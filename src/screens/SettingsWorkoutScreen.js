@@ -5,9 +5,10 @@ import { useShallow } from 'zustand/react/shallow';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
 import { canScheduleExactAlarms, requestExactAlarmAccess } from '../lib/notifications/restForeground';
-import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
+import { SettingsPage, SettingRow, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 import NumericStepper from '../components/Stepper';
 import { colors, withAlpha, spacing, radius, fontWeight, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
 
 // Body-weight unit options. Gym weights stay kg-only by design (UK); this
@@ -76,32 +77,43 @@ export default function SettingsWorkoutScreen() {
   }, [workoutPrefsLoaded, loadWorkoutPrefs]);
 
   const restSeconds = Number(defaultRestSeconds) || 90;
+  // CP-10 stage 3: live theme (src/hooks/useTheme.js). `live` is the shared
+  // settingsStyles override (SettingsPrimitives.js); `liveLocal` covers this
+  // screen's own colour/type-bearing style keys the same way.
+  const t = useTheme();
+  const live = useSettingsStyles();
+  const liveLocal = {
+    segment: { backgroundColor: t.colors.surface2 },
+    segBtnActive: { backgroundColor: t.colors.primaryFill },
+    segText: { ...t.type.label, color: t.colors.textSecondary },
+    segTextActive: { color: t.colors.onPrimary, fontWeight: fontWeight.semibold },
+  };
 
   return (
     <SettingsPage title="Workout & units">
-      <View style={styles.section}>
-        <View style={styles.settingRow}>
-          <View style={styles.settingIcon}>
-            <Ionicons name="body-outline" size={18} color={colors.primary} />
+      <View style={[styles.section, live.section]}>
+        <View style={[styles.settingRow, live.settingRow]}>
+          <View style={[styles.settingIcon, live.settingIcon]}>
+            <Ionicons name="body-outline" size={18} color={t.colors.primary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.settingLabel}>Body-weight unit</Text>
-            <Text style={styles.settingSub}>
+            <Text style={[styles.settingLabel, live.settingLabel]}>Body-weight unit</Text>
+            <Text style={[styles.settingSub, live.settingSub]}>
               How your own body weight is shown. Gym weights stay in kg.
             </Text>
-            <View style={local.segment} accessibilityRole="radiogroup">
+            <View style={[local.segment, liveLocal.segment]} accessibilityRole="radiogroup">
               {BODY_WEIGHT_UNIT_OPTIONS.map((opt) => {
                 const active = (bodyWeightUnits ?? 'st') === opt.value;
                 return (
                   <TouchableOpacity
                     key={opt.value}
-                    style={[local.segBtn, active && local.segBtnActive]}
+                    style={[local.segBtn, active && [local.segBtnActive, liveLocal.segBtnActive]]}
                     onPress={() => { if (!active) { haptics.selection(); setBodyWeightUnits(opt.value); } }}
                     accessibilityRole="radio"
                     accessibilityState={{ selected: active }}
                     accessibilityLabel={opt.label}
                   >
-                    <Text style={[local.segText, active && local.segTextActive]}>{opt.label}</Text>
+                    <Text style={[local.segText, liveLocal.segText, active && [local.segTextActive, liveLocal.segTextActive]]}>{opt.label}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -140,8 +152,8 @@ export default function SettingsWorkoutScreen() {
             <Switch
               value={!!autoStartRestTimer}
               onValueChange={v => { haptics.selection(); setAutoStartRestTimer(v); }}
-              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
-              thumbColor={autoStartRestTimer ? colors.primary : colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+              thumbColor={autoStartRestTimer ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -158,8 +170,8 @@ export default function SettingsWorkoutScreen() {
             <Switch
               value={!!restEndAlertEnabled}
               onValueChange={v => { haptics.selection(); setRestEndAlertEnabled(v); }}
-              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
-              thumbColor={restEndAlertEnabled ? colors.primary : colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+              thumbColor={restEndAlertEnabled ? t.colors.primary : t.colors.textMuted}
             />
           }
         />

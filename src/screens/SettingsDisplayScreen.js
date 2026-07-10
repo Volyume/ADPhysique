@@ -5,7 +5,8 @@ import { useShallow } from 'zustand/react/shallow';
 import * as Updates from 'expo-updates';
 import useAppStore from '../store/useAppStore';
 import { colors, withAlpha, spacing, radius, type } from '../styles/theme';
-import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
+import useTheme from '../hooks/useTheme';
+import { SettingsPage, SettingRow, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 import Chip from '../components/Chip';
 import * as haptics from '../lib/haptics';
 
@@ -32,24 +33,24 @@ const ENERGY_OPTIONS = [
 // in App.js re-applies them before screens load. Prompt the user to reload now
 // rather than leaving them confused that the toggle "did nothing".
 //
-// D24 CP-10 stage 2 status (docs/ux-world-class-audit-2026-07-09/
+// D24 CP-10 stage 3 status (docs/ux-world-class-audit-2026-07-09/
 // CP-10-restart-free-theming-plan.md, 2026-07-10): ALL FOUR prompts below
 // stay exactly as they are. The plan's own Stage 5 ("Retire the reload
 // prompt") is explicit that a toggle's promptRestartForA11y call is removed
 // only "once Stage 3+4 cover every screen a toggle's dependency set
 // touches" -- i.e. after every one of the 85 screens (Stage 3) and the four
 // Skia/chart consumers (Stage 4) have been migrated off the frozen
-// StyleSheet.create/module-const pattern onto useTheme(). Stage 2 (this
-// pass) converts ONLY App.js's StatusBar + themeReady gate and
-// RootNavigator.js's NavigationContainer theme + stackOptions -- root chrome,
-// not screen content. Every screen's own background/text/border colours
-// (Home, Diary, Settings itself, all 85) are still frozen at import time.
-// Retiring even the Appearance prompt now would be actively dishonest: a
-// user switching to Light would see the status bar and nav header flip
-// instantly while every screen body stayed on the old palette until they
-// manually reloaded -- precisely the half-migrated "torn" state the plan's
-// risk register #1/#7 warns against, worse than the existing reload prompt.
-// No toggle is genuinely restart-free yet. Revisit this comment at Stage 5.
+// StyleSheet.create/module-const pattern onto useTheme(). This screen's OWN
+// body (section cards, labels, switches) is now migrated as part of the
+// Settings-family Stage 3 batch, so it flips live the instant a toggle is
+// switched -- but the vast majority of the other 84 screens (Home, Diary,
+// the workout family, etc.) are not yet migrated, so retiring the prompts
+// now would still be dishonest: a user switching to Light would see THIS
+// screen and the root chrome (Stage 2) flip instantly while most of the
+// rest of the app stayed on the old palette until they manually reloaded --
+// precisely the half-migrated "torn" state the plan's risk register #1/#7
+// warns against, worse than the existing reload prompt. No toggle is
+// genuinely restart-free app-wide yet. Revisit this comment at Stage 5.
 async function promptRestartForA11y(label) {
   appAlert(
     `${label} saved`,
@@ -93,15 +94,28 @@ export default function SettingsDisplayScreen() {
 
   const currentTheme = accessibility.theme ?? 'dark';
   const currentEnergy = accessibility.energyUnit ?? 'kcal';
+  // CP-10 stage 3: live theme (src/hooks/useTheme.js). This screen is where
+  // the Appearance/larger-text/contrast/colour-blind toggles themselves
+  // live, so its own chrome and section labels now flip live the instant a
+  // toggle is switched, same as every other migrated Settings screen; the
+  // reload prompt below is unchanged (still needed until every OTHER screen
+  // migrates too, per the plan's Stage 5 gate).
+  const t = useTheme();
+  const live = useSettingsStyles();
+  const liveText = {
+    title: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    sub: { ...t.type.bodySm, color: t.colors.textMuted },
+    segment: { backgroundColor: t.colors.surface2 },
+  };
 
   return (
     <SettingsPage title="Display & accessibility">
-      <View style={styles.section}>
-        <Text style={local.title}>Appearance</Text>
-        <Text style={local.sub}>
+      <View style={[styles.section, live.section]}>
+        <Text style={[local.title, liveText.title]}>Appearance</Text>
+        <Text style={[local.sub, liveText.sub]}>
           Dark is the Volyume default. Light is easier to read in daylight. Match phone follows your system setting.
         </Text>
-        <View style={local.segment} accessibilityRole="radiogroup">
+        <View style={[local.segment, liveText.segment]} accessibilityRole="radiogroup">
           {THEME_OPTIONS.map((opt) => {
             const active = currentTheme === opt.value;
             return (
@@ -127,13 +141,13 @@ export default function SettingsDisplayScreen() {
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={local.title}>Energy units</Text>
-        <Text style={local.sub}>
+      <View style={[styles.section, live.section]}>
+        <Text style={[local.title, liveText.title]}>Energy units</Text>
+        <Text style={[local.sub, liveText.sub]}>
           How food energy is shown. kJ (kilojoules) matches the energy on EU food labels. This changes the
           display only. Your targets and coaching stay the same.
         </Text>
-        <View style={local.segment} accessibilityRole="radiogroup">
+        <View style={[local.segment, liveText.segment]} accessibilityRole="radiogroup">
           {ENERGY_OPTIONS.map((opt) => {
             const active = currentEnergy === opt.value;
             return (
@@ -152,8 +166,8 @@ export default function SettingsDisplayScreen() {
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={local.title}>Home</Text>
+      <View style={[styles.section, live.section]}>
+        <Text style={[local.title, liveText.title]}>Home</Text>
         <SettingRow
           icon="restaurant-outline"
           label="Show nutrition on Home"
@@ -163,16 +177,16 @@ export default function SettingsDisplayScreen() {
             <Switch
               value={accessibility.showHomeNutrition !== false}
               onValueChange={(v) => { haptics.selection(); setAccessibilityPref('showHomeNutrition', v); }}
-              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
-              thumbColor={(accessibility.showHomeNutrition !== false) ? colors.primary : colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+              thumbColor={(accessibility.showHomeNutrition !== false) ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
       </View>
 
-      <View style={styles.section}>
-        <Text style={local.title}>Nutrients shown</Text>
-        <Text style={local.sub}>
+      <View style={[styles.section, live.section]}>
+        <Text style={[local.title, liveText.title]}>Nutrients shown</Text>
+        <Text style={[local.sub, liveText.sub]}>
           Which extra nutrients appear under a food's calories and macros, when the food carries them. Shown for that food only. This never changes your targets or daily totals.
         </Text>
         <SettingRow
@@ -184,8 +198,8 @@ export default function SettingsDisplayScreen() {
             <Switch
               value={accessibility.showFibre !== false}
               onValueChange={(v) => { haptics.selection(); setAccessibilityPref('showFibre', v); }}
-              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
-              thumbColor={(accessibility.showFibre !== false) ? colors.primary : colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+              thumbColor={(accessibility.showFibre !== false) ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -198,8 +212,8 @@ export default function SettingsDisplayScreen() {
             <Switch
               value={accessibility.showSugar !== false}
               onValueChange={(v) => { haptics.selection(); setAccessibilityPref('showSugar', v); }}
-              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
-              thumbColor={(accessibility.showSugar !== false) ? colors.primary : colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+              thumbColor={(accessibility.showSugar !== false) ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -212,14 +226,14 @@ export default function SettingsDisplayScreen() {
             <Switch
               value={accessibility.showSodium !== false}
               onValueChange={(v) => { haptics.selection(); setAccessibilityPref('showSodium', v); }}
-              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
-              thumbColor={(accessibility.showSodium !== false) ? colors.primary : colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+              thumbColor={(accessibility.showSodium !== false) ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
       </View>
 
-      <View style={styles.section}>
+      <View style={[styles.section, live.section]}>
         <SettingRow
           icon="text-outline"
           label="Larger text"
@@ -236,8 +250,8 @@ export default function SettingsDisplayScreen() {
                 await setAccessibilityPref('largerText', v);
                 promptRestartForA11y('Larger text');
               }}
-              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
-              thumbColor={accessibility.largerText ? colors.primary : colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+              thumbColor={accessibility.largerText ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -254,8 +268,8 @@ export default function SettingsDisplayScreen() {
                 await setAccessibilityPref('higherContrast', v);
                 promptRestartForA11y('Higher contrast');
               }}
-              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
-              thumbColor={accessibility.higherContrast ? colors.primary : colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+              thumbColor={accessibility.higherContrast ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -272,8 +286,8 @@ export default function SettingsDisplayScreen() {
                 await setAccessibilityPref('colorBlindSafe', v);
                 promptRestartForA11y('Colour-blind safe palette');
               }}
-              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
-              thumbColor={accessibility.colorBlindSafe ? colors.primary : colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+              thumbColor={accessibility.colorBlindSafe ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -286,12 +300,12 @@ export default function SettingsDisplayScreen() {
             <Switch
               value={!!accessibility.reduceMotion}
               onValueChange={v => { haptics.selection(); setAccessibilityPref('reduceMotion', v); }}
-              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
-              thumbColor={accessibility.reduceMotion ? colors.primary : colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+              thumbColor={accessibility.reduceMotion ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
-        <Text style={styles.a11yNote}>
+        <Text style={[styles.a11yNote, live.a11yNote]}>
           Reduce motion takes effect immediately. Appearance, larger text, higher contrast, and the colour-blind safe palette need Volyume to reopen. You'll be prompted to reload after changing them.
         </Text>
       </View>

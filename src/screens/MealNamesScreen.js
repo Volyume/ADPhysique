@@ -3,9 +3,10 @@ import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, spacing, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import TextField from '../components/TextField';
-import { settingsStyles as styles } from '../components/SettingsPrimitives';
+import { settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 import {
   DEFAULT_MEALS_PER_DAY, defaultMealSlotLabel, getMealLabelOverrides, setMealLabel,
 } from '../lib/food/mealSlots';
@@ -20,6 +21,15 @@ const PERI_SLOTS = ['preworkout', 'postworkout'];
 export default function MealNamesScreen() {
   const [slots, setSlots] = useState([]);
   const [values, setValues] = useState({});
+  // CP-10 stage 3: live theme (src/hooks/useTheme.js). `live` is the shared
+  // settingsStyles override (SettingsPrimitives.js); `liveText` covers this
+  // screen's own colour/type-bearing style keys the same way.
+  const t = useTheme();
+  const live = useSettingsStyles();
+  const liveText = {
+    intro: { ...t.type.bodySm, color: t.colors.textMuted },
+    default: { ...t.type.body, color: t.colors.textSecondary },
+  };
 
   useEffect(() => {
     let active = true;
@@ -50,29 +60,29 @@ export default function MealNamesScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Meal names" />
       {/* L03-C5 (2026-07-09 design audit): standardise on the app's
           KeyboardAvoidingView pattern for consistency, no fixed footer was
           found below this scroll. */}
       <KeyboardAvoidingView style={local.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.section}>
-          <Text style={local.intro}>
+        <View style={[styles.section, live.section]}>
+          <Text style={[local.intro, liveText.intro]}>
             Rename your meals to whatever you call them. Leave a box blank to use the default. This changes the
             label only. Your logged food and plan stay the same.
           </Text>
           {slots.map((key) => (
             <View key={key} style={local.row}>
-              <Text style={local.default} numberOfLines={1}>{defaultMealSlotLabel(key)}</Text>
+              <Text style={[local.default, liveText.default]} numberOfLines={1}>{defaultMealSlotLabel(key)}</Text>
               <TextField
                 containerStyle={local.input}
                 value={values[key] ?? ''}
-                onChangeText={(t) => onChange(key, t)}
+                onChangeText={(txt) => onChange(key, txt)}
                 onBlur={() => onCommit(key)}
                 onSubmitEditing={() => onCommit(key)}
                 placeholder={defaultMealSlotLabel(key)}
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={t.colors.textMuted}
                 maxLength={24}
                 returnKeyType="done"
                 accessibilityLabel={`Custom name for ${defaultMealSlotLabel(key)}`}

@@ -4,7 +4,8 @@ import { View, Text, Switch } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
-import { colors, withAlpha } from '../styles/theme';
+import { withAlpha } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
 import * as haptics from '../lib/haptics';
@@ -13,7 +14,7 @@ import {
   getHealthPermissionStatus, requestHealthPermissions, importNewWeights, importNewCardio,
   openSystemHealthSettings, openHealthConnectInstall,
 } from '../lib/health';
-import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
+import { SettingsPage, SettingRow, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 
 // Health connections: per-scope read/write toggles for the device health
 // provider (Apple Health / Health Connect). Each scope is requested and
@@ -21,6 +22,10 @@ import { SettingsPage, SettingRow, settingsStyles as styles } from '../component
 export default function SettingsHealthScreen() {
   const toast = useToast();
   const { user, tier } = useAppStore(useShallow(s => ({ user: s.user, tier: s.tier })));
+  // CP-10 stage 3: live theme (src/hooks/useTheme.js), so the switch track/
+  // thumb colours and the shared chrome follow a theme change.
+  const t = useTheme();
+  const live = useSettingsStyles();
   // Passive cardio import is a Pro cardio feature; the row is hidden for free
   // users (NA-cux-5). Cardio itself is Pro-gated app-wide (withProGuard 'Cardio').
   const isPro = tier === 'pro';
@@ -178,7 +183,7 @@ export default function SettingsHealthScreen() {
 
   return (
     <SettingsPage title="Health">
-      <View style={styles.section}>
+      <View style={[styles.section, live.section]}>
         <SettingRow
           icon="scale-outline"
           label="Read morning weight"
@@ -193,8 +198,8 @@ export default function SettingsHealthScreen() {
               value={healthWeightStatus === 'granted'}
               onValueChange={handleToggleWeight}
               disabled={healthSyncing}
-              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
-              thumbColor={healthWeightStatus === 'granted' ? colors.primary : colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+              thumbColor={healthWeightStatus === 'granted' ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -213,8 +218,8 @@ export default function SettingsHealthScreen() {
                 value={healthCardioStatus === 'granted'}
                 onValueChange={handleToggleCardio}
                 disabled={healthSyncing}
-                trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
-                thumbColor={healthCardioStatus === 'granted' ? colors.primary : colors.textMuted}
+                trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+                thumbColor={healthCardioStatus === 'granted' ? t.colors.primary : t.colors.textMuted}
               />
             }
           />
@@ -233,8 +238,8 @@ export default function SettingsHealthScreen() {
               value={healthWorkoutStatus === 'granted'}
               onValueChange={handleToggleWorkout}
               disabled={healthSyncing}
-              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
-              thumbColor={healthWorkoutStatus === 'granted' ? colors.primary : colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+              thumbColor={healthWorkoutStatus === 'granted' ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -256,7 +261,7 @@ export default function SettingsHealthScreen() {
           />
         )}
       </View>
-      <Text style={styles.dataPrivacyNote}>
+      <Text style={[styles.dataPrivacyNote, live.dataPrivacyNote]}>
         Volyume only uses the Health scopes you switch on. Everything else stays untouched.
       </Text>
     </SettingsPage>

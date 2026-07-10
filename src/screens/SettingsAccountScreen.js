@@ -3,7 +3,7 @@ import { appAlert } from '../components/AppAlert';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import useAccountActions from '../hooks/useAccountActions';
-import { SettingsPage, SectionHeader, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
+import { SettingsPage, SectionHeader, SettingRow, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 
 // Account: identity, plan, upgrade/downgrade, and the two destructive
 // account actions (sign out, delete) kept together at the bottom.
@@ -12,11 +12,13 @@ export default function SettingsAccountScreen({ navigation }) {
     useShallow(s => ({ user: s.user, tier: s.tier, setTier: s.setTier })),
   );
   const { signingOut, deletingAccount, handleSignOut, handleDeleteAccount } = useAccountActions();
+  // CP-10 stage 3: live theme override, see SettingsPrimitives.js.
+  const live = useSettingsStyles();
 
   return (
     <SettingsPage title="Account">
       <SectionHeader title="Plan" />
-      <View style={styles.section}>
+      <View style={[styles.section, live.section]}>
         <SettingRow
           icon="person-circle-outline"
           label={user?.email || 'Signed in'}
@@ -61,7 +63,7 @@ export default function SettingsAccountScreen({ navigation }) {
       {/* Sign out and delete account, isolated below the plan rows so a
           destructive tap is never next to a routine action. */}
       <SectionHeader title="Account access" />
-      <View style={styles.section}>
+      <View style={[styles.section, live.section]}>
         <SettingRow
           icon="log-out-outline"
           label={signingOut ? 'Signing out...' : 'Sign out'}

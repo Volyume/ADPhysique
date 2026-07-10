@@ -11,8 +11,9 @@ import { useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { appAlert } from '../components/AppAlert';
-import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
+import { SettingsPage, SettingRow, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 import { colors, spacing, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { listSnapshots, restoreSnapshot } from '../lib/dbSnapshot';
 import { closeDatabase } from '../lib/database';
 import { logError } from '../lib/errorLog';
@@ -27,6 +28,15 @@ export default function SnapshotsScreen() {
   const [snapshots, setSnapshots] = useState(null); // null = loading
   const [loadError, setLoadError] = useState(false);
   const loadRequestRef = useRef(0);
+  // CP-10 stage 3: live theme (src/hooks/useTheme.js). `live` is the shared
+  // settingsStyles override (SettingsPrimitives.js); `liveText` covers this
+  // screen's own colour/type-bearing style keys the same way.
+  const t = useTheme();
+  const live = useSettingsStyles();
+  const liveText = {
+    note: { ...t.type.bodySm, color: t.colors.textMuted },
+    footer: { ...t.type.caption, color: t.colors.textMuted },
+  };
 
   const load = useCallback(() => {
     const requestId = loadRequestRef.current + 1;
@@ -83,12 +93,12 @@ export default function SnapshotsScreen() {
 
   return (
     <SettingsPage title="Restore a snapshot">
-      <View style={styles.section}>
+      <View style={[styles.section, live.section]}>
         {snapshots === null ? (
-          <Text style={localStyles.note}>Loading…</Text>
+          <Text style={[localStyles.note, liveText.note]}>Loading…</Text>
         ) : loadError ? (
           <>
-            <Text style={localStyles.note}>
+            <Text style={[localStyles.note, liveText.note]}>
               Could not load snapshots from this device. Try again before restoring a backup.
             </Text>
             <SettingRow
@@ -99,7 +109,7 @@ export default function SnapshotsScreen() {
             />
           </>
         ) : snapshots.length === 0 ? (
-          <Text style={localStyles.note}>
+          <Text style={[localStyles.note, liveText.note]}>
             No snapshots yet. Volyume saves an automatic safety copy before each
             app update, so one will appear here the next time the app updates.
           </Text>
@@ -116,7 +126,7 @@ export default function SnapshotsScreen() {
           ))
         )}
       </View>
-      <Text style={localStyles.footer}>
+      <Text style={[localStyles.footer, liveText.footer]}>
         Snapshots are automatic safety copies of your database, kept on this
         device only. The most recent few are retained.
       </Text>

@@ -4,7 +4,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import { colors, spacing, type } from '../styles/theme';
-import { SettingsPage, settingsStyles } from '../components/SettingsPrimitives';
+import useTheme from '../hooks/useTheme';
+import { SettingsPage, settingsStyles, useSettingsStyles } from '../components/SettingsPrimitives';
 import Chip from '../components/Chip';
 import { DIETS } from '../lib/food/curatedMeals';
 import { ALLERGENS } from '../lib/food/foodRoles';
@@ -42,6 +43,19 @@ export default function SettingsDietaryScreen() {
   );
 
   const [diet, setDiet] = useState(userProfile?.dietPreference ?? 'omnivore');
+  // CP-10 stage 3: live theme (src/hooks/useTheme.js). `live` is the shared
+  // settingsStyles override (SettingsPrimitives.js); `liveText` covers this
+  // screen's OWN colour/type-bearing style keys the same way.
+  const t = useTheme();
+  const live = useSettingsStyles();
+  const liveText = {
+    block: { borderBottomColor: t.colors.border },
+    chipText: { ...t.type.label },
+    caption: { ...t.type.caption, color: t.colors.textMuted },
+    emptyRow: { ...t.type.body, color: t.colors.textMuted },
+    foodName: { ...t.type.body, color: t.colors.textPrimary },
+    removeChipText: { ...t.type.label, color: t.colors.error },
+  };
 
   const excludedTags = Array.isArray(userProfile?.mealPlanExcludeTags)
     ? userProfile.mealPlanExcludeTags : [];
@@ -64,15 +78,15 @@ export default function SettingsDietaryScreen() {
 
   return (
     <SettingsPage title="Dietary needs">
-      <View style={settingsStyles.section}>
-        <View style={styles.block}>
+      <View style={[settingsStyles.section, live.section]}>
+        <View style={[styles.block, liveText.block]}>
           <View style={styles.blockHeader}>
-            <View style={settingsStyles.settingIcon}>
-              <Ionicons name="nutrition-outline" size={18} color={colors.primary} />
+            <View style={[settingsStyles.settingIcon, live.settingIcon]}>
+              <Ionicons name="nutrition-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={settingsStyles.settingLabel}>Diet</Text>
-              <Text style={settingsStyles.settingSub}>Filters the meals Volyume suggests and the plans it builds.</Text>
+              <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Diet</Text>
+              <Text style={[settingsStyles.settingSub, live.settingSub]}>Filters the meals Volyume suggests and the plans it builds.</Text>
             </View>
           </View>
           <View style={styles.chipGrid}>
@@ -87,21 +101,21 @@ export default function SettingsDietaryScreen() {
                   accessibilityRole="radio"
                   accessibilityLabel={`Diet preference ${opt.label}`}
                   style={styles.gridChip}
-                  labelStyle={styles.chipText}
+                  labelStyle={[styles.chipText, liveText.chipText]}
                 />
               );
             })}
           </View>
         </View>
 
-        <View style={styles.block}>
+        <View style={[styles.block, liveText.block]}>
           <View style={styles.blockHeader}>
-            <View style={settingsStyles.settingIcon}>
-              <Ionicons name="warning-outline" size={18} color={colors.primary} />
+            <View style={[settingsStyles.settingIcon, live.settingIcon]}>
+              <Ionicons name="warning-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={settingsStyles.settingLabel}>Allergens to avoid</Text>
-              <Text style={settingsStyles.settingSub}>Meals and plan suggestions leave these out.</Text>
+              <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Allergens to avoid</Text>
+              <Text style={[settingsStyles.settingSub, live.settingSub]}>Meals and plan suggestions leave these out.</Text>
             </View>
           </View>
           <View style={styles.chipGrid}>
@@ -117,46 +131,46 @@ export default function SettingsDietaryScreen() {
                   accessibilityState={{ checked }}
                   accessibilityLabel={label}
                   style={styles.gridChip}
-                  labelStyle={styles.chipText}
+                  labelStyle={[styles.chipText, liveText.chipText]}
                 />
               );
             })}
           </View>
-          <Text style={styles.caption}>
+          <Text style={[styles.caption, liveText.caption]}>
             Volyume filters the foods and meals it knows about. Packaged food data can be incomplete, so always check the label.
           </Text>
         </View>
 
-        <View style={[styles.block, styles.lastBlock]}>
+        <View style={[styles.block, liveText.block, styles.lastBlock]}>
           <View style={styles.blockHeader}>
-            <View style={settingsStyles.settingIcon}>
-              <Ionicons name="close-circle-outline" size={18} color={colors.primary} />
+            <View style={[settingsStyles.settingIcon, live.settingIcon]}>
+              <Ionicons name="close-circle-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={settingsStyles.settingLabel}>Foods you avoid</Text>
-              <Text style={settingsStyles.settingSub}>Individual foods you have flagged from a meal plan.</Text>
+              <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Foods you avoid</Text>
+              <Text style={[settingsStyles.settingSub, live.settingSub]}>Individual foods you have flagged from a meal plan.</Text>
             </View>
           </View>
           {excludedFoods.length > AVOID_LIST_NUDGE_THRESHOLD ? (
-            <Text style={styles.caption}>
+            <Text style={[styles.caption, liveText.caption]}>
               A longer avoid list narrows what Volyume can suggest. Keep it to foods you really won't eat.
             </Text>
           ) : null}
           {excludedFoods.length === 0 ? (
-            <Text style={styles.emptyRow}>Nothing on your avoid list. You can flag a food from any meal plan.</Text>
+            <Text style={[styles.emptyRow, liveText.emptyRow]}>Nothing on your avoid list. You can flag a food from any meal plan.</Text>
           ) : (
             excludedFoods.map((foodKey) => {
               const name = CURATED_FOODS[foodKey]?.name ?? foodKey;
               return (
                 <View key={foodKey} style={styles.foodRow}>
-                  <Text style={styles.foodName}>{name}</Text>
+                  <Text style={[styles.foodName, liveText.foodName]}>{name}</Text>
                   <Chip
                     label="Remove"
                     onPress={() => removeFood(foodKey)}
                     accessibilityRole="button"
                     accessibilityLabel={`Remove ${name} from your avoid list`}
                     style={styles.removeChip}
-                    labelStyle={styles.removeChipText}
+                    labelStyle={[styles.removeChipText, liveText.removeChipText]}
                   />
                 </View>
               );

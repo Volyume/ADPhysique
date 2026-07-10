@@ -43,6 +43,19 @@ describe('SettingsAboutScreen "Help & FAQ" row (CP-9/D16)', () => {
     jest.doMock('../../components/FeedbackSheet', () => ({
       useFeedback: () => ({ open: jest.fn() }),
     }));
+    // CP-10 stage 3: SettingsAboutScreen now calls useTheme() too. Stub it
+    // with the real PURE resolveTheme() (no React hooks inside) rather than
+    // the real useTheme() hook -- after jest.resetModules() above, a dynamic
+    // require() of a component using a genuine hook (useShallow -> useRef)
+    // picks up a second, freshly-required copy of `react`, whose dispatcher
+    // was never set by the react-test-renderer `create()` call below, and
+    // throws "Cannot read properties of null (reading 'useRef')". Sidestep
+    // that entirely: this stub has no hook of its own to break.
+    jest.doMock('../../hooks/useTheme', () => ({
+      __esModule: true,
+      // eslint-disable-next-line global-require
+      default: () => require('../../styles/theme').resolveTheme({}),
+    }));
     jest.doMock('../../components/SettingsPrimitives', () => {
       const { View, Text } = require('react-native');
       return {
@@ -54,6 +67,10 @@ describe('SettingsAboutScreen "Help & FAQ" row (CP-9/D16)', () => {
           </View>
         ),
         settingsStyles: { section: {} },
+        // CP-10 stage 3: SettingsAboutScreen now calls useSettingsStyles() for
+        // its live theme override; this mock stands in for it the same way
+        // the other exports here stand in for the real primitives.
+        useSettingsStyles: () => ({}),
       };
     });
     // eslint-disable-next-line global-require

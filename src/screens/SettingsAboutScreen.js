@@ -1,17 +1,22 @@
 import { View, Text, StyleSheet, TouchableOpacity, Share, Platform, Linking } from 'react-native';
 import Constants from 'expo-constants';
 import { colors, fontSize, fontWeight, spacing, radius, type, letterSpacing } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { useFeedback } from '../components/FeedbackSheet';
-import { SettingsPage, SettingRow, settingsStyles } from '../components/SettingsPrimitives';
+import { SettingsPage, SettingRow, settingsStyles, useSettingsStyles } from '../components/SettingsPrimitives';
 
 // Help & about: FAQ, feedback, store rating, credits, and the build footer.
 // Long-pressing the version opens the on-device debug log.
 export default function SettingsAboutScreen({ navigation }) {
   const feedback = useFeedback();
+  // CP-10 stage 3: live theme (src/hooks/useTheme.js) so this screen's own
+  // footer text/version and the shared section card follow a theme change.
+  const t = useTheme();
+  const live = useSettingsStyles();
 
   return (
     <SettingsPage title="About">
-      <View style={settingsStyles.section}>
+      <View style={[settingsStyles.section, live.section]}>
         <SettingRow
           icon="help-circle-outline"
           label="Help & FAQ"
@@ -59,7 +64,7 @@ export default function SettingsAboutScreen({ navigation }) {
 
       <View style={styles.about}>
         <View style={styles.appNameRow}>
-          <Text style={styles.appName}>Volyume</Text>
+          <Text style={[styles.appName, { fontSize: t.fontSize.xl, color: t.colors.textPrimary }]}>Volyume</Text>
         </View>
         <TouchableOpacity
           onPress={() => {
@@ -80,7 +85,7 @@ export default function SettingsAboutScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="App version. Tap to share, press and hold for debug logs."
         >
-          <Text style={styles.appVersion}>
+          <Text style={[styles.appVersion, { fontSize: t.fontSize.sm, color: t.colors.textMuted }]}>
             v{Constants.expoConfig?.version ?? '1.1.0'}
             {' '}
             ({Platform.OS === 'ios'
@@ -88,7 +93,7 @@ export default function SettingsAboutScreen({ navigation }) {
               : Constants.expoConfig?.android?.versionCode})
           </Text>
         </TouchableOpacity>
-        <Text style={styles.tagline}>Less thinking. More lifting.</Text>
+        <Text style={[styles.tagline, { ...t.type.caption, color: t.colors.textMuted }]}>Less thinking. More lifting.</Text>
       </View>
     </SettingsPage>
   );

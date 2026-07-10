@@ -4,8 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import { colors, spacing, fontSize, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
-import { settingsStyles } from '../components/SettingsPrimitives';
+import { settingsStyles, useSettingsStyles } from '../components/SettingsPrimitives';
 import { getNutritionTargets, getLatestBodyWeight, getLatestBodyComposition } from '../lib/database';
 import { computeFFMFloor } from '../lib/nutritionEngine';
 import { safeDayFloorKcal } from '../lib/food/calorieBank';
@@ -91,18 +92,34 @@ export default function PerDayTargetsScreen({ navigation }) {
   const displayedKcalFor = (offset) => Math.max(floorKcal, baseKcal + (Number(offset) || 0));
   const unitLabel = energyUnitLabel(energyUnit);
   const anyOffset = hasAnyOffset(offsets);
+  // CP-10 stage 3: live theme (src/hooks/useTheme.js) -- colour/type plumbing
+  // only, this screen's calorie-floor clamp logic above is untouched. `live`
+  // is the shared settingsStyles override (SettingsPrimitives.js); `liveText`
+  // covers this screen's own colour/type-bearing style keys the same way.
+  const t = useTheme();
+  const live = useSettingsStyles();
+  const liveText = {
+    intro: { ...t.type.bodySm, color: t.colors.textMuted },
+    baseLine: { ...t.type.bodySm, color: t.colors.textSecondary },
+    baseLineLink: { color: t.colors.primary },
+    row: { borderTopColor: t.colors.border },
+    day: { ...t.type.body, color: t.colors.textPrimary },
+    dayTarget: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
+    dayDelta: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
+    floorTag: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
+  };
 
   return (
-    <SafeAreaView style={settingsStyles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[settingsStyles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Per-day targets" />
       <ScrollView contentContainerStyle={settingsStyles.content}>
         <View style={local.section}>
-          <Text style={local.intro}>
+          <Text style={[local.intro, liveText.intro]}>
             Plan a different calorie target for each day of the week. The diary shows that day's target shifted by your
             offset. This is planning only. It never changes your coaching, your weekly average, or your safety floor.
           </Text>
           {baseKcal > 0 ? (
-            <Text style={local.baseLine}>
+            <Text style={[local.baseLine, liveText.baseLine]}>
               Base target: {toEnergy(baseKcal, energyUnit)} {unitLabel}. No day can go below your safe floor of {toEnergy(floorKcal, energyUnit)} {unitLabel}.
             </Text>
           ) : (
@@ -110,7 +127,7 @@ export default function PerDayTargetsScreen({ navigation }) {
             // no way to actually get there. Same stack as this screen, so a
             // plain in-stack navigate is enough (no cross-tab jump needed).
             <Text
-              style={[local.baseLine, local.baseLineLink]}
+              style={[local.baseLine, liveText.baseLine, local.baseLineLink, liveText.baseLineLink]}
               onPress={() => navigation.navigate('NutritionTargets')}
               accessibilityRole="link"
               accessibilityLabel="Set your calorie target in Nutrition targets first, then plan per-day offsets here"
@@ -129,15 +146,15 @@ export default function PerDayTargetsScreen({ navigation }) {
             const sign = offsetKcalShown > 0 ? '+' : offsetKcalShown < 0 ? '−' : '';
             const offsetMag = Math.abs(offsetKcalShown);
             return (
-              <View key={key} style={local.row}>
+              <View key={key} style={[local.row, liveText.row]}>
                 <View style={local.rowLabel}>
-                  <Text style={local.day} numberOfLines={1}>{WEEKDAY_LABELS[key]}</Text>
-                  <Text style={local.dayTarget}>
+                  <Text style={[local.day, liveText.day]} numberOfLines={1}>{WEEKDAY_LABELS[key]}</Text>
+                  <Text style={[local.dayTarget, liveText.dayTarget]}>
                     {baseKcal > 0 ? `${toEnergy(displayed, energyUnit)} ${unitLabel}` : '-'}
                     {baseKcal > 0 && offsetMag > 0 ? (
-                      <Text style={local.dayDelta}>{`  ${sign}${toEnergy(offsetMag, energyUnit)}`}</Text>
+                      <Text style={[local.dayDelta, liveText.dayDelta]}>{`  ${sign}${toEnergy(offsetMag, energyUnit)}`}</Text>
                     ) : null}
-                    {floored ? <Text style={local.floorTag}>  floor</Text> : null}
+                    {floored ? <Text style={[local.floorTag, liveText.floorTag]}>  floor</Text> : null}
                   </Text>
                 </View>
                 <Stepper

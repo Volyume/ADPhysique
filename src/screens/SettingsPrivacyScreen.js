@@ -4,7 +4,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import useAccountActions from '../hooks/useAccountActions';
-import { colors, withAlpha, alpha } from '../styles/theme';
+import { withAlpha, alpha } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
 import {
   getConsent as getOffWritebackConsent,
@@ -15,7 +16,7 @@ import {
   setLockEnabled as setAppLockEnabled,
   getBiometricAvailability,
 } from '../lib/biometricLock';
-import { SettingsPage, SectionHeader, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
+import { SettingsPage, SectionHeader, SettingRow, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 
 // Privacy & legal: health-data consent withdrawal, the two data-sharing
 // toggles (Open Food Facts, anonymous usage), and the privacy policy.
@@ -28,6 +29,10 @@ export default function SettingsPrivacyScreen({ navigation }) {
     })),
   );
   const { withdrawing, handleWithdrawConsent } = useAccountActions();
+  // CP-10 stage 3: live theme (src/hooks/useTheme.js), so the switch track/
+  // thumb colours and the shared chrome follow a theme change.
+  const t = useTheme();
+  const live = useSettingsStyles();
   const [offConsent, setOffConsent] = useState(false);
   // CP-7 (design-usability audit 2026-07-09): opt-in biometric app lock.
   // Default OFF. `biometricAvailable` is re-checked LIVE on every focus (not
@@ -76,7 +81,7 @@ export default function SettingsPrivacyScreen({ navigation }) {
 
   return (
     <SettingsPage title="Privacy">
-      <View style={styles.section}>
+      <View style={[styles.section, live.section]}>
         <SettingRow
           icon="share-social-outline"
           label="Share scanned labels with Open Food Facts"
@@ -86,8 +91,8 @@ export default function SettingsPrivacyScreen({ navigation }) {
             <Switch
               value={offConsent}
               onValueChange={toggleOffConsent}
-              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, alpha.half) }}
-              thumbColor={offConsent ? colors.primary : colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={offConsent ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -100,8 +105,8 @@ export default function SettingsPrivacyScreen({ navigation }) {
             <Switch
               value={!privacy?.analyticsOptOut}
               onValueChange={v => setAnalyticsOptOut(!v)}
-              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, alpha.half) }}
-              thumbColor={!privacy?.analyticsOptOut ? colors.primary : colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={!privacy?.analyticsOptOut ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -121,7 +126,7 @@ export default function SettingsPrivacyScreen({ navigation }) {
           (checked live, never cached); it stays interactive to turn OFF
           even if that stops being true later, so the user is never stuck. */}
       <SectionHeader title="App lock" />
-      <View style={styles.section}>
+      <View style={[styles.section, live.section]}>
         <SettingRow
           icon="finger-print-outline"
           label="App lock (Face ID / fingerprint)"
@@ -136,8 +141,8 @@ export default function SettingsPrivacyScreen({ navigation }) {
               value={appLockOn}
               onValueChange={toggleAppLock}
               disabled={checkingLock || (!appLockOn && !biometricAvailable)}
-              trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, alpha.half) }}
-              thumbColor={appLockOn ? colors.primary : colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={appLockOn ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -152,7 +157,7 @@ export default function SettingsPrivacyScreen({ navigation }) {
           true); the underlying withdraw-consent behaviour and its
           existing two-step confirm are unchanged. */}
       <SectionHeader title="Health-data consent" />
-      <View style={styles.section}>
+      <View style={[styles.section, live.section]}>
         <SettingRow
           icon="shield-checkmark-outline"
           label={healthConsent === true ? 'Delete account and withdraw consent' : 'Health-data consent'}

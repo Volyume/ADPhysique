@@ -1,6 +1,6 @@
 import { View, Platform } from 'react-native';
 import { appAlert } from '../components/AppAlert';
-import { SettingsPage, SettingRow, settingsStyles as styles } from '../components/SettingsPrimitives';
+import { SettingsPage, SettingRow, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { isHealthAvailable, getHealthProviderLabel } from '../lib/health';
@@ -19,10 +19,13 @@ export default function SettingsScreen({ navigation }) {
     tier: s.tier,
   })));
   const healthOn = isHealthAvailable();
+  // CP-10 stage 3: live theme override appended after the frozen static
+  // base, so this row-list card follows a theme change (SettingsPrimitives.js).
+  const live = useSettingsStyles();
 
   return (
     <SettingsPage title="Settings">
-      <View style={styles.section}>
+      <View style={[styles.section, live.section]}>
         <SettingRow
           icon="person-circle-outline"
           label="Account"

@@ -81,8 +81,13 @@ export function SectionHeader({ title }) {
 // is left to claim it. Screens not yet converted omit `title` and keep
 // relying on the stack header, so this stays a no-op for them.
 export function SettingsPage({ title, children }) {
+  // CP-10 stage 3: live theme (src/hooks/useTheme.js) for the page
+  // background, so every SettingsPage-hosted sub-screen's backdrop follows a
+  // theme change instead of staying on the frozen boot-time colour while its
+  // own (now-migrated) content flips live.
+  const live = useSettingsStyles();
   return (
-    <SafeAreaView style={styles.safe} edges={title ? ['top', 'bottom'] : ['bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={title ? ['top', 'bottom'] : ['bottom']}>
       {title ? <BackHeader title={title} /> : null}
       {/* L03-C5 (2026-07-09 design audit): SettingsProfileScreen's first-name
           TextField has no keyboard avoidance; standardise on the app's
@@ -97,17 +102,36 @@ export function SettingsPage({ title, children }) {
   );
 }
 
-// CP-10 stage 1 scope note: `settingsStyles` stays on the legacy static
-// `colors`/`fontSize`/`type` imports, UNCHANGED, deliberately. It is
-// exported and consumed directly (bypassing SettingRow) by ~14 Settings
-// sub-screens (SettingsDietaryScreen, SettingsProfileScreen, etc.) that are
-// not migrated in this stage (Stage 3, screens-by-traffic, in the CP-10
-// plan). SettingRow's OWN render above already overrides every colour key
-// it reads from this object with a live value positioned later in its style
-// array, so SettingRow is fully live today; screens reading
-// `settingsStyles.*` directly keep the frozen boot-time behaviour until
-// their own screen migrates, per the plan's "migrated primitive inside an
-// unmigrated screen is safe" coexistence rule.
+// CP-10 stage 3 (docs/ux-world-class-audit-2026-07-09/
+// CP-10-restart-free-theming-plan.md, Settings-family batch): the unfreeze
+// for `settingsStyles`. Stage 1 left this object on the legacy static
+// `colors`/`fontSize`/`type` imports deliberately (see the removed note this
+// replaces) because SettingRow's own render already overrode every colour
+// key it reads with a live value positioned LATER in its style array — the
+// same "frozen base + live override appended after it in the array" shape
+// Card.js/Button.js/Chip.js use. `useSettingsStyles()` below is that same
+// live-override object, generalised so every one of the ~14 Settings
+// sub-screens that reads `settingsStyles.section`/`.settingIcon`/
+// `.settingLabel`/etc. DIRECTLY (bypassing SettingRow) can append it the
+// same way: `style={[settingsStyles.section, live.section]}`. The static
+// `settingsStyles` StyleSheet.create below is intentionally left byte-for-
+// byte unchanged — at rest (no theme change since boot) the live override
+// resolves to the exact same values, so this is a zero-visual-diff addition;
+// only a live theme change now reaches these screens' shared chrome.
+export function useSettingsStyles() {
+  const t = useTheme();
+  return {
+    safe: { backgroundColor: t.colors.background },
+    section: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    settingRow: { borderBottomColor: t.colors.border },
+    settingIcon: { backgroundColor: t.colors.primaryBg },
+    settingLabel: { ...t.type.body, color: t.colors.textPrimary },
+    settingSub: { ...t.type.captionTight, color: t.colors.textMuted },
+    dataPrivacyNote: { ...t.type.captionTight, color: t.colors.textMuted },
+    a11yNote: { ...t.type.captionTight, color: t.colors.textMuted },
+  };
+}
+
 export const settingsStyles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   keyboardAvoid: { flex: 1 },

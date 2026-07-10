@@ -16,8 +16,9 @@ import { exportCoachReportPdf } from '../lib/coachReport';
 import { exportBackup, importBackup } from '../lib/dataBackup';
 import { getStatus as getSyncStatus, syncAll } from '../lib/sync';
 import { formatLastSynced } from '../lib/syncStatusLabel';
-import { colors, withAlpha } from '../styles/theme';
-import { SettingsPage, SettingRow, SectionHeader, settingsStyles as styles } from '../components/SettingsPrimitives';
+import { withAlpha } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
+import { SettingsPage, SettingRow, SectionHeader, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 
 // L05-SL1 (design audit 2026-07-09): the global "skip the name step" flag
 // ScanLabelScreen.js sets when a label scan's "Skip name" is tapped
@@ -33,6 +34,10 @@ const SCAN_SKIP_NAME_KEY = '@volyume_scan_skip_name';
 export default function SettingsDataScreen({ navigation }) {
   const toast = useToast();
   const { user, tier } = useAppStore(useShallow(s => ({ user: s.user, tier: s.tier })));
+  // CP-10 stage 3: live theme (src/hooks/useTheme.js), so the switch track/
+  // thumb colours and the shared chrome follow a theme change.
+  const t = useTheme();
+  const live = useSettingsStyles();
 
   // Cloud sync status line (A2-006). Quiet, read from the runner snapshot;
   // syncingNow tracks the manual "tap to sync" so the row shows progress.
@@ -247,7 +252,7 @@ export default function SettingsDataScreen({ navigation }) {
 
   return (
     <SettingsPage title="Your data">
-      <View style={styles.section}>
+      <View style={[styles.section, live.section]}>
         <SettingRow
           icon="cloud-outline"
           label={syncingNow ? 'Syncing...' : 'Cloud sync'}
@@ -274,8 +279,8 @@ export default function SettingsDataScreen({ navigation }) {
               <Switch
                 value={scanSkipName}
                 onValueChange={toggleScanSkipName}
-                trackColor={{ false: colors.surface3, true: withAlpha(colors.primary, 0.502) }}
-                thumbColor={scanSkipName ? colors.primary : colors.textMuted}
+                trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+                thumbColor={scanSkipName ? t.colors.primary : t.colors.textMuted}
               />
             }
           />
@@ -324,7 +329,7 @@ export default function SettingsDataScreen({ navigation }) {
           access" pattern, so a destructive tap is never next to a routine
           action. */}
       <SectionHeader title="Clear history" />
-      <View style={styles.section}>
+      <View style={[styles.section, live.section]}>
         <SettingRow
           icon="trash-outline"
           label="Clear workout history"
@@ -333,7 +338,7 @@ export default function SettingsDataScreen({ navigation }) {
           onPress={handleClearHistory}
         />
       </View>
-      <Text style={styles.dataPrivacyNote}>
+      <Text style={[styles.dataPrivacyNote, live.dataPrivacyNote]}>
         Your data is always yours. Export workout sets, create a JSON database backup, or restore a safety snapshot any time. Photo image files stay on this device unless you share or export them yourself.
       </Text>
     </SettingsPage>

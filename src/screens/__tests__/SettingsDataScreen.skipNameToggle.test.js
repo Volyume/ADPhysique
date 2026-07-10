@@ -46,6 +46,10 @@ jest.mock('../../components/SettingsPrimitives', () => {
     ),
     SectionHeader: ({ title }) => <Text>{title}</Text>,
     settingsStyles: { section: {}, dataPrivacyNote: {} },
+    // CP-10 stage 3: SettingsDataScreen now calls useSettingsStyles() for its
+    // live theme override; stand in for it the same way the other exports
+    // here stand in for the real primitives.
+    useSettingsStyles: () => ({}),
   };
 });
 jest.mock('@react-native-async-storage/async-storage', () => ({

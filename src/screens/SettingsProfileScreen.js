@@ -4,7 +4,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import { colors, spacing, type } from '../styles/theme';
-import { SettingsPage, settingsStyles } from '../components/SettingsPrimitives';
+import useTheme from '../hooks/useTheme';
+import { SettingsPage, settingsStyles, useSettingsStyles } from '../components/SettingsPrimitives';
 import TextField from '../components/TextField';
 import Chip from '../components/Chip';
 import HeightFeetInchesField from '../components/HeightFeetInchesField';
@@ -50,6 +51,15 @@ export default function SettingsProfileScreen() {
   const [heightFt, setHeightFt] = useState('');
   const [heightIn, setHeightIn] = useState('');
   const [age,      setAge]      = useState('');
+  // CP-10 stage 3: live theme (src/hooks/useTheme.js). `live` is the shared
+  // settingsStyles override (SettingsPrimitives.js); `liveText` covers this
+  // screen's own colour/type-bearing style keys the same way.
+  const t = useTheme();
+  const live = useSettingsStyles();
+  const liveText = {
+    dietBlock: { borderBottomColor: t.colors.border },
+    dietChipText: { ...t.type.label },
+  };
 
   // Prefill from the same source NutritionTargetsScreen prefills from
   // (user_body_profile), using the identical heightCm -> ft/in and
@@ -150,15 +160,15 @@ export default function SettingsProfileScreen() {
 
   return (
     <SettingsPage title="Profile">
-      <View style={settingsStyles.section}>
+      <View style={[settingsStyles.section, live.section]}>
         <View style={styles.nameRow}>
           <TextField
             containerStyle={styles.nameField}
-            leading={<Ionicons name="person-outline" size={18} color={colors.primary} />}
+            leading={<Ionicons name="person-outline" size={18} color={t.colors.primary} />}
             value={editName}
             onChangeText={setEditName}
             placeholder="Your first name"
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={t.colors.textMuted}
             autoCapitalize="words"
             autoCorrect={false}
             returnKeyType="done"
@@ -176,14 +186,14 @@ export default function SettingsProfileScreen() {
             body weight units come from onboarding (the morning-weight
             setup screen). The store still holds these values; they
             just aren't user-editable from Settings any more. */}
-        <View style={styles.dietBlock}>
+        <View style={[styles.dietBlock, liveText.dietBlock]}>
           <View style={styles.dietHeader}>
-            <View style={settingsStyles.settingIcon}>
-              <Ionicons name="male-female-outline" size={18} color={colors.primary} />
+            <View style={[settingsStyles.settingIcon, live.settingIcon]}>
+              <Ionicons name="male-female-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={settingsStyles.settingLabel}>Biological sex</Text>
-              <Text style={settingsStyles.settingSub}>Used for calorie floors and nutrition targets. Changes apply on your next weekly check-in.</Text>
+              <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Biological sex</Text>
+              <Text style={[settingsStyles.settingSub, live.settingSub]}>Used for calorie floors and nutrition targets. Changes apply on your next weekly check-in.</Text>
             </View>
           </View>
           <View style={styles.dietChips}>
@@ -198,20 +208,20 @@ export default function SettingsProfileScreen() {
                   accessibilityRole="radio"
                   accessibilityLabel={`Biological sex ${opt.label}`}
                   style={styles.dietChip}
-                  labelStyle={styles.dietChipText}
+                  labelStyle={[styles.dietChipText, liveText.dietChipText]}
                 />
               );
             })}
           </View>
         </View>
-        <View style={styles.dietBlock}>
+        <View style={[styles.dietBlock, liveText.dietBlock]}>
           <View style={styles.dietHeader}>
-            <View style={settingsStyles.settingIcon}>
-              <Ionicons name="resize-outline" size={18} color={colors.primary} />
+            <View style={[settingsStyles.settingIcon, live.settingIcon]}>
+              <Ionicons name="resize-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={settingsStyles.settingLabel}>Height</Text>
-              <Text style={settingsStyles.settingSub}>Used for calorie floors and nutrition targets.</Text>
+              <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Height</Text>
+              <Text style={[settingsStyles.settingSub, live.settingSub]}>Used for calorie floors and nutrition targets.</Text>
             </View>
           </View>
           <HeightFeetInchesField
@@ -223,26 +233,26 @@ export default function SettingsProfileScreen() {
             onBlurInches={() => saveHeight(heightFt, heightIn)}
           />
         </View>
-        <View style={styles.dietBlock}>
+        <View style={[styles.dietBlock, liveText.dietBlock]}>
           <View style={styles.dietHeader}>
-            <View style={settingsStyles.settingIcon}>
-              <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+            <View style={[settingsStyles.settingIcon, live.settingIcon]}>
+              <Ionicons name="calendar-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={settingsStyles.settingLabel}>Date of birth</Text>
-              <Text style={settingsStyles.settingSub}>Enter your age. Used for calorie floors and nutrition targets.</Text>
+              <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Date of birth</Text>
+              <Text style={[settingsStyles.settingSub, live.settingSub]}>Enter your age. Used for calorie floors and nutrition targets.</Text>
             </View>
           </View>
           <AgeYearsField value={age} onChangeText={setAge} onBlur={() => saveAge(age)} />
         </View>
-        <View style={styles.dietBlock}>
+        <View style={[styles.dietBlock, liveText.dietBlock]}>
           <View style={styles.dietHeader}>
-            <View style={settingsStyles.settingIcon}>
-              <Ionicons name="nutrition-outline" size={18} color={colors.primary} />
+            <View style={[settingsStyles.settingIcon, live.settingIcon]}>
+              <Ionicons name="nutrition-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={settingsStyles.settingLabel}>Diet preference</Text>
-              <Text style={settingsStyles.settingSub}>Filters the meals Volyume suggests.</Text>
+              <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Diet preference</Text>
+              <Text style={[settingsStyles.settingSub, live.settingSub]}>Filters the meals Volyume suggests.</Text>
             </View>
           </View>
           <View style={styles.dietChips}>
@@ -257,7 +267,7 @@ export default function SettingsProfileScreen() {
                   accessibilityRole="radio"
                   accessibilityLabel={`Diet preference ${opt.label}`}
                   style={styles.dietChip}
-                  labelStyle={styles.dietChipText}
+                  labelStyle={[styles.dietChipText, liveText.dietChipText]}
                 />
               );
             })}
