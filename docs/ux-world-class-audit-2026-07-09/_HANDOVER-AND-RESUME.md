@@ -1378,3 +1378,12 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   Full suite green except SettingsFaqScreen.test.js = theming stage 3
   agent's LIVE WIP (Settings family mid-conversion) - must be green at
   its boundary. IN FLIGHT: theming stage 3 batch 1.
+- IN FLIGHT: theming stage 3 batch 1 (Settings family -> Home -> workout
+  family, clean-boundary batching) + FTS5 instant search (Sonnet;
+  availability probe first, food-search fast path with recents re-rank
+  preserved, exercise fuzzy search left alone unless measurement says
+  otherwise, migration v68 if built). Queue after: transitions, dynamic
+  type, keyboard-controller + zeego, gallery + scrub haptics + Android
+  polish, Live Activity wiring, rest-timer notif actions, OFF micros +
+  MLKit, watch memo, smalls (usuals chips, per-meal subtotal, TalkBack
+  isolation, thumbhash proposal).
