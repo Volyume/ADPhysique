@@ -1497,3 +1497,22 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   unknowns. 34 new tests; food+seed suites 61/61. IN FLIGHT: theming
   final batch only (its WIP explains 17 transient failures in workout/
   theme suites - must be green at ITS boundary).
+- PAUSE SNAPSHOT (2026-07-10, ~4% budget): ONE agent in flight - theming
+  stage 3 FINAL batch (ActiveWorkoutScreen + WorkoutSummaryScreen shells;
+  its WIP sits uncommitted incl. mechanical guard updates already
+  verified rule-preserving). ON RESUME: get its report or review the
+  diff against batch 2's pattern (frozen styles byte-identical, live
+  object appended, guards mechanical-only), full suite MUST be green
+  incl. the 17 transient workout/theme failures its WIP caused, then
+  commit + push. THEN fire the queued pair: dietary-needs
+  discoverability (visible diet/allergen chip on the meal builder's
+  primary surface + one-time pointer) + sheet-input verify sweep (any
+  RAW TextInput inside sheet children bypassing TextField still fights
+  the keyboard). Queue after: theming stage 4 (Skia/charts) + stage 5
+  (retire reload prompts), MLKit scanner, keyboard-controller + zeego,
+  gallery + scrub haptics, Android polish, Live Activity wiring,
+  rest-timer notif actions, watch memo, smalls (kala namak call open;
+  usuals chips; per-meal subtotal; TalkBack isolation; thumbhash
+  proposal). Founder running CODEX ADVERSARIAL in parallel (D28) -
+  findings return here as work items. Founder-side: migrations 110-116,
+  refresh-off-snapshot manual run, App Groups + EAS, SHA-1.
