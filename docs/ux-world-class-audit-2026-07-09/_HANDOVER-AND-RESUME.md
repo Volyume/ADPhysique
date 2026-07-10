@@ -1125,3 +1125,14 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   clump a 9pm bulk-confirm into one false 9pm eating event (honesty/ED
   flag, needs founder sign-off). 4 founder questions in section 6 -
   bring TOGETHER with item 16's round when its scoping lands.
+- ITEM 16 SCOPING LANDED (item-16-micronutrients-scoping.md, read-only):
+  schema (v58 + migrate_109), maths module, custom-food entry and sync
+  plumbing all genuinely built; diary display deleted by D12 and nothing
+  replaced it. CRITICAL: measured bundled data coverage = 0% of CoFID
+  (2,852 rows) and 0% of OFF (26,427 rows) carry ANY micronutrient value
+  (seed doesn't write the columns; snapshot builder parses Proximates
+  only; live fetch + OCR never map vitamins/minerals). A display today
+  would show unknown almost everywhere - the exact D12 failure mode.
+  Also: food_library_pull RPC (migrate_028) never re-issued for the 27
+  columns, so even server data can't reach devices. Founder rounds for
+  BOTH 15+16 being asked now (consolidated).
