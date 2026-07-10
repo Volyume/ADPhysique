@@ -1147,3 +1147,7 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   NRV home if it proceeds: per-food detail sheet / Food Insights weekly
   average / decide when data exists. Builds for 15 and 16 DO NOT START
   until these are answered.
+- FOUNDER STANDING ORDER (2026-07-10, binding on all future delegated
+  decisions): product decisions are made ENTIRELY on what produces the
+  better end product - never on build effort. Effort may inform
+  sequencing, never the choice itself.
