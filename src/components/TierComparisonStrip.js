@@ -14,6 +14,7 @@
  */
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { colors, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
 
 // Three-row content for the 2-tier model. Free on the left (the lesser
@@ -36,21 +37,25 @@ export default function TierComparisonStrip({
   // active store responds; the Pro column shows a short placeholder, never a
   // hardcoded price.
   const priceFor = usePlayPrices();
+  // CP-10 theming tail (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
 
   const FreeColumn = (
     <View
       style={[
         styles.col,
-        highlighted === 'free' && styles.colHighlighted,
+        live.col,
+        highlighted === 'free' && [styles.colHighlighted, live.colHighlighted],
       ]}
     >
-      <Text maxFontSizeMultiplier={1.3} style={styles.colHeader}>Free</Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.colPrice}>£0</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.colHeader, live.colHeader]}>Free</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.colPrice, live.colPrice]}>£0</Text>
       {/* COMP-007: empty cadence spacer keeps Free's rows aligned with Pro's
           (only Pro shows a real "per year/month" line). */}
-      <Text maxFontSizeMultiplier={1.3} style={styles.colCadence}> </Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.colCadence, live.colCadence]}> </Text>
       {COMPARISON_ROWS.map((row, i) => (
-        <Text maxFontSizeMultiplier={1.3} key={`free-${i}`} style={styles.rowText} numberOfLines={2}>
+        <Text maxFontSizeMultiplier={1.3} key={`free-${i}`} style={[styles.rowText, live.rowText]} numberOfLines={2}>
           {row.free}
         </Text>
       ))}
@@ -63,16 +68,17 @@ export default function TierComparisonStrip({
       disabled={!onPickPro}
       style={({ pressed }) => [
         styles.col,
-        highlighted === 'pro' && styles.colHighlighted,
+        live.col,
+        highlighted === 'pro' && [styles.colHighlighted, live.colHighlighted],
         pressed && { opacity: 0.7 },
       ]}
     >
-      <Text maxFontSizeMultiplier={1.3} style={styles.colHeader}>Pro</Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.colPrice}>{priceFor('pro', pricingWindow) ?? '…'}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.colHeader, live.colHeader]}>Pro</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.colPrice, live.colPrice]}>{priceFor('pro', pricingWindow) ?? '…'}</Text>
       {/* COMP-007: cadence suffix so the annual price isn't misread as monthly. */}
-      <Text maxFontSizeMultiplier={1.3} style={styles.colCadence}>{pricingWindow === 'annual' ? 'per year' : 'per month'}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.colCadence, live.colCadence]}>{pricingWindow === 'annual' ? 'per year' : 'per month'}</Text>
       {COMPARISON_ROWS.map((row, i) => (
-        <Text maxFontSizeMultiplier={1.3} key={`pro-${i}`} style={styles.rowText} numberOfLines={2}>
+        <Text maxFontSizeMultiplier={1.3} key={`pro-${i}`} style={[styles.rowText, live.rowText]} numberOfLines={2}>
           {row.pro}
         </Text>
       ))}
@@ -127,3 +133,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
 });
+
+// CP-10 theming tail (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. wrap has no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    col: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    colHighlighted: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
+    colHeader: { color: t.colors.textPrimary },
+    colPrice: { color: t.colors.textPrimary },
+    colCadence: { color: t.colors.textMuted },
+    rowText: { color: t.colors.textSecondary },
+  };
+}

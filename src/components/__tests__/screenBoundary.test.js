@@ -8,7 +8,7 @@
  * quiet "Go to Home" escape so the user is never trapped in the
  * unrecoverable retry loop the audit found at the app root.
  */
-import { Text } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
 import { create, act } from 'react-test-renderer';
 
 jest.mock('../../lib/errorLog', () => ({
@@ -37,8 +37,10 @@ import {
   StackRouter,
 } from '@react-navigation/core';
 
-import ScreenBoundary, { withBoundary, withScreenBoundaries } from '../ScreenBoundary';
+import ScreenBoundary, { ScreenBoundaryClass, withBoundary, withScreenBoundaries } from '../ScreenBoundary';
 import { logError } from '../../lib/errorLog';
+import useAppStore from '../../store/useAppStore';
+import * as theme from '../../styles/theme';
 
 // Controlled crasher: throws while `shouldThrow` is true, renders
 // normally once it is flipped off (simulates a transient render fault).
@@ -217,4 +219,69 @@ test('withScreenBoundaries: real navigator registration; a crashing screen degra
   // Recovery: navigating back to the healthy screen still works.
   act(() => { navRef.goBack(); });
   expect(JSON.stringify(tree.toJSON())).toContain('healthy-screen');
+});
+
+// D39 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md:671-683):
+// the class error boundary can't consume useTheme itself, so a functional
+// wrapper reads it and hands the resolved tokens down as a `theme` prop,
+// with the class falling back to the frozen static tokens whenever that
+// prop is missing. These two tests are the proof: the wrapper's fallback UI
+// is genuinely live (flips with no remount), and the class alone -- given
+// no theme prop at all -- renders the exact byte-equivalent fallback the
+// pre-D39 boundary always rendered.
+describe('D39: ScreenBoundary theme wiring', () => {
+  function setTheme(themeName) {
+    act(() => {
+      useAppStore.setState({
+        accessibility: {
+          ...useAppStore.getState().accessibility,
+          theme: themeName,
+          higherContrast: false,
+          colorBlindSafe: false,
+          largerText: false,
+        },
+      });
+    });
+  }
+
+  function flat(node) {
+    return StyleSheet.flatten(node.props.style);
+  }
+
+  test('wrapper: fallback colours flip light<->dark on the same mounted instance, no remount', () => {
+    setTheme('dark');
+    shouldThrow = true;
+    const tree = mountBoundary();
+    const title = tree.root.findAllByType(Text).find((n) => n.props.children === 'This screen hit a problem.');
+    const darkColor = flat(title).color;
+    expect(darkColor).toBe(theme.resolveTheme({ theme: 'dark' }).colors.textPrimary);
+
+    setTheme('light');
+    const lightColor = flat(title).color;
+    expect(lightColor).toBe(theme.resolveTheme({ theme: 'light' }).colors.textPrimary);
+    expect(lightColor).not.toBe(darkColor);
+  });
+
+  test('class alone (no theme prop): fallback renders byte-equivalent to the frozen static tokens', () => {
+    shouldThrow = true;
+    let tree;
+    act(() => {
+      tree = create(
+        <ScreenBoundaryClass screenName="NoThemeProp">
+          <Bomb />
+        </ScreenBoundaryClass>,
+      );
+    });
+    const json = JSON.stringify(tree.toJSON());
+    expect(json).toContain('This screen hit a problem.');
+
+    const title = tree.root.findAllByType(Text).find((n) => n.props.children === 'This screen hit a problem.');
+    const body = tree.root.findAllByType(Text).find((n) => n.props.children === 'Your data is safe. Try again, or come back in a moment.');
+    // Falls back to the module's static `colors`/`fontSize` singleton
+    // exactly as the pre-D39 boundary always did -- no theme prop, no crash.
+    expect(flat(title).color).toBe(theme.colors.textPrimary);
+    expect(flat(title).fontSize).toBe(theme.fontSize.lg);
+    expect(flat(body).color).toBe(theme.colors.textSecondary);
+    expect(flat(body).fontSize).toBe(theme.fontSize.sm);
+  });
 });

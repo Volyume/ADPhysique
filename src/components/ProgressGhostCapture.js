@@ -65,6 +65,7 @@ import {
   withAlpha,
   motion,
 } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 // expo-camera is a native module (config plugin). Lazy-require at module load
 // like the image picker on the gallery screen, so a stale/rebuild-pending
@@ -107,6 +108,9 @@ function clampOpacity(v) {
  * accessibility actions (VoiceOver/TalkBack swipe up/down). Reports 0..1.
  */
 function OpacitySlider({ value, onChange }) {
+  // CP-10 theming tail (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const widthRef = useRef(0);
 
   const setFromX = useCallback((x) => {
@@ -136,7 +140,7 @@ function OpacitySlider({ value, onChange }) {
 
   return (
     <View style={styles.sliderRow}>
-      <Ionicons name="contrast-outline" size={iconSize.sm} color={colors.textSecondary} />
+      <Ionicons name="contrast-outline" size={iconSize.sm} color={t.colors.textSecondary} />
       <View
         style={styles.sliderTrack}
         onLayout={(e) => { widthRef.current = e.nativeEvent.layout.width; }}
@@ -151,10 +155,10 @@ function OpacitySlider({ value, onChange }) {
         }}
         {...responder.panHandlers}
       >
-        <View style={[styles.sliderFill, { width: `${Math.round(fillRatio * 100)}%` }]} />
-        <View style={[styles.sliderThumb, { left: `${Math.round(fillRatio * 100)}%` }]} />
+        <View style={[styles.sliderFill, live.sliderFill, { width: `${Math.round(fillRatio * 100)}%` }]} />
+        <View style={[styles.sliderThumb, live.sliderThumb, { left: `${Math.round(fillRatio * 100)}%` }]} />
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={styles.sliderPct} accessibilityElementsHidden>{pct}%</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.sliderPct, live.sliderPct]} accessibilityElementsHidden>{pct}%</Text>
     </View>
   );
 }
@@ -173,6 +177,9 @@ export default function ProgressGhostCapture({
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const { height: viewportHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  // CP-10 theming tail (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
 
   const cameraRef = useRef(null);
   const [permission, requestPermission] = useCameraPermissions();
@@ -331,24 +338,24 @@ export default function ProgressGhostCapture({
   if (!cameraAvailable || (permission && !permission.granted && !permission.canAskAgain)) {
     const noModule = !cameraAvailable;
     return (
-      <View style={styles.fallback} accessibilityRole="summary">
-        <Ionicons name="camera-outline" size={iconSize.xl} color={colors.textSecondary} />
-        <Text maxFontSizeMultiplier={1.3} style={styles.fallbackTitle}>
+      <View style={[styles.fallback, live.fallback]} accessibilityRole="summary">
+        <Ionicons name="camera-outline" size={iconSize.xl} color={t.colors.textSecondary} />
+        <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackTitle, live.fallbackTitle]}>
           {noModule ? 'Camera not ready on this device' : 'Camera access is off'}
         </Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.fallbackBody}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackBody, live.fallbackBody]}>
           {noModule
             ? 'The camera is not available on this device right now. You can still add a photo from your library.'
             : 'You can turn camera access on in Settings whenever you like, or add a photo from your library instead.'}
         </Text>
         {onFallback ? (
           <Pressable
-            style={styles.fallbackBtn}
+            style={[styles.fallbackBtn, live.fallbackBtn]}
             onPress={() => onFallback()}
             accessibilityRole="button"
             accessibilityLabel="Add a photo from your library"
           >
-            <Text maxFontSizeMultiplier={1.3} style={styles.fallbackBtnLabel}>Use your photo library</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackBtnLabel, live.fallbackBtnLabel]}>Use your photo library</Text>
           </Pressable>
         ) : null}
         <Pressable
@@ -358,7 +365,7 @@ export default function ProgressGhostCapture({
           accessibilityRole="button"
           accessibilityLabel="Close"
         >
-          <Text maxFontSizeMultiplier={1.3} style={styles.fallbackCloseLabel}>Not now</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackCloseLabel, live.fallbackCloseLabel]}>Not now</Text>
         </Pressable>
       </View>
     );
@@ -368,20 +375,20 @@ export default function ProgressGhostCapture({
   // motion needed) rather than a flash of the camera.
   if (!granted) {
     return (
-      <View style={styles.loading} accessibilityRole="summary">
-        <Ionicons name="camera-outline" size={iconSize.xl} color={colors.textSecondary} />
-        <Text maxFontSizeMultiplier={1.3} style={styles.fallbackTitle}>Waiting for camera permission</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.fallbackBody}>
+      <View style={[styles.loading, live.loading]} accessibilityRole="summary">
+        <Ionicons name="camera-outline" size={iconSize.xl} color={t.colors.textSecondary} />
+        <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackTitle, live.fallbackTitle]}>Waiting for camera permission</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackBody, live.fallbackBody]}>
           If the permission prompt does not appear, you can still add a photo from your library.
         </Text>
         {onFallback ? (
           <Pressable
-            style={styles.fallbackBtn}
+            style={[styles.fallbackBtn, live.fallbackBtn]}
             onPress={() => onFallback()}
             accessibilityRole="button"
             accessibilityLabel="Add a photo from your library"
           >
-            <Text maxFontSizeMultiplier={1.3} style={styles.fallbackBtnLabel}>Use your photo library</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackBtnLabel, live.fallbackBtnLabel]}>Use your photo library</Text>
           </Pressable>
         ) : null}
         <Pressable
@@ -391,7 +398,7 @@ export default function ProgressGhostCapture({
           accessibilityRole="button"
           accessibilityLabel="Close"
         >
-          <Text maxFontSizeMultiplier={1.3} style={styles.fallbackCloseLabel}>Not now</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackCloseLabel, live.fallbackCloseLabel]}>Not now</Text>
         </Pressable>
       </View>
     );
@@ -433,35 +440,35 @@ export default function ProgressGhostCapture({
           accessibilityIgnoresInvertColors
           accessibilityLabel="Photo preview"
         />
-        <View style={[styles.previewTopBar, { paddingTop: Math.max(spacing.lg, (Number(insets?.top) || 0) + spacing.sm) }]}>
-          <View style={styles.previewCopy}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.modeChip}>Photo preview</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.title}>Check this photo</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>
+        <View style={[styles.previewTopBar, live.previewTopBar, { paddingTop: Math.max(spacing.lg, (Number(insets?.top) || 0) + spacing.sm) }]}>
+          <View style={[styles.previewCopy, live.previewCopy]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.modeChip, live.modeChip]}>Photo preview</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Check this photo</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>
               Use it if your whole body is visible, the photo is sharp, and the camera looks upright.
             </Text>
           </View>
         </View>
-        <View style={[styles.previewActions, { paddingBottom: Math.max(spacing.xl, safeBottomInset + spacing.md) }]}>
+        <View style={[styles.previewActions, live.previewActions, { paddingBottom: Math.max(spacing.xl, safeBottomInset + spacing.md) }]}>
           <Pressable
-            style={[styles.previewButton, styles.previewSecondary]}
+            style={[styles.previewButton, styles.previewSecondary, live.previewSecondary]}
             onPress={retakeCapturedPhoto}
             disabled={savingCapture}
             accessibilityRole="button"
             accessibilityLabel="Retake photo"
             accessibilityState={{ disabled: savingCapture }}
           >
-            <Text maxFontSizeMultiplier={1.3} style={styles.previewSecondaryText}>Retake</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.previewSecondaryText, live.previewSecondaryText]}>Retake</Text>
           </Pressable>
           <Pressable
-            style={[styles.previewButton, styles.previewPrimary]}
+            style={[styles.previewButton, styles.previewPrimary, live.previewPrimary]}
             onPress={confirmCapturedPhoto}
             disabled={savingCapture}
             accessibilityRole="button"
             accessibilityLabel="Use photo"
             accessibilityState={{ disabled: savingCapture }}
           >
-            <Text maxFontSizeMultiplier={1.3} style={styles.previewPrimaryText}>{savingCapture ? 'Saving' : 'Use photo'}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.previewPrimaryText, live.previewPrimaryText]}>{savingCapture ? 'Saving' : 'Use photo'}</Text>
           </Pressable>
         </View>
       </View>
@@ -469,7 +476,7 @@ export default function ProgressGhostCapture({
   }
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, live.root]}>
       <CameraView
         ref={cameraRef}
         style={StyleSheet.absoluteFill}
@@ -493,10 +500,10 @@ export default function ProgressGhostCapture({
         {/* Rule-of-thirds framing grid. */}
         {showGrid ? (
           <View style={StyleSheet.absoluteFill} pointerEvents="none" accessible={false}>
-            <View style={[styles.gridV, { left: '33.33%' }]} />
-            <View style={[styles.gridV, { left: '66.66%' }]} />
-            <View style={[styles.gridH, { top: '33.33%' }]} />
-            <View style={[styles.gridH, { top: '66.66%' }]} />
+            <View style={[styles.gridV, live.gridV, { left: '33.33%' }]} />
+            <View style={[styles.gridV, live.gridV, { left: '66.66%' }]} />
+            <View style={[styles.gridH, live.gridH, { top: '33.33%' }]} />
+            <View style={[styles.gridH, live.gridH, { top: '66.66%' }]} />
           </View>
         ) : null}
 
@@ -506,7 +513,7 @@ export default function ProgressGhostCapture({
             <View
               style={[
                 styles.levelLine,
-                { transform: levelTransform, backgroundColor: level ? colors.success : withAlpha(colors.textPrimary, 0.7) },
+                { transform: levelTransform, backgroundColor: level ? t.colors.success : withAlpha(t.colors.textPrimary, 0.7) },
               ]}
             />
           </View>
@@ -514,31 +521,31 @@ export default function ProgressGhostCapture({
 
         {countdown != null ? (
           <View style={[styles.countdownWrap, compactOverlay && styles.countdownWrapCompact]} pointerEvents="none" accessible={false}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.countdownText}>{countdown}</Text>
-            {!compactOverlay ? <Text maxFontSizeMultiplier={1.3} style={styles.countdownHint}>Step into the frame</Text> : null}
+            <Text maxFontSizeMultiplier={1.3} style={[styles.countdownText, live.countdownText]}>{countdown}</Text>
+            {!compactOverlay ? <Text maxFontSizeMultiplier={1.3} style={[styles.countdownHint, live.countdownHint]}>Step into the frame</Text> : null}
           </View>
         ) : null}
       </CameraView>
 
       {/* Top bar: framing copy + close. */}
       <View style={[styles.topBar, compactOverlay && styles.topBarCompact, topInsetStyle]} pointerEvents="box-none">
-        <View style={[styles.topCopy, compactOverlay && styles.topCopyCompact]} pointerEvents="none">
-          <Text maxFontSizeMultiplier={1.3} style={styles.modeChip}>{modeLabel}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.title} numberOfLines={1}>
+        <View style={[styles.topCopy, live.topCopy, compactOverlay && styles.topCopyCompact]} pointerEvents="none">
+          <Text maxFontSizeMultiplier={1.3} style={[styles.modeChip, live.modeChip]}>{modeLabel}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]} numberOfLines={1}>
             {title || guidance.title}
           </Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, compactOverlay && styles.subtitleCompact]} numberOfLines={compactOverlay ? 1 : 2}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle, compactOverlay && styles.subtitleCompact]} numberOfLines={compactOverlay ? 1 : 2}>
             {captureInstruction}
           </Text>
         </View>
         <Pressable
-          style={styles.iconBtn}
+          style={[styles.iconBtn, live.iconBtn]}
           onPress={() => onClose?.()}
           hitSlop={hitSlop}
           accessibilityRole="button"
           accessibilityLabel="Close camera"
         >
-          <Ionicons name="close" size={iconSize.lg} color={colors.textPrimary} />
+          <Ionicons name="close" size={iconSize.lg} color={t.colors.textPrimary} />
         </Pressable>
       </View>
 
@@ -554,7 +561,7 @@ export default function ProgressGhostCapture({
                 return (
                   <Pressable
                     key={preset.key}
-                    style={[styles.opacityPreset, active && styles.opacityPresetActive]}
+                    style={[styles.opacityPreset, live.opacityPreset, active && [styles.opacityPresetActive, live.opacityPresetActive]]}
                     onPress={() => setOpacity(preset.value)}
                     hitSlop={hitSlop}
                     accessibilityRole="button"
@@ -562,7 +569,7 @@ export default function ProgressGhostCapture({
                     accessibilityLabel={`${preset.label} overlay strength`}
                     accessibilityHint="Changes how strongly the previous photo appears over the camera preview"
                   >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.opacityPresetText, active && styles.opacityPresetTextActive]}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.opacityPresetText, live.opacityPresetText, active && [styles.opacityPresetTextActive, live.opacityPresetTextActive]]}>
                       {preset.label}
                     </Text>
                   </Pressable>
@@ -573,11 +580,11 @@ export default function ProgressGhostCapture({
           </View>
         ) : null}
 
-        <View style={styles.timerRow}>
+        <View style={[styles.timerRow, live.timerRow]}>
           {[0, 5, 10].map((seconds) => (
             <Pressable
               key={seconds}
-              style={[styles.timerChip, timerSeconds === seconds && styles.timerChipActive]}
+              style={[styles.timerChip, timerSeconds === seconds && [styles.timerChipActive, live.timerChipActive]]}
               onPress={() => chooseTimer(seconds)}
               hitSlop={hitSlop}
               accessibilityRole="button"
@@ -585,7 +592,7 @@ export default function ProgressGhostCapture({
               accessibilityLabel={seconds === 0 ? 'Timer off' : `${seconds} second timer`}
               accessibilityHint="Sets a delay before the photo is taken"
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.timerChipText, timerSeconds === seconds && styles.timerChipTextActive]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.timerChipText, live.timerChipText, timerSeconds === seconds && [styles.timerChipTextActive, live.timerChipTextActive]]}>
                 {seconds === 0 ? 'Off' : `${seconds}s`}
               </Text>
             </Pressable>
@@ -594,7 +601,7 @@ export default function ProgressGhostCapture({
 
         <View style={styles.controlRow} pointerEvents="box-none">
           <Pressable
-            style={styles.pillBtn}
+            style={[styles.pillBtn, live.pillBtn]}
             onPress={() => setShowGrid((g) => !g)}
             hitSlop={hitSlop}
             accessibilityRole="button"
@@ -602,11 +609,11 @@ export default function ProgressGhostCapture({
             accessibilityLabel={showGrid ? 'Hide framing grid' : 'Show framing grid'}
             accessibilityHint="Turns the camera framing grid on or off"
           >
-            <Ionicons name="grid-outline" size={iconSize.md} color={showGrid ? colors.primary : colors.textSecondary} />
+            <Ionicons name="grid-outline" size={iconSize.md} color={showGrid ? t.colors.primary : t.colors.textSecondary} />
           </Pressable>
 
           <Pressable
-            style={styles.captureBtn}
+            style={[styles.captureBtn, live.captureBtn]}
             onPress={startCapture}
             disabled={capturing || countdown != null}
             accessibilityRole="button"
@@ -614,18 +621,18 @@ export default function ProgressGhostCapture({
             accessibilityHint="Saves a private progress photo on this device"
             accessibilityState={{ disabled: capturing || countdown != null }}
           >
-            <View style={styles.captureInner} />
+            <View style={[styles.captureInner, live.captureInner]} />
           </Pressable>
 
           <Pressable
-            style={styles.pillBtn}
+            style={[styles.pillBtn, live.pillBtn]}
             onPress={flipCamera}
             hitSlop={hitSlop}
             accessibilityRole="button"
             accessibilityLabel="Flip camera"
             accessibilityHint="Switches between the front and rear camera"
           >
-            <Ionicons name="camera-reverse-outline" size={iconSize.md} color={colors.textSecondary} />
+            <Ionicons name="camera-reverse-outline" size={iconSize.md} color={t.colors.textSecondary} />
           </Pressable>
         </View>
       </View>
@@ -993,3 +1000,53 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
 });
+
+// CP-10 theming tail (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. controls/controlsCompact/
+// overlayControls/overlayControlsCompact/sliderRow/sliderTrack/topBar/
+// topBarCompact/topCopyCompact/subtitleCompact/countdownWrap/
+// countdownWrapCompact/opacityPresetRow/controlRow/timerChip/fallbackClose
+// have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    root: { backgroundColor: t.colors.camera },
+    gridV: { backgroundColor: withAlpha(t.colors.textPrimary, 0.35) },
+    gridH: { backgroundColor: withAlpha(t.colors.textPrimary, 0.35) },
+    countdownText: { color: t.colors.textPrimary },
+    countdownHint: { color: withAlpha(t.colors.textPrimary, 0.9), backgroundColor: withAlpha(t.colors.background, 0.5) },
+    topCopy: { backgroundColor: withAlpha(t.colors.background, 0.62), borderColor: withAlpha(t.colors.textPrimary, 0.16) },
+    title: { color: t.colors.textPrimary },
+    modeChip: { color: withAlpha(t.colors.textPrimary, 0.82) },
+    subtitle: { color: withAlpha(t.colors.textPrimary, 0.85) },
+    iconBtn: { backgroundColor: withAlpha(t.colors.background, 0.5) },
+    sliderFill: { backgroundColor: withAlpha(t.colors.primary, 0.9) },
+    sliderThumb: { backgroundColor: t.colors.textPrimary },
+    sliderPct: { color: withAlpha(t.colors.textPrimary, 0.85) },
+    opacityPreset: { backgroundColor: withAlpha(t.colors.background, 0.46), borderColor: withAlpha(t.colors.textPrimary, 0.16) },
+    opacityPresetActive: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.primary },
+    opacityPresetText: { color: withAlpha(t.colors.textPrimary, 0.86) },
+    opacityPresetTextActive: { color: t.colors.onPrimary },
+    timerRow: { backgroundColor: withAlpha(t.colors.background, 0.5) },
+    timerChipActive: { backgroundColor: t.colors.primaryFill },
+    timerChipText: { color: t.colors.textSecondary },
+    timerChipTextActive: { color: t.colors.onPrimary },
+    pillBtn: { backgroundColor: withAlpha(t.colors.background, 0.5) },
+    captureBtn: { borderColor: t.colors.textPrimary, backgroundColor: withAlpha(t.colors.textPrimary, 0.15) },
+    captureInner: { backgroundColor: t.colors.textPrimary },
+    previewTopBar: { backgroundColor: withAlpha(t.colors.camera, 0.36) },
+    previewCopy: { backgroundColor: withAlpha(t.colors.background, 0.72), borderColor: withAlpha(t.colors.textPrimary, 0.16) },
+    previewActions: { backgroundColor: withAlpha(t.colors.camera, 0.48) },
+    previewPrimary: { backgroundColor: t.colors.primaryFill },
+    previewSecondary: { backgroundColor: withAlpha(t.colors.background, 0.72), borderColor: withAlpha(t.colors.textPrimary, 0.16) },
+    previewPrimaryText: { color: t.colors.onPrimary },
+    previewSecondaryText: { color: t.colors.textPrimary },
+    fallback: { backgroundColor: t.colors.background },
+    fallbackTitle: { color: t.colors.textPrimary },
+    fallbackBody: { color: t.colors.textSecondary },
+    fallbackBtn: { backgroundColor: t.colors.primaryFill },
+    fallbackBtnLabel: { color: t.colors.onPrimary },
+    fallbackCloseLabel: { color: t.colors.textSecondary },
+    loading: { backgroundColor: t.colors.background },
+  };
+}

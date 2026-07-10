@@ -1,5 +1,5 @@
 /**
- * ScreenBoundary (F8 / audit PR-7)
+ * ScreenBoundary (F8 / audit PR-7; theme wiring D39, 2026-07-10)
  *
  * Per-screen error boundary. Before this, the only boundary was the
  * app-root ErrorBoundary in App.js: a deterministic render throw in any
@@ -9,9 +9,20 @@
  * fallback while the tab bar, navigation state and every other screen
  * keep working.
  *
- * This is a CLASS component: React only exposes componentDidCatch /
- * getDerivedStateFromError on classes, so this is the one sanctioned
- * exception to the function-components-only convention (CLAUDE.md § 3).
+ * ARCHITECTURE (D39, docs/ux-world-class-audit-2026-07-09/
+ * DECISIONS-2026-07-09.md:671-683): React only exposes componentDidCatch /
+ * getDerivedStateFromError on classes, and hooks (useTheme) are
+ * function-component only, so the two can't live in one component. The
+ * ruling: keep `ScreenBoundaryClass` below as the actual boundary (the one
+ * sanctioned exception to the function-components-only convention,
+ * CLAUDE.md § 3), and wrap it in a small function component -- the default
+ * export `ScreenBoundary` further down -- that reads useTheme() and passes
+ * the resolved tokens down as a `theme` prop. The class renders its
+ * fallback UI from `this.props.theme`, falling back to the frozen static
+ * `colors`/`fontSize` imports whenever that prop is missing, so a theme
+ * read failure (or the class ever being mounted without the wrapper) can
+ * never break the fallback UI itself -- this boundary must be the most
+ * robust component in the tree.
  *
  * Behaviour:
  * - Healthy children render untouched.
@@ -31,13 +42,20 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import Button from './Button';
 import { logError } from '../lib/errorLog';
 
 // After this many failed "Try again" presses the Home escape appears.
 const MAX_QUIET_RETRIES = 2;
 
-export default class ScreenBoundary extends React.Component {
+// D39: the actual error boundary. Not exported by default -- the
+// `ScreenBoundary` function wrapper below is the module's public surface
+// (every existing call site, `withBoundary` and `withScreenBoundaries`
+// included, keeps using the name `ScreenBoundary` unchanged). Exported by
+// name only so a test can mount it directly to prove the no-theme fallback
+// path (see screenBoundary.test.js).
+export class ScreenBoundaryClass extends React.Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false, retryCount: 0 };
@@ -80,12 +98,20 @@ export default class ScreenBoundary extends React.Component {
   render() {
     if (!this.state.hasError) return this.props.children;
 
+    // D39: prefer the live theme the wrapper resolved; fall back to the
+    // frozen static exports whenever it is missing (undefined theme prop,
+    // or this class mounted directly without the wrapper, as the guard
+    // test below does) so this fallback UI is never at the mercy of a
+    // theme read. fontWeight is theme-invariant (not part of useTheme()'s
+    // returned object, same treatment as BeforeAfterShareSheet.js) so it
+    // always reads the static import.
+    const live = buildLiveStyles(this.props.theme);
     const showHomeEscape = this.state.retryCount >= MAX_QUIET_RETRIES;
     return (
-      <View style={styles.container}>
-        <Ionicons name="alert-circle-outline" size={40} color={colors.textMuted} />
-        <Text maxFontSizeMultiplier={1.3} style={styles.title}>This screen hit a problem.</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.body}>Your data is safe. Try again, or come back in a moment.</Text>
+      <View style={[styles.container, live.container]}>
+        <Ionicons name="alert-circle-outline" size={40} color={live.iconColor} />
+        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>This screen hit a problem.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>Your data is safe. Try again, or come back in a moment.</Text>
         <Button
           title="Try again"
           onPress={this.handleRetry}
@@ -103,6 +129,21 @@ export default class ScreenBoundary extends React.Component {
       </View>
     );
   }
+}
+
+/**
+ * ScreenBoundary — D39 functional wrapper. Deliberately the thinnest
+ * possible layer above ScreenBoundaryClass: it makes no rendering
+ * decisions of its own (healthy children still pass straight through the
+ * class untouched), it only resolves the live theme and hands it down.
+ */
+export default function ScreenBoundary({ screenName, children }) {
+  const t = useTheme();
+  return (
+    <ScreenBoundaryClass screenName={screenName} theme={t}>
+      {children}
+    </ScreenBoundaryClass>
+  );
 }
 
 /**
@@ -201,3 +242,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
 });
+
+// CP-10 theming tail / D39 (2026-07-10): live override for the frozen
+// `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles -- except `t` here is
+// deliberately treated as OPTIONAL: this fallback UI must render correctly
+// even if the theme wrapper failed to resolve a value, so every read below
+// falls back to the frozen static `colors`/`fontSize` imports. `retry` has
+// no colour/fontSize tokens of its own.
+function buildLiveStyles(t) {
+  const c = t?.colors ?? colors;
+  const fsz = t?.fontSize ?? fontSize;
+  return {
+    container: { backgroundColor: c.background },
+    iconColor: c.textMuted,
+    title: { color: c.textPrimary, fontSize: fsz.lg },
+    body: { color: c.textSecondary, fontSize: fsz.sm },
+  };
+}

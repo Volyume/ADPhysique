@@ -128,7 +128,11 @@ test('camera overlay has a compact short-screen layout path', () => {
   expect(SOURCE).toMatch(/styles\.topBarCompact/);
   expect(SOURCE).toMatch(/styles\.controlsCompact/);
   expect(SOURCE).toMatch(/!\s*compactOverlay \? \(/);
-  expect(SOURCE).toMatch(/!\s*compactOverlay \? <Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.countdownHint\}>Step into the frame<\/Text> : null/);
+  // 2026-07-10 (CP-10 theming tail): ProgressGhostCapture now reads a live
+  // theme (src/hooks/useTheme.js), so this Text's style prop moved from the
+  // frozen `styles.countdownHint` alone to `[styles.countdownHint,
+  // live.countdownHint]` -- the pinned layout/copy is unchanged.
+  expect(SOURCE).toMatch(/!\s*compactOverlay \? <Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.countdownHint, live\.countdownHint\]\}>Step into the frame<\/Text> : null/);
   expect(SOURCE).toMatch(/key: 'strong'/);
   expect(SOURCE).toMatch(/\$\{preset\.label\} overlay strength/);
   expect(SOURCE).toMatch(/useSafeAreaInsets/);
