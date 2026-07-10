@@ -509,14 +509,11 @@ export default function ManualBuilderScreen({ navigation, route }) {
   const [supersetSelection, setSupersetSelection] = useState({});
 
   function toggleSupersetSelect(dayIndex, exLocalId) {
-    const cur = supersetSelection[dayIndex] || new Set();
-    // Cap supersets at a pair: the live session alternates exactly two
-    // exercises that share a supersetGroupId, so authoring a giant set of 3+
-    // would silently break mid-session. Extend when the session supports it.
-    if (!cur.has(exLocalId) && cur.size >= 2) {
-      toast.show('Supersets pair two exercises for now.', { variant: 'warning' });
-      return;
-    }
+    // Giant sets (campaign item 21): a group may hold three or more exercises.
+    // The live session cycles every member of a shared supersetGroupId in order
+    // (A -> B -> C -> back to A), so there is no longer a pair cap here.
+    // Auto-generated pairings stay pairs-only in the engine (assignSupersets);
+    // this is the user-built giant-set path.
     haptics.selection();
     setSupersetSelection(prev => {
       const next = new Set(prev[dayIndex] || []);
@@ -536,29 +533,30 @@ export default function ManualBuilderScreen({ navigation, route }) {
       toast.show('Select at least two exercises to superset', { variant: 'warning' });
       return;
     }
-    // Belt and braces on the pair cap enforced in toggleSupersetSelect: never
-    // author a 3+ giant set the live session would silently break on.
-    if (selected.size > 2) {
-      toast.show('Supersets pair two exercises for now.', { variant: 'warning' });
-      return;
-    }
     haptics.selection();
 
     // Plan-D Option B/C calm nudge (docs/exercise-planning-2026-07-09/
-    // plan-D-intelligent-supersets.md): reuse the auto-gen engine's own
-    // relationship + equipment-zone classifier so the builder shares the same
-    // "coach-logical" bar the engine already enforces, without enforcing it
-    // here. Never blocks; fires once, and only when both exercises resolve a
-    // muscle (an unclassifiable custom exercise never gets a false nudge).
-    const pair = (days[dayIndex]?.exercises || []).filter(ex => selected.has(ex.localId));
-    if (pair.length === 2 && pair[0].primaryMuscle && pair[1].primaryMuscle) {
-      const classification = classifySupersetPair(pair[0], pair[1]);
-      if (!classification.practical) {
-        toast.show(
-          'Supersets work best when both exercises share a station or target opposing muscles.',
-          { variant: 'info' },
-        );
-      }
+    // plan-D-intelligent-supersets.md), extended to giant sets (campaign
+    // item 21): reuse the auto-gen engine's own relationship + equipment-zone
+    // classifier so the builder shares the same "coach-logical" bar the engine
+    // already enforces, without enforcing it here. For a giant set of 3+ we
+    // classify each consecutive link in day order; if any link clears neither
+    // bar we nudge once. Never blocks; a link is only judged when both members
+    // resolve a muscle (an unclassifiable custom exercise never gets a false
+    // nudge).
+    const members = (days[dayIndex]?.exercises || []).filter(ex => selected.has(ex.localId));
+    let anyImpractical = false;
+    for (let k = 0; k < members.length - 1; k++) {
+      const a = members[k];
+      const b = members[k + 1];
+      if (!a.primaryMuscle || !b.primaryMuscle) continue;
+      if (!classifySupersetPair(a, b).practical) { anyImpractical = true; break; }
+    }
+    if (anyImpractical) {
+      toast.show(
+        'Supersets work best when the exercises share a station or target opposing muscles.',
+        { variant: 'info' },
+      );
     }
 
     const groupId = `ss-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

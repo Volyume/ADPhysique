@@ -205,6 +205,70 @@ describe('ManualBuilderScreen — manual superset persistence', () => {
   });
 });
 
+describe('ManualBuilderScreen — giant sets (3+ exercises, campaign item 21)', () => {
+  test('grouping three exercises writes ONE shared supersetGroupId across all three', async () => {
+    let tree;
+    act(() => { tree = create(<ManualBuilderScreen navigation={nav} />); });
+    setPlanName(tree, 'Giant Plan');
+    press(tree, '2 training days per week');
+    await act(async () => { press(tree, 'Create plan and add workouts'); });
+
+    const picker = tree.root.findAll(n => n.props && typeof n.props.onSelect === 'function')[0];
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-a', name: 'Bench Press', primaryMuscle: 'chest' }); });
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-b', name: 'Row', primaryMuscle: 'back' }); });
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-c', name: 'Curl', primaryMuscle: 'biceps' }); });
+
+    // Select all three (no pair cap), then group. The button label reflects
+    // the live selection size, proving 3+ can be grouped in one action.
+    press(tree, 'Bench Press, 3 sets');
+    press(tree, 'Row, 3 sets');
+    press(tree, 'Curl, 3 sets');
+    press(tree, 'Group 3 exercises into a superset');
+
+    press(tree, 'Remove Day 2');
+    await act(async () => { press(tree, 'Save and activate'); });
+
+    const calls = addExerciseToRoutine.mock.calls;
+    expect(calls).toHaveLength(3);
+    const groupIds = calls.map(c => c[9]); // 10th arg = supersetGroupId
+    expect(groupIds[0]).toBeTruthy();
+    expect(new Set(groupIds).size).toBe(1); // all three share exactly ONE id
+  });
+
+  test('ungrouping a giant set clears the group id from every member', async () => {
+    let tree;
+    act(() => { tree = create(<ManualBuilderScreen navigation={nav} />); });
+    setPlanName(tree, 'Ungroup Plan');
+    press(tree, '2 training days per week');
+    await act(async () => { press(tree, 'Create plan and add workouts'); });
+
+    const picker = tree.root.findAll(n => n.props && typeof n.props.onSelect === 'function')[0];
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-a', name: 'Bench Press', primaryMuscle: 'chest' }); });
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-b', name: 'Row', primaryMuscle: 'back' }); });
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-c', name: 'Curl', primaryMuscle: 'biceps' }); });
+
+    press(tree, 'Bench Press, 3 sets');
+    press(tree, 'Row, 3 sets');
+    press(tree, 'Curl, 3 sets');
+    press(tree, 'Group 3 exercises into a superset');
+    // Ungroup via the first member's control (group A) - must clear ALL three.
+    press(tree, 'Ungroup superset A');
+
+    press(tree, 'Remove Day 2');
+    await act(async () => { press(tree, 'Save and activate'); });
+
+    const calls = addExerciseToRoutine.mock.calls;
+    expect(calls).toHaveLength(3);
+    expect(calls.every(c => c[9] == null)).toBe(true); // no group id anywhere
+  });
+});
+
 describe('ManualBuilderScreen — target steppers (S5)', () => {
   test('sets, reps and rest are editable via +/- steppers, not read-only text', async () => {
     let tree;

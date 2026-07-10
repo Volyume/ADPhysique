@@ -342,7 +342,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // starting. Set, not array, for O(1) membership checks.
   const acknowledgedSupersetsRef = useRef(new Set());
   const [supersetHeadsUp, setSupersetHeadsUp] = useState(null);
-  // shape: { groupId, exerciseAName, exerciseBName } | null
+  // shape: { groupId, memberNames: string[] } | null (2+ members: pair or giant set)
   const [saving, setSaving] = useState(false);
   // Myo-rep / rest-pause cluster in progress. null when not clustering.
   // shape: { setType, weight, reps: [activation, mini1, ...] }
@@ -564,13 +564,28 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionAdjustment?.show, exercise?.id]);
 
-  // Superset pairing: two adjacent entries sharing a supersetGroupId are paired.
+  // Superset / giant-set grouping: entries sharing a supersetGroupId are one
+  // unit. A pair is the two-member case; a giant set (campaign item 21) has 3+.
   const currentSGI = workoutExercises[currentExerciseIndex]?.supersetGroupId ?? null;
   const nextSGI = workoutExercises[currentExerciseIndex + 1]?.supersetGroupId ?? null;
   const isPairedWithNext = currentSGI != null && currentSGI === nextSGI;
-  const pairedExerciseName = currentSGI != null
-    ? (workoutExercises.find((e, i) => i !== currentExerciseIndex && e.supersetGroupId === currentSGI)?.exercise?.name ?? '')
-    : '';
+  // Every member of the current group, in session order (for the heads-up).
+  const groupMemberNames = currentSGI != null
+    ? workoutExercises.filter(e => e.supersetGroupId === currentSGI).map(e => e.exercise?.name ?? '')
+    : [];
+  // The OTHER members (all of them, for a giant set), in session order.
+  const partnerNames = currentSGI != null
+    ? workoutExercises
+        .filter((e, i) => i !== currentExerciseIndex && e.supersetGroupId === currentSGI)
+        .map(e => e.exercise?.name ?? '')
+        .filter(Boolean)
+    : [];
+  // First partner: kept for the truthiness gates that guard the chip/modal.
+  const pairedExerciseName = partnerNames[0] ?? '';
+  // British-English list join ("A", "A and B", "A, B and C"), no Oxford comma.
+  const partnerNamesText = partnerNames.length <= 1
+    ? (partnerNames[0] ?? '')
+    : `${partnerNames.slice(0, -1).join(', ')} and ${partnerNames[partnerNames.length - 1]}`;
 
   // L07-F9 (design-usability-audit-2026-07-09): in-session drag-reorder was
   // missing, only the nav-strip's tap-to-jump existed. Reusing the existing
@@ -614,15 +629,26 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function handleTogglePair() {
     const updated = [...workoutExercises];
     if (isPairedWithNext) {
-      // Unpair: clear group ID from both
-      updated[currentExerciseIndex] = { ...updated[currentExerciseIndex], supersetGroupId: null };
-      updated[currentExerciseIndex + 1] = { ...updated[currentExerciseIndex + 1], supersetGroupId: null };
+      // Unlink the whole group: clear the group id from EVERY member (a pair is
+      // just the two-member case). Coherent for a giant set of 3+ - it never
+      // leaves an orphaned lone member still carrying the group id.
+      const gid = currentSGI;
+      for (let i = 0; i < updated.length; i++) {
+        if (updated[i].supersetGroupId === gid) {
+          updated[i] = { ...updated[i], supersetGroupId: null };
+        }
+      }
     } else {
-      // Pair: assign a fresh group ID to both
-      const existingIds = updated.map(e => e.supersetGroupId).filter(Boolean);
-      const newId = (Math.max(0, ...existingIds) + 1);
-      updated[currentExerciseIndex] = { ...updated[currentExerciseIndex], supersetGroupId: newId };
-      updated[currentExerciseIndex + 1] = { ...updated[currentExerciseIndex + 1], supersetGroupId: newId };
+      // Link the current exercise with the next. If either is already in a
+      // group, the other JOINS that group (growing a pair into a giant set);
+      // otherwise a fresh group id links the two. A string id matches the
+      // builder/engine scheme, so a mixed session never produces a NaN id.
+      const nextIdx = currentExerciseIndex + 1;
+      const curGid = updated[currentExerciseIndex].supersetGroupId;
+      const nextGid = updated[nextIdx]?.supersetGroupId;
+      const gid = curGid || nextGid || `ss-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      updated[currentExerciseIndex] = { ...updated[currentExerciseIndex], supersetGroupId: gid };
+      updated[nextIdx] = { ...updated[nextIdx], supersetGroupId: gid };
     }
     useAppStore.getState().setWorkoutExercises(updated);
     hapticsVocab.selection();
@@ -852,10 +878,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   }, [activeWorkout?.id]);
 
   // Superset heads-up: when the user lands on an exercise that's part of a
-  // pair we haven't already shown the modal for in this workout, surface a
+  // group we haven't already shown the modal for in this workout, surface a
   // clear instructional sheet so a first-timer isn't lost. Shown once per
   // group id per workout, dismissing acknowledges; unlinking removes the
-  // pair entirely; swap opens the swap UI for either exercise.
+  // whole group; swap opens the swap UI for the current exercise. Works for a
+  // pair (two members) or a giant set (3+).
   useEffect(() => {
     if (currentSGI == null) return;
     if (acknowledgedSupersetsRef.current.has(currentSGI)) return;
@@ -865,10 +892,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     acknowledgedSupersetsRef.current.add(currentSGI);
     setSupersetHeadsUp({
       groupId: currentSGI,
-      exerciseAName: exercise?.name ?? 'this exercise',
-      exerciseBName: pairedExerciseName,
+      // Every member in session order (a pair is just two; a giant set 3+).
+      memberNames: groupMemberNames.length ? groupMemberNames : [exercise?.name ?? 'this exercise'],
     });
     hapticsVocab.selection();
+    // groupMemberNames is derived from currentSGI + workoutExercises and only
+    // read once, behind the acknowledged-ref gate, so it needn't re-trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSGI, pairedExerciseName, exercise?.name]);
 
   // D9: metadata-flagged unilateral exercises (exercise.laterality, finally
@@ -2478,7 +2508,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <View key="superset" style={[styles.supersetChip, live.supersetChip]}>
                   <Ionicons name="link" size={11} color={t.colors.primary} />
                   <Text maxFontSizeMultiplier={1.3} style={[styles.supersetChipText, live.supersetChipText]}>
-                    Superset {currentSGI} - alternates with {pairedExerciseName}
+                    Superset - alternates with {partnerNamesText}
                   </Text>
                 </View>
               );
@@ -3028,10 +3058,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           actionLabel={pickerMode === 'swap' ? 'Swap in' : 'Add to workout'}
         />
 
-        {/* Superset heads-up modal, appears once per pair when the user
-            lands on a paired exercise. Educational for first-timers,
+        {/* Superset / giant-set heads-up modal, appears once per group when the
+            user lands on a grouped exercise. Educational for first-timers,
             and gives a clear out (unlink or swap) if they're not set up
-            for it today. */}
+            for it today. Renders one numbered row per member, so a pair shows
+            two and a giant set 3+. */}
         <Modal
           visible={!!supersetHeadsUp}
           transparent
@@ -3049,32 +3080,34 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               >
                 <View style={styles.supIconRow}>
                   <Ionicons name="link" size={24} color={t.colors.primary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.supTitle, live.supTitle]}>Superset coming up</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.supTitle, live.supTitle]}>
+                    {(supersetHeadsUp?.memberNames?.length ?? 0) > 2 ? 'Giant set coming up' : 'Superset coming up'}
+                  </Text>
                 </View>
                 <Text maxFontSizeMultiplier={1.3} style={[styles.supSubtitle, live.supSubtitle]}>
-                  Two exercises paired back-to-back with no rest between them.
+                  {(supersetHeadsUp?.memberNames?.length ?? 0) > 2
+                    ? `${supersetHeadsUp.memberNames.length} exercises done back-to-back with no rest between them.`
+                    : 'Two exercises done back-to-back with no rest between them.'}
                 </Text>
 
                 <Card surface="surface2" radius="md" padding="md" style={[styles.supPairCard, live.supPairCard]}>
-                  <View style={styles.supPairRow}>
-                    <View style={[styles.supPairChip, live.supPairChip]}><Text maxFontSizeMultiplier={1.3} style={[styles.supPairChipText, live.supPairChipText]}>1</Text></View>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supPairName, live.supPairName]} numberOfLines={2}>
-                      {supersetHeadsUp?.exerciseAName}
-                    </Text>
-                  </View>
-                  <View style={[styles.supPairConnector, live.supPairConnector]} />
-                  <View style={styles.supPairRow}>
-                    <View style={[styles.supPairChip, live.supPairChip]}><Text maxFontSizeMultiplier={1.3} style={[styles.supPairChipText, live.supPairChipText]}>2</Text></View>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supPairName, live.supPairName]} numberOfLines={2}>
-                      {supersetHeadsUp?.exerciseBName}
-                    </Text>
-                  </View>
+                  {(supersetHeadsUp?.memberNames ?? []).map((memberName, memberIdx) => (
+                    <React.Fragment key={`${memberIdx}-${memberName}`}>
+                      {memberIdx > 0 && <View style={[styles.supPairConnector, live.supPairConnector]} />}
+                      <View style={styles.supPairRow}>
+                        <View style={[styles.supPairChip, live.supPairChip]}><Text maxFontSizeMultiplier={1.3} style={[styles.supPairChipText, live.supPairChipText]}>{memberIdx + 1}</Text></View>
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.supPairName, live.supPairName]} numberOfLines={2}>
+                          {memberName}
+                        </Text>
+                      </View>
+                    </React.Fragment>
+                  ))}
                 </Card>
 
                 <View style={styles.supSteps}>
                   <View style={styles.supStep}>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>1</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>Set up both stations now if you can.</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>Set up every station now if you can.</Text>
                   </View>
                   <View style={styles.supStep}>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>2</Text>
@@ -3082,16 +3115,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   </View>
                   <View style={styles.supStep}>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>3</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>Move straight to the second. No rest between.</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>Move straight to the next. No rest between.</Text>
                   </View>
                   <View style={styles.supStep}>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>4</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>After both, rest the full rest period, then repeat.</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>After the last one, rest the full rest period, then repeat.</Text>
                   </View>
                 </View>
 
                 <Text maxFontSizeMultiplier={1.3} style={[styles.supTip, live.supTip]}>
-                  Tip: if you can't grab both stations right now, unlink and do them as normal sets.
+                  Tip: if you can't grab every station right now, unlink and do them as normal sets.
                 </Text>
 
                 <Button

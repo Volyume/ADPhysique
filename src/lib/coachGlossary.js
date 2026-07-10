@@ -66,7 +66,7 @@ export const GLOSSARY = {
   // (ActiveWorkoutScreen.js's supersetHeadsUp modal) so the builder and the
   // session teach the same thing.
   superset:
-    'Two exercises done back-to-back with no rest between them, then a full rest before repeating.',
+    'Two or more exercises done back-to-back with no rest between them, then a full rest before repeating.',
   // NV-4: baseline vocabulary glosses for the "never lifted" persona, so the
   // two most foundational training words in the product are defined
   // somewhere. Self-naming (like rir/redS above) since these surface as a
