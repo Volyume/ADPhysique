@@ -372,16 +372,22 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
   CLOSED in the register, not resurrected. A read-only Sonnet triage
   of all six items is running; its verdicts land in the register.
 
+- ✅ STALENESS TRIAGE LANDED → **D37**: ALL SIX Ultimate-Audit items
+  (11–16) were ALREADY BUILT this campaign (D16/D20/D21/D22 rounds;
+  commits in the register entry). Item 15 timeline diary was built
+  and REVERTED on the founder's device verdict — never re-propose.
+  CLAUDE.md's stale 2026-07-01 status banner corrected to point at
+  the current campaign. The cluster is CLOSED; only operational
+  remainders exist (founder runs refresh-off-snapshot.yml).
+
 ## ⏸ RESUME POINT — current state and queue (2026-07-10 late):
-1. IN FLIGHT: the Ultimate-Audit 11–16 staleness triage (read-only,
-   verdicts → register; do NOT build any of the six before it lands
-   and the lead rules on each verdict).
-2. NEXT SLOTS: D35 drag edge auto-scroll (Sonnet — item 17 landed, so
-   RoutineDetail/ActiveWorkout are free); FeedbackSheet/PeekMenu
-   migration slot (D36b); TalkBack sheet isolation slot (D36c,
-   cross-cutting, RootNavigator-adjacent); then the remaining
-   delegated decision rounds (watch-app scoping, kala namak, brand
-   font) — each verify-first.
+1. IN FLIGHT: D35 drag edge auto-scroll (Sonnet — DragReorderList +
+   its four consumer surfaces; the crux is scroll-offset-aware
+   hit-testing; lead reviews the worklet arithmetic at landing).
+2. NEXT SLOTS: FeedbackSheet/PeekMenu migration slot (D36b); TalkBack
+   sheet isolation slot (D36c, cross-cutting, RootNavigator-adjacent);
+   then the remaining delegated decision rounds (watch-app scoping,
+   kala namak, brand font) — each verify-first.
 3. PROCESS NOTE: two consecutive campaign lines (16, 19) were stale
    against the tree — every remaining item gets a verify-first read
    agent before any build brief is written. The same rule applies

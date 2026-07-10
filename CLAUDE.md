@@ -3,13 +3,21 @@
 Live production app on Google Play (Android; iOS via TestFlight). Real users
 are paying. Every change affects them. Work accordingly.
 
-> **STATUS (2026-07-01):** Ultimate-Audit build phase complete except the
-> decision-gated items 11–16 (named autonomy modes, raw/cooked toggle,
-> mid-session-swap wording, Core-Haptics dependency, timeline food logging,
-> micronutrients/NRV = MN-1). A session MUST NOT start these without a
-> structured founder decision. Source:
-> `docs/ultimate-audit-2026-06-13/_AUDIT-STATUS-AND-RESUME.md`.
-> **Outstanding founder actions:** confirm Google Play OAuth SHA-1.
+> **STATUS (updated 2026-07-10):** the Ultimate-Audit is FULLY CLOSED.
+> Items 11–16 (formerly decision-gated) were ALL built during the
+> 2026-07-09/10 campaign under decisions D16/D20/D21/D22, verified by
+> triage D37 — see `docs/ux-world-class-audit-2026-07-09/
+> DECISIONS-2026-07-09.md`. Item 15 (timeline diary) was built and then
+> REVERTED on the founder's device verdict: meal cards are canonical,
+> NEVER re-propose a flat diary. Do NOT build anything from
+> `docs/ultimate-audit-2026-06-13/` blueprints — that register is
+> historical; triage any pre-campaign audit item against the current
+> tree and the decision register before considering it (D37 standing
+> rule). Current work runs from
+> `docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md`.
+> **Outstanding founder actions:** confirm Google Play OAuth SHA-1; run
+> refresh-off-snapshot.yml (OFF branded micronutrients); iOS App Groups
+> provisioning + fresh EAS build.
 > **Cloud migrations (updated 2026-07-10):** now CLAUDE-RUN via the founder's
 > Supabase connector, gated on the founder's exact phrase "run against
 > production" per apply batch (see supabase/README). EU-Dublin is applied

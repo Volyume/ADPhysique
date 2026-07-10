@@ -621,3 +621,33 @@ six SafeAreaView instances and make ProgressPhotoCompare's
 scrollContent bottom padding inset-aware. DO-NOT-DISTURB contract:
 usePhotoSuppression call sites, suppressed-branch JSX and placeholder
 copy are pinned by tests and must not change.
+
+## D37 — Ultimate-Audit items 11–16 CLOSED as superseded (staleness triage, 2026-07-10)
+Founder flagged the risk of pulling month-old audit items over newer
+work; a read-only triage verified all six against the tree and git
+history. VERDICT: ALL SIX ALREADY BUILT during this campaign — none
+may be re-dispatched from the old pass4 blueprints.
+- (11) Named autonomy modes: BUILT `8aae4b7` (Coached/Collaborative/
+  Manual, autoApplyHoldActive safety gate, scoffPositive added at lead
+  review; D16/D20).
+- (12) Raw/cooked: BUILT `86125c0`+`c1f0973` (weight_state basis
+  stored, NO conversion factor — that ruling superseded the old
+  blueprint's conversion design; migrate_114 applied).
+- (13) Mid-session-swap wording: BUILT `21f3265` (volume-credit
+  clause; mechanism verified already correct).
+- (14) Core-Haptics: BUILT `edd84d9` (react-native-haptic-feedback v3
+  MIT per D21; `4de5604` config-plugin drop was a CI build fix, not a
+  revert).
+- (15) Timeline food logging: BUILT `ae9c311` then REVERTED `363d2d7`
+  the same day on the founder's device verdict — meal cards are
+  canonical; NEVER RE-PROPOSE a flat diary. The durable parts
+  (eaten_at schema migrate_115, quiet time display, editable
+  eaten-at) shipped and survive the revert.
+- (16) Micronutrients/NRV: BUILT IN FULL (schema v58/migrate_109,
+  CoFID micros in the seed `a1c10a9`, migrate_116 RPC, per-food
+  MicronutrientDetail + WeeklyMicronutrientsCard `203d6ce`; D22
+  data-before-display honoured). Remainder is OPERATIONAL only: the
+  founder runs refresh-off-snapshot.yml for OFF branded micros.
+STANDING RULE (restated): nothing from a pre-campaign audit is built
+from its old blueprint; triage against today's tree + this register
+first; superseded items are closed here, not resurrected.
