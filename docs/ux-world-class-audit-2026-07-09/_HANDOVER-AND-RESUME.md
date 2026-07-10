@@ -1274,3 +1274,20 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   (7) Food Insights shows the 7-day awareness card once enough logged
   foods carry data. NEXT: design campaign pair 1 (theming stage 1 +
   bottom-sheet) firing.
+- THEMING STAGE 1 LANDED (lead-reviewed): pure resolveTheme(prefs) is
+  the single source both applyAccessibility (legacy boot) and the new
+  useTheme hook (live, reads the EXISTING accessibility slice via
+  useShallow, memoized on the 4 prefs) call - the systems cannot
+  disagree. 10 primitives converted live (Card, Button, TextField,
+  Toast incl. a caught stale-closure fix on show()'s F7 stability,
+  Chip, SettingRow only within SettingsPrimitives - settingsStyles
+  stays frozen for the ~14 direct-consumer screens until stage 3,
+  Skeleton, ScreenHeader, BackHeader, ModalHeader). BottomSheet
+  deliberately skipped (concurrent adoption agent owns it).
+  Zero visual change pinned; 63 targeted tests green; full suite green
+  except motionFitRules.guard - CONFIRMED caused by the in-flight
+  bottom-sheet agent's WIP (Animated import removal vs the guard's
+  allowlist), must be green at ITS boundary. STAGE 2 NEXT (App.js
+  StatusBar + themeReady gate + NavigationContainer theme TOGETHER,
+  risk register #7) - fires after the bottom-sheet landing settles
+  App.js. Then stage 3 screens.
