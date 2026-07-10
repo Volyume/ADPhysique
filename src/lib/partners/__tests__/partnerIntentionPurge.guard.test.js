@@ -26,9 +26,14 @@ describe('migrate_105: additive table + deletion promise', () => {
     expect(migration).toMatch(/PRIMARY KEY \(pair_id, user_id, week_start\)/);
   });
 
-  test('founder-run, not applied remotely, safe to re-run (header contract)', () => {
-    expect(migration).toMatch(/Applied remotely:\s*NO/);
-    expect(migration).toMatch(/FOUNDER-RUN/);
+  // Header contract updated 2026-07-10: cloud migrations moved to the
+  // Claude-run model (founder-authorised per batch with the exact
+  // "run against production" phrase; see supabase/README) and 105 was
+  // applied to EU-Dublin that day. The pin now asserts the applied status
+  // is recorded honestly, not that the file stays pending forever.
+  test('applied remotely under founder authorisation, safe to re-run (header contract)', () => {
+    expect(migration).toMatch(/Applied remotely:\s*YES \(2026-07-10/);
+    expect(migration).toMatch(/founder-authorised "run against production"/);
     expect(migration).toMatch(/Safe to re-run:\s*YES/);
   });
 
