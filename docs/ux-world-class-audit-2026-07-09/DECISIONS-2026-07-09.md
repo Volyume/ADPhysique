@@ -295,3 +295,11 @@ pieces get hands-on lead review; 15 and 16 get a scoping read first.
 Item 14 Core-Haptics: RESEARCH approved (package name, purpose, licence,
 maintenance health; managed-Expo-compatible) - returns for the founder's
 final yes/no BEFORE any install (never-add-deps-without-asking rule).
+
+## D17 — Core-Haptics adoption (founder, 2026-07-10)
+Item 14 final yes: ADOPT react-native-haptic-feedback v3 (MIT), restricted
+to its triggerPattern() JS API (no .ahap, no manual Xcode edits). Scope:
+richer iOS curves for rest-timer completion and PR celebration only;
+Android keeps existing behaviour; expo-haptics remains for everything
+else. Dependency added with package-lock.json regenerated in the same
+commit (lockfile rule). Needs a fresh EAS build (founder-side).
