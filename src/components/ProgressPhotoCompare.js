@@ -38,7 +38,7 @@ import Reanimated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Canvas, Image as SkiaImage, useImage } from '@shopify/react-native-skia';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   colors, spacing, radius, type, iconSize, motion, withAlpha,
 } from '../styles/theme';
@@ -337,6 +337,7 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const suppressed = usePhotoSuppression();
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
+  const insets = useSafeAreaInsets();
 
   const [metaMap, setMetaMap] = useState(null);
   const [poseFilter, setPoseFilter] = useState('all');
@@ -475,7 +476,7 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
   // placeholder instead of any comparison. Hooks above always run first.
   if (suppressed) {
     return (
-      <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <View style={styles.headerCopy}>
             <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Compare Progress Photos</Text>
@@ -503,7 +504,7 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
   const later = ready ? pair[1] : null;
 
   return (
-    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Compare Progress Photos</Text>
@@ -521,7 +522,10 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(spacing.xxxl, insets.bottom + spacing.lg) },
+        ]}
         showsVerticalScrollIndicator
         testID="progress-photo-compare-scroll"
       >

@@ -145,7 +145,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
 
   if (suppressed) {
     return (
-      <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         {renderHeader()}
         <View style={styles.placeholder}>
           <Ionicons name="leaf-outline" size={32} color={t.colors.textMuted} />
@@ -156,7 +156,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
   }
 
   return (
-    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       {renderHeader()}
 
       <ScrollView contentContainerStyle={styles.content}>
