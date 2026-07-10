@@ -268,16 +268,77 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
   names closing that gap; no pinned test protected the old
   behaviour).
 
+- ✅ PAIR 7 LANDED (2026-07-10, both Sonnet verify-first agents,
+  lead-reviewed). (a) ITEM 19 iOS LIVE ACTIVITY = ALREADY FULLY WIRED,
+  `60190a7` docs-only fix. Verification table in the agent report:
+  every link WIRED with file:line — JS module graceful no-op, all five
+  E6B store lifecycle call sites (useAppStore.js ~1329-1541), podspec,
+  plugins/withVolyumeWidget.js creates the extension target at
+  prebuild, app.json plugin + NSSupportsLiveActivities + App Group,
+  REAL lock-screen + Dynamic Island UI (VolyumeRestTimerLiveActivity
+  .swift incl. the VOLYUME-1K ClosedRange clamp), CP-2 home widgets
+  registered. The campaign line was STALE and even named the wrong
+  module (modules/rest-timer-live is the ANDROID chronometer;
+  modules/live-activity is the iOS one). Only defect found: three
+  docstrings + widget README still described the pre-plugin manual-
+  Xcode world — corrected, comments/README only. 15/15 wiring guards;
+  lint clean; FULL suite green at the boundary (666/667 suites, 8,347
+  passed / 0 failed). Item 19's remaining steps are FOUNDER-SIDE ONLY:
+  App Groups provisioning on BOTH App IDs (app.volyume +
+  app.volyume.widget, then EAS credentials re-sync) + fresh EAS build.
+  iPhone device checklist is in the item-19 agent report (9 steps:
+  lock-screen card, Dynamic Island, adjust propagation, natural
+  expiry, force-kill stale sweep, Skip dismissal, Live-Activities-off
+  no-op, no weight/food data on any lock surface).
+  (b) ITEM 12 ANDROID REST-TIMER ACTIONS = STOPPED ON A GENUINE FORK,
+  no code changed (correct procedure). Verified chain: category +
+  actions + listener + store handler + sticky-notification path ALL
+  WIRED (categories.js:61-171, activeWorkout.js:259-273,
+  listeners.js:76-82, restTimerActions.js) — BUT the notification a
+  user actually sees during a TYPICAL rest (default 90s < the 170s
+  shortService window, restForeground.js:28) is the NATIVE FGS
+  chronometer, which carries ZERO action buttons
+  (WorkoutForegroundService.kt buildRestNotification, no .addAction
+  anywhere), and RestTimer.js suppresses the JS sticky while the FGS
+  is live. This was a RECORDED 2026-07-02 trade-off
+  (restForeground.js:14-17). Every fix is a product trade-off →
+  FOUNDER ROUND (options recorded below). 4 suites / 37 tests pass at
+  baseline.
+
 ## ⏸ RESUME POINT — next slots, in order:
-1. Pair 7: iOS Live Activity wiring (item 19) + Android rest-timer
-   actions (item 12). Then item 17 small tails (+ remaining
+1. Item 12 resumes ONLY after the founder picks a fork option (see the
+   open round below). Meanwhile: item 17 small tails (+ remaining
    edge-to-edge Modal inset audits from the item 15 recon list above);
    theming stage-4 tail (remaining static: food domain 19, photo/scan
    family 10, ProgressSections, chart exclusions, ScreenBoundary
    architecture question); stage 5 stays honesty-gated. Coverage after
    batch B: 71/108 components live.
-2. Standing discipline at every landing: full suite over the clean
+2. PROCESS NOTE for dispatching the remaining campaign items: item 19
+   is the SECOND consecutive campaign line found stale against the
+   tree (after item 16 scanner) — every remaining item gets a
+   verify-first read agent before any build brief is written.
+3. Standing discipline at every landing: full suite over the clean
    tree, this handover's stage log updated, push.
+
+**AWAITING FOUNDER — ITEM 12 FORK (new, 2026-07-10): the typical-rest
+notification on Android has no Skip/+15 buttons. Options, none
+pre-decided:**
+1. Build a native Service→JS event bridge in modules/rest-timer-live
+   (new architecture — no Service→JS pattern exists anywhere in the
+   repo today) so FGS-notification buttons act silently without
+   foregrounding the app, matching the JS sticky's UX. Moderate native
+   effort; needs an EAS build either way.
+2. Add the buttons via the module's existing deep-link
+   PendingIntent.getActivity pattern — small effort, but tapping
+   +15/Skip would OPEN the app, contradicting the locked
+   opensAppToForeground:false design of those actions.
+3. Narrow/disable the ~170s shortService window so more (or all) rests
+   fall back to the JS sticky that already carries all five working
+   buttons — trades away the founder-approved E6A live-countdown /
+   background-survival benefit for short rests.
+4. Accept the status quo (the recorded 2026-07-02 trade-off): long
+   rests get full buttons, short rests get the live chronometer with
+   none; item 12 closes as "verified, gap deliberate".
 
 **AWAITING FOUNDER (asked in chat 2026-07-10, unanswered at handover):**
 - migrate_117 apply (telemetry-view REVOKE, drafted + committed at
