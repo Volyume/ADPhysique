@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. Wave 3 delivery report; the wave shipped and the campaign has moved on. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # Wave 3 delivery — "Engine evolution" (2026-07-02)
 
 Scope from `/audit/06-MASTER-PLAN.md`: **F9 → B1 → B2 → F10 → B4**, one

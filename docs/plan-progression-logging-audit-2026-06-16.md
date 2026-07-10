@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. June 2026 plan/progression/logging audit on a squash-merged branch; the engine work has since shipped (D8 set-cap/spillover, D9 unilateral, plan-G adherence). Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # Plan Builder, Progression & Workout Logging — Full Audit
 
 **Date:** 2026-06-16

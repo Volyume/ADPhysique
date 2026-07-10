@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. June 2026 next-session note; both its tasks are long done and it points at the now-stale CURRENT_STATUS.md. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # Next-session handoff — ready-to-execute tasks
 
 > **SUPERSEDED (2026-06-10).** This file is a 2026-06-02 record; both tasks

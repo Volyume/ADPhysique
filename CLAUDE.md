@@ -14,7 +14,10 @@ are paying. Every change affects them. Work accordingly.
 > historical; triage any pre-campaign audit item against the current
 > tree and the decision register before considering it (D37 standing
 > rule). Current work runs from
-> `docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md`.
+> `docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md` and the
+> single live task list `docs/TASKBOARD.md` (D38: every queued item
+> carries current state / end state / elevation rationale). Every other
+> audit/status/backlog doc now carries a staleness banner.
 > **Outstanding founder actions:** confirm Google Play OAuth SHA-1; run
 > refresh-off-snapshot.yml (OFF branded micronutrients); iOS App Groups
 > provisioning + fresh EAS build.

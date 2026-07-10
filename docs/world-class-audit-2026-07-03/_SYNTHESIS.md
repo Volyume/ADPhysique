@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. Options/findings pack, nothing approved on its face; its ground is covered independently by the July-9 ux-world-class campaign. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # WORLD-CLASS USABILITY AUDIT — SYNTHESIS (2026-07-03)
 
 Founder brief (verbatim): "Be the best app in the world. Not simply features,

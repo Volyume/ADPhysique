@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. Deferred/excluded feature list verified 2026-05-27; the current never-re-propose set and live queue now live in the decision register and docs/TASKBOARD.md. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # Volyume feature backlog
 
 Features listed here are explicitly deferred or excluded. None should be implemented without the founder explicitly reopening the item and confirming scope.

@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. Says-vs-does findings log (maths verified sound); any still-valid product-bug findings need fresh triage, not a build from this June doc. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # AUDIT — "What the app SAYS vs what the app DOES" + scientific correctness
 
 **Started:** 2026-06-21 · **Branch:** `claude/audit-work-quality-review-benrin`

@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): PARTIALLY SUPERSEDED - do not run this as a standalone campaign. Its D7 programme is complete; its coverage synthesis and residual IDs (theming CP-10, FR-1/FR-3 first-run warmth, L05-FI5 fibre) were FOLDED INTO and are now driven from the July-9 ux-world-class campaign - read that, not this. Only coverage-00-SYNTHESIS.md survives as a cited reference. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Any residual item requires the D37 triage rule before consideration.
+
 # World-class design campaign — status and resume
 
 **Purpose.** Live state of the 2026-07-09 world-class design/usability

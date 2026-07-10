@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. Voice audit whose fixes were applied hands-on the same day; historical record. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # Prompt 10 — Voice audit against COACHING_VOICE_SYNTHESIS_LOCKED (2026-07-03)
 
 Audit run by a scoped agent over src/screens and src/components against the

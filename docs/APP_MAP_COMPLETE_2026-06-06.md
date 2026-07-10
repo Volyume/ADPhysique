@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. June 2026 app map; screen counts and navigation have moved on since. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # Volyume complete app map
 
 Built 2026-06-06 from the code (`src/navigation/RootNavigator.js`, `src/screens`,

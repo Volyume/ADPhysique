@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. May 2026 data-flow audit on a now-retired branch. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # Volyume — App Data Flow Audit
 
 _Last updated: 2026-05-16. Covers the build as it existed in May 2026

@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. Citation audit of the growth-strategy passes; the synthesis they fed is now GROWTH_STRATEGY_SYNTHESIS_LOCKED.md. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # Growth strategy citation audit
 
 Pressure-tested 34 unique citations across the three growth-strategy passes (ChatGPT non-deep, Gemini, Claude). Excludes three citations already verified in prior rounds (Kidman 2024 JMIR churn taxonomy, Mountjoy 2014/2023 RED-S, Lang 2025 JMIR).

@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. Wave A + founder defect-pass build status from early July; overtaken by the July-9 campaign. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # WAVE A + FOUNDER DEFECT PASS — BUILD STATUS & RESUME (2026-07-03)
 
 Single source of truth for the world-class usability **Wave A** build and the

@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. 2026-07-01 founder-side action list; the current founder-side ops live in docs/TASKBOARD.md §FOUNDER-SIDE OPS. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # Founder actions — 2026-07-01
 
 Things only you can do (outside the code). Nothing here is run by the app or by

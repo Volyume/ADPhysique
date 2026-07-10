@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. Partner-system rebuild spec; the system was built and has since been re-audited and extended (design-usability lane-06 and the July-9 campaign). Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # PARTNERS: Design Specification (Step B)
 **Date:** 2026-07-03. **Author:** Fable (orchestrator). **Status:** FIXED. Build agents implement this spec verbatim; deviations require the orchestrator, not agent judgement.
 **Quality bar:** the free-trial screen standard. Premium means every detail considered: token-pure, generous space, one hero moment per screen, calm always. Never flashy, never gamified, never status-signalling.

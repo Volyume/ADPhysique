@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. Cronometer/MFP gap map; its GATED founder-decision items (D1-D7: micronutrients/NRV, home Remaining widget, per-day targets, fasting timer, medical biometrics, etc.) are pre-campaign - micronutrients/NRV already shipped (D22/D37), and every remaining item needs D37 triage against today's tree before any consideration. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md.
+
 # VOLYUME — Master Gap Map & Build-Ready Backlog
 
 **Date:** 2026-06-29

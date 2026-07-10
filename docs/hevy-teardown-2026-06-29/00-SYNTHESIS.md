@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. Hevy parity teardown; the P1 wave built and merged, and remaining items are decision-gated or already overtaken by the July campaign (editable/deletable logged sets shipped via zeego; drag-to-reorder shipped D32). Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # Hevy vs Volyume — competitive teardown SYNTHESIS (2026-06-29)
 
 Source: 16 area teardowns in this folder, built from a decompiled **Hevy v3.1.0**

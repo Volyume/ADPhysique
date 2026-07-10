@@ -1,3 +1,7 @@
+> ⚠ STATUS (2026-07-10): PARTIALLY SUPERSEDED - reference only, do not rebuild from these plans. All seven plans in this folder (A-G) have SHIPPED: plan-A/B set-cap + weak-point spillover (13f4af0, D8), plan-C unilateral logging (3bbdca0, D9), plan-D intelligent supersets + giant sets (5eb50d9 / 746bb65), plan-E/F progress-photo loop + corroboration (D18), plan-G adherence responsiveness (D15). Retained as the design reference for current engine behaviour; the live rulings are captured in the register (D8-D19). Any residual exercise-engine change goes through the register + D37/D38 triage, never a rebuild from these blueprints. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md.
+>
+> NOTE (banner scope): the other six plan files in this folder (plan-B..G) carry the same status; per the one-banner-per-folder sweep rule the marker sits here on the first-opened file.
+
 # Plan A — Exercise library expansion
 
 Founder question: "Should we be increasing our exercise library? What specific

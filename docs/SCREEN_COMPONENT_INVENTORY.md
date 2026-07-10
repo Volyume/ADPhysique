@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. May 2026 inventory on a retired branch (already self-noted as superseded below). Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # Volyume — Screen & Component Inventory
 
 _Last updated: 2026-05-16. Covers the build as it existed in May 2026 on the now-retired `claude/build-volyume-app-srY9C` branch. Active branch is now `main` (also the GitHub default as of 2026-05-26)._

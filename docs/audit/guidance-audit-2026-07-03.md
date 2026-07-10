@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. Read-only guidance/page-structure findings from early July; its subject matter is covered by the design-usability lane-03/04 and the July-9 campaign's AC-/FR-/CO- items. (The other two files in this docs/audit/ folder are self-closing: bottom-inset-inventory is marked ROLLED OUT; ultimate-audit-build-quality-review is historical per D37.) Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # Guidance & Page-Structure Consistency Audit
 
 **Date:** 2026-07-03

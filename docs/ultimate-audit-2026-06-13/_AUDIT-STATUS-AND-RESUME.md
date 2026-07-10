@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. All items incl. 11-16 verified built or founder-rejected (item 15 flat timeline diary was built-and-reverted on the founder's device verdict - never re-propose) - D37. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # _AUDIT-STATUS-AND-RESUME  (read this FIRST, then read `_AUDIT-SPEC.md` in full)
 
 Maintained per CLAUDE.md handover rule. Points to SOURCE files by path; states the exact current

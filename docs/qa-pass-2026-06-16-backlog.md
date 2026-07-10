@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. June 2026 founder QA backlog on a squash-merged branch. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # Founder QA pass — backlog (2026-06-16)
 
 Live QA sweep of the food / meal-plan / progress / partner / recap surfaces.

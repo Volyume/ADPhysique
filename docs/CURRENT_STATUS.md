@@ -1,4 +1,6 @@
-﻿# Volyume current status
+﻿> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. Status snapshot verified 2026-05-29, long overtaken (an older 2026-06-26 stale note already sits below). Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
+# Volyume current status
 
 > ## ⚠ STALE — predates the June 2026 sprint (banner added 2026-06-26)
 > This doc was verified on **2026-05-29** and has NOT been rewritten since. The

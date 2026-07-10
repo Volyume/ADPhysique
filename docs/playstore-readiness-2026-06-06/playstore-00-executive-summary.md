@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. Play Store readiness audit; all Document-A codebase fixes shipped to main, only external Play Console paperwork remains (tracked founder-side in TASKBOARD). Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # Volyume — Play Store production readiness: executive summary
 
 Date: 2026-06-06. Repo: `main` @ `7a944a5` (clean, = origin/main). Read-only

@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. June 2026 food-subsystem audit on a squash-merged branch; its findings were built or overtaken by the July campaign (dietary Phase A/B, micronutrients, diary de-clutter D12). Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # Food Function — Full Audit & Improvement Recommendations
 
 **Date:** 2026-06-16

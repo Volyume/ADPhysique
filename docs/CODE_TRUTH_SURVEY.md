@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. May 2026 line-level code-truth survey; stale against the current tree. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # Volyume code-truth survey
 
 Working document. Gitignored. **This file will not survive container teardown unless committed** — ask Claude to keep it if you want it preserved.

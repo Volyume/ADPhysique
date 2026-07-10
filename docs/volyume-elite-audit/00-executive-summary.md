@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. Audit + strategy options only, no build committed on its face; surviving ideas (Photos/Partners integration, Card-adoption codemod) were re-derived and built inside the July-9 campaigns. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # 00 · Executive Summary — Volyume Elite Audit
 
 **Author:** Fable (main-loop synthesis). **Date:** 2026-07-04.

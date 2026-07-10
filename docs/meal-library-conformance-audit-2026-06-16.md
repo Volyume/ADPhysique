@@ -1,3 +1,5 @@
+> ⚠ STATUS (2026-07-10): SUPERSEDED/CLOSED - do not build from this document. June 2026 meal-library conformance check; the library has been expanded since (dietary Phase B curated meals). Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Pre-campaign items require the D37 triage rule before any consideration.
+
 # Meal Library Conformance Audit — 2026-06-16
 
 **Goal:** check the built library (`src/lib/food/curatedMeals.js`, `curatedFoods.js`)
