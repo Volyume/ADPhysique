@@ -97,25 +97,32 @@ serve(async (req: Request) => {
     return new Response("OK", { status: 200 });
   }
 
-  // Authoritative status from Apple. Route the user by the Apple-returned
-  // appAccountToken; fall back to the notification's own (less trusted) copy.
+  // Authoritative status from Apple. Without it, acknowledge the notification
+  // but make no entitlement change.
   const authoritative = await getSubscriptionStatus(originalTransactionId);
-  const userId = authoritative?.tx.appAccountToken ?? claimedTx?.appAccountToken;
-  if (!userId) {
-    log("warn", "notifications: no appAccountToken; cannot route to a user", {
+  if (!authoritative) {
+    log("warn", "notifications: authoritative Apple lookup failed; no tier change", {
       type, originalTransactionId,
     });
     return new Response("OK", { status: 200 });
   }
-  const productId = authoritative?.tx.productId ?? claimedTx?.productId ?? "pro_monthly";
-  const status = authoritative?.status ?? null;
-  const paymentRef = authoritative?.tx.transactionId ?? originalTransactionId;
+
+  const userId = authoritative.tx.appAccountToken;
+  if (!userId) {
+    log("warn", "notifications: authoritative transaction has no appAccountToken; no tier change", {
+      type, originalTransactionId,
+    });
+    return new Response("OK", { status: 200 });
+  }
+  const productId = authoritative.tx.productId ?? "pro_monthly";
+  const status = authoritative.status;
+  const paymentRef = authoritative.tx.transactionId ?? originalTransactionId;
 
   switch (action) {
     case "purchase": {
       // Only grant when Apple confirms the subscription is active (or in its
       // billing grace window). Guards a forged/stale SUBSCRIBED.
-      if (status === null || status === APPLE_STATUS.ACTIVE || status === APPLE_STATUS.GRACE_PERIOD) {
+      if (status === APPLE_STATUS.ACTIVE || status === APPLE_STATUS.GRACE_PERIOD) {
         await callUpgradeTier(userId, "pro", "user_paid", paymentRef, "app_store_notification");
         await setBillingPeriod(userId, productId);
       } else {
@@ -138,7 +145,7 @@ serve(async (req: Request) => {
     case "expire": {
       // Only downgrade if Apple confirms it is no longer active. Guards a forged
       // EXPIRED against an account whose Apple-side status is still active.
-      if (status === null || status === APPLE_STATUS.EXPIRED || status === APPLE_STATUS.REVOKED) {
+      if (status === APPLE_STATUS.EXPIRED || status === APPLE_STATUS.REVOKED) {
         await callUpgradeTier(userId, "free", "user_cancelled", paymentRef, "app_store_notification");
       } else {
         log("info", `notifications: ${type} but authoritative status=${status} still active; no downgrade`);
@@ -146,7 +153,11 @@ serve(async (req: Request) => {
       break;
     }
     case "refund": {
-      await callUpgradeTier(userId, "free", "refunded", paymentRef, "app_store_notification");
+      if (status === APPLE_STATUS.EXPIRED || status === APPLE_STATUS.REVOKED) {
+        await callUpgradeTier(userId, "free", "refunded", paymentRef, "app_store_notification");
+      } else {
+        log("info", `notifications: ${type} but authoritative status=${status} not terminal; no downgrade`);
+      }
       break;
     }
     case "ignore":

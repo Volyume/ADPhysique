@@ -57,11 +57,24 @@ describe('app-store-notifications → authoritative-status guards', () => {
     const block = NOTIFS.slice(NOTIFS.indexOf('case "purchase":'), NOTIFS.indexOf('case "grace":'));
     expect(block).toMatch(/APPLE_STATUS\.ACTIVE/);
     expect(block).toMatch(/callUpgradeTier\(userId, "pro"/);
+    expect(block).not.toMatch(/status\s*===\s*null/);
   });
   test('an EXPIRED notification only downgrades if Apple confirms it (no forged downgrade)', () => {
     const block = NOTIFS.slice(NOTIFS.indexOf('case "expire":'), NOTIFS.indexOf('case "refund":'));
     expect(block).toMatch(/APPLE_STATUS\.EXPIRED/);
     expect(block).toMatch(/still active; no downgrade/);
+    expect(block).not.toMatch(/status\s*===\s*null/);
+  });
+  test('failed authoritative lookup ACKs without routing by the claimed token', () => {
+    expect(NOTIFS).toMatch(/if\s*\(\s*!authoritative\s*\)/);
+    expect(NOTIFS).toMatch(/authoritative Apple lookup failed; no tier change/);
+    expect(NOTIFS).toMatch(/const userId = authoritative\.tx\.appAccountToken/);
+    expect(NOTIFS).not.toMatch(/authoritative\?\.tx\.appAccountToken\s*\?\?/);
+  });
+  test('refund/revoke cannot downgrade an Apple-active transaction', () => {
+    const block = NOTIFS.slice(NOTIFS.indexOf('case "refund":'), NOTIFS.indexOf('case "ignore":'));
+    expect(block).toMatch(/APPLE_STATUS\.REVOKED/);
+    expect(block).toMatch(/not terminal; no downgrade/);
   });
   test('grace keeps Pro and fires the payment-failure push', () => {
     const block = NOTIFS.slice(NOTIFS.indexOf('case "grace":'), NOTIFS.indexOf('case "expire":'));
