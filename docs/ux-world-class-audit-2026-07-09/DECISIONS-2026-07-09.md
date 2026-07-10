@@ -667,3 +667,17 @@ sent back to triage, not built. TASKBOARD.md carries this per line:
 every queued item states current state → end state → elevation
 rationale, and items that cannot are parked in a needs-justification
 section rather than queued.
+
+## D39 — ScreenBoundary theming architecture (lead-ruled under D33, 2026-07-10)
+The class error boundary cannot consume useTheme (hooks are
+function-component only; error boundaries must be classes). RULING:
+wrap it — a small functional component reads useTheme and passes the
+resolved tokens to the class boundary as a prop; the class renders
+from that prop with the current static tokens as fallback so a theme
+failure can never break the error UI itself (the boundary must be the
+most robust component in the tree). Fallback-path behaviour stays
+byte-equivalent when no live theme is supplied. Stage-5 note: landing
+the final 8 static components does NOT unlock the stage-5 restart-
+prompt retirement — screens coverage still lags (the honesty gate
+binds on a toggle's FULL dependency set); stage 5 stays gated on the
+remaining screen batches.
