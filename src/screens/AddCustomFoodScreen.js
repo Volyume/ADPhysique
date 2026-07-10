@@ -10,7 +10,13 @@
 import { todayLocalKey } from '../lib/dayKey';
 import { appAlert } from '../components/AppAlert';
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+// Campaign item 14 (D25): react-native-keyboard-controller outside sheets.
+// KeyboardAwareScrollView replaces the ScrollView + KeyboardAvoidingView
+// pair below (proper avoidance, auto-scroll to the focused field);
+// KeyboardGestureArea adds cross-platform interactive (drag-to-dismiss)
+// keyboard handling, matching iOS's native behaviour on Android too.
+import { KeyboardAwareScrollView, KeyboardGestureArea } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import Button from '../components/Button';
@@ -302,12 +308,13 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ModalHeader title="New food" onClose={() => navigation.goBack()} />
 
-      {/* L03-C5 (2026-07-09 design audit): standardise on the app's
-          KeyboardAvoidingView pattern (same behavior prop as PlansScreen /
-          ManualBuilderScreen) for consistency, no fixed footer was found
-          below this scroll. */}
-      <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      {/* L03-C5 (2026-07-09 design audit) originally standardised this on the
+          app's KeyboardAvoidingView pattern (same behavior prop as
+          PlansScreen/ManualBuilderScreen); campaign item 14 (D25) replaces it
+          here with the keyboard-controller equivalent — proper avoidance
+          plus interactive dismiss, no fixed footer below this scroll. */}
+      <KeyboardGestureArea interpolator="ios" style={styles.keyboardAvoid}>
+      <KeyboardAwareScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <Text style={styles.contextLabel}>Save this food, then add it to your diary.</Text>
         {prefillBarcode ? (
           <Text style={styles.barcodeHint}>Scanned barcode: {prefillBarcode}</Text>
@@ -401,8 +408,8 @@ export default function AddCustomFoodScreen({ navigation, route }) {
           onPress={onSave}
           style={styles.saveBtn}
         />
-      </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+      </KeyboardGestureArea>
     </SafeAreaView>
   );
 }

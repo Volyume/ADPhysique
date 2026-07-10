@@ -21,9 +21,13 @@
 import { todayLocalKey } from '../lib/dayKey';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  KeyboardAvoidingView, Platform,
+  View, Text, StyleSheet, TouchableOpacity,
 } from 'react-native';
+// Campaign item 14 (D25): react-native-keyboard-controller outside sheets.
+// KeyboardAwareScrollView replaces the ScrollView + KeyboardAvoidingView
+// pair below; KeyboardGestureArea adds cross-platform interactive
+// (drag-to-dismiss) keyboard handling.
+import { KeyboardAwareScrollView, KeyboardGestureArea } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, spacing, radius, type } from '../styles/theme';
@@ -328,11 +332,12 @@ export default function RecipeBuilderScreen({ navigation, route }) {
           />
         </View>
       ) : (
-      /* L03-C5 (2026-07-09 design audit): standardise on the app's
-         KeyboardAvoidingView pattern for consistency, "Save" lives in the
+      /* L03-C5 (2026-07-09 design audit) originally standardised this on the
+         app's KeyboardAvoidingView pattern; campaign item 14 (D25) replaces
+         it with the keyboard-controller equivalent. "Save" lives in the
          ModalHeader above (not a fixed footer under this scroll). */
-      <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+      <KeyboardGestureArea interpolator="ios" style={styles.keyboardAvoid}>
+      <KeyboardAwareScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: spacing.xxl }}>
         <View style={styles.section}>
           <View style={styles.importRow}>
             <TextField
@@ -468,8 +473,8 @@ export default function RecipeBuilderScreen({ navigation, route }) {
             Whole recipe: {toEnergy(macros.total.kcal, energyUnit)} {energyUnitLabel(energyUnit)} - P {macros.total.protein}g - C {macros.total.carbs}g - F {macros.total.fat}g
           </Text>
         </View>
-      </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+      </KeyboardGestureArea>
       )}
     </SafeAreaView>
   );

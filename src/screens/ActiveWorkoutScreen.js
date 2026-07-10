@@ -8,6 +8,10 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as hapticsVocab from '../lib/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// Campaign item 14 (D25): zeego native long-press context menu, first
+// surface only (logged-set rows). ED-safety bound: workout-only, never
+// added to weight/nutrition surfaces.
+import * as ContextMenu from 'zeego/context-menu';
 
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, motion, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
@@ -165,7 +169,7 @@ function WorkoutBottomSheet({ visible, onClose, accessibilityLabel, keyboardAvoi
 // row is pure presentational props-in/JSX-out, so it is exported purely so
 // the live-theme flip contract can be pinned against a real mounted instance
 // (see cp10Stage3WorkoutShellsLiveTheme.test.js). No behaviour change.
-export const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum, exerciseType = 'weight_reps', onEdit }) {
+export const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum, exerciseType = 'weight_reps', onEdit, onDelete }) {
   // CP-10 stage 3 (theming FINAL batch): live theme (src/hooks/useTheme.js).
   // See buildLiveStyles' header comment (defined further down this
   // file, after the frozen `styles` block -- see the comment there for why).
@@ -183,7 +187,7 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progr
     fmt.text,
     perSide,
   ].filter(Boolean).join(': ');
-  return (
+  const row = (
     <TouchableOpacity
       style={[styles.loggedSetRow, live.loggedSetRow, isWarmup && [styles.loggedSetRowWarmup, live.loggedSetRowWarmup]]}
       // F7: the row binds its own set so the parent can pass ONE stable
@@ -211,6 +215,32 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progr
       )}
       <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
     </TouchableOpacity>
+  );
+
+  // Campaign item 14 (D25): zeego native long-press menu, first surface
+  // (logged sets). Mirrors the row's OWN two existing actions exactly —
+  // Edit set (the tap-to-open sheet, unchanged) and Delete set (the sheet's
+  // existing delete button, reached via the same confirm-then-remove flow;
+  // see ActiveWorkoutScreen's openDeleteFromMenu). No new action invented.
+  // `onDelete` is optional so callers that only need the plain row (the
+  // cp10Stage3 live-theme pin mounts LoggedSetRow with no onDelete) get
+  // byte-identical behaviour with zero menu wrapping.
+  if (!onDelete) return row;
+
+  return (
+    <ContextMenu.Root>
+      <ContextMenu.Trigger action="longPress" asChild>
+        {row}
+      </ContextMenu.Trigger>
+      <ContextMenu.Content>
+        <ContextMenu.Item key="edit-set" onSelect={() => onEdit(set)}>
+          <ContextMenu.ItemTitle>Edit set</ContextMenu.ItemTitle>
+        </ContextMenu.Item>
+        <ContextMenu.Item key="delete-set" destructive onSelect={() => onDelete(set)}>
+          <ContextMenu.ItemTitle>Delete set</ContextMenu.ItemTitle>
+        </ContextMenu.Item>
+      </ContextMenu.Content>
+    </ContextMenu.Root>
   );
 });
 
@@ -1569,6 +1599,28 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     });
   }, []);
 
+  // Campaign item 14 (D25): the zeego long-press menu's "Delete set" item
+  // reuses this SAME confirm-then-remove flow, not a new one. handleDeleteEditedSet
+  // is pinned zero-arg (ActiveWorkoutScreen.prReEval.guard.test.js), and it
+  // reads `editingSet` by closure, so it cannot take a target set directly.
+  // openDeleteFromMenu opens the edit sheet's state exactly like a row tap
+  // (openEditSet) and records which set id it was for; the effect below
+  // fires the real, unmodified handleDeleteEditedSet() once editingSet
+  // reflects that id, so the user sees the existing "Delete set?" confirm —
+  // no new deletion path, no bypassed confirmation.
+  const menuDeleteTargetIdRef = useRef(null);
+  const openDeleteFromMenu = React.useCallback((set) => {
+    menuDeleteTargetIdRef.current = set.id;
+    openEditSet(set);
+  }, [openEditSet]);
+  useEffect(() => {
+    if (menuDeleteTargetIdRef.current != null && editingSet && editingSet.id === menuDeleteTargetIdRef.current) {
+      menuDeleteTargetIdRef.current = null;
+      handleDeleteEditedSet();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingSet]);
+
   async function handleSaveEditedSet() {
     if (saving || !editingSet || !editValue) return;
     const validation = validateSetEntryValue({
@@ -2889,6 +2941,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     progressNum={countProgressSets(loggedSets.slice(0, i + 1))}
                     exerciseType={activeExerciseType}
                     onEdit={openEditSet}
+                    onDelete={openDeleteFromMenu}
                   />
                 </AnimatedRow>
               ))}

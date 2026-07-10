@@ -11,6 +11,13 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 // inside GestureHandlerRootView (the library's own requirement) and above
 // everything else. No screen needs to know it exists.
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+// Campaign item 14 (D25): react-native-keyboard-controller. KeyboardProvider
+// must be an ancestor of every screen that uses the library's components
+// (KeyboardAwareScrollView, KeyboardAvoidingView, KeyboardGestureArea) —
+// sits at the app root next to BottomSheetModalProvider, inside
+// GestureHandlerRootView. Sheet TextFields keep using BottomSheetTextInput
+// (unaffected by this provider); this complements that fix outside sheets.
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -942,6 +949,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
+        <KeyboardProvider>
         <BottomSheetModalProvider>
           <SafeAreaProvider initialWindowMetrics={initialWindowMetrics}>
             {/* CP-10 stage 2: live theme read (useTheme, not the static
@@ -974,6 +982,7 @@ export default function App() {
             </ToastProvider>
           </SafeAreaProvider>
         </BottomSheetModalProvider>
+        </KeyboardProvider>
       </GestureHandlerRootView>
     </ErrorBoundary>
   );

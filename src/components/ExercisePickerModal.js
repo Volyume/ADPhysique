@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, Modal, KeyboardAvoidingView,
-  Platform, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, Modal,
+  TouchableOpacity, ScrollView,
 } from 'react-native';
+// Campaign item 14 (D25): react-native-keyboard-controller outside sheets
+// (this is a plain RN Modal, not a gorhom BottomSheet). Used only for the
+// inline "New exercise" create form below — the horizontal filter-chip
+// ScrollViews further down have no text inputs and are left as core
+// ScrollView.
+import { KeyboardAwareScrollView, KeyboardGestureArea } from 'react-native-keyboard-controller';
 // E8 perf: the full library is ~450 rows with no render cap; FlashList
 // recycles rows instead of mounting them all (audit/perf-baseline.md section 2).
 import { FlashList } from '@shopify/flash-list';
@@ -213,7 +219,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
       <SafeAreaProvider>
       <SafeAreaView style={[styles.pickerSafe, live.pickerSafe]} edges={['top', 'bottom']}>
         {showCreate ? (
-          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <KeyboardGestureArea interpolator="ios" style={{ flex: 1 }}>
             <View style={[styles.pickerHeader, live.pickerHeader]}>
               <TouchableOpacity accessibilityRole="button"
                 accessibilityLabel="Back to exercise search"
@@ -233,7 +239,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 <Ionicons name="close" size={24} color={t.colors.textSecondary} />
               </TouchableOpacity>
             </View>
-            <ScrollView contentContainerStyle={styles.createContent} keyboardShouldPersistTaps="handled">
+            <KeyboardAwareScrollView contentContainerStyle={styles.createContent} keyboardShouldPersistTaps="handled">
               <TextField
                 accessibilityLabel="New exercise name"
                 value={createName}
@@ -315,8 +321,8 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 <Ionicons name={isSwapAction ? 'swap-horizontal' : 'add-circle'} size={20} color={t.colors.onPrimary} />
                 <Text style={[styles.createSaveBtnText, live.createSaveBtnText]} numberOfLines={1}>{buttonLabel}</Text>
               </TouchableOpacity>
-            </ScrollView>
-          </KeyboardAvoidingView>
+            </KeyboardAwareScrollView>
+          </KeyboardGestureArea>
         ) : (
           <>
             <View style={[styles.pickerHeader, live.pickerHeader]}>

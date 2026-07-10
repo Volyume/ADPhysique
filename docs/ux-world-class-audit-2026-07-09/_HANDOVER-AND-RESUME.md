@@ -1741,3 +1741,58 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   go-ahead (server/sync: 01/02/06; local-db: 03/04/05/07). Verdicts +
   fix-constraints (cloud migrations founder-applied only; billing needs
   written test plan; deterministic engine untouched) return to founder.
+- KEYBOARD-CONTROLLER + ZEEGO ADOPTION LANDED (build agent, pending lead
+  review — campaign item 14, D25, D23 discipline): react-native-keyboard-
+  controller 1.22.0 (MIT, github.com/kirillzyusko/react-native-keyboard-
+  controller, published 2026-07-09, officially listed on the Expo SDK 54
+  docs page, no config plugin needed, peer react-native-reanimated already
+  installed) + zeego 3.0.6 (MIT, github.com/nandorojo/zeego, last published
+  2025-03 - flagged stale, ~16 months - with its required exact-pinned
+  peers react-native-ios-context-menu@3.1.0, react-native-ios-utilities@
+  5.1.2, @react-native-menu/menu@1.2.2, all MIT, no config plugin needed
+  SDK52+). All 5 packages + lockfile entries added in one change; only
+  installs this pass. KeyboardProvider wired at App.js root (inside
+  GestureHandlerRootView, wrapping BottomSheetModalProvider). Non-sheet
+  surfaces adopted: WorkoutSummaryScreen (main content ScrollView had NO
+  keyboard handling at all before this - now KeyboardAwareScrollView +
+  KeyboardGestureArea; template-name modal's iOS-only KeyboardAvoidingView
+  ternary replaced with the library's cross-platform behavior="padding"),
+  AddCustomFoodScreen, RecipeBuilderScreen, ExercisePickerModal's inline
+  custom-exercise create form (all three: ScrollView + iOS-only
+  KeyboardAvoidingView -> KeyboardAwareScrollView + KeyboardGestureArea).
+  LogCardioScreen has no text input at all (duration is a Stepper) -
+  correctly N/A, not touched. Sheet TextFields untouched (still
+  BottomSheetTextInput per the existing fix). Jest: manual mock
+  __mocks__/react-native-keyboard-controller.js re-exports the library's
+  own official jest mock; __mocks__/zeego/context-menu.js is a new
+  passthrough mock (zeego ships no jest mock of its own). zeego first
+  surface: ActiveWorkoutScreen logged-set rows, long-press menu with Edit
+  set / Delete set, wrapping the row's OWN existing TouchableOpacity via
+  Trigger asChild (short tap still opens the edit sheet unchanged). Edit
+  set calls the existing openEditSet. Delete set could NOT call the
+  existing handleDeleteEditedSet() with a target set directly - that
+  function is pinned zero-arg by ActiveWorkoutScreen.prReEval.guard.test.js
+  (regex on the literal `function handleDeleteEditedSet()`) - so Delete set
+  opens the edit-sheet state for the tapped set (openEditSet, byte-
+  identical to a row tap) and a new ref+effect fires the SAME unmodified
+  handleDeleteEditedSet() once editingSet reflects that set, so the user
+  still sees the existing "Delete set?" confirm Alert, no bypassed
+  safety check. FLAGGED, not invented: a genuine "repeat set" action does
+  not exist on set rows today (an old "repeat-last button" was removed in
+  an earlier redesign per the row's own header comment; "Log another set"
+  is a different, target-gated global affordance, not a per-row repeat) -
+  the menu ships with the two real actions (Edit, Delete) only; whether to
+  build a real repeat-set feature is an open founder question, not
+  something this pass invented. Both libraries need a fresh EAS build
+  (native modules) - no App Groups/entitlements/SHA-1 implications, just
+  the standard native-rebuild note. app.json unchanged (neither library
+  needs a config plugin at these versions). Lint 0 warnings on every
+  touched file; targeted suites (ActiveWorkoutScreen guards incl.
+  prReEval/reorder/supersetRest/unilateral/swapVolumeClause/
+  nextExerciseButton/usability, cp10Stage3WorkoutShellsLiveTheme,
+  WorkoutSummaryScreen/RecipeBuilderScreen/AddCustomFoodScreen/
+  ExercisePickerModal a11y, screen-mount.test.js's full 616-test fuzz
+  sweep) all green; full suite 657/658 suites (1 pre-existing env-gated
+  skip, unrelated) / 8234/8243 tests (9 pre-existing conditional skips,
+  unrelated) green, lint clean. Device-test checklist and D23 findings
+  detail returned to the dispatching session, not duplicated here.

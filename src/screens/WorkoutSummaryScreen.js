@@ -1,6 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Animated } from 'react-native';
+// Campaign item 14 (D25): react-native-keyboard-controller outside sheets
+// (this screen's Modal + inline notes fields are plain RN, not gorhom
+// BottomSheets, which already route through BottomSheetTextInput).
+// KeyboardAwareScrollView replaces the main content ScrollView, which
+// previously had NO keyboard avoidance at all for the feedback/next-time
+// notes fields below it; KeyboardAvoidingView replaces the template-name
+// modal's iOS-only ternary with the library's cross-platform equivalent.
+// KeyboardGestureArea adds interactive (drag-to-dismiss) keyboard handling
+// on Android to match iOS's native interactive dismiss.
+import {
+  KeyboardAwareScrollView,
+  KeyboardAvoidingView,
+  KeyboardGestureArea,
+} from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -954,7 +968,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       {readOnly ? <BackHeader title="Workout summary" /> : null}
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardGestureArea interpolator="ios" style={{ flex: 1 }}>
+      <KeyboardAwareScrollView contentContainerStyle={styles.content} bottomOffset={24} keyboardShouldPersistTaps="handled">
         <View style={styles.completionHeader}>
           <View style={styles.checkRow}>
             <Ionicons name="checkmark-circle" size={28} color={t.colors.success} />
@@ -1470,7 +1485,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </View>
           </RevealSection>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
+      </KeyboardGestureArea>
 
       {/* Flat token, NOT insets.bottom: the tab band renders below this
           screen and already absorbs the system inset, so adding it here
@@ -1520,7 +1536,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       >
         <KeyboardAvoidingView
           style={[styles.templateModalBg, live.templateModalBg]}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
         >
           <Card radius="xl" padding="xl" style={styles.templateModalCard}>
             <Text style={[styles.templateModalTitle, live.templateModalTitle]}>Save as Workout Template</Text>
