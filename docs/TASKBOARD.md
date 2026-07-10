@@ -25,7 +25,17 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ## 1. IN FLIGHT
 
-### D35 - Drag reorder edge auto-scroll
+### PRIORITY - Inline dietary preferences + allergies in the meal builder
+- Moved from QUEUED: Sonnet agent dispatched 2026-07-10 late; spec = the
+  QUEUED entry below (kept for reference until landing). Lead reviews at
+  landing; full suite gates the boundary.
+
+### DONE THIS SESSION (for the record; full detail in the handover)
+- D35 edge auto-scroll LANDED `ed62aab` (still-finger reaction fix included;
+  20 targeted suites / 152 tests + lint green; CI full suite arbitrates on
+  push). Device checklist steps 1-12 in the agent reports via the handover.
+
+### D35 - Drag reorder edge auto-scroll (LANDED, see above)
 - **Source:** D35; handover resume point (1). Files: `src/components/DragReorderList.js` + its four consumer surfaces.
 - **CURRENT STATE:** DragReorderList ships true long-press drag (landed `534e0e0`, D32) but has NO parent auto-scroll at the drag edge - dragging to the top/bottom of a screen-overflowing list will not scroll; the user must drop and re-drag to cross off-screen (disclosed in the component header).
 - **END STATE:** dragging near the top/bottom edge auto-scrolls the parent list so a longer-than-screen list is reorderable in one continuous gesture.
