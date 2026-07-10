@@ -54,6 +54,7 @@ const reanimated = {
   useAnimatedStyle: () => ({}),
   useAnimatedProps: () => ({}),
   useDerivedValue: (fn) => ({ value: typeof fn === 'function' ? fn() : fn }),
+  useAnimatedReaction: () => {},
   useAnimatedScrollHandler: () => () => {},
   withTiming: (v) => v,
   withSpring: (v) => v,

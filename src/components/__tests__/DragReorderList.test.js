@@ -69,6 +69,29 @@ describe('DragReorderList source contract', () => {
     expect(SOURCE).toContain('accessibilityElementsHidden');
     expect(SOURCE).toContain('importantForAccessibility="no-hide-descendants"');
   });
+
+  // D35 (2026-07-10): edge auto-scroll. The scroll wiring is OPTIONAL --
+  // scrollRef/scrollOffset props plus the exported useDragAutoScrollBridge
+  // hook -- and a still finger at the edge must not stall the drag: a
+  // useAnimatedReaction on scrollOffset re-runs the SAME slot-scan worklet
+  // (scanSlots) the pan's onUpdate uses, so slot detection and the floating
+  // block's position stay live while auto-scroll moves the content
+  // underneath. scanSlots stays pure arithmetic like every other worklet.
+  test('D35: scroll wiring is optional (scrollRef/scrollOffset props + exported bridge hook)', () => {
+    expect(SOURCE).toContain('export function useDragAutoScrollBridge()');
+    expect(SOURCE).toContain('scrollRef,');
+    expect(SOURCE).toContain('scrollOffset,');
+  });
+
+  test('D35: a useAnimatedReaction on scrollOffset keeps the drag live under a still finger, via the ONE shared slot-scan worklet', () => {
+    expect(SOURCE).toContain('useAnimatedReaction');
+    const scanFn = SOURCE.match(/function scanSlots\(\) \{[\s\S]*?\n {2}\}/)?.[0] ?? '';
+    expect(scanFn).toContain("'worklet'");
+    expect(scanFn).not.toMatch(/\bt\.colors\b|\bt\.type\b|useAppStore\.getState/);
+    // Both paths (pan onUpdate and the scrollOffset reaction) call the SAME
+    // helper -- no second copy of the slot-scan arithmetic.
+    expect((SOURCE.match(/scanSlots\(\);/g) || []).length).toBeGreaterThanOrEqual(2);
+  });
 });
 
 describe('DragReorderList render contract', () => {

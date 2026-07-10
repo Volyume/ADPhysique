@@ -22,6 +22,7 @@ import { getExerciseWhyThis, getSplitRationale } from '../lib/whyThisTemplates';
 import { rankSwaps } from '../lib/swapEngine';
 import { swapAdjacentBlocks } from '../lib/reorder';
 import DragReorderList from '../components/DragReorderList';
+import { useDragAutoScrollBridge } from '../components/DragReorderList';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
@@ -115,6 +116,8 @@ export default function RoutineDetailScreen({ navigation, route }) {
   const [swapCandidates, setSwapCandidates] = useState([]);
   const [showSwapPicker, setShowSwapPicker] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
+  // D35: edge auto-scroll for the reorder-mode ScrollView below.
+  const { scrollRef, scrollOffset, onScroll, onContentSizeChange } = useDragAutoScrollBridge();
   // A4: division fingerprint line ("Built for Bikini: ..."), set only when
   // this routine belongs to the user's ACTIVE generated division plan.
   const [divisionLine, setDivisionLine] = useState(null);
@@ -541,7 +544,14 @@ export default function RoutineDetailScreen({ navigation, route }) {
         // (below) is completely untouched. The chevrons inside each row
         // stay the accessible move path; DragReorderList hides its own
         // drag handle from screen readers.
-        <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          ref={scrollRef}
+          onScroll={onScroll}
+          onContentSizeChange={onContentSizeChange}
+          scrollEventThrottle={16}
+          contentContainerStyle={styles.list}
+          keyboardShouldPersistTaps="handled"
+        >
           {listHeader}
           {exercises.length > 0 ? (
             <DragReorderList
@@ -552,6 +562,8 @@ export default function RoutineDetailScreen({ navigation, route }) {
               handleAccessibilityLabel={(item) => `Drag to reorder ${item.exercise.name}`}
               renderRow={renderExerciseRow}
               gap={spacing.md}
+              scrollRef={scrollRef}
+              scrollOffset={scrollOffset}
             />
           ) : (
             <View style={styles.empty}>

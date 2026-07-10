@@ -16,6 +16,7 @@ import TextField from '../components/TextField';
 import BottomSheet from '../components/BottomSheet';
 import InfoTooltip from '../components/InfoTooltip';
 import DragReorderList from '../components/DragReorderList';
+import { useDragAutoScrollBridge } from '../components/DragReorderList';
 
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import {
@@ -232,6 +233,11 @@ export default function ManualBuilderScreen({ navigation, route }) {
     user: s.user,
   })));
   const toast = useToast();
+  // D35: edge auto-scroll for page 2's day-exercise drag-reorder lists
+  // (one bridge, shared by every day's DragReorderList -- they all live in
+  // the SAME page-2 ScrollView). Declared unconditionally up here, ahead of
+  // the page-1/page-2 early return below, per the Rules of Hooks.
+  const { scrollRef, scrollOffset, onScroll, onContentSizeChange } = useDragAutoScrollBridge();
 
   // Page 1 state
   const [page, setPage]               = useState(1);
@@ -920,6 +926,10 @@ export default function ManualBuilderScreen({ navigation, route }) {
       />
 
       <ScrollView
+        ref={scrollRef}
+        onScroll={onScroll}
+        onContentSizeChange={onContentSizeChange}
+        scrollEventThrottle={16}
         contentContainerStyle={styles.page2Content}
         keyboardShouldPersistTaps="handled"
       >
@@ -999,6 +1009,8 @@ export default function ManualBuilderScreen({ navigation, route }) {
                     onReorder={(next) => handleReorderDayExercises(dayIdx, next)}
                     handleAccessibilityLabel={(ex) => `Drag to reorder ${ex.name}`}
                     gap={spacing.xs}
+                    scrollRef={scrollRef}
+                    scrollOffset={scrollOffset}
                     renderRow={({ item: ex, index: exIdx }) => {
                     const isSelected = selected.has(ex.localId);
                     const groupIdx = ex.supersetGroupId ? groupOrder.indexOf(ex.supersetGroupId) : -1;

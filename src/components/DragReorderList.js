@@ -44,21 +44,61 @@
  *   accessible affordance) as the fully accessible path. Drag is strictly
  *   additive.
  *
- * KNOWN LIMITATION (disclosed, not silently accepted): this list does not
- * auto-scroll its parent ScrollView when a drag reaches the top/bottom edge.
- * For the list lengths every current surface actually has (a handful of
- * plan days / routine exercises / workout exercises) the whole list fits on
- * screen or nearly does; a very long list would need to be dropped and
- * picked up again to cross out of the visible area. Flagged to the founder
- * rather than built silently or skipped silently -- see the campaign-20
- * delivery notes.
+ * AUTO-SCROLL AT THE DRAG EDGE (D35, lead-ruled under D33, 2026-07-10): a
+ * drag that reaches the top/bottom edge of the host ScrollView's visible
+ * viewport auto-scrolls that ScrollView, speed roughly proportional to how
+ * far past the edge zone the finger sits. Opt-in and backwards-compatible:
+ * a consumer wires its OWN `<ScrollView>` to the exported
+ * `useDragAutoScrollBridge()` hook (ref + onScroll + onContentSizeChange)
+ * and passes the resulting `scrollRef`/`scrollOffset` pair straight through
+ * as two new optional props on this component; a caller that never does
+ * this keeps today's plain-ScrollView, no-auto-scroll behaviour byte for
+ * byte. Driving mechanism: deliberately NOT Reanimated's UI-thread
+ * `scrollTo()` (which needs an `Animated.ScrollView`/`useAnimatedRef` --
+ * RoutineDetailScreen's reorder-mode branch is pinned to a plain
+ * `<ScrollView>` by its own guard test, and every consumer already renders
+ * an ordinary host ScrollView). Instead: the pan worklet writes the touch's
+ * raw screen Y into a shared value on every `onUpdate` (pure arithmetic, no
+ * thread hop), and a plain JS `requestAnimationFrame` loop -- started on
+ * pickup, cancelled on drop -- reads that shared value each frame, computes
+ * a proximity-based speed against the viewport bounds (measured once per
+ * pickup via `measureInWindow`, since the ScrollView's own screen position
+ * does not move mid-drag), and calls the consumer's `scrollRef.current.
+ * scrollTo` imperatively. Because auto-scroll never asks the ScrollView's
+ * OWN gesture recogniser to move it (driven programmatically, not by a
+ * second competing pan), no `simultaneousHandlers` wiring is needed
+ * anywhere, including inside the ActiveWorkout reorder sheet's nested
+ * ScrollView -- an imperative `scrollTo` and an in-flight `Gesture.Pan`
+ * simply don't contend for the same touch.
+ * Hit-testing while scrolling (the crux of this build): the dragged
+ * block's content-relative centre is `dragStartTop + dragTranslateY +
+ * height / 2`, exactly the pre-D35 formula, but `dragTranslateY` now folds
+ * in `scrollOffset.value - dragStartScrollOffset` (the scroll that has
+ * happened since pickup) alongside the raw finger translation. That
+ * cancels out the native content shift scrolling would otherwise apply to
+ * the floating block (it is a normal descendant of the scrolling content,
+ * so without this it would slide away from the finger as the list
+ * scrolled beneath it) while keeping the SAME content-relative layout
+ * cache (`orderedLayoutsSV`, unaffected by scroll) for slot detection.
+ * Because Pan's `onUpdate` only fires on finger MOVEMENT, a
+ * `useAnimatedReaction` on `scrollOffset` (gated on `isDraggingSV`, set
+ * in the onStart/onFinalize worklets) re-runs the same translate fold and
+ * the shared `scanSlots` worklet whenever auto-scroll moves the content
+ * under a perfectly still finger -- without it the floating block would
+ * drift away with the scrolled content and slot detection would stall
+ * until the finger next twitched.
+ * Reduce Motion: auto-scroll still FUNCTIONS (a navigational aid, not
+ * decoration) but its proximity-to-speed curve flattens from eased
+ * (proximity^2, ramps in faster the closer the finger sits to the very
+ * edge) to plain linear, matching AnimatedRow.js's own reduce-motion
+ * branch elsewhere in the app.
  */
 
 import { useMemo, useRef, useState, Fragment } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  useSharedValue, useAnimatedStyle, runOnJS, LinearTransition,
+  useSharedValue, useAnimatedStyle, useAnimatedReaction, runOnJS, LinearTransition,
 } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
@@ -68,6 +108,47 @@ import * as haptics from '../lib/haptics';
 import { groupIntoBlocks } from '../lib/reorder';
 
 const LONG_PRESS_MS = 350;
+
+// D35 auto-scroll tuning -- pure geometry constants, not theme reads.
+// EDGE_ZONE: band (px) from the visible viewport's top/bottom edge that
+// triggers auto-scroll. MAX_SCROLL_SPEED: fastest the content moves
+// (px/frame, ~60fps) when the finger sits right at the very edge.
+const EDGE_ZONE = 80;
+const MAX_SCROLL_SPEED = 14;
+
+function clamp(n, lo, hi) {
+  return Math.min(hi, Math.max(lo, n));
+}
+
+/**
+ * useDragAutoScrollBridge
+ *
+ * Companion hook a consumer calls ONCE per host ScrollView to opt into
+ * DragReorderList's edge auto-scroll (full design in the file header
+ * above). Wire the returned `scrollRef`/`onScroll`/`onContentSizeChange`
+ * onto the consumer's OWN plain `<ScrollView>` (not an Animated.ScrollView
+ * -- see the header comment for why), and pass the `scrollRef`/
+ * `scrollOffset` pair straight through to every DragReorderList that lives
+ * inside it. `scrollRef` doubles as the carrier for the measured content
+ * height (`scrollRef.contentHeight`): plain JS bookkeeping a worklet never
+ * reads, kept off the shared-value pair on purpose, so the auto-scroll
+ * loop below can clamp at the bottom of the real content instead of
+ * over-scrolling past it.
+ */
+export function useDragAutoScrollBridge() {
+  const scrollRef = useRef(null);
+  const scrollOffset = useSharedValue(0);
+
+  function onScroll(e) {
+    scrollOffset.value = e.nativeEvent.contentOffset.y;
+  }
+
+  function onContentSizeChange(_width, height) {
+    scrollRef.contentHeight = height;
+  }
+
+  return { scrollRef, scrollOffset, onScroll, onContentSizeChange };
+}
 
 function buildLiveStyles(t) {
   return {
@@ -101,6 +182,12 @@ export default function DragReorderList({
   gap = 0,
   style,
   testID,
+  // D35 auto-scroll opt-in pair (both optional, both required together):
+  // pass the matching fields straight from useDragAutoScrollBridge(). See
+  // the file header for the full design; omitted, this component behaves
+  // exactly as before D35.
+  scrollRef,
+  scrollOffset,
 }) {
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const t = useTheme();
@@ -154,6 +241,76 @@ export default function DragReorderList({
   const [floatTop, setFloatTop] = useState(0);
   const [floatHeight, setFloatHeight] = useState(0);
 
+  // D35 auto-scroll: raw touch screen-Y, written every onUpdate (worklet
+  // side) and read every frame by the JS-thread auto-scroll loop below; the
+  // scroll offset captured at pickup, so the hit-test/transform maths can
+  // express "how much has the container scrolled since I picked this block
+  // up". viewportRef/autoScrollFrameRef are plain refs, not shared values,
+  // because the loop that reads them lives on the JS thread (see the file
+  // header for why this is JS-thread-driven rather than a UI-thread
+  // useFrameCallback/scrollTo).
+  const touchAbsoluteYSV = useSharedValue(0);
+  const dragStartScrollOffset = useSharedValue(0);
+  // Raw finger translation, kept separate from dragTranslateY (which folds
+  // the scroll delta in) so the useAnimatedReaction below can recompute the
+  // fold when the SCROLL side changes without any new finger movement.
+  const fingerTranslationYSV = useSharedValue(0);
+  // Drag-in-flight flag for the reaction: set true in the onStart worklet,
+  // false in the onFinalize worklet (both UI-thread, so the reaction never
+  // races a runOnJS round trip).
+  const isDraggingSV = useSharedValue(false);
+  const viewportRef = useRef({ top: 0, height: 0 });
+  const autoScrollFrameRef = useRef(null);
+
+  function stopAutoScroll() {
+    if (autoScrollFrameRef.current != null) {
+      cancelAnimationFrame(autoScrollFrameRef.current);
+      autoScrollFrameRef.current = null;
+    }
+  }
+
+  // JS-thread requestAnimationFrame loop, alive only between pickup and
+  // drop and only when the consumer opted in (scrollRef + scrollOffset
+  // both passed). Deliberately NOT a worklet/useFrameCallback: scrollRef
+  // here is a plain ScrollView ref (useDragAutoScrollBridge's own header
+  // note explains why it is not an Animated.ScrollView), and the
+  // imperative `scrollTo` it needs only exists on the JS side. Re-reading
+  // proximity every frame off `touchAbsoluteYSV` (rather than only
+  // reacting to onUpdate) is what keeps auto-scroll going while the finger
+  // holds still at the edge, not just while it is actively moving.
+  function autoScrollTick() {
+    if (!scrollRef?.current || !scrollOffset) {
+      autoScrollFrameRef.current = null;
+      return;
+    }
+    const touchY = touchAbsoluteYSV.value;
+    const { top, height } = viewportRef.current;
+    const distFromTop = touchY - top;
+    const distFromBottom = (top + height) - touchY;
+    let direction = 0;
+    let proximity = 0;
+    if (distFromTop < EDGE_ZONE) {
+      direction = -1;
+      proximity = clamp((EDGE_ZONE - distFromTop) / EDGE_ZONE, 0, 1);
+    } else if (distFromBottom < EDGE_ZONE) {
+      direction = 1;
+      proximity = clamp((EDGE_ZONE - distFromBottom) / EDGE_ZONE, 0, 1);
+    }
+    if (direction !== 0) {
+      // Reduce Motion: still functional, but the eased curve (proximity^2)
+      // flattens to plain linear -- see the file header.
+      const eased = reduceMotion ? proximity : proximity * proximity;
+      const speed = direction * MAX_SCROLL_SPEED * eased;
+      const current = scrollOffset.value;
+      const maxOffset = Math.max(0, (scrollRef.contentHeight || 0) - height);
+      const next = clamp(current + speed, 0, maxOffset);
+      if (next !== current) {
+        scrollRef.current.scrollTo({ y: next, animated: false });
+      }
+    }
+    autoScrollFrameRef.current = requestAnimationFrame(autoScrollTick);
+  }
+
   function handlePickUp(key) {
     const l = layoutsRef.current[key];
     draggingKeyRef.current = key;
@@ -167,6 +324,19 @@ export default function DragReorderList({
     lastTargetIdx.value = -1;
     publishLayouts();
     haptics.selection();
+    // D35: measure the host ScrollView's on-screen bounds once per pickup
+    // (its position on screen doesn't move mid-drag) and start the
+    // auto-scroll loop. No-op when the consumer hasn't opted in.
+    if (scrollRef?.current && scrollOffset) {
+      // (dragStartScrollOffset is captured in the onStart worklet itself,
+      // UI-thread, before this runOnJS handler lands -- no race with the
+      // scrollOffset reaction.)
+      scrollRef.current.measureInWindow((x, y, width, height) => {
+        viewportRef.current = { top: y, height };
+      });
+      stopAutoScroll();
+      autoScrollFrameRef.current = requestAnimationFrame(autoScrollTick);
+    }
   }
 
   function handleCrossSlot(targetIdx) {
@@ -188,11 +358,48 @@ export default function DragReorderList({
     draggingKeyRef.current = null;
     setDraggingKeyState(null);
     haptics.selection();
+    stopAutoScroll();
     setLiveOrder((current) => {
       if (current && !sameKeys(current, items, keyExtractor)) onReorder?.(current);
       return null; // hand control back to `items` -- the parent now owns the new order
     });
   }
+
+  // The ONE slot-scan implementation, shared by the pan's onUpdate worklet
+  // and the scrollOffset reaction below (D35 review fix): compares the
+  // dragged block's content-relative centre against the cached layout
+  // midpoints and dispatches a crossing via runOnJS, exactly as onUpdate
+  // always did. Pure arithmetic -- no theme/store reads.
+  function scanSlots() {
+    'worklet';
+    const currentCenter = dragStartTop.value + dragTranslateY.value + dragHeight.value / 2;
+    const layouts = orderedLayoutsSV.value;
+    let targetIdx = 0;
+    for (let i = 0; i < layouts.length; i++) {
+      const mid = layouts[i].y + layouts[i].height / 2;
+      if (currentCenter > mid) targetIdx = i + 1;
+    }
+    if (targetIdx !== lastTargetIdx.value) {
+      lastTargetIdx.value = targetIdx;
+      runOnJS(handleCrossSlot)(targetIdx);
+    }
+  }
+
+  // D35 review fix: Pan.onUpdate only fires on finger MOVEMENT, so during
+  // an auto-scroll with a perfectly still finger the scroll-delta fold and
+  // the slot scan would otherwise stall (block drifts with the content,
+  // release drops at a stale position). This reaction re-runs both on every
+  // scrollOffset change while a drag is in flight. When the consumer hasn't
+  // opted in, the prepare function returns a constant 0 and the reaction
+  // never fires.
+  useAnimatedReaction(
+    () => (scrollOffset ? scrollOffset.value : 0),
+    (current, previous) => {
+      if (!scrollOffset || !isDraggingSV.value || current === previous) return;
+      dragTranslateY.value = fingerTranslationYSV.value + (current - dragStartScrollOffset.value);
+      scanSlots();
+    },
+  );
 
   const floatingAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: dragTranslateY.value }],
@@ -216,22 +423,30 @@ export default function DragReorderList({
         .activateAfterLongPress(LONG_PRESS_MS)
         .onStart(() => {
           'worklet';
+          // D35: capture the scroll offset at pickup HERE (UI thread), not
+          // in handlePickUp -- the scrollOffset reaction is armed the same
+          // instant via isDraggingSV, so its baseline must already be set.
+          isDraggingSV.value = true;
+          fingerTranslationYSV.value = 0;
+          if (scrollOffset) dragStartScrollOffset.value = scrollOffset.value;
           runOnJS(handlePickUp)(key);
         })
         .onUpdate((e) => {
           'worklet';
-          dragTranslateY.value = e.translationY;
-          const currentCenter = dragStartTop.value + e.translationY + dragHeight.value / 2;
-          const layouts = orderedLayoutsSV.value;
-          let targetIdx = 0;
-          for (let i = 0; i < layouts.length; i++) {
-            const mid = layouts[i].y + layouts[i].height / 2;
-            if (currentCenter > mid) targetIdx = i + 1;
-          }
-          if (targetIdx !== lastTargetIdx.value) {
-            lastTargetIdx.value = targetIdx;
-            runOnJS(handleCrossSlot)(targetIdx);
-          }
+          // D35: publish the raw touch screen-Y for the JS-thread
+          // auto-scroll loop (see handlePickUp/autoScrollTick above), and
+          // fold "how much has the container scrolled since pickup" into
+          // the same translateY the floating block renders with -- this is
+          // the offset-aware hit-testing fix documented in the file header.
+          // The raw finger translation is kept in its own shared value so
+          // the scrollOffset reaction can redo this fold without new
+          // finger movement; the slot scan itself lives in the shared
+          // scanSlots worklet above.
+          touchAbsoluteYSV.value = e.absoluteY;
+          fingerTranslationYSV.value = e.translationY;
+          const scrollDelta = scrollOffset ? (scrollOffset.value - dragStartScrollOffset.value) : 0;
+          dragTranslateY.value = e.translationY + scrollDelta;
+          scanSlots();
         })
         .onEnd(() => {
           'worklet';
@@ -239,6 +454,7 @@ export default function DragReorderList({
         })
         .onFinalize(() => {
           'worklet';
+          isDraggingSV.value = false;
           dragTranslateY.value = 0;
         });
       map[key] = pan;

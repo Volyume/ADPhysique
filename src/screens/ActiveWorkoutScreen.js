@@ -22,6 +22,7 @@ import AnimatedRow from '../components/AnimatedRow';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 import BottomSheet from '../components/BottomSheet';
 import DragReorderList from '../components/DragReorderList';
+import { useDragAutoScrollBridge } from '../components/DragReorderList';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import useAppStore from '../store/useAppStore';
@@ -123,9 +124,19 @@ const SET_TYPE_OPTIONS = [
 ];
 
 
-function WorkoutSheetScroll({ children }) {
+// D35: scrollRef/onScroll/onContentSizeChange are optional and undefined
+// for every sheet except the reorder sheet below -- they come straight
+// from that sheet's useDragAutoScrollBridge() call and are otherwise a
+// no-op (RN ignores undefined ref/onScroll/onContentSizeChange props), so
+// every other WorkoutBottomSheet caller keeps today's plain-ScrollView
+// behaviour byte for byte.
+function WorkoutSheetScroll({ children, scrollRef, onScroll, onContentSizeChange }) {
   return (
     <ScrollView
+      ref={scrollRef}
+      onScroll={onScroll}
+      onContentSizeChange={onContentSizeChange}
+      scrollEventThrottle={onScroll ? 16 : undefined}
       style={styles.sheetScroll}
       contentContainerStyle={styles.sheetScrollBody}
       showsVerticalScrollIndicator={false}
@@ -136,7 +147,10 @@ function WorkoutSheetScroll({ children }) {
   );
 }
 
-function WorkoutBottomSheet({ visible, onClose, accessibilityLabel, keyboardAvoiding = false, children }) {
+function WorkoutBottomSheet({
+  visible, onClose, accessibilityLabel, keyboardAvoiding = false, children,
+  scrollRef, onScroll, onContentSizeChange,
+}) {
   return (
     <BottomSheet
       visible={visible}
@@ -144,7 +158,7 @@ function WorkoutBottomSheet({ visible, onClose, accessibilityLabel, keyboardAvoi
       keyboardAvoiding={keyboardAvoiding}
       accessibilityLabel={accessibilityLabel}
     >
-      <WorkoutSheetScroll>
+      <WorkoutSheetScroll scrollRef={scrollRef} onScroll={onScroll} onContentSizeChange={onContentSizeChange}>
         {children}
       </WorkoutSheetScroll>
     </BottomSheet>
@@ -379,6 +393,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // drag on this screen -- the single-exercise focus view stays untouched;
   // see the sheet's own render block further down for the rationale.
   const [showReorderSheet, setShowReorderSheet] = useState(false);
+  // D35: edge auto-scroll for the reorder sheet's own scroll area
+  // (WorkoutSheetScroll's ScrollView, threaded through WorkoutBottomSheet
+  // below). Declared unconditionally here alongside showReorderSheet.
+  const reorderSheetScroll = useDragAutoScrollBridge();
   // B8 gym basics: the warm-up helper opens ONLY from the exercise overflow menu,
   // pull, never push (the recorded no-auto-suggest decision below stands).
   const [showWarmupRamp, setShowWarmupRamp] = useState(false);
@@ -3755,6 +3773,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           visible={showReorderSheet}
           onClose={() => setShowReorderSheet(false)}
           accessibilityLabel="Reorder exercises"
+          scrollRef={reorderSheetScroll.scrollRef}
+          onScroll={reorderSheetScroll.onScroll}
+          onContentSizeChange={reorderSheetScroll.onContentSizeChange}
         >
           {showReorderSheet ? (
             <>
@@ -3769,6 +3790,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 onReorder={handleReorderWorkoutExercises}
                 handleAccessibilityLabel={(e) => `Drag to reorder ${e.exercise?.name ?? 'exercise'}`}
                 gap={spacing.sm}
+                scrollRef={reorderSheetScroll.scrollRef}
+                scrollOffset={reorderSheetScroll.scrollOffset}
                 renderRow={({ item, index }) => {
                   const gid = item.supersetGroupId ?? null;
                   // Same 2-vs-3+ naming the heads-up modal uses (item 21):

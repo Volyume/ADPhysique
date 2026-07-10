@@ -26,6 +26,7 @@ import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import Card from '../components/Card';
 import SectionLabel from '../components/SectionLabel';
 import DragReorderList from '../components/DragReorderList';
+import { useDragAutoScrollBridge } from '../components/DragReorderList';
 import * as haptics from '../lib/haptics';
 
 // Same reading order the enrollment reveal uses: how the week is structured,
@@ -50,6 +51,11 @@ export default function PlanDetailScreen({ navigation, route }) {
   const [whyThis, setWhyThis] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
+  // D35: edge auto-scroll for the workouts drag-reorder list below -- this
+  // page's own ScrollView is the drag's scroll container. Harmless when not
+  // reordering: the bridge only does anything once a DragReorderList drag
+  // actually picks up, and that list only mounts in reorder mode.
+  const { scrollRef, scrollOffset, onScroll, onContentSizeChange } = useDragAutoScrollBridge();
 
   useFocusEffect(
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -289,6 +295,10 @@ export default function PlanDetailScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <BackHeader title={plan?.name || 'Plan'} />
       <ScrollView
+        ref={scrollRef}
+        onScroll={onScroll}
+        onContentSizeChange={onContentSizeChange}
+        scrollEventThrottle={16}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
@@ -382,6 +392,8 @@ export default function PlanDetailScreen({ navigation, route }) {
               onReorder={handleReorderWorkouts}
               handleAccessibilityLabel={(w) => `Drag to reorder ${w.name}`}
               gap={spacing.md}
+              scrollRef={scrollRef}
+              scrollOffset={scrollOffset}
               renderRow={({ item: routine, index: i }) => (
                 <Card style={styles.workoutCard}>
                   <View style={styles.workoutIndex}>
