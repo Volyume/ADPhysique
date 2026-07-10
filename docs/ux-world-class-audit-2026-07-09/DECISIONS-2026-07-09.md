@@ -417,3 +417,19 @@ for use." The AI-assisted food input fork (photo meal-scan / voice
 logging) is HELD by founder order - not rejected, not approved; do not
 build and do not re-propose unprompted. The coaching engine's no-AI
 rule was never in question and stands absolutely.
+
+## D28 — Adversarial review goes external; R1 pulled into the queue (founder, 2026-07-10)
+Founder: "let's get these all done and I'll ask codex to do a full
+adversarial." Rulings recorded:
+- The HELD adversarial whole-diff review transfers to the FOUNDER,
+  executed externally (Codex). The internal held task closes as
+  superseded; findings from the external review return here as work.
+- R1 (curated-meal additions carry no FSA allergen tags/filtering; soya
+  and mustard reachable by allergic users on filtered meals) was held
+  ONLY because it belonged to that review - with the review external,
+  the FIX joins the internal build queue NOW at high priority: tag
+  allergen-bearing additions in the curated data + filter by the
+  profile's allergen excludes wherever additions render (CuratedMealSheet
+  + the diary season-to-taste row + MealPlan additions lists).
+- The remaining runway (in-chat list, recorded in the handover) is
+  confirmed GO in full.
