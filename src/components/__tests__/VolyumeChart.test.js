@@ -77,15 +77,20 @@ const { plotPoints, paddedDomain } = require('../../lib/chartGeometry');
 afterEach(() => applyAccessibility({}));
 
 describe('LT-6: gridline contrast', () => {
+  // CP-10 stage 4 (theming, Skia/chart consumers, 2026-07-10): `rulesColor`
+  // is resolved to `resolvedRulesColor` inside the component body now (a
+  // live-theme fallback, see the class below), instead of being read
+  // directly as a default-parameter prop. Same identifier renamed at both
+  // the render site and the default-resolution site; no behaviour change.
   test('the gridline stroke carries no opacity multiplier on top of the border token', () => {
     const gridline = SOURCE.match(/<Line x1=\{box\.left\} y1=\{y\}[\s\S]{0,140}?\/>/);
     expect(gridline).toBeTruthy();
-    expect(gridline[0]).toMatch(/stroke=\{rulesColor\}/);
+    expect(gridline[0]).toMatch(/stroke=\{resolvedRulesColor\}/);
     expect(gridline[0]).not.toMatch(/opacity/);
   });
 
   test('rulesColor still defaults to the border token (the intended gridline token)', () => {
-    expect(SOURCE).toMatch(/rulesColor = theme\.border,/);
+    expect(SOURCE).toMatch(/resolvedRulesColor = rulesColor \?\? t\.colors\.border;/);
   });
 
   // Relative-luminance WCAG contrast, same formula theme.test.js uses inline

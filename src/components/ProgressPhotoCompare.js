@@ -42,6 +42,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   colors, spacing, radius, type, iconSize, motion, withAlpha,
 } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { logError } from '../lib/errorLog';
 import { getPhotoMetaMap } from '../lib/progressPhotoMeta';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
@@ -71,6 +72,8 @@ const MODES = [
 // A small segmented control shared by the pose filter and the mode switch.
 // Selection is announced via accessibilityState.selected; copy is token-styled.
 function Segmented({ options, value, onChange, groupLabel }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={styles.segmented} accessibilityLabel={groupLabel}>
       {options.map((opt) => {
@@ -78,7 +81,7 @@ function Segmented({ options, value, onChange, groupLabel }) {
         return (
           <TouchableOpacity
             key={opt.key}
-            style={[styles.segment, active && styles.segmentActive]}
+            style={[styles.segment, live.segment, active && [styles.segmentActive, live.segmentActive]]}
             onPress={() => onChange(opt.key)}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
@@ -88,10 +91,10 @@ function Segmented({ options, value, onChange, groupLabel }) {
               <Ionicons
                 name={opt.icon}
                 size={iconSize.sm}
-                color={active ? colors.onPrimary : colors.textMuted}
+                color={active ? t.colors.onPrimary : t.colors.textMuted}
               />
             ) : null}
-            <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{opt.label}</Text>
+            <Text style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{opt.label}</Text>
           </TouchableOpacity>
         );
       })}
@@ -102,16 +105,18 @@ function Segmented({ options, value, onChange, groupLabel }) {
 // A dated pane: one bounded, resize-decoded image with its neutral label and
 // date. Shared by the side-by-side mode. `role` is 'Earlier' or 'Later'.
 function Pane({ item, role, w, h, failed, onError, reduceMotion }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={styles.pane}>
       {failed ? (
-        <View style={[styles.paneImage, styles.fallback, { width: w, height: h }]}>
-          <Text style={styles.fallbackText}>Could not load this photo.</Text>
+        <View style={[styles.paneImage, live.paneImage, styles.fallback, live.fallback, { width: w, height: h }]}>
+          <Text style={[styles.fallbackText, live.fallbackText]}>Could not load this photo.</Text>
         </View>
       ) : (
         <Image
           source={{ uri: item.uri }}
-          style={[styles.paneImage, { width: w, height: h }]}
+          style={[styles.paneImage, live.paneImage, { width: w, height: h }]}
           contentFit="contain"
           recyclingKey={item.name}
           transition={reduceMotion ? 0 : motion.state}
@@ -120,8 +125,8 @@ function Pane({ item, role, w, h, failed, onError, reduceMotion }) {
           onError={onError}
         />
       )}
-      <Text style={styles.paneRole}>{role}</Text>
-      <Text style={styles.paneDate}>{formatProgressPhotoDay(item.takenAt)}</Text>
+      <Text style={[styles.paneRole, live.paneRole]}>{role}</Text>
+      <Text style={[styles.paneDate, live.paneDate]}>{formatProgressPhotoDay(item.takenAt)}</Text>
     </View>
   );
 }
@@ -134,6 +139,8 @@ function Pane({ item, role, w, h, failed, onError, reduceMotion }) {
 function CompareSlider({
   earlier, later, w, h, reduceMotion, failed, onError,
 }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const divider = useSharedValue(w / 2);
   const [pct, setPct] = useState(50);
 
@@ -162,10 +169,10 @@ function CompareSlider({
 
   return (
     <View style={styles.stage}>
-      <View style={[styles.frame, { width: w, height: h }]}>
+      <View style={[styles.frame, live.frame, { width: w, height: h }]}>
         {failed.later ? (
-          <View style={[styles.fallback, { width: w, height: h }]}>
-            <Text style={styles.fallbackText}>Could not load this photo.</Text>
+          <View style={[styles.fallback, live.fallback, { width: w, height: h }]}>
+            <Text style={[styles.fallbackText, live.fallbackText]}>Could not load this photo.</Text>
           </View>
         ) : (
           <Image
@@ -181,8 +188,8 @@ function CompareSlider({
         )}
         <Reanimated.View style={[styles.clip, clipStyle]} pointerEvents="none">
           {failed.earlier ? (
-            <View style={[styles.fallback, { width: w, height: h }]}>
-              <Text style={styles.fallbackText}>Could not load this photo.</Text>
+            <View style={[styles.fallback, live.fallback, { width: w, height: h }]}>
+              <Text style={[styles.fallbackText, live.fallbackText]}>Could not load this photo.</Text>
             </View>
           ) : (
             <Image
@@ -207,9 +214,9 @@ function CompareSlider({
             accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
             onAccessibilityAction={onAction}
           >
-            <View style={styles.handleLine} />
-            <View style={styles.handleGrip}>
-              <Ionicons name="code-outline" size={iconSize.sm} color={colors.onPrimary} />
+            <View style={[styles.handleLine, live.handleLine]} />
+            <View style={[styles.handleGrip, live.handleGrip]}>
+              <Ionicons name="code-outline" size={iconSize.sm} color={t.colors.onPrimary} />
             </View>
           </Reanimated.View>
         </GestureDetector>
@@ -217,12 +224,12 @@ function CompareSlider({
 
       <View style={styles.ends}>
         <View style={styles.endBlock}>
-          <Text style={styles.paneRole}>Earlier</Text>
-          <Text style={styles.paneDate}>{formatProgressPhotoDay(earlier.takenAt)}</Text>
+          <Text style={[styles.paneRole, live.paneRole]}>Earlier</Text>
+          <Text style={[styles.paneDate, live.paneDate]}>{formatProgressPhotoDay(earlier.takenAt)}</Text>
         </View>
         <View style={[styles.endBlock, styles.endRight]}>
-          <Text style={styles.paneRole}>Later</Text>
-          <Text style={styles.paneDate}>{formatProgressPhotoDay(later.takenAt)}</Text>
+          <Text style={[styles.paneRole, live.paneRole]}>Later</Text>
+          <Text style={[styles.paneDate, live.paneDate]}>{formatProgressPhotoDay(later.takenAt)}</Text>
         </View>
       </View>
     </View>
@@ -236,6 +243,8 @@ function CompareSlider({
 function CompareOverlay({
   earlier, later, w, h,
 }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const earlierImg = useImage(earlier.uri);
   const laterImg = useImage(later.uri);
   const [pct, setPct] = useState(60);
@@ -257,7 +266,7 @@ function CompareOverlay({
 
   return (
     <View style={styles.stage}>
-      <View style={[styles.frame, { width: w, height: h }]}>
+      <View style={[styles.frame, live.frame, { width: w, height: h }]}>
         <Canvas style={{ width: w, height: h }}>
           {earlierImg ? (
             <SkiaImage image={earlierImg} x={0} y={0} width={w} height={h} fit="contain" />
@@ -285,21 +294,21 @@ function CompareOverlay({
         onAccessibilityAction={onAction}
       >
         <GestureDetector gesture={pan}>
-          <View style={styles.track}>
-            <View style={[styles.trackFill, { width: `${pct}%` }]} />
-            <View style={[styles.trackThumb, { left: `${pct}%` }]} />
+          <View style={[styles.track, live.track]}>
+            <View style={[styles.trackFill, live.trackFill, { width: `${pct}%` }]} />
+            <View style={[styles.trackThumb, live.trackThumb, { left: `${pct}%` }]} />
           </View>
         </GestureDetector>
       </View>
 
       <View style={styles.ends}>
         <View style={styles.endBlock}>
-          <Text style={styles.paneRole}>Earlier</Text>
-          <Text style={styles.paneDate}>{formatProgressPhotoDay(earlier.takenAt)}</Text>
+          <Text style={[styles.paneRole, live.paneRole]}>Earlier</Text>
+          <Text style={[styles.paneDate, live.paneDate]}>{formatProgressPhotoDay(earlier.takenAt)}</Text>
         </View>
         <View style={[styles.endBlock, styles.endRight]}>
-          <Text style={styles.paneRole}>Later</Text>
-          <Text style={styles.paneDate}>{formatProgressPhotoDay(later.takenAt)}</Text>
+          <Text style={[styles.paneRole, live.paneRole]}>Later</Text>
+          <Text style={[styles.paneDate, live.paneDate]}>{formatProgressPhotoDay(later.takenAt)}</Text>
         </View>
       </View>
       {/* The overlay has no auto-crossfade at all (a flicker would read as a
@@ -324,6 +333,8 @@ function seededPairFor(initialName, enriched, fallback) {
 }
 
 export default function ProgressPhotoCompare({ photos, onClose, initialName = null }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const suppressed = usePhotoSuppression();
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
 
@@ -464,11 +475,11 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
   // placeholder instead of any comparison. Hooks above always run first.
   if (suppressed) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
         <View style={styles.header}>
           <View style={styles.headerCopy}>
-            <Text style={styles.title}>Compare Progress Photos</Text>
-            <Text style={styles.subtitle}>Dates and poses only. Files stay on this device.</Text>
+            <Text style={[styles.title, live.title]}>Compare Progress Photos</Text>
+            <Text style={[styles.subtitle, live.subtitle]}>Dates and poses only. Files stay on this device.</Text>
           </View>
           <TouchableOpacity
             onPress={onClose}
@@ -476,13 +487,13 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
             accessibilityRole="button"
             accessibilityLabel="Close compare"
           >
-            <Ionicons name="close" size={26} color={colors.textPrimary} />
+            <Ionicons name="close" size={26} color={t.colors.textPrimary} />
           </TouchableOpacity>
         </View>
         <View style={styles.placeholder}>
-          <Ionicons name="leaf-outline" size={32} color={colors.textMuted} />
-          <Text style={styles.placeholderText}>Comparison is hidden for now.</Text>
-          <Text style={styles.placeholderSub}>Your photos stay private to this device.</Text>
+          <Ionicons name="leaf-outline" size={32} color={t.colors.textMuted} />
+          <Text style={[styles.placeholderText, live.placeholderText]}>Comparison is hidden for now.</Text>
+          <Text style={[styles.placeholderSub, live.placeholderSub]}>Your photos stay private to this device.</Text>
         </View>
       </SafeAreaView>
     );
@@ -492,11 +503,11 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
   const later = ready ? pair[1] : null;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text style={styles.title}>Compare Progress Photos</Text>
-          <Text style={styles.subtitle}>Dates and poses only. Files stay on this device.</Text>
+          <Text style={[styles.title, live.title]}>Compare Progress Photos</Text>
+          <Text style={[styles.subtitle, live.subtitle]}>Dates and poses only. Files stay on this device.</Text>
         </View>
         <TouchableOpacity
           onPress={onClose}
@@ -504,7 +515,7 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
           accessibilityRole="button"
           accessibilityLabel="Close compare"
         >
-          <Ionicons name="close" size={26} color={colors.textPrimary} />
+          <Ionicons name="close" size={26} color={t.colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -523,23 +534,23 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
 
         <View style={styles.quickRow}>
           <TouchableOpacity
-            style={styles.quick}
+            style={[styles.quick, live.quick]}
             onPress={pickEarliestLatest}
             disabled={scoped.length < 2}
             accessibilityRole="button"
             accessibilityState={{ disabled: scoped.length < 2 }}
             accessibilityLabel="Earliest and latest"
           >
-            <Text style={styles.quickText}>Earliest and latest</Text>
+            <Text style={[styles.quickText, live.quickText]}>Earliest and latest</Text>
           </TouchableOpacity>
           {weeksBack ? (
             <TouchableOpacity
-              style={styles.quick}
+              style={[styles.quick, live.quick]}
               onPress={pickWeeksBack}
               accessibilityRole="button"
               accessibilityLabel={`Latest and ${weeksBack.n} week${weeksBack.n === 1 ? '' : 's'} back`}
             >
-              <Text style={styles.quickText}>
+              <Text style={[styles.quickText, live.quickText]}>
                 {`Latest and ${weeksBack.n} week${weeksBack.n === 1 ? '' : 's'} back`}
               </Text>
             </TouchableOpacity>
@@ -548,20 +559,20 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
 
         {!ready ? (
           <View style={styles.placeholder}>
-            <Ionicons name="images-outline" size={32} color={colors.textMuted} />
-            <Text style={styles.placeholderText}>Two photos are needed to compare.</Text>
+            <Ionicons name="images-outline" size={32} color={t.colors.textMuted} />
+            <Text style={[styles.placeholderText, live.placeholderText]}>Two photos are needed to compare.</Text>
           </View>
         ) : (
           <View style={styles.body}>
             {setupStatus ? (
               <View
-                style={styles.setupStatus}
+                style={[styles.setupStatus, live.setupStatus]}
                 accessibilityLabel={`Compare setup status: ${setupStatus.title}. ${setupStatus.body}`}
               >
-                <Ionicons name={setupStatus.icon} size={iconSize.sm} color={colors.primary} />
+                <Ionicons name={setupStatus.icon} size={iconSize.sm} color={t.colors.primary} />
                 <View style={styles.setupStatusCopy}>
-                  <Text style={styles.setupStatusTitle}>{setupStatus.title}</Text>
-                  <Text style={styles.setupStatusBody}>{setupStatus.body}</Text>
+                  <Text style={[styles.setupStatusTitle, live.setupStatusTitle]}>{setupStatus.title}</Text>
+                  <Text style={[styles.setupStatusBody, live.setupStatusBody]}>{setupStatus.body}</Text>
                 </View>
               </View>
             ) : null}
@@ -617,7 +628,7 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
               >
                 <Image
                   source={{ uri: item.uri }}
-                  style={[styles.thumb, isChosen && styles.thumbChosen]}
+                  style={[styles.thumb, live.thumb, isChosen && [styles.thumbChosen, live.thumbChosen]]}
                   contentFit="cover"
                   recyclingKey={item.name}
                   transition={reduceMotion ? 0 : motion.state}
@@ -745,3 +756,53 @@ const styles = StyleSheet.create({
   placeholderText: { ...type.bodyStrong, color: colors.textPrimary, textAlign: 'center' },
   placeholderSub: { ...type.bodySm, color: colors.textMuted, textAlign: 'center' },
 });
+
+// CP-10 stage 4 (theming, Skia/chart consumers, 2026-07-10): buildLiveStyles
+// is the shared "frozen base + live override" map for this file's five
+// function-component scopes (Segmented, Pane, CompareSlider, CompareOverlay,
+// ProgressPhotoCompare) -- each calls `const t = useTheme(); const live =
+// useMemo(() => buildLiveStyles(t), [t]);` and appends `live.KEY` after
+// `styles.KEY` in every style array, same pattern as WorkoutSummaryScreen.js's
+// buildLiveStyles. Memoised on `t` (not called bare per render like the
+// primitives' convention) because CompareSlider/CompareOverlay re-render on
+// every drag frame (runOnJS(setPct) in their pan gestures) -- rebuilding a
+// fresh style-value map on every one of those frames would be wasted work
+// the plan's section 5.1 performance note warns against. Every key here
+// mirrors only the colour/fontSize/type-bearing sub-properties of the
+// matching frozen style above, at identical rest values; pure layout keys
+// (flex/gap/padding/position/width, no token) are correctly omitted.
+// `scroll`, `scrollContent`, `segmented`, `quickRow`, `body`,
+// `setupStatusCopy`, `clip`, `handle`, `ends`, `endBlock`, `endRight`,
+// `trackWrap`, `modeBar`, `ribbon` have no colour/fontSize tokens at all, so
+// they stay untouched with no `live.*` entry.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    title: { ...t.type.h3, color: t.colors.textPrimary },
+    subtitle: { ...t.type.caption, color: t.colors.textMuted },
+    segment: { backgroundColor: t.colors.surface2 },
+    segmentActive: { backgroundColor: t.colors.primaryFill },
+    segmentText: { ...t.type.label, color: t.colors.textMuted },
+    segmentTextActive: { color: t.colors.onPrimary },
+    quick: { borderColor: t.colors.borderSubtle },
+    quickText: { ...t.type.label, color: t.colors.textPrimary },
+    setupStatus: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    setupStatusTitle: { ...t.type.label, color: t.colors.textPrimary },
+    setupStatusBody: { ...t.type.caption, color: t.colors.textMuted },
+    paneImage: { backgroundColor: t.colors.surface },
+    paneRole: { ...t.type.label, color: t.colors.textMuted },
+    paneDate: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    frame: { backgroundColor: t.colors.surface },
+    handleLine: { backgroundColor: withAlpha(t.colors.background, 0.85) },
+    handleGrip: { backgroundColor: t.colors.primaryFill },
+    track: { backgroundColor: t.colors.surface3 },
+    trackFill: { backgroundColor: t.colors.primaryFill },
+    trackThumb: { backgroundColor: t.colors.primaryFill },
+    thumb: { backgroundColor: t.colors.surface },
+    thumbChosen: { borderColor: t.colors.primary },
+    fallback: { backgroundColor: t.colors.surface },
+    fallbackText: { ...t.type.bodySm, color: t.colors.textMuted },
+    placeholderText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    placeholderSub: { ...t.type.bodySm, color: t.colors.textMuted },
+  };
+}

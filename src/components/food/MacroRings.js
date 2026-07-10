@@ -4,6 +4,7 @@ import { useSharedValue, useDerivedValue, withTiming } from 'react-native-reanim
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import RollingNumber from '../RollingNumber';
 import { colors, fontSize, fontWeight, spacing, radius, motion } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 
@@ -24,6 +25,18 @@ const KCAL_STROKE = 14;
 // the adherence-neutral behaviour above.
 export function bandColour() {
   return colors.primaryFill;
+}
+
+// CP-10 stage 4 (theming, Skia/chart consumers, 2026-07-10): live variant of
+// bandColour() above, same "build" pattern as theme.js's
+// buildVolumeStatusColor -- resolves the SAME token (primaryFill) but off a
+// passed-in colour table (a migrated component's `t.colors`, from
+// useTheme()) instead of the frozen module singleton, so the calorie ring's
+// tint stays in step with a live theme flip. bandColour() itself is
+// untouched and stays the frozen-singleton form for any unmigrated caller
+// and its own colocated test.
+export function buildBandColour(c) {
+  return c.primaryFill;
 }
 
 function arcPath(cx, cy, r, startDeg, sweepDeg) {
@@ -107,7 +120,14 @@ function Ring({ size, stroke, progress, progressTarget, plannedProgress = 0, tin
 // `moreIsFine` marks a macro with no upper-bound shame (fibre): it shows a
 // "Ng to go" remaining hint while under target but NEVER an "over" readout,
 // since more fibre is not a deviation to flag.
-function MacroBar({ label, value, target, planned = 0, primary, sub = null, moreIsFine = false, tint = colors.primary }) {
+function MacroBar({ label, value, target, planned = 0, primary, sub = null, moreIsFine = false, tint }) {
+  // CP-10 stage 4: `tint` was a default PARAMETER reading the frozen module
+  // `colors` singleton (every real caller in this file already passes an
+  // explicit tint, so this default is defensive); resolved against the
+  // live theme here so a caller that omits it still tracks a theme flip.
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
+  const resolvedTint = tint ?? t.colors.primary;
   const progress = target && target > 0 ? Math.max(0, Math.min(1, value / target)) : 0;
   const plannedProgress = target && target > 0 ? Math.max(0, Math.min(1, (value + planned) / target)) : 0;
   // Remaining framing (factual value/target, no colour judgement, matches the
@@ -122,22 +142,22 @@ function MacroBar({ label, value, target, planned = 0, primary, sub = null, more
   return (
     <View style={styles.macroBar}>
       <View style={styles.macroBarTop}>
-        <Text style={[styles.macroBarLabel, primary && styles.macroBarLabelPrimary]}>{label}</Text>
-        <Text style={[styles.macroBarValue, primary && styles.macroBarValuePrimary]}>
+        <Text style={[styles.macroBarLabel, live.macroBarLabel, primary && [styles.macroBarLabelPrimary, live.macroBarLabelPrimary]]}>{label}</Text>
+        <Text style={[styles.macroBarValue, live.macroBarValue, primary && [styles.macroBarValuePrimary, live.macroBarValuePrimary]]}>
           {value}{target != null ? ` / ${target}` : ''}g
-          {planned > 0 ? <Text style={styles.macroBarPlanned}>{`  +${Math.round(planned)} planned`}</Text> : null}
+          {planned > 0 ? <Text style={[styles.macroBarPlanned, live.macroBarPlanned]}>{`  +${Math.round(planned)} planned`}</Text> : null}
         </Text>
       </View>
-      <View style={styles.macroTrack}>
+      <View style={[styles.macroTrack, live.macroTrack]}>
         {plannedProgress > progress ? (
-          <View style={[styles.macroFillPlanned, { width: `${Math.round(plannedProgress * 100)}%`, backgroundColor: tint }]} />
+          <View style={[styles.macroFillPlanned, live.macroFillPlanned, { width: `${Math.round(plannedProgress * 100)}%`, backgroundColor: resolvedTint }]} />
         ) : null}
-        <View style={[styles.macroFill, { width: `${Math.round(progress * 100)}%`, backgroundColor: tint }]} />
+        <View style={[styles.macroFill, live.macroFill, { width: `${Math.round(progress * 100)}%`, backgroundColor: resolvedTint }]} />
       </View>
       {(sub || remainingText) ? (
         <View style={styles.macroBarSubRow}>
-          <Text style={styles.macroBarSub}>{sub ?? ''}</Text>
-          {remainingText ? <Text style={styles.macroBarRemaining}>{remainingText}</Text> : null}
+          <Text style={[styles.macroBarSub, live.macroBarSub]}>{sub ?? ''}</Text>
+          {remainingText ? <Text style={[styles.macroBarRemaining, live.macroBarRemaining]}>{remainingText}</Text> : null}
         </View>
       ) : null}
     </View>
@@ -145,6 +165,8 @@ function MacroBar({ label, value, target, planned = 0, primary, sub = null, more
 }
 
 export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onPress }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const kcal = Math.round(rollup?.kcal_total ?? 0);
   const p = Math.round(rollup?.protein_g ?? 0);
   const c = Math.round(rollup?.carbs_g ?? 0);
@@ -165,7 +187,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
   const kcalPlannedProgress = kcalTarget && kcalTarget > 0 ? (kcal + plannedKcal) / kcalTarget : 0;
   // Remaining (the hero) is derived from the animated eaten total at render time
   // (the remaining numeral), so the non-animated kcalRemaining is no longer needed here.
-  const kcalTint = bandColour();
+  const kcalTint = buildBandColour(t.colors);
 
   // Descriptive macro %-of-calories split (Cronometer-style). Purely factual:
   // what was eaten, computed from grams using the Atwater factors (protein 4,
@@ -251,7 +273,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
 
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, live.card]}
       onPress={onPress}
       disabled={!onPress}
       activeOpacity={0.9}
@@ -264,8 +286,8 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
       accessibilityLiveRegion="polite"
     >
       {dayTypeLabel ? (
-        <View style={styles.dayTypeChip}>
-          <Text style={styles.dayTypeChipText}>{dayTypeLabel}</Text>
+        <View style={[styles.dayTypeChip, live.dayTypeChip]}>
+          <Text style={[styles.dayTypeChipText, live.dayTypeChipText]}>{dayTypeLabel}</Text>
         </View>
       ) : null}
       <View style={styles.kcalRow}>
@@ -277,33 +299,33 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
             progressTarget={kcalProgress}
             plannedProgress={kcalPlannedProgress}
             tint={kcalTint}
-            track={colors.surface2}
+            track={t.colors.surface2}
           />
           <View style={styles.kcalCentre} pointerEvents="none">
             {kcalTarget != null ? (
               <>
                 <RollingNumber
                   value={toEnergy(over ? Math.abs(remaining) : remaining, energyUnit)}
-                  style={styles.kcalValue}
+                  style={[styles.kcalValue, live.kcalValue]}
                   accessibilityLabel={`${toEnergy(over ? Math.abs(remaining) : remaining, energyUnit)} ${energyWord} ${over ? 'over' : 'left'}`}
                 />
-                <Text style={styles.kcalSubLabel}>{over ? 'over' : 'left'}</Text>
+                <Text style={[styles.kcalSubLabel, live.kcalSubLabel]}>{over ? 'over' : 'left'}</Text>
               </>
             ) : (
               <>
-                <RollingNumber value={toEnergy(kcal, energyUnit)} style={styles.kcalValue} />
-                <Text style={styles.kcalSubLabel}>{energyUnitLabel(energyUnit)}</Text>
+                <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalValue, live.kcalValue]} />
+                <Text style={[styles.kcalSubLabel, live.kcalSubLabel]}>{energyUnitLabel(energyUnit)}</Text>
               </>
             )}
             {hasPlanned ? (
-              <Text style={styles.kcalPlanned}>{`+${toEnergy(plannedKcal, energyUnit)} planned`}</Text>
+              <Text style={[styles.kcalPlanned, live.kcalPlanned]}>{`+${toEnergy(plannedKcal, energyUnit)} planned`}</Text>
             ) : null}
           </View>
         </View>
         {kcalTarget != null ? (
           <View style={styles.kcalEatenWrap}>
-            <RollingNumber value={toEnergy(kcal, energyUnit)} style={styles.kcalEatenValue} />
-            <Text style={styles.kcalEatenLabel}>{`of ${toEnergy(kcalTarget, energyUnit)} ${energyUnitLabel(energyUnit)}`}</Text>
+            <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalEatenValue, live.kcalEatenValue]} />
+            <Text style={[styles.kcalEatenLabel, live.kcalEatenLabel]}>{`of ${toEnergy(kcalTarget, energyUnit)} ${energyUnitLabel(energyUnit)}`}</Text>
           </View>
         ) : null}
       </View>
@@ -314,19 +336,19 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
           target={pTarget}
           planned={plannedP}
           primary
-          tint={colors.macroProtein}
+          tint={t.colors.macroProtein}
           sub={proteinPerKgToday != null ? `${proteinPerKgToday} g/kg today` : null}
         />
-        <MacroBar label="Carbs"   value={c} target={cTarget} planned={plannedC} tint={colors.macroCarb} />
-        <MacroBar label="Fat"     value={f} target={fTarget} planned={plannedF} tint={colors.macroFat} />
+        <MacroBar label="Carbs"   value={c} target={cTarget} planned={plannedC} tint={t.colors.macroCarb} />
+        <MacroBar label="Fat"     value={f} target={fTarget} planned={plannedF} tint={t.colors.macroFat} />
         {showFibre ? (
-          <MacroBar label="Fibre" value={fibre} target={fibreTarget} moreIsFine tint={colors.macroFibre} />
+          <MacroBar label="Fibre" value={fibre} target={fibreTarget} moreIsFine tint={t.colors.macroFibre} />
         ) : null}
       </View>
       {macroSplit ? (
-        <Text style={styles.macroSplit}>
+        <Text style={[styles.macroSplit, live.macroSplit]}>
           {`P ${macroSplit.p}% - C ${macroSplit.c}% - F ${macroSplit.f}%`}
-          <Text style={styles.macroSplitCaption}> of calories</Text>
+          <Text style={[styles.macroSplitCaption, live.macroSplitCaption]}> of calories</Text>
         </Text>
       ) : null}
     </TouchableOpacity>
@@ -479,3 +501,41 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
   },
 });
+
+// CP-10 stage 4 (theming, Skia/chart consumers, 2026-07-10): buildLiveStyles
+// is the shared "frozen base + live override" map for this file's two
+// function-component scopes (MacroBar, MacroRings) -- each calls
+// `const t = useTheme(); const live = buildLiveStyles(t);` and appends
+// `live.KEY` after `styles.KEY` in every style array, same pattern as
+// WorkoutSummaryScreen.js's buildLiveStyles. Every key here mirrors only the
+// colour/fontSize sub-properties of the matching frozen style above, at
+// identical rest values; fontWeight/fontVariant/lineHeight/layout keys carry
+// no live token (fontWeight is not part of useTheme()'s returned `t`) and are
+// correctly omitted -- there is nothing to unfreeze for them. `macroBar`,
+// `macroBarTop`, `macroRow`, `macroBarSubRow`, `kcalRow`, `kcalRingWrap`,
+// `kcalCentre`, `kcalEatenWrap` have no colour/fontSize tokens at all, so
+// they stay untouched with no `live.*` entry.
+function buildLiveStyles(t) {
+  return {
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    kcalValue: { color: t.colors.textPrimary, fontSize: t.fontSize.xxxl, lineHeight: Math.round(t.fontSize.xxxl * 1.1) },
+    kcalSubLabel: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
+    kcalPlanned: { color: t.colors.primary, fontSize: t.fontSize.xs },
+    kcalEatenValue: { color: t.colors.textSecondary, fontSize: t.fontSize.xl },
+    kcalEatenLabel: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
+    dayTypeChip: { backgroundColor: t.colors.surface2 },
+    dayTypeChipText: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
+    macroBarLabel: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
+    macroBarLabelPrimary: { color: t.colors.textSecondary },
+    macroBarValue: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
+    macroBarValuePrimary: { color: t.colors.textPrimary },
+    macroTrack: { backgroundColor: t.colors.surface2 },
+    macroFill: { backgroundColor: t.colors.primary },
+    macroFillPlanned: { backgroundColor: t.colors.primary },
+    macroBarPlanned: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
+    macroBarSub: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
+    macroBarRemaining: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
+    macroSplit: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
+    macroSplitCaption: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
+  };
+}

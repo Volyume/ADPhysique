@@ -35,6 +35,7 @@ import Svg, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { colors as theme, withAlpha, alpha, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import {
   plotPoints, linePath, smoothPath, areaPath, ticks, paddedDomain, nearestPointIndex,
 } from '../lib/chartGeometry';
@@ -50,8 +51,15 @@ export default function VolyumeChart({
   data2 = null,
   width = 300,
   height = 120,
-  color = theme.primary,
-  color2 = withAlpha(theme.textMuted, alpha.strong),
+  // CP-10 stage 4 (theming, Skia/chart consumers, 2026-07-10): these five
+  // colour props were default PARAMETERS reading the frozen module `theme`
+  // singleton (already call-time-evaluated, CP-10 plan section 1.4 class 3,
+  // but only reflects a theme change if something re-renders this component
+  // AFTER a cold-boot re-bake). Defaults removed here; each is resolved
+  // below against the live `t` from useTheme() so an omitted prop tracks a
+  // live theme flip, same pattern as TextField.js's resolvedPlaceholderColor.
+  color,
+  color2,
   thickness = 2,
   thickness2 = 1,
   area = false,
@@ -64,9 +72,9 @@ export default function VolyumeChart({
   showDots = false,
   dotRadius = 3,
   curved = true,
-  axisColor = theme.border,
-  rulesColor = theme.border,
-  labelColor = theme.textMuted,
+  axisColor,
+  rulesColor,
+  labelColor,
   backgroundColor = 'transparent',
   interactive = false,
   formatTooltip = null,
@@ -88,6 +96,16 @@ export default function VolyumeChart({
   // ED-suppression gating applies (ED-safety note, CP-5).
   highlightIndices = null,
 }) {
+  const t = useTheme();
+  // CP-10 stage 4: an explicit prop always wins; an omitted prop falls back
+  // to the LIVE theme (t.colors.*) instead of the frozen module `theme`
+  // singleton, so it tracks a theme flip once this component re-renders.
+  const resolvedColor = color ?? t.colors.primary;
+  const resolvedColor2 = color2 ?? withAlpha(t.colors.textMuted, alpha.strong);
+  const resolvedAxisColor = axisColor ?? t.colors.border;
+  const resolvedRulesColor = rulesColor ?? t.colors.border;
+  const resolvedLabelColor = labelColor ?? t.colors.textMuted;
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const isBar = variant === 'bar';
   const gradId = useRef(`volyumeFill${Math.random().toString(36).slice(2, 9)}`).current;
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -131,7 +149,7 @@ export default function VolyumeChart({
   const bars = isBar ? values.map((v, i) => {
     const h = v <= 0 ? 2 : Math.max(2, Math.round((v / barMax) * (height - 2)));
     const x = i * (barW + barGap);
-    return { x, y: height - h, w: barW, h, cx: x + barW / 2, color: data[i]?.color || color };
+    return { x, y: height - h, w: barW, h, cx: x + barW / 2, color: data[i]?.color || resolvedColor };
   }) : [];
 
   const points = isBar
@@ -147,10 +165,13 @@ export default function VolyumeChart({
       haptics.selection();
       if (onScrubIndex) onScrubIndex(idx);
       if (formatTooltip) {
-        const t = formatTooltip(idx);
-        if (t) {
+        // CP-10 stage 4: renamed from `t` to `tt` -- `t` now names the live
+        // theme object (`const t = useTheme()`) in this component's scope,
+        // and this local would otherwise shadow it. No behaviour change.
+        const tt = formatTooltip(idx);
+        if (tt) {
           const isPR = Array.isArray(highlightIndices) && highlightIndices.includes(idx);
-          const announcement = `${t.title}${t.sub ? `, ${t.sub}` : ''}${isPR ? ', Personal best' : ''}`;
+          const announcement = `${tt.title}${tt.sub ? `, ${tt.sub}` : ''}${isPR ? ', Personal best' : ''}`;
           AccessibilityInfo.announceForAccessibility(announcement);
         }
       }
@@ -216,8 +237,8 @@ export default function VolyumeChart({
   const points2 = values2.length >= 2 ? plotPoints(values2, box, min, max) : null;
   const mainPath = curved ? smoothPath(points) : linePath(points);
   const fillPath = area ? areaPath(points, baselineY, curved) : '';
-  const topFill = areaTopColor || withAlpha(color, 0.188);
-  const botFill = areaBottomColor || withAlpha(color, 0.02);
+  const topFill = areaTopColor || withAlpha(resolvedColor, 0.188);
+  const botFill = areaBottomColor || withAlpha(resolvedColor, 0.02);
   const tickVals = ticks(min, max, sections);
 
   const active = activeIndex >= 0 && activeIndex < points.length ? points[activeIndex] : null;
@@ -247,8 +268,8 @@ export default function VolyumeChart({
           return (
             <React.Fragment key={`rule-${i}`}>
               <Line x1={box.left} y1={y} x2={box.left + box.width} y2={y}
-                stroke={rulesColor} strokeWidth={1} strokeDasharray="3 4" />
-              <SvgText x={box.left - 6} y={y + 3} fontSize={9} fill={labelColor} textAnchor="end">
+                stroke={resolvedRulesColor} strokeWidth={1} strokeDasharray="3 4" />
+              <SvgText x={box.left - 6} y={y + 3} fontSize={9} fill={resolvedLabelColor} textAnchor="end">
                 {`${formatTick(tv, span)}${yAxisSuffix}`}
               </SvgText>
             </React.Fragment>
@@ -256,19 +277,19 @@ export default function VolyumeChart({
         })}
 
         <Line x1={box.left} y1={baselineY} x2={box.left + box.width} y2={baselineY}
-          stroke={axisColor} strokeWidth={1} />
+          stroke={resolvedAxisColor} strokeWidth={1} />
 
         {area && fillPath ? <Path d={fillPath} fill={`url(#${gradId})`} /> : null}
 
         {points2 ? (
           <Path d={curved ? smoothPath(points2) : linePath(points2)}
-            stroke={color2} strokeWidth={thickness2} fill="none" />
+            stroke={resolvedColor2} strokeWidth={thickness2} fill="none" />
         ) : null}
 
-        <Path d={mainPath} stroke={color} strokeWidth={thickness} fill="none" />
+        <Path d={mainPath} stroke={resolvedColor} strokeWidth={thickness} fill="none" />
 
         {showDots && points.map((p, i) => (
-          <Circle key={`dot-${i}`} cx={p.x} cy={p.y} r={dotRadius} fill={color} />
+          <Circle key={`dot-${i}`} cx={p.x} cy={p.y} r={dotRadius} fill={resolvedColor} />
         ))}
 
         {/* CP-5 personal-best markers: a ring-and-dot in the gold trophy token,
@@ -279,8 +300,8 @@ export default function VolyumeChart({
           if (!p) return null;
           return (
             <React.Fragment key={`pr-${idx}`}>
-              <Circle cx={p.x} cy={p.y} r={5} fill="none" stroke={theme.gold} strokeWidth={1.5} />
-              <Circle cx={p.x} cy={p.y} r={1.5} fill={theme.gold} />
+              <Circle cx={p.x} cy={p.y} r={5} fill="none" stroke={t.colors.gold} strokeWidth={1.5} />
+              <Circle cx={p.x} cy={p.y} r={1.5} fill={t.colors.gold} />
             </React.Fragment>
           );
         })}
@@ -289,8 +310,8 @@ export default function VolyumeChart({
         {active ? (
           <>
             <Line x1={active.x} y1={box.top} x2={active.x} y2={baselineY}
-              stroke={color} strokeWidth={1} strokeDasharray="2 3" opacity={0.7} />
-            <Circle cx={active.x} cy={active.y} r={4} fill={color} stroke={theme.surface} strokeWidth={1.5} />
+              stroke={resolvedColor} strokeWidth={1} strokeDasharray="2 3" opacity={0.7} />
+            <Circle cx={active.x} cy={active.y} r={4} fill={resolvedColor} stroke={t.colors.surface} strokeWidth={1.5} />
           </>
         ) : null}
 
@@ -299,7 +320,7 @@ export default function VolyumeChart({
           const anchor = i === 0 ? 'start' : i === data.length - 1 ? 'end' : 'middle';
           return (
             <SvgText key={`xl-${i}`} x={points[i].x} y={height - 4} fontSize={9}
-              fill={labelColor} textAnchor={anchor}>
+              fill={resolvedLabelColor} textAnchor={anchor}>
               {d.label}
             </SvgText>
           );
@@ -308,9 +329,9 @@ export default function VolyumeChart({
 
       {/* Tooltip card (RN overlay, easier to style than SVG text) */}
       {tip ? (
-        <View style={[styles.tooltip, { left: tipLeft, width: TIP_W }]} pointerEvents="none">
-          <Text style={styles.tooltipTitle} numberOfLines={1}>{tip.title}</Text>
-          {tip.sub ? <Text style={styles.tooltipSub} numberOfLines={1}>{tip.sub}</Text> : null}
+        <View style={[styles.tooltip, live.tooltip, { left: tipLeft, width: TIP_W }]} pointerEvents="none">
+          <Text style={[styles.tooltipTitle, live.tooltipTitle]} numberOfLines={1}>{tip.title}</Text>
+          {tip.sub ? <Text style={[styles.tooltipSub, live.tooltipSub]} numberOfLines={1}>{tip.sub}</Text> : null}
         </View>
       ) : null}
     </View>
@@ -334,3 +355,20 @@ const styles = StyleSheet.create({
   tooltipTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: theme.textPrimary },
   tooltipSub: { ...type.caption, color: theme.textSecondary },
 });
+
+// CP-10 stage 4 (theming, Skia/chart consumers, 2026-07-10): live override
+// for the tooltip chrome above, same "frozen base + live override" pattern
+// as WorkoutSummaryScreen.js's buildLiveStyles -- the component calls
+// `const t = useTheme(); const live = buildLiveStyles(t);` and appends
+// `live.KEY` after `styles.KEY` in each style array. Only mirrors the
+// colour/fontSize sub-properties of the matching frozen style, at identical
+// rest values; fontWeight is theme-invariant (not part of useTheme()'s
+// returned `t`), so tooltipTitle's fontWeight.bold stays the static import,
+// untouched.
+function buildLiveStyles(t) {
+  return {
+    tooltip: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    tooltipTitle: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    tooltipSub: { ...t.type.caption, color: t.colors.textSecondary },
+  };
+}

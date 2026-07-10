@@ -37,6 +37,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, motion,
 } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { useToast } from './Toast';
 import { appAlert } from './AppAlert';
 import Button from './Button';
@@ -135,6 +136,8 @@ async function decodePhoto(uri) {
 export default function BeforeAfterShareSheet({
   visible, onClose, photos = [], hideScanRange = false, onPreviewForPartner,
 }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const toast = useToast();
   const suppressed = usePhotoSuppression();
   const tier = useAppStore((s) => s.tier);
@@ -419,30 +422,30 @@ export default function BeforeAfterShareSheet({
   const busy = sharing || savingToGallery;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text style={styles.title}>Private share image</Text>
-          <Text style={styles.subtitle}>One composed image. No raw photo files. You choose share or save.</Text>
+          <Text style={[styles.title, live.title]}>Private share image</Text>
+          <Text style={[styles.subtitle, live.subtitle]}>One composed image. No raw photo files. You choose share or save.</Text>
         </View>
         <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-          <Ionicons name="close" size={26} color={colors.textPrimary} />
+          <Ionicons name="close" size={26} color={t.colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.privacyReceipt}>
+        <View style={[styles.privacyReceipt, live.privacyReceipt]}>
           <View style={styles.receiptRow}>
-            <Ionicons name="image-outline" size={16} color={colors.primary} />
-            <Text style={styles.receiptText}>Exports one composed PNG, not your raw photos.</Text>
+            <Ionicons name="image-outline" size={16} color={t.colors.primary} />
+            <Text style={[styles.receiptText, live.receiptText]}>Exports one composed PNG, not your raw photos.</Text>
           </View>
           <View style={styles.receiptRow}>
-            <Ionicons name="lock-closed-outline" size={16} color={colors.primary} />
-            <Text style={styles.receiptText}>Nothing leaves the device until you tap Share or Save.</Text>
+            <Ionicons name="lock-closed-outline" size={16} color={t.colors.primary} />
+            <Text style={[styles.receiptText, live.receiptText]}>Nothing leaves the device until you tap Share or Save.</Text>
           </View>
           <View style={styles.receiptRow}>
-            <Ionicons name="shield-checkmark-outline" size={16} color={colors.primary} />
-            <Text style={styles.receiptText}>Names, notes, measurements and your photo library never appear.</Text>
+            <Ionicons name="shield-checkmark-outline" size={16} color={t.colors.primary} />
+            <Text style={[styles.receiptText, live.receiptText]}>Names, notes, measurements and your photo library never appear.</Text>
           </View>
         </View>
 
@@ -464,22 +467,22 @@ export default function BeforeAfterShareSheet({
                 >
                   <Image
                     source={{ uri: item.uri }}
-                    style={[styles.thumb, on && styles.thumbOn]}
+                    style={[styles.thumb, live.thumb, on && [styles.thumbOn, live.thumbOn]]}
                     contentFit="cover"
                     recyclingKey={item.name}
                     transition={reduceMotion ? 0 : motion.state}
                   />
                   {on ? (
-                    <View pointerEvents="none" style={styles.thumbCheck}>
-                      <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                    <View pointerEvents="none" style={[styles.thumbCheck, live.thumbCheck]}>
+                      <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} />
                     </View>
                   ) : null}
-                  {range ? <Text style={styles.thumbRange} numberOfLines={1}>{range}</Text> : null}
+                  {range ? <Text style={[styles.thumbRange, live.thumbRange]} numberOfLines={1}>{range}</Text> : null}
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
-          <Text style={styles.hint}>
+          <Text style={[styles.hint, live.hint]}>
             {pairReady
               ? `Ready with two ${usingScans ? 'scans' : 'photos'}.`
               : `Choose two ${usingScans ? 'scans' : 'photos'} for the image.`}
@@ -489,7 +492,7 @@ export default function BeforeAfterShareSheet({
         {/* Format presets: square 1:1 (default), portrait 4:5, story 9:16. */}
         <View style={styles.section}>
           <SectionLabel>Format</SectionLabel>
-          <View style={styles.segmentRow}>
+          <View style={[styles.segmentRow, live.segmentRow]}>
             <SegmentBtn label="Square" active={aspect === 'square'} onPress={() => setAspect('square')} icon="square-outline" />
             <SegmentBtn label="Portrait" active={aspect === 'portrait'} onPress={() => setAspect('portrait')} icon="crop-outline" />
             <SegmentBtn label="Story" active={aspect === 'story'} onPress={() => setAspect('story')} icon="phone-portrait-outline" />
@@ -508,8 +511,8 @@ export default function BeforeAfterShareSheet({
                 transition={reduceMotion ? 0 : motion.state}
               />
             ) : (
-              <View style={[styles.previewPlaceholder, { width: PREVIEW_DISPLAY_W, height: previewH }]}>
-                {pairReady ? <ActivityIndicator color={colors.primary} /> : <Text style={styles.hint}>Choose two photos</Text>}
+              <View style={[styles.previewPlaceholder, live.previewPlaceholder, { width: PREVIEW_DISPLAY_W, height: previewH }]}>
+                {pairReady ? <ActivityIndicator color={t.colors.primary} /> : <Text style={[styles.hint, live.hint]}>Choose two photos</Text>}
               </View>
             )}
           </View>
@@ -518,35 +521,35 @@ export default function BeforeAfterShareSheet({
         {/* Weight toggle: explicit opt-in per export, bounded by the suppression
             withhold above. */}
         <View style={styles.section}>
-          <View style={styles.togglesCard}>
-            <View style={[styles.toggleRow, styles.toggleRowLast]}>
-              <Text style={styles.toggleLabel}>Include weight on this export</Text>
+          <View style={[styles.togglesCard, live.togglesCard]}>
+            <View style={[styles.toggleRow, live.toggleRow, styles.toggleRowLast]}>
+              <Text style={[styles.toggleLabel, live.toggleLabel]}>Include weight on this export</Text>
               <Switch
                 value={showWeight}
                 onValueChange={setShowWeight}
-                trackColor={{ false: colors.surface2, true: withAlpha(colors.primary, alpha.strong) }}
-                thumbColor={showWeight ? colors.primary : colors.textMuted}
+                trackColor={{ false: t.colors.surface2, true: withAlpha(t.colors.primary, alpha.strong) }}
+                thumbColor={showWeight ? t.colors.primary : t.colors.textMuted}
               />
             </View>
           </View>
-          <View style={styles.exportReceipt}>
+          <View style={[styles.exportReceipt, live.exportReceipt]}>
             <View style={styles.exportReceiptCol}>
-              <Text style={styles.exportReceiptTitle}>Included</Text>
-              <Text style={styles.exportReceiptLine}>Two selected photos</Text>
-              <Text style={styles.exportReceiptLine}>Dates and elapsed time</Text>
+              <Text style={[styles.exportReceiptTitle, live.exportReceiptTitle]}>Included</Text>
+              <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Two selected photos</Text>
+              <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Dates and elapsed time</Text>
               {usingScans && !hideScanRange ? (
-                <Text style={styles.exportReceiptLine}>Visible Volyume Score</Text>
+                <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Visible Volyume Score</Text>
               ) : null}
-              <Text style={styles.exportReceiptLine}>Weight: {showWeight ? 'included' : 'off'}</Text>
+              <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Weight: {showWeight ? 'included' : 'off'}</Text>
             </View>
             <View style={styles.exportReceiptCol}>
-              <Text style={styles.exportReceiptTitle}>Kept private</Text>
-              <Text style={styles.exportReceiptLine}>Raw photo files</Text>
-              <Text style={styles.exportReceiptLine}>Name, notes and measurements</Text>
-              <Text style={styles.exportReceiptLine}>Your photo library</Text>
+              <Text style={[styles.exportReceiptTitle, live.exportReceiptTitle]}>Kept private</Text>
+              <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Raw photo files</Text>
+              <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Name, notes and measurements</Text>
+              <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Your photo library</Text>
             </View>
           </View>
-          <Text style={styles.privacyNote}>
+          <Text style={[styles.privacyNote, live.privacyNote]}>
             The exported file is a single composed image. It includes only the two photos, dates, optional Volyume Score, weights only if you switch them on, and elapsed time. Your name, measurements and private notes are never included.
           </Text>
         </View>
@@ -593,16 +596,18 @@ export default function BeforeAfterShareSheet({
 }
 
 function SegmentBtn({ label, active, onPress, icon }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <TouchableOpacity
-      style={[styles.segment, active && styles.segmentActive]}
+      style={[styles.segment, active && [styles.segmentActive, live.segmentActive]]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       accessibilityLabel={label}
     >
-      <Ionicons name={icon} size={15} color={active ? colors.primary : colors.textMuted} />
-      <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{label}</Text>
+      <Ionicons name={icon} size={15} color={active ? t.colors.primary : t.colors.textMuted} />
+      <Text style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -698,3 +703,50 @@ const styles = StyleSheet.create({
   partnerBtn: { marginTop: spacing.md },
   galleryBtn: { marginTop: spacing.md },
 });
+
+// CP-10 stage 4 (theming, Skia/chart consumers, 2026-07-10): buildLiveStyles
+// is the shared "frozen base + live override" map for this file's two
+// function-component scopes (BeforeAfterShareSheet, SegmentBtn) -- each
+// calls `const t = useTheme(); const live = useMemo(() => buildLiveStyles(t),
+// [t]);` and appends `live.KEY` after `styles.KEY` in every style array,
+// same pattern as WorkoutSummaryScreen.js's buildLiveStyles. This covers
+// ONLY the sheet's own UI chrome (the visible RN controls: header, receipt
+// cards, thumbnails, toggle, preview frame). The Skia `drawShareCard`
+// composite pipeline this sheet drives (renderCardBase64/buildParams, both
+// above) is explicitly OUT OF SCOPE per CP-10 plan section 2.2 -- the
+// exported card renders in the brand's fixed dark palette regardless of the
+// in-app theme (export/screenshot consistency), so none of its params are
+// touched here. Every key below mirrors only the colour/fontSize sub-
+// properties of the matching frozen style, at identical rest values;
+// fontWeight is theme-invariant (not part of useTheme()'s returned `t`), so
+// segmentText's/toggleLabel's fontWeight stays the static import, untouched.
+// `headerCopy`, `content`, `receiptRow`, `section`, `stripRow`,
+// `previewOuter`, `exportReceiptCol`, `partnerBtn`, `galleryBtn` have no
+// colour/fontSize tokens at all, so they stay untouched with no `live.*`
+// entry.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    title: { ...t.type.h3, color: t.colors.textPrimary },
+    subtitle: { ...t.type.caption, color: t.colors.textMuted },
+    privacyReceipt: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    receiptText: { ...t.type.caption, color: t.colors.textPrimary },
+    thumb: { backgroundColor: t.colors.surface },
+    thumbOn: { borderColor: t.colors.primary },
+    thumbCheck: { backgroundColor: t.colors.background },
+    thumbRange: { ...t.type.captionTight, color: t.colors.textMuted },
+    hint: { ...t.type.bodySm, color: t.colors.textMuted },
+    segmentRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    segmentActive: { backgroundColor: t.colors.surface3 },
+    segmentText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    segmentTextActive: { color: t.colors.textPrimary },
+    previewPlaceholder: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    togglesCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    toggleRow: { borderBottomColor: t.colors.border },
+    toggleLabel: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    exportReceipt: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    exportReceiptTitle: { ...t.type.caption, color: t.colors.primary },
+    exportReceiptLine: { ...t.type.captionTight, color: t.colors.textPrimary },
+    privacyNote: { ...t.type.captionTight, color: t.colors.textMuted },
+  };
+}

@@ -7,8 +7,8 @@ jest.mock('@shopify/react-native-skia', () => ({
 }));
 
 import { create } from 'react-test-renderer';
-import MacroRings, { bandColour } from '../MacroRings';
-import { colors } from '../../../styles/theme';
+import MacroRings, { bandColour, buildBandColour } from '../MacroRings';
+import { colors, resolveTheme } from '../../../styles/theme';
 
 describe('bandColour (adherence-neutral, founder decision 2026-05-29)', () => {
   // Light-theme coverage audit LT-2/D7 (2026-07-09): the ring is a Skia
@@ -34,6 +34,26 @@ describe('bandColour (adherence-neutral, founder decision 2026-05-29)', () => {
       expect(c).not.toBe(colors.warning);
       expect(c).not.toBe(colors.error);
     }
+  });
+});
+
+// CP-10 stage 4 (theming, Skia/chart consumers, 2026-07-10): buildBandColour
+// is the live-theme variant of bandColour() above (same "build" pattern as
+// theme.js's buildVolumeStatusColor) -- MacroRings.js's calorie ring now
+// calls `buildBandColour(t.colors)` (from useTheme()) instead of the frozen
+// bandColour(), so the ring tint stays in step with a live theme flip.
+// bandColour() itself is untouched, still frozen-singleton, still covered
+// by the describe block above.
+describe('buildBandColour (CP-10 stage 4, live-theme variant)', () => {
+  test('resolves the same primaryFill token as the legacy singleton, for the current (dark) palette', () => {
+    expect(buildBandColour(colors)).toBe(bandColour());
+  });
+
+  test('reads off the PASSED-IN colour table, not the frozen singleton -- tracks a live theme flip', () => {
+    const darkColors = resolveTheme({ theme: 'dark' }).colors;
+    const lightColors = resolveTheme({ theme: 'light' }).colors;
+    expect(buildBandColour(darkColors)).toBe(darkColors.primaryFill);
+    expect(buildBandColour(lightColors)).toBe(lightColors.primaryFill);
   });
 });
 
