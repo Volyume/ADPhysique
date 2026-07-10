@@ -287,7 +287,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
     >
       {dayTypeLabel ? (
         <View style={[styles.dayTypeChip, live.dayTypeChip]}>
-          <Text style={[styles.dayTypeChipText, live.dayTypeChipText]}>{dayTypeLabel}</Text>
+          <Text style={[styles.dayTypeChipText, live.dayTypeChipText]} numberOfLines={1} maxFontSizeMultiplier={1.3}>{dayTypeLabel}</Text>
         </View>
       ) : null}
       <View style={styles.kcalRow}>
@@ -308,23 +308,24 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
                   value={toEnergy(over ? Math.abs(remaining) : remaining, energyUnit)}
                   style={[styles.kcalValue, live.kcalValue]}
                   accessibilityLabel={`${toEnergy(over ? Math.abs(remaining) : remaining, energyUnit)} ${energyWord} ${over ? 'over' : 'left'}`}
+                  maxFontSizeMultiplier={1.3}
                 />
-                <Text style={[styles.kcalSubLabel, live.kcalSubLabel]}>{over ? 'over' : 'left'}</Text>
+                <Text style={[styles.kcalSubLabel, live.kcalSubLabel]} numberOfLines={1} maxFontSizeMultiplier={1.3}>{over ? 'over' : 'left'}</Text>
               </>
             ) : (
               <>
-                <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalValue, live.kcalValue]} />
-                <Text style={[styles.kcalSubLabel, live.kcalSubLabel]}>{energyUnitLabel(energyUnit)}</Text>
+                <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalValue, live.kcalValue]} maxFontSizeMultiplier={1.3} />
+                <Text style={[styles.kcalSubLabel, live.kcalSubLabel]} numberOfLines={1} maxFontSizeMultiplier={1.3}>{energyUnitLabel(energyUnit)}</Text>
               </>
             )}
             {hasPlanned ? (
-              <Text style={[styles.kcalPlanned, live.kcalPlanned]}>{`+${toEnergy(plannedKcal, energyUnit)} planned`}</Text>
+              <Text style={[styles.kcalPlanned, live.kcalPlanned]} numberOfLines={1} maxFontSizeMultiplier={1.3}>{`+${toEnergy(plannedKcal, energyUnit)} planned`}</Text>
             ) : null}
           </View>
         </View>
         {kcalTarget != null ? (
           <View style={styles.kcalEatenWrap}>
-            <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalEatenValue, live.kcalEatenValue]} />
+            <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalEatenValue, live.kcalEatenValue]} maxFontSizeMultiplier={1.3} />
             <Text style={[styles.kcalEatenLabel, live.kcalEatenLabel]}>{`of ${toEnergy(kcalTarget, energyUnit)} ${energyUnitLabel(energyUnit)}`}</Text>
           </View>
         ) : null}

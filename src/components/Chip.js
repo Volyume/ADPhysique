@@ -28,6 +28,11 @@ export default function Chip({
   labelStyle,
   selectedLabelStyle,
   numberOfLines,
+  // Fixed-shape pill: caps growth at the largest system font so a row of
+  // chips does not blow past its container. House precedent (SetEntry.js,
+  // ActiveWorkoutScreen.js, WorkoutHistoryScreen.js, MealPlanScreen.js) is
+  // 1.3; callers with more room may pass a higher value.
+  maxFontSizeMultiplier = 1.3,
   testID,
 }) {
   // CP-10 stage 1: live theme (src/hooks/useTheme.js) instead of the static
@@ -70,6 +75,7 @@ export default function Chip({
           selected && selectedLabelStyle,
         ]}
         numberOfLines={numberOfLines}
+        maxFontSizeMultiplier={maxFontSizeMultiplier}
       >
         {label}
       </Text>

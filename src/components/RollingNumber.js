@@ -47,6 +47,11 @@ export default function RollingNumber({
   suffix = '',
   style,
   accessibilityLabel,
+  // Optional font-scale ceiling for callers that place the numeral inside a
+  // fixed-size container (e.g. the MacroRings kcal circle) where an
+  // uncapped OS font scale would overflow. Left undefined (uncapped) for
+  // callers sitting in a flexible card, matching prior behaviour.
+  maxFontSizeMultiplier,
 }) {
   const reduceMotion = useAppStore((s) => !!s.accessibility?.reduceMotion);
   const target = Math.round(Number(value) || 0);
@@ -69,7 +74,7 @@ export default function RollingNumber({
 
   const finalText = `${prefix}${grouped ? target.toLocaleString('en-GB') : String(target)}${suffix}`;
   if (reduceMotion) {
-    return <Text style={style} accessibilityLabel={accessibilityLabel ?? finalText}>{finalText}</Text>;
+    return <Text style={style} accessibilityLabel={accessibilityLabel ?? finalText} maxFontSizeMultiplier={maxFontSizeMultiplier}>{finalText}</Text>;
   }
   return (
     <AnimatedTextInput
@@ -81,6 +86,7 @@ export default function RollingNumber({
       // numeral sits exactly where the Text it replaced sat.
       style={[{ padding: 0, margin: 0 }, style]}
       accessibilityLabel={accessibilityLabel ?? finalText}
+      maxFontSizeMultiplier={maxFontSizeMultiplier}
     />
   );
 }

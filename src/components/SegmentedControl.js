@@ -27,7 +27,11 @@ export default function SegmentedControl({ options, value, onChange, accessibili
             accessibilityState={{ checked: active }}
             accessibilityLabel={opt.label}
           >
-            <Text style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{opt.label}</Text>
+            <Text
+              style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}
+              numberOfLines={1}
+              maxFontSizeMultiplier={1.3}
+            >{opt.label}</Text>
           </TouchableOpacity>
         );
       })}
