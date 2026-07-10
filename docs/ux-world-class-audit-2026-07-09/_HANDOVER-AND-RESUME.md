@@ -1431,3 +1431,15 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   prompts (gated on all of it). ANDROID BUILD: fix commit 4de5604's run
   IN PROGRESS at last check - confirm green. IN FLIGHT: UK meals audit
   (data lane).
+- UK MEALS AUDIT LANDED (lead-reviewed): all 94 meals audited against
+  availability (live web-verified vs Tesco/Sainsbury's/Asda - seitan/
+  tempeh/nutritional yeast/TVP/lentil pasta all confirmed stocked),
+  bodybuilder credibility (ALL PASS, none flagged) and UK naming (one
+  real defect: yogurt->yoghurt across 10 meals/staples/tips + the
+  SWEET_HINT regex made spelling-tolerant; ids untouched). Pool counts
+  re-verified (vegan 33 / veg 61 / pesc 80 / omni 94 cascaded; all
+  clear the 7-day no-repeat bar). OPEN FOUNDER MICRO-CALL: kala namak
+  (black salt) tip on the vegan tofu scramble is real vegan-BB practice
+  but not mainstream-UK-stocked (Asian grocers/online only) - keep as
+  educational tip, or swap/drop. IN FLIGHT: theming stage 3 batch 2
+  (Home + workout families).
