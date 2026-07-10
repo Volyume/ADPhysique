@@ -580,3 +580,21 @@ billing, tier gating, GDPR, schema rules, new dependencies) have their
 own explicit founder gates and are not treated as loosened by this
 delegation; everything else is lead-ruled on product-best and recorded
 here with rationale.
+
+## D33 SECOND AMENDMENT (founder, 2026-07-10 — gates delegated, one exception)
+Founder's words, verbatim: "Delegate all those to you note too other
+than billing price changes." Effect: the Section 2 gate items
+previously carved out (ED-safety decisions, billing, new dependencies,
+GDPR/consent, schema rules) are NOW ALSO delegated to the lead, ruled
+on the same absolute product-best-for-users criterion — with ONE
+exception: BILLING PRICE CHANGES stay founder-gated.
+Lead's standing interpretation, recorded so no future session
+over-reads this: delegation transfers DECISION authority, not the
+underlying obligations. The ED-safety floors/gates, GDPR/Article 9
+compliance, EU data residency, product IDs pro_monthly/pro_annual, and
+the deterministic-engine rule remain binding constraints on any ruling
+(weakening them would never be "best for end users"); billing changes
+other than price still get a written test plan per docs/rules/
+billing.md; new dependencies still get the D23 discipline (register
+entry, licence check, pinning). Every ruling under this delegation is
+recorded in this register with rationale.

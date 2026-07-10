@@ -14,6 +14,17 @@ are paying. Every change affects them. Work accordingly.
 > Supabase connector, gated on the founder's exact phrase "run against
 > production" per apply batch (see supabase/README). EU-Dublin is applied
 > and verified through `migrate_116`; 049/059 remain HELD.
+> **Decision delegation (D33 + amendments, founder 2026-07-10):** decision
+> forks — INCLUDING the Section 2 gate items below, EXCEPT billing PRICE
+> changes — are delegated to the lead, ruled on the absolute best solution
+> for the app and end users, never on effort ("if it takes more work to get
+> a slightly better app, we do more work. Always."). Billing price changes
+> remain founder-gated. Delegation transfers decision authority, NOT the
+> underlying obligations: the ED-safety floors/gates, deterministic engine,
+> GDPR/Article 9 and EU residency, product IDs, billing test-plan and
+> dependency disciplines all remain binding on any ruling. Every ruling is
+> recorded with rationale in
+> `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md`.
 
 ---
 
