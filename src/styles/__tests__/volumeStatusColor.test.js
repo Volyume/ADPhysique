@@ -7,7 +7,7 @@
  * must propagate. These tests lock that contract.
  */
 import { getVolumeStatus } from '../../lib/algorithms';
-import { volumeStatusColor, applyAccessibility, colors, stateColors } from '../theme';
+import { volumeStatusColor, buildVolumeStatusColor, applyAccessibility, colors, stateColors, resolveTheme } from '../theme';
 
 afterEach(() => {
   // Reset the in-place palette mutation so tests don't leak into each other.
@@ -85,5 +85,48 @@ describe('stateColors grammar (COMP-027)', () => {
     expect(stateColors.onTrack).not.toBe(onTrackBefore);
     expect(stateColors.act).toBe(colors.error);
     expect(stateColors.watch).toBe(watchBefore); // yellow kept across palettes
+  });
+});
+
+describe('buildVolumeStatusColor (CP-10 stage 3, theming FINAL batch, 2026-07-10)', () => {
+  // WorkoutSummaryScreen.js's live-theme variant of volumeStatusColor above:
+  // fed by a resolved `t.colors` (from useTheme()) instead of the frozen
+  // module singleton, so it stays in step with a screen's own theme
+  // generation. Must resolve to the SAME grammar as the legacy singleton for
+  // any given colour table -- one system, no drift, just two read paths.
+  test('resolves the same status -> tone mapping as the legacy singleton, for the current (dark) palette', () => {
+    const resolve = buildVolumeStatusColor(colors);
+    for (const status of ['unknown', 'below', 'minimum', 'optimal', 'near_mrv', 'over_mrv', 'nonsense', undefined]) {
+      expect(resolve(status)).toBe(volumeStatusColor(status));
+    }
+  });
+
+  test('reads off the PASSED-IN colour table, not the frozen singleton -- tracks a live theme flip', () => {
+    const darkColors = resolveTheme({ theme: 'dark' }).colors;
+    const lightColors = resolveTheme({ theme: 'light' }).colors;
+    const resolveDark = buildVolumeStatusColor(darkColors);
+    const resolveLight = buildVolumeStatusColor(lightColors);
+    expect(resolveDark('optimal')).toBe(darkColors.success);
+    expect(resolveLight('optimal')).toBe(lightColors.success);
+    // The two tables can differ (light/dark surface family), so the two
+    // resolvers must not be silently sharing one frozen answer.
+    if (darkColors.success !== lightColors.success) {
+      expect(resolveDark('optimal')).not.toBe(resolveLight('optimal'));
+    }
+  });
+
+  test('follows the colour-blind-safe palette swap fed through its OWN colour table (not the frozen one)', () => {
+    const normal = resolveTheme({ theme: 'dark', colorBlindSafe: false }).colors;
+    const cvd = resolveTheme({ theme: 'dark', colorBlindSafe: true }).colors;
+    const before = buildVolumeStatusColor(normal)('optimal');
+    const after = buildVolumeStatusColor(cvd)('optimal');
+    expect(after).toBe(cvd.success);
+    expect(after).not.toBe(before);
+  });
+
+  test('falls back to the muted token for an unrecognised status, same as the legacy singleton', () => {
+    const resolve = buildVolumeStatusColor(colors);
+    expect(resolve('nonsense')).toBe(colors.textMuted);
+    expect(resolve(undefined)).toBe(colors.textMuted);
   });
 });

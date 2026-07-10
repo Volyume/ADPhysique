@@ -51,8 +51,14 @@ const SRC = fs.readFileSync(
 
 // The bottom-pinned action bar: from the (cluster || perSide) guard through
 // the closing of that ternary, just before the Exercise Picker Modal comment.
+//
+// CP-10 stage 3 (theming FINAL batch, 2026-07-10): ActiveWorkoutScreen now
+// reads a live theme (src/hooks/useTheme.js), so `styles.bottomBar` gained a
+// `live.bottomBar` neighbour in its style array (frozen `styles` block is
+// byte-identical; only the JSX call site grew). The regex below is widened
+// to allow that, no other change to the pinned shape.
 const bottomBarWindow = SRC.match(
-  /\{\(cluster \|\| perSide\) \? null : \(\s*<View style=\{\[styles\.bottomBar[\s\S]*?\)\}\n\s*<\/View>\s*\)\}/,
+  /\{\(cluster \|\| perSide\) \? null : \(\s*<View style=\{\[styles\.bottomBar, live\.bottomBar,[\s\S]*?\)\}\n\s*<\/View>\s*\)\}/,
 )?.[0] ?? '';
 
 describe('target-reached bottom bar swaps "Next exercise" / "Finish workout" in for "Log set"', () => {
@@ -67,7 +73,9 @@ describe('target-reached bottom bar swaps "Next exercise" / "Finish workout" in 
     expect(bottomBarWindow).toContain('testID="volyume-btn-next-exercise"');
     expect(bottomBarWindow).toContain('onPress={handleNextExercise}');
     expect(bottomBarWindow).toContain('accessibilityLabel="Move to next exercise"');
-    expect(bottomBarWindow).toContain('<Text style={styles.completeBtnText}>Next exercise</Text>');
+    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live theme override
+    // appended after the frozen style, same mechanical change as above.
+    expect(bottomBarWindow).toContain('<Text style={[styles.completeBtnText, live.completeBtnText]}>Next exercise</Text>');
   });
 
   test('reaching target on the last exercise shows "Finish workout" instead, routed through handleFinishWorkout', () => {
@@ -75,7 +83,9 @@ describe('target-reached bottom bar swaps "Next exercise" / "Finish workout" in 
     expect(bottomBarWindow).toContain('testID="volyume-btn-finish-primary"');
     expect(bottomBarWindow).toContain('onPress={handleFinishWorkout}');
     expect(bottomBarWindow).toContain('accessibilityLabel="Finish workout"');
-    expect(bottomBarWindow).toContain('<Text style={styles.completeBtnText}>Finish workout</Text>');
+    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live theme override
+    // appended after the frozen style, same mechanical change as above.
+    expect(bottomBarWindow).toContain('<Text style={[styles.completeBtnText, live.completeBtnText]}>Finish workout</Text>');
   });
 
   test('a trailing time-crunch-skipped exercise cannot leave the finish offer unreachable: last means no un-skipped exercise remains after this one', () => {

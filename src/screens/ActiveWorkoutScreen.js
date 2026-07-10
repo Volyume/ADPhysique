@@ -10,6 +10,7 @@ import * as hapticsVocab from '../lib/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, motion, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { workoutLoggerSize } from '../styles/layout';
 import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
@@ -115,6 +116,7 @@ const SET_TYPE_OPTIONS = [
   { value: 'amrap', label: 'AMRAP', description: 'As many reps as possible, usually the last set. Counts towards volume and progress.' },
 ];
 
+
 function WorkoutSheetScroll({ children }) {
   return (
     <ScrollView
@@ -157,7 +159,18 @@ function WorkoutBottomSheet({ visible, onClose, accessibilityLabel, keyboardAvoi
  * with stable props React.memo skips them. `progressNum` is the set's position
  * among counting (non-warm-up, non-dropset) sets, computed by the caller.
  */
-const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum, exerciseType = 'weight_reps', onEdit }) {
+// Named export (CP-10 stage 3, theming FINAL batch, 2026-07-10): this screen
+// as a whole is impractical to mount in a test (SQLite, notifications, Live
+// Activity, haptics -- see the guard tests' own header comments), but this
+// row is pure presentational props-in/JSX-out, so it is exported purely so
+// the live-theme flip contract can be pinned against a real mounted instance
+// (see cp10Stage3WorkoutShellsLiveTheme.test.js). No behaviour change.
+export const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum, exerciseType = 'weight_reps', onEdit }) {
+  // CP-10 stage 3 (theming FINAL batch): live theme (src/hooks/useTheme.js).
+  // See buildLiveStyles' header comment (defined further down this
+  // file, after the frozen `styles` block -- see the comment there for why).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const isWarmup = set.setType === 'warmup';
   // Exercise-type aware: a distance/duration/reps_only set must not print
   // "{weight}kg × {reps}" (the weight column holds metres/0 for those) nor an
@@ -172,7 +185,7 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum,
   ].filter(Boolean).join(': ');
   return (
     <TouchableOpacity
-      style={[styles.loggedSetRow, isWarmup && styles.loggedSetRowWarmup]}
+      style={[styles.loggedSetRow, live.loggedSetRow, isWarmup && [styles.loggedSetRowWarmup, live.loggedSetRowWarmup]]}
       // F7: the row binds its own set so the parent can pass ONE stable
       // handler; an inline closure per row was defeating this memo.
       onPress={() => onEdit(set)}
@@ -182,21 +195,21 @@ const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progressNum,
       accessibilityHint="Opens a sheet to change or delete this logged set"
     >
       {isWarmup ? (
-        <Ionicons name="flame-outline" size={14} color={colors.warning} style={{ width: 22, textAlign: 'center' }} />
+        <Ionicons name="flame-outline" size={14} color={t.colors.warning} style={{ width: 22, textAlign: 'center' }} />
       ) : (
-        <View style={styles.setNumBadge}>
-          <Text style={styles.setNumText} maxFontSizeMultiplier={1.3}>{progressNum}</Text>
+        <View style={[styles.setNumBadge, live.setNumBadge]}>
+          <Text style={[styles.setNumText, live.setNumText]} maxFontSizeMultiplier={1.3}>{progressNum}</Text>
         </View>
       )}
-      <Text style={[styles.loggedSetText, isWarmup && styles.loggedSetTextWarmup]} numberOfLines={1}>
+      <Text style={[styles.loggedSetText, live.loggedSetText, isWarmup && [styles.loggedSetTextWarmup, live.loggedSetTextWarmup]]} numberOfLines={1}>
         {fmt.text}
         {perSide ? ` - ${perSide}` : ''}
         {isWarmup ? ' - Warm-up' : ''}
       </Text>
       {!isWarmup && est1RM > 0 && (
-        <Text style={styles.loggedEst1RM}>Est. max ~{est1RM.toFixed(0)}{units}</Text>
+        <Text style={[styles.loggedEst1RM, live.loggedEst1RM]}>Est. max ~{est1RM.toFixed(0)}{units}</Text>
       )}
-      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+      <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
     </TouchableOpacity>
   );
 });
@@ -253,6 +266,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // their first block. A true beginner keeps them. Unknown experience is treated
   // as non-beginner so an athlete is never offered a crutch.
   const isBeginner = useAppStore(s => s.userProfile?.experience) === 'beginner';
+
+  // CP-10 stage 3 (theming FINAL batch): live theme (src/hooks/useTheme.js).
+  // See buildLiveStyles' header comment (defined further down this
+  // file, after the frozen `styles` block -- see the comment there for why).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
 
   const [currentSet, setCurrentSet] = useState({ ...DEFAULT_SET });
   const [prevSets, setPrevSets] = useState([]);
@@ -2237,7 +2256,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   if (!exercise) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={[styles.safe, live.safe]}>
         <EmptyExerciseView
           onAdd={openAddExercisePicker}
           onFinish={handleFinishWorkout}
@@ -2258,10 +2277,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, live.header]}>
           <View style={styles.headerSide}>
             <TouchableOpacity
               onPress={handleCancelWorkout}
@@ -2270,16 +2289,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Cancel workout"
             >
-              <Ionicons name="close" size={22} color={colors.textSecondary} />
+              <Ionicons name="close" size={22} color={t.colors.textSecondary} />
             </TouchableOpacity>
           </View>
           <View style={styles.headerCenter}>
-            <Text style={styles.timerText}>{elapsedStr}</Text>
+            <Text style={[styles.timerText, live.timerText]}>{elapsedStr}</Text>
             {timeCrunchActive && (
               <Ionicons
                 name="timer"
                 size={15}
-                color={colors.warning}
+                color={t.colors.warning}
                 accessibilityLabel="Time crunch active"
               />
             )}
@@ -2295,7 +2314,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 size="sm"
                 fullWidth={false}
                 onPress={handleFinishWorkout}
-                style={[styles.headerTapTarget, styles.headerFinishButton]}
+                style={[styles.headerTapTarget, styles.headerFinishButton, live.headerFinishButton]}
                 accessibilityLabel="Finish workout"
               />
             )}
@@ -2310,13 +2329,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={styles.exerciseNav}
+            style={[styles.exerciseNav, live.exerciseNav]}
             contentContainerStyle={styles.exerciseNavContent}
           >
             {workoutExercises.map((entry, i) => (
               <TouchableOpacity
                 key={i}
-                style={[styles.navTab, i === currentExerciseIndex && styles.navTabActive]}
+                style={[styles.navTab, live.navTab, i === currentExerciseIndex && [styles.navTabActive, live.navTabActive]]}
                 onPress={() => {
                   setCurrentExerciseIndex(i);
                 }}
@@ -2326,15 +2345,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 accessibilityState={{ selected: i === currentExerciseIndex }}
               >
                 <Text
-                  style={[styles.navTabText, i === currentExerciseIndex && styles.navTabTextActive]}
+                  style={[styles.navTabText, live.navTabText, i === currentExerciseIndex && [styles.navTabTextActive, live.navTabTextActive]]}
                   numberOfLines={1}
                   ellipsizeMode="tail"
                 >
                   {entry.exercise?.name}
                 </Text>
                 {entry.sets?.length > 0 && (
-                  <View style={styles.navTabBadge}>
-                    <Text style={styles.navTabBadgeText} maxFontSizeMultiplier={1.3}>{entry.sets.length}</Text>
+                  <View style={[styles.navTabBadge, live.navTabBadge]}>
+                    <Text style={[styles.navTabBadgeText, live.navTabBadgeText]} maxFontSizeMultiplier={1.3}>{entry.sets.length}</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -2352,9 +2371,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {/* Exercise Title */}
           <View style={styles.exerciseHeader}>
             <View style={styles.exerciseNameRow}>
-              <Text style={styles.exerciseName} numberOfLines={2}>{exercise.name}</Text>
+              <Text style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>
               <TouchableOpacity
-                style={styles.overflowBtn}
+                style={[styles.overflowBtn, live.overflowBtn]}
                 onPress={() => {
                   if (showInfoTipPulse) {
                     infoPulseLoop.current?.stop();
@@ -2370,7 +2389,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 accessibilityLabel="Exercise options"
               >
                 <Animated.View style={showInfoTipPulse ? { transform: [{ scale: infoPulseAnim }] } : null}>
-                  <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
+                  <Ionicons name="ellipsis-horizontal" size={20} color={t.colors.textSecondary} />
                 </Animated.View>
               </TouchableOpacity>
             </View>
@@ -2387,26 +2406,26 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             const notes = [];
             if (starterActive) {
               notes.push(
-                <View key="starter" style={styles.starterBanner}>
-                  <Ionicons name="flash-outline" size={16} color={colors.primary} />
-                  <Text style={styles.starterBannerText}>{timeCrunchMsg}</Text>
+                <View key="starter" style={[styles.starterBanner, live.starterBanner]}>
+                  <Ionicons name="flash-outline" size={16} color={t.colors.primary} />
+                  <Text style={[styles.starterBannerText, live.starterBannerText]}>{timeCrunchMsg}</Text>
                   <TouchableOpacity
-                    style={styles.inlineActionPill}
+                    style={[styles.inlineActionPill, live.inlineActionPill]}
                     onPress={handleRevertTimeCrunch}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     accessibilityRole="button"
                     accessibilityLabel="Do the full session instead"
                   >
-                    <Text style={styles.inlineActionPillText}>Full session</Text>
+                    <Text style={[styles.inlineActionPillText, live.inlineActionPillText]}>Full session</Text>
                   </TouchableOpacity>
                 </View>
               );
             }
             if (currentSGI != null && !!pairedExerciseName) {
               notes.push(
-                <View key="superset" style={styles.supersetChip}>
-                  <Ionicons name="link" size={11} color={colors.primary} />
-                  <Text style={styles.supersetChipText}>
+                <View key="superset" style={[styles.supersetChip, live.supersetChip]}>
+                  <Ionicons name="link" size={11} color={t.colors.primary} />
+                  <Text style={[styles.supersetChipText, live.supersetChipText]}>
                     Superset {currentSGI} - alternates with {pairedExerciseName}
                   </Text>
                 </View>
@@ -2414,11 +2433,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             }
             nextTimeNotes.forEach(note => {
               notes.push(
-                <View key={`note-${note.id}`} style={styles.nextTimeBanner}>
-                  <Ionicons name="bulb-outline" size={16} color={colors.primary} style={{ marginTop: spacing.hair }} />
-                  <Text style={styles.nextTimeBannerText} numberOfLines={4}>{note.note}</Text>
+                <View key={`note-${note.id}`} style={[styles.nextTimeBanner, live.nextTimeBanner]}>
+                  <Ionicons name="bulb-outline" size={16} color={t.colors.primary} style={{ marginTop: spacing.hair }} />
+                  <Text style={[styles.nextTimeBannerText, live.nextTimeBannerText]} numberOfLines={4}>{note.note}</Text>
                   <TouchableOpacity
-                    style={styles.inlineActionPill}
+                    style={[styles.inlineActionPill, live.inlineActionPill]}
                     onPress={async () => {
                       try { await markNoteShown(note.id); } catch (_e) {}
                       setNextTimeNotes(prev => prev.filter(n => n.id !== note.id));
@@ -2427,37 +2446,37 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     accessibilityRole="button"
                     accessibilityLabel="Dismiss note"
                   >
-                    <Text style={styles.inlineActionPillText}>Got it</Text>
+                    <Text style={[styles.inlineActionPillText, live.inlineActionPillText]}>Got it</Text>
                   </TouchableOpacity>
                 </View>
               );
             });
             if (isDeloadWeek && !deloadDismissed) {
               notes.push(
-                <View key="deload" style={styles.deloadBanner}>
+                <View key="deload" style={[styles.deloadBanner, live.deloadBanner]}>
                   <View style={styles.deloadBannerLeft}>
-                    <Ionicons name="battery-charging-outline" size={18} color={colors.warning} />
+                    <Ionicons name="battery-charging-outline" size={18} color={t.colors.warning} />
                     <View>
-                      <Text style={styles.deloadBannerTitle}>Recovery week</Text>
-                      <Text style={styles.deloadBannerSub}>Light loads - full recovery - no PRs</Text>
+                      <Text style={[styles.deloadBannerTitle, live.deloadBannerTitle]}>Recovery week</Text>
+                      <Text style={[styles.deloadBannerSub, live.deloadBannerSub]}>Light loads - full recovery - no PRs</Text>
                     </View>
                   </View>
                   <TouchableOpacity
-                    style={styles.inlineActionPill}
+                    style={[styles.inlineActionPill, live.inlineActionPill]}
                     onPress={() => setDeloadDismissed(true)}
                     accessibilityRole="button"
                     accessibilityLabel="Dismiss deload banner"
                   >
-                    <Text style={styles.inlineActionPillText}>Skip</Text>
+                    <Text style={[styles.inlineActionPillText, live.inlineActionPillText]}>Skip</Text>
                   </TouchableOpacity>
                 </View>
               );
             }
             if (targetComplete) {
               notes.push(
-                <View key="target-reached" style={styles.targetBanner}>
-                  <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-                  <Text style={styles.targetBannerText}>
+                <View key="target-reached" style={[styles.targetBanner, live.targetBanner]}>
+                  <Ionicons name="checkmark-circle" size={16} color={t.colors.success} />
+                  <Text style={[styles.targetBannerText, live.targetBannerText]}>
                     Target reached: {targetSets} working set{targetSets !== 1 ? 's' : ''} done
                   </Text>
                 </View>
@@ -2468,16 +2487,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             return (
               <View style={styles.notesRail}>
                 <TouchableOpacity
-                  style={styles.notesChip}
+                  style={[styles.notesChip, live.notesChip]}
                   onPress={() => setNotesExpanded(v => !v)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   accessibilityRole="button"
                   accessibilityState={{ expanded: notesExpanded }}
                   accessibilityLabel={`${noteCount} note${noteCount !== 1 ? 's' : ''}, tap to ${notesExpanded ? 'collapse' : 'expand'}`}
                 >
-                  <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
-                  <Text style={styles.notesChipText}>{noteCount} note{noteCount !== 1 ? 's' : ''}</Text>
-                  <Ionicons name={notesExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSecondary} />
+                  <Ionicons name="information-circle-outline" size={16} color={t.colors.textSecondary} />
+                  <Text style={[styles.notesChipText, live.notesChipText]}>{noteCount} note{noteCount !== 1 ? 's' : ''}</Text>
+                  <Ionicons name={notesExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={t.colors.textSecondary} />
                 </TouchableOpacity>
                 {notesExpanded && <View style={styles.notesExpanded}>{notes}</View>}
               </View>
@@ -2497,18 +2516,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             padding="none"
             style={[
               styles.setEntryCard,
-              currentSet.setType === 'warmup' && styles.setEntryCardWarmup,
-              logFlash && styles.setEntryCardFlash,
+              currentSet.setType === 'warmup' && [styles.setEntryCardWarmup, live.setEntryCardWarmup],
+              logFlash && [styles.setEntryCardFlash, live.setEntryCardFlash],
             ]}
           >
             {currentSet.setType === 'warmup' && (
               <View style={styles.warmupBanner}>
-                <Ionicons name="flame-outline" size={14} color={colors.warning} />
-                <Text style={styles.warmupBannerText}>Warm-up - not counted in your totals</Text>
+                <Ionicons name="flame-outline" size={14} color={t.colors.warning} />
+                <Text style={[styles.warmupBannerText, live.warmupBannerText]}>Warm-up - not counted in your totals</Text>
               </View>
             )}
             {currentSet.setType === 'warmup' && !warmupHintSeenRef.current && (
-              <Text style={styles.warmupOneTimeHint}>
+              <Text style={[styles.warmupOneTimeHint, live.warmupOneTimeHint]}>
                 Get the muscles and joints ready. Light weight, easy reps. Tap Log warm-up when you&apos;re ready to work.
               </Text>
             )}
@@ -2529,8 +2548,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel={`${orientationLabel}, tap to change set type`}
             >
-              <Text style={styles.orientationText}>{orientationLabel}</Text>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+              <Text style={[styles.orientationText, live.orientationText]}>{orientationLabel}</Text>
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
 
             {/* Target line (U-A-1): the sets/reps prescription, moved off
@@ -2538,8 +2557,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 orientation/beat lines. */}
             {routineExercise && (
               <View style={styles.targetRow}>
-                <Ionicons name="flag-outline" size={12} color={colors.textMuted} />
-                <Text style={styles.targetText} numberOfLines={1}>
+                <Ionicons name="flag-outline" size={12} color={t.colors.textMuted} />
+                <Text style={[styles.targetText, live.targetText]} numberOfLines={1}>
                   Target: {adjustedSetCount || routineExercise.recommendedSets || 3} sets - {routineExercise.recommendedRepsMin}-{routineExercise.recommendedRepsMax} reps
                 </Text>
               </View>
@@ -2574,12 +2593,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     accessibilityRole="button"
                     accessibilityLabel={`Recovery week: ${target.weight} ${units} times ${target.repsMin}. Tap to apply.`}
                   >
-                    <Text style={styles.beatLineLabel} numberOfLines={2}>
-                      Recovery week - <Text style={styles.beatLineValue}>{target.weight}{units} x {target.repsMin}</Text>
+                    <Text style={[styles.beatLineLabel, live.beatLineLabel]} numberOfLines={2}>
+                      Recovery week - <Text style={[styles.beatLineValue, live.beatLineValue]}>{target.weight}{units} x {target.repsMin}</Text>
                     </Text>
-                    <View style={styles.beatLineCue}>
-                      <Ionicons name="arrow-down-circle-outline" size={13} color={colors.textSecondary} />
-                      <Text style={styles.beatLineCueText}>Use</Text>
+                    <View style={[styles.beatLineCue, live.beatLineCue]}>
+                      <Ionicons name="arrow-down-circle-outline" size={13} color={t.colors.textSecondary} />
+                      <Text style={[styles.beatLineCueText, live.beatLineCueText]}>Use</Text>
                     </View>
                   </TouchableOpacity>
                 );
@@ -2608,15 +2627,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     accessibilityRole="button"
                     accessibilityLabel={`Last session: ${prev.weight} ${units} times ${prev.actualReps} reps.${range ? ` Target ${range}.` : ''} Tap to apply.`}
                   >
-                    <Text style={styles.beatLineLabel} numberOfLines={2}>
-                      Last: <Text style={styles.beatLineValue}>{prev.weight}{units} x {prev.actualReps}</Text>
+                    <Text style={[styles.beatLineLabel, live.beatLineLabel]} numberOfLines={2}>
+                      Last: <Text style={[styles.beatLineValue, live.beatLineValue]}>{prev.weight}{units} x {prev.actualReps}</Text>
                       {range ? ' - Target ' : ''}
-                      {range ? <Text style={styles.beatLineValue}>{range}</Text> : null}
-                      {glyph ? <Text style={styles.beatLineGlyph}> {glyph}</Text> : null}
+                      {range ? <Text style={[styles.beatLineValue, live.beatLineValue]}>{range}</Text> : null}
+                      {glyph ? <Text style={[styles.beatLineGlyph, live.beatLineGlyph]}> {glyph}</Text> : null}
                     </Text>
-                    <View style={styles.beatLineCue}>
-                      <Ionicons name="arrow-down-circle-outline" size={13} color={colors.textSecondary} />
-                      <Text style={styles.beatLineCueText}>Use</Text>
+                    <View style={[styles.beatLineCue, live.beatLineCue]}>
+                      <Ionicons name="arrow-down-circle-outline" size={13} color={t.colors.textSecondary} />
+                      <Text style={[styles.beatLineCueText, live.beatLineCueText]}>Use</Text>
                     </View>
                   </TouchableOpacity>
                 );
@@ -2628,8 +2647,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   accessible
                   accessibilityLabel={`First time on this exercise. Target ${range} reps.`}
                 >
-                  <Text style={styles.beatLineLabel} numberOfLines={2}>
-                    First time - Target <Text style={styles.beatLineValue}>{range}</Text>
+                  <Text style={[styles.beatLineLabel, live.beatLineLabel]} numberOfLines={2}>
+                    First time - Target <Text style={[styles.beatLineValue, live.beatLineValue]}>{range}</Text>
                   </Text>
                 </View>
               );
@@ -2657,8 +2676,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5} ${units} times ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0} ${units} and push for ${stalledAdvice.r0 + 1}.`
                       : targetReason}
               >
-                <Ionicons name="pulse-outline" size={13} color={colors.primary} style={{ marginTop: spacing.xxs }} />
-                <Text style={styles.coachLineText} numberOfLines={2}>
+                <Ionicons name="pulse-outline" size={13} color={t.colors.primary} style={{ marginTop: spacing.xxs }} />
+                <Text style={[styles.coachLineText, live.coachLineText]} numberOfLines={2}>
                   {(sessionAdjustment?.show && !readinessDrivesTarget)
                     ? sessionAdjustment.reasonText
                     : readinessLine
@@ -2667,13 +2686,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                         ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5}${units} x ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0}${units} and push for ${stalledAdvice.r0 + 1}.`
                         : targetReason}
                 </Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} style={{ marginTop: spacing.xxs }} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} style={{ marginTop: spacing.xxs }} />
               </TouchableOpacity>
             )}
             {showInfoTipPulse && loggedSets.length === 0 && prevSets.length === 0 && (
-              <View style={styles.firstSetHint}>
-                <Ionicons name="information-circle-outline" size={14} color={colors.primary} />
-                <Text style={styles.firstSetHintText}>
+              <View style={[styles.firstSetHint, live.firstSetHint]}>
+                <Ionicons name="information-circle-outline" size={14} color={t.colors.primary} />
+                <Text style={[styles.firstSetHintText, live.firstSetHintText]}>
                   {/* NV-4 (ux-world-class-audit-2026-07-09/cohesion-02-novice-psychology.md):
                       no baseline "what's a set / what's a rep" explainer existed
                       anywhere. This is the exact gate the audit asked for: the
@@ -2701,11 +2720,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
             {showNoteInput ? (
               <TextInput
-                style={styles.noteInput}
+                style={[styles.noteInput, live.noteInput]}
                 value={noteText}
                 onChangeText={setNoteText}
                 placeholder="Add a note for this set"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={t.colors.textMuted}
                 accessibilityLabel="Add a note"
                 multiline
                 autoFocus
@@ -2717,21 +2736,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
           {/* Cluster banner: drives myo-rep / rest-pause mini-sets. */}
           {cluster ? (
-            <View style={styles.clusterBanner}>
-              <Text style={styles.clusterTitle}>
+            <View style={[styles.clusterBanner, live.clusterBanner]}>
+              <Text style={[styles.clusterTitle, live.clusterTitle]}>
                 {clusterLabel(cluster.setType)} cluster
               </Text>
-              <Text style={styles.clusterReps}>
+              <Text style={[styles.clusterReps, live.clusterReps]}>
                 {cluster.reps.join(' + ')} = {cluster.reps.reduce((a, n) => a + n, 0)} reps
                 {cluster.weight ? ` @ ${cluster.weight}${units}` : ''}
               </Text>
               <View style={styles.clusterInputRow}>
                 <TextInput
-                  style={styles.clusterInput}
+                  style={[styles.clusterInput, live.clusterInput]}
                   value={clusterReps}
                   onChangeText={setClusterReps}
                   placeholder="Mini-set reps"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor={t.colors.textMuted}
                   accessibilityLabel="Mini-set reps"
                   keyboardType="number-pad"
                   returnKeyType="done"
@@ -2740,26 +2759,26 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Button
                   variant="tertiary"
                   fullWidth={false}
-                  style={styles.clusterAddBtn}
+                  style={[styles.clusterAddBtn, live.clusterAddBtn]}
                   onPress={addMiniSet}
                   accessibilityLabel="Add mini-set"
                 >
-                  <Ionicons name="add" size={20} color={colors.primary} />
-                  <Text style={styles.clusterAddBtnText}>Mini-set</Text>
+                  <Ionicons name="add" size={20} color={t.colors.primary} />
+                  <Text style={[styles.clusterAddBtnText, live.clusterAddBtnText]}>Mini-set</Text>
                 </Button>
               </View>
               <Button
                 variant="primary"
-                style={styles.completeBtn}
+                style={[styles.completeBtn, live.completeBtn]}
                 onPress={finishCluster}
                 disabled={saving}
                 accessibilityLabel="Finish cluster and log the set"
               >
-                <Ionicons name="checkmark-circle" size={20} color={colors.onPrimary} />
-                <Text style={styles.completeBtnText}>Finish cluster</Text>
+                <Ionicons name="checkmark-circle" size={20} color={t.colors.onPrimary} />
+                <Text style={[styles.completeBtnText, live.completeBtnText]}>Finish cluster</Text>
               </Button>
-              <TouchableOpacity onPress={cancelCluster} style={styles.clusterCancel} accessibilityLabel="Cancel cluster">
-                <Text style={styles.clusterCancelText}>Cancel</Text>
+              <TouchableOpacity onPress={cancelCluster} style={[styles.clusterCancel, live.clusterCancel]} accessibilityLabel="Cancel cluster">
+                <Text style={[styles.clusterCancelText, live.clusterCancelText]}>Cancel</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -2772,24 +2791,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               names the running rest timer above; isolation shows a plain
               switch-sides line with no timer at all. */}
           {perSide ? (
-            <View style={styles.clusterBanner}>
-              <Text style={styles.clusterTitle}>
+            <View style={[styles.clusterBanner, live.clusterBanner]}>
+              <Text style={[styles.clusterTitle, live.clusterTitle]}>
                 {exercise?.compoundIsolation === 'compound' ? 'Other side, after your rest' : 'Switch sides'}
               </Text>
-              <Text style={styles.clusterReps}>
+              <Text style={[styles.clusterReps, live.clusterReps]}>
                 First side: {perSide.leftReps} reps
                 {perSide.weight ? ` @ ${perSide.weight}${units}` : ''}
               </Text>
               {exercise?.compoundIsolation !== 'compound' && (
-                <Text style={styles.sheetOptionDesc}>Swap sides when you're ready, no rush.</Text>
+                <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>Swap sides when you're ready, no rush.</Text>
               )}
               <View style={styles.clusterInputRow}>
                 <TextInput
-                  style={styles.clusterInput}
+                  style={[styles.clusterInput, live.clusterInput]}
                   value={perSideReps}
                   onChangeText={setPerSideReps}
                   placeholder="Other side reps"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor={t.colors.textMuted}
                   accessibilityLabel="Other side reps"
                   keyboardType="number-pad"
                   returnKeyType="done"
@@ -2798,16 +2817,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </View>
               <Button
                 variant="primary"
-                style={styles.completeBtn}
+                style={[styles.completeBtn, live.completeBtn]}
                 onPress={finishPerSide}
                 disabled={saving}
                 accessibilityLabel="Log the other side and finish this set"
               >
-                <Ionicons name="checkmark-circle" size={20} color={colors.onPrimary} />
-                <Text style={styles.completeBtnText}>Log other side</Text>
+                <Ionicons name="checkmark-circle" size={20} color={t.colors.onPrimary} />
+                <Text style={[styles.completeBtnText, live.completeBtnText]}>Log other side</Text>
               </Button>
-              <TouchableOpacity onPress={cancelPerSide} style={styles.clusterCancel} accessibilityLabel="Cancel this set">
-                <Text style={styles.clusterCancelText}>Cancel</Text>
+              <TouchableOpacity onPress={cancelPerSide} style={[styles.clusterCancel, live.clusterCancel]} accessibilityLabel="Cancel this set">
+                <Text style={[styles.clusterCancelText, live.clusterCancelText]}>Cancel</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -2821,14 +2840,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <Button
               testID="volyume-btn-extra-set"
               variant="secondary"
-              style={styles.extraSetBtnPromoted}
+              style={[styles.extraSetBtnPromoted, live.extraSetBtnPromoted]}
               onPress={() => setExtraSetArmed(true)}
               disabled={saving}
               accessibilityLabel="Log another set"
               accessibilityHint="Opens one more set below; nothing is logged until you confirm"
             >
-              <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-              <Text style={styles.extraSetBtnPromotedText}>Log another set</Text>
+              <Ionicons name="add-circle-outline" size={20} color={t.colors.primary} />
+              <Text style={[styles.extraSetBtnPromotedText, live.extraSetBtnPromotedText]}>Log another set</Text>
             </Button>
           ) : null}
 
@@ -2838,16 +2857,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               cancel, alongside the "Log another set" affordance above. */}
           {autoAdvanceArmed && targetComplete && !extraSetArmed ? (
             <View style={styles.autoAdvanceRow}>
-              <Text style={styles.autoAdvanceRowText}>Next exercise in a moment</Text>
-              <Text style={styles.autoAdvanceRowDot}> - </Text>
+              <Text style={[styles.autoAdvanceRowText, live.autoAdvanceRowText]}>Next exercise in a moment</Text>
+              <Text style={[styles.autoAdvanceRowDot, live.autoAdvanceRowDot]}> - </Text>
               <TouchableOpacity
-                style={styles.autoAdvanceRowActionBtn}
+                style={[styles.autoAdvanceRowActionBtn, live.autoAdvanceRowActionBtn]}
                 onPress={cancelAutoAdvance}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessibilityRole="button"
                 accessibilityLabel="Stay on this exercise"
               >
-                <Text style={styles.autoAdvanceRowAction}>Stay here</Text>
+                <Text style={[styles.autoAdvanceRowAction, live.autoAdvanceRowAction]}>Stay here</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -2857,7 +2876,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               without scrolling past secondary actions. */}
           {loggedSets.length > 0 && (
             <View style={styles.loggedSection}>
-              <Text style={styles.loggedTitle}>This workout</Text>
+              <Text style={[styles.loggedTitle, live.loggedTitle]}>This workout</Text>
               {/* D2: rows keyed by the set's stable id (was the array index,
                   which made every delete re-key the rows below it) and wrapped
                   so a logged set arrives, an unlogged one leaves, and siblings
@@ -2901,36 +2920,36 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             always-visible tab bar and no longer holds. Math.max keeps the
             old padding on devices that report no bottom inset. */}
         {(cluster || perSide) ? null : (
-          <View style={[styles.bottomBar, { paddingBottom: Math.max(spacing.md, insets.bottom + spacing.sm) }]}>
+          <View style={[styles.bottomBar, live.bottomBar, { paddingBottom: Math.max(spacing.md, insets.bottom + spacing.sm) }]}>
             {targetComplete && !extraSetArmed ? (
               isLastExercise ? (
                 <Button
                   testID="volyume-btn-finish-primary"
                   variant="primary"
-                  style={styles.completeBtn}
+                  style={[styles.completeBtn, live.completeBtn]}
                   onPress={handleFinishWorkout}
                   accessibilityLabel="Finish workout"
                 >
-                  <Ionicons name="checkmark-done" size={20} color={colors.onPrimary} />
-                  <Text style={styles.completeBtnText}>Finish workout</Text>
+                  <Ionicons name="checkmark-done" size={20} color={t.colors.onPrimary} />
+                  <Text style={[styles.completeBtnText, live.completeBtnText]}>Finish workout</Text>
                 </Button>
               ) : (
                 <Button
                   testID="volyume-btn-next-exercise"
                   variant="primary"
-                  style={styles.completeBtn}
+                  style={[styles.completeBtn, live.completeBtn]}
                   onPress={handleNextExercise}
                   accessibilityLabel="Move to next exercise"
                 >
-                  <Ionicons name="arrow-forward-circle" size={20} color={colors.onPrimary} />
-                  <Text style={styles.completeBtnText}>Next exercise</Text>
+                  <Ionicons name="arrow-forward-circle" size={20} color={t.colors.onPrimary} />
+                  <Text style={[styles.completeBtnText, live.completeBtnText]}>Next exercise</Text>
                 </Button>
               )
             ) : (
               <Button
                 testID="volyume-btn-complete-set"
                 variant="primary"
-                style={[styles.completeBtn, currentSet.setType === 'warmup' && styles.completeBtnWarmup]}
+                style={[styles.completeBtn, live.completeBtn, currentSet.setType === 'warmup' && [styles.completeBtnWarmup, live.completeBtnWarmup]]}
                 onPress={handleCompleteSetPress}
                 disabled={saving}
                 accessibilityLabel={
@@ -2938,8 +2957,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'
                 }
               >
-                <Ionicons name="checkmark-circle" size={20} color={currentSet.setType === 'warmup' ? colors.warning : colors.onPrimary} />
-                <Text style={[styles.completeBtnText, currentSet.setType === 'warmup' && styles.completeBtnTextWarmup]}>
+                <Ionicons name="checkmark-circle" size={20} color={currentSet.setType === 'warmup' ? t.colors.warning : t.colors.onPrimary} />
+                <Text style={[styles.completeBtnText, live.completeBtnText, currentSet.setType === 'warmup' && [styles.completeBtnTextWarmup, live.completeBtnTextWarmup]]}>
                   {currentSet.setType === 'warmup' ? 'Log warm-up'
                     : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'}
                 </Text>
@@ -2967,8 +2986,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           onRequestClose={() => setSupersetHeadsUp(null)}
         >
           {supersetHeadsUp ? (
-          <View style={styles.supOverlay}>
-            <View style={styles.supSheet}>
+          <View style={[styles.supOverlay, live.supOverlay]}>
+            <View style={[styles.supSheet, live.supSheet]}>
               <ScrollView
                 style={styles.supSheetScroll}
                 contentContainerStyle={styles.supSheetContent}
@@ -2976,24 +2995,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 showsVerticalScrollIndicator={false}
               >
                 <View style={styles.supIconRow}>
-                  <Ionicons name="link" size={24} color={colors.primary} />
-                  <Text style={styles.supTitle}>Superset coming up</Text>
+                  <Ionicons name="link" size={24} color={t.colors.primary} />
+                  <Text style={[styles.supTitle, live.supTitle]}>Superset coming up</Text>
                 </View>
-                <Text style={styles.supSubtitle}>
+                <Text style={[styles.supSubtitle, live.supSubtitle]}>
                   Two exercises paired back-to-back with no rest between them.
                 </Text>
 
-                <Card surface="surface2" radius="md" padding="md" style={styles.supPairCard}>
+                <Card surface="surface2" radius="md" padding="md" style={[styles.supPairCard, live.supPairCard]}>
                   <View style={styles.supPairRow}>
-                    <View style={styles.supPairChip}><Text style={styles.supPairChipText}>1</Text></View>
-                    <Text style={styles.supPairName} numberOfLines={2}>
+                    <View style={[styles.supPairChip, live.supPairChip]}><Text style={[styles.supPairChipText, live.supPairChipText]}>1</Text></View>
+                    <Text style={[styles.supPairName, live.supPairName]} numberOfLines={2}>
                       {supersetHeadsUp?.exerciseAName}
                     </Text>
                   </View>
-                  <View style={styles.supPairConnector} />
+                  <View style={[styles.supPairConnector, live.supPairConnector]} />
                   <View style={styles.supPairRow}>
-                    <View style={styles.supPairChip}><Text style={styles.supPairChipText}>2</Text></View>
-                    <Text style={styles.supPairName} numberOfLines={2}>
+                    <View style={[styles.supPairChip, live.supPairChip]}><Text style={[styles.supPairChipText, live.supPairChipText]}>2</Text></View>
+                    <Text style={[styles.supPairName, live.supPairName]} numberOfLines={2}>
                       {supersetHeadsUp?.exerciseBName}
                     </Text>
                   </View>
@@ -3001,59 +3020,59 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
                 <View style={styles.supSteps}>
                   <View style={styles.supStep}>
-                    <Text style={styles.supStepNum}>1</Text>
-                    <Text style={styles.supStepText}>Set up both stations now if you can.</Text>
+                    <Text style={[styles.supStepNum, live.supStepNum]}>1</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>Set up both stations now if you can.</Text>
                   </View>
                   <View style={styles.supStep}>
-                    <Text style={styles.supStepNum}>2</Text>
-                    <Text style={styles.supStepText}>Do all reps of the first exercise.</Text>
+                    <Text style={[styles.supStepNum, live.supStepNum]}>2</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>Do all reps of the first exercise.</Text>
                   </View>
                   <View style={styles.supStep}>
-                    <Text style={styles.supStepNum}>3</Text>
-                    <Text style={styles.supStepText}>Move straight to the second. No rest between.</Text>
+                    <Text style={[styles.supStepNum, live.supStepNum]}>3</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>Move straight to the second. No rest between.</Text>
                   </View>
                   <View style={styles.supStep}>
-                    <Text style={styles.supStepNum}>4</Text>
-                    <Text style={styles.supStepText}>After both, rest the full rest period, then repeat.</Text>
+                    <Text style={[styles.supStepNum, live.supStepNum]}>4</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>After both, rest the full rest period, then repeat.</Text>
                   </View>
                 </View>
 
-                <Text style={styles.supTip}>
+                <Text style={[styles.supTip, live.supTip]}>
                   Tip: if you can't grab both stations right now, unlink and do them as normal sets.
                 </Text>
 
                 <Button
                   variant="primary"
-                  style={styles.supPrimaryBtn}
+                  style={[styles.supPrimaryBtn, live.supPrimaryBtn]}
                   onPress={() => setSupersetHeadsUp(null)}
                   title="Got it, start"
-                  textStyle={styles.supPrimaryBtnText}
+                  textStyle={[styles.supPrimaryBtnText, live.supPrimaryBtnText]}
                 />
 
                 <View style={styles.supSecondaryRow}>
                   <Button
                     variant="outline"
-                    style={styles.supSecondaryBtn}
+                    style={[styles.supSecondaryBtn, live.supSecondaryBtn]}
                     onPress={() => {
                       handleTogglePair(); // unpair
                       setSupersetHeadsUp(null);
                     }}
                     accessibilityLabel="Unlink the superset"
                   >
-                    <Ionicons name="unlink" size={14} color={colors.textSecondary} />
-                    <Text style={styles.supSecondaryBtnText}>Unlink</Text>
+                    <Ionicons name="unlink" size={14} color={t.colors.textSecondary} />
+                    <Text style={[styles.supSecondaryBtnText, live.supSecondaryBtnText]}>Unlink</Text>
                   </Button>
                   <Button
                     variant="outline"
-                    style={styles.supSecondaryBtn}
+                    style={[styles.supSecondaryBtn, live.supSecondaryBtn]}
                     onPress={() => {
                       setSupersetHeadsUp(null);
                       handleOpenSwap();
                     }}
                     accessibilityLabel="Swap exercise"
                   >
-                    <Ionicons name="swap-horizontal" size={14} color={colors.textSecondary} />
-                    <Text style={styles.supSecondaryBtnText}>Swap exercise</Text>
+                    <Ionicons name="swap-horizontal" size={14} color={t.colors.textSecondary} />
+                    <Text style={[styles.supSecondaryBtnText, live.supSecondaryBtnText]}>Swap exercise</Text>
                   </Button>
                 </View>
               </ScrollView>
@@ -3088,8 +3107,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               handleUnilateralAnswer(id, turnOn);
             };
             return (
-          <View style={styles.supOverlay}>
-            <View style={styles.supSheet}>
+          <View style={[styles.supOverlay, live.supOverlay]}>
+            <View style={[styles.supSheet, live.supSheet]}>
               <ScrollView
                 style={styles.supSheetScroll}
                 contentContainerStyle={styles.supSheetContent}
@@ -3097,72 +3116,72 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 showsVerticalScrollIndicator={false}
               >
                 <View style={styles.supIconRow}>
-                  <Ionicons name="repeat" size={24} color={colors.primary} />
-                  <Text style={styles.supTitle}>Log this one side at a time?</Text>
+                  <Ionicons name="repeat" size={24} color={t.colors.primary} />
+                  <Text style={[styles.supTitle, live.supTitle]}>Log this one side at a time?</Text>
                 </View>
-                <Text style={styles.supSubtitle}>
+                <Text style={[styles.supSubtitle, live.supSubtitle]}>
                   {unilateralSuggest.exerciseName} is usually trained one side at a time.
                 </Text>
 
-                <Card surface="surface2" radius="md" padding="md" style={styles.supPairCard}>
+                <Card surface="surface2" radius="md" padding="md" style={[styles.supPairCard, live.supPairCard]}>
                   <View style={styles.supPairRow}>
-                    <View style={styles.supPairChip}><Text style={styles.supPairChipText}>1</Text></View>
-                    <Text style={styles.supPairName} numberOfLines={2}>First side</Text>
+                    <View style={[styles.supPairChip, live.supPairChip]}><Text style={[styles.supPairChipText, live.supPairChipText]}>1</Text></View>
+                    <Text style={[styles.supPairName, live.supPairName]} numberOfLines={2}>First side</Text>
                   </View>
-                  <View style={styles.supPairConnector} />
+                  <View style={[styles.supPairConnector, live.supPairConnector]} />
                   <View style={styles.supPairRow}>
-                    <View style={styles.supPairChip}><Text style={styles.supPairChipText}>2</Text></View>
-                    <Text style={styles.supPairName} numberOfLines={2}>Other side</Text>
+                    <View style={[styles.supPairChip, live.supPairChip]}><Text style={[styles.supPairChipText, live.supPairChipText]}>2</Text></View>
+                    <Text style={[styles.supPairName, live.supPairName]} numberOfLines={2}>Other side</Text>
                   </View>
                 </Card>
 
                 <View style={styles.supSteps}>
                   <View style={styles.supStep}>
-                    <Text style={styles.supStepNum}>1</Text>
-                    <Text style={styles.supStepText}>Do your first side.</Text>
+                    <Text style={[styles.supStepNum, live.supStepNum]}>1</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>Do your first side.</Text>
                   </View>
                   <View style={styles.supStep}>
-                    <Text style={styles.supStepNum}>2</Text>
-                    <Text style={styles.supStepText}>
+                    <Text style={[styles.supStepNum, live.supStepNum]}>2</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>
                       {isCompound
                         ? 'Half your normal rest, then do the other side.'
                         : 'Switch sides when you\'re ready, no forced timer.'}
                     </Text>
                   </View>
                   <View style={styles.supStep}>
-                    <Text style={styles.supStepNum}>3</Text>
-                    <Text style={styles.supStepText}>
+                    <Text style={[styles.supStepNum, live.supStepNum]}>3</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>
                       {isCompound
                         ? 'Rest the same again, then start your next set.'
                         : 'Rest as normal once both sides are done.'}
                     </Text>
                   </View>
                   <View style={styles.supStep}>
-                    <Text style={styles.supStepNum}>4</Text>
-                    <Text style={styles.supStepText}>Logs as one set, using your lower side's reps.</Text>
+                    <Text style={[styles.supStepNum, live.supStepNum]}>4</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>Logs as one set, using your lower side's reps.</Text>
                   </View>
                 </View>
 
-                <Text style={styles.supTip}>
+                <Text style={[styles.supTip, live.supTip]}>
                   Tip: change your mind any time from this exercise's options menu.
                 </Text>
 
                 <Button
                   variant="primary"
-                  style={styles.supPrimaryBtn}
+                  style={[styles.supPrimaryBtn, live.supPrimaryBtn]}
                   onPress={() => answerAndClose(true)}
                   title="Yes, log per side"
-                  textStyle={styles.supPrimaryBtnText}
+                  textStyle={[styles.supPrimaryBtnText, live.supPrimaryBtnText]}
                 />
 
                 <View style={styles.supSecondaryRow}>
                   <Button
                     variant="outline"
-                    style={styles.supSecondaryBtn}
+                    style={[styles.supSecondaryBtn, live.supSecondaryBtn]}
                     onPress={() => answerAndClose(false)}
                     accessibilityLabel="No, log as normal"
                   >
-                    <Text style={styles.supSecondaryBtnText}>No, log as normal</Text>
+                    <Text style={[styles.supSecondaryBtnText, live.supSecondaryBtnText]}>No, log as normal</Text>
                   </Button>
                 </View>
               </ScrollView>
@@ -3175,27 +3194,27 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         {/* Stale workout recovery modal */}
         <Modal visible={showStaleModal} transparent animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={() => setShowStaleModal(false)}>
           {showStaleModal ? (
-          <View style={styles.staleOverlay}>
-            <View style={styles.staleSheet}>
-              <Ionicons name="time-outline" size={32} color={colors.warning} style={{ marginBottom: spacing.md }} />
-              <Text style={styles.staleTitle}>Resume workout?</Text>
-              <Text style={styles.staleBody}>
+          <View style={[styles.staleOverlay, live.staleOverlay]}>
+            <View style={[styles.staleSheet, live.staleSheet]}>
+              <Ionicons name="time-outline" size={32} color={t.colors.warning} style={{ marginBottom: spacing.md }} />
+              <Text style={[styles.staleTitle, live.staleTitle]}>Resume workout?</Text>
+              <Text style={[styles.staleBody, live.staleBody]}>
                 This workout has been inactive for a while. What would you like to do?
               </Text>
               <Button
                 variant="primary"
-                style={styles.staleResume}
+                style={[styles.staleResume, live.staleResume]}
                 onPress={() => { updateLastActivity(); setShowStaleModal(false); }}
                 title="Resume"
-                textStyle={styles.staleResumeText}
+                textStyle={[styles.staleResumeText, live.staleResumeText]}
                 accessibilityLabel="Resume workout"
               />
               <Button
                 variant="secondary"
-                style={styles.staleFinish}
+                style={[styles.staleFinish, live.staleFinish]}
                 onPress={() => { setShowStaleModal(false); handleFinishWorkout(); }}
                 title="Finish workout"
-                textStyle={styles.staleFinishText}
+                textStyle={[styles.staleFinishText, live.staleFinishText]}
               />
               <TouchableOpacity style={styles.staleDiscard} accessibilityRole="button" accessibilityLabel="Discard workout" onPress={() => {
                 appAlert('Discard workout?', 'All logged sets will be lost.', [
@@ -3215,7 +3234,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   },
                 ]);
               }}>
-                <Text style={styles.staleDiscardText}>Discard</Text>
+                <Text style={[styles.staleDiscardText, live.staleDiscardText]}>Discard</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -3233,8 +3252,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         >
           {showSetTypePicker ? (
             <>
-              <Text style={styles.sheetTitle}>Set type</Text>
-              <Text style={styles.sheetExplainer}>
+              <Text style={[styles.sheetTitle, live.sheetTitle]}>Set type</Text>
+              <Text style={[styles.sheetExplainer, live.sheetExplainer]}>
                 Pick how this set was done. Working sets and intensity techniques count towards your training; warm-ups do not. This helps Volyume read the session correctly.
               </Text>
               {/* P9: the radios group so TalkBack announces position context
@@ -3243,7 +3262,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               {SET_TYPE_OPTIONS.map(opt => (
                 <TouchableOpacity
                   key={opt.value}
-                  style={styles.sheetOption}
+                  style={[styles.sheetOption, live.sheetOption]}
                   onPress={() => {
                     hapticsVocab.selection();
                     setCurrentSet(s => ({ ...s, setType: opt.value }));
@@ -3254,13 +3273,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   accessibilityLabel={`${opt.label}. ${opt.description}`}
                 >
                   <View style={styles.sheetOptionText}>
-                    <Text style={[styles.sheetOptionLabel, currentSet.setType === opt.value && styles.sheetOptionLabelActive]}>
+                    <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel, currentSet.setType === opt.value && [styles.sheetOptionLabelActive, live.sheetOptionLabelActive]]}>
                       {opt.label}
                     </Text>
-                    <Text style={styles.sheetOptionDesc}>{opt.description}</Text>
+                    <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>{opt.description}</Text>
                   </View>
                   {currentSet.setType === opt.value && (
-                    <Ionicons name="checkmark" size={18} color={colors.primary} />
+                    <Ionicons name="checkmark" size={18} color={t.colors.primary} />
                   )}
                 </TouchableOpacity>
               ))}
@@ -3281,7 +3300,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         >
           {showWarmupRamp ? (
             <>
-              <Text style={styles.sheetTitle}>Warm-up sets</Text>
+              <Text style={[styles.sheetTitle, live.sheetTitle]}>Warm-up sets</Text>
               {(() => {
                 // Working weight: the entry while it holds a working set;
                 // the anchor while the entry holds a ramp row (so reopening
@@ -3294,7 +3313,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   : rampAnchorRef.current;
                 if (!Number.isFinite(working) || working <= 0) {
                   return (
-                    <Text style={styles.sheetExplainer}>
+                    <Text style={[styles.sheetExplainer, live.sheetExplainer]}>
                       Enter your working weight first, then come back for warm-up sets.
                     </Text>
                   );
@@ -3305,20 +3324,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 });
                 if (rows.length === 0) {
                   return (
-                    <Text style={styles.sheetExplainer}>
+                    <Text style={[styles.sheetExplainer, live.sheetExplainer]}>
                       {`This is light enough to start at ${working} ${units}. You can begin with your working set today.`}
                     </Text>
                   );
                 }
                 return (
                   <>
-                    <Text style={styles.sheetExplainer}>
+                    <Text style={[styles.sheetExplainer, live.sheetExplainer]}>
                       {`Working up to ${working} ${units}. Choose a warm-up set to load it, then tap Log warm-up. Warm-ups are saved but not counted in your working-set target.`}
                     </Text>
                     {rows.map((row) => (
                       <TouchableOpacity
                         key={`${row.weight}-${row.reps}`}
-                        style={styles.sheetOption}
+                        style={[styles.sheetOption, live.sheetOption]}
                         onPress={() => {
                           hapticsVocab.selection();
                           setGhostSet(null);
@@ -3329,10 +3348,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                         accessibilityLabel={`${row.isBar ? 'Empty bar' : `${row.weight} ${units}`}, ${row.reps} reps. Load as a warm-up set.`}
                       >
                         <View style={styles.overflowOptionRow}>
-                          <Ionicons name="flame-outline" size={16} color={colors.warning} />
-                          <Text style={styles.sheetOptionLabel}>{`${row.weight} ${units} x ${row.reps}`}</Text>
+                          <Ionicons name="flame-outline" size={16} color={t.colors.warning} />
+                          <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{`${row.weight} ${units} x ${row.reps}`}</Text>
                         </View>
-                        {row.isBar ? <Text style={styles.rampBarTag}>Empty bar</Text> : null}
+                        {row.isBar ? <Text style={[styles.rampBarTag, live.rampBarTag]}>Empty bar</Text> : null}
                       </TouchableOpacity>
                     ))}
                   </>
@@ -3352,20 +3371,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         >
           {showOverflow ? (
             <>
-              <Text style={styles.sheetTitle}>{exercise?.name}</Text>
+              <Text style={[styles.sheetTitle, live.sheetTitle]}>{exercise?.name}</Text>
               <TouchableOpacity
-                style={styles.sheetOption}
+                style={[styles.sheetOption, live.sheetOption]}
                 onPress={() => { setShowOverflow(false); handleOpenSwap(); }}
                 accessibilityRole="button"
                 accessibilityLabel="Swap exercise"
               >
                 <View style={styles.overflowOptionRow}>
-                  <Ionicons name="swap-horizontal" size={18} color={colors.textSecondary} />
-                  <Text style={styles.sheetOptionLabel}>Swap exercise</Text>
+                  <Ionicons name="swap-horizontal" size={18} color={t.colors.textSecondary} />
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Swap exercise</Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.sheetOption}
+                style={[styles.sheetOption, live.sheetOption]}
                 onPress={() => {
                   setShowOverflow(false);
                   openAddExercisePicker();
@@ -3374,38 +3393,38 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 accessibilityLabel="Add exercise to workout"
               >
                 <View style={styles.overflowOptionRow}>
-                  <Ionicons name="add-circle-outline" size={18} color={colors.textSecondary} />
-                  <Text style={styles.sheetOptionLabel}>Add exercise</Text>
+                  <Ionicons name="add-circle-outline" size={18} color={t.colors.textSecondary} />
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Add exercise</Text>
                 </View>
               </TouchableOpacity>
               {canMoveUp && (
               <TouchableOpacity
-                style={styles.sheetOption}
+                style={[styles.sheetOption, live.sheetOption]}
                 onPress={() => { setShowOverflow(false); handleMoveExercise('up'); }}
                 accessibilityRole="button"
                 accessibilityLabel="Move exercise up"
               >
                 <View style={styles.overflowOptionRow}>
-                  <Ionicons name="chevron-up" size={18} color={colors.textSecondary} />
-                  <Text style={styles.sheetOptionLabel}>Move exercise up</Text>
+                  <Ionicons name="chevron-up" size={18} color={t.colors.textSecondary} />
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Move exercise up</Text>
                 </View>
               </TouchableOpacity>
               )}
               {canMoveDown && (
               <TouchableOpacity
-                style={styles.sheetOption}
+                style={[styles.sheetOption, live.sheetOption]}
                 onPress={() => { setShowOverflow(false); handleMoveExercise('down'); }}
                 accessibilityRole="button"
                 accessibilityLabel="Move exercise down"
               >
                 <View style={styles.overflowOptionRow}>
-                  <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
-                  <Text style={styles.sheetOptionLabel}>Move exercise down</Text>
+                  <Ionicons name="chevron-down" size={18} color={t.colors.textSecondary} />
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Move exercise down</Text>
                 </View>
               </TouchableOpacity>
               )}
               <TouchableOpacity
-                style={styles.sheetOption}
+                style={[styles.sheetOption, live.sheetOption]}
                 onPress={() => {
                   setShowOverflow(false);
                   setShowNoteInput(true);
@@ -3414,19 +3433,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 accessibilityLabel={`${noteActionLabel} for this set`}
               >
                 <View style={styles.overflowOptionRow}>
-                  <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
-                  <Text style={styles.sheetOptionLabel}>{noteActionLabel}</Text>
+                  <Ionicons name="create-outline" size={18} color={t.colors.textSecondary} />
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{noteActionLabel}</Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.sheetOption}
+                style={[styles.sheetOption, live.sheetOption]}
                 onPress={() => { setShowOverflow(false); setShowExecution(true); }}
                 accessibilityRole="button"
                 accessibilityLabel="Exercise info"
               >
                 <View style={styles.overflowOptionRow}>
-                  <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
-                  <Text style={styles.sheetOptionLabel}>Exercise info</Text>
+                  <Ionicons name="information-circle-outline" size={18} color={t.colors.textSecondary} />
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Exercise info</Text>
                 </View>
               </TouchableOpacity>
               {/* D9: per-exercise "log per side" preference. Shown only for
@@ -3438,7 +3457,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   prompt directly). */}
               {exercise?.laterality === 'unilateral' && (
               <TouchableOpacity
-                style={styles.sheetOption}
+                style={[styles.sheetOption, live.sheetOption]}
                 onPress={() => {
                   setShowOverflow(false);
                   const exerciseId = exercise.id;
@@ -3452,11 +3471,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <Ionicons
                     name={unilateralExercises.has(exercise.id) ? 'repeat' : 'repeat-outline'}
                     size={18}
-                    color={unilateralExercises.has(exercise.id) ? colors.primary : colors.textSecondary}
+                    color={unilateralExercises.has(exercise.id) ? t.colors.primary : t.colors.textSecondary}
                   />
                   <View style={styles.sheetOptionText}>
-                    <Text style={styles.sheetOptionLabel}>{unilateralExercises.has(exercise.id) ? 'Logging per side' : 'Log per side'}</Text>
-                    <Text style={styles.sheetOptionDesc}>One side, then the other. Still counts as one set.</Text>
+                    <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{unilateralExercises.has(exercise.id) ? 'Logging per side' : 'Log per side'}</Text>
+                    <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>One side, then the other. Still counts as one set.</Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -3471,7 +3490,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   cluster as a light warm-up. */}
               {!cluster && (!exercise?.exerciseType || exercise.exerciseType === 'weight_reps' || exercise.exerciseType === 'weighted_bodyweight') && (
               <TouchableOpacity
-                style={styles.sheetOption}
+                style={[styles.sheetOption, live.sheetOption]}
                 onPress={() => {
                   setShowOverflow(false);
                   const w = parseFloat(currentSet.weight);
@@ -3484,68 +3503,68 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 accessibilityLabel="Warm-up sets"
               >
                 <View style={styles.overflowOptionRow}>
-                  <Ionicons name="flame-outline" size={18} color={colors.textSecondary} />
+                  <Ionicons name="flame-outline" size={18} color={t.colors.textSecondary} />
                   <View style={styles.sheetOptionText}>
-                    <Text style={styles.sheetOptionLabel}>Warm-up sets</Text>
-                    <Text style={styles.sheetOptionDesc}>Suggested light sets up to today's working weight.</Text>
+                    <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Warm-up sets</Text>
+                    <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>Suggested light sets up to today's working weight.</Text>
                   </View>
                 </View>
               </TouchableOpacity>
               )}
               {!isLastExercise && (
               <TouchableOpacity
-                style={styles.sheetOption}
+                style={[styles.sheetOption, live.sheetOption]}
                 onPress={() => { setShowOverflow(false); handleTogglePair(); }}
                 accessibilityRole="button"
                 accessibilityLabel={isPairedWithNext ? 'Unpair from next exercise' : 'Pair as superset with next exercise'}
               >
                 <View style={styles.overflowOptionRow}>
-                  <Ionicons name={isPairedWithNext ? 'link' : 'link-outline'} size={18} color={isPairedWithNext ? colors.primary : colors.textSecondary} />
-                  <Text style={styles.sheetOptionLabel}>{isPairedWithNext ? 'Unpair superset' : 'Pair as superset'}</Text>
+                  <Ionicons name={isPairedWithNext ? 'link' : 'link-outline'} size={18} color={isPairedWithNext ? t.colors.primary : t.colors.textSecondary} />
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{isPairedWithNext ? 'Unpair superset' : 'Pair as superset'}</Text>
                 </View>
               </TouchableOpacity>
               )}
               {!timeCrunchActive && workoutExercises.length > currentExerciseIndex + 1 && (
               <TouchableOpacity
-                style={styles.sheetOption}
+                style={[styles.sheetOption, live.sheetOption]}
                 onPress={() => { setShowOverflow(false); handleTimeCrunch(); }}
                 accessibilityRole="button"
                 accessibilityLabel="Shorten session"
               >
                 <View style={styles.overflowOptionRow}>
-                  <Ionicons name="timer-outline" size={18} color={colors.textSecondary} />
+                  <Ionicons name="timer-outline" size={18} color={t.colors.textSecondary} />
                   <View style={styles.sheetOptionText}>
-                    <Text style={styles.sheetOptionLabel}>Shorten session</Text>
-                    <Text style={styles.sheetOptionDesc}>Shortens the rest of today's session to fit the time you have left. Undo any time.</Text>
+                    <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Shorten session</Text>
+                    <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>Shortens the rest of today's session to fit the time you have left. Undo any time.</Text>
                   </View>
                 </View>
               </TouchableOpacity>
               )}
               {timeCrunchActive && (
               <TouchableOpacity
-                style={styles.sheetOption}
+                style={[styles.sheetOption, live.sheetOption]}
                 onPress={() => { setShowOverflow(false); handleRevertTimeCrunch(); }}
                 accessibilityRole="button"
                 accessibilityLabel="Undo shortening"
               >
                 <View style={styles.overflowOptionRow}>
-                  <Ionicons name="refresh-outline" size={18} color={colors.textSecondary} />
+                  <Ionicons name="refresh-outline" size={18} color={t.colors.textSecondary} />
                   <View style={styles.sheetOptionText}>
-                    <Text style={styles.sheetOptionLabel}>Undo shortening</Text>
-                    {!!timeCrunchMsg && <Text style={styles.sheetOptionDesc}>{timeCrunchMsg}</Text>}
+                    <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Undo shortening</Text>
+                    {!!timeCrunchMsg && <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>{timeCrunchMsg}</Text>}
                   </View>
                 </View>
               </TouchableOpacity>
               )}
               <TouchableOpacity
-                style={styles.sheetOption}
+                style={[styles.sheetOption, live.sheetOption]}
                 onPress={() => { setShowOverflow(false); handleRemoveExercise(); }}
                 accessibilityRole="button"
                 accessibilityLabel="Remove exercise from workout"
               >
                 <View style={styles.overflowOptionRow}>
-                  <Ionicons name="trash-outline" size={18} color={colors.error} />
-                  <Text style={[styles.sheetOptionLabel, { color: colors.error }]}>Remove exercise</Text>
+                  <Ionicons name="trash-outline" size={18} color={t.colors.error} />
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel, { color: t.colors.error }]}>Remove exercise</Text>
                 </View>
               </TouchableOpacity>
             </>
@@ -3560,17 +3579,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         >
           {showExecution ? (
             <>
-              <Text style={styles.sheetTitle}>{exercise?.name}</Text>
+              <Text style={[styles.sheetTitle, live.sheetTitle]}>{exercise?.name}</Text>
               {exercise?.primaryMuscle ? (
-                <Text style={styles.infoMuscle}>
+                <Text style={[styles.infoMuscle, live.infoMuscle]}>
                   {MUSCLE_DISPLAY_NAMES[exercise.primaryMuscle] ?? ((exercise.primaryMuscle || '').charAt(0).toUpperCase() + (exercise.primaryMuscle || '').slice(1).replace('_', ' '))}
                   {exercise.equipment ? ` - ${exercise.equipment}` : ''}
                 </Text>
               ) : null}
               {routineExercise?.recommendedSets ? (
                 <View style={styles.infoTargetRow}>
-                  <Ionicons name="checkmark-circle-outline" size={14} color={colors.primary} />
-                  <Text style={styles.infoTarget}>
+                  <Ionicons name="checkmark-circle-outline" size={14} color={t.colors.primary} />
+                  <Text style={[styles.infoTarget, live.infoTarget]}>
                     {adjustedSetCount || routineExercise.recommendedSets} sets of {routineExercise.recommendedRepsMin}-{routineExercise.recommendedRepsMax} reps
                   </Text>
                 </View>
@@ -3580,14 +3599,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   and the one-tap revert. Shown for any visible adjustment; the
                   revert button only when there's a real set change to undo. */}
               {sessionAdjustment?.show ? (
-                <View style={styles.adjustedSection}>
+                <View style={[styles.adjustedSection, live.adjustedSection]}>
                   <View style={styles.adjustedHeader}>
-                    <Ionicons name="pulse-outline" size={14} color={colors.primary} />
-                    <Text style={styles.adjustedTitle}>Adjusted today</Text>
+                    <Ionicons name="pulse-outline" size={14} color={t.colors.primary} />
+                    <Text style={[styles.adjustedTitle, live.adjustedTitle]}>Adjusted today</Text>
                   </View>
-                  <Text style={styles.adjustedReason}>{sessionAdjustment.reasonText}</Text>
+                  <Text style={[styles.adjustedReason, live.adjustedReason]}>{sessionAdjustment.reasonText}</Text>
                   {sessionAdjustment.signals?.lastTrainedAt ? (
-                    <Text style={styles.adjustedSignal}>
+                    <Text style={[styles.adjustedSignal, live.adjustedSignal]}>
                       Last trained {new Date(sessionAdjustment.signals.lastTrainedAt).toLocaleDateString(undefined, { weekday: 'long' })}.
                     </Text>
                   ) : null}
@@ -3598,8 +3617,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       accessibilityRole="button"
                       accessibilityLabel={`Use planned sets instead. ${routineExercise?.recommendedSets ?? ''} sets as written.`}
                     >
-                      <Ionicons name="arrow-undo-outline" size={15} color={colors.primary} />
-                      <Text style={styles.adjustedRevertText}>Use planned sets instead</Text>
+                      <Ionicons name="arrow-undo-outline" size={15} color={t.colors.primary} />
+                      <Text style={[styles.adjustedRevertText, live.adjustedRevertText]}>Use planned sets instead</Text>
                     </TouchableOpacity>
                   ) : null}
                 </View>
@@ -3610,14 +3629,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   Suggestions on the targets display only; the plan and logged
                   sets are never changed. */}
               {readinessReduces ? (
-                <View style={styles.adjustedSection}>
+                <View style={[styles.adjustedSection, live.adjustedSection]}>
                   <View style={styles.adjustedHeader}>
-                    <Ionicons name="pulse-outline" size={14} color={colors.primary} />
-                    <Text style={styles.adjustedTitle}>Eased for today</Text>
+                    <Ionicons name="pulse-outline" size={14} color={t.colors.primary} />
+                    <Text style={[styles.adjustedTitle, live.adjustedTitle]}>Eased for today</Text>
                   </View>
-                  <Text style={styles.adjustedReason}>{readinessTweak.whySets}</Text>
+                  <Text style={[styles.adjustedReason, live.adjustedReason]}>{readinessTweak.whySets}</Text>
                   {readinessTweak.whyLoad ? (
-                    <Text style={styles.adjustedSignal}>{readinessTweak.whyLoad}</Text>
+                    <Text style={[styles.adjustedSignal, live.adjustedSignal]}>{readinessTweak.whyLoad}</Text>
                   ) : null}
                   <TouchableOpacity
                     style={styles.adjustedRevertBtn}
@@ -3625,14 +3644,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     accessibilityRole="button"
                     accessibilityLabel={`${readinessRestoreLabel}. Applies to the whole session.`}
                   >
-                    <Ionicons name="arrow-undo-outline" size={15} color={colors.primary} />
-                    <Text style={styles.adjustedRevertText}>{readinessRestoreLabel}</Text>
+                    <Ionicons name="arrow-undo-outline" size={15} color={t.colors.primary} />
+                    <Text style={[styles.adjustedRevertText, live.adjustedRevertText]}>{readinessRestoreLabel}</Text>
                   </TouchableOpacity>
                 </View>
               ) : null}
 
-              <Text style={styles.infoNotesLabel}>How to do it</Text>
-              <Text style={styles.infoNotes}>
+              <Text style={[styles.infoNotesLabel, live.infoNotesLabel]}>How to do it</Text>
+              <Text style={[styles.infoNotes, live.infoNotes]}>
                 {routineExercise?.notes || FORM_TIPS[exercise?.name] || exercise?.notes || 'No coaching notes yet for this exercise.\n\nIf you\'re not sure how much weight to use, start light. Pick something you could comfortably lift 15 to 20 times. Getting comfortable with the movement matters more than the weight, especially early on.\n\nFocus on controlled movement, feel the target muscle working, and stop a couple of reps before you truly cannot do any more.'}
               </Text>
             </>
@@ -3647,40 +3666,40 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               iOS and would otherwise read top:0, jamming the swap list against
               the status bar / Dynamic Island. */}
           <SafeAreaProvider>
-          <SafeAreaView style={styles.swapSafe} edges={['top', 'bottom']}>
-            <View style={styles.swapHeader}>
+          <SafeAreaView style={[styles.swapSafe, live.swapSafe]} edges={['top', 'bottom']}>
+            <View style={[styles.swapHeader, live.swapHeader]}>
               <View style={styles.swapHeaderCopy}>
-                <Text style={styles.swapTitle}>Swap exercise</Text>
-                <Text style={styles.swapSubtitle} numberOfLines={1}>
+                <Text style={[styles.swapTitle, live.swapTitle]}>Swap exercise</Text>
+                <Text style={[styles.swapSubtitle, live.swapSubtitle]} numberOfLines={1}>
                   {exercise?.name}
                 </Text>
               </View>
-              <TouchableOpacity style={styles.swapCloseBtn} onPress={() => setShowSwapModal(false)} accessibilityRole="button" accessibilityLabel="Close swap">
-                <Ionicons name="close" size={20} color={colors.textPrimary} />
+              <TouchableOpacity style={[styles.swapCloseBtn, live.swapCloseBtn]} onPress={() => setShowSwapModal(false)} accessibilityRole="button" accessibilityLabel="Close swap">
+                <Ionicons name="close" size={20} color={t.colors.textPrimary} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.swapNote}>Choose a close match for today. Your plan is not changed, and sets you log count towards the new exercise's own muscle in your weekly volume.</Text>
+            <Text style={[styles.swapNote, live.swapNote]}>Choose a close match for today. Your plan is not changed, and sets you log count towards the new exercise's own muscle in your weekly volume.</Text>
             <FlashList
               data={swapCandidates}
               keyExtractor={item => item.exercise.id}
               contentContainerStyle={styles.swapListContent}
               ItemSeparatorComponent={() => <View style={styles.swapItemGap} />}
               renderItem={({ item }) => (
-                <TouchableOpacity style={styles.swapItem} onPress={() => handleConfirmSwap(item.exercise)} accessibilityRole="button" accessibilityLabel={`Swap in ${item.exercise.name}`}>
-                  <View style={styles.swapItemIcon}>
-                    <Ionicons name="swap-horizontal" size={16} color={colors.textSecondary} />
+                <TouchableOpacity style={[styles.swapItem, live.swapItem]} onPress={() => handleConfirmSwap(item.exercise)} accessibilityRole="button" accessibilityLabel={`Swap in ${item.exercise.name}`}>
+                  <View style={[styles.swapItemIcon, live.swapItemIcon]}>
+                    <Ionicons name="swap-horizontal" size={16} color={t.colors.textSecondary} />
                   </View>
                   <View style={styles.swapItemCopy}>
-                    <Text style={styles.swapItemName}>{item.exercise.name}</Text>
-                    <Text style={styles.swapItemReason}>{item.reason}</Text>
+                    <Text style={[styles.swapItemName, live.swapItemName]}>{item.exercise.name}</Text>
+                    <Text style={[styles.swapItemReason, live.swapItemReason]}>{item.reason}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+                  <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
                 </TouchableOpacity>
               )}
               ListEmptyComponent={
                 <View style={styles.swapEmpty}>
-                  <Text style={styles.swapEmptyTitle}>No close matches yet</Text>
-                  <Text style={styles.swapEmptyText}>Search the full library instead.</Text>
+                  <Text style={[styles.swapEmptyTitle, live.swapEmptyTitle]}>No close matches yet</Text>
+                  <Text style={[styles.swapEmptyText, live.swapEmptyText]}>Search the full library instead.</Text>
                 </View>
               }
               ListFooterComponent={
@@ -3688,7 +3707,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 // library or add your own. Always present, so it works whether
                 // or not there were candidates.
                 <TouchableOpacity
-                  style={styles.swapBrowseBtn}
+                  style={[styles.swapBrowseBtn, live.swapBrowseBtn]}
                   onPress={() => {
                     setShowSwapModal(false);
                     setPickerMode('swap');
@@ -3697,8 +3716,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   accessibilityRole="button"
                   accessibilityLabel="Search exercise library"
                 >
-                  <Ionicons name="search" size={16} color={colors.textSecondary} />
-                  <Text style={styles.swapBrowseText}>Search exercise library</Text>
+                  <Ionicons name="search" size={16} color={t.colors.textSecondary} />
+                  <Text style={[styles.swapBrowseText, live.swapBrowseText]}>Search exercise library</Text>
                 </TouchableOpacity>
               }
             />
@@ -3710,19 +3729,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         {/* Discard Workout Modal */}
         <Modal visible={showDiscardModal} transparent animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={() => setShowDiscardModal(false)}>
           {showDiscardModal ? (
-          <View style={styles.discardOverlay}>
-            <View style={styles.discardSheet}>
-              <Text style={styles.discardTitle}>Discard workout?</Text>
-              <Text style={styles.discardBody}>
+          <View style={[styles.discardOverlay, live.discardOverlay]}>
+            <View style={[styles.discardSheet, live.discardSheet]}>
+              <Text style={[styles.discardTitle, live.discardTitle]}>Discard workout?</Text>
+              <Text style={[styles.discardBody, live.discardBody]}>
                 This will delete the current workout session. Your plan will not advance.
               </Text>
               <Button
                 variant="primary"
-                style={styles.keepTrainingBtn}
+                style={[styles.keepTrainingBtn, live.keepTrainingBtn]}
                 onPress={() => setShowDiscardModal(false)}
                 accessibilityLabel="Keep training"
               >
-                <Text style={styles.keepTrainingBtnText}>Keep training</Text>
+                <Text style={[styles.keepTrainingBtnText, live.keepTrainingBtnText]}>Keep training</Text>
               </Button>
               <TouchableOpacity
                 style={styles.discardConfirmBtn}
@@ -3738,7 +3757,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   }
                 }}
               >
-                <Text style={styles.discardConfirmBtnText}>Discard workout</Text>
+                <Text style={[styles.discardConfirmBtnText, live.discardConfirmBtnText]}>Discard workout</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -3761,15 +3780,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.editSetKeyboard}
           >
-            <View style={styles.editSetOverlay}>
-              <View style={styles.editSetSheet}>
+            <View style={[styles.editSetOverlay, live.editSetOverlay]}>
+              <View style={[styles.editSetSheet, live.editSetSheet]}>
                 <ScrollView
                   style={styles.editSetScroll}
                   contentContainerStyle={styles.editSetContent}
                   keyboardShouldPersistTaps="handled"
                   showsVerticalScrollIndicator={false}
                 >
-                  <Text style={styles.editSetTitle}>Edit set</Text>
+                  <Text style={[styles.editSetTitle, live.editSetTitle]}>Edit set</Text>
                   {editValue && (
                     <SetEntry
                       value={editValue}
@@ -3782,11 +3801,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   )}
                   <Button
                     variant="primary"
-                    style={styles.editSetSaveBtn}
+                    style={[styles.editSetSaveBtn, live.editSetSaveBtn]}
                     onPress={handleSaveEditedSet}
                     disabled={saving}
                     title="Save"
-                    textStyle={styles.editSetSaveText}
+                    textStyle={[styles.editSetSaveText, live.editSetSaveText]}
                     accessibilityLabel="Save set changes"
                   />
                   <TouchableOpacity
@@ -3795,17 +3814,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     accessibilityRole="button"
                     accessibilityLabel="Cancel editing set"
                   >
-                    <Text style={styles.editSetCancelText}>Cancel</Text>
+                    <Text style={[styles.editSetCancelText, live.editSetCancelText]}>Cancel</Text>
                   </TouchableOpacity>
-                  <View style={styles.editSetDivider} />
+                  <View style={[styles.editSetDivider, live.editSetDivider]} />
                   <TouchableOpacity
                     style={styles.editSetDeleteBtn}
                     onPress={handleDeleteEditedSet}
                     accessibilityRole="button"
                     accessibilityLabel="Delete set"
                   >
-                    <Ionicons name="trash-outline" size={16} color={colors.error} />
-                    <Text style={styles.editSetDeleteText}>Delete set</Text>
+                    <Ionicons name="trash-outline" size={16} color={t.colors.error} />
+                    <Text style={[styles.editSetDeleteText, live.editSetDeleteText]}>Delete set</Text>
                   </TouchableOpacity>
                 </ScrollView>
               </View>
@@ -3821,16 +3840,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 }
 
 function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercises, setCurrentExerciseIndex, currentExerciseIndex }) {
+  // CP-10 stage 3 (theming FINAL batch): live theme (src/hooks/useTheme.js).
+  // See buildLiveStyles' header comment (defined further down this
+  // file, after the frozen `styles` block -- see the comment there for why).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
-    <View style={styles.emptyView}>
-      <View style={styles.header}>
+    <View style={[styles.emptyView, live.emptyView]}>
+      <View style={[styles.header, live.header]}>
         <View style={styles.headerSide}>
           <TouchableOpacity onPress={onCancel} style={styles.headerTapTarget} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Cancel workout">
-            <Ionicons name="close" size={22} color={colors.textSecondary} />
+            <Ionicons name="close" size={22} color={t.colors.textSecondary} />
           </TouchableOpacity>
         </View>
         <View style={styles.headerCenter}>
-          <Text style={styles.timerText}>{elapsed}</Text>
+          <Text style={[styles.timerText, live.timerText]}>{elapsed}</Text>
         </View>
         <View style={styles.headerSideRight}>
           <Button
@@ -3840,38 +3864,38 @@ function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, workoutExercise
             size="sm"
             fullWidth={false}
             onPress={onFinish}
-            style={[styles.headerTapTarget, styles.headerFinishButton]}
+            style={[styles.headerTapTarget, styles.headerFinishButton, live.headerFinishButton]}
             accessibilityLabel="Finish workout"
           />
         </View>
       </View>
 
       {workoutExercises.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.exerciseNav} contentContainerStyle={styles.exerciseNavContent}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.exerciseNav, live.exerciseNav]} contentContainerStyle={styles.exerciseNavContent}>
           {workoutExercises.map((entry, i) => (
-            <TouchableOpacity key={i} style={[styles.navTab, i === currentExerciseIndex && styles.navTabActive]} onPress={() => setCurrentExerciseIndex(i)} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }} accessibilityRole="button" accessibilityState={{ selected: i === currentExerciseIndex }} accessibilityLabel={entry.exercise?.name || `Exercise ${i + 1}`}>
-              <Text style={[styles.navTabText, i === currentExerciseIndex && styles.navTabTextActive]} numberOfLines={1} ellipsizeMode="tail">
+            <TouchableOpacity key={i} style={[styles.navTab, live.navTab, i === currentExerciseIndex && [styles.navTabActive, live.navTabActive]]} onPress={() => setCurrentExerciseIndex(i)} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }} accessibilityRole="button" accessibilityState={{ selected: i === currentExerciseIndex }} accessibilityLabel={entry.exercise?.name || `Exercise ${i + 1}`}>
+              <Text style={[styles.navTabText, live.navTabText, i === currentExerciseIndex && [styles.navTabTextActive, live.navTabTextActive]]} numberOfLines={1} ellipsizeMode="tail">
                 {entry.exercise?.name}
               </Text>
-              {entry.sets?.length > 0 && <View style={styles.navTabBadge}><Text style={styles.navTabBadgeText} maxFontSizeMultiplier={1.3}>{entry.sets.length}</Text></View>}
+              {entry.sets?.length > 0 && <View style={[styles.navTabBadge, live.navTabBadge]}><Text style={[styles.navTabBadgeText, live.navTabBadgeText]} maxFontSizeMultiplier={1.3}>{entry.sets.length}</Text></View>}
             </TouchableOpacity>
           ))}
         </ScrollView>
       )}
 
       <View style={styles.emptyContent}>
-        <Ionicons name="barbell-outline" size={64} color={colors.surface3} />
-        <Text style={styles.emptyTitle}>Add your first exercise</Text>
-        <Text style={styles.emptySubtitle}>Search the exercise library to get started</Text>
+        <Ionicons name="barbell-outline" size={64} color={t.colors.surface3} />
+        <Text style={[styles.emptyTitle, live.emptyTitle]}>Add your first exercise</Text>
+        <Text style={[styles.emptySubtitle, live.emptySubtitle]}>Search the exercise library to get started</Text>
         <Button
           variant="primary"
           fullWidth={false}
-          style={styles.addFirstBtn}
+          style={[styles.addFirstBtn, live.addFirstBtn]}
           onPress={onAdd}
           accessibilityLabel="Add exercise"
         >
-          <Ionicons name="add" size={22} color={colors.onPrimary} />
-          <Text style={styles.addFirstBtnText}>Add exercise</Text>
+          <Ionicons name="add" size={22} color={t.colors.onPrimary} />
+          <Text style={[styles.addFirstBtnText, live.addFirstBtnText]}>Add exercise</Text>
         </Button>
       </View>
     </View>
@@ -4265,3 +4289,167 @@ const styles = StyleSheet.create({
   deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.warning },
   deloadBannerSub: { ...type.caption, color: colors.textMuted },
 });
+
+// CP-10 stage 3 (theming FINAL batch, 2026-07-10): buildLiveStyles is the
+// shared "frozen base + live override" map for this screen's three
+// function-component scopes (LoggedSetRow, ActiveWorkoutScreen,
+// EmptyExerciseView) -- each calls `const t = useTheme(); const live =
+// buildLiveStyles(t);` and appends `live.KEY` after `styles.KEY` in every
+// style array, same pattern as batch 1/2 (Card.js/CoachBriefCard.js's
+// buildBriefIconColor). Extracted to one function (rather than inlined
+// three times) so the three scopes can never drift out of step with each
+// other or with the frozen `styles` block above -- every key here mirrors
+// only the colour/fontSize/type-bearing sub-properties of the matching
+// frozen style, at identical rest values; pure layout keys (flex/gap/
+// padding/width, no token) are correctly omitted, there is nothing to
+// unfreeze for them.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    header: { borderBottomColor: t.colors.border },
+    headerFinishButton: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    timerText: { ...t.type.num('title'), color: t.colors.primary },
+    starterBanner: { backgroundColor: withAlpha(t.colors.primary, alpha.ghost), borderBottomColor: t.colors.border },
+    starterBannerText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    inlineActionPill: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    inlineActionPillText: { ...t.type.caption, color: t.colors.textPrimary },
+    exerciseNav: { borderBottomColor: t.colors.border },
+    navTab: { backgroundColor: t.colors.surface2 },
+    navTabActive: { backgroundColor: t.colors.primaryBg },
+    navTabText: { ...t.type.label, color: t.colors.textSecondary },
+    navTabTextActive: { color: t.colors.primary },
+    navTabBadge: { backgroundColor: t.colors.primaryFill },
+    navTabBadgeText: { ...t.type.caption, color: t.colors.onPrimary, fontSize: t.fontSize.micro },
+    notesChip: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    notesChipText: { ...t.type.label, color: t.colors.textSecondary },
+    exerciseName: { ...t.type.title, color: t.colors.textPrimary },
+    swapSafe: { backgroundColor: t.colors.background },
+    swapHeader: { borderBottomColor: t.colors.borderSubtle },
+    swapTitle: { ...t.type.title, color: t.colors.textPrimary },
+    swapSubtitle: { ...t.type.caption, color: t.colors.textMuted },
+    swapCloseBtn: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    swapNote: { ...t.type.caption, color: t.colors.textMuted },
+    swapItem: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    swapItemIcon: { backgroundColor: t.colors.surface2 },
+    swapItemName: { ...t.type.label, color: t.colors.textPrimary },
+    swapItemReason: { ...t.type.caption, color: t.colors.textMuted },
+    swapBrowseBtn: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
+    swapBrowseText: { ...t.type.label, color: t.colors.textPrimary },
+    swapEmptyTitle: { ...t.type.label, color: t.colors.textPrimary },
+    swapEmptyText: { ...t.type.caption, color: t.colors.textMuted },
+    targetText: { ...t.type.captionTight, color: t.colors.textMuted },
+    setEntryCardWarmup: { borderColor: t.colors.warning, backgroundColor: t.colors.warningBg || t.colors.surface },
+    setEntryCardFlash: { borderColor: t.colors.primary },
+    warmupBannerText: { ...t.type.caption, color: t.colors.warning },
+    warmupOneTimeHint: { ...t.type.bodySm, color: t.colors.textMuted },
+    firstSetHint: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    firstSetHintText: { ...t.type.caption, color: t.colors.textSecondary },
+    orientationText: { ...t.type.label, color: t.colors.textSecondary },
+    beatLineLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    beatLineValue: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    beatLineGlyph: { ...t.type.bodyStrong, color: t.colors.primary },
+    beatLineCue: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    beatLineCueText: { ...t.type.caption, color: t.colors.textSecondary },
+    coachLineText: { ...t.type.bodySm, color: t.colors.primary },
+    noteInput: { backgroundColor: t.colors.surface2, fontSize: t.fontSize.sm, color: t.colors.textPrimary, borderColor: t.colors.border },
+    completeBtn: { backgroundColor: t.colors.primaryFill },
+    completeBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    completeBtnWarmup: { backgroundColor: t.colors.warningBg || t.colors.surface, borderColor: t.colors.warning },
+    completeBtnTextWarmup: { color: t.colors.warning },
+    extraSetBtnText: { ...t.type.label, color: t.colors.textSecondary },
+    extraSetBtnPromoted: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    extraSetBtnPromotedText: { ...t.type.label, color: t.colors.textPrimary },
+    autoAdvanceRowText: { ...t.type.caption, color: t.colors.textMuted },
+    autoAdvanceRowDot: { ...t.type.caption, color: t.colors.textMuted },
+    autoAdvanceRowActionBtn: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    autoAdvanceRowAction: { ...t.type.caption, color: t.colors.textPrimary },
+    bottomBar: { backgroundColor: t.colors.background, borderTopColor: t.colors.borderSubtle },
+    clusterBanner: { borderColor: withAlpha(t.colors.primary, 0.502), backgroundColor: t.colors.primaryBg },
+    clusterTitle: { ...t.type.label, color: t.colors.primary },
+    clusterReps: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    clusterInput: { backgroundColor: t.colors.background, color: t.colors.textPrimary, borderColor: t.colors.border, ...t.type.body },
+    clusterAddBtn: { borderColor: withAlpha(t.colors.primary, 0.502) },
+    clusterAddBtnText: { ...t.type.label, color: t.colors.primary },
+    clusterCancel: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    clusterCancelText: { ...t.type.label, color: t.colors.textPrimary },
+    overflowBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    supersetChip: { backgroundColor: t.colors.primaryBg },
+    supersetChipText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    loggedTitle: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    loggedSetRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    loggedSetRowWarmup: { borderColor: withAlpha(t.colors.warning, 0.376), backgroundColor: t.colors.warningBg || t.colors.surface },
+    loggedSetTextWarmup: { color: t.colors.warning },
+    setNumBadge: { backgroundColor: t.colors.surface2 },
+    setNumText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    loggedSetText: { ...t.type.bodySm, color: t.colors.textPrimary },
+    loggedEst1RM: { ...t.type.caption, color: t.colors.textMuted },
+    emptyView: { backgroundColor: t.colors.background },
+    emptyTitle: { ...t.type.title, color: t.colors.textPrimary },
+    emptySubtitle: { ...t.type.body, color: t.colors.textSecondary },
+    addFirstBtn: { backgroundColor: t.colors.primaryFill },
+    addFirstBtnText: { ...t.type.label, color: t.colors.onPrimary },
+    sheetTitle: { ...t.type.title, color: t.colors.textPrimary },
+    sheetExplainer: { ...t.type.bodySm, color: t.colors.textSecondary },
+    sheetOption: { borderBottomColor: t.colors.border },
+    rampBarTag: { ...t.type.caption, color: t.colors.textMuted },
+    sheetOptionLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    sheetOptionLabelActive: { color: t.colors.primary },
+    sheetOptionDesc: { ...t.type.caption, color: t.colors.textMuted },
+    infoTarget: { ...t.type.label, color: t.colors.primary },
+    infoMuscle: { ...t.type.caption, color: t.colors.textMuted },
+    infoNotesLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    infoNotes: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    adjustedSection: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.376) },
+    adjustedTitle: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    adjustedReason: { ...t.type.bodySm, color: t.colors.textPrimary },
+    adjustedSignal: { ...t.type.caption, color: t.colors.textMuted },
+    adjustedRevertText: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    targetBanner: { backgroundColor: t.colors.successBg, borderColor: t.colors.success },
+    targetBannerText: { fontSize: t.fontSize.sm, color: t.colors.onSuccessBg },
+    supOverlay: { backgroundColor: t.colors.scrim },
+    supSheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    supTitle: { ...t.type.h3, color: t.colors.textPrimary },
+    supSubtitle: { ...t.type.bodySm, color: t.colors.textSecondary },
+    supPairCard: { borderLeftColor: t.colors.primary },
+    supPairChip: { backgroundColor: t.colors.primaryFill },
+    supPairChipText: { color: t.colors.onPrimary, fontSize: t.fontSize.xs },
+    supPairName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    supPairConnector: { backgroundColor: t.colors.border },
+    supStepNum: { color: t.colors.primary, fontSize: t.fontSize.sm },
+    supStepText: { ...t.type.bodySm, color: t.colors.textPrimary },
+    supTip: { ...t.type.caption, color: t.colors.textMuted },
+    supPrimaryBtn: { backgroundColor: t.colors.primaryFill },
+    supPrimaryBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    supSecondaryBtn: { borderColor: t.colors.border },
+    supSecondaryBtnText: { ...t.type.label, color: t.colors.textSecondary },
+    staleOverlay: { backgroundColor: t.colors.scrim },
+    staleSheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    staleTitle: { ...t.type.h3, color: t.colors.textPrimary },
+    staleBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+    staleResume: { backgroundColor: t.colors.primaryFill },
+    staleResumeText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    staleFinish: { backgroundColor: t.colors.surface2, borderColor: t.colors.borderSubtle },
+    staleFinishText: { ...t.type.label, color: t.colors.textPrimary },
+    staleDiscardText: { ...t.type.label, color: t.colors.error },
+    discardOverlay: { backgroundColor: t.colors.scrim },
+    discardSheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    discardTitle: { ...t.type.h3, color: t.colors.textPrimary },
+    discardBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+    keepTrainingBtn: { backgroundColor: t.colors.primaryFill },
+    keepTrainingBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    discardConfirmBtnText: { ...t.type.label, color: t.colors.error },
+    editSetOverlay: { backgroundColor: t.colors.scrim },
+    editSetSheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    editSetTitle: { ...t.type.h3, color: t.colors.textPrimary },
+    editSetSaveBtn: { backgroundColor: t.colors.primaryFill },
+    editSetSaveText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    editSetCancelText: { ...t.type.label, color: t.colors.textSecondary },
+    editSetDivider: { backgroundColor: t.colors.border },
+    editSetDeleteText: { ...t.type.label, color: t.colors.error },
+    nextTimeBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.251) },
+    nextTimeBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },
+    deloadBanner: { backgroundColor: t.colors.warningBg, borderColor: t.colors.warning },
+    deloadBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.warning },
+    deloadBannerSub: { ...t.type.caption, color: t.colors.textMuted },
+  };
+}

@@ -32,8 +32,13 @@ const DATABASE = fs.readFileSync(
 
 describe('mid-session swap volume clause (Ultimate-Audit item 13, NA-wr-3)', () => {
   test('swap sheet note states the volume clause verbatim', () => {
+    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): ActiveWorkoutScreen
+    // now reads a live theme (src/hooks/useTheme.js); swapNote gained a
+    // live.swapNote override in its style array. The frozen `styles.swapNote`
+    // definition is byte-identical -- this is a mechanical literal update,
+    // the pinned clause wording is unchanged.
     expect(ACTIVE_WORKOUT).toContain(
-      "<Text style={styles.swapNote}>Choose a close match for today. Your plan is not changed, and sets you log count towards the new exercise's own muscle in your weekly volume.</Text>",
+      "<Text style={[styles.swapNote, live.swapNote]}>Choose a close match for today. Your plan is not changed, and sets you log count towards the new exercise's own muscle in your weekly volume.</Text>",
     );
   });
 

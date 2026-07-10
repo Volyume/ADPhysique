@@ -1004,7 +1004,7 @@ export default function DiaryScreen({ navigation, route }) {
     });
   }
 
-  async function saveEditSheet({ quantityG, mealSlot, entryDate, weightState }) {
+  async function saveEditSheet({ quantityG, mealSlot, entryDate, weightState, eatenAt }) {
     if (!canWrite()) return;
     const { entry, food } = editSheet;
     await updateFoodEntry(entry.id, userId, {
@@ -1017,6 +1017,11 @@ export default function DiaryScreen({ navigation, route }) {
       // (untouched or user-chosen); falls back to the entry's existing value
       // so a food with no raw/cooked choice never loses its prior label.
       weightState: weightState ?? entry.weight_state,
+      // Item 15 data layer (kept after the meal-card layout restoration,
+      // founder 2026-07-10): the sheet's optional eaten-at edit persists.
+      // undefined leaves the stored value untouched (updateFoodEntry
+      // preserves omitted fields); an explicit value or null writes through.
+      ...(eatenAt !== undefined ? { eatenAt } : null),
     });
     await load();
   }
@@ -1586,6 +1591,7 @@ export default function DiaryScreen({ navigation, route }) {
         initialMealSlot={editSheet?.entry?.meal_slot ?? 'snack'}
         initialEntryDate={editSheet?.entry?.entry_date ?? selectedDate}
         initialWeightState={editSheet?.entry?.weight_state}
+        initialEatenAt={editSheet?.entry?.eaten_at ?? null}
         onSave={saveEditSheet}
         onDelete={deleteFromEditSheet}
         onClose={() => setEditSheet(null)}

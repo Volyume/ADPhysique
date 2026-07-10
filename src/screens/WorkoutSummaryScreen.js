@@ -4,7 +4,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, KeyboardAv
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, withAlpha, alpha, circle, motion, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, buildVolumeStatusColor, withAlpha, alpha, circle, motion, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import InfoTooltip from '../components/InfoTooltip';
 import BackHeader from '../components/BackHeader';
 import RollingNumber from '../components/RollingNumber';
@@ -79,7 +80,13 @@ function partnerCheerFailureMessage(error) {
   return 'Could not send that cheer. Refresh Partners, then try once more.';
 }
 
+
 function RatingRow({ label, field, value, max, onChange }) {
+  // CP-10 stage 3 (theming FINAL batch): live theme (src/hooks/useTheme.js).
+  // See buildLiveStyles' header comment (defined further down this
+  // file, after the frozen `styles` block -- see the comment there for why).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const labels = RATING_LABELS[field];
   const values = field === 'jointDiscomfort'
     ? [0, 1, 2, 3]
@@ -87,21 +94,21 @@ function RatingRow({ label, field, value, max, onChange }) {
   return (
     <View style={styles.ratingRow}>
       <View style={styles.ratingLabelRow}>
-        <Text style={styles.ratingLabel}>{label}</Text>
-        {labels?.[value] ? <Text style={styles.ratingValueLabel}>{labels[value]}</Text> : null}
+        <Text style={[styles.ratingLabel, live.ratingLabel]}>{label}</Text>
+        {labels?.[value] ? <Text style={[styles.ratingValueLabel, live.ratingValueLabel]}>{labels[value]}</Text> : null}
       </View>
       <View style={styles.ratingBtns} accessibilityRole="radiogroup" accessibilityLabel={label}>
         {values.map((i) => (
           <TouchableOpacity
             key={i}
-            style={[styles.ratingBtn, value === i && styles.ratingBtnActive]}
+            style={[styles.ratingBtn, live.ratingBtn, value === i && [styles.ratingBtnActive, live.ratingBtnActive]]}
             onPress={() => onChange(i)}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             accessibilityRole="radio"
             accessibilityState={{ selected: value === i }}
             accessibilityLabel={labels?.[i] ? `${i}, ${labels[i]}` : String(i)}
           >
-            <Text style={[styles.ratingBtnText, value === i && styles.ratingBtnTextActive]}>
+            <Text style={[styles.ratingBtnText, live.ratingBtnText, value === i && [styles.ratingBtnTextActive, live.ratingBtnTextActive]]}>
               {i}
             </Text>
           </TouchableOpacity>
@@ -135,6 +142,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     // review to see, never a generic upsell.
     hasUnseenCoachChange: s.hasUnseenCoachChange,
   })));
+  // CP-10 stage 3 (theming FINAL batch): live theme (src/hooks/useTheme.js).
+  // See buildLiveStyles' header comment (defined further down this
+  // file, after the frozen `styles` block -- see the comment there for why).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const toast = useToast();
   // NEW-002 rebuild: the post-workout partner beat (Duolingo's post-lesson
   // nudge is the highest-value re-engagement moment). Renders only when
@@ -940,17 +952,17 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     .join(', ');
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       {readOnly ? <BackHeader title="Workout summary" /> : null}
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.completionHeader}>
           <View style={styles.checkRow}>
-            <Ionicons name="checkmark-circle" size={28} color={colors.success} />
-            <Text style={styles.completionTitle}>Workout complete</Text>
+            <Ionicons name="checkmark-circle" size={28} color={t.colors.success} />
+            <Text style={[styles.completionTitle, live.completionTitle]}>Workout complete</Text>
           </View>
-          <Text style={styles.completionDate}>{completionDate}</Text>
+          <Text style={[styles.completionDate, live.completionDate]}>{completionDate}</Text>
           {firstSessionLine ? (
-            <Text style={styles.firstSessionLine}>{firstSessionLine}</Text>
+            <Text style={[styles.firstSessionLine, live.firstSessionLine]}>{firstSessionLine}</Text>
           ) : null}
         </View>
 
@@ -961,21 +973,21 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {milestone ? (
           <RevealSection delay={120}>
             <Card tone="gold" style={styles.milestoneCard}>
-              <View style={styles.milestoneIconWrap}>
-                <Ionicons name={milestone.icon} size={22} color={colors.gold} />
+              <View style={[styles.milestoneIconWrap, live.milestoneIconWrap]}>
+                <Ionicons name={milestone.icon} size={22} color={t.colors.gold} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.milestoneTitle}>{milestone.title}</Text>
-                <Text style={styles.milestoneBody}>{milestone.body}</Text>
+                <Text style={[styles.milestoneTitle, live.milestoneTitle]}>{milestone.title}</Text>
+                <Text style={[styles.milestoneBody, live.milestoneBody]}>{milestone.body}</Text>
               </View>
               <TouchableOpacity
-                style={styles.milestoneShareBtn}
+                style={[styles.milestoneShareBtn, live.milestoneShareBtn]}
                 onPress={handleShareMilestone}
                 accessibilityRole="button"
                 accessibilityLabel="Share this milestone"
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Ionicons name="share-social-outline" size={18} color={colors.gold} />
+                <Ionicons name="share-social-outline" size={18} color={t.colors.gold} />
               </TouchableOpacity>
             </Card>
           </RevealSection>
@@ -1002,32 +1014,32 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             if (verdict === 'best') {
               headline = `Strongest workout in 4 weeks`;
               sub = `Top of ${total} sessions logged for this routine.`;
-              accent = colors.gold;
+              accent = t.colors.gold;
             } else if (verdict === 'up') {
               headline = `${pct >= 0 ? '+' : ''}${pct}% vs your 4-week average`;
               sub = `Position ${position} of ${total} sessions in the window.`;
-              accent = colors.success;
+              accent = t.colors.success;
             } else if (verdict === 'down') {
               headline = `${pct}% vs your 4-week average`;
               sub = `Sessions vary with recovery, sleep and stress. The 4-week trend carries more signal than any single session.`;
-              accent = colors.textSecondary;
+              accent = t.colors.textSecondary;
             } else {
               headline = `On pace with your last ${priorCount} session${priorCount !== 1 ? 's' : ''}`;
               sub = 'Within about 10% of your 4-week average. Consistency is the goal.';
               // Neutral, not amber: the hero numeral is this screen's one
               // amber object (design audit 03 amber-inflation rule).
-              accent = colors.textPrimary;
+              accent = t.colors.textPrimary;
             }
             return (
-              <View style={styles.verdictRow}>
+              <View style={[styles.verdictRow, live.verdictRow]}>
                 <Ionicons
                   name={verdict === 'best' ? 'trophy-outline' : verdict === 'up' ? 'trending-up-outline' : verdict === 'down' ? 'trending-down-outline' : 'analytics-outline'}
                   size={16}
                   color={accent}
                 />
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.verdictHeadline, { color: accent }]}>{headline}</Text>
-                  <Text style={styles.verdictSub}>{sub}</Text>
+                  <Text style={[styles.verdictHeadline, live.verdictHeadline, { color: accent }]}>{headline}</Text>
+                  <Text style={[styles.verdictSub, live.verdictSub]}>{sub}</Text>
                 </View>
               </View>
             );
@@ -1061,8 +1073,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <RevealSection key={pair.id} delay={1130}>
               <Card style={styles.partnerBeatRow}>
                 <View style={styles.partnerBeatTop}>
-                  <Ionicons name="people-outline" size={18} color={colors.primary} />
-                  <Text style={styles.partnerBeatText}>
+                  <Ionicons name="people-outline" size={18} color={t.colors.primary} />
+                  <Text style={[styles.partnerBeatText, live.partnerBeatText]}>
                     {moment
                       ? moment.line
                       : pair.rowState === 'resting'
@@ -1078,8 +1090,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                     size="sm"
                     fullWidth={false}
                     onPress={() => handlePreviewPartnerWin(pair.id)}
-                    style={styles.partnerWinBtn}
-                    textStyle={styles.partnerCheerText}
+                    style={[styles.partnerWinBtn, live.partnerWinBtn]}
+                    textStyle={[styles.partnerCheerText, live.partnerCheerText]}
                     accessibilityLabel={`Preview this workout win for ${partnerName}`}
                   />
                   <Button
@@ -1090,8 +1102,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                     fullWidth={false}
                     onPress={() => handlePostWorkoutCheer(pair)}
                     disabled={!pair.cheerEnabled || sending}
-                    style={[styles.partnerCheerBtn, (!pair.cheerEnabled || sending) && styles.partnerCheerBtnDone]}
-                    textStyle={[styles.partnerCheerText, (!pair.cheerEnabled || sending) && styles.partnerCheerTextDone]}
+                    style={[styles.partnerCheerBtn, live.partnerCheerBtn, (!pair.cheerEnabled || sending) && [styles.partnerCheerBtnDone, live.partnerCheerBtnDone]]}
+                    textStyle={[styles.partnerCheerText, live.partnerCheerText, (!pair.cheerEnabled || sending) && [styles.partnerCheerTextDone, live.partnerCheerTextDone]]}
                     accessibilityLabel={sending ? `Sending cheer to ${partnerName}` : pair.cheerEnabled ? `Send a cheer to ${partnerName}` : 'Cheer sent'}
                   />
                 </View>
@@ -1107,9 +1119,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {!readOnly && !calmSuppressed && mesoWeek?.plannedWeeks >= 2 && (
           <RevealSection delay={1160}>
             <Card style={styles.blockArcSection}>
-              <Text style={styles.sectionTitle}>Your block</Text>
+              <Text style={[styles.sectionTitle, live.sectionTitle]}>Your block</Text>
               {mesoWeek.mesoName ? (
-                <Text style={styles.blockArcName}>{mesoWeek.mesoName}</Text>
+                <Text style={[styles.blockArcName, live.blockArcName]}>{mesoWeek.mesoName}</Text>
               ) : null}
               <BlockShapeCard
                 weekIndex={mesoWeek.weekIndex}
@@ -1133,18 +1145,18 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   s => (s.setType ?? 'straight') !== 'warmup'
                 );
                 return (
-                  <View key={ex.exerciseId || i} style={styles.exerciseListRow}>
-                    <Text style={styles.exerciseListName} numberOfLines={1}>{ex.name}</Text>
+                  <View key={ex.exerciseId || i} style={[styles.exerciseListRow, live.exerciseListRow]}>
+                    <Text style={[styles.exerciseListName, live.exerciseListName]} numberOfLines={1}>{ex.name}</Text>
                     {workingSets.length > 0 ? (
                       <View style={styles.exerciseSetsList}>
                         {workingSets.map((s, si) => (
-                          <Text key={si} style={styles.exerciseSetChip}>
+                          <Text key={si} style={[styles.exerciseSetChip, live.exerciseSetChip]}>
                             {s.weight > 0 ? `${s.weight}${units}` : 'BW'} x {s.reps}
                           </Text>
                         ))}
                       </View>
                     ) : (
-                      <Text style={styles.exerciseListMeta}>
+                      <Text style={[styles.exerciseListMeta, live.exerciseListMeta]}>
                         {ex.recommendedSets} x {ex.repsMin}-{ex.repsMax}
                       </Text>
                     )}
@@ -1157,9 +1169,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
         {detectedPRs.length > 0 && (
           <RevealSection delay={1340}>
-          <View style={styles.prRow}>
-            <Ionicons name="trophy-outline" size={18} color={colors.warning} />
-            <Text style={styles.prRowText}>
+          <View style={[styles.prRow, live.prRow]}>
+            <Ionicons name="trophy-outline" size={18} color={t.colors.warning} />
+            <Text style={[styles.prRowText, live.prRowText]}>
               {detectedPRs.length} new PR{detectedPRs.length !== 1 ? 's' : ''}
               {prExerciseNames ? ` - ${prExerciseNames}` : ''}
             </Text>
@@ -1179,26 +1191,26 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <View style={styles.onwardLinksRow}>
               {showProgressLink && (
                 <TouchableOpacity
-                  style={styles.onwardLink}
+                  style={[styles.onwardLink, live.onwardLink]}
                   activeOpacity={0.85}
                   onPress={handleSeeProgress}
                   accessibilityRole="button"
                   accessibilityLabel={progressLinkLabel}
                 >
-                  <Ionicons name="trending-up-outline" size={14} color={colors.textSecondary} />
-                  <Text style={styles.onwardLinkText}>{progressLinkLabel}</Text>
+                  <Ionicons name="trending-up-outline" size={14} color={t.colors.textSecondary} />
+                  <Text style={[styles.onwardLinkText, live.onwardLinkText]}>{progressLinkLabel}</Text>
                 </TouchableOpacity>
               )}
               {showCoachLink && (
                 <TouchableOpacity
-                  style={styles.onwardLink}
+                  style={[styles.onwardLink, live.onwardLink]}
                   activeOpacity={0.85}
                   onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput')}
                   accessibilityRole="button"
                   accessibilityLabel="See this week's coaching review"
                 >
-                  <Ionicons name="pulse-outline" size={14} color={colors.textSecondary} />
-                  <Text style={styles.onwardLinkText}>See this week&apos;s coaching review</Text>
+                  <Ionicons name="pulse-outline" size={14} color={t.colors.textSecondary} />
+                  <Text style={[styles.onwardLinkText, live.onwardLinkText]}>See this week&apos;s coaching review</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -1220,13 +1232,13 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </RevealSection>
         ) : null}
 
-        <View style={styles.divider} />
+        <View style={[styles.divider, live.divider]} />
 
         {musclesWorked.length > 0 && (
           <RevealSection delay={1460}>
           <View style={styles.section}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Text style={styles.sectionTitle}>This week's volume</Text>
+              <Text style={[styles.sectionTitle, live.sectionTitle]}>This week's volume</Text>
               <InfoTooltip size={11} text={
                 'How much you\'ve trained each muscle group this week.\n\n' +
                 'Green = Good range: enough training to grow without overdoing it\n' +
@@ -1242,22 +1254,28 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             {musclesWorked.map((muscle, mi) => {
               const data = weeklyVolume[muscle];
               const { label, status } = getVolumeStatus(data.workingSets, muscle);
-              const color = volumeStatusColor(status);
+              // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live
+              // variant of volumeStatusColor (src/styles/theme.js), fed by
+              // this screen's own t.colors so the muscle-volume tone stays in
+              // step with the rest of this screen's theme generation. Same
+              // status -> tone mapping as the legacy singleton (kept for
+              // VolumeHeatmapScreen.js/AnalyticsScreen.js, unmigrated).
+              const color = buildVolumeStatusColor(t.colors)(status);
               const insight = getVolumeInsight(muscle, data.workingSets, status);
               const why = getVolumeWhy(muscle, data.workingSets, status);
               const isExpanded = expandedVolumeWhy === muscle;
               return (
-                <View key={muscle} style={[styles.volumeRow, mi === musclesWorked.length - 1 && styles.volumeRowLast]}>
+                <View key={muscle} style={[styles.volumeRow, live.volumeRow, mi === musclesWorked.length - 1 && styles.volumeRowLast]}>
                   <View style={styles.volumeRowMain}>
-                    <Text style={styles.muscleName}>{MUSCLE_DISPLAY_NAMES[muscle] || muscle}</Text>
+                    <Text style={[styles.muscleName, live.muscleName]}>{MUSCLE_DISPLAY_NAMES[muscle] || muscle}</Text>
                     <View style={[styles.statusBadge, { backgroundColor: withAlpha(color, 0.133) }]}>
-                      <Text style={[styles.statusText, { color }]}>{label}</Text>
+                      <Text style={[styles.statusText, live.statusText, { color }]}>{label}</Text>
                     </View>
                   </View>
                   {insight ? (
-                    <Text style={styles.volumeInsightText}>{insight}</Text>
+                    <Text style={[styles.volumeInsightText, live.volumeInsightText]}>{insight}</Text>
                   ) : (
-                    <Text style={styles.volumeInsightText}>
+                    <Text style={[styles.volumeInsightText, live.volumeInsightText]}>
                       {Math.round(data.workingSets)} sets this week
                     </Text>
                   )}
@@ -1268,19 +1286,19 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                         accessibilityRole="button"
                         accessibilityLabel={isExpanded ? `Hide why ${MUSCLE_DISPLAY_NAMES[muscle] || muscle} sits here` : `Why ${MUSCLE_DISPLAY_NAMES[muscle] || muscle} sits here`}
                         hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                        style={styles.volumeWhyToggle}
+                        style={[styles.volumeWhyToggle, live.volumeWhyToggle]}
                         >
-                        <Text style={styles.volumeWhyToggleText}>
+                        <Text style={[styles.volumeWhyToggleText, live.volumeWhyToggleText]}>
                           {isExpanded ? 'Hide explanation' : 'Why this status?'}
                         </Text>
                         <Ionicons
                           name={isExpanded ? 'chevron-up' : 'chevron-down'}
                           size={14}
-                          color={colors.textSecondary}
+                          color={t.colors.textSecondary}
                         />
                       </TouchableOpacity>
                       {isExpanded && (
-                        <Text style={styles.volumeWhyBody}>{why}</Text>
+                        <Text style={[styles.volumeWhyBody, live.volumeWhyBody]}>{why}</Text>
                       )}
                     </>
                   )}
@@ -1297,15 +1315,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {!readOnly && blockStory && calmSuppressed && (
           <RevealSection delay={1480}>
             <TouchableOpacity
-              style={styles.blockRecapRow}
+              style={[styles.blockRecapRow, live.blockRecapRow]}
               activeOpacity={0.85}
               onPress={() => navigation.navigate('RecapStory', { variant: 'block', mesocycleId: blockStory.mesocycleId, blockName: blockStory.name })}
               accessibilityRole="button"
               accessibilityLabel="Watch your block story"
             >
-              <Ionicons name="film-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.blockRecapText}>You&apos;ve finished this block. Have a look back at how it went.</Text>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+              <Ionicons name="film-outline" size={16} color={t.colors.textSecondary} />
+              <Text style={[styles.blockRecapText, live.blockRecapText]}>You&apos;ve finished this block. Have a look back at how it went.</Text>
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
           </RevealSection>
         )}
@@ -1318,18 +1336,18 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           <RevealSection delay={1480}>
             <Card tone="gold" style={styles.phaseCard}>
               <View style={styles.phaseHeaderRow}>
-                <Ionicons name="flag" size={18} color={colors.gold} />
-                <Text style={styles.phaseTitle}>Block complete</Text>
+                <Ionicons name="flag" size={18} color={t.colors.gold} />
+                <Text style={[styles.phaseTitle, live.phaseTitle]}>Block complete</Text>
               </View>
               {blockStory.name ? (
-                <Text style={styles.phaseName}>{blockStory.name}</Text>
+                <Text style={[styles.phaseName, live.phaseName]}>{blockStory.name}</Text>
               ) : null}
-              <Text style={styles.phaseRecap}>
+              <Text style={[styles.phaseRecap, live.phaseRecap]}>
                 {Number.isFinite(mesoWeek?.plannedWeeks)
                   ? `${mesoWeek.plannedWeeks} weeks completed, including your recovery week.`
                   : 'A full training block completed.'}
               </Text>
-              <Text style={styles.phaseNext}>
+              <Text style={[styles.phaseNext, live.phaseNext]}>
                 What's next: start the next block with sensible progressions from this one.
               </Text>
               <View style={styles.phaseActions}>
@@ -1339,19 +1357,19 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   variant="tertiary"
                   size="sm"
                   onPress={() => navigation.navigate('RecapStory', { variant: 'block', mesocycleId: blockStory.mesocycleId, blockName: blockStory.name })}
-                  style={[styles.phaseActionBtn, { backgroundColor: 'transparent' }]}
-                  textStyle={styles.phaseActionText}
+                  style={[styles.phaseActionBtn, live.phaseActionBtn, { backgroundColor: 'transparent' }]}
+                  textStyle={[styles.phaseActionText, live.phaseActionText]}
                   accessibilityLabel="Watch your block story"
                 />
                 <TouchableOpacity
-                  style={styles.phaseShareBtn}
+                  style={[styles.phaseShareBtn, live.phaseShareBtn]}
                   activeOpacity={0.85}
                   onPress={handleShareBlock}
                   accessibilityRole="button"
                   accessibilityLabel="Share block complete"
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Ionicons name="share-social-outline" size={18} color={colors.primary} />
+                  <Ionicons name="share-social-outline" size={18} color={t.colors.primary} />
                 </TouchableOpacity>
               </View>
             </Card>
@@ -1362,9 +1380,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             is about to give the next round of feedback. Live path only. */}
         {!readOnly && sessionAdjustments.length > 0 && (
           <RevealSection delay={1520}>
-            <View style={styles.adjustedSummaryRow}>
-              <Ionicons name="sparkles" size={15} color={colors.primary} />
-              <Text style={styles.adjustedSummaryText}>
+            <View style={[styles.adjustedSummaryRow, live.adjustedSummaryRow]}>
+              <Ionicons name="sparkles" size={15} color={t.colors.primary} />
+              <Text style={[styles.adjustedSummaryText, live.adjustedSummaryText]}>
                 Adjusted today: {sessionAdjustments.map(a =>
                   `${(MUSCLE_DISPLAY_NAMES[a.muscle] || a.muscle).toLowerCase()}, ${a.setDelta < 0 ? '1 set fewer' : '1 set added'}`,
                 ).join(' - ')}
@@ -1380,25 +1398,25 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {!readOnly && (
           <Card style={styles.coachZoneCard}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Workout feedback</Text>
-              <Text style={styles.optionalLabel}>optional</Text>
+              <Text style={[styles.sectionTitle, live.sectionTitle]}>Workout feedback</Text>
+              <Text style={[styles.optionalLabel, live.optionalLabel]}>optional</Text>
             </View>
-            <Text style={styles.coachZoneSubHeading}>How did the session feel?</Text>
+            <Text style={[styles.coachZoneSubHeading, live.coachZoneSubHeading]}>How did the session feel?</Text>
             <TouchableOpacity
-              style={styles.feedbackToggleBtn}
+              style={[styles.feedbackToggleBtn, live.feedbackToggleBtn]}
               onPress={() => setFeedbackExpanded(e => !e)}
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityState={{ expanded: feedbackExpanded }}
               accessibilityLabel={feedbackExpanded ? 'Hide workout rating' : 'Rate this workout'}
             >
-              <Text style={styles.feedbackToggleBtnText}>
+              <Text style={[styles.feedbackToggleBtnText, live.feedbackToggleBtnText]}>
                 {feedbackExpanded ? 'Hide workout rating' : 'Rate this workout'}
               </Text>
               <Ionicons
                 name={feedbackExpanded ? 'chevron-up' : 'chevron-down'}
                 size={18}
-                color={colors.textSecondary}
+                color={t.colors.textSecondary}
               />
             </TouchableOpacity>
             {feedbackExpanded && (
@@ -1413,24 +1431,24 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 <RatingRow label="Fatigue" field="fatigueLevel" value={feedback.fatigueLevel} max={5} onChange={v => setFeedback(f => ({ ...f, fatigueLevel: v }))} />
                 <TextField accessibilityLabel="Workout feedback notes"
                   fieldStyle={styles.notesField}
-                  inputStyle={styles.notesInput}
+                  inputStyle={styles.notesInput, live.notesInput}
                   value={notes}
                   onChangeText={setNotes}
                   placeholder="Anything notable from this session"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor={t.colors.textMuted}
                   multiline
                 />
               </View>
             )}
-            <View style={styles.coachZoneDivider} />
-            <Text style={styles.coachZoneSubHeading}>Notes for next time</Text>
+            <View style={[styles.coachZoneDivider, live.coachZoneDivider]} />
+            <Text style={[styles.coachZoneSubHeading, live.coachZoneSubHeading]}>Notes for next time</Text>
             <TextField accessibilityLabel="Notes for next time"
               fieldStyle={styles.nextTimeNoteField}
-              inputStyle={styles.nextTimeNoteInput}
+              inputStyle={styles.nextTimeNoteInput, live.nextTimeNoteInput}
               value={nextTimeNote}
               onChangeText={setNextTimeNote}
               placeholder="Anything to remember for next session? e.g. try 85kg, wider grip, reduce volume"
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={t.colors.textMuted}
               multiline
               numberOfLines={3}
             />
@@ -1445,7 +1463,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               variant="secondary"
               icon="bookmark-outline"
               style={styles.templateBtn}
-              textStyle={styles.templateBtnText}
+              textStyle={[styles.templateBtnText, live.templateBtnText]}
               onPress={handleSaveAsTemplate}
               accessibilityLabel="Save as workout template"
             />
@@ -1459,11 +1477,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           doubled the gap under Close (founder screenshot 2026-07-03). The
           inverse case, ActiveWorkout, where the band hides, is the one
           that needs the inset; bottomBarInset.guard.test.js pins both. */}
-      <View style={[styles.stickyFooter, { paddingBottom: spacing.lg }]}>
+      <View style={[styles.stickyFooter, live.stickyFooter, { paddingBottom: spacing.lg }]}>
         {saveError ? (
-          <View style={styles.saveErrorCard}>
-            <Ionicons name="warning-outline" size={16} color={colors.error} />
-            <Text style={styles.saveErrorText}>{saveError}</Text>
+          <View style={[styles.saveErrorCard, live.saveErrorCard]}>
+            <Ionicons name="warning-outline" size={16} color={t.colors.error} />
+            <Text style={[styles.saveErrorText, live.saveErrorText]}>{saveError}</Text>
           </View>
         ) : null}
         <View style={styles.footerRow}>
@@ -1472,8 +1490,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             variant="secondary"
             onPress={handleDone}
             disabled={saving}
-            style={styles.doneBtn}
-            textStyle={styles.doneBtnText}
+            style={[styles.doneBtn, live.doneBtn]}
+            textStyle={[styles.doneBtnText, live.doneBtnText]}
             accessibilityLabel="Close"
             accessibilityState={{ disabled: saving }}
           />
@@ -1485,8 +1503,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               size="sm"
               fullWidth={false}
               onPress={handleShareCard}
-              style={styles.shareFooterBtn}
-              textStyle={styles.shareFooterBtnText}
+              style={[styles.shareFooterBtn, live.shareFooterBtn]}
+              textStyle={[styles.shareFooterBtnText, live.shareFooterBtnText]}
               accessibilityLabel="Share session"
             />
           )}
@@ -1501,18 +1519,18 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         onRequestClose={() => setTemplateModalVisible(false)}
       >
         <KeyboardAvoidingView
-          style={styles.templateModalBg}
+          style={[styles.templateModalBg, live.templateModalBg]}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <Card radius="xl" padding="xl" style={styles.templateModalCard}>
-            <Text style={styles.templateModalTitle}>Save as Workout Template</Text>
+            <Text style={[styles.templateModalTitle, live.templateModalTitle]}>Save as Workout Template</Text>
             <TextField accessibilityLabel="Workout template name"
               fieldStyle={styles.templateModalField}
-              inputStyle={styles.templateModalInput}
+              inputStyle={styles.templateModalInput, live.templateModalInput}
               value={templateName}
               onChangeText={setTemplateName}
               placeholder="Template name"
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={t.colors.textMuted}
               autoFocus
               returnKeyType="done"
               onSubmitEditing={confirmSaveTemplate}
@@ -1523,20 +1541,20 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 title="Cancel"
                 variant="secondary"
                 fullWidth={false}
-                style={styles.templateModalCancel}
+                style={[styles.templateModalCancel, live.templateModalCancel]}
                 onPress={() => setTemplateModalVisible(false)}
                 accessibilityLabel="Cancel"
-                textStyle={styles.templateModalCancelText}
+                textStyle={[styles.templateModalCancelText, live.templateModalCancelText]}
               />
               <Button
                 title="Save"
                 fullWidth={false}
-                style={styles.templateModalSave}
+                style={[styles.templateModalSave, live.templateModalSave]}
                 onPress={confirmSaveTemplate}
                 disabled={!templateName.trim()}
                 accessibilityLabel="Save template"
                 accessibilityState={{ disabled: !templateName.trim() }}
-                textStyle={styles.templateModalSaveText}
+                textStyle={[styles.templateModalSaveText, live.templateModalSaveText]}
               />
             </View>
           </Card>
@@ -1567,7 +1585,20 @@ function RevealSection({ children }) {
 // D3: `hero` renders the same animated counter at display size for the
 // screen's one headline number (tonnage), without the box chrome; the
 // three compact boxes below keep the original treatment.
-function StatBox({ icon, value, label, tooltip, animateOrder = 0, hero = false }) {
+//
+// Named export (CP-10 stage 3, theming FINAL batch, 2026-07-10): this screen
+// as a whole is impractical to mount in a test (SQLite, wellbeing reads,
+// mesocycle week -- see this screen's own guard tests' header comments), but
+// StatBox only needs a handful of primitive props and one store field
+// (reduceMotion), so it is exported purely so the live-theme flip contract
+// can be pinned against a real mounted instance (see
+// cp10Stage3WorkoutShellsLiveTheme.test.js). No behaviour change.
+export function StatBox({ icon, value, label, tooltip, animateOrder = 0, hero = false }) {
+  // CP-10 stage 3 (theming FINAL batch): live theme (src/hooks/useTheme.js).
+  // See buildLiveStyles' header comment (defined further down this
+  // file, after the frozen `styles` block -- see the comment there for why).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   // Parse the value to detect whether it's "10,432 kg" (number with
   // optional suffix) or "12m" (number + unit) or "8" (pure number).
@@ -1599,25 +1630,32 @@ function StatBox({ icon, value, label, tooltip, animateOrder = 0, hero = false }
   // E9/E15-4: the count-up rides RollingNumber on the UI thread (the old
   // requestAnimationFrame counter re-rendered this box every frame).
   // Non-numeric values render static, as before.
-  const numeral = (textStyle) => (parsed ? (
+  // CP-10 stage 3 (theming FINAL batch, 2026-07-10): numeral now takes the
+  // frozen style AND its live override separately (rather than one
+  // `textStyle` prop) so both call sites below can pass `styles.KEY` plus
+  // `live.KEY` through to the actual Text/RollingNumber `style` array --
+  // the mechanical styles.KEY->styles.KEY, live.KEY substitution elsewhere
+  // in this file would otherwise have silently changed numeral's arity
+  // without this fix.
+  const numeral = (frozenStyle, liveStyle) => (parsed ? (
     <RollingNumber
       value={parsed.num}
       from={0}
       delayMs={delay}
       suffix={parsed.suffix}
-      style={textStyle}
+      style={[frozenStyle, liveStyle]}
       accessibilityLabel={String(value)}
     />
   ) : (
-    <Text style={textStyle}>{value}</Text>
+    <Text style={[frozenStyle, liveStyle]}>{value}</Text>
   ));
 
   if (hero) {
     return (
       <Animated.View style={[styles.heroValueWrap, { opacity, transform: [{ translateY }] }]}>
-        {numeral(styles.heroValue)}
+        {numeral(styles.heroValue, live.heroValue)}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
-          <Text style={styles.heroValueLabel}>{label}</Text>
+          <Text style={[styles.heroValueLabel, live.heroValueLabel]}>{label}</Text>
           {tooltip ? <InfoTooltip size={11} text={tooltip} /> : null}
         </View>
       </Animated.View>
@@ -1625,11 +1663,11 @@ function StatBox({ icon, value, label, tooltip, animateOrder = 0, hero = false }
   }
 
   return (
-    <Animated.View style={[styles.statBox, { opacity, transform: [{ translateY }] }]}>
-      <Ionicons name={icon} size={20} color={colors.textSecondary} />
-      {numeral(styles.statValue)}
+    <Animated.View style={[styles.statBox, live.statBox, { opacity, transform: [{ translateY }] }]}>
+      <Ionicons name={icon} size={20} color={t.colors.textSecondary} />
+      {numeral(styles.statValue, live.statValue)}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
-        <Text style={styles.statLabel}>{label}</Text>
+        <Text style={[styles.statLabel, live.statLabel]}>{label}</Text>
         {tooltip ? <InfoTooltip size={10} text={tooltip} /> : null}
       </View>
     </Animated.View>
@@ -1976,3 +2014,101 @@ const styles = StyleSheet.create({
   },
   templateModalSaveText: { ...type.label, color: colors.onPrimary },
 });
+
+// CP-10 stage 3 (theming FINAL batch, 2026-07-10): buildLiveStyles is the
+// shared "frozen base + live override" map for this screen's three
+// function-component scopes (RatingRow, WorkoutSummaryScreen, StatBox) --
+// each calls `const t = useTheme(); const live = buildLiveStyles(t);` and
+// appends `live.KEY` after `styles.KEY` in every style array, same pattern
+// as ActiveWorkoutScreen.js's buildLiveStyles (this batch) and batch
+// 1/2's buildBriefIconColor. Extracted to one function so the three
+// scopes can never drift out of step with each other or with the frozen
+// `styles` block above -- every key here mirrors only the colour/
+// fontSize/type-bearing sub-properties of the matching frozen style, at
+// identical rest values; pure layout keys (flex/gap/padding/width, no
+// token) are correctly omitted, there is nothing to unfreeze for them.
+// RevealSection has no colour/fontSize/type tokens at all, so it stays
+// untouched -- there is nothing for it to unfreeze.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    completionTitle: { ...t.type.h2, color: t.colors.textPrimary },
+    completionDate: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    firstSessionLine: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    milestoneIconWrap: { backgroundColor: withAlpha(t.colors.gold, 0.125) },
+    milestoneTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    milestoneBody: { ...t.type.captionTight, color: t.colors.textSecondary },
+    milestoneShareBtn: { backgroundColor: withAlpha(t.colors.gold, 0.125) },
+    phaseTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    phaseName: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    phaseRecap: { ...t.type.bodySm, color: t.colors.textSecondary },
+    phaseNext: { ...t.type.captionTight, color: t.colors.textMuted },
+    phaseActionBtn: { borderColor: withAlpha(t.colors.primary, 0.376) },
+    phaseActionText: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    phaseShareBtn: { borderColor: withAlpha(t.colors.primary, 0.376) },
+    partnerBeatText: { ...t.type.bodySm, color: t.colors.textPrimary },
+    partnerWinBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    partnerCheerBtn: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    partnerCheerBtnDone: { backgroundColor: withAlpha(t.colors.border, alpha.edge), borderColor: t.colors.border },
+    partnerCheerText: { ...t.type.label, color: t.colors.primary, fontSize: t.fontSize.xs },
+    partnerCheerTextDone: { color: t.colors.textSecondary },
+    blockArcName: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    heroValue: { ...t.type.num('display'), color: t.colors.primary },
+    heroValueLabel: { ...t.type.caption, color: t.colors.textSecondary },
+    verdictRow: { borderTopColor: t.colors.borderSubtle },
+    verdictHeadline: { ...t.type.bodyStrong },
+    verdictSub: { ...t.type.captionTight, color: t.colors.textMuted },
+    statBox: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    statValue: { ...t.type.num('h3'), color: t.colors.textPrimary },
+    statLabel: { ...t.type.caption, color: t.colors.textSecondary },
+    prRow: { backgroundColor: t.colors.warningBg, borderColor: withAlpha(t.colors.warning, 0.251) },
+    prRowText: { ...t.type.label, color: t.colors.warning },
+    onwardLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    onwardLinkText: { ...t.type.label, color: t.colors.textPrimary },
+    divider: { backgroundColor: t.colors.border },
+    sectionTitle: { ...t.type.title, color: t.colors.textPrimary },
+    optionalLabel: { ...t.type.caption, color: t.colors.textMuted },
+    volumeRow: { borderBottomColor: t.colors.borderSubtle },
+    muscleName: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    volumeInsightText: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    volumeWhyToggle: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    volumeWhyToggleText: { ...t.type.caption, color: t.colors.textSecondary },
+    volumeWhyBody: { fontSize: t.fontSize.xs, color: t.colors.textSecondary, backgroundColor: t.colors.surface2 },
+    statusText: { fontSize: t.fontSize.xs },
+    coachZoneSubHeading: { ...t.type.label, color: t.colors.textSecondary },
+    coachZoneDivider: { backgroundColor: t.colors.borderSubtle },
+    feedbackToggleBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    feedbackToggleBtnText: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
+    adjustedSummaryRow: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.251) },
+    adjustedSummaryText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    blockRecapRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    blockRecapText: { ...t.type.label, color: t.colors.textPrimary },
+    ratingLabel: { ...t.type.label, color: t.colors.textSecondary },
+    ratingBtn: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    ratingBtnActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    ratingBtnText: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
+    ratingBtnTextActive: { color: t.colors.primary },
+    ratingValueLabel: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    notesInput: { ...t.type.body },
+    nextTimeNoteInput: { fontSize: t.fontSize.sm },
+    templateBtnText: { ...t.type.label, color: t.colors.textSecondary },
+    stickyFooter: { borderTopColor: t.colors.border, backgroundColor: t.colors.background },
+    saveErrorCard: { backgroundColor: withAlpha(t.colors.error, 0.12), borderColor: withAlpha(t.colors.error, 0.28) },
+    saveErrorText: { ...t.type.caption, color: t.colors.textPrimary },
+    doneBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    doneBtnText: { ...t.type.label, color: t.colors.textPrimary },
+    shareFooterBtn: { borderColor: withAlpha(t.colors.primary, alpha.strong), backgroundColor: t.colors.primaryBg },
+    shareFooterBtnText: { ...t.type.label, color: t.colors.primary },
+    exerciseListRow: { borderBottomColor: t.colors.border },
+    exerciseListName: { ...t.type.label, color: t.colors.textPrimary },
+    exerciseListMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
+    exerciseSetChip: { ...t.type.num('caption'), color: t.colors.textSecondary, backgroundColor: t.colors.surface2 ?? t.colors.background, borderColor: t.colors.border },
+    templateModalBg: { backgroundColor: t.colors.scrim },
+    templateModalTitle: { ...t.type.title, color: t.colors.textPrimary },
+    templateModalInput: { ...t.type.body },
+    templateModalCancel: { borderColor: t.colors.border },
+    templateModalCancelText: { ...t.type.label, color: t.colors.textSecondary },
+    templateModalSave: { backgroundColor: t.colors.primaryFill },
+    templateModalSaveText: { ...t.type.label, color: t.colors.onPrimary },
+  };
+}

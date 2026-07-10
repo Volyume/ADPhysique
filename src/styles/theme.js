@@ -552,7 +552,7 @@ export const letterSpacing = {
 // bindings, never two copies to keep in sync. Usage unchanged:
 // style={{ ...type.body, color: ... }}.
 function buildTypeRoles(fontSizeTable) {
-  return {
+  const roles = {
     get display() {
       return { fontFamily: fontFamily.displayBold, fontSize: fontSizeTable.display,
         lineHeight: Math.round(fontSizeTable.display * lineHeight.tight), letterSpacing: letterSpacing.display };
@@ -622,20 +622,43 @@ function buildTypeRoles(fontSizeTable) {
         lineHeight: Math.round(fontSizeTable.xs * lineHeight.snug), letterSpacing: letterSpacing.caption };
     },
   };
+  // Numerals are the hero. Any text node rendering a number the user reads
+  // as data (weight, reps, sets, %, kcal, timer, table date) should use
+  // tabular figures so columns align and a changing value doesn't jitter as
+  // digit widths change. `roleName` is any key of `roles` above; defaults to
+  // body. Usage: style={{ ...type.num('display'), color }}.
+  //
+  // CP-10 stage 3 (theming FINAL batch, 2026-07-10) fix: attached HERE, on
+  // the `roles` table this function builds and closes over, instead of only
+  // ever being mutated onto the one legacy module-level `type` singleton
+  // (the original shape, kept below for back-compat). That original shape
+  // meant ANY other resolved type table -- specifically the one `useTheme()`
+  // returns via resolveTheme() -- never got a `.num()` at all, since it is a
+  // fresh `buildTypeRoles()` call result, not the mutated singleton. Two
+  // frozen call sites (ActiveWorkoutScreen.js's `timerText`,
+  // WorkoutSummaryScreen.js's `heroValue`/`statValue`/`exerciseListMeta`/
+  // `exerciseSetChip`) already called `type.num(...)`; converting those
+  // screens to `t.type.num(...)` for CP-10 would otherwise throw
+  // "t.type.num is not a function" the moment a user flips theme with
+  // either screen mounted -- a crash, not just a stale colour. Attaching
+  // `num` per-table here fixes both the legacy singleton and every future
+  // `resolveTheme()` result identically.
+  roles.num = function num(roleName = 'body') {
+    const role = roles[roleName] || roles.body;
+    return { ...role, fontVariant: ['tabular-nums'] };
+  };
+  return roles;
 }
 
 export const type = buildTypeRoles(fontSize);
 
-// Numerals are the hero. Any text node rendering a number the user reads as
-// data (weight, reps, sets, %, kcal, timer, table date) should use tabular
-// figures so columns align and a changing value doesn't jitter as digit
-// widths change. `roleName` is any key of `type`; defaults to body.
-// Usage: style={{ ...type.num('display'), color }}.
+// Standalone export kept for back-compat (no known external importer as of
+// 2026-07-10, other than the self-attach below) -- reads through the legacy
+// singleton `type`, same behaviour as before this fix.
 export function num(roleName = 'body') {
   const role = type[roleName] || type.body;
   return { ...role, fontVariant: ['tabular-nums'] };
 }
-type.num = num;
 
 export const hitSlop = { top: 12, bottom: 12, left: 12, right: 12 };
 
@@ -744,8 +767,38 @@ const volumeStatusColors = {
 
 // Resolve a volume-status string to its themed colour, falling back to the
 // neutral muted token for an unrecognised status.
+//
+// Frozen singleton form: reads the module-level mutable `colors`/`stateColors`
+// (only updated on app restart via applyAccessibility). Kept as-is for every
+// unmigrated call site (VolumeHeatmapScreen.js, AnalyticsScreen.js).
 export function volumeStatusColor(status) {
   return volumeStatusColors[status] ?? colors.textMuted;
+}
+
+// CP-10 stage 3 (theming FINAL batch, 2026-07-10): live variant for a
+// migrated screen's `const t = useTheme();` object. Resolves the SAME
+// status -> tone mapping as volumeStatusColors above (unknown/below ->
+// neutral, minimum/near_mrv -> watch, optimal -> onTrack, over_mrv -> act)
+// but reads it off the passed-in live `t.colors` instead of the frozen
+// singleton, so it stays in step with WorkoutSummaryScreen.js's own theme
+// generation. Returns a resolver function, not a precomputed map, so it can
+// be called directly as `buildVolumeStatusColor(t.colors)(status)`.
+export function buildVolumeStatusColor(c) {
+  const neutral = c.textMuted;
+  const watch = c.warning;
+  const onTrack = c.success;
+  const act = c.error;
+  const map = {
+    unknown: neutral,
+    below: neutral,
+    minimum: watch,
+    optimal: onTrack,
+    near_mrv: watch,
+    over_mrv: act,
+  };
+  return function resolveVolumeStatusColor(status) {
+    return map[status] ?? neutral;
+  };
 }
 
 // Convenience: consistent icon button size used across screens

@@ -51,8 +51,11 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).not.toContain('accessibilityLabel="More options for this exercise"');
     expect(ACTIVE_WORKOUT).toContain('placeholder="Add a note for this set"');
     expect(ACTIVE_WORKOUT).not.toContain('placeholder="Add a note..."');
-    expect(ACTIVE_WORKOUT).toContain('name="information-circle-outline" size={14} color={colors.primary}');
-    expect(ACTIVE_WORKOUT).toContain('name="information-circle-outline" size={16} color={colors.textSecondary}');
+    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): ActiveWorkoutScreen
+    // now reads a live theme (src/hooks/useTheme.js); inline colour props
+    // moved from the frozen `colors.*` singleton to `t.colors.*`.
+    expect(ACTIVE_WORKOUT).toContain('name="information-circle-outline" size={14} color={t.colors.primary}');
+    expect(ACTIVE_WORKOUT).toContain('name="information-circle-outline" size={16} color={t.colors.textSecondary}');
     expect(ACTIVE_WORKOUT).toMatch(/notesChip: \{[\s\S]*backgroundColor: colors\.surface,[\s\S]*borderColor: colors\.borderSubtle/);
     expect(ACTIVE_WORKOUT).toMatch(/firstSetHint: \{[\s\S]*backgroundColor: colors\.surface,[\s\S]*borderColor: colors\.borderSubtle/);
     expect(ACTIVE_WORKOUT).not.toContain('sparkles');
@@ -114,9 +117,12 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(SET_ENTRY).not.toContain('fontWeight: fontWeight.bold');
     expect(SET_ENTRY.match(/hitSlop=\{STEPPER_HIT_SLOP\}/g)?.length).toBeGreaterThanOrEqual(10);
     expect(ACTIVE_WORKOUT).toMatch(/setEntryCard: \{[\s\S]*padding: spacing\.xs2[\s\S]*gap: spacing\.xxs/);
-    expect(ACTIVE_WORKOUT).toContain('<Text style={styles.exerciseName} numberOfLines={2}>{exercise.name}</Text>');
+    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): exerciseName/targetText
+    // gained a live.* override in their style arrays (source: useTheme.js);
+    // the frozen `styles` definitions asserted next are byte-identical.
+    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>');
     expect(ACTIVE_WORKOUT).toContain('exerciseName: { flex: 1, ...type.title, color: colors.textPrimary }');
-    expect(ACTIVE_WORKOUT).toContain('<Text style={styles.targetText} numberOfLines={1}>');
+    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.targetText, live.targetText]} numberOfLines={1}>');
     expect(ACTIVE_WORKOUT).toContain('targetText: { flex: 1, ...type.captionTight, color: colors.textMuted }');
     expect(ACTIVE_WORKOUT).toMatch(/beatLine: \{[\s\S]*minHeight: 36/);
     expect(ACTIVE_WORKOUT).toMatch(/loggedSetRow: \{[\s\S]*minHeight: workoutLoggerSize\.loggedSetMinHeight/);
@@ -174,9 +180,12 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('function openAddExercisePicker()');
     expect(ACTIVE_WORKOUT).toContain("setPickerMode('add');");
     expect(ACTIVE_WORKOUT).toContain('onAdd={openAddExercisePicker}');
-    expect(ACTIVE_WORKOUT).toContain('<Text style={styles.sheetOptionLabel}>Add exercise</Text>');
+    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): sheetOptionLabel
+    // gained a live.sheetOptionLabel override in its style array (source:
+    // useTheme.js); the frozen `styles.sheetOptionLabel` is byte-identical.
+    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Add exercise</Text>');
     expect(ACTIVE_WORKOUT).toContain("const noteActionLabel = showNoteInput || noteText.trim().length > 0 ? 'Edit note' : 'Add note';");
-    expect(ACTIVE_WORKOUT).toContain('<Text style={styles.sheetOptionLabel}>{noteActionLabel}</Text>');
+    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{noteActionLabel}</Text>');
     // Stale pin -> corrected: commit 214b057 (design campaign 2026-07-09)
     // renamed the collapsed banner rail from "N cues" to "N notes" per the
     // U-A-1 contract (see ActiveWorkoutScreen.js:365,2036,2039,3342); the
@@ -186,7 +195,9 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).not.toContain('testID="volyume-btn-add-mid-workout"');
     expect(ACTIVE_WORKOUT).not.toContain('secondaryActions: {');
     expect(ACTIVE_WORKOUT).not.toContain('actionBtnText');
-    expect(ACTIVE_WORKOUT).toContain('<Text style={styles.keepTrainingBtnText}>Keep training</Text>');
+    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live.keepTrainingBtnText
+    // override appended (source: useTheme.js); frozen style byte-identical.
+    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.keepTrainingBtnText, live.keepTrainingBtnText]}>Keep training</Text>');
     expect(ACTIVE_WORKOUT).not.toContain('>Keep Training<');
     expect(ACTIVE_WORKOUT).toContain("const retryAction = currentSet.setType === 'warmup'");
     expect(ACTIVE_WORKOUT).toContain("? 'Log warm-up'");
@@ -207,7 +218,9 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
 
   test('warm-up helper uses gym-floor language, not internal ramp wording', () => {
     expect(ACTIVE_WORKOUT).toContain('accessibilityLabel="Warm-up sets"');
-    expect(ACTIVE_WORKOUT).toContain('<Text style={styles.sheetTitle}>Warm-up sets</Text>');
+    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live.sheetTitle
+    // override appended (source: useTheme.js); frozen style byte-identical.
+    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.sheetTitle, live.sheetTitle]}>Warm-up sets</Text>');
     expect(ACTIVE_WORKOUT).toContain('Choose a warm-up set to load it, then tap Log warm-up.');
     expect(ACTIVE_WORKOUT).toContain('Load as a warm-up set.');
     expect(ACTIVE_WORKOUT).not.toContain('Tap a row to load it as a warm-up');

@@ -23,7 +23,12 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     // and the share icon are now Button props (title/icon), not raw JSX, so
     // those two assertions are re-pointed at the Button call sites.
     expect(SOURCE).toMatch(/stickyFooter: \{[\s\S]*paddingTop: spacing\.sm,[\s\S]*minHeight: 68/);
-    expect(SOURCE).toContain('<View style={[styles.stickyFooter, { paddingBottom: spacing.lg }]}>');
+    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): WorkoutSummaryScreen
+    // now reads a live theme (src/hooks/useTheme.js); stickyFooter gained a
+    // live.stickyFooter override ahead of the inline paddingBottom object.
+    // The frozen `styles.stickyFooter` definition (asserted above) is
+    // byte-identical -- mechanical only.
+    expect(SOURCE).toContain('<View style={[styles.stickyFooter, live.stickyFooter, { paddingBottom: spacing.lg }]}>');
     expect(SOURCE).toContain('<TouchableOpacity');
     expect(SOURCE).toContain("title={saving ? 'Saving' : 'Close'}");
     expect(SOURCE).toMatch(/title="Share"[\s\S]*?icon="share-social-outline"[\s\S]*?variant="tertiary"[\s\S]*?size="sm"/);
@@ -51,7 +56,10 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     // "Rate this workout" so the completed unit reads as "workout" throughout,
     // matching the "Workout complete" header on this screen.
     expect(SOURCE).toContain('const [feedbackExpanded, setFeedbackExpanded] = useState(false);');
-    expect(SOURCE).toContain('<Text style={styles.sectionTitle}>Workout feedback</Text>');
+    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): sectionTitle gained a
+    // live.sectionTitle override (source: useTheme.js); frozen style
+    // byte-identical.
+    expect(SOURCE).toContain('<Text style={[styles.sectionTitle, live.sectionTitle]}>Workout feedback</Text>');
     expect(SOURCE).toContain('Rate this workout');
     expect(SOURCE).toContain('placeholder="Anything notable from this session"');
     expect(SOURCE).toContain('placeholder="Anything to remember for next session? e.g. try 85kg, wider grip, reduce volume"');
@@ -77,7 +85,9 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     expect(SOURCE).toMatch(/volumeWhyToggle: \{[\s\S]*minHeight: 40,[\s\S]*backgroundColor: colors\.surface2,[\s\S]*borderColor: colors\.border/);
     expect(SOURCE).toContain('volumeWhyToggleText: {');
     expect(SOURCE).toContain('...type.caption, color: colors.textSecondary');
-    expect(SOURCE).toContain('name="film-outline" size={16} color={colors.textSecondary}');
+    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): inline colour prop
+    // moved from the frozen `colors.*` singleton to `t.colors.*`.
+    expect(SOURCE).toContain('name="film-outline" size={16} color={t.colors.textSecondary}');
     expect(SOURCE).toMatch(/blockRecapRow: \{[\s\S]*backgroundColor: colors\.surface2,[\s\S]*borderColor: colors\.border/);
     expect(SOURCE).toContain('blockRecapText: { flex: 1, ...type.label, color: colors.textPrimary }');
     expect(whyToggleStyle).not.toContain('colors.primary');

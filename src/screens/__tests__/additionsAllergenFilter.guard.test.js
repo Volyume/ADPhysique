@@ -28,14 +28,18 @@ describe('additions allergen filter is applied at every render site (R1)', () =>
     expect(src).toMatch(/\{additions\.length\s*\?/);
   });
 
-  test('DiaryScreen season-to-taste row filters through filterAdditionsForProfile and drops empty lists', () => {
-    const src = read('screens/DiaryScreen.js');
-    expect(src).toMatch(/import\s*{[^}]*filterAdditionsForProfile[^}]*}\s*from\s*'..\/lib\/food\/mealAdditions'/);
-    expect(src).toMatch(/filterAdditionsForProfile\(\s*getMealAdditionsForEntries\(/);
-    expect(src).not.toMatch(/adds\s*=\s*getMealAdditionsForEntries\(/);
+  test('MealSection (the diary meal card, restored 2026-07-10) filters through filterAdditionsForProfile and drops empty lists', () => {
+    // The founder restored the meal-card diary layout on 2026-07-10, so the
+    // diary's season-to-taste row lives in MealSection again. R1's rule is
+    // unchanged: the filter is applied where the additions render, and an
+    // all-filtered meal renders no row.
+    const src = read('components/food/MealSection.js');
+    expect(src).toMatch(/import\s*{[^}]*filterAdditionsForProfile[^}]*}\s*from\s*'..\/..\/lib\/food\/mealAdditions'/);
+    expect(src).toMatch(/filterAdditionsForProfile\(\s*rawSeasonAdds/);
+    expect(src).not.toMatch(/seasonAdds\s*=\s*hasEntries[^;]*getMealAdditionsForEntries\([^;]*;\s*$/m);
     // Only a non-empty filtered list is kept, so an all-filtered meal
     // renders no row at all.
-    expect(src).toMatch(/if\s*\(adds\.length\)\s*out\[slot\.key\]\s*=\s*adds/);
+    expect(src).toMatch(/filteredSeasonAdds\s*&&\s*filteredSeasonAdds\.length\s*\?\s*filteredSeasonAdds\s*:\s*null/);
   });
 
   test('MealPlanScreen per-meal season-to-taste list filters through filterAdditionsForProfile', () => {

@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, iconSize } from '../../styles/theme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
-import { getMealAdditionsForEntries } from '../../lib/food/mealAdditions';
+import { getMealAdditionsForEntries, filterAdditionsForProfile } from '../../lib/food/mealAdditions';
 import useAppStore from '../../store/useAppStore';
 import { SwipeableEntryRow } from './EntryRow';
 import AnimatedRow from '../AnimatedRow';
@@ -46,7 +46,13 @@ export default function MealSection({
   // Season to taste (founder 2026-07-01): once a curated / meal-plan meal is on
   // the day, carry its free additions into the diary too. Only shows when the
   // slot's foods resolve to a real curated meal; null (hidden) otherwise.
-  const seasonAdds = hasEntries && !selectionMode ? getMealAdditionsForEntries(entries) : null;
+  // R1 (D28): additions are filtered by the profile's allergen excludes at
+  // every render site - an excluded allergen is never suggested, silently.
+  // Reads the profile here (like CuratedMealSheet) so no caller can forget.
+  const userProfile = useAppStore((s) => s.userProfile);
+  const rawSeasonAdds = hasEntries && !selectionMode ? getMealAdditionsForEntries(entries) : null;
+  const filteredSeasonAdds = rawSeasonAdds ? filterAdditionsForProfile(rawSeasonAdds, userProfile) : null;
+  const seasonAdds = filteredSeasonAdds && filteredSeasonAdds.length ? filteredSeasonAdds : null;
   // L05-D1/D6 (design-usability audit 2026-07-09, founder-gated build): a
   // logged row already opens for edit on tap (EntryRow's own accessibility
   // label says "Tap to edit"), but a sighted user had no visual cue at all.

@@ -14,8 +14,13 @@ const read = (rel) => fs.readFileSync(path.resolve(__dirname, '..', rel), 'utf8'
 describe('ActiveWorkout bottom bar vs the hidden tab band', () => {
   test('the bottom bar padding includes the safe-area inset', () => {
     const screen = read('screens/ActiveWorkoutScreen.js');
+    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): ActiveWorkoutScreen
+    // now reads a live theme (src/hooks/useTheme.js); styles.bottomBar gained
+    // a live.bottomBar override ahead of the inline paddingBottom object.
+    // The pinned contract (Math.max(spacing.md, insets.bottom + spacing.sm))
+    // is unchanged -- widened only to allow the live.bottomBar insertion.
     expect(screen).toMatch(
-      /styles\.bottomBar,\s*\{\s*paddingBottom:\s*Math\.max\(spacing\.md,\s*insets\.bottom\s*\+\s*spacing\.sm\)/
+      /styles\.bottomBar,\s*live\.bottomBar,\s*\{\s*paddingBottom:\s*Math\.max\(spacing\.md,\s*insets\.bottom\s*\+\s*spacing\.sm\)/
     );
   });
 
@@ -30,8 +35,14 @@ describe('ActiveWorkout bottom bar vs the hidden tab band', () => {
   // Close (founder screenshot 2026-07-03).
   test('WorkoutSummary sticky footer uses a flat token, never the inset again', () => {
     const summary = read('screens/WorkoutSummaryScreen.js');
-    expect(summary).toMatch(/styles\.stickyFooter,\s*\{\s*paddingBottom:\s*spacing\.lg\s*\}/);
-    expect(summary).not.toMatch(/stickyFooter,\s*\{\s*paddingBottom:\s*Math\.max/);
+    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): WorkoutSummaryScreen
+    // now reads a live theme (src/hooks/useTheme.js); stickyFooter gained a
+    // live.stickyFooter override ahead of the inline paddingBottom object.
+    // The pinned contract (a flat spacing.lg token, never Math.max/inset
+    // maths) is unchanged -- widened only to allow the live.stickyFooter
+    // insertion.
+    expect(summary).toMatch(/styles\.stickyFooter,\s*live\.stickyFooter,\s*\{\s*paddingBottom:\s*spacing\.lg\s*\}/);
+    expect(summary).not.toMatch(/stickyFooter,\s*live\.stickyFooter,\s*\{\s*paddingBottom:\s*Math\.max/);
   });
 
   // Bottom-anchored Modals overlay the tab band and touch the physical

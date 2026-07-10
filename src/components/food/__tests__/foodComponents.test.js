@@ -206,8 +206,11 @@ describe('EntryRow', () => {
     expect(txt).toContain('"4"');
   });
 
-  test('shows the logged time in the meta line when logged_at is present', () => {
-    const tree = create(<EntryRow entry={{ ...baseEntry, logged_at: new Date('2026-06-29T13:42:00').getTime() }} onEdit={() => {}} />).toJSON();
+  test('shows the eaten time in the meta line when eaten_at is present', () => {
+    // Item 15 data layer (kept after the 2026-07-10 meal-card restoration):
+    // the quiet time shown is eaten_at, not logged_at; history is backfilled
+    // eaten_at = logged_at by schema v67 so old rows still show their time.
+    const tree = create(<EntryRow entry={{ ...baseEntry, eaten_at: new Date('2026-06-29T13:42:00').getTime() }} onEdit={() => {}} />).toJSON();
     const txt = JSON.stringify(tree);
     expect(txt).toContain('13:42');
     expect(txt).toContain('170g');
