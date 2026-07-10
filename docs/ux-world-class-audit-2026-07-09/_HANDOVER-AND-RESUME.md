@@ -1318,3 +1318,10 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   R1 allergen-filtering fix - the most important unfixed finding) is
   near its "everything else done" trigger - recommended to fire as the
   build-heavy items land; awaiting founder word if wanted earlier.
+- D28 RECORDED: adversarial review -> FOUNDER-EXTERNAL (Codex); internal
+  held task superseded; external findings return as work items. R1
+  allergen fix UNPARKED and jumps the queue - fires into the FIRST slot
+  that frees (tag allergen-bearing curated additions + filter by profile
+  allergen excludes at every additions render site: CuratedMealSheet,
+  diary season-to-taste row, MealPlan additions). Runway confirmed GO in
+  full. IN FLIGHT: theming stage 2 + image polish.
