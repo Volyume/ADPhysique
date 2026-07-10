@@ -22,7 +22,12 @@ describe('Coach and weekly check-in copy polish', () => {
   });
 
   test('fast check-in detail escape is a contained secondary action, not an amber text link', () => {
-    expect(weeklyCheckInSource).toContain('<Ionicons name="create-outline" size={16} color={colors.textSecondary} />');
+    // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): the JSX
+    // call site now reads the live theme (color={t.colors.textSecondary})
+    // instead of the frozen static import; the frozen `styles` block asserted
+    // below (fastExpandBtn/fastExpandText) is byte-identical to before, so
+    // this is a mechanical update, not a weakening.
+    expect(weeklyCheckInSource).toContain('<Ionicons name="create-outline" size={16} color={t.colors.textSecondary} />');
     expect(weeklyCheckInSource).toMatch(/fastExpandBtn: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(weeklyCheckInSource).toContain('fastExpandText: { ...type.label, color: colors.textPrimary }');
     expect(weeklyCheckInSource).not.toMatch(/fastExpandText: \{ fontSize: fontSize\.sm,[\s\S]*color: colors\.primary/);

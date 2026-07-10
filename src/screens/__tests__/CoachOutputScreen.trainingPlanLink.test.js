@@ -64,10 +64,15 @@ describe('the training card links to the plan it changed once applied (CO-2)', (
     expect(cardBody).toMatch(
       /\{applied && output\.appliedAdjustments\?\.training\?\.musclesChanged && navigation \? \(/,
     );
-    expect(cardBody).toMatch(/style=\{styles\.planEditLink\}/);
+    // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): the
+    // frozen styles.planEditLink now carries a mechanical live-theme append
+    // (style={[styles.planEditLink, live.planEditLink]}), same pattern as
+    // every other themed screen; the style key/behaviour it names is
+    // unchanged.
+    expect(cardBody).toMatch(/style=\{\[styles\.planEditLink, live\.planEditLink\]\}/);
     expect(cardBody).toMatch(/accessibilityRole="button"/);
     expect(cardBody).toMatch(/accessibilityLabel="See your updated plan"/);
-    expect(cardBody).toMatch(/<Text style=\{styles\.planEditLinkText\}>See your updated plan<\/Text>/);
+    expect(cardBody).toMatch(/<Text style=\{\[styles\.planEditLinkText, live\.planEditLinkText\]\}>See your updated plan<\/Text>/);
   });
 
   test('navigates to the Plans tab landing screen (no specific routine/plan id is tracked on this screen)', () => {
@@ -87,8 +92,10 @@ describe('the training card links to the plan it changed once applied (CO-2)', (
     const siblingStart = SCREEN.indexOf('planEditNote?.deepLink ? (');
     expect(siblingStart).toBeGreaterThan(-1);
     const siblingBlock = SCREEN.slice(siblingStart, siblingStart + 600);
-    expect(siblingBlock).toMatch(/style=\{styles\.planEditLink\}/);
-    expect(siblingBlock).toMatch(/style=\{styles\.planEditLinkText\}/);
+    // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): same
+    // mechanical live-theme style-array append as the training card above.
+    expect(siblingBlock).toMatch(/style=\{\[styles\.planEditLink, live\.planEditLink\]\}/);
+    expect(siblingBlock).toMatch(/style=\{\[styles\.planEditLinkText, live\.planEditLinkText\]\}/);
     expect(siblingBlock).toMatch(/accessibilityRole="button"/);
   });
 });

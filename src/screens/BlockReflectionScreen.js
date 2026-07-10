@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
@@ -11,6 +12,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getBlockReflectionData } from '../lib/database';
 import { SkeletonCard } from '../components/Skeleton';
+import { selection as hapticSelection } from '../lib/haptics';
 
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -24,11 +26,16 @@ function fmtDate(ms) {
 }
 
 function StatBlock({ icon, value, label }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <View style={styles.statBlock}>
-      <Ionicons name={icon} size={20} color={colors.primary} style={styles.statIcon} />
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Ionicons name={icon} size={20} color={t.colors.primary} style={styles.statIcon} />
+      <Text style={[styles.statValue, live.statValue]}>{value}</Text>
+      <Text style={[styles.statLabel, live.statLabel]}>{label}</Text>
     </View>
   );
 }
@@ -79,6 +86,11 @@ const PR_TYPE_LABELS = {
 };
 
 export default function BlockReflectionScreen({ navigation, route }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const { mesocycleId } = route.params ?? {};
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const { user, units } = useAppStore(useShallow(s => ({
@@ -124,18 +136,18 @@ export default function BlockReflectionScreen({ navigation, route }) {
   const narrative = data ? buildNarrative(data) : [];
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'left', 'right']}>
       <BackHeader
         title="Block summary"
         right={data ? (
           // COMP-005: this analytic screen gains the story as its front door.
           <TouchableOpacity
-            onPress={() => navigation.navigate('RecapStory', { variant: 'block', mesocycleId, blockName: data.meso?.name })}
+            onPress={() => { hapticSelection(); navigation.navigate('RecapStory', { variant: 'block', mesocycleId, blockName: data.meso?.name }); }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
             accessibilityLabel="Play block story"
           >
-            <Ionicons name="play-circle-outline" size={24} color={colors.primary} />
+            <Ionicons name="play-circle-outline" size={24} color={t.colors.primary} />
           </TouchableOpacity>
         ) : null}
       />
@@ -175,9 +187,9 @@ export default function BlockReflectionScreen({ navigation, route }) {
           <>
             {/* Block title and dates */}
             <View style={styles.blockTitle}>
-              <Text style={styles.blockName} accessibilityRole="header">{data.meso?.name ?? 'Training Block'}</Text>
+              <Text style={[styles.blockName, live.blockName]} accessibilityRole="header">{data.meso?.name ?? 'Training Block'}</Text>
               {data.startDate ? (
-                <Text style={styles.blockDates}>
+                <Text style={[styles.blockDates, live.blockDates]}>
                   {fmtDate(data.startDate)}
                   {data.endDate ? ` – ${fmtDate(data.endDate)}` : ''}
                   {data.meso?.plannedWeeks ? ` · ${data.meso.plannedWeeks} weeks` : ''}
@@ -186,7 +198,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
             </View>
 
             {/* 4-stat row */}
-            <View style={styles.statsRow}>
+            <View style={[styles.statsRow, live.statsRow]}>
               <StatBlock icon="barbell-outline" value={String(data.totalSessions)} label="Sessions" />
               <StatBlock icon="layers-outline" value={data.totalSets.toLocaleString('en-GB')} label="Sets" />
               <StatBlock
@@ -200,26 +212,26 @@ export default function BlockReflectionScreen({ navigation, route }) {
             </View>
 
             {/* Narrative */}
-            <View style={styles.narrativeCard}>
+            <View style={[styles.narrativeCard, live.narrativeCard]}>
               {narrative.map((line, i) => (
-                <Text key={i} style={styles.narrativeLine}>{line}</Text>
+                <Text key={i} style={[styles.narrativeLine, live.narrativeLine]}>{line}</Text>
               ))}
             </View>
 
             {/* PRs set during this block */}
             {data.prs?.length > 0 && (
-              <View style={styles.section}>
+              <View style={[styles.section, live.section]}>
                 <View style={styles.sectionHeader}>
-                  <Ionicons name="trophy-outline" size={16} color={colors.primary} />
+                  <Ionicons name="trophy-outline" size={16} color={t.colors.primary} />
                   <SectionLabel accessibilityRole="header">Records set this block</SectionLabel>
                 </View>
                 {data.prs.map((pr, i) => (
-                  <View key={i} style={styles.prRow}>
+                  <View key={i} style={[styles.prRow, live.prRow]}>
                     <View style={styles.prInfo}>
-                      <Text style={styles.prExercise}>{pr.exerciseName ?? pr.exercise_name}</Text>
-                      <Text style={styles.prType}>{PR_TYPE_LABELS[pr.recordType ?? pr.record_type] ?? pr.recordType}</Text>
+                      <Text style={[styles.prExercise, live.prExercise]}>{pr.exerciseName ?? pr.exercise_name}</Text>
+                      <Text style={[styles.prType, live.prType]}>{PR_TYPE_LABELS[pr.recordType ?? pr.record_type] ?? pr.recordType}</Text>
                     </View>
-                    <Text style={styles.prValue}>{parseFloat(pr.value).toFixed(1)}{units}</Text>
+                    <Text style={[styles.prValue, live.prValue]}>{parseFloat(pr.value).toFixed(1)}{units}</Text>
                   </View>
                 ))}
               </View>
@@ -227,22 +239,22 @@ export default function BlockReflectionScreen({ navigation, route }) {
 
             {/* Best session */}
             {data.bestSession?.volume > 0 && (
-              <View style={styles.bestSessionCard}>
-                <Ionicons name="flash-outline" size={16} color={colors.primary} />
+              <View style={[styles.bestSessionCard, live.bestSessionCard]}>
+                <Ionicons name="flash-outline" size={16} color={t.colors.primary} />
                 <View style={styles.bestSessionInfo}>
-                  <Text style={styles.bestSessionLabel}>Best session</Text>
-                  <Text style={styles.bestSessionDate}>{fmtDate(data.bestSession.startedAt)}</Text>
+                  <Text style={[styles.bestSessionLabel, live.bestSessionLabel]}>Best session</Text>
+                  <Text style={[styles.bestSessionDate, live.bestSessionDate]}>{fmtDate(data.bestSession.startedAt)}</Text>
                 </View>
-                <Text style={styles.bestSessionVolume}>
+                <Text style={[styles.bestSessionVolume, live.bestSessionVolume]}>
                   {Math.round(data.bestSession.volume).toLocaleString('en-GB')} kg
                 </Text>
               </View>
             )}
 
             {/* What's next */}
-            <View style={styles.nextSection}>
-              <Text style={styles.nextTitle} accessibilityRole="header">What's next</Text>
-              <Text style={styles.nextBody}>
+            <View style={[styles.nextSection, live.nextSection]}>
+              <Text style={[styles.nextTitle, live.nextTitle]} accessibilityRole="header">What's next</Text>
+              <Text style={[styles.nextBody, live.nextBody]}>
                 Take a few days of lighter activity to recover, then start your next block. That recovery is when your progress takes hold.
               </Text>
               <Button
@@ -341,3 +353,33 @@ const styles = StyleSheet.create({
   nextTitle: { ...type.bodyStrong, color: colors.textPrimary },
   nextBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 21 },
 });
+
+// CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): buildLiveStyles
+// mirrors only the colour/fontSize/type-bearing sub-properties of the frozen
+// `styles` block above, at identical rest values; pure layout keys (flex/
+// padding/gap, no token) are correctly omitted. Same pattern as
+// WorkoutSummaryScreen.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    blockName: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
+    blockDates: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    statsRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    statValue: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
+    statLabel: { ...t.type.caption, color: t.colors.textMuted },
+    narrativeCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    narrativeLine: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
+    section: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    prRow: { borderTopColor: t.colors.border },
+    prExercise: { ...t.type.label, color: t.colors.textPrimary },
+    prType: { ...t.type.caption, color: t.colors.textMuted },
+    prValue: { ...t.type.num('bodyStrong'), color: t.colors.primary },
+    bestSessionCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.188) },
+    bestSessionLabel: { ...t.type.label, color: t.colors.textPrimary },
+    bestSessionDate: { ...t.type.num('caption'), color: t.colors.textMuted },
+    bestSessionVolume: { ...t.type.num('title'), color: t.colors.primary },
+    nextSection: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    nextTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    nextBody: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+  };
+}

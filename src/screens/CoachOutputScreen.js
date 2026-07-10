@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, AccessibilityInfo,
 } from 'react-native';
@@ -111,7 +111,15 @@ import SectionLabel from '../components/SectionLabel';
 import Reanimated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { selectCoachOutputZones } from '../lib/coachOutputZones';
 import { isGreatWeek } from '../lib/shareCard/greatWeek';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, stateColors, type, motion, letterSpacing, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type, motion, letterSpacing, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
+// CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): NO haptics
+// import here. coachOutputApplyMorph.guard.test.js pins this screen as
+// haptics-free by construction (a hold path must never accidentally buzz);
+// that pre-existing safety guard is stricter than the campaign brief's
+// per-surface exclusions, so every touchable on this screen stays haptic-free
+// -- flagged as a STOP item in the campaign report rather than silently
+// worked around.
 import {
   ED_PATTERN_LOCKOUT_COPY,
   ED_PATTERN_CLEARED_COPY,
@@ -190,32 +198,37 @@ function AdjustmentRow({
   iconName, label, note, detail, holdNote, holdArrived, applied,
   onApply, applyState = 'idle', onApplySettled, emphasis, tooltip,
 }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const settling = applyState === 'success';
   const showApply = (!!onApply && !applied && !holdNote) || settling;
   return (
     <View style={styles.adjustmentRow}>
-      <View style={styles.adjustmentIconWrap}>
-        <Ionicons name={iconName} size={18} color={colors.primary} />
+      <View style={[styles.adjustmentIconWrap, live.adjustmentIconWrap]}>
+        <Ionicons name={iconName} size={18} color={t.colors.primary} />
       </View>
       <View style={styles.adjustmentContent}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
-          <Text style={emphasis ? styles.adjustmentLabelHero : styles.adjustmentLabel}>{label}</Text>
+          <Text style={emphasis ? [styles.adjustmentLabelHero, live.adjustmentLabelHero] : [styles.adjustmentLabel, live.adjustmentLabel]}>{label}</Text>
           {/* L04-11: the recovery-week (deload) row is the one jargon term
               named inline in an Apply row's label rather than a section
               header, so the gloss sits right next to it. */}
           {tooltip ? <InfoTooltip text={tooltip} size={13} /> : null}
           {applied && !settling && (
-            <View style={styles.appliedChip}>
-              <Ionicons name="checkmark" size={10} color={colors.success} />
-              <Text style={styles.appliedChipText}>Applied</Text>
+            <View style={[styles.appliedChip, live.appliedChip]}>
+              <Ionicons name="checkmark" size={10} color={t.colors.success} />
+              <Text style={[styles.appliedChipText, live.appliedChipText]}>Applied</Text>
             </View>
           )}
         </View>
-        {note ? <Text style={styles.adjustmentNote}>{note}</Text> : null}
-        {detail ? <Text style={styles.adjustmentDetail}>{detail}</Text> : null}
+        {note ? <Text style={[styles.adjustmentNote, live.adjustmentNote]}>{note}</Text> : null}
+        {detail ? <Text style={[styles.adjustmentDetail, live.adjustmentDetail]}>{detail}</Text> : null}
         {holdNote && !applied ? (
           <HoldEnter live={holdArrived}>
-            <Text style={styles.adjustmentHold}>{holdNote}</Text>
+            <Text style={[styles.adjustmentHold, live.adjustmentHold]}>{holdNote}</Text>
           </HoldEnter>
         ) : null}
       </View>
@@ -329,6 +342,11 @@ function TrainingNextWeekCard({
   output, onApply, canApply, applyStateFor, onApplySettled,
   deloadSuggested, deloadNote, onApplyDeload, hero, navigation,
 }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const signal = output.volumeSignal ?? 0;
   const applied = isApplied(output, 'training');
   const note = output.adjustments?.training?.note;
@@ -362,9 +380,9 @@ function TrainingNextWeekCard({
             emphasis={hero}
           />
           {!canApply && !deloadApplied && (
-            <View style={styles.planNote}>
-              <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
-              <Text style={styles.planNoteText}>
+            <View style={[styles.planNote, live.planNote]}>
+              <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
+              <Text style={[styles.planNoteText, live.planNoteText]}>
                 Start your next training week to bring the recovery week forward.
               </Text>
             </View>
@@ -384,9 +402,9 @@ function TrainingNextWeekCard({
             onApplySettled={() => onApplySettled('training')}
             emphasis={hero}
           />
-          <View style={styles.planNote}>
-            <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.planNoteText}>
+          <View style={[styles.planNote, live.planNote]}>
+            <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
+            <Text style={[styles.planNoteText, live.planNoteText]}>
               This sets next week's starting volume. Your plan still fine-tunes each session as you train.
             </Text>
           </View>
@@ -396,13 +414,13 @@ function TrainingNextWeekCard({
               same component/style/a11y). Same pattern here, once applied. */}
           {applied && output.appliedAdjustments?.training?.musclesChanged && navigation ? (
             <TouchableOpacity
-              style={styles.planEditLink}
+              style={[styles.planEditLink, live.planEditLink]}
               onPress={() => navigation.navigate('PlansTab', { screen: 'Plans', initial: false })}
               accessibilityRole="button"
               accessibilityLabel="See your updated plan"
             >
-              <Ionicons name="barbell-outline" size={14} color={colors.textSecondary} />
-              <Text style={styles.planEditLinkText}>See your updated plan</Text>
+              <Ionicons name="barbell-outline" size={14} color={t.colors.textSecondary} />
+              <Text style={[styles.planEditLinkText, live.planEditLinkText]}>See your updated plan</Text>
             </TouchableOpacity>
           ) : null}
         </>
@@ -415,34 +433,39 @@ function TrainingNextWeekCard({
 // the card states the post-tap absolute + honest duration before the tap.
 // NU-3: a tap-time null renders its reason (notice) instead of silence.
 function DietBreakCard({ weeksInDeficit, applied, onApply, applyState, onApplySettled, energyUnit, previewKcal, notice, hero }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const settling = applyState === 'success';
   return (
     <Card style={styles.dietBreakCard} elevated={hero} tone={hero ? 'primary' : undefined}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
-        <Text style={hero ? styles.dietBreakTitleHero : styles.dietBreakTitle}>Diet break worth considering</Text>
+        <Text style={hero ? [styles.dietBreakTitleHero, live.dietBreakTitleHero] : [styles.dietBreakTitle, live.dietBreakTitle]}>Diet break worth considering</Text>
         <InfoTooltip text={GLOSSARY.maintenanceCalories} size={13} />
         {applied && !settling && (
-          <View style={styles.appliedChip}>
-            <Ionicons name="checkmark" size={10} color={colors.success} />
-            <Text style={styles.appliedChipText}>Applied</Text>
+          <View style={[styles.appliedChip, live.appliedChip]}>
+            <Ionicons name="checkmark" size={10} color={t.colors.success} />
+            <Text style={[styles.appliedChipText, live.appliedChipText]}>Applied</Text>
           </View>
         )}
       </View>
-      <Text style={styles.dietBreakBody}>
+      <Text style={[styles.dietBreakBody, live.dietBreakBody]}>
         {weeksInDeficit >= 8
           ? `You have been in a calorie deficit for ${weeksInDeficit} weeks. `
           : 'You have been in a calorie deficit for over eight weeks. '}
         {'A short diet break, returning to maintenance calories for one to two weeks, can help your body settle back to its normal calorie burn and improve long-term fat loss. Consider taking a break before your next phase.'}
       </Text>
-      <Text style={styles.dietBreakFootnote}>
+      <Text style={[styles.dietBreakFootnote, live.dietBreakFootnote]}>
         Based on the MATADOR trial (2017). This is a suggestion, not a requirement.
       </Text>
       {!applied && previewKcal != null ? (
-        <Text style={styles.adjustmentDetail}>{preTapTargetLine(previewKcal, energyUnit)}</Text>
+        <Text style={[styles.adjustmentDetail, live.adjustmentDetail]}>{preTapTargetLine(previewKcal, energyUnit)}</Text>
       ) : null}
       {!applied && notice ? (
         <HoldEnter live>
-          <Text style={styles.adjustmentHold}>{notice}</Text>
+          <Text style={[styles.adjustmentHold, live.adjustmentHold]}>{notice}</Text>
         </HoldEnter>
       ) : null}
       {((!applied && onApply && !notice) || settling) && (
@@ -471,6 +494,11 @@ function DietBreakCard({ weeksInDeficit, applied, onApply, applyState, onApplySe
 // to userProfile.macroCycle, which the Diary reads to show the right
 // target for the day.
 function MacroCycleCard({ macroCycle, applied, onApply, applyState, onApplySettled, energyUnit, holdNote, holdArrived }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const { trainingDay, restDay } = macroCycle;
   const unitLabel = energyUnitLabel(energyUnit);
   const settling = applyState === 'success';
@@ -479,28 +507,28 @@ function MacroCycleCard({ macroCycle, applied, onApply, applyState, onApplySettl
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
         <SectionHeader title="Carbs by day" tooltip={GLOSSARY.macroCycle} />
         {applied && !settling && (
-          <View style={[styles.appliedChip, { marginBottom: spacing.xs }]}>
-            <Ionicons name="checkmark" size={10} color={colors.success} />
-            <Text style={styles.appliedChipText}>Applied</Text>
+          <View style={[styles.appliedChip, live.appliedChip, { marginBottom: spacing.xs }]}>
+            <Ionicons name="checkmark" size={10} color={t.colors.success} />
+            <Text style={[styles.appliedChipText, live.appliedChipText]}>Applied</Text>
           </View>
         )}
       </View>
       <View style={styles.macroCycleRow}>
-        <View style={styles.macroCycleCol}>
-          <Text style={styles.macroCycleColLabel}>Training days</Text>
-          <Text style={styles.macroCycleColKcal}>{formatEnergy(trainingDay.kcal, energyUnit)} {unitLabel}</Text>
-          <Text style={styles.macroCycleColCarbs}>{trainingDay.carbsG}g carbs</Text>
+        <View style={[styles.macroCycleCol, live.macroCycleCol]}>
+          <Text style={[styles.macroCycleColLabel, live.macroCycleColLabel]}>Training days</Text>
+          <Text style={[styles.macroCycleColKcal, live.macroCycleColKcal]}>{formatEnergy(trainingDay.kcal, energyUnit)} {unitLabel}</Text>
+          <Text style={[styles.macroCycleColCarbs, live.macroCycleColCarbs]}>{trainingDay.carbsG}g carbs</Text>
         </View>
-        <View style={styles.macroCycleCol}>
-          <Text style={styles.macroCycleColLabel}>Rest days</Text>
-          <Text style={styles.macroCycleColKcal}>{formatEnergy(restDay.kcal, energyUnit)} {unitLabel}</Text>
-          <Text style={styles.macroCycleColCarbs}>{restDay.carbsG}g carbs</Text>
+        <View style={[styles.macroCycleCol, live.macroCycleCol]}>
+          <Text style={[styles.macroCycleColLabel, live.macroCycleColLabel]}>Rest days</Text>
+          <Text style={[styles.macroCycleColKcal, live.macroCycleColKcal]}>{formatEnergy(restDay.kcal, energyUnit)} {unitLabel}</Text>
+          <Text style={[styles.macroCycleColCarbs, live.macroCycleColCarbs]}>{restDay.carbsG}g carbs</Text>
         </View>
       </View>
-      <Text style={styles.adjustmentNote}>{macroCycle.note}</Text>
+      <Text style={[styles.adjustmentNote, live.adjustmentNote]}>{macroCycle.note}</Text>
       {!applied && holdNote ? (
         <HoldEnter live={holdArrived}>
-          <Text style={styles.adjustmentHold}>{holdNote}</Text>
+          <Text style={[styles.adjustmentHold, live.adjustmentHold]}>{holdNote}</Text>
         </HoldEnter>
       ) : null}
       {((!applied && onApply && !holdNote) || settling) && (
@@ -528,36 +556,41 @@ function MacroCycleCard({ macroCycle, applied, onApply, applyState, onApplySettl
 // on the coach's cadence. Applying schedules it onto the next training
 // day via userProfile.refeed, which the Diary reads.
 function RefeedCard({ refeed, applied, onApply, applyState, onApplySettled, energyUnit, holdNote }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const settling = applyState === 'success';
   return (
     <Card style={styles.card}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
         <SectionHeader title="Refeed day" tooltip={GLOSSARY.refeed} />
         {applied && !settling && (
-          <View style={[styles.appliedChip, { marginBottom: spacing.xs }]}>
-            <Ionicons name="checkmark" size={10} color={colors.success} />
-            <Text style={styles.appliedChipText}>Applied</Text>
+          <View style={[styles.appliedChip, live.appliedChip, { marginBottom: spacing.xs }]}>
+            <Ionicons name="checkmark" size={10} color={t.colors.success} />
+            <Text style={[styles.appliedChipText, live.appliedChipText]}>Applied</Text>
           </View>
         )}
       </View>
       <View style={styles.macroCycleRow}>
-        <View style={styles.macroCycleCol}>
-          <Text style={styles.macroCycleColLabel}>Refeed target</Text>
-          <Text style={styles.macroCycleColKcal}>{formatEnergy(refeed.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
-          <Text style={styles.macroCycleColCarbs}>{refeed.carbsG}g carbs</Text>
+        <View style={[styles.macroCycleCol, live.macroCycleCol]}>
+          <Text style={[styles.macroCycleColLabel, live.macroCycleColLabel]}>Refeed target</Text>
+          <Text style={[styles.macroCycleColKcal, live.macroCycleColKcal]}>{formatEnergy(refeed.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+          <Text style={[styles.macroCycleColCarbs, live.macroCycleColCarbs]}>{refeed.carbsG}g carbs</Text>
         </View>
       </View>
-      <Text style={styles.adjustmentNote}>{refeed.note}</Text>
+      <Text style={[styles.adjustmentNote, live.adjustmentNote]}>{refeed.note}</Text>
       {/* NU-4: this write is genuinely one day (the Diary resolves it onto the
           single next training day), so the duration says exactly that. Gated
           on the absence of the failure notice (holdNote) so "Applies to your
           next training day only." never stacks under "nothing was applied". */}
       {!applied && !holdNote ? (
-        <Text style={styles.adjustmentDetail}>Applies to your next training day only.</Text>
+        <Text style={[styles.adjustmentDetail, live.adjustmentDetail]}>Applies to your next training day only.</Text>
       ) : null}
       {!applied && holdNote ? (
         <HoldEnter live>
-          <Text style={styles.adjustmentHold}>{holdNote}</Text>
+          <Text style={[styles.adjustmentHold, live.adjustmentHold]}>{holdNote}</Text>
         </HoldEnter>
       ) : null}
       {((!applied && onApply && !holdNote) || settling) && (
@@ -580,6 +613,12 @@ function RefeedCard({ refeed, applied, onApply, applyState, onApplySettled, ener
 }
 
 function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUnit }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why. No haptics in this card: it is a held-decision surface
+  // (hard exclusion, campaign item 1 authority doc).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   if (!decisions || decisions.length === 0) return null;
   const edLockout = decisions.find(d => d.type === 'ed_pattern_lockout');
   const edCleared = decisions.find(d => d.type === 'ed_pattern_cleared');
@@ -606,47 +645,48 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUn
           <SectionHeader title="What we held this week" />
           {standardDecisions.map((d, i) => (
             <View key={i} style={styles.heldRow}>
-              <Ionicons name="pause-circle-outline" size={16} color={colors.textMuted} style={{ marginTop: spacing.xxs }} />
-              <Text style={styles.heldText}>{d.reason}</Text>
+              <Ionicons name="pause-circle-outline" size={16} color={t.colors.textMuted} style={{ marginTop: spacing.xxs }} />
+              <Text style={[styles.heldText, live.heldText]}>{d.reason}</Text>
             </View>
           ))}
           {/* COMP-006: only on standard holds, never alongside the ED-pattern
               or rapid-loss blocks, whose own copy + CTAs must not be diluted. */}
           {onLearnMore ? (
             <TouchableOpacity
-              style={styles.heldLearnMore}
+              style={[styles.heldLearnMore, live.heldLearnMore]}
               onPress={onLearnMore}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               accessibilityRole="button"
               accessibilityLabel="See how Precision Coaching decides"
             >
-              <Ionicons name="information-circle-outline" size={14} color={colors.textSecondary} />
-              <Text style={styles.heldLearnMoreText}>See how Precision Coaching decides</Text>
+              <Ionicons name="information-circle-outline" size={14} color={t.colors.textSecondary} />
+              <Text style={[styles.heldLearnMoreText, live.heldLearnMoreText]}>See how Precision Coaching decides</Text>
             </TouchableOpacity>
           ) : null}
         </>
       ) : null}
       {historyWithHeld.length > 0 ? (
         <View style={styles.heldHistoryShelf}>
-          <Text style={styles.heldHistoryTitle}>PREVIOUS WEEKS</Text>
+          <Text style={[styles.heldHistoryTitle, live.heldHistoryTitle]}>PREVIOUS WEEKS</Text>
           {historyWithHeld.map((entry, i) => (
             <View
               key={i}
               style={[
                 styles.heldHistoryEntry,
+                live.heldHistoryEntry,
                 i === historyWithHeld.length - 1 && { borderBottomWidth: 0 },
               ]}
             >
-              <Text style={styles.heldHistoryDate}>{weekRangeLabel(entry.weekStart)}</Text>
+              <Text style={[styles.heldHistoryDate, live.heldHistoryDate]}>{weekRangeLabel(entry.weekStart)}</Text>
               {entry.heldDecisions.map((d, j) => (
-                <Text key={j} style={styles.heldHistoryText}>{d.reason}</Text>
+                <Text key={j} style={[styles.heldHistoryText, live.heldHistoryText]}>{d.reason}</Text>
               ))}
             </View>
           ))}
         </View>
       ) : (
         <View style={styles.heldHistoryShelf}>
-          <Text style={styles.heldHistoryEmptyText}>
+          <Text style={[styles.heldHistoryEmptyText, live.heldHistoryEmptyText]}>
             Your held-decision history will appear here as weeks pass.
           </Text>
         </View>
@@ -658,8 +698,8 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUn
           accessibilityRole="button"
           accessibilityLabel="See all coaching decisions"
         >
-          <Text style={styles.heldSeeAllText}>See all weeks</Text>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+          <Text style={[styles.heldSeeAllText, live.heldSeeAllText]}>See all weeks</Text>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
       ) : null}
     </Card>
@@ -667,6 +707,11 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUn
 }
 
 function EdPatternLockoutBlock({ decision }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why. No haptics here: explicit ED-pattern-lockout exclusion
+  // (campaign item 1 authority doc).
+  const live = buildLiveStyles(useTheme());
   const [showReadMore, setShowReadMore] = useState(false);
   const supportLink = getEdSupportLink(
     // Best-effort locale: Intl.DateTimeFormat reports the device
@@ -701,36 +746,40 @@ function EdPatternLockoutBlock({ decision }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
-    <View style={styles.edLockoutCard}>
-      <Text style={styles.edLockoutHeader}>{ED_PATTERN_LOCKOUT_COPY.header}</Text>
-      <Text style={styles.edLockoutTitle}>{ED_PATTERN_LOCKOUT_COPY.title}</Text>
-      <Text style={styles.edLockoutBody}>{ED_PATTERN_LOCKOUT_COPY.body}</Text>
+    <View style={[styles.edLockoutCard, live.edLockoutCard]}>
+      <Text style={[styles.edLockoutHeader, live.edLockoutHeader]}>{ED_PATTERN_LOCKOUT_COPY.header}</Text>
+      <Text style={[styles.edLockoutTitle, live.edLockoutTitle]}>{ED_PATTERN_LOCKOUT_COPY.title}</Text>
+      <Text style={[styles.edLockoutBody, live.edLockoutBody]}>{ED_PATTERN_LOCKOUT_COPY.body}</Text>
       {decision?.goalLockAdvanced ? (
-        <Text style={styles.edLockoutBody}>{ED_PATTERN_LOCKOUT_COPY.bodyGoalLockExtension}</Text>
+        <Text style={[styles.edLockoutBody, live.edLockoutBody]}>{ED_PATTERN_LOCKOUT_COPY.bodyGoalLockExtension}</Text>
       ) : null}
       {showReadMore ? (
-        <View style={styles.edLockoutReadMoreBox}>
-          <Text style={styles.edLockoutReadMoreText}>{ED_PATTERN_LOCKOUT_COPY.readMoreBody}</Text>
+        <View style={[styles.edLockoutReadMoreBox, live.edLockoutReadMoreBox]}>
+          <Text style={[styles.edLockoutReadMoreText, live.edLockoutReadMoreText]}>{ED_PATTERN_LOCKOUT_COPY.readMoreBody}</Text>
         </View>
       ) : null}
       <View style={styles.edLockoutCtaRow}>
-        <TouchableOpacity onPress={openSupport} style={styles.edLockoutCtaPrimary} accessibilityRole="button">
-          <Text style={styles.edLockoutCtaPrimaryText}>
+        <TouchableOpacity onPress={openSupport} style={[styles.edLockoutCtaPrimary, live.edLockoutCtaPrimary]} accessibilityRole="button">
+          <Text style={[styles.edLockoutCtaPrimaryText, live.edLockoutCtaPrimaryText]}>
             {ED_PATTERN_LOCKOUT_COPY.ctaSupport} · {supportLink.name}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setShowReadMore(v => !v)} style={styles.edLockoutCtaGhost} accessibilityRole="button">
-          <Text style={styles.edLockoutCtaGhostText}>
+        <TouchableOpacity onPress={() => setShowReadMore(v => !v)} style={[styles.edLockoutCtaGhost, live.edLockoutCtaGhost]} accessibilityRole="button">
+          <Text style={[styles.edLockoutCtaGhostText, live.edLockoutCtaGhostText]}>
             {showReadMore ? 'Hide' : ED_PATTERN_LOCKOUT_COPY.ctaReadMore}
           </Text>
         </TouchableOpacity>
       </View>
-      <Text style={styles.edLockoutBottomNote}>{ED_PATTERN_LOCKOUT_COPY.bottomNote}</Text>
+      <Text style={[styles.edLockoutBottomNote, live.edLockoutBottomNote]}>{ED_PATTERN_LOCKOUT_COPY.bottomNote}</Text>
     </View>
   );
 }
 
 function EdPatternClearedBlock() {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const live = buildLiveStyles(useTheme());
   useEffect(() => {
     // AY-7/D7: same announce-on-appearance treatment as the lockout block
     // above, reading ED_PATTERN_CLEARED_COPY verbatim (header, title, body,
@@ -746,10 +795,10 @@ function EdPatternClearedBlock() {
     } catch (_) { /* best-effort, no-op without a screen reader */ }
   }, []);
   return (
-    <View style={styles.edClearedCard}>
-      <Text style={styles.edClearedHeader}>{ED_PATTERN_CLEARED_COPY.header}</Text>
-      <Text style={styles.edClearedTitle}>{ED_PATTERN_CLEARED_COPY.title}</Text>
-      <Text style={styles.edClearedBody}>{ED_PATTERN_CLEARED_COPY.body}</Text>
+    <View style={[styles.edClearedCard, live.edClearedCard]}>
+      <Text style={[styles.edClearedHeader, live.edClearedHeader]}>{ED_PATTERN_CLEARED_COPY.header}</Text>
+      <Text style={[styles.edClearedTitle, live.edClearedTitle]}>{ED_PATTERN_CLEARED_COPY.title}</Text>
+      <Text style={[styles.edClearedBody, live.edClearedBody]}>{ED_PATTERN_CLEARED_COPY.body}</Text>
     </View>
   );
 }
@@ -761,15 +810,19 @@ function EdPatternClearedBlock() {
 // magnitude explicit so the user sees the size of the change, not
 // just that "something happened".
 function RapidLossCorrectedBlock({ decision, energyUnit }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const live = buildLiveStyles(useTheme());
   const delta = decision?.kcalDelta;
   return (
-    <View style={styles.edClearedCard}>
-      <Text style={styles.edClearedHeader}>{RAPID_LOSS_CORRECTED_COPY.header}</Text>
-      <Text style={styles.edClearedTitle}>{RAPID_LOSS_CORRECTED_COPY.title}</Text>
-      <Text style={styles.edClearedBody}>{RAPID_LOSS_CORRECTED_COPY.body}</Text>
+    <View style={[styles.edClearedCard, live.edClearedCard]}>
+      <Text style={[styles.edClearedHeader, live.edClearedHeader]}>{RAPID_LOSS_CORRECTED_COPY.header}</Text>
+      <Text style={[styles.edClearedTitle, live.edClearedTitle]}>{RAPID_LOSS_CORRECTED_COPY.title}</Text>
+      <Text style={[styles.edClearedBody, live.edClearedBody]}>{RAPID_LOSS_CORRECTED_COPY.body}</Text>
       {/* NU-6: the figure (not the locked copy) honours the kJ preference. */}
       {typeof delta === 'number' && delta > 0 ? (
-        <Text style={styles.edClearedBody}>{`Daily target raised by ${signedEnergyChange(delta, energyUnit)}.`}</Text>
+        <Text style={[styles.edClearedBody, live.edClearedBody]}>{`Daily target raised by ${signedEnergyChange(delta, energyUnit)}.`}</Text>
       ) : null}
     </View>
   );
@@ -789,38 +842,43 @@ function LoadingView() {
 }
 
 function InsufficientDataView({ dataNote, receipt, onClose }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <Card style={styles.card}>
         <View style={styles.insufficientIconRow}>
-          <Ionicons name="time-outline" size={32} color={colors.primary} />
+          <Ionicons name="time-outline" size={32} color={t.colors.primary} />
         </View>
-        <Text style={styles.insufficientTitle}>Building your baseline.</Text>
+        <Text style={[styles.insufficientTitle, live.insufficientTitle]}>Building your baseline.</Text>
         {/* A3 (audit 04 §4): the hold is a decision, so it renders as a full
             receipt, what the coach read, the rule it applied, and the named
             unlock date, not a bare "come back later" panel. The neutral
             (ED-flag) receipt has no rows by construction. */}
         {receipt?.ledger?.rows?.length ? (
           <View style={styles.receiptRows}>
-            <Text style={styles.receiptLabel}>{receipt.ledger.title}</Text>
+            <Text style={[styles.receiptLabel, live.receiptLabel]}>{receipt.ledger.title}</Text>
             {receipt.ledger.rows.map((row) => (
               <View key={row.key} style={styles.receiptRow}>
                 <Ionicons
                   name={row.done ? 'checkmark-circle' : 'ellipse-outline'}
                   size={14}
-                  color={row.done ? colors.success : colors.textMuted}
+                  color={row.done ? t.colors.success : t.colors.textMuted}
                 />
-                <Text style={styles.receiptRowText}>{row.label}</Text>
+                <Text style={[styles.receiptRowText, live.receiptRowText]}>{row.label}</Text>
               </View>
             ))}
           </View>
         ) : null}
-        <Text style={styles.insufficientBody}>
+        <Text style={[styles.insufficientBody, live.insufficientBody]}>
           {receipt?.rule ?? dataNote ??
             'Your coach reads your training and weight from day one. It holds calorie and volume changes until it has about two weeks of weigh-ins plus a check-in, so it moves on a real trend rather than one noisy week. Keep logging sessions, your morning weight, and your weekly check-in. The first adjustment lands once the trend is clear.'}
         </Text>
         {receipt?.unlockLine ? (
-          <Text style={styles.receiptUnlock}>{receipt.unlockLine}</Text>
+          <Text style={[styles.receiptUnlock, live.receiptUnlock]}>{receipt.unlockLine}</Text>
         ) : null}
       </Card>
       <Button
@@ -828,7 +886,7 @@ function InsufficientDataView({ dataNote, receipt, onClose }) {
         onPress={onClose}
         size="lg"
         style={styles.doneBtn}
-        textStyle={styles.doneBtnText}
+        textStyle={[styles.doneBtnText, live.doneBtnText]}
       />
     </ScrollView>
   );
@@ -838,14 +896,19 @@ function InsufficientDataView({ dataNote, receipt, onClose }) {
 // Distinct from InsufficientDataView so a transient error never masquerades as
 // "you haven't logged enough", it offers a retry instead of a dead end.
 function LoadErrorView({ onRetry, onClose }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <Card style={styles.card}>
         <View style={styles.insufficientIconRow}>
-          <Ionicons name="cloud-offline-outline" size={32} color={colors.textMuted} />
+          <Ionicons name="cloud-offline-outline" size={32} color={t.colors.textMuted} />
         </View>
-        <Text style={styles.insufficientTitle}>Couldn't load your coach.</Text>
-        <Text style={styles.insufficientBody}>
+        <Text style={[styles.insufficientTitle, live.insufficientTitle]}>Couldn't load your coach.</Text>
+        <Text style={[styles.insufficientBody, live.insufficientBody]}>
           Something went wrong fetching this week&apos;s data, usually a
           dropped connection. Your logs are safe. Try again in a moment.
         </Text>
@@ -856,13 +919,13 @@ function LoadErrorView({ onRetry, onClose }) {
         size="lg"
         accessibilityLabel="Try again"
         style={styles.doneBtn}
-        textStyle={styles.doneBtnText}
+        textStyle={[styles.doneBtnText, live.doneBtnText]}
       />
       {/* No Button variant matches this plain borderless quiet-text action
           (all variants carry either a fill or a border); left hand-rolled
           rather than force a visual mismatch (see final report). */}
       <TouchableOpacity style={styles.secondaryBtn} onPress={onClose} activeOpacity={0.8} accessibilityRole="button">
-        <Text style={styles.secondaryBtnText}>Close</Text>
+        <Text style={[styles.secondaryBtnText, live.secondaryBtnText]}>Close</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -917,6 +980,13 @@ export default function CoachOutputScreen({ navigation, route }) {
     reduceMotion: !!s.accessibility?.reduceMotion,
   })));
   const latestProfile = () => useAppStore.getState().userProfile || userProfile || {};
+
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why. Memoised on `t` (this screen is large and re-renders
+  // often across the apply/settle state machine above).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   // Ultimate-Audit item 11 (D16, founder ruling 2026-07-10): apply-control
   // mode, read the same local-only way coachTone is read for register
@@ -1919,7 +1989,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Coaching decision" onBack={handleClose} />
         <LoadingView />
       </SafeAreaView>
@@ -1929,7 +1999,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // ── Load error state (retryable) ───────────────────────────────────────────
   if (loadError) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Coaching decision" onBack={handleClose} />
         <LoadErrorView onRetry={() => setReloadKey(k => k + 1)} onClose={handleClose} />
       </SafeAreaView>
@@ -1939,7 +2009,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // ── Insufficient data state ────────────────────────────────────────────────
   if (!output || !output.hasEnoughData) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Coaching decision" onBack={handleClose} />
         <InsufficientDataView dataNote={output?.dataNote} receipt={holdReceipt} onClose={handleClose} />
       </SafeAreaView>
@@ -2009,9 +2079,13 @@ export default function CoachOutputScreen({ navigation, route }) {
     { suppressed: photoCorroborationRenderSuppressed },
   );
   let trendIcon = 'remove-outline';
-  let trendColor = colors.textMuted;
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): stateColors
+  // is a frozen alias onto colors.success/warning/error/textMuted (theme.js),
+  // so its live equivalent is the same t.colors tokens it aliases -- no
+  // separate "live stateColors" builder needed.
+  let trendColor = t.colors.textMuted;
   if (trend.delta !== null && !edPatternOpen) {
-    const dirColor = trend.onTarget ? stateColors.onTrack : stateColors.watch;
+    const dirColor = trend.onTarget ? t.colors.success : t.colors.warning;
     if (trend.delta > 0.01) {
       trendIcon = 'arrow-up-outline';
       trendColor = dirColor;
@@ -2215,7 +2289,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     reduceMotion ? undefined : FadeInDown.duration(duration).delay(i * motion.micro);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Coaching decision" onBack={handleClose} />
       <ScrollView
         contentContainerStyle={styles.content}
@@ -2223,8 +2297,8 @@ export default function CoachOutputScreen({ navigation, route }) {
       >
         {/* Week header */}
         <Reanimated.View entering={stage(0)} style={styles.weekHeader}>
-          <Text style={styles.weekLabel}>{weekLabel}</Text>
-          <Text style={styles.weekRange}>{weekRangeLabel(weekStart)}</Text>
+          <Text style={[styles.weekLabel, live.weekLabel]}>{weekLabel}</Text>
+          <Text style={[styles.weekRange, live.weekRange]}>{weekRangeLabel(weekStart)}</Text>
         </Reanimated.View>
 
         {/* D15 (founder ruling 2026-07-09): the adherence-why line, said once
@@ -2233,8 +2307,8 @@ export default function CoachOutputScreen({ navigation, route }) {
             The other placement is ProSetupCompleteScreen, at Pro setup. */}
         {showAdherenceWhy ? (
           <View style={styles.cardioNoteRow}>
-            <Ionicons name="bulb-outline" size={14} color={colors.primary} />
-            <Text style={styles.cardioNoteText}>
+            <Ionicons name="bulb-outline" size={14} color={t.colors.primary} />
+            <Text style={[styles.cardioNoteText, live.cardioNoteText]}>
               Consistency is what your coach reads best. The more sessions you log, the better it understands how your body responds, and the more precisely it can adjust your plan.
             </Text>
           </View>
@@ -2249,20 +2323,20 @@ export default function CoachOutputScreen({ navigation, route }) {
         {(coachResponse.commitmentAnswer || coachResponse.acknowledgement || coachResponse.interpretation) ? (
           <Reanimated.View
             entering={stage(1)}
-            style={styles.coachLeadCard}
+            style={[styles.coachLeadCard, live.coachLeadCard]}
             accessible
             accessibilityLabel={[coachResponse.commitmentAnswer, coachResponse.acknowledgement, coachResponse.interpretation].filter(Boolean).join(' ')}
           >
             {/* S1c: last week's pre-commitment, answered. Leads the card, it is
                 the "did the coach get it right" payoff that pulls users back. */}
             {coachResponse.commitmentAnswer ? (
-              <Text style={styles.coachLeadCommitment}>{coachResponse.commitmentAnswer}</Text>
+              <Text style={[styles.coachLeadCommitment, live.coachLeadCommitment]}>{coachResponse.commitmentAnswer}</Text>
             ) : null}
             {coachResponse.acknowledgement ? (
-              <Text style={styles.coachLeadAck}>{coachResponse.acknowledgement}</Text>
+              <Text style={[styles.coachLeadAck, live.coachLeadAck]}>{coachResponse.acknowledgement}</Text>
             ) : null}
             {coachResponse.interpretation ? (
-              <Text style={styles.coachLeadInterpretation}>{coachResponse.interpretation}</Text>
+              <Text style={[styles.coachLeadInterpretation, live.coachLeadInterpretation]}>{coachResponse.interpretation}</Text>
             ) : null}
           </Reanimated.View>
         ) : null}
@@ -2280,7 +2354,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             {/* Wave A B6: the WHY never sits a scroll away from the WHAT. One
                 line here; the full WhyBlock further down keeps the detail. */}
             {whyThisWeek ? (
-              <Text style={styles.heroWhy}>
+              <Text style={[styles.heroWhy, live.heroWhy]}>
                 {'The reason: '}
                 {whyThisWeek.includes('. ') ? whyThisWeek.slice(0, whyThisWeek.indexOf('. ') + 1) : whyThisWeek}
               </Text>
@@ -2293,14 +2367,14 @@ export default function CoachOutputScreen({ navigation, route }) {
              claiming the plan is simply working. */
           <Reanimated.View entering={stage(2, motion.hero)} style={styles.heroZone}>
             <SectionLabel tone="primary" style={styles.heroLabel}>This week&apos;s main move</SectionLabel>
-            <View style={styles.holdHeroCard}>
-              <Text style={styles.holdHeroText}>
+            <View style={[styles.holdHeroCard, live.holdHeroCard]}>
+              <Text style={[styles.holdHeroText, live.holdHeroText]}>
                 {heldDecisions && heldDecisions.length > 0
                   ? 'Hold steady. The reasons are below.'
                   : 'Nothing to change. The plan is working.'}
               </Text>
               {whyThisWeek ? (
-                <Text style={styles.heroWhy}>
+                <Text style={[styles.heroWhy, live.heroWhy]}>
                   {'The reason: '}
                   {whyThisWeek.includes('. ') ? whyThisWeek.slice(0, whyThisWeek.indexOf('. ') + 1) : whyThisWeek}
                 </Text>
@@ -2319,7 +2393,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             // the check-in uses. Never labelled as a plain weekly change.
             label={trend.delta !== null ? '7-day trend' : null}
             // Class B: no colour on a body-weight numeral, ever.
-            valueColor={colors.textPrimary}
+            valueColor={t.colors.textPrimary}
             // L04-11: the same EWMA gloss BodyMetricsScreen already ships,
             // reused here so the "7-day trend" number is explained the same
             // way everywhere it appears. Only shown once there is a trend to explain.
@@ -2327,39 +2401,39 @@ export default function CoachOutputScreen({ navigation, route }) {
           />
           <StatChip
             icon="barbell-outline"
-            iconColor={colors.primary}
+            iconColor={t.colors.primary}
             value={`${sessionsCompleted}/${sessionsPlanned}`}
             label="sessions"
-            valueColor={colors.textPrimary}
+            valueColor={t.colors.textPrimary}
           />
           {prsThisWeek > 0 && (
             <StatChip
               icon="flash-outline"
-              iconColor={colors.warning}
+              iconColor={t.colors.warning}
               value={`${prsThisWeek} PR${prsThisWeek !== 1 ? 's' : ''}`}
-              valueColor={colors.warning}
+              valueColor={t.colors.warning}
             />
           )}
         </Reanimated.View>
 
         {canShowProgressScanCoachContext ? (
-          <View style={styles.planEditCard} accessibilityRole="summary">
-            <Text style={styles.planEditHead}>{progressScanCoachContext.title}</Text>
-            <Text style={styles.planEditBody}>
+          <View style={[styles.planEditCard, live.planEditCard]} accessibilityRole="summary">
+            <Text style={[styles.planEditHead, live.planEditHead]}>{progressScanCoachContext.title}</Text>
+            <Text style={[styles.planEditBody, live.planEditBody]}>
               {progressScanCoachContext.body}
             </Text>
             {scanAssessmentPacket ? (
               <View
-                style={styles.scanAssessmentBlock}
+                style={[styles.scanAssessmentBlock, live.scanAssessmentBlock]}
                 accessible
                 accessibilityLabel={scanAssessmentAccessibilityLabel(scanAssessmentPacket)}
               >
-                <Text style={styles.scanAssessmentHeadline}>{scanAssessmentPacket.receipt.headline}</Text>
+                <Text style={[styles.scanAssessmentHeadline, live.scanAssessmentHeadline]}>{scanAssessmentPacket.receipt.headline}</Text>
                 {scanAssessmentPacket.receipt.detail ? (
-                  <Text style={styles.scanAssessmentDetail}>{scanAssessmentPacket.receipt.detail}</Text>
+                  <Text style={[styles.scanAssessmentDetail, live.scanAssessmentDetail]}>{scanAssessmentPacket.receipt.detail}</Text>
                 ) : null}
                 {scanAssessmentUsedSentence ? (
-                  <Text style={styles.scanAssessmentDetail}>{scanAssessmentUsedSentence}</Text>
+                  <Text style={[styles.scanAssessmentDetail, live.scanAssessmentDetail]}>{scanAssessmentUsedSentence}</Text>
                 ) : null}
               </View>
             ) : null}
@@ -2367,19 +2441,21 @@ export default function CoachOutputScreen({ navigation, route }) {
         ) : null}
 
         {/* Opt-in "share your week", only on a genuinely great, ED-safe week
-            (blueprint §5/§7). Routes through the qualitative, ED-safe recap card. */}
+            (blueprint §5/§7). Routes through the qualitative, ED-safe recap card.
+            No haptic here (campaign item 1 hard exclusion: wellbeing-adjacent
+            surface -- this button routes to the weight/PR-bearing recap share). */}
         {greatWeek && (
           /* Wave A B6: a genuinely great, ED-safe week is the emotional peak
              of the loop; it no longer renders at footnote weight. Success
              tint, never amber (one-amber rule). */
           <TouchableOpacity
-            style={styles.shareWeekBtn}
+            style={[styles.shareWeekBtn, live.shareWeekBtn]}
             onPress={handleShareWeek}
             accessibilityRole="button"
             accessibilityLabel="Great week. Share it?"
           >
-            <Ionicons name="share-outline" size={15} color={colors.success} />
-            <Text style={styles.shareWeekText}>Great week. Share it?</Text>
+            <Ionicons name="share-outline" size={15} color={t.colors.success} />
+            <Text style={[styles.shareWeekText, live.shareWeekText]}>Great week. Share it?</Text>
           </TouchableOpacity>
         )}
 
@@ -2406,52 +2482,52 @@ export default function CoachOutputScreen({ navigation, route }) {
         {/* Food-level receipt: when the calorie change edited an active
             meal plan, the coach says what moved, at the gram of rice. */}
         {planEditNote ? (
-          <View style={styles.planEditCard} accessibilityRole="summary">
-            <Text style={styles.planEditHead}>{planEditNote.headline}</Text>
-            <Text style={styles.planEditBody}>{planEditNote.body}</Text>
+          <View style={[styles.planEditCard, live.planEditCard]} accessibilityRole="summary">
+            <Text style={[styles.planEditHead, live.planEditHead]}>{planEditNote.headline}</Text>
+            <Text style={[styles.planEditBody, live.planEditBody]}>{planEditNote.body}</Text>
           </View>
         ) : null}
 
         {/* Seamless next-week meal setup (founder 2026-06-15): build or repeat
             next week's meals straight from the check-in, then land on the plan
             to swap and get the shopping list. */}
-        <View style={styles.planEditCard}>
-          <Text style={styles.planEditHead}>Plan next week&apos;s meals</Text>
-          <Text style={styles.planEditBody}>
+        <View style={[styles.planEditCard, live.planEditCard]}>
+          <Text style={[styles.planEditHead, live.planEditHead]}>Plan next week&apos;s meals</Text>
+          <Text style={[styles.planEditBody, live.planEditBody]}>
             A full week built to next week&apos;s targets, with a shopping list.
             Review it, swap meals if needed, then add it to your diary.
           </Text>
           <View style={styles.nextWeekRow}>
             <TouchableOpacity
-              style={styles.planEditLink}
+              style={[styles.planEditLink, live.planEditLink]}
               onPress={() => handlePlanNextWeek(false)}
               disabled={planningWeek}
               accessibilityRole="button"
               accessibilityLabel="Plan a fresh week of meals"
             >
-              <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
-              <Text style={styles.planEditLinkText}>{planningWeek ? 'Building' : 'Fresh week'}</Text>
+              <Ionicons name="calendar-outline" size={14} color={t.colors.textSecondary} />
+              <Text style={[styles.planEditLinkText, live.planEditLinkText]}>{planningWeek ? 'Building' : 'Fresh week'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.planEditLink}
+              style={[styles.planEditLink, live.planEditLink]}
               onPress={() => handlePlanNextWeek(true)}
               disabled={planningWeek}
               accessibilityRole="button"
               accessibilityLabel="Repeat last week's meals"
             >
-              <Ionicons name="repeat-outline" size={14} color={colors.textSecondary} />
-              <Text style={styles.planEditLinkText}>Repeat last week</Text>
+              <Ionicons name="repeat-outline" size={14} color={t.colors.textSecondary} />
+              <Text style={[styles.planEditLinkText, live.planEditLinkText]}>Repeat last week</Text>
             </TouchableOpacity>
           </View>
           {planEditNote?.deepLink ? (
             <TouchableOpacity
-              style={styles.planEditLink}
+              style={[styles.planEditLink, live.planEditLink]}
               onPress={() => navigation.navigate('DiaryTab', { screen: 'MealPlan', initial: false })}
               accessibilityRole="button"
               accessibilityLabel={planEditNote.deepLink.label}
             >
-              <Ionicons name="restaurant-outline" size={14} color={colors.textSecondary} />
-              <Text style={styles.planEditLinkText}>{planEditNote.deepLink.label}</Text>
+              <Ionicons name="restaurant-outline" size={14} color={t.colors.textSecondary} />
+              <Text style={[styles.planEditLinkText, live.planEditLinkText]}>{planEditNote.deepLink.label}</Text>
             </TouchableOpacity>
           ) : null}
         </View>
@@ -2461,15 +2537,15 @@ export default function CoachOutputScreen({ navigation, route }) {
             distinguishable at a glance, same quiet register. */}
         {cardioFlag ? (
           <View style={styles.cardioNoteRow}>
-            <Ionicons name="alert-circle-outline" size={14} color={colors.warning} />
-            <Text style={styles.cardioNoteText}>{cardioFlag}</Text>
+            <Ionicons name="alert-circle-outline" size={14} color={t.colors.warning} />
+            <Text style={[styles.cardioNoteText, live.cardioNoteText]}>{cardioFlag}</Text>
           </View>
         ) : null}
         {/* D1: light acknowledgement of cardio logged outside a cut. */}
         {cardioAcknowledgement ? (
           <View style={styles.cardioNoteRow}>
-            <Ionicons name="checkmark-circle-outline" size={14} color={colors.success} />
-            <Text style={styles.cardioNoteText}>{cardioAcknowledgement}</Text>
+            <Ionicons name="checkmark-circle-outline" size={14} color={t.colors.success} />
+            <Text style={[styles.cardioNoteText, live.cardioNoteText]}>{cardioAcknowledgement}</Text>
           </View>
         ) : null}
         {/* U4: cycle-phase reassurance for a small period-week water rise
@@ -2477,8 +2553,8 @@ export default function CoachOutputScreen({ navigation, route }) {
             their period and shows a water-plausible rise). */}
         {cyclePhaseNote?.note ? (
           <View style={styles.cardioNoteRow}>
-            <Ionicons name="water-outline" size={14} color={colors.primary} />
-            <Text style={styles.cardioNoteText}>{cyclePhaseNote.note}</Text>
+            <Ionicons name="water-outline" size={14} color={t.colors.primary} />
+            <Text style={[styles.cardioNoteText, live.cardioNoteText]}>{cyclePhaseNote.note}</Text>
           </View>
         ) : null}
 
@@ -2491,7 +2567,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             (assessDataConfidence) and persists it, but it was never surfaced.
             One calm line so the user knows how solid this week's read was. */}
         {CONFIDENCE_CAPTIONS[displayConfidence] ? (
-          <Text style={styles.confidenceCaption}>
+          <Text style={[styles.confidenceCaption, live.confidenceCaption]}>
             {CONFIDENCE_CAPTIONS[displayConfidence]}
             {/* Wave A B6: name WHICH data was thin when it was the weigh-ins.
                 No threshold claim here, so this line can never disagree with
@@ -2513,9 +2589,9 @@ export default function CoachOutputScreen({ navigation, route }) {
           const focus = coachResponse.cue ?? buildFocus(output, checkin);
           if (!focus) return null;
           return (
-            <View style={styles.focusCard}>
-              <Text style={styles.focusLabel}>Focus this week</Text>
-              <Text style={styles.focusText}>{focus}</Text>
+            <View style={[styles.focusCard, live.focusCard]}>
+              <Text style={[styles.focusLabel, live.focusLabel]}>Focus this week</Text>
+              <Text style={[styles.focusText, live.focusText]}>{focus}</Text>
             </View>
           );
         })()}
@@ -2538,13 +2614,13 @@ export default function CoachOutputScreen({ navigation, route }) {
         {/* S1c pre-commitment: the specific, checkable thing next week's read
             will answer, named in advance. Sits with the forward-pull. */}
         {coachResponse.preCommitment ? (
-          <Text style={styles.preCommitmentLine}>{coachResponse.preCommitment}</Text>
+          <Text style={[styles.preCommitmentLine, live.preCommitmentLine]}>{coachResponse.preCommitment}</Text>
         ) : null}
 
         {/* Coach response part 5: the forward-pull anchor closes the response
             below the always-visible safety shelf. */}
         {coachResponse.forward ? (
-          <Text style={styles.forwardLine}>{coachResponse.forward}</Text>
+          <Text style={[styles.forwardLine, live.forwardLine]}>{coachResponse.forward}</Text>
         ) : null}
 
         {/* B4: contest countdown. Deliberately BELOW the safety shelf (rule 1:
@@ -2554,16 +2630,16 @@ export default function CoachOutputScreen({ navigation, route }) {
             Process checkpoints only; peak week adds the standard medical
             line (docs/b4-contest-countdown-ed-review-2026-07-02.md). */}
         {countdown ? (
-          <View style={styles.countdownCard} accessibilityRole="summary">
-            <Text style={styles.countdownLine}>{countdown.line}</Text>
+          <View style={[styles.countdownCard, live.countdownCard]} accessibilityRole="summary">
+            <Text style={[styles.countdownLine, live.countdownLine]}>{countdown.line}</Text>
             {countdown.checkpoint ? (
               <>
-                <Text style={styles.countdownCheckpointTitle}>{countdown.checkpoint.title}</Text>
-                <Text style={styles.countdownCheckpointDetail}>{countdown.checkpoint.detail}</Text>
+                <Text style={[styles.countdownCheckpointTitle, live.countdownCheckpointTitle]}>{countdown.checkpoint.title}</Text>
+                <Text style={[styles.countdownCheckpointDetail, live.countdownCheckpointDetail]}>{countdown.checkpoint.detail}</Text>
               </>
             ) : null}
             {countdown.isPeakWeek ? (
-              <Text style={styles.countdownDisclaimer}>
+              <Text style={[styles.countdownDisclaimer, live.countdownDisclaimer]}>
                 Volyume provides estimates and guidance, not medical advice. Consult a qualified professional before making significant changes to your diet or training.
               </Text>
             ) : null}
@@ -2584,14 +2660,14 @@ export default function CoachOutputScreen({ navigation, route }) {
           accessibilityRole="link"
           accessibilityLabel="Coaching history"
         >
-          <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-          <Text style={styles.historyQuietText}>Coaching history</Text>
+          <Ionicons name="time-outline" size={14} color={t.colors.textSecondary} />
+          <Text style={[styles.historyQuietText, live.historyQuietText]}>Coaching history</Text>
         </TouchableOpacity>
 
         {/* Done: a quiet text action (A1 one-amber rule). The hero Apply is
             the screen's only amber fill. */}
         <TouchableOpacity style={styles.doneQuietBtn} onPress={handleClose} activeOpacity={0.8} accessibilityRole="button">
-          <Text style={styles.doneQuietText}>Done</Text>
+          <Text style={[styles.doneQuietText, live.doneQuietText]}>Done</Text>
         </TouchableOpacity>
 
         {/* Founder-approved tooltips (2026-07-09): "volume" already has a
@@ -2599,22 +2675,22 @@ export default function CoachOutputScreen({ navigation, route }) {
             "Training next week"); autoregulation and RED-S were the two
             remaining dense terms in this credential line. */}
         <View style={styles.credentialNoteRow}>
-          <Text style={styles.credentialNoteInline}>
+          <Text style={[styles.credentialNoteInline, live.credentialNoteInline]}>
             Precision Coaching is built on published training science: volume landmarks,{' '}
           </Text>
           <View style={styles.credentialTermRow}>
-            <Text style={styles.credentialNoteInline}>autoregulation,</Text>
+            <Text style={[styles.credentialNoteInline, live.credentialNoteInline]}>autoregulation,</Text>
             <InfoTooltip text={GLOSSARY.autoregulation} size={12} />
           </View>
-          <Text style={styles.credentialNoteInline}> and </Text>
+          <Text style={[styles.credentialNoteInline, live.credentialNoteInline]}> and </Text>
           <View style={styles.credentialTermRow}>
-            <Text style={styles.credentialNoteInline}>RED-S</Text>
+            <Text style={[styles.credentialNoteInline, live.credentialNoteInline]}>RED-S</Text>
             <InfoTooltip text={GLOSSARY.redS} size={12} />
           </View>
-          <Text style={styles.credentialNoteInline}> safety limits, configured to your data.</Text>
+          <Text style={[styles.credentialNoteInline, live.credentialNoteInline]}> safety limits, configured to your data.</Text>
         </View>
 
-        <Text style={styles.credentialNote}>
+        <Text style={[styles.credentialNote, live.credentialNote]}>
           Volyume provides estimates and guidance, not medical advice. Consult a qualified professional before making significant changes to your diet or training.
         </Text>
       </ScrollView>
@@ -3279,3 +3355,116 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
 });
+
+// CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): the shared
+// "frozen base + live override" map for this screen's many function-component
+// scopes (AdjustmentRow, TrainingNextWeekCard, DietBreakCard, MacroCycleCard,
+// RefeedCard, HeldDecisionsCard, EdPatternLockoutBlock, EdPatternClearedBlock,
+// RapidLossCorrectedBlock, InsufficientDataView, LoadErrorView, and the
+// default-exported CoachOutputScreen) -- each calls
+// `const t = useTheme(); const live = buildLiveStyles(t);` (the default
+// export memoises this on `t` with useMemo, this screen is large and
+// re-renders often across its apply/settle state machine) and appends
+// `live.KEY` after `styles.KEY` in every style array, same pattern as
+// WorkoutSummaryScreen.js's buildLiveStyles. Extracted to one function so
+// every scope stays in step with the frozen `styles` block above and with
+// each other -- every key here mirrors only the colour/fontSize/type-bearing
+// sub-properties of the matching frozen style, at identical rest values;
+// pure layout keys (flex/gap/padding/width, no token) are correctly omitted,
+// there is nothing to unfreeze for them. This is colour/type PLUMBING ONLY:
+// it changes no logic, no copy, no render-condition ordering, including in
+// the ED-safety-adjacent blocks (held decisions, ED lockout/cleared,
+// rapid-loss-corrected), whose render logic stays byte-identical apart from
+// these style-array appends.
+function buildLiveStyles(t) {
+  return {
+    cardioNoteText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    planEditCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    planEditHead: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    planEditBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+    scanAssessmentBlock: { borderTopColor: t.colors.border },
+    scanAssessmentHeadline: { ...t.type.bodySm, color: t.colors.textPrimary },
+    scanAssessmentDetail: { ...t.type.caption, color: t.colors.textSecondary },
+    planEditLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    planEditLinkText: { ...t.type.label, color: t.colors.textPrimary },
+    safe: { backgroundColor: t.colors.background },
+    shareWeekBtn: { backgroundColor: withAlpha(t.colors.success, 0.125) },
+    shareWeekText: { ...t.type.label, color: t.colors.textPrimary },
+    insufficientTitle: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
+    insufficientBody: { ...t.type.body, color: t.colors.textSecondary },
+    receiptLabel: { ...t.type.caption, color: t.colors.textMuted },
+    receiptRowText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    receiptUnlock: { ...t.type.caption, color: t.colors.textPrimary },
+    weekLabel: { fontSize: t.fontSize.xxl, color: t.colors.primary },
+    weekRange: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    heroWhy: { ...t.type.bodySm, color: t.colors.textSecondary },
+    holdHeroCard: { backgroundColor: t.colors.surfaceElevated, borderColor: t.colors.border },
+    holdHeroText: { ...t.type.h3, color: t.colors.textPrimary },
+    coachLeadCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    coachLeadAck: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    coachLeadCommitment: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    coachLeadInterpretation: { ...t.type.body, color: t.colors.textSecondary },
+    preCommitmentLine: { ...t.type.bodySm, color: t.colors.textPrimary },
+    forwardLine: { ...t.type.bodySm, color: t.colors.textSecondary },
+    focusCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.251) },
+    focusLabel: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    focusText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    adjustmentIconWrap: { backgroundColor: t.colors.primaryBg },
+    adjustmentLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    adjustmentLabelHero: { ...t.type.h3, color: t.colors.textPrimary },
+    appliedChip: {
+      backgroundColor: t.colors.successBg ?? t.colors.surface2,
+      borderColor: withAlpha(t.colors.success ?? t.colors.primary, 0.314),
+    },
+    appliedChipText: { fontSize: t.fontSize.micro, color: t.colors.success ?? t.colors.primary },
+    adjustmentNote: { ...t.type.bodySm, color: t.colors.textSecondary },
+    adjustmentDetail: { ...t.type.bodySm, color: t.colors.textPrimary },
+    adjustmentHold: { ...t.type.bodySm, color: t.colors.textPrimary },
+    macroCycleCol: { backgroundColor: t.colors.surface2 },
+    macroCycleColLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    macroCycleColKcal: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
+    macroCycleColCarbs: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    planNote: { borderTopColor: t.colors.border },
+    planNoteText: { ...t.type.caption, color: t.colors.textMuted },
+    confidenceCaption: { ...t.type.caption, color: t.colors.textMuted },
+    heldLearnMore: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    heldLearnMoreText: { ...t.type.label, color: t.colors.textPrimary },
+    dietBreakTitle: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    dietBreakTitleHero: { ...t.type.h3, color: t.colors.textPrimary },
+    dietBreakBody: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    dietBreakFootnote: { ...t.type.caption, color: t.colors.textMuted },
+    doneBtnText: { fontSize: t.fontSize.lg },
+    doneQuietText: { ...t.type.bodyStrong, color: t.colors.textSecondary },
+    historyQuietText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    secondaryBtnText: { ...t.type.bodyStrong, color: t.colors.textMuted },
+    countdownCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    countdownLine: { ...t.type.h3, color: t.colors.textPrimary },
+    countdownCheckpointTitle: { ...t.type.bodyStrong, color: t.colors.textSecondary },
+    countdownCheckpointDetail: { ...t.type.body, color: t.colors.textSecondary },
+    countdownDisclaimer: { ...t.type.caption, color: t.colors.textMuted },
+    credentialNote: { ...t.type.caption, color: t.colors.textMuted },
+    credentialNoteInline: { ...t.type.caption, color: t.colors.textMuted },
+    edLockoutCard: { backgroundColor: t.colors.surface2, borderColor: t.colors.warning },
+    edLockoutHeader: { fontSize: t.fontSize.xs, color: t.colors.warning },
+    edLockoutTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
+    edLockoutBody: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    edLockoutReadMoreBox: { borderTopColor: t.colors.border },
+    edLockoutReadMoreText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    edLockoutCtaPrimary: { backgroundColor: t.colors.primaryFill },
+    edLockoutCtaPrimaryText: { color: t.colors.onPrimary, fontSize: t.fontSize.sm },
+    edLockoutCtaGhost: { borderColor: t.colors.border },
+    edLockoutCtaGhostText: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
+    edLockoutBottomNote: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    edClearedCard: { backgroundColor: t.colors.surface2, borderColor: t.colors.success },
+    edClearedHeader: { fontSize: t.fontSize.xs, color: t.colors.success },
+    edClearedTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
+    edClearedBody: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    heldText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    heldHistoryTitle: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    heldHistoryEntry: { borderBottomColor: t.colors.border },
+    heldHistoryDate: { ...t.type.caption, color: t.colors.textMuted },
+    heldHistoryText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    heldHistoryEmptyText: { ...t.type.caption, color: t.colors.textMuted },
+    heldSeeAllText: { fontSize: t.fontSize.sm, color: t.colors.primary },
+  };
+}

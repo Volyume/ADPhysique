@@ -29,6 +29,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { formatCheckinCountdown } from '../lib/coachLedger';
 
 // Of the ledger's three rows (weighIns, days, sessions), only these two map
@@ -42,6 +43,11 @@ import { formatCheckinCountdown } from '../lib/coachLedger';
 const RUNWAY_ROW_KEYS = new Set(['weighIns', 'sessions']);
 
 export default function CoachDailyBrief({ ledger = null }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const countdown = ledger ? formatCheckinCountdown(ledger.unlockDate) : null;
   const runwayRows = ledger?.variant === 'full'
     ? ledger.rows.filter((row) => RUNWAY_ROW_KEYS.has(row.key))
@@ -51,18 +57,18 @@ export default function CoachDailyBrief({ ledger = null }) {
   if (!showRunway) return null;
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, live.wrap]}>
       <View style={styles.runway}>
-        <Text style={styles.runwayTitle}>Since your check-in</Text>
-        {countdown ? <Text style={styles.countdown}>{countdown}</Text> : null}
+        <Text style={[styles.runwayTitle, live.runwayTitle]}>Since your check-in</Text>
+        {countdown ? <Text style={[styles.countdown, live.countdown]}>{countdown}</Text> : null}
         {runwayRows.map((row) => (
           <View key={row.key} style={styles.row}>
             <Ionicons
               name={row.done ? 'checkmark-circle' : 'ellipse-outline'}
               size={14}
-              color={row.done ? colors.success : colors.textMuted}
+              color={row.done ? t.colors.success : t.colors.textMuted}
             />
-            <Text style={[styles.rowText, row.done && styles.rowTextDone]}>{row.label}</Text>
+            <Text style={[styles.rowText, live.rowText, row.done && [styles.rowTextDone, live.rowTextDone]]}>{row.label}</Text>
           </View>
         ))}
       </View>
@@ -86,3 +92,18 @@ const styles = StyleSheet.create({
   rowText: { ...type.bodySm, color: colors.textSecondary },
   rowTextDone: { color: colors.textPrimary },
 });
+
+// CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): buildLiveStyles
+// mirrors only the colour/fontSize/type-bearing sub-properties of the frozen
+// `styles` block above, at identical rest values; pure layout keys (flex/
+// padding/gap, no token) are correctly omitted. Same pattern as
+// WorkoutSummaryScreen.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    wrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    runwayTitle: { ...t.type.caption, color: t.colors.textMuted },
+    countdown: { ...t.type.bodySm, color: t.colors.textSecondary },
+    rowText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    rowTextDone: { color: t.colors.textPrimary },
+  };
+}

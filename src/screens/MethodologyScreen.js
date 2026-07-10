@@ -22,6 +22,7 @@ import { useState, useEffect } from 'react';
 import { Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 import { track } from '../lib/engineTelemetry';
 import CollapsibleSection from '../components/CollapsibleSection';
@@ -116,6 +117,10 @@ const SOURCE_SECTION = {
 };
 
 export default function MethodologyScreen({ route }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme
+  // (src/hooks/useTheme.js). See buildLiveStyles below for why.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   // One collapsible section starts open so the page never reads as a wall of
   // closed rows; which one depends on where the reader came from.
   const initialKey = SOURCE_SECTION[route?.params?.source] ?? SECTIONS[0].key;
@@ -132,10 +137,10 @@ export default function MethodologyScreen({ route }) {
   }, []);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="How Precision Coaching works" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.intro}>{INTRO}</Text>
+        <Text style={[styles.intro, live.intro]}>{INTRO}</Text>
 
         {SECTIONS.map(s => (
           <CollapsibleSection
@@ -147,7 +152,7 @@ export default function MethodologyScreen({ route }) {
           />
         ))}
 
-        <Text style={styles.credentialNote}>
+        <Text style={[styles.credentialNote, live.credentialNote]}>
           Built on published training and sports-medicine science. Every change has
           a reason. Every non-change has a reason too.
         </Text>
@@ -168,3 +173,16 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
 });
+
+// CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): buildLiveStyles
+// mirrors only the colour/fontSize/type-bearing sub-properties of the frozen
+// `styles` block above, at identical rest values; pure layout keys (flex/
+// padding/gap, no token) are correctly omitted. Same pattern as
+// WorkoutSummaryScreen.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    intro: { ...t.type.body, color: t.colors.textPrimary },
+    credentialNote: { ...t.type.caption, color: t.colors.textMuted },
+  };
+}

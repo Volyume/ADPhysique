@@ -9,6 +9,11 @@ jest.mock('../../store/useAppStore', () => ({
 }));
 jest.mock('../../components/BackHeader', () => () => null);
 jest.mock('../../components/Skeleton', () => ({ SkeletonCard: () => null }));
+// CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): the screen
+// now imports the haptics vocabulary for its "Play block story" link, same
+// mock convention as every other screen test that renders a haptics-calling
+// screen (e.g. SettingsProfileScreen.heightDob.test.js).
+jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn() }));
 jest.mock('../../components/Button', () => {
   const { Text, TouchableOpacity } = require('react-native');
   return ({ title, onPress }) => (

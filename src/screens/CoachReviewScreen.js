@@ -8,6 +8,7 @@ import { format } from 'date-fns/format';
 import { isWithinInterval } from 'date-fns/isWithinInterval';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, fontSize, fontWeight, radius, type, withAlpha, circle, letterSpacing, alpha } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles } from '../lib/algorithms';
 import { SkeletonCard } from '../components/Skeleton';
@@ -21,13 +22,15 @@ import { navigateCrossTab } from '../navigation/navigateCrossTab';
 
 // --- Helpers -----------------------------------------------------------------
 
-function statusDotColor(status) {
+// CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): takes the
+// live colours so callers pass t.colors instead of the frozen static import.
+function statusDotColor(status, c = colors) {
   switch (status) {
-    case 'optimal': return colors.success;
-    case 'minimum': return colors.warning;
-    case 'near_mrv': return colors.warning;
-    case 'over_mrv': return colors.error;
-    default: return colors.textMuted; // below / unknown
+    case 'optimal': return c.success;
+    case 'minimum': return c.warning;
+    case 'near_mrv': return c.warning;
+    case 'over_mrv': return c.error;
+    default: return c.textMuted; // below / unknown
   }
 }
 
@@ -180,8 +183,13 @@ function SectionHeading({ title }) {
 }
 
 function VolumeRow({ muscle, data }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const { status } = getVolumeStatus(data.workingSets, muscle);
-  const dot = statusDotColor(status);
+  const dot = statusDotColor(status, t.colors);
   const label = volumeStatusLabel(status);
   const displayName = MUSCLE_DISPLAY_NAMES[muscle] || muscle;
   const sets = Math.round(data.workingSets);
@@ -189,8 +197,8 @@ function VolumeRow({ muscle, data }) {
   return (
     <View style={styles.volumeRow}>
       <View style={[styles.volumeDot, { backgroundColor: dot }]} />
-      <Text style={styles.volumeMuscleName}>{displayName}</Text>
-      <Text style={styles.volumeSetCount}>{sets} {sets === 1 ? 'set' : 'sets'}</Text>
+      <Text style={[styles.volumeMuscleName, live.volumeMuscleName]}>{displayName}</Text>
+      <Text style={[styles.volumeSetCount, live.volumeSetCount]}>{sets} {sets === 1 ? 'set' : 'sets'}</Text>
       <View style={[styles.volumeBadge, { backgroundColor: withAlpha(dot, alpha.tint) }]}>
         <Text style={[styles.volumeBadgeText, { color: dot }]}>{label}</Text>
       </View>
@@ -199,24 +207,30 @@ function VolumeRow({ muscle, data }) {
 }
 
 function InsightRow({ icon, iconColor, text, subtext }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <View style={styles.insightRow}>
-      <Ionicons name={icon} size={16} color={iconColor || colors.textSecondary} style={styles.insightIcon} />
+      <Ionicons name={icon} size={16} color={iconColor || t.colors.textSecondary} style={styles.insightIcon} />
       <View style={styles.insightTextWrap}>
-        <Text style={styles.insightText}>{text}</Text>
-        {subtext ? <Text style={styles.insightSubtext}>{subtext}</Text> : null}
+        <Text style={[styles.insightText, live.insightText]}>{text}</Text>
+        {subtext ? <Text style={[styles.insightSubtext, live.insightSubtext]}>{subtext}</Text> : null}
       </View>
     </View>
   );
 }
 
 function RecommendationRow({ index, text }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <View style={styles.recRow}>
-      <View style={styles.recIndex}>
-        <Text style={styles.recIndexText}>{index + 1}</Text>
+      <View style={[styles.recIndex, live.recIndex]}>
+        <Text style={[styles.recIndexText, live.recIndexText]}>{index + 1}</Text>
       </View>
-      <Text style={styles.recText}>{text}</Text>
+      <Text style={[styles.recText, live.recText]}>{text}</Text>
     </View>
   );
 }
@@ -225,6 +239,11 @@ function RecommendationRow({ index, text }) {
 
 export default function CoachReviewScreen() {
   const navigation = useNavigation();
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const { user } = useAppStore(useShallow(s => ({
     user: s.user,
@@ -442,7 +461,7 @@ export default function CoachReviewScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Training review" />
         <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
           <SkeletonCard height={96} />
@@ -457,7 +476,7 @@ export default function CoachReviewScreen() {
   // U-B-6: a real read failure is shown as a retryable error, never as "no sessions".
   if (loadError) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Training review" />
         <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
           <EmptyState
@@ -475,14 +494,14 @@ export default function CoachReviewScreen() {
   const hasData = weeklyWorkouts.length > 0;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Training review" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* Date range subline, relocated here now the BackHeader carries the
             page title (previously duplicated as an in-body "Training review"
             heading, drawing a double header under the native bar). */}
-        {dateLabel ? <Text style={styles.headerDate}>{dateLabel}</Text> : null}
+        {dateLabel ? <Text style={[styles.headerDate, live.headerDate]}>{dateLabel}</Text> : null}
 
         {/* -- No data state -- */}
         {!hasData && (
@@ -500,23 +519,23 @@ export default function CoachReviewScreen() {
           <>
             {/* -- Sessions this week -- */}
             <Card>
-              <Text style={styles.cardTitle}>Sessions this week</Text>
+              <Text style={[styles.cardTitle, live.cardTitle]}>Sessions this week</Text>
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{weeklyWorkouts.length}</Text>
-                  <Text style={styles.statLabel}>{weeklyWorkouts.length === 1 ? 'session' : 'sessions'}</Text>
+                  <Text style={[styles.statValue, live.statValue]}>{weeklyWorkouts.length}</Text>
+                  <Text style={[styles.statLabel, live.statLabel]}>{weeklyWorkouts.length === 1 ? 'session' : 'sessions'}</Text>
                 </View>
-                <View style={styles.statDivider} />
+                <View style={[styles.statDivider, live.statDivider]} />
                 <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{Math.round(totalSets)}</Text>
-                  <Text style={styles.statLabel}>total sets</Text>
+                  <Text style={[styles.statValue, live.statValue]}>{Math.round(totalSets)}</Text>
+                  <Text style={[styles.statLabel, live.statLabel]}>total sets</Text>
                 </View>
                 {topMuscle && (
                   <>
-                    <View style={styles.statDivider} />
+                    <View style={[styles.statDivider, live.statDivider]} />
                     <View style={styles.statItem}>
-                      <Text style={styles.statValue} numberOfLines={1}>{topMuscle}</Text>
-                      <Text style={styles.statLabel}>most trained</Text>
+                      <Text style={[styles.statValue, live.statValue]} numberOfLines={1}>{topMuscle}</Text>
+                      <Text style={[styles.statLabel, live.statLabel]}>most trained</Text>
                     </View>
                   </>
                 )}
@@ -527,7 +546,7 @@ export default function CoachReviewScreen() {
             {trainedMuscles.length > 0 && (
               <View style={styles.section}>
                 <SectionHeading title="Volume this week" />
-                <Text style={styles.sectionSubtext}>
+                <Text style={[styles.sectionSubtext, live.sectionSubtext]}>
                   How much training each muscle group received, and whether it falls within a helpful range for growth.
                 </Text>
                 <Card style={styles.cardNoPad}>
@@ -537,6 +556,7 @@ export default function CoachReviewScreen() {
                       style={[
                         styles.volumeRowWrap,
                         i < trainedMuscles.length - 1 && styles.volumeRowBorder,
+                        i < trainedMuscles.length - 1 && live.volumeRowBorder,
                       ]}
                     >
                       <VolumeRow muscle={muscle} data={data} />
@@ -551,7 +571,7 @@ export default function CoachReviewScreen() {
               <SectionHeading title="What went well" />
               {optimalMuscles.length === 0 && progressionWins.length === 0 ? (
                 <Card>
-                  <Text style={styles.emptySubText}>
+                  <Text style={[styles.emptySubText, live.emptySubText]}>
                     Keep logging sessions and patterns will show up here.
                   </Text>
                 </Card>
@@ -561,7 +581,7 @@ export default function CoachReviewScreen() {
                     <InsightRow
                       key={muscle}
                       icon="checkmark-circle-outline"
-                      iconColor={colors.success}
+                      iconColor={t.colors.success}
                       text={`${MUSCLE_DISPLAY_NAMES[muscle] || muscle} training is in a good range`}
                       subtext="Enough sets to drive progress without overdoing it."
                     />
@@ -570,7 +590,7 @@ export default function CoachReviewScreen() {
                     <InsightRow
                       key={`win-${i}`}
                       icon="trending-up-outline"
-                      iconColor={colors.primary}
+                      iconColor={t.colors.primary}
                       text={`${win.exerciseName} - ${win.detail}`}
                       subtext="Consistent small improvements are the foundation of long-term progress."
                     />
@@ -584,7 +604,7 @@ export default function CoachReviewScreen() {
               <SectionHeading title="What to watch" />
               {watchMuscles.length === 0 && !deloadResult?.deload && !jointFlag ? (
                 <Card>
-                  <Text style={styles.emptySubText}>
+                  <Text style={[styles.emptySubText, live.emptySubText]}>
                     Nothing to flag this week, your training is looking nicely balanced.
                   </Text>
                 </Card>
@@ -600,10 +620,10 @@ export default function CoachReviewScreen() {
                       ? 'alert-circle-outline'
                       : 'arrow-down-circle-outline';
                     const iconColor = isOver
-                      ? colors.error
+                      ? t.colors.error
                       : isNear
-                      ? colors.warning
-                      : colors.textMuted;
+                      ? t.colors.warning
+                      : t.colors.textMuted;
                     const text = isOver
                       ? `${MUSCLE_DISPLAY_NAMES[muscle] || muscle} - more sets than you can comfortably recover from`
                       : isNear
@@ -628,7 +648,7 @@ export default function CoachReviewScreen() {
                   {deloadResult?.deload && (
                     <InsightRow
                       icon="battery-half-outline"
-                      iconColor={colors.warning}
+                      iconColor={t.colors.warning}
                       text="Your recent training suggests a recovery week might help"
                       subtext="A lighter week every few weeks allows your nervous system and joints to reset, often leading to better performance afterwards."
                     />
@@ -637,7 +657,7 @@ export default function CoachReviewScreen() {
                   {jointFlag && (
                     <InsightRow
                       icon="medkit-outline"
-                      iconColor={colors.error}
+                      iconColor={t.colors.error}
                       text="Joint discomfort noted during sessions this week"
                       subtext="Keep an eye on this. Prioritise movement quality over load, and consider swapping to a less demanding variation if it persists."
                     />
@@ -837,3 +857,29 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
 });
+
+// CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): buildLiveStyles
+// mirrors only the colour/fontSize/type-bearing sub-properties of the frozen
+// `styles` block above, at identical rest values; pure layout keys (flex/
+// padding/gap, no token) are correctly omitted. Same pattern as
+// WorkoutSummaryScreen.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    headerDate: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    cardTitle: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    statValue: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
+    statLabel: { ...t.type.caption, color: t.colors.textSecondary },
+    statDivider: { backgroundColor: t.colors.border },
+    sectionSubtext: { ...t.type.captionTight, color: t.colors.textMuted },
+    volumeRowBorder: { borderBottomColor: t.colors.border },
+    volumeMuscleName: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    volumeSetCount: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    insightText: { ...t.type.bodySm, color: t.colors.textPrimary },
+    insightSubtext: { ...t.type.captionTight, color: t.colors.textSecondary },
+    recIndex: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
+    recIndexText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    recText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    emptySubText: { ...t.type.bodySm, color: t.colors.textMuted },
+  };
+}

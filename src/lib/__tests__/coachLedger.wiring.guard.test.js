@@ -70,16 +70,23 @@ describe('A3: CoachOutput hold renders as a full receipt', () => {
   });
 
   test('next-week meal planning actions render as contained neutral buttons', () => {
-    expect(COACH).toContain('Ionicons name="calendar-outline" size={14} color={colors.textSecondary}');
-    expect(COACH).toContain('Ionicons name="repeat-outline" size={14} color={colors.textSecondary}');
-    expect(COACH).toContain('Ionicons name="restaurant-outline" size={14} color={colors.textSecondary}');
+    // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): the JSX
+    // call sites now read the live theme (color={t.colors.textSecondary})
+    // instead of the frozen static import; the frozen `styles` block asserted
+    // below (planEditLink/planEditLinkText) is byte-identical to before, so
+    // this is a mechanical update, not a weakening.
+    expect(COACH).toContain('Ionicons name="calendar-outline" size={14} color={t.colors.textSecondary}');
+    expect(COACH).toContain('Ionicons name="repeat-outline" size={14} color={t.colors.textSecondary}');
+    expect(COACH).toContain('Ionicons name="restaurant-outline" size={14} color={t.colors.textSecondary}');
     expect(COACH).toMatch(/planEditLink: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(COACH).toContain('planEditLinkText: { ...type.label, color: colors.textPrimary }');
     expect(COACH).not.toContain('planEditLinkText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary }');
   });
 
   test('held-decision explainer renders as a contained neutral control', () => {
-    expect(COACH).toContain('Ionicons name="information-circle-outline" size={14} color={colors.textSecondary}');
+    // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): same
+    // mechanical live-theme JSX update as the meal-planning test above.
+    expect(COACH).toContain('Ionicons name="information-circle-outline" size={14} color={t.colors.textSecondary}');
     expect(COACH).toMatch(/heldLearnMore: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(COACH).toContain('heldLearnMoreText: {\n    ...type.label,\n    color: colors.textPrimary,');
     expect(COACH).not.toMatch(/heldLearnMoreText: \{[\s\S]*textDecorationLine: 'underline'/);

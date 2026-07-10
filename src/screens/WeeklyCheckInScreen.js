@@ -47,6 +47,7 @@ import { summariseWeekCardio, cardioComplianceFromLog } from '../lib/cardio/card
 import { getRollupsForRange, getPlannedDaysInRange, confirmPlannedDay } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, alpha } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder, scheduleWeeklyCoachReady, scheduleMissedCheckinFollowups } from '../lib/notifications';
 import { logError, logWarn } from '../lib/errorLog';
 import { audit } from '../lib/observability';
@@ -62,6 +63,11 @@ const DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 // --- Sub-components -----------------------------------------------------------
 
 function StepBar({ current, total }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <View style={styles.stepBar}>
       {Array.from({ length: total }, (_, i) => (
@@ -71,6 +77,9 @@ function StepBar({ current, total }) {
             styles.stepDot,
             i < current && styles.stepDotDone,
             i === current && styles.stepDotActive,
+            live.stepDot,
+            i < current && live.stepDotDone,
+            i === current && live.stepDotActive,
           ]}
         />
       ))}
@@ -79,10 +88,15 @@ function StepBar({ current, total }) {
 }
 
 function SectionLabel({ children, hint }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <View style={styles.sectionLabelWrap}>
-      <Text style={styles.sectionLabel}>{children}</Text>
-      {hint ? <Text style={styles.sectionHint}>{hint}</Text> : null}
+      <Text style={[styles.sectionLabel, live.sectionLabel]}>{children}</Text>
+      {hint ? <Text style={[styles.sectionHint, live.sectionHint]}>{hint}</Text> : null}
     </View>
   );
 }
@@ -110,6 +124,11 @@ function ChipRow({ options, selected, onSelect }) {
 }
 
 function OptionRow({ options, selected, onSelect }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <View style={styles.optionRow}>
       {options.map((opt) => {
@@ -122,7 +141,7 @@ function OptionRow({ options, selected, onSelect }) {
             onPress={() => onSelect(isSelected ? null : opt.value)}
             accessibilityLabel={opt.label}
             style={styles.optionChip}
-            labelStyle={styles.optionChipLabel}
+            labelStyle={[styles.optionChipLabel, live.optionChipLabel]}
             numberOfLines={2}
           />
         );
@@ -135,19 +154,24 @@ function OptionRow({ options, selected, onSelect }) {
 // dismissible, never blocking; "Not now" only sets component state, nothing
 // persisted, no streaks, no guilt copy.
 function ScanPromptCard({ onScan, onDismiss }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
-    <View style={styles.scanPromptCard}>
+    <View style={[styles.scanPromptCard, live.scanPromptCard]}>
       <View style={{ flex: 1, gap: spacing.xxs }}>
-        <Text style={styles.scanPromptTitle}>Add a progress scan first?</Text>
-        <Text style={styles.scanPromptBody}>
+        <Text style={[styles.scanPromptTitle, live.scanPromptTitle]}>Add a progress scan first?</Text>
+        <Text style={[styles.scanPromptBody, live.scanPromptBody]}>
           A recent scan gives this check-in extra visual context. It is optional and skipping it changes nothing.
         </Text>
         <View style={styles.scanPromptActions}>
           <TouchableOpacity onPress={onScan} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Do a scan">
-            <Text style={styles.scanPromptActionPrimary}>Do a scan</Text>
+            <Text style={[styles.scanPromptActionPrimary, live.scanPromptActionPrimary]}>Do a scan</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={onDismiss} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Not now">
-            <Text style={styles.scanPromptActionSecondary}>Not now</Text>
+            <Text style={[styles.scanPromptActionSecondary, live.scanPromptActionSecondary]}>Not now</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -167,6 +191,11 @@ const TOTAL_STEPS = 4;
 // --- Main screen --------------------------------------------------------------
 
 export default function WeeklyCheckInScreen({ navigation }) {
+  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
+  // See buildLiveStyles' header comment (defined below the frozen `styles`
+  // block) for why.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const { user, userProfile, bodyWeightUnits, energyUnit } = useAppStore(useShallow(s => ({
     user: s.user,
@@ -804,8 +833,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
   function renderStep0() {
     return (
       <>
-        <Text style={styles.stepHeading}>How are you feeling?</Text>
-        <Text style={styles.stepSubtitle}>These answers help Volyume read the week in context, not just by numbers.</Text>
+        <Text style={[styles.stepHeading, live.stepHeading]}>How are you feeling?</Text>
+        <Text style={[styles.stepSubtitle, live.stepSubtitle]}>These answers help Volyume read the week in context, not just by numbers.</Text>
 
         <View style={styles.section}>
           <SectionLabel>Energy and motivation this week</SectionLabel>
@@ -842,13 +871,13 @@ export default function WeeklyCheckInScreen({ navigation }) {
           <TextField
             containerStyle={styles.shortFieldContainer}
             fieldStyle={styles.shortField}
-            inputStyle={styles.shortFieldInput}
+            inputStyle={[styles.shortFieldInput, live.shortFieldInput]}
             value={sleepHours}
             onChangeText={setSleepHours}
             accessibilityLabel="Average sleep hours"
             keyboardType="decimal-pad"
             placeholder="7.5"
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={t.colors.textMuted}
             returnKeyType="done"
             maxLength={4}
           />
@@ -860,8 +889,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
   function renderStep1() {
     return (
       <>
-        <Text style={styles.stepHeading}>This week's data</Text>
-        <Text style={styles.stepSubtitle}>We pre-fill what we can from your logs. Correct anything that does not reflect the week.</Text>
+        <Text style={[styles.stepHeading, live.stepHeading]}>This week's data</Text>
+        <Text style={[styles.stepSubtitle, live.stepSubtitle]}>We pre-fill what we can from your logs. Correct anything that does not reflect the week.</Text>
 
         {/* Weight trend, read-only */}
         {!loading && (
@@ -872,18 +901,18 @@ export default function WeeklyCheckInScreen({ navigation }) {
               Morning weight trend
             </SectionLabel>
             {weekWeights.length > 0 ? (
-              <View style={styles.weightSummaryRow}>
-                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-                <Text style={styles.weightSummaryText}>
+              <View style={[styles.weightSummaryRow, live.weightSummaryRow]}>
+                <Ionicons name="checkmark-circle" size={16} color={t.colors.success} />
+                <Text style={[styles.weightSummaryText, live.weightSummaryText]}>
                   {weekWeights.length} {weekWeights.length === 1 ? 'day' : 'days'} logged
                   {trendKg ? ` - trend ${formatBodyWeightShort(trendKg, bwu)}` : ''}
                 </Text>
                 {!alreadyLoggedToday && (
-                  <Text style={styles.weightSummaryMissed}>Not yet today</Text>
+                  <Text style={[styles.weightSummaryMissed, live.weightSummaryMissed]}>Not yet today</Text>
                 )}
               </View>
             ) : (
-              <Text style={styles.skipNote}>
+              <Text style={[styles.skipNote, live.skipNote]}>
                 No morning weights logged this week. Log each morning from the Today tab. One reading per day makes the trend far more accurate.
               </Text>
             )}
@@ -899,16 +928,16 @@ export default function WeeklyCheckInScreen({ navigation }) {
           <View style={styles.section}>
             <SectionLabel>Progress scan</SectionLabel>
             {(scanEvidencePacket.status === 'no_scan_ever' || scanEvidencePacket.status === 'no_recent_scan') ? (
-              <Text style={styles.skipNote}>No photo set this period.</Text>
+              <Text style={[styles.skipNote, live.skipNote]}>No photo set this period.</Text>
             ) : (
               <View accessible accessibilityLabel={scanEvidenceAccessibilityLabel(scanEvidencePacket)}>
-                <Text style={styles.scanEvidenceHeadline}>{scanEvidencePacket.receipt.headline}</Text>
+                <Text style={[styles.scanEvidenceHeadline, live.scanEvidenceHeadline]}>{scanEvidencePacket.receipt.headline}</Text>
                 {scanEvidencePacket.receipt.detail ? (
-                  <Text style={styles.scanEvidenceDetail}>{scanEvidencePacket.receipt.detail}</Text>
+                  <Text style={[styles.scanEvidenceDetail, live.scanEvidenceDetail]}>{scanEvidencePacket.receipt.detail}</Text>
                 ) : null}
-                <Text style={styles.scanEvidenceDetail}>{scanEvidencePacket.receipt.usedSentence}</Text>
+                <Text style={[styles.scanEvidenceDetail, live.scanEvidenceDetail]}>{scanEvidencePacket.receipt.usedSentence}</Text>
                 {scanEvidencePacket.status === 'valid' && (
-                  <Text style={styles.scanEvidenceConfidence}>{confidenceChipLabel(scanEvidencePacket.confidenceTier)}</Text>
+                  <Text style={[styles.scanEvidenceConfidence, live.scanEvidenceConfidence]}>{confidenceChipLabel(scanEvidencePacket.confidenceTier)}</Text>
                 )}
               </View>
             )}
@@ -943,7 +972,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             <SectionLabel>Calorie target: how did you get on?</SectionLabel>
             {autoDerived.calsMeta ? (
               autoDerived.calsMeta.daysLogged > 0 ? (
-                <Text style={styles.autoDerivedNote}>
+                <Text style={[styles.autoDerivedNote, live.autoDerivedNote]}>
                   From your diary: {autoDerived.calsMeta.daysLogged} of 7 days logged,
                   averaging {formatEnergy(autoDerived.calsMeta.avgKcal, energyUnit)} {energyUnitLabel(energyUnit)} a day
                   against your {formatEnergy(autoDerived.calsMeta.target, energyUnit)} target ({
@@ -953,14 +982,14 @@ export default function WeeklyCheckInScreen({ navigation }) {
                   }). Adjust below only if your logging was off, for example you tracked in another app.
                 </Text>
               ) : (
-                <Text style={styles.autoDerivedNote}>
+                <Text style={[styles.autoDerivedNote, live.autoDerivedNote]}>
                   No food logged in your diary this week. If you tracked elsewhere, set it below.
                 </Text>
               )
             ) : null}
             {unconfirmedPlannedDays.length > 0 ? (
-              <View style={styles.plannedBackstop}>
-                <Text style={styles.plannedBackstopText}>
+              <View style={[styles.plannedBackstop, live.plannedBackstop]}>
+                <Text style={[styles.plannedBackstopText, live.plannedBackstopText]}>
                   You had a meal plan on {unconfirmedPlannedDays.length} {unconfirmedPlannedDays.length === 1 ? 'day' : 'days'} this
                   week but didn't confirm eating {unconfirmedPlannedDays.length === 1 ? 'it' : 'them'}, so {unconfirmedPlannedDays.length === 1 ? "it isn't" : "they aren't"} counted
                   above. If you stuck to your plan, confirm so it counts.
@@ -969,7 +998,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
                   title={confirmingPlanned ? 'Confirming' : 'I ate as planned'}
                   size="sm"
                   style={styles.plannedBackstopBtn}
-                  textStyle={styles.plannedBackstopBtnText}
+                  textStyle={[styles.plannedBackstopBtnText, live.plannedBackstopBtnText]}
                   onPress={handleConfirmPlannedWeek}
                   disabled={confirmingPlanned}
                   loading={confirmingPlanned}
@@ -991,7 +1020,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           <View style={styles.section}>
             <SectionLabel>Calorie target</SectionLabel>
             <TouchableOpacity onPress={() => navigation.navigate('NutritionTargets')} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Set up nutrition targets">
-              <Text style={styles.skipNoteTappable}>
+              <Text style={[styles.skipNoteTappable, live.skipNoteTappable]}>
                 Nutrition targets not set. Tap to set them up and turn on calorie coaching.
               </Text>
             </TouchableOpacity>
@@ -1005,7 +1034,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             {/* A7 provenance: the pre-selected answer names its source, matching
                 the diary and logged-sessions notes above. */}
             {cardioMeta ? (
-              <Text style={styles.autoDerivedNote}>
+              <Text style={[styles.autoDerivedNote, live.autoDerivedNote]}>
                 {cardioMeta.sessions > 0 && cardioMeta.targetSessions > 0
                   ? `From your cardio log: ${cardioMeta.sessions} of ${cardioMeta.targetSessions} prescribed session${cardioMeta.targetSessions === 1 ? '' : 's'} this week. Adjust below only if you did cardio that isn't logged here.`
                   : cardioMeta.sessions > 0
@@ -1031,8 +1060,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
   function renderStep2() {
     return (
       <>
-        <Text style={styles.stepHeading}>Recovery and issues</Text>
-        <Text style={styles.stepSubtitle}>Helps the coach decide whether to hold, push, or ease off training.</Text>
+        <Text style={[styles.stepHeading, live.stepHeading]}>Recovery and issues</Text>
+        <Text style={[styles.stepSubtitle, live.stepSubtitle]}>Helps the coach decide whether to hold, push, or ease off training.</Text>
 
         <View style={styles.section}>
           <SectionLabel>Overall muscle soreness this week</SectionLabel>
@@ -1100,12 +1129,12 @@ export default function WeeklyCheckInScreen({ navigation }) {
             multiline
             accessibilityLabel="Anything else to flag?"
             placeholder="Anything Volyume should take into account this week..."
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={t.colors.textMuted}
             maxLength={280}
             textAlignVertical="top"
             returnKeyType="default"
           />
-          <Text style={styles.charCount}>{notes.length}/280</Text>
+          <Text style={[styles.charCount, live.charCount]}>{notes.length}/280</Text>
         </View>
       </>
     );
@@ -1114,8 +1143,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
   function renderStep3() {
     return (
       <>
-        <Text style={styles.stepHeading}>Training performance</Text>
-        <Text style={styles.stepSubtitle}>
+        <Text style={[styles.stepHeading, live.stepHeading]}>Training performance</Text>
+        <Text style={[styles.stepSubtitle, live.stepSubtitle]}>
           {autoDerived.trainingPerformance
             ? 'Pre-filled from your logged sessions. Tap a different option if it feels wrong.'
             : 'How did your sessions go compared to what you expected?'}
@@ -1124,7 +1153,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         <View style={styles.section}>
           <SectionLabel>This week's training felt like</SectionLabel>
           {autoDerived.trainingMeta && autoDerived.trainingMeta.completed > 0 ? (
-            <Text style={styles.autoDerivedNote}>
+            <Text style={[styles.autoDerivedNote, live.autoDerivedNote]}>
               From your logged sessions: {autoDerived.trainingMeta.completed} session{autoDerived.trainingMeta.completed === 1 ? '' : 's'} this
               week, {autoDerived.trainingMeta.prs} PR{autoDerived.trainingMeta.prs === 1 ? '' : 's'}
               {autoDerived.trainingMeta.volDeltaPct != null
@@ -1138,7 +1167,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               Tap an option to change it.
             </Text>
           ) : (
-            <Text style={styles.autoDerivedNote}>
+            <Text style={[styles.autoDerivedNote, live.autoDerivedNote]}>
               No sessions logged in the app this week. Pick how training went below.
             </Text>
           )}
@@ -1153,7 +1182,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               return (
                 <TouchableOpacity
                   key={opt.value}
-                  style={[styles.perfCard, isSelected && styles.perfCardSelected]}
+                  style={[styles.perfCard, isSelected && styles.perfCardSelected, live.perfCard, isSelected && live.perfCardSelected]}
                   onPress={() => setTrainingPerformance(isSelected ? null : opt.value)}
                   activeOpacity={0.75}
                   accessibilityRole="button"
@@ -1163,9 +1192,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
                   <Ionicons
                     name={opt.icon}
                     size={22}
-                    color={isSelected ? colors.primary : colors.textSecondary}
+                    color={isSelected ? t.colors.primary : t.colors.textSecondary}
                   />
-                  <Text style={[styles.perfCardText, isSelected && styles.perfCardTextSelected]}>
+                  <Text style={[styles.perfCardText, isSelected && styles.perfCardTextSelected, live.perfCardText, isSelected && live.perfCardTextSelected]}>
                     {opt.label}
                   </Text>
                 </TouchableOpacity>
@@ -1225,24 +1254,24 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
     return (
       <>
-        <Text style={styles.stepHeading}>Quick check-in</Text>
-        <Text style={styles.stepSubtitle}>
+        <Text style={[styles.stepHeading, live.stepHeading]}>Quick check-in</Text>
+        <Text style={[styles.stepSubtitle, live.stepSubtitle]}>
           Volyume has read your week from your logs. Confirm energy and recovery, then submit.
         </Text>
 
-        <View style={styles.fastSummaryCard}>
+        <View style={[styles.fastSummaryCard, live.fastSummaryCard]}>
           {summaryRows.map(row => (
             <View key={row.key} style={styles.fastSummaryRow}>
-              <Ionicons name={row.icon} size={16} color={colors.textSecondary} style={styles.fastSummaryIcon} />
-              <Text style={styles.fastSummaryLabel}>{row.label}</Text>
-              <Text style={styles.fastSummaryValue} numberOfLines={1}>{row.value}</Text>
-              <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+              <Ionicons name={row.icon} size={16} color={t.colors.textSecondary} style={styles.fastSummaryIcon} />
+              <Text style={[styles.fastSummaryLabel, live.fastSummaryLabel]}>{row.label}</Text>
+              <Text style={[styles.fastSummaryValue, live.fastSummaryValue]} numberOfLines={1}>{row.value}</Text>
+              <Ionicons name="checkmark-circle" size={16} color={t.colors.success} />
             </View>
           ))}
           {/* Wave A B6: the fastest path was the least transparent, one
               muted provenance line so the confirm-not-recall promise is
               visibly grounded in the user's own logs. */}
-          <Text style={styles.fastSummaryProvenance}>
+          <Text style={[styles.fastSummaryProvenance, live.fastSummaryProvenance]}>
             {[
               autoDerived.trainingMeta
                 ? `From your logged sessions: ${autoDerived.trainingMeta.completed} of ${autoDerived.trainingMeta.planned}`
@@ -1290,7 +1319,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // --- Gate screens ----------------------------------------------------------
   if (loading || gateState === 'loading') {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
           <SkeletonCard height={72} />
           <SkeletonCard height={160} />
@@ -1303,25 +1332,25 @@ export default function WeeklyCheckInScreen({ navigation }) {
   if (gateState === 'wrong_day') {
     const dayName = DAYS_FULL[checkinDayNum];
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         {/* Header bar matches the rest of the app: single chevron back,
             screen title in line. Empty card style below mirrors the
             BodyMetrics empty state for visual consistency. */}
         <View style={styles.gateHeader}>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
-            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+            <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.gateHeaderTitle}>Weekly check-in</Text>
+          <Text style={[styles.gateHeaderTitle, live.gateHeaderTitle]}>Weekly check-in</Text>
           <View style={{ width: 24 }} />
         </View>
         <ScrollView contentContainerStyle={styles.gateScroll}>
-          <View style={styles.gateCard}>
-            <Ionicons name="calendar-outline" size={40} color={colors.surface3} />
-            <Text style={styles.gateTitle}>Come back on {dayName}</Text>
-            <Text style={styles.gateBody}>
+          <View style={[styles.gateCard, live.gateCard]}>
+            <Ionicons name="calendar-outline" size={40} color={t.colors.surface3} />
+            <Text style={[styles.gateTitle, live.gateTitle]}>Come back on {dayName}</Text>
+            <Text style={[styles.gateBody, live.gateBody]}>
               Your check-in day is {dayName}. Coaching runs on a weekly rhythm tied to that day, so the numbers compare like for like each time.
             </Text>
-            <Text style={styles.gateBody}>
+            <Text style={[styles.gateBody, live.gateBody]}>
               You can change the day in your coaching reminder settings. In the meantime, log your weight each morning from the Today tab. Every reading makes the trend more accurate.
             </Text>
           </View>
@@ -1332,10 +1361,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
             accessibilityRole="button"
             accessibilityLabel="Change check-in day"
           >
-            <Text style={styles.gateDeferBtnText}>Change check-in day</Text>
+            <Text style={[styles.gateDeferBtnText, live.gateDeferBtnText]}>Change check-in day</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85} accessibilityRole="button">
-            <Text style={styles.gateBtnText}>Got it</Text>
+          <TouchableOpacity style={[styles.gateBtn, live.gateBtn]} onPress={() => navigation.goBack()} activeOpacity={0.85} accessibilityRole="button">
+            <Text style={[styles.gateBtnText, live.gateBtnText]}>Got it</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
@@ -1348,30 +1377,30 @@ export default function WeeklyCheckInScreen({ navigation }) {
   if (gateState === 'day_late') {
     const dayName = DAYS_FULL[checkinDayNum];
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <View style={styles.gateHeader}>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
-            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+            <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.gateHeaderTitle}>Weekly check-in</Text>
+          <Text style={[styles.gateHeaderTitle, live.gateHeaderTitle]}>Weekly check-in</Text>
           <View style={{ width: 24 }} />
         </View>
         <ScrollView contentContainerStyle={styles.gateScroll}>
-          <View style={styles.gateCard}>
-            <Ionicons name="calendar-outline" size={40} color={colors.surface3} />
-            <Text style={styles.gateTitle}>Your check-in day was {dayName}</Text>
-            <Text style={styles.gateBody}>
+          <View style={[styles.gateCard, live.gateCard]}>
+            <Ionicons name="calendar-outline" size={40} color={t.colors.surface3} />
+            <Text style={[styles.gateTitle, live.gateTitle]}>Your check-in day was {dayName}</Text>
+            <Text style={[styles.gateBody, live.gateBody]}>
               You&apos;re one day late, so the week you missed can still be reviewed. If travel or illness pushed you off your day, check in now rather than lose the week.
             </Text>
-            <Text style={styles.gateBody}>
+            <Text style={[styles.gateBody, live.gateBody]}>
               A day&apos;s delay makes the read slightly less accurate than checking in on {dayName}. Your next check-in lands back on {dayName} as normal.
             </Text>
           </View>
-          <TouchableOpacity style={styles.gateBtn} onPress={() => setGateState('open')} activeOpacity={0.85} accessibilityRole="button">
-            <Text style={styles.gateBtnText}>Check in anyway</Text>
+          <TouchableOpacity style={[styles.gateBtn, live.gateBtn]} onPress={() => setGateState('open')} activeOpacity={0.85} accessibilityRole="button">
+            <Text style={[styles.gateBtnText, live.gateBtnText]}>Check in anyway</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.gateDeferBtn} onPress={() => navigation.goBack()} activeOpacity={0.75} accessibilityRole="button">
-            <Text style={styles.gateDeferBtnText}>Wait for {dayName}</Text>
+            <Text style={[styles.gateDeferBtnText, live.gateDeferBtnText]}>Wait for {dayName}</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
@@ -1384,32 +1413,32 @@ export default function WeeklyCheckInScreen({ navigation }) {
       ? firstCheckinLabel
       : `your next ${scheduledDayName}`;
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <View style={styles.gateHeader}>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
-            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+            <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
           </TouchableOpacity>
         </View>
         <ScrollView contentContainerStyle={styles.gateCenterScroll}>
-          <View style={styles.gateIconWrap}>
-            <Ionicons name="time-outline" size={32} color={colors.primary} />
+          <View style={[styles.gateIconWrap, live.gateIconWrap]}>
+            <Ionicons name="time-outline" size={32} color={t.colors.primary} />
           </View>
-          <Text style={styles.gateTitle}>First check-in needs more data</Text>
+          <Text style={[styles.gateTitle, live.gateTitle]}>First check-in needs more data</Text>
           {hasStartedBaseline ? (
-            <Text style={styles.gateBody}>
+            <Text style={[styles.gateBody, live.gateBody]}>
               Your coach needs at least {FIRST_CHECKIN_MIN_DAYS} days of data before the first weekly check-in. Right now there {daysToWait === 1 ? 'is 1 day' : `are ${daysToWait} days`} of baseline data left.
               {'\n\n'}
               Volyume waits for your next {scheduledDayName} after that baseline is ready, so each check-in compares like for like. Keep logging your morning weight each day, and food if you use Eat. Your first check-in opens on {safeFirstCheckinLabel}.
             </Text>
           ) : (
-            <Text style={styles.gateBody}>
+            <Text style={[styles.gateBody, live.gateBody]}>
               Your coach needs at least {FIRST_CHECKIN_MIN_DAYS} days of data before the first weekly check-in.
               {'\n\n'}
               Log your first morning weight from the Today tab to start the baseline. Once the baseline is ready, your first check-in opens on your scheduled day: {scheduledDayName}.
             </Text>
           )}
-          <TouchableOpacity style={styles.gateBtn} onPress={() => navigation.goBack()} activeOpacity={0.85} accessibilityRole="button">
-            <Text style={styles.gateBtnText}>Got it</Text>
+          <TouchableOpacity style={[styles.gateBtn, live.gateBtn]} onPress={() => navigation.goBack()} activeOpacity={0.85} accessibilityRole="button">
+            <Text style={[styles.gateBtnText, live.gateBtnText]}>Got it</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
@@ -1420,18 +1449,18 @@ export default function WeeklyCheckInScreen({ navigation }) {
     const dayName = DAYS_FULL[checkinDayNum];
     const remaining = MIN_WEIGH_INS - weighInsThisWeek;
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <View style={styles.gateHeader}>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
-            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+            <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
           </TouchableOpacity>
         </View>
         <ScrollView contentContainerStyle={styles.gateCenterScroll}>
-          <View style={styles.gateIconWrap}>
-            <Ionicons name="scale-outline" size={32} color={colors.warning} />
+          <View style={[styles.gateIconWrap, live.gateIconWrap]}>
+            <Ionicons name="scale-outline" size={32} color={t.colors.warning} />
           </View>
-          <Text style={styles.gateTitle}>A few more weight readings needed</Text>
-          <Text style={styles.gateBody}>
+          <Text style={[styles.gateTitle, live.gateTitle]}>A few more weight readings needed</Text>
+          <Text style={[styles.gateBody, live.gateBody]}>
             You've logged {weighInsThisWeek} {weighInsThisWeek === 1 ? 'reading' : 'readings'} this week. Your coach needs at least {MIN_WEIGH_INS} to calculate a reliable trend.
             {'\n\n'}
             Body weight shifts naturally each day due to fluid, food, and hormones. Logging every other day gives enough readings to smooth out that noise and see what's actually changing. With fewer readings, the coaching adjustments won't be as accurate.
@@ -1445,15 +1474,15 @@ export default function WeeklyCheckInScreen({ navigation }) {
               route via the parent tab navigator. The fresh param value means
               a repeat visit re-opens the input. */}
           <TouchableOpacity
-            style={styles.gateBtn}
+            style={[styles.gateBtn, live.gateBtn]}
             onPress={() => navigateCrossTab(navigation, 'HomeTab', 'Home', { openWeightLog: Date.now() })}
             activeOpacity={0.85}
             accessibilityRole="button"
           >
-            <Text style={styles.gateBtnText}>Log my weight first</Text>
+            <Text style={[styles.gateBtnText, live.gateBtnText]}>Log my weight first</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.gateDeferBtn} onPress={() => setGateState('open')} activeOpacity={0.75} accessibilityRole="button">
-            <Text style={styles.gateDeferBtnText}>Check in anyway</Text>
+            <Text style={[styles.gateDeferBtnText, live.gateDeferBtnText]}>Check in anyway</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
@@ -1462,27 +1491,27 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   if (gateState === 'load_error') {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <View style={styles.gateHeader}>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
-            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+            <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
           </TouchableOpacity>
         </View>
         <ScrollView contentContainerStyle={styles.gateCenterScroll}>
-          <View style={styles.gateIconWrap}>
-            <Ionicons name="cloud-offline-outline" size={32} color={colors.warning} />
+          <View style={[styles.gateIconWrap, live.gateIconWrap]}>
+            <Ionicons name="cloud-offline-outline" size={32} color={t.colors.warning} />
           </View>
-          <Text style={styles.gateTitle}>Couldn't load your week</Text>
-          <Text style={styles.gateBody}>
+          <Text style={[styles.gateTitle, live.gateTitle]}>Couldn't load your week</Text>
+          <Text style={[styles.gateBody, live.gateBody]}>
             We couldn't read this week's data, so the check-in is held to keep the coaching accurate.
           </Text>
           <TouchableOpacity
-            style={styles.gateBtn}
+            style={[styles.gateBtn, live.gateBtn]}
             onPress={() => { setLoading(true); setGateState('loading'); setReloadKey(k => k + 1); }}
             activeOpacity={0.85}
             accessibilityRole="button"
           >
-            <Text style={styles.gateBtnText}>Try again</Text>
+            <Text style={[styles.gateBtnText, live.gateBtnText]}>Try again</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
@@ -1496,9 +1525,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const checkinDayLabel = 'Weekly check-in';
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       {/* Header */}
-      <View style={styles.headerBar}>
+      <View style={[styles.headerBar, live.headerBar]}>
         <TouchableOpacity
           onPress={() => (!fastEligible && step > 0) ? setStep(s => s - 1) : navigation.goBack()}
           style={styles.backBtn}
@@ -1512,16 +1541,16 @@ export default function WeeklyCheckInScreen({ navigation }) {
           disabled={busy || submitSuccess}
           accessibilityState={{ disabled: busy || submitSuccess }}
         >
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+          <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
         </TouchableOpacity>
         <View
           style={styles.headerCenter}
           accessible
           accessibilityLabel={fastEligible ? `${checkinDayLabel}, quick check-in` : `${checkinDayLabel}, step ${step + 1} of ${TOTAL_STEPS}`}
         >
-          <Text style={styles.headerTitle}>{checkinDayLabel}</Text>
+          <Text style={[styles.headerTitle, live.headerTitle]}>{checkinDayLabel}</Text>
           {fastEligible
-            ? <Text style={styles.headerQuickTag}>Quick check-in</Text>
+            ? <Text style={[styles.headerQuickTag, live.headerQuickTag]}>Quick check-in</Text>
             : <StepBar current={step} total={TOTAL_STEPS} />}
         </View>
         <View style={styles.headerSpacer} />
@@ -1551,18 +1580,18 @@ export default function WeeklyCheckInScreen({ navigation }) {
           {/* Ritual intro, only on the wizard's first step */}
           {!fastEligible && step === 0 && (
             <View style={styles.ritualIntro}>
-              <Text style={styles.ritualIntroTitle}>{checkinDayLabel}</Text>
-              <Text style={styles.ritualIntroSub}>Four short sections. Volyume combines them with your logs, then shows the weekly coaching decision straight away.</Text>
+              <Text style={[styles.ritualIntroTitle, live.ritualIntroTitle]}>{checkinDayLabel}</Text>
+              <Text style={[styles.ritualIntroSub, live.ritualIntroSub]}>Four short sections. Volyume combines them with your logs, then shows the weekly coaching decision straight away.</Text>
             </View>
           )}
 
           {/* Week label */}
-          <Text style={styles.weekLabel}>{weekLabel}</Text>
+          <Text style={[styles.weekLabel, live.weekLabel]}>{weekLabel}</Text>
 
           {alreadyCheckedIn && (fastEligible || step === 0) && (
-            <View style={styles.alreadyInRow}>
-              <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-              <Text style={styles.alreadyInText}>
+            <View style={[styles.alreadyInRow, live.alreadyInRow]}>
+              <Ionicons name="checkmark-circle" size={16} color={t.colors.success} />
+              <Text style={[styles.alreadyInText, live.alreadyInText]}>
                 You've checked in this week. Your answers are loaded, edit and resubmit to update.
               </Text>
             </View>
@@ -1587,19 +1616,19 @@ export default function WeeklyCheckInScreen({ navigation }) {
                 disabled={!fastCanSubmit}
                 state={submitSuccess ? 'success' : busy ? 'loading' : 'idle'}
                 onSettled={handleSubmitSettled}
-                style={[styles.ctaBtn, !fastCanSubmit && styles.ctaBtnDisabled]}
-                textStyle={[styles.ctaBtnText, !fastCanSubmit && styles.ctaBtnTextDisabled]}
+                style={[styles.ctaBtn, !fastCanSubmit && styles.ctaBtnDisabled, live.ctaBtn, !fastCanSubmit && live.ctaBtnDisabled]}
+                textStyle={[styles.ctaBtnText, !fastCanSubmit && styles.ctaBtnTextDisabled, live.ctaBtnText, !fastCanSubmit && live.ctaBtnTextDisabled]}
               />
             ) : step < TOTAL_STEPS - 1 ? (
               <Button
                 title="Next"
                 trailingIcon="arrow-forward"
-                style={[styles.ctaBtn, !stepCanAdvance(step) && styles.ctaBtnDisabled]}
+                style={[styles.ctaBtn, !stepCanAdvance(step) && styles.ctaBtnDisabled, live.ctaBtn, !stepCanAdvance(step) && live.ctaBtnDisabled]}
                 onPress={() => setStep(s => s + 1)}
                 disabled={!stepCanAdvance(step)}
                 accessibilityState={{ disabled: !stepCanAdvance(step) }}
                 accessibilityLabel="Next"
-                textStyle={[styles.ctaBtnText, !stepCanAdvance(step) && styles.ctaBtnTextDisabled]}
+                textStyle={[styles.ctaBtnText, !stepCanAdvance(step) && styles.ctaBtnTextDisabled, live.ctaBtnText, !stepCanAdvance(step) && live.ctaBtnTextDisabled]}
               />
             ) : (
               <Button
@@ -1608,8 +1637,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
                 disabled={!stepCanAdvance(step)}
                 state={submitSuccess ? 'success' : busy ? 'loading' : 'idle'}
                 onSettled={handleSubmitSettled}
-                style={[styles.ctaBtn, !stepCanAdvance(step) && styles.ctaBtnDisabled]}
-                textStyle={[styles.ctaBtnText, !stepCanAdvance(step) && styles.ctaBtnTextDisabled]}
+                style={[styles.ctaBtn, !stepCanAdvance(step) && styles.ctaBtnDisabled, live.ctaBtn, !stepCanAdvance(step) && live.ctaBtnDisabled]}
+                textStyle={[styles.ctaBtnText, !stepCanAdvance(step) && styles.ctaBtnTextDisabled, live.ctaBtnText, !stepCanAdvance(step) && live.ctaBtnTextDisabled]}
               />
             )}
           </View>
@@ -1617,7 +1646,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           {/* COMP-008: escape from the fast card into the full wizard. */}
           {fastEligible && (
             <TouchableOpacity
-              style={styles.fastExpandBtn}
+              style={[styles.fastExpandBtn, live.fastExpandBtn]}
               onPress={() => { setForceFullWizard(true); setStep(0); }}
               activeOpacity={0.7}
               accessibilityRole="button"
@@ -1627,17 +1656,17 @@ export default function WeeklyCheckInScreen({ navigation }) {
               disabled={busy || submitSuccess}
               accessibilityState={{ disabled: busy || submitSuccess }}
             >
-              <Ionicons name="create-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.fastExpandText}>Add more detail</Text>
+              <Ionicons name="create-outline" size={16} color={t.colors.textSecondary} />
+              <Text style={[styles.fastExpandText, live.fastExpandText]}>Add more detail</Text>
             </TouchableOpacity>
           )}
 
           {fastEligible && !fastCanSubmit && (
-            <Text style={styles.ctaHint}>Rate your energy and soreness to continue.</Text>
+            <Text style={[styles.ctaHint, live.ctaHint]}>Rate your energy and soreness to continue.</Text>
           )}
 
           {!fastEligible && !stepCanAdvance(step) && step !== 1 && (
-            <Text style={styles.ctaHint}>
+            <Text style={[styles.ctaHint, live.ctaHint]}>
               {step === 0 ? 'Rate your energy to continue.' : step === 2 ? 'Rate your soreness to continue.' : 'Pick how training felt to continue.'}
             </Text>
           )}
@@ -1991,3 +2020,81 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+// CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): buildLiveStyles
+// is the shared "frozen base + live override" map for this screen's function-
+// component scopes (StepBar, SectionLabel, OptionRow, ScanPromptCard,
+// WeeklyCheckInScreen) -- each calls `const t = useTheme(); const live =
+// buildLiveStyles(t);` and appends `live.KEY` after `styles.KEY` in every
+// style array, same pattern as WorkoutSummaryScreen.js's buildLiveStyles.
+// Extracted to one function so the scopes can never drift out of step with
+// each other or with the frozen `styles` block above -- every key here
+// mirrors only the colour/fontSize/type-bearing sub-properties of the
+// matching frozen style, at identical rest values; pure layout keys (flex/
+// gap/padding/width, no token) are correctly omitted, there is nothing to
+// unfreeze for them. ChipRow has no colour/fontSize/type tokens at all in
+// its own styles, so it stays untouched -- there is nothing for it to
+// unfreeze.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    gateHeaderTitle: { ...t.type.title, color: t.colors.textPrimary },
+    gateIconWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    gateCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    gateTitle: { ...t.type.title, color: t.colors.textSecondary },
+    gateBody: { ...t.type.bodySm, color: t.colors.textMuted },
+    gateBtn: { backgroundColor: t.colors.primaryFill },
+    gateBtnText: { fontSize: t.fontSize.md, color: t.colors.onPrimary },
+    gateDeferBtnText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    headerBar: { borderBottomColor: t.colors.border, backgroundColor: t.colors.background },
+    headerTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    stepDot: { backgroundColor: t.colors.surface3 },
+    stepDotDone: { backgroundColor: withAlpha(t.colors.primary, alpha.strong) },
+    stepDotActive: { backgroundColor: t.colors.primary },
+    weekLabel: { ...t.type.label, color: t.colors.primary },
+    alreadyInRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    alreadyInText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    stepHeading: { ...t.type.h3, color: t.colors.textPrimary },
+    stepSubtitle: { ...t.type.bodySm, color: t.colors.textSecondary },
+    sectionLabel: { ...t.type.label, color: t.colors.textSecondary },
+    sectionHint: { ...t.type.caption, color: t.colors.textMuted },
+    optionChipLabel: { ...t.type.label },
+    weightSummaryRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    weightSummaryText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    weightSummaryMissed: { ...t.type.caption, color: t.colors.textMuted },
+    skipNote: { ...t.type.bodySm, color: t.colors.textMuted, backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    skipNoteTappable: { fontSize: t.fontSize.sm, color: t.colors.primary, backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    scanEvidenceHeadline: { ...t.type.bodySm, color: t.colors.textPrimary },
+    scanEvidenceDetail: { ...t.type.caption, color: t.colors.textSecondary },
+    scanEvidenceConfidence: { ...t.type.caption, color: t.colors.textMuted },
+    scanPromptCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    scanPromptTitle: { ...t.type.label, color: t.colors.textPrimary },
+    scanPromptBody: { ...t.type.captionTight, color: t.colors.textSecondary },
+    scanPromptActionPrimary: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    scanPromptActionSecondary: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    autoDerivedNote: { ...t.type.caption, color: t.colors.textSecondary },
+    plannedBackstop: { backgroundColor: t.colors.surface2, borderColor: t.colors.primary },
+    plannedBackstopText: { ...t.type.caption, color: t.colors.textPrimary },
+    plannedBackstopBtnText: { fontSize: t.fontSize.sm },
+    shortFieldInput: { fontSize: t.fontSize.lg },
+    charCount: { ...t.type.num('caption'), color: t.colors.textMuted },
+    perfCard: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    perfCardSelected: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    perfCardText: { ...t.type.label, color: t.colors.textSecondary },
+    perfCardTextSelected: { color: t.colors.primary },
+    ctaBtn: { backgroundColor: t.colors.primaryFill },
+    ctaBtnDisabled: { backgroundColor: t.colors.surface3 },
+    ctaBtnText: { fontSize: t.fontSize.md, color: t.colors.onPrimary },
+    ctaBtnTextDisabled: { color: t.colors.textMuted },
+    ctaHint: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    headerQuickTag: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    fastSummaryCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    fastSummaryLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    fastSummaryValue: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    fastSummaryProvenance: { ...t.type.caption, color: t.colors.textMuted },
+    fastExpandBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    fastExpandText: { ...t.type.label, color: t.colors.textPrimary },
+    ritualIntroTitle: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
+    ritualIntroSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+  };
+}
