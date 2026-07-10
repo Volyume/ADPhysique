@@ -149,3 +149,25 @@ export function buildExerciseMetricSeries(sets, exerciseTypeById = null) {
   }
   return out;
 }
+
+// Item 10 (campaign 2026-07-10, CP-5 residue): which points in a session
+// series earned a personal best, for LiftProgressScreen's row sparkline
+// marker (Sparkline's new highlightIndices, same gold ring-and-dot idiom
+// ExerciseDetail's chart already uses). A point is a PR when it strictly
+// beats the running max of every point before it. Mirrors
+// ExerciseDetailScreen's derivePRSessionDates rule that the very first point
+// "beats" an empty history but is a first-lift acknowledgement, not a
+// record: index 0 is never marked. Pure, oldest -> newest, and metric-
+// agnostic (works for the e1rm/heaviest/reps/volume series alike), so it can
+// be applied to whichever lens the row is currently showing. Non-finite
+// entries are skipped rather than resetting the running max.
+export function derivePRIndices(series) {
+  const indices = [];
+  let runningMax = null;
+  (series || []).forEach((v, i) => {
+    if (!Number.isFinite(v)) return;
+    if (runningMax != null && v > runningMax) indices.push(i);
+    if (runningMax == null || v > runningMax) runningMax = v;
+  });
+  return indices;
+}

@@ -18,7 +18,7 @@ import SearchBar from '../components/SearchBar';
 import EmptyState from '../components/EmptyState';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
-import { buildLiftProgressRows, buildExerciseMetricSeries } from '../lib/liftProgress';
+import { buildLiftProgressRows, buildExerciseMetricSeries, derivePRIndices } from '../lib/liftProgress';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getStrengthLevel, summariseStrengthStanding } from '../lib/strengthStandards';
 import { kgToLbs } from '../lib/units';
@@ -62,6 +62,19 @@ const METRICS = [
   { key: 'reps', label: 'Total reps' },
   { key: 'volume', label: 'Volume' },
 ];
+
+// Item 7 (campaign 2026-07-10): the row's headline numeral used to stay
+// e1RM-based even when a non-default metric lens was selected, so a
+// volume-shaped sparkline sat under an "est. max" label. Each entry names
+// the headline label for its lens and whether the value is a weight in the
+// display unit (kg/lbs suffix) or a bare count, mirroring ExerciseDetail's
+// WEIGHT_METRICS split.
+const METRIC_HEADLINE = {
+  e1rm: { label: 'est. max', isWeight: true },
+  heaviest: { label: 'heaviest', isWeight: true },
+  reps: { label: 'most reps', isWeight: false },
+  volume: { label: 'best volume', isWeight: false },
+};
 
 export default function LiftProgressScreen({ navigation }) {
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
@@ -358,9 +371,22 @@ export default function LiftProgressScreen({ navigation }) {
           // default best-set trend already on the row; the other lenses come
           // from the recomputed per-exercise series. Falls back to the row's
           // own trend so a row never renders blank.
+          const nonE1rmSeries = metric === 'e1rm' ? null : metricSeries.get(item.exerciseId)?.[metric];
+          const hasNonE1rmSeries = Array.isArray(nonE1rmSeries) && nonE1rmSeries.length > 0;
           const series = metric === 'e1rm'
             ? item.trend
-            : (metricSeries.get(item.exerciseId)?.[metric] ?? item.trend);
+            : (nonE1rmSeries ?? item.trend);
+          // Item 7 (campaign 2026-07-10): the headline numeral + label now
+          // track the selected metric lens, same fallback as the sparkline
+          // above -- an exercise with no computed series for this lens (e.g.
+          // distance/duration types skipped by buildExerciseMetricSeries)
+          // falls back to the e1RM headline rather than showing nothing.
+          const headlineMetric = (metric === 'e1rm' || !hasNonE1rmSeries) ? 'e1rm' : metric;
+          const headlineMeta = METRIC_HEADLINE[headlineMetric];
+          const headlineValue = headlineMetric === 'e1rm' ? item.bestE1rm : Math.max(...nonE1rmSeries);
+          // Item 10: PR markers on whichever lens the row is currently
+          // showing, same series the sparkline itself draws.
+          const prIndices = derivePRIndices(series);
           return (
             <AnimatedEntrance index={index}>
             <PressableCard
@@ -400,10 +426,11 @@ export default function LiftProgressScreen({ navigation }) {
                   Last time: {item.latestWeight}{units} - est. max {item.latestE1rm}{units}
                 </Text>
                 <View style={styles.statRow}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.statValue}>{item.bestE1rm}{units}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.statLabel}>est. max</Text>
-                  {/* U-D-3: plain-English gloss for estimated 1RM on the row. */}
-                  <InfoTooltip text={GLOSSARY.estMax} size={11} />
+                  <Text maxFontSizeMultiplier={1.3} style={styles.statValue}>{headlineValue}{headlineMeta.isWeight ? units : ''}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.statLabel}>{headlineMeta.label}</Text>
+                  {/* U-D-3: plain-English gloss for estimated 1RM on the row.
+                      Only meaningful for the e1RM lens itself. */}
+                  {headlineMetric === 'e1rm' && <InfoTooltip text={GLOSSARY.estMax} size={11} />}
                   {item.deltaPct != null && item.sessions > 1 && (
                     <Text maxFontSizeMultiplier={1.3} style={[styles.delta, { color: trendColor(item.deltaPct) }]}>
                       {item.deltaPct > 0 ? '+' : ''}{item.deltaPct}%
@@ -416,7 +443,7 @@ export default function LiftProgressScreen({ navigation }) {
                     line; show an encouragement "building" hint instead until a
                     real trend exists (3+ points). */}
                 {(series?.length ?? 0) > 2 ? (
-                  <Sparkline data={series} width={84} height={34} color={trendColor(item.deltaPct)} />
+                  <Sparkline data={series} width={84} height={34} color={trendColor(item.deltaPct)} highlightIndices={prIndices} />
                 ) : (
                   <Text maxFontSizeMultiplier={1.3} style={styles.trendBuilding}>Building</Text>
                 )}

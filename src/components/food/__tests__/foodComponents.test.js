@@ -235,6 +235,46 @@ describe('EntryRow', () => {
     const txt = JSON.stringify(tree);
     expect(txt).toContain('Greek yoghurt, 143 kcal. Tap to edit.');
   });
+
+  // Item 9 (campaign 2026-07-10): quiet inline weighing-basis chip. Shown
+  // ONLY for an explicit raw/cooked weight_state -- never for the
+  // as_weighed default or a missing value, so the vast majority of rows
+  // carry no extra noise. ED-safety bound: states the weighing basis only,
+  // no calorie/portion emphasis, no colour-coding.
+  describe('weight_state chip', () => {
+    test('shows "Raw" when weight_state is raw', () => {
+      const tree = create(<EntryRow entry={{ ...baseEntry, weight_state: 'raw' }} onEdit={() => {}} />).toJSON();
+      expect(JSON.stringify(tree)).toContain('Raw');
+    });
+
+    test('shows "Cooked" when weight_state is cooked', () => {
+      const tree = create(<EntryRow entry={{ ...baseEntry, weight_state: 'cooked' }} onEdit={() => {}} />).toJSON();
+      expect(JSON.stringify(tree)).toContain('Cooked');
+    });
+
+    test('renders no chip for the as_weighed default (no noise)', () => {
+      const tree = create(<EntryRow entry={{ ...baseEntry, weight_state: 'as_weighed' }} onEdit={() => {}} />).toJSON();
+      const txt = JSON.stringify(tree);
+      expect(txt).not.toContain('Raw');
+      expect(txt).not.toContain('Cooked');
+    });
+
+    test('renders no chip when weight_state is missing/null', () => {
+      const tree = create(<EntryRow entry={baseEntry} onEdit={() => {}} />).toJSON();
+      const txt = JSON.stringify(tree);
+      expect(txt).not.toContain('Raw');
+      expect(txt).not.toContain('Cooked');
+    });
+
+    test('the chip uses only neutral tokens, no colour-coding (ED-safety bound)', () => {
+      const tree = create(<EntryRow entry={{ ...baseEntry, weight_state: 'cooked' }} onEdit={() => {}} />).toJSON();
+      const txt = JSON.stringify(tree);
+      expect(txt).toContain(`"backgroundColor":"${colors.surface2}"`);
+      expect(txt).not.toContain(colors.error);
+      expect(txt).not.toContain(colors.success);
+      expect(txt).not.toContain(colors.warning);
+    });
+  });
 });
 
 // L05-D1/D6 (design-usability audit 2026-07-09): re-confirmed by the

@@ -51,6 +51,19 @@ export function EntryRow({
     : null;
   const metaLine = [isQuick ? null : `${Math.round(entry.quantity_g)}g`, eatenTime]
     .filter(Boolean).join('  ·  ');
+  // Item 9 (campaign 2026-07-10): weight_state (raw/cooked/as_weighed) only
+  // showed in FoodDetailSheet's edit sheet before. A quiet inline chip on
+  // the row itself surfaces the weighing basis without opening the sheet --
+  // but ONLY when it was explicitly set to raw or cooked; the as_weighed
+  // default (or a missing value on older rows) shows nothing, so the vast
+  // majority of rows carry no extra noise. ED-safety bound: this states the
+  // weighing basis only, neutral tokens (no colour-coding, no calorie/
+  // portion emphasis), same idiom as the mealTag chip below.
+  const weightStateLabel = entry?.weight_state === 'raw'
+    ? 'Raw'
+    : entry?.weight_state === 'cooked'
+      ? 'Cooked'
+      : null;
   return (
     <TouchableOpacity
       style={[styles.entryRow, selected && styles.entryRowSelected]}
@@ -87,6 +100,14 @@ export function EntryRow({
       <View style={styles.entryMain}>
         <View style={styles.entryNameRow}>
           <Text maxFontSizeMultiplier={1.3} style={styles.entryName} numberOfLines={1}>{name}</Text>
+          {/* Item 9: quiet weighing-basis chip, shown only for an explicit
+              raw/cooked weight_state. Decorative only, same as mealTag below
+              (no accessibility change to the row's own label). */}
+          {weightStateLabel ? (
+            <View style={styles.weightStateTag}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.weightStateTagText} numberOfLines={1}>{weightStateLabel}</Text>
+            </View>
+          ) : null}
           {/* Ultimate-Audit item 15 (D22 15a): the meal name as a small quiet
               tag, all that is left of the old per-meal card identity in the
               flat timeline. Decorative only (no accessibility change; the
@@ -191,6 +212,16 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   mealTagText: { ...type.caption, color: colors.textMuted, fontSize: fontSize.xs },
+  // Item 9: same neutral chip idiom as mealTag -- no colour-coding (ED-safety
+  // bound: weighing basis only, never a good/bad signal).
+  weightStateTag: {
+    paddingHorizontal: spacing.xs, paddingVertical: 1,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.border,
+    flexShrink: 0,
+  },
+  weightStateTagText: { ...type.caption, color: colors.textMuted, fontSize: fontSize.xs },
   entryBrand: { ...type.caption, color: colors.textMuted, marginTop: spacing.hair },
   entryQuantity: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   entryMacros: { alignItems: 'flex-end' },

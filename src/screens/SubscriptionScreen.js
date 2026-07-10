@@ -19,6 +19,7 @@ import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import CancelReasonSheet from '../components/CancelReasonSheet';
+import TierComparisonStrip from '../components/TierComparisonStrip';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
@@ -149,6 +150,18 @@ export default function SubscriptionScreen({ navigation, route }) {
           </Text>
         </Card>
 
+        {/* Item 11 (campaign 2026-07-10): Paywall/ProUpgrade already show the
+            Free-vs-Pro comparison strip; Subscription showed only a bare
+            "Upgrade" button to a free/lapsed viewer. Display only -- reuses
+            the existing `tier` read above (proGate/store.tier, unchanged),
+            no purchase/restore/entitlement logic touched. Never shown to a
+            Pro viewer, who already has everything the strip is selling. */}
+        {tier !== 'pro' ? (
+          <View style={styles.comparisonWrap}>
+            <TierComparisonStrip pricingWindow={period} highlighted="pro" />
+          </View>
+        ) : null}
+
         {currentSku ? (
           <Card borderless style={styles.card}>
             <Text maxFontSizeMultiplier={1.3} style={styles.cardLabel}>Price</Text>
@@ -215,6 +228,9 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
   },
   card: {
+    marginBottom: spacing.md,
+  },
+  comparisonWrap: {
     marginBottom: spacing.md,
   },
   cardLabel: {
