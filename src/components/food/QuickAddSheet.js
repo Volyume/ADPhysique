@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 import * as haptics from '../../lib/haptics';
 import BottomSheet from '../BottomSheet';
 // M4 (audit 03b §3.3b): the save CTA rides the Button primitive's
@@ -23,6 +24,9 @@ import { pickerMealSlots } from '../../lib/food/mealSlots';
  *   onClose          () => void
  */
 export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSave, onClose }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const toast = useToast();
   const [kcal, setKcal] = useState('');
   const [protein, setProtein] = useState('');
@@ -71,16 +75,16 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
 
   return (
     <BottomSheet visible={visible} onClose={handleClose} keyboardAvoiding accessibilityLabel="Quick add">
-          <Text maxFontSizeMultiplier={1.3} style={styles.title}>Quick add</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>Log calories now, with macros if you have them.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Quick add</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>Log calories now, with macros if you have them.</Text>
 
-          <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Calories</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Calories</Text>
           <TextField
             value={kcal}
             onChangeText={setKcal}
             keyboardType="number-pad"
             placeholder="0"
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={t.colors.textMuted}
             accessibilityLabel="Calories"
             autoFocus
             returnKeyType="done"
@@ -100,7 +104,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
                 onChangeText={set}
                 keyboardType="decimal-pad"
                 placeholder="0"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={t.colors.textMuted}
                 accessibilityLabel={a11y}
                 returnKeyType="done"
                 containerStyle={styles.macroField}
@@ -109,7 +113,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
             ))}
           </View>
 
-          <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Meal</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Meal</Text>
           <View style={styles.mealRow}>
             {pickerMealSlots(mealSlot).map(s => (
               <Chip
@@ -171,3 +175,16 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   actionButton: { flex: 1 },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. calorieInput/macroRow/
+// macroField/macroInput/mealRow/mealChip/mealChipLabel/actions/actionButton
+// have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    title: { color: t.colors.textPrimary },
+    subtitle: { color: t.colors.textMuted },
+    fieldLabel: { color: t.colors.textSecondary },
+  };
+}

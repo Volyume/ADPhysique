@@ -38,7 +38,12 @@ const day = (y, m, d) => new Date(y, m - 1, d).getTime();
 const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'PhotoDateRangeSheet.js'), 'utf8');
 
 test('date range fields are narrow-screen safe', () => {
-  expect(SOURCE.match(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.dateText\} numberOfLines=\{1\} ellipsizeMode="tail">/g)).toHaveLength(2);
+  // 2026-07-10 (CP-10 stage 4 batch C, theming): both call sites now carry a
+  // live-theme override alongside the frozen style (array form,
+  // `[styles.dateText, live.dateText]`), so the pin matches that form
+  // instead of the bare `styles.dateText`. Same two call sites, same frozen
+  // style object underneath, still asserted below.
+  expect(SOURCE.match(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.dateText, live\.dateText\]\} numberOfLines=\{1\} ellipsizeMode="tail">/g)).toHaveLength(2);
   expect(SOURCE).toMatch(/sheetTitle: \{ \.\.\.type\.bodyStrong/);
 });
 

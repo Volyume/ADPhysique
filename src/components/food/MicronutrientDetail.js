@@ -30,6 +30,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, type, letterSpacing } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 import CollapsibleSection from '../CollapsibleSection';
 import { MICRONUTRIENTS, nrvPercent } from '../../lib/food/micronutrients';
 import { scaleMicronutrients, knownMicronutrientCount } from '../../lib/food/micronutrientCoverage';
@@ -44,6 +45,9 @@ export const MIN_KNOWN_TO_SHOW_GRID = 3;
 
 export default function MicronutrientDetail({ food, quantityG }) {
   const [open, setOpen] = useState(false);
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
 
   if (!food) return null;
 
@@ -60,12 +64,12 @@ export default function MicronutrientDetail({ food, quantityG }) {
         onToggle={() => setOpen((v) => !v)}
       >
         {knownCount < MIN_KNOWN_TO_SHOW_GRID ? (
-          <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>No vitamin and mineral data for this food yet.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.emptyText, live.emptyText]}>No vitamin and mineral data for this food yet.</Text>
         ) : (
           <>
             {knownVitamins.length ? (
               <>
-                <Text maxFontSizeMultiplier={1.3} style={styles.groupLabel}>Vitamins</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.groupLabel, live.groupLabel]}>Vitamins</Text>
                 {knownVitamins.map((n) => (
                   <NutrientRow key={n.key} nutrient={n} amount={scaled[n.key]} />
                 ))}
@@ -73,7 +77,7 @@ export default function MicronutrientDetail({ food, quantityG }) {
             ) : null}
             {knownMinerals.length ? (
               <>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.groupLabel, knownVitamins.length ? styles.groupLabelSpacer : null]}>Minerals</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.groupLabel, live.groupLabel, knownVitamins.length ? styles.groupLabelSpacer : null]}>Minerals</Text>
                 {knownMinerals.map((n) => (
                   <NutrientRow key={n.key} nutrient={n} amount={scaled[n.key]} />
                 ))}
@@ -87,6 +91,9 @@ export default function MicronutrientDetail({ food, quantityG }) {
 }
 
 function NutrientRow({ nutrient, amount }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const pct = nrvPercent(nutrient.key, amount);
   return (
     <View
@@ -94,10 +101,10 @@ function NutrientRow({ nutrient, amount }) {
       accessible
       accessibilityLabel={`${nutrient.label}, ${amount} ${nutrient.unit}${pct != null ? `, ${pct}% of NRV` : ''}`}
     >
-      <Text maxFontSizeMultiplier={1.3} style={styles.rowLabel}>{nutrient.label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.rowLabel, live.rowLabel]}>{nutrient.label}</Text>
       <View style={styles.rowValues}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.rowAmount}>{`${amount} ${nutrient.unit}`}</Text>
-        {pct != null ? <Text maxFontSizeMultiplier={1.3} style={styles.rowNrv}>{`${pct}% NRV`}</Text> : null}
+        <Text maxFontSizeMultiplier={1.3} style={[styles.rowAmount, live.rowAmount]}>{`${amount} ${nutrient.unit}`}</Text>
+        {pct != null ? <Text maxFontSizeMultiplier={1.3} style={[styles.rowNrv, live.rowNrv]}>{`${pct}% NRV`}</Text> : null}
       </View>
     </View>
   );
@@ -123,3 +130,17 @@ const styles = StyleSheet.create({
   rowAmount: { ...type.bodySm, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
   rowNrv: { fontSize: fontSize.xs, color: colors.textMuted, fontVariant: ['tabular-nums'] },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. wrap/groupLabelSpacer/row/
+// rowValues have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    emptyText: { color: t.colors.textSecondary },
+    groupLabel: { color: t.colors.textMuted },
+    rowLabel: { color: t.colors.textPrimary },
+    rowAmount: { color: t.colors.textSecondary },
+    rowNrv: { color: t.colors.textMuted },
+  };
+}

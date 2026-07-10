@@ -8,6 +8,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from './Button';
 import { colors, spacing, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import {
   MEANING_MOMENT_BODY,
   MEANING_MOMENT_BUTTON,
@@ -15,11 +16,14 @@ import {
 } from '../lib/progressScanResultsContract';
 
 export default function ProgressScanMeaningMoment({ onDismiss }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <View style={styles.content}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.title}>{MEANING_MOMENT_TITLE}</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.body}>{MEANING_MOMENT_BODY}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>{MEANING_MOMENT_TITLE}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>{MEANING_MOMENT_BODY}</Text>
         <Button
           title={MEANING_MOMENT_BUTTON}
           onPress={onDismiss}
@@ -38,3 +42,15 @@ const styles = StyleSheet.create({
   body: { ...type.body, color: colors.textSecondary, textAlign: 'center', lineHeight: 24 },
   button: { marginTop: spacing.md },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. content/button have no colour
+// tokens.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    title: { color: t.colors.textPrimary },
+    body: { color: t.colors.textSecondary },
+  };
+}

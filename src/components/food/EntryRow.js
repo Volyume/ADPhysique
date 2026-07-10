@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 import * as haptics from '../../lib/haptics';
@@ -31,6 +32,9 @@ export function EntryRow({
   // (TalkBack actions menu) when the parent provides a delete handler.
   onAccessibilityDelete = null,
 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const kcal = Math.round(entry.kcal ?? 0);
   const p = Math.round(entry.protein_g ?? 0);
@@ -66,7 +70,7 @@ export function EntryRow({
       : null;
   return (
     <TouchableOpacity
-      style={[styles.entryRow, selected && styles.entryRowSelected]}
+      style={[styles.entryRow, live.entryRow, selected && [styles.entryRowSelected, live.entryRowSelected]]}
       // E10 read-only lapse views: a view-only row carries no edit, selection
       // or long-press affordance; it is a plain fact of what was logged.
       // Haptics completion pass (2026-07-10, campaign item 5): a tap either
@@ -93,19 +97,19 @@ export function EntryRow({
       }
     >
       {selectionMode ? (
-        <View style={[styles.checkbox, selected && styles.checkboxOn]}>
-          {selected ? <Ionicons name="checkmark" size={14} color={colors.onPrimary} /> : null}
+        <View style={[styles.checkbox, live.checkbox, selected && [styles.checkboxOn, live.checkboxOn]]}>
+          {selected ? <Ionicons name="checkmark" size={14} color={t.colors.onPrimary} /> : null}
         </View>
       ) : null}
       <View style={styles.entryMain}>
         <View style={styles.entryNameRow}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.entryName} numberOfLines={1}>{name}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.entryName, live.entryName]} numberOfLines={1}>{name}</Text>
           {/* Item 9: quiet weighing-basis chip, shown only for an explicit
               raw/cooked weight_state. Decorative only, same as mealTag below
               (no accessibility change to the row's own label). */}
           {weightStateLabel ? (
-            <View style={styles.weightStateTag}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.weightStateTagText} numberOfLines={1}>{weightStateLabel}</Text>
+            <View style={[styles.weightStateTag, live.weightStateTag]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.weightStateTagText, live.weightStateTagText]} numberOfLines={1}>{weightStateLabel}</Text>
             </View>
           ) : null}
           {/* Ultimate-Audit item 15 (D22 15a): the meal name as a small quiet
@@ -113,17 +117,17 @@ export function EntryRow({
               flat timeline. Decorative only (no accessibility change; the
               row's own accessibilityLabel below is unaffected). */}
           {mealLabel ? (
-            <View style={styles.mealTag}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.mealTagText} numberOfLines={1}>{mealLabel}</Text>
+            <View style={[styles.mealTag, live.mealTag]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.mealTagText, live.mealTagText]} numberOfLines={1}>{mealLabel}</Text>
             </View>
           ) : null}
         </View>
-        {brand ? <Text maxFontSizeMultiplier={1.3} style={styles.entryBrand} numberOfLines={1}>{brand}</Text> : null}
-        {metaLine ? <Text maxFontSizeMultiplier={1.3} style={styles.entryQuantity}>{metaLine}</Text> : null}
+        {brand ? <Text maxFontSizeMultiplier={1.3} style={[styles.entryBrand, live.entryBrand]} numberOfLines={1}>{brand}</Text> : null}
+        {metaLine ? <Text maxFontSizeMultiplier={1.3} style={[styles.entryQuantity, live.entryQuantity]}>{metaLine}</Text> : null}
       </View>
       <View style={styles.entryMacros}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.entryKcal}>{toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.entryMacroLine}>{p}P {c}C {f}F</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.entryKcal, live.entryKcal]}>{toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.entryMacroLine, live.entryMacroLine]}>{p}P {c}C {f}F</Text>
       </View>
     </TouchableOpacity>
   );
@@ -135,18 +139,21 @@ export function SwipeableEntryRow({
   readOnly = false,
   mealLabel = null,
 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const ref = useRef(null);
   const renderRightActions = useCallback(() => (
     <TouchableOpacity
-      style={styles.swipeDelete}
+      style={[styles.swipeDelete, live.swipeDelete]}
       accessibilityRole="button"
       accessibilityLabel="Delete entry"
       onPress={() => onDelete?.(entry, () => ref.current?.close?.())}
     >
-      <Ionicons name="trash-outline" size={20} color={colors.textPrimary} />
-      <Text maxFontSizeMultiplier={1.3} style={styles.swipeDeleteText}>Delete</Text>
+      <Ionicons name="trash-outline" size={20} color={t.colors.textPrimary} />
+      <Text maxFontSizeMultiplier={1.3} style={[styles.swipeDeleteText, live.swipeDeleteText]}>Delete</Text>
     </TouchableOpacity>
-  ), [entry, onDelete]);
+  ), [entry, onDelete, live.swipeDelete, live.swipeDeleteText, t.colors.textPrimary]);
   return (
     <Swipeable
       ref={ref}
@@ -241,3 +248,27 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. entryMain/entryNameRow/
+// entryMacros have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    entryRow: { backgroundColor: t.colors.surface, borderTopColor: t.colors.border },
+    entryRowSelected: { backgroundColor: t.colors.surface2 },
+    checkbox: { borderColor: t.colors.border },
+    checkboxOn: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.primary },
+    entryName: { color: t.colors.textPrimary },
+    mealTag: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    mealTagText: { color: t.colors.textMuted },
+    weightStateTag: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    weightStateTagText: { color: t.colors.textMuted },
+    entryBrand: { color: t.colors.textMuted },
+    entryQuantity: { color: t.colors.textMuted },
+    entryKcal: { color: t.colors.textPrimary },
+    entryMacroLine: { color: t.colors.textMuted },
+    swipeDelete: { backgroundColor: t.colors.error },
+    swipeDeleteText: { color: t.colors.textPrimary },
+  };
+}

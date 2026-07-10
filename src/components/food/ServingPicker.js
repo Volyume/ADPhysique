@@ -13,6 +13,7 @@ import { View, StyleSheet } from 'react-native';
 import TextField from '../TextField';
 import Chip from '../Chip';
 import { colors, spacing } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 import * as haptics from '../../lib/haptics';
 
 const DEFAULT_UNITS = ['g', 'oz'];
@@ -32,18 +33,21 @@ export default function ServingPicker({
   onChangeQuantity,
   onChangeUnit,
 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const list = units.length > 0 ? units : DEFAULT_UNITS;
   return (
     <View style={styles.row} accessibilityLabel="Serving size">
       <TextField
         containerStyle={styles.inputContainer}
-        fieldStyle={styles.inputField}
+        fieldStyle={[styles.inputField, live.inputField]}
         inputStyle={styles.input}
         value={String(quantity ?? '')}
         onChangeText={onChangeQuantity}
         keyboardType="decimal-pad"
         placeholder="0"
-        placeholderTextColor={colors.textMuted}
+        placeholderTextColor={t.colors.textMuted}
         accessibilityLabel="Quantity"
       />
       <View style={styles.units}>
@@ -92,3 +96,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    inputField: { backgroundColor: t.colors.surface },
+  };
+}

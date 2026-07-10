@@ -37,7 +37,12 @@ const DAY = 86400000;
 const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'PhotoDetailsSheet.js'), 'utf8');
 
 test('date field copy is narrow-screen safe', () => {
-  expect(SOURCE).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.dateText\} numberOfLines=\{1\} ellipsizeMode="tail">/);
+  // 2026-07-10 (CP-10 stage 4 batch C, theming): the call site now carries a
+  // live-theme override alongside the frozen style (array form,
+  // `[styles.dateText, live.dateText]`), so the pin matches that form
+  // instead of the bare `styles.dateText`. Same call site, same frozen
+  // style object underneath, still asserted below.
+  expect(SOURCE).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.dateText, live\.dateText\]\} numberOfLines=\{1\} ellipsizeMode="tail">/);
   expect(SOURCE).toMatch(/sheetTitle: \{ \.\.\.type\.bodyStrong/);
 });
 

@@ -27,7 +27,12 @@ describe('FoodDetailSheet: eaten-at field (edit mode only)', () => {
   });
 
   test('the "Eaten at" field is gated to edit mode only, keeping the add-mode fast path untouched', () => {
-    expect(SRC).toMatch(/\{mode === 'edit' \? \(\s*<>\s*<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.fieldLabel\}>Eaten at<\/Text>/);
+    // 2026-07-10 (CP-10 stage 4 batch C, theming): the field label now
+    // carries a live-theme override alongside the frozen style (array form,
+    // `[styles.fieldLabel, live.fieldLabel]`), so the pin matches that form
+    // instead of the bare `styles.fieldLabel`. Same call site, same frozen
+    // style object underneath, still asserted below.
+    expect(SRC).toMatch(/\{mode === 'edit' \? \(\s*<>\s*<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.fieldLabel, live\.fieldLabel\]\}>Eaten at<\/Text>/);
   });
 
   test('a bulk-confirmed entry (no eaten_at) opens with "No time set", never a false timestamp', () => {

@@ -12,6 +12,7 @@
 import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
 import { appAlert } from '../AppAlert';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 
 const BEAT_URL = 'https://www.beateatingdisorders.org.uk/';
 
@@ -30,14 +31,17 @@ function openSupport() {
  * @param {() => void} [props.onWhy] - opens longer explanation
  */
 export default function HeldDecisionCard({ type, body, onWhy }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
-    <View style={styles.card} accessibilityRole="text">
+    <View style={[styles.card, live.card]} accessibilityRole="text">
       <View style={styles.badgeRow}>
-        <View style={styles.badge}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.badgeText}>Held this week</Text>
+        <View style={[styles.badge, live.badge]}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.badgeText, live.badgeText]}>Held this week</Text>
         </View>
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={styles.body}>{body}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>{body}</Text>
       {onWhy ? (
         <Pressable
           onPress={onWhy}
@@ -46,7 +50,7 @@ export default function HeldDecisionCard({ type, body, onWhy }) {
           hitSlop={8}
           style={({ pressed }) => [pressed && { opacity: 0.7 }]}
         >
-          <Text maxFontSizeMultiplier={1.3} style={styles.why}>Why?</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.why, live.why]}>Why?</Text>
         </Pressable>
       ) : null}
       {type === 'ed_pattern' ? (
@@ -54,9 +58,9 @@ export default function HeldDecisionCard({ type, body, onWhy }) {
           onPress={openSupport}
           accessibilityRole="link"
           accessibilityLabel="Open Beat support"
-          style={({ pressed }) => [styles.supportButton, pressed && { opacity: 0.7 }]}
+          style={({ pressed }) => [styles.supportButton, live.supportButton, pressed && { opacity: 0.7 }]}
         >
-          <Text maxFontSizeMultiplier={1.3} style={styles.supportText}>Get support</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.supportText, live.supportText]}>Get support</Text>
         </Pressable>
       ) : null}
     </View>
@@ -110,3 +114,18 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. badgeRow has no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    badge: { backgroundColor: t.colors.primaryFill },
+    badgeText: { color: t.colors.onPrimary },
+    body: { color: t.colors.textPrimary },
+    why: { color: t.colors.primary },
+    supportButton: { backgroundColor: t.colors.background, borderColor: t.colors.primary },
+    supportText: { color: t.colors.primary },
+  };
+}

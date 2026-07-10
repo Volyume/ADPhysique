@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 import * as haptics from '../../lib/haptics';
@@ -51,6 +52,9 @@ function round(s) {
 // self-explain the energy total and the descriptive %-of-calories split. This
 // is purely DESCRIPTIVE of what was eaten, no target, no colour judgement.
 function MacroLine({ kcal, protein, carbs, fat, energyUnit }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const pKcal = protein * 4;
   const cKcal = carbs * 4;
   const fKcal = fat * 9;
@@ -60,13 +64,13 @@ function MacroLine({ kcal, protein, carbs, fat, energyUnit }) {
     : null;
   return (
     <View style={styles.macroCell}>
-      <Text maxFontSizeMultiplier={1.3} style={styles.rowMacros}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.rowMacros, live.rowMacros]}>
         {toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)} - {protein}P {carbs}C {fat}F
       </Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.rowMacroKcal}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.rowMacroKcal, live.rowMacroKcal]}>
         {protein}x4 + {carbs}x4 + {fat}x9 = {macroKcal} kcal
       </Text>
-      {split ? <Text maxFontSizeMultiplier={1.3} style={styles.rowMacroSplit}>{split} of calories</Text> : null}
+      {split ? <Text maxFontSizeMultiplier={1.3} style={[styles.rowMacroSplit, live.rowMacroSplit]}>{split} of calories</Text> : null}
     </View>
   );
 }
@@ -77,6 +81,9 @@ function MacroLine({ kcal, protein, carbs, fat, energyUnit }) {
  * anything with it is handled back on the diary itself.
  */
 export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClose, onSelectMeal }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const { rows, total } = mealBreakdown(entries);
   // Energy DISPLAY unit (kcal | kj). Display-only: the rollup kcal values stay
   // kcal; only the rendered energy number + label convert.
@@ -85,12 +92,12 @@ export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClo
   return (
     <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Macro breakdown by meal">
       <View style={styles.header}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.title}>By meal</Text>
-        {dateLabel ? <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>{dateLabel}</Text> : null}
+        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>By meal</Text>
+        {dateLabel ? <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>{dateLabel}</Text> : null}
       </View>
 
       {rows.length === 0 ? (
-        <Text maxFontSizeMultiplier={1.3} style={styles.empty}>Nothing logged yet. Your macro breakdown will appear here.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.empty, live.empty]}>Nothing logged yet. Your macro breakdown will appear here.</Text>
       ) : (
         <View>
           {rows.map((r) => (
@@ -98,25 +105,25 @@ export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClo
             // read-only dead-end). Falls back to a plain row when no handler.
             <Pressable
               key={r.key}
-              style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [styles.row, live.row, pressed && { opacity: 0.7 }]}
               onPress={onSelectMeal ? () => { haptics.selection(); onSelectMeal(r.key); } : undefined}
               disabled={!onSelectMeal}
               accessibilityRole={onSelectMeal ? 'button' : undefined}
               accessibilityLabel={onSelectMeal ? `Go to ${r.label}` : undefined}
             >
-              <Text maxFontSizeMultiplier={1.3} style={styles.rowLabel}>{r.label}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.rowLabel, live.rowLabel]}>{r.label}</Text>
               <MacroLine kcal={r.kcal} protein={r.protein} carbs={r.carbs} fat={r.fat} energyUnit={energyUnit} />
             </Pressable>
           ))}
-          <View style={[styles.row, styles.totalRow]}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.totalLabel}>Total</Text>
+          <View style={[styles.row, live.row, styles.totalRow]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.totalLabel, live.totalLabel]}>Total</Text>
             <MacroLine kcal={total.kcal} protein={total.protein} carbs={total.carbs} fat={total.fat} energyUnit={energyUnit} />
           </View>
         </View>
       )}
 
-      <Pressable style={({ pressed }) => [styles.doneBtn, pressed && { opacity: 0.7 }]} onPress={() => { haptics.selection(); onClose?.(); }} accessibilityRole="button" accessibilityLabel="Done">
-        <Text maxFontSizeMultiplier={1.3} style={styles.doneText}>Done</Text>
+      <Pressable style={({ pressed }) => [styles.doneBtn, live.doneBtn, pressed && { opacity: 0.7 }]} onPress={() => { haptics.selection(); onClose?.(); }} accessibilityRole="button" accessibilityLabel="Done">
+        <Text maxFontSizeMultiplier={1.3} style={[styles.doneText, live.doneText]}>Done</Text>
       </Pressable>
     </BottomSheet>
   );
@@ -147,3 +154,23 @@ const styles = StyleSheet.create({
   },
   doneText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. header/macroCell/totalRow have
+// no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    title: { color: t.colors.textPrimary },
+    subtitle: { color: t.colors.textMuted },
+    row: { borderBottomColor: t.colors.border },
+    rowLabel: { color: t.colors.textPrimary },
+    rowMacros: { color: t.colors.textMuted },
+    rowMacroKcal: { color: t.colors.textMuted },
+    rowMacroSplit: { color: t.colors.textMuted },
+    totalLabel: { color: t.colors.textPrimary },
+    empty: { color: t.colors.textSecondary },
+    doneBtn: { backgroundColor: t.colors.surface2 },
+    doneText: { color: t.colors.textPrimary },
+  };
+}

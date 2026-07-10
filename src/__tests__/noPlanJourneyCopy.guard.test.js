@@ -58,7 +58,13 @@ describe('no-plan / start-plan copy', () => {
   });
 
   test('Progress no-plan card uses a contained neutral Browse plans control', () => {
-    expect(PROGRESS_SECTIONS).toContain('Ionicons name="compass-outline" size={14} color={colors.textSecondary}');
+    // 2026-07-10 (CP-10 stage 4 batch C, theming): ProgressSections now reads
+    // a live theme (src/hooks/useTheme.js), so this inline colour prop moved
+    // from `colors.textSecondary` to `t.colors.textSecondary`, same treatment
+    // as the HomeScreen pin above. The pinned RULE (contained neutral
+    // control) is unchanged -- the static mesoEmptyBtn/mesoEmptyBtnText
+    // definitions (asserted next) are byte-identical to before.
+    expect(PROGRESS_SECTIONS).toContain('Ionicons name="compass-outline" size={14} color={t.colors.textSecondary}');
     expect(PROGRESS_SECTIONS).toMatch(/mesoEmptyBtn:     \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border/);
     expect(PROGRESS_SECTIONS).toContain('mesoEmptyBtnText: { ...type.label, color: colors.textPrimary }');
     expect(PROGRESS_SECTIONS).not.toContain('mesoEmptyBtnText: { ...type.label, color: colors.primary }');

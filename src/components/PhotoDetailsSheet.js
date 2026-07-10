@@ -31,6 +31,7 @@ import useAppStore from '../store/useAppStore';
 import {
   colors, spacing, radius, type, iconSize, motion,
 } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 
 const POSES = [
@@ -51,6 +52,9 @@ export default function PhotoDetailsSheet({
   visible, initialDateMs, initialPose = null, previewUri = null, onConfirm, onCancel,
 }) {
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const [dateMs, setDateMs] = useState(Number.isFinite(initialDateMs) ? initialDateMs : Date.now());
   const [pose, setPose] = useState(initialPose ?? null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -79,24 +83,24 @@ export default function PhotoDetailsSheet({
       onRequestClose={onCancel}
     >
       <Pressable
-        style={styles.backdrop}
+        style={[styles.backdrop, live.backdrop]}
         onPress={onCancel}
         accessibilityRole="button"
         accessibilityLabel="Dismiss photo details"
       >
-        <View style={styles.sheet} onStartShouldSetResponder={() => true}>
+        <View style={[styles.sheet, live.sheet]} onStartShouldSetResponder={() => true}>
           <ScrollView
             style={styles.sheetScroll}
             contentContainerStyle={styles.sheetScrollBody}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            <Text maxFontSizeMultiplier={1.3} style={styles.sheetTitle}>Photo details</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.sheetIntro}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Photo details</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.sheetIntro, live.sheetIntro]}>
               Add the date and pose so Progress Photos can keep this image in the right place.
             </Text>
             {previewUri ? (
-              <View style={styles.previewWrap}>
+              <View style={[styles.previewWrap, live.previewWrap]}>
                 <Image
                   source={{ uri: previewUri }}
                   style={styles.previewImage}
@@ -107,26 +111,26 @@ export default function PhotoDetailsSheet({
                 />
               </View>
             ) : null}
-            <View style={styles.contextBox}>
-              <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.contextText}>
+            <View style={[styles.contextBox, live.contextBox]}>
+              <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={t.colors.primary} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.contextText, live.contextText]}>
                 Date and pose make future reviews fairer by grouping photos from the same day together.
               </Text>
             </View>
 
-            <Text maxFontSizeMultiplier={1.3} style={styles.helper}>When was this photo taken?</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.helper, live.helper]}>When was this photo taken?</Text>
             <TouchableOpacity
-              style={styles.dateField}
+              style={[styles.dateField, live.dateField]}
               onPress={() => setPickerOpen(true)}
               accessibilityRole="button"
               accessibilityLabel={`Change the date, currently ${formatProgressPhotoDay(dateMs)}`}
             >
-              <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.dateText} numberOfLines={1} ellipsizeMode="tail">{formatProgressPhotoDay(dateMs)}</Text>
-              <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
+              <Ionicons name="calendar-outline" size={iconSize.md} color={t.colors.primary} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.dateText, live.dateText]} numberOfLines={1} ellipsizeMode="tail">{formatProgressPhotoDay(dateMs)}</Text>
+              <Ionicons name="chevron-down" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
 
-            <Text maxFontSizeMultiplier={1.3} style={styles.sectionLabel}>Pose</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.sectionLabel, live.sectionLabel]}>Pose</Text>
             <View style={styles.poseSelector}>
               {POSES.map((p) => {
                 const active = pose === p.key;
@@ -134,7 +138,7 @@ export default function PhotoDetailsSheet({
                   <TouchableOpacity
                     key={p.key}
                     onPress={() => onSelectPose(p.key)}
-                    style={[styles.poseOption, active && styles.poseOptionActive]}
+                    style={[styles.poseOption, live.poseOption, active && [styles.poseOptionActive, live.poseOptionActive]]}
                     accessibilityRole="button"
                     accessibilityState={{ selected: active }}
                     accessibilityLabel={`Set pose to ${p.label}`}
@@ -142,9 +146,9 @@ export default function PhotoDetailsSheet({
                     <Ionicons
                       name={p.icon}
                       size={iconSize.sm}
-                      color={active ? colors.primary : colors.textMuted}
+                      color={active ? t.colors.primary : t.colors.textMuted}
                     />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.poseOptionText, active && styles.poseOptionTextActive]}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.poseOptionText, live.poseOptionText, active && [styles.poseOptionTextActive, live.poseOptionTextActive]]}>
                       {p.label}
                     </Text>
                   </TouchableOpacity>
@@ -253,3 +257,27 @@ const styles = StyleSheet.create({
     minWidth: 136,
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. sheetScroll/sheetScrollBody/
+// previewImage/poseSelector/actions/actionButton have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    backdrop: { backgroundColor: t.colors.scrim },
+    sheet: { backgroundColor: t.colors.surfaceElevated ?? t.colors.surface, borderColor: t.colors.border },
+    sheetTitle: { color: t.colors.textPrimary },
+    sheetIntro: { color: t.colors.textSecondary },
+    previewWrap: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    contextBox: { backgroundColor: t.colors.primaryBg },
+    contextText: { color: t.colors.textPrimary },
+    helper: { color: t.colors.textMuted },
+    dateField: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    dateText: { color: t.colors.textPrimary },
+    sectionLabel: { color: t.colors.textMuted },
+    poseOption: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    poseOptionActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    poseOptionText: { color: t.colors.textSecondary },
+    poseOptionTextActive: { color: t.colors.primary },
+  };
+}

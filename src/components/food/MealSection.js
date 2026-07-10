@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, iconSize } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import { getMealAdditionsForEntries, filterAdditionsForProfile } from '../../lib/food/mealAdditions';
 import useAppStore from '../../store/useAppStore';
@@ -27,6 +28,9 @@ export default function MealSection({
   // renders when this slot actually holds planned rows.
   onConfirmPlanned,
 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const hasEntries = entries.length > 0;
   const slotKcal = Math.round(entries.reduce((a, e) => a + (e.kcal ?? 0), 0));
@@ -62,16 +66,16 @@ export default function MealSection({
   // is not currently a multi-select target.
   const showRowEditHint = !selectionMode && !readOnly;
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, live.card]}>
       <View style={styles.header}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.mealName}>{slot.label}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.mealName, live.mealName]}>{slot.label}</Text>
         {hasEntries ? (
-          <Text maxFontSizeMultiplier={1.3} style={styles.subtotal}>{toEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} - {slotProtein}g P</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.subtotal, live.subtotal]}>{toEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} - {slotProtein}g P</Text>
         ) : null}
       </View>
       {showEmptyActions && showUsuals ? (
         <View style={styles.emptySlot}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.emptySlotText}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.emptySlotText, live.emptySlotText]}>
             Your usual foods are below. Pick something else if this meal was different.
           </Text>
         </View>
@@ -81,13 +85,13 @@ export default function MealSection({
           {usuals.map((food) => (
             <TouchableOpacity
               key={food.food_ref}
-              style={styles.usualChip}
+              style={[styles.usualChip, live.usualChip]}
               onPress={() => onLogUsual?.(food)}
               accessibilityRole="button"
               accessibilityLabel={`Add ${food.name ?? 'food'} to ${slot.label}`}
             >
-              <Ionicons name="add" size={14} color={colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.usualChipText} numberOfLines={1}>{food.name ?? 'Food'}</Text>
+              <Ionicons name="add" size={14} color={t.colors.primary} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.usualChipText, live.usualChipText]} numberOfLines={1}>{food.name ?? 'Food'}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -116,21 +120,21 @@ export default function MealSection({
               or swipe-to-delete gesture; hidden the moment the row is not
               actually editable (selection mode, read-only lapse view). */}
           {showRowEditHint ? (
-            <View style={styles.entryChevron} pointerEvents="none">
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+            <View style={[styles.entryChevron, live.entryChevron]} pointerEvents="none">
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </View>
           ) : null}
         </AnimatedRow>
       ))}
       {seasonAdds ? (
-        <View style={styles.seasonRow}>
+        <View style={[styles.seasonRow, live.seasonRow]}>
           {/* Founder 2026-07-09: the old label here read like an instruction
               to add ALL of the listed items. Reframed to the same pick-any
               register as ADDITIONS_INTRO/CuratedMealSheet's "Optional extras"
               heading (src/lib/food/mealAdditions.js), so this inline row can't
               be misread as a checklist. */}
-          <Text maxFontSizeMultiplier={1.3} style={styles.seasonText}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.seasonLabel}>Optional extras, add any you fancy: </Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.seasonText, live.seasonText]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.seasonLabel, live.seasonLabel]}>Optional extras, add any you fancy: </Text>
             {seasonAdds.map((a) => a.name).join(', ')}.
           </Text>
         </View>
@@ -142,16 +146,16 @@ export default function MealSection({
           runs without this explicit tap. */}
       {showMarkEaten ? (
         <View style={styles.plannedRow}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.plannedRowText}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.plannedRowText, live.plannedRowText]}>
             {plannedCount === 1 ? 'This meal is planned.' : `${plannedCount} foods planned in this meal.`}
           </Text>
           <TouchableOpacity
-            style={styles.markEatenButton}
+            style={[styles.markEatenButton, live.markEatenButton]}
             onPress={onConfirmPlanned}
             accessibilityRole="button"
             accessibilityLabel={`Mark ${slot.label} as eaten`}
           >
-            <Text maxFontSizeMultiplier={1.3} style={styles.markEatenText}>Mark eaten</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.markEatenText, live.markEatenText]}>Mark eaten</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -159,13 +163,13 @@ export default function MealSection({
       {showActionHub ? (
         <View style={[styles.actionHub, hasEntries && styles.actionHubDivided]}>
           <TouchableOpacity
-            style={styles.addFoodButton}
+            style={[styles.addFoodButton, live.addFoodButton]}
             onPress={() => { haptics.selection(); onAdd?.(); }}
           accessibilityRole="button"
           accessibilityLabel={`Add food to ${slot.label}`}
         >
-            <Ionicons name="search-outline" size={16} color={colors.textSecondary} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.addFoodText}>Add food</Text>
+            <Ionicons name="search-outline" size={16} color={t.colors.textSecondary} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.addFoodText, live.addFoodText]}>Add food</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -273,3 +277,27 @@ const styles = StyleSheet.create({
   seasonText: { ...type.bodySm, color: colors.textSecondary },
   seasonLabel: { color: colors.textMuted, fontWeight: fontWeight.bold },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. header/emptySlot/actionHub/
+// actionHubDivided/entryRowOuter/entryFlex have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    mealName: { color: t.colors.textPrimary },
+    subtotal: { color: t.colors.textMuted },
+    usualChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    usualChipText: { color: t.colors.textPrimary },
+    emptySlotText: { color: t.colors.textMuted },
+    addFoodButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    addFoodText: { color: t.colors.textPrimary },
+    entryChevron: { backgroundColor: t.colors.surface, borderTopColor: t.colors.border },
+    plannedRowText: { color: t.colors.textMuted },
+    markEatenButton: { backgroundColor: t.colors.primaryFill },
+    markEatenText: { color: t.colors.onPrimary },
+    seasonRow: { borderTopColor: t.colors.border },
+    seasonText: { color: t.colors.textSecondary },
+    seasonLabel: { color: t.colors.textMuted },
+  };
+}

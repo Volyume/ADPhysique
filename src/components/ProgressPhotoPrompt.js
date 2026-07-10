@@ -39,6 +39,7 @@ import useAppStore from '../store/useAppStore';
 import {
   colors, spacing, fontSize, fontWeight, withAlpha, circle, radius, type,
 } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { todayLocalKey } from '../lib/dayKey';
 import { track } from '../lib/telemetry';
 import { logError } from '../lib/errorLog';
@@ -105,6 +106,9 @@ async function recordShown(milestoneId) {
  * @param {() => void} props.onAddPhoto  Routes to the existing photo add flow.
  */
 export default function ProgressPhotoPrompt({ milestoneId, tier, onAddPhoto }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const suppressed = usePhotoSuppression();
   const [visible, setVisible] = useState(false);
   // Guards a double-impression: once an impression is recorded for a milestone
@@ -169,16 +173,16 @@ export default function ProgressPhotoPrompt({ milestoneId, tier, onAddPhoto }) {
   return (
     <Card style={styles.card} accessibilityLabel="Mark the moment">
       <View style={styles.headerRow}>
-        <View style={styles.iconWrap}>
-          <Ionicons name="camera-outline" size={20} color={colors.primary} />
+        <View style={[styles.iconWrap, live.iconWrap]}>
+          <Ionicons name="camera-outline" size={20} color={t.colors.primary} />
         </View>
         <View style={styles.headerText}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.title}>Mark the moment</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.body}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Mark the moment</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
             You've just hit a milestone. If you'd like, add a photo.
             Your own pace, always private to this phone.
           </Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.body}>The scale can't tell muscle from water. Photos can.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>The scale can't tell muscle from water. Photos can.</Text>
         </View>
       </View>
       <View style={styles.actions}>
@@ -199,15 +203,15 @@ export default function ProgressPhotoPrompt({ milestoneId, tier, onAddPhoto }) {
         />
       </View>
       <TouchableOpacity
-        style={styles.optOutBtn}
+        style={[styles.optOutBtn, live.optOutBtn]}
         onPress={handleOptOut}
         activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel="Don't ask again"
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Ionicons name="notifications-off-outline" size={14} color={colors.textMuted} />
-        <Text maxFontSizeMultiplier={1.3} style={styles.optOutText}>Don&apos;t ask again</Text>
+        <Ionicons name="notifications-off-outline" size={14} color={t.colors.textMuted} />
+        <Text maxFontSizeMultiplier={1.3} style={[styles.optOutText, live.optOutText]}>Don&apos;t ask again</Text>
       </TouchableOpacity>
     </Card>
   );
@@ -271,3 +275,17 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. card/headerRow/headerText/
+// actions/actionButton have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    iconWrap: { backgroundColor: withAlpha(t.colors.primary, 0.125) },
+    title: { color: t.colors.textPrimary },
+    body: { color: t.colors.textSecondary },
+    optOutBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    optOutText: { color: t.colors.textMuted },
+  };
+}

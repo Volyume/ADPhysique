@@ -19,6 +19,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import InfoTooltip from '../InfoTooltip';
 import { colors, fontSize, spacing, radius, withAlpha, alpha } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 
 const LABELS = {
   off:      'OFF',
@@ -32,17 +33,20 @@ export const COFID_TOOLTIP =
   "CoFID is the UK government's food composition dataset. Values for generic foods come from it directly.";
 
 export default function SourceChip({ source }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const label = LABELS[source] ?? String(source ?? '').toUpperCase().slice(0, 6);
   const isCofid = source === 'cofid';
   const chip = (
     <View
-      style={[styles.chip, isCofid && styles.chipVerified]}
+      style={[styles.chip, live.chip, isCofid && [styles.chipVerified, live.chipVerified]]}
       accessibilityLabel={isCofid ? 'Source: CoFID, UK government food data' : `Source: ${label}`}
     >
       {isCofid ? (
-        <Ionicons name="checkmark-circle" size={fontSize.xs} color={colors.success} style={styles.tick} />
+        <Ionicons name="checkmark-circle" size={fontSize.xs} color={t.colors.success} style={styles.tick} />
       ) : null}
-      <Text style={styles.text} numberOfLines={1} maxFontSizeMultiplier={1.3}>{label}</Text>
+      <Text style={[styles.text, live.text]} numberOfLines={1} maxFontSizeMultiplier={1.3}>{label}</Text>
     </View>
   );
   if (!isCofid) return chip;
@@ -82,3 +86,14 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    chip: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    chipVerified: { borderColor: withAlpha(t.colors.success, alpha.mid) },
+    text: { color: t.colors.textMuted },
+  };
+}

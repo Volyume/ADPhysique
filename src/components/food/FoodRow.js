@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, iconSize } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 
@@ -40,6 +41,9 @@ export default function FoodRow({
   addAccessibilityLabel,
   longPressHint,
 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const sourceTag = SOURCE_LABEL[food.source] ?? null;
   // kcalForServing stays in kcal (other callers/tests depend on the numeric
   // helper). Energy DISPLAY unit (kcal | kj) is applied here, at the render
@@ -56,7 +60,7 @@ export default function FoodRow({
     : '';
   return (
     <TouchableOpacity
-      style={styles.row}
+      style={[styles.row, live.row]}
       onPress={onPress}
       onLongPress={onLongPress}
       accessibilityRole="button"
@@ -65,14 +69,14 @@ export default function FoodRow({
     >
       <View style={styles.rowMain}>
         <Text maxFontSizeMultiplier={1.3}
-          style={[styles.rowName, isDislike && styles.rowNameMuted]}
+          style={[styles.rowName, live.rowName, isDislike && [styles.rowNameMuted, live.rowNameMuted]]}
           numberOfLines={1}
         >
           {food.name}
           {pref === 'fav' ? '  Starred' : ''}
         </Text>
         <Text maxFontSizeMultiplier={1.3}
-          style={[styles.rowMeta, isDislike && styles.rowMetaMuted]}
+          style={[styles.rowMeta, live.rowMeta, isDislike && [styles.rowMetaMuted, live.rowMetaMuted]]}
           numberOfLines={1}
         >
           {food.brand ? `${food.brand} - ` : ''}
@@ -82,21 +86,21 @@ export default function FoodRow({
         </Text>
       </View>
       {pref === 'dislike'
-        ? <Ionicons name="close-circle" size={20} color={colors.textMuted} style={{ marginRight: spacing.sm }} />
+        ? <Ionicons name="close-circle" size={20} color={t.colors.textMuted} style={{ marginRight: spacing.sm }} />
         : null}
       {onAdd ? (
         <TouchableOpacity
-          style={styles.addBtn}
+          style={[styles.addBtn, live.addBtn]}
           onPress={onAdd}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityRole="button"
           accessibilityLabel={addAccessibilityLabel || `Add ${food.name} to plate`}
         >
-          <Ionicons name="add" size={16} color={colors.primary} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.addBtnText}>{addLabel}</Text>
+          <Ionicons name="add" size={16} color={t.colors.primary} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.addBtnText, live.addBtnText]}>{addLabel}</Text>
         </TouchableOpacity>
       ) : (
-        <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} style={styles.rowChevron} importantForAccessibility="no" accessibilityElementsHidden />
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} style={styles.rowChevron} importantForAccessibility="no" accessibilityElementsHidden />
       )}
     </TouchableOpacity>
   );
@@ -128,3 +132,19 @@ const styles = StyleSheet.create({
   addBtnText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   rowChevron: { marginLeft: spacing.xs },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. rowMain/rowChevron have no
+// colour tokens.
+function buildLiveStyles(t) {
+  return {
+    row: { borderBottomColor: t.colors.border },
+    rowName: { color: t.colors.textPrimary },
+    rowNameMuted: { color: t.colors.textMuted },
+    rowMeta: { color: t.colors.textMuted },
+    rowMetaMuted: { color: t.colors.textMuted },
+    addBtn: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.border },
+    addBtnText: { color: t.colors.primary },
+  };
+}

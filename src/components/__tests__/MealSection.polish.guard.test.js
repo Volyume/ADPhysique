@@ -20,9 +20,14 @@ const CURATED_MEAL_SHEET = fs.readFileSync(
 
 describe('Eat meal-card polish', () => {
   test('empty meal cards keep one centred add-food CTA without an icon pile', () => {
-    expect(MEAL_SECTION).toContain('style={styles.addFoodButton}');
-    expect(MEAL_SECTION).toContain('<Text maxFontSizeMultiplier={1.3} style={styles.addFoodText}>Add food</Text>');
-    expect(MEAL_SECTION).toContain('<Ionicons name="search-outline" size={16} color={colors.textSecondary} />');
+    // 2026-07-10 (CP-10 stage 4 batch C, theming): the call sites now carry
+    // a live-theme override alongside the frozen style/colour (array form,
+    // `t.colors.X` for the icon prop), so the pins match that form instead
+    // of the bare `styles.X`/`colors.X` references. Same call sites, same
+    // frozen style objects underneath, still asserted below.
+    expect(MEAL_SECTION).toContain('style={[styles.addFoodButton, live.addFoodButton]}');
+    expect(MEAL_SECTION).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.addFoodText, live.addFoodText]}>Add food</Text>');
+    expect(MEAL_SECTION).toContain('<Ionicons name="search-outline" size={16} color={t.colors.textSecondary} />');
     expect(MEAL_SECTION).toMatch(/addFoodButton: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(MEAL_SECTION).toContain('addFoodText: { ...type.label, color: colors.textPrimary }');
     expect(MEAL_SECTION).not.toContain('style={styles.shortcutButton}');

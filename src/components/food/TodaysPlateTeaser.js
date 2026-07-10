@@ -15,6 +15,7 @@
 import { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 import { assembleDayPlan } from '../../lib/food/mealPlanAssembler';
@@ -26,6 +27,9 @@ const SAMPLE_TARGET = Object.freeze({ kcal: 2200, proteinG: 165, carbsG: 230, fa
 const SAMPLE_BAND = Object.freeze({ kcalMin: 1980, kcalMax: 2420 });
 
 export default function TodaysPlateTeaser() {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   // Energy DISPLAY unit (kcal | kj). Display-only: SAMPLE_TARGET and the
   // assembled plan totals stay kcal (the engine works in kcal); only the
   // rendered energy number + label convert.
@@ -40,32 +44,32 @@ export default function TodaysPlateTeaser() {
   if (!day || !day.slots?.length) return null;
 
   return (
-    <View style={styles.card} accessibilityRole="summary" accessibilityLabel="Example meal plan day. Pro builds this around your own targets.">
-      <Text maxFontSizeMultiplier={1.3} style={styles.eyebrow}>A day on Pro</Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.title}>Your meals, sorted.</Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.sub}>
+    <View style={[styles.card, live.card]} accessibilityRole="summary" accessibilityLabel="Example meal plan day. Pro builds this around your own targets.">
+      <Text maxFontSizeMultiplier={1.3} style={[styles.eyebrow, live.eyebrow]}>A day on Pro</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Your meals, sorted.</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.sub, live.sub]}>
         Pro builds a day of real food to your own calories and macros, and lets
         you swap anything and log it in a tap. Here is what a day looks like.
       </Text>
 
       <View style={styles.plates} pointerEvents="none">
         {day.slots.map((slot) => (
-          <View key={slot.slot} style={styles.plate}>
+          <View key={slot.slot} style={[styles.plate, live.plate]}>
             <View style={styles.plateHead}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.plateSlot}>{mealSlotLabel(slot.slot)}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.plateKcal}>{toEnergy(slot.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.plateSlot, live.plateSlot]}>{mealSlotLabel(slot.slot)}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.plateKcal, live.plateKcal]}>{toEnergy(slot.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={styles.plateName} numberOfLines={1}>{slot.name}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.plateName, live.plateName]} numberOfLines={1}>{slot.name}</Text>
           </View>
         ))}
         <View style={styles.totalRow}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.totalText}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.totalText, live.totalText]}>
             {`${toEnergy(day.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${day.totals.protein} - C ${day.totals.carbs} - F ${day.totals.fat}`}
           </Text>
         </View>
       </View>
 
-      <Text maxFontSizeMultiplier={1.3} style={styles.foot}>An example, not medical advice. Your plan is built around your numbers.</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.foot, live.foot]}>An example, not medical advice. Your plan is built around your numbers.</Text>
     </View>
   );
 }
@@ -94,3 +98,22 @@ const styles = StyleSheet.create({
   totalText: { color: colors.textSecondary, fontSize: fontSize.xs, fontVariant: ['tabular-nums'] },
   foot: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.sm },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. plates/plateHead/totalRow have
+// no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    eyebrow: { color: t.colors.primary },
+    title: { color: t.colors.textPrimary },
+    sub: { color: t.colors.textSecondary },
+    plate: { backgroundColor: t.colors.surface2 },
+    plateSlot: { color: t.colors.textSecondary },
+    plateKcal: { color: t.colors.textSecondary },
+    plateName: { color: t.colors.textPrimary },
+    totalText: { color: t.colors.textSecondary },
+    foot: { color: t.colors.textMuted },
+  };
+}

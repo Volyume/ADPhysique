@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import SvgBarSparkline from './SvgBarSparkline';
 import InfoTooltip from './InfoTooltip';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
@@ -14,17 +15,23 @@ import { workloadTakeaway } from '../lib/chartWindows';
 const FREQ_MAX_DISPLAY = 8;
 
 export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, onPress, onBuild }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const progWidth = `${Math.round(progress * 100)}%`;
 
   if (!meso) {
     return (
-      <TouchableOpacity style={[styles.card, styles.mesoEmpty]} onPress={onBuild} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Browse plans">
-        <Ionicons name="layers-outline" size={32} color={colors.primaryDim} />
-        <Text maxFontSizeMultiplier={1.3} style={styles.mesoEmptyTitle}>No plan running yet</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.mesoEmptySub}>Browse the plan library or build your own. Your progress will appear right here once you start.</Text>
-        <View style={styles.mesoEmptyBtn}>
-          <Ionicons name="compass-outline" size={14} color={colors.textSecondary} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.mesoEmptyBtnText}>Browse plans</Text>
+      <TouchableOpacity style={[styles.card, live.card, styles.mesoEmpty]} onPress={onBuild} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Browse plans">
+        <Ionicons name="layers-outline" size={32} color={t.colors.primaryDim} />
+        <Text maxFontSizeMultiplier={1.3} style={[styles.mesoEmptyTitle, live.mesoEmptyTitle]}>No plan running yet</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.mesoEmptySub, live.mesoEmptySub]}>Browse the plan library or build your own. Your progress will appear right here once you start.</Text>
+        <View style={[styles.mesoEmptyBtn, live.mesoEmptyBtn]}>
+          {/* 2026-07-10 (CP-10 stage 4 batch C, theming): live-theme colour
+              prop (t.colors.textSecondary); see noPlanJourneyCopy.guard.test.js
+              for the mechanically-updated pin. */}
+          <Ionicons name="compass-outline" size={14} color={t.colors.textSecondary} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.mesoEmptyBtnText, live.mesoEmptyBtnText]}>Browse plans</Text>
         </View>
       </TouchableOpacity>
     );
@@ -38,7 +45,7 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
 
   return (
     <TouchableOpacity
-      style={[styles.card, styles.mesoCard]}
+      style={[styles.card, live.card, styles.mesoCard]}
       onPress={onPress}
       activeOpacity={0.85}
       accessibilityRole="button"
@@ -47,24 +54,24 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
     >
       <View style={styles.mesoTop}>
         <View style={{ flex: 1 }}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.mesoName} numberOfLines={1}>{meso.name ?? 'Training Block'}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.mesoWeek}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.mesoName, live.mesoName]} numberOfLines={1}>{meso.name ?? 'Training Block'}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.mesoWeek, live.mesoWeek]}>
             {isPlan
               ? (meso.splitType ? meso.splitType : 'Active plan')
               : `Week ${currentWeek}${meso.durationWeeks ? ` of ${meso.durationWeeks}` : ''}${meso.focus ? `  ·  ${meso.focus}` : ''}`
             }
           </Text>
         </View>
-        <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
       </View>
 
       {/* Progress bar, only for mesocycles with a known duration */}
       {!isPlan && meso.durationWeeks > 0 && (
         <>
-          <View style={styles.mesoProgressTrack}>
-            <View style={[styles.mesoProgressFill, { width: progWidth }]} />
+          <View style={[styles.mesoProgressTrack, live.mesoProgressTrack]}>
+            <View style={[styles.mesoProgressFill, live.mesoProgressFill, { width: progWidth }]} />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={styles.mesoProgressLabel}>{Math.round(progress * 100)}% complete</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.mesoProgressLabel, live.mesoProgressLabel]}>{Math.round(progress * 100)}% complete</Text>
         </>
       )}
 
@@ -72,8 +79,8 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
       {tonnageBars.some(b => b.value > 0) && (
         <View style={styles.sparkWrap}>
           <View style={styles.sparkLabelRow}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.sparkLabel}>Weekly load</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.sparkValue}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.sparkLabel, live.sparkLabel]}>Weekly load</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.sparkValue, live.sparkValue]}>
               {(tonnageBars[tonnageBars.length - 1]?.value ?? 0).toLocaleString('en-GB')} kg
             </Text>
           </View>
@@ -93,6 +100,9 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
 }
 
 export function TrainingCalendar({ values }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const { width: SCREEN_W } = useWindowDimensions();
   const trainedDates = new Set(values.map(v => v.date));
   const trainedCount = values.length;
@@ -109,7 +119,7 @@ export function TrainingCalendar({ values }) {
     }),
   );
   return (
-    <View style={styles.calWrap}>
+    <View style={[styles.calWrap, live.calWrap]}>
       <View
         style={styles.calGrid}
         accessible
@@ -122,7 +132,7 @@ export function TrainingCalendar({ values }) {
                 key={di}
                 style={{
                   width: SQ, height: SQ, borderRadius: 2,
-                  backgroundColor: trained ? colors.primary : colors.surface2,
+                  backgroundColor: trained ? t.colors.primary : t.colors.surface2,
                 }}
               />
             ))}
@@ -130,17 +140,35 @@ export function TrainingCalendar({ values }) {
         ))}
       </View>
       <View style={styles.calLegend}>
-        <View style={[styles.calDot, { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border }]} />
-        <Text maxFontSizeMultiplier={1.3} style={styles.calLegendText}>Rest</Text>
-        <View style={[styles.calDot, { backgroundColor: colors.primary }]} />
-        <Text maxFontSizeMultiplier={1.3} style={styles.calLegendText}>Trained</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.calLegendText, { marginLeft: 'auto' }]}>{trainedCount} days trained</Text>
+        <View style={[styles.calDot, { backgroundColor: t.colors.surface2, borderWidth: 1, borderColor: t.colors.border }]} />
+        <Text maxFontSizeMultiplier={1.3} style={[styles.calLegendText, live.calLegendText]}>Rest</Text>
+        <View style={[styles.calDot, { backgroundColor: t.colors.primary }]} />
+        <Text maxFontSizeMultiplier={1.3} style={[styles.calLegendText, live.calLegendText]}>Trained</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.calLegendText, live.calLegendText, { marginLeft: 'auto' }]}>{trainedCount} days trained</Text>
       </View>
     </View>
   );
 }
 
+// CP-10 theming batch (component sweep, 2026-07-10): live colour resolver
+// replacing the frozen barColor() function, same "build" pattern as
+// CardioHistoryScreen's buildMarkStyle(c) -- resolves the same avgMin ->
+// colour mapping off the passed-in live t.colors instead of the frozen
+// colors singleton.
+function buildBarColor(c) {
+  return function barColor(avgMin) {
+    if (avgMin <= 0) return c.surface2;
+    if (avgMin < 45) return c.textMuted;
+    if (avgMin <= 75) return c.success;
+    return c.warning;
+  };
+}
+
 export function SessionDurationChart({ bars }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
+  const barColor = buildBarColor(t.colors);
   const BAR_MAX_H = 40;
   const BAR_W = 20;
   const durations = bars.map(b => b.avgMin).filter(v => v > 0);
@@ -155,15 +183,8 @@ export function SessionDurationChart({ bars }) {
     if (isDown) coachingLine = 'Your sessions are getting shorter, which might mean fatigue.';
   }
 
-  function barColor(avgMin) {
-    if (avgMin <= 0) return colors.surface2;
-    if (avgMin < 45) return colors.textMuted;
-    if (avgMin <= 75) return colors.success;
-    return colors.warning;
-  }
-
   return (
-    <View style={styles.durationWrap}>
+    <View style={[styles.durationWrap, live.durationWrap]}>
       <View style={styles.durationBarsRow}>
         {bars.map((bar, i) => {
           const barH = bar.avgMin > 0
@@ -176,35 +197,38 @@ export function SessionDurationChart({ bars }) {
                 { height: barH, width: BAR_W, backgroundColor: barColor(bar.avgMin) },
               ]} />
               {bar.avgMin > 0 && (
-                <Text maxFontSizeMultiplier={1.3} style={styles.durationBarValue}>{bar.avgMin}m</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.durationBarValue, live.durationBarValue]}>{bar.avgMin}m</Text>
               )}
-              <Text maxFontSizeMultiplier={1.3} style={styles.durationBarLabel}>{bar.weekLabel}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.durationBarLabel, live.durationBarLabel]}>{bar.weekLabel}</Text>
             </View>
           );
         })}
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={styles.durationCoach}>{coachingLine}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.durationCoach, live.durationCoach]}>{coachingLine}</Text>
     </View>
   );
 }
 
 export function MuscleFrequencyTable({ rows, showAll, onToggle }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const visible = showAll ? rows : rows.slice(0, FREQ_MAX_DISPLAY);
   const hasMore = rows.length > FREQ_MAX_DISPLAY;
 
   return (
-    <View style={styles.freqWrap}>
+    <View style={[styles.freqWrap, live.freqWrap]}>
       {visible.map(({ muscle, thisWeek, lastWeek }) => (
-        <View key={muscle} style={styles.freqRow}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.freqMuscle} numberOfLines={1}>
+        <View key={muscle} style={[styles.freqRow, live.freqRow]}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.freqMuscle, live.freqMuscle]} numberOfLines={1}>
             {MUSCLE_DISPLAY_NAMES[muscle] ?? muscle}
           </Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.freqCounts}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.freqCountBold, thisWeek > lastWeek && styles.freqCountUp]}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.freqCounts, live.freqCounts]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.freqCountBold, live.freqCountBold, thisWeek > lastWeek && [styles.freqCountUp, live.freqCountUp]]}>
               {thisWeek}
             </Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.freqDivider}> this · </Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.freqLastWeek}>{lastWeek} last</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.freqDivider, live.freqDivider]}> this · </Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.freqLastWeek, live.freqLastWeek]}>{lastWeek} last</Text>
           </Text>
         </View>
       ))}
@@ -217,13 +241,13 @@ export function MuscleFrequencyTable({ rows, showAll, onToggle }) {
           accessibilityState={{ expanded: showAll }}
           accessibilityLabel={showAll ? 'Show less' : `Show all ${rows.length}`}
         >
-          <Text maxFontSizeMultiplier={1.3} style={styles.freqToggleText}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.freqToggleText, live.freqToggleText]}>
             {showAll ? 'Show less' : `Show all (${rows.length})`}
           </Text>
           <Ionicons
             name={showAll ? 'chevron-up' : 'chevron-down'}
             size={12}
-            color={colors.primary}
+            color={t.colors.primary}
           />
         </TouchableOpacity>
       )}
@@ -232,20 +256,23 @@ export function MuscleFrequencyTable({ rows, showAll, onToggle }) {
 }
 
 export function WorkloadCard({ data }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   if (!data || data.ratio === null) return null;
 
   const { acute, chronic, ratio } = data;
 
-  let statusColor = colors.textMuted;
+  let statusColor = t.colors.textMuted;
   let statusText = 'Below your recent average (under 0.8). Room for more volume if you feel fresh.';
   if (ratio >= 1.5) {
-    statusColor = colors.error;
+    statusColor = t.colors.error;
     statusText = 'High load this week (above 1.5). Consider an easier session.';
   } else if (ratio >= 1.3) {
-    statusColor = colors.warning;
+    statusColor = t.colors.warning;
     statusText = 'Load is elevated (above 1.3). Monitor how you feel.';
   } else if (ratio >= 0.8) {
-    statusColor = colors.success;
+    statusColor = t.colors.success;
     statusText = 'In your optimal range (0.8 to 1.3).';
   }
 
@@ -255,33 +282,33 @@ export function WorkloadCard({ data }) {
   const takeaway = workloadTakeaway(ratio, acute, chronic);
 
   return (
-    <View style={styles.workloadCard}>
+    <View style={[styles.workloadCard, live.workloadCard]}>
       <View style={styles.rowBetween}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.workloadTitle}>Training load</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.workloadTitle, live.workloadTitle]}>Training load</Text>
         <InfoTooltip text="Compares this week's tonnage to your recent average. 0.8 to 1.3 is the optimal range. Above 1.5 signals high fatigue risk." />
       </View>
 
-      <View style={styles.workloadBarBg}>
+      <View style={[styles.workloadBarBg, live.workloadBarBg]}>
         <View style={[styles.workloadBarFill, { width: `${Math.round(fillPct * 100)}%`, backgroundColor: statusColor }]} />
       </View>
 
       <View style={styles.workloadStats}>
         <View style={styles.workloadStat}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.workloadStatValue}>{(ratio).toFixed(2)}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.workloadStatLabel}>vs recent average</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.workloadStatValue, live.workloadStatValue]}>{(ratio).toFixed(2)}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.workloadStatLabel, live.workloadStatLabel]}>vs recent average</Text>
         </View>
         <View style={styles.workloadStat}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.workloadStatValue}>{acute.toLocaleString('en-GB')}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.workloadStatLabel}>This week (kg)</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.workloadStatValue, live.workloadStatValue]}>{acute.toLocaleString('en-GB')}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.workloadStatLabel, live.workloadStatLabel]}>This week (kg)</Text>
         </View>
         <View style={styles.workloadStat}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.workloadStatValue}>{chronic.toLocaleString('en-GB')}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.workloadStatLabel}>4-wk avg (kg)</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.workloadStatValue, live.workloadStatValue]}>{chronic.toLocaleString('en-GB')}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.workloadStatLabel, live.workloadStatLabel]}>4-wk avg (kg)</Text>
         </View>
       </View>
 
       <Text maxFontSizeMultiplier={1.3} style={[styles.workloadStatus, { color: statusColor }]}>{statusText}</Text>
-      {!!takeaway && <Text maxFontSizeMultiplier={1.3} style={styles.workloadTakeaway}>{takeaway}</Text>}
+      {!!takeaway && <Text maxFontSizeMultiplier={1.3} style={[styles.workloadTakeaway, live.workloadTakeaway]}>{takeaway}</Text>}
     </View>
   );
 }
@@ -447,3 +474,49 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. rowBetween/mesoCard/mesoEmpty/
+// mesoTop/sparkWrap/sparkLabelRow/sparkChartCentered/calGrid/calCol/calLegend/
+// calDot/durationBarsRow/durationBarCol/durationBar/freqToggle/
+// workloadStats/workloadStat/workloadBarFill/workloadStatus have no colour
+// tokens baked at module scope (workloadBarFill/workloadStatus take their
+// colour from the statusColor variable computed inline against t.colors).
+function buildLiveStyles(t) {
+  return {
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    mesoEmptyTitle: { color: t.colors.textPrimary },
+    mesoEmptySub: { color: t.colors.textSecondary },
+    mesoEmptyBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    mesoEmptyBtnText: { color: t.colors.textPrimary },
+    mesoName: { color: t.colors.textPrimary },
+    mesoWeek: { color: t.colors.textSecondary },
+    mesoProgressTrack: { backgroundColor: t.colors.surface2 },
+    mesoProgressFill: { backgroundColor: t.colors.primary },
+    mesoProgressLabel: { color: t.colors.textMuted },
+    sparkLabel: { color: t.colors.textMuted },
+    sparkValue: { color: t.colors.textPrimary },
+    calWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    calLegendText: { color: t.colors.textMuted },
+    durationWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    durationBarValue: { color: t.colors.textSecondary },
+    durationBarLabel: { color: t.colors.textMuted },
+    durationCoach: { color: t.colors.textSecondary },
+    freqWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    freqRow: { borderBottomColor: withAlpha(t.colors.border, alpha.strong) },
+    freqMuscle: { color: t.colors.textPrimary },
+    freqCounts: { color: t.colors.textSecondary },
+    freqCountBold: { color: t.colors.textPrimary },
+    freqCountUp: { color: t.colors.success },
+    freqDivider: { color: t.colors.textMuted },
+    freqLastWeek: { color: t.colors.textMuted },
+    freqToggleText: { color: t.colors.primary },
+    workloadCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    workloadTitle: { color: t.colors.textMuted },
+    workloadBarBg: { backgroundColor: t.colors.surface2 },
+    workloadStatValue: { color: t.colors.textPrimary },
+    workloadStatLabel: { color: t.colors.textMuted },
+    workloadTakeaway: { color: t.colors.textSecondary },
+  };
+}

@@ -32,6 +32,7 @@ import useAppStore from '../store/useAppStore';
 import {
   colors, spacing, radius, type, iconSize,
 } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 
 function startOfDay(ms) {
@@ -57,6 +58,9 @@ export default function PhotoDateRangeSheet({
   visible, fromMs = null, toMs = null, onApply, onCancel,
 }) {
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const [fromDraft, setFromDraft] = useState(Number.isFinite(fromMs) ? fromMs : null);
   const [toDraft, setToDraft] = useState(Number.isFinite(toMs) ? toMs : null);
   const [fromPickerOpen, setFromPickerOpen] = useState(false);
@@ -76,12 +80,12 @@ export default function PhotoDateRangeSheet({
 
   const apply = () => {
     let f = fromDraft;
-    let t = toDraft;
+    let toVal = toDraft;
     // Quietly swap an inverted range so the result is always valid.
-    if (Number.isFinite(f) && Number.isFinite(t) && f > t) { const s = f; f = t; t = s; }
+    if (Number.isFinite(f) && Number.isFinite(toVal) && f > toVal) { const s = f; f = toVal; toVal = s; }
     onApply?.({
       fromMs: Number.isFinite(f) ? startOfDay(f) : null,
-      toMs: Number.isFinite(t) ? endOfDay(t) : null,
+      toMs: Number.isFinite(toVal) ? endOfDay(toVal) : null,
     });
   };
 
@@ -94,39 +98,39 @@ export default function PhotoDateRangeSheet({
       animationType={reduceMotion ? 'none' : 'fade'}
       onRequestClose={onCancel}
     >
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+      <View style={[styles.backdrop, live.backdrop]}>
+        <View style={[styles.sheet, live.sheet]}>
           <ScrollView
             style={styles.sheetScroll}
             contentContainerStyle={styles.sheetScrollBody}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            <Text maxFontSizeMultiplier={1.3} style={styles.sheetTitle}>Filter by date</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.helper}>Show only photos within a range. Leave either side on Any to keep everything before or after it.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Filter by date</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.helper, live.helper]}>Show only photos within a range. Leave either side on Any to keep everything before or after it.</Text>
 
-            <Text maxFontSizeMultiplier={1.3} style={styles.sectionLabel}>From</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.sectionLabel, live.sectionLabel]}>From</Text>
             <TouchableOpacity
-              style={styles.dateField}
+              style={[styles.dateField, live.dateField]}
               onPress={() => { setToPickerOpen(false); setFromPickerOpen(true); }}
               accessibilityRole="button"
               accessibilityLabel={`Change the earliest date, currently ${Number.isFinite(fromDraft) ? formatProgressPhotoDay(fromDraft) : 'Any'}`}
             >
-              <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.dateText} numberOfLines={1} ellipsizeMode="tail">{Number.isFinite(fromDraft) ? formatProgressPhotoDay(fromDraft) : 'Any'}</Text>
-              <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
+              <Ionicons name="calendar-outline" size={iconSize.md} color={t.colors.primary} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.dateText, live.dateText]} numberOfLines={1} ellipsizeMode="tail">{Number.isFinite(fromDraft) ? formatProgressPhotoDay(fromDraft) : 'Any'}</Text>
+              <Ionicons name="chevron-down" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
 
-            <Text maxFontSizeMultiplier={1.3} style={styles.sectionLabel}>To</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.sectionLabel, live.sectionLabel]}>To</Text>
             <TouchableOpacity
-              style={styles.dateField}
+              style={[styles.dateField, live.dateField]}
               onPress={() => { setFromPickerOpen(false); setToPickerOpen(true); }}
               accessibilityRole="button"
               accessibilityLabel={`Change the latest date, currently ${Number.isFinite(toDraft) ? formatProgressPhotoDay(toDraft) : 'Any'}`}
             >
-              <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.dateText} numberOfLines={1} ellipsizeMode="tail">{Number.isFinite(toDraft) ? formatProgressPhotoDay(toDraft) : 'Any'}</Text>
-              <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
+              <Ionicons name="calendar-outline" size={iconSize.md} color={t.colors.primary} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.dateText, live.dateText]} numberOfLines={1} ellipsizeMode="tail">{Number.isFinite(toDraft) ? formatProgressPhotoDay(toDraft) : 'Any'}</Text>
+              <Ionicons name="chevron-down" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
           </ScrollView>
 
@@ -215,3 +219,19 @@ const styles = StyleSheet.create({
     minWidth: 118,
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. sheetScroll/sheetScrollBody/
+// actions/actionButton have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    backdrop: { backgroundColor: t.colors.scrim },
+    sheet: { backgroundColor: t.colors.surfaceElevated ?? t.colors.surface, borderColor: t.colors.border },
+    sheetTitle: { color: t.colors.textPrimary },
+    helper: { color: t.colors.textMuted },
+    sectionLabel: { color: t.colors.textMuted },
+    dateField: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    dateText: { color: t.colors.textPrimary },
+  };
+}

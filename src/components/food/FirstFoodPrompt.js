@@ -22,17 +22,21 @@
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, type } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 
 export default function FirstFoodPrompt({ targetKcal, energyUnit = 'kcal' }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
-    <View style={styles.card} accessibilityRole="summary">
-      <Ionicons name="restaurant-outline" size={28} color={colors.textMuted} />
-      <Text maxFontSizeMultiplier={1.3} style={styles.headline}>
+    <View style={[styles.card, live.card]} accessibilityRole="summary">
+      <Ionicons name="restaurant-outline" size={28} color={t.colors.textMuted} />
+      <Text maxFontSizeMultiplier={1.3} style={[styles.headline, live.headline]}>
         Log your first food to see your day take shape.
       </Text>
       {targetKcal != null ? (
-        <Text maxFontSizeMultiplier={1.3} style={styles.target}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.target, live.target]}>
           {`Today's target is ${toEnergy(targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}.`}
         </Text>
       ) : null}
@@ -60,3 +64,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    headline: { color: t.colors.textSecondary },
+    target: { color: t.colors.textMuted },
+  };
+}

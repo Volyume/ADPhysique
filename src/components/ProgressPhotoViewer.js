@@ -66,6 +66,7 @@ import { formatBodyWeight } from '../lib/units';
 import { logError } from '../lib/errorLog';
 import PhotoDatePicker from './PhotoDatePicker';
 import { colors, spacing, radius, type, motion, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 
 const POSES = [
@@ -126,6 +127,9 @@ export default function ProgressPhotoViewer({
   const userId = useAppStore((s) => s.user?.id);
   const bodyWeightUnits = useAppStore((s) => s.bodyWeightUnits);
   const suppressed = usePhotoSuppression();
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
 
   const startIndex = Math.max(0, photos.findIndex((p) => p.name === initialName));
   const [index, setIndex] = useState(startIndex);
@@ -533,21 +537,21 @@ export default function ProgressPhotoViewer({
       statusBarTranslucent
     >
       <Animated.View style={[StyleSheet.absoluteFill, chromeStyle]}>
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-            <Ionicons name="chevron-back" size={26} color={colors.textPrimary} />
+            <Ionicons name="chevron-back" size={26} color={t.colors.textPrimary} />
           </TouchableOpacity>
-          <Text maxFontSizeMultiplier={1.3} style={styles.headerDate} numberOfLines={1}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.headerDate, live.headerDate]} numberOfLines={1}>
             {current ? formatProgressPhotoDay(currentMeta.takenAt) : ''}
           </Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.counter}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.counter, live.counter]}>
             {photos.length > 1 ? `${safeIndex + 1} / ${photos.length}` : ''}
           </Text>
         </View>
 
         <View
-          style={styles.stage}
+          style={[styles.stage, live.stage]}
           accessible={!!current}
           accessibilityRole={photos.length > 1 ? 'adjustable' : 'image'}
           accessibilityLabel={current ? `Photo from ${formatProgressPhotoDay(currentMeta.takenAt)}` : 'No photo to show'}
@@ -581,7 +585,7 @@ export default function ProgressPhotoViewer({
               </Animated.View>
             </GestureDetector>
           ) : (
-            <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>No photo to show.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.emptyText, live.emptyText]}>No photo to show.</Text>
           )}
         </View>
 
@@ -590,24 +594,24 @@ export default function ProgressPhotoViewer({
             <>
               <View style={styles.metaRow}>
                 {currentMeta.pose ? (
-                  <View style={styles.poseTag}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.poseTagText}>{POSE_LABEL[currentMeta.pose]}</Text>
+                  <View style={[styles.poseTag, live.poseTag]}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.poseTagText, live.poseTagText]}>{POSE_LABEL[currentMeta.pose]}</Text>
                   </View>
                 ) : null}
-                <Text maxFontSizeMultiplier={1.3} style={styles.metaDate}>{formatProgressPhotoDay(currentMeta.takenAt)}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.metaDate, live.metaDate]}>{formatProgressPhotoDay(currentMeta.takenAt)}</Text>
               </View>
 
-              {showWeight ? <Text maxFontSizeMultiplier={1.3} style={styles.metaWeight}>{weightLine}</Text> : null}
-              {currentMeta.note ? <Text maxFontSizeMultiplier={1.3} style={styles.metaNote}>{currentMeta.note}</Text> : null}
+              {showWeight ? <Text maxFontSizeMultiplier={1.3} style={[styles.metaWeight, live.metaWeight]}>{weightLine}</Text> : null}
+              {currentMeta.note ? <Text maxFontSizeMultiplier={1.3} style={[styles.metaNote, live.metaNote]}>{currentMeta.note}</Text> : null}
 
-              <View style={styles.storageNote}>
-                <Ionicons name="phone-portrait-outline" size={iconSize.sm} color={colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={styles.storageNoteText}>
+              <View style={[styles.storageNote, live.storageNote]}>
+                <Ionicons name="phone-portrait-outline" size={iconSize.sm} color={t.colors.primary} />
+                <Text maxFontSizeMultiplier={1.3} style={[styles.storageNoteText, live.storageNoteText]}>
                   Stored on this device. Export anything you want to keep before uninstalling, clearing app data or changing phones.
                 </Text>
               </View>
 
-              <Text maxFontSizeMultiplier={1.3} style={styles.sectionLabel}>Pose</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.sectionLabel, live.sectionLabel]}>Pose</Text>
               <View style={styles.poseSelector}>
                 {POSES.map((p) => {
                   const active = currentMeta.pose === p.key;
@@ -650,7 +654,7 @@ export default function ProgressPhotoViewer({
                     icon="images-outline" onPress={onPressCompare} accessibilityLabel="Compare from here"
                   />
                 </View>
-                <View style={styles.destructiveActionRow}>
+                <View style={[styles.destructiveActionRow, live.destructiveActionRow]}>
                   <Button
                     title={deleteModeForPhoto?.(current.name) === 'scan-set' ? 'Delete set' : deleteModeForPhoto?.(current.name) === 'photo-set' ? 'Delete set' : 'Delete photo'}
                     variant="destructive"
@@ -689,17 +693,17 @@ export default function ProgressPhotoViewer({
         animationType={reduceMotion ? 'none' : 'fade'}
         onRequestClose={() => setEditing(null)}
       >
-        <View style={styles.sheetBackdrop}>
-          <View style={styles.sheet}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.sheetTitle}>Note</Text>
+        <View style={[styles.sheetBackdrop, live.sheetBackdrop]}>
+          <View style={[styles.sheet, live.sheet]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Note</Text>
             <TextField
               containerStyle={styles.noteFieldContainer}
-              fieldStyle={styles.noteField}
+              fieldStyle={[styles.noteField, live.noteField]}
               inputStyle={styles.noteInput}
               value={draftNote}
               onChangeText={setDraftNote}
               placeholder="A short note for yourself"
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={t.colors.textMuted}
               multiline
               maxLength={280}
               accessibilityLabel="Photo note"
@@ -807,3 +811,35 @@ const styles = StyleSheet.create({
   },
   sheetActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, marginTop: spacing.lg },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. header/stageInner/morphOverlay/
+// panel/panelContent/metaRow/poseSelector/poseOption/poseOptionText/actions/
+// actionRow/actionHalf/noteFieldContainer/noteInput/sheetActions have no
+// colour tokens. The Reanimated worklets (imgAnimStyle/overlayStyle/
+// chromeStyle/stageImageStyle) are untouched -- they are pure-arithmetic,
+// no theme reads, per the file's own worklet-safety comments (CP-10 plan
+// section 5.1); nothing in this batch changes that.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    headerDate: { color: t.colors.textPrimary },
+    counter: { color: t.colors.textMuted },
+    stage: { backgroundColor: t.colors.camera },
+    emptyText: { color: t.colors.textMuted },
+    poseTag: { backgroundColor: t.colors.primaryBg },
+    poseTagText: { color: t.colors.primary },
+    metaDate: { color: t.colors.textPrimary },
+    metaWeight: { color: t.colors.textSecondary },
+    metaNote: { color: t.colors.textSecondary },
+    storageNote: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    storageNoteText: { color: t.colors.textSecondary },
+    sectionLabel: { color: t.colors.textMuted },
+    destructiveActionRow: { borderTopColor: t.colors.borderSubtle },
+    sheetBackdrop: { backgroundColor: t.colors.scrim },
+    sheet: { backgroundColor: t.colors.surfaceElevated ?? t.colors.surface, borderColor: t.colors.border },
+    sheetTitle: { color: t.colors.textPrimary },
+    noteField: { backgroundColor: t.colors.inputBg },
+  };
+}

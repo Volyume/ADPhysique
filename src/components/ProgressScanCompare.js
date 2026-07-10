@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   colors, spacing, radius, type, fontWeight, motion,
 } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
@@ -64,15 +65,18 @@ function scanConfidenceChipText(scan) {
 }
 
 function ScanSummary({ scan, label, hideExact }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const weight = scanWeightLabel(scan, { hideExact });
   const confidenceChip = scanConfidenceChipText(scan);
   return (
-    <View style={styles.summaryPanel}>
-      <Text maxFontSizeMultiplier={1.3} style={styles.summaryLabel}>{label}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.summaryDate}>{formatProgressPhotoDay(scan?.capturedAt)}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.summaryRange}>{scanRangeLabel(scan, { hideExact })}</Text>
-      {confidenceChip ? <Text maxFontSizeMultiplier={1.3} style={styles.summaryConfidence}>{confidenceChip}</Text> : null}
-      <Text maxFontSizeMultiplier={1.3} style={styles.summaryMeta}>
+    <View style={[styles.summaryPanel, live.summaryPanel]}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.summaryLabel, live.summaryLabel]}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.summaryDate, live.summaryDate]}>{formatProgressPhotoDay(scan?.capturedAt)}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.summaryRange, live.summaryRange]}>{scanRangeLabel(scan, { hideExact })}</Text>
+      {confidenceChip ? <Text maxFontSizeMultiplier={1.3} style={[styles.summaryConfidence, live.summaryConfidence]}>{confidenceChip}</Text> : null}
+      <Text maxFontSizeMultiplier={1.3} style={[styles.summaryMeta, live.summaryMeta]}>
         {[scan?.qualityLabel || 'saved', weight, `${scan?.assets?.length || 0} photos`].filter(Boolean).join(' | ')}
       </Text>
     </View>
@@ -80,17 +84,20 @@ function ScanSummary({ scan, label, hideExact }) {
 }
 
 function ScanAssetCell({ asset, dateLabel, reduceMotion }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   if (!asset) {
     return (
-      <View style={[styles.photoCell, styles.photoMissing]}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.photoMissingText}>Not taken</Text>
+      <View style={[styles.photoCell, live.photoCell, styles.photoMissing, live.photoMissing]}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.photoMissingText, live.photoMissingText]}>Not taken</Text>
       </View>
     );
   }
   return (
     <Image
       source={{ uri: asset.uri }}
-      style={styles.photoCell}
+      style={[styles.photoCell, live.photoCell]}
       contentFit="cover"
       recyclingKey={asset.photoName || String(asset.id)}
       transition={reduceMotion ? 0 : motion.state}
@@ -101,6 +108,9 @@ function ScanAssetCell({ asset, dateLabel, reduceMotion }) {
 }
 
 export default function ProgressScanCompare({ scans = [], onClose, hideExact = false }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const suppressed = usePhotoSuppression();
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const entries = useMemo(() => orderedScanEntries(scans), [scans]);
@@ -124,29 +134,29 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
   const renderHeader = () => (
     <View style={styles.header}>
       <View style={styles.headerCopy}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.title}>Compare photo sets</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>Compare two photo sets by score, confidence and matched poses.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Compare photo sets</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>Compare two photo sets by score, confidence and matched poses.</Text>
       </View>
       <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close photo-set comparison">
-        <Ionicons name="close" size={26} color={colors.textPrimary} />
+        <Ionicons name="close" size={26} color={t.colors.textPrimary} />
       </TouchableOpacity>
     </View>
   );
 
   if (suppressed) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
         {renderHeader()}
         <View style={styles.placeholder}>
-          <Ionicons name="leaf-outline" size={32} color={colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.placeholderText}>Score comparison is hidden for now.</Text>
+          <Ionicons name="leaf-outline" size={32} color={t.colors.textMuted} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.placeholderText, live.placeholderText]}>Score comparison is hidden for now.</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       {renderHeader()}
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -160,10 +170,10 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={`Photo score from ${formatProgressPhotoDay(scan.capturedAt)}${active ? ', chosen' : ''}`}
-                style={[styles.scanChip, active && styles.scanChipActive]}
+                style={[styles.scanChip, live.scanChip, active && [styles.scanChipActive, live.scanChipActive]]}
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.scanChipDate, active && styles.scanChipDateActive]}>{formatProgressPhotoDay(scan.capturedAt)}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.scanChipRange, active && styles.scanChipRangeActive]}>{scanRangeLabel(scan, { hideExact })}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.scanChipDate, live.scanChipDate, active && [styles.scanChipDateActive, live.scanChipDateActive]]}>{formatProgressPhotoDay(scan.capturedAt)}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.scanChipRange, live.scanChipRange, active && [styles.scanChipRangeActive, live.scanChipRangeActive]]}>{scanRangeLabel(scan, { hideExact })}</Text>
               </TouchableOpacity>
             );
           })}
@@ -171,8 +181,8 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
 
         {!(earlier && later) ? (
           <View style={styles.placeholder}>
-            <Ionicons name="scan-outline" size={32} color={colors.textMuted} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.placeholderText}>Two scored photo sets are needed.</Text>
+            <Ionicons name="scan-outline" size={32} color={t.colors.textMuted} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.placeholderText, live.placeholderText]}>Two scored photo sets are needed.</Text>
           </View>
         ) : (
           <>
@@ -182,9 +192,9 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
             </View>
 
             {deltaText ? (
-              <View style={styles.deltaBox}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.deltaLabel}>Why this looks different</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.deltaText}>{deltaText}</Text>
+              <View style={[styles.deltaBox, live.deltaBox]}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.deltaLabel, live.deltaLabel]}>Why this looks different</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.deltaText, live.deltaText]}>{deltaText}</Text>
               </View>
             ) : null}
 
@@ -193,15 +203,15 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
               const laterDate = formatProgressPhotoDay(later.capturedAt);
               return (
                 <View key={row.pose} style={styles.poseBlock}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.poseTitle}>{POSE_LABEL[row.pose] || row.pose}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.poseTitle, live.poseTitle]}>{POSE_LABEL[row.pose] || row.pose}</Text>
                   <View style={styles.photoPair}>
                     <View style={styles.photoSide}>
                       <ScanAssetCell asset={row.earlier} dateLabel={earlierDate} reduceMotion={reduceMotion} />
-                      <Text maxFontSizeMultiplier={1.3} style={styles.photoLabel}>Earlier</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.photoLabel, live.photoLabel]}>Earlier</Text>
                     </View>
                     <View style={styles.photoSide}>
                       <ScanAssetCell asset={row.later} dateLabel={laterDate} reduceMotion={reduceMotion} />
-                      <Text maxFontSizeMultiplier={1.3} style={styles.photoLabel}>Later</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.photoLabel, live.photoLabel]}>Later</Text>
                     </View>
                   </View>
                 </View>
@@ -285,3 +295,36 @@ const styles = StyleSheet.create({
   placeholder: { alignItems: 'center', marginTop: spacing.xxxl, gap: spacing.sm },
   placeholderText: { ...type.bodyStrong, color: colors.textPrimary, textAlign: 'center' },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. header/headerCopy/content/
+// strip/summaryRow/poseBlock/photoPair/photoSide have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    title: { color: t.colors.textPrimary },
+    subtitle: { color: t.colors.textMuted },
+    scanChip: { backgroundColor: t.colors.surface2 },
+    scanChipActive: { backgroundColor: t.colors.primaryFill },
+    scanChipDate: { color: t.colors.textMuted },
+    scanChipDateActive: { color: t.colors.onPrimary },
+    scanChipRange: { color: t.colors.textPrimary },
+    scanChipRangeActive: { color: t.colors.onPrimary },
+    summaryPanel: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    summaryLabel: { color: t.colors.textMuted },
+    summaryDate: { color: t.colors.textPrimary },
+    summaryRange: { color: t.colors.primary },
+    summaryConfidence: { color: t.colors.textSecondary },
+    summaryMeta: { color: t.colors.textMuted },
+    deltaBox: { backgroundColor: t.colors.primaryBg },
+    deltaLabel: { color: t.colors.primary },
+    deltaText: { color: t.colors.textSecondary },
+    poseTitle: { color: t.colors.textMuted },
+    photoCell: { backgroundColor: t.colors.surface },
+    photoMissing: { borderColor: t.colors.border },
+    photoMissingText: { color: t.colors.textMuted },
+    photoLabel: { color: t.colors.textMuted },
+    placeholderText: { color: t.colors.textPrimary },
+  };
+}

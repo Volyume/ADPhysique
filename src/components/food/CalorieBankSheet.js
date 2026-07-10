@@ -17,6 +17,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import BottomSheet from '../BottomSheet';
 import SectionLabel from '../SectionLabel';
 import { colors, fontSize, fontWeight, spacing, radius, circle, type } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 import { planCalorieBank, maxApplicableBumpKcal } from '../../lib/food/calorieBank';
@@ -44,6 +45,9 @@ export default function CalorieBankSheet({
   onClear,
   dayLabel = (d) => d,
 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const [bigDay, setBigDay] = useState(defaultBigDay);
   const [requestedBump, setRequestedBump] = useState(DEFAULT_BUMP);
 
@@ -105,8 +109,8 @@ export default function CalorieBankSheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Plan a higher-calorie day">
-      <Text maxFontSizeMultiplier={1.3} style={styles.title}>Plan a higher-calorie day</Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.intro}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Plan a higher-calorie day</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.intro, live.intro]}>
         Got a meal out or an occasion coming up? Pick that day and we will move some
         calories onto it from the rest of the week, so you eat a little less on the
         other days to make room. Your weekly total stays the same, and that's what
@@ -115,12 +119,12 @@ export default function CalorieBankSheet({
       </Text>
 
       {existingBank ? (
-        <View style={styles.activeRow}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.activeText} numberOfLines={2}>
+        <View style={[styles.activeRow, live.activeRow]}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.activeText, live.activeText]} numberOfLines={2}>
             A higher-calorie day is planned for {dayLabel(existingBank.bigDayKey)}.
           </Text>
           <TouchableOpacity onPress={onClear} hitSlop={8} accessibilityRole="button" accessibilityLabel="Clear the planned higher-calorie day">
-            <Text maxFontSizeMultiplier={1.3} style={styles.clearText}>Clear</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.clearText, live.clearText]}>Clear</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -136,9 +140,9 @@ export default function CalorieBankSheet({
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
               accessibilityLabel={dayLabel(d)}
-              style={({ pressed }) => [styles.dayChip, active && styles.dayChipActive, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [styles.dayChip, live.dayChip, active && [styles.dayChipActive, live.dayChipActive], pressed && { opacity: 0.7 }]}
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.dayChipText, active && styles.dayChipTextActive]}>{dayLabel(d)}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.dayChipText, live.dayChipText, active && [styles.dayChipTextActive, live.dayChipTextActive]]}>{dayLabel(d)}</Text>
             </Pressable>
           );
         })}
@@ -152,39 +156,39 @@ export default function CalorieBankSheet({
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Less"
-          style={[styles.stepBtn, requestedBump <= BUMP_STEP && styles.stepBtnDisabled]}
+          style={[styles.stepBtn, live.stepBtn, requestedBump <= BUMP_STEP && styles.stepBtnDisabled]}
         >
-          <Ionicons name="remove" size={24} color={requestedBump <= BUMP_STEP ? colors.textMuted : colors.primary} />
+          <Ionicons name="remove" size={24} color={requestedBump <= BUMP_STEP ? t.colors.textMuted : t.colors.primary} />
         </TouchableOpacity>
-        <Text maxFontSizeMultiplier={1.3} style={styles.stepValue} accessibilityLabel={`${requestedBump} kcal`}>+{requestedBump}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.stepValue, live.stepValue]} accessibilityLabel={`${requestedBump} kcal`}>+{requestedBump}</Text>
         <TouchableOpacity
           onPress={() => step(BUMP_STEP)}
           disabled={requestedBump >= stepMax}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="More"
-          style={[styles.stepBtn, requestedBump >= stepMax && styles.stepBtnDisabled]}
+          style={[styles.stepBtn, live.stepBtn, requestedBump >= stepMax && styles.stepBtnDisabled]}
         >
-          <Ionicons name="add" size={24} color={requestedBump >= stepMax ? colors.textMuted : colors.primary} />
+          <Ionicons name="add" size={24} color={requestedBump >= stepMax ? t.colors.textMuted : t.colors.primary} />
         </TouchableOpacity>
       </View>
 
       {plan.ok ? (
-        <Text maxFontSizeMultiplier={1.3} style={styles.preview}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.preview, live.preview]}>
           {dayLabel(bigDay)}: {toEnergy(bigNewKcal, energyUnit)} {energyUnitLabel(energyUnit)}. The other {others} days drop by about {toEnergy(perOther, energyUnit)} {energyUnitLabel(energyUnit)} each. Your weekly total stays the same.
         </Text>
       ) : (
-        <Text maxFontSizeMultiplier={1.3} style={styles.error}>{ERROR_COPY[plan.reason] ?? ERROR_COPY.invalid_input}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.error, live.error]}>{ERROR_COPY[plan.reason] ?? ERROR_COPY.invalid_input}</Text>
       )}
 
       <TouchableOpacity
-        style={[styles.applyBtn, !plan.ok && styles.applyBtnDisabled]}
+        style={[styles.applyBtn, live.applyBtn, !plan.ok && styles.applyBtnDisabled]}
         onPress={apply}
         disabled={!plan.ok}
         accessibilityRole="button"
         accessibilityLabel="Apply the higher-calorie day"
       >
-        <Text maxFontSizeMultiplier={1.3} style={styles.applyText}>Plan it</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.applyText, live.applyText]}>Plan it</Text>
       </TouchableOpacity>
     </BottomSheet>
   );
@@ -241,3 +245,27 @@ const styles = StyleSheet.create({
   applyBtnDisabled: { opacity: 0.5 },
   applyText: { color: colors.onPrimary, fontSize: fontSize.md, fontWeight: fontWeight.bold },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. sectionLabel/dayChips/stepper/
+// stepBtnDisabled/applyBtnDisabled have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    title: { color: t.colors.textPrimary },
+    intro: { color: t.colors.textMuted },
+    activeRow: { backgroundColor: t.colors.surface2 },
+    activeText: { color: t.colors.textSecondary },
+    clearText: { color: t.colors.primary },
+    dayChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    dayChipActive: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.primary },
+    dayChipText: { color: t.colors.textSecondary },
+    dayChipTextActive: { color: t.colors.onPrimary },
+    stepBtn: { borderColor: t.colors.border },
+    stepValue: { color: t.colors.textPrimary },
+    preview: { color: t.colors.textSecondary },
+    error: { color: t.colors.warning },
+    applyBtn: { backgroundColor: t.colors.primaryFill },
+    applyText: { color: t.colors.onPrimary },
+  };
+}

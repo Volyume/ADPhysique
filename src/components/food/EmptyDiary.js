@@ -11,6 +11,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, type, hitSlop, iconSize } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 import Button from '../Button';
 
 export const EMPTY_DIARY_COPY = 'Nothing logged for this day yet.';
@@ -22,26 +23,29 @@ export default function EmptyDiary({
   addLabel = 'Add food',
   addAccessibilityLabel = 'Add food',
 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
-    <View style={styles.card} accessibilityRole="summary">
-      <Ionicons name="restaurant-outline" size={28} color={colors.textMuted} />
-      <Text maxFontSizeMultiplier={1.3} style={styles.body}>{EMPTY_DIARY_COPY}</Text>
+    <View style={[styles.card, live.card]} accessibilityRole="summary">
+      <Ionicons name="restaurant-outline" size={28} color={t.colors.textMuted} />
+      <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>{EMPTY_DIARY_COPY}</Text>
       {onPlanDay ? (
         <TouchableOpacity
-          style={styles.planRow}
+          style={[styles.planRow, live.planRow]}
           onPress={onPlanDay}
           hitSlop={hitSlop}
           accessibilityRole="button"
           accessibilityLabel="Open meal builder for this day or week"
         >
-          <View style={styles.planIcon}>
-            <Ionicons name="restaurant-outline" size={18} color={colors.textSecondary} />
+          <View style={[styles.planIcon, live.planIcon]}>
+            <Ionicons name="restaurant-outline" size={18} color={t.colors.textSecondary} />
           </View>
           <View style={styles.planCopy}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.planTitle}>Meal builder</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.planText}>Build a day or week from your targets. Nothing is logged until you add it.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.planTitle, live.planTitle]}>Meal builder</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.planText, live.planText]}>Build a day or week from your targets. Nothing is logged until you add it.</Text>
           </View>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
       ) : null}
       <View style={styles.actions}>
@@ -122,3 +126,18 @@ const styles = StyleSheet.create({
   planText: { ...type.caption, color: colors.textSecondary, marginTop: 2, textAlign: 'left' },
   actionButton: { minHeight: 44 },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. actions/planCopy/actionButton
+// have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    body: { color: t.colors.textSecondary },
+    planRow: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    planIcon: { backgroundColor: t.colors.surface },
+    planTitle: { color: t.colors.textPrimary },
+    planText: { color: t.colors.textSecondary },
+  };
+}

@@ -3,6 +3,7 @@ import { appAlert } from '../AppAlert';
 import { View, Text, StyleSheet, Pressable, Keyboard } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 import * as haptics from '../../lib/haptics';
@@ -73,6 +74,9 @@ export default function FoodDetailSheet({
   initialQuantityG, initialMealSlot = 'snack', initialEntryDate, initialWeightState, initialEatenAt = null,
   onSave, onDelete, onClose,
 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const toast = useToast();
   const userId = useAppStore((s) => s.user?.id ?? null);
   // Energy DISPLAY unit (kcal | kj). Display-only: macros.kcal stays kcal (the
@@ -262,8 +266,8 @@ export default function FoodDetailSheet({
   return (
     <>
     <BottomSheet visible={visible} onClose={handleClose} keyboardAvoiding accessibilityLabel={food.name}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.title} numberOfLines={2}>{food.name}</Text>
-          {food.brand ? <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>{food.brand}</Text> : null}
+          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]} numberOfLines={2}>{food.name}</Text>
+          {food.brand ? <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>{food.brand}</Text> : null}
           {/* A6: the shared SourceChip replaces the inline uppercase text so
               CoFID rows carry their verified treatment + "what is CoFID?"
               gloss at the point of use. */}
@@ -272,10 +276,10 @@ export default function FoodDetailSheet({
               (off/usda) rows only, reusing foods.fetched_at. Never implies the
               food is wrong -- it only states when it was last checked. */}
           {isNetworkSourced(food.source) && food.fetched_at ? (
-            <Text maxFontSizeMultiplier={1.3} style={styles.lastVerified}>{formatLastVerified(food.fetched_at)}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.lastVerified, live.lastVerified]}>{formatLastVerified(food.fetched_at)}</Text>
           ) : null}
 
-          <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Amount</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Amount</Text>
           {units.length > 1 ? (
             <View style={styles.unitRow}>
               {units.map(u => (
@@ -285,8 +289,8 @@ export default function FoodDetailSheet({
                   selected={unitKey === u.key}
                   onPress={() => { haptics.selection(); selectUnit(u.key); }}
                   style={styles.unitBtn}
-                  labelStyle={styles.unitBtnText}
-                  selectedLabelStyle={styles.unitBtnTextActive}
+                  labelStyle={[styles.unitBtnText, live.unitBtnText]}
+                  selectedLabelStyle={[styles.unitBtnTextActive, live.unitBtnTextActive]}
                   accessibilityRole="radio"
                   accessibilityLabel={u.key === 'serving' ? `Per ${u.label}` : 'Grams'}
                   numberOfLines={1}
@@ -297,19 +301,19 @@ export default function FoodDetailSheet({
           <View style={styles.stepper}>
             <Pressable
               onPress={() => { haptics.selection(); adjustAmount(-1); }}
-              style={({ pressed }) => [styles.stepBtn, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [styles.stepBtn, live.stepBtn, pressed && { opacity: 0.7 }]}
               accessibilityRole="button"
               accessibilityLabel="Decrease amount"
               accessibilityValue={{ text: `${amount} ${unit?.label ?? ''}`.trim() }}
             >
-              <Ionicons name="remove" size={22} color={colors.textPrimary} />
+              <Ionicons name="remove" size={22} color={t.colors.textPrimary} />
             </Pressable>
             <TextField
               containerStyle={styles.stepInputContainer}
               fieldStyle={styles.stepInputField}
               inputStyle={styles.stepInput}
               value={amount}
-              onChangeText={t => setAmount(t.replace(/[^0-9.]/g, ''))}
+              onChangeText={v => setAmount(v.replace(/[^0-9.]/g, ''))}
               keyboardType="decimal-pad"
               selectTextOnFocus
               returnKeyType="done"
@@ -318,16 +322,16 @@ export default function FoodDetailSheet({
             />
             <Pressable
               onPress={() => { haptics.selection(); adjustAmount(1); }}
-              style={({ pressed }) => [styles.stepBtn, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [styles.stepBtn, live.stepBtn, pressed && { opacity: 0.7 }]}
               accessibilityRole="button"
               accessibilityLabel="Increase amount"
               accessibilityValue={{ text: `${amount} ${unit?.label ?? ''}`.trim() }}
             >
-              <Ionicons name="add" size={22} color={colors.textPrimary} />
+              <Ionicons name="add" size={22} color={t.colors.textPrimary} />
             </Pressable>
           </View>
           {unitKey === 'serving' ? (
-            <Text maxFontSizeMultiplier={1.3} style={styles.gramHint}>= {Math.round(quantityG)} g</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.gramHint, live.gramHint]}>= {Math.round(quantityG)} g</Text>
           ) : null}
 
           {/* Ultimate-Audit item 12: only shown for a curated food with a real
@@ -337,15 +341,15 @@ export default function FoodDetailSheet({
               conversion). */}
           {showWeightChoice ? (
             <>
-              <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Weighed</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Weighed</Text>
               <View style={styles.unitRow}>
                 <Chip
                   label="Raw"
                   selected={weightState === 'raw'}
                   onPress={() => { haptics.selection(); setWeightState('raw'); }}
                   style={styles.unitBtn}
-                  labelStyle={styles.unitBtnText}
-                  selectedLabelStyle={styles.unitBtnTextActive}
+                  labelStyle={[styles.unitBtnText, live.unitBtnText]}
+                  selectedLabelStyle={[styles.unitBtnTextActive, live.unitBtnTextActive]}
                   accessibilityRole="radio"
                   accessibilityLabel="Weighed raw"
                 />
@@ -354,8 +358,8 @@ export default function FoodDetailSheet({
                   selected={weightState === 'cooked'}
                   onPress={() => { haptics.selection(); setWeightState('cooked'); }}
                   style={styles.unitBtn}
-                  labelStyle={styles.unitBtnText}
-                  selectedLabelStyle={styles.unitBtnTextActive}
+                  labelStyle={[styles.unitBtnText, live.unitBtnText]}
+                  selectedLabelStyle={[styles.unitBtnTextActive, live.unitBtnTextActive]}
                   accessibilityRole="radio"
                   accessibilityLabel="Weighed cooked"
                 />
@@ -378,8 +382,8 @@ export default function FoodDetailSheet({
           {extraNutrients.length ? (
             <View style={styles.extraRow}>
               {extraNutrients.map((n) => (
-                <Text maxFontSizeMultiplier={1.3} key={n.key} style={styles.extraText}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.extraLabel}>{n.label} </Text>{n.value}
+                <Text maxFontSizeMultiplier={1.3} key={n.key} style={[styles.extraText, live.extraText]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.extraLabel, live.extraLabel]}>{n.label} </Text>{n.value}
                 </Text>
               ))}
             </View>
@@ -394,17 +398,17 @@ export default function FoodDetailSheet({
               the one place a user can give it a real, editable time. */}
           {mode === 'edit' ? (
             <>
-              <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Eaten at</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Eaten at</Text>
               <View style={styles.unitRow}>
                 <Pressable
                   onPress={() => { haptics.selection(); setShowTimePicker(true); }}
-                  style={({ pressed }) => [styles.unitBtn, styles.eatenAtBtn, pressed && { opacity: 0.7 }]}
+                  style={({ pressed }) => [styles.unitBtn, styles.eatenAtBtn, live.eatenAtBtn, pressed && { opacity: 0.7 }]}
                   accessibilityRole="button"
                   accessibilityLabel={eatenAt
                     ? `Change the time you ate this, currently ${new Date(eatenAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
                     : 'Set the time you ate this'}
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={styles.unitBtnTextActive}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.unitBtnTextActive, live.unitBtnTextActive]}>
                     {eatenAt
                       ? new Date(eatenAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
                       : 'No time set'}
@@ -417,14 +421,14 @@ export default function FoodDetailSheet({
                     accessibilityRole="button"
                     accessibilityLabel="Clear the eaten time"
                   >
-                    <Text maxFontSizeMultiplier={1.3} style={styles.unitBtnText}>Clear</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.unitBtnText, live.unitBtnText]}>Clear</Text>
                   </Pressable>
                 ) : null}
               </View>
             </>
           ) : null}
 
-          <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Meal</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Meal</Text>
           <View style={styles.mealRow}>
             {pickerMealSlots(mealSlot).map(s => (
               <Chip
@@ -433,8 +437,8 @@ export default function FoodDetailSheet({
                 selected={mealSlot === s.key}
                 onPress={() => { haptics.selection(); setMealSlot(s.key); }}
                 style={styles.mealBtn}
-                labelStyle={styles.mealBtnText}
-                selectedLabelStyle={styles.mealBtnTextActive}
+                labelStyle={[styles.mealBtnText, live.mealBtnText]}
+                selectedLabelStyle={[styles.mealBtnTextActive, live.mealBtnTextActive]}
                 accessibilityRole="radio"
                 accessibilityLabel={`Meal: ${s.label}`}
               />
@@ -443,8 +447,8 @@ export default function FoodDetailSheet({
 
           <View style={styles.actions}>
             {mode === 'edit' && onDelete ? (
-              <Pressable onPress={handleDelete} style={({ pressed }) => [styles.deleteBtn, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel="Remove entry">
-                <Ionicons name="trash-outline" size={18} color={colors.error} />
+              <Pressable onPress={handleDelete} style={({ pressed }) => [styles.deleteBtn, live.deleteBtn, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel="Remove entry">
+                <Ionicons name="trash-outline" size={18} color={t.colors.error} />
               </Pressable>
             ) : null}
             <Button
@@ -453,7 +457,7 @@ export default function FoodDetailSheet({
               variant="secondary"
               fullWidth={false}
               style={styles.cancelBtn}
-              textStyle={styles.cancelText}
+              textStyle={[styles.cancelText, live.cancelText]}
             />
             <Button
               title={mode === 'edit' ? 'Save changes' : 'Add to diary'}
@@ -461,8 +465,8 @@ export default function FoodDetailSheet({
               state={saved ? 'success' : submitting ? 'loading' : 'idle'}
               onSettled={handleClose}
               fullWidth={false}
-              style={styles.saveBtn}
-              textStyle={styles.saveText}
+              style={[styles.saveBtn, live.saveBtn]}
+              textStyle={[styles.saveText, live.saveText]}
             />
           </View>
     </BottomSheet>
@@ -479,10 +483,13 @@ export default function FoodDetailSheet({
 }
 
 function MacroPill({ label, value }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
-    <View style={styles.macroPill}>
-      <Text maxFontSizeMultiplier={1.3} style={styles.macroPillValue}>{value}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.macroPillLabel}>{label}</Text>
+    <View style={[styles.macroPill, live.macroPill]}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.macroPillValue, live.macroPillValue]}>{value}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.macroPillLabel, live.macroPillLabel]}>{label}</Text>
     </View>
   );
 }
@@ -586,3 +593,33 @@ const styles = StyleSheet.create({
   },
   saveText: { color: colors.onPrimary, fontSize: fontSize.md, fontWeight: fontWeight.bold },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. unitRow/unitBtn/stepper/
+// stepInputContainer/stepInputField/stepInput/macroSummary/extraRow/mealRow/
+// mealBtn/actions have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    title: { color: t.colors.textPrimary },
+    subtitle: { color: t.colors.textMuted },
+    lastVerified: { color: t.colors.textMuted },
+    fieldLabel: { color: t.colors.textSecondary },
+    unitBtnText: { color: t.colors.textSecondary },
+    unitBtnTextActive: { color: t.colors.primary },
+    eatenAtBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    stepBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    gramHint: { color: t.colors.textMuted },
+    macroPill: { backgroundColor: t.colors.surface2 },
+    macroPillValue: { color: t.colors.textPrimary },
+    macroPillLabel: { color: t.colors.textMuted },
+    extraText: { color: t.colors.textPrimary },
+    extraLabel: { color: t.colors.textMuted },
+    mealBtnText: { color: t.colors.textSecondary },
+    mealBtnTextActive: { color: t.colors.primary },
+    deleteBtn: { borderColor: t.colors.border },
+    cancelText: { color: t.colors.textSecondary },
+    saveBtn: { backgroundColor: t.colors.primaryFill },
+    saveText: { color: t.colors.onPrimary },
+  };
+}

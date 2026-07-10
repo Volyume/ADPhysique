@@ -19,6 +19,7 @@ import { View, Text, StyleSheet, Modal, Platform } from 'react-native';
 import Button from '../Button';
 import useAppStore from '../../store/useAppStore';
 import { colors, spacing, radius, type } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 
 /**
  * @param {boolean}  props.visible  whether the picker is shown
@@ -29,6 +30,9 @@ import { colors, spacing, radius, type } from '../../styles/theme';
  */
 export default function EatenTimePicker({ visible, value, onChange, onClose }) {
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
 
   if (!visible) return null;
 
@@ -48,9 +52,9 @@ export default function EatenTimePicker({ visible, value, onChange, onClose }) {
   if (Platform.OS === 'ios') {
     return (
       <Modal transparent visible animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={onClose}>
-        <View style={styles.backdrop}>
-          <View style={styles.sheet}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.title}>What time did you eat this?</Text>
+        <View style={[styles.backdrop, live.backdrop]}>
+          <View style={[styles.sheet, live.sheet]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>What time did you eat this?</Text>
             <DateTimePicker
               value={current}
               mode="time"
@@ -94,3 +98,14 @@ const styles = StyleSheet.create({
   title: { ...type.title, color: colors.textPrimary, marginBottom: spacing.md },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: spacing.md },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. actions has no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    backdrop: { backgroundColor: t.colors.scrim },
+    sheet: { backgroundColor: t.colors.surfaceElevated ?? t.colors.surface, borderColor: t.colors.border },
+    title: { color: t.colors.textPrimary },
+  };
+}

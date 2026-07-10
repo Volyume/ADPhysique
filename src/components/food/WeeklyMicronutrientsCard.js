@@ -26,6 +26,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, type, letterSpacing } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 import Card from '../Card';
 import SectionLabel from '../SectionLabel';
 import { SkeletonRow } from '../Skeleton';
@@ -41,6 +42,9 @@ import { logError } from '../../lib/errorLog';
  * @param endDate     yyyy-mm-dd, last day of the fixed 7-day window
  */
 export default function WeeklyMicronutrientsCard({ userId, startDate, endDate }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   // { averages, loggedDays, hasEntries } | null
@@ -99,23 +103,23 @@ export default function WeeklyMicronutrientsCard({ userId, startDate, endDate })
             <SkeletonRow />
           </View>
         ) : error ? (
-          <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>Couldn't load this. Try again later.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.emptyText, live.emptyText]}>Couldn't load this. Try again later.</Text>
         ) : !result?.hasEntries ? (
-          <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.emptyText, live.emptyText]}>
             Log food across the week to see a picture build here.
           </Text>
         ) : included.length === 0 ? (
-          <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.emptyText, live.emptyText]}>
             Not enough foods with known values yet to show an average.
           </Text>
         ) : (
           <>
-            <Text maxFontSizeMultiplier={1.3} style={styles.introText}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.introText, live.introText]}>
               A rough picture from the foods with known values. Gaps mean unknown, not zero.
             </Text>
             {includedVitamins.length ? (
               <>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.groupLabel, styles.groupLabelSpacer]}>Vitamins</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.groupLabel, live.groupLabel, styles.groupLabelSpacer]}>Vitamins</Text>
                 {includedVitamins.map((n) => (
                   <WeeklyRow key={n.key} nutrient={n} avg={result.averages[n.key].avgPerDay} />
                 ))}
@@ -123,13 +127,13 @@ export default function WeeklyMicronutrientsCard({ userId, startDate, endDate })
             ) : null}
             {includedMinerals.length ? (
               <>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.groupLabel, styles.groupLabelSpacer]}>Minerals</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.groupLabel, live.groupLabel, styles.groupLabelSpacer]}>Minerals</Text>
                 {includedMinerals.map((n) => (
                   <WeeklyRow key={n.key} nutrient={n} avg={result.averages[n.key].avgPerDay} />
                 ))}
               </>
             ) : null}
-            <Text maxFontSizeMultiplier={1.3} style={styles.cardFootnote}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.cardFootnote, live.cardFootnote]}>
               {`Average over ${result.loggedDays} ${result.loggedDays === 1 ? 'day' : 'days'} logged this week.`}
             </Text>
           </>
@@ -140,14 +144,17 @@ export default function WeeklyMicronutrientsCard({ userId, startDate, endDate })
 }
 
 function WeeklyRow({ nutrient, avg }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <View
       style={styles.row}
       accessible
       accessibilityLabel={`${nutrient.label}, ${avg} ${nutrient.unit} a day on average`}
     >
-      <Text maxFontSizeMultiplier={1.3} style={styles.rowLabel}>{nutrient.label}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.rowValue}>{`${avg} ${nutrient.unit}/day`}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.rowLabel, live.rowLabel]}>{nutrient.label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.rowValue, live.rowValue]}>{`${avg} ${nutrient.unit}/day`}</Text>
     </View>
   );
 }
@@ -173,3 +180,18 @@ const styles = StyleSheet.create({
   rowValue: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   cardFootnote: { ...type.caption, color: colors.textMuted, marginTop: spacing.md },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. sectionLabelSpacing/card/
+// groupLabelSpacer/row have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    emptyText: { color: t.colors.textMuted },
+    introText: { color: t.colors.textSecondary },
+    groupLabel: { color: t.colors.textMuted },
+    rowLabel: { color: t.colors.textMuted },
+    rowValue: { color: t.colors.textPrimary },
+    cardFootnote: { color: t.colors.textMuted },
+  };
+}

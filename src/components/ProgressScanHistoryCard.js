@@ -6,6 +6,7 @@ import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 import {
   colors, spacing, radius, type, iconSize, motion,
 } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 import {
   formatVolyumeScore,
@@ -135,26 +136,29 @@ export default function ProgressScanHistoryCard({
   onOpenPhoto,
 }) {
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   if (!Array.isArray(scans) || scans.length === 0) return null;
   return (
     <Card padding="md" style={styles.scanCard}>
       <View style={styles.scanCardHeader}>
         <View style={styles.scanHeadingGroup}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.scanTitle}>Photo results</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.scanTitle, live.scanTitle]}>Photo results</Text>
         </View>
       </View>
       {scans.map((scan) => {
         const dateLabel = formatProgressPhotoDay(scan.capturedAt);
         return (
-          <View key={scan.id} style={styles.scanEntry}>
+          <View key={scan.id} style={[styles.scanEntry, live.scanEntry]}>
             <View style={styles.scanEntryHeader}>
               <View style={styles.scanEntryTitleGroup}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.scanDate}>{dateLabel}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.scanEntryTitle}>{comparisonLabel(scan)}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.scanDate, live.scanDate]}>{dateLabel}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.scanEntryTitle, live.scanEntryTitle]}>{comparisonLabel(scan)}</Text>
               </View>
               <View style={styles.scanEntryActions}>
-                <View style={styles.confidencePill}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.confidencePillText} numberOfLines={1}>
+                <View style={[styles.confidencePill, live.confidencePill]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.confidencePillText, live.confidencePillText]} numberOfLines={1}>
                     Read quality: {confidenceLabel(scan)}
                   </Text>
                 </View>
@@ -166,31 +170,31 @@ export default function ProgressScanHistoryCard({
                     accessibilityLabel={`Delete photo set from ${dateLabel}`}
                     style={styles.scanDeleteButton}
                   >
-                    <Ionicons name="trash-outline" size={iconSize.sm} color={colors.error} />
+                    <Ionicons name="trash-outline" size={iconSize.sm} color={t.colors.error} />
                   </TouchableOpacity>
                 ) : null}
               </View>
             </View>
             <View style={styles.scanInsightGrid}>
-              <View style={styles.scanInsightCell}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.scanInsightLabel}>Leanness</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.scanInsightValue} numberOfLines={1}>{bandLabel(scan)}</Text>
+              <View style={[styles.scanInsightCell, live.scanInsightCell]}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.scanInsightLabel, live.scanInsightLabel]}>Leanness</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.scanInsightValue, live.scanInsightValue]} numberOfLines={1}>{bandLabel(scan)}</Text>
               </View>
-              <View style={styles.scanInsightCell}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.scanInsightLabel}>Change</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.scanInsightValue} numberOfLines={2}>{signalLabel(scan, { suppressed })}</Text>
+              <View style={[styles.scanInsightCell, live.scanInsightCell]}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.scanInsightLabel, live.scanInsightLabel]}>Change</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.scanInsightValue, live.scanInsightValue]} numberOfLines={2}>{signalLabel(scan, { suppressed })}</Text>
               </View>
-              <View style={styles.scanInsightCell}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.scanInsightLabel}>Volyume Score</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.scanInsightValue} numberOfLines={1}>{scoreLabel(scan, { suppressed, hideExact })}</Text>
+              <View style={[styles.scanInsightCell, live.scanInsightCell]}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.scanInsightLabel, live.scanInsightLabel]}>Volyume Score</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.scanInsightValue, live.scanInsightValue]} numberOfLines={1}>{scoreLabel(scan, { suppressed, hideExact })}</Text>
               </View>
-              <View style={styles.scanInsightCell}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.scanInsightLabel}>Weight</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.scanInsightValue} numberOfLines={1}>{weightLabel(scan, { suppressed, hideExact })}</Text>
+              <View style={[styles.scanInsightCell, live.scanInsightCell]}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.scanInsightLabel, live.scanInsightLabel]}>Weight</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.scanInsightValue, live.scanInsightValue]} numberOfLines={1}>{weightLabel(scan, { suppressed, hideExact })}</Text>
               </View>
             </View>
-            <View style={styles.scanReasonBox}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.scanBody} numberOfLines={3}>{whyLabel(scan, { suppressed, hideExact })}</Text>
+            <View style={[styles.scanReasonBox, live.scanReasonBox]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.scanBody, live.scanBody]} numberOfLines={3}>{whyLabel(scan, { suppressed, hideExact })}</Text>
             </View>
             {Array.isArray(scan.assets) && scan.assets.length > 0 ? (
               <View style={styles.scanAssetRow}>
@@ -205,12 +209,12 @@ export default function ProgressScanHistoryCard({
                   >
                     <Image
                       source={{ uri: asset.uri }}
-                      style={styles.scanAssetImage}
+                      style={[styles.scanAssetImage, live.scanAssetImage]}
                       contentFit="cover"
                       recyclingKey={asset.photoName || String(asset.id)}
                       transition={reduceMotion ? 0 : motion.state}
                     />
-                    <Text maxFontSizeMultiplier={1.3} style={styles.scanAssetPose} numberOfLines={1}>{POSE_LABEL[asset.pose] || asset.pose}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.scanAssetPose, live.scanAssetPose]} numberOfLines={1}>{POSE_LABEL[asset.pose] || asset.pose}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -285,3 +289,27 @@ const styles = StyleSheet.create({
   scanAssetImage: { width: 72, height: 72, borderRadius: radius.sm, backgroundColor: colors.surface2 },
   scanAssetPose: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. scanCard/scanCardHeader/
+// scanHeadingGroup/scanEntryHeader/scanEntryTitleGroup/scanEntryActions/
+// scanDeleteButton/scanInsightGrid/scanAssetRow/scanAssetThumb have no
+// colour tokens.
+function buildLiveStyles(t) {
+  return {
+    scanTitle: { color: t.colors.textPrimary },
+    scanDate: { color: t.colors.textMuted },
+    scanBody: { color: t.colors.textMuted },
+    scanEntry: { borderTopColor: t.colors.border },
+    scanEntryTitle: { color: t.colors.textPrimary },
+    confidencePill: { backgroundColor: t.colors.primaryBg },
+    confidencePillText: { color: t.colors.primary },
+    scanInsightCell: { backgroundColor: t.colors.surface2 },
+    scanInsightLabel: { color: t.colors.textMuted },
+    scanInsightValue: { color: t.colors.textPrimary },
+    scanReasonBox: { borderLeftColor: t.colors.primary, backgroundColor: t.colors.surface2 },
+    scanAssetImage: { backgroundColor: t.colors.surface2 },
+    scanAssetPose: { color: t.colors.textMuted },
+  };
+}

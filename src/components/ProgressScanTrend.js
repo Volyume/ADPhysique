@@ -15,6 +15,7 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, radius, type, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 import {
@@ -24,9 +25,12 @@ import {
 } from '../lib/progressScanTrendViewModel';
 
 function MarkerIcon({ shape }) {
-  if (shape === 'solid') return <View style={[styles.marker, styles.markerSolid]} />;
-  if (shape === 'hollow') return <View style={[styles.marker, styles.markerHollow]} />;
-  return <View style={[styles.marker, styles.markerUnscored]} />;
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
+  if (shape === 'solid') return <View style={[styles.marker, styles.markerSolid, live.markerSolid]} />;
+  if (shape === 'hollow') return <View style={[styles.marker, styles.markerHollow, live.markerHollow]} />;
+  return <View style={[styles.marker, styles.markerUnscored, live.markerUnscored]} />;
 }
 
 function pointAccessibilityLabel(point, dateLabel) {
@@ -40,6 +44,9 @@ function pointAccessibilityLabel(point, dateLabel) {
 }
 
 export default function ProgressScanTrend({ scans = [], onClose }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const suppressed = usePhotoSuppression();
   const { points, comparableCount, totalCount } = useMemo(() => buildTrendPoints(scans), [scans]);
   const [expandedId, setExpandedId] = useState(null);
@@ -49,8 +56,8 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
     return (
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.title}>Score trend</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Score trend</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>
             Comparable photo sets only. Gaps are shown, never smoothed over.
           </Text>
         </View>
@@ -60,7 +67,7 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
           accessibilityRole="button"
           accessibilityLabel="Close score trend"
         >
-          <Ionicons name="close" size={26} color={colors.textPrimary} />
+          <Ionicons name="close" size={26} color={t.colors.textPrimary} />
         </TouchableOpacity>
       </View>
     );
@@ -68,11 +75,11 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
 
   if (suppressed) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
         {renderHeader()}
         <View style={styles.placeholder}>
-          <Ionicons name="leaf-outline" size={32} color={colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.placeholderText}>Trend view is hidden for now.</Text>
+          <Ionicons name="leaf-outline" size={32} color={t.colors.textMuted} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.placeholderText, live.placeholderText]}>Trend view is hidden for now.</Text>
         </View>
       </SafeAreaView>
     );
@@ -80,22 +87,22 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
 
   if (points.length === 0) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
         {renderHeader()}
         <View style={styles.placeholder}>
-          <Ionicons name="trending-up-outline" size={32} color={colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.placeholderText}>{TREND_EMPTY_STATE_TEXT}</Text>
+          <Ionicons name="trending-up-outline" size={32} color={t.colors.textMuted} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.placeholderText, live.placeholderText]}>{TREND_EMPTY_STATE_TEXT}</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       {renderHeader()}
       {ladderLabel ? (
         <View style={styles.ladderRow}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.ladderText}>{ladderLabel}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.ladderText, live.ladderText]}>{ladderLabel}</Text>
         </View>
       ) : null}
       <ScrollView contentContainerStyle={styles.content}>
@@ -111,7 +118,7 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
           return (
             <View key={point.scanId} style={styles.row}>
               {index > 0 ? (
-                <View style={[styles.connector, showsGap && styles.connectorGap]} />
+                <View style={[styles.connector, live.connector, showsGap && [styles.connectorGap, live.connectorGap]]} />
               ) : null}
               <TouchableOpacity
                 style={styles.pointRow}
@@ -122,20 +129,20 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
               >
                 <MarkerIcon shape={point.shape} />
                 <View style={styles.pointCopy}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.pointDate}>{dateLabel}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.pointValue} numberOfLines={1}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.pointDate, live.pointDate]}>{dateLabel}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.pointValue, live.pointValue]} numberOfLines={1}>
                     {point.scoreText || point.chipLabel}
                   </Text>
                 </View>
                 <Ionicons
                   name={expanded ? 'chevron-up' : 'chevron-down'}
                   size={iconSize.sm}
-                  color={colors.textMuted}
+                  color={t.colors.textMuted}
                 />
               </TouchableOpacity>
               {expanded ? (
-                <View style={styles.pointDetail}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.pointDetailText}>{detailText}</Text>
+                <View style={[styles.pointDetail, live.pointDetail]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.pointDetailText, live.pointDetailText]}>{detailText}</Text>
                 </View>
               ) : null}
             </View>
@@ -190,3 +197,26 @@ const styles = StyleSheet.create({
   },
   pointDetailText: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BillingPeriodSelector.js's buildLiveStyles. header/headerCopy/ladderRow/
+// content/placeholder/row/pointRow/marker/pointCopy have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    title: { color: t.colors.textPrimary },
+    subtitle: { color: t.colors.textMuted },
+    ladderText: { color: t.colors.textPrimary },
+    placeholderText: { color: t.colors.textPrimary },
+    connector: { backgroundColor: t.colors.border },
+    connectorGap: { borderLeftColor: t.colors.border },
+    markerSolid: { backgroundColor: t.colors.primary },
+    markerHollow: { borderColor: t.colors.primary },
+    markerUnscored: { borderColor: t.colors.border },
+    pointDate: { color: t.colors.textPrimary },
+    pointValue: { color: t.colors.textMuted },
+    pointDetail: { backgroundColor: t.colors.surface2 },
+    pointDetailText: { color: t.colors.textSecondary },
+  };
+}
