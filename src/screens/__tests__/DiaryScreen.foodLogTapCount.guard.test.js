@@ -3,11 +3,11 @@
  *
  * This guards the number of user taps required to log a food into the diary
  * from the diary screen. The canonical path is:
- *   TAP #1: Tap "Add food" button in MealSection (on DiaryScreen)
+ *   TAP #1: Tap the single "Add food" button (on DiaryScreen)
  *   TAP #2: Tap a food row (on FoodSearchScreen) -> opens FoodDetailSheet
  *   TAP #3: Tap "Add to diary" button (on FoodDetailSheet) -> logs the entry
  *
- * BASELINE: 3 taps (documented below at line ~62, TAP_BUDGET constant).
+ * BASELINE: 3 taps (documented below at line ~55, TAP_BUDGET constant).
  *
  * If a future diary redesign changes the tap path, this test will fail,
  * forcing an explicit founder decision on whether the new count is
@@ -22,22 +22,19 @@
  * IN ADVANCE (per CLAUDE.md §4: "Multiple approaches → present them.
  * Anything bigger than a one-liner → plan first, wait for 'go'").
  *
- * L05-D1/D6 (design-usability audit 2026-07-09): re-confirmed by the
- * write-affordance build. TAP #1 is unchanged (the "Add food" button, its
- * addFoodButton style and onPress={onAdd} wiring); the new per-row edit
- * chevron and the DiaryScreen doc comment on the unused onSavedMeals/onScan/
- * onQuickAdd props do not touch any regex this file matches.
+ * Ultimate-Audit item 15 (D22 15a, timeline food logging, 2026-07-10):
+ * TAP #1 moved from MealSection's per-meal-card "Add food" button (now
+ * deleted with the meal-card layout) to DiaryScreen's own single primary
+ * "Add food" affordance below the flat timeline -- still ONE tap, still
+ * infers the likely meal via inferMealSlotForHour, so TAP_BUDGET is
+ * unaffected. TAP #2/#3 (FoodSearchScreen, FoodDetailSheet) are untouched
+ * by item 15.
  */
 import fs from 'fs';
 import path from 'path';
 
 const DIARY_SRC = fs.readFileSync(
   path.join(__dirname, '..', 'DiaryScreen.js'),
-  'utf8',
-);
-
-const MEAL_SECTION_SRC = fs.readFileSync(
-  path.join(__dirname, '..', '..', 'components', 'food', 'MealSection.js'),
   'utf8',
 );
 
@@ -57,17 +54,19 @@ const TAP_BUDGET = 3;
 
 describe('DiaryScreen food-logging tap count (§15 item 10)', () => {
   describe(`baseline is TAP_BUDGET = ${TAP_BUDGET}`, () => {
-    test('TAP #1: MealSection has a TouchableOpacity button labelled "Add food"', () => {
-      expect(MEAL_SECTION_SRC).toMatch(/TouchableOpacity/);
-      expect(MEAL_SECTION_SRC).toMatch(/addFoodButton/);
-      expect(MEAL_SECTION_SRC).toMatch(/onPress=\{onAdd\}/);
-      expect(MEAL_SECTION_SRC).toMatch(/Add food/);
+    test('TAP #1: DiaryScreen has a single "Add food" button wired to addFood()', () => {
+      expect(DIARY_SRC).toMatch(/style=\{styles\.addFoodRow\}/);
+      expect(DIARY_SRC).toMatch(/onPress=\{\(\) => addFood\(likelyMealSlot \|\| 'meal_1'\)\}/);
+      expect(DIARY_SRC).toMatch(/title="Add food"/);
     });
 
-    test('TAP #1: MealSection.onAdd is connected to DiaryScreen.addFood()', () => {
-      expect(MEAL_SECTION_SRC).toMatch(/onAdd/);
+    test('TAP #1: addFood() is the single Button call site inferring the likely meal', () => {
       expect(DIARY_SRC).toMatch(/function addFood\(slot\)/);
-      expect(DIARY_SRC).toMatch(/<MealSection/);
+      // Exactly one primary "Add food" affordance below the timeline, not a
+      // per-meal-card button per entry (item 15's "single primary add
+      // affordance" resolution of the scoping doc's open Q3).
+      const matches = DIARY_SRC.match(/title="Add food"/g) || [];
+      expect(matches).toHaveLength(1);
     });
 
     test('TAP #2: DiaryScreen.addFood() navigates to FoodSearch screen', () => {
@@ -138,7 +137,7 @@ describe('DiaryScreen food-logging tap count (§15 item 10)', () => {
       // This is a summary guard: if any of the above specific tests fail,
       // this will too, but it reads more directly as a single assertion
       // that the full path is wired.
-      const hasTap1 = MEAL_SECTION_SRC.includes('Add food') && MEAL_SECTION_SRC.includes('onAdd');
+      const hasTap1 = DIARY_SRC.includes('title="Add food"') && DIARY_SRC.includes('function addFood(slot)');
       const hasTap2 = FOOD_SEARCH_SRC.includes('openPicker');
       const hasTap3 = FOOD_DETAIL_SHEET_SRC.includes('onSave');
       expect(hasTap1 && hasTap2 && hasTap3).toBe(true);

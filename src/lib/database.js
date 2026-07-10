@@ -1921,6 +1921,44 @@ const SCHEMA_MIGRATIONS = [
   [
     "ALTER TABLE food_entries ADD COLUMN weight_state TEXT NOT NULL DEFAULT 'as_weighed'",
   ],
+  // v67, Ultimate-Audit item 15 (timeline food logging, D22 15b, lead ruling
+  // ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md): an optional
+  // "time eaten" on food_entries, distinct from logged_at ("the moment the
+  // client wrote the row" -- item-15-timeline-scoping.md Stage 0 finding).
+  // An individually logged or individually confirmed entry gets eaten_at =
+  // now at the moment of that action (editable afterwards); a bulk
+  // day-confirm ("mark all meals as eaten") leaves eaten_at NULL rather than
+  // stamping every meal with one false clumped instant -- the exact
+  // honesty-test failure the scoping doc's Section 5 point 3 flags. NULL is
+  // a real, permanent state here ("no known eaten time"), not "unset
+  // pending a default", so the column is nullable with NO default.
+  // Backfilled ONCE from the existing logged_at for every pre-existing row:
+  // every row already displayed logged_at as its quiet "when you ate" time
+  // (EntryRow.js, gap #3, shipped 2026-06-xx), and the backfill cannot
+  // retroactively tell a historical bulk confirm from an individual log
+  // (both wrote logged_at = now identically before this build), so keeping
+  // that existing display for old rows is the honest, no-regression choice;
+  // only NEW writes follow the split going forward (src/lib/food/db.js:
+  // logFoodEntry, updateFoodEntry, confirmPlannedDay, confirmPlannedEntry).
+  // Cloud counterpart: migrate_115_food_entry_eaten_at.sql (founder-run,
+  // EU-Dublin; per CLAUDE.md the app never runs cloud migrations).
+  // ED-safety note: this column IS the item-15 honesty-test fix itself
+  // (no meal-timing judgement is ever rendered from it -- see
+  // src/lib/food/diaryTimeline.js). No calorie floor, macro total, or
+  // adherence value reads this column; MacroRings and the rollup read
+  // kcal/protein/carbs/fat/fibre only, unaffected by presentation order.
+  // Safe to re-run: yes (duplicate-column errors are tolerated by the
+  // runner; the backfill UPDATE only touches rows still NULL, a no-op once
+  // it has run).
+  // Rollback: ALTER TABLE food_entries DROP COLUMN eaten_at (SQLite 3.35+);
+  // every read already tolerates the column's absence (SELECT * / `?? null`
+  // fallbacks), and the timeline falls back to grouping every entry under
+  // its meal tag with no time shown, so dropping it only removes the true-
+  // time distinction, no other data loss.
+  [
+    'ALTER TABLE food_entries ADD COLUMN eaten_at INTEGER',
+    'UPDATE food_entries SET eaten_at = logged_at WHERE eaten_at IS NULL',
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {

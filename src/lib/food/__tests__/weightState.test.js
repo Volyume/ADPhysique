@@ -168,7 +168,8 @@ describe('logFoodEntry: weight_state default and no-conversion invariant', () =>
   });
 });
 
-// params index: date0 slot1 ref2 qty3 kcal4 pro5 carb6 fat7 fibre8 weight9 updated10 id11 user12
+// params index: date0 slot1 ref2 qty3 kcal4 pro5 carb6 fat7 fibre8 weight9
+// eaten10 (Ultimate-Audit item 15, D22 15b) updated11 id12 user13
 describe('updateFoodEntry: weight_state default and per-entry scoping', () => {
   test('defaults to "as_weighed" when the caller omits the basis', async () => {
     await food.updateFoodEntry('fe1', 'u1', {
@@ -192,8 +193,8 @@ describe('updateFoodEntry: weight_state default and per-entry scoping', () => {
       kcal: 234, proteinG: 5, carbsG: 50, fatG: 1, weightState: 'raw',
     });
     const p = updateParams();
-    expect(p[11]).toBe('fe1'); // id
-    expect(p[12]).toBe('u1'); // user_id
+    expect(p[12]).toBe('fe1'); // id
+    expect(p[13]).toBe('u1'); // user_id
   });
 });
 

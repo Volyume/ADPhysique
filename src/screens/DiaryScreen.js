@@ -4,10 +4,13 @@
  * Locked in UI_FLOWS_LOCKED.md and MOVE_1_FOOD_FOUNDATION_AND_FFM.md.
  * Voice rules from COACHING_VOICE_SYNTHESIS_LOCKED.md.
  *
- * Ships: date pager, macro summary, six meal sections as contained cards
- * (Breakfast, Lunch, Dinner, Pre/Post-workout, Snacks), search-based add,
- * barcode scan, swipe-delete, multi-select bulk tools, copy yesterday, and a
- * designed empty state (diary-tab redesign 2026-06-01).
+ * Ships: date pager, macro summary, ONE flat chronological timeline of the
+ * day's entries with quiet Morning/Afternoon/Evening day-part labels (meal
+ * names ride as small tags on each row -- Ultimate-Audit item 15, D22 15a/
+ * 15b, replaces the old per-meal card layout for every user, no toggle),
+ * search-based add, barcode scan, swipe-delete, multi-select bulk tools,
+ * copy yesterday, and a designed empty state (diary-tab redesign 2026-06-01;
+ * timeline rebuild 2026-07-10).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { appAlert } from '../components/AppAlert';
@@ -20,12 +23,11 @@ import * as haptics from '../lib/haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type, iconSize } from '../styles/theme';
-import AnimatedEntrance from '../components/AnimatedEntrance';
 import Card from '../components/Card';
 import {
   getFoodEntriesForDay, getRecentLoggedDays, deleteFoodEntry, restoreFoodEntry, updateFoodEntry, getRollupForDay,
-  setWater, getWater, createSavedMeal, confirmPlannedDay, clearPlannedDay,
-  getSlotRecents, logFoodEntry, upsertSlotRecent, hasAnyFoodEntries,
+  setWater, getWater, createSavedMeal, confirmPlannedDay, confirmPlannedEntry, clearPlannedDay,
+  hasAnyFoodEntries,
 } from '../lib/food/db';
 import { isoDate, shiftDate, weekDatesMon, weekdayShort, friendlyDate } from '../lib/food/diaryDates';
 import { createRaceGuard } from '../lib/food/loadRaceGuard';
@@ -52,7 +54,8 @@ import QuickAddSheet from '../components/food/QuickAddSheet';
 import BottomSheet from '../components/BottomSheet';
 import EmptyDiary from '../components/food/EmptyDiary';
 import { SkeletonRow } from '../components/Skeleton';
-import MealSection from '../components/food/MealSection';
+import TimelineEntryRow from '../components/food/TimelineEntryRow';
+import AnimatedRow from '../components/AnimatedRow';
 import HintCaption from '../components/HintCaption';
 import { friendlyFoodName } from '../components/food/EntryRow';
 import ScreenHeader from '../components/ScreenHeader';
@@ -62,10 +65,11 @@ import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { deleteEntries, restoreEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
 import { shouldShowOffConsentCard, dismissOffConsentCard } from '../lib/food/writeback';
-import { buildMealSlots, highestLoggedMeal, inferMealSlotForHour, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
-import { scaleMacros, resolveServingG } from '../lib/food/macros';
-import { isValidEntryGrams } from '../lib/food/servingEntry';
+import { buildMealSlots, highestLoggedMeal, inferMealSlotForHour, mealSlotLabel, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
+import { scaleMacros } from '../lib/food/macros';
 import { deriveDiaryDayViewModel } from '../lib/food/diaryViewModel';
+import { buildDiaryTimeline } from '../lib/food/diaryTimeline';
+import { getMealAdditionsForEntries } from '../lib/food/mealAdditions';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import { parseLocalDay } from '../lib/dayKey';
 
@@ -299,26 +303,28 @@ export default function DiaryScreen({ navigation, route }) {
     }
   }, [canWrite, userId, selectedDate, load, toast, dismissMarkEatenHint, dismissPlanAddedHint]);
 
-  // Food audit item 1 ("mark planned meal eaten", one tap): confirm just ONE
-  // meal's planned rows, not the whole day, so staging a plan into the diary
-  // does not force an all-or-nothing choice. Same real write path as the
-  // day-level confirm (confirmPlannedDay -> is_planned 1->0), scoped to a
-  // meal_slot; MealSection only renders the button when that slot actually
-  // holds planned rows.
-  const handleConfirmPlannedSlot = useCallback(async (slotKey) => {
-    if (!userId || !canWrite() || !slotKey) return;
+  // Food audit item 1 ("mark planned meal eaten", one tap), re-homed for the
+  // flat timeline (Ultimate-Audit item 15, D22 15b): the timeline has no
+  // meal card to hang a per-meal confirm button on, so this now confirms
+  // ONE entry at a time -- a genuine single action at a real moment, which
+  // is exactly why confirmPlannedEntry stamps eaten_at = now for it (unlike
+  // the whole-day bulk confirm below, which leaves eaten_at NULL). Same
+  // real write path (is_planned 1->0 against food_entries), just scoped to
+  // a single row instead of a meal_slot.
+  const handleConfirmPlannedEntry = useCallback(async (entry) => {
+    if (!userId || !canWrite() || !entry?.id) return;
     try {
-      const n = await confirmPlannedDay(userId, selectedDate, slotKey);
+      const n = await confirmPlannedEntry(userId, entry.id);
       await load();
       if (n > 0) {
-        dismissMarkEatenHint(); // discovery: per-meal mark-as-eaten used
+        dismissMarkEatenHint(); // discovery: per-entry mark-as-eaten used
         dismissPlanAddedHint(); // same discovery, plan-added teach's signal
         toast.show('Marked as eaten.', { variant: 'success' });
       }
     } catch (_) {
       toast.show("Couldn't update. Try again.", { variant: 'error' });
     }
-  }, [canWrite, userId, selectedDate, load, toast, dismissMarkEatenHint, dismissPlanAddedHint]);
+  }, [canWrite, userId, load, toast, dismissMarkEatenHint, dismissPlanAddedHint]);
 
   const handleClearPlanned = useCallback(async () => {
     if (!userId || !canWrite()) return;
@@ -665,85 +671,20 @@ export default function DiaryScreen({ navigation, route }) {
     if (selectedDate === isoDate(new Date())) return inferMealSlotForHour(new Date().getHours(), keys);
     return keys[0] ?? null;
   }, [mealSlots, selectedDate]);
-  // E10 read-only lapse views: only render meals that actually have food. An
-  // empty ladder slot exists to be added to; with the add affordances hidden
-  // it would just be a dead header-only card.
-  const visibleSlots = useMemo(
-    () => (readOnly ? mealSlots.filter((s) => (viewEntries.some((e) => e.meal_slot === s.key))) : mealSlots),
-    [readOnly, mealSlots, viewEntries],
-  );
-
-  // GAP #5: one-tap "usuals" for empty meal slots. Each slot offers up to three
-  // of the foods most logged into THAT slot (the same `food_slot_recents`
-  // ranking the "Add again" list uses), resolved to current food records, so a
-  // regular breakfast is a single tap rather than a search. Only ever shown on a
-  // slot with no entries yet, so it reads as a prompt, never as clutter over
-  // food already logged. Keyed on the memoised mealSlots so it reloads after a
-  // log (recents shift) or a date change, and never on every render.
-  const [slotUsuals, setSlotUsuals] = useState({});
-  useEffect(() => {
-    // Read-only diary shows no usuals (a usual is a one-tap WRITE), so skip
-    // the per-slot recents reads entirely.
-    if (!userId || readOnly) { setSlotUsuals({}); return; }
-    let active = true;
-    (async () => {
-      const next = {};
-      await Promise.all(mealSlots.map(async (slot) => {
-        try {
-          const rows = await getSlotRecents(userId, slot.key, 3);
-          const foods = await Promise.all((rows ?? []).map(async (row) => {
-            try {
-              const food = await resolveFoodRef(userId, row.food_ref);
-              if (!food) return null;
-              // Carry the remembered portion so resolveServingG reuses the
-              // user's last logged weight for this food, not a generic 100 g.
-              return { ...food, food_ref: row.food_ref, last_quantity_g: row.last_quantity_g };
-            } catch (_) { return null; }
-          }));
-          const valid = foods.filter(Boolean);
-          if (valid.length) next[slot.key] = valid;
-        } catch (_) { /* slot has no recents */ }
-      }));
-      if (active) setSlotUsuals(next);
-    })();
-    return () => { active = false; };
-  }, [userId, readOnly, selectedDate, mealSlots]);
-
-  // One-tap log of a usual. Same write path, rollup trigger and sync as a
-  // search-result add, with an Undo. Guards a double tap (loggingUsualRef) and
-  // an invalid remembered portion (logs nothing rather than a junk weight).
-  const loggingUsualRef = useRef(false);
-  const onLogUsual = useCallback(async (food, slotKey) => {
-    if (!userId || !food || loggingUsualRef.current || !canWrite()) return;
-    const grams = Math.round(resolveServingG(food));
-    if (!isValidEntryGrams(grams)) return;
-    loggingUsualRef.current = true;
-    audit('food.relog', { surface: 'diary_usual', mealSlot: slotKey });
-    try {
-      const m = scaleMacros(food, grams);
-      const id = await logFoodEntry(userId, {
-        entryDate: selectedDate,
-        mealSlot: slotKey,
-        foodRef: food.food_ref,
-        quantityG: grams,
-        kcal: m.kcal,
-        proteinG: m.proteinG,
-        carbsG: m.carbsG,
-        fatG: m.fatG,
-        fibreG: m.fibreG,
-      });
-      await upsertSlotRecent(userId, { mealSlot: slotKey, foodRef: food.food_ref, quantityG: grams });
-      await load();
-      toast.show(`${food.name ?? 'Food'} added.`, {
-        variant: 'undo',
-        action: { label: 'Undo', onPress: async () => { try { await deleteFoodEntry(id, userId); await load(); } catch (_) { /* already gone */ } } },
-      });
-    } catch (_) {
-      toast.show("Couldn't add that. Try again.", { variant: 'error' });
-    } finally {
-      loggingUsualRef.current = false;
-    }
-  }, [canWrite, userId, selectedDate, load, toast]);
+  // Ultimate-Audit item 15 (D22 15a, timeline food logging): the flat
+  // chronological timeline (below) shows only entries that exist, so there
+  // is no "empty slot card" left to host GAP #5's one-tap "usuals" prompt --
+  // that affordance was a per-empty-card prompt and has no home once the
+  // meal-bucket cards are gone (item-15-timeline-scoping.md Stage 2 point 2
+  // flags exactly this: dropping per-meal grouping entirely "needs a new
+  // home or removal" for MealSection's per-meal-specific chrome). Disclosed
+  // scope cut, not a silent one: usuals can return as a day-level "quick add
+  // your usuals" surface in a follow-up if the lead wants it back.
+  //
+  // The "season to taste" / optional-extras row DOES still have a home: it
+  // attaches to the last timeline row of a curated meal's group (below,
+  // seasonAddsBySlot), since that meal's entries still exist and still
+  // group together even without a card.
 
   function gotoYesterday() { setSelectedDate(shiftDate(selectedDate, -1)); }
   function gotoTomorrow()  { setSelectedDate(shiftDate(selectedDate, 1)); }
@@ -793,10 +734,6 @@ export default function DiaryScreen({ navigation, route }) {
 
   function addSavedMeal(slot) {
     setSavedPickerSlot(slot);
-  }
-
-  function scanForMeal(slot) {
-    navigation.navigate('ScanBarcode', { mealSlot: slot, entryDate: selectedDate });
   }
 
   const [editSheet, setEditSheet] = useState(null); // { entry, food } | null
@@ -851,6 +788,39 @@ export default function DiaryScreen({ navigation, route }) {
   }, []);
   const [copyDays, setCopyDays] = useState(null); // recent logged days | null (picker hidden)
   const [diaryToolsOpen, setDiaryToolsOpen] = useState(false);
+
+  // Ultimate-Audit item 15 (D22 15a): the single flat, chronological list
+  // replacing the meal-bucket cards. Pure derivation (src/lib/food/
+  // diaryTimeline.js), so this is cheap to recompute on every entries/
+  // mealSlots change; ordering is by eaten_at where present, or the entry's
+  // meal-slot conventional position where not (D22 15b, never an invented
+  // clock time).
+  const timeline = useMemo(
+    () => buildDiaryTimeline(viewEntries, { mealSlots }),
+    [viewEntries, mealSlots],
+  );
+
+  // entriesBySlot (declared earlier, alongside the other view-derived memos)
+  // is reused here for the two things that still need a per-meal grouping:
+  // the "season to taste" optional-extras copy below, and the macro
+  // breakdown sheet's "jump to meal" scroll target, wired via mealLayoutY.
+
+  // "Optional extras" (D12 item 4 / founder 2026-07-09 reframe): once a
+  // curated / meal-plan meal is on the day, its free additions still show,
+  // now attached to the LAST timeline row of that meal's group rather than
+  // a meal-card footer. Never shown mid-selection (the rows are selection
+  // targets then, matching the old MealSection gate).
+  const seasonAddsBySlot = useMemo(() => {
+    if (selectionMode) return {};
+    const out = {};
+    for (const slot of mealSlots) {
+      const es = entriesBySlot[slot.key];
+      if (!es || !es.length) continue;
+      const adds = getMealAdditionsForEntries(es);
+      if (adds) out[slot.key] = adds;
+    }
+    return out;
+  }, [mealSlots, entriesBySlot, selectionMode]);
 
   // Hostile review (E10 #1): the write SURFACES render on their own state, so
   // one already open when the tier flips pro-to-free would stay live for a
@@ -1004,7 +974,7 @@ export default function DiaryScreen({ navigation, route }) {
     });
   }
 
-  async function saveEditSheet({ quantityG, mealSlot, entryDate, weightState }) {
+  async function saveEditSheet({ quantityG, mealSlot, entryDate, weightState, eatenAt }) {
     if (!canWrite()) return;
     const { entry, food } = editSheet;
     await updateFoodEntry(entry.id, userId, {
@@ -1017,6 +987,12 @@ export default function DiaryScreen({ navigation, route }) {
       // (untouched or user-chosen); falls back to the entry's existing value
       // so a food with no raw/cooked choice never loses its prior label.
       weightState: weightState ?? entry.weight_state,
+      // Ultimate-Audit item 15 (D22 15b): the edit sheet always sends its
+      // current eaten-at value (set, cleared to null, or left as the
+      // entry's own via the sheet's own initial state) -- updateFoodEntry
+      // only preserves the existing value when this key is OMITTED
+      // entirely, so it must always be sent here.
+      eatenAt,
     });
     await load();
   }
@@ -1401,7 +1377,7 @@ export default function DiaryScreen({ navigation, route }) {
                 alongside showPlanAddedHint above (mutually exclusive: a
                 fresh plan-add always dismisses both discovery signals
                 together, see dismissMarkEatenHint/dismissPlanAddedHint in
-                handleConfirmPlanned/handleConfirmPlannedSlot). */}
+                handleConfirmPlanned/handleConfirmPlannedEntry). */}
             {plannedCount > 0 && !selectionMode && !readOnly && !showPlanAddedHint && showMarkEatenHint ? (
               <HintCaption
                 text="Tick meals off one by one as you eat, or mark them all as eaten at once from the bottom of the page."
@@ -1419,53 +1395,93 @@ export default function DiaryScreen({ navigation, route }) {
                 onDismiss={dismissFoodHint}
               />
             ) : null}
-            {visibleSlots.map((slot, i) => (
-              <View
-                key={slot.key}
-                onLayout={(e) => { mealLayoutY.current[slot.key] = e.nativeEvent.layout.y; }}
-              >
-                <AnimatedEntrance index={i}>
-                  <MealSection
-                    slot={slot}
-                    entries={entriesBySlot[slot.key] ?? []}
-                    usuals={(entriesBySlot[slot.key]?.length) ? null : (slotUsuals[slot.key] ?? null)}
-                    onLogUsual={(food) => onLogUsual(food, slot.key)}
-                    onAdd={() => addFood(slot.key)}
-                    /* L05-D1/D6 (design-usability audit 2026-07-09): kept
-                       wired but intentionally unused by MealSection - a
-                       prior polish pass deliberately simplified the
-                       per-meal-card hub to the single "Add food" action
-                       (MealSection.polish.guard.test.js /
-                       foodComponents.test.js pin exactly that), so a
-                       4-button hub is not being restored here. Scan and
-                       quick-add/saved-meals stay reachable via
-                       Add food -> FoodSearchScreen's "More" tab; these
-                       three callbacks are left connected (not deleted) so
-                       addSavedMeal/scanForMeal/setQuickAddSlot and their
-                       sheets below stay live code, in case a future
-                       session is asked to wire a genuine second entry
-                       point rather than remove them outright. */
-                    onSavedMeals={() => addSavedMeal(slot.key)}
-                    onScan={() => scanForMeal(slot.key)}
-                    onQuickAdd={() => setQuickAddSlot(slot.key)}
-                    onEdit={openEditSheet}
-                    onDelete={requestDelete}
-                    selectionMode={selectionMode}
-                    selectedIds={selectedIds}
-                    onLongPressEntry={enterSelection}
-                    onToggleSelect={toggleSelect}
-                    readOnly={readOnly}
-                    // One-tap "mark eaten" per meal (food audit item 1). Only
-                    // offered when a write is possible and the day has
-                    // happened; MealSection itself decides whether THIS slot
-                    // has any planned rows to confirm.
-                    onConfirmPlanned={!readOnly && !isFutureDay ? () => handleConfirmPlannedSlot(slot.key) : undefined}
-                  />
-                </AnimatedEntrance>
-              </View>
-            ))}
+            {/* Ultimate-Audit item 15 (D22 15a): ONE chronological scroll
+                across the whole day, quiet Morning/Afternoon/Evening day-part
+                labels as small section markers, meal name riding as a small
+                tag on each row (EntryRow's mealLabel). Replaces the old
+                visibleSlots.map(...) -> MealSection per-meal card render for
+                every user (June founder ruling: no toggle). Reuses
+                SwipeableEntryRow/EntryRow verbatim via TimelineEntryRow. */}
+            {timeline.map((item) => {
+              if (item.type === 'daypart') {
+                return (
+                  <SectionLabel key={item.key} tone="muted" style={styles.dayPartLabel}>
+                    {item.label}
+                  </SectionLabel>
+                );
+              }
+              const entry = item.entry;
+              const slotKey = entry.meal_slot;
+              const seasonAdds = item.isLastOfSlot ? seasonAddsBySlot[slotKey] : null;
+              return (
+                <View
+                  key={item.key}
+                  // F-6 macro-breakdown "jump to meal": capture the Y of the
+                  // FIRST row belonging to each meal, since there is no
+                  // meal-card header to capture it on any more.
+                  onLayout={item.isFirstOfSlot
+                    ? (e) => { mealLayoutY.current[slotKey] = e.nativeEvent.layout.y; }
+                    : undefined}
+                >
+                  <AnimatedRow style={styles.timelineRowOuter}>
+                    <TimelineEntryRow
+                      entry={entry}
+                      mealLabel={mealSlotLabel(slotKey)}
+                      onEdit={openEditSheet}
+                      onDelete={requestDelete}
+                      selectionMode={selectionMode}
+                      selected={selectedIds.has(entry.id)}
+                      onLongPress={() => enterSelection(entry)}
+                      onToggleSelect={() => toggleSelect(entry)}
+                      readOnly={readOnly}
+                      // Per-entry "mark eaten" (food audit item 1, re-homed
+                      // for the flat timeline). Only offered when a write is
+                      // possible and the day has happened.
+                      onConfirmPlanned={!readOnly && !isFutureDay ? () => handleConfirmPlannedEntry(entry) : undefined}
+                    />
+                  </AnimatedRow>
+                  {seasonAdds ? (
+                    <View style={styles.seasonRow}>
+                      <Text style={styles.seasonText}>
+                        <Text style={styles.seasonLabel}>Optional extras, add any you fancy: </Text>
+                        {seasonAdds.map((a) => a.name).join(', ')}.
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })}
             {!selectionMode && !readOnly ? (
               <>
+                {/* Ultimate-Audit item 15 (D22): a single primary "Add food"
+                    affordance now that there is no per-meal card add button.
+                    Infers the likely meal tag from the time of day
+                    (inferMealSlotForHour, unchanged); the Meal chip row on
+                    the FoodDetailSheet that opens next lets the user change
+                    it before saving. */}
+                <Button
+                  title="Add food"
+                  icon="search-outline"
+                  onPress={() => addFood(likelyMealSlot || 'meal_1')}
+                  variant="secondary"
+                  style={styles.addFoodRow}
+                  textStyle={styles.addFoodRowText}
+                  accessibilityLabel="Add food"
+                />
+                {/* Saved meals/recipes chooser: a quiet secondary link beside
+                    the single primary "Add food" affordance (rather than a
+                    second big button), so the timeline keeps one obvious add
+                    path while this stays reachable, same chooser sheet as
+                    before. */}
+                <TouchableOpacity
+                  style={styles.savedMealLinkRow}
+                  onPress={() => addSavedMeal(likelyMealSlot || 'meal_1')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Use a saved meal or recipe"
+                >
+                  <Ionicons name="bookmark-outline" size={14} color={colors.textSecondary} />
+                  <Text style={styles.savedMealLinkText}>Use a saved meal or recipe</Text>
+                </TouchableOpacity>
                 <Button
                   title="Add meal"
                   icon="add"
@@ -1539,10 +1555,12 @@ export default function DiaryScreen({ navigation, route }) {
 
         {/* D12 (ux-world-class-audit-2026-07-09, founder direct order): the
             bulk "mark all planned meals as eaten" control demoted to the
-            bottom of the diary page. Per-meal marking (MealSection's
-            onConfirmPlanned, wired above) is the primary interaction; this
-            is the same confirm/clear pair and gating that used to sit above
-            the meal sections, unchanged in behaviour, just relocated. */}
+            bottom of the diary page. Per-entry marking (TimelineEntryRow's
+            onConfirmPlanned, wired above -- re-homed from MealSection's
+            per-meal button by Ultimate-Audit item 15) is the primary
+            interaction; this is the same confirm/clear pair and gating that
+            used to sit above the meal sections, unchanged in behaviour,
+            just relocated. */}
         {plannedCount > 0 && !selectionMode && !readOnly ? (
           <View style={styles.plannedBanner}>
             <Text style={styles.plannedBannerText}>
@@ -1586,6 +1604,7 @@ export default function DiaryScreen({ navigation, route }) {
         initialMealSlot={editSheet?.entry?.meal_slot ?? 'snack'}
         initialEntryDate={editSheet?.entry?.entry_date ?? selectedDate}
         initialWeightState={editSheet?.entry?.weight_state}
+        initialEatenAt={editSheet?.entry?.eaten_at ?? null}
         onSave={saveEditSheet}
         onDelete={deleteFromEditSheet}
         onClose={() => setEditSheet(null)}
@@ -2177,6 +2196,47 @@ const styles = StyleSheet.create({
   },
   offCardDismiss: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textMuted },
   offCardCta: { ...type.label, color: colors.textPrimary },
+  // Ultimate-Audit item 15 (D22 15a): quiet day-part section marker, small
+  // and muted so it reads as a soft divider, never a heading competing with
+  // the food itself.
+  dayPartLabel: {
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  // Each timeline row sits in its own rounded card (the old MealSection card
+  // border, now per-row instead of per-meal) with a small gap between rows.
+  timelineRowOuter: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+    overflow: 'hidden',
+    marginBottom: spacing.xs,
+  },
+  // "Optional extras" row (D12 item 4 reframe), now attached under the last
+  // row of a curated meal's group instead of a meal-card footer.
+  seasonRow: {
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+    marginTop: -spacing.xs, marginBottom: spacing.sm,
+    backgroundColor: colors.surface, borderBottomLeftRadius: radius.md, borderBottomRightRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border, borderTopWidth: 0,
+  },
+  seasonText: { ...type.bodySm, color: colors.textSecondary },
+  seasonLabel: { color: colors.textMuted, fontWeight: fontWeight.bold },
+  addFoodRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.xs, minHeight: 48,
+    backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  addFoodRowText: { ...type.label, color: colors.textPrimary },
+  savedMealLinkRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.xs, minHeight: 36,
+    marginBottom: spacing.sm,
+  },
+  savedMealLinkText: { ...type.bodySm, color: colors.textSecondary },
   addMealRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, minHeight: 48,

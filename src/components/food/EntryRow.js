@@ -18,6 +18,13 @@ export function EntryRow({
   entry, onEdit,
   selectionMode = false, selected = false, onLongPress, onToggleSelect,
   readOnly = false,
+  // Ultimate-Audit item 15 (D22 15a, timeline food logging): the meal name
+  // as a small quiet tag on the row, replacing the old per-meal card header
+  // now that the flat chronological timeline has no meal card to carry it.
+  // Undefined/null when the caller has no meal context (kept optional so
+  // every existing render of EntryRow that never passed this stays
+  // byte-identical).
+  mealLabel = null,
   // P9 TalkBack: swipe-to-delete is a pan gesture TalkBack captures for
   // navigation, so the row exposes delete as a screen-reader custom action
   // (TalkBack actions menu) when the parent provides a delete handler.
@@ -32,12 +39,16 @@ export function EntryRow({
   const brand = entry?._brand ?? null;
   // Quick-add entries carry macros directly with no meaningful gram weight.
   const isQuick = (entry?.food_ref ?? '').startsWith('quick:');
-  // Logged time (gap #3): every entry stores logged_at; show it as a quiet 24h
-  // HH:mm so the user can see WHEN they ate, like MFP/Cronometer. Display-only.
-  const loggedTime = Number.isFinite(entry?.logged_at)
-    ? new Date(entry.logged_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  // Ultimate-Audit item 15 (D22 15b): the quiet time shown is now eaten_at,
+  // not logged_at ("the moment the client wrote the row" -- item-15-
+  // timeline-scoping.md Stage 0). A bulk-confirmed entry carries NO eaten_at
+  // and shows no time at all here -- never a false timestamp, only its meal
+  // tag (below). Every pre-existing entry was backfilled eaten_at =
+  // logged_at (schema v67), so this is a no-op change for history.
+  const eatenTime = Number.isFinite(entry?.eaten_at)
+    ? new Date(entry.eaten_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
     : null;
-  const metaLine = [isQuick ? null : `${Math.round(entry.quantity_g)}g`, loggedTime]
+  const metaLine = [isQuick ? null : `${Math.round(entry.quantity_g)}g`, eatenTime]
     .filter(Boolean).join('  ·  ');
   return (
     <TouchableOpacity
@@ -69,7 +80,18 @@ export function EntryRow({
         </View>
       ) : null}
       <View style={styles.entryMain}>
-        <Text style={styles.entryName} numberOfLines={1}>{name}</Text>
+        <View style={styles.entryNameRow}>
+          <Text style={styles.entryName} numberOfLines={1}>{name}</Text>
+          {/* Ultimate-Audit item 15 (D22 15a): the meal name as a small quiet
+              tag, all that is left of the old per-meal card identity in the
+              flat timeline. Decorative only (no accessibility change; the
+              row's own accessibilityLabel below is unaffected). */}
+          {mealLabel ? (
+            <View style={styles.mealTag}>
+              <Text style={styles.mealTagText} numberOfLines={1}>{mealLabel}</Text>
+            </View>
+          ) : null}
+        </View>
         {brand ? <Text style={styles.entryBrand} numberOfLines={1}>{brand}</Text> : null}
         {metaLine ? <Text style={styles.entryQuantity}>{metaLine}</Text> : null}
       </View>
@@ -85,6 +107,7 @@ export function SwipeableEntryRow({
   entry, onEdit, onDelete,
   selectionMode = false, selected = false, onLongPress, onToggleSelect,
   readOnly = false,
+  mealLabel = null,
 }) {
   const ref = useRef(null);
   const renderRightActions = useCallback(() => (
@@ -115,6 +138,7 @@ export function SwipeableEntryRow({
         onLongPress={onLongPress}
         onToggleSelect={onToggleSelect}
         readOnly={readOnly}
+        mealLabel={mealLabel}
         onAccessibilityDelete={() => onDelete?.(entry, () => ref.current?.close?.())}
       />
     </Swipeable>
@@ -150,7 +174,18 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   entryMain: { flex: 1 },
-  entryName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
+  // Ultimate-Audit item 15 (D22 15a): name + meal tag share a row so the tag
+  // reads as a quiet label on the food, not a second heading.
+  entryNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  entryName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium, flexShrink: 1 },
+  mealTag: {
+    paddingHorizontal: spacing.xs, paddingVertical: 1,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.border,
+    flexShrink: 0,
+  },
+  mealTagText: { ...type.caption, color: colors.textMuted, fontSize: fontSize.xs },
   entryBrand: { ...type.caption, color: colors.textMuted, marginTop: spacing.hair },
   entryQuantity: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   entryMacros: { alignItems: 'flex-end' },

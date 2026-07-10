@@ -116,7 +116,9 @@ function _parseItemsJson(raw) {
 // (sync.regressionMatrix.test.js) caught it; restored snake-case
 // reads here match what production rows actually look like.
 
-function _foodEntryToCloud(row, userId) {
+// Exported for the schema round-trip test (Ultimate-Audit item 15,
+// diaryTimeline sync-mapper suite), same convention as _recipeToCloud below.
+export function _foodEntryToCloud(row, userId) {
   return {
     id: row.id,
     user_id: userId,
@@ -132,6 +134,12 @@ function _foodEntryToCloud(row, userId) {
     // Ultimate-Audit item 12 (raw/cooked basis toggle, founder ruling
     // NA-nutrition-1): a stored label only, never a conversion factor.
     weight_state: row.weight_state ?? 'as_weighed',
+    // Ultimate-Audit item 15 (timeline food logging, D22 15b): the editable
+    // "time eaten", distinct from logged_at. NULL is a real state (a
+    // bulk-confirmed entry with no honest single eaten time), so this is
+    // NOT defaulted to logged_at like weight_state's label is -- a null
+    // stays null across the wire.
+    eaten_at: _msToISOorNull(row.eaten_at),
     logged_at: _msToISOorNull(row.logged_at),
     created_at: _msToISOorNull(row.created_at),
     updated_at: _msToISOorNull(row.updated_at),

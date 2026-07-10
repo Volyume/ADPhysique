@@ -48,6 +48,12 @@ function _normaliseWeightState(v) {
  * @param {'as_weighed'|'raw'|'cooked'} [entry.weightState] - which basis the
  *   grams are in (Ultimate-Audit item 12). Defaults to 'as_weighed', today's
  *   behaviour: no conversion is ever performed, this is a stored label only.
+ * @param {number} [entry.eatenAt] - ms epoch "time eaten" (Ultimate-Audit
+ *   item 15, D22 15b). Defaults to the logging moment (now) for a real
+ *   (non-planned) entry -- an individual log IS an honest "I ate this now"
+ *   act. A planned (entry.isPlanned) row gets NULL instead: it has not been
+ *   eaten yet, and confirming it later (confirmPlannedEntry /
+ *   confirmPlannedDay) is what sets its real eaten_at.
  * @returns {Promise<string>} id of the new entry
  */
 export async function logFoodEntry(userId, entry) {
@@ -85,18 +91,24 @@ export async function logFoodEntry(userId, entry) {
   // model 2026-06-15). Defaults to an actual (0).
   const isPlanned = entry.isPlanned ? 1 : 0;
   const weightState = _normaliseWeightState(entry.weightState);
+  // Ultimate-Audit item 15 (D22 15b): a real (non-planned) log is an honest
+  // "I ate this now" act, so it earns eaten_at = now unless the caller
+  // explicitly supplies one. A planned meal-plan row has not been eaten yet
+  // -- eaten_at stays NULL until it is confirmed (confirmPlannedEntry /
+  // confirmPlannedDay), which is what stamps the real moment.
+  const eatenAt = isPlanned ? null : (Number.isFinite(entry.eatenAt) ? entry.eatenAt : now);
   await d.runAsync(
     `INSERT INTO food_entries (
       id, user_id, entry_date, meal_slot, food_ref, quantity_g,
       kcal, protein_g, carbs_g, fat_g, fibre_g, logged_at,
-      is_planned, weight_state, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      is_planned, weight_state, eaten_at, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, userId, entry.entryDate, entry.mealSlot, entry.foodRef,
       finite(entry.quantityG), finite(entry.kcal), finite(entry.proteinG),
       finite(entry.carbsG), finite(entry.fatG),
       Number.isFinite(entry.fibreG) ? entry.fibreG : null, now,
-      isPlanned, weightState, now, now,
+      isPlanned, weightState, eatenAt, now, now,
     ]
   );
   await recomputeRollup(userId, entry.entryDate);
@@ -132,22 +144,31 @@ export async function updateFoodEntry(id, userId, patch) {
   const d = await db();
   const now = Date.now();
   const existing = await d.getFirstAsync(
-    `SELECT entry_date FROM food_entries WHERE id = ? AND user_id = ?`,
+    `SELECT entry_date, eaten_at FROM food_entries WHERE id = ? AND user_id = ?`,
     [id, userId]
   );
   if (!existing) return false;
   const newDate = patch.entryDate ?? existing.entry_date;
   const weightState = _normaliseWeightState(patch.weightState);
+  // Ultimate-Audit item 15 (D22 15b): the edit sheet offers a calm optional
+  // "eaten at" time. `undefined` means the caller did not touch the field
+  // (preserve whatever the entry already had, timed or not); an explicit
+  // value (including null, "I don't know exactly") replaces it. This is the
+  // one write path where a user can set a real eaten time on an entry that
+  // was bulk-confirmed with none.
+  const eatenAt = patch.eatenAt !== undefined
+    ? (Number.isFinite(patch.eatenAt) ? patch.eatenAt : null)
+    : (existing.eaten_at ?? null);
   await d.runAsync(
     `UPDATE food_entries SET
       entry_date = ?, meal_slot = ?, food_ref = ?, quantity_g = ?,
       kcal = ?, protein_g = ?, carbs_g = ?, fat_g = ?, fibre_g = ?,
-      weight_state = ?, updated_at = ?
+      weight_state = ?, eaten_at = ?, updated_at = ?
     WHERE id = ? AND user_id = ?`,
     [
       newDate, patch.mealSlot, patch.foodRef, patch.quantityG,
       patch.kcal, patch.proteinG, patch.carbsG, patch.fatG,
-      patch.fibreG ?? null, weightState, now, id, userId,
+      patch.fibreG ?? null, weightState, eatenAt, now, id, userId,
     ]
   );
   await recomputeRollup(userId, newDate);
@@ -256,16 +277,57 @@ export async function hasAnyFoodEntries(userId) {
  *   instead of the whole day, so a single staged meal can be logged without
  *   forcing every other planned meal on the day to confirm with it. Every
  *   existing whole-day call site omits this and is unaffected.
+ *
+ * Ultimate-Audit item 15 (D22 15b, timeline food logging): eaten_at is set
+ * conditionally on which of the two this call is.
+ *   - mealSlot given: a genuine single action at a real moment (confirming
+ *     one meal), so its rows get eaten_at = now, same reasoning as
+ *     confirmPlannedEntry below.
+ *   - mealSlot omitted (the whole-day "mark all meals as eaten" bulk
+ *     control): the app has no honest idea when each individual meal was
+ *     actually eaten, so stamping every row with the SAME instant would be a
+ *     false, invented timestamp (item-15-timeline-scoping.md Section 5 point
+ *     3 -- reads as "ate everything at once", a pattern the app itself would
+ *     have created). Those rows get eaten_at = NULL instead; the timeline
+ *     displays them grouped under their meal tag with no clock time.
  */
 export async function confirmPlannedDay(userId, entryDate, mealSlot = null) {
   const d = await db();
   const now = Date.now();
-  const params = [now, now, userId, entryDate];
-  let sql = `UPDATE food_entries SET is_planned = 0, logged_at = ?, updated_at = ?
+  const eatenAt = mealSlot ? now : null;
+  const params = [now, eatenAt, now, userId, entryDate];
+  let sql = `UPDATE food_entries SET is_planned = 0, logged_at = ?, eaten_at = ?, updated_at = ?
      WHERE user_id = ? AND entry_date = ? AND is_planned = 1 AND deleted_at IS NULL`;
   if (mealSlot) { sql += ' AND meal_slot = ?'; params.push(mealSlot); }
   const res = await d.runAsync(sql, params);
   await recomputeRollup(userId, entryDate);
+  _scheduleSync();
+  return res?.changes ?? 0;
+}
+
+/**
+ * Confirm ONE planned entry as eaten (Ultimate-Audit item 15, D22 15b): the
+ * flat timeline has no meal card to hang a per-meal confirm button on, so
+ * "mark eaten" becomes a per-ROW action. A single tap on a single food is a
+ * genuine, real-moment act, so it gets an honest eaten_at = now, exactly like
+ * confirmPlannedDay's per-meal form. Returns 1 if a planned row was
+ * confirmed, 0 if the id did not match a live planned row (already
+ * confirmed, deleted, or someone else's).
+ */
+export async function confirmPlannedEntry(userId, entryId) {
+  const d = await db();
+  const now = Date.now();
+  const existing = await d.getFirstAsync(
+    `SELECT entry_date FROM food_entries WHERE id = ? AND user_id = ? AND is_planned = 1 AND deleted_at IS NULL`,
+    [entryId, userId]
+  );
+  if (!existing) return 0;
+  const res = await d.runAsync(
+    `UPDATE food_entries SET is_planned = 0, logged_at = ?, eaten_at = ?, updated_at = ?
+     WHERE id = ? AND user_id = ? AND is_planned = 1 AND deleted_at IS NULL`,
+    [now, now, now, entryId, userId]
+  );
+  await recomputeRollup(userId, existing.entry_date);
   _scheduleSync();
   return res?.changes ?? 0;
 }
@@ -1597,16 +1659,21 @@ export async function applyFoodEntryFromCloud(userId, row) {
   // food-day-key migration has run (it no longer races the pull). Returns the
   // local key so the caller rebuilds the right day's rollup.
   const entryDate = localDayKey(loggedAt);
+  // Ultimate-Audit item 15 (D22 15b): eaten_at is NOT defaulted to loggedAt
+  // here (unlike loggedAt's own `?? Date.now()` fallback above) -- NULL is a
+  // real state (a bulk-confirmed row with no honest eaten time) and must
+  // round-trip as NULL, never invented from the write timestamp.
+  const eatenAt = _isoToMs(row.eaten_at);
   await d.runAsync(
     `INSERT OR REPLACE INTO food_entries (
       id, user_id, entry_date, meal_slot, food_ref, quantity_g,
-      kcal, protein_g, carbs_g, fat_g, fibre_g, weight_state, logged_at,
+      kcal, protein_g, carbs_g, fat_g, fibre_g, weight_state, eaten_at, logged_at,
       deleted_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       row.id, userId, entryDate, row.meal_slot, row.food_ref,
       row.quantity_g, row.kcal, row.protein_g, row.carbs_g, row.fat_g,
-      row.fibre_g ?? null, _normaliseWeightState(row.weight_state), loggedAt,
+      row.fibre_g ?? null, _normaliseWeightState(row.weight_state), eatenAt, loggedAt,
       deletedAt, createdAt, updatedAt,
     ]
   );

@@ -13,11 +13,14 @@
  *      NutritionTargetsScreen) is a separate module that never routed through
  *      this panel, so it is untouched and out of scope for this guard.
  *   2. The bulk "Mark as eaten" / "Clear" planned-meals control has moved
- *      below the meal sections, WaterRow, and banking rows, to the true
- *      bottom of the scrollable diary page. Per-meal marking
- *      (onConfirmPlanned on MealSection) stays the primary interaction and is
- *      unmoved. Same gating (`plannedCount > 0 && !selectionMode && !readOnly`)
- *      and the same two buttons/copy, just relocated.
+ *      below the flat timeline, WaterRow, and banking rows, to the true
+ *      bottom of the scrollable diary page. Per-entry marking
+ *      (onConfirmPlanned on TimelineEntryRow -- re-homed by Ultimate-Audit
+ *      item 15, D22 15a/15b, from MealSection's retired per-meal button once
+ *      the meal-card layout became a flat chronological timeline) stays the
+ *      primary interaction and is unmoved. Same gating
+ *      (`plannedCount > 0 && !selectionMode && !readOnly`) and the same two
+ *      buttons/copy, just relocated.
  *   3. A one-time hint (the existing '@volyume_seen_*' once-ever convention,
  *      same idiom as showFoodHint/showWaterHint) teaches that planned meals
  *      can be confirmed one by one or all at once, since the bulk control no
@@ -58,19 +61,24 @@ describe('D12 item 2: bulk mark-as-eaten demoted to the bottom of the page', () 
     expect(SRC).toMatch(/onPress=\{handleClearPlanned\}/);
   });
 
-  test('per-meal marking (the primary interaction) is still wired on MealSection, unmoved', () => {
-    expect(SRC).toMatch(/onConfirmPlanned=\{!readOnly && !isFutureDay \? \(\) => handleConfirmPlannedSlot\(slot\.key\) : undefined\}/);
+  // Ultimate-Audit item 15 (D22 15a/15b): MealSection's per-meal "Mark
+  // eaten" button is gone with the meal-card layout; the primary
+  // interaction is now per-ENTRY, wired on TimelineEntryRow via
+  // handleConfirmPlannedEntry, still gated on write-capability and the day
+  // not being in the future.
+  test('per-entry marking (the primary interaction) is wired on TimelineEntryRow, unmoved', () => {
+    expect(SRC).toMatch(/onConfirmPlanned=\{!readOnly && !isFutureDay \? \(\) => handleConfirmPlannedEntry\(entry\) : undefined\}/);
   });
 
-  test('the bulk banner now renders AFTER WaterRow (true bottom of the page), not before the meal sections', () => {
+  test('the bulk banner now renders AFTER WaterRow (true bottom of the page), not before the timeline', () => {
     const waterRowIdx = SRC.indexOf('<WaterRow');
     const bannerIdx = SRC.indexOf('<View style={styles.plannedBanner}>');
-    const mealSectionsIdx = SRC.indexOf('visibleSlots.map(');
+    const timelineIdx = SRC.indexOf('timeline.map(');
     expect(waterRowIdx).toBeGreaterThan(-1);
     expect(bannerIdx).toBeGreaterThan(-1);
-    expect(mealSectionsIdx).toBeGreaterThan(-1);
+    expect(timelineIdx).toBeGreaterThan(-1);
     expect(bannerIdx).toBeGreaterThan(waterRowIdx);
-    expect(bannerIdx).toBeGreaterThan(mealSectionsIdx);
+    expect(bannerIdx).toBeGreaterThan(timelineIdx);
   });
 
   test('the relocated banner sits inside the ScrollView, just before it closes', () => {
@@ -116,8 +124,8 @@ describe('D12 item 3: one-time hint teaching mark-as-eaten', () => {
     expect(match[0]).not.toMatch(/—/);
   });
 
-  test('marking a planned meal as eaten (bulk or per-meal) counts as discovery and dismisses the hint', () => {
+  test('marking a planned meal as eaten (bulk or per-entry) counts as discovery and dismisses the hint', () => {
     expect(SRC).toMatch(/if \(n > 0\) dismissMarkEatenHint\(\); \/\/ discovery: bulk mark-as-eaten used/);
-    expect(SRC).toMatch(/dismissMarkEatenHint\(\); \/\/ discovery: per-meal mark-as-eaten used/);
+    expect(SRC).toMatch(/dismissMarkEatenHint\(\); \/\/ discovery: per-entry mark-as-eaten used/);
   });
 });

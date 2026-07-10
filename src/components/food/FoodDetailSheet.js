@@ -19,6 +19,11 @@ import { buildServingUnits, initialServingState, resolveGrams, isValidEntryGrams
 import { isNetworkSourced, formatLastVerified } from '../../lib/food/freshness';
 import { refetchStaleFood } from '../../lib/food/waterfall';
 import { defaultWeightStateFor } from '../../lib/food/foodRoles';
+import { parseLocalDay } from '../../lib/dayKey';
+import EatenTimePicker from './EatenTimePicker';
+// Ultimate-Audit item 16 (MN-1), D22 16b: separate file, see its own header
+// for why (another agent's WIP was live in this file at build time).
+import MicronutrientDetail from './MicronutrientDetail';
 
 // Ultimate-Audit item 12 (raw/cooked basis toggle): the curated food key
 // behind a food_ref, or null for anything that isn't a curated staple
@@ -51,13 +56,20 @@ function macrosFor(food, qtyG) {
  *   mode             'add' | 'edit'
  *   initialWeightState 'as_weighed' | 'raw' | 'cooked' (edit mode: the
  *                    entry's current basis label; Ultimate-Audit item 12)
- *   onSave           ({ quantityG, mealSlot, entryDate, weightState }) => Promise<void>
+ *   initialEatenAt   ms epoch or null (edit mode: the entry's current
+ *                    "time eaten", Ultimate-Audit item 15, D22 15b). Add
+ *                    mode never shows this field -- a fresh log stamps
+ *                    eaten_at = now automatically (see src/lib/food/db.js
+ *                    logFoodEntry), keeping the fast add path unchanged.
+ *   onSave           ({ quantityG, mealSlot, entryDate, weightState, eatenAt }) => Promise<void>
+ *                    (eatenAt is only ever sent in edit mode; add-mode
+ *                    callers can ignore it, it is undefined)
  *   onDelete         () => Promise<void>  (edit mode only)
  *   onClose          () => void
  */
 export default function FoodDetailSheet({
   visible, food, mode = 'add',
-  initialQuantityG, initialMealSlot = 'snack', initialEntryDate, initialWeightState,
+  initialQuantityG, initialMealSlot = 'snack', initialEntryDate, initialWeightState, initialEatenAt = null,
   onSave, onDelete, onClose,
 }) {
   const toast = useToast();
@@ -110,6 +122,15 @@ export default function FoodDetailSheet({
     : nativeWeightState;
   const [weightState, setWeightState] = useState(initialWeight);
 
+  // Ultimate-Audit item 15 (D22 15b): the calm, optional "eaten at" field.
+  // Edit mode only -- a fresh log already stamps eaten_at = now, so add
+  // mode never shows this (the fast add path, and its TAP_BUDGET, are
+  // unchanged). null means "no time set" (e.g. a bulk-confirmed entry,
+  // D22 15b's honest untimed state); the user may set one, or clear a time
+  // back to null if they realise they do not know it either.
+  const [eatenAt, setEatenAt] = useState(mode === 'edit' ? (Number.isFinite(initialEatenAt) ? initialEatenAt : null) : null);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
   const unit = units.find(u => u.key === unitKey) || units[units.length - 1];
   const quantityG = resolveGrams(amount, unit);
 
@@ -119,10 +140,27 @@ export default function FoodDetailSheet({
     setAmount(initial.amount);
     setMealSlot(initialMealSlot);
     setWeightState(initialWeight);
+    setEatenAt(mode === 'edit' ? (Number.isFinite(initialEatenAt) ? initialEatenAt : null) : null);
+    setShowTimePicker(false);
     setSubmitting(false);
     setSaved(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, curatedKey]);
+
+  // Combine the chosen clock time with the entry's own calendar day
+  // (initialEntryDate), never inventing a different day. Falls back to
+  // stamping just the picked Date if the day fails to parse (should not
+  // happen: initialEntryDate is always a valid local day-key).
+  function onPickEatenTime(date) {
+    const day = parseLocalDay(initialEntryDate);
+    if (Number.isNaN(day.getTime())) {
+      setEatenAt(date.getTime());
+    } else {
+      day.setHours(date.getHours(), date.getMinutes(), 0, 0);
+      setEatenAt(day.getTime());
+    }
+    setShowTimePicker(false);
+  }
 
   // Opportunistic re-fetch (audit §15 item 4): viewing a promoted off/usda
   // food whose foods.fetched_at ("last verified") is past the staleness
@@ -169,8 +207,13 @@ export default function FoodDetailSheet({
     try {
       // showWeightChoice false -> weightState is null (no basis to record for
       // this food, e.g. it's 'ready'-state or not a curated staple); the
-      // caller/db layer falls back to 'as_weighed'.
-      await onSave({ quantityG: qty, mealSlot, entryDate: initialEntryDate, weightState });
+      // caller/db layer falls back to 'as_weighed'. eatenAt is only ever sent
+      // in edit mode (Ultimate-Audit item 15, D22 15b); add-mode callers
+      // receive undefined and the db layer's own "log now" default applies.
+      await onSave({
+        quantityG: qty, mealSlot, entryDate: initialEntryDate, weightState,
+        eatenAt: mode === 'edit' ? eatenAt : undefined,
+      });
       setSaved(true);
     } catch (_e) {
       setSubmitting(false);
@@ -213,6 +256,7 @@ export default function FoodDetailSheet({
   if (!food) return null;
 
   return (
+    <>
     <BottomSheet visible={visible} onClose={handleClose} keyboardAvoiding accessibilityLabel={food.name}>
           <Text style={styles.title} numberOfLines={2}>{food.name}</Text>
           {food.brand ? <Text style={styles.subtitle}>{food.brand}</Text> : null}
@@ -337,6 +381,45 @@ export default function FoodDetailSheet({
             </View>
           ) : null}
 
+          {/* Ultimate-Audit item 16 (MN-1), D22 16b primary surface. */}
+          <MicronutrientDetail food={food} quantityG={quantityG} />
+
+          {/* Ultimate-Audit item 15 (D22 15b): the calm, optional "eaten at"
+              time. Edit mode only. A bulk-confirmed entry opens here with no
+              time set (D22 15b's honest untimed state); setting one here is
+              the one place a user can give it a real, editable time. */}
+          {mode === 'edit' ? (
+            <>
+              <Text style={styles.fieldLabel}>Eaten at</Text>
+              <View style={styles.unitRow}>
+                <Pressable
+                  onPress={() => setShowTimePicker(true)}
+                  style={({ pressed }) => [styles.unitBtn, styles.eatenAtBtn, pressed && { opacity: 0.7 }]}
+                  accessibilityRole="button"
+                  accessibilityLabel={eatenAt
+                    ? `Change the time you ate this, currently ${new Date(eatenAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+                    : 'Set the time you ate this'}
+                >
+                  <Text style={styles.unitBtnTextActive}>
+                    {eatenAt
+                      ? new Date(eatenAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                      : 'No time set'}
+                  </Text>
+                </Pressable>
+                {eatenAt != null ? (
+                  <Pressable
+                    onPress={() => setEatenAt(null)}
+                    style={({ pressed }) => [styles.unitBtn, pressed && { opacity: 0.7 }]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear the eaten time"
+                  >
+                    <Text style={styles.unitBtnText}>Clear</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            </>
+          ) : null}
+
           <Text style={styles.fieldLabel}>Meal</Text>
           <View style={styles.mealRow}>
             {pickerMealSlots(mealSlot).map(s => (
@@ -379,6 +462,15 @@ export default function FoodDetailSheet({
             />
           </View>
     </BottomSheet>
+    {mode === 'edit' ? (
+      <EatenTimePicker
+        visible={showTimePicker}
+        value={eatenAt ? new Date(eatenAt) : new Date()}
+        onChange={onPickEatenTime}
+        onClose={() => setShowTimePicker(false)}
+      />
+    ) : null}
+    </>
   );
 }
 
@@ -411,6 +503,13 @@ const styles = StyleSheet.create({
   },
   unitBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
   unitBtnTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
+  // Ultimate-Audit item 15 (D22 15b): the eaten-at button reuses unitBtn's
+  // shape but stays visually neutral (border, not a selected-chip fill) --
+  // it is a value to open, not a radio choice.
+  eatenAtBtn: {
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+  },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   stepBtn: {
     width: 48, height: 48,
