@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 // E8 perf: the vertical plans list recycles via FlashList; the small
 // horizontal category chip row stays a FlatList (tiny, no gain).
 import { FlashList } from '@shopify/flash-list';
@@ -22,6 +22,7 @@ import EmptyState from '../components/EmptyState';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
+import BottomSheet from '../components/BottomSheet';
 
 // ─── Collections ─────────────────────────────────────────────────────────────
 
@@ -239,9 +240,8 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
 export default function PlanLibraryScreen({ navigation, route }) {
   const toast = useToast();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, reduceMotion } = useAppStore(useShallow(s => ({
+  const { user } = useAppStore(useShallow(s => ({
     user: s.user,
-    reduceMotion: s.accessibility?.reduceMotion,
   })));
   const fromFirstRun = route?.params?.fromFirstRun ?? false;
 
@@ -606,17 +606,13 @@ export default function PlanLibraryScreen({ navigation, route }) {
         />
       </View>
 
-      {/* Quiz modal */}
-      <Modal
-        visible={quizVisible}
-        transparent
-        animationType={reduceMotion ? 'none' : 'slide'}
-        onRequestClose={dismissQuiz}
-      >
-        <Pressable accessibilityRole="button" accessibilityLabel="Close" style={styles.backdrop} onPress={dismissQuiz}>
-          <Pressable style={styles.quizSheet} onPress={() => {}} accessible={false}>
-            <View style={styles.sheetHandle} />
-
+      {/* Quiz modal.
+          D36a (item 17 modal tails, 2026-07-10): migrated off a hand-rolled
+          Modal onto the shared BottomSheet chrome. Fixes a genuine inset bug
+          (quizSheet's paddingBottom was a fixed token with no safe-area
+          inset) alongside the migration; BottomSheet now owns the backdrop,
+          drag handle and bottom-inset padding. */}
+      <BottomSheet visible={quizVisible} onClose={dismissQuiz} accessibilityLabel="Plan quiz">
             {quizStep < QUIZ_STEPS.length ? (
               // Question step
               <>
@@ -707,9 +703,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                 />
               </>
             )}
-          </Pressable>
-        </Pressable>
-      </Modal>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -841,18 +835,8 @@ const styles = StyleSheet.create({
 
   skeletonWrap: { gap: spacing.md },
 
-  // Quiz modal
-  backdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
-  quizSheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
-    padding: spacing.xl, paddingBottom: spacing.xxl,
-    gap: spacing.md,
-  },
-  sheetHandle: {
-    width: 36, height: 4, borderRadius: radius.hair,
-    backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.sm,
-  },
+  // Quiz modal. BottomSheet supplies the backdrop, panel chrome and drag
+  // handle now (D36a migration) -- only the content-level styles remain.
   quizProgress: {
     flexDirection: 'row', gap: spacing.sm, alignSelf: 'center',
     marginBottom: spacing.xs,

@@ -3133,7 +3133,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <View style={[styles.supSheet, live.supSheet]}>
               <ScrollView
                 style={styles.supSheetScroll}
-                contentContainerStyle={styles.supSheetContent}
+                contentContainerStyle={[styles.supSheetContent, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
               >
@@ -3256,7 +3256,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             <View style={[styles.supSheet, live.supSheet]}>
               <ScrollView
                 style={styles.supSheetScroll}
-                contentContainerStyle={styles.supSheetContent}
+                contentContainerStyle={[styles.supSheetContent, { paddingBottom: Math.max(spacing.xxl, insets.bottom + spacing.lg) }]}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
               >
@@ -4487,7 +4487,15 @@ const styles = StyleSheet.create({
   // AY-2/D7: onSuccessBg is the text-on-tint ink (the flat `success` mark
   // fails 4.5:1 composited on successBg in light theme at every elevation).
   targetBannerText: { fontSize: fontSize.sm, color: colors.onSuccessBg, fontWeight: fontWeight.semibold, flex: 1 },
-  // Superset heads-up modal
+  // Superset heads-up modal (shared with the unilateral-suggest modal below
+  // -- both use supOverlay/supSheet/supSheetContent). D36a (item 17 modal
+  // tails, 2026-07-10): this stays a raw Modal (education moment with its
+  // own scroll behaviour, not a candidate for BottomSheet), but the bottom
+  // padding was a fixed token with no safe-area inset -- the call sites now
+  // widen contentContainerStyle to
+  // `Math.max(spacing.xxl, insets.bottom + spacing.lg)`, same
+  // Math.max(token, insets.bottom + token) contract as bottomBar/plateBar.
+  // The static paddingBottom below stays as the pre-inset floor.
   supOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   supSheet: { backgroundColor: colors.surface, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, maxHeight: '88%', borderTopWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   supSheetScroll: { flexShrink: 1, minHeight: 0 },

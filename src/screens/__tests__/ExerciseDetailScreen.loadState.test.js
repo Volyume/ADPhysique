@@ -13,7 +13,15 @@ jest.mock('expo-haptics', () => ({
   ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
   NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
 }));
-jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }) => children }));
+// D36a (item 17 modal tails, 2026-07-10): the goal modal now renders
+// through the shared BottomSheet, which calls useSafeAreaInsets itself --
+// this override previously provided only SafeAreaView, matching the
+// pre-migration screen's imports, so useSafeAreaInsets is added here to
+// match the root __mocks__/react-native-safe-area-context.js shape.
+jest.mock('react-native-safe-area-context', () => ({
+  SafeAreaView: ({ children }) => children,
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn().mockResolvedValue(null),
   setItem: jest.fn().mockResolvedValue(undefined),
@@ -41,7 +49,9 @@ jest.mock('../../lib/engineTelemetry', () => ({ track: jest.fn() }));
 jest.mock('../../lib/swapEngine', () => ({ rankSwaps: jest.fn(() => []) }));
 
 import ExerciseDetailScreen from '../ExerciseDetailScreen';
-import { getExerciseById } from '../../lib/database';
+import {
+  getExerciseById, getWorkoutSetsForExercise, getExerciseGoal, getAllExercises,
+} from '../../lib/database';
 
 const EXERCISE_DETAIL_SOURCE = require('fs').readFileSync(
   require('path').resolve(__dirname, '../ExerciseDetailScreen.js'),
@@ -96,6 +106,76 @@ describe('ExerciseDetailScreen load states', () => {
     expect(getExerciseById).toHaveBeenCalledTimes(2);
     text = flattenText(tree.toJSON());
     expect(text).toContain("Couldn't load exercise details");
+  });
+});
+
+describe('ExerciseDetailScreen goal sheet reachability (D36a item 17 modal tails)', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  // The goal-setting modal migrated off a hand-rolled Modal onto the shared
+  // BottomSheet (src/components/BottomSheet.js) as part of the D36a build.
+  // This pins that the sheet is still reachable end to end after the
+  // migration: tapping "Set a target weight" opens it, and its content
+  // (title copy the old Modal also showed) actually renders.
+  test('tapping "Set a target weight" opens the migrated goal sheet', async () => {
+    getExerciseById.mockResolvedValueOnce({
+      id: 'e1',
+      name: 'Barbell squat',
+      primaryMuscle: 'quads',
+      secondaryMuscles: [],
+      defaultRepMin: 6,
+      defaultRepMax: 12,
+    });
+    getWorkoutSetsForExercise.mockResolvedValueOnce([]);
+    getExerciseGoal.mockResolvedValueOnce(null);
+    getAllExercises.mockResolvedValueOnce([]);
+
+    let tree;
+    await act(async () => {
+      tree = create(
+        <ExerciseDetailScreen
+          navigation={{ goBack: jest.fn(), push: jest.fn() }}
+          route={{ params: { exerciseId: 'e1' } }}
+        />,
+      );
+    });
+    await flush();
+
+    const openBtn = tree.root.findAll(
+      (n) => n.props.accessibilityLabel === 'Set a target weight' && typeof n.props.onPress === 'function',
+    )[0];
+    expect(openBtn).toBeTruthy();
+    await act(async () => {
+      openBtn.props.onPress();
+    });
+    await flush();
+
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('Based on your estimated max. Progress will be shown each time you open this exercise.');
+    expect(text).toContain(`Target weight (kg)`);
+  });
+});
+
+describe('ExerciseDetailScreen goal sheet migration (D36a item 17 modal tails)', () => {
+  // Item 17's surface 6 gave a choice: patch the inset on the raw Modal, or
+  // migrate to BottomSheet, whichever is the better product result for THIS
+  // modal's content. RULING (recorded in this suite as the source-level
+  // pin): migrate, because this modal has the same content class as item 4
+  // (RoutineDetail's edit-exercise sheet, several TextFields) -- same
+  // gesture-dismiss and consistency gains apply, and it fixes the same
+  // genuine inset bug (modalSheet had no safe-area padding) in one motion.
+  test('the goal modal is built on the shared BottomSheet, not a hand-rolled Modal', () => {
+    expect(EXERCISE_DETAIL_SOURCE).toContain("import BottomSheet from '../components/BottomSheet';");
+    const goalWindow = EXERCISE_DETAIL_SOURCE.match(/\{\/\* Goal-setting bottom sheet\.[\s\S]*?<\/BottomSheet>/)?.[0] ?? '';
+    expect(goalWindow).toContain('<BottomSheet');
+    expect(goalWindow).toContain('visible={goalModalVisible}');
+    expect(goalWindow).toContain('onClose={() => setGoalModalVisible(false)}');
+    expect(goalWindow).toContain('keyboardAvoiding');
+    expect(goalWindow).not.toContain('<KeyboardAvoidingView');
+    expect(goalWindow).not.toContain('styles.modalBackdrop');
+    expect(goalWindow).not.toContain('styles.modalOverlay');
   });
 });
 

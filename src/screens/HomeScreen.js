@@ -2017,12 +2017,14 @@ export default function HomeScreen({ navigation, route }) {
       {/* COMP-010: the shape of the current training block, opened from the
           meso chip. Makes periodisation visible and the recovery week a
           destination rather than a dip. */}
+      {/* D36a (item 17 modal tails, 2026-07-10): both sheets now migrated
+          onto the shared BottomSheet chrome, which owns insets and
+          reduce-motion itself -- insetsBottom/reduceMotion no longer
+          threaded in as props. */}
       <HomeBlockShapeSheet
         visible={showBlockShape}
         onClose={closeBlockShape}
         currentMesoWeek={currentMesoWeek}
-        reduceMotion={reduceMotion}
-        insetsBottom={insets.bottom}
       />
 
       <HomeChangeWorkoutSheet
@@ -2036,8 +2038,6 @@ export default function HomeScreen({ navigation, route }) {
         selectedWorkoutOverride={selectedWorkoutOverride}
         onSelectOverride={setSelectedWorkoutOverride}
         navigation={navigation}
-        reduceMotion={reduceMotion}
-        insetsBottom={insets.bottom}
       />
 
       {/* ── Pre-workout intent prompt ── */}

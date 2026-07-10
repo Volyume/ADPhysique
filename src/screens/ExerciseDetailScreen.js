@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Modal, KeyboardAvoidingView, Platform, Animated,
+  Animated,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,6 +37,7 @@ import { logError } from '../lib/errorLog';
 import { FORM_TIPS } from '../lib/formTips';
 import InfoTooltip from '../components/InfoTooltip';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
+import BottomSheet from '../components/BottomSheet';
 
 // Loose date parser, accepts "Dec 2025", "December 2025", "2025-12", "12/2025" etc.
 // Returns unix timestamp (ms) for the 1st of the parsed month, or null.
@@ -948,26 +949,23 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         })()}
       </ScrollView>
 
-      {/* Goal-setting bottom sheet */}
-      <Modal
+      {/* Goal-setting bottom sheet.
+          D36a (item 17 modal tails, 2026-07-10): migrated off a hand-rolled
+          Modal onto the shared BottomSheet chrome, same choice as item 4
+          (RoutineDetail's edit-exercise modal) rather than a bare inset
+          patch -- this modal is the same content class (bottom-anchored
+          form, several TextFields), so the same product-consistency and
+          gesture-dismiss gains apply, and it fixes the genuine inset bug
+          (modalSheet had no safe-area padding) in the same motion.
+          `keyboardAvoiding` replaces the KeyboardAvoidingView wrapper;
+          BottomSheet's own keyboardBehavior handles the lift and TextField
+          already swaps to BottomSheetTextInput inside a sheet. */}
+      <BottomSheet
         visible={goalModalVisible}
-        animationType={reduceMotion ? 'none' : 'slide'}
-        transparent
-        onRequestClose={() => setGoalModalVisible(false)}
+        onClose={() => setGoalModalVisible(false)}
+        keyboardAvoiding
+        accessibilityLabel={goal ? 'Edit target' : 'Set a target weight'}
       >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <TouchableOpacity
-            style={styles.modalBackdrop}
-            activeOpacity={1}
-            onPress={() => setGoalModalVisible(false)}
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-          />
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHandle} />
             <Text maxFontSizeMultiplier={1.3} style={styles.modalTitle}>{goal ? 'Edit target' : 'Set a target weight'}</Text>
             <Text maxFontSizeMultiplier={1.3} style={styles.modalSubtitle}>
               Based on your estimated max. Progress will be shown each time you open this exercise.
@@ -1022,9 +1020,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 accessibilityLabel="Remove goal"
               />
             )}
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -1315,31 +1311,8 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.primary,
   },
-  // Goal modal
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.scrim,
-  },
-  modalSheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    padding: spacing.xl,
-    paddingBottom: spacing.xxxl,
-    gap: spacing.md,
-  },
-  modalHandle: {
-    width: 36,
-    height: 4,
-    backgroundColor: colors.border,
-    borderRadius: radius.full,
-    alignSelf: 'center',
-    marginBottom: spacing.sm,
-  },
+  // Goal modal. BottomSheet supplies the backdrop, panel chrome and drag
+  // handle now (D36a migration) -- only the content-level styles remain.
   modalTitle: {
     ...type.title,
     color: colors.textPrimary,

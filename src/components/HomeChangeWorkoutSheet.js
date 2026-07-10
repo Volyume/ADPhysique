@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import SectionLabel from './SectionLabel';
+import BottomSheet from './BottomSheet';
 
 // Extracted from HomeScreen.js (behaviour-preserving decomposition).
 //
@@ -11,19 +12,21 @@ import SectionLabel from './SectionLabel';
 // workout, start a blank session, or pick a different day from the active
 // plan. Callback props (onClose, onSelectOverride) mirror the setState
 // calls the JSX used to make directly, so behaviour is unchanged.
+//
+// D36a (item 17 modal tails, 2026-07-10): migrated off a hand-rolled Modal
+// onto the shared BottomSheet chrome. BottomSheet owns the backdrop, drag
+// handle, and bottom-inset padding itself, so `insetsBottom` (previously
+// threaded in from HomeScreen's useSafeAreaInsets) is no longer accepted --
+// see HomeScreen.js's call site, which now omits it.
 function HomeChangeWorkoutSheet({
   visible, onClose, activePlan, displayWorkout, planAllWorkouts, nextWorkout,
   exerciseCounts, selectedWorkoutOverride, onSelectOverride, navigation,
-  reduceMotion, insetsBottom,
 }) {
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
   // keys only.
   const t = useTheme();
   const live = {
-    sheetBackdrop: { backgroundColor: t.colors.scrim },
-    sheet: { backgroundColor: t.colors.surface },
-    sheetHandle: { backgroundColor: t.colors.border },
     sheetTitle: { ...t.type.h3, color: t.colors.textPrimary },
     sheetSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     sheetActionIcon: { backgroundColor: t.colors.primaryBg },
@@ -42,24 +45,16 @@ function HomeChangeWorkoutSheet({
     sheetCancelText: { ...t.type.body, color: t.colors.textSecondary },
   };
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType={reduceMotion ? 'none' : 'slide'}
-      onRequestClose={onClose}
-    >
-      <TouchableOpacity
-        style={[styles.sheetBackdrop, live.sheetBackdrop]}
-        activeOpacity={1}
-        onPress={onClose}
-        accessibilityRole="button"
-        accessibilityLabel="Close"
-      />
-      <View style={[styles.sheet, live.sheet, { paddingBottom: spacing.xxxl + insetsBottom }]}>
-        <View style={[styles.sheetHandle, live.sheetHandle]} />
+    <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Workout options">
         <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Workout options</Text>
         {activePlan && <Text maxFontSizeMultiplier={1.3} style={[styles.sheetSub, live.sheetSub]}>{activePlan.name}</Text>}
-        <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Fixed title/sub above, fixed Cancel below, scrollable picker list
+            in between -- same three-region layout the old Modal had, kept
+            deliberately rather than letting BottomSheet's own `scroll` prop
+            put Cancel inside the scroll area (same nested-ScrollView pattern
+            ActiveWorkoutScreen's WorkoutSheetScroll already uses inside a
+            non-scroll BottomSheet). */}
+        <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
           {displayWorkout?.routine?.id ? (
             <TouchableOpacity
               style={styles.sheetActionRow}
@@ -146,28 +141,16 @@ function HomeChangeWorkoutSheet({
         <TouchableOpacity style={styles.sheetCancel} onPress={onClose} accessibilityRole="button" accessibilityLabel="Cancel">
           <Text maxFontSizeMultiplier={1.3} style={[styles.sheetCancelText, live.sheetCancelText]}>Cancel</Text>
         </TouchableOpacity>
-      </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 export default React.memo(HomeChangeWorkoutSheet);
 
 const styles = StyleSheet.create({
-  sheetBackdrop: { flex: 1, backgroundColor: colors.scrim },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xxxl,
-    maxHeight: '80%',
-  },
-  sheetHandle: {
-    width: 36, height: 4, borderRadius: radius.hair,
-    backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.lg,
-  },
+  // BottomSheet supplies the backdrop, panel chrome and drag handle now
+  // (D36a migration) -- only the content-level styles below remain.
+  pickerScroll: { flexShrink: 1, minHeight: 0 },
   sheetTitle: {
     ...type.h3,
     color: colors.textPrimary, marginBottom: spacing.xs,

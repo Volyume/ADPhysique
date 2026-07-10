@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -28,6 +28,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 import ExercisePickerModal from '../components/ExercisePickerModal';
+import BottomSheet from '../components/BottomSheet';
 import * as haptics from '../lib/haptics';
 
 // Compute muscle coverage: { [muscleKey]: count } sorted by count descending
@@ -580,29 +581,22 @@ export default function RoutineDetailScreen({ navigation, route }) {
         />
       )}
 
-      {/* Edit exercise modal */}
-      <Modal
+      {/* Edit exercise modal.
+          D36a (item 17 modal tails, 2026-07-10): migrated off a hand-rolled
+          Modal onto the shared BottomSheet chrome. Fixes a genuine inset bug
+          (editSheet had no safe-area padding) alongside the migration.
+          `keyboardAvoiding` replaces the KeyboardAvoidingView this sheet used
+          to wrap itself in -- BottomSheet's own keyboardBehavior handles the
+          lift, same as every other BottomSheet consumer with TextFields
+          (QuickAddSheet, FoodDetailSheet); TextField itself already swaps to
+          BottomSheetTextInput automatically inside a sheet (BottomSheet.js's
+          InsideBottomSheetContext), so no other input change was needed. */}
+      <BottomSheet
         visible={!!editingExercise}
-        animationType={reduceMotion ? 'none' : 'slide'}
-        transparent
-        onRequestClose={() => setEditingExercise(null)}
+        onClose={() => setEditingExercise(null)}
+        keyboardAvoiding
+        accessibilityLabel={editingExercise?.exercise?.name ? `Edit ${editingExercise.exercise.name}` : 'Edit exercise'}
       >
-        {/* L03-C5 (2026-07-09 design audit): this bottom-anchored sheet
-            (editOverlay justifyContent: 'flex-end') holds several TextFields;
-            standardise on the same KeyboardAvoidingView pattern
-            ActiveWorkoutScreen's editSet modal uses (behavior padding/height)
-            so the sheet lifts above the keyboard. */}
-        <KeyboardAvoidingView
-          style={styles.editModalKeyboard}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close" style={styles.editOverlay} activeOpacity={1} onPress={() => setEditingExercise(null)}>
-          {/* AY-4 (2026-07-09 design audit): capture layer for the sheet
-              itself, not the backdrop; accessible={false} stops the
-              backdrop's "Close" label from swallowing the form fields
-              below, and accessibilityViewIsModal traps screen-reader
-              navigation to the sheet (same pattern as AppAlert.js). */}
-          <TouchableOpacity accessibilityRole="button" style={styles.editSheet} activeOpacity={1} accessible={false} accessibilityViewIsModal>
             <Text maxFontSizeMultiplier={1.3} style={styles.editTitle}>{editingExercise?.exercise?.name}</Text>
             <View style={styles.editRow}>
               <TextField
@@ -677,10 +671,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
               onPress={saveEdit}
               accessibilityLabel="Save exercise targets"
             />
-          </TouchableOpacity>
-        </TouchableOpacity>
-        </KeyboardAvoidingView>
-      </Modal>
+      </BottomSheet>
 
       {/* Plan-level swap modal */}
       <Modal
@@ -852,17 +843,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
   },
   reorderBtnDisabled: { opacity: 0.3 },
-  editModalKeyboard: { flex: 1 },
-  editOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
-  editSheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    padding: spacing.xl,
-    gap: spacing.lg,
-    borderTopWidth: 1,
-    borderColor: colors.border,
-  },
+  // BottomSheet supplies the backdrop, panel chrome and drag handle now
+  // (D36a migration) -- only the content-level styles below remain.
   editTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xs },
   editRow: { flexDirection: 'row', gap: spacing.md },
   editField: { flex: 1 },
