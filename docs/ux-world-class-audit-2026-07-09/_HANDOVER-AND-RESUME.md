@@ -1041,3 +1041,21 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   managed workflow). Honest read: iOS-only texture polish for two
   already-tuned moments; marginal, not functional. Founder decision A
   (adopt, triggerPattern only) vs C (close item 14) - ASKED.
+- NEXT-EXERCISE RELIABILITY LANDED (founder order, Sonnet, lead-reviewed):
+  ROOT CAUSE of "keeps adding more and more sets" = targetSets read only
+  adjustedSetCount, which is undefined whenever the slot has no
+  routineExercise row - i.e. blank/freeform workouts AND any exercise
+  added mid-session via the picker (addExerciseToWorkout defaults
+  routineExercise to null). targetComplete then short-circuits falsy
+  forever, so the existing Next exercise/Finish workout bar (built
+  2026-07-03) never appeared on those paths. FIX: fallback cascade
+  adjustedSetCount || recommendedSets || 3 (3 = the file's own existing
+  display fallback). Button matrix unchanged otherwise (extra sets stay
+  loggable via Log another set; hidden mid cluster/per-side pair; last
+  exercise offers Finish through the conditional confirm). 15 new guard
+  tests incl. a tripwire on addExerciseToWorkout's null default; full
+  suite 624 green; lint clean. FLAGGED not fixed (pre-existing latent
+  gap, surfaced per no-silent-patch rule): a TRAILING time-crunch-skipped
+  exercise means the true second-to-last slot shows "Next exercise"
+  which no-ops instead of offering Finish - queued as a small follow-up
+  for a founder nod.

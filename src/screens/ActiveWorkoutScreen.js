@@ -60,6 +60,27 @@ import { shareSessionName } from '../lib/sessionShareData';
 
 const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 2 };
 
+// Founder fix (2026-07-10): "the next exercise button ... doesn't always
+// happen, it goes on and adds more and more sets". Root cause: targetSets
+// below used to be adjustedSetCount ALONE, which resolves to undefined
+// whenever the current slot has no routineExercise row at all - a blank/
+// freeform workout (HomeScreen "Just want to log? Start a blank workout",
+// startWorkout(workout, [])) and ANY exercise added mid-session via the "+
+// Add exercise" picker (handlePickerSelect -> addExerciseToWorkout(ex), which
+// defaults its second arg to null in useAppStore.js) both land here.
+// `undefined && workingLogged >= undefined` is always falsy, so
+// targetComplete never becomes true and the target-reached bottom-bar swap
+// (Next exercise / Finish workout) never fires for these slots - the entry
+// card just keeps offering "Log set" forever, matching the founder's report.
+// Fallback, in order: the session-adjusted target -> the routine row's own
+// recommendedSets (defensive; already folded into the first) -> this
+// constant, only when the slot truly has no plan data at all. 3 is not a new
+// number: it is the exact fallback this file already uses when displaying a
+// target with a missing recommendedSets (see the "Target: N sets" line and
+// the info-sheet target line further down), so a freeform/ad-hoc exercise
+// now gets the same target-reached behaviour, not a silently different one.
+const DEFAULT_FREEFORM_TARGET_SETS = 3;
+
 // D9 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md): the
 // full unilateral (per-side) walkthrough - modelled on the superset
 // heads-up below - shows only the very first time it is ever suggested,
@@ -2130,7 +2151,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   };
   const elapsedStr = `${elapsed.mins}:${elapsed.secs.toString().padStart(2, '0')}`;
 
-  const targetSets = adjustedSetCount; // COMP-015: session-adjusted working-set target
+  // COMP-015: session-adjusted working-set target, falling back to the
+  // routine row's own recommendedSets (defensive - adjustedSetCount already
+  // folds this in when there is no active adjustment), and finally to
+  // DEFAULT_FREEFORM_TARGET_SETS so a slot with no routineExercise at all
+  // (blank workout, or an exercise added mid-session) still resolves to a
+  // real number instead of undefined. See DEFAULT_FREEFORM_TARGET_SETS above
+  // for the full root-cause note.
+  const targetSets = adjustedSetCount || routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS;
   const workingLogged = countProgressSets(loggedSets);
   const targetComplete = targetSets && workingLogged >= targetSets;
 
