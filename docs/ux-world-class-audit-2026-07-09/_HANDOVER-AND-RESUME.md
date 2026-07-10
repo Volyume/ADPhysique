@@ -1136,3 +1136,14 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   Also: food_library_pull RPC (migrate_028) never re-issued for the 27
   columns, so even server data can't reach devices. Founder rounds for
   BOTH 15+16 being asked now (consolidated).
+- PENDING FOUNDER ROUND (asked in chat 2026-07-10; AskUserQuestion tool
+  failed twice with a stream error - round NOT yet answered, re-raise on
+  resume if unanswered): (15a) timeline layout: continuous list with
+  quiet day-part labels / pure continuous / meal headings inside one
+  scroll; (15b) time truth: editable eaten-time + untimed bulk display
+  (grouped, no false timestamp) / keep logged-at shown loosely / accept
+  the clump; (16a) micronutrients path: data-first CoFID spike then
+  display / park item 16 / ship display on today's 0% coverage; (16b)
+  NRV home if it proceeds: per-food detail sheet / Food Insights weekly
+  average / decide when data exists. Builds for 15 and 16 DO NOT START
+  until these are answered.
