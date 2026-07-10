@@ -185,17 +185,55 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
   updated to the applied-migration reality. Full suite green at the
   boundary: 658 suites / 8,254 tests, lint clean.
 
+- ✅ CI ANDROID BUILD CONFIRMED GREEN (run 2603 on c589b00, 2026-07-10
+  15:55Z) — the b41731a menu 2.0.0 fix is validated; that artefact (or
+  any later green run) is the device-walk build.
+- ✅ 4-AGENT WINDOW LANDINGS (founder raised the cap for one hour,
+  2026-07-10 late; all lead-reviewed, committed separately, pushed):
+  `c1f0973` smalls 7/9/10/11 (metric-tracking headline; raw/cooked
+  basis chip — neutral tokens by ED design; PR gold markers on the row
+  sparkline via new pure derivePRIndices; TierComparisonStrip on
+  Subscription, display-only, payments-import source-pinned).
+  `0668d18` watch-app scoping memo (open round 25 — five founder
+  questions ready; side-finding: SD-11 idempotency defect in
+  applyRemoteSetEvent must be fixed before any wrist traffic).
+  `85c5fe1` item 4 dietary discoverability (primary-surface chip +
+  once-ever hint, single source of truth, accordion row kept).
+  `653fe32` migrate_117 DRAFT (security advisor ERROR: the all-users
+  engine_telemetry_daily aggregate view was app-readable under default
+  grants; REVOKE anon/authenticated — PENDING the founder phrase).
+  `746bb65` item 21 GIANT SETS: data model was already group-shaped
+  (superset_group_id), session jump already N-aware; builder cap
+  lifted, calm nudge classifies each consecutive link, heads-up says
+  "Giant set" for 3+, chip lists partners and drops the raw group id;
+  ENGINE UNTOUCHED (auto-generation pairs-only pinned vs real
+  generatePlan; real-engine attribution invariant added); the old
+  supersetCap guard was semantically reversed WITH lead sign-off (its
+  own until-condition was fulfilled). Lead copy rulings flagged for
+  founder veto: "Giant set" title split, chip id removal.
+  `9cdf3a4` edge-to-edge StatusBar honesty fix (dead backgroundColor
+  props removed at App.js + YearOfLifts; cp10 chrome pin updated).
+  `d8982aa` theming stage-4 batch B: 22 components (partner, auth,
+  consent, billing-adjacent, misc) on buildLiveStyles; ProGate tier
+  logic untouched; ScreenBoundary flagged (class error boundary cannot
+  take the theme hook — architecture question, not forced).
+
 ## ⏸ RESUME POINT — next slots, in order:
-1. Confirm the CI Android release build is GREEN on c589b00 or later
-   (the b41731a menu fix is validated by that build, not by Jest).
-2. Pair 6: drag reorder (item 20) + giant sets (item 21 — ENGINE-
-   ADJACENT, lead reviews the planEngine/logging diff hands-on).
-3. Then slate order: Pair 7 iOS Live Activity wiring + Android
-   rest-timer actions; Pair 8 dietary discoverability + item 17 small
-   tails (+ the edge-to-edge fixes above); smalls 7/9/10/11 interleave
-   into spare slots. The theming stage-4 tail continues as
-   component/screen batches (coverage tracker below); stage 5 stays
-   honesty-gated.
+1. IN FLIGHT: item 20 drag reorder (Sonnet; hand-rolled gesture-
+   handler+Reanimated drag, additive to the accessible chevron/sheet
+   paths, giant-set blocks move whole; lead reviews at landing, FULL
+   suite runs over the clean tree at that boundary).
+2. Pair 7: iOS Live Activity wiring (item 19) + Android rest-timer
+   actions (item 12).
+3. Item 17 small tails (+ remaining edge-to-edge Modal inset audits);
+   theming stage-4 tail (remaining: food domain 19, photo/scan family
+   10, ProgressSections, chart exclusions); stage 5 stays honesty-
+   gated. Coverage after batch B: 71/108 components live.
+
+**AWAITING FOUNDER (asked in chat 2026-07-10):**
+- migrate_117 apply — needs the exact phrase "run against production".
+- Watch-app decision round (5 questions in the memo).
+- Optional veto on the giant-set copy rulings above.
 
 **SUPABASE / MIGRATIONS (2026-07-10, DONE — Claude-run model live):**
 Founder connected a Supabase connector and switched cloud migrations to
