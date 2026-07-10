@@ -82,8 +82,20 @@ export default function WhatsNewSheet() {
     return () => { active = false; };
   }, [version]);
 
-  if (!visible) return null;
-
+  // Bug fix (D36b aside, taskboard verify pass, 2026-07-10): this used to
+  // `if (!visible) return null` here, which unmounted <BottomSheet> itself
+  // the instant `visible` flipped false, before BottomSheet ever saw a
+  // visible={false} render. That skipped BottomSheet's own dismiss()-driven
+  // close animation entirely (see BottomSheet.js's effect at the top of the
+  // file: dismiss() only fires on a visible prop transition while mounted).
+  // Every other BottomSheet consumer (QuickAddSheet, FoodDetailSheet,
+  // FeedbackSheet, PeekMenu) always renders <BottomSheet visible={...}>
+  // unconditionally and lets BottomSheet own its own present/dismiss
+  // lifecycle; this now matches that pattern. `items` is never cleared on
+  // close (only ever set by the effect above), so the content stays intact
+  // through the close animation exactly like FeedbackSheet's `config`.
+  // Reduce Motion still collapses the animation to instant (BottomSheet's
+  // own REDUCE_MOTION_CONFIG), unaffected by this change.
   return (
     <BottomSheet visible={visible} onClose={() => setVisible(false)} accessibilityLabel="What's new">
       <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>What&apos;s new</Text>
