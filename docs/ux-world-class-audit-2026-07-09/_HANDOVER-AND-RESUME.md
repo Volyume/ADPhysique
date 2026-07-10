@@ -1407,3 +1407,18 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   maintained via the R1 completeness test; diet-axis pool sizes must
   still clear the no-repeat bar from dietary Phase B). Same audit, same
   next slot.
+- ANDROID BUILD BREAK DIAGNOSED + FIXED (founder report "all builds
+  failing"): Main CI + identity guard were GREEN throughout; only the
+  Android workflow failed, at expo prebuild - react-native-haptic-
+  feedback's published package ships app.plugin.js but its exports map
+  does NOT expose it, so plugin resolution fails on CI's clean install
+  (locally invisible: jest never runs prebuild). FIX: removed the
+  plugin entry from app.json (the plugin is a documented no-op;
+  autolinking handles the native module); expo config --type prebuild
+  verified clean. LESSON pinned: any agent adding an app.json plugin
+  entry must verify resolution via expo config --type prebuild, not
+  just the package docs. FTS5 verification LANDED same commit: all
+  three D25 search surfaces were ALREADY BUILT under the 2026-07-02 E3
+  approval (75ms index build over 28.8k rows, ~0.1-0.6ms queries,
+  re-rank preserved; exercise + history search verified honestly left
+  alone); one accent/case test added. IN FLIGHT: theming stage 3 only.
