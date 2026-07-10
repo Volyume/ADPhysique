@@ -46,16 +46,38 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
   screen never imports haptics (a hold path must never buzz) — the guard
   won over the campaign brief's allowance. Lint + full suite green at
   both landings (657 suites / 8,225 tests).
-- ▶ PAIR 2 IN FLIGHT: (a) theming stage-4 TAIL — measured reality: only
-  20/85 screens and ~31/111 theme-consuming components are live; stage 5
-  (retire restart prompts) is honesty-gated by the slate's own wording,
-  so slot A migrates the shared/coach/chart-adjacent component batch
-  first (stage-5 retirement is assessed only when a toggle's FULL
-  dependency set is live — several more component batches plus the
-  remaining ~65 screens, incl. item 8's history/cardio trio, come before
-  any prompt is retired). (b) item 5 haptics completion pass
-  (food/paywall/settings/tab bar/picker; ED/weight/wellbeing surfaces
-  and billing-destructive actions excluded).
+- ✅ PAIR 2 LANDED + PUSHED. (a) `d81f8a9` theming stage-4 tail batch A:
+  21 shared components live-themed (BottomSheet, EmptyState,
+  SegmentedControl, SearchBar, SectionLabel, Stepper, Dropdown,
+  InfoTooltip, HintCaption, CollapsibleSection, OptionCard, AppAlert,
+  WhatsNewSheet, CoachOutputCards, WeightTrendCard, Sparkline,
+  SvgBarSparkline, ReadinessCards, BlockProgressCard, BlockShapeCard,
+  FatigueTrendCard); PressableCard needed nothing. Module-scope
+  token-baking consts became build functions; no frozen twins kept
+  (none were exported/pinned). (b) `959f622` item 5 haptics pass:
+  selection()/commit() across diary, food sheets, FoodSearch,
+  MyMeals/MyRecipes, FoodInsights, NutritionTargets, Settings hub,
+  ExercisePickerModal, paywall period-selector+policy links. Verified
+  exclusions held: no haptics on Mark eaten/usuals/one-tap logs/
+  copy-to-today, macro-cycle/refeed stops, ease nudge, consent
+  checkboxes, purchase/restore/cancel CTAs; tab bar already fired via
+  RootNavigator. NOTE: DiaryScreen's MacroRings call site is pinned
+  byte-identical by a guard — if the macro ring tap should buzz, the
+  haptic belongs inside MacroRings itself (later batch decision).
+  Lint + full suite green at both landings (657/8,225).
+- ▶ PAIR 3 IN FLIGHT: (a) item 6 dynamic-type completion pass
+  (maxFontSizeMultiplier ceilings + large-text overflow resilience;
+  approach = global default cap + tighter caps on dense/numeric
+  surfaces; agent STOPs if the global mechanism proves unviable under
+  RN 0.81/Fabric). (b) item 8 history/cardio theme migration
+  (WorkoutHistory, LogCardio, CardioHistory on the buildLiveStyles
+  pattern incl. CardioHistoryScreen's module-scope label consts).
+- THEMING COVERAGE TRACKER (for the stage-5 honesty gate): after batch
+  A, live = 20/85 screens (+3 in flight via item 8), ~52/111
+  theme-consuming components. Remaining static components ~59 (food/*,
+  photo/scan family, partner, auth, misc); remaining static screens
+  ~62. Stage-5 prompt retirement stays blocked until a toggle's full
+  dependency set is live.
 
 ### OPERATING MODEL (founder standing orders, INVIOLABLE)
 - **Fable coordinates; agents do the work.** You (main loop) do
