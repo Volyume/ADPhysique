@@ -1011,3 +1011,10 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   NEXT PAIR FIRING: CP-10 restart-free theming INVESTIGATION (plan-only,
   no build) + Haiku extraction of pass4 blueprints for the Ultimate-Audit
   11-16 founder round.
+- D16 GO (2026-07-10): Ultimate-Audit 11-16 unblocked (order 13, 12, 11,
+  15, 16 per DECISIONS D16; rulings in ultimate-audit-11-16-
+  reconciliation.md) + Core-Haptics research approved (report only, no
+  install without the founder's final yes). PAIR 1 LAUNCHED: item 13
+  build + Core-Haptics research. CLAUDE.md STATUS note ("MUST NOT start
+  11-16 without structured founder decision") is now SATISFIED by D16 -
+  update that STATUS block when 11-16 complete.

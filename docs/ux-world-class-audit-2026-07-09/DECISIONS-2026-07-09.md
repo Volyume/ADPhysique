@@ -283,3 +283,15 @@ Source: docs/ux-world-class-audit-2026-07-09/SCORECARD.md (25 functions).
   the job done to standard, at all times, to preserve tokens.** Sonnet for
   builds, Haiku for mechanical work; Opus only where engine-grade
   judgement is unavoidable; Fable never dispatched.
+
+## D16 — Ultimate-Audit items 11-16 GO (founder, 2026-07-10)
+Source rulings: docs/ux-world-class-audit-2026-07-09/ultimate-audit-11-16-reconciliation.md
+(June register reconciliation). Founder: "Start all, in that order":
+13 (mid-session swap clause) -> 12 (raw/cooked basis toggle) -> 11
+(named autonomy modes; safety rule: never auto-apply during a hold) ->
+15 (timeline food logging, large) -> 16 (micronutrients/NRV completion,
+large, partially built). Two agents at a time; engine/safety-adjacent
+pieces get hands-on lead review; 15 and 16 get a scoping read first.
+Item 14 Core-Haptics: RESEARCH approved (package name, purpose, licence,
+maintenance health; managed-Expo-compatible) - returns for the founder's
+final yes/no BEFORE any install (never-add-deps-without-asking rule).
