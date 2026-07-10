@@ -1367,3 +1367,14 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   (verified: zero R1 files in the tree); resumed from its transcript
   with the full brief restated. In flight: theming stage 2 (navTheme.js
   + nav tests visibly progressing) + resumed R1.
+- R1 LANDED (lead-reviewed; the top scorecard risk CLOSED): 78 distinct
+  additions audited vs FSA-14, 10 allergen-bearing (tag table pinned in
+  mealAdditionsAllergens.test.js with reasoning), name-keyed ADDITION_TAGS
+  map + single pure filterAdditionsForProfile (allergen excludes only,
+  never taste), wired at CuratedMealSheet (reads profile itself) +
+  DiaryScreen seasonAdds + MealPlanScreen; FoodSearchScreen verified
+  copy-only + guard-pinned. Fail-safe both directions; silent omission;
+  zero copy/macro change. 6-step device checklist in the agent report.
+  Full suite green except SettingsFaqScreen.test.js = theming stage 3
+  agent's LIVE WIP (Settings family mid-conversion) - must be green at
+  its boundary. IN FLIGHT: theming stage 3 batch 1.
