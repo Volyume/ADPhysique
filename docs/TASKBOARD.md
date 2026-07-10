@@ -27,6 +27,14 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 
 ### DONE THIS SESSION (for the record; full detail in the handover)
+- D36b LANDED `d1bf193`: FeedbackSheet + PeekMenu onto shared BottomSheet,
+  imperative ref APIs preserved, zero call-site changes; PlansScreen's
+  folder-rename prompt is now the only hand-rolled backdrop. WhatsNewSheet
+  early-return may skip its close animation - queue a look (see below).
+- D36c LANDED `b8d9b47`: TalkBack sheet isolation via a module-level
+  open-sheet counter + SheetIsolationBoundary around the navigation
+  container; stacked/fast-reopen/unmount-safe; raw Modals unaffected.
+  Full suite green at this boundary: 8,410 passed / 0 failed.
 - Inline dietary preferences LANDED (founder ask): shared
   DietaryPreferencesEditor rendered by BOTH SettingsDietaryScreen and the
   meal builder's new dietary sheet; link-out + stranding removed; ED nudge
@@ -55,19 +63,27 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 - **ELEVATES BECAUSE:** users can set dietary needs where they actually build meals, without being ejected from their flow; the two surfaces can never disagree.
 - **Bounds:** same ED-safe soft exclusion nudge, tier posture unchanged, same allergen_excludes sync ladder, no duplicate state anywhere. Verify-first per D38.
 
-### D36b - FeedbackSheet + PeekMenu migration to shared BottomSheet
+### LANDED - D36b FeedbackSheet + PeekMenu migration (see DONE)
 - **Source:** D36(b); handover resume point (2, NEXT SLOTS). Current state sourced from the D36 verify-first read (docs lane cannot re-read `src/**`).
 - **CURRENT STATE:** FeedbackSheet and PeekMenu are the two never-finished custom-sheet targets named in `BottomSheet.js`'s own header; still hand-rolled, not on the shared gorhom sheet.
 - **END STATE:** both migrated to the shared BottomSheet via a real restructure (imperative singleton API), matching the chrome and bottom insets of the other migrated sheets.
 - **ELEVATES BECAUSE:** removes the last hand-rolled sheets, giving consistent gesture-native behaviour and correct insets everywhere; the header's own TODO is finally closed.
 - **Bounds:** its own slot (real restructure, not folded into another migration).
 
-### D36c - TalkBack sheet isolation
+### LANDED - D36c TalkBack sheet isolation (see DONE)
 - **Source:** D36(c); handover resume point (2). Cross-cutting, RootNavigator-adjacent.
 - **CURRENT STATE:** when a sheet is open, the host screen is not marked `importantForAccessibility` to hide it, so TalkBack can still reach content behind the sheet - a gap that compounds with every sheet migration.
 - **END STATE:** host screen set `importantForAccessibility` (no-hide) while any sheet is open, restored on close.
 - **ELEVATES BECAUSE:** screen-reader users get correct modal isolation across every sheet in the app; a genuine accessibility defect closes.
 - **Bounds:** own cross-cutting slot; do not weaken any existing sheet a11y guard.
+
+### WhatsNewSheet close-animation early return (small, from the D36b aside)
+- **Source:** D36b agent aside, 2026-07-10. CURRENT STATE: WhatsNewSheet.js
+  returns null when not visible above its <BottomSheet>, which likely skips
+  the shared close animation on dismiss. END STATE: dismissal animates like
+  every other sheet. ELEVATES BECAUSE: one sheet snapping shut while all
+  others glide breaks the cohesion mandate. Verify-first (may be a non-issue
+  if gorhom unmount-dismisses gracefully).
 
 ### Theming - remaining static components + ScreenBoundary + stage-5 gate
 - **Source:** `CP-10-restart-free-theming-plan.md`; D16, D24, D29; handover THEMING COVERAGE TRACKER.
