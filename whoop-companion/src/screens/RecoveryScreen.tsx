@@ -14,6 +14,8 @@ import { sleepConfidenceColor, sleepConfidenceLabel, sleepCoverageColor } from '
 import { sleepNeedsMoreSync } from '../metrics/sleepSync';
 import { sleepTrustTier } from '../metrics/sleepTrustWeight';
 
+const RECOVERY_BASELINE_NIGHTS = 5;
+
 function avg(rows: DailyMetricRow[], pick: (r: DailyMetricRow) => number | null): number | null {
   const vals = rows.map(pick).filter((v): v is number => v != null);
   if (!vals.length) return null;
@@ -66,8 +68,12 @@ function recoveryStatusLabel(recovery: number | null, cap: number | null): strin
   return 'rest needed';
 }
 
-function recoveryGuidance(recovery: number | null, cap: number | null): string {
-  if (recovery == null) return 'Recovery appears after a couple of nights of overnight data to build your baseline.';
+function recoveryGuidance(recovery: number | null, cap: number | null, baselineNights = 0): string {
+  if (recovery == null) {
+    return baselineNights < RECOVERY_BASELINE_NIGHTS
+      ? `Personal recovery baseline: ${baselineNights}/${RECOVERY_BASELINE_NIGHTS} trusted nights. Keep syncing complete overnight records.`
+      : 'Recovery is waiting for a complete trusted overnight record today.';
+  }
   if (cap != null && cap <= 66) return 'Recovery is capped because the overnight capture is weak. Sync more data or review the sleep window before trusting today\'s training signal.';
   if (cap != null) return 'Recovery is capped by medium sleep confidence. Treat it as usable but provisional until the overnight record is fuller.';
   if (recovery < 34) return 'Recovery is low - your body is under strain. Prioritise rest, hydration and sleep today.';
@@ -79,6 +85,7 @@ function recoveryGuidanceForDetail(
   recovery: number | null,
   cap: number | null,
   sleepDetail: DailyMetricRow['sleepDetail'] | null,
+  baselineNights: number,
 ): string {
   if (sleepStateWakeConflict(sleepDetail)) {
     return 'Recovery is capped because the sleep window conflicts with decoded strap-state evidence. Review the window before trusting today\'s training signal.';
@@ -86,13 +93,14 @@ function recoveryGuidanceForDetail(
   if (cap != null && !sleepNeedsMoreSync(sleepDetail)) {
     return 'Recovery is capped because sleep confidence is low despite usable signal. Review the sleep window before trusting today\'s training signal.';
   }
-  return recoveryGuidance(recovery, cap);
+  return recoveryGuidance(recovery, cap, baselineNights);
 }
 
 function recoveryQualityNote(
   day: DailyMetricRow | null,
   confidence: 'high' | 'medium' | 'low' | null,
   cap: number | null,
+  baselineNights: number,
 ): string {
   if (!day) return 'Recovery appears after a synced overnight record.';
   const missing = [
@@ -101,6 +109,9 @@ function recoveryQualityNote(
     day.resp == null ? 'respiratory rate' : null,
   ].filter((v): v is string => v != null);
   if (missing.length) return `Recovery is waiting for ${missing.join(', ')} from a stronger overnight sync.`;
+  if (day.recovery == null && baselineNights < RECOVERY_BASELINE_NIGHTS) {
+    return `${baselineNights}/${RECOVERY_BASELINE_NIGHTS} trusted prior nights are ready. Recovery appears once the personal HRV and RHR baseline reaches ${RECOVERY_BASELINE_NIGHTS}.`;
+  }
   if (sleepStateWakeConflict(day.sleepDetail)) return 'Recovery is capped because decoded strap-state evidence is mostly wake.';
   if (cap != null && !sleepNeedsMoreSync(day.sleepDetail)) return `Recovery is capped at ${cap}% until the sleep window is reviewed or corroborated.`;
   if (cap != null) return `Recovery is capped at ${cap}% until sleep confidence improves.`;
@@ -170,6 +181,9 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
   const confidenceCap = recoveryConfidenceCap(sleepDetail);
   const captureTrustScore = sleepCaptureTrustScore(sleepDetail);
   const prior = recentDays.filter((d) => d.day !== today?.day);
+  const baselineNights = prior.filter(
+    (d) => d.rmssd != null && d.rhr != null && sleepTrustTier(d.sleepDetail) !== 'low',
+  ).length;
   const week = recentDays.slice(0, 7).reverse();
   const days = orderedDays(today, recentDays);
   const recoveryDriver = recoveryDriverInsight(parts, confidence, sleepDetail, confidenceCap);
@@ -196,7 +210,11 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
           color={recoveryColor(recovery)}
           centerTop="Recovery"
           centerMain={recovery != null ? `${recovery}%` : '—'}
-          centerSub={recoveryStatusLabel(recovery, confidenceCap)}
+          centerSub={
+            recovery == null && today?.rmssd != null && today.rhr != null
+              ? `${Math.min(baselineNights, RECOVERY_BASELINE_NIGHTS)}/${RECOVERY_BASELINE_NIGHTS} baseline nights`
+              : recoveryStatusLabel(recovery, confidenceCap)
+          }
         />
       </Card>
 
@@ -212,7 +230,7 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
           <Stat label="Sleep coverage" value={sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}%` : '-'} color={sleepCoverageColor(sleepDetail?.coveragePct)} />
           <Stat label="Signal" value={sleepDetail?.signalMin ?? '-'} unit={sleepDetail?.signalMin != null ? 'min' : undefined} />
         </View>
-        <Text style={styles.qualityNote}>{recoveryQualityNote(today, confidence, confidenceCap)}</Text>
+        <Text style={styles.qualityNote}>{recoveryQualityNote(today, confidence, confidenceCap, baselineNights)}</Text>
         {qualityAction ? (
           <NavRow
             label={qualityAction.label}
@@ -376,7 +394,7 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
         <NavRow label="Health Monitor" icon="fitness" iconColor={colors.recoveryGreen} onPress={() => nav.navigate({ name: 'health' })} last />
       </Card>
 
-      <Empty text={recoveryGuidanceForDetail(recovery, confidenceCap, sleepDetail)} />
+      <Empty text={recoveryGuidanceForDetail(recovery, confidenceCap, sleepDetail, baselineNights)} />
 
       <SectionLabel>Weekly trends</SectionLabel>
       <Card>

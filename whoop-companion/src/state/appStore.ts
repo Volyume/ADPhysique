@@ -430,7 +430,7 @@ class AppStore extends Store<AppState> {
       void this.backfillStoredK21Motion()
         .then(() => this.recomputeRecentSleepEvidence())
         .then(() => this.refreshDerived())
-        .catch(() => {});
+        .catch(() => this.scheduleDeferredSleepMaintenance(60 * 1000));
     }, delayMs);
   }
 
