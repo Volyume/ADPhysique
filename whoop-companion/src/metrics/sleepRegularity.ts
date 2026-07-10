@@ -42,7 +42,10 @@ function circularSdMinutes(times: number[]): number {
 }
 
 export function sleepRegularity(windows: Array<{ startTs: number; endTs: number }>): SleepRegularity | null {
-  const valid = windows.filter((w) => w.startTs > 0 && w.endTs > 0).slice(-14);
+  const valid = windows
+    .filter((w) => w.startTs > 0 && w.endTs > w.startTs)
+    .sort((a, b) => a.endTs - b.endTs)
+    .slice(-14);
   if (valid.length < MIN_NIGHTS) return null;
   const bedSdMin = circularSdMinutes(valid.map((w) => clockMinutes(w.startTs)));
   const wakeSdMin = circularSdMinutes(valid.map((w) => clockMinutes(w.endTs)));

@@ -58,7 +58,10 @@ function circularMedianSd(times: number[]): { median: number; sd: number } {
 export function sleepConsistency(
   windows: Array<{ startTs: number; endTs: number }>,
 ): SleepConsistency | null {
-  const valid = windows.filter((w) => w.startTs > 0 && w.endTs > 0).slice(-WINDOW);
+  const valid = windows
+    .filter((w) => w.startTs > 0 && w.endTs > w.startTs)
+    .sort((a, b) => a.endTs - b.endTs)
+    .slice(-WINDOW);
   if (valid.length < MIN_NIGHTS) return null;
   const beds = valid.map((w) => clockMin(w.startTs));
   const wakes = valid.map((w) => clockMin(w.endTs));

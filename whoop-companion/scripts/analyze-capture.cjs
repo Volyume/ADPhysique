@@ -77,6 +77,7 @@ function main() {
   console.log(`maverick_frames: ${frames.length}`);
   console.log(`packet_counts: ${JSON.stringify(Object.fromEntries([...byPacket.entries()].sort((a, b) => a[0] - b[0])))}`);
   console.log(`metadata: starts=${meta.starts} ends=${meta.ends} unique_ends=${meta.uniqueEnds} unique_ends_after_prior_end=${meta.uniqueEndsAfterPriorEnd} completes=${meta.completes}`);
+  console.log(`metadata_repeated_end_tokens: ${JSON.stringify(meta.repeatedEndTokens)}`);
   console.log(`command_responses: ${JSON.stringify(commandResponses)}`);
   console.log(
     `history: records=${decoded.records} decoded=${decoded.decodedRecords} rejected=${decoded.rejectedRecords} dropped_ts=${decoded.droppedImplausibleTs} versions=${versions}`,
@@ -521,6 +522,7 @@ function summarizeMetadata(framesIn) {
   let ends = 0;
   let completes = 0;
   const uniqueEndData = new Set();
+  const endCounts = new Map();
   let endSeenSinceStart = false;
   let uniqueEndsAfterPriorEnd = 0;
   for (const frame of framesIn) {
@@ -534,6 +536,7 @@ function summarizeMetadata(framesIn) {
       ends += 1;
       if (frame.inner.length >= 21) {
         const key = bytesToHex(frame.inner.subarray(13, 21));
+        endCounts.set(key, (endCounts.get(key) ?? 0) + 1);
         if (endSeenSinceStart && !uniqueEndData.has(key)) uniqueEndsAfterPriorEnd += 1;
         uniqueEndData.add(key);
       }
@@ -541,13 +544,19 @@ function summarizeMetadata(framesIn) {
     }
     else if (metaType === 3) completes += 1;
   }
-  return { starts, ends, uniqueEnds: uniqueEndData.size, uniqueEndsAfterPriorEnd, completes };
+  const repeatedEndTokens = Object.fromEntries(
+    [...endCounts.entries()]
+      .filter(([, count]) => count > 1)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12),
+  );
+  return { starts, ends, uniqueEnds: uniqueEndData.size, uniqueEndsAfterPriorEnd, completes, repeatedEndTokens };
 }
 
 function summarizeCommandResponses(framesIn) {
   const counts = {};
   for (const frame of framesIn) {
-    if (frame.packetType !== 36 || frame.inner.length < 5) continue;
+    if ((frame.packetType !== 36 && frame.packetType !== 38) || frame.inner.length < 5) continue;
     const command = frame.inner[2];
     const result = frame.inner[4];
     const key = `${command}:${result}`;

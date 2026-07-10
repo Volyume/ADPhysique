@@ -11,6 +11,7 @@
 
 import { crc16modbus, crc32 } from './crc';
 import { decodeWhoop5SkinTemp } from './skinTemperature';
+import { isPlausibleHeartRate } from '../metrics/dataQuality';
 
 const PACKET_HISTORICAL_DATA = 47;
 const MIN_PLAUSIBLE_UNIX = 1_700_000_000;
@@ -119,7 +120,9 @@ export function decodeWhoop5HistoryFrames(
       }
       decodedRecords += 1;
       v18Records += 1;
-      if (rec.bpm > 0) hr.push({ ts: ts * 1000, bpm: rec.bpm, rr: rec.rr, source: 'whoop5_v18' });
+      if (isPlausibleHeartRate(rec.bpm)) {
+        hr.push({ ts: ts * 1000, bpm: rec.bpm, rr: rec.rr, source: 'whoop5_v18' });
+      }
       if (rec.stepCounter != null) {
         steps.push({ ts: ts * 1000, counter: rec.stepCounter, activityClass: rec.activityClass });
       }
@@ -190,6 +193,7 @@ export function decodeWhoop5HistoryFrames(
   }
 
   for (const estimate of estimatePpgHr(ppg)) {
+    if (!isPlausibleHeartRate(estimate.bpm)) continue;
     hr.push({
       ts: estimate.ts * 1000,
       bpm: estimate.bpm,

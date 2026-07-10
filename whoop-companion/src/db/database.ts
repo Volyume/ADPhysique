@@ -15,6 +15,7 @@
  */
 
 import * as SQLite from 'expo-sqlite';
+import { cleanRrIntervals, finiteRange, isPlausibleHeartRate } from '../metrics/dataQuality';
 
 export type HrSampleSource = 'live_standard' | 'whoop5_v18' | 'whoop5_v26_ppg';
 export type HrSampleRow = {
@@ -268,13 +269,14 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
 
 // ---- HR samples ----
 export async function insertHrSample(s: HrSampleRow): Promise<void> {
+  if (!isPlausibleHeartRate(s.bpm) || !Number.isFinite(s.ts) || s.ts <= 0) return;
   await serializeWrite(async () => {
     const db = await getDb();
     await db.runAsync(
       UPSERT_HR_SAMPLE_SQL,
       s.ts,
       s.bpm,
-      JSON.stringify(s.rr ?? []),
+      JSON.stringify(cleanRrIntervals(s.rr)),
       s.source ?? 'live_standard',
       s.confidence ?? null,
     );
@@ -290,17 +292,27 @@ export async function getHrSamplesBetween(fromTs: number, toTs: number): Promise
     source: HrSampleSource | null;
     confidence: number | null;
   }>(
-    'SELECT ts, bpm, rr, source, confidence FROM hr_samples WHERE ts >= ? AND ts <= ? ORDER BY ts ASC',
+    'SELECT ts, bpm, rr, source, confidence FROM hr_samples WHERE ts >= ? AND ts < ? ORDER BY ts ASC',
     fromTs,
     toTs,
   );
-  return rows.map((r) => ({
-    ts: r.ts,
-    bpm: r.bpm,
-    rr: r.rr ? (JSON.parse(r.rr) as number[]) : [],
-    source: r.source,
-    confidence: r.confidence,
-  }));
+  return rows
+    .filter((r) => isPlausibleHeartRate(r.bpm) && Number.isFinite(r.ts) && r.ts > 0)
+    .map((r) => {
+      let rr: unknown = [];
+      try {
+        rr = r.rr ? JSON.parse(r.rr) : [];
+      } catch {
+        rr = [];
+      }
+      return {
+        ts: r.ts,
+        bpm: r.bpm,
+        rr: cleanRrIntervals(rr),
+        source: r.source,
+        confidence: finiteRange(r.confidence, 0, 1),
+      };
+    });
 }
 
 /** Trim the raw HR stream to keep storage bounded (default: keep 30 days). */
@@ -327,11 +339,20 @@ export async function insertStepSample(s: StepSampleRow): Promise<void> {
 export async function getStepSamplesBetween(fromTs: number, toTs: number): Promise<StepSampleRow[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<{ ts: number; counter: number; activity_class: number | null }>(
-    'SELECT ts, counter, activity_class FROM step_samples WHERE ts >= ? AND ts <= ? ORDER BY ts ASC',
+    'SELECT ts, counter, activity_class FROM step_samples WHERE ts >= ? AND ts < ? ORDER BY ts ASC',
     fromTs,
     toTs,
   );
   return rows.map((r) => ({ ts: r.ts, counter: r.counter, activityClass: r.activity_class }));
+}
+
+export async function getStepSampleBefore(ts: number): Promise<StepSampleRow | null> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ ts: number; counter: number; activity_class: number | null }>(
+    'SELECT ts, counter, activity_class FROM step_samples WHERE ts < ? ORDER BY ts DESC LIMIT 1',
+    ts,
+  );
+  return row ? { ts: row.ts, counter: row.counter, activityClass: row.activity_class } : null;
 }
 
 // ---- Band sleep-state samples ----
@@ -349,7 +370,7 @@ export async function insertSleepStateSample(s: SleepStateSampleRow): Promise<vo
 export async function getSleepStateSamplesBetween(fromTs: number, toTs: number): Promise<SleepStateSampleRow[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<SleepStateSampleRow>(
-    'SELECT ts, state FROM sleep_state_samples WHERE ts >= ? AND ts <= ? ORDER BY ts ASC',
+    'SELECT ts, state FROM sleep_state_samples WHERE ts >= ? AND ts < ? ORDER BY ts ASC',
     fromTs,
     toTs,
   );
@@ -360,7 +381,7 @@ export async function getSleepStateSamplesBetween(fromTs: number, toTs: number):
 export async function getMotionSamplesBetween(fromTs: number, toTs: number): Promise<MotionSampleRow[]> {
   const db = await getDb();
   return db.getAllAsync<MotionSampleRow>(
-    'SELECT ts, intensity FROM motion_samples WHERE ts >= ? AND ts <= ? ORDER BY ts ASC',
+    'SELECT ts, intensity FROM motion_samples WHERE ts >= ? AND ts < ? ORDER BY ts ASC',
     fromTs,
     toTs,
   );
@@ -385,7 +406,7 @@ export async function insertRawVitalSample(s: RawVitalSampleRow): Promise<void> 
 export async function getRawVitalSamplesBetween(fromTs: number, toTs: number): Promise<RawVitalSampleRow[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<{ ts: number; spo2: number | null; skin_temp_c: number | null }>(
-    'SELECT ts, spo2, skin_temp_c FROM raw_vital_samples WHERE ts >= ? AND ts <= ? ORDER BY ts ASC',
+    'SELECT ts, spo2, skin_temp_c FROM raw_vital_samples WHERE ts >= ? AND ts < ? ORDER BY ts ASC',
     fromTs,
     toTs,
   );
@@ -396,9 +417,19 @@ export async function getRawVitalSamplesBetween(fromTs: number, toTs: number): P
 export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
   await serializeWrite(async () => {
     const db = await getDb();
+    const recovery = finiteRange(m.recovery, 0, 100, true);
+    const rmssd = finiteRange(m.rmssd, 3, 300);
+    const rhr = finiteRange(m.rhr, 30, 130, true);
     const resp = cleanRespiratoryRate(m.resp);
     const sleepPerf = cleanSleepFraction(m.sleepPerf);
     const sleepDetail = cleanSleepDetail(m.sleepDetail);
+    const sleepMin = finiteRange(m.sleepMin, 0, 24 * 60, true);
+    const strain = finiteRange(m.strain, 0, 21);
+    const steps = m.stepSource === 'band' ? finiteRange(m.steps, 0, 500_000, true) : null;
+    const stepSource = steps != null ? 'band' : null;
+    const sleepWindow = cleanSleepWindow(m.sleepStart, m.sleepEnd);
+    const stages = cleanStageMinutes(m, sleepMin, sleepDetail?.inBedMin ?? null);
+    const updatedAt = finiteRange(m.updatedAt, 1, Number.MAX_SAFE_INTEGER, true) ?? Date.now();
     await db.runAsync(
     `INSERT INTO daily_metrics (day, recovery, rmssd, rhr, resp, spo2, skin_temp_c, sleep_min, sleep_perf, strain, steps, step_source,
        sleep_start, sleep_end, deep_min, rem_min, light_min, awake_min, sleep_json, updated_at)
@@ -414,27 +445,54 @@ export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
        sleep_json=excluded.sleep_json,
        updated_at=excluded.updated_at`,
     m.day,
-    m.recovery,
-    m.rmssd,
-    m.rhr,
+    recovery,
+    rmssd,
+    rhr,
     resp,
     cleanPct(m.spo2),
     cleanSkinTemp(m.skinTempC),
-    m.sleepMin,
+    sleepMin,
     sleepPerf,
-    m.strain,
-    m.steps,
-    m.stepSource,
-    m.sleepStart,
-    m.sleepEnd,
-    m.deepMin,
-    m.remMin,
-    m.lightMin,
-    m.awakeMin,
+    strain,
+    steps,
+    stepSource,
+    sleepWindow.start,
+    sleepWindow.end,
+    stages.deep,
+    stages.rem,
+    stages.light,
+    stages.awake,
     sleepDetail ? JSON.stringify(sleepDetail) : null,
-      m.updatedAt,
+      updatedAt,
     );
   });
+}
+
+function cleanSleepWindow(
+  start: number | null | undefined,
+  end: number | null | undefined,
+): { start: number | null; end: number | null } {
+  const cleanStart = finiteRange(start, 1, Number.MAX_SAFE_INTEGER, true);
+  const cleanEnd = finiteRange(end, 1, Number.MAX_SAFE_INTEGER, true);
+  if (cleanStart == null || cleanEnd == null || cleanEnd <= cleanStart || cleanEnd - cleanStart > 24 * 60 * 60 * 1000) {
+    return { start: null, end: null };
+  }
+  return { start: cleanStart, end: cleanEnd };
+}
+
+function cleanStageMinutes(
+  metric: Pick<DailyMetricRow, 'deepMin' | 'remMin' | 'lightMin' | 'awakeMin'>,
+  sleepMin: number | null,
+  inBedMin: number | null,
+): { deep: number | null; rem: number | null; light: number | null; awake: number | null } {
+  if (sleepMin == null) return { deep: null, rem: null, light: null, awake: null };
+  const deep = finiteRange(metric.deepMin, 0, sleepMin, true);
+  const rem = finiteRange(metric.remMin, 0, sleepMin, true);
+  const light = finiteRange(metric.lightMin, 0, sleepMin, true);
+  const asleepTotal = (deep ?? 0) + (rem ?? 0) + (light ?? 0);
+  const stagesValid = deep != null && rem != null && light != null && Math.abs(asleepTotal - sleepMin) <= 5;
+  const awake = finiteRange(metric.awakeMin, 0, Math.max(sleepMin, inBedMin ?? sleepMin), true);
+  return stagesValid ? { deep, rem, light, awake } : { deep: null, rem: null, light: null, awake: null };
 }
 
 function cleanRespiratoryRate(value: number | null | undefined): number | null {
@@ -534,25 +592,49 @@ function mapDaily(r: {
   }
   return {
     day: r.day,
-    recovery: r.recovery,
-    rmssd: r.rmssd,
-    rhr: r.rhr,
+    recovery: finiteRange(r.recovery, 0, 100, true),
+    rmssd: finiteRange(r.rmssd, 3, 300),
+    rhr: finiteRange(r.rhr, 30, 130, true),
     resp: cleanRespiratoryRate(r.resp),
     spo2: cleanPct(r.spo2),
     skinTempC: cleanSkinTemp(r.skin_temp_c),
-    sleepMin: r.sleep_min,
+    sleepMin: finiteRange(r.sleep_min, 0, 24 * 60, true),
     sleepPerf: cleanSleepFraction(r.sleep_perf),
-    strain: r.strain,
-    steps: r.step_source === 'band' ? r.steps : null,
-    stepSource: r.step_source === 'band' ? 'band' : null,
-    sleepStart: r.sleep_start ?? null,
-    sleepEnd: r.sleep_end ?? null,
-    deepMin: r.deep_min ?? null,
-    remMin: r.rem_min ?? null,
-    lightMin: r.light_min ?? null,
-    awakeMin: r.awake_min ?? null,
+    strain: finiteRange(r.strain, 0, 21),
+    steps: r.step_source === 'band' ? finiteRange(r.steps, 0, 500_000, true) : null,
+    stepSource: r.step_source === 'band' && finiteRange(r.steps, 0, 500_000, true) != null ? 'band' : null,
+    ...mappedSleepFields(r, sleepDetail),
     sleepDetail: cleanSleepDetail(sleepDetail),
-    updatedAt: r.updated_at,
+    updatedAt: finiteRange(r.updated_at, 1, Number.MAX_SAFE_INTEGER, true) ?? 1,
+  };
+}
+
+function mappedSleepFields(
+  row: {
+    sleep_min: number | null;
+    sleep_start: number | null;
+    sleep_end: number | null;
+    deep_min: number | null;
+    rem_min: number | null;
+    light_min: number | null;
+    awake_min: number | null;
+  },
+  detail: SleepDetail | null,
+): Pick<DailyMetricRow, 'sleepStart' | 'sleepEnd' | 'deepMin' | 'remMin' | 'lightMin' | 'awakeMin'> {
+  const window = cleanSleepWindow(row.sleep_start, row.sleep_end);
+  const sleepMin = finiteRange(row.sleep_min, 0, 24 * 60, true);
+  const stages = cleanStageMinutes(
+    { deepMin: row.deep_min, remMin: row.rem_min, lightMin: row.light_min, awakeMin: row.awake_min },
+    sleepMin,
+    detail?.inBedMin ?? null,
+  );
+  return {
+    sleepStart: window.start,
+    sleepEnd: window.end,
+    deepMin: stages.deep,
+    remMin: stages.rem,
+    lightMin: stages.light,
+    awakeMin: stages.awake,
   };
 }
 
@@ -581,6 +663,7 @@ export async function clearUntrustedLegacyData(): Promise<void> {
       `);
     }
     await db.execAsync(`
+    DELETE FROM hr_samples WHERE bpm < 30 OR bpm > 220 OR ts <= 0;
     UPDATE daily_metrics
        SET steps = NULL, step_source = NULL
      WHERE steps IS NOT NULL AND (step_source IS NULL OR step_source != 'band');
@@ -903,12 +986,13 @@ export async function persistHistoryBatch(batch: HistoryPersistBatch): Promise<v
     try {
       for (const hex of batch.framesHex) await historyStmt.executeAsync(batch.rawTs, hex);
       for (const sample of batch.hr) {
+        if (!isPlausibleHeartRate(sample.bpm) || !Number.isFinite(sample.ts) || sample.ts <= 0) continue;
         await hrStmt.executeAsync(
           sample.ts,
           sample.bpm,
-          JSON.stringify(sample.rr ?? []),
+          JSON.stringify(cleanRrIntervals(sample.rr)),
           sample.source ?? null,
-          sample.confidence ?? null,
+          finiteRange(sample.confidence, 0, 1),
         );
       }
       for (const sample of batch.steps) {

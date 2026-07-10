@@ -37,6 +37,7 @@ export enum PacketType {
   COMMAND = 35,
   COMMAND_RESPONSE = 36,
   PUFFIN_COMMAND = 37, // WHOOP 5.0 ("Puffin") command variant
+  PUFFIN_COMMAND_RESPONSE = 38,
   REALTIME_DATA = 40, // live data (incl. HR) over the proprietary stream
   REALTIME_RAW_DATA = 43,
   HISTORICAL_DATA = 47,
@@ -161,6 +162,13 @@ export class FrameAssembler {
       while (this.buf.length > 0 && this.buf[0] !== FRAME_START) this.buf.shift();
       if (this.buf.length < 8) break; // need header(6) + crc16(2)
 
+      const header = new Uint8Array(this.buf.slice(0, 6));
+      const expectedHeaderCrc = (this.buf[6] as number) | ((this.buf[7] as number) << 8);
+      if (crc16modbus(header) !== expectedHeaderCrc) {
+        this.buf.shift();
+        continue;
+      }
+
       // length field = padded-inner length + 4 (includes the trailing CRC32).
       const length = (this.buf[2] as number) | ((this.buf[3] as number) << 8);
       const innerLen = length - 4;
@@ -177,6 +185,17 @@ export class FrameAssembler {
       const roleA = this.buf[4] as number;
       const roleB = this.buf[5] as number;
       const inner = new Uint8Array(this.buf.slice(8, 8 + innerLen));
+      const crcOffset = 8 + innerLen;
+      const expectedInnerCrc = (
+        (raw[crcOffset] as number) |
+        ((raw[crcOffset + 1] as number) << 8) |
+        ((raw[crcOffset + 2] as number) << 16) |
+        ((raw[crcOffset + 3] as number) << 24)
+      ) >>> 0;
+      if (crc32(inner) !== expectedInnerCrc) {
+        this.buf.splice(0, total);
+        continue;
+      }
       frames.push({ raw, version, roleA, roleB, ...parseInner(inner) });
 
       this.buf.splice(0, total);

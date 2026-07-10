@@ -226,7 +226,10 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
         <View style={styles.qualityGrid}>
           <Stat label="HRV" value={today?.rmssd != null ? 'Ready' : '-'} color={today?.rmssd != null ? colors.recoveryGreen : colors.textTertiary} />
           <Stat label="RHR" value={today?.rhr != null ? 'Ready' : '-'} color={today?.rhr != null ? colors.recoveryGreen : colors.textTertiary} />
+        </View>
+        <View style={[styles.qualityGrid, { marginTop: 12 }]}>
           <Stat label="Resp" value={today?.resp != null ? 'Ready' : '-'} color={today?.resp != null ? colors.recoveryGreen : colors.textTertiary} />
+          <Stat label="Skin temp" value={today?.skinTempC != null ? 'Ready' : '-'} color={today?.skinTempC != null ? colors.recoveryGreen : colors.textTertiary} />
         </View>
         <View style={[styles.qualityGrid, { marginTop: 12 }]}>
           <Stat label="Sleep confidence" value={sleepConfidenceLabel(confidence)} color={sleepConfidenceColor(confidence)} />
@@ -321,6 +324,15 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
                 onPress={() => nav.navigate({ name: 'metric', key: 'respiratory' })}
               />
             ) : null}
+            {parts.tempSub != null ? (
+              <ContributorRow
+                label="Skin temperature"
+                percent={parts.tempSub}
+                value={fourTier(parts.tempSub).label}
+                color={fourTier(parts.tempSub).color}
+                onPress={() => nav.navigate({ name: 'metric', key: 'skin_temp' })}
+              />
+            ) : null}
             <ContributorRow
               label="Sleep"
               percent={parts.sleepSub}
@@ -366,6 +378,13 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
           prior={avg(prior, (r) => r.resp)}
           unit=" rpm"
           onPress={() => nav.navigate({ name: 'metric', key: 'respiratory' })}
+        />
+        <MetricRow
+          label="Skin temperature"
+          current={today?.skinTempC != null ? Math.round(today.skinTempC * 10) / 10 : null}
+          prior={avg(prior, (r) => r.skinTempC)}
+          unit=" C"
+          onPress={() => nav.navigate({ name: 'metric', key: 'skin_temp' })}
         />
       </Card>
 
@@ -433,7 +452,7 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
         )}
       </Card>
 
-      <Empty text="Recovery blends overnight HRV vs your baseline, resting HR, respiratory rate and sleep performance — a local approximation, not WHOOP's exact score." />
+      <Empty text="Recovery blends overnight HRV, resting HR, respiratory stability, skin-temperature stability and sleep performance against your baseline. It is a local estimate, not WHOOP's proprietary score." />
     </Screen>
   );
 }
@@ -492,6 +511,9 @@ function recoveryDriverInsight(
     ...(parts.respSub != null
       ? [{ key: 'resp', metric: 'Respiratory', score: parts.respSub, route: { name: 'metric', key: 'respiratory' } as const, icon: 'fitness' }]
       : []),
+    ...(parts.tempSub != null
+      ? [{ key: 'temp', metric: 'Skin temperature', score: parts.tempSub, route: { name: 'metric', key: 'skin_temp' } as const, icon: 'thermometer' }]
+      : []),
     { key: 'sleep', metric: 'Sleep', score: parts.sleepSub, route: { name: 'sleep' } as const, icon: 'moon' },
   ];
   const weakest = rows.slice().sort((a, b) => a.score - b.score)[0];
@@ -531,6 +553,7 @@ function recoveryDriverBody(key: string, score: number): string {
   if (key === 'hrv') return `HRV is below your current baseline band (${score}), so recovery should stay conservative.`;
   if (key === 'rhr') return `Resting heart rate is elevated relative to baseline (${score}), often a sign to ease off.`;
   if (key === 'resp') return `Respiratory rate is away from baseline (${score}), so recovery confidence should be tempered.`;
+  if (key === 'temp') return `Skin temperature is away from your personal baseline (${score}), which can signal strain or poor recovery.`;
   if (key === 'sleep') return `Sleep performance is the lowest contributor (${score}); tonight's plan is the biggest lever.`;
   return 'One recovery input is below its useful band today.';
 }
@@ -539,6 +562,7 @@ function recoverySupportBody(key: string): string {
   if (key === 'hrv') return 'HRV is carrying the recovery score in the right direction.';
   if (key === 'rhr') return 'Resting heart rate is supporting recovery against your baseline.';
   if (key === 'resp') return 'Respiratory rate is close enough to baseline to support the score.';
+  if (key === 'temp') return 'Skin temperature is stable against your baseline.';
   if (key === 'sleep') return 'Sleep is supporting the recovery blend today.';
   return 'The main recovery inputs are aligned.';
 }

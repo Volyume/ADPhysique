@@ -37,7 +37,13 @@ const skinTemperature = loadTypeScriptModule(path.join('src', 'whoop', 'skinTemp
 const historical = require(path.join(__dirname, '..', 'src', 'whoop', 'historicalParse.ts'));
 const crc = require(path.join(__dirname, '..', 'src', 'whoop', 'crc.ts'));
 const commands = require(path.join(__dirname, '..', 'src', 'whoop', 'commands.ts'));
+const maverick = require(path.join(__dirname, '..', 'src', 'whoop', 'maverick.ts'));
 const alarmSchedule = loadTypeScriptModule(path.join('src', 'util', 'alarmSchedule.ts'));
+const dataQuality = loadTypeScriptModule(path.join('src', 'metrics', 'dataQuality.ts'));
+const strain = loadTypeScriptModule(path.join('src', 'metrics', 'strain.ts'));
+const historySyncPolicy = loadTypeScriptModule(path.join('src', 'whoop', 'historySyncPolicy.ts'));
+const recovery = loadTypeScriptModule(path.join('src', 'metrics', 'recovery.ts'));
+const illness = loadTypeScriptModule(path.join('src', 'metrics', 'illness.ts'));
 
 const chronological = [
   { day: 1, value: 40 },
@@ -64,6 +70,78 @@ assert(
 assert(skinTemperature.decodeWhoop5SkinTemp(3057) === 30.57, 'decodes a labelled worn-skin fixture');
 assert(skinTemperature.decodeWhoop5SkinTemp(2247) === 22.47, 'decodes a labelled off-wrist fixture');
 assert(skinTemperature.decodeWhoop5SkinTemp(499) == null, 'rejects an implausible temperature register');
+assert(dataQuality.isPlausibleHeartRate(60), 'accepts physiological heart rate');
+assert(!dataQuality.isPlausibleHeartRate(255), 'rejects impossible heart rate before metrics and persistence');
+assert(dataQuality.isDirectSleepHeartRateSample({ bpm: 60, source: 'whoop5_v18' }), 'direct history HR can score sleep');
+assert(!dataQuality.isDirectSleepHeartRateSample({ bpm: 60, source: 'whoop5_v26_ppg' }), 'estimated PPG HR cannot score sleep');
+
+const hrrZones = strain.hrZones(
+  [
+    { hr: 120, minutes: 1 },
+    { hr: 130, minutes: 1 },
+    { hr: 144, minutes: 1 },
+  ],
+  { ageYears: 30, sex: 'male', restingHr: 60, maxHr: 200 },
+);
+assert(hrrZones[0].minutes === 1 && hrrZones[1].minutes === 1 && hrrZones[2].minutes === 1, 'WHOOP zones use HR reserve boundaries');
+
+assert(
+  historySyncPolicy.historySyncIsDurablyComplete({ reason: 'complete', rawRecords: 20, durableEndChunks: 2, acknowledgedEndChunks: 2, failed: false }),
+  'completed history requires every durable END acknowledgement',
+);
+assert(
+  !historySyncPolicy.historySyncIsDurablyComplete({ reason: 'complete', rawRecords: 20, durableEndChunks: 2, acknowledgedEndChunks: 1, failed: false }),
+  'unacknowledged history cannot advance last sync',
+);
+assert(
+  !historySyncPolicy.historySyncIsDurablyComplete({ reason: 'complete', rawRecords: 20, durableEndChunks: 2, acknowledgedEndChunks: 2, failed: true }),
+  'database failure cannot be masked by a later COMPLETE frame',
+);
+assert(historySyncPolicy.historyCursorAdvanced('0011', '0022'), 'a changed durable endpoint permits the next drain pass');
+assert(!historySyncPolicy.historyCursorAdvanced('0011', '0011'), 'a replayed endpoint does not trigger another immediate pass');
+assert(historySyncPolicy.historyRetryDelayMs(1) === 15_000, 'first failed history retry stays responsive');
+assert(historySyncPolicy.historyRetryDelayMs(20) === 15 * 60_000, 'repeated history failures are rate-limited');
+const queuedEnds = new Set(['pending']);
+const acknowledgedEnds = new Set(['done']);
+assert(historySyncPolicy.historyEndShouldQueue('new', queuedEnds, acknowledgedEnds), 'a new history END token is admitted');
+assert(!historySyncPolicy.historyEndShouldQueue('pending', queuedEnds, acknowledgedEnds), 'a duplicate END in flight is suppressed');
+assert(!historySyncPolicy.historyEndShouldQueue('done', queuedEnds, acknowledgedEnds), 'a successfully acknowledged END is suppressed for this run');
+assert(historySyncPolicy.historyEndShouldQueue('done', new Set(), new Set()), 'a reconnect can retry the same END token');
+
+const stableRecovery = recovery.computeRecovery({
+  rmssd: 50, rmssdBaseline: 50, rmssdSd: 8,
+  restingHr: 55, rhrBaseline: 55, rhrSd: 4,
+  respiratoryRate: 14, respiratoryBaseline: 14, respiratorySd: 1,
+  skinTemperature: 33.2, skinTemperatureBaseline: 33.2, skinTemperatureSd: 0.3,
+  sleepPerformance: 0.85,
+});
+const deviatedRecovery = recovery.computeRecovery({
+  rmssd: 50, rmssdBaseline: 50, rmssdSd: 8,
+  restingHr: 55, rhrBaseline: 55, rhrSd: 4,
+  respiratoryRate: 11, respiratoryBaseline: 14, respiratorySd: 1,
+  skinTemperature: 34.1, skinTemperatureBaseline: 33.2, skinTemperatureSd: 0.3,
+  sleepPerformance: 0.85,
+});
+assert(
+  stableRecovery && deviatedRecovery && stableRecovery.score > deviatedRecovery.score,
+  'large respiratory and skin-temperature deviations lower recovery',
+);
+const illnessWithTemp = illness.illnessRisk({
+  rhr: { value: 55, baseline: 55, sd: 4 },
+  hrv: { value: 50, baseline: 50, sd: 8 },
+  respiratory: { value: 14, baseline: 14, sd: 1 },
+  skinTemperature: { value: 34.1, baseline: 33.2, sd: 0.3 },
+});
+assert(
+  illnessWithTemp?.signals.some((signal) => signal.metric === 'skin_temp' && signal.flagged),
+  'validated skin-temperature deviation contributes to sick-risk',
+);
+
+const validCommandFrame = commands.cmdGetDataRange();
+assert(new maverick.FrameAssembler().push(validCommandFrame).length === 1, 'valid Maverick frames pass CRC validation');
+const corruptCommandFrame = validCommandFrame.slice();
+corruptCommandFrame[corruptCommandFrame.length - 5] ^= 0x01;
+assert(new maverick.FrameAssembler().push(corruptCommandFrame).length === 0, 'corrupt Maverick frames are rejected before command or metadata routing');
 
 function writeU16(bytes, offset, value) {
   bytes[offset] = value & 0xff;

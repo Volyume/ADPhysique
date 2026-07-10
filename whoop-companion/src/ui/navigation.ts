@@ -53,6 +53,7 @@ export type Route =
   | { name: 'liveSession' }
   | { name: 'resilience' }
   | { name: 'illness' }
+  | { name: 'weeklyPlan' }
   | { name: 'day'; day: string }
   | { name: 'metric'; key: MetricKey }
   | { name: 'activity'; id: string };

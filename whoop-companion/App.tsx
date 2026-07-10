@@ -32,6 +32,7 @@ import { WorkoutsScreen } from './src/screens/WorkoutsScreen';
 import { StartScreen } from './src/screens/StartScreen';
 import { LiveSessionScreen } from './src/screens/LiveSessionScreen';
 import { DayScreen } from './src/screens/DayScreen';
+import { WeeklyPlanScreen } from './src/screens/WeeklyPlanScreen';
 import { colors } from './src/ui/theme';
 import { fonts, useWhoopFonts } from './src/ui/fonts';
 import { Nav, Route, TabKey, TABS } from './src/ui/navigation';
@@ -44,12 +45,15 @@ ThemedText.defaultProps.style = { fontFamily: fonts.text, color: colors.text };
 export default function App() {
   const [tab, setTabState] = useState<TabKey>('today');
   const [stack, setStack] = useState<Route[]>([{ name: 'today' }]);
+  const [initError, setInitError] = useState<string | null>(null);
+  const [initAttempt, setInitAttempt] = useState(0);
   const ready = useStoreSelector(appStore, (s) => s.ready);
   const fontsLoaded = useWhoopFonts();
 
   useEffect(() => {
-    void appStore.init();
-  }, []);
+    setInitError(null);
+    void appStore.init().catch((error) => setInitError(String(error)));
+  }, [initAttempt]);
 
   const nav: Nav = useMemo(
     () => ({
@@ -76,8 +80,22 @@ export default function App() {
       <View style={styles.root}>
         {!ready || !fontsLoaded ? (
           <View style={styles.loading}>
-            <ActivityIndicator color={colors.recoveryGreen} />
-            <Text style={styles.loadingText}>Loading…</Text>
+            {initError ? (
+              <>
+                <Ionicons name="alert-circle-outline" size={28} color={colors.recoveryRed} />
+                <Text style={styles.loadingTitle}>Pulse could not start</Text>
+                <Text style={styles.loadingError}>{initError}</Text>
+                <TouchableOpacity style={styles.retryButton} onPress={() => setInitAttempt((attempt) => attempt + 1)}>
+                  <Ionicons name="refresh" size={18} color="#000" />
+                  <Text style={styles.retryText}>Retry</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <ActivityIndicator color={colors.recoveryGreen} />
+                <Text style={styles.loadingText}>Loading...</Text>
+              </>
+            )}
           </View>
         ) : (
           <View style={{ flex: 1 }}>
@@ -85,7 +103,7 @@ export default function App() {
           </View>
         )}
 
-        <SafeAreaView edges={['bottom']} style={styles.tabBar}>
+        {ready && fontsLoaded ? <SafeAreaView edges={['bottom']} style={styles.tabBar}>
           {TABS.map((t) => {
             const active = tab === t.key;
             return (
@@ -99,7 +117,7 @@ export default function App() {
               </TouchableOpacity>
             );
           })}
-        </SafeAreaView>
+        </SafeAreaView> : null}
       </View>
     </SafeAreaProvider>
   );
@@ -137,6 +155,8 @@ function Router({ route, nav }: { route: Route; nav: Nav }) {
       return <ResilienceScreen nav={nav} />;
     case 'illness':
       return <IllnessScreen nav={nav} />;
+    case 'weeklyPlan':
+      return <WeeklyPlanScreen nav={nav} />;
     case 'editSleep':
       return <EditSleepScreen nav={nav} day={route.day} />;
     case 'sleepTrends':
@@ -168,6 +188,10 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { color: colors.textSecondary, marginTop: 12 },
+  loadingTitle: { color: colors.text, marginTop: 12, fontSize: 17, fontFamily: fonts.textBold },
+  loadingError: { color: colors.textSecondary, marginTop: 8, maxWidth: 320, textAlign: 'center', lineHeight: 18 },
+  retryButton: { marginTop: 18, minHeight: 42, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.recoveryGreen, borderRadius: 6 },
+  retryText: { color: '#000', fontFamily: fonts.textBold, fontSize: 14 },
   tabBar: {
     flexDirection: 'row',
     backgroundColor: colors.card,

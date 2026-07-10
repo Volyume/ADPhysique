@@ -31,6 +31,7 @@ import {
   HistoryMetadata,
 } from '../whoop/commands';
 import { decodeWhoop5HistoryFrames, HistoricalDecodeResult } from '../whoop/historicalParse';
+import { historyCursorAdvanced, historyEndShouldQueue, historyRetryDelayMs, historySyncIsDurablyComplete } from '../whoop/historySyncPolicy';
 import {
   CardioRow,
   DailyMetricRow,
@@ -52,6 +53,7 @@ import {
   getStoredHistoryPage,
   getStoredK21HistoryPage,
   getStepSamplesBetween,
+  getStepSampleBefore,
   kvGet,
   kvSet,
   listCardio,
@@ -76,6 +78,7 @@ import { autoSleepBoundariesCovered, computeSleep, computeSleepNeed, durationOnl
 import { computeSleepScore, SleepScore } from '../metrics/sleepScore';
 import { sleepRegularity, SleepRegularity } from '../metrics/sleepRegularity';
 import { FALLBACK_SLEEP_SCHEDULE, inferSleepSchedule, SleepSchedule } from '../metrics/sleepSchedule';
+import { isDirectSleepHeartRateSample, isPlausibleHeartRate } from '../metrics/dataQuality';
 import { sleepConsistency, SleepConsistency } from '../metrics/sleepConsistency';
 import { sleepDebt } from '../metrics/sleepDebt';
 import { computeSleepStress, SleepStress, StressEpoch } from '../metrics/sleepStress';
@@ -158,6 +161,9 @@ export type HistorySyncReport = {
   finishedTs?: number;
   reason?: 'complete' | 'timeout' | 'disconnect';
   mode?: 'manual' | 'auto';
+  durableChunks?: number;
+  acknowledgedChunks?: number;
+  cursorAdvanced?: boolean;
 };
 
 export type StrapAlarmState = {
@@ -220,7 +226,7 @@ export type AppState = {
   energyReserve: EnergyReserve | null; // all-day usable energy estimate
   sleepGoal: number; // target fraction of sleep need: 0.7 / 0.85 / 1.0
   // Oura-style derived insights (all HR/R-R only):
-  recoveryParts: { hrvSub: number; rhrSub: number; respSub: number | null; sleepSub: number } | null;
+  recoveryParts: { hrvSub: number; rhrSub: number; respSub: number | null; tempSub: number | null; sleepSub: number } | null;
   hrvBal: HrvBalance | null;
   illness: IllnessResult | null;
   resilience: Resilience | null;
@@ -341,7 +347,15 @@ class AppStore extends Store<AppState> {
   private historyLastActivityTs = 0;
   private historyStopQueued = false;
   private historyQueuedEndKeys = new Set<string>();
+  private historyAckedEndKeys = new Set<string>();
   private historyAckedChunks = 0;
+  private historyDurableEndChunks = 0;
+  private historyCommitError: Error | null = null;
+  private historyRunStartAckEndKey: string | null = null;
+  private historyLastAckEndKey: string | null = null;
+  private historyConnectionSessionId = -1;
+  private historyTransferId = 0;
+  private historyRetryFailures = 0;
   private historyStallRecoveries = 0;
   private historyNudgeInFlight = false;
   private historyPersisting = false;
@@ -372,12 +386,25 @@ class AppStore extends Store<AppState> {
   private connectInFlight = false;
   private connectStartedAt = 0;
   private keepAliveRetryAfterTs = 0;
+  private pendingHistoryDrainMode: 'manual' | 'auto' | null = null;
+  private pendingHistoryDrainTimer: ReturnType<typeof setTimeout> | null = null;
+  private initInFlight: Promise<void> | null = null;
 
   constructor() {
     super(initialState);
   }
 
-  async init(): Promise<void> {
+  init(): Promise<void> {
+    if (this.getState().ready) return Promise.resolve();
+    if (!this.initInFlight) {
+      this.initInFlight = this.initialise().finally(() => {
+        this.initInFlight = null;
+      });
+    }
+    return this.initInFlight;
+  }
+
+  private async initialise(): Promise<void> {
     const profile = await loadProfile();
     const goalRaw = await kvGet('sleepGoal');
     const sleepGoal = goalRaw ? Number(goalRaw) : 0.85;
@@ -408,6 +435,14 @@ class AppStore extends Store<AppState> {
       bandStepDivisor,
       strapAlarm,
     });
+    await clearUntrustedLegacyData();
+    await this.refreshBandSteps();
+    await this.refreshDerived();
+    await pruneHrSamples(addDays(Date.now(), -HR_RETENTION_DAYS));
+    this.setState({ bufferedRecords: await countHistoryRecords() });
+
+    // Create native resources only after every fallible startup read/migration
+    // succeeds. A Retry therefore cannot leak a BLE manager or app listener.
     this.ble = new WhoopBle({
       onStatus: (status, detail) => this.onStatus(status, detail),
       onDevice: (device) => this.onDevice(device),
@@ -416,11 +451,6 @@ class AppStore extends Store<AppState> {
       onHeartRate: (s) => void this.onHeartRate(s.bpm, s.rrMs),
       onRawFrame: (f) => this.onRawFrame(f),
     });
-    await clearUntrustedLegacyData();
-    await this.refreshBandSteps();
-    await this.refreshDerived();
-    await pruneHrSamples(addDays(Date.now(), -HR_RETENTION_DAYS));
-    this.setState({ bufferedRecords: await countHistoryRecords() });
 
     // Keep every metric area current without needing its screen opened: recompute
     // + persist on a steady cadence while the app is alive, and again whenever the
@@ -477,6 +507,7 @@ class AppStore extends Store<AppState> {
     if (status === 'connected') {
       void this.flushPendingStrapAlarm('connection');
       this.startConnectedAutoSync();
+      this.schedulePendingHistoryDrain();
     }
     if (status === 'disconnected' || status === 'idle') {
       this.clearCommandResponseWaiters(new Error('WHOOP disconnected while awaiting a command response'));
@@ -484,7 +515,10 @@ class AppStore extends Store<AppState> {
       this.clearAutoSyncTimer();
       this.stopConnectedAutoSync();
       this.autoSyncAttempts = 0;
-      if (this.getState().draining) this.enqueueHistoryStop('disconnect');
+      if (this.getState().draining) {
+        if (status === 'disconnected') this.pendingHistoryDrainMode = this.historyDrainMode;
+        this.enqueueHistoryStop('disconnect');
+      }
     }
     this.lastStatus = status;
   }
@@ -548,8 +582,42 @@ class AppStore extends Store<AppState> {
   private retryAutoHistoryDrain(): void {
     const deviceId = this.getState().device?.id;
     if (!deviceId) return;
+    this.historyRetryFailures += 1;
     this.autoDrainedFor = '';
-    this.scheduleAutoHistoryDrain(deviceId, AUTO_HISTORY_SYNC_RETRY_MS);
+    this.scheduleAutoHistoryDrain(deviceId, historyRetryDelayMs(this.historyRetryFailures));
+  }
+
+  private schedulePendingHistoryDrain(delayMs = 750): void {
+    if (!this.pendingHistoryDrainMode || this.pendingHistoryDrainTimer) return;
+    this.pendingHistoryDrainTimer = setTimeout(() => {
+      this.pendingHistoryDrainTimer = null;
+      const mode = this.pendingHistoryDrainMode;
+      if (!mode || this.getState().status !== 'connected') return;
+      if (this.historyDrainActive || this.getState().draining) {
+        this.schedulePendingHistoryDrain(750);
+        return;
+      }
+      this.pendingHistoryDrainMode = null;
+      void this.runHistoryDrain(mode);
+    }, delayMs);
+  }
+
+  private async reconnectForHistory(mode: 'manual' | 'auto', detail: string): Promise<void> {
+    this.historyDrainActive = false;
+    this.clearHistoryTimeout();
+    this.stopHistoryWatchdog();
+    this.pendingHistoryDrainMode = mode;
+    this.setState((state) => ({
+      draining: false,
+      status: 'disconnected',
+      statusDetail: detail,
+      error: null,
+      historySync: state.historySync
+        ? { ...state.historySync, status: 'History sync queued while the WHOOP link reconnects' }
+        : state.historySync,
+    }));
+    if (this.ble?.isConnected) await this.ble.stop().catch(() => {});
+    void this.connectAsync();
   }
 
   private clearAutoSyncTimer(): void {
@@ -665,9 +733,11 @@ class AppStore extends Store<AppState> {
 
   private async refreshBandSteps(): Promise<number | null> {
     const now = Date.now();
+    const start = startOfDayMs(now);
     const estimate = estimateBandStepsFromCounters(
-      await getStepSamplesBetween(startOfDayMs(now), now),
+      await dailyStepRows(start, now),
       this.getState().bandStepDivisor,
+      { countFromTs: start, countToTs: now },
     );
     const bandEstimate = estimate?.steps ?? null;
     const trustedSteps = bandStepsAreTrusted(estimate, this.getState().bandStepDivisor) ? bandEstimate : null;
@@ -804,6 +874,11 @@ class AppStore extends Store<AppState> {
   };
 
   disconnect = (): void => {
+    this.pendingHistoryDrainMode = null;
+    if (this.pendingHistoryDrainTimer) {
+      clearTimeout(this.pendingHistoryDrainTimer);
+      this.pendingHistoryDrainTimer = null;
+    }
     void this.ble?.stop();
     // User asked to disconnect → tear down the keep-alive service too (it only
     // exists to hold the connection open; auto-reconnect keeps it during drops).
@@ -1041,6 +1116,7 @@ class AppStore extends Store<AppState> {
   };
 
   private async onHeartRate(bpm: number, rr: number[]): Promise<void> {
+    if (!isPlausibleHeartRate(bpm)) return;
     // Live UI values.
     this.rollingRr.push(...rr);
     if (this.rollingRr.length > ROLLING_RR_WINDOW) {
@@ -1088,7 +1164,12 @@ class AppStore extends Store<AppState> {
       }
       try {
         for (const frame of asm.push(hexToBytes(f.hex))) {
-          if (frame.packetType === PacketType.COMMAND_RESPONSE) this.handleCommandResponse(frame);
+          if (
+            frame.packetType === PacketType.COMMAND_RESPONSE ||
+            frame.packetType === PacketType.PUFFIN_COMMAND_RESPONSE
+          ) {
+            this.handleCommandResponse(frame);
+          }
           const hb = decodeHeartbeatSteps(frame);
           if (hb != null) this.setState({ hbStepRaw: hb });
           // Raw accelerometer counting stays disabled. The validated source is
@@ -1176,7 +1257,7 @@ class AppStore extends Store<AppState> {
       const chunk = this.historyRecords;
       this.historyRecords = [];
       const endKey = bytesToHex(meta.endData);
-      if (this.historyQueuedEndKeys.has(endKey)) return;
+      if (!historyEndShouldQueue(endKey, this.historyQueuedEndKeys, this.historyAckedEndKeys)) return;
       this.historyQueuedEndKeys.add(endKey);
       this.enqueueHistoryChunk(chunk, meta);
     } else if (meta.kind === 'complete') {
@@ -1246,11 +1327,15 @@ class AppStore extends Store<AppState> {
 
   private enqueueHistoryPersistChunk(frames: Uint8Array[]): void {
     if (!frames.length || this.historyStopQueued) return;
+    const transferId = this.historyTransferId;
     this.historyCommitQueue = this.historyCommitQueue
       .then(async () => {
-        await this.persistHistoryFrames(frames);
+        if (transferId !== this.historyTransferId) return;
+        await this.persistHistoryFrames(frames, transferId);
       })
       .catch((e) => {
+        if (transferId !== this.historyTransferId) return;
+        this.historyCommitError = e instanceof Error ? e : new Error(String(e));
         this.clearHistoryTimeout();
         this.stopHistoryWatchdog();
         this.historyStopQueued = true;
@@ -1262,26 +1347,55 @@ class AppStore extends Store<AppState> {
 
   private enqueueHistoryChunk(frames: Uint8Array[], meta: Extract<HistoryMetadata, { kind: 'end' }>): void {
     if (this.historyStopQueued) return;
+    const transferId = this.historyTransferId;
     const endKey = bytesToHex(meta.endData);
+    const connectionSessionId = this.ble?.connectionSessionId ?? -1;
     this.historyCommitQueue = this.historyCommitQueue
       .then(async () => {
         try {
-          await this.persistHistoryFrames(frames);
+          if (transferId !== this.historyTransferId) return;
+          await this.persistHistoryFrames(frames, transferId);
+          if (transferId !== this.historyTransferId) return;
+          this.historyDurableEndChunks += 1;
           const ble = this.ble;
-          if (!ble) return;
+          if (!ble || !ble.isConnected || ble.connectionSessionId !== connectionSessionId) {
+            throw new Error('WHOOP connection changed before the durable history acknowledgement');
+          }
           const commandReady = ble.canSendCommands || (await ble.refreshCommandChannel()) === true;
-          if (commandReady) {
-            await withTimeout(ble.writeCommand(cmdHistoricalDataResult(meta.endData)), 8000, 'History acknowledgement');
-            this.historyAckedChunks += 1;
+          if (transferId !== this.historyTransferId) return;
+          if (!commandReady) throw new Error('WHOOP command channel unavailable for history acknowledgement');
+          const ack = cmdHistoricalDataResult(meta.endData);
+          const result = await this.writeCommandAwaitFinalResult(
+            ble,
+            ack,
+            Command.HISTORICAL_DATA_RESULT,
+            10_000,
+            'History acknowledgement',
+          );
+          if (transferId !== this.historyTransferId) return;
+          if (result !== 1) throw new Error(`WHOOP rejected the history acknowledgement (result ${result})`);
+          this.historyAckedChunks += 1;
+          this.historyAckedEndKeys.add(endKey);
+          this.historyLastAckEndKey = endKey;
+          const deviceId = this.getState().device?.id;
+          if (deviceId) {
+            void kvSet(historyAckCursorKey(deviceId), JSON.stringify({
+              endKey,
+              trim: meta.trim,
+              unix: meta.unix,
+              acknowledgedAt: Date.now(),
+            })).catch(() => {});
           }
         } finally {
           // Suppress duplicate END notifications only while this exact durable
           // write/ack is in flight. A later retransmit is safe to acknowledge
           // again and must not be blocked forever by a session-wide cache.
-          this.historyQueuedEndKeys.delete(endKey);
+          if (transferId === this.historyTransferId) this.historyQueuedEndKeys.delete(endKey);
         }
       })
       .catch((e) => {
+        if (transferId !== this.historyTransferId) return;
+        this.historyCommitError = e instanceof Error ? e : new Error(String(e));
         this.clearHistoryTimeout();
         this.stopHistoryWatchdog();
         this.historyStopQueued = true;
@@ -1293,26 +1407,43 @@ class AppStore extends Store<AppState> {
 
   private enqueueHistoryStop(reason: 'complete' | 'timeout' | 'disconnect'): void {
     if (this.historyStopQueued) return;
+    const transferId = this.historyTransferId;
     this.historyStopQueued = true;
     const mode = this.historyDrainMode;
     const tail = this.historyRecords;
     this.historyRecords = [];
     this.historyCommitQueue = this.historyCommitQueue
       .then(async () => {
-        if (tail.length) await this.persistHistoryFrames(tail);
-        await this.finishHistoryMode(reason);
+        if (transferId !== this.historyTransferId) return;
+        if (this.historyCommitError) throw this.historyCommitError;
+        if (tail.length) await this.persistHistoryFrames(tail, transferId);
+        if (transferId !== this.historyTransferId) return;
+        const current = this.getState().historySync;
+        const durablyComplete = historySyncIsDurablyComplete({
+          reason,
+          rawRecords: current?.rawRecords ?? 0,
+          durableEndChunks: this.historyDurableEndChunks,
+          acknowledgedEndChunks: this.historyAckedChunks,
+          failed: this.historyCommitError != null,
+        });
+        const finalReason = reason === 'complete' && !durablyComplete ? 'timeout' : reason;
+        const cursorAdvanced = historyCursorAdvanced(this.historyRunStartAckEndKey, this.historyLastAckEndKey);
+        await this.finishHistoryMode(finalReason);
         await this.backfillHistoryDays(this.historySessionStats);
         await this.backfillCardioStepsFromHistory();
-        const syncTs = Date.now();
-        await kvSet('lastSyncTs', String(syncTs));
-        const current = this.getState().historySync;
+        if (transferId !== this.historyTransferId) return;
+        const finishedTs = Date.now();
+        if (durablyComplete) await kvSet('lastSyncTs', String(finishedTs));
         const finalReport = current
           ? {
               ...current,
-              status: historyStopStatus(reason, current),
-              finishedTs: syncTs,
-              reason,
+              status: historyStopStatus(finalReason, current, cursorAdvanced),
+              finishedTs,
+              reason: finalReason,
               mode,
+              durableChunks: this.historyDurableEndChunks,
+              acknowledgedChunks: this.historyAckedChunks,
+              cursorAdvanced,
             }
           : null;
         if (finalReport) await kvSet('lastHistorySync', JSON.stringify(finalReport));
@@ -1320,7 +1451,7 @@ class AppStore extends Store<AppState> {
         this.stopHistoryWatchdog();
         this.setState({
           draining: false,
-          lastSyncTs: syncTs,
+          lastSyncTs: durablyComplete ? finishedTs : this.getState().lastSyncTs,
           historySync: finalReport,
           lastHistorySync: finalReport,
         });
@@ -1329,13 +1460,15 @@ class AppStore extends Store<AppState> {
         const stats = this.historySessionStats;
         const shouldContinueAutoDrain =
           mode === 'auto' &&
-          reason === 'complete' &&
+          finalReason === 'complete' &&
           (stats?.decodedRecords ?? 0) > 0 &&
           this.historyAckedChunks > 0 &&
+          cursorAdvanced &&
           this.autoSyncAttempts < AUTO_HISTORY_MAX_CONTINUOUS_PASSES &&
           this.getState().status === 'connected' &&
           this.getState().device != null;
-        if (reason === 'timeout') {
+        if (durablyComplete) this.historyRetryFailures = 0;
+        if (finalReason === 'timeout') {
           if (mode === 'auto') {
             this.retryAutoHistoryDrain();
           } else {
@@ -1353,11 +1486,13 @@ class AppStore extends Store<AppState> {
             this.autoDrainedFor = '';
             this.scheduleAutoHistoryDrain(deviceId, 1500);
           }
-        } else if (mode === 'auto' && reason === 'complete') {
+        } else if (mode === 'auto' && finalReason === 'complete') {
           this.autoSyncAttempts = 0;
         }
       })
       .catch((e) => {
+        if (transferId !== this.historyTransferId) return;
+        this.historyCommitError = e instanceof Error ? e : new Error(String(e));
         this.clearHistoryTimeout();
         this.stopHistoryWatchdog();
         this.historyDrainActive = false;
@@ -1366,18 +1501,22 @@ class AppStore extends Store<AppState> {
       });
   }
 
-  private async persistHistoryFrames(frames: Uint8Array[]): Promise<HistoricalDecodeResult> {
+  private async persistHistoryFrames(frames: Uint8Array[], transferId: number): Promise<HistoricalDecodeResult> {
     const rawTs = Date.now();
-    this.historyPersisting = true;
-    this.markHistoryActivity();
-    this.setState((s) => ({
-      historySync: s.historySync
-        ? { ...s.historySync, status: `Committing ${frames.length} history records` }
-        : s.historySync,
-    }));
+    const current = transferId === this.historyTransferId;
+    if (current) {
+      this.historyPersisting = true;
+      this.markHistoryActivity();
+      this.setState((s) => ({
+        historySync: s.historySync
+          ? { ...s.historySync, status: `Committing ${frames.length} history records` }
+          : s.historySync,
+      }));
+    }
     let decoded: HistoricalDecodeResult;
     try {
-      decoded = decodeWhoop5HistoryFrames(frames, undefined, { ppgContextFrames: this.historyPpgContext });
+      const ppgContextFrames = this.historyPpgContext;
+      decoded = decodeWhoop5HistoryFrames(frames, undefined, { ppgContextFrames });
       await persistHistoryBatch({
         rawTs,
         framesHex: frames.map(bytesToHex),
@@ -1387,11 +1526,17 @@ class AppStore extends Store<AppState> {
         motion: decoded.motion,
         rawVitals: decoded.rawVitals,
       });
-      this.historyPpgContext = [...this.historyPpgContext, ...frames.filter((frame) => frame[9] === 26)].slice(-16);
+      if (transferId === this.historyTransferId) {
+        this.historyPpgContext = [...ppgContextFrames, ...frames.filter((frame) => frame[9] === 26)].slice(-16);
+      }
     } finally {
-      this.historyPersisting = false;
-      this.markHistoryActivity();
+      if (transferId === this.historyTransferId) {
+        this.historyPersisting = false;
+        this.markHistoryActivity();
+      }
     }
+
+    if (transferId !== this.historyTransferId) return decoded;
 
     this.historySessionStats = mergeHistoryStats(this.historySessionStats, decoded);
     const stats = this.historySessionStats;
@@ -1453,8 +1598,12 @@ class AppStore extends Store<AppState> {
       const sod = dayStartFromKey(day);
       const existing = await getDailyMetric(day);
       if (!existing) continue;
-      const rows = await getStepSamplesBetween(sod, Math.min(sod + 24 * 60 * 60 * 1000, now));
-      const estimate = estimateBandStepsFromCounters(rows, this.getState().bandStepDivisor);
+      const end = Math.min(localDayStartOffset(sod, 1), now);
+      const rows = await dailyStepRows(sod, end);
+      const estimate = estimateBandStepsFromCounters(rows, this.getState().bandStepDivisor, {
+        countFromTs: sod,
+        countToTs: end,
+      });
       const steps = bandStepsAreTrusted(estimate, this.getState().bandStepDivisor)
         ? estimate?.steps ?? null
         : null;
@@ -1476,7 +1625,10 @@ class AppStore extends Store<AppState> {
     const strainSamples = perMin.map((p) => ({ hr: p.hr, minutes: 1 }));
     const load = edwardsTrimp(strainSamples, profile);
     const strain = strainSamples.length ? strainFromLoad(load) : null;
-    const stepEstimate = estimateBandStepsFromCounters(await getStepSamplesBetween(sod, dayEnd), this.getState().bandStepDivisor);
+    const stepEstimate = estimateBandStepsFromCounters(await dailyStepRows(sod, dayEnd), this.getState().bandStepDivisor, {
+      countFromTs: sod,
+      countToTs: dayEnd,
+    });
     const steps = bandStepsAreTrusted(stepEstimate, this.getState().bandStepDivisor) ? stepEstimate?.steps ?? null : null;
 
     const manualRaw = await kvGet(`manualSleep:${day}`);
@@ -1484,7 +1636,7 @@ class AppStore extends Store<AppState> {
     const wakeDayEnd = localDayStartOffset(sod, 1);
     const winStart = manual ? manual.startTs : localDayHour(sod, -1, 10);
     const winEnd = manual ? manual.endTs : Math.min(localDayHour(sod, 1, 2), now);
-    const nightHr = await getHrSamplesBetween(winStart, winEnd);
+    const nightHr = sleepDetectionHrSamples(await getHrSamplesBetween(winStart, winEnd));
     const nightPerMin = perMinuteHr(nightHr);
     const sleepInput = await buildSleepInput(nightPerMin, winStart, winEnd, nightHr);
     let candidateSleep = manual
@@ -1576,14 +1728,17 @@ class AppStore extends Store<AppState> {
     const rmssdSamples = toDayValues((d) => d.rmssd);
     const rhrSamples = toDayValues((d) => d.rhr);
     const respSamples = toDayValues((d) => d.resp);
+    const skinTempSamples = toDayValues((d) => d.skinTempC);
     const rawRecovery = recoveryEstimate({
       rmssd,
       rhr,
       resp,
+      skinTempC,
       sleepPerformance: sleepPerformanceResult ? sleepPerformanceResult.score / 100 : (sleep?.performance ?? null),
       rmssdSamples,
       rhrSamples,
       respSamples,
+      skinTempSamples,
     }).score;
     const recovery = applyRecoveryConfidenceCap(rawRecovery, sleepDetail);
 
@@ -1749,7 +1904,7 @@ class AppStore extends Store<AppState> {
 
   private async finishHistoryMode(reason: 'complete' | 'timeout' | 'disconnect'): Promise<void> {
     const ble = this.ble;
-    if (!ble?.isConnected) return;
+    if (!ble?.isConnected || ble.connectionSessionId !== this.historyConnectionSessionId) return;
     const ready = ble.canSendCommands || (await ble.refreshCommandChannel()) === true;
     if (!ready) return;
     if (reason !== 'complete') {
@@ -1776,6 +1931,7 @@ class AppStore extends Store<AppState> {
    */
   runHistoryDrain = async (mode: 'manual' | 'auto' = 'manual'): Promise<void> => {
     if (this.historyDrainActive || this.getState().draining) return;
+    this.historyTransferId += 1;
     this.historyDrainActive = true;
     this.clearAutoSyncTimer();
     this.clearHistoryTimeout();
@@ -1785,7 +1941,13 @@ class AppStore extends Store<AppState> {
     this.historySessionStats = null;
     this.historyStopQueued = false;
     this.historyQueuedEndKeys.clear();
+    this.historyAckedEndKeys.clear();
     this.historyAckedChunks = 0;
+    this.historyDurableEndChunks = 0;
+    this.historyCommitError = null;
+    this.historyRunStartAckEndKey = null;
+    this.historyLastAckEndKey = null;
+    this.historyConnectionSessionId = -1;
     this.historyStallRecoveries = 0;
     this.historyNudgeInFlight = false;
     this.historyPersisting = false;
@@ -1795,14 +1957,18 @@ class AppStore extends Store<AppState> {
     this.setState({ draining: true, error: null });
     const ble = this.ble;
     if (!ble || !ble.isConnected) {
-      this.historyDrainActive = false;
-      this.setState({ draining: false, error: 'History drain needs an active WHOOP Bluetooth connection.' });
-      this.connect();
+      await this.reconnectForHistory(mode, 'Bluetooth link dropped; reconnecting before history sync');
       return;
     }
+    this.historyConnectionSessionId = ble.connectionSessionId;
+    this.historyRunStartAckEndKey = await loadHistoryAckEndKey(this.getState().device?.id ?? null).catch(() => null);
     if (!ble.canSendCommands) {
       const commandReady = await ble.refreshCommandChannel().catch(() => false);
-      if (!this.historyDrainActive || this.historyStopQueued || !ble.isConnected) return;
+      if (!this.historyDrainActive || this.historyStopQueued) return;
+      if (!ble.isConnected) {
+        await this.reconnectForHistory(mode, 'Bluetooth link changed during command discovery; reconnecting');
+        return;
+      }
       if (commandReady) {
         await this.flushPendingStrapAlarm(`${mode} sync`);
         this.setState((s) => ({
@@ -1811,11 +1977,7 @@ class AppStore extends Store<AppState> {
             : s.historySync,
         }));
       } else {
-        this.historyDrainActive = false;
-        this.setState({
-          draining: false,
-          error: 'History drain needs the WHOOP command channel (fd4b0002), not found on this device/firmware.',
-        });
+        await this.reconnectForHistory(mode, 'WHOOP command channel went stale; reconnecting before history sync');
         return;
       }
     }
@@ -2314,7 +2476,7 @@ class AppStore extends Store<AppState> {
     const wakeDayEnd = localDayStartOffset(sod, 1);
     const winStart = manual ? manual.startTs : localDayHour(sod, -1, 10);
     const winEnd = manual ? manual.endTs : Math.min(localDayHour(sod, 1, 2), now);
-    const nightHr = await getHrSamplesBetween(winStart, winEnd);
+    const nightHr = sleepDetectionHrSamples(await getHrSamplesBetween(winStart, winEnd));
     const nightPerMin = perMinuteHr(nightHr);
     const captureWindowMin = Math.max(1, Math.round((winEnd - winStart) / 60000));
     const sleepInput = await buildSleepInput(nightPerMin, winStart, winEnd, nightHr);
@@ -2462,13 +2624,16 @@ class AppStore extends Store<AppState> {
     const rmssdSamples = toDayValues((d) => d.rmssd);
     const rhrSamples = toDayValues((d) => d.rhr);
     const respSamples = toDayValues((d) => d.resp);
+    const skinTempSamples = toDayValues((d) => d.skinTempC);
 
     const rmssdBaseline = emaBaseline(rmssdSamples) ?? null;
     const rhrBaseline = emaBaseline(rhrSamples) ?? null;
     const respBaseline = emaBaseline(respSamples);
+    const skinTempBaseline = emaBaseline(skinTempSamples);
     const rmssdSd = stdev(rmssdSamples.map((s) => s.value)) || 1;
     const rhrSd = stdev(rhrSamples.map((s) => s.value)) || 1;
     const respSd = stdev(respSamples.map((s) => s.value)) || 1;
+    const skinTempSd = Math.max(0.2, stdev(skinTempSamples.map((s) => s.value)) || 0);
 
     let recovery: number | null = null;
     let recoveryParts: AppState['recoveryParts'] = null;
@@ -2476,10 +2641,12 @@ class AppStore extends Store<AppState> {
       rmssd,
       rhr,
       resp,
+      skinTempC,
       sleepPerformance: sleepPerformanceResult ? sleepPerformanceResult.score / 100 : (sleep?.performance ?? null),
       rmssdSamples,
       rhrSamples,
       respSamples,
+      skinTempSamples,
     });
     recovery = applyRecoveryConfidenceCap(recoveryResult.score, sleepDetail);
     recoveryParts = recoveryResult.parts;
@@ -2490,6 +2657,7 @@ class AppStore extends Store<AppState> {
       rhr: { value: rhr, baseline: rhrBaseline, sd: rhrSd },
       hrv: { value: rmssd, baseline: rmssdBaseline, sd: rmssdSd },
       respiratory: { value: resp, baseline: respBaseline, sd: respSd },
+      skinTemperature: { value: skinTempC, baseline: skinTempBaseline, sd: skinTempSd },
     });
     const recoveryHistory = [...recent].reverse().map((d) => d.recovery).filter((v): v is number => v != null);
     if (recovery != null) recoveryHistory.push(recovery);
@@ -2722,6 +2890,7 @@ class AppStore extends Store<AppState> {
 function perMinuteHr(samples: { ts: number; bpm: number }[]): { tsMs: number; hr: number }[] {
   const buckets = new Map<number, { sum: number; n: number }>();
   for (const s of samples) {
+    if (!isPlausibleHeartRate(s.bpm) || !Number.isFinite(s.ts) || s.ts <= 0) continue;
     const minute = Math.floor(s.ts / 60000);
     const b = buckets.get(minute) ?? { sum: 0, n: 0 };
     b.sum += s.bpm;
@@ -2731,6 +2900,19 @@ function perMinuteHr(samples: { ts: number; bpm: number }[]): { tsMs: number; hr
   return [...buckets.entries()]
     .sort((a, b) => a[0] - b[0])
     .map(([minute, b]) => ({ tsMs: minute * 60000, hr: b.sum / b.n }));
+}
+
+/** Sleep scoring uses direct firmware/GATT HR, never autocorrelation-estimated PPG HR. */
+function sleepDetectionHrSamples(samples: HrSampleRow[]): HrSampleRow[] {
+  return samples.filter(isDirectSleepHeartRateSample);
+}
+
+async function dailyStepRows(startTs: number, endTs: number): Promise<import('../db/database').StepSampleRow[]> {
+  const [previous, rows] = await Promise.all([
+    getStepSampleBefore(startTs),
+    getStepSamplesBetween(startTs, endTs),
+  ]);
+  return previous ? [previous, ...rows] : rows;
 }
 
 async function strainBetween(fromTs: number, toTs: number, profile: UserProfile): Promise<number | null> {
@@ -2928,7 +3110,9 @@ type OvernightVitals = {
 function averageRawVitals(rows: RawVitalSampleRow[]): { spo2: number | null; skinTempC: number | null } {
   const MIN_RAW_VITAL_SAMPLES = 6;
   const spo2 = rows.map((r) => r.spo2).filter((v): v is number => v != null && v >= 70 && v <= 100);
-  const skin = rows.map((r) => r.skinTempC).filter((v): v is number => v != null && v >= 15 && v <= 45);
+  // The v18 register remains populated off wrist (captures include room-like
+  // values near 22 C). Only the worn-skin band may feed overnight recovery.
+  const skin = rows.map((r) => r.skinTempC).filter((v): v is number => v != null && v >= 28 && v <= 40);
   const robustAverage = (values: number[], decimals = 0): number | null => {
     if (values.length < MIN_RAW_VITAL_SAMPLES) return null;
     const sorted = values.slice().sort((a, b) => a - b);
@@ -3508,20 +3692,26 @@ function recoveryEstimate(input: {
   rmssd: number | null;
   rhr: number | null;
   resp: number | null;
+  skinTempC: number | null;
   sleepPerformance: number | null;
   rmssdSamples: Array<{ day: number; value: number }>;
   rhrSamples: Array<{ day: number; value: number }>;
   respSamples: Array<{ day: number; value: number }>;
+  skinTempSamples: Array<{ day: number; value: number }>;
 }): { score: number | null; parts: AppState['recoveryParts'] } {
-  const { rmssd, rhr, resp, sleepPerformance, rmssdSamples, rhrSamples, respSamples } = input;
-  if (rmssd == null || rhr == null) return { score: null, parts: null };
+  const { rmssd, rhr, resp, skinTempC, sleepPerformance, rmssdSamples, rhrSamples, respSamples, skinTempSamples } = input;
+  if (rmssd == null || rhr == null || !Number.isFinite(rmssd) || !Number.isFinite(rhr)) {
+    return { score: null, parts: null };
+  }
 
   const rmssdBaseline = emaBaseline(rmssdSamples) ?? null;
   const rhrBaseline = emaBaseline(rhrSamples) ?? null;
   const respBaseline = emaBaseline(respSamples);
+  const skinTempBaseline = skinTempSamples.length >= MIN_RECOVERY_BASELINE_NIGHTS ? emaBaseline(skinTempSamples) : null;
   const rmssdSd = Math.max(MIN_RMSSD_BASELINE_SD_MS, stdev(rmssdSamples.map((s) => s.value)) || 0);
   const rhrSd = Math.max(MIN_RHR_BASELINE_SD_BPM, stdev(rhrSamples.map((s) => s.value)) || 0);
   const respSd = Math.max(MIN_RESP_BASELINE_SD_RPM, stdev(respSamples.map((s) => s.value)) || 0);
+  const skinTempSd = Math.max(0.2, stdev(skinTempSamples.map((s) => s.value)) || 0);
 
   if (rmssdSamples.length >= MIN_RECOVERY_BASELINE_NIGHTS && rhrSamples.length >= MIN_RECOVERY_BASELINE_NIGHTS) {
     const r = computeRecovery({
@@ -3534,8 +3724,12 @@ function recoveryEstimate(input: {
       respiratoryRate: resp,
       respiratoryBaseline: respBaseline,
       respiratorySd: respSd,
+      skinTemperature: skinTempC,
+      skinTemperatureBaseline: skinTempBaseline,
+      skinTemperatureSd: skinTempBaseline == null ? null : skinTempSd,
       sleepPerformance,
     });
+    if (!r) return { score: null, parts: null };
     // Ease a newly learned baseline in over two weeks. A handful of nights can
     // establish direction, but should not push recovery to a dramatic extreme.
     const calibration = Math.min(1, Math.min(rmssdSamples.length, rhrSamples.length) / FULL_RECOVERY_BASELINE_NIGHTS);
@@ -3547,6 +3741,7 @@ function recoveryEstimate(input: {
         hrvSub: shrink(r.hrvSub) as number,
         rhrSub: shrink(r.rhrSub) as number,
         respSub: shrink(r.respSub),
+        tempSub: shrink(r.tempSub),
         sleepSub: shrink(r.sleepSub) as number,
       },
     };
@@ -3684,12 +3879,30 @@ function isHistoryDrainFrame(packetType: number): boolean {
   );
 }
 
+function historyAckCursorKey(deviceId: string): string {
+  return `historyAckCursor:${deviceId}`;
+}
+
+async function loadHistoryAckEndKey(deviceId: string | null): Promise<string | null> {
+  if (!deviceId) return null;
+  const raw = await kvGet(historyAckCursorKey(deviceId));
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as { endKey?: unknown };
+    return typeof parsed.endKey === 'string' && /^[0-9a-f]+$/i.test(parsed.endKey) ? parsed.endKey : null;
+  } catch {
+    return null;
+  }
+}
+
 function historyStopStatus(
   reason: 'complete' | 'timeout' | 'disconnect',
   sync: NonNullable<AppState['historySync']>,
+  cursorAdvanced = false,
 ): string {
   const summary = `${sync.hrSamples} HR, ${sync.motionSamples} IMU, ${sync.stepSamples} step rows from ${sync.rawRecords} records`;
   if (reason === 'complete') {
+    if (sync.rawRecords > 0 && !cursorAdvanced) return `Complete: replay acknowledged; ${summary}`;
     return sync.rawRecords > 0 ? `Complete: ${summary}` : 'Complete: no stored history returned';
   }
   if (reason === 'disconnect') {
@@ -3725,6 +3938,9 @@ function parseHistorySyncReport(raw: string | null): HistorySyncReport | null {
       finishedTs: typeof r.finishedTs === 'number' ? r.finishedTs : undefined,
       reason: r.reason,
       mode: r.mode,
+      durableChunks: r.durableChunks == null ? undefined : safeInt(r.durableChunks),
+      acknowledgedChunks: r.acknowledgedChunks == null ? undefined : safeInt(r.acknowledgedChunks),
+      cursorAdvanced: typeof r.cursorAdvanced === 'boolean' ? r.cursorAdvanced : undefined,
     };
   } catch {
     return null;

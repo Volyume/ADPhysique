@@ -17,6 +17,8 @@
  *   then: zero or more RR intervals (uint16 LE each, units of 1/1024 s)
  */
 
+import { cleanRrIntervals, isPlausibleHeartRate } from '../metrics/dataQuality';
+
 export type HeartRateSample = {
   /** Beats per minute. */
   bpm: number;
@@ -61,9 +63,10 @@ export function decodeHeartRate(bytes: Uint8Array): HeartRateSample | null {
     }
   }
 
+  if (!isPlausibleHeartRate(bpm)) return null;
   return {
     bpm,
-    rrMs,
+    rrMs: cleanRrIntervals(rrMs),
     contact: contactSupported ? contactDetected : null,
   };
 }

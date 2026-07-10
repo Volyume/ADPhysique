@@ -33,6 +33,7 @@ let startPromise: Promise<boolean> | null = null;
 let stopPromise: Promise<void> | null = null;
 
 export async function startKeepAlive(): Promise<boolean> {
+  if (Platform.OS !== 'android') return true;
   if (stopPromise) {
     await stopPromise;
     return startKeepAlive();
@@ -92,6 +93,10 @@ async function requestNotificationPermission(): Promise<void> {
 }
 
 export async function stopKeepAlive(): Promise<void> {
+  if (Platform.OS !== 'android') {
+    running = false;
+    return;
+  }
   if (stopPromise) return stopPromise;
 
   running = false;

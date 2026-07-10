@@ -29,6 +29,12 @@ export const LEGACY_WHOOP5_STEP_TICKS_PER_STEP = 8;
 export const MIN_STEP_TICKS_PER_STEP = 0.5;
 export const MAX_STEP_TICKS_PER_STEP = 30;
 
+export type BandStepEstimateOptions = {
+  /** Count a delta only when its endpoint is inside this half-open range. */
+  countFromTs?: number;
+  countToTs?: number;
+};
+
 const MAX_INTERVAL_MS = 15 * 60 * 1000;
 const MAX_RAW_DELTA = 512;
 // WHOOP history batches counter increments; the July capture has legitimate
@@ -39,6 +45,7 @@ const MAX_STEPS_PER_SECOND = 8;
 export function estimateBandStepsFromCounters(
   rows: BandStepCounterRow[],
   calibrationDivisor = WHOOP5_STEP_TICKS_PER_STEP,
+  options: BandStepEstimateOptions = {},
 ): BandStepEstimate | null {
   if (rows.length < 2 || calibrationDivisor <= 0) return null;
   const sorted = rows.slice().sort((a, b) => a.ts - b.ts);
@@ -56,6 +63,8 @@ export function estimateBandStepsFromCounters(
     const prev = sorted[i - 1];
     const cur = sorted[i];
     if (!prev || !cur) continue;
+    if (options.countFromTs != null && cur.ts < options.countFromTs) continue;
+    if (options.countToTs != null && cur.ts >= options.countToTs) continue;
 
     const dtMs = cur.ts - prev.ts;
     if (!Number.isFinite(dtMs) || dtMs <= 0 || dtMs > MAX_INTERVAL_MS) {
@@ -93,10 +102,11 @@ export function estimateBandStepsFromCounters(
 
   if (usedIntervals <= 0) return null;
   const movementLinkedPct = Math.round((activeRawTicks / Math.max(1, rawTicks)) * 100);
+  const spanMs = Math.max(0, lastTs - firstTs);
   const confidence =
-    activeIntervals >= 5 && usedIntervals >= 20 && resetCount <= 1 && movementLinkedPct >= 55
+    activeIntervals >= 5 && usedIntervals >= 20 && resetCount === 0 && movementLinkedPct >= 55
       ? 'high'
-      : activeIntervals >= 1 && usedIntervals >= 2 && movementLinkedPct >= 40
+      : activeIntervals >= 3 && usedIntervals >= 5 && resetCount === 0 && movementLinkedPct >= 55 && spanMs >= 5 * 60 * 1000
         ? 'medium'
         : 'low';
   return {
@@ -119,7 +129,7 @@ export function estimateBandStepsFromCounters(
 
 /** Only publish counters corroborated by the WHOOP's own movement class. */
 export function bandStepEstimateIsTrusted(estimate: BandStepEstimate | null | undefined): boolean {
-  return !!estimate && estimate.steps > 0 && estimate.usedIntervals >= 2 && estimate.movementLinkedPct >= 40 && estimate.confidence !== 'low';
+  return !!estimate && estimate.steps > 0 && estimate.resetCount === 0 && estimate.confidence !== 'low';
 }
 
 export function estimateStepsFromBandCounters(

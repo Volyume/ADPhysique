@@ -28,11 +28,14 @@ import {
   BATTERY_SERVICE,
   HEART_RATE_MEASUREMENT,
   HEART_RATE_SERVICE,
+  WHOOP4_DATA_NOTIFY,
   WHOOP4_CMD_WRITE,
   WHOOP4_SERVICE,
+  WHOOP5_DATA_NOTIFY,
   WHOOP5_CMD_WRITE,
   WHOOP5_SERVICE,
   WHOOP_CHAR_PREFIX,
+  WHOOP_CHAR_PREFIX_4,
   WHOOP_CMD_WRITE_PREFIX,
   WHOOP_CMD_WRITE_PREFIX_4,
   WHOOP_NAME_PREFIX,
@@ -98,6 +101,7 @@ export class WhoopBle {
   private writeService: string | null = null;
   private writeChar: string | null = null;
   private keepalive: ReturnType<typeof setInterval> | null = null;
+  private keepaliveWriteInFlight = false;
   private reArm: ReturnType<typeof setInterval> | null = null;
   private wantConnected = false; // user wants a connection → auto-reconnect on drop
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -351,7 +355,15 @@ export class WhoopBle {
 
     let connected: Device | null = null;
     try {
-      connected = await withTimeout(connect(), timeoutMs, timeoutLabel);
+      const nativeConnect = connect();
+      void nativeConnect
+        .then((lateDevice) => {
+          if (!this.isAttemptCurrent(lifecycle, generation)) {
+            return lateDevice.cancelConnection().catch(() => {});
+          }
+        })
+        .catch(() => {});
+      connected = await withTimeout(nativeConnect, timeoutMs, timeoutLabel);
       if (!this.isAttemptCurrent(lifecycle, generation)) {
         await connected.cancelConnection().catch(() => {});
         return false;
@@ -557,11 +569,12 @@ export class WhoopBle {
     if (!this.isDeviceGenerationCurrent(device, generation) || !this.canSendCommands) return;
     this.clearKeepalive();
     void this.runGentleHandshake(device, generation);
-    // LINK_VALID keepalive every 2s — the strap drops the link without it
-    // (whoop-vault LINK_VALID_INTERVAL_S = 2.0).
+    // The hardware-validated r52 cadence is 2 seconds. The in-flight guard
+    // prevents a slow Android write from building a keepalive backlog.
     let failures = 0;
     this.keepalive = setInterval(() => {
-      if (!this.isDeviceGenerationCurrent(device, generation)) return;
+      if (!this.isDeviceGenerationCurrent(device, generation) || this.keepaliveWriteInFlight) return;
+      this.keepaliveWriteInFlight = true;
       this.writeCommand(cmdLinkValid())
         .then(() => {
           failures = 0;
@@ -570,8 +583,11 @@ export class WhoopBle {
           if (!this.isDeviceGenerationCurrent(device, generation)) return;
           failures += 1;
           if (failures >= 3) this.recoverStaleLink('Link validation failed - reconnecting...');
+        })
+        .finally(() => {
+          this.keepaliveWriteInFlight = false;
         });
-    }, 2000);
+    }, 2_000);
   }
 
   private async runGentleHandshake(device: Device, generation: number): Promise<void> {
@@ -613,6 +629,7 @@ export class WhoopBle {
       clearInterval(this.keepalive);
       this.keepalive = null;
     }
+    this.keepaliveWriteInFlight = false;
     if (this.reArm) {
       clearInterval(this.reArm);
       this.reArm = null;
@@ -634,6 +651,7 @@ export class WhoopBle {
     const services = await device.services();
     if (!this.isDeviceGenerationCurrent(device, generation)) return;
     const discovered: DiscoveredChar[] = [];
+    const rawSubscriptions = new Set<string>();
 
     for (const service of services) {
       const chars = await service.characteristics();
@@ -662,8 +680,9 @@ export class WhoopBle {
     // 3) Proprietary fd4b notify characteristics -> capture raw frames.
     for (const dc of discovered) {
       const lc = dc.characteristic.toLowerCase();
-      if (dc.notifiable && lc.startsWith(WHOOP_CHAR_PREFIX)) {
+      if (dc.notifiable && (lc.startsWith(WHOOP_CHAR_PREFIX) || lc.startsWith(WHOOP_CHAR_PREFIX_4))) {
         const label = lc.slice(0, 8);
+        rawSubscriptions.add(`${dc.service.toLowerCase()}|${lc}`);
         this.trySubscribe(
           device,
           dc.service,
@@ -682,6 +701,31 @@ export class WhoopBle {
         this.writeService = dc.service;
         this.writeChar = dc.characteristic;
       }
+    }
+
+    // Android may omit cached notification properties even though the known
+    // WHOOP data characteristic remains monitorable.
+    for (const service of services) {
+      const serviceUuid = service.uuid.toLowerCase();
+      const dataChar =
+        serviceUuid === WHOOP5_SERVICE
+          ? WHOOP5_DATA_NOTIFY
+          : serviceUuid === WHOOP4_SERVICE
+            ? WHOOP4_DATA_NOTIFY
+            : null;
+      if (!dataChar) continue;
+      const key = `${serviceUuid}|${dataChar}`;
+      if (rawSubscriptions.has(key)) continue;
+      const label = dataChar.slice(0, 8);
+      this.trySubscribe(
+        device,
+        service.uuid,
+        dataChar,
+        (bytes) => this.events.onRawFrame?.({ ts: Date.now(), source: label, hex: bytesToHex(bytes) }),
+        generation,
+        true,
+      );
+      rawSubscriptions.add(key);
     }
   }
 
@@ -715,6 +759,10 @@ export class WhoopBle {
   /** True if the proprietary command-write characteristic was found. */
   get canSendCommands(): boolean {
     return this.device !== null && this.writeChar !== null && this.writeService !== null;
+  }
+
+  get connectionSessionId(): number {
+    return this.connectionGeneration;
   }
 
   /** Write a framed Maverick command to fd4b0002. */

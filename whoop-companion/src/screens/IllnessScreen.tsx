@@ -20,6 +20,7 @@ function levelLabel(level: IllnessResult['level']): string {
 export function IllnessScreen({ nav }: { nav: Nav }) {
   const illness = useStoreSelector(appStore, (s) => s.illness);
   const tint = illnessTint(illness?.level);
+  const hasTemperature = illness?.signals.some((signal) => signal.metric === 'skin_temp') ?? false;
 
   return (
     <Screen title="Sick-Risk Monitor" onBack={nav.back} tint={tint}>
@@ -58,14 +59,15 @@ export function IllnessScreen({ nav }: { nav: Nav }) {
       <SectionLabel>How it works</SectionLabel>
       <Card>
         <Text style={styles.blurb}>
-          This early-warning flag watches three overnight signals against your personal baseline: a
-          rising resting heart rate, falling HRV, and a rising respiratory rate. A coordinated adverse
+          This early-warning flag watches {hasTemperature ? 'four' : 'three'} overnight signals against your personal baseline: a
+          rising resting heart rate, falling HRV, a rising respiratory rate{hasTemperature ? ', and skin-temperature deviation' : ''}. A coordinated adverse
           move across them often precedes feeling unwell — sometimes a day before symptoms.
         </Text>
         <Text style={styles.note}>
-          Note: Oura’s strongest illness signal is body temperature, which can’t be read over WHOOP
-          Bluetooth — so this is honestly lower-sensitivity than a temperature-based version. It is a
-          wellness indicator, not a medical diagnosis.
+          {hasTemperature
+            ? 'Skin temperature is included because this synced firmware history exposed a validated worn-skin channel.'
+            : 'Skin temperature is unavailable in this synced firmware history, so sensitivity is lower than a temperature-backed result.'}{' '}
+          This is a wellness indicator, not a medical diagnosis.
         </Text>
       </Card>
     </Screen>

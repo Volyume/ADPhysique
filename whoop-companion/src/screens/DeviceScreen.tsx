@@ -398,6 +398,12 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           Background guard: {keepAlive ? (keepAliveRunning ? 'running' : 'needs permission') : 'off'}
         </Text>
         <Text style={styles.diagText}>Sync finish: {effectiveSync?.reason ?? 'none yet'}</Text>
+        <Text style={styles.diagText}>
+          Durable chunks: {effectiveSync?.durableChunks ?? '-'} committed / {effectiveSync?.acknowledgedChunks ?? '-'} strap-acknowledged
+        </Text>
+        <Text style={styles.diagText}>
+          Cursor progress: {effectiveSync?.cursorAdvanced == null ? '-' : effectiveSync.cursorAdvanced ? 'new endpoint' : 'replay/no new endpoint'}
+        </Text>
         <Text style={styles.diagText}>Decoded range: {historyRangeText}</Text>
         <Text style={styles.diagText}>Decoded records: {effectiveSync?.decodedRecords ?? 0}</Text>
         <Text style={styles.diagText}>HR samples backfilled: {effectiveSync?.hrSamples ?? 0}</Text>

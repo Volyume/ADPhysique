@@ -2,11 +2,12 @@
  * Daily recovery score (0–100), WHOOP-style, from published inputs:
  *   - HRV (RMSSD) today vs personal baseline — dominant signal
  *   - Resting HR today vs personal baseline — lower is better
- *   - Respiratory rate today vs personal baseline (when available)
+ *   - Respiratory rate stability vs personal baseline (when available)
+ *   - Skin-temperature stability vs personal baseline (when available)
  *   - Sleep performance (achieved / needed)
  *
  * WHOOP's exact weighting is proprietary; this uses a transparent weighted blend
- * (HRV-led, with RHR, respiratory and sleep as supporting inputs). Output is a
+ * (HRV-led, with RHR, respiration, skin temperature and sleep as supporting inputs). Output is a
  * labelled approximation.
  *
  * Baselines are EMA values (see ema.ts); the SD of recent readings turns a raw
@@ -23,6 +24,9 @@ export type RecoveryInputs = {
   respiratoryRate?: number | null;
   respiratoryBaseline?: number | null;
   respiratorySd?: number | null;
+  skinTemperature?: number | null;
+  skinTemperatureBaseline?: number | null;
+  skinTemperatureSd?: number | null;
   sleepPerformance: number | null; // 0..1 (achieved/needed), or null if unknown
 };
 
@@ -32,6 +36,7 @@ export type RecoveryResult = {
   hrvSub: number;
   rhrSub: number;
   respSub: number | null;
+  tempSub: number | null;
   sleepSub: number;
 };
 
@@ -41,7 +46,23 @@ function zToScore(z: number, gain = 1.1): number {
   return s;
 }
 
-export function computeRecovery(inp: RecoveryInputs): RecoveryResult {
+export function computeRecovery(inp: RecoveryInputs): RecoveryResult | null {
+  if (
+    !Number.isFinite(inp.rmssd) ||
+    !Number.isFinite(inp.rmssdBaseline) ||
+    !Number.isFinite(inp.rmssdSd) ||
+    !Number.isFinite(inp.restingHr) ||
+    !Number.isFinite(inp.rhrBaseline) ||
+    !Number.isFinite(inp.rhrSd) ||
+    inp.rmssd <= 0 ||
+    inp.rmssdBaseline <= 0 ||
+    inp.rmssdSd <= 0 ||
+    inp.restingHr <= 0 ||
+    inp.rhrBaseline <= 0 ||
+    inp.rhrSd <= 0
+  ) {
+    return null;
+  }
   // HRV: higher than baseline -> better.
   const hrvZ = inp.rmssdSd > 0 ? (inp.rmssd - inp.rmssdBaseline) / inp.rmssdSd : 0;
   const hrvSub = zToScore(hrvZ);
@@ -60,18 +81,42 @@ export function computeRecovery(inp: RecoveryInputs): RecoveryResult {
     Number.isFinite(inp.respiratoryBaseline);
   const respSd = inp.respiratorySd && inp.respiratorySd > 0 ? inp.respiratorySd : 1;
   const respSub = hasResp
-    ? zToScore(((inp.respiratoryBaseline as number) - (inp.respiratoryRate as number)) / respSd, 0.9)
+    ? zToScore(-Math.abs(((inp.respiratoryRate as number) - (inp.respiratoryBaseline as number)) / respSd), 0.9)
     : null;
 
-  const score = hasResp
-    ? clamp(0.45 * hrvSub + 0.25 * rhrSub + 0.1 * (respSub as number) + 0.2 * sleepSub, 1, 99)
-    : clamp(0.5 * hrvSub + 0.25 * rhrSub + 0.25 * sleepSub, 1, 99);
+  const hasTemp =
+    inp.skinTemperature != null &&
+    inp.skinTemperatureBaseline != null &&
+    inp.skinTemperatureSd != null &&
+    Number.isFinite(inp.skinTemperature) &&
+    Number.isFinite(inp.skinTemperatureBaseline) &&
+    Number.isFinite(inp.skinTemperatureSd) &&
+    inp.skinTemperatureSd > 0;
+  const tempSub = hasTemp
+    ? zToScore(
+        -Math.abs(
+          ((inp.skinTemperature as number) - (inp.skinTemperatureBaseline as number)) /
+            (inp.skinTemperatureSd as number),
+        ),
+      )
+    : null;
+
+  const terms: Array<[number, number]> = [
+    [0.4, hrvSub],
+    [0.25, rhrSub],
+    [0.15, sleepSub],
+  ];
+  if (respSub != null) terms.push([0.1, respSub]);
+  if (tempSub != null) terms.push([0.1, tempSub]);
+  const weight = terms.reduce((sum, [termWeight]) => sum + termWeight, 0);
+  const score = clamp(terms.reduce((sum, [termWeight, value]) => sum + termWeight * value, 0) / weight, 1, 99);
   return {
     score: Math.round(score),
     band: score >= 67 ? 'green' : score >= 34 ? 'yellow' : 'red',
     hrvSub: Math.round(hrvSub),
     rhrSub: Math.round(rhrSub),
     respSub: respSub == null ? null : Math.round(respSub),
+    tempSub: tempSub == null ? null : Math.round(tempSub),
     sleepSub: Math.round(sleepSub),
   };
 }

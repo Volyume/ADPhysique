@@ -59,4 +59,39 @@ const dailyRows = [
 const workoutEstimate = estimateBandStepsFromCounters(dailyRows.filter((row) => row.ts >= 10_000), 1);
 assert(workoutEstimate?.steps === 100, 'isolates workout steps from the daily total');
 
+const midnightRange = estimateBandStepsFromCounters(
+  [
+    { ts: 59_000, counter: 100, activityClass: 1 },
+    { ts: 61_000, counter: 112, activityClass: 1 },
+    { ts: 62_000, counter: 120, activityClass: 1 },
+  ],
+  1,
+  { countFromTs: 60_000, countToTs: 120_000 },
+);
+assert(midnightRange?.steps === 20, 'counts the first post-midnight delta from its predecessor');
+
+const sparse = estimateBandStepsFromCounters(
+  [
+    { ts: 0, counter: 0, activityClass: 1 },
+    { ts: 1000, counter: 4, activityClass: 1 },
+    { ts: 2000, counter: 8, activityClass: 1 },
+  ],
+  1,
+);
+assert(sparse?.confidence === 'low' && !bandStepEstimateIsTrusted(sparse), 'does not publish two-interval step guesses');
+
+const reset = estimateBandStepsFromCounters(
+  [
+    { ts: 0, counter: 100, activityClass: 1 },
+    { ts: 60_000, counter: 110, activityClass: 1 },
+    { ts: 120_000, counter: 5, activityClass: 1 },
+    { ts: 180_000, counter: 15, activityClass: 1 },
+    { ts: 240_000, counter: 25, activityClass: 1 },
+    { ts: 300_000, counter: 35, activityClass: 1 },
+    { ts: 360_000, counter: 45, activityClass: 1 },
+  ],
+  1,
+);
+assert(reset?.resetCount === 1 && !bandStepEstimateIsTrusted(reset), 'counter resets prevent publication');
+
 console.log('band step regression tests passed');

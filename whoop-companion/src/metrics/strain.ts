@@ -95,7 +95,7 @@ export function strainFromLoad(load: number): number {
 
 export type HrZone = { zone: number; label: string; range: string; minutes: number };
 
-// WHOOP heart-rate zones are bands of % MAX HR (not heart-rate reserve):
+// Current WHOOP zones use heart-rate reserve (HRR), accounting for resting and maximum HR.
 // Zone 0 <50%, 1 50–60%, 2 60–70%, 3 70–80%, 4 80–90%, 5 90–100%.
 const ZONE_MAX_EDGES = [0.5, 0.6, 0.7, 0.8, 0.9];
 const ZONE_LABELS = ['Zone 0', 'Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5'];
@@ -106,10 +106,9 @@ export function hrZones(
   samples: Array<{ hr: number; minutes: number }>,
   profile: UserProfile,
 ): HrZone[] {
-  const max = hrMaxFor(profile);
   const minutes = [0, 0, 0, 0, 0, 0];
   for (const s of samples) {
-    const frac = max > 0 ? s.hr / max : 0;
+    const frac = hrReserveFraction(s.hr, profile);
     let z = 0;
     for (let i = 0; i < ZONE_MAX_EDGES.length; i += 1) {
       if (frac >= (ZONE_MAX_EDGES[i] as number)) z = i + 1;

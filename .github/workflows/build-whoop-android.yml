@@ -63,6 +63,7 @@ jobs:
           npm run test:band-steps
           npm run test:sleep
           npm run test:sleep-schedule
+          npm run test:weekly-plan
           npm run test:physiology
 
       - name: Expo prebuild (generate android/)

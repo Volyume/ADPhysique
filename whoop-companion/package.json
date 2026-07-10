@@ -14,6 +14,7 @@
     "test:band-steps": "node scripts/test-band-steps.cjs",
     "test:sleep": "node scripts/test-sleep.cjs",
     "test:sleep-schedule": "node scripts/test-sleep-schedule.cjs",
+    "test:weekly-plan": "node scripts/test-weekly-plan.cjs",
     "test:physiology": "node scripts/test-physiology.cjs"
   },
   "dependencies": {

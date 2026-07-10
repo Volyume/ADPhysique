@@ -24,6 +24,8 @@ function assert(condition, message) {
 const sleep = loadTypeScriptModule(path.join('src', 'metrics', 'sleep.ts'));
 const evidence = loadTypeScriptModule(path.join('src', 'metrics', 'sleepEvidence.ts'));
 const sleepStress = loadTypeScriptModule(path.join('src', 'metrics', 'sleepStress.ts'));
+const sleepConsistency = loadTypeScriptModule(path.join('src', 'metrics', 'sleepConsistency.ts'));
+const sleepRegularity = loadTypeScriptModule(path.join('src', 'metrics', 'sleepRegularity.ts'));
 const minute = 60_000;
 const start = 1_800_000;
 const quiet = Array.from({ length: 180 }, (_, i) => ({
@@ -101,5 +103,17 @@ const stress = sleepStress.computeSleepStress(
 assert(stress != null, 'scores a sufficiently populated stress fixture');
 assert(stress.highPct + stress.medPct + stress.lowPct === 80, 'sleep stress percentages use time in bed');
 assert(stress.unscoredMin === 2 && stress.unscoredPct === 20, 'missing stress epochs remain explicitly unscored');
+
+const orderedWindows = Array.from({ length: 30 }, (_, index) => {
+  const day = new Date(2026, 0, 1 + index, index < 16 ? (index % 4) * 3 : 23, index < 16 ? (index % 3) * 17 : 0, 0, 0);
+  const end = new Date(day);
+  end.setHours(end.getHours() + 8);
+  return { startTs: day.getTime(), endTs: end.getTime() };
+});
+const newestFirstWindows = orderedWindows.slice().reverse();
+const recentConsistency = sleepConsistency.sleepConsistency(newestFirstWindows);
+const recentRegularity = sleepRegularity.sleepRegularity(newestFirstWindows);
+assert(recentConsistency?.nights === 5 && recentConsistency.score >= 95, 'consistency selects the latest five nights from newest-first DB rows');
+assert(recentRegularity?.nights === 14 && recentRegularity.score >= 95, 'regularity selects the latest 14 nights from newest-first DB rows');
 
 console.log('sleep reliability regression tests passed');
