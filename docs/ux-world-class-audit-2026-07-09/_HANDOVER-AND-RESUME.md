@@ -65,13 +65,43 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
   byte-identical by a guard — if the macro ring tap should buzz, the
   haptic belongs inside MacroRings itself (later batch decision).
   Lint + full suite green at both landings (657/8,225).
-- ▶ PAIR 3 IN FLIGHT: (a) item 6 dynamic-type completion pass
-  (maxFontSizeMultiplier ceilings + large-text overflow resilience;
-  approach = global default cap + tighter caps on dense/numeric
-  surfaces; agent STOPs if the global mechanism proves unviable under
-  RN 0.81/Fabric). (b) item 8 history/cardio theme migration
-  (WorkoutHistory, LogCardio, CardioHistory on the buildLiveStyles
-  pattern incl. CardioHistoryScreen's module-scope label consts).
+- ✅ PAIR 3 LANDED + PUSHED. (a) `504d657` item 8: WorkoutHistory,
+  LogCardio, CardioHistory live-themed; the plan's INTENSITY_LABEL/
+  CARDIO_SOURCE_LABEL entries were label-strings only (stale plan
+  entries); the real colour-baker was markStyle(), now buildMarkStyle(c)
+  with the never-red verdict mapping byte-identical; NA-cux-11 trend
+  wording untouched. (b) `0c85864` item 6 TARGETED pass: 1.3 caps on
+  tab-bar labels, Chip (overridable default prop, covers 26 consumer
+  files), SegmentedControl, Stepper values, SourceChip badge, MacroRings
+  fixed kcal ring; RollingNumber optional pass-through cap (uncapped
+  default). Fixed-height text rows audited: codebase already uses
+  minHeight throughout, no layout fixes needed.
+- ⚠ OPEN FOUNDER ROUND — item 6 GLOBAL ceiling: Text.defaultProps/
+  TextInput.defaultProps is EMPIRICALLY DEAD under RN 0.81 + React 19
+  automatic JSX runtime (the runtime has no defaultProps merge; proven
+  with a babel-pipeline probe against this repo). Options surfaced to
+  founder: (A) per-component caps only (12 files now carry them),
+  (B) module-export wrap of RN.Text at boot (propagates app-wide via
+  live property lookup; undocumented technique, needs a guard test),
+  (C) scripted codemod adding the cap to every raw Text/TextInput
+  across ~85 screens. Question asked 2026-07-10; do not build B or C
+  without the answer.
+- 📋 DEVICE CHECKLIST (item 6, physical Android at MAX system font):
+  1 tab bar labels one line, no truncation; 2 Diary kcal ring numbers
+  stay inside the 132px circle; 3 day-type chip no wrap; 4 ActiveWorkout
+  set-entry steppers legible; 5 Stepper values centred, one line;
+  6 SegmentedControl segments equal height, one line; 7 chips wrap as
+  rows, never overflow the pill; 8 food source badge one line; 9 ED
+  check: no animated numerals on any weight surface (unchanged).
+- ▶ PAIR 4 IN FLIGHT: (a) item 13 progress-photo gallery — LEAD DECISION
+  (product quality, D23 discipline): Reanimated/Gesture-Handler
+  HAND-ROLL, no new dependency (both libs proven in this codebase;
+  pinch/swipe/compare is well-understood; avoids a dep for one screen).
+  Photos stay on-device; suppression gates intact. (b) item 14
+  keyboard-controller + zeego adoption (D25-approved deps; D23
+  discipline: licence+health+lockfile same commit, register entry, EAS
+  flag; zeego lands on logged sets first). NOTE: fresh EAS build needed
+  after item 14 (native module) — founder-side.
 - THEMING COVERAGE TRACKER (for the stage-5 honesty gate): after batch
   A, live = 20/85 screens (+3 in flight via item 8), ~52/111
   theme-consuming components. Remaining static components ~59 (food/*,
