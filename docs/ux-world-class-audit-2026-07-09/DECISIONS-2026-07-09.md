@@ -410,3 +410,10 @@ input fork remains OPEN, neither approved nor rejected):
 4. Watch app: SCOPING programme approved (memo -> founder round before
    any build; builds on the existing P12 watchOS memo; must respect the
    removed-HealthKit state).
+
+## D27 addendum — AI food input: HELD (founder, 2026-07-10)
+Founder: "Hold the AI I'm not sure it's good enough or accurate enough
+for use." The AI-assisted food input fork (photo meal-scan / voice
+logging) is HELD by founder order - not rejected, not approved; do not
+build and do not re-propose unprompted. The coaching engine's no-AI
+rule was never in question and stands absolutely.

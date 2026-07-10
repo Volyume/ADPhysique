@@ -41,6 +41,7 @@ import { getNutritionTargets } from '../lib/database';
 import { exportDiaryCsv, exportDiaryPdf } from '../lib/food/csvExport';
 import { ADHERENCE_TOLERANCE, pctLabel, within } from '../lib/food/adherence';
 import { summariseNutrients, NUTRIENT_ROWS } from '../lib/food/nutrientSummary';
+import WeeklyMicronutrientsCard from '../components/food/WeeklyMicronutrientsCard';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
@@ -119,6 +120,13 @@ export default function FoodInsightsScreen({ navigation }) {
   const days = useMemo(() => lastNDayIsoList(windowDays), [windowDays]);
   const startDate = days[0];
   const endDate = days[days.length - 1];
+  // Ultimate-Audit item 16 (MN-1), D22 16b: the weekly micronutrient average
+  // is a FIXED 7-day window, independent of the window selector above (the
+  // ruling calls it "Food Insights weekly average", not "windowed average").
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const weeklyMicroDays = useMemo(() => lastNDayIsoList(7), []);
+  const weeklyMicroStart = weeklyMicroDays[0];
+  const weeklyMicroEnd = weeklyMicroDays[weeklyMicroDays.length - 1];
   // L05-FI4 (2026-07-09 design audit): the period-vs-previous-period
   // comparison below needs rollups for TWICE the selected window (the
   // window itself plus the equal span immediately before it), so the fetch
@@ -610,6 +618,10 @@ export default function FoodInsightsScreen({ navigation }) {
             </Text>
           )}
         </Card>
+
+        {/* Ultimate-Audit item 16 (MN-1), D22 16b secondary surface: 7-day
+            average, coverage-floor gated, awareness register. */}
+        <WeeklyMicronutrientsCard userId={userId} startDate={weeklyMicroStart} endDate={weeklyMicroEnd} />
 
         <Button
           title={`Export ${windowDays} days as CSV`}
