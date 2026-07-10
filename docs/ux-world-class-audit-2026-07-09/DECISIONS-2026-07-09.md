@@ -471,3 +471,26 @@ migration.
   next free agent slot after Pair 4 (photo gallery + keyboard/zeego).
 - House cap value stays 1.3 (the existing precedent); RestTimer's 1.15
   outlier and RollingNumber's uncapped default are untouched by the sweep.
+
+## D31 — Item 15 transitions technique (founder-delegated, lead-ruled 2026-07-10)
+Context: recon proved Reanimated sharedTransitionTag is absent from the
+installed 4.1.7 (grep-verified), so the campaign's named technique cannot
+be used; the transition is hand-built either way. Three options were put
+to the founder (true cloned-card morph / origin-aware zoom / both split
+by content); the founder delegated: "You choose the best for our package
+and for end users. That's the priority ahead of the work it will take to
+get there."
+- LEAD RULING: **Both, split by content.** Origin-aware zoom becomes the
+  app-wide standard for card->screen pushes (heroZoomTransition extended
+  to grow the incoming screen from the tapped card's measured rect, with
+  graceful centre-zoom fallback when no origin is supplied); the true
+  measure+clone hero morph is reserved for imagery — photo grid ->
+  viewer now, any future image surface later.
+- Rationale (product, not effort): a cloned morph on text/chrome cards
+  cannot return cleanly on the JS stack — morph-on-push with a standard
+  back transition is asymmetric and breaks the illusion it just created,
+  reading worse than a consistent symmetric origin zoom. On imagery the
+  morph is where perceived quality is dramatic, and the photo viewer is
+  same-tree (no navigation coupling), so it takes the full treatment.
+- Bounds: photo-viewer suppression behaviour (calm/ED) stays pinned;
+  Reduce Motion flattens both treatments; no new dependency.
