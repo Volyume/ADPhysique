@@ -29,8 +29,33 @@ full /10 scorecard of every user-facing area was produced
 the scorecard target list EXCEPT #18 exercise media and #22 rest-day
 notification (both HELD). That includes newly-UNHELD items: iOS Live
 Activity wiring, drag reorder, giant sets, and Rive/brand-font (asset/
-taste-gated). Sequence + per-item spec are in that campaign doc. Start at
-Pair 1 (Coach-half polish + theming stage 4) unless the founder redirects.
+taste-gated). Sequence + per-item spec are in that campaign doc.
+
+**CAMPAIGN POSITION (2026-07-10, update at every pair boundary):**
+- ✅ PAIR 1 LANDED + PUSHED. (a) `584b4d0` theming stage 4: the four
+  chart/Skia consumers (VolyumeChart, MacroRings, ProgressPhotoCompare,
+  BeforeAfterShareSheet) on the buildLiveStyles pattern; audit found NO
+  Skia Paint freeze bugs; drawShareCard untouched by design; five caller
+  screens still pass static colours into VolyumeChart (they go live with
+  their screen batches). (b) `0ac5de9` item 1 Coach-half polish: all 5
+  Coach screens + CoachDailyBrief live-themed; the safety-contract guard
+  battery pins the ED blocks logic-identical. Haptics: BlockReflection
+  play-story link only. NOTE FOR FOUNDER: WeeklyCheckIn got NO haptics
+  (whole screen judged weight/food-adjacent) and CoachOutputScreen got
+  NONE because the pre-existing coachOutputApplyMorph.guard pins that the
+  screen never imports haptics (a hold path must never buzz) — the guard
+  won over the campaign brief's allowance. Lint + full suite green at
+  both landings (657 suites / 8,225 tests).
+- ▶ PAIR 2 IN FLIGHT: (a) theming stage-4 TAIL — measured reality: only
+  20/85 screens and ~31/111 theme-consuming components are live; stage 5
+  (retire restart prompts) is honesty-gated by the slate's own wording,
+  so slot A migrates the shared/coach/chart-adjacent component batch
+  first (stage-5 retirement is assessed only when a toggle's FULL
+  dependency set is live — several more component batches plus the
+  remaining ~65 screens, incl. item 8's history/cardio trio, come before
+  any prompt is retired). (b) item 5 haptics completion pass
+  (food/paywall/settings/tab bar/picker; ED/weight/wellbeing surfaces
+  and billing-destructive actions excluded).
 
 ### OPERATING MODEL (founder standing orders, INVIOLABLE)
 - **Fable coordinates; agents do the work.** You (main loop) do
