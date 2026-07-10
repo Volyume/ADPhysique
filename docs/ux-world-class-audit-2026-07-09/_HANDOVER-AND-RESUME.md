@@ -1460,3 +1460,13 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   "timeline replaces buckets" ruling is SUPERSEDED by the founder's
   device verdict - meal cards are canonical; do not re-propose a flat
   diary. Theming batch 2 agent fenced off the food lane mid-flight.
+- THEMING STAGE 3 BATCH 2 LANDED (lead-reviewed): Home family (12
+  components + HomeScreen itself + VolyumeTabBar) + workout components
+  (SetEntry, RestTimer, PRCelebration mount-time palette by design,
+  ExercisePickerModal) live-themed; 4 guard updates all mechanical with
+  rules re-verified; same-instance flip tests added; 649 suites green.
+  REMAINING batch 3: ActiveWorkoutScreen (~4.3k lines, 8+ guards) +
+  WorkoutSummaryScreen (~2k lines) shells only - every component inside
+  them is already live. Then stage 4 (Skia/charts: VolyumeChart,
+  MacroRings, photo compares) and stage 5 (retire reload prompts).
+  IN FLIGHT: OFF micronutrient parsing only.
