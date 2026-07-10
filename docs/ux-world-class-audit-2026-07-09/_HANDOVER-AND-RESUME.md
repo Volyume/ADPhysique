@@ -305,28 +305,46 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
   FOUNDER ROUND (options recorded below). 4 suites / 37 tests pass at
   baseline.
 
+- ✅ PAIR 9 LANDED (2026-07-10 late; both lead-reviewed, full suite
+  green at the boundary: 666/667 suites, 8,356 passed / 0 failed,
+  lint clean). (a) `6171531` **D34 native bridge**: the FGS
+  chronometer rest notification now carries "+15s" / "Skip rest" via
+  getService PendingIntents (taps never foreground the app); new
+  Service→module→JS event bridge (Events/sendEvent + @Volatile
+  companion emitter in RestTimerLiveModule) routes taps into the SAME
+  handleRestTimerAction seam (store guards + clampRestDelta floor +
+  stale-tap no-op, one REST_TIMER_ACTION vocabulary, two transports);
+  service extends its own chronometer natively on +15 (JS re-anchor
+  is background-blocked), re-capped against the shortService
+  deadline; Skip tears down like the in-app stop; graceful no-op
+  wherever native is absent; restForeground.js trade-off comment
+  updated to the new reality. Kotlin NOT compilable in this env —
+  compile-risk notes in the agent report (Events DSL, sendEvent Map
+  overload, addAction icon 0); watch the first EAS/CI Android build.
+  8-step device checklist in the agent report. ⚠ FRESH EAS BUILD
+  required (new native code + module event). (b) `b7c36bd` **theming
+  stage-4 batch C**: 29 components converted (food 19/19, photo/scan
+  9/9, ProgressSections' 5 exports; barColor → buildBarColor(c),
+  never-red mapping unchanged); 6 guard pins updated mechanically;
+  frozen static stylesheets byte-identical; ProgressPhotoViewer
+  worklets untouched. COVERAGE: components now 100/108 live (was
+  71/108); food + photo/scan families fully live.
+
 ## ⏸ RESUME POINT — current state and queue (2026-07-10 late):
-1. IN FLIGHT: (a) theming stage-4 batch C (Sonnet — food domain +
-   photo/scan component families onto buildLiveStyles; exclusions:
-   charts already ruled, ScreenBoundary, ProGate logic, screens);
-   (b) item 12 native Service→JS bridge build per D34 (Opus —
-   modules/rest-timer-live actions on the FGS chronometer, silent
-   routing into handleRestTimerAction; needs EAS build at landing).
-   Item 17's verify-first READ is COMPLETE (findings + scope rulings
-   in D36; per-surface table in the read agent's report — key facts:
-   PlanLibrary quiz / RoutineDetail edit-exercise / ActiveWorkout
-   supersetHeadsUp+unilateralSuggest / ExerciseDetail goal modal have
-   genuine bottom-inset gaps under edge-to-edge; Home sheets are
-   inset-correct but raw; FeedbackSheet/PeekMenu are the 2 of 6
-   original BottomSheet targets never migrated, imperative-API
-   restructure; TalkBack sheet isolation gap is documented in
-   BottomSheet.js:38-47 itself and compounds with every migration).
-2. NEXT SLOTS in order once the pair lands: item 17 six-modal slot
-   (D36a, Sonnet); then D35 drag edge auto-scroll (Sonnet — sequenced
-   AFTER item 17 because both touch RoutineDetail/ActiveWorkout);
-   then FeedbackSheet/PeekMenu migration slot (D36b); TalkBack sheet
-   isolation slot (D36c, cross-cutting, RootNavigator-adjacent);
-   ProgressPhotos content-modal read pass (D36d, Haiku/Sonnet read).
+1. IN FLIGHT: (a) item 17 six-modal slot per D36a (Sonnet — migrate
+   HomeChangeWorkoutSheet, HomeBlockShapeSheet, PlanLibrary quiz,
+   RoutineDetail edit-exercise to BottomSheet; fix the two genuine
+   bottom-inset gaps: ActiveWorkout supersetHeadsUp/unilateralSuggest
+   shared styles + ExerciseDetail goal modal); (b) D36d ProgressPhotos
+   content-modal read pass (read-only: do the four full-screen content
+   modals' child components handle insets under edge-to-edge?).
+2. NEXT SLOTS once the pair lands: D35 drag edge auto-scroll (Sonnet —
+   sequenced AFTER item 17, both touch RoutineDetail/ActiveWorkout);
+   FeedbackSheet/PeekMenu migration slot (D36b); TalkBack sheet
+   isolation slot (D36c, cross-cutting, RootNavigator-adjacent); then
+   the D33-unblocked decision cluster (Ultimate-Audit 11–16 rulings
+   from source blueprints, watch-app round, kala namak, brand font) —
+   each with a verify-first read agent before any ruling/build.
 3. PROCESS NOTE: two consecutive campaign lines (16, 19) were stale
    against the tree — every remaining item gets a verify-first read
    agent before any build brief is written.
