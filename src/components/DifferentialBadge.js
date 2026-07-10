@@ -16,6 +16,7 @@ import { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 // paywall_shown impressions already sent this JS session, keyed by trigger.
 // Home's banner stack remounts this component whenever a sibling banner loads
@@ -30,6 +31,9 @@ export default function DifferentialBadge({
   pricingPriceText,    // e.g. "£2.99/month", pre-resolved by caller for the buy_pro CTA
   onTapCta,            // (action: 'pay' | 'dismiss' | 'shown') => void ('shown' is the impression ping)
 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   // Fire the locked paywall_shown telemetry once per session + trigger with a
   // visible badge. Caller wires the event sender via onTapCta when
   // the user actually taps; this effect captures the impression.
@@ -59,28 +63,28 @@ export default function DifferentialBadge({
     : pricingPriceText ? `Get Pro for ${pricingPriceText}` : 'Get Pro';
 
   return (
-    <View style={styles.wrap} accessibilityLabel="Differential paywall">
+    <View style={[styles.wrap, live.wrap]} accessibilityLabel="Differential paywall">
       <View style={styles.headerRow}>
-        <Ionicons name="barbell-outline" size={16} color={colors.primary} />
-        <Text maxFontSizeMultiplier={1.3} style={styles.headerText}>With Pro</Text>
+        <Ionicons name="barbell-outline" size={16} color={t.colors.primary} />
+        <Text maxFontSizeMultiplier={1.3} style={[styles.headerText, live.headerText]}>With Pro</Text>
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={styles.body}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
         {differential.with_food_data_message}
       </Text>
       <TouchableOpacity
-        style={styles.ctaBtn}
+        style={[styles.ctaBtn, live.ctaBtn]}
         onPress={() => onTapCta?.('pay')}
         accessibilityRole="button"
         accessibilityLabel={ctaLabel}
       >
-        <Text maxFontSizeMultiplier={1.3} style={styles.ctaText}>{ctaLabel}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.ctaText, live.ctaText]}>{ctaLabel}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.dismissBtn}
         onPress={() => onTapCta?.('dismiss')}
         accessibilityRole="button"
       >
-        <Text maxFontSizeMultiplier={1.3} style={styles.dismissText}>Not now</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.dismissText, live.dismissText]}>Not now</Text>
       </TouchableOpacity>
     </View>
   );
@@ -135,3 +139,18 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BottomSheet.js's buildLiveStyles. headerRow/dismissBtn have no colour
+// tokens.
+function buildLiveStyles(t) {
+  return {
+    wrap: { backgroundColor: t.colors.surface, borderColor: t.colors.primary },
+    headerText: { color: t.colors.primary },
+    body: { color: t.colors.textPrimary },
+    ctaBtn: { borderColor: t.colors.primary },
+    ctaText: { color: t.colors.primary },
+    dismissText: { color: t.colors.textMuted },
+  };
+}

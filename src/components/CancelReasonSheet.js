@@ -19,6 +19,7 @@
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BottomSheet from './BottomSheet';
 import Button from './Button';
 import Chip from './Chip';
@@ -43,6 +44,9 @@ export default function CancelReasonSheet({
   userId = null,
   surface = 'pre_store_handoff',
 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const [reason, setReason] = useState(null);
   const [text, setText] = useState('');
   const [breakWindow, setBreakWindow] = useState(null);
@@ -84,8 +88,8 @@ export default function CancelReasonSheet({
       keyboardAvoiding
       accessibilityLabel="Before you go"
     >
-      <Text maxFontSizeMultiplier={1.3} style={styles.title}>Before you go: what's the main reason?</Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.sub}>Optional. It helps us decide what to build.</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Before you go: what's the main reason?</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.sub, live.sub]}>Optional. It helps us decide what to build.</Text>
 
       <ReasonPicker
         reason={reason}
@@ -96,7 +100,7 @@ export default function CancelReasonSheet({
 
       {reason === 'temporary_break' ? (
         <View style={styles.breakBlock}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.breakPrompt}>When do you think you'll be back?</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.breakPrompt, live.breakPrompt]}>When do you think you'll be back?</Text>
           <View style={styles.chipRow}>
             {BREAK_WINDOWS.map((w) => {
               const selected = breakWindow === w.key;
@@ -112,14 +116,14 @@ export default function CancelReasonSheet({
             })}
           </View>
           {Platform.OS === 'android' ? (
-            <Text maxFontSizeMultiplier={1.3} style={styles.pauseHint}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.pauseHint, live.pauseHint]}>
               Your subscription settings may also let you pause instead of cancel.
             </Text>
           ) : null}
         </View>
       ) : null}
 
-      <Text maxFontSizeMultiplier={1.3} style={styles.disclosure}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.disclosure, live.disclosure]}>
         You'll keep your features until the current billing period ends. Your
         training history, food log and check-ins all stay.
       </Text>
@@ -172,3 +176,17 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BottomSheet.js's buildLiveStyles. breakBlock/chipRow have no colour
+// tokens.
+function buildLiveStyles(t) {
+  return {
+    title: { color: t.colors.textPrimary },
+    sub: { color: t.colors.textMuted },
+    disclosure: { ...t.type.bodySm, color: t.colors.textSecondary },
+    breakPrompt: { color: t.colors.textPrimary },
+    pauseHint: { ...t.type.captionTight, color: t.colors.textMuted },
+  };
+}

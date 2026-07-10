@@ -32,7 +32,14 @@ describe('Pro gate feature copy', () => {
   });
 
   test('restore purchase action is contained chrome, not an underlined text link', () => {
-    expect(PRO_GATE).toContain('Ionicons name="refresh-outline" size={14} color={colors.textSecondary}');
+    // CP-10 theming batch (2026-07-10): pin extended, mechanical only. The
+    // icon now reads the live theme (t.colors.textSecondary) instead of the
+    // frozen colors singleton, same token, live instead of import-time-baked
+    // (see BottomSheet.js's buildLiveStyles header comment for the pattern).
+    // The frozen `lockedRestore`/`lockedRestoreText` StyleSheet entries this
+    // test also pins are untouched (byte-identical), so those two
+    // assertions are unchanged.
+    expect(PRO_GATE).toContain('Ionicons name="refresh-outline" size={14} color={t.colors.textSecondary}');
     expect(PRO_GATE).toMatch(/lockedRestore: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(PRO_GATE).toContain('lockedRestoreText: { ...type.caption, color: colors.textSecondary }');
     expect(PRO_GATE).not.toContain("textDecorationLine: 'underline'");

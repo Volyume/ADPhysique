@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BottomSheet from './BottomSheet';
 import useWeeklyStreak from '../hooks/useWeeklyStreak';
 import { addPause, setManualGoal } from '../lib/streakState';
@@ -33,20 +34,32 @@ const PAUSE_OPTIONS = [
 // the key. The no-shame rule is kept in the WORDING and the shape: never
 // "missed" or "failed", never red; the glyph stays a faint outline. Screen
 // readers already hear it as a "quiet week" via stripA11y.
-const GLYPH = {
-  kept:          { icon: 'ellipse',          color: colors.primary },
-  resting:       { icon: 'moon',             color: colors.success },
-  paused:        { icon: 'pause-circle',     color: colors.textMuted },
-  repaired:      { icon: 'git-compare',      color: colors.primary },
-  missed:        { icon: 'ellipse-outline',  color: colors.border },
-  'in-progress': { icon: 'ellipse-outline',  color: colors.primary },
-};
+// CP-10 theming batch (component sweep, 2026-07-10): build function replacing
+// the frozen module-scope GLYPH map, same "build" pattern as WeightTrendCard's
+// buildDotColour -- resolves the SAME state -> icon/colour mapping off the
+// passed-in live t.colors instead of the frozen colors singleton, so the
+// glyph strip stays in step with a theme flip. No frozen twin kept: GLYPH was
+// file-private and untested.
+function buildGlyph(c) {
+  return {
+    kept:          { icon: 'ellipse',          color: c.primary },
+    resting:       { icon: 'moon',             color: c.success },
+    paused:        { icon: 'pause-circle',     color: c.textMuted },
+    repaired:      { icon: 'git-compare',      color: c.primary },
+    missed:        { icon: 'ellipse-outline',  color: c.border },
+    'in-progress': { icon: 'ellipse-outline',  color: c.primary },
+  };
+}
 
 function strength(weeks, key) {
   return weeks.filter(w => w.state === key).length;
 }
 
 export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
+  const GLYPH = buildGlyph(t.colors);
   const vm = useWeeklyStreak(userId, scoffScore);
   const [pauseOpen, setPauseOpen] = useState(false);
 
@@ -102,10 +115,10 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
   }
 
   return (
-    <View style={styles.section}>
+    <View style={[styles.section, live.section]}>
       <View style={styles.headerRow}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.title}>Your weeks</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.runLine} numberOfLines={2}>{runLine}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Your weeks</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.runLine, live.runLine]} numberOfLines={2}>{runLine}</Text>
       </View>
 
       {/* 12-week glyph strip */}
@@ -134,39 +147,39 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
         ].map(({ state, label }) => (
           <View key={state} style={styles.glyphKeyItem}>
             <Ionicons name={GLYPH[state].icon} size={12} color={GLYPH[state].color} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.glyphKeyLabel}>{label}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.glyphKeyLabel, live.glyphKeyLabel]}>{label}</Text>
           </View>
         ))}
       </View>
 
       {justRepaired ? (
         <View style={styles.repairRow}>
-          <Ionicons name="git-compare" size={14} color={colors.primary} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.repairLine}>A lighter week, and you came back. Your run carried on.</Text>
+          <Ionicons name="git-compare" size={14} color={t.colors.primary} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.repairLine, live.repairLine]}>A lighter week, and you came back. Your run carried on.</Text>
         </View>
       ) : null}
 
       {longestRun > 0 ? (
-        <Text maxFontSizeMultiplier={1.3} style={styles.longest}>Longest run: {longestRun} {longestRun === 1 ? 'week' : 'weeks'}.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.longest, live.longest]}>Longest run: {longestRun} {longestRun === 1 ? 'week' : 'weeks'}.</Text>
       ) : null}
 
       {/* Manual-goal editor, plan-less users only */}
       {!hasTarget ? (
         <View style={styles.goalBlock}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.goalLabel}>How many sessions a week are you aiming for?</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.goalLabel, live.goalLabel]}>How many sessions a week are you aiming for?</Text>
           <View style={styles.goalChips}>
             {[1, 2, 3, 4, 5, 6].map(n => {
               const sel = vm.manualGoal === n;
               return (
                 <TouchableOpacity
                   key={n}
-                  style={[styles.goalChip, sel && styles.goalChipOn]}
+                  style={[styles.goalChip, live.goalChip, sel && [styles.goalChipOn, live.goalChipOn]]}
                   onPress={() => setGoal(n)}
                   accessibilityRole="button"
                   accessibilityState={{ selected: sel }}
                   accessibilityLabel={`${n} sessions a week`}
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.goalChipText, sel && styles.goalChipTextOn]}>{n}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.goalChipText, live.goalChipText, sel && [styles.goalChipTextOn, live.goalChipTextOn]]}>{n}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -175,13 +188,13 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
       ) : null}
 
       <TouchableOpacity
-        style={styles.pauseBtn}
+        style={[styles.pauseBtn, live.pauseBtn]}
         onPress={() => setPauseOpen(true)}
         accessibilityRole="button"
         accessibilityLabel="Pause your run"
       >
-        <Ionicons name="pause-outline" size={16} color={colors.textSecondary} />
-        <Text maxFontSizeMultiplier={1.3} style={styles.pauseBtnText}>Pause</Text>
+        <Ionicons name="pause-outline" size={16} color={t.colors.textSecondary} />
+        <Text maxFontSizeMultiplier={1.3} style={[styles.pauseBtnText, live.pauseBtnText]}>Pause</Text>
       </TouchableOpacity>
 
       <BottomSheet
@@ -189,16 +202,16 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
         onClose={() => setPauseOpen(false)}
         accessibilityLabel="Pause your run options"
       >
-        <Text maxFontSizeMultiplier={1.3} style={styles.sheetTitle}>Life happens. Pause your run and nothing is lost.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Life happens. Pause your run and nothing is lost.</Text>
         {PAUSE_OPTIONS.map(opt => (
           <TouchableOpacity
             key={opt.weeks}
-            style={styles.sheetOption}
+            style={[styles.sheetOption, live.sheetOption]}
             onPress={() => doPause(opt.weeks)}
             accessibilityRole="button"
             accessibilityLabel={`Pause for ${opt.label}`}
           >
-            <Text maxFontSizeMultiplier={1.3} style={styles.sheetOptionText}>{opt.label}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionText, live.sheetOptionText]}>{opt.label}</Text>
           </TouchableOpacity>
         ))}
       </BottomSheet>
@@ -251,3 +264,28 @@ const styles = StyleSheet.create({
   },
   sheetOptionText: { fontSize: fontSize.md, color: colors.textPrimary },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BottomSheet.js's buildLiveStyles. headerRow/strip/glyph/glyphKey/
+// glyphKeyItem/goalChips have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    section: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    title: { ...t.type.label, color: t.colors.textSecondary },
+    runLine: { color: t.colors.textPrimary },
+    glyphKeyLabel: { ...t.type.caption, color: t.colors.textMuted },
+    longest: { ...t.type.caption, color: t.colors.textMuted },
+    repairLine: { ...t.type.captionTight, color: t.colors.textSecondary },
+    goalLabel: { color: t.colors.textSecondary },
+    goalChip: { borderColor: t.colors.border },
+    goalChipOn: { borderColor: t.colors.primary, backgroundColor: withAlpha(t.colors.primary, alpha.tint) },
+    goalChipText: { ...t.type.num('body'), color: t.colors.textSecondary },
+    goalChipTextOn: { color: t.colors.primary },
+    pauseBtn: { borderColor: t.colors.border },
+    pauseBtnText: { color: t.colors.textSecondary },
+    sheetTitle: { color: t.colors.textPrimary },
+    sheetOption: { borderColor: t.colors.border },
+    sheetOptionText: { color: t.colors.textPrimary },
+  };
+}

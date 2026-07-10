@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { G, Ellipse, Rect, Path, Line } from 'react-native-svg';
 import { colors, fontSize, fontWeight, spacing, radius, letterSpacing } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import InfoTooltip from './InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 
@@ -26,9 +27,12 @@ function outline(strokeColor) {
   };
 }
 
-function getFill(volumeByMuscle, muscle) {
+// CP-10 theming batch (component sweep, 2026-07-10): takes the live colour
+// table instead of reading the frozen `colors` singleton, so the "no data"
+// fallback fill stays in step with a theme flip.
+function getFill(volumeByMuscle, muscle, c) {
   const entry = volumeByMuscle?.[muscle];
-  if (!entry || !entry.color) return colors.surface2;
+  if (!entry || !entry.color) return c.surface2;
   return entry.color;
 }
 
@@ -72,25 +76,26 @@ const DIVISION_MARKER_ANCHORS = {
   },
 };
 
-// Small solid triangle: up in colors.primary for a division-elevated muscle,
-// down in colors.textMuted for a capped one. Static, decorative (the region's
+// Small solid triangle: up in primary for a division-elevated muscle, down in
+// textMuted for a capped one. Static, decorative (the region's
 // accessibilityLabel carries the spoken version), no press handler so taps
-// fall through to the region beneath.
-function DivisionMarker({ x, y, direction }) {
+// fall through to the region beneath. CP-10: takes the live colour table
+// instead of reading the frozen `colors` singleton.
+function DivisionMarker({ x, y, direction, c }) {
   const up = direction === 'elevated';
   const d = up
     ? `M ${x - 4} ${y + 3} L ${x + 4} ${y + 3} L ${x} ${y - 4} Z`
     : `M ${x - 4} ${y - 3} L ${x + 4} ${y - 3} L ${x} ${y + 4} Z`;
-  return <Path d={d} fill={up ? colors.primary : colors.textMuted} />;
+  return <Path d={d} fill={up ? c.primary : c.textMuted} />;
 }
 
-function renderDivisionMarkers(figure, divisionMarkers) {
+function renderDivisionMarkers(figure, divisionMarkers, c) {
   if (!divisionMarkers) return null;
   const anchors = DIVISION_MARKER_ANCHORS[figure];
   return Object.entries(anchors)
     .filter(([muscle]) => divisionMarkers[muscle])
     .map(([muscle, pos]) => (
-      <DivisionMarker key={muscle} x={pos.x} y={pos.y} direction={divisionMarkers[muscle]} />
+      <DivisionMarker key={muscle} x={pos.x} y={pos.y} direction={divisionMarkers[muscle]} c={c} />
     ));
 }
 
@@ -103,16 +108,19 @@ export default function BodyDiagramHeatmap({
   divisionMarkers = null,
   divisionLabel = null,
 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const handle = muscle => () => {
     if (onMuscleTap) onMuscleTap(muscle);
   };
 
-  const stroke = outline(colors.border);
-  const silhouetteFill = colors.surface;
-  const regionStroke = colors.border;
+  const stroke = outline(t.colors.border);
+  const silhouetteFill = t.colors.surface;
+  const regionStroke = t.colors.border;
 
   const region = muscleKey => ({
-    fill: getFill(volumeByMuscle, muscleKey),
+    fill: getFill(volumeByMuscle, muscleKey, t.colors),
     stroke: regionStroke,
     strokeWidth: 0.75,
     onPress: handle(muscleKey),
@@ -122,7 +130,7 @@ export default function BodyDiagramHeatmap({
   });
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, live.container]}>
       <Svg
         viewBox={`0 0 ${TOTAL_WIDTH} ${FIGURE_HEIGHT}`}
         width="100%"
@@ -177,7 +185,7 @@ export default function BodyDiagramHeatmap({
             cy={50}
             rx={8}
             ry={5}
-            fill={colors.surface2}
+            fill={t.colors.surface2}
             stroke={regionStroke}
             strokeWidth={0.75}
           />
@@ -226,7 +234,7 @@ export default function BodyDiagramHeatmap({
           <Ellipse cx={92} cy={266} rx={9} ry={22} {...region('calves')} />
 
           {/* A4: division fingerprint markers (front-view muscles) */}
-          {renderDivisionMarkers('front', divisionMarkers)}
+          {renderDivisionMarkers('front', divisionMarkers, t.colors)}
 
           {/* Label */}
         </G>
@@ -316,23 +324,23 @@ export default function BodyDiagramHeatmap({
           <Ellipse cx={92} cy={266} rx={10} ry={22} {...region('calves')} />
 
           {/* A4: division fingerprint markers (back-view muscles) */}
-          {renderDivisionMarkers('back', divisionMarkers)}
+          {renderDivisionMarkers('back', divisionMarkers, t.colors)}
         </G>
       </Svg>
 
       {/* Figure labels */}
       <View style={styles.labelRow}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.figureLabel}>Front</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.figureLabel}>Back</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.figureLabel, live.figureLabel]}>Front</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.figureLabel, live.figureLabel]}>Back</Text>
       </View>
 
       {/* Legend */}
-      <View style={styles.legend}>
-        <LegendSwatch color={colors.textMuted} label="Below target" />
-        <LegendSwatch color={colors.success} label="Optimal" />
-        <LegendSwatch color={colors.warning} label="Near limit" />
-        <LegendSwatch color={colors.error} label="Over limit" />
-        <LegendSwatch color={colors.surface2} label="No data" bordered />
+      <View style={[styles.legend, live.legend]}>
+        <LegendSwatch color={t.colors.textMuted} label="Below target" borderColor={t.colors.border} textStyle={live.legendText} />
+        <LegendSwatch color={t.colors.success} label="Optimal" borderColor={t.colors.border} textStyle={live.legendText} />
+        <LegendSwatch color={t.colors.warning} label="Near limit" borderColor={t.colors.border} textStyle={live.legendText} />
+        <LegendSwatch color={t.colors.error} label="Over limit" borderColor={t.colors.border} textStyle={live.legendText} />
+        <LegendSwatch color={t.colors.surface2} label="No data" bordered borderColor={t.colors.border} textStyle={live.legendText} />
         {/* U-F-5: plain-English gloss for the volume bands / "Over limit" jargon. */}
         <InfoTooltip text={GLOSSARY.volumeBands} size={14} />
       </View>
@@ -342,12 +350,12 @@ export default function BodyDiagramHeatmap({
           applied for this division; nothing here is computed fresh. */}
       {divisionMarkers && divisionLabel ? (
         <Text maxFontSizeMultiplier={1.3}
-          style={styles.divisionLegendText}
+          style={[styles.divisionLegendText, live.divisionLegendText]}
           accessibilityLabel={`Triangle up means elevated for ${divisionLabel}, triangle down means capped`}
         >
-          <Text maxFontSizeMultiplier={1.3} style={{ color: colors.primary }}>▲</Text>
+          <Text maxFontSizeMultiplier={1.3} style={{ color: t.colors.primary }}>▲</Text>
           {` Elevated for ${divisionLabel} · `}
-          <Text maxFontSizeMultiplier={1.3} style={{ color: colors.textMuted }}>▼</Text>
+          <Text maxFontSizeMultiplier={1.3} style={{ color: t.colors.textMuted }}>▼</Text>
           {' Capped'}
         </Text>
       ) : null}
@@ -355,17 +363,17 @@ export default function BodyDiagramHeatmap({
   );
 }
 
-function LegendSwatch({ color, label, bordered }) {
+function LegendSwatch({ color, label, bordered, borderColor, textStyle }) {
   return (
     <View style={styles.legendItem}>
       <View
         style={[
           styles.swatch,
           { backgroundColor: color },
-          bordered && { borderWidth: 1, borderColor: colors.border },
+          bordered && { borderWidth: 1, borderColor },
         ]}
       />
-      <Text maxFontSizeMultiplier={1.3} style={styles.legendText}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.legendText, textStyle]}>{label}</Text>
     </View>
   );
 }
@@ -418,3 +426,17 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BottomSheet.js's buildLiveStyles. labelRow/legendItem/swatch have no
+// colour tokens.
+function buildLiveStyles(t) {
+  return {
+    container: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    figureLabel: { color: t.colors.textMuted },
+    legend: { borderTopColor: t.colors.border },
+    legendText: { color: t.colors.textMuted },
+    divisionLegendText: { color: t.colors.textMuted },
+  };
+}

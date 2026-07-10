@@ -7,8 +7,12 @@
 import { View, StyleSheet } from 'react-native';
 import Chip from './Chip';
 import { colors, spacing, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 export default function WindowChips({ windows, selectedKey, onSelect, accessibilityPrefix = 'time window' }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <View style={styles.row} accessibilityRole="tablist">
       {windows.map((w) => {
@@ -22,8 +26,8 @@ export default function WindowChips({ windows, selectedKey, onSelect, accessibil
             accessibilityRole="tab"
             accessibilityLabel={`${accessibilityPrefix}: ${w.label}`}
             style={styles.chip}
-            labelStyle={styles.chipText}
-            selectedLabelStyle={styles.chipTextActive}
+            labelStyle={[styles.chipText, live.chipText]}
+            selectedLabelStyle={[styles.chipTextActive, live.chipTextActive]}
           />
         );
       })}
@@ -44,3 +48,13 @@ const styles = StyleSheet.create({
   chipText: { ...type.label, color: colors.textSecondary },
   chipTextActive: { color: colors.primary },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BottomSheet.js's buildLiveStyles. row/chip have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    chipText: { ...t.type.label, color: t.colors.textSecondary },
+    chipTextActive: { color: t.colors.primary },
+  };
+}

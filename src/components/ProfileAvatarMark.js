@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontWeight, radius, type, circle, withAlpha, alpha, motion } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { avatarPresetFor } from '../lib/profileAvatarPresets';
 import useAppStore from '../store/useAppStore';
 
@@ -19,10 +20,13 @@ export default function ProfileAvatarMark({
   selected = false,
   style,
 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const preset = presetKey ? avatarPresetFor(presetKey) : null;
-  const accent = colors[preset?.tone || 'primary'] || colors.primary;
-  const borderColor = selected ? colors.primary : withAlpha(accent, alpha.edge);
+  const accent = t.colors[preset?.tone || 'primary'] || t.colors.primary;
+  const borderColor = selected ? t.colors.primary : withAlpha(accent, alpha.edge);
   const baseStyle = [
     styles.avatar,
     {
@@ -30,7 +34,7 @@ export default function ProfileAvatarMark({
       height: size,
       borderRadius: circle(size),
       borderColor,
-      backgroundColor: preset ? withAlpha(accent, alpha.tint) : colors.primaryBg,
+      backgroundColor: preset ? withAlpha(accent, alpha.tint) : t.colors.primaryBg,
     },
     style,
   ];
@@ -47,8 +51,8 @@ export default function ProfileAvatarMark({
           transition={reduceMotion ? 0 : motion.state}
         />
         {editable ? (
-          <View style={[styles.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: colors.primaryFill }]}>
-            <Ionicons name="camera-outline" size={Math.max(12, Math.round(size * 0.17))} color={colors.onPrimary} />
+          <View style={[styles.badge, live.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: t.colors.primaryFill }]}>
+            <Ionicons name="camera-outline" size={Math.max(12, Math.round(size * 0.17))} color={t.colors.onPrimary} />
           </View>
         ) : null}
       </View>
@@ -59,11 +63,11 @@ export default function ProfileAvatarMark({
     return (
       <View style={baseStyle}>
         <Ionicons name={preset.icon} size={iconSize} color={accent} />
-        <View style={[styles.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: selected ? colors.primary : colors.surface }]}>
+        <View style={[styles.badge, live.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: selected ? t.colors.primary : t.colors.surface }]}>
           <Ionicons
             name={selected ? 'checkmark' : preset.badgeIcon}
             size={Math.max(12, Math.round(size * 0.17))}
-            color={selected ? colors.onPrimary : accent}
+            color={selected ? t.colors.onPrimary : accent}
           />
         </View>
       </View>
@@ -72,10 +76,10 @@ export default function ProfileAvatarMark({
 
   return (
     <View style={baseStyle}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.initial, { fontSize: Math.round(size * 0.34) }]}>{initialFor(displayName)}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.initial, live.initial, { fontSize: Math.round(size * 0.34) }]}>{initialFor(displayName)}</Text>
       {editable ? (
-        <View style={[styles.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: colors.primaryFill }]}>
-          <Ionicons name="camera-outline" size={Math.max(12, Math.round(size * 0.17))} color={colors.onPrimary} />
+        <View style={[styles.badge, live.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: t.colors.primaryFill }]}>
+          <Ionicons name="camera-outline" size={Math.max(12, Math.round(size * 0.17))} color={t.colors.onPrimary} />
         </View>
       ) : null}
     </View>
@@ -102,3 +106,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BottomSheet.js's buildLiveStyles. `avatar`/`image` carry no colour tokens
+// of their own (borderColor/backgroundColor are supplied inline per call, see
+// baseStyle above).
+function buildLiveStyles(t) {
+  return {
+    initial: { ...t.type.h3, color: t.colors.primary },
+    badge: { borderColor: t.colors.surface },
+  };
+}

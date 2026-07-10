@@ -38,10 +38,14 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fontSize, fontWeight, spacing, radius, motion, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 import * as haptics from '../lib/haptics';
 
 const PeekMenu = forwardRef(function PeekMenu(_, ref) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const [config, setConfig] = useState(null);
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const translateY = useRef(new Animated.Value(reduceMotion ? 0 : 400)).current;
@@ -111,23 +115,24 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
       animationType="none"
       statusBarTranslucent={Platform.OS === 'android'}
     >
-      <Animated.View style={[styles.backdrop, { opacity: backdrop }]}>
+      <Animated.View style={[styles.backdrop, live.backdrop, { opacity: backdrop }]}>
         <Pressable accessibilityRole="button" accessibilityLabel="Close" style={StyleSheet.absoluteFillObject} onPress={() => animateOut()} />
       </Animated.View>
       <Animated.View
         style={[
           styles.sheet,
+          live.sheet,
           { paddingBottom: Math.max(spacing.xxl + spacing.md, insets.bottom + spacing.lg) },
           { transform: [{ translateY }] },
         ]}
         accessibilityViewIsModal
       >
-        <View style={styles.handle} />
+        <View style={[styles.handle, live.handle]} />
         {config.title ? (
-          <Text maxFontSizeMultiplier={1.3} style={styles.title} numberOfLines={1}>{config.title}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]} numberOfLines={1}>{config.title}</Text>
         ) : null}
         {config.subtitle ? (
-          <Text maxFontSizeMultiplier={1.3} style={styles.subtitle} numberOfLines={2}>{config.subtitle}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]} numberOfLines={2}>{config.subtitle}</Text>
         ) : null}
         <View style={styles.itemList}>
           {config.items.map((item, i) => (
@@ -136,7 +141,7 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
               onPress={() => handleItem(item)}
               style={({ pressed }) => [
                 styles.item,
-                pressed && { backgroundColor: colors.surface2 },
+                pressed && { backgroundColor: t.colors.surface2 },
               ]}
               accessibilityRole="button"
               accessibilityLabel={item.label}
@@ -144,12 +149,13 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
               <Ionicons
                 name={item.icon || 'ellipse-outline'}
                 size={18}
-                color={item.destructive ? colors.error : colors.primary}
+                color={item.destructive ? t.colors.error : t.colors.primary}
               />
               <Text maxFontSizeMultiplier={1.3}
                 style={[
                   styles.itemText,
-                  item.destructive && { color: colors.error },
+                  live.itemText,
+                  item.destructive && { color: t.colors.error },
                 ]}
               >
                 {item.label}
@@ -159,11 +165,11 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
         </View>
         <Pressable
           onPress={() => animateOut()}
-          style={styles.cancel}
+          style={[styles.cancel, live.cancel]}
           accessibilityRole="button"
           accessibilityLabel="Cancel"
         >
-          <Text maxFontSizeMultiplier={1.3} style={styles.cancelText}>Cancel</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.cancelText, live.cancelText]}>Cancel</Text>
         </Pressable>
       </Animated.View>
     </Modal>
@@ -234,3 +240,19 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BottomSheet.js's buildLiveStyles. itemList/item have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    backdrop: { backgroundColor: t.colors.scrim },
+    sheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    handle: { backgroundColor: t.colors.border },
+    title: { color: t.colors.textPrimary },
+    subtitle: { ...t.type.caption, color: t.colors.textMuted },
+    itemText: { color: t.colors.textPrimary },
+    cancel: { backgroundColor: t.colors.surface2 },
+    cancelText: { color: t.colors.textSecondary },
+  };
+}

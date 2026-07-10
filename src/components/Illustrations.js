@@ -13,11 +13,9 @@
 
 import { View } from 'react-native';
 import Svg, { Path, Circle, Rect, Line, G } from 'react-native-svg';
-import { colors } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 const STROKE = 2.5;
-const ACCENT = colors.primary;
-const MUTED = colors.textMuted;
 
 function Frame({ size = 140, children }) {
   return (
@@ -35,6 +33,12 @@ function Frame({ size = 140, children }) {
  * yet" empty states.
  */
 export function EmptyWorkoutsIllustration({ size = 140 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme, replacing
+  // the frozen module-scope ACCENT/MUTED consts these illustrations used to
+  // bake at import time.
+  const t = useTheme();
+  const ACCENT = t.colors.primary;
+  const MUTED = t.colors.textMuted;
   return (
     <Frame size={size}>
       {/* Floor line */}
@@ -61,6 +65,10 @@ export function EmptyWorkoutsIllustration({ size = 140 }) {
  * Home empty states where the user hasn't picked a plan yet.
  */
 export function EmptyPlanIllustration({ size = 140 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const ACCENT = t.colors.primary;
+  const MUTED = t.colors.textMuted;
   return (
     <Frame size={size}>
       {/* Calendar body */}
@@ -90,6 +98,9 @@ export function EmptyPlanIllustration({ size = 140 }) {
  * earned yet.
  */
 export function EmptyPRsIllustration({ size = 140 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const ACCENT = t.colors.primary;
   return (
     <Frame size={size}>
       {/* Cup */}
@@ -118,6 +129,10 @@ export function EmptyPRsIllustration({ size = 140 }) {
  * Progress / Analytics when there's no data yet.
  */
 export function EmptyChartIllustration({ size = 140 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const ACCENT = t.colors.primary;
+  const MUTED = t.colors.textMuted;
   return (
     <Frame size={size}>
       {/* Axes */}
@@ -146,6 +161,10 @@ export function EmptyChartIllustration({ size = 140 }) {
  * states.
  */
 export function EmptyBodyIllustration({ size = 140 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const ACCENT = t.colors.primary;
+  const MUTED = t.colors.textMuted;
   return (
     <Frame size={size}>
       {/* Scale body */}

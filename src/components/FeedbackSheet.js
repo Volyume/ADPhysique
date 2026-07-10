@@ -35,6 +35,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as haptics from '../lib/haptics';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 import { submitFeedback, markPromptShown } from '../lib/feedback';
 import Button from './Button';
@@ -125,6 +126,9 @@ export function FeedbackProvider({ children }) {
 }
 
 const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const userId = useAppStore(s => s.user?.id);
 
@@ -244,31 +248,32 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
       animationType="none"
       statusBarTranslucent={Platform.OS === 'android'}
     >
-      <Animated.View style={[styles.backdrop, { opacity: backdrop }]}>
+      <Animated.View style={[styles.backdrop, live.backdrop, { opacity: backdrop }]}>
         <Pressable accessibilityRole="button" accessibilityLabel="Close" style={StyleSheet.absoluteFillObject} onPress={() => animateOut()} />
       </Animated.View>
       <Animated.View
         style={[
           styles.sheet,
+          live.sheet,
           { paddingBottom: Math.max(spacing.xxl + spacing.md, insets.bottom + spacing.lg) },
           { transform: [{ translateY }] },
         ]}
         accessibilityViewIsModal
       >
-        <View style={styles.handle} />
+        <View style={[styles.handle, live.handle]} />
 
         {done ? (
           <View style={styles.doneBlock}>
-            <Ionicons name="checkmark-circle" size={36} color={colors.success} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.doneTitle}>Thanks</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.doneSub}>Your feedback's on its way.</Text>
+            <Ionicons name="checkmark-circle" size={36} color={t.colors.success} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.doneTitle, live.doneTitle]}>Thanks</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.doneSub, live.doneSub]}>Your feedback's on its way.</Text>
           </View>
         ) : (
           <>
-            <Text maxFontSizeMultiplier={1.3} style={styles.title}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>
               {config.trigger === 'shake' ? "What's wrong?" : 'How was that?'}
             </Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.sub}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.sub, live.sub]}>
               {config.trigger === 'shake'
                 ? "Tell us what just happened. We attach the rest automatically."
                 : "Pick the closest match. One tap is plenty."}
@@ -289,8 +294,8 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
                   accessibilityRole="radio"
                   accessibilityLabel={`${s.label} sentiment`}
                   style={styles.sentimentChip}
-                  labelStyle={styles.sentimentChipText}
-                  selectedLabelStyle={styles.sentimentChipTextSelected}
+                  labelStyle={[styles.sentimentChipText, live.sentimentChipText]}
+                  selectedLabelStyle={[styles.sentimentChipTextSelected, live.sentimentChipTextSelected]}
                 />
               ))}
             </View>
@@ -299,12 +304,12 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
               <View>
                 <TextField
                   placeholder="Anything specific? (optional)"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor={t.colors.textMuted}
                   multiline
                   numberOfLines={3}
                   maxLength={500}
                   value={message}
-                  onChangeText={(t) => { setMessage(t); scheduleAutoDismiss(); }}
+                  onChangeText={(txt) => { setMessage(txt); scheduleAutoDismiss(); }}
                   accessibilityLabel="Optional details"
                   surface="surface2"
                   containerStyle={styles.inputContainer}
@@ -321,7 +326,7 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
                 variant="secondary"
                 fullWidth={false}
                 style={styles.cancelBtn}
-                textStyle={styles.cancelText}
+                textStyle={[styles.cancelText, live.cancelText]}
                 accessibilityLabel="Cancel feedback"
               />
               <Button
@@ -331,12 +336,12 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
                 loading={submitting}
                 fullWidth={false}
                 style={styles.submitBtn}
-                textStyle={styles.submitText}
+                textStyle={[styles.submitText, live.submitText]}
                 accessibilityLabel="Send feedback"
               />
             </View>
 
-            <Text maxFontSizeMultiplier={1.3} style={styles.privacy}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.privacy, live.privacy]}>
               Sent with build info, your last few actions, and a recent error if any.
               Body measurements and names are stripped before sending.
             </Text>
@@ -462,5 +467,27 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BottomSheet.js's buildLiveStyles. chipRow/sentimentChip/inputContainer/
+// inputField/inputText/actions/cancelBtn/submitBtn/doneBlock have no colour
+// tokens.
+function buildLiveStyles(t) {
+  return {
+    backdrop: { backgroundColor: t.colors.scrim },
+    sheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    handle: { backgroundColor: t.colors.border },
+    title: { color: t.colors.textPrimary },
+    sub: { color: t.colors.textMuted },
+    sentimentChipText: { color: t.colors.textSecondary },
+    sentimentChipTextSelected: { color: t.colors.textPrimary },
+    cancelText: { color: t.colors.textSecondary },
+    submitText: { color: t.colors.onPrimary },
+    privacy: { ...t.type.captionTight, color: t.colors.textMuted },
+    doneTitle: { color: t.colors.textPrimary },
+    doneSub: { color: t.colors.textMuted },
+  };
+}
 
 export default FeedbackSheet;

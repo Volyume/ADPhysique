@@ -18,18 +18,22 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   colors, fontSize, fontWeight, spacing, circle, type,
 } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import Button from './Button';
 
 export default function BiometricLockScreen({ authenticating = false, lastFailed = false, onRetry }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
-    <View style={styles.overlay} pointerEvents="auto">
+    <View style={[styles.overlay, live.overlay]} pointerEvents="auto">
       <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
         <View style={styles.content}>
-          <View style={styles.iconWrap}>
-            <Ionicons name="lock-closed" size={32} color={colors.primary} />
+          <View style={[styles.iconWrap, live.iconWrap]}>
+            <Ionicons name="lock-closed" size={32} color={t.colors.primary} />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={styles.title}>Volyume is locked</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.body}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Volyume is locked</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
             {lastFailed
               ? "That didn't go through. You can try again, or use your device passcode."
               : 'Unlock with Face ID, your fingerprint, or your device passcode to continue.'}
@@ -75,3 +79,16 @@ const styles = StyleSheet.create({
   },
   button: { marginTop: spacing.sm, alignSelf: 'stretch' },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BottomSheet.js's buildLiveStyles. safe/content/button have no colour
+// tokens.
+function buildLiveStyles(t) {
+  return {
+    overlay: { backgroundColor: t.colors.background },
+    iconWrap: { backgroundColor: t.colors.primaryBg },
+    title: { color: t.colors.textPrimary },
+    body: { ...t.type.body, color: t.colors.textSecondary },
+  };
+}

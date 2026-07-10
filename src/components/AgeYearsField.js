@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
-import { colors, spacing, radius, type } from '../styles/theme';
+import { spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import TextField from './TextField';
 
 // Shared age-in-years input. Extracted from NutritionTargetsScreen.js so
@@ -10,12 +11,14 @@ import TextField from './TextField';
 // age <-> a stored date-of-birth string (dateOfBirthFromAgeYears /
 // ageYearsFromDateOfBirth).
 export default function AgeYearsField({ value, onChangeText, onBlur }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
   return (
     <TextField
-      surface={colors.inputBg}
+      surface={t.colors.inputBg}
       fieldStyle={styles.numInputField}
       inputStyle={styles.numInput}
-      placeholderTextColor={colors.textMuted}
+      placeholderTextColor={t.colors.textMuted}
       value={value}
       onChangeText={onChangeText}
       onBlur={onBlur}

@@ -17,6 +17,7 @@ import useAppStore from '../store/useAppStore';
 import {
   colors, spacing, radius, type, iconSize, withAlpha, alpha, motion, letterSpacing,
 } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 // The two columns of the receipt. Copy is fixed (DESIGN-SPEC B4); it is echoed
 // into the consent record via PARTNER_PRIVACY_NOTICE_VERSION, so it changes
@@ -43,48 +44,52 @@ const NEVER = [
 const STACK_BELOW = 360;
 
 export default function PartnerPrivacyReceipt() {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  // Consent surface: style-token change only, no copy/logic touched.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const { width } = useWindowDimensions();
   const stack = width < STACK_BELOW;
 
   const body = (
     <>
-      <Text maxFontSizeMultiplier={1.3} style={styles.heading}>What your partner can see</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.heading, live.heading]}>What your partner can see</Text>
 
       <View style={[styles.columns, stack && styles.columnsStack]}>
         <View style={styles.col}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.colHeader}>THEY WILL SEE</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.colHeader, live.colHeader]}>THEY WILL SEE</Text>
           {CROSSES.map((line) => (
-            <Text maxFontSizeMultiplier={1.3} key={line} style={styles.crossLine}>{line}</Text>
+            <Text maxFontSizeMultiplier={1.3} key={line} style={[styles.crossLine, live.crossLine]}>{line}</Text>
           ))}
         </View>
 
-        {stack ? <View style={styles.ruleH} /> : <View style={styles.ruleV} />}
+        {stack ? <View style={[styles.ruleH, live.ruleH]} /> : <View style={[styles.ruleV, live.ruleV]} />}
 
         <View style={styles.col}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.colHeader}>THEY NEVER SEE</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.colHeader, live.colHeader]}>THEY NEVER SEE</Text>
           {NEVER.map((line) => (
             <View key={line} style={styles.neverRow}>
               <Ionicons
                 name="lock-closed-outline"
                 size={iconSize.sm}
-                color={colors.textSecondary}
+                color={t.colors.textSecondary}
                 style={styles.lockIcon}
               />
-              <Text maxFontSizeMultiplier={1.3} style={styles.neverLine}>{line}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.neverLine, live.neverLine]}>{line}</Text>
             </View>
           ))}
         </View>
       </View>
 
-      <Text maxFontSizeMultiplier={1.3} style={styles.footer}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.footer, live.footer]}>
         Either of you can end this at any time. Everything shared is deleted.
       </Text>
     </>
   );
 
   if (reduceMotion) {
-    return <View style={styles.card}>{body}</View>;
+    return <View style={[styles.card, live.card]}>{body}</View>;
   }
 
   let entering;
@@ -96,10 +101,10 @@ export default function PartnerPrivacyReceipt() {
       ),
     );
   } catch (_) {
-    return <View style={styles.card}>{body}</View>;
+    return <View style={[styles.card, live.card]}>{body}</View>;
   }
 
-  return <Animated.View entering={entering} style={styles.card}>{body}</Animated.View>;
+  return <Animated.View entering={entering} style={[styles.card, live.card]}>{body}</Animated.View>;
 }
 
 const styles = StyleSheet.create({
@@ -140,3 +145,20 @@ const styles = StyleSheet.create({
   neverLine: { ...type.body, color: colors.textSecondary, flex: 1 },
   footer: { ...type.caption, color: colors.textSecondary },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BottomSheet.js's buildLiveStyles. columns/columnsStack/col/neverRow/
+// lockIcon have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    heading: { ...t.type.title, color: t.colors.textPrimary },
+    colHeader: { ...t.type.caption, color: t.colors.textSecondary },
+    ruleV: { backgroundColor: withAlpha(t.colors.border, alpha.strong) },
+    ruleH: { backgroundColor: withAlpha(t.colors.border, alpha.strong) },
+    crossLine: { ...t.type.body, color: t.colors.textPrimary },
+    neverLine: { ...t.type.body, color: t.colors.textSecondary },
+    footer: { ...t.type.caption, color: t.colors.textSecondary },
+  };
+}

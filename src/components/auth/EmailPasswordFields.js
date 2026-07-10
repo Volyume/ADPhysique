@@ -1,6 +1,7 @@
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, spacing } from '../../styles/theme';
+import { spacing } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 import TextField from '../TextField';
 
 // The email + password inputs shared by the LoginScreen and the Pro onboarding
@@ -14,6 +15,8 @@ export default function EmailPasswordFields({
   password, onPasswordChange,
   showPassword, onToggleShowPassword,
 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
   const isSignup = mode === 'signup';
 
   return (
@@ -57,7 +60,7 @@ export default function EmailPasswordFields({
               accessibilityRole="button"
               accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
             >
-              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={19} color={colors.textMuted} />
+              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={19} color={t.colors.textMuted} />
             </TouchableOpacity>
           )}
         />

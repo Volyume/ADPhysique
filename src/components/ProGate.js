@@ -8,6 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import {
   colors, fontSize, fontWeight, spacing, radius, circle, type,
 } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BottomSheet from './BottomSheet';
 import Button from './Button';
 import useAppStore from '../store/useAppStore';
@@ -68,6 +69,9 @@ function benefitFor(feature) {
  *   </ProGate>
  */
 export default function ProGate({ children, feature = 'This feature', style }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   // Only subscribe to tier, the unselected destructure re-rendered every
   // ProGated subtree on every store mutation (including each rest-timer
   // tick).
@@ -97,9 +101,9 @@ export default function ProGate({ children, feature = 'This feature', style }) {
           accessibilityRole="button"
           accessibilityLabel="Upgrade to Pro"
         >
-          <View style={styles.lockChip}>
-            <Ionicons name="lock-closed" size={13} color={colors.onPrimary} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.lockChipText}>Pro</Text>
+          <View style={[styles.lockChip, live.lockChip]}>
+            <Ionicons name="lock-closed" size={13} color={t.colors.onPrimary} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.lockChipText, live.lockChipText]}>Pro</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -110,14 +114,14 @@ export default function ProGate({ children, feature = 'This feature', style }) {
         accessibilityLabel={`${feature} Pro upgrade`}
       >
         <View style={styles.sheetContent}>
-          <View style={styles.sheetIconWrap} accessibilityElementsHidden importantForAccessibility="no">
-            <Ionicons name="lock-closed-outline" size={28} color={colors.primary} />
+          <View style={[styles.sheetIconWrap, live.sheetIconWrap]} accessibilityElementsHidden importantForAccessibility="no">
+            <Ionicons name="lock-closed-outline" size={28} color={t.colors.primary} />
           </View>
 
-          <Text maxFontSizeMultiplier={1.3} style={styles.sheetTitle}>{feature}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>{feature}</Text>
           {/* COMP-CLARITY: per-feature line so the inline sheet matches what
               the user tapped, falling back to the coaching-layer pitch. */}
-          <Text maxFontSizeMultiplier={1.3} style={styles.sheetBody}>{benefitFor(feature)}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.sheetBody, live.sheetBody]}>{benefitFor(feature)}</Text>
 
           <Button
             title="Upgrade to Pro"
@@ -145,6 +149,9 @@ export default function ProGate({ children, feature = 'This feature', style }) {
  * The route guard renders this instead of the screen.
  */
 export function ProLocked({ feature = 'This' }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const navigation = useNavigation();
   const userId = useAppStore(s => s.user?.id);
   const [restoring, setRestoring] = useState(false);
@@ -190,20 +197,20 @@ export function ProLocked({ feature = 'This' }) {
   }
 
   return (
-    <SafeAreaView style={styles.lockedSafe} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.lockedSafe, live.lockedSafe]} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.lockedScroll} showsVerticalScrollIndicator={false}>
         {/* Founder 2026-07-02: the lock is a short gate, not a sales page.
             Identity first (lock + what this is), the example day as the one
             piece of show-don't-tell, then the CTA. The full sell (prices,
             comparison, FAQ, held-seat reassurance) lives on ProUpgrade, which
             the CTA opens, duplicating it here read as a mess. */}
-        <View style={styles.lockedIcon}>
-          <Ionicons name="lock-closed" size={28} color={colors.primary} />
+        <View style={[styles.lockedIcon, live.lockedIcon]}>
+          <Ionicons name="lock-closed" size={28} color={t.colors.primary} />
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={styles.lockedTitle}>{feature} is part of Pro</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.lockedTitle, live.lockedTitle]}>{feature} is part of Pro</Text>
         {/* COMP-CLARITY: per-feature benefit line so each Pro route explains
             why it is Pro, instead of the same coaching pitch on every lock. */}
-        <Text maxFontSizeMultiplier={1.3} style={styles.lockedBody}>{benefitFor(feature)}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.lockedBody, live.lockedBody]}>{benefitFor(feature)}</Text>
         {/* Show-then-sell (founder decision #6): the read-only example day,
             below the headline so it reads in context. Nutrition lock only.
             The teaser LOOKS tappable (four meal cards), so the whole block is
@@ -222,12 +229,12 @@ export function ProLocked({ feature = 'This' }) {
           </TouchableOpacity>
         ) : null}
         <TouchableOpacity accessibilityRole="button"
-          style={styles.lockedBtn}
+          style={[styles.lockedBtn, live.lockedBtn]}
           onPress={() => navigation.navigate('ProUpgrade')}
           activeOpacity={0.88}
         >
-          <Ionicons name="barbell-outline" size={16} color={colors.onPrimary} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.lockedBtnText}>Upgrade to Pro</Text>
+          <Ionicons name="barbell-outline" size={16} color={t.colors.onPrimary} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.lockedBtnText, live.lockedBtnText]}>Upgrade to Pro</Text>
         </TouchableOpacity>
         <TouchableOpacity accessibilityRole="button"
           style={styles.lockedBack}
@@ -239,20 +246,23 @@ export function ProLocked({ feature = 'This' }) {
             else navigation.navigate('HomeTab');
           }}
         >
-          <Text maxFontSizeMultiplier={1.3} style={styles.lockedBackText}>Not now</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.lockedBackText, live.lockedBackText]}>Not now</Text>
         </TouchableOpacity>
         {/* COMP-CLARITY: Play-required restore, so a reinstalled paid user can
             recover Pro from the lock without buying again. Same read-only
             entitlement path as PaywallScreen; no purchase is made here. */}
         <TouchableOpacity
-          style={styles.lockedRestore}
+          style={[styles.lockedRestore, live.lockedRestore]}
           onPress={handleRestore}
           disabled={restoring}
           accessibilityRole="button"
           accessibilityLabel="Restore purchases"
         >
-          <Ionicons name="refresh-outline" size={14} color={colors.textSecondary} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.lockedRestoreText}>
+          {/* CP-10 theming batch, guard-test pin extended (ProGate.featureCopy.
+              guard.test.js "restore purchase action is contained chrome"): the
+              literal now reads t.colors.textSecondary, same token, live read. */}
+          <Ionicons name="refresh-outline" size={14} color={t.colors.textSecondary} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.lockedRestoreText, live.lockedRestoreText]}>
             {restoring ? 'Restoring...' : 'Restore purchases'}
           </Text>
         </TouchableOpacity>
@@ -304,6 +314,9 @@ export function withProGuard(Component, feature) {
  */
 export function withReadOnlyProGuard(Component, feature, hasHistory) {
   return function GuardedScreen(props) {
+    // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+    const t = useTheme();
+    const live = buildLiveStyles(t);
     const tier = useAppStore(s => s.tier);
     const userId = useAppStore(s => s.user?.id);
     const isFree = tier !== 'pro';
@@ -326,7 +339,7 @@ export function withReadOnlyProGuard(Component, feature, hasHistory) {
     if (!isFree) return <Component {...props} />;
     // Plain background while the existence read settles, so a user with
     // history never sees the lock flash before their data appears.
-    if (hasData === null) return <View style={styles.lockedSafe} />;
+    if (hasData === null) return <View style={[styles.lockedSafe, live.lockedSafe]} />;
     if (!hasData) return <ProLocked feature={feature} />;
     return <Component {...props} />;
   };
@@ -336,11 +349,14 @@ export function withReadOnlyProGuard(Component, feature, hasHistory) {
  * ProBadge, inline badge to show next to Pro-only labels/headings.
  */
 export function ProBadge({ size = 'sm' }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const isSmall = size === 'sm';
   return (
-    <View style={[styles.badge, isSmall ? styles.badgeSm : styles.badgeMd]}>
-      <Ionicons name="barbell" size={isSmall ? 8 : 10} color={colors.onPrimary} />
-      <Text maxFontSizeMultiplier={1.3} style={[styles.badgeText, isSmall ? styles.badgeTextSm : styles.badgeTextMd]}>PRO</Text>
+    <View style={[styles.badge, live.badge, isSmall ? styles.badgeSm : styles.badgeMd]}>
+      <Ionicons name="barbell" size={isSmall ? 8 : 10} color={t.colors.onPrimary} />
+      <Text maxFontSizeMultiplier={1.3} style={[styles.badgeText, live.badgeText, isSmall ? styles.badgeTextSm : styles.badgeTextMd]}>PRO</Text>
     </View>
   );
 }
@@ -429,3 +445,29 @@ const styles = StyleSheet.create({
   badgeTextSm: { fontSize: fontSize.micro },
   badgeTextMd: { fontSize: fontSize.micro },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BottomSheet.js's buildLiveStyles. wrapper/contentDim/lockOverlay/
+// sheetContent/upgradeBtn/lockedScroll/lockedTeaser/lockedBack/badgeSm/
+// badgeMd have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    lockChip: { backgroundColor: t.colors.primaryFill },
+    lockChipText: { ...t.type.captionStrong, color: t.colors.onPrimary },
+    sheetIconWrap: { backgroundColor: t.colors.primaryBg },
+    sheetTitle: { color: t.colors.textPrimary },
+    sheetBody: { color: t.colors.textSecondary },
+    lockedSafe: { backgroundColor: t.colors.background },
+    lockedIcon: { backgroundColor: t.colors.primaryBg },
+    lockedTitle: { color: t.colors.textPrimary },
+    lockedBody: { color: t.colors.textSecondary },
+    lockedBtn: { backgroundColor: t.colors.primaryFill },
+    lockedBtnText: { color: t.colors.onPrimary },
+    lockedBackText: { color: t.colors.textMuted },
+    lockedRestore: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    lockedRestoreText: { ...t.type.caption, color: t.colors.textSecondary },
+    badge: { backgroundColor: t.colors.primaryFill },
+    badgeText: { color: t.colors.onPrimary },
+  };
+}

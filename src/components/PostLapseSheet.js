@@ -17,6 +17,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Text, StyleSheet, AppState } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BottomSheet from './BottomSheet';
 import Button from './Button';
 import ReasonPicker from './ReasonPicker';
@@ -34,6 +35,9 @@ const BODY = "Everything you logged is saved: training history, PRs, weigh-ins, 
 const SUBSCRIPTION_LINK_TEXT = 'Changed your mind? Pro is always one tap away in Subscription.';
 
 export default function PostLapseSheet({ visible, onClose, userId = null, askReason = false }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const [reason, setReason] = useState(null);
   const [text, setText] = useState('');
 
@@ -78,8 +82,8 @@ export default function PostLapseSheet({ visible, onClose, userId = null, askRea
       keyboardAvoiding
       accessibilityLabel="Your Pro subscription has ended"
     >
-      <Text maxFontSizeMultiplier={1.3} style={styles.title}>Your Pro subscription has ended</Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.body}>{BODY}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Your Pro subscription has ended</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>{BODY}</Text>
 
       <Button
         title={SUBSCRIPTION_LINK_TEXT}
@@ -93,7 +97,7 @@ export default function PostLapseSheet({ visible, onClose, userId = null, askRea
 
       {askReason ? (
         <>
-          <Text maxFontSizeMultiplier={1.3} style={styles.sub}>One quick question, if you have a moment. Optional.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.sub, live.sub]}>One quick question, if you have a moment. Optional.</Text>
           <ReasonPicker
             reason={reason}
             text={text}
@@ -173,3 +177,14 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BottomSheet.js's buildLiveStyles. subscriptionLink has no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    title: { color: t.colors.textPrimary },
+    body: { ...t.type.bodySm, color: t.colors.textSecondary },
+    sub: { color: t.colors.textMuted },
+  };
+}

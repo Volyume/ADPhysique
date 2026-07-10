@@ -1,6 +1,7 @@
 import { Pressable, View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 export default function ConsentCheckboxRow({
   checked,
@@ -13,6 +14,10 @@ export default function ConsentCheckboxRow({
   style,
   labelStyle,
 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  // Consent surface: style-token change only, no copy/logic touched.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const compact = size === 'sm';
 
   return (
@@ -21,7 +26,7 @@ export default function ConsentCheckboxRow({
       disabled={disabled}
       style={({ pressed }) => [
         styles.row,
-        variant === 'card' && styles.card,
+        variant === 'card' && [styles.card, live.card],
         compact ? styles.rowSm : styles.rowMd,
         style,
         pressed && !disabled && styles.pressed,
@@ -33,19 +38,20 @@ export default function ConsentCheckboxRow({
     >
       <View style={[
         styles.checkbox,
-        compact ? styles.checkboxSm : styles.checkboxMd,
-        checked && styles.checkboxChecked,
+        compact ? [styles.checkboxSm, live.checkboxSm] : [styles.checkboxMd, live.checkboxMd],
+        checked && [styles.checkboxChecked, live.checkboxChecked],
       ]}>
         {checked ? (
           <Ionicons
             name="checkmark"
             size={compact ? 13 : 18}
-            color={colors.onPrimary}
+            color={t.colors.onPrimary}
           />
         ) : null}
       </View>
       <Text maxFontSizeMultiplier={1.3} style={[
         styles.label,
+        live.label,
         compact ? styles.labelSm : styles.labelMd,
         labelStyle,
       ]}>
@@ -110,3 +116,17 @@ const styles = StyleSheet.create({
     ...type.bodySm,
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BottomSheet.js's buildLiveStyles. row/rowSm/rowMd/pressed/disabled/checkbox/
+// labelSm/labelMd have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    checkboxSm: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface2 },
+    checkboxMd: { borderColor: t.colors.border },
+    checkboxChecked: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryFill },
+    label: { color: t.colors.textPrimary },
+  };
+}

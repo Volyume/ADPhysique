@@ -77,8 +77,15 @@ describe('shared chrome polish', () => {
   });
 
   test('Cardio history is a contained neutral header action', () => {
-    expect(CARDIO_PLAN_CARD).toContain('style={styles.cardioHistoryBtn}');
-    expect(CARDIO_PLAN_CARD).toContain('Ionicons name="time-outline" size={13} color={colors.textSecondary}');
+    // CP-10 theming batch (2026-07-10): pin extended, mechanical only.
+    // CardioPlanCard moved to the live useTheme() hook (frozen StyleSheet +
+    // buildLiveStyles override, same pattern as BottomSheet.js), so the
+    // style prop now carries a live override array and the icon colour
+    // reads t.colors.textSecondary instead of the frozen colors singleton.
+    // The frozen `cardioHistoryBtn`/`cardioHistoryLink` StyleSheet entries
+    // this test also pins are untouched (byte-identical).
+    expect(CARDIO_PLAN_CARD).toContain('style={[styles.cardioHistoryBtn, live.cardioHistoryBtn]}');
+    expect(CARDIO_PLAN_CARD).toContain('Ionicons name="time-outline" size={13} color={t.colors.textSecondary}');
     expect(CARDIO_PLAN_CARD).toMatch(/cardioHistoryBtn: \{[\s\S]*minHeight: 36,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(CARDIO_PLAN_CARD).toContain('cardioHistoryLink: { ...type.caption, color: colors.textPrimary }');
     expect(CARDIO_PLAN_CARD).not.toMatch(/cardioHistoryLink: \{[\s\S]*color: colors\.primary/);

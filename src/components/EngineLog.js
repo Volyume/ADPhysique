@@ -14,6 +14,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getRecentAdaptationEvents, getCompletedWorkoutSets, getAllExercises } from '../lib/database';
 import InfoTooltip from './InfoTooltip';
@@ -57,6 +58,9 @@ function detectRepRegressions(sets, exerciseMap) {
 }
 
 export default function EngineLog({ userId }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const [adaptationHistory, setAdaptationHistory] = useState([]);
   const [repWarnings, setRepWarnings] = useState([]);
   const [open, setOpen] = useState(false);
@@ -82,38 +86,38 @@ export default function EngineLog({ userId }) {
   if (adaptationHistory.length === 0 && repWarnings.length === 0) return null;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, live.card]}>
       {/* AY-5 (2026-07-09 design audit): expanded-state so the disclosure is
           screen-reader navigable (matches CollapsibleSection.js's convention). */}
       <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: open }} style={styles.header} onPress={() => setOpen(v => !v)} activeOpacity={0.7}>
         <View style={styles.headerLeft}>
-          <View style={styles.iconWrap}>
-            <Ionicons name="pulse" size={18} color={colors.primary} />
+          <View style={[styles.iconWrap, live.iconWrap]}>
+            <Ionicons name="pulse" size={18} color={t.colors.primary} />
           </View>
           <View>
-            <Text maxFontSizeMultiplier={1.3} style={styles.headerLabel}>Engine Log</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.headerSub}>{repWarnings.length + adaptationHistory.length} recent coaching decisions</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.headerLabel, live.headerLabel]}>Engine Log</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.headerSub, live.headerSub]}>{repWarnings.length + adaptationHistory.length} recent coaching decisions</Text>
           </View>
         </View>
         <View style={styles.headerRight}>
           {/* U-F-5: define what the log is, in plain English, on the header. */}
           <InfoTooltip text={GLOSSARY.engineLog} size={15} />
-          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={t.colors.textMuted} />
         </View>
       </TouchableOpacity>
 
       {open && (
-        <View style={styles.body}>
+        <View style={[styles.body, live.body]}>
           {repWarnings.map((w, i) => (
             <View key={w.id || `reg_${i}`} style={styles.row}>
-              <Ionicons name="alert-circle-outline" size={14} color={colors.warning} />
+              <Ionicons name="alert-circle-outline" size={14} color={t.colors.warning} />
               <View style={{ flex: 1 }}>
                 <View style={styles.regTitleRow}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.muscle, { color: colors.warning }]}>{w.exerciseName}: Rep regression</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.muscle, live.muscle, { color: t.colors.warning }]}>{w.exerciseName}: Rep regression</Text>
                   {/* U-F-5: define "rep regression" in lay terms (once is enough). */}
                   {i === 0 && <InfoTooltip text={GLOSSARY.repRegression} size={13} />}
                 </View>
-                {w.reason_text ? <Text maxFontSizeMultiplier={1.3} style={styles.reason} numberOfLines={3}>{w.reason_text}</Text> : null}
+                {w.reason_text ? <Text maxFontSizeMultiplier={1.3} style={[styles.reason, live.reason]} numberOfLines={3}>{w.reason_text}</Text> : null}
               </View>
             </View>
           ))}
@@ -125,9 +129,9 @@ export default function EngineLog({ userId }) {
               event.decision === 'rotate_exercise' ? 'swap-horizontal' :
               'remove-outline';
             const iconColor =
-              event.decision === 'add_set' ? colors.primary :
-              event.decision === 'drop_set' || event.decision === 'deload_trigger' ? colors.error :
-              colors.textMuted;
+              event.decision === 'add_set' ? t.colors.primary :
+              event.decision === 'drop_set' || event.decision === 'deload_trigger' ? t.colors.error :
+              t.colors.textMuted;
             const muscleLabel = MUSCLE_DISPLAY_NAMES[event.muscle] || event.muscle || 'Unknown';
             const date = event.created_at
               ? new Date(event.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
@@ -136,13 +140,13 @@ export default function EngineLog({ userId }) {
               <View key={event.id || i} style={styles.row}>
                 <Ionicons name={icon} size={14} color={iconColor} />
                 <View style={{ flex: 1 }}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.muscle}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.muscle, live.muscle]}>
                     {muscleLabel}
                     {event.delta != null && event.delta !== 0 ? ` ${event.delta > 0 ? '+' : ''}${event.delta} set` : ''}
                   </Text>
-                  {event.reason_text ? <Text maxFontSizeMultiplier={1.3} style={styles.reason} numberOfLines={2}>{event.reason_text}</Text> : null}
+                  {event.reason_text ? <Text maxFontSizeMultiplier={1.3} style={[styles.reason, live.reason]} numberOfLines={2}>{event.reason_text}</Text> : null}
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={styles.date}>{date}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.date, live.date]}>{date}</Text>
               </View>
             );
           })}
@@ -173,3 +177,20 @@ const styles = StyleSheet.create({
   reason: { ...type.captionTight, color: colors.textSecondary, marginTop: spacing.xxs },
   date: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BottomSheet.js's buildLiveStyles. header/headerLeft/row/headerRight/
+// regTitleRow have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    iconWrap: { backgroundColor: t.colors.primaryBg },
+    headerLabel: { color: t.colors.textPrimary },
+    headerSub: { ...t.type.caption, color: t.colors.textSecondary },
+    body: { borderTopColor: t.colors.border },
+    muscle: { color: t.colors.textPrimary },
+    reason: { ...t.type.captionTight, color: t.colors.textSecondary },
+    date: { ...t.type.caption, color: t.colors.textMuted },
+  };
+}

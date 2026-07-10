@@ -12,11 +12,15 @@
 
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { colors, spacing, fontSize, fontWeight, radius, circle } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { selection as hapticSelection } from '../lib/haptics';
 import { CANCEL_REASONS, FREE_TEXT_REASONS, FREE_TEXT_PROMPT } from '../lib/cancelReason';
 import TextField from './TextField';
 
 export default function ReasonPicker({ reason, text, onSelectReason, onChangeText }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const showFreeText = reason != null && FREE_TEXT_REASONS.has(reason);
 
   function select(key) {
@@ -35,17 +39,18 @@ export default function ReasonPicker({ reason, text, onSelectReason, onChangeTex
               onPress={() => select(r.key)}
               style={({ pressed }) => [
                 styles.row,
-                selected && styles.rowSelected,
+                live.row,
+                selected && [styles.rowSelected, live.rowSelected],
                 pressed && { opacity: 0.7 },
               ]}
               accessibilityRole="radio"
               accessibilityState={{ checked: selected }}
               accessibilityLabel={r.label}
             >
-              <View style={[styles.radio, selected && styles.radioSelected]}>
-                {selected ? <View style={styles.radioDot} /> : null}
+              <View style={[styles.radio, live.radio, selected && [styles.radioSelected, live.radioSelected]]}>
+                {selected ? <View style={[styles.radioDot, live.radioDot]} /> : null}
               </View>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.rowText, selected && styles.rowTextSelected]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.rowText, live.rowText, selected && [styles.rowTextSelected, live.rowTextSelected]]}>
                 {r.label}
               </Text>
             </Pressable>
@@ -56,7 +61,7 @@ export default function ReasonPicker({ reason, text, onSelectReason, onChangeTex
       {showFreeText ? (
         <TextField
           placeholder={FREE_TEXT_PROMPT[reason]}
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={t.colors.textMuted}
           value={text}
           onChangeText={onChangeText}
           maxLength={120}
@@ -134,3 +139,19 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BottomSheet.js's buildLiveStyles. rows/inputContainer/inputField/inputText
+// have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    row: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    rowSelected: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    radio: { borderColor: t.colors.textMuted },
+    radioSelected: { borderColor: t.colors.primary },
+    radioDot: { backgroundColor: t.colors.primaryFill },
+    rowText: { color: t.colors.textSecondary },
+    rowTextSelected: { color: t.colors.textPrimary },
+  };
+}

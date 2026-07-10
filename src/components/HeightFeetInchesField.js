@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import TextField from './TextField';
 
 // Shared feet+inches height input pair. Extracted from
@@ -18,14 +19,17 @@ export default function HeightFeetInchesField({
   feet, onChangeFeet, onBlurFeet,
   inches, onChangeInches, onBlurInches,
 }) {
+  // CP-10 theming batch (component sweep, 2026-07-10): live theme.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <View style={styles.heightRow}>
       <View style={styles.heightUnit}>
         <TextField
-          surface={colors.inputBg}
+          surface={t.colors.inputBg}
           fieldStyle={styles.numInputField}
           inputStyle={styles.numInput}
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={t.colors.textMuted}
           value={feet}
           onChangeText={onChangeFeet}
           onBlur={onBlurFeet}
@@ -34,14 +38,14 @@ export default function HeightFeetInchesField({
           maxLength={1}
           accessibilityLabel="Height, feet"
         />
-        <Text maxFontSizeMultiplier={1.3} style={styles.unitLabel}>ft</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.unitLabel, live.unitLabel]}>ft</Text>
       </View>
       <View style={styles.heightUnit}>
         <TextField
-          surface={colors.inputBg}
+          surface={t.colors.inputBg}
           fieldStyle={styles.numInputField}
           inputStyle={styles.numInput}
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={t.colors.textMuted}
           value={inches}
           onChangeText={onChangeInches}
           onBlur={onBlurInches}
@@ -50,7 +54,7 @@ export default function HeightFeetInchesField({
           maxLength={4}
           accessibilityLabel="Height, inches"
         />
-        <Text maxFontSizeMultiplier={1.3} style={styles.unitLabel}>in</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.unitLabel, live.unitLabel]}>in</Text>
       </View>
     </View>
   );
@@ -81,3 +85,13 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 });
+
+// CP-10 theming batch (component sweep, 2026-07-10): live override for the
+// frozen `styles` block above, same "frozen base + live override" pattern as
+// BottomSheet.js's buildLiveStyles. heightRow/heightUnit/numInputField/
+// numInput have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    unitLabel: { ...t.type.bodyStrong, color: t.colors.textSecondary },
+  };
+}
