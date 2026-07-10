@@ -1059,3 +1059,14 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   exercise means the true second-to-last slot shows "Next exercise"
   which no-ops instead of offering Finish - queued as a small follow-up
   for a founder nod.
+- ITEM 13 LANDED (D16 order 1/5, Sonnet, lead-reviewed): the June ruling
+  (NA-wr-3, mid-session swap credits the ACTUAL swapped-in exercise's
+  muscle) was verified already structurally true (getWeeklyVolumeByMuscle
+  joins on logged exercise_id at read time; handleConfirmSwap rebuilds
+  the slot so set writes carry the new id). The gap was user-facing: the
+  swap sheet note now reads "Choose a close match for today. Your plan
+  is not changed, and sets you log count towards the new exercise's own
+  muscle in your weekly volume." 4 tests (copy verbatim + mechanism
+  pins). Full suite green (progressScanVision even passed this run).
+  NEXT per D16: item 12 raw/cooked basis toggle firing now; haptics
+  adoption still in flight.

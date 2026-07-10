@@ -3652,7 +3652,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Ionicons name="close" size={20} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.swapNote}>Choose a close match for today. Your plan is not changed.</Text>
+            <Text style={styles.swapNote}>Choose a close match for today. Your plan is not changed, and sets you log count towards the new exercise's own muscle in your weekly volume.</Text>
             <FlashList
               data={swapCandidates}
               keyExtractor={item => item.exercise.id}
