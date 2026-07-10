@@ -54,7 +54,8 @@ export function computeJournalImpacts(
   for (const entry of entries) {
     if (!labels.has(entry.behaviour) || (entry.value !== 'yes' && entry.value !== 'no')) continue;
     const outcome = outcomes.get(nextDay(entry.day));
-    if (!outcome || sleepTrustTier(outcome.sleepDetail) === 'low') continue;
+    const trust = outcome ? sleepTrustTier(outcome.sleepDetail) : 'none';
+    if (!outcome || (trust !== 'high' && trust !== 'medium')) continue;
     const bucket = buckets.get(entry.behaviour) ?? {
       yesRecovery: [],
       noRecovery: [],

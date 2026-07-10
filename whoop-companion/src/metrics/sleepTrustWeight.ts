@@ -34,8 +34,7 @@ export function sleepTrustWeight(day: DailyMetricRow): number {
   const tier = sleepTrustTier(day.sleepDetail);
   if (tier === 'high') return 1;
   if (tier === 'medium') return 0.7;
-  if (tier === 'low') return 0;
-  return day.sleepDetail?.coveragePct != null ? 0.45 : 1;
+  return 0;
 }
 
 export function sleepTrustWeightedAverage(

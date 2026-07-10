@@ -182,7 +182,10 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
   const captureTrustScore = sleepCaptureTrustScore(sleepDetail);
   const prior = recentDays.filter((d) => d.day !== today?.day);
   const baselineNights = prior.filter(
-    (d) => d.rmssd != null && d.rhr != null && sleepTrustTier(d.sleepDetail) !== 'low',
+    (d) => {
+      const tier = sleepTrustTier(d.sleepDetail);
+      return d.rmssd != null && d.rhr != null && (tier === 'high' || tier === 'medium');
+    },
   ).length;
   const week = recentDays.slice(0, 7).reverse();
   const days = orderedDays(today, recentDays);

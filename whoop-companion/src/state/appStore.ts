@@ -308,7 +308,7 @@ const LAST_DEVICE_ID_KEY = 'lastWhoopDeviceId';
 const STEP_DIVISOR_KEY = 'whoopStepTicksPerStep';
 const STEP_DIVISOR_MIGRATION_KEY = 'whoopStepDivisorCaptureDefaultV2';
 const K21_MOTION_BACKFILL_KEY = 'whoopK21MotionBackfillV1';
-const SLEEP_EVIDENCE_RECOMPUTE_KEY = 'sleepEvidenceRecomputeV6';
+const SLEEP_EVIDENCE_RECOMPUTE_KEY = 'sleepEvidenceRecomputeV7';
 const STRAP_ALARM_KEY = 'strapAlarm';
 
 function bandStepsAreTrusted(estimate: BandStepEstimate | null | undefined, divisor: number): boolean {
@@ -2819,7 +2819,7 @@ function applySleepNeed(sleep: SleepResult, need: SleepNeed): void {
 
 function isUsableDebtNight(day: DailyMetricRow): boolean {
   if (day.sleepMin == null) return false;
-  return sleepTrustTier(day.sleepDetail) !== 'low';
+  return sleepTrustIsUsable(day);
 }
 
 /** Debt accrues against the debt-free requirement for that night. Stored
@@ -2860,7 +2860,7 @@ function personalSleepBaseline(days: DailyMetricRow[]): number {
 
 function isUsableSleepTrendNight(day: DailyMetricRow): boolean {
   if (day.sleepStart == null || day.sleepEnd == null) return false;
-  return sleepTrustTier(day.sleepDetail) !== 'low';
+  return sleepTrustIsUsable(day);
 }
 
 /** Recovery baselines must come from nights with trustworthy sleep and vitals.
@@ -2870,8 +2870,13 @@ function isUsableRecoveryNight(day: DailyMetricRow): boolean {
   return (
     day.rmssd != null &&
     day.rhr != null &&
-    sleepTrustTier(day.sleepDetail) !== 'low'
+    sleepTrustIsUsable(day)
   );
+}
+
+function sleepTrustIsUsable(day: DailyMetricRow): boolean {
+  const tier = sleepTrustTier(day.sleepDetail);
+  return tier === 'high' || tier === 'medium';
 }
 
 function sleepCoveragePct(sleep: SleepResult): number {
