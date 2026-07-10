@@ -433,3 +433,24 @@ adversarial." Rulings recorded:
   + the diary season-to-taste row + MealPlan additions lists).
 - The remaining runway (in-chat list, recorded in the handover) is
   confirmed GO in full.
+
+## D29 — World-class campaign slate approved (founder, 2026-07-10)
+Founder reviewed the /10 scorecard (SCORECARD-2026-07-10.md) and confirmed
+"all to be done other than exercise media, rest day notification." Full
+approved slate documented in CAMPAIGN-2026-07-10-APPROVED-SLATE.md.
+- APPROVED (build): every scorecard target item - Coach-half polish,
+  finish restart-free theming (stages 4-5), dietary discoverability,
+  haptics + dynamic-type completion passes, LiftProgress metric bug,
+  history/cardio theming, raw/cooked chip, PR markers on LiftProgress,
+  TierComparisonStrip on Subscription, Android rest-timer actions, photo
+  gallery, keyboard-controller + zeego, shared-element transitions +
+  Android polish, MLKit scanner, small tails. NEWLY UNHELD: iOS Live
+  Activity wiring, drag reorder, giant sets (3+), Rive/brand-font
+  (asset/taste-gated).
+- STILL HELD (founder, do not build): #18 exercise media, #22 rest-day
+  notification.
+- Two agents at a time, lowest tier, leverage order per the campaign doc.
+- Codex external audit CLOSED AUD-01..07 (6 fixes on main, AUD-06 refuted);
+  our branch rebased onto that tip; combined tree green (657/8223).
+- Chat cleared after this; a fresh Fable session resumes from the handover's
+  FRESH SESSION START block.

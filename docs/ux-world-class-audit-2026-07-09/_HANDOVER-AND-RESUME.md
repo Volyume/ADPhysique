@@ -1,5 +1,104 @@
 # UX world-class audit — handover and resume note
 
+===============================================================================
+## ★ FRESH SESSION START HERE (2026-07-10, chat cleared, resuming with Fable) ★
+===============================================================================
+
+**You are Fable, coordinating a live-production build campaign on VOLYUME.**
+Read this block, then `CAMPAIGN-2026-07-10-APPROVED-SLATE.md` (the action
+spec), then `CLAUDE.md` (the constitution). Everything below is current.
+
+**BRANCH:** `claude/codebase-audit-docs-pv6mjd`. It is currently EVEN with
+`origin/main` PLUS three docs-only commits (audit intake, verification,
+scorecard) on top of Codex's AUD-01..07 fixes. Base is clean and green:
+657 suites / 8,223 tests pass, lint clean (2026-07-10). Never touch main
+directly except a founder-ordered ship (PR/squash or fast-forward on
+explicit instruction).
+
+**WHAT JUST HAPPENED:** An external Codex adversarial audit ran and fixed
+AUD-01..07 (billing fail-closed, recipe composite key, sync cursor on
+rollup, partner atomic purge, plan rollback, workout-set protection);
+AUD-06 was verified a false alarm and correctly skipped. Those 6 fix
+commits are merged into this branch's base. We independently verified all
+findings first (`codex-audit-verification-2026-07-10.md`). Separately, a
+full /10 scorecard of every user-facing area was produced
+(`SCORECARD-2026-07-10.md`).
+
+**THE JOB NOW:** Build the founder-approved improvement slate in
+`CAMPAIGN-2026-07-10-APPROVED-SLATE.md`. Founder approved EVERYTHING on
+the scorecard target list EXCEPT #18 exercise media and #22 rest-day
+notification (both HELD). That includes newly-UNHELD items: iOS Live
+Activity wiring, drag reorder, giant sets, and Rive/brand-font (asset/
+taste-gated). Sequence + per-item spec are in that campaign doc. Start at
+Pair 1 (Coach-half polish + theming stage 4) unless the founder redirects.
+
+### OPERATING MODEL (founder standing orders, INVIOLABLE)
+- **Fable coordinates; agents do the work.** You (main loop) do
+  architecture, safety-adjacent code, design judgement, and ALL hands-on
+  review. Agents do the leverage work (well-specified builds, reads, audits).
+- **Lowest capable agent tier, ALWAYS.** Every subagent/workflow call MUST
+  carry an explicit model: 'sonnet' for builds/tests/well-specified work,
+  'haiku' for mechanical (greps, simple writes, triage), 'opus' ONLY where
+  Fable-level judgement is unavoidable (engine-grade, hostile review).
+  NEVER 'fable' in a subagent. A hook (.claude/hooks/agent-tier-guard.py)
+  blocks a missing model. Effort informs sequencing, never the choice.
+- **TWO agents at a time, run to completion before the next pair.** (Token
+  protection in the 5-hour window.)
+- **Every agent brief:** state the authority (which decision/doc), the HARD
+  bounds (ED-safety/engine/billing/gating), do-NOT-touch files (name the
+  concurrent agent's lane + any file the lead is editing), the test + lint +
+  device-checklist expectation, and "STOP and report rather than interpret"
+  on any ambiguity or pinned-test conflict. Agents do NOT commit or push —
+  the lead reviews the diff, then commits. Agents must NOT run `git stash`
+  (shared tree). Agents must NOT touch main.
+- **PRODUCT-OVER-EFFORT (founder rule):** decisions are made on what makes
+  the end product best, never on what is easier to build.
+- **NO SILENT CORNER-CUTTING / NO PARKING:** every fork between "do the full
+  thing" and "do less" is a founder decision, surfaced as a structured
+  multiple-choice round BEFORE proceeding, never pre-decided, never with the
+  lighter option framed as the recommendation.
+- **Per-pair discipline:** after EVERY completed pair, update this handover +
+  the decisions register and PUSH, so a guardrail stop or chat loss never
+  loses progress. In practice, commit+push+stage-log after every single
+  landing.
+- **Commits:** small, per-feature, imperative + why-body, British English,
+  NO attribution of any kind (no Co-Authored-By, no tool/session links).
+  Reset-author rebase before every push if the harness injects attribution.
+- **Founder questions:** structured multi-choice rounds (AskUserQuestion),
+  never walls of text; if the tool fails, ask in plain numbered text.
+
+### KEY REFERENCE DOCS (read before acting)
+- `CAMPAIGN-2026-07-10-APPROVED-SLATE.md` — the action spec + sequencing.
+- `SCORECARD-2026-07-10.md` — every area rated /10, targeting rationale.
+- `DECISIONS-2026-07-09.md` — the full founder decision register (D8..D28;
+  includes the REJECTED/HELD/never-re-propose set).
+- `codex-audit-verification-2026-07-10.md` — the AUD-01..07 verdicts.
+- `CP-10-restart-free-theming-plan.md` — theming stages 4-5 plan.
+- `CLAUDE.md` (repo root) — the constitution; Section 2 inviolables.
+- Exercise plans A-G: `docs/exercise-planning-2026-07-09/`.
+
+### FOUNDER-SIDE ACTIONS OUTSTANDING (not agent work)
+- Apply supabase migrations 110-116 to EU-Dublin (manual) + any migration
+  Codex wrote for its AUD fixes.
+- Run `refresh-off-snapshot.yml` workflow (lands OFF micronutrient data).
+- iOS Live Activity: App Groups provisioning + fresh EAS build.
+- Play OAuth SHA-1 confirm.
+- Fresh EAS build carries a large device-walk backlog (timeline diary was
+  REVERTED to meal cards — verify that; weigh-in edit, dietary needs,
+  vitamins, haptics, next-exercise, bottom sheets, Help/FAQ, live theming).
+- Plan-F Tier-1/Tier-2 validation studies (external; not code).
+- OPEN founder rounds: watch-app scoping, kala namak tip, brand-font pick.
+
+### STILL HELD — do NOT build or re-propose
+Exercise media (#18); rest-day notification (#22); plate calculator;
+paywall social proof; RPE/RIR reinstatement (settled-removed). The
+adversarial whole-diff review is SUPERSEDED (Codex did it).
+
+===============================================================================
+## (Historical campaign log follows — the block above supersedes it for a
+## fresh session; the log below is the day-by-day landing history.)
+===============================================================================
+
 **Branch:** `claude/codebase-audit-docs-pv6mjd` (began docs-only; now the
 live BUILD campaign branch — app code changes land here too)
 **Started:** 2026-07-09
