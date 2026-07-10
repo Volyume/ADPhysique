@@ -307,7 +307,7 @@ const LAST_DEVICE_ID_KEY = 'lastWhoopDeviceId';
 const STEP_DIVISOR_KEY = 'whoopStepTicksPerStep';
 const STEP_DIVISOR_MIGRATION_KEY = 'whoopStepDivisorCaptureDefaultV2';
 const K21_MOTION_BACKFILL_KEY = 'whoopK21MotionBackfillV1';
-const SLEEP_EVIDENCE_RECOMPUTE_KEY = 'sleepEvidenceRecomputeV3';
+const SLEEP_EVIDENCE_RECOMPUTE_KEY = 'sleepEvidenceRecomputeV4';
 const STRAP_ALARM_KEY = 'strapAlarm';
 
 function bandStepsAreTrusted(estimate: BandStepEstimate | null | undefined, divisor: number): boolean {
@@ -418,10 +418,20 @@ class AppStore extends Store<AppState> {
 
     this.setState({ ready: true });
     setTimeout(() => this.connect(), 750);
-    void this.backfillStoredK21Motion()
-      .then(() => this.recomputeRecentSleepEvidence())
-      .then(() => this.refreshDerived())
-      .catch(() => {});
+    this.scheduleDeferredSleepMaintenance();
+  }
+
+  private scheduleDeferredSleepMaintenance(delayMs = 30 * 1000): void {
+    setTimeout(() => {
+      if (this.getState().draining || this.historyPersisting) {
+        this.scheduleDeferredSleepMaintenance(30 * 1000);
+        return;
+      }
+      void this.backfillStoredK21Motion()
+        .then(() => this.recomputeRecentSleepEvidence())
+        .then(() => this.refreshDerived())
+        .catch(() => {});
+    }, delayMs);
   }
 
   private onDevice(device: { id: string; name: string }): void {
@@ -676,7 +686,10 @@ class AppStore extends Store<AppState> {
   private async recomputeRecentSleepEvidence(): Promise<void> {
     if ((await kvGet(SLEEP_EVIDENCE_RECOMPUTE_KEY)) === '1') return;
     const today = dayKey(Date.now());
-    const recent = await getRecentDailyMetrics(14);
+    // Rebuild chronologically so each day's debt and personal-baseline inputs
+    // see the already-upgraded nights before it. Newest-first leaves recent
+    // rows dependent on stale scores from the previous algorithm.
+    const recent = (await getRecentDailyMetrics(30)).slice().reverse();
     for (const row of recent) {
       if (row.day === today) continue;
       await this.backfillDailyMetric(row.day);
