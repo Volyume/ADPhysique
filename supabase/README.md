@@ -12,6 +12,19 @@ proving each one landed. Run them in numeric order in the Supabase
 Dashboard SQL Editor. Every migration is additive and idempotent
 unless the file header says otherwise.
 
+> **OPERATING MODEL CHANGE (founder, 2026-07-10): cloud migrations are now
+> CLAUDE-RUN.** The founder connected a Supabase connector to the Claude
+> session and switched application from founder-run to Claude-run. The
+> production safety gate is unchanged: nothing is applied to EU-Dublin
+> without the founder's exact phrase "run against production" in that
+> session, given AFTER Claude has presented the audited apply list. Each
+> apply is followed by a read-only re-verification of every object the
+> batch should have created. On 2026-07-10, under this model, **migrations
+> 101-116 were applied to EU-Dublin and verified** (17/17 object checks
+> green; the prior founder-run state had stopped after 100/102's DDL, and
+> the deployed telemetry allow-list predated 101). **049 and 059 remain
+> HELD** and are excluded from any batch until the founder unholds them.
+
 ## Application order and verification playbook (migrations 037-057)
 
 > Authoritative applied-vs-pending status lives in `docs/CURRENT_STATUS.md`

@@ -9,7 +9,7 @@
 --                   reaches here.
 -- Applied locally:  N/A — cloud only; there is no local-DB analogue (the local
 --                   PB state lives in AsyncStorage via streakState.js).
--- Applied remotely: NO — founder runs this MANUALLY against EU-Dublin, like
+-- Applied remotely: YES (2026-07-10, applied to EU-Dublin by Claude via the Supabase connector, founder-authorised "run against production")
 --                   every cloud migration. The app never runs it.
 -- Safe to re-run:   YES — CREATE OR REPLACE FUNCTION fully redefines the
 --                   allow-list each run; idempotent. GRANT is idempotent.

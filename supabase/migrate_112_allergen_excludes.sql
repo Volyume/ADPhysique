@@ -1,4 +1,6 @@
 -- Migration 112: users_profile.allergen_excludes — synced FSA allergen
+-- Applied remotely: YES (2026-07-10, applied to EU-Dublin by Claude via the
+--   Supabase connector, founder-authorised "run against production").
 -- exclusion list for the dietary-needs build.
 --
 -- Purpose:

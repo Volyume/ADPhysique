@@ -55,7 +55,7 @@
 --   - Migration number:  102
 --   - Purpose:           partner safety/consent foundation (STEP A).
 --   - Applied locally:   NO (no local dev Supabase project)
---   - Applied remotely:  NO — NOT APPLIED. FOUNDER-RUN, manual, staging first
+--   - Applied remotely:  YES (2026-07-10, applied to EU-Dublin by Claude via the Supabase connector, founder-authorised "run against production")
 --                        (deploy-migrations.yml is workflow_dispatch-only; the
 --                        app never runs migrations).
 --   - Safe to re-run:    YES (ADD COLUMN IF NOT EXISTS, CREATE OR REPLACE, a

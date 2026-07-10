@@ -1,4 +1,6 @@
 -- migrate_116_food_library_pull_micros.sql
+-- Applied remotely: YES (2026-07-10, applied to EU-Dublin by Claude via the
+--   Supabase connector, founder-authorised "run against production").
 -- Item 16 data spike (Ultimate-Audit item 16, MN-1), 2026-07-10.
 --
 -- Purpose:

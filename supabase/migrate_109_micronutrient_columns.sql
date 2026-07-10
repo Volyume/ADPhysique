@@ -1,4 +1,6 @@
 -- Migration 109: MN-1 micronutrient columns on the food tables.
+-- Applied remotely: YES (2026-07-10, applied to EU-Dublin by Claude via the
+--   Supabase connector, founder-authorised "run against production").
 --
 -- Purpose:
 --   Cloud counterpart of local schema v58 (database.js). Adds the 27 UK-NRV

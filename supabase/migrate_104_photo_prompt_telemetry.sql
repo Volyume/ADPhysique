@@ -20,7 +20,7 @@
 -- last one applied.
 --
 -- Applied locally:  NO (pending)
--- Applied remotely: NO — founder-applied manually. The deploy-migrations
+-- Applied remotely: YES (2026-07-10, applied to EU-Dublin by Claude via the Supabase connector, founder-authorised "run against production")
 --                   workflow is retired (E0); cloud migrations are run by the
 --                   founder per CLAUDE.md. Apply this BEFORE shipping a client
 --                   build that emits these events, or those pushes are rejected

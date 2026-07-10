@@ -1,4 +1,6 @@
 -- Migration 107: Partner win cards.
+-- Applied remotely: YES (2026-07-10, applied to EU-Dublin by Claude via the
+--   Supabase connector, founder-authorised "run against production").
 --
 -- Purpose:
 --   Explicit, consent-gated partner win cards. A member can send one sanitized

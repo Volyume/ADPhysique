@@ -1,4 +1,6 @@
 -- Migration 108: founder Pro ledger.
+-- Applied remotely: YES (2026-07-10, applied to EU-Dublin by Claude via the
+--   Supabase connector, founder-authorised "run against production").
 --
 -- Purpose:
 --   Founder test accounts must stay Pro forever, even after repeated account

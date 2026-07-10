@@ -1,4 +1,6 @@
 -- Migration 110: perday_target_offsets — cloud mirror for the per-day-of-week
+-- Applied remotely: YES (2026-07-10, applied to EU-Dublin by Claude via the
+--   Supabase connector, founder-authorised "run against production").
 -- calorie planning offsets.
 --
 -- Purpose:

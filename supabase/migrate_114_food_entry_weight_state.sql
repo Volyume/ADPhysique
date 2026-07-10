@@ -1,4 +1,6 @@
 -- migrate_114_food_entry_weight_state.sql
+-- Applied remotely: YES (2026-07-10, applied to EU-Dublin by Claude via the
+--   Supabase connector, founder-authorised "run against production").
 -- Ultimate-Audit item 12: raw/cooked weight-state label on food_entries.
 --
 -- Purpose:

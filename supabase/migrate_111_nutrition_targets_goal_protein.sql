@@ -1,4 +1,6 @@
 -- Migration 111: goal + protein_approach columns on nutrition_targets.
+-- Applied remotely: YES (2026-07-10, applied to EU-Dublin by Claude via the
+--   Supabase connector, founder-authorised "run against production").
 --
 -- Purpose:
 --   Design-usability audit 2026-07-09, finding L05-NT1 (founder "keep going

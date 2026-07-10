@@ -33,7 +33,7 @@
 --   - Migration number:  106
 --   - Purpose:           partner cheer acknowledgement enum (STEP D5-B1).
 --   - Applied locally:   NO (no local dev Supabase project)
---   - Applied remotely:  NO — NOT APPLIED. FOUNDER-RUN, manual, staging first.
+--   - Applied remotely:  YES (2026-07-10, applied to EU-Dublin by Claude via the Supabase connector, founder-authorised "run against production")
 --                        Deploy the updated partner-cheer edge function in the
 --                        SAME founder step (it validates + stores kind).
 --   - Safe to re-run:    YES (ADD COLUMN IF NOT EXISTS; a DO block that

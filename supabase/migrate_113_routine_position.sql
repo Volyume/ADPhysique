@@ -1,4 +1,6 @@
 -- Migration 113: routines.position — day-level plan reorder.
+-- Applied remotely: YES (2026-07-10, applied to EU-Dublin by Claude via the
+--   Supabase connector, founder-authorised "run against production").
 --
 -- Purpose:
 --   Old founder-GO item, verified unbuilt: a user could reorder exercises

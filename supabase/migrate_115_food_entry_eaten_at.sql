@@ -1,4 +1,6 @@
 -- migrate_115_food_entry_eaten_at.sql
+-- Applied remotely: YES (2026-07-10, applied to EU-Dublin by Claude via the
+--   Supabase connector, founder-authorised "run against production").
 -- Ultimate-Audit item 15 (timeline food logging): editable "time eaten" on
 -- food_entries.
 --

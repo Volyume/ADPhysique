@@ -174,18 +174,25 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
    theming stage-4 tail continues as component/screen batches (coverage
    tracker below); stage 5 stays honesty-gated.
 
-**SUPABASE / MIGRATIONS (2026-07-10 resumed session, IN PROGRESS):**
-Founder connected a Supabase MCP connector to the session and proposed
-switching cloud migrations from founder-run to CLAUDE-RUN. Verified
-from the merged commits: Codex wrote NO SQL migration files — its only
-backend change is the app-store-notifications edge function fix
-(0987ecf, auto-deploys on main; deployed version to be verified via the
-connector). The cloud gap is exactly migrate_110..116. Plan: read-only
-schema audit first, then a structured founder round covering (a) the
-run-against-production confirmation for the missing files (constitution
-still requires that exact phrase) and (b) recording the founder-run ->
-Claude-run change in CLAUDE.md and supabase/README. 049/059 stay HELD
-regardless.
+**SUPABASE / MIGRATIONS (2026-07-10, DONE — Claude-run model live):**
+Founder connected a Supabase connector and switched cloud migrations to
+CLAUDE-RUN (phrase gate kept: exact "run against production" per batch,
+given this session). Read-only audit found the true gap was 101-116,
+not 110-116 (the deployed telemetry allow-list predated 101; 102's DDL
+was in but its function re-issue lineage was uncertain; 105-116 wholly
+absent). All 16 applied in order via apply_migration and RE-VERIFIED:
+17/17 object checks green, eaten_at backfill complete. Codex wrote NO
+SQL; its app-store-notifications fix is deployed (v3, auto-deploy).
+Security advisors: 1 pre-existing ERROR security_definer_view on
+engine_telemetry_daily (queue a look, predates this batch); 5
+rls-no-policy INFOs are deliberate deny-by-default tables. Recorded in
+supabase/README (operating-model note), CLAUDE.md status block, and
+the 16 file headers. 049/059 remain HELD. Item 16 scanner landed
+`2a42fe4` (already-MLKit verified; torch haptic + 6 pinned tests).
+NEW OPEN THREAD: founder reports the APK (EAS) build is FAILING again
+after the recent native changes (item 14 keyboard-controller/zeego,
+item 15 expo-splash-screen + monochrome icon) — logs requested, not
+yet investigated.
 
 **OPEN FOUNDER ITEMS (new this session, ask when convenient):**
 - Repeat-set on the set-row context menu: no per-row repeat action

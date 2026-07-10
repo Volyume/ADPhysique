@@ -9,9 +9,11 @@ are paying. Every change affects them. Work accordingly.
 > micronutrients/NRV = MN-1). A session MUST NOT start these without a
 > structured founder decision. Source:
 > `docs/ultimate-audit-2026-06-13/_AUDIT-STATUS-AND-RESUME.md`.
-> **Outstanding founder actions:** apply `supabase/migrate_092`..`_099` to
-> EU-Dublin (manual, founder-run; 049/059 remain HELD per supabase/README);
-> confirm Google Play OAuth SHA-1.
+> **Outstanding founder actions:** confirm Google Play OAuth SHA-1.
+> **Cloud migrations (updated 2026-07-10):** now CLAUDE-RUN via the founder's
+> Supabase connector, gated on the founder's exact phrase "run against
+> production" per apply batch (see supabase/README). EU-Dublin is applied
+> and verified through `migrate_116`; 049/059 remain HELD.
 
 ---
 
