@@ -1540,3 +1540,14 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   + zeego, gallery + scrub haptics, Android polish, Live Activity,
   rest-timer actions, watch memo, smalls. Founder-side: migrations
   110-116, OFF snapshot workflow run, App Groups + EAS, SHA-1.
+- CODEX ADVERSARIAL AUDIT received (2026-07-10): 7 findings (AUD-01..07)
+  + release decision. Founder confirmed NO USER BASE -> AUD-01 (forged
+  Apple notifications grant Pro) has ZERO live exploit window: no
+  webhook to disable, no grants to revoke, no entitlement history to
+  audit. ALL findings reclassified as FIX-BEFORE-LAUNCH code-correctness
+  items, not incidents; no ops mitigation needed. Founder is handing the
+  fixes to CODEX. Lead dispatched TWO read-only verification agents to
+  confirm/refute each finding against our actual tree before the
+  go-ahead (server/sync: 01/02/06; local-db: 03/04/05/07). Verdicts +
+  fix-constraints (cloud migrations founder-applied only; billing needs
+  written test plan; deterministic engine untouched) return to founder.
