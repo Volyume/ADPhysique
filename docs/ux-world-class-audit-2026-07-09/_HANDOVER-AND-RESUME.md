@@ -1307,3 +1307,14 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   NavigationContainer theme TOGETHER - App.js now free) + blurhash
   image polish (disjoint files); transitions follow (they'd collide
   with stage 2's RootNavigator work).
+- RUNWAY CONFIRMED TO FOUNDER (2026-07-10, in-chat list): in flight =
+  theming stage 2 + image polish. Then: theming stage 3; transitions;
+  dynamic type + FTS5; keyboard-controller + zeego; gallery + scrub
+  haptics + Android polish; Live Activity wiring; rest-timer notif
+  actions; OFF micros + MLKit; watch scoping memo; smalls (usuals chips,
+  per-meal subtotal, TalkBack isolation). Founder-gated: Rive assets,
+  font shortlist, migrations 110-116, App Groups + EAS, SHA-1.
+  FLAGGED to founder: the HELD adversarial whole-diff review (and its
+  R1 allergen-filtering fix - the most important unfixed finding) is
+  near its "everything else done" trigger - recommended to fire as the
+  build-heavy items land; awaiting founder word if wanted earlier.
