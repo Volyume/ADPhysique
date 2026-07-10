@@ -494,3 +494,24 @@ get there."
   same-tree (no navigation coupling), so it takes the full treatment.
 - Bounds: photo-viewer suppression behaviour (calm/ED) stays pinned;
   Reduce Motion flattens both treatments; no new dependency.
+
+## D32 — Drag reorder scope + session surface (founder-delegated, lead-ruled 2026-07-10)
+Context: campaign item 20. The founder's 2026-07-10 GO ("replace
+chevron-only reorder with true drag", newly-unheld list, D29)
+supersedes D5/D6's 2026-07-09 chevron-only constraint; the two reorder
+guard tests update to the new decision (dated comments), KEEPING the
+no-new-dependency and no-library pins and dropping only the
+runOnJS/PanResponder-era bans that encoded the old ruling. Verification
+found the active session has no draggable list (single-exercise view +
+tap-to-jump strip), so "true drag in session" is a design fork; the
+founder delegated it ("best for the user").
+- LEAD RULING: true long-press drag ships on PlanDetail (days),
+  ManualBuilder (superset/giant-set blocks move whole) and
+  RoutineDetail (drag made block-aware there too, closing that
+  surface's pre-existing block gap); the SESSION gets a purpose-built
+  reorder sheet opened from the existing overflow — the whole workout
+  as a draggable list in a sheet, workout view untouched. Rationale:
+  the single-exercise view is a deliberate focus design; in-view drag
+  mid-training is ergonomically risky, and a sheet gives real drag on
+  a real list one-handed. Accessible chevron/sheet move paths remain
+  everywhere (drag is additive).
