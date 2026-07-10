@@ -996,3 +996,18 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   Combined verification: lint clean, 12 suites/170 targeted tests green.
   10-step Android checklist for NAV-2 in the agent report (chat log).
   NEXT PAIR FIRING: D17 training-reminder habit rebuild + CP-9 in-app FAQ.
+- PAIR LANDED (2026-07-10): CP-9 Help & FAQ (0f1a87d, lead-reviewed
+  incl. one hands-on copy fix: "Eat" tab reference corrected to "the
+  food diary" - the tab is titled Nutrition): SettingsFaqScreen, 16
+  code-verified tier-neutral entries, free-reachable, offline; What's
+  new row correctly omitted (WhatsNewSheet has no imperative open API -
+  future plumbing item). D17 training-reminder rebuild (29de79e,
+  lead-reviewed): habit-derived weekdays (6 trailing full weeks,
+  half-rounded-up threshold, <2wk history = no write, lapsed pattern
+  actively clears), writer feeds @volyume_schedule_v1 in the reader's
+  exact shape (end-to-end contract test vs the REAL reader), hooks on
+  workout finish + App.js foreground beside the timezone re-lay, honest
+  settings copy guard-pinned. The shipped-but-silent reminder now works.
+  NEXT PAIR FIRING: CP-10 restart-free theming INVESTIGATION (plan-only,
+  no build) + Haiku extraction of pass4 blueprints for the Ultimate-Audit
+  11-16 founder round.
