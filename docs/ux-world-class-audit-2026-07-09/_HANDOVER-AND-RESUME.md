@@ -981,3 +981,18 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   IN FLIGHT: that implementation (Sonnet) + NAV-2 edit+delete+history
   (Sonnet, BodyMetrics + weigh-in storage/sync, detection re-runs on
   corrected series).
+- PAIR LANDED (2026-07-10): NAV-2 weigh-in edit+delete+history (a99f499,
+  lead-reviewed): soft-delete tombstones through the existing
+  body_composition sync, live reads exclude deleted, history from first
+  entry, edit reuses the entry form; KEY ARCHITECTURE FACT test-pinned -
+  body_metric_log NEVER feeds the rapid-loss ED detector (that reads
+  morning_weights), body-fat target inputs are live-read so corrections
+  apply next run; no haptics/judgement copy, gates untouched. Plan-F
+  display forks (ce968e4, lead-ruled under founder delegation):
+  render-time-only caption raise on-device from the local packet via the
+  one shared derivation (fail-to-base incl. older outputs; thin-data
+  disclosure stays on base), conflicts receipt sentence live and
+  unreachable under suppression; NU-8 guard mechanically updated (D18).
+  Combined verification: lint clean, 12 suites/170 targeted tests green.
+  10-step Android checklist for NAV-2 in the agent report (chat log).
+  NEXT PAIR FIRING: D17 training-reminder habit rebuild + CP-9 in-app FAQ.
