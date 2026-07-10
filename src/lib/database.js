@@ -2473,10 +2473,19 @@ export async function updateWorkout(id, data) {
 // SQLite bloat that comes from leaving orphaned in_progress rows
 // around with all their sets attached.
 export async function deleteIncompleteWorkout(workoutId) {
-  if (!workoutId) return;
+  if (!workoutId) return false;
   const d = await db();
-  await d.runAsync('DELETE FROM workout_sets WHERE workout_id = ?', [workoutId]);
-  await d.runAsync('DELETE FROM workouts WHERE id = ? AND is_completed = 0', [workoutId]);
+  return runInTransaction(d, async () => {
+    const workout = await d.getFirstAsync(
+      'SELECT id, is_completed FROM workouts WHERE id = ?',
+      [workoutId],
+    );
+    if (!workout || Number(workout.is_completed) === 1) return false;
+
+    await d.runAsync('DELETE FROM workout_sets WHERE workout_id = ?', [workoutId]);
+    await d.runAsync('DELETE FROM workouts WHERE id = ? AND is_completed = 0', [workoutId]);
+    return true;
+  });
 }
 
 // Hard-delete ANY workout and its sets (founder request 2026-06-12: remove a
