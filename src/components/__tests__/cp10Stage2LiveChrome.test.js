@@ -23,18 +23,27 @@
  * not provide). None of that is theming-specific -- it is the pre-existing,
  * documented state of this test environment.
  *
- * So this harness renders the exact PROP VALUES App.js's <StatusBar>
- * receives (`t.resolvedTheme`-derived `style`, `t.colors.background`) into a
- * plain, always-mountable View instead of the real native component, next to
- * the REAL src/navigation/navTheme.js derivation (useNavTheme -- no
- * react-navigation import, genuinely mountable, see that file's header
- * comment) and a REAL Stage-1 primitive (Card). All three are driven by the
- * same useTheme() call inside one component, exactly as App.js/
- * RootNavigator.js wire it. What this proves: the shared hook mechanism
- * that makes "no torn state" possible. What it does NOT prove: that
- * `expo-status-bar`'s native module itself repaints the OS status bar on a
- * physical device -- that is the on-device manual check this task's test
- * plan calls for.
+ * So this harness renders the exact PROP VALUE App.js's <StatusBar>
+ * receives (`t.resolvedTheme`-derived `style`) into a plain, always-mountable
+ * View instead of the real native component, next to the REAL
+ * src/navigation/navTheme.js derivation (useNavTheme -- no react-navigation
+ * import, genuinely mountable, see that file's header comment) and a REAL
+ * Stage-1 primitive (Card). All three are driven by the same useTheme() call
+ * inside one component, exactly as App.js/RootNavigator.js wire it. What
+ * this proves: the shared hook mechanism that makes "no torn state"
+ * possible. What it does NOT prove: that `expo-status-bar`'s native module
+ * itself repaints the OS status bar on a physical device -- that is the
+ * on-device manual check this task's test plan calls for.
+ *
+ * NOTE (2026-07-10, edge-to-edge StatusBar fix): App.js's <StatusBar> no
+ * longer passes `backgroundColor` -- under Android edge-to-edge (enforced in
+ * this app, targetSdk 35) it is a documented no-op that only logs a dev
+ * warning (node_modules/expo-status-bar/src/StatusBar.android.tsx). The
+ * probe below was updated to drop the matching prop/assertions so it keeps
+ * mirroring App.js's real JSX exactly; the Card and navTheme
+ * backgroundColor-sync assertions are untouched -- they pin a different,
+ * still-live prop path -- so the "no torn state across chrome consumers"
+ * guarantee this suite exists to prove is unweakened.
  */
 import { create, act } from 'react-test-renderer';
 import { View, Text, StyleSheet } from 'react-native';
@@ -81,14 +90,16 @@ function findHostByTestID(root, testID) {
   return root.findAllByProps({ testID }).find((n) => typeof n.type === 'string');
 }
 
-// Mirrors App.js's live StatusBar JSX (post CP-10 stage 2) exactly, minus the
-// real native component -- see the file header for why.
+// Mirrors App.js's live StatusBar JSX (post CP-10 stage 2, and post the
+// 2026-07-10 edge-to-edge fix that dropped the dead `backgroundColor` prop)
+// exactly, minus the real native component -- see the file header for why.
+// `style` (via accessibilityValue.text here) is the only prop with any
+// on-device effect under edge-to-edge, so it is the only one pinned.
 function StatusBarProbe({ t }) {
   return (
     <View
       testID="statusbar-probe"
       accessibilityValue={{ text: t.resolvedTheme === 'light' ? 'dark' : 'light' }}
-      style={{ backgroundColor: t.colors.background }}
     />
   );
 }
@@ -121,7 +132,6 @@ describe('CP-10 stage 2: StatusBar + nav theme + a Stage-1 primitive flip in ONE
     const navProbeBefore = tree.root.findByProps({ testID: 'nav-theme-probe' });
     const cardBefore = findHostByTestID(tree.root, 'probe-card');
 
-    expect(flat(statusBarBefore).backgroundColor).toBe(darkResolved.colors.background);
     expect(statusBarBefore.props.accessibilityValue.text).toBe('light'); // dark theme -> light status-bar text
     expect(JSON.parse(navProbeBefore.props.accessibilityValue.text).dark).toBe(true);
     expect(flat(cardBefore).backgroundColor).toBe(darkResolved.colors.surface);
@@ -136,14 +146,15 @@ describe('CP-10 stage 2: StatusBar + nav theme + a Stage-1 primitive flip in ONE
     const navProbeAfter = tree.root.findByProps({ testID: 'nav-theme-probe' });
     const cardAfter = findHostByTestID(tree.root, 'probe-card');
 
-    expect(flat(statusBarAfter).backgroundColor).toBe(lightResolved.colors.background);
     expect(statusBarAfter.props.accessibilityValue.text).toBe('dark'); // light theme -> dark status-bar text
     expect(JSON.parse(navProbeAfter.props.accessibilityValue.text).dark).toBe(false);
     expect(flat(cardAfter).backgroundColor).toBe(lightResolved.colors.surface);
 
-    // None of the three is still showing the old (dark) values -- proves the
-    // flip is not staggered across consumers.
-    expect(flat(statusBarAfter).backgroundColor).not.toBe(darkResolved.colors.background);
+    // None of the remaining consumers is still showing the old (dark)
+    // values -- proves the flip is not staggered across consumers. (The
+    // StatusBar's own before/after check is the accessibilityValue.text
+    // assertions above -- 'light' before, 'dark' after -- since
+    // backgroundColor is no longer a live prop to compare here.)
     expect(JSON.parse(navProbeAfter.props.accessibilityValue.text).colors.background)
       .not.toBe(darkResolved.colors.background);
     expect(flat(cardAfter).backgroundColor).not.toBe(darkResolved.colors.surface);

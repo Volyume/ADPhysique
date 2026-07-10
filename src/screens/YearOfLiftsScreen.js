@@ -601,7 +601,15 @@ export default function YearOfLiftsScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      {/* barStyle is intentionally static (not theme-derived): this screen
+          is a fixed dark "story" surface regardless of the app's light/dark
+          theme setting, so light-content icons are always correct here.
+          backgroundColor is dropped: Android edge-to-edge is enforced (no
+          opt-out set, targetSdk 35), and under edge-to-edge RN core
+          StatusBar's backgroundColor is a no-op — the bar is always
+          transparent and its colour comes from this screen's own
+          styles.safe background (colors.background), not this prop. */}
+      <StatusBar barStyle="light-content" />
 
       {/* Brand mark at the very top, like a story's account row. */}
       <View style={styles.brandRow}>

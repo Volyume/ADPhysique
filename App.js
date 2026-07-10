@@ -980,13 +980,16 @@ export default function App() {
           <SafeAreaProvider initialWindowMetrics={initialWindowMetrics}>
             {/* CP-10 stage 2: live theme read (useTheme, not the static
                 resolvedTheme import) so the status bar flips with the rest of
-                the app's chrome on a theme change, no restart. t.colors.background
-                is byte-identical to the hard-coded '#FAFAF7'/'#0D0D0D' this
-                replaces (theme.js baseColors/lightColors) — zero visual change
-                at rest, in either theme. */}
+                the app's chrome on a theme change, no restart. `style` is the
+                only prop with any effect here: Android edge-to-edge is
+                enforced (no opt-out set, targetSdk 35 — see
+                node_modules/expo-status-bar/src/StatusBar.android.tsx), and
+                under edge-to-edge `backgroundColor` is a no-op (it warns and
+                is ignored) because the bar is always transparent — the
+                colour behind it comes from the app's own root-level
+                background rendering, not this prop. */}
             <StatusBar
               style={t.resolvedTheme === 'light' ? 'dark' : 'light'}
-              backgroundColor={t.colors.background}
             />
             <ToastProvider>
               <FeedbackProvider>
