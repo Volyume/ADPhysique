@@ -1470,3 +1470,17 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   them is already live. Then stage 4 (Skia/charts: VolyumeChart,
   MacroRings, photo compares) and stage 5 (retire reload prompts).
   IN FLIGHT: OFF micronutrient parsing only.
+- FOUNDER-REPORTED P0 FIXED HANDS-ON (2026-07-10): keyboard dismissed
+  after every keystroke on number/weight fields - ROOT CAUSE: the gorhom
+  bottom-sheet adoption rendered plain TextInputs inside sheets; the
+  library REQUIRES BottomSheetTextInput for keyboard coordination.
+  FIX: BottomSheet wrapper exports InsideBottomSheetContext; TextField
+  switches primitive on it (BottomSheetTextInput inside sheets, TextInput
+  elsewhere); jest mock extended; guard test pins the switch. All sheets
+  healed centrally. NOTE: any RAW TextInput inside sheet children (not
+  via TextField) would still fight - QUEUED verify sweep.
+- FOUNDER UX ASK QUEUED: Dietary needs row inside Meal preferences is
+  not obvious enough to find ("consider the user") - next-slot task:
+  elevate discoverability (visible diet/allergen summary chip on the
+  builder's primary surface + consider a one-time pointer hint; calm,
+  no redesign of the preferences panel itself).
