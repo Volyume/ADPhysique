@@ -34,6 +34,7 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
   const sleepNeedsReview = sleepTier === 'low';
   const sleepStart = metric?.sleepStart ?? null;
   const sleepEnd = metric?.sleepEnd ?? null;
+  const loggedTimingOnly = metric?.sleepDetail?.source === 'manual_duration' && sleepStart != null && sleepEnd != null;
   const totalStageMin = (metric?.deepMin ?? 0) + (metric?.remMin ?? 0) + (metric?.lightMin ?? 0) + (metric?.awakeMin ?? 0);
   const sleepReview = metric ? daySleepReview(metric) : null;
   const vitalsReview = metric ? dayVitalsReview(metric) : null;
@@ -133,6 +134,23 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.adjustTitle}>Adjust this sleep</Text>
                     <Text style={styles.adjustMeta}>Re-detect stages, vitals and recovery for {formatDayLong(day)}</Text>
+                  </View>
+                  <Ionicons name="create" size={18} color={colors.sleepTeal} />
+                </TouchableOpacity>
+              </>
+            ) : loggedTimingOnly ? (
+              <>
+                <View style={styles.sleepHead}>
+                  <Text style={styles.big}>Logged timing</Text>
+                  <Text style={styles.sub}>{formatClock(sleepStart)}-{formatClock(sleepEnd)}</Text>
+                </View>
+                <Text style={styles.note}>
+                  This window informs sleep timing and schedule suggestions. It has no measured HR coverage, so Pulse is not assigning sleep minutes, stages, vitals, recovery, or debt.
+                </Text>
+                <TouchableOpacity style={styles.adjustRow} onPress={() => nav.navigate({ name: 'editSleep', day })}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.adjustTitle}>Adjust logged timing</Text>
+                    <Text style={styles.adjustMeta}>Sync strap history later to score this window from real data</Text>
                   </View>
                   <Ionicons name="create" size={18} color={colors.sleepTeal} />
                 </TouchableOpacity>

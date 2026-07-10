@@ -16,7 +16,8 @@ export type SleepCorroborationEvidence = SleepStateEvidence & {
 };
 
 const LONG_AUTO_SLEEP_MIN = 7 * 60;
-const MIN_LONG_AUTO_SLEEP_EVIDENCE_PCT = 18;
+const MIN_LONG_AUTO_SLEEP_EVIDENCE_PCT = 35;
+const MIN_VERY_LONG_AUTO_SLEEP_EVIDENCE_PCT = 45;
 const MIN_SLEEP_CORROBORATION_PCT = 25;
 const MIN_LONG_AUTO_SLEEP_STATE_MIN = 60;
 const MIN_LONG_AUTO_SLEEP_STATE_PROOF_RATIO = 0.35;
@@ -65,7 +66,14 @@ export function longAutoSleepNeedsCorroboration(
   if (evidence?.source && evidence.source !== 'auto_hr') return false;
   const windowMin = evidenceWindowMin(evidence);
   if (windowMin < LONG_AUTO_SLEEP_MIN) return false;
-  return sleepEvidencePct(evidence) < MIN_LONG_AUTO_SLEEP_EVIDENCE_PCT && !hasSleepStateProof(evidence);
+  // A couple of hours of stillness is not enough to call a whole night asleep:
+  // it can equally be a quiet evening, a strap on a bedside table, or a partial
+  // history drain. Longer windows demand more independently observed stillness
+  // unless the decoded strap sleep-state stream proves otherwise.
+  const requiredPct = windowMin >= 9 * 60
+    ? MIN_VERY_LONG_AUTO_SLEEP_EVIDENCE_PCT
+    : MIN_LONG_AUTO_SLEEP_EVIDENCE_PCT;
+  return sleepEvidencePct(evidence) < requiredPct && !hasSleepStateProof(evidence);
 }
 
 function hasSleepStateProof(evidence: SleepCorroborationEvidence | null | undefined): boolean {

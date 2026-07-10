@@ -1428,10 +1428,13 @@ class AppStore extends Store<AppState> {
       sleepPerformanceResult = scored.performance;
       sleepDetail = scored.detail;
       stagesTrusted = scored.stagesTrusted;
+    } else if (manual) {
+      sleepDetail = manualTimingOnlyDetail(manual.startTs, manual.endTs);
     }
 
+    const trustedRecoveryNights = recent.filter(isUsableRecoveryNight);
     const toDayValues = (pick: (d: DailyMetricRow) => number | null) =>
-      recent
+      trustedRecoveryNights
         .filter((d) => pick(d) != null)
         .map((d) => ({ day: epochDay(Date.parse(`${d.day}T00:00:00`)), value: pick(d) as number }));
     const rmssdSamples = toDayValues((d) => d.rmssd);
@@ -1461,8 +1464,8 @@ class AppStore extends Store<AppState> {
       strain,
       steps,
       stepSource: steps != null ? 'band' : null,
-      sleepStart: sleep?.startTs ?? null,
-      sleepEnd: sleep?.endTs ?? null,
+      sleepStart: sleep?.startTs ?? manual?.startTs ?? null,
+      sleepEnd: sleep?.endTs ?? manual?.endTs ?? null,
       deepMin: sleep && stagesTrusted ? sleep.stages.deep : null,
       remMin: sleep && stagesTrusted ? sleep.stages.rem : null,
       lightMin: sleep && stagesTrusted ? sleep.stages.light : null,
@@ -2240,9 +2243,12 @@ class AppStore extends Store<AppState> {
       sleepScoreResult = scored.score;
       sleepDetail = scored.detail;
       stagesTrusted = scored.stagesTrusted;
+    } else if (manual) {
+      sleepDetail = manualTimingOnlyDetail(manual.startTs, manual.endTs);
     }
+    const trustedRecoveryNights = recent.filter(isUsableRecoveryNight);
     const toDayValues = (pick: (d: DailyMetricRow) => number | null) =>
-      recent
+      trustedRecoveryNights
         .filter((d) => pick(d) != null)
         .map((d) => ({ day: epochDay(Date.parse(`${d.day}T00:00:00`)), value: pick(d) as number }));
     const rmssdSamples = toDayValues((d) => d.rmssd);
@@ -2320,8 +2326,8 @@ class AppStore extends Store<AppState> {
       strain,
       steps: bestSteps,
       stepSource: bestSteps != null ? 'band' : null,
-      sleepStart: sleep?.startTs ?? null,
-      sleepEnd: sleep?.endTs ?? null,
+      sleepStart: sleep?.startTs ?? manual?.startTs ?? null,
+      sleepEnd: sleep?.endTs ?? manual?.endTs ?? null,
       deepMin: sleep && stagesTrusted ? sleep.stages.deep : null,
       remMin: sleep && stagesTrusted ? sleep.stages.rem : null,
       lightMin: sleep && stagesTrusted ? sleep.stages.light : null,
@@ -2725,6 +2731,48 @@ const MIN_VITAL_SIGNAL_MIN = 240;
 const MIN_VITAL_COVERAGE_PCT = 70;
 const MIN_SLEEP_SCORE_SIGNAL_MIN = 240;
 const MIN_SLEEP_SCORE_COVERAGE_PCT = 70;
+const MIN_RECOVERY_BASELINE_NIGHTS = 5;
+const FULL_RECOVERY_BASELINE_NIGHTS = 14;
+const MIN_RMSSD_BASELINE_SD_MS = 8;
+const MIN_RHR_BASELINE_SD_BPM = 3;
+const MIN_RESP_BASELINE_SD_RPM = 0.5;
+
+/** A logged window is useful for schedule learning and history, but it must not
+ * create invented sleep minutes, stages, recovery, or overnight vitals. */
+function manualTimingOnlyDetail(startTs: number, endTs: number): SleepDetail {
+  return {
+    performance: null,
+    hoursVsNeeded: null,
+    needMin: null,
+    baselineMin: null,
+    napMin: null,
+    strainMin: null,
+    debtMin: null,
+    efficiency: null,
+    consistency: null,
+    restorativeMin: null,
+    restorativePct: null,
+    latencyMin: null,
+    wakeEvents: null,
+    inBedMin: Math.max(1, Math.round((endTs - startTs) / 60000)),
+    stressHigh: null,
+    stressMed: null,
+    stressLow: null,
+    source: 'manual_duration',
+    signalMin: 0,
+    hrvMin: 0,
+    motionMin: 0,
+    stillMin: 0,
+    movingMin: 0,
+    sleepStateMin: 0,
+    sleepStateWakeMin: 0,
+    sleepStateStillMin: 0,
+    sleepStateAsleepMin: 0,
+    sleepStateUpMin: 0,
+    coveragePct: 0,
+    confidence: 'low',
+  };
+}
 
 function applySleepNeed(sleep: SleepResult, need: SleepNeed): void {
   sleep.neededMin = need.neededMin;
@@ -2739,6 +2787,17 @@ function isUsableDebtNight(day: DailyMetricRow): boolean {
 function isUsableSleepTrendNight(day: DailyMetricRow): boolean {
   if (day.sleepStart == null || day.sleepEnd == null) return false;
   return sleepTrustTier(day.sleepDetail) !== 'low';
+}
+
+/** Recovery baselines must come from nights with trustworthy sleep and vitals.
+ * Including partial historical rows makes a single bad PPG/R-R decode redefine
+ * the personal baseline and produces implausible green/red swings. */
+function isUsableRecoveryNight(day: DailyMetricRow): boolean {
+  return (
+    day.rmssd != null &&
+    day.rhr != null &&
+    sleepTrustTier(day.sleepDetail) !== 'low'
+  );
 }
 
 function sleepCoveragePct(sleep: SleepResult): number {
@@ -3163,11 +3222,11 @@ function recoveryEstimate(input: {
   const rmssdBaseline = emaBaseline(rmssdSamples) ?? null;
   const rhrBaseline = emaBaseline(rhrSamples) ?? null;
   const respBaseline = respSamples.length ? respSamples.reduce((a, b) => a + b.value, 0) / respSamples.length : null;
-  const rmssdSd = stdev(rmssdSamples.map((s) => s.value)) || 1;
-  const rhrSd = stdev(rhrSamples.map((s) => s.value)) || 1;
-  const respSd = stdev(respSamples.map((s) => s.value)) || 1;
+  const rmssdSd = Math.max(MIN_RMSSD_BASELINE_SD_MS, stdev(rmssdSamples.map((s) => s.value)) || 0);
+  const rhrSd = Math.max(MIN_RHR_BASELINE_SD_BPM, stdev(rhrSamples.map((s) => s.value)) || 0);
+  const respSd = Math.max(MIN_RESP_BASELINE_SD_RPM, stdev(respSamples.map((s) => s.value)) || 0);
 
-  if (rmssdSamples.length >= 2 && rhrSamples.length >= 2) {
+  if (rmssdSamples.length >= MIN_RECOVERY_BASELINE_NIGHTS && rhrSamples.length >= MIN_RECOVERY_BASELINE_NIGHTS) {
     const r = computeRecovery({
       rmssd,
       rmssdBaseline: rmssdBaseline ?? rmssd,
@@ -3180,12 +3239,25 @@ function recoveryEstimate(input: {
       respiratorySd: respSd,
       sleepPerformance,
     });
-    return { score: r.score, parts: { hrvSub: r.hrvSub, rhrSub: r.rhrSub, respSub: r.respSub, sleepSub: r.sleepSub } };
+    // Ease a newly learned baseline in over two weeks. A handful of nights can
+    // establish direction, but should not push recovery to a dramatic extreme.
+    const calibration = Math.min(1, Math.min(rmssdSamples.length, rhrSamples.length) / FULL_RECOVERY_BASELINE_NIGHTS);
+    const score = Math.round(50 + (r.score - 50) * calibration);
+    const shrink = (value: number | null): number | null => value == null ? null : Math.round(50 + (value - 50) * calibration);
+    return {
+      score,
+      parts: {
+        hrvSub: shrink(r.hrvSub) as number,
+        rhrSub: shrink(r.rhrSub) as number,
+        respSub: shrink(r.respSub),
+        sleepSub: shrink(r.sleepSub) as number,
+      },
+    };
   }
 
-  const sleepSub = Math.round(Math.max(0, Math.min(100, (sleepPerformance ?? 0.5) * 100)));
-  const score = Math.round(0.5 * 50 + 0.25 * 50 + 0.25 * sleepSub);
-  return { score, parts: { hrvSub: 50, rhrSub: 50, respSub: null, sleepSub } };
+  // Until a personal baseline exists, showing a numerical readiness value would
+  // be false precision. Sleep performance remains visible independently.
+  return { score: null, parts: null };
 }
 
 function stressSeriesFromRows(rows: HrSampleRow[]): Array<{ tsMs: number; score: number }> {

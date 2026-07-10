@@ -65,7 +65,10 @@ export function inferSleepSchedule(days: SleepDay[]): SleepSchedule {
       const confidence = day.sleepDetail?.confidence;
       const coverage = day.sleepDetail?.coveragePct ?? 0;
       const manuallyTimed = day.sleepDetail?.source === 'manual_hr' || day.sleepDetail?.source === 'manual_duration';
-      return duration >= 180 && duration <= 12 * 60 && day.sleepMin != null && (manuallyTimed || ((confidence === 'high' || confidence === 'medium') && coverage >= 70));
+      return duration >= 180 && duration <= 12 * 60 && (
+        manuallyTimed ||
+        (day.sleepMin != null && (confidence === 'high' || confidence === 'medium') && coverage >= 70)
+      );
     })
     .slice(0, 14);
   if (!usable.length) return FALLBACK_SLEEP_SCHEDULE;
