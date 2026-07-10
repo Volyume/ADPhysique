@@ -272,7 +272,7 @@ const MEAL_ADDITIONS = {
     { name: 'Cocoa powder', why: 'Chocolate pancakes.' },
   ],
   curated_veg_greek_yogurt_bowl: [
-    { name: 'Cinnamon', why: 'Sweetens the yogurt, no sugar.' },
+    { name: 'Cinnamon', why: 'Sweetens the yoghurt, no sugar.' },
     { name: 'Vanilla extract', why: 'A dessert-like finish.' },
     { name: 'Lemon zest', why: 'Fresh against the berries.' },
     { name: 'Cocoa powder', why: 'A chocolate twist.' },
@@ -348,7 +348,7 @@ const MEAL_ADDITIONS = {
     { name: 'Cocoa powder', why: 'A chocolate version.' },
   ],
   curated_veg_pre_yogurt_ricecakes: [
-    { name: 'Cinnamon', why: 'Natural sweetness on the yogurt.' },
+    { name: 'Cinnamon', why: 'Natural sweetness on the yoghurt.' },
     { name: 'Vanilla extract', why: 'A dessert-like finish.' },
     { name: 'Lemon zest', why: 'A fresh twist.' },
   ],
@@ -404,7 +404,7 @@ const MEAL_ADDITIONS = {
     { name: 'Chilli flakes', why: 'A little heat on top.' },
   ],
   curated_veg_sn_yogurt_granola_berries: [
-    { name: 'Cinnamon', why: 'Sweetens the yogurt, no sugar.' },
+    { name: 'Cinnamon', why: 'Sweetens the yoghurt, no sugar.' },
     { name: 'Vanilla extract', why: 'A dessert-like finish.' },
     { name: 'Lemon zest', why: 'Brightens the berries.' },
   ],
@@ -434,7 +434,7 @@ const MEAL_ADDITIONS = {
     { name: 'Cocoa powder', why: 'Chocolate pancakes.' },
   ],
   curated_vg_soy_yogurt_granola: [
-    { name: 'Cinnamon', why: 'Natural sweetness on the yogurt.' },
+    { name: 'Cinnamon', why: 'Natural sweetness on the yoghurt.' },
     { name: 'Vanilla extract', why: 'A dessert-like finish.' },
     { name: 'Lemon zest', why: 'Fresh against the berries.' },
     { name: 'Cocoa powder', why: 'A chocolate twist.' },
@@ -541,7 +541,7 @@ const MEAL_ADDITIONS = {
     { name: 'Black pepper', why: 'A little sharpness.' },
   ],
   curated_vg_sn_soy_yogurt_pb: [
-    { name: 'Cinnamon', why: 'Sweetens the yogurt, no sugar.' },
+    { name: 'Cinnamon', why: 'Sweetens the yoghurt, no sugar.' },
     { name: 'Vanilla extract', why: 'A dessert-like finish.' },
     { name: 'Cocoa powder', why: 'A chocolate version.' },
   ],
@@ -747,7 +747,7 @@ const SAVOURY_FALLBACK = Object.freeze([
   { name: 'Lemon or lime', why: 'A squeeze brightens the plate.' },
 ].map(withTags));
 
-const SWEET_HINT = /(oat|porridge|pancake|yogurt|skyr|shake|berr|banana|granola)/i;
+const SWEET_HINT = /(oat|porridge|pancake|yogh?urt|skyr|shake|berr|banana|granola)/i;
 
 /**
  * Additions for a curated meal. Returns the authored list, or a savoury/sweet

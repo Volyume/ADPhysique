@@ -11,7 +11,7 @@
  * Food Library: UK Bodybuilder Research Report"): UK CoFID / own-label values,
  * UK shelf names, explicit weight state (state lives in foodRoles.js). Notable
  * corrections from that report: whole egg 131 kcal (CoFID 2021, not USDA 143);
- * FAGE Total 0%/2% Greek yogurt + skyr to UK label; baked sweet potato (CoFID
+ * FAGE Total 0%/2% Greek yoghurt + skyr to UK label; baked sweet potato (CoFID
  * ~115); cooked cod fillet. New staples: back-bacon medallions, white sourdough,
  * Quorn chicken-style pieces. (Founder override 2026-06-15: chicken thigh,
  * mackerel and the "cod loin" name from the report are dropped — not wanted.)
@@ -81,8 +81,8 @@ export const CURATED_FOODS = Object.freeze({
   bacon_medallions: F('Back bacon medallions (cooked)', 125, 21, 0.5, 4),
 
   // Dairy
-  greek_yogurt_0:  F('Total 0% Greek yogurt', 54, 10.3, 3, 0),
-  greek_yogurt_2:  F('Total 2% Greek yogurt', 70, 9.9, 3, 2),
+  greek_yogurt_0:  F('Total 0% Greek yoghurt', 54, 10.3, 3, 0),
+  greek_yogurt_2:  F('Total 2% Greek yoghurt', 70, 9.9, 3, 2),
   skyr:            F('Skyr (natural)', 63, 11, 3.4, 0.1),
   cottage_cheese:  F('Cottage cheese (low-fat)', 74, 12, 4, 1.5),
   halloumi:        F('Halloumi', 320, 22, 2, 25),
@@ -115,7 +115,7 @@ export const CURATED_FOODS = Object.freeze({
   // option the report mandates over single-source pea (line 153). Macros per the
   // report's own row (line 69): ~360 kcal, ~78 P, 5 C, 6 F per 100g.
   vegan_protein_blend: F('Vegan protein powder', 360, 78, 5, 6),
-  soy_yogurt_hp:   F('High-protein soya yogurt', 70, 6, 5, 3),
+  soy_yogurt_hp:   F('High-protein soya yoghurt', 70, 6, 5, 3),
   soy_milk:        F('Soya milk', 33, 3.3, 1.2, 1.8),
 
   // Fats

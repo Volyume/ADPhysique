@@ -11,7 +11,7 @@
  * library was rebuilt out because its meals were not research-grounded. Rules
  * from the report enforced here:
  *   - Breakfast = real UK bodybuilder breakfasts only (eggs, oats, Greek
- *     yogurt/skyr, protein pancakes/shakes, smoked salmon, bacon medallions) —
+ *     yoghurt/skyr, protein pancakes/shakes, smoked salmon, bacon medallions) —
  *     never tuna, never a savoury hash-of-leftovers in the breakfast slot.
  *   - A meal named after a protein contains that protein (no "tuna" with cod).
  *   - Tuna is a lunch/dinner/snack staple only.
@@ -102,7 +102,7 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_veg_protein_porridge', 'Protein porridge', 'vegetarian', ['breakfast'], [{ food: 'oats', g: 60 }, { food: 'whey', g: 30 }, { food: 'milk_skimmed', g: 250 }, { food: 'berries', g: 80 }, { food: 'peanut_butter', g: 20 }]),
   m('curated_veg_overnight_oats', 'Overnight oats', 'vegetarian', ['breakfast'], [{ food: 'oats', g: 60 }, { food: 'greek_yogurt_0', g: 100 }, { food: 'whey', g: 30 }, { food: 'milk_skimmed', g: 150 }, { food: 'peanut_butter', g: 20 }]),
   m('curated_veg_protein_pancakes', 'Protein pancakes', 'vegetarian', ['breakfast'], [{ food: 'oats', g: 50 }, { food: 'whey', g: 30 }, { food: 'egg_whites', g: 150 }, { food: 'banana', g: 60 }, { food: 'peanut_butter', g: 20 }]),
-  m('curated_veg_greek_yogurt_bowl', 'Greek yogurt bowl', 'vegetarian', ['breakfast'], [{ food: 'greek_yogurt_0', g: 250 }, { food: 'berries', g: 80 }, { food: 'honey', g: 15 }, { food: 'almonds', g: 15 }]),
+  m('curated_veg_greek_yogurt_bowl', 'Greek yoghurt bowl', 'vegetarian', ['breakfast'], [{ food: 'greek_yogurt_0', g: 250 }, { food: 'berries', g: 80 }, { food: 'honey', g: 15 }, { food: 'almonds', g: 15 }]),
   m('curated_veg_skyr_berry_bowl', 'Skyr & berry bowl', 'vegetarian', ['breakfast'], [{ food: 'skyr', g: 250 }, { food: 'granola', g: 30 }, { food: 'mixed_seeds', g: 20 }]),
   m('curated_veg_eggwhite_scramble_sourdough', 'Egg-white scramble, spinach & sourdough', 'vegetarian', ['breakfast'], [{ food: 'egg_whites', g: 150 }, { food: 'eggs', g: 100 }, { food: 'spinach', g: 60 }, { food: 'sourdough', g: 80 }]),
   m('curated_veg_cottage_toast_egg', 'Cottage cheese on toast & poached egg', 'vegetarian', ['breakfast'], [{ food: 'cottage_cheese', g: 150 }, { food: 'wholemeal_bread', g: 80 }, { food: 'eggs', g: 50 }]),
@@ -114,10 +114,10 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_veg_egg_fried_rice_tofu', 'Egg-fried rice with tofu', 'vegetarian', ['lunch', 'dinner'], [{ food: 'eggs', g: 100 }, { food: 'tofu_firm', g: 100 }, { food: 'white_rice', g: 200 }, { food: 'peas', g: 100 }]),
   m('curated_veg_jacket_cheese_beans', 'Jacket potato, cheese & beans', 'vegetarian', ['lunch', 'dinner'], [{ food: 'white_potato', g: 300 }, { food: 'cheddar_light', g: 40 }, { food: 'baked_beans', g: 200 }]),
 
-  m('curated_veg_sn_yogurt_whey', 'Greek yogurt & whey', 'vegetarian', ['snack'], [{ food: 'greek_yogurt_0', g: 200 }, { food: 'whey', g: 15 }]),
+  m('curated_veg_sn_yogurt_whey', 'Greek yoghurt & whey', 'vegetarian', ['snack'], [{ food: 'greek_yogurt_0', g: 200 }, { food: 'whey', g: 15 }]),
   m('curated_veg_sn_cottage_pineapple', 'Cottage cheese & pineapple', 'vegetarian', ['snack'], [{ food: 'cottage_cheese', g: 200 }, { food: 'pineapple', g: 100 }]),
   m('curated_veg_pre_oats_whey', 'Oats & whey', 'vegetarian', ['preworkout'], [{ food: 'oats', g: 50 }, { food: 'whey', g: 30 }, { food: 'honey', g: 10 }]),
-  m('curated_veg_pre_yogurt_ricecakes', 'Greek yogurt & rice cakes', 'vegetarian', ['preworkout'], [{ food: 'greek_yogurt_0', g: 200 }, { food: 'rice_cakes', g: 24 }, { food: 'honey', g: 10 }]),
+  m('curated_veg_pre_yogurt_ricecakes', 'Greek yoghurt & rice cakes', 'vegetarian', ['preworkout'], [{ food: 'greek_yogurt_0', g: 200 }, { food: 'rice_cakes', g: 24 }, { food: 'honey', g: 10 }]),
   m('curated_veg_post_whey_banana', 'Whey & banana shake', 'vegetarian', ['postworkout'], [{ food: 'whey', g: 40 }, { food: 'banana', g: 120 }, { food: 'milk_skimmed', g: 250 }]),
   m('curated_veg_post_skyr_berries', 'Skyr, berries & honey', 'vegetarian', ['postworkout'], [{ food: 'skyr', g: 250 }, { food: 'berries', g: 100 }, { food: 'honey', g: 15 }]),
 
@@ -130,18 +130,18 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_veg_cottage_jacket', 'Cottage cheese jacket potato & salad', 'vegetarian', ['lunch', 'dinner'], [{ food: 'cottage_cheese', g: 200 }, { food: 'white_potato', g: 300 }, { food: 'salad', g: 80 }]),
   m('curated_veg_mushroom_omelette', 'Mushroom & cheese omelette with sourdough', 'vegetarian', ['lunch', 'dinner'], [{ food: 'eggs', g: 150 }, { food: 'mushrooms', g: 100 }, { food: 'cheddar_light', g: 25 }, { food: 'sourdough', g: 60 }]),
   m('curated_veg_sn_cheese_toast', 'Cheese on toast', 'vegetarian', ['snack'], [{ food: 'cheddar_light', g: 40 }, { food: 'wholemeal_bread', g: 80 }]),
-  m('curated_veg_sn_yogurt_granola_berries', 'Greek yogurt, granola & berries', 'vegetarian', ['snack'], [{ food: 'greek_yogurt_0', g: 200 }, { food: 'granola', g: 30 }, { food: 'berries', g: 60 }]),
+  m('curated_veg_sn_yogurt_granola_berries', 'Greek yoghurt, granola & berries', 'vegetarian', ['snack'], [{ food: 'greek_yogurt_0', g: 200 }, { food: 'granola', g: 30 }, { food: 'berries', g: 60 }]),
   m('curated_veg_sn_paneer_apple', 'Paneer & apple', 'vegetarian', ['snack'], [{ food: 'paneer', g: 90 }, { food: 'apple', g: 120 }]),
 
   // ─── VEGAN (report §B vegan) ────────────────────────────────────────────
   m('curated_vg_tofu_scramble', 'Tofu scramble on sourdough', 'vegan', ['breakfast'], [{ food: 'tofu_firm', g: 200 }, { food: 'sourdough', g: 80 }, { food: 'spinach', g: 60 }]),
   m('curated_vg_overnight_oats', 'Vegan protein overnight oats', 'vegan', ['breakfast'], [{ food: 'oats', g: 60 }, { food: 'soy_protein', g: 30 }, { food: 'soy_milk', g: 200 }, { food: 'berries', g: 80 }, { food: 'peanut_butter', g: 20 }]),
   m('curated_vg_protein_pancakes', 'Vegan protein pancakes', 'vegan', ['breakfast'], [{ food: 'oats', g: 50 }, { food: 'vegan_protein_blend', g: 25 }, { food: 'soy_milk', g: 150 }, { food: 'banana', g: 60 }, { food: 'peanut_butter', g: 20 }]),
-  m('curated_vg_soy_yogurt_granola', 'Soya yogurt, granola & berries', 'vegan', ['breakfast'], [{ food: 'soy_yogurt_hp', g: 200 }, { food: 'vegan_protein_blend', g: 15 }, { food: 'granola', g: 30 }, { food: 'berries', g: 60 }]),
+  m('curated_vg_soy_yogurt_granola', 'Soya yoghurt, granola & berries', 'vegan', ['breakfast'], [{ food: 'soy_yogurt_hp', g: 200 }, { food: 'vegan_protein_blend', g: 15 }, { food: 'granola', g: 30 }, { food: 'berries', g: 60 }]),
   // M-3 (content-quality audit, 2026-07-04): the vegan breakfast pool was too
   // thin (4 meals), forcing heavy repeats across a generated vegan week. The
   // six meals below add genuinely different formats (pancake, pudding,
-  // smoothie, a savoury "beans on toast" plate, a wrap, a yogurt bowl), each
+  // smoothie, a savoury "beans on toast" plate, a wrap, a yoghurt bowl), each
   // anchored on a real vegan protein source, not just a reshuffle of the same
   // oats + soya-milk + peanut-butter base.
   m('curated_vg_chickpea_pancakes', 'Chickpea flour pancakes, banana & peanut butter', 'vegan', ['breakfast'], [{ food: 'chickpea_flour', g: 70 }, { food: 'vegan_protein_blend', g: 25 }, { food: 'soy_milk', g: 150 }, { food: 'banana', g: 80 }, { food: 'peanut_butter', g: 20 }]),
@@ -149,7 +149,7 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_vg_green_smoothie', 'Berry & spinach protein smoothie', 'vegan', ['breakfast'], [{ food: 'oats', g: 30 }, { food: 'vegan_protein_blend', g: 35 }, { food: 'soy_milk', g: 250 }, { food: 'berries', g: 100 }, { food: 'spinach', g: 30 }, { food: 'peanut_butter', g: 15 }]),
   m('curated_vg_beans_tofu_toast', 'Beans on toast with scrambled tofu', 'vegan', ['breakfast'], [{ food: 'baked_beans', g: 300 }, { food: 'wholemeal_bread', g: 90 }, { food: 'tofu_firm', g: 150 }]),
   m('curated_vg_tempeh_avocado_wrap', 'Tempeh & avocado wrap', 'vegan', ['breakfast'], [{ food: 'tortilla', g: 80 }, { food: 'tempeh', g: 130 }, { food: 'avocado', g: 40 }, { food: 'spinach', g: 30 }]),
-  m('curated_vg_soyyog_pb_banana', 'Soya yogurt, peanut butter & banana bowl', 'vegan', ['breakfast'], [{ food: 'soy_yogurt_hp', g: 250 }, { food: 'peanut_butter', g: 15 }, { food: 'banana', g: 100 }, { food: 'vegan_protein_blend', g: 20 }, { food: 'mixed_seeds', g: 10 }]),
+  m('curated_vg_soyyog_pb_banana', 'Soya yoghurt, peanut butter & banana bowl', 'vegan', ['breakfast'], [{ food: 'soy_yogurt_hp', g: 250 }, { food: 'peanut_butter', g: 15 }, { food: 'banana', g: 100 }, { food: 'vegan_protein_blend', g: 20 }, { food: 'mixed_seeds', g: 10 }]),
 
   m('curated_vg_tofu_stirfry', 'Tofu stir-fry & rice', 'vegan', ['lunch', 'dinner'], [{ food: 'tofu_firm', g: 200 }, { food: 'white_rice', g: 180 }, { food: 'stirfry_veg', g: 120 }]),
   m('curated_vg_tempeh_sweetpot', 'Tempeh & sweet potato bowl', 'vegan', ['lunch', 'dinner'], [{ food: 'tempeh', g: 120 }, { food: 'sweet_potato', g: 200 }, { food: 'broccoli', g: 100 }]),
@@ -169,7 +169,7 @@ export const CURATED_MEALS = Object.freeze([
   m('curated_vg_blackbean_sweetpot', 'Black bean & sweet potato bowl', 'vegan', ['lunch', 'dinner'], [{ food: 'black_beans', g: 300 }, { food: 'sweet_potato', g: 200 }, { food: 'mixed_veg', g: 100 }, { food: 'olive_oil', g: 10 }]),
 
   m('curated_vg_sn_edamame', 'Edamame', 'vegan', ['snack'], [{ food: 'edamame', g: 200 }]),
-  m('curated_vg_sn_soy_yogurt_pb', 'Soya yogurt & peanut butter', 'vegan', ['snack'], [{ food: 'soy_yogurt_hp', g: 200 }, { food: 'peanut_butter', g: 12 }]),
+  m('curated_vg_sn_soy_yogurt_pb', 'Soya yoghurt & peanut butter', 'vegan', ['snack'], [{ food: 'soy_yogurt_hp', g: 200 }, { food: 'peanut_butter', g: 12 }]),
   m('curated_vg_sn_pea_shake_berries', 'Pea protein shake & berries', 'vegan', ['snack'], [{ food: 'vegan_protein_blend', g: 33 }, { food: 'berries', g: 100 }, { food: 'soy_milk', g: 200 }]),
   m('curated_vg_pre_soy_oats_banana', 'Soya protein, oats & banana', 'vegan', ['preworkout'], [{ food: 'soy_protein', g: 30 }, { food: 'oats', g: 50 }, { food: 'banana', g: 120 }]),
   m('curated_vg_post_pea_oats_berries', 'Pea protein, oats & berries', 'vegan', ['postworkout'], [{ food: 'vegan_protein_blend', g: 35 }, { food: 'oats', g: 60 }, { food: 'berries', g: 80 }]),
