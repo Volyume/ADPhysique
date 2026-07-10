@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import InfoTooltip from './InfoTooltip';
 
 // Inline dropdown, expands in place, no modal needed. Shared by the Pro
@@ -12,6 +13,11 @@ import InfoTooltip from './InfoTooltip';
 // tip: optional plain-English gloss (U-E-1) rendered as an InfoTooltip beside the
 // label; omitted by default so existing usages are unchanged.
 export default function Dropdown({ label, hint, value, options, onChange, placeholder = 'Choose…', tip }) {
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+  // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
+  // (defined further down this file, after the frozen `styles` block).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const [open, setOpen] = useState(false);
   const selected = options.find(o => o.value === value);
   return (
@@ -19,36 +25,40 @@ export default function Dropdown({ label, hint, value, options, onChange, placeh
       {label ? (
         tip ? (
           <View style={styles.labelRow}>
-            <Text style={styles.fieldLabel}>{label}</Text>
+            <Text style={[styles.fieldLabel, live.fieldLabel]}>{label}</Text>
             <InfoTooltip text={tip} size={13} />
           </View>
         ) : (
-          <Text style={styles.fieldLabel}>{label}</Text>
+          <Text style={[styles.fieldLabel, live.fieldLabel]}>{label}</Text>
         )
       ) : null}
-      {hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
+      {hint ? <Text style={[styles.fieldHint, live.fieldHint]}>{hint}</Text> : null}
       <TouchableOpacity
-        style={[styles.dropdownTrigger, value && styles.dropdownTriggerFilled, open && styles.dropdownTriggerOpen]}
+        style={[
+          styles.dropdownTrigger, live.dropdownTrigger,
+          value && [styles.dropdownTriggerFilled, live.dropdownTriggerFilled],
+          open && [styles.dropdownTriggerOpen, live.dropdownTriggerOpen],
+        ]}
         onPress={() => setOpen(v => !v)}
         activeOpacity={0.8}
         accessibilityRole="button"
         accessibilityLabel={label || placeholder}
         accessibilityState={{ expanded: open }}
       >
-        <Text style={[styles.dropdownValue, !value && styles.dropdownPlaceholder]}>
+        <Text style={[styles.dropdownValue, live.dropdownValue, !value && [styles.dropdownPlaceholder, live.dropdownPlaceholder]]}>
           {selected?.label ?? placeholder}
         </Text>
-        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={value ? colors.primary : colors.textMuted} />
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={value ? t.colors.primary : t.colors.textMuted} />
       </TouchableOpacity>
       {open && (
-        <View style={styles.dropdownList}>
+        <View style={[styles.dropdownList, live.dropdownList]}>
           {options.map((opt, i) => (
             <TouchableOpacity
               key={opt.value}
               style={[
                 styles.dropdownItem,
-                value === opt.value && styles.dropdownItemActive,
-                i < options.length - 1 && styles.dropdownItemBorder,
+                value === opt.value && [styles.dropdownItemActive, live.dropdownItemActive],
+                i < options.length - 1 && [styles.dropdownItemBorder, live.dropdownItemBorder],
               ]}
               onPress={() => { onChange(opt.value); setOpen(false); }}
               activeOpacity={0.75}
@@ -56,12 +66,12 @@ export default function Dropdown({ label, hint, value, options, onChange, placeh
               accessibilityState={{ selected: value === opt.value }}
             >
               <View style={{ flex: 1 }}>
-                <Text style={[styles.dropdownItemLabel, value === opt.value && styles.dropdownItemLabelActive]}>
+                <Text style={[styles.dropdownItemLabel, live.dropdownItemLabel, value === opt.value && [styles.dropdownItemLabelActive, live.dropdownItemLabelActive]]}>
                   {opt.label}
                 </Text>
-                {opt.sub ? <Text style={styles.dropdownItemSub}>{opt.sub}</Text> : null}
+                {opt.sub ? <Text style={[styles.dropdownItemSub, live.dropdownItemSub]}>{opt.sub}</Text> : null}
               </View>
-              {value === opt.value && <Ionicons name="checkmark" size={16} color={colors.primary} />}
+              {value === opt.value && <Ionicons name="checkmark" size={16} color={t.colors.primary} />}
             </TouchableOpacity>
           ))}
         </View>
@@ -104,3 +114,24 @@ const styles = StyleSheet.create({
   dropdownItemLabelActive: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
   dropdownItemSub: { ...type.captionTight, color: colors.textMuted },
 });
+
+// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+// override for the frozen `styles` block above, same "frozen base + live
+// override" pattern as WorkoutSummaryScreen.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    fieldLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
+    fieldHint: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    dropdownTrigger: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    dropdownTriggerFilled: { borderColor: withAlpha(t.colors.primary, alpha.strong) },
+    dropdownTriggerOpen: { borderColor: t.colors.primary },
+    dropdownValue: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    dropdownPlaceholder: { color: t.colors.textDisabled },
+    dropdownList: { backgroundColor: t.colors.surface, borderColor: t.colors.primary },
+    dropdownItemBorder: { borderBottomColor: t.colors.border },
+    dropdownItemActive: { backgroundColor: t.colors.primaryBg },
+    dropdownItemLabel: { ...t.type.body, color: t.colors.textSecondary },
+    dropdownItemLabelActive: { color: t.colors.textPrimary },
+    dropdownItemSub: { ...t.type.captionTight, color: t.colors.textMuted },
+  };
+}

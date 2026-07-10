@@ -18,6 +18,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import BottomSheet from './BottomSheet';
 import Button from './Button';
 import { colors, spacing, fontSize, fontWeight, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 const LAST_SEEN_KEY = '@volyume_whats_new_last_seen';
 
@@ -46,6 +47,11 @@ export const WHATS_NEW = {
 };
 
 export default function WhatsNewSheet() {
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+  // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
+  // (defined further down this file, after the frozen `styles` block).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const [visible, setVisible] = useState(false);
   const [items, setItems] = useState([]);
   const version = Application.nativeApplicationVersion;
@@ -80,13 +86,13 @@ export default function WhatsNewSheet() {
 
   return (
     <BottomSheet visible={visible} onClose={() => setVisible(false)} accessibilityLabel="What's new">
-      <Text style={styles.title}>What&apos;s new</Text>
-      <Text style={styles.sub}>Version {version}</Text>
+      <Text style={[styles.title, live.title]}>What&apos;s new</Text>
+      <Text style={[styles.sub, live.sub]}>Version {version}</Text>
       <View style={styles.list}>
         {items.map((item) => (
           <View key={item.text} style={styles.row}>
-            <Ionicons name={item.icon} size={18} color={colors.primary} style={styles.rowIcon} />
-            <Text style={styles.rowText}>{item.text}</Text>
+            <Ionicons name={item.icon} size={18} color={t.colors.primary} style={styles.rowIcon} />
+            <Text style={[styles.rowText, live.rowText]}>{item.text}</Text>
           </View>
         ))}
       </View>
@@ -104,3 +110,14 @@ const styles = StyleSheet.create({
   rowText: { ...type.body, color: colors.textSecondary, flex: 1, fontWeight: fontWeight.regular },
   btn: { marginTop: spacing.xl },
 });
+
+// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+// override for the frozen `styles` block above, same "frozen base + live
+// override" pattern as WorkoutSummaryScreen.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    title: { ...t.type.h2, color: t.colors.textPrimary },
+    sub: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    rowText: { ...t.type.body, color: t.colors.textSecondary },
+  };
+}

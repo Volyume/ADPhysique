@@ -15,16 +15,24 @@
 import { useMemo } from 'react';
 import { View } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { colors } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { plotPoints, smoothPath, paddedDomain } from '../lib/chartGeometry';
 
 export default function Sparkline({
   data = [],
   width = 100,
   height = 28,
-  color = colors.primary,
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): this was
+  // a default parameter reading the frozen module `colors` singleton
+  // (already call-time-evaluated, but only reflects a theme change if
+  // something re-renders this component after a cold-boot re-bake). Default
+  // removed; resolved below against the live `t` from useTheme() so an
+  // omitted prop tracks a live theme flip, same pattern as VolyumeChart.js.
+  color,
   showDots = false,
 }) {
+  const t = useTheme();
+  const resolvedColor = color ?? t.colors.primary;
   const values = useMemo(
     () => (data || []).filter(v => Number.isFinite(v)),
     [data],
@@ -45,7 +53,7 @@ export default function Sparkline({
       <View style={{
         width, height,
         borderBottomWidth: 1,
-        borderBottomColor: colors.border,
+        borderBottomColor: t.colors.border,
         opacity: 0.3,
       }} />
     );
@@ -54,9 +62,9 @@ export default function Sparkline({
   return (
     <View style={{ width, height, overflow: 'hidden' }} pointerEvents="none">
       <Svg width={width} height={height}>
-        <Path d={smoothPath(points)} stroke={color} strokeWidth={1.5} fill="none" />
+        <Path d={smoothPath(points)} stroke={resolvedColor} strokeWidth={1.5} fill="none" />
         {showDots && points.map((p, i) => (
-          <Circle key={i} cx={p.x} cy={p.y} r={2} fill={color} />
+          <Circle key={i} cx={p.x} cy={p.y} r={2} fill={resolvedColor} />
         ))}
       </Svg>
     </View>

@@ -16,6 +16,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import useAppStore from '../store/useAppStore';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 let _enqueue = null;
 const _queue = [];
@@ -32,6 +33,11 @@ export function appAlert(title, message, buttons, options) {
 }
 
 export function AppAlertHost() {
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+  // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
+  // (defined further down this file, after the frozen `styles` block).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const [current, setCurrent] = useState(null);
   const queueRef = useRef([]);
@@ -83,7 +89,7 @@ export function AppAlertHost() {
   return (
     <Modal transparent animationType={reduceMotion ? 'none' : 'fade'} statusBarTranslucent onRequestClose={onBackdrop}>
       <TouchableOpacity
-        style={styles.backdrop}
+        style={[styles.backdrop, live.backdrop]}
         activeOpacity={1}
         onPress={onBackdrop}
         // AX-3: when cancelable, name the backdrop so a screen reader
@@ -95,7 +101,7 @@ export function AppAlertHost() {
       >
         <TouchableOpacity
           activeOpacity={1}
-          style={styles.card}
+          style={[styles.card, live.card]}
           onPress={() => {}}
           // accessible={false} stops the backdrop's "Close" label from
           // swallowing the card's own content into one opaque node; the
@@ -105,8 +111,8 @@ export function AppAlertHost() {
           accessible={false}
           accessibilityViewIsModal
         >
-          {!!title && <Text style={styles.title} accessibilityRole="header">{title}</Text>}
-          {!!message && <Text style={styles.message}>{message}</Text>}
+          {!!title && <Text style={[styles.title, live.title]} accessibilityRole="header">{title}</Text>}
+          {!!message && <Text style={[styles.message, live.message]}>{message}</Text>}
           <View style={[styles.actions, stacked ? styles.actionsStacked : styles.actionsRow]}>
             {buttons.map((b, i) => {
               const isCancel = b.style === 'cancel';
@@ -121,7 +127,7 @@ export function AppAlertHost() {
                   style={[
                     styles.btn,
                     stacked && styles.btnStacked,
-                    isPrimary && styles.btnPrimary,
+                    isPrimary && [styles.btnPrimary, live.btnPrimary],
                     isDestructive && styles.btnDestructive,
                     isCancel && styles.btnCancel,
                   ]}
@@ -129,9 +135,9 @@ export function AppAlertHost() {
                   <Text
                     style={[
                       styles.btnText,
-                      isPrimary && styles.btnTextPrimary,
-                      isDestructive && styles.btnTextDestructive,
-                      isCancel && styles.btnTextCancel,
+                      isPrimary && [styles.btnTextPrimary, live.btnTextPrimary],
+                      isDestructive && [styles.btnTextDestructive, live.btnTextDestructive],
+                      isCancel && [styles.btnTextCancel, live.btnTextCancel],
                     ]}
                   >
                     {b.text}
@@ -195,3 +201,19 @@ const styles = StyleSheet.create({
   btnTextDestructive: { color: colors.error },
   btnTextCancel: { color: colors.textMuted },
 });
+
+// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+// override for the frozen `styles` block above, same "frozen base + live
+// override" pattern as WorkoutSummaryScreen.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    backdrop: { backgroundColor: t.colors.scrim },
+    card: { backgroundColor: t.colors.surfaceElevated ?? t.colors.surface, borderColor: t.colors.border },
+    title: { color: t.colors.textPrimary },
+    message: { color: t.colors.textSecondary },
+    btnPrimary: { backgroundColor: t.colors.primaryFill },
+    btnTextPrimary: { color: t.colors.onPrimary },
+    btnTextDestructive: { color: t.colors.error },
+    btnTextCancel: { color: t.colors.textMuted },
+  };
+}

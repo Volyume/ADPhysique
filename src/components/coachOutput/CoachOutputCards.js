@@ -4,6 +4,7 @@ import Card from '../Card';
 import SectionLabel from '../SectionLabel';
 import InfoTooltip from '../InfoTooltip';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type, iconSize, alpha } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
 
 // L04-11: an optional `tooltip` string reuses the same InfoTooltip + glossary
 // pattern already shipped on 26 other files (BodyMetricsScreen, EngineLog,
@@ -21,21 +22,31 @@ export function SectionHeader({ title, tooltip }) {
 }
 
 export function StatChip({ icon, iconColor, label, value, valueColor, tooltip }) {
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+  // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
+  // (defined further down this file, after the frozen `styles` block).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
-    <View style={styles.statChip}>
+    <View style={[styles.statChip, live.statChip]}>
       {icon ? (
-        <Ionicons name={icon} size={15} color={iconColor ?? colors.textSecondary} />
+        <Ionicons name={icon} size={15} color={iconColor ?? t.colors.textSecondary} />
       ) : null}
-      <Text style={[styles.statChipValue, valueColor ? { color: valueColor } : null]}>
+      <Text style={[styles.statChipValue, live.statChipValue, valueColor ? { color: valueColor } : null]}>
         {value}
       </Text>
-      {label ? <Text style={styles.statChipLabel}>{label}</Text> : null}
+      {label ? <Text style={[styles.statChipLabel, live.statChipLabel]}>{label}</Text> : null}
       {tooltip ? <InfoTooltip text={tooltip} size={12} /> : null}
     </View>
   );
 }
 
 export function LedgerCard({ working, off }) {
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+  // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
+  // (defined further down this file, after the frozen `styles` block).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const hasWorking = working && working.length > 0;
   const hasOff = off && off.length > 0;
   if (!hasWorking && !hasOff) return null;
@@ -47,8 +58,8 @@ export function LedgerCard({ working, off }) {
           <View style={styles.bulletList}>
             {working.map((item, i) => (
               <View key={i} style={styles.bulletRow}>
-                <Ionicons name="checkmark" size={15} color={colors.success} style={styles.bulletIcon} />
-                <Text style={styles.bulletText}>{item}</Text>
+                <Ionicons name="checkmark" size={15} color={t.colors.success} style={styles.bulletIcon} />
+                <Text style={[styles.bulletText, live.bulletText]}>{item}</Text>
               </View>
             ))}
           </View>
@@ -60,8 +71,8 @@ export function LedgerCard({ working, off }) {
           <View style={styles.bulletList}>
             {off.map((item, i) => (
               <View key={i} style={styles.bulletRow}>
-                <Ionicons name="remove" size={15} color={colors.warning} style={styles.bulletIcon} />
-                <Text style={styles.bulletText}>{item}</Text>
+                <Ionicons name="remove" size={15} color={t.colors.warning} style={styles.bulletIcon} />
+                <Text style={[styles.bulletText, live.bulletText]}>{item}</Text>
               </View>
             ))}
           </View>
@@ -72,21 +83,26 @@ export function LedgerCard({ working, off }) {
 }
 
 export function WhyBlock({ text, onLearnMore }) {
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+  // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
+  // (defined further down this file, after the frozen `styles` block).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <View style={styles.whyBlock}>
-      <Text style={styles.whyLabel}>Why this week:</Text>
-      <Text style={styles.whyText}>{text}</Text>
+      <Text style={[styles.whyLabel, live.whyLabel]}>Why this week:</Text>
+      <Text style={[styles.whyText, live.whyText]}>{text}</Text>
       {onLearnMore ? (
         <TouchableOpacity
-          style={styles.link44}
+          style={[styles.link44, live.link44]}
           onPress={onLearnMore}
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           accessibilityRole="button"
           accessibilityLabel="Understand how this decision was made"
         >
-          <Ionicons name="information-circle-outline" size={iconSize.sm} color={colors.textSecondary} />
-          <Text style={styles.whyLearnMore}>Understand how this decision was made</Text>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+          <Ionicons name="information-circle-outline" size={iconSize.sm} color={t.colors.textSecondary} />
+          <Text style={[styles.whyLearnMore, live.whyLearnMore]}>Understand how this decision was made</Text>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
       ) : null}
     </View>
@@ -94,13 +110,18 @@ export function WhyBlock({ text, onLearnMore }) {
 }
 
 export function RapidLossAlert() {
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+  // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
+  // (defined further down this file, after the frozen `styles` block).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
-    <View style={styles.rapidLossCard}>
+    <View style={[styles.rapidLossCard, live.rapidLossCard]}>
       <View style={styles.rapidLossHeader}>
-        <Ionicons name="warning-outline" size={18} color={colors.error} />
-        <Text style={styles.rapidLossTitle}>Weight dropping quickly</Text>
+        <Ionicons name="warning-outline" size={18} color={t.colors.error} />
+        <Text style={[styles.rapidLossTitle, live.rapidLossTitle]}>Weight dropping quickly</Text>
       </View>
-      <Text style={styles.rapidLossBody}>
+      <Text style={[styles.rapidLossBody, live.rapidLossBody]}>
         Your weight is falling more than 1.5% of your body weight per week and your energy is low. Losing at this rate risks losing muscle alongside fat and makes training harder. Eating a little more this week protects muscle while you lose.
       </Text>
     </View>
@@ -218,3 +239,31 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
 });
+
+// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+// override for the frozen `styles` block above, same "frozen base + live
+// override" pattern as WorkoutSummaryScreen.js's buildLiveStyles -- each of
+// StatChip/LedgerCard/WhyBlock/RapidLossAlert calls `const t = useTheme();
+// const live = buildLiveStyles(t);` and appends `live.KEY` after `styles.KEY`
+// in its own style arrays. SectionHeader has no colour tokens of its own
+// (sectionHeader/sectionHeaderRow/sectionHeaderInline are layout-only), so it
+// stays untouched -- there is nothing for it to unfreeze. card/bulletList/
+// bulletRow/bulletIcon/actions have no colour tokens either.
+function buildLiveStyles(t) {
+  return {
+    statChip: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    statChipValue: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    statChipLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    bulletText: { ...t.type.body, color: t.colors.textPrimary },
+    whyLabel: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    whyText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    whyLearnMore: { ...t.type.label, color: t.colors.textSecondary },
+    link44: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    rapidLossCard: {
+      backgroundColor: t.colors.errorBg ?? t.colors.warningBg,
+      borderColor: withAlpha(t.colors.error, alpha.mid),
+    },
+    rapidLossTitle: { fontSize: t.fontSize.sm, color: t.colors.error },
+    rapidLossBody: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+  };
+}

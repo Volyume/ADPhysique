@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, radius, type, stateColors, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import VolyumeChart from './VolyumeChart';
 import { formatBodyWeight } from '../lib/units';
 
@@ -19,13 +20,30 @@ import { formatBodyWeight } from '../lib/units';
  * The dashed goal-band overlay from the blueprint is intentionally deferred
  * (visual polish): band membership is conveyed by the dot + insight line.
  */
-const DOT_COLORS = {
-  onTrack: () => stateColors.onTrack,
-  watch: () => stateColors.watch,
-  neutral: () => stateColors.neutral,
-};
+// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+// variant of the frozen DOT_COLORS map this file used to define inline
+// (module-scope, aliasing `stateColors.*` at call time), same "build"
+// pattern as theme.js's buildVolumeStatusColor -- resolves the SAME
+// state -> tone mapping (onTrack -> success, watch -> warning, neutral ->
+// textMuted, matching stateColors' own aliasing) off the passed-in live
+// t.colors instead of the frozen stateColors singleton, so the trend dot's
+// colour stays in step with a theme flip. No frozen twin kept: DOT_COLORS
+// was file-private and untested, so there is no unmigrated caller to
+// preserve it for.
+function buildDotColour(c) {
+  return {
+    onTrack: c.success,
+    watch: c.warning,
+    neutral: c.textMuted,
+  };
+}
 
 export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+  // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
+  // (defined further down this file, after the frozen `styles` block).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const [chartWidth, setChartWidth] = useState(0);
 
   if (!vm || !vm.render) return null;
@@ -36,7 +54,8 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
     hasSparkline, showRaw = true, stepTrendLine = null,
   } = vm;
 
-  const dotColor = dot && DOT_COLORS[dot] ? DOT_COLORS[dot]() : null;
+  const dotColours = buildDotColour(t.colors);
+  const dotColor = dot && dotColours[dot] ? dotColours[dot] : null;
 
   const lineData = ewmaData
     .map((p) => ({ value: p?.ewma }))
@@ -60,8 +79,8 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
   ].filter(Boolean).join(' ');
 
   return (
-    <View style={styles.card} accessible accessibilityLabel={a11y}>
-      <Text style={styles.label}>Your trend</Text>
+    <View style={[styles.card, live.card]} accessible accessibilityLabel={a11y}>
+      <Text style={[styles.label, live.label]}>Your trend</Text>
 
       {hasSparkline && lineData.length >= 2 && (
         <View
@@ -74,7 +93,7 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
               data2={rawSeries}
               width={chartWidth}
               height={88}
-              color={colors.primary}
+              color={t.colors.primary}
               curved
             />
           )}
@@ -85,8 +104,8 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
           once there is a meaningful smoothed value (state 2+). */}
       {state >= 2 && ewmaNow != null && (
         <View style={styles.statRow}>
-          <Text style={styles.ewmaValue}>{formatBodyWeight(ewmaNow, bodyWeightUnits)}</Text>
-          {showRate && rateText && <Text style={styles.rateValue}>{rateText}</Text>}
+          <Text style={[styles.ewmaValue, live.ewmaValue]}>{formatBodyWeight(ewmaNow, bodyWeightUnits)}</Text>
+          {showRate && rateText && <Text style={[styles.rateValue, live.rateValue]}>{rateText}</Text>}
         </View>
       )}
 
@@ -96,27 +115,27 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
         {dotColor && (
           <View style={[styles.dot, { backgroundColor: dotColor }]} accessibilityElementsHidden importantForAccessibility="no" />
         )}
-        <Text style={styles.insight}>{insight}</Text>
+        <Text style={[styles.insight, live.insight]}>{insight}</Text>
       </View>
 
       {maintenance && (
         maintenance.building ? (
-          <Text style={styles.maintenanceBuilding}>
+          <Text style={[styles.maintenanceBuilding, live.maintenanceBuilding]}>
             Your coach is building your estimate. Keep logging and it appears in about a week.
           </Text>
         ) : (
           <View style={styles.maintenanceBlock}>
-            <Text style={styles.maintenanceValue}>
+            <Text style={[styles.maintenanceValue, live.maintenanceValue]}>
               ~{maintenance.kcal.toLocaleString()} kcal/day estimated maintenance
             </Text>
-            <Text style={styles.maintenanceLabel}>{maintenance.label}</Text>
+            <Text style={[styles.maintenanceLabel, live.maintenanceLabel]}>{maintenance.label}</Text>
           </View>
         )
       )}
 
       {/* COMP-026 (B): step-trend line, only in a week the modifier sized the
           change. Already suppressed under an open ED flag by the view-model. */}
-      {stepTrendLine && <Text style={styles.stepTrendLine}>{stepTrendLine}</Text>}
+      {stepTrendLine && <Text style={[styles.stepTrendLine, live.stepTrendLine]}>{stepTrendLine}</Text>}
     </View>
   );
 }
@@ -148,3 +167,21 @@ const styles = StyleSheet.create({
   maintenanceBuilding: { ...type.bodySm, color: colors.textMuted },
   stepTrendLine: { ...type.captionTight, color: colors.textMuted, fontStyle: 'italic' },
 });
+
+// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+// override for the frozen `styles` block above, same "frozen base + live
+// override" pattern as WorkoutSummaryScreen.js's buildLiveStyles.
+// chartWrap/statRow/insightRow/maintenanceBlock have no colour tokens.
+function buildLiveStyles(t) {
+  return {
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    label: { ...t.type.overline, color: t.colors.textMuted },
+    ewmaValue: { ...t.type.num('h3'), color: t.colors.textPrimary },
+    rateValue: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    insight: { ...t.type.bodySm, color: t.colors.textSecondary },
+    maintenanceValue: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    maintenanceLabel: { ...t.type.caption, color: t.colors.textMuted },
+    maintenanceBuilding: { ...t.type.bodySm, color: t.colors.textMuted },
+    stepTrendLine: { ...t.type.captionTight, color: t.colors.textMuted },
+  };
+}

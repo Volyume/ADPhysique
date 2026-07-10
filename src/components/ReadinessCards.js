@@ -15,6 +15,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle, type, alpha } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import AnimatedEntrance from './AnimatedEntrance';
 import InfoTooltip from './InfoTooltip';
 import SectionLabel from './SectionLabel';
@@ -41,13 +42,23 @@ function nextMilestone(total) {
   return MILESTONES.find(m => m.sessions > total) ?? null;
 }
 
-function freshnessMeta(lastTrainedAt, now) {
-  if (!lastTrainedAt) return { label: 'Ready', color: colors.success, dot: colors.success };
-  const hoursAgo = (now - lastTrainedAt) / (1000 * 60 * 60);
-  if (hoursAgo < 24)  return { label: 'Just trained', color: colors.warning, dot: colors.warning };
-  if (hoursAgo < 48)  return { label: 'Recovering',   color: colors.warning, dot: colors.warning };
-  if (hoursAgo < 72)  return { label: 'Nearly ready',  color: colors.success, dot: withAlpha(colors.success, 0.6) };
-  return { label: 'Ready', color: colors.success, dot: colors.success };
+// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+// variant of the frozen freshnessMeta(lastTrainedAt, now) this file used to
+// define inline (module-scope, reading `colors.*` at call time), same
+// "build" pattern as theme.js's buildVolumeStatusColor -- resolves the SAME
+// thresholds/labels off a passed-in colour table (t.colors) instead of the
+// frozen module `colors` singleton, so muscle-freshness colouring stays in
+// step with a theme flip. No frozen twin kept: this helper was file-private
+// and untested, so there is no unmigrated caller to preserve it for.
+function buildFreshnessMeta(c) {
+  return function freshnessMetaLive(lastTrainedAt, now) {
+    if (!lastTrainedAt) return { label: 'Ready', color: c.success, dot: c.success };
+    const hoursAgo = (now - lastTrainedAt) / (1000 * 60 * 60);
+    if (hoursAgo < 24)  return { label: 'Just trained', color: c.warning, dot: c.warning };
+    if (hoursAgo < 48)  return { label: 'Recovering',   color: c.warning, dot: c.warning };
+    if (hoursAgo < 72)  return { label: 'Nearly ready',  color: c.success, dot: withAlpha(c.success, 0.6) };
+    return { label: 'Ready', color: c.success, dot: c.success };
+  };
 }
 
 // Checkins arrive newest-first. Surfaces a single plain-English read on
@@ -97,6 +108,11 @@ export function computeRecoveryTrendInsight(checkins) {
 }
 
 export default function ReadinessCards({ userId, tier }) {
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+  // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
+  // (defined further down this file, after the frozen `styles` block).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const [totalWorkouts, setTotalWorkouts] = useState(0);
   const [recovery, setRecovery] = useState({ soreness: null, fatigue: null, joint: null });
   const [muscleFreshness, setMuscleFreshness] = useState({});
@@ -156,9 +172,10 @@ export default function ReadinessCards({ userId, tier }) {
   const lastUnlocked = unlocked[unlocked.length - 1] ?? null;
   const progressPct = next ? `${Math.round(Math.min(1, totalWorkouts / next.sessions) * 100)}%` : '100%';
 
+  const resolveFreshnessMeta = buildFreshnessMeta(t.colors);
   const freshnessEntries = Object.entries(MUSCLE_DISPLAY_NAMES)
     .filter(([key]) => muscleFreshness[key] !== undefined)
-    .map(([key, displayName]) => ({ key, displayName, ...freshnessMeta(muscleFreshness[key], Date.now()) }))
+    .map(([key, displayName]) => ({ key, displayName, ...resolveFreshnessMeta(muscleFreshness[key], Date.now()) }))
     .sort((a, b) => {
       const order = { 'Just trained': 0, Recovering: 1, 'Nearly ready': 2, Ready: 3 };
       return (order[a.label] ?? 4) - (order[b.label] ?? 4);
@@ -168,24 +185,24 @@ export default function ReadinessCards({ userId, tier }) {
     <AnimatedEntrance index={1} style={{ gap: spacing.md }}>
       {/* Milestone progress */}
       {(lastUnlocked || next) && (
-        <View style={styles.milestoneCard}>
+        <View style={[styles.milestoneCard, live.milestoneCard]}>
           <View style={styles.milestoneTop}>
             {lastUnlocked && (
               <View style={styles.milestoneUnlocked}>
-                <Ionicons name={lastUnlocked.icon} size={16} color={colors.gold} />
-                <Text style={styles.milestoneUnlockedText}>{lastUnlocked.label}</Text>
+                <Ionicons name={lastUnlocked.icon} size={16} color={t.colors.gold} />
+                <Text style={[styles.milestoneUnlockedText, live.milestoneUnlockedText]}>{lastUnlocked.label}</Text>
               </View>
             )}
             {next && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Text style={styles.milestoneNext}>{next.sessions - totalWorkouts} to go: {next.label}</Text>
+                <Text style={[styles.milestoneNext, live.milestoneNext]}>{next.sessions - totalWorkouts} to go: {next.label}</Text>
                 <InfoTooltip size={11} text={"Consistency is the biggest predictor of long-term progress. The more sessions you log, the better Volyume understands how your body responds, so it can suggest the right weights, spot when your reps are slipping, and time your lighter weeks correctly.\n\nBuilding the habit is the foundation everything else sits on."} />
               </View>
             )}
           </View>
           {next && (
-            <View style={styles.milestoneBarTrack}>
-              <View style={[styles.milestoneBarFill, { width: progressPct }]} />
+            <View style={[styles.milestoneBarTrack, live.milestoneBarTrack]}>
+              <View style={[styles.milestoneBarFill, live.milestoneBarFill, { width: progressPct }]} />
             </View>
           )}
         </View>
@@ -197,17 +214,17 @@ export default function ReadinessCards({ userId, tier }) {
           <SectionLabel>Recovery</SectionLabel>
           <InfoTooltip text="Weighted 7-day average of your session check-ins. Scored 1-5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1-5 where 1 = comfortable. If scores are consistently high, consider a lighter week." />
         </View>
-        <View style={styles.recoveryCard}>
+        <View style={[styles.recoveryCard, live.recoveryCard]}>
           <View style={styles.recoveryGrid}>
             <RecoveryGauge label="Soreness" value={recovery.soreness} />
             <RecoveryGauge label="Fatigue" value={recovery.fatigue} />
             <RecoveryGauge label="Joint comfort" value={recovery.joint} invertGood />
           </View>
-          <Text style={styles.recoveryNote}>Scale 1-5 · Lower is better for soreness & fatigue</Text>
+          <Text style={[styles.recoveryNote, live.recoveryNote]}>Scale 1-5 · Lower is better for soreness & fatigue</Text>
           {cardioLoad === 'high' && (
-            <View style={styles.cardioLoadNote}>
-              <Ionicons name="heart-outline" size={13} color={colors.warning} />
-              <Text style={styles.cardioLoadText}>
+            <View style={[styles.cardioLoadNote, live.cardioLoadNote]}>
+              <Ionicons name="heart-outline" size={13} color={t.colors.warning} />
+              <Text style={[styles.cardioLoadText, live.cardioLoadText]}>
                 Your cardio is adding to your fatigue this week. Keep it low-impact, or trim a session.
               </Text>
             </View>
@@ -215,22 +232,22 @@ export default function ReadinessCards({ userId, tier }) {
 
           {tier === 'pro' && freshnessEntries.length > 0 && (
             <>
-              <View style={styles.recoveryDivider} />
+              <View style={[styles.recoveryDivider, live.recoveryDivider]} />
               <View style={styles.mfHeaderRow}>
-                <View style={[styles.mfIconWrap, { backgroundColor: colors.primaryBg }]}>
-                  <Ionicons name="flash-outline" size={20} color={colors.primary} />
+                <View style={[styles.mfIconWrap, { backgroundColor: t.colors.primaryBg }]}>
+                  <Ionicons name="flash-outline" size={20} color={t.colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.mfTitle}>Muscle readiness</Text>
-                  <Text style={styles.mfSub}>How recovered your muscles are based on your recent training.</Text>
+                  <Text style={[styles.mfTitle, live.mfTitle]}>Muscle readiness</Text>
+                  <Text style={[styles.mfSub, live.mfSub]}>How recovered your muscles are based on your recent training.</Text>
                 </View>
               </View>
               <View style={styles.mfChipGrid}>
                 {freshnessEntries.map(({ key, displayName, label, color, dot }) => (
                   <View key={key} style={[styles.mfChip, { borderColor: withAlpha(color, alpha.edge), backgroundColor: withAlpha(color, alpha.ghost) }]}>
                     <View style={[styles.mfDot, { backgroundColor: dot }]} />
-                    <Text style={[styles.mfChipName, { color: colors.textPrimary }]}>{displayName}</Text>
-                    <Text style={[styles.mfChipLabel, { color }]}>{label}</Text>
+                    <Text style={[styles.mfChipName, live.mfChipName, { color: t.colors.textPrimary }]}>{displayName}</Text>
+                    <Text style={[styles.mfChipLabel, live.mfChipLabel, { color }]}>{label}</Text>
                   </View>
                 ))}
               </View>
@@ -239,13 +256,13 @@ export default function ReadinessCards({ userId, tier }) {
         </View>
 
         {tier === 'pro' && recoveryTrendInsight && (
-          <View style={[styles.trendInsightCard, recoveryTrendInsight.type === 'good' ? styles.trendInsightGood : styles.trendInsightWarn]}>
+          <View style={[styles.trendInsightCard, recoveryTrendInsight.type === 'good' ? [styles.trendInsightGood, live.trendInsightGood] : [styles.trendInsightWarn, live.trendInsightWarn]]}>
             <Ionicons
               name={recoveryTrendInsight.type === 'good' ? 'trending-up-outline' : 'alert-circle-outline'}
               size={16}
-              color={recoveryTrendInsight.type === 'good' ? colors.success : colors.warning}
+              color={recoveryTrendInsight.type === 'good' ? t.colors.success : t.colors.warning}
             />
-            <Text style={styles.trendInsightText}>{recoveryTrendInsight.text}</Text>
+            <Text style={[styles.trendInsightText, live.trendInsightText]}>{recoveryTrendInsight.text}</Text>
           </View>
         )}
       </View>
@@ -254,18 +271,24 @@ export default function ReadinessCards({ userId, tier }) {
 }
 
 function RecoveryGauge({ label, value, invertGood = false }) {
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+  // theme (src/hooks/useTheme.js). RecoveryGauge is a separate function
+  // component from ReadinessCards above, so it calls useTheme() itself
+  // (same pattern as WorkoutSummaryScreen.js's RatingRow).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const hasValue = value != null && !isNaN(value);
   const display = hasValue ? value.toFixed(1) : 'N/A';
 
-  let dotColor = colors.textMuted;
+  let dotColor = t.colors.textMuted;
   let scaleNote = 'Nothing to show yet';
   if (hasValue) {
     const v = parseFloat(value);
     if (invertGood) {
-      dotColor = v >= 3 ? colors.error : v >= 2 ? colors.warning : colors.success;
+      dotColor = v >= 3 ? t.colors.error : v >= 2 ? t.colors.warning : t.colors.success;
       scaleNote = v >= 3 ? 'High discomfort' : v >= 2 ? 'Moderate' : 'Comfortable';
     } else {
-      dotColor = v >= 4 ? colors.error : v >= 3 ? colors.warning : colors.success;
+      dotColor = v >= 4 ? t.colors.error : v >= 3 ? t.colors.warning : t.colors.success;
       scaleNote = v >= 4 ? 'High' : v >= 3 ? 'Elevated' : v >= 2 ? 'Moderate' : 'Low / Fresh';
     }
   }
@@ -273,9 +296,9 @@ function RecoveryGauge({ label, value, invertGood = false }) {
   return (
     <View style={styles.gaugeItem}>
       <View style={[styles.gaugeDot, { backgroundColor: dotColor }]} />
-      <Text style={styles.gaugeValue}>{display}</Text>
-      <Text style={styles.gaugeLabel}>{label}</Text>
-      <Text style={styles.gaugeScale}>{scaleNote}</Text>
+      <Text style={[styles.gaugeValue, live.gaugeValue]}>{display}</Text>
+      <Text style={[styles.gaugeLabel, live.gaugeLabel]}>{label}</Text>
+      <Text style={[styles.gaugeScale, live.gaugeScale]}>{scaleNote}</Text>
     </View>
   );
 }
@@ -338,3 +361,41 @@ const styles = StyleSheet.create({
   mfChipName: { ...type.captionStrong },
   mfChipLabel: { fontSize: fontSize.micro, fontWeight: fontWeight.semibold },
 });
+
+// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+// override for the frozen `styles` block above, shared by BOTH function-
+// component scopes in this file (ReadinessCards, RecoveryGauge) -- each
+// calls `const t = useTheme(); const live = buildLiveStyles(t);` and appends
+// `live.KEY` after `styles.KEY`, same pattern as WorkoutSummaryScreen.js's
+// buildLiveStyles. Only mirrors the colour/fontSize/type-bearing
+// sub-properties of the matching frozen style, at identical rest values;
+// pure layout keys (section/milestoneTop/milestoneUnlocked/recoveryGrid/
+// gaugeItem/gaugeDot/trendInsightCard/mfHeaderRow/mfIconWrap/mfChipGrid/
+// mfChip/mfDot) have no colour tokens, so there is nothing to unfreeze for
+// them. mfCard is unused in the current JSX (dead style, pre-existing, not
+// this batch's concern) but is mirrored here too for completeness.
+function buildLiveStyles(t) {
+  return {
+    milestoneCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    milestoneUnlockedText: { fontSize: t.fontSize.sm, color: t.colors.gold },
+    milestoneNext: { ...t.type.caption, color: t.colors.textMuted },
+    milestoneBarTrack: { backgroundColor: t.colors.surface2 },
+    milestoneBarFill: { backgroundColor: t.colors.primary },
+    recoveryCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    recoveryDivider: { backgroundColor: t.colors.border },
+    gaugeValue: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
+    gaugeLabel: { fontSize: t.fontSize.micro, color: t.colors.textMuted },
+    gaugeScale: { fontSize: t.fontSize.micro, color: t.colors.textMuted },
+    recoveryNote: { ...t.type.caption, color: t.colors.textMuted },
+    cardioLoadNote: { borderTopColor: t.colors.border },
+    cardioLoadText: { ...t.type.captionTight, color: t.colors.textSecondary },
+    trendInsightGood: { backgroundColor: t.colors.successBg ?? t.colors.primaryBg, borderColor: withAlpha(t.colors.success, alpha.edge) },
+    trendInsightWarn: { backgroundColor: t.colors.warningBg, borderColor: withAlpha(t.colors.warning, alpha.edge) },
+    trendInsightText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    mfCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    mfTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    mfSub: { ...t.type.captionTight, color: t.colors.textMuted },
+    mfChipName: { ...t.type.captionStrong },
+    mfChipLabel: { fontSize: t.fontSize.micro },
+  };
+}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Svg, Rect, Text as SvgText } from 'react-native-svg';
-import { colors } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 /**
  * Pure SVG bar sparkline. Shared visual language for FatigueTrend, MesocyclePulse,
@@ -37,12 +37,21 @@ export default function SvgBarSparkline({
   barGap = 8,
   alignRight = false,
   showLabels = true,
-  defaultColor = colors.primary,
-  labelColor = colors.textMuted,
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): these two
+  // were default parameters reading the frozen module `colors` singleton.
+  // Defaults removed; resolved below against the live `t` from useTheme() so
+  // an omitted prop tracks a live theme flip, same pattern as
+  // VolyumeChart.js/Sparkline.js.
+  defaultColor,
+  labelColor,
   minBarHeight = 4,
   accessibilityLabel,
 }) {
+  const t = useTheme();
   if (!data || data.length === 0) return null;
+
+  const resolvedDefaultColor = defaultColor ?? t.colors.primary;
+  const resolvedLabelColor = labelColor ?? t.colors.textMuted;
 
   const a11yLabel = accessibilityLabel
     ?? `Bar chart: ${data
@@ -67,7 +76,7 @@ export default function SvgBarSparkline({
         const barHeight = Math.max(minBarHeight, ratio * height);
         const x = startX + i * (barWidth + barGap);
         const y = height - barHeight;
-        const fill = point.color ?? defaultColor;
+        const fill = point.color ?? resolvedDefaultColor;
         return (
           <React.Fragment key={i}>
             <Rect
@@ -84,7 +93,7 @@ export default function SvgBarSparkline({
                 x={x + barWidth / 2}
                 y={height + 11}
                 fontSize={9}
-                fill={labelColor}
+                fill={resolvedLabelColor}
                 textAnchor="middle"
               >
                 {point.label}

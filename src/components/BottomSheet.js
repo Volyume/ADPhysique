@@ -62,6 +62,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useAppStore from '../store/useAppStore';
 import { colors, spacing, radius, motion } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 // Zero-duration spring config: the library accepts a WithSpringConfig or
 // WithTimingConfig for every internal animation (mount, snap, forceClose).
@@ -84,6 +85,11 @@ export default function BottomSheet({
   contentContainerStyle,
   accessibilityLabel,
 }) {
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+  // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
+  // (defined further down this file, after the frozen `styles` block).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -143,9 +149,9 @@ export default function BottomSheet({
       pressBehavior="close"
       onPress={handleBackdropPress}
       accessibilityLabel="Close"
-      style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.scrim }]}
+      style={[StyleSheet.absoluteFillObject, { backgroundColor: t.colors.scrim }]}
     />
-  ), [handleBackdropPress]);
+  ), [handleBackdropPress, t.colors.scrim]);
 
   // Android hardware back button: the old RN `Modal`'s onRequestClose hooked
   // into this automatically. BottomSheetModal is a JS portal, not a native
@@ -201,9 +207,9 @@ export default function BottomSheet({
       onDismiss={handleDismiss}
       backdropComponent={renderBackdrop}
       handleComponent={showHandle ? undefined : NoHandle}
-      handleIndicatorStyle={styles.handleIndicator}
+      handleIndicatorStyle={[styles.handleIndicator, live.handleIndicator]}
       handleStyle={styles.handleWrap}
-      backgroundStyle={[styles.sheetBackground, sheetStyle]}
+      backgroundStyle={[styles.sheetBackground, live.sheetBackground, sheetStyle]}
       keyboardBehavior={keyboardAvoiding ? 'interactive' : 'extend'}
       android_keyboardInputMode={keyboardAvoiding ? 'adjustResize' : 'adjustPan'}
       accessibilityLabel={accessibilityLabel}
@@ -254,3 +260,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
 });
+
+// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+// override for the frozen `styles` block above, same "frozen base + live
+// override" pattern as WorkoutSummaryScreen.js's buildLiveStyles -- the
+// component calls `const t = useTheme(); const live = buildLiveStyles(t);`
+// and appends `live.KEY` after `styles.KEY` in each style array. Only
+// mirrors the colour-bearing sub-properties of the matching frozen style,
+// at identical rest values; handleWrap/body/scroll/scrollContent have no
+// colour tokens at all, so there is nothing to unfreeze for them.
+function buildLiveStyles(t) {
+  return {
+    sheetBackground: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    handleIndicator: { backgroundColor: t.colors.border },
+  };
+}

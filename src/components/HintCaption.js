@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, spacing, type, fontWeight } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 /**
  * A quiet, one-time caption for a long-press gesture that otherwise has no
@@ -12,16 +13,21 @@ import { colors, spacing, type, fontWeight } from '../styles/theme';
  * attention.
  */
 export default function HintCaption({ text, onDismiss, style }) {
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+  // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
+  // (defined further down this file, after the frozen `styles` block).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <View style={[styles.row, style]}>
-      <Text style={styles.text}>{text}</Text>
+      <Text style={[styles.text, live.text]}>{text}</Text>
       <TouchableOpacity
         onPress={onDismiss}
         hitSlop={8}
         accessibilityRole="button"
         accessibilityLabel="Got it, dismiss this hint"
       >
-        <Text style={styles.dismiss}>Got it</Text>
+        <Text style={[styles.dismiss, live.dismiss]}>Got it</Text>
       </TouchableOpacity>
     </View>
   );
@@ -40,3 +46,13 @@ const styles = StyleSheet.create({
   text: { ...type.caption, color: colors.textMuted, flex: 1 },
   dismiss: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
 });
+
+// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+// override for the frozen `styles` block above, same "frozen base + live
+// override" pattern as WorkoutSummaryScreen.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    text: { ...t.type.caption, color: t.colors.textMuted },
+    dismiss: { ...t.type.caption, color: t.colors.primary },
+  };
+}

@@ -13,6 +13,7 @@
 import { ActivityIndicator, View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, spacing, radius, iconSize, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 export default function SearchBar({
   value,
@@ -25,16 +26,21 @@ export default function SearchBar({
   accessibilityLabel,
   loading = false,
 }) {
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+  // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
+  // (defined further down this file, after the frozen `styles` block).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const handleClear = () => (onClear ? onClear() : onChangeText?.(''));
   return (
-    <View style={[styles.bar, style]}>
-      <Ionicons name="search-outline" size={iconSize.sm} color={colors.textMuted} />
+    <View style={[styles.bar, live.bar, style]}>
+      <Ionicons name="search-outline" size={iconSize.sm} color={t.colors.textMuted} />
       <TextInput
-        style={styles.input}
+        style={[styles.input, live.input]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={colors.textMuted}
+        placeholderTextColor={t.colors.textMuted}
         autoCapitalize="none"
         autoCorrect={false}
         autoFocus={autoFocus}
@@ -43,7 +49,7 @@ export default function SearchBar({
         testID={testID}
       />
       {loading ? (
-        <ActivityIndicator size="small" color={colors.textMuted} />
+        <ActivityIndicator size="small" color={t.colors.textMuted} />
       ) : value ? (
         <TouchableOpacity
           onPress={handleClear}
@@ -51,7 +57,7 @@ export default function SearchBar({
           accessibilityRole="button"
           accessibilityLabel="Clear search"
         >
-          <Ionicons name="close-circle" size={iconSize.sm} color={colors.textMuted} />
+          <Ionicons name="close-circle" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
       ) : null}
     </View>
@@ -79,3 +85,13 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
 });
+
+// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+// override for the frozen `styles` block above, same "frozen base + live
+// override" pattern as WorkoutSummaryScreen.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    bar: { backgroundColor: t.colors.inputBg, borderColor: t.colors.border },
+    input: { ...t.type.body, fontSize: Math.max(16, t.fontSize.md), color: t.colors.textPrimary },
+  };
+}

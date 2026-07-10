@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from './Button';
 import { colors, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 /**
  * Shared empty-state component used across screens.
@@ -33,12 +34,18 @@ export default function EmptyState({
   onDismiss,
   compact = false,
 }) {
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+  // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
+  // (defined further down this file, after the frozen `styles` block).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <View
       style={[
         styles.card,
+        live.card,
         compact && styles.cardCompact,
-        ghost && styles.cardGhost,
+        ghost && [styles.cardGhost, live.cardGhost],
       ]}
     >
       {ghost && onDismiss && (
@@ -48,23 +55,23 @@ export default function EmptyState({
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityLabel="Dismiss"
         >
-          <Ionicons name="close" size={16} color={colors.textMuted} />
+          <Ionicons name="close" size={16} color={t.colors.textMuted} />
         </TouchableOpacity>
       )}
 
-      <View style={[styles.iconWrap, compact && styles.iconWrapCompact, ghost && styles.iconWrapGhost]}>
+      <View style={[styles.iconWrap, live.iconWrap, compact && styles.iconWrapCompact, ghost && [styles.iconWrapGhost, live.iconWrapGhost]]}>
         <Ionicons
           name={icon}
           size={compact ? 24 : 28}
-          color={ghost ? colors.textMuted : colors.primary}
+          color={ghost ? t.colors.textMuted : t.colors.primary}
         />
       </View>
 
       {!!title && (
-        <Text style={[styles.title, ghost && styles.titleGhost]}>{title}</Text>
+        <Text style={[styles.title, live.title, ghost && [styles.titleGhost, live.titleGhost]]}>{title}</Text>
       )}
       {!!text && (
-        <Text style={styles.text}>{text}</Text>
+        <Text style={[styles.text, live.text]}>{text}</Text>
       )}
 
       {/* D1 sweep (f): the CTAs are the shared Button primitive, so empty
@@ -143,3 +150,23 @@ const styles = StyleSheet.create({
   },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs, flexWrap: 'wrap', justifyContent: 'center' },
 });
+
+// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+// override for the frozen `styles` block above, same "frozen base + live
+// override" pattern as WorkoutSummaryScreen.js's buildLiveStyles -- the
+// component calls `const t = useTheme(); const live = buildLiveStyles(t);`
+// and appends `live.KEY` after `styles.KEY` in each style array. Only
+// mirrors the colour-bearing sub-properties of the matching frozen style, at
+// identical rest values; cardCompact/iconWrapCompact/dismiss/actions have no
+// colour tokens, so there is nothing to unfreeze for them.
+function buildLiveStyles(t) {
+  return {
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    cardGhost: { borderColor: t.colors.borderSubtle },
+    iconWrap: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    iconWrapGhost: { backgroundColor: t.colors.surface2, borderColor: t.colors.borderSubtle },
+    title: { ...t.type.title, color: t.colors.textPrimary },
+    titleGhost: { color: t.colors.textMuted },
+    text: { ...t.type.bodySm, color: t.colors.textSecondary },
+  };
+}

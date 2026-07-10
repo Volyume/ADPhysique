@@ -3,8 +3,14 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
 import { colors, spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 export default function InfoTooltip({ text, size = 14 }) {
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+  // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
+  // (defined further down this file, after the frozen `styles` block).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const [visible, setVisible] = useState(false);
   return (
@@ -18,18 +24,18 @@ export default function InfoTooltip({ text, size = 14 }) {
         accessibilityRole="button"
         accessibilityLabel="More information"
       >
-        <Ionicons name="information-circle-outline" size={size} color={colors.textMuted} />
+        <Ionicons name="information-circle-outline" size={size} color={t.colors.textMuted} />
       </TouchableOpacity>
       <Modal visible={visible} transparent animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={() => setVisible(false)}>
         <TouchableOpacity
-          style={styles.overlay}
+          style={[styles.overlay, live.overlay]}
           activeOpacity={1}
           onPress={() => setVisible(false)}
           accessibilityRole="button"
           accessibilityLabel="Close"
         >
-          <View style={styles.box} pointerEvents="box-none" accessible accessibilityRole="text">
-            <Text style={styles.text}>{text}</Text>
+          <View style={[styles.box, live.box]} pointerEvents="box-none" accessible accessibilityRole="text">
+            <Text style={[styles.text, live.text]}>{text}</Text>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -59,3 +65,14 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 });
+
+// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+// override for the frozen `styles` block above, same "frozen base + live
+// override" pattern as WorkoutSummaryScreen.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    overlay: { backgroundColor: t.colors.scrim },
+    box: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    text: { ...t.type.bodySm, color: t.colors.textSecondary },
+  };
+}

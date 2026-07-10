@@ -13,7 +13,8 @@
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from './PressableCard';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontWeight, spacing, radius } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 export default function Stepper({
   value,
@@ -31,17 +32,23 @@ export default function Stepper({
   hitSlop,
   style,
 }) {
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+  // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
+  // (defined further down this file, after the frozen `styles` block).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const clamp = (n) => Math.max(min, Math.min(max, n));
   const dec = () => onChange?.(clamp(value - step));
   const inc = () => onChange?.(clamp(value + step));
   const atMin = value <= min;
   const atMax = value >= max;
   const display = formatValue ? formatValue(value) : `${value}${unit ? ` ${unit}` : ''}`;
+  const SIZES = buildSizes(t.fontSize);
   const sizeStyle = SIZES[size] || SIZES.md;
   const isCompact = size === 'compact';
 
   return (
-    <View style={[styles.row, { gap: sizeStyle.gap }, isCompact && styles.rowCompact, style]}>
+    <View style={[styles.row, { gap: sizeStyle.gap }, isCompact && [styles.rowCompact, live.rowCompact], style]}>
       <PressableCard
         onPress={dec}
         disabled={atMin}
@@ -49,17 +56,18 @@ export default function Stepper({
         accessibilityRole="button"
         accessibilityLabel={decreaseLabel || `Decrease ${label}`}
         accessibilityState={{ disabled: atMin }}
-        style={[styles.btn, isCompact && styles.btnCompact, atMin && styles.btnDisabled]}
+        style={[styles.btn, live.btn, isCompact && styles.btnCompact, atMin && styles.btnDisabled]}
       >
         <Ionicons
           name="remove"
           size={sizeStyle.icon}
-          color={atMin ? colors.textDisabled : colors.textPrimary}
+          color={atMin ? t.colors.textDisabled : t.colors.textPrimary}
         />
       </PressableCard>
       <Text
         style={[
           styles.value,
+          live.value,
           {
             minWidth: sizeStyle.valueMinWidth,
             fontSize: sizeStyle.fontSize,
@@ -76,22 +84,31 @@ export default function Stepper({
         accessibilityRole="button"
         accessibilityLabel={increaseLabel || `Increase ${label}`}
         accessibilityState={{ disabled: atMax }}
-        style={[styles.btn, isCompact && styles.btnCompact, atMax && styles.btnDisabled]}
+        style={[styles.btn, live.btn, isCompact && styles.btnCompact, atMax && styles.btnDisabled]}
       >
         <Ionicons
           name="add"
           size={sizeStyle.icon}
-          color={atMax ? colors.textDisabled : colors.textPrimary}
+          color={atMax ? t.colors.textDisabled : t.colors.textPrimary}
         />
       </PressableCard>
     </View>
   );
 }
 
-const SIZES = {
-  md: { icon: 20, valueMinWidth: 56, fontSize: fontSize.lg, gap: spacing.md },
-  compact: { icon: 16, valueMinWidth: 32, fontSize: fontSize.sm, gap: 0 },
-};
+// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): SIZES was
+// a module-scope const baking fontSize.* at import time (class 2, CP-10 plan
+// section 1.4) -- frozen until an app restart, so Larger text would not
+// resize an already-mounted Stepper. Same fix as Button.js/TextField.js's
+// own buildSizes: built per-render from the live theme's fontSize table
+// inside the component, above. No frozen twin kept: this map was
+// file-private and untested.
+function buildSizes(fs) {
+  return {
+    md: { icon: 20, valueMinWidth: 56, fontSize: fs.lg, gap: spacing.md },
+    compact: { icon: 16, valueMinWidth: 32, fontSize: fs.sm, gap: 0 },
+  };
+}
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
@@ -127,3 +144,16 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
 });
+
+// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+// override for the frozen `styles` block above, same "frozen base + live
+// override" pattern as WorkoutSummaryScreen.js's buildLiveStyles. btnCompact/
+// btnDisabled/row have no colour tokens, so there is nothing to unfreeze for
+// them.
+function buildLiveStyles(t) {
+  return {
+    rowCompact: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    btn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    value: { color: t.colors.textPrimary },
+  };
+}

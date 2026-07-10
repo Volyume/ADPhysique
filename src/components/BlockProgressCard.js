@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 /**
  * Planned vs actual weekly volume per muscle for the current training block.
@@ -11,14 +12,19 @@ import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type }
  *   currentMesoWeek   { weekIndex, plannedWeeks, isDeload, rirTarget } | null
  */
 export default function BlockProgressCard({ blockProgress, currentMesoWeek }) {
+  // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+  // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
+  // (defined further down this file, after the frozen `styles` block).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   if (!blockProgress || blockProgress.length === 0) return null;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, live.card]}>
       <View style={styles.header}>
-        <Text style={styles.title}>This week's plan</Text>
+        <Text style={[styles.title, live.title]}>This week's plan</Text>
         {currentMesoWeek && (
-          <Text style={styles.week}>
+          <Text style={[styles.week, live.week]}>
             Week {currentMesoWeek.weekIndex}/{currentMesoWeek.plannedWeeks}
             {currentMesoWeek.isDeload
               ? ' · Recovery week'
@@ -29,9 +35,9 @@ export default function BlockProgressCard({ blockProgress, currentMesoWeek }) {
       {blockProgress.map(p => {
         const pct = p.planned > 0 ? Math.min(1, p.actual / p.planned) : 0;
         const fillColor =
-          pct >= 1 ? colors.primary
-          : pct >= 0.7 ? colors.warning
-          : withAlpha(colors.primary, alpha.edge);
+          pct >= 1 ? t.colors.primary
+          : pct >= 0.7 ? t.colors.warning
+          : withAlpha(t.colors.primary, alpha.edge);
         return (
           <View
             key={p.muscle}
@@ -39,11 +45,11 @@ export default function BlockProgressCard({ blockProgress, currentMesoWeek }) {
             accessibilityRole="text"
             accessibilityLabel={`${p.label}: ${p.actual} of ${p.planned} sets`}
           >
-            <Text style={styles.muscle} numberOfLines={1}>{p.label}</Text>
-            <View style={styles.barBg}>
+            <Text style={[styles.muscle, live.muscle]} numberOfLines={1}>{p.label}</Text>
+            <View style={[styles.barBg, live.barBg]}>
               <View style={[styles.barFill, { width: `${Math.round(pct * 100)}%`, backgroundColor: fillColor }]} />
             </View>
-            <Text style={styles.sets}>{p.actual}/{p.planned}</Text>
+            <Text style={[styles.sets, live.sets]}>{p.actual}/{p.planned}</Text>
           </View>
         );
       })}
@@ -104,3 +110,19 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
 });
+
+// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
+// override for the frozen `styles` block above, same "frozen base + live
+// override" pattern as WorkoutSummaryScreen.js's buildLiveStyles. header/row/
+// barFill have no colour tokens of their own (barFill's backgroundColor is
+// already resolved live via fillColor above).
+function buildLiveStyles(t) {
+  return {
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    title: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    week: { ...t.type.caption, color: t.colors.textMuted },
+    muscle: { ...t.type.captionStrong, color: t.colors.textSecondary },
+    barBg: { backgroundColor: t.colors.surface2 },
+    sets: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+  };
+}
