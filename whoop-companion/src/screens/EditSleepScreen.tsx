@@ -42,9 +42,10 @@ export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
   const targetDay = day ?? dayKey(Date.now());
   const today = useStoreSelector(appStore, (s) => s.today);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
+  const schedule = useStoreSelector(appStore, (s) => s.sleepSchedule);
   const metric = targetDay === today?.day ? today : recentDays.find((d) => d.day === targetDay) ?? null;
-  const bedInit = hmFromTs(metric?.sleepStart ?? null, 23, 0);
-  const wakeInit = hmFromTs(metric?.sleepEnd ?? null, 7, 0);
+  const bedInit = hmFromTs(metric?.sleepStart ?? null, Math.floor(schedule.bedMin / 60), schedule.bedMin % 60);
+  const wakeInit = hmFromTs(metric?.sleepEnd ?? null, Math.floor(schedule.wakeMin / 60), schedule.wakeMin % 60);
   const [bed, setBed] = useState(bedInit);
   const [wake, setWake] = useState(wakeInit);
   const [saved, setSaved] = useState(false);
@@ -105,6 +106,14 @@ export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
           the strap’s heart rate over exactly that window — useful if a night was missed or detected
           with the wrong times.
         </Text>
+        {!metric?.sleepStart ? (
+          <Text style={styles.suggestion}>
+            {schedule.sampleCount
+              ? `Suggested from ${schedule.sampleCount} reliable ${schedule.sampleCount === 1 ? 'night' : 'nights'}: `
+              : 'No reliable timing history yet: '}
+            {String(Math.floor(schedule.bedMin / 60)).padStart(2, '0')}:{String(schedule.bedMin % 60).padStart(2, '0')} - {String(Math.floor(schedule.wakeMin / 60)).padStart(2, '0')}:{String(schedule.wakeMin % 60).padStart(2, '0')}
+          </Text>
+        ) : null}
         {metric?.sleepDetail ? (
           <View style={styles.qualityRow}>
             <QualityPill label="Confidence" value={currentConfidence ?? '-'} color={sleepConfidenceColor(currentConfidence)} />
@@ -254,6 +263,7 @@ function Stepper({ label, onMinus, onPlus }: { label: string; onMinus: () => voi
 const styles = StyleSheet.create({
   date: { color: colors.text, fontSize: 18, marginBottom: 6, fontFamily: fonts.textBold },
   intro: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, fontFamily: fonts.text },
+  suggestion: { color: colors.sleepTeal, fontSize: 12, lineHeight: 18, marginTop: 10, fontFamily: fonts.textSemibold },
   qualityRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
   qualityPill: { flex: 1, alignItems: 'center' },
   qualityValue: { fontSize: 17, fontFamily: fonts.black },

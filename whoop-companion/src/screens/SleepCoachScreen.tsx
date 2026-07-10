@@ -58,7 +58,10 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const keepAlive = useStoreSelector(appStore, (s) => s.backgroundKeepAlive);
   const keepAliveRunning = useStoreSelector(appStore, (s) => s.backgroundKeepAliveRunning);
   const strapAlarm = useStoreSelector(appStore, (s) => s.strapAlarm);
+  const schedule = useStoreSelector(appStore, (s) => s.sleepSchedule);
   const [alarmBusy, setAlarmBusy] = useState<'set' | 'disable' | null>(null);
+  const [wakeLoaded, setWakeLoaded] = useState(false);
+  const [hasSavedWake, setHasSavedWake] = useState(false);
 
   const neededMin = need?.neededMin ?? 480;
   const targetMin = Math.round(neededMin * goal);
@@ -66,21 +69,29 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   // Sleep Planner (per WHOOP's published model): the recommended TIME IN BED to
   // hit your goal accounts for your typical sleep efficiency; the suggested
   // bedtime is your wake time minus that. Wake time is user-set and persisted.
-  const [wakeMin, setWakeMin] = useState(7 * 60); // default 07:00
+  const [wakeMin, setWakeMin] = useState(schedule.wakeMin);
   const [smartWindowMin, setSmartWindowMin] = useState(30);
   useEffect(() => {
     void kvGet('wakeTime').then((v) => {
       const n = v ? Number(v) : NaN;
-      if (Number.isFinite(n)) setWakeMin(n);
+      if (Number.isFinite(n) && n >= 0 && n < 1440) {
+        setWakeMin(n);
+        setHasSavedWake(true);
+      }
+      setWakeLoaded(true);
     });
     void kvGet('smartWakeWindowMin').then((v) => {
       const n = v ? Number(v) : NaN;
       if (SMART_WINDOWS.includes(n as (typeof SMART_WINDOWS)[number])) setSmartWindowMin(n);
     });
   }, []);
+  useEffect(() => {
+    if (wakeLoaded && !hasSavedWake) setWakeMin(schedule.wakeMin);
+  }, [hasSavedWake, schedule.wakeMin, wakeLoaded]);
   const setWake = (m: number) => {
     const next = ((m % 1440) + 1440) % 1440;
     setWakeMin(next);
+    setHasSavedWake(true);
     void kvSet('wakeTime', String(next));
   };
   const setSmartWindow = (m: number) => {
@@ -291,6 +302,17 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
             </Pressable>
           </View>
         </View>
+        {schedule.source !== 'fallback' ? (
+          <Pressable
+            onPress={() => setWake(schedule.wakeMin)}
+            style={({ pressed }) => [styles.learnedSchedule, pressed && styles.pressed]}
+          >
+            <Ionicons name="moon-outline" size={17} color={colors.sleepTeal} />
+            <Text style={styles.learnedScheduleText}>
+              Use learned wake time {fmtClock(schedule.wakeMin)} from {schedule.sampleCount} reliable {schedule.sampleCount === 1 ? 'night' : 'nights'}
+            </Text>
+          </Pressable>
+        ) : null}
         <Text style={styles.planNote}>
           To reach {MODES.find((m) => m.key === goal)?.pct} of your sleep need ({formatDuration(targetMin)} asleep),
           allowing for your typical {Math.round(expectedEff * 100)}% efficiency.
@@ -627,6 +649,8 @@ const styles = StyleSheet.create({
   stepBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
   stepTxt: { color: colors.text, fontSize: 20, fontFamily: fonts.bold },
   wakeValue: { color: colors.text, fontSize: 18, fontFamily: fonts.bold, minWidth: 56, textAlign: 'center' },
+  learnedSchedule: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, paddingTop: 11, borderTopWidth: 1, borderTopColor: colors.border },
+  learnedScheduleText: { flex: 1, color: colors.sleepTeal, fontSize: 12, lineHeight: 17, fontFamily: fonts.textSemibold },
   tonightRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
   tonightDot: { width: 10, height: 10, borderRadius: 5 },
   tonightTitle: { color: colors.text, fontSize: 14, fontFamily: fonts.textBold },

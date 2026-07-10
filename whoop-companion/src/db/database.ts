@@ -111,6 +111,21 @@ export type JournalRow = {
 };
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
+let writeQueue: Promise<void> = Promise.resolve();
+
+/**
+ * expo-sqlite exclusive transactions reject overlapping asynchronous writes on
+ * Android. Keep every local write on one queue so history chunks, live HR and
+ * diagnostics cannot contend for the same database connection.
+ */
+function serializeWrite<T>(operation: () => Promise<T>): Promise<T> {
+  const next = writeQueue.then(operation, operation);
+  writeQueue = next.then(
+    () => undefined,
+    () => undefined,
+  );
+  return next;
+}
 
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
@@ -237,13 +252,15 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
 
 // ---- HR samples ----
 export async function insertHrSample(s: HrSampleRow): Promise<void> {
-  const db = await getDb();
-  await db.runAsync(
-    'INSERT OR REPLACE INTO hr_samples (ts, bpm, rr) VALUES (?, ?, ?)',
-    s.ts,
-    s.bpm,
-    JSON.stringify(s.rr ?? []),
-  );
+  await serializeWrite(async () => {
+    const db = await getDb();
+    await db.runAsync(
+      'INSERT OR REPLACE INTO hr_samples (ts, bpm, rr) VALUES (?, ?, ?)',
+      s.ts,
+      s.bpm,
+      JSON.stringify(s.rr ?? []),
+    );
+  });
 }
 
 export async function getHrSamplesBetween(fromTs: number, toTs: number): Promise<HrSampleRow[]> {
@@ -258,19 +275,23 @@ export async function getHrSamplesBetween(fromTs: number, toTs: number): Promise
 
 /** Trim the raw HR stream to keep storage bounded (default: keep 30 days). */
 export async function pruneHrSamples(olderThanTs: number): Promise<void> {
-  const db = await getDb();
-  await db.runAsync('DELETE FROM hr_samples WHERE ts < ?', olderThanTs);
+  await serializeWrite(async () => {
+    const db = await getDb();
+    await db.runAsync('DELETE FROM hr_samples WHERE ts < ?', olderThanTs);
+  });
 }
 
 // ---- Band step counters ----
 export async function insertStepSample(s: StepSampleRow): Promise<void> {
-  const db = await getDb();
-  await db.runAsync(
-    'INSERT OR REPLACE INTO step_samples (ts, counter, activity_class) VALUES (?, ?, ?)',
-    s.ts,
-    s.counter,
-    s.activityClass,
-  );
+  await serializeWrite(async () => {
+    const db = await getDb();
+    await db.runAsync(
+      'INSERT OR REPLACE INTO step_samples (ts, counter, activity_class) VALUES (?, ?, ?)',
+      s.ts,
+      s.counter,
+      s.activityClass,
+    );
+  });
 }
 
 export async function getStepSamplesBetween(fromTs: number, toTs: number): Promise<StepSampleRow[]> {
@@ -285,12 +306,14 @@ export async function getStepSamplesBetween(fromTs: number, toTs: number): Promi
 
 // ---- Band sleep-state samples ----
 export async function insertSleepStateSample(s: SleepStateSampleRow): Promise<void> {
-  const db = await getDb();
-  await db.runAsync(
-    'INSERT OR REPLACE INTO sleep_state_samples (ts, state) VALUES (?, ?)',
-    s.ts,
-    s.state,
-  );
+  await serializeWrite(async () => {
+    const db = await getDb();
+    await db.runAsync(
+      'INSERT OR REPLACE INTO sleep_state_samples (ts, state) VALUES (?, ?)',
+      s.ts,
+      s.state,
+    );
+  });
 }
 
 export async function getSleepStateSamplesBetween(fromTs: number, toTs: number): Promise<SleepStateSampleRow[]> {
@@ -315,16 +338,18 @@ export async function getMotionSamplesBetween(fromTs: number, toTs: number): Pro
 
 // ---- Experimental raw sensor vitals ----
 export async function insertRawVitalSample(s: RawVitalSampleRow): Promise<void> {
-  const db = await getDb();
-  await db.runAsync(
-    `INSERT INTO raw_vital_samples (ts, spo2, skin_temp_c) VALUES (?, ?, ?)
-     ON CONFLICT(ts) DO UPDATE SET
-       spo2=COALESCE(excluded.spo2, raw_vital_samples.spo2),
-       skin_temp_c=COALESCE(excluded.skin_temp_c, raw_vital_samples.skin_temp_c)`,
-    s.ts,
-    s.spo2,
-    s.skinTempC,
-  );
+  await serializeWrite(async () => {
+    const db = await getDb();
+    await db.runAsync(
+      `INSERT INTO raw_vital_samples (ts, spo2, skin_temp_c) VALUES (?, ?, ?)
+       ON CONFLICT(ts) DO UPDATE SET
+         spo2=COALESCE(excluded.spo2, raw_vital_samples.spo2),
+         skin_temp_c=COALESCE(excluded.skin_temp_c, raw_vital_samples.skin_temp_c)`,
+      s.ts,
+      s.spo2,
+      s.skinTempC,
+    );
+  });
 }
 
 export async function getRawVitalSamplesBetween(fromTs: number, toTs: number): Promise<RawVitalSampleRow[]> {
@@ -339,11 +364,12 @@ export async function getRawVitalSamplesBetween(fromTs: number, toTs: number): P
 
 // ---- Daily metrics ----
 export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
-  const db = await getDb();
-  const resp = cleanRespiratoryRate(m.resp);
-  const sleepPerf = cleanSleepFraction(m.sleepPerf);
-  const sleepDetail = cleanSleepDetail(m.sleepDetail);
-  await db.runAsync(
+  await serializeWrite(async () => {
+    const db = await getDb();
+    const resp = cleanRespiratoryRate(m.resp);
+    const sleepPerf = cleanSleepFraction(m.sleepPerf);
+    const sleepDetail = cleanSleepDetail(m.sleepDetail);
+    await db.runAsync(
     `INSERT INTO daily_metrics (day, recovery, rmssd, rhr, resp, spo2, skin_temp_c, sleep_min, sleep_perf, strain, steps, step_source,
        sleep_start, sleep_end, deep_min, rem_min, light_min, awake_min, sleep_json, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -376,8 +402,9 @@ export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
     m.lightMin,
     m.awakeMin,
     sleepDetail ? JSON.stringify(sleepDetail) : null,
-    m.updatedAt,
-  );
+      m.updatedAt,
+    );
+  });
 }
 
 function cleanRespiratoryRate(value: number | null | undefined): number | null {
@@ -504,8 +531,9 @@ function mapDaily(r: {
  * fields: phone steps and the old speculative raw-vital byte offsets.
  */
 export async function clearUntrustedLegacyData(): Promise<void> {
-  const db = await getDb();
-  await db.execAsync(`
+  await serializeWrite(async () => {
+    const db = await getDb();
+    await db.execAsync(`
     UPDATE daily_metrics
        SET steps = NULL, step_source = NULL
      WHERE steps IS NOT NULL AND (step_source IS NULL OR step_source != 'band');
@@ -515,7 +543,8 @@ export async function clearUntrustedLegacyData(): Promise<void> {
     DELETE FROM raw_vital_samples;
     UPDATE daily_metrics SET spo2 = NULL, skin_temp_c = NULL
      WHERE spo2 IS NOT NULL OR skin_temp_c IS NOT NULL;
-  `);
+    `);
+  });
 }
 
 export async function getDailyMetric(day: string): Promise<DailyMetricRow | null> {
@@ -538,8 +567,9 @@ export async function getRecentDailyMetrics(limit = 30): Promise<DailyMetricRow[
 
 // ---- Cardio ----
 export async function insertCardio(c: CardioRow): Promise<void> {
-  const db = await getDb();
-  await db.runAsync(
+  await serializeWrite(async () => {
+    const db = await getDb();
+    await db.runAsync(
     `INSERT OR REPLACE INTO cardio (
        id, start_ts, end_ts, activity, avg_hr, max_hr, trimp, strain, kcal,
        distance_m, route, steps, cadence_spm, step_source, lap_count, source, notes
@@ -561,13 +591,16 @@ export async function insertCardio(c: CardioRow): Promise<void> {
     c.stepSource,
     c.lapCount,
     c.source,
-    c.notes,
-  );
+      c.notes,
+    );
+  });
 }
 
 export async function deleteCardio(id: string): Promise<void> {
-  const db = await getDb();
-  await db.runAsync('DELETE FROM cardio WHERE id = ?', id);
+  await serializeWrite(async () => {
+    const db = await getDb();
+    await db.runAsync('DELETE FROM cardio WHERE id = ?', id);
+  });
 }
 
 export async function listCardio(limit = 50): Promise<CardioRow[]> {
@@ -624,15 +657,17 @@ export async function listCardio(limit = 50): Promise<CardioRow[]> {
 
 // ---- Journal ----
 export async function insertJournal(j: JournalRow): Promise<void> {
-  const db = await getDb();
-  await db.runAsync(
-    'INSERT OR REPLACE INTO journal (id, day, behaviour, value, created_at) VALUES (?, ?, ?, ?, ?)',
-    j.id,
-    j.day,
-    j.behaviour,
-    j.value,
-    j.createdAt,
-  );
+  await serializeWrite(async () => {
+    const db = await getDb();
+    await db.runAsync(
+      'INSERT OR REPLACE INTO journal (id, day, behaviour, value, created_at) VALUES (?, ?, ?, ?, ?)',
+      j.id,
+      j.day,
+      j.behaviour,
+      j.value,
+      j.createdAt,
+    );
+  });
 }
 
 export async function listJournal(day: string): Promise<JournalRow[]> {
@@ -655,8 +690,10 @@ export async function listJournal(day: string): Promise<JournalRow[]> {
 
 // ---- Raw frames ----
 export async function insertRawFrame(ts: number, source: string, hex: string): Promise<void> {
-  const db = await getDb();
-  await db.runAsync('INSERT INTO raw_frames (ts, source, hex) VALUES (?, ?, ?)', ts, source, hex);
+  await serializeWrite(async () => {
+    const db = await getDb();
+    await db.runAsync('INSERT INTO raw_frames (ts, source, hex) VALUES (?, ?, ?)', ts, source, hex);
+  });
 }
 
 export async function countRawFrames(): Promise<number> {
@@ -684,8 +721,10 @@ export async function getRawFramesPage(afterRowId = 0, limit = 2000): Promise<Ra
 }
 
 export async function clearRawFrames(): Promise<void> {
-  const db = await getDb();
-  await db.runAsync('DELETE FROM raw_frames');
+  await serializeWrite(async () => {
+    const db = await getDb();
+    await db.runAsync('DELETE FROM raw_frames');
+  });
 }
 
 // ---- History records (strap on-device buffer, drained on reconnect) ----
@@ -700,14 +739,16 @@ export async function insertHistoryRecord(
   startId: number | null = null,
   endId: number | null = null,
 ): Promise<void> {
-  const db = await getDb();
-  await db.runAsync(
-    'INSERT OR IGNORE INTO history_records (ts, start_id, end_id, hex, decoded) VALUES (?, ?, ?, ?, 0)',
-    ts,
-    startId,
-    endId,
-    hex,
-  );
+  await serializeWrite(async () => {
+    const db = await getDb();
+    await db.runAsync(
+      'INSERT OR IGNORE INTO history_records (ts, start_id, end_id, hex, decoded) VALUES (?, ?, ?, ?, 0)',
+      ts,
+      startId,
+      endId,
+      hex,
+    );
+  });
 }
 
 export type HistoryPersistBatch = {
@@ -722,8 +763,11 @@ export type HistoryPersistBatch = {
 
 /** Persist one decoded history chunk in a single transaction. */
 export async function persistHistoryBatch(batch: HistoryPersistBatch): Promise<void> {
-  const db = await getDb();
-  await db.withExclusiveTransactionAsync(async (tx) => {
+  await serializeWrite(async () => {
+    const db = await getDb();
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        await db.withExclusiveTransactionAsync(async (tx) => {
     const historyStmt = await tx.prepareAsync(
       'INSERT OR IGNORE INTO history_records (ts, start_id, end_id, hex, decoded) VALUES (?, NULL, NULL, ?, 0)',
     );
@@ -759,12 +803,24 @@ export async function persistHistoryBatch(batch: HistoryPersistBatch): Promise<v
         await vitalStmt.executeAsync(sample.ts, sample.spo2, sample.skinTempC);
       }
     } finally {
-      await historyStmt.finalizeAsync();
-      await hrStmt.finalizeAsync();
-      await stepStmt.finalizeAsync();
-      await sleepStmt.finalizeAsync();
-      await motionStmt.finalizeAsync();
-      await vitalStmt.finalizeAsync();
+      // Finalize every statement even if one finalizer fails; leaked statements
+      // can keep SQLite locked for the next history chunk.
+      let finalizeError: unknown = null;
+      for (const statement of [historyStmt, hrStmt, stepStmt, sleepStmt, motionStmt, vitalStmt]) {
+        try {
+          await statement.finalizeAsync();
+        } catch (error) {
+          finalizeError ??= error;
+        }
+      }
+      if (finalizeError) throw finalizeError;
+    }
+        });
+        return;
+      } catch (error) {
+        if (!isDatabaseLocked(error) || attempt >= 2) throw error;
+        await delay(80 * (attempt + 1));
+      }
     }
   });
 }
@@ -803,10 +859,20 @@ export async function kvGet(key: string): Promise<string | null> {
 }
 
 export async function kvSet(key: string, value: string): Promise<void> {
-  const db = await getDb();
-  await db.runAsync(
-    'INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
-    key,
-    value,
-  );
+  await serializeWrite(async () => {
+    const db = await getDb();
+    await db.runAsync(
+      'INSERT INTO kv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+      key,
+      value,
+    );
+  });
+}
+
+function isDatabaseLocked(error: unknown): boolean {
+  return String(error).toLowerCase().includes('database is locked');
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

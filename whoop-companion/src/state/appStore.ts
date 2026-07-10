@@ -67,6 +67,7 @@ import { computeRecovery } from '../metrics/recovery';
 import { computeSleep, computeSleepNeed, durationOnlySleep, SleepMinute, SleepNeed, SleepResult } from '../metrics/sleep';
 import { computeSleepScore, SleepScore } from '../metrics/sleepScore';
 import { sleepRegularity, SleepRegularity } from '../metrics/sleepRegularity';
+import { FALLBACK_SLEEP_SCHEDULE, inferSleepSchedule, SleepSchedule } from '../metrics/sleepSchedule';
 import { sleepConsistency, SleepConsistency } from '../metrics/sleepConsistency';
 import { sleepDebt } from '../metrics/sleepDebt';
 import { computeSleepStress, SleepStress, StressEpoch } from '../metrics/sleepStress';
@@ -187,6 +188,7 @@ export type AppState = {
   sleepScore: SleepScore | null;
   sleepReg: SleepRegularity | null;
   sleepConsistency: SleepConsistency | null;
+  sleepSchedule: SleepSchedule;
   sleepStress: SleepStress | null; // last night's 0-3 stress breakdown
   sleepPerformance: SleepPerformance | null; // composite ring + 4 contributors
   sleepCapture: {
@@ -256,6 +258,7 @@ const initialState: AppState = {
   sleepScore: null,
   sleepReg: null,
   sleepConsistency: null,
+  sleepSchedule: FALLBACK_SLEEP_SCHEDULE,
   sleepStress: null,
   sleepPerformance: null,
   sleepCapture: null,
@@ -304,6 +307,7 @@ const LAST_DEVICE_ID_KEY = 'lastWhoopDeviceId';
 const STEP_DIVISOR_KEY = 'whoopStepTicksPerStep';
 const STEP_DIVISOR_MIGRATION_KEY = 'whoopStepDivisorCaptureDefaultV2';
 const K21_MOTION_BACKFILL_KEY = 'whoopK21MotionBackfillV1';
+const SLEEP_EVIDENCE_RECOMPUTE_KEY = 'sleepEvidenceRecomputeV3';
 const STRAP_ALARM_KEY = 'strapAlarm';
 
 function bandStepsAreTrusted(estimate: BandStepEstimate | null | undefined, divisor: number): boolean {
@@ -415,6 +419,7 @@ class AppStore extends Store<AppState> {
     this.setState({ ready: true });
     setTimeout(() => this.connect(), 750);
     void this.backfillStoredK21Motion()
+      .then(() => this.recomputeRecentSleepEvidence())
       .then(() => this.refreshDerived())
       .catch(() => {});
   }
@@ -666,6 +671,17 @@ class AppStore extends Store<AppState> {
       afterRowId = page[page.length - 1]!.rowId;
     }
     await kvSet(K21_MOTION_BACKFILL_KEY, '1');
+  }
+
+  private async recomputeRecentSleepEvidence(): Promise<void> {
+    if ((await kvGet(SLEEP_EVIDENCE_RECOMPUTE_KEY)) === '1') return;
+    const today = dayKey(Date.now());
+    const recent = await getRecentDailyMetrics(14);
+    for (const row of recent) {
+      if (row.day === today) continue;
+      await this.backfillDailyMetric(row.day);
+    }
+    await kvSet(SLEEP_EVIDENCE_RECOMPUTE_KEY, '1');
   }
 
   private currentStepSnapshot(): { steps: number | null; source: 'band' | null } {
@@ -976,7 +992,7 @@ class AppStore extends Store<AppState> {
 
     // Persist at most one row per second.
     const now = Date.now();
-    if (now - this.lastPersistTs >= 1000) {
+    if (now - this.lastPersistTs >= 1000 && !this.historyPersisting) {
       this.lastPersistTs = now;
       try {
         await insertHrSample({ ts: now, bpm, rr });
@@ -990,8 +1006,8 @@ class AppStore extends Store<AppState> {
     this.setState((s) => ({ frameCount: s.frameCount + 1 }));
 
     // Persist raw frames only while capturing (keeps storage bounded).
-    if (this.getState().capturing) {
-      void insertRawFrame(f.ts, f.source, f.hex);
+    if (this.getState().capturing && !this.historyPersisting) {
+      void insertRawFrame(f.ts, f.source, f.hex).catch(() => {});
     }
 
     // Always parse proprietary frames for command responses, band counters and status.
@@ -2064,8 +2080,14 @@ class AppStore extends Store<AppState> {
 
   // ---- derived metrics ----
   refreshDerived = async (): Promise<void> => {
+    if (this.historyPersisting || this.getState().draining) return;
     await this.recomputeToday();
-    this.setState({ recentDays: await getRecentDailyMetrics(30), cardio: await listCardio(CARDIO_RECENT_LIMIT) });
+    const recentDays = await getRecentDailyMetrics(30);
+    this.setState({
+      recentDays,
+      cardio: await listCardio(CARDIO_RECENT_LIMIT),
+      sleepSchedule: inferSleepSchedule([this.getState().today, ...recentDays].filter((d): d is DailyMetricRow => d != null)),
+    });
   };
 
   recomputeDay = async (day: string): Promise<void> => {
@@ -2074,9 +2096,11 @@ class AppStore extends Store<AppState> {
       return;
     }
     await this.backfillDailyMetric(day);
+    const recentDays = await getRecentDailyMetrics(30);
     this.setState({
-      recentDays: await getRecentDailyMetrics(30),
+      recentDays,
       cardio: await listCardio(CARDIO_RECENT_LIMIT),
+      sleepSchedule: inferSleepSchedule([this.getState().today, ...recentDays].filter((d): d is DailyMetricRow => d != null)),
     });
   };
 
@@ -2313,6 +2337,7 @@ class AppStore extends Store<AppState> {
       sleepScore: sleepScoreResult,
       sleepReg,
       sleepConsistency: consistency,
+      sleepSchedule: inferSleepSchedule([row, ...recent]),
       sleepStress: sleepStressResult,
       sleepPerformance: sleepPerformanceResult,
       sleepCapture,
