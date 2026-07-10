@@ -7,7 +7,8 @@
  *
  * Schema (matching both ends after the deleted_at + updated_at
  * additions):
- *   id          TEXT PRIMARY KEY
+ *   (user_id, id) PRIMARY KEY
+ *   id          TEXT NOT NULL
  *   recipe_id   TEXT NOT NULL
  *   food_ref    TEXT NOT NULL
  *   quantity_g  REAL NOT NULL
@@ -18,7 +19,7 @@
  *   deleted_at  INTEGER NULL      (tombstone, soft delete)
  *
  * Push: read every row for the user including tombstones, map to
- * the cloud schema, upsert in 200-row batches on id. Tombstones
+ * the cloud schema, upsert in 200-row batches on user_id + id. Tombstones
  * ship as rows with deleted_at set; the cloud side either accepts
  * them (creates / updates the tombstone) or its LWW gate rejects
  * (cloud row is newer than this client's delete).
@@ -72,7 +73,7 @@ export async function pushRecipeIngredients(sb, { userId, localUserId } = {}) {
       const batch = rows.slice(i, i + PUSH_BATCH_SIZE);
       const { error } = await sb
         .from('recipe_ingredients')
-        .upsert(batch, { onConflict: 'id' });
+        .upsert(batch, { onConflict: 'user_id,id' });
       if (error) {
         errors += 1;
         logSyncError('sync.tables.recipeIngredients.pushUpsert', error);

@@ -578,7 +578,7 @@ describe('nutrition_targets', () => {
 // ---------------------------------------------------------------------------
 
 describe('recipe_ingredients', () => {
-  test('T1 insert push: row goes through with id + recipe_id + onConflict:id', async () => {
+  test('T1 insert push: row goes through with id + recipe_id + composite conflict key', async () => {
     db.getAllRecipeIngredientsForUser.mockResolvedValue([
       { id: 'ri-1', recipeId: 'r-1', foodRef: 'off:1', quantityG: 100, orderIndex: 0, createdAt: 1, updatedAt: 1, deletedAt: null },
     ]);
@@ -587,7 +587,7 @@ describe('recipe_ingredients', () => {
 
     await pushTable('recipe_ingredients', { userId: 'u1', localUserId: 'u1' });
 
-    expect(sb._calls.upserts[0].opts).toEqual({ onConflict: 'id' });
+    expect(sb._calls.upserts[0].opts).toEqual({ onConflict: 'user_id,id' });
     expect(sb._calls.upserts[0].rows[0]).toMatchObject({ id: 'ri-1', recipe_id: 'r-1' });
   });
 

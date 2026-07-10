@@ -815,6 +815,7 @@ describe('recipe_ingredients push (soft-delete)', () => {
 
     expect(result).toEqual({ count: 2, errors: 0 });
     const upserted = sb._calls.upserts[0].rows;
+    expect(sb._calls.upserts[0].opts).toEqual({ onConflict: 'user_id,id' });
     expect(upserted).toHaveLength(2);
     expect(upserted[0]).toMatchObject({ id: 'ri-1', deleted_at: null });
     expect(upserted[1]).toMatchObject({ id: 'ri-2' });
@@ -832,6 +833,31 @@ describe('recipe_ingredients push (soft-delete)', () => {
 
     const upserted = sb._calls.upserts[0].rows[0];
     expect(upserted.created_at).toBe(upserted.updated_at);
+  });
+
+  test('retry succeeds after the first upsert fails', async () => {
+    dbModule.getAllRecipeIngredientsForUser.mockResolvedValue([
+      { id: 'ri-retry', recipeId: 'r-1', foodRef: 'off:1', quantityG: 100, orderIndex: 0, createdAt: 1, updatedAt: 1, deletedAt: null },
+    ]);
+    const outcomes = [new Error('temporary network failure'), null];
+    const upserts = [];
+    const sb = {
+      from: jest.fn(() => ({
+        upsert: jest.fn(async (rows, opts) => {
+          upserts.push({ rows, opts });
+          return { error: outcomes.shift() };
+        }),
+      })),
+    };
+    getSupabaseClient.mockReturnValue(sb);
+
+    const first = await pushTable('recipe_ingredients', { userId: 'u1', localUserId: 'u1' });
+    const retry = await pushTable('recipe_ingredients', { userId: 'u1', localUserId: 'u1' });
+
+    expect(first).toEqual({ count: 0, errors: 1 });
+    expect(retry).toEqual({ count: 1, errors: 0 });
+    expect(upserts).toHaveLength(2);
+    expect(upserts[1].opts).toEqual({ onConflict: 'user_id,id' });
   });
 });
 
