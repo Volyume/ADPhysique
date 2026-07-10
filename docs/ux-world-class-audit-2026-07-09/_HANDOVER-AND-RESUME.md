@@ -219,21 +219,61 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
   take the theme hook — architecture question, not forced).
 
 ## ⏸ RESUME POINT — next slots, in order:
-1. IN FLIGHT: item 20 drag reorder (Sonnet; hand-rolled gesture-
-   handler+Reanimated drag, additive to the accessible chevron/sheet
-   paths, giant-set blocks move whole; lead reviews at landing, FULL
-   suite runs over the clean tree at that boundary).
-2. Pair 7: iOS Live Activity wiring (item 19) + Android rest-timer
-   actions (item 12).
-3. Item 17 small tails (+ remaining edge-to-edge Modal inset audits);
-   theming stage-4 tail (remaining: food domain 19, photo/scan family
-   10, ProgressSections, chart exclusions); stage 5 stays honesty-
-   gated. Coverage after batch B: 71/108 components live.
+1. IN FLIGHT AT HANDOVER TIME: item 20 drag reorder under **D32**
+   (read it in DECISIONS-2026-07-09.md — founder GO supersedes the old
+   chevron-only D5/D6; lead ruled the scope after founder delegation).
+   The agent first STOPPED on the D5/D6 conflict (correct procedure),
+   was resumed at ~2026-07-10 17:0x with the D32 brief: true
+   long-press drag on PlanDetail days + ManualBuilder exercises
+   (superset/giant-set blocks move whole) + RoutineDetail (made
+   block-aware too, closing its pre-existing gap); the ACTIVE SESSION
+   gets a purpose-built draggable reorder sheet from the overflow (the
+   single-exercise view stays untouched); the two reorder guard tests
+   update to the superseding decision KEEPING the no-new-dependency /
+   no-draggable-flatlist pins and dropping only the runOnJS/
+   PanResponder-era bans; accessible chevron/sheet paths remain
+   everywhere (drag is additive); no new dependency; agent does not
+   commit. IF THIS SESSION DIED MID-RUN: check `git status` — if drag
+   work sits uncommitted, lead-review it against this spec (surfaces,
+   block moves, guard-test treatment, Reduce Motion, pure-arithmetic
+   worklets), run `npm run lint && npm test -- --runInBand` (tree was
+   otherwise CLEAN at cf15fa8 — every failure is this diff's), then
+   commit per-feature; if no drag work exists, relaunch a Sonnet agent
+   with D32 + the original item 20 brief (both in this file's history
+   and the decisions register).
+2. At that landing: FULL suite over the clean tree + this handover's
+   stage log updated + push (standing discipline).
+3. Pair 7: iOS Live Activity wiring (item 19) + Android rest-timer
+   actions (item 12). Then item 17 small tails (+ remaining
+   edge-to-edge Modal inset audits from the item 15 recon list above);
+   theming stage-4 tail (remaining static: food domain 19, photo/scan
+   family 10, ProgressSections, chart exclusions, ScreenBoundary
+   architecture question); stage 5 stays honesty-gated. Coverage after
+   batch B: 71/108 components live.
 
-**AWAITING FOUNDER (asked in chat 2026-07-10):**
-- migrate_117 apply — needs the exact phrase "run against production".
-- Watch-app decision round (5 questions in the memo).
-- Optional veto on the giant-set copy rulings above.
+**AWAITING FOUNDER (asked in chat 2026-07-10, unanswered at handover):**
+- migrate_117 apply (telemetry-view REVOKE, drafted + committed at
+  653fe32) — needs the exact phrase "run against production"; apply
+  via the Supabase connector (project sujrylzzxcqxxfygptns, Volyume,
+  eu-west-1), then re-verify grants and update the file header +
+  supabase/README, per the Claude-run model.
+- Watch-app decision round — 5 questions at the end of
+  watch-app-scoping-memo.md in this folder.
+- Optional veto on the giant-set copy rulings (Pair-6 entry above).
+
+**OTHER LIVE STATE AT HANDOVER:**
+- Supabase Claude-run model ACTIVE (see the Supabase/migrations block
+  above): EU-Dublin applied+verified through migrate_116; connector
+  approved "always allow" in the founder's claude.ai settings.
+- CI Android build GREEN as of run 2603 (c589b00); every later push
+  triggers a fresh run — check the latest run on this branch before
+  telling the founder a build is walkable.
+- Founder's 4-agent window (Sonnet-or-lower, granted ~16:20 for one
+  hour) is EXPIRED for a fresh session: revert to TWO agents at a
+  time, tier rules per the operating model below.
+- SD-11 (await-spanning idempotency check in applyRemoteSetEvent,
+  useAppStore.js ~1215-1282) recorded as must-fix-before-wrist-traffic
+  (watch memo side-finding); not fixed, founder-visible.
 
 **SUPABASE / MIGRATIONS (2026-07-10, DONE — Claude-run model live):**
 Founder connected a Supabase connector and switched cloud migrations to
