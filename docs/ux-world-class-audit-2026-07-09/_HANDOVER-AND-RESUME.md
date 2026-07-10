@@ -1215,3 +1215,17 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   proper scoping; no = never-re-propose register. Context note: CoFID
   landing already gives UK foods Cronometer-class verified micro depth
   (median 20/27) - a home-market edge over MFP's crowdsourced UK data.
+- WORKOUT-LOGGER ANALYSIS given in chat (2026-07-10): code-verified that
+  the logger already carries the best-in-class basics (focus-scoped
+  keep-awake B8, ghost pre-fill + tap-apply of last session, layoff
+  detection, warm-up, clusters, unilateral per-side, PR re-detect,
+  next-exercise offer, haptic curves) - no dependency gap in the daily
+  loop. Remaining separators surfaced to founder: (1) iOS Live Activity
+  rest timer - module ALREADY BUILT (modules/rest-timer-live), wiring
+  HELD by founder; offered as "say unhold" (needs App Groups + EAS,
+  already on founder-side list); (2) Android rest-timer notification
+  actions (skip/+15s) - VERIFY what exists, close gap if absent (queued
+  small); (3) zeego on logged sets (already D25); (4) watch app =
+  horizon programme, scoping only on founder request. D26 recorded: OFF
+  micronutrient parsing + MLKit scanner approved; AI-input fork still
+  open with founder.
