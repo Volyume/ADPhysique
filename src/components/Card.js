@@ -15,28 +15,8 @@
 
 import { View, StyleSheet } from 'react-native';
 import PressableCard from './PressableCard';
-import {
-  colors, radius, spacing, withAlpha, alpha, shadow, resolvedTheme,
-} from '../styles/theme';
-
-const TONES = {
-  primary: colors.primary,
-  success: colors.success,
-  warning: colors.warning,
-  error: colors.error,
-  gold: colors.gold,
-  neutral: colors.border,
-};
-
-// The surface tiers Card can sit on. Lets the ONE Card component absorb the
-// surface2 / surface3 boxes the app previously hand-rolled, so those stop being
-// a reason to bypass Card.
-const SURFACES = {
-  surface: colors.surface,
-  surfaceElevated: colors.surfaceElevated,
-  surface2: colors.surface2,
-  surface3: colors.surface3,
-};
+import { radius, spacing, withAlpha, alpha } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 export default function Card({
   children,
@@ -72,14 +52,50 @@ export default function Card({
   testID,
   hitSlop,
 }) {
+  // CP-10 stage 1: live theme read (src/hooks/useTheme.js) instead of the
+  // static colors/shadow/resolvedTheme imports, so Card re-renders on a
+  // theme change with no app restart. TONES/SURFACES were module-scope
+  // consts baked at import time (class 2, CP-10 plan section 1.4); now
+  // built per-render from the live palette.
+  const t = useTheme();
+  const TONES = {
+    primary: t.colors.primary,
+    success: t.colors.success,
+    warning: t.colors.warning,
+    error: t.colors.error,
+    gold: t.colors.gold,
+    neutral: t.colors.border,
+  };
+  // The surface tiers Card can sit on. Lets the ONE Card component absorb the
+  // surface2 / surface3 boxes the app previously hand-rolled, so those stop being
+  // a reason to bypass Card.
+  const SURFACES = {
+    surface: t.colors.surface,
+    surfaceElevated: t.colors.surfaceElevated,
+    surface2: t.colors.surface2,
+    surface3: t.colors.surface3,
+  };
   const accent = tone ? (TONES[tone] || TONES.primary) : null;
   const backgroundColor = surface
-    ? (SURFACES[surface] || colors.surface)
-    : elevated ? colors.surfaceElevated : colors.surface;
+    ? (SURFACES[surface] || t.colors.surface)
+    : elevated ? t.colors.surfaceElevated : t.colors.surface;
   const pad = padding === 'none' ? 0 : (spacing[padding] ?? spacing.lg);
   const cardStyle = [
     styles.base,
-    { backgroundColor, borderRadius: radius[radiusKey] ?? radius.lg, padding: pad },
+    {
+      backgroundColor,
+      borderRadius: radius[radiusKey] ?? radius.lg,
+      padding: pad,
+      // borderColor + the LT-3 light-only shadow used to live in the frozen
+      // module-scope `styles.base` below (read once at import, via the
+      // static `colors`/`shadow`/`resolvedTheme` singletons); both now come
+      // from the live hook so the elevation cue and hairline colour follow
+      // a theme flip with no restart. Dark output is unaffected (shadow.card
+      // is only spread in when t.resolvedTheme === 'light', same rule as
+      // before), so the dark surface ladder stays byte-identical.
+      borderColor: t.colors.borderSubtle,
+      ...(t.resolvedTheme === 'light' ? t.shadow.card : null),
+    },
     borderless && styles.borderless,
     // alpha.mid so the accent reads as a border, not a fill (replaces the
     // old `accent + '55'` hex concat via the withAlpha helper).
@@ -121,19 +137,13 @@ export default function Card({
 }
 
 const styles = StyleSheet.create({
-  // backgroundColor / borderRadius / padding are set per-instance in the
-  // component (so surface + radius + padding props can override); base only
-  // owns the hairline border, which every tier shares. Cards use the quiet
-  // borderSubtle token; inputs/buttons keep the stronger border token.
+  // Layout-only (theme-invariant): backgroundColor / borderColor / borderRadius
+  // / padding / the LT-3 shadow are all set per-instance in the component body
+  // above (live theme, CP-10 stage 1) so surface + radius + padding props can
+  // override and the whole card follows a theme flip with no restart. base
+  // only owns the hairline border WIDTH, which every tier shares.
   base: {
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    // LT-3 (Materials Policy, theme.js): light theme uses shadow as the
-    // PRIMARY elevation cue; dark theme keeps the surface ladder untouched,
-    // so the card-elevation token is only spread in when the theme resolved
-    // at boot is light. Read once here, the same boot-then-reload pattern
-    // as the colors.* tokens above (see theme.js header comment).
-    ...(resolvedTheme === 'light' ? shadow.card : null),
   },
   borderless: { borderWidth: 0 },
 });

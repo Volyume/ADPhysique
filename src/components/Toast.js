@@ -27,8 +27,9 @@
 import { createContext, useContext, useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, AccessibilityInfo } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, shadow, type, motion, letterSpacing } from '../styles/theme';
+import { fontWeight, spacing, radius, motion, letterSpacing } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
+import useTheme from '../hooks/useTheme';
 
 const ToastContext = createContext({ show: () => {} });
 
@@ -36,22 +37,35 @@ export function useToast() {
   return useContext(ToastContext);
 }
 
-const DEFAULTS = {
-  success: { icon: 'checkmark-circle', tint: colors.success, duration: 2500 },
-  error:   { icon: 'alert-circle',     tint: colors.error,   duration: 4000 },
-  warning: { icon: 'warning',          tint: colors.warning, duration: 3500 },
-  info:    { icon: 'information-circle', tint: colors.primary, duration: 2500 },
-  // Undo variant for destructive actions. Longer duration so the user
-  // has time to read + react. Neutral icon, white text, looks distinct
-  // from success/error to signal "you can take this back".
-  undo:    { icon: 'arrow-undo',      tint: colors.warning, duration: 8000 },
-};
+// CP-10 stage 1: DEFAULTS was a module-scope const baking colors.success/
+// error/warning/primary at import time (class 2, CP-10 plan section 1.4,
+// explicitly called out as the Toast tint risk in the risk register #5).
+// Built per-render from the live theme now, inside ToastProvider, so a fresh
+// toast picks up the current tint even if the theme changed since boot.
+function buildDefaults(c) {
+  return {
+    success: { icon: 'checkmark-circle', tint: c.success, duration: 2500 },
+    error:   { icon: 'alert-circle',     tint: c.error,   duration: 4000 },
+    warning: { icon: 'warning',          tint: c.warning, duration: 3500 },
+    info:    { icon: 'information-circle', tint: c.primary, duration: 2500 },
+    // Undo variant for destructive actions. Longer duration so the user
+    // has time to read + react. Neutral icon, white text, looks distinct
+    // from success/error to signal "you can take this back".
+    undo:    { icon: 'arrow-undo',      tint: c.warning, duration: 8000 },
+  };
+}
 
 export function ToastProvider({ children }) {
   const [queue, setQueue] = useState([]);
   const [current, setCurrent] = useState(null);
   const [screenReaderEnabled, setScreenReaderEnabled] = useState(false);
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  const t = useTheme();
+  // Memoized on t.colors (itself stable across unrelated re-renders — see
+  // useTheme.js) so `show`'s useCallback dep below stays stable too, and F7's
+  // "one show() for the app's life" optimisation only breaks (deliberately)
+  // on an actual theme change, not on every queue/current/reduceMotion tick.
+  const DEFAULTS = useMemo(() => buildDefaults(t.colors), [t.colors]);
 
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(reduceMotion ? 0 : 40)).current;
@@ -97,7 +111,11 @@ export function ToastProvider({ children }) {
       onTimeout: options.onTimeout || null,
     };
     setQueue(q => [...q, next]);
-  }, []);
+    // DEFAULTS only changes reference when the theme actually flips (see the
+    // useMemo above); F7's "show is stable for the app's life" is now
+    // "show is stable until the user changes their theme", which is the
+    // intended, rare exception (CP-10).
+  }, [DEFAULTS]);
 
   // Pump the queue: when current is null and queue has items, dequeue one.
   useEffect(() => {
@@ -201,7 +219,15 @@ export function ToastProvider({ children }) {
           style={[styles.host, { opacity, transform: [{ translateY }] }]}
         >
           <View
-            style={[styles.toast, { borderLeftColor: current.tint }]}
+            style={[
+              styles.toast,
+              {
+                backgroundColor: t.colors.surface2,
+                borderColor: t.colors.border,
+                ...t.shadow.lg,
+              },
+              { borderLeftColor: current.tint },
+            ]}
             accessibilityRole="alert"
             accessibilityLiveRegion="polite"
           >
@@ -213,7 +239,12 @@ export function ToastProvider({ children }) {
               style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 }}
             >
               <Ionicons name={current.icon} size={18} color={current.tint} />
-              <Text style={styles.text} numberOfLines={3}>{current.message}</Text>
+              <Text
+                style={[styles.text, { ...t.type.bodySm, color: t.colors.textPrimary, fontWeight: fontWeight.medium }]}
+                numberOfLines={3}
+              >
+                {current.message}
+              </Text>
             </TouchableOpacity>
             {current.action && (
               <TouchableOpacity
@@ -230,7 +261,7 @@ export function ToastProvider({ children }) {
                   ? 'Restores the change and closes this notification.'
                   : 'Runs this action and closes this notification.'}
               >
-                <Text style={[styles.actionText, { color: current.tint }]}>
+                <Text style={[styles.actionText, { fontSize: t.fontSize.sm, color: current.tint }]}>
                   {current.action.label}
                 </Text>
               </TouchableOpacity>
@@ -242,6 +273,10 @@ export function ToastProvider({ children }) {
   );
 }
 
+// Layout-only (theme-invariant): backgroundColor / borderColor / the shadow
+// / type role + text colour / fontSize now come from the live theme
+// per-render above (CP-10 stage 1) so Toast follows a theme flip with no
+// restart.
 const styles = StyleSheet.create({
   host: {
     position: 'absolute',
@@ -256,24 +291,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surface2,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
     borderLeftWidth: 4,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     minWidth: 220,
     maxWidth: 480,
-    // Floating, above-everything surface: depth via the shared shadow token
-    // (the standard reserves shadows for floating temporary surfaces).
-    ...shadow.lg,
   },
   text: {
-    ...type.bodySm,
     flex: 1,
-    color: colors.textPrimary,
-    fontWeight: fontWeight.medium,
   },
   actionBtn: {
     paddingHorizontal: spacing.sm,
@@ -281,7 +308,6 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
   },
   actionText: {
-    fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
     letterSpacing: letterSpacing.overline,
     textTransform: 'uppercase',

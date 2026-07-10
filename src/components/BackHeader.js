@@ -20,11 +20,17 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { colors, spacing, type, hitSlop } from '../styles/theme';
+import { spacing, hitSlop } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 const SIDE_WIDTH = 44;
 
 export default function BackHeader({ title, onBack, right }) {
+  // CP-10 stage 1: live theme instead of the static colors/type imports —
+  // one of the three sanctioned screen chrome shapes (docs/rules/
+  // styling.md), so this covers navigation-adjacent chrome for every pushed
+  // / modal screen at once.
+  const t = useTheme();
   // useNavigation throws when rendered outside a navigation container
   // (e.g. some isolated mount tests). Guard it so the header degrades to
   // a no-op back rather than crashing the screen; real screens always
@@ -36,7 +42,7 @@ export default function BackHeader({ title, onBack, right }) {
   try { navigation = useNavigation(); } catch (_) { navigation = null; }
   const goBack = onBack ?? (() => navigation?.goBack?.());
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { borderBottomColor: t.colors.borderSubtle }]}>
       <TouchableOpacity
         onPress={goBack}
         hitSlop={hitSlop}
@@ -44,14 +50,19 @@ export default function BackHeader({ title, onBack, right }) {
         accessibilityRole="button"
         accessibilityLabel="Go back"
       >
-        <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+        <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
       </TouchableOpacity>
-      <Text style={styles.title} numberOfLines={1}>{title}</Text>
+      <Text style={[styles.title, { ...t.type.title, color: t.colors.textPrimary }]} numberOfLines={1}>
+        {title}
+      </Text>
       <View style={styles.right}>{right ?? null}</View>
     </View>
   );
 }
 
+// Layout-only (theme-invariant): border colour / text colour / type role now
+// come from the live theme per-render above (CP-10 stage 1) so BackHeader
+// follows a theme flip with no restart.
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
@@ -60,7 +71,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderSubtle,
   },
   backButton: {
     width: SIDE_WIDTH,
@@ -70,9 +80,7 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    ...type.title,
     textAlign: 'center',
-    color: colors.textPrimary,
     marginHorizontal: spacing.sm,
   },
   // Matches the 24px back chevron so the title sits optically centred.

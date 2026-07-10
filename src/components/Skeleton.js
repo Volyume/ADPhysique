@@ -17,10 +17,14 @@
 
 import { useEffect, useRef } from 'react';
 import { View, Animated, Easing, StyleSheet } from 'react-native';
-import { colors, radius, spacing, motion } from '../styles/theme';
+import { radius, spacing, motion } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
+import useTheme from '../hooks/useTheme';
 
 export function Skeleton({ width = '100%', height = 14, style, radius: r = 6 }) {
+  // CP-10 stage 1: live theme instead of the static `colors` import, so the
+  // skeleton fill colour re-renders correctly on a theme change.
+  const t = useTheme();
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const pulse = useRef(new Animated.Value(0.45)).current;
 
@@ -52,7 +56,7 @@ export function Skeleton({ width = '100%', height = 14, style, radius: r = 6 }) 
       accessibilityLabel="Loading"
       style={[
         styles.base,
-        { width, height, borderRadius: r, opacity: reduceMotion ? 0.6 : pulse },
+        { backgroundColor: t.colors.surface3, width, height, borderRadius: r, opacity: reduceMotion ? 0.6 : pulse },
         style,
       ]}
     />
@@ -62,8 +66,17 @@ export function Skeleton({ width = '100%', height = 14, style, radius: r = 6 }) 
 // Common compositions, use these where you have a known layout you're
 // loading into, so the placeholder matches the real shape.
 export function SkeletonCard({ height = 92, style }) {
+  // CP-10 stage 1: live theme instead of the static `colors` import.
+  const t = useTheme();
   return (
-    <View style={[styles.cardWrap, style, { minHeight: height }]}>
+    <View
+      style={[
+        styles.cardWrap,
+        { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+        style,
+        { minHeight: height },
+      ]}
+    >
       <Skeleton width={120} height={12} />
       <Skeleton width="78%" height={20} style={{ marginTop: 10 }} />
       <Skeleton width="46%" height={12} style={{ marginTop: spacing.sm }} />
@@ -83,13 +96,14 @@ export function SkeletonRow({ style }) {
   );
 }
 
+// Layout-only (theme-invariant): backgroundColor / borderColor now come from
+// the live theme per-render above (CP-10 stage 1) so every Skeleton variant
+// follows a theme flip with no restart.
 const styles = StyleSheet.create({
-  base: { backgroundColor: colors.surface3 },
+  base: {},
   cardWrap: {
-    backgroundColor: colors.surface2,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
     padding: spacing.md,
   },
   rowWrap: {

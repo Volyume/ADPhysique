@@ -17,34 +17,47 @@
  */
 
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, spacing, circle, type } from '../styles/theme';
+import { spacing, circle } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { VolyumeIcon } from './BrandMark';
 
 const BRAND_BOX = 34;
 const BRAND_ICON_HEIGHT = 19;
 
-function HeaderBrandMark() {
+function HeaderBrandMark({ backgroundColor }) {
   return (
-    <View style={styles.brandMark}>
+    <View style={[styles.brandMark, { backgroundColor }]}>
       <VolyumeIcon size={BRAND_ICON_HEIGHT} />
     </View>
   );
 }
 
 export default function ScreenHeader({ title, subtitle, right }) {
+  // CP-10 stage 1: live theme instead of the static colors/type imports, so
+  // this shared tab-screen header re-renders correctly on a theme change.
+  const t = useTheme();
   return (
     <View style={styles.wrap}>
       <View style={styles.titleRow}>
-        <Text style={styles.title} numberOfLines={1}>{title}</Text>
+        <Text style={[styles.title, { ...t.type.h3, color: t.colors.textPrimary }]} numberOfLines={1}>
+          {title}
+        </Text>
         <View style={styles.right}>
-          {right ?? <HeaderBrandMark />}
+          {right ?? <HeaderBrandMark backgroundColor={t.colors.chipInk} />}
         </View>
       </View>
-      {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
+      {subtitle ? (
+        <Text style={[styles.subtitle, { ...t.type.bodySm, color: t.colors.textMuted }]} numberOfLines={1}>
+          {subtitle}
+        </Text>
+      ) : null}
     </View>
   );
 }
 
+// Layout-only (theme-invariant): text colour / type role / brand-mark
+// backing colour now come from the live theme per-render above (CP-10
+// stage 1) so ScreenHeader follows a theme flip with no restart.
 const styles = StyleSheet.create({
   wrap: {
     gap: spacing.xxs,
@@ -59,8 +72,6 @@ const styles = StyleSheet.create({
     minHeight: 32,
   },
   title: {
-    ...type.h3,
-    color: colors.textPrimary,
     flex: 1,
   },
   right: {
@@ -72,10 +83,6 @@ const styles = StyleSheet.create({
     borderRadius: circle(BRAND_BOX),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.chipInk,
   },
-  subtitle: {
-    ...type.bodySm,
-    color: colors.textMuted,
-  },
+  subtitle: {},
 });

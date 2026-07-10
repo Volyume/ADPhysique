@@ -87,9 +87,15 @@ describe('shared chrome polish', () => {
   test('core chrome uses bundled type roles instead of synthetic Android weights', () => {
     expect(BUTTON).toContain('fontFamily: fontFamily.semibold');
     expect(BUTTON).not.toContain('fontWeight: fontWeight.bold');
-    expect(CHIP).toContain('label: { ...type.label, color: colors.textSecondary }');
+    // CP-10 stage 1: Chip/ScreenHeader were migrated from the static
+    // `type`/`colors` singletons to the live useTheme() hook (t.type/
+    // t.colors), so the type-role usage now reads `t.type.label`/
+    // `t.type.h3` instead of the bare `type.label`/`type.h3` — the RULE
+    // this test pins (bundled type roles, not a hand-rolled fontWeight) is
+    // unchanged, only the source shape moved.
+    expect(CHIP).toContain('{ ...t.type.label, color: t.colors.textSecondary }');
     expect(CHIP).not.toContain('fontWeight: fontWeight.semibold');
-    expect(SCREEN_HEADER).toContain('...type.h3');
+    expect(SCREEN_HEADER).toContain('...t.type.h3');
     expect(TAB_BAR).toContain('label: { ...type.caption, fontFamily: type.label.fontFamily }');
   });
 
@@ -100,6 +106,10 @@ describe('shared chrome polish', () => {
     ].join('');
     expect(BRAND_MARK).toContain(compactIconRequire);
     expect(BRAND_MARK).toContain('source={V_ICON_COMPACT}');
-    expect(SCREEN_HEADER).toContain('backgroundColor: colors.chipInk');
+    // CP-10 stage 1: the V's backing colour is now passed as a prop
+    // (`backgroundColor={t.colors.chipInk}`) from ScreenHeader's live theme
+    // read, rather than baked inline in a module-scope StyleSheet.create —
+    // still the chipInk token, never a raw hex.
+    expect(SCREEN_HEADER).toContain('backgroundColor={t.colors.chipInk}');
   });
 });

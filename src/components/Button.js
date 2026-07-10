@@ -36,27 +36,37 @@ import Reanimated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from './PressableCard';
 import useAppStore from '../store/useAppStore';
+import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
-import { colors, fontSize, spacing, radius, motion, withAlpha, alpha, lineHeight } from '../styles/theme';
+import { spacing, radius, motion, withAlpha, alpha, lineHeight } from '../styles/theme';
 import { fontFamily } from '../styles/fontFamily';
 
-const VARIANTS = {
-  // fg uses onPrimary (always-dark ink, theme.js:42), NOT `background`, which flips
-  // near-white in the light theme and fails contrast on the amber fill (audit U-F-1).
-  primary: { bg: colors.primaryFill, fg: colors.onPrimary, border: 'transparent' },
-  secondary: { bg: colors.surface2, fg: colors.textPrimary, border: colors.border },
-  tertiary: { bg: colors.primaryBg, fg: colors.primary, border: withAlpha(colors.primary, alpha.edge) },
-  outline: { bg: colors.surface, fg: colors.textPrimary, border: colors.border },
-  // fg uses onError (always-light ink, theme.js), NOT textPrimary, which flips
-  // dark in the light theme and fails contrast on the dark-red fill (audit U-F-1).
-  destructive: { bg: colors.error, fg: colors.onError, border: 'transparent' },
-};
+// CP-10 stage 1: VARIANTS (colour) and SIZES (fontSize) were module-scope
+// consts baked at import time from the static `colors`/`fontSize` singletons
+// (class 2, CP-10 plan section 1.4) — frozen until an app restart. Now built
+// per-render from the live theme (src/hooks/useTheme.js) inside the
+// component, below, so a Button re-renders correctly on a theme change.
+function buildVariants(c) {
+  return {
+    // fg uses onPrimary (always-dark ink, theme.js:42), NOT `background`, which flips
+    // near-white in the light theme and fails contrast on the amber fill (audit U-F-1).
+    primary: { bg: c.primaryFill, fg: c.onPrimary, border: 'transparent' },
+    secondary: { bg: c.surface2, fg: c.textPrimary, border: c.border },
+    tertiary: { bg: c.primaryBg, fg: c.primary, border: withAlpha(c.primary, alpha.edge) },
+    outline: { bg: c.surface, fg: c.textPrimary, border: c.border },
+    // fg uses onError (always-light ink, theme.js), NOT textPrimary, which flips
+    // dark in the light theme and fails contrast on the dark-red fill (audit U-F-1).
+    destructive: { bg: c.error, fg: c.onError, border: 'transparent' },
+  };
+}
 
-const SIZES = {
-  sm: { pv: spacing.sm, ph: spacing.md, font: fontSize.sm, icon: 16, gap: spacing.xs },
-  md: { pv: spacing.md, ph: spacing.lg, font: fontSize.md, icon: 18, gap: spacing.sm },
-  lg: { pv: spacing.lg, ph: spacing.lg, font: fontSize.md, icon: 20, gap: spacing.sm },
-};
+function buildSizes(fs) {
+  return {
+    sm: { pv: spacing.sm, ph: spacing.md, font: fs.sm, icon: 16, gap: spacing.xs },
+    md: { pv: spacing.md, ph: spacing.lg, font: fs.md, icon: 18, gap: spacing.sm },
+    lg: { pv: spacing.lg, ph: spacing.lg, font: fs.md, icon: 20, gap: spacing.sm },
+  };
+}
 
 // How long the success checkmark holds before onSettled fires. A hold time
 // (like Toast's per-variant HOLD values), not a motion duration, so it is
@@ -86,6 +96,9 @@ export default function Button({
   testID,
   children,
 }) {
+  const t = useTheme();
+  const VARIANTS = buildVariants(t.colors);
+  const SIZES = buildSizes(t.fontSize);
   const v = VARIANTS[variant] || VARIANTS.primary;
   const s = SIZES[size] || SIZES.md;
   // `state` is the morph API; the legacy `loading` bool keeps every existing

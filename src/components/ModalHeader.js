@@ -1,8 +1,9 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, spacing, type, hitSlop } from '../styles/theme';
+import { spacing, hitSlop } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
-function CloseButton({ onClose, style }) {
+function CloseButton({ onClose, style, iconColor }) {
   return (
     <TouchableOpacity
       style={style}
@@ -11,24 +12,33 @@ function CloseButton({ onClose, style }) {
       accessibilityRole="button"
       accessibilityLabel="Close"
     >
-      <Ionicons name="close" size={24} color={colors.textPrimary} />
+      <Ionicons name="close" size={24} color={iconColor} />
     </TouchableOpacity>
   );
 }
 
 export default function ModalHeader({ title, onClose, closePosition = 'right', rightAccessory = null }) {
-  const closeButton = <CloseButton onClose={onClose} style={styles.side} />;
+  // CP-10 stage 1: live theme instead of the static colors/type imports —
+  // one of the three sanctioned screen chrome shapes (docs/rules/
+  // styling.md), so this covers modal chrome for every screen at once.
+  const t = useTheme();
+  const closeButton = <CloseButton onClose={onClose} style={styles.side} iconColor={t.colors.textPrimary} />;
   const rightSlot = rightAccessory ? <View style={styles.side}>{rightAccessory}</View> : <View style={styles.side} />;
 
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { borderBottomColor: t.colors.borderSubtle }]}>
       {closePosition === 'left' ? closeButton : <View style={styles.side} />}
-      <Text style={styles.title} numberOfLines={1}>{title}</Text>
+      <Text style={[styles.title, { ...t.type.title, color: t.colors.textPrimary }]} numberOfLines={1}>
+        {title}
+      </Text>
       {closePosition === 'left' ? rightSlot : closeButton}
     </View>
   );
 }
 
+// Layout-only (theme-invariant): border colour / text colour / type role now
+// come from the live theme per-render above (CP-10 stage 1) so ModalHeader
+// follows a theme flip with no restart.
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
@@ -37,7 +47,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderSubtle,
   },
   side: {
     width: 44,
@@ -47,8 +56,6 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    ...type.title,
-    color: colors.textPrimary,
     textAlign: 'center',
     marginHorizontal: spacing.sm,
   },

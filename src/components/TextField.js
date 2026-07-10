@@ -1,17 +1,26 @@
 import { forwardRef, useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
-import { colors, spacing, radius, fontSize, type, withAlpha, alpha } from '../styles/theme';
+import { spacing, radius, withAlpha, alpha } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
-const SURFACES = {
-  surface: colors.surface,
-  surface2: colors.surface2,
-  surfaceElevated: colors.surfaceElevated,
-};
+// CP-10 stage 1: SURFACES (colour) and SIZES (fontSize) were module-scope
+// consts baked at import time (class 2, CP-10 plan section 1.4). Built
+// per-render from the live theme now, so a TextField re-renders correctly
+// on a theme change.
+function buildSurfaces(c) {
+  return {
+    surface: c.surface,
+    surface2: c.surface2,
+    surfaceElevated: c.surfaceElevated,
+  };
+}
 
-const SIZES = {
-  md: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, fontSize: fontSize.md, minHeight: 50 },
-  lg: { paddingHorizontal: spacing.md, paddingVertical: spacing.md, fontSize: fontSize.lg, minHeight: 54 },
-};
+function buildSizes(fs) {
+  return {
+    md: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, fontSize: fs.md, minHeight: 50 },
+    lg: { paddingHorizontal: spacing.md, paddingVertical: spacing.md, fontSize: fs.lg, minHeight: 54 },
+  };
+}
 
 const TextField = forwardRef(function TextField({
   label,
@@ -23,7 +32,10 @@ const TextField = forwardRef(function TextField({
   // across surfaces; see docs/design-usability-audit-2026-07-09/
   // coverage-04-accessibility.md AY-1). textMuted clears 4.5:1 on every
   // surface in both themes and is already what most explicit overrides use.
-  placeholderTextColor = colors.textMuted,
+  // Was a default-PARAMETER read of the static `colors` singleton (already
+  // reactive-shaped, CP-10 plan section 1.4 class 3); now resolved inside
+  // the body against the live theme so an explicit override still wins.
+  placeholderTextColor,
   surface = 'surface2',
   size = 'md',
   leading,
@@ -39,8 +51,12 @@ const TextField = forwardRef(function TextField({
   ...inputProps
 }, ref) {
   const [focused, setFocused] = useState(false);
+  const t = useTheme();
+  const SURFACES = buildSurfaces(t.colors);
+  const SIZES = buildSizes(t.fontSize);
   const sizeStyle = SIZES[size] || SIZES.md;
   const surfaceColor = SURFACES[surface] || surface;
+  const resolvedPlaceholderColor = placeholderTextColor ?? t.colors.textMuted;
   const disabled = editable === false;
 
   function handleFocus(event) {
@@ -55,16 +71,21 @@ const TextField = forwardRef(function TextField({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label ? <Text style={[styles.label, labelStyle]}>{label}</Text> : null}
+      {label ? (
+        <Text style={[styles.label, { ...t.type.captionStrong, color: t.colors.textSecondary }, labelStyle]}>
+          {label}
+        </Text>
+      ) : null}
       <View
         style={[
           styles.field,
           {
             minHeight: sizeStyle.minHeight,
             backgroundColor: surfaceColor,
+            borderColor: t.colors.border,
           },
           multiline && styles.fieldMultiline,
-          focused && styles.fieldFocused,
+          focused && { borderColor: withAlpha(t.colors.primary, alpha.strong) },
           disabled && styles.disabled,
           fieldStyle,
         ]}
@@ -75,6 +96,8 @@ const TextField = forwardRef(function TextField({
           style={[
             styles.input,
             {
+              ...t.type.body,
+              color: t.colors.textPrimary,
               paddingHorizontal: sizeStyle.paddingHorizontal,
               paddingVertical: sizeStyle.paddingVertical,
               fontSize: sizeStyle.fontSize,
@@ -85,7 +108,7 @@ const TextField = forwardRef(function TextField({
           value={value}
           onChangeText={onChangeText}
           accessibilityLabel={accessibilityLabel || label}
-          placeholderTextColor={placeholderTextColor}
+          placeholderTextColor={resolvedPlaceholderColor}
           editable={editable}
           multiline={multiline}
           onFocus={handleFocus}
@@ -100,20 +123,19 @@ const TextField = forwardRef(function TextField({
 
 export default TextField;
 
+// Layout-only (theme-invariant): colour / type-size values (label, field
+// border, fieldFocused, input text colour + type role) now come from the
+// live theme per-render above (CP-10 stage 1) so TextField follows a theme
+// flip with no restart.
 const styles = StyleSheet.create({
   container: { gap: spacing.sm },
-  label: {
-    ...type.captionStrong,
-    color: colors.textSecondary,
-  },
+  label: {},
   field: {
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: radius.md,
     borderWidth: 1.5,
-    borderColor: colors.border,
   },
-  fieldFocused: { borderColor: withAlpha(colors.primary, alpha.strong) },
   fieldMultiline: { alignItems: 'flex-start' },
   disabled: { opacity: 0.55 },
   leading: {
@@ -127,10 +149,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   input: {
-    ...type.body,
     flex: 1,
     minWidth: 0,
-    color: colors.textPrimary,
   },
   inputMultiline: {
     minHeight: 96,

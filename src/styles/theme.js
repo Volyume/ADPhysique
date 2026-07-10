@@ -279,6 +279,30 @@ const lightCVD = {
 const baseShadowOpacity = { sm: 0.3, md: 0.4, lg: 0.5 };
 const lightShadowOpacity = { sm: 0.10, md: 0.14, lg: 0.18 };
 
+// Shape (offset/radius/elevation) for shadow.sm/md/lg — only the OPACITY
+// differs between themes (applyAccessibility swaps it in place below).
+// Factored out (CP-10 stage 0) so the legacy mutable `shadow` export further
+// down this file and resolveTheme()'s pure derivation (which useTheme() —
+// src/hooks/useTheme.js — calls directly) build identical shadow objects
+// from one definition and can never drift apart.
+const shadowShape = {
+  sm: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowRadius: 2, elevation: 2 },
+  md: { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowRadius: 6, elevation: 5 },
+  lg: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowRadius: 12, elevation: 10 },
+};
+
+// The Card primitive's light-theme-only shadow (LT-3). Theme-invariant — its
+// opacity is never mutated by applyAccessibility, unlike sm/md/lg above — so
+// it is safe to share the same object by reference between the legacy
+// `shadow.card` export and resolveTheme()'s returned shadow table.
+const cardShadow = {
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.08,
+  shadowRadius: 4,
+  elevation: 1,
+};
+
 // The theme actually resolved by the last applyAccessibility() call. A live
 // binding so the StatusBar + NavigationContainer chrome can follow it. Default
 // 'dark' so no existing user's appearance changes.
@@ -374,6 +398,74 @@ const baseFontSize = {
 
 export const fontSize = { ...baseFontSize };
 
+// ─── CP-10 stage 0: the restart-free theming primitive ─────────────────────
+// Pure derivation shared by BOTH theming systems. Given the same four raw
+// preferences applyAccessibility already reads (theme/higherContrast/
+// colorBlindSafe/largerText), returns a FRESH { colors, fontSize, shadow,
+// resolvedTheme, type } object with no mutation of any shared/module state.
+// applyAccessibility (below) calls this and copies the result onto the
+// legacy mutable exports for every screen not yet migrated to useTheme()
+// (src/hooks/useTheme.js) — the boot-then-reload path is unchanged.
+// useTheme() calls this directly on every render where a raw preference
+// changed, so migrated components get a live value instead. Routing both
+// paths through this one function means they can never resolve to
+// different palettes for the same preferences — the token TABLES
+// (baseColors, lightColors, the HC/CVD modifier tables, baseFontSize) stay
+// exactly as they are; only this read/derive mechanism is new.
+export function resolveTheme(prefs) {
+  const themeName = resolveThemeChoice(prefs);
+  const isLight = themeName === 'light';
+
+  const resolvedColors = { ...baseColors };
+  if (isLight) Object.assign(resolvedColors, lightColors);
+  if (prefs?.higherContrast) Object.assign(resolvedColors, isLight ? lightHC : darkHC);
+  if (prefs?.colorBlindSafe) Object.assign(resolvedColors, isLight ? lightCVD : darkCVD);
+
+  const resolvedFontSize = { ...baseFontSize };
+  if (prefs?.largerText) {
+    Object.assign(resolvedFontSize, {
+      micro:   Math.round(baseFontSize.micro   * 1.2),
+      xs:      Math.round(baseFontSize.xs      * 1.2),
+      sm:      Math.round(baseFontSize.sm      * 1.2),
+      md:      Math.round(baseFontSize.md      * 1.2),
+      lg:      Math.round(baseFontSize.lg      * 1.2),
+      xl:      Math.round(baseFontSize.xl      * 1.2),
+      xxl:     Math.round(baseFontSize.xxl     * 1.2),
+      xxxl:    Math.round(baseFontSize.xxxl    * 1.2),
+      display: Math.round(baseFontSize.display * 1.2),
+    });
+  }
+
+  const opacity = isLight ? lightShadowOpacity : baseShadowOpacity;
+  const resolvedShadow = {
+    sm: { ...shadowShape.sm, shadowOpacity: opacity.sm },
+    md: { ...shadowShape.md, shadowOpacity: opacity.md },
+    lg: { ...shadowShape.lg, shadowOpacity: opacity.lg },
+    // Theme-invariant (LT-3) — same static object the legacy `shadow.card`
+    // export uses below, never mutated by either system.
+    card: cardShadow,
+    // Getter (same pattern as the legacy `shadow.glow`) so shadowColor tracks
+    // resolvedColors.primary, which the HC/CVD tables above may have changed.
+    get glow() {
+      return {
+        shadowColor: resolvedColors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.18,
+        shadowRadius: 16,
+        elevation: 8,
+      };
+    },
+  };
+
+  return {
+    colors: resolvedColors,
+    fontSize: resolvedFontSize,
+    shadow: resolvedShadow,
+    resolvedTheme: themeName,
+    type: buildTypeRoles(resolvedFontSize),
+  };
+}
+
 // Called once from App.js BEFORE any screen module is required, so the
 // mutated values land in every downstream StyleSheet.create call. Calling
 // this after RootNavigator is mounted is a no-op for already-built styles;
@@ -398,50 +490,20 @@ export const fontSize = { ...baseFontSize };
 // can also lean on the OS-level font size; this in-app toggle stacks
 // with allowFontScaling=true (RN default).
 export function applyAccessibility(prefs) {
-  // 1. Reset to dark defaults first so consecutive applies don't compound.
-  Object.assign(colors, baseColors);
-  Object.assign(fontSize, baseFontSize);
-  shadow.sm.shadowOpacity = baseShadowOpacity.sm;
-  shadow.md.shadowOpacity = baseShadowOpacity.md;
-  shadow.lg.shadowOpacity = baseShadowOpacity.lg;
-
-  // 2. Resolve + apply the base theme. Light is a base PALETTE, not a modifier,
-  //    so it must land before higher-contrast / colour-blind tweaks.
-  const theme = resolveThemeChoice(prefs);
-  resolvedTheme = theme;
-  const isLight = theme === 'light';
-  if (isLight) {
-    Object.assign(colors, lightColors);
-    shadow.sm.shadowOpacity = lightShadowOpacity.sm;
-    shadow.md.shadowOpacity = lightShadowOpacity.md;
-    shadow.lg.shadowOpacity = lightShadowOpacity.lg;
-  }
-
-  // 3. Higher contrast: the resolved theme's HC table.
-  if (prefs?.higherContrast) {
-    Object.assign(colors, isLight ? lightHC : darkHC);
-  }
-
-  // 4. Colour-blind safe: the resolved theme's CVD table (same Okabe-Ito hue
-  //    families, darkened for a light surface).
-  if (prefs?.colorBlindSafe) {
-    Object.assign(colors, isLight ? lightCVD : darkCVD);
-  }
-
-  // 5. Larger text: theme-independent.
-  if (prefs?.largerText) {
-    Object.assign(fontSize, {
-      micro:   Math.round(baseFontSize.micro   * 1.2),
-      xs:      Math.round(baseFontSize.xs      * 1.2),
-      sm:      Math.round(baseFontSize.sm      * 1.2),
-      md:      Math.round(baseFontSize.md      * 1.2),
-      lg:      Math.round(baseFontSize.lg      * 1.2),
-      xl:      Math.round(baseFontSize.xl      * 1.2),
-      xxl:     Math.round(baseFontSize.xxl     * 1.2),
-      xxxl:    Math.round(baseFontSize.xxxl    * 1.2),
-      display: Math.round(baseFontSize.display * 1.2),
-    });
-  }
+  // CP-10 stage 0: delegates to the pure resolveTheme() above (same tables,
+  // same rules) and copies the result onto the legacy mutable exports below.
+  // resolved.colors/fontSize always carry every key (each starts as a full
+  // spread of baseColors/baseFontSize before any override lands), so
+  // Object.assign-ing the resolved object over the live singleton is
+  // equivalent to the previous reset-then-layer sequence — byte-identical
+  // output for every existing (non-migrated) StyleSheet.create call site.
+  const resolved = resolveTheme(prefs);
+  Object.assign(colors, resolved.colors);
+  Object.assign(fontSize, resolved.fontSize);
+  shadow.sm.shadowOpacity = resolved.shadow.sm.shadowOpacity;
+  shadow.md.shadowOpacity = resolved.shadow.md.shadowOpacity;
+  shadow.lg.shadowOpacity = resolved.shadow.lg.shadowOpacity;
+  resolvedTheme = resolved.resolvedTheme;
 }
 
 export const fontWeight = {
@@ -481,80 +543,88 @@ export const letterSpacing = {
   wordmark: 2,
 };
 
-// Semantic type roles. Getters (like volumeColors) so they reflect the
-// larger-text fontSize swap: applyAccessibility mutates fontSize in place
-// before screens build their styles, and these read it fresh at
-// StyleSheet.create time. Usage: style={{ ...type.body, color: ... }}.
-export const type = {
-  get display() {
-    return { fontFamily: fontFamily.displayBold, fontSize: fontSize.display,
-      lineHeight: Math.round(fontSize.display * lineHeight.tight), letterSpacing: letterSpacing.display };
-  },
-  get h1() {
-    return { fontFamily: fontFamily.displayBold, fontSize: fontSize.xxxl,
-      lineHeight: Math.round(fontSize.xxxl * lineHeight.tight), letterSpacing: letterSpacing.heading };
-  },
-  get h2() {
-    return { fontFamily: fontFamily.semibold, fontSize: fontSize.xxl,
-      lineHeight: Math.round(fontSize.xxl * lineHeight.snug), letterSpacing: letterSpacing.heading };
-  },
-  get h3() {
-    return { fontFamily: fontFamily.medium, fontSize: fontSize.xl,
-      lineHeight: Math.round(fontSize.xl * lineHeight.snug), letterSpacing: letterSpacing.heading };
-  },
-  get title() {
-    return { fontFamily: fontFamily.medium, fontSize: fontSize.lg,
-      lineHeight: Math.round(fontSize.lg * lineHeight.snug), letterSpacing: letterSpacing.body };
-  },
-  get body() {
-    return { fontFamily: fontFamily.regular, fontSize: fontSize.md,
-      lineHeight: Math.round(fontSize.md * lineHeight.normal), letterSpacing: letterSpacing.body };
-  },
-  get bodyStrong() {
-    return { fontFamily: fontFamily.medium, fontSize: fontSize.md,
-      lineHeight: Math.round(fontSize.md * lineHeight.normal), letterSpacing: letterSpacing.body };
-  },
-  get label() {
-    return { fontFamily: fontFamily.medium, fontSize: fontSize.sm,
-      lineHeight: Math.round(fontSize.sm * lineHeight.snug), letterSpacing: letterSpacing.label };
-  },
-  get overline() {
-    return { fontFamily: fontFamily.medium, fontSize: fontSize.xs,
-      lineHeight: Math.round(fontSize.xs * lineHeight.snug), letterSpacing: letterSpacing.overline, textTransform: 'uppercase' };
-  },
-  get caption() {
-    return { fontFamily: fontFamily.regular, fontSize: fontSize.xs,
-      lineHeight: Math.round(fontSize.xs * lineHeight.snug), letterSpacing: letterSpacing.caption };
-  },
-  // Small body copy: 13px with a body-comfort line height (13 × 1.5 ≈ 20).
-  // Design audit 03 (D0): the app's dominant hand-rolled combination is
-  // fontSize.sm + lineHeight 18-20 (~177 sites) because no token carried it —
-  // `label` is too tight (18) for multi-line copy. Adopt in later sweeps.
-  get bodySm() {
-    return { fontFamily: fontFamily.regular, fontSize: fontSize.sm,
-      lineHeight: Math.round(fontSize.sm * lineHeight.normal), letterSpacing: letterSpacing.body };
-  },
-  // Caption with a slightly roomier line (11 × 1.45 ≈ 16) for two-line
-  // caption copy; absorbs the hand-rolled xs + lineHeight 16/17 sites (D0).
-  get captionTight() {
-    return { fontFamily: fontFamily.regular, fontSize: fontSize.xs,
-      lineHeight: Math.round(fontSize.xs * 1.45), letterSpacing: letterSpacing.caption };
-  },
-  // The semibold sibling of `caption`: same 11px/1.35-line-height/neutral-
-  // tracking box, one weight step up, for small non-uppercase labels that
-  // want a touch more emphasis (form-field labels, data-adjacent chip/badge
-  // text). Design audit 03 coverage (AC-5): a fourth, unnamed micro-label
-  // combination -- fontSize.xs + an independently hand-picked fontWeight
-  // (medium/semibold/bold/black, or none at all) -- had drifted across ~29
-  // files with no shared name. Named once here; uppercase eyebrow labels
-  // stay on `overline` (a separate, already-tracked finding) and tabular
-  // numeric readouts stay raw (a different role, not a label).
-  get captionStrong() {
-    return { fontFamily: fontFamily.semibold, fontSize: fontSize.xs,
-      fontWeight: fontWeight.semibold,
-      lineHeight: Math.round(fontSize.xs * lineHeight.snug), letterSpacing: letterSpacing.caption };
-  },
-};
+// Semantic type roles. A factory (CP-10 stage 0) taking the fontSize table
+// to read from as a parameter, so the SAME role definitions build both the
+// legacy `type` export just below (bound to the mutable, boot-mutated
+// `fontSize` singleton — getters so they still reflect the larger-text
+// swap the same way they always have) and each useTheme() call's fresh
+// resolved fontSize table (resolveTheme() above) — one definition, two live
+// bindings, never two copies to keep in sync. Usage unchanged:
+// style={{ ...type.body, color: ... }}.
+function buildTypeRoles(fontSizeTable) {
+  return {
+    get display() {
+      return { fontFamily: fontFamily.displayBold, fontSize: fontSizeTable.display,
+        lineHeight: Math.round(fontSizeTable.display * lineHeight.tight), letterSpacing: letterSpacing.display };
+    },
+    get h1() {
+      return { fontFamily: fontFamily.displayBold, fontSize: fontSizeTable.xxxl,
+        lineHeight: Math.round(fontSizeTable.xxxl * lineHeight.tight), letterSpacing: letterSpacing.heading };
+    },
+    get h2() {
+      return { fontFamily: fontFamily.semibold, fontSize: fontSizeTable.xxl,
+        lineHeight: Math.round(fontSizeTable.xxl * lineHeight.snug), letterSpacing: letterSpacing.heading };
+    },
+    get h3() {
+      return { fontFamily: fontFamily.medium, fontSize: fontSizeTable.xl,
+        lineHeight: Math.round(fontSizeTable.xl * lineHeight.snug), letterSpacing: letterSpacing.heading };
+    },
+    get title() {
+      return { fontFamily: fontFamily.medium, fontSize: fontSizeTable.lg,
+        lineHeight: Math.round(fontSizeTable.lg * lineHeight.snug), letterSpacing: letterSpacing.body };
+    },
+    get body() {
+      return { fontFamily: fontFamily.regular, fontSize: fontSizeTable.md,
+        lineHeight: Math.round(fontSizeTable.md * lineHeight.normal), letterSpacing: letterSpacing.body };
+    },
+    get bodyStrong() {
+      return { fontFamily: fontFamily.medium, fontSize: fontSizeTable.md,
+        lineHeight: Math.round(fontSizeTable.md * lineHeight.normal), letterSpacing: letterSpacing.body };
+    },
+    get label() {
+      return { fontFamily: fontFamily.medium, fontSize: fontSizeTable.sm,
+        lineHeight: Math.round(fontSizeTable.sm * lineHeight.snug), letterSpacing: letterSpacing.label };
+    },
+    get overline() {
+      return { fontFamily: fontFamily.medium, fontSize: fontSizeTable.xs,
+        lineHeight: Math.round(fontSizeTable.xs * lineHeight.snug), letterSpacing: letterSpacing.overline, textTransform: 'uppercase' };
+    },
+    get caption() {
+      return { fontFamily: fontFamily.regular, fontSize: fontSizeTable.xs,
+        lineHeight: Math.round(fontSizeTable.xs * lineHeight.snug), letterSpacing: letterSpacing.caption };
+    },
+    // Small body copy: 13px with a body-comfort line height (13 × 1.5 ≈ 20).
+    // Design audit 03 (D0): the app's dominant hand-rolled combination is
+    // fontSize.sm + lineHeight 18-20 (~177 sites) because no token carried it —
+    // `label` is too tight (18) for multi-line copy. Adopt in later sweeps.
+    get bodySm() {
+      return { fontFamily: fontFamily.regular, fontSize: fontSizeTable.sm,
+        lineHeight: Math.round(fontSizeTable.sm * lineHeight.normal), letterSpacing: letterSpacing.body };
+    },
+    // Caption with a slightly roomier line (11 × 1.45 ≈ 16) for two-line
+    // caption copy; absorbs the hand-rolled xs + lineHeight 16/17 sites (D0).
+    get captionTight() {
+      return { fontFamily: fontFamily.regular, fontSize: fontSizeTable.xs,
+        lineHeight: Math.round(fontSizeTable.xs * 1.45), letterSpacing: letterSpacing.caption };
+    },
+    // The semibold sibling of `caption`: same 11px/1.35-line-height/neutral-
+    // tracking box, one weight step up, for small non-uppercase labels that
+    // want a touch more emphasis (form-field labels, data-adjacent chip/badge
+    // text). Design audit 03 coverage (AC-5): a fourth, unnamed micro-label
+    // combination -- fontSize.xs + an independently hand-picked fontWeight
+    // (medium/semibold/bold/black, or none at all) -- had drifted across ~29
+    // files with no shared name. Named once here; uppercase eyebrow labels
+    // stay on `overline` (a separate, already-tracked finding) and tabular
+    // numeric readouts stay raw (a different role, not a label).
+    get captionStrong() {
+      return { fontFamily: fontFamily.semibold, fontSize: fontSizeTable.xs,
+        fontWeight: fontWeight.semibold,
+        lineHeight: Math.round(fontSizeTable.xs * lineHeight.snug), letterSpacing: letterSpacing.caption };
+    },
+  };
+}
+
+export const type = buildTypeRoles(fontSize);
 
 // Numerals are the hero. Any text node rendering a number the user reads as
 // data (weight, reps, sets, %, kcal, timer, table date) should use tabular
@@ -593,27 +663,13 @@ export const alpha = Object.freeze({
 });
 
 export const shadow = {
-  sm: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  md: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  lg: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 10,
-  },
+  // Built from shadowShape (defined above, CP-10 stage 0) + the dark-default
+  // opacities; applyAccessibility mutates .shadowOpacity in place per theme,
+  // same as before — only the initial construction is now shared with
+  // resolveTheme() rather than a second copy of these literals.
+  sm: { ...shadowShape.sm, shadowOpacity: baseShadowOpacity.sm },
+  md: { ...shadowShape.md, shadowOpacity: baseShadowOpacity.md },
+  lg: { ...shadowShape.lg, shadowOpacity: baseShadowOpacity.lg },
   // Soft, low-elevation shadow for the shared Card primitive, LIGHT THEME
   // ONLY (LT-3, Materials Policy above: light theme uses shadow as the
   // PRIMARY elevation cue; dark theme carries elevation via the surface
@@ -621,13 +677,7 @@ export const shadow = {
   // opacity, a barely-there lift rather than a heavy card shadow. Card.js
   // applies this only when `resolvedTheme === 'light'`; dark output is
   // unaffected, so the dark surface ladder stays byte-identical.
-  card: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 1,
-  },
+  card: cardShadow,
 
   // The one sanctioned brand-tinted shadow (decision 2026-07-09, recorded in
   // docs/design-usability-audit-2026-07-09/DECISIONS-2026-07-09.md): a soft

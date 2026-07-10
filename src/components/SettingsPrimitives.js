@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, spacing, radius, type, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import PressableCard from './PressableCard';
 import BackHeader from './BackHeader';
 import SectionLabel from './SectionLabel';
@@ -13,33 +14,57 @@ import SectionLabel from './SectionLabel';
 // row press feel and the accessibility wiring.
 
 export function SettingRow({ icon, label, sub, value, onPress, destructive, rightElement, showArrow = true }) {
+  // CP-10 stage 1: live theme (src/hooks/useTheme.js) instead of the static
+  // colors/type imports, so a settings row re-renders correctly on a theme
+  // change.
+  const t = useTheme();
   // One press feel app-wide: tappable rows use the PressableCard spring.
   // Rows that are just a label + a Switch (rightElement, no onPress) render
   // as a static View so the row itself isn't "pressable", the Switch is.
   const Wrapper = onPress ? PressableCard : View;
   return (
     <Wrapper
-      style={styles.settingRow}
+      style={[styles.settingRow, { borderBottomColor: t.colors.border }]}
       onPress={onPress}
       accessibilityRole={onPress ? 'button' : 'none'}
       accessibilityLabel={value ? `${label}: ${value}` : label}
     >
-      <View style={[styles.settingIcon, destructive && styles.settingIconDestructive]}>
-        <Ionicons name={icon} size={18} color={destructive ? colors.error : colors.primary} />
+      <View
+        style={[
+          styles.settingIcon,
+          { backgroundColor: t.colors.primaryBg },
+          destructive && { backgroundColor: t.colors.errorBg },
+        ]}
+      >
+        <Ionicons name={icon} size={18} color={destructive ? t.colors.error : t.colors.primary} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={[styles.settingLabel, destructive && styles.settingLabelDestructive]}>{label}</Text>
-        {sub ? <Text style={styles.settingSub}>{sub}</Text> : null}
+        <Text
+          style={[
+            styles.settingLabel,
+            { ...t.type.body, color: t.colors.textPrimary },
+            destructive && { color: t.colors.error },
+          ]}
+        >
+          {label}
+        </Text>
+        {sub ? (
+          <Text style={[styles.settingSub, { ...t.type.captionTight, color: t.colors.textMuted }]}>{sub}</Text>
+        ) : null}
       </View>
       <View style={styles.settingRight}>
-        {value ? <Text style={styles.settingValue}>{value}</Text> : null}
+        {value ? (
+          <Text style={[styles.settingValue, { fontSize: t.fontSize.sm, color: t.colors.textSecondary }]}>
+            {value}
+          </Text>
+        ) : null}
         {/* A Switch passed as rightElement otherwise announces only its
             on/off state with no context; lend it the row's label. */}
         {isValidElement(rightElement) && rightElement.props.accessibilityLabel == null
           ? cloneElement(rightElement, { accessibilityLabel: label })
           : rightElement}
         {showArrow && onPress && !rightElement ? (
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         ) : null}
       </View>
     </Wrapper>
@@ -72,6 +97,17 @@ export function SettingsPage({ title, children }) {
   );
 }
 
+// CP-10 stage 1 scope note: `settingsStyles` stays on the legacy static
+// `colors`/`fontSize`/`type` imports, UNCHANGED, deliberately. It is
+// exported and consumed directly (bypassing SettingRow) by ~14 Settings
+// sub-screens (SettingsDietaryScreen, SettingsProfileScreen, etc.) that are
+// not migrated in this stage (Stage 3, screens-by-traffic, in the CP-10
+// plan). SettingRow's OWN render above already overrides every colour key
+// it reads from this object with a live value positioned later in its style
+// array, so SettingRow is fully live today; screens reading
+// `settingsStyles.*` directly keep the frozen boot-time behaviour until
+// their own screen migrates, per the plan's "migrated primitive inside an
+// unmigrated screen is safe" coexistence rule.
 export const settingsStyles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   keyboardAvoid: { flex: 1 },

@@ -11,7 +11,8 @@
 import { Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from './PressableCard';
-import { colors, spacing, radius, type } from '../styles/theme';
+import { spacing, radius } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 export default function Chip({
   label,
@@ -29,6 +30,9 @@ export default function Chip({
   numberOfLines,
   testID,
 }) {
+  // CP-10 stage 1: live theme (src/hooks/useTheme.js) instead of the static
+  // colors/type imports, so Chip re-renders correctly on a theme change.
+  const t = useTheme();
   const accessibilityState = accessibilityRole === 'radio'
     ? { checked: selected, disabled }
     : { selected, disabled };
@@ -40,19 +44,31 @@ export default function Chip({
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel || label}
       accessibilityState={accessibilityState}
-      style={[styles.chip, selected && styles.chipSelected, disabled && styles.chipDisabled, style]}
+      style={[
+        styles.chip,
+        { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+        selected && { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+        disabled && styles.chipDisabled,
+        style,
+      ]}
       testID={testID}
     >
       {icon ? (
         <Ionicons
           name={icon}
           size={14}
-          color={selected ? colors.primary : colors.textMuted}
+          color={selected ? t.colors.primary : t.colors.textMuted}
           style={styles.icon}
         />
       ) : null}
       <Text
-        style={[styles.label, labelStyle, selected && styles.labelSelected, selected && selectedLabelStyle]}
+        style={[
+          styles.label,
+          { ...t.type.label, color: t.colors.textSecondary },
+          labelStyle,
+          selected && { color: t.colors.primary },
+          selected && selectedLabelStyle,
+        ]}
         numberOfLines={numberOfLines}
       >
         {label}
@@ -61,24 +77,20 @@ export default function Chip({
   );
 }
 
+// Layout-only (theme-invariant): backgroundColor / borderColor / the type
+// role + text colour now come from the live theme per-render above (CP-10
+// stage 1) so Chip follows a theme flip with no restart.
 const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: colors.surface2,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: colors.border,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  chipSelected: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
-  },
   chipDisabled: { opacity: 0.5 },
   icon: { marginRight: spacing.xs },
-  label: { ...type.label, color: colors.textSecondary },
-  labelSelected: { color: colors.primary },
+  label: {},
 });
