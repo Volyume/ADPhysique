@@ -305,40 +305,46 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
   FOUNDER ROUND (options recorded below). 4 suites / 37 tests pass at
   baseline.
 
-## ⏸ RESUME POINT — next slots, in order:
-1. Item 12 resumes ONLY after the founder picks a fork option (see the
-   open round below). Meanwhile: item 17 small tails (+ remaining
-   edge-to-edge Modal inset audits from the item 15 recon list above);
-   theming stage-4 tail (remaining static: food domain 19, photo/scan
-   family 10, ProgressSections, chart exclusions, ScreenBoundary
-   architecture question); stage 5 stays honesty-gated. Coverage after
-   batch B: 71/108 components live.
-2. PROCESS NOTE for dispatching the remaining campaign items: item 19
-   is the SECOND consecutive campaign line found stale against the
-   tree (after item 16 scanner) — every remaining item gets a
-   verify-first read agent before any build brief is written.
-3. Standing discipline at every landing: full suite over the clean
+## ⏸ RESUME POINT — current state and queue (2026-07-10 late):
+1. IN FLIGHT: (a) theming stage-4 batch C (Sonnet — food domain +
+   photo/scan component families onto buildLiveStyles; exclusions:
+   charts already ruled, ScreenBoundary, ProGate logic, screens);
+   (b) item 12 native Service→JS bridge build per D34 (Opus —
+   modules/rest-timer-live actions on the FGS chronometer, silent
+   routing into handleRestTimerAction; needs EAS build at landing).
+   Item 17's verify-first READ is COMPLETE (findings + scope rulings
+   in D36; per-surface table in the read agent's report — key facts:
+   PlanLibrary quiz / RoutineDetail edit-exercise / ActiveWorkout
+   supersetHeadsUp+unilateralSuggest / ExerciseDetail goal modal have
+   genuine bottom-inset gaps under edge-to-edge; Home sheets are
+   inset-correct but raw; FeedbackSheet/PeekMenu are the 2 of 6
+   original BottomSheet targets never migrated, imperative-API
+   restructure; TalkBack sheet isolation gap is documented in
+   BottomSheet.js:38-47 itself and compounds with every migration).
+2. NEXT SLOTS in order once the pair lands: item 17 six-modal slot
+   (D36a, Sonnet); then D35 drag edge auto-scroll (Sonnet — sequenced
+   AFTER item 17 because both touch RoutineDetail/ActiveWorkout);
+   then FeedbackSheet/PeekMenu migration slot (D36b); TalkBack sheet
+   isolation slot (D36c, cross-cutting, RootNavigator-adjacent);
+   ProgressPhotos content-modal read pass (D36d, Haiku/Sonnet read).
+3. PROCESS NOTE: two consecutive campaign lines (16, 19) were stale
+   against the tree — every remaining item gets a verify-first read
+   agent before any build brief is written.
+4. Standing discipline at every landing: full suite over the clean
    tree, this handover's stage log updated, push.
 
-**AWAITING FOUNDER — ITEM 12 FORK (new, 2026-07-10): the typical-rest
-notification on Android has no Skip/+15 buttons. Options, none
-pre-decided:**
-1. Build a native Service→JS event bridge in modules/rest-timer-live
-   (new architecture — no Service→JS pattern exists anywhere in the
-   repo today) so FGS-notification buttons act silently without
-   foregrounding the app, matching the JS sticky's UX. Moderate native
-   effort; needs an EAS build either way.
-2. Add the buttons via the module's existing deep-link
-   PendingIntent.getActivity pattern — small effort, but tapping
-   +15/Skip would OPEN the app, contradicting the locked
-   opensAppToForeground:false design of those actions.
-3. Narrow/disable the ~170s shortService window so more (or all) rests
-   fall back to the JS sticky that already carries all five working
-   buttons — trades away the founder-approved E6A live-countdown /
-   background-survival benefit for short rests.
-4. Accept the status quo (the recorded 2026-07-02 trade-off): long
-   rests get full buttons, short rests get the live chronometer with
-   none; item 12 closes as "verified, gap deliberate".
+**D33 STANDING DELEGATION (founder, 2026-07-10, recorded in the
+decisions register):** product-fork decisions "like these" are now
+LEAD-RULED on best-product-for-users criteria, never on effort.
+Inviolables (ED-safety, billing, gating, GDPR, schema, NEW
+DEPENDENCIES) stay founder-gated. The item-12 fork and item-20
+auto-scroll question were both resolved under it: **D34** = build the
+native Service→JS bridge so the chronometer notification gets silent
+Skip/+15; **D35** = build drag edge auto-scroll; **D36** = item 17
+scope (one slot: 4 named modals→BottomSheet + 2 genuine inset gaps;
+FeedbackSheet/PeekMenu migration and TalkBack sheet isolation each get
+their own later slot; ProgressPhotos content modals get a read pass
+first; centred dialogs stay Modals by design).
 
 **AWAITING FOUNDER (asked in chat 2026-07-10, unanswered at handover):**
 - migrate_117 apply (telemetry-view REVOKE, drafted + committed at

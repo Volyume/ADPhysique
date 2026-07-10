@@ -515,3 +515,52 @@ founder delegated it ("best for the user").
   mid-training is ergonomically risky, and a sheet gives real drag on
   a real list one-handed. Accessible chevron/sheet move paths remain
   everywhere (drag is additive).
+
+## D33 — Standing delegation: product-fork decisions to the lead (founder, 2026-07-10)
+Founder's words, given on the item-12 and item-20 rounds: "You make
+these and all decisions like this. Make the decision based on the best
+possible app and service for users not on the work that takes to get
+there." Scope as understood: build/UX product trade-off forks of this
+kind are LEAD-RULED on product-best-for-users criteria, recorded here
+with rationale. This does NOT loosen the CLAUDE.md Section 2
+inviolables — ED-safety, billing, tier gating, GDPR, schema rules, and
+NEW DEPENDENCIES stay founder-gated, and anything safety-adjacent still
+stops for the founder.
+
+## D34 — Item 12: native Service→JS bridge (lead-ruled under D33, 2026-07-10)
+The typical-rest (90s) Android notification is the native FGS
+chronometer with zero action buttons; only >170s rests get the JS
+sticky's five actions. Options were bridge / deep-link buttons /
+shrink FGS window / status quo. RULING: build the native Service→JS
+event bridge in modules/rest-timer-live so Skip/+15 on the chronometer
+notification act SILENTLY (no app foregrounding), routed into the
+existing handleRestTimerAction seam (stale-tap guard + clampRestDelta
+floor stay). Rationale: it is the only option where the notification
+users actually see gains working controls without sacrificing the
+locked opensAppToForeground:false design or the E6A live-countdown/
+survival benefit. Effort is explicitly not a criterion (D33).
+
+## D35 — Item 20 follow-up: build drag edge auto-scroll (lead-ruled under D33, 2026-07-10)
+DragReorderList shipped without parent-scroll auto-scroll at the drag
+edge (disclosed limitation). RULING: build it — drag on a
+longer-than-screen list must scroll when the finger nears the edge;
+drop-and-redrag is not the complete experience. Constraints carried:
+no new dependency, pure-arithmetic worklets, Reduce Motion respected,
+chevron paths untouched.
+
+## D36 — Item 17 scope rulings (lead-ruled under D33, 2026-07-10)
+From the verify-first read: (a) ONE build slot migrates the four
+modals item 17 names (HomeChangeWorkoutSheet, HomeBlockShapeSheet,
+PlanLibrary quiz, RoutineDetail edit-exercise) to BottomSheet AND
+fixes the two genuine bottom-inset gaps found in the same pattern
+(ActiveWorkout supersetHeadsUp/unilateralSuggest shared styles,
+ExerciseDetail goal modal). (b) FeedbackSheet + PeekMenu (the two
+never-finished targets named in BottomSheet.js's own header) WILL be
+migrated — real restructure (imperative singleton API), so it gets
+its OWN later slot, not folded in silently. (c) TalkBack sheet
+isolation (host screen importantForAccessibility while a sheet is
+open) WILL be built as its own cross-cutting slot — genuine
+accessibility gap that compounds with every migration. (d)
+ProgressPhotosScreen's four content modals get a child-component read
+pass before any ruling. AppAlert / InfoTooltip / EatenTimePicker /
+centred dialogs stay raw Modals by design (correct semantics).
