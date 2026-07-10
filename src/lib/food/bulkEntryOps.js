@@ -24,6 +24,7 @@ export function entryToPatch(entry, overrides = {}) {
     carbsG: entry.carbs_g,
     fatG: entry.fat_g,
     fibreG: entry.fibre_g ?? null,
+    weightState: entry.weight_state,
     ...overrides,
   };
 }
@@ -60,6 +61,7 @@ export async function copyEntriesToDate(userId, entries, entryDate) {
       carbsG: e.carbs_g,
       fatG: e.fat_g,
       fibreG: e.fibre_g ?? null,
+      weightState: e.weight_state,
     });
   }
 }

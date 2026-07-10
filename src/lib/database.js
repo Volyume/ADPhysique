@@ -1900,6 +1900,27 @@ const SCHEMA_MIGRATIONS = [
     )`,
     'CREATE INDEX IF NOT EXISTS idx_progress_scan_classification_history_user_time ON progress_scan_classification_history(user_id, created_at DESC)',
   ],
+  // v66, Ultimate-Audit item 12: raw/cooked weight-state label on food_entries
+  // (founder ruling NA-nutrition-1, pass3-v2-founder-decisions.md:195-196,
+  // 2026-06-14: "store the basis, no conversion... use the matching entry.
+  // Deterministic; no conversion table needed"). Additive, NOT NULL column
+  // with a DEFAULT so every existing row keeps its exact current meaning
+  // ('as_weighed' = the number is whatever basis it always implicitly was,
+  // unlabelled). No macro/gram recompute anywhere: this is a stored label
+  // only, never a conversion factor (foodRoles.js defaultWeightStateFor /
+  // hasWeightChoice). Written by src/lib/food/db.js (logFoodEntry /
+  // updateFoodEntry / applyFoodEntryFromCloud), surfaced on
+  // FoodDetailSheet.js and MealPlanScreen.js item rows. Cloud counterpart:
+  // migrate_114_food_entry_weight_state.sql (founder-run).
+  // ED-safety note: none. No calorie floor, macro total, or adherence value
+  // reads this column; MacroRings and the rollup are unaffected.
+  // Safe to re-run: yes (duplicate-column errors are tolerated by the runner).
+  // Rollback: ALTER TABLE food_entries DROP COLUMN weight_state (SQLite
+  // 3.35+); every read already tolerates the column via SELECT * / `?? null`
+  // fallbacks, so dropping it just removes the label, no other data loss.
+  [
+    "ALTER TABLE food_entries ADD COLUMN weight_state TEXT NOT NULL DEFAULT 'as_weighed'",
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {

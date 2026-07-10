@@ -20,6 +20,7 @@ import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import Chip from '../components/Chip';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
 import { SettingRow } from '../components/SettingsPrimitives';
@@ -45,6 +46,7 @@ import {
   findRoleAlternatives,
 } from '../lib/food/mealPlanService';
 import { updateMealPlan, getFoodEntriesForDay, clearPlannedDay } from '../lib/food/db';
+import { defaultWeightStateFor } from '../lib/food/foodRoles';
 import { buildGroceryList, formatGroceryListForShare } from '../lib/food/groceryList';
 import { getMealAdditions, ADDITIONS_INTRO } from '../lib/food/mealAdditions';
 import { formatNumber, formatEnergy, energyUnitLabel } from '../lib/format';
@@ -645,6 +647,30 @@ export default function MealPlanScreen({ navigation, route }) {
     );
   }, [user?.id, record, plan, day, dayIndex, busy, addMealPlanExcludedFood, toast]);
 
+  // Ultimate-Audit item 12 (raw/cooked basis toggle, founder ruling
+  // NA-nutrition-1): record which basis the user will weigh this plate item
+  // in. Pure label -- grams, macros and totals are untouched (no conversion
+  // exists anywhere in the app), so the day's totals never move when this is
+  // set. Persists the same way a swap does: rewrite the slot's items array in
+  // the stored plan JSON and push it through updateMealPlan.
+  const handleSetItemWeightState = useCallback(async (slotKey, itemIndex, value) => {
+    if (!user?.id || !record || !day) return;
+    const slot = day.slots.find((s) => s.slot === slotKey);
+    if (!slot?.items?.[itemIndex]) return;
+    const newItems = slot.items.map((it, i) => (i === itemIndex ? { ...it, weightState: value } : it));
+    const newSlot = { ...slot, items: newItems };
+    const newSlots = day.slots.map((s) => (s.slot === slotKey ? newSlot : s));
+    const newDay = { ...day, slots: newSlots };
+    const days = plan.days.map((d, i) => (i === dayIndex ? newDay : d));
+    const nextPlan = { ...plan, days };
+    try {
+      await updateMealPlan(user.id, record.id, nextPlan);
+      setRecord({ ...record, plan: nextPlan });
+    } catch (_) {
+      toast.show("Couldn't update. Try again.", { variant: 'error' });
+    }
+  }, [user?.id, record, plan, day, dayIndex, toast]);
+
   // Change a preference, persist it, and rebuild an existing plan around it so
   // the change is visible immediately. Before generation, this only saves the
   // user's choices so the first build uses them.
@@ -936,20 +962,55 @@ export default function MealPlanScreen({ navigation, route }) {
                     {(slot.items || []).map((it, i) => {
                       const foodKey = (it.foodRef || '').startsWith('curated:') ? it.foodRef.slice(8) : null;
                       const canSwap = !!foodKey && !!slot.components;
+                      // Ultimate-Audit item 12 (raw/cooked basis toggle, founder
+                      // ruling NA-nutrition-1): only a food with a real dry/cooked
+                      // distinction gets the choice; a 'ready'-state food (cooked
+                      // meat, fruit, dairy) shows none. A pure label -- grams and
+                      // macros never change when it's set.
+                      const nativeWeightState = foodKey ? defaultWeightStateFor(foodKey) : null;
+                      const weightState = it.weightState ?? nativeWeightState;
                       return (
-                        <TouchableOpacity
-                          key={`${it.foodRef}-${i}`}
-                          style={[styles.itemRow, (!canSwap || busy) && styles.itemRowDisabled]}
-                          disabled={!canSwap || busy}
-                          onPress={() => handleSwapFood(slot.slot, foodKey)}
-                          onLongPress={() => canSwap && handleFlagFood(slot.slot, foodKey, it.name)}
-                          hitSlop={hitSlop}
-                          accessibilityRole={canSwap ? 'button' : 'text'}
-                          accessibilityLabel={canSwap ? `${it.quantityG} grams ${it.name}. Tap to swap, long press to leave it out for good.` : `${it.quantityG} grams ${it.name}`}
-                        >
-                          <Text style={styles.itemLine} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={1.3}>{`${formatNumber(it.quantityG)} g ${it.name}`}</Text>
-                          {canSwap ? <Ionicons name="swap-horizontal-outline" size={13} color={colors.textSecondary} /> : null}
-                        </TouchableOpacity>
+                        <View key={`${it.foodRef}-${i}`}>
+                          <TouchableOpacity
+                            style={[styles.itemRow, (!canSwap || busy) && styles.itemRowDisabled]}
+                            disabled={!canSwap || busy}
+                            onPress={() => handleSwapFood(slot.slot, foodKey)}
+                            onLongPress={() => canSwap && handleFlagFood(slot.slot, foodKey, it.name)}
+                            hitSlop={hitSlop}
+                            accessibilityRole={canSwap ? 'button' : 'text'}
+                            accessibilityLabel={canSwap ? `${it.quantityG} grams ${it.name}. Tap to swap, long press to leave it out for good.` : `${it.quantityG} grams ${it.name}`}
+                          >
+                            <Text style={styles.itemLine} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={1.3}>{`${formatNumber(it.quantityG)} g ${it.name}`}</Text>
+                            {canSwap ? <Ionicons name="swap-horizontal-outline" size={13} color={colors.textSecondary} /> : null}
+                          </TouchableOpacity>
+                          {nativeWeightState ? (
+                            <View style={styles.weightChoiceRow}>
+                              <Text style={styles.weightChoiceLabel}>Weighed</Text>
+                              <Chip
+                                label="Raw"
+                                selected={weightState === 'raw'}
+                                onPress={() => handleSetItemWeightState(slot.slot, i, 'raw')}
+                                disabled={busy}
+                                style={styles.weightChoiceChip}
+                                labelStyle={styles.weightChoiceChipText}
+                                selectedLabelStyle={styles.weightChoiceChipTextActive}
+                                accessibilityRole="radio"
+                                accessibilityLabel={`Weigh ${it.name} raw`}
+                              />
+                              <Chip
+                                label="Cooked"
+                                selected={weightState === 'cooked'}
+                                onPress={() => handleSetItemWeightState(slot.slot, i, 'cooked')}
+                                disabled={busy}
+                                style={styles.weightChoiceChip}
+                                labelStyle={styles.weightChoiceChipText}
+                                selectedLabelStyle={styles.weightChoiceChipTextActive}
+                                accessibilityRole="radio"
+                                accessibilityLabel={`Weigh ${it.name} cooked`}
+                              />
+                            </View>
+                          ) : null}
+                        </View>
                       );
                     })}
                     <Text style={styles.macroLine} numberOfLines={1} ellipsizeMode="tail">
@@ -1389,6 +1450,13 @@ const styles = StyleSheet.create({
   itemRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 28, gap: spacing.sm },
   itemRowDisabled: { opacity: 0.6 },
   itemLine: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'], flex: 1 },
+  // Ultimate-Audit item 12: the per-item raw/cooked basis choice, a quiet
+  // sub-row under the food line so it reads as a detail, not a new decision.
+  weightChoiceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingBottom: spacing.xxs },
+  weightChoiceLabel: { color: colors.textMuted, fontSize: fontSize.xs },
+  weightChoiceChip: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, minHeight: 0 },
+  weightChoiceChipText: { fontSize: fontSize.xs },
+  weightChoiceChipTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
   macroLine: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.xs, fontVariant: ['tabular-nums'] },
   seasonIntro: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.sm },
   seasonWrap: {

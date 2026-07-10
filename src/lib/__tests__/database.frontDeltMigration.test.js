@@ -44,6 +44,15 @@
  * seed rows here. The v62 block now runs the last FOUR migrations
  * (`runLastMigrations(raw, 4)`) and the v63 block the last THREE
  * (`runLastMigrations(raw, 3)`), asserting the same end states as before.
+ *
+ * v66 addendum (Ultimate-Audit item 12, 2026-07-10, raw/cooked weight-state):
+ * another migration lands after v65 and, unlike v65, is NOT inert against a
+ * fixture missing its table -- it ALTERs food_entries, which this file never
+ * created. freshExercisesDb now also creates a minimal food_entries table so
+ * the ALTER succeeds harmlessly (no exercises row is affected). The v62 block
+ * runs the last FIVE migrations (`runLastMigrations(raw, 5)`) and the v63
+ * block the last FOUR (`runLastMigrations(raw, 4)`), asserting the same end
+ * states as before.
  */
 
 const { DatabaseSync } = require('node:sqlite');
@@ -88,15 +97,20 @@ async function totalMigrationCount() {
 
 function freshExercisesDb() {
   const raw = new DatabaseSync(':memory:');
-  // subregion is unused by v62/v63 but v64 (the next migration, biceps
-  // subregion tags) now runs alongside them in this file's "last N
-  // migrations" harness, and its UPDATE targets that column.
+  // subregion is unused by v62/v63 but v64 (biceps subregion tags) now runs
+  // alongside them in this file's "last N migrations" harness, and its
+  // UPDATE targets that column.
   raw.exec(`CREATE TABLE exercises (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     primary_muscle TEXT,
     subregion TEXT
   );`);
+  // v66 (Ultimate-Audit item 12) now also runs alongside v62/v63 in this same
+  // harness and ALTERs food_entries, which no earlier migration in this
+  // file's fixture needed; a minimal table is enough for the ALTER to
+  // succeed (no exercises row is affected).
+  raw.exec(`CREATE TABLE food_entries (id TEXT PRIMARY KEY);`);
   return raw;
 }
 
@@ -143,7 +157,7 @@ describe('SCHEMA_MIGRATIONS v62 (+ v63 alongside it): front-delt muscle-taxonomy
   test('re-tags Machine Shoulder Press and generic Shoulder Press to front_delts', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    await runLastMigrations(raw, 4);
+    await runLastMigrations(raw, 5);
 
     const machine = raw.prepare('SELECT primary_muscle FROM exercises WHERE id = ?').get('ex-1');
     const generic = raw.prepare('SELECT primary_muscle FROM exercises WHERE id = ?').get('ex-2');
@@ -154,7 +168,7 @@ describe('SCHEMA_MIGRATIONS v62 (+ v63 alongside it): front-delt muscle-taxonomy
   test('is exactly scoped by name: does not touch Dumbbell Shoulder Press, Dumbbell Lateral Raise, or Upright Row', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    await runLastMigrations(raw, 4);
+    await runLastMigrations(raw, 5);
 
     const untouched = ['ex-3', 'ex-5', 'ex-6'];
     for (const id of untouched) {
@@ -172,7 +186,7 @@ describe('SCHEMA_MIGRATIONS v62 (+ v63 alongside it): front-delt muscle-taxonomy
   test('Plate-Loaded Shoulder Press, out of v62\'s own scope, is retagged once v63 runs alongside it', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    await runLastMigrations(raw, 4);
+    await runLastMigrations(raw, 5);
 
     const plateLoaded = raw.prepare('SELECT primary_muscle FROM exercises WHERE id = ?').get('ex-4');
     expect(plateLoaded.primary_muscle).toBe('front_delts');
@@ -181,7 +195,7 @@ describe('SCHEMA_MIGRATIONS v62 (+ v63 alongside it): front-delt muscle-taxonomy
   test('is idempotent: running the migrations a second time leaves the corrected rows unchanged and errors on neither run', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    const total = await runLastMigrations(raw, 4);
+    const total = await runLastMigrations(raw, 5);
 
     // Re-run the exact same migration set (simulating a second boot that
     // still sees the pre-migration version, e.g. a restored snapshot) by
@@ -213,7 +227,7 @@ describe('SCHEMA_MIGRATIONS v63: extends the front-delt correction to Viking Pre
   test('re-tags Viking Press and Plate-Loaded Shoulder Press to front_delts', async () => {
     const raw = freshExercisesDb();
     seedRowsV63(raw);
-    await runLastMigrations(raw, 3); // v63 is the true last migration
+    await runLastMigrations(raw, 4); // v63 is the true last migration
 
     const viking = raw.prepare('SELECT primary_muscle FROM exercises WHERE id = ?').get('ex-1');
     const plateLoaded = raw.prepare('SELECT primary_muscle FROM exercises WHERE id = ?').get('ex-2');
@@ -224,7 +238,7 @@ describe('SCHEMA_MIGRATIONS v63: extends the front-delt correction to Viking Pre
   test('is exactly scoped by name: does not touch Machine Shoulder Press (already corrected by v62), Dumbbell Shoulder Press, Dumbbell Lateral Raise, or Upright Row', async () => {
     const raw = freshExercisesDb();
     seedRowsV63(raw);
-    await runLastMigrations(raw, 3);
+    await runLastMigrations(raw, 4);
 
     const untouched = ['ex-3', 'ex-4', 'ex-5', 'ex-6'];
     for (const id of untouched) {
@@ -237,7 +251,7 @@ describe('SCHEMA_MIGRATIONS v63: extends the front-delt correction to Viking Pre
   test('is idempotent: running the migration a second time leaves the corrected rows unchanged and errors on neither run', async () => {
     const raw = freshExercisesDb();
     seedRowsV63(raw);
-    const total = await runLastMigrations(raw, 3);
+    const total = await runLastMigrations(raw, 4);
 
     raw.exec(`PRAGMA user_version = ${total - 3}`);
     const d = adapt(raw);

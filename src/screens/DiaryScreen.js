@@ -1004,7 +1004,7 @@ export default function DiaryScreen({ navigation, route }) {
     });
   }
 
-  async function saveEditSheet({ quantityG, mealSlot, entryDate }) {
+  async function saveEditSheet({ quantityG, mealSlot, entryDate, weightState }) {
     if (!canWrite()) return;
     const { entry, food } = editSheet;
     await updateFoodEntry(entry.id, userId, {
@@ -1013,6 +1013,10 @@ export default function DiaryScreen({ navigation, route }) {
       foodRef: entry.food_ref,
       quantityG,
       ...scaleMacros(food, quantityG), // { kcal, proteinG, carbsG, fatG, fibreG }
+      // Ultimate-Audit item 12: the sheet always sends the current basis label
+      // (untouched or user-chosen); falls back to the entry's existing value
+      // so a food with no raw/cooked choice never loses its prior label.
+      weightState: weightState ?? entry.weight_state,
     });
     await load();
   }
@@ -1091,6 +1095,7 @@ export default function DiaryScreen({ navigation, route }) {
           carbsG: e.carbs_g,
           fatG: e.fat_g,
           fibreG: e.fibre_g ?? null,
+          weightState: e.weight_state,
         });
         ok++;
       } catch (_) {
@@ -1580,6 +1585,7 @@ export default function DiaryScreen({ navigation, route }) {
         initialQuantityG={editSheet?.entry?.quantity_g}
         initialMealSlot={editSheet?.entry?.meal_slot ?? 'snack'}
         initialEntryDate={editSheet?.entry?.entry_date ?? selectedDate}
+        initialWeightState={editSheet?.entry?.weight_state}
         onSave={saveEditSheet}
         onDelete={deleteFromEditSheet}
         onClose={() => setEditSheet(null)}

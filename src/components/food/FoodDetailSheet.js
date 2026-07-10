@@ -18,6 +18,17 @@ import { scaleMacros, scaleSugarG, scaleSodiumMg } from '../../lib/food/macros';
 import { buildServingUnits, initialServingState, resolveGrams, isValidEntryGrams } from '../../lib/food/servingEntry';
 import { isNetworkSourced, formatLastVerified } from '../../lib/food/freshness';
 import { refetchStaleFood } from '../../lib/food/waterfall';
+import { defaultWeightStateFor } from '../../lib/food/foodRoles';
+
+// Ultimate-Audit item 12 (raw/cooked basis toggle): the curated food key
+// behind a food_ref, or null for anything that isn't a curated staple
+// (global/custom/quick-add foods have no dry/cooked classification and
+// never show the choice). Mirrors the 'curated:' prefix resolveFoodRef uses
+// (src/lib/food/sources/localCache.js).
+function curatedKeyOf(food) {
+  const ref = food?.food_ref;
+  return typeof ref === 'string' && ref.startsWith('curated:') ? ref.slice(8) : null;
+}
 
 // Display-shaped wrapper over the shared scaling helper (food review U-M2):
 // the preview render reads .protein/.carbs/.fat, the engine returns .*G.
@@ -38,13 +49,15 @@ function macrosFor(food, qtyG) {
  *   initialMealSlot  'breakfast' | 'lunch' | 'dinner' | 'snack'
  *   initialEntryDate yyyy-mm-dd
  *   mode             'add' | 'edit'
- *   onSave           ({ quantityG, mealSlot, entryDate }) => Promise<void>
+ *   initialWeightState 'as_weighed' | 'raw' | 'cooked' (edit mode: the
+ *                    entry's current basis label; Ultimate-Audit item 12)
+ *   onSave           ({ quantityG, mealSlot, entryDate, weightState }) => Promise<void>
  *   onDelete         () => Promise<void>  (edit mode only)
  *   onClose          () => void
  */
 export default function FoodDetailSheet({
   visible, food, mode = 'add',
-  initialQuantityG, initialMealSlot = 'snack', initialEntryDate,
+  initialQuantityG, initialMealSlot = 'snack', initialEntryDate, initialWeightState,
   onSave, onDelete, onClose,
 }) {
   const toast = useToast();
@@ -80,6 +93,23 @@ export default function FoodDetailSheet({
   // Button's onSettled so the checkmark beat is seen before the sheet goes.
   const [saved, setSaved] = useState(false);
 
+  // Ultimate-Audit item 12 (raw/cooked basis toggle). Only curated foods with
+  // a dry/cooked distinction show the choice (foodRoles.hasWeightChoice via
+  // defaultWeightStateFor returning non-null); ready-state foods and every
+  // global/custom/quick-add food never show it. Edit mode opens on the
+  // entry's own saved label when it is a real choice; otherwise (add mode, or
+  // no prior label) it opens pre-selected to the food's native basis, so an
+  // untouched item keeps exactly today's meaning. This never changes grams or
+  // macros -- see foodRoles.js defaultWeightStateFor for the founder ruling
+  // this pins (store the basis, no conversion).
+  const curatedKey = curatedKeyOf(food);
+  const nativeWeightState = curatedKey ? defaultWeightStateFor(curatedKey) : null;
+  const showWeightChoice = nativeWeightState != null;
+  const initialWeight = (mode === 'edit' && (initialWeightState === 'raw' || initialWeightState === 'cooked'))
+    ? initialWeightState
+    : nativeWeightState;
+  const [weightState, setWeightState] = useState(initialWeight);
+
   const unit = units.find(u => u.key === unitKey) || units[units.length - 1];
   const quantityG = resolveGrams(amount, unit);
 
@@ -88,9 +118,11 @@ export default function FoodDetailSheet({
     setUnitKey(initial.unitKey);
     setAmount(initial.amount);
     setMealSlot(initialMealSlot);
+    setWeightState(initialWeight);
     setSubmitting(false);
     setSaved(false);
-  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, curatedKey]);
 
   // Opportunistic re-fetch (audit §15 item 4): viewing a promoted off/usda
   // food whose foods.fetched_at ("last verified") is past the staleness
@@ -135,7 +167,10 @@ export default function FoodDetailSheet({
     }
     setSubmitting(true);
     try {
-      await onSave({ quantityG: qty, mealSlot, entryDate: initialEntryDate });
+      // showWeightChoice false -> weightState is null (no basis to record for
+      // this food, e.g. it's 'ready'-state or not a curated staple); the
+      // caller/db layer falls back to 'as_weighed'.
+      await onSave({ quantityG: qty, mealSlot, entryDate: initialEntryDate, weightState });
       setSaved(true);
     } catch (_e) {
       setSubmitting(false);
@@ -245,6 +280,39 @@ export default function FoodDetailSheet({
           </View>
           {unitKey === 'serving' ? (
             <Text style={styles.gramHint}>= {Math.round(quantityG)} g</Text>
+          ) : null}
+
+          {/* Ultimate-Audit item 12: only shown for a curated food with a real
+              raw/cooked distinction. Choosing an option never changes the
+              grams above or the macros below -- it only records which basis
+              this entry's grams are in (founder ruling: store the basis, no
+              conversion). */}
+          {showWeightChoice ? (
+            <>
+              <Text style={styles.fieldLabel}>Weighed</Text>
+              <View style={styles.unitRow}>
+                <Chip
+                  label="Raw"
+                  selected={weightState === 'raw'}
+                  onPress={() => setWeightState('raw')}
+                  style={styles.unitBtn}
+                  labelStyle={styles.unitBtnText}
+                  selectedLabelStyle={styles.unitBtnTextActive}
+                  accessibilityRole="radio"
+                  accessibilityLabel="Weighed raw"
+                />
+                <Chip
+                  label="Cooked"
+                  selected={weightState === 'cooked'}
+                  onPress={() => setWeightState('cooked')}
+                  style={styles.unitBtn}
+                  labelStyle={styles.unitBtnText}
+                  selectedLabelStyle={styles.unitBtnTextActive}
+                  accessibilityRole="radio"
+                  accessibilityLabel="Weighed cooked"
+                />
+              </View>
+            </>
           ) : null}
 
           <View

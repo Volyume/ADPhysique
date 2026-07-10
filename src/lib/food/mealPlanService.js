@@ -470,6 +470,10 @@ export async function applyPlanDayToDiary(userId, day, { entryDate } = {}) {
         proteinG: Number(it.proteinG) || 0,
         carbsG: Number(it.carbsG) || 0,
         fatG: Number(it.fatG) || 0,
+        // Ultimate-Audit item 12: carries the per-item raw/cooked label the
+        // user set on the expanded plate (MealPlanScreen); undefined when
+        // untouched, which logFoodEntry defaults to 'as_weighed'.
+        weightState: it.weightState,
         // Written as planned scaffolding; the user confirms it as eaten on the
         // diary (adherence model). Until then it doesn't count towards adherence.
         isPlanned: true,

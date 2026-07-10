@@ -129,6 +129,9 @@ function _foodEntryToCloud(row, userId) {
     carbs_g: row.carbs_g,
     fat_g: row.fat_g,
     fibre_g: row.fibre_g ?? null,
+    // Ultimate-Audit item 12 (raw/cooked basis toggle, founder ruling
+    // NA-nutrition-1): a stored label only, never a conversion factor.
+    weight_state: row.weight_state ?? 'as_weighed',
     logged_at: _msToISOorNull(row.logged_at),
     created_at: _msToISOorNull(row.created_at),
     updated_at: _msToISOorNull(row.updated_at),

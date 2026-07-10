@@ -1080,3 +1080,19 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   tests incl. both fallback surfaces; full suite 627 green; lint +
   check:imports + tsc clean. FOUNDER-SIDE: fresh EAS build REQUIRED
   before this (or the iOS widget) reaches a device - native dep added.
+- ITEM 12 LANDED (D16 order 2/5, Sonnet, lead-reviewed): built from the
+  REAL June ruling (pass3-v2-founder-decisions.md:195-196, NA-nutrition-1
+  "store the basis, no conversion") which SUPERSEDES the pass4 blueprint's
+  conversion-factor design. food_entries.weight_state label (as_weighed
+  default | raw | cooked) - grams/kcal/macros NEVER change; UI = "Weighed:
+  Raw / Cooked" chips on FoodDetailSheet + MealPlan plate items, only for
+  non-ready-state foods. Local migration v66 + NEW CLOUD MIGRATION
+  supabase/migrate_114_food_entry_weight_state.sql (FOUNDER APPLIES
+  MANUALLY - queue now 110-114). Sync mapper carries the label; cloud
+  apply normalises. 18 new tests; 628 suites green; lint clean. AGENT
+  FINDINGS recorded: reconciliation doc cited wrong line number for the
+  ruling (says :75, real source :195-196 - correct on next doc touch);
+  pre-existing migrate_090 saved_meals/recipes field-name drift
+  (ingredients/servings vs items_json/total_servings) NOT fixed, queued
+  as a founder-visible investigation. 5-step device checklist in agent
+  report. NEXT: item 11 autonomy modes firing.

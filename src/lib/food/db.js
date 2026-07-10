@@ -20,6 +20,15 @@ import { generateUUID as uid } from '../uuid';
 
 // ─── food_entries (the diary) ────────────────────────────────────────────
 
+// Ultimate-Audit item 12 (raw/cooked basis toggle, founder ruling
+// NA-nutrition-1): the only three values weight_state may hold. Anything
+// else (missing, stale client, corrupt sync payload) falls back to
+// 'as_weighed' -- today's implicit meaning -- rather than guessing a basis.
+const VALID_WEIGHT_STATES = new Set(['as_weighed', 'raw', 'cooked']);
+function _normaliseWeightState(v) {
+  return VALID_WEIGHT_STATES.has(v) ? v : 'as_weighed';
+}
+
 /**
  * Log a food entry for a user on a specific date and meal slot.
  * Macros are denormalised at log time so future edits to the
@@ -36,6 +45,9 @@ import { generateUUID as uid } from '../uuid';
  * @param {number} entry.carbsG
  * @param {number} entry.fatG
  * @param {number} [entry.fibreG]
+ * @param {'as_weighed'|'raw'|'cooked'} [entry.weightState] - which basis the
+ *   grams are in (Ultimate-Audit item 12). Defaults to 'as_weighed', today's
+ *   behaviour: no conversion is ever performed, this is a stored label only.
  * @returns {Promise<string>} id of the new entry
  */
 export async function logFoodEntry(userId, entry) {
@@ -72,18 +84,19 @@ export async function logFoodEntry(userId, entry) {
   // rollup/adherence/FFM/sync until the user confirms they ate it (adherence
   // model 2026-06-15). Defaults to an actual (0).
   const isPlanned = entry.isPlanned ? 1 : 0;
+  const weightState = _normaliseWeightState(entry.weightState);
   await d.runAsync(
     `INSERT INTO food_entries (
       id, user_id, entry_date, meal_slot, food_ref, quantity_g,
       kcal, protein_g, carbs_g, fat_g, fibre_g, logged_at,
-      is_planned, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      is_planned, weight_state, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, userId, entry.entryDate, entry.mealSlot, entry.foodRef,
       finite(entry.quantityG), finite(entry.kcal), finite(entry.proteinG),
       finite(entry.carbsG), finite(entry.fatG),
       Number.isFinite(entry.fibreG) ? entry.fibreG : null, now,
-      isPlanned, now, now,
+      isPlanned, weightState, now, now,
     ]
   );
   await recomputeRollup(userId, entry.entryDate);
@@ -124,16 +137,17 @@ export async function updateFoodEntry(id, userId, patch) {
   );
   if (!existing) return false;
   const newDate = patch.entryDate ?? existing.entry_date;
+  const weightState = _normaliseWeightState(patch.weightState);
   await d.runAsync(
     `UPDATE food_entries SET
       entry_date = ?, meal_slot = ?, food_ref = ?, quantity_g = ?,
       kcal = ?, protein_g = ?, carbs_g = ?, fat_g = ?, fibre_g = ?,
-      updated_at = ?
+      weight_state = ?, updated_at = ?
     WHERE id = ? AND user_id = ?`,
     [
       newDate, patch.mealSlot, patch.foodRef, patch.quantityG,
       patch.kcal, patch.proteinG, patch.carbsG, patch.fatG,
-      patch.fibreG ?? null, now, id, userId,
+      patch.fibreG ?? null, weightState, now, id, userId,
     ]
   );
   await recomputeRollup(userId, newDate);
@@ -1586,13 +1600,13 @@ export async function applyFoodEntryFromCloud(userId, row) {
   await d.runAsync(
     `INSERT OR REPLACE INTO food_entries (
       id, user_id, entry_date, meal_slot, food_ref, quantity_g,
-      kcal, protein_g, carbs_g, fat_g, fibre_g, logged_at,
+      kcal, protein_g, carbs_g, fat_g, fibre_g, weight_state, logged_at,
       deleted_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       row.id, userId, entryDate, row.meal_slot, row.food_ref,
       row.quantity_g, row.kcal, row.protein_g, row.carbs_g, row.fat_g,
-      row.fibre_g ?? null, loggedAt,
+      row.fibre_g ?? null, _normaliseWeightState(row.weight_state), loggedAt,
       deletedAt, createdAt, updatedAt,
     ]
   );

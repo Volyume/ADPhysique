@@ -21,11 +21,13 @@ import {
   buildPlanSnapshot,
   buildDayPlanSnapshot,
   answerDayTraining,
+  applyPlanDayToDiary,
   applyPlanWeekToDiary,
   planNextWeek,
   resyncBankedPlannedFood,
   repeatPlanDay,
 } from '../mealPlanService';
+import { logFoodEntry } from '../db';
 import { assembleWeekPlan } from '../mealPlanAssembler';
 import { resolveComponent } from '../curatedFoods';
 import { mealTotals } from '../curatedMeals';
@@ -42,6 +44,39 @@ function _day() {
     ],
   };
 }
+
+// Ultimate-Audit item 12 (raw/cooked basis toggle, founder ruling
+// NA-nutrition-1: store the basis, no conversion). "Log this day" fans
+// each plan item through logFoodEntry; the per-item label the user set on
+// the expanded plate (MealPlanScreen) must ride along, and an item nobody
+// touched must default the same way manual logging does (logFoodEntry's own
+// 'as_weighed' fallback), never a silently invented raw/cooked guess here.
+describe('applyPlanDayToDiary: carries the per-item weight-state label (Ultimate-Audit item 12)', () => {
+  beforeEach(() => { logFoodEntry.mockClear(); });
+
+  test('an item with an explicit weightState passes it straight through to logFoodEntry', async () => {
+    const day = {
+      slots: [{
+        slot: 'meal_1',
+        items: [{ foodRef: 'curated:oats', quantityG: 60, kcal: 227, proteinG: 8, carbsG: 40, fatG: 4, weightState: 'cooked' }],
+      }],
+    };
+    await applyPlanDayToDiary('u1', day, { entryDate: '2026-07-05' });
+    expect(logFoodEntry).toHaveBeenCalledWith('u1', expect.objectContaining({ weightState: 'cooked' }));
+  });
+
+  test('an untouched item (no weightState field) forwards undefined, not a guessed label', async () => {
+    const day = {
+      slots: [{
+        slot: 'meal_1',
+        items: [{ foodRef: 'curated:white_rice', quantityG: 180, kcal: 234, proteinG: 5, carbsG: 50, fatG: 1 }],
+      }],
+    };
+    await applyPlanDayToDiary('u1', day, { entryDate: '2026-07-05' });
+    const call = logFoodEntry.mock.calls.find((c) => c[1].foodRef === 'curated:white_rice');
+    expect(call[1].weightState).toBeUndefined();
+  });
+});
 
 describe('storedTargetToEngineTarget', () => {
   test('maps a stored row to the engine shape with a ±10% band', () => {

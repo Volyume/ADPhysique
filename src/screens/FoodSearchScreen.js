@@ -570,7 +570,7 @@ export default function FoodSearchScreen({ navigation, route }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scannedFood]);
 
-  async function confirmLog({ quantityG, mealSlot: chosenSlot, entryDate: chosenDate }) {
+  async function confirmLog({ quantityG, mealSlot: chosenSlot, entryDate: chosenDate, weightState }) {
     if (!picker?.food) return;
     const food = picker.food;
     // Recipe builder reuse: hand the picked food back instead of logging.
@@ -598,6 +598,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       foodRef: food.food_ref,
       quantityG,
       food,
+      weightState,
     }));
     await upsertSlotRecent(userId, buildSlotRecentPayload({
       mealSlot: chosenSlot,

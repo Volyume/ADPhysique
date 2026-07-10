@@ -291,6 +291,36 @@ export function stateOf(foodKey) {
   return STATE[foodKey] || 'ready';
 }
 
+/**
+ * Whether a curated food has a meaningful raw/cooked weighing choice, i.e.
+ * its table entry is NOT already 'ready' (eaten as weighed: cooked meat,
+ * fruit, dairy...). Drives whether the food-logging and meal-plan surfaces
+ * show the "Weigh: Raw / Cooked" choice at all (Ultimate-Audit item 12).
+ */
+export function hasWeightChoice(foodKey) {
+  return stateOf(foodKey) !== 'ready';
+}
+
+/**
+ * The weight-state VALUE ('raw' | 'cooked') that matches a curated food's own
+ * table basis, or null when the food has no raw/cooked distinction (state
+ * 'ready', no choice shown). Founder ruling (NA-nutrition-1, pass3-v2-founder-
+ * decisions.md:195-196, 2026-06-14): "Raw/cooked = store the basis, no
+ * conversion (record which basis the grams are in; use the matching entry).
+ * Deterministic; no conversion table needed." There is no per-food conversion
+ * factor anywhere in this module and none is invented here: this only labels
+ * which choice matches the SAME per-100g entry the food already resolves
+ * against, so picking it leaves every gram figure and macro exactly as
+ * computed today. An untouched item defaults to this value, so it is
+ * unchanged from today's implicit meaning.
+ */
+export function defaultWeightStateFor(foodKey) {
+  const s = stateOf(foodKey);
+  if (s === 'dry') return 'raw';
+  if (s === 'cooked') return 'cooked';
+  return null;
+}
+
 /** FSA allergen tags for a curated food key (always an array). */
 export function tagsOf(foodKey) {
   return TAGS[foodKey] || [];

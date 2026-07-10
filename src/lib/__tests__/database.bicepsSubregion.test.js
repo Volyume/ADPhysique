@@ -20,12 +20,16 @@
  * than a string match on the migration source.
  *
  * Isolation: v65 (progress-scan classification history, D18) was appended
- * after v64, so v64 is now the second-to-last entry and this file runs the
- * last TWO migrations together via `runLastMigrations(raw, 2)` (v65 only
- * CREATE TABLE IF NOT EXISTS a new, unrelated table, so it is inert against
- * the exercises fixture here). This is the same "combined last N" adjustment
- * database.frontDeltMigration.test.js documents for v62/v63; a further
- * migration after v65 will need each count bumped again.
+ * after v64, so v64 was the second-to-last entry with v65 alone after it
+ * (v65 only CREATE TABLE IF NOT EXISTS a new, unrelated table, inert against
+ * the exercises fixture here). v66 (Ultimate-Audit item 12, raw/cooked
+ * weight-state) has now landed after v65 too, and unlike v65 it is NOT inert
+ * against a fixture missing its table: it ALTERs food_entries, which this
+ * file never created. freshExercisesDb now also creates a minimal
+ * food_entries table, and this file runs the last THREE migrations together
+ * via `runLastMigrations(raw, 3)` (v64+v65+v66). This is the same "combined
+ * last N" adjustment database.frontDeltMigration.test.js documents for
+ * v62/v63; a further migration after v66 will need each count bumped again.
  */
 
 const { DatabaseSync } = require('node:sqlite');
@@ -77,6 +81,10 @@ function freshExercisesDb() {
     primary_muscle TEXT,
     subregion TEXT
   );`);
+  // v66 (Ultimate-Audit item 12) now also runs alongside v64/v65 in this same
+  // harness and ALTERs food_entries; a minimal table is enough for the ALTER
+  // to succeed (no exercises row is affected).
+  raw.exec(`CREATE TABLE food_entries (id TEXT PRIMARY KEY);`);
   return raw;
 }
 
@@ -119,7 +127,7 @@ describe('SCHEMA_MIGRATIONS v64: biceps subregion tags', () => {
   test('tags long_head, short_head and brachialis exercises correctly', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    await runLastMigrations(raw, 2);
+    await runLastMigrations(raw, 3);
 
     expect(subregionOf(raw, 'ex-1')).toBe('long_head');
     expect(subregionOf(raw, 'ex-2')).toBe('long_head');
@@ -132,7 +140,7 @@ describe('SCHEMA_MIGRATIONS v64: biceps subregion tags', () => {
   test('is exactly scoped to biceps rows: a non-biceps exercise, and a same-named exercise on a different muscle, are never touched', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    await runLastMigrations(raw, 2);
+    await runLastMigrations(raw, 3);
 
     expect(subregionOf(raw, 'ex-7')).toBeNull(); // Barbell Bench Press / chest
     expect(subregionOf(raw, 'ex-8')).toBeNull(); // Barbell Curl / forearms (name collision, wrong muscle)
@@ -141,7 +149,7 @@ describe('SCHEMA_MIGRATIONS v64: biceps subregion tags', () => {
   test('is idempotent: running the migration a second time leaves the tags unchanged and errors on neither run', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    const total = await runLastMigrations(raw, 2);
+    const total = await runLastMigrations(raw, 3);
 
     raw.exec(`PRAGMA user_version = ${total - 1}`);
     const d = adapt(raw);
@@ -172,7 +180,7 @@ describe('SCHEMA_MIGRATIONS v64: biceps subregion tags', () => {
     const raw = freshExercisesDb();
     raw.prepare('INSERT INTO exercises (id, name, primary_muscle, subregion) VALUES (?, ?, ?, ?)')
       .run('ex-1', 'Incline Dumbbell Curl', 'biceps', 'short_head');
-    await runLastMigrations(raw, 2);
+    await runLastMigrations(raw, 3);
     expect(subregionOf(raw, 'ex-1')).toBe('long_head');
   });
 });
