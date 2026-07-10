@@ -3011,7 +3011,7 @@ export async function getRoutineById(id) {
   return rowToCamel(row);
 }
 
-export async function createRoutine(userId, name, description = null, splitType = null, isLibrary = 0, sourceRoutineId = null, programmeId = null, isSample = false) {
+export async function createRoutine(userId, name, description = null, splitType = null, isLibrary = 0, sourceRoutineId = null, programmeId = null, isSample = false, scheduleSync = true) {
   const d = await db();
   const id = uid();
   const now = Date.now();
@@ -3028,7 +3028,7 @@ export async function createRoutine(userId, name, description = null, splitType 
      VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)`,
     [id, userId, name, description, splitType, isLibrary, isSampleInt, sourceRoutineId, programmeId, position, now, now],
   );
-  _scheduleSync();
+  if (scheduleSync) _scheduleSync();
   return { id, userId, name, description, splitType, isActive: 1, isLibrary, isSample: isSampleInt, sourceRoutineId, programmeId, position, createdAt: now, updatedAt: now };
 }
 
@@ -3140,7 +3140,7 @@ export async function deleteOrphanedRoutines(userId) {
 
 // ─── Programmes ───────────────────────────────────────────────────────────────────────────────────────
 
-export async function createProgramme(userId, name, description = null, isLibrary = 0, tags = null, splitType = null, difficulty = null) {
+export async function createProgramme(userId, name, description = null, isLibrary = 0, tags = null, splitType = null, difficulty = null, scheduleSync = true) {
   const d = await db();
   const id = uid();
   const now = Date.now();
@@ -3149,8 +3149,23 @@ export async function createProgramme(userId, name, description = null, isLibrar
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [id, userId || null, name, description, isLibrary, tags, splitType, difficulty, now, now],
   );
-  _scheduleSync();
+  if (scheduleSync) _scheduleSync();
   return { id, userId, name, description, isLibrary, tags, splitType, difficulty, createdAt: now, updatedAt: now };
+}
+
+export async function deleteProgrammeCascade(programmeId, { scheduleSync = true } = {}) {
+  if (!programmeId) return;
+  const d = await db();
+  await runInTransaction(d, async () => {
+    await d.runAsync(
+      `DELETE FROM routine_exercises
+       WHERE routine_id IN (SELECT id FROM routines WHERE programme_id = ?)`,
+      [programmeId],
+    );
+    await d.runAsync('DELETE FROM routines WHERE programme_id = ?', [programmeId]);
+    await d.runAsync('DELETE FROM programmes WHERE id = ?', [programmeId]);
+  });
+  if (scheduleSync) _scheduleSync();
 }
 
 export async function getAllProgrammes(userId) {
@@ -3287,7 +3302,7 @@ export async function getRoutineExercisesWithDetails(routineId) {
   });
 }
 
-export async function addExerciseToRoutine(routineId, exerciseId, order, repsMin = 6, repsMax = 12, notes = null, sets = 3, startingWeight = null, restSeconds = null, supersetGroupId = null) {
+export async function addExerciseToRoutine(routineId, exerciseId, order, repsMin = 6, repsMax = 12, notes = null, sets = 3, startingWeight = null, restSeconds = null, supersetGroupId = null, scheduleSync = true) {
   const d = await db();
   const id = uid();
   const now = Date.now();
@@ -3306,7 +3321,7 @@ export async function addExerciseToRoutine(routineId, exerciseId, order, repsMin
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [id, routineId, exerciseId, exerciseName, order, sets, repsMin, repsMax, notes, startingWeight, restSeconds, supersetGroupId, now, now],
   );
-  _scheduleSync();
+  if (scheduleSync) _scheduleSync();
   return { id, routineId, exerciseId, orderInRoutine: order, supersetGroupId };
 }
 

@@ -21,6 +21,9 @@ import {
   activatePlanWithBlock,
   archiveOtherUserPlans,
   getAllProgrammes,
+  db,
+  runInTransaction,
+  deleteProgrammeCascade,
 } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generatePlan } from './planEngine';
@@ -152,38 +155,51 @@ export async function generateAndSavePlan(userId, profile) {
 
   const baseName = plan.name ?? 'Your plan';
   const planName = await makeUniquePlanName(userId, baseName);
+  let programmeId = null;
   try {
-    const prog = await createProgramme(userId, planName, plan.description ?? '', 0);
-    const exerciseMap = {};
-    for (const ex of allExercises) exerciseMap[ex.name.toLowerCase()] = ex;
-
-    let totalWritten = 0;
-    let totalRequested = 0;
-    const missedNames = [];
-    for (const workout of plan.workouts) {
-      const routine = await createRoutine(
-        userId, workout.name, null, plan.splitType, 0, null, prog.id,
+    const writeResult = await runInTransaction(await db(), async () => {
+      const prog = await createProgramme(
+        userId, planName, plan.description ?? '', 0, null, null, null, false,
       );
-      for (let i = 0; i < workout.exercises.length; i++) {
-        const ex = workout.exercises[i];
-        totalRequested++;
-        const dbEx = exerciseMap[ex.exerciseName?.toLowerCase()];
-        if (!dbEx) {
-          if (missedNames.length < 5 && ex.exerciseName) missedNames.push(ex.exerciseName);
-          continue;
-        }
-        await addExerciseToRoutine(
-          routine.id, dbEx.id, i, ex.repMin, ex.repMax, ex.notes ?? null, ex.sets,
-          null,                          // startingWeight, engine doesn't set this
-          ex.restSec ?? null,
-          ex.supersetGroupId ?? null,    // pairing from plan engine
+      programmeId = prog.id;
+      const exerciseMap = {};
+      for (const ex of allExercises) exerciseMap[ex.name.toLowerCase()] = ex;
+
+      let totalWritten = 0;
+      let totalRequested = 0;
+      const missedNames = [];
+      for (const workout of plan.workouts) {
+        const routine = await createRoutine(
+          userId, workout.name, null, plan.splitType, 0, null, prog.id, false, false,
         );
-        totalWritten++;
+        for (let i = 0; i < workout.exercises.length; i++) {
+          const ex = workout.exercises[i];
+          totalRequested++;
+          const dbEx = exerciseMap[ex.exerciseName?.toLowerCase()];
+          if (!dbEx) {
+            if (missedNames.length < 5 && ex.exerciseName) missedNames.push(ex.exerciseName);
+            continue;
+          }
+          await addExerciseToRoutine(
+            routine.id, dbEx.id, i, ex.repMin, ex.repMax, ex.notes ?? null, ex.sets,
+            null,                          // startingWeight, engine doesn't set this
+            ex.restSec ?? null,
+            ex.supersetGroupId ?? null,    // pairing from plan engine
+            false,
+          );
+          totalWritten++;
+        }
       }
+      if (totalWritten === 0) {
+        await deleteProgrammeCascade(prog.id, { scheduleSync: false });
+        return { zeroMatch: true, prog, totalWritten, totalRequested, missedNames };
+      }
+      return { zeroMatch: false, prog, totalWritten, totalRequested, missedNames };
+    });
+    if (writeResult.zeroMatch) {
+      return { ok: false, error: 'Plan created but no exercises matched the library' };
     }
-    if (totalWritten === 0) {
-      return { ok: false, programmeId: prog.id, error: 'Plan created but no exercises matched the library' };
-    }
+    const { prog, totalWritten, totalRequested, missedNames } = writeResult;
     // Soft warning when the engine wanted exercises we couldn't fulfil
     // (typically a bodyweight-only user where the engine picked a barbell
     // movement). The plan is still usable but visibly thinner than asked
@@ -218,6 +234,14 @@ export async function generateAndSavePlan(userId, profile) {
     }
     return result;
   } catch (e) {
+    if (programmeId) {
+      try {
+        await deleteProgrammeCascade(programmeId, { scheduleSync: false });
+      } catch (cleanupError) {
+        // eslint-disable-next-line global-require
+        try { require('./errorLog').logError('plan.generateAndSave.cleanupFailed', cleanupError, { userId, programmeId }); } catch (_) {}
+      }
+    }
     return { ok: false, error: e?.message ?? 'DB write failed' };
   }
 }

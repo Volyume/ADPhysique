@@ -13,13 +13,18 @@ jest.mock('../database', () => ({
   activatePlanWithBlock: jest.fn(),
   archiveOtherUserPlans: jest.fn(),
   getAllProgrammes: jest.fn(),
+  db: jest.fn(),
+  runInTransaction: jest.fn(),
+  deleteProgrammeCascade: jest.fn(),
+  recordEngineTelemetry: jest.fn(async () => 'telemetry-1'),
 }));
 
-import { buildPlanInputs, generatePlanDryRun } from '../planAutoGen';
+import { buildPlanInputs, generateAndSavePlan, generatePlanDryRun } from '../planAutoGen';
 import { POOL } from '../planEngine';
 import {
   getAllExercises, createProgramme, createRoutine, addExerciseToRoutine,
-  activatePlanWithBlock,
+  activatePlanWithBlock, archiveOtherUserPlans, getAllProgrammes,
+  db, runInTransaction, deleteProgrammeCascade,
 } from '../database';
 
 // A library that contains every name the engine can pick, so the match loop
@@ -138,6 +143,82 @@ describe('buildPlanInputs', () => {
     });
     expect(inputs).not.toBeNull();
     expect(inputs.nutritionPhase).toBe('maintain');
+  });
+});
+
+describe('generateAndSavePlan atomic persistence', () => {
+  const profile = {
+    experience: 'intermediate', daysPerWeek: 4, sessionLengthMinutes: 60,
+    equipment: 'full_gym', trainingGoal: 'build_muscle', trainingPhase: 'maintain',
+    recoveryRating: 'average',
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    getAllProgrammes.mockResolvedValue([]);
+    getAllExercises.mockResolvedValue(FULL_LIBRARY.map((exercise, index) => ({
+      ...exercise,
+      id: `exercise-${index}`,
+    })));
+    db.mockResolvedValue({});
+    runInTransaction.mockImplementation(async (_connection, task) => task());
+    createProgramme.mockResolvedValue({ id: 'programme-1' });
+    let routineIndex = 0;
+    createRoutine.mockImplementation(async () => ({ id: `routine-${routineIndex++}` }));
+    addExerciseToRoutine.mockResolvedValue({ id: 'routine-exercise-1' });
+    activatePlanWithBlock.mockResolvedValue('mesocycle-1');
+    archiveOtherUserPlans.mockResolvedValue(undefined);
+    deleteProgrammeCascade.mockResolvedValue(undefined);
+  });
+
+  test('writes the plan in one transaction and suppresses intermediate sync', async () => {
+    const result = await generateAndSavePlan('u1', profile);
+
+    expect(result.ok).toBe(true);
+    expect(runInTransaction).toHaveBeenCalledTimes(1);
+    expect(createProgramme).toHaveBeenCalledWith(
+      'u1', expect.any(String), expect.any(String), 0, null, null, null, false,
+    );
+    for (const call of createRoutine.mock.calls) expect(call.at(-1)).toBe(false);
+    for (const call of addExerciseToRoutine.mock.calls) expect(call.at(-1)).toBe(false);
+    expect(deleteProgrammeCascade).not.toHaveBeenCalled();
+  });
+
+  test('zero library matches remove the empty programme without scheduling sync', async () => {
+    getAllExercises.mockResolvedValue([]);
+
+    const result = await generateAndSavePlan('u1', profile);
+
+    expect(result).toEqual({
+      ok: false,
+      error: 'Plan created but no exercises matched the library',
+    });
+    expect(deleteProgrammeCascade).toHaveBeenCalledWith(
+      'programme-1',
+      { scheduleSync: false },
+    );
+    expect(activatePlanWithBlock).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ['programme insert', createProgramme],
+    ['routine insert', createRoutine],
+    ['exercise insert', addExerciseToRoutine],
+  ])('%s failure returns an error and cleans any allocated programme', async (_label, failingWrite) => {
+    failingWrite.mockRejectedValueOnce(new Error('injected write failure'));
+
+    const result = await generateAndSavePlan('u1', profile);
+
+    expect(result).toEqual({ ok: false, error: 'injected write failure' });
+    if (failingWrite === createProgramme) {
+      expect(deleteProgrammeCascade).not.toHaveBeenCalled();
+    } else {
+      expect(deleteProgrammeCascade).toHaveBeenCalledWith(
+        'programme-1',
+        { scheduleSync: false },
+      );
+    }
+    expect(activatePlanWithBlock).not.toHaveBeenCalled();
   });
 });
 

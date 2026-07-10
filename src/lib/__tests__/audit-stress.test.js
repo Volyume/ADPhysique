@@ -17,6 +17,12 @@ jest.mock('../database', () => ({
   addExerciseToRoutine: jest.fn(),
   getAllExercises: jest.fn(),
   activatePlanWithBlock: jest.fn(),
+  archiveOtherUserPlans: jest.fn(),
+  getAllProgrammes: jest.fn(),
+  db: jest.fn(),
+  runInTransaction: jest.fn(),
+  deleteProgrammeCascade: jest.fn(),
+  recordEngineTelemetry: jest.fn(async () => 'telemetry-1'),
 }));
 
 import { generatePlan } from '../planEngine';
