@@ -41,7 +41,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const sleep = useStoreSelector(appStore, (s) => s.lastSleep);
   const perf = useStoreSelector(appStore, (s) => s.sleepPerformance);
   const sleepScore = useStoreSelector(appStore, (s) => s.sleepScore);
-  const sleepNeed = useStoreSelector(appStore, (s) => s.sleepNeed);
+  const tonightNeed = useStoreSelector(appStore, (s) => s.sleepNeed);
   const regularity = useStoreSelector(appStore, (s) => s.sleepReg);
   const consistency = useStoreSelector(appStore, (s) => s.sleepConsistency);
   const stress = useStoreSelector(appStore, (s) => s.sleepStress);
@@ -59,7 +59,8 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   }, [sleep]);
 
   const tib = sleep?.inBedMin || 1;
-  const neededMin = sleepNeed?.neededMin ?? BASE_NEED_MIN;
+  const lastNightNeed = useMemo(() => storedSleepNeed(today?.sleepDetail), [today?.sleepDetail]);
+  const neededMin = lastNightNeed?.neededMin ?? sleep?.neededMin ?? BASE_NEED_MIN;
   const week = recentDays.slice(0, 7).reverse();
   const days = useMemo(() => orderedDays(today, recentDays), [today, recentDays]);
   const debtExcludedNights = useMemo(() => lowTrustDebtNightCount(recentDays, today?.day), [recentDays, today?.day]);
@@ -75,8 +76,8 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const largeSurplusSleepMin = sleep ? Math.max(0, sleep.asleepMin - Math.round(neededMin * 1.1)) : 0;
   const stagesTrusted = today?.sleepDetail?.restorativeMin != null;
   const scoreDrivers = useMemo(
-    () => sleepScoreDrivers({ perf, sleepScore, sleep, capture, sleepNeed, stress }),
-    [perf, sleepScore, sleep, capture, sleepNeed, stress],
+    () => sleepScoreDrivers({ perf, sleepScore, sleep, capture, sleepNeed: lastNightNeed, stress }),
+    [perf, sleepScore, sleep, capture, lastNightNeed, stress],
   );
   const stageQuality = useMemo(() => stageQualityCheck(sleep, capture, stagesTrusted), [sleep, capture, stagesTrusted]);
   const verdict = sleepVerdict({ sleep, capture, perfCapped: !!perf?.cappedByConfidence, rmssd: today?.rmssd ?? null, rhr: today?.rhr ?? null });
@@ -84,7 +85,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
     sleep,
     capture,
     perfCapped: !!perf?.cappedByConfidence,
-    sleepNeed,
+    sleepNeed: tonightNeed,
     stress,
     consistency,
   });
@@ -177,7 +178,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
             ))}
             {surplusSleepMin > 0 ? (
               <Text style={styles.surplusNote}>
-                You slept {formatDuration(surplusSleepMin)} beyond today's calculated need; Sleep Performance is capped at 100%.
+                You slept {formatDuration(surplusSleepMin)} beyond last night's calculated need; Sleep Performance is capped at 100%.
               </Text>
             ) : null}
           </>
@@ -402,12 +403,12 @@ export function SleepScreen({ nav }: { nav: Nav }) {
       </View>
 
       {/* Sleep Need breakdown */}
-      <SectionLabel>How sleep need is calculated</SectionLabel>
+      <SectionLabel>Last night's sleep need</SectionLabel>
       <Card>
-        <NeedRow label="Baseline" value={formatDuration(sleepNeed?.baselineMin ?? BASE_NEED_MIN)} />
-        <NeedRow label="Recent naps" value={`−${formatDuration(sleepNeed?.napMin ?? 0)}`} />
-        <NeedRow label="Recent strain" value={`+${formatDuration(sleepNeed?.strainMin ?? 0)}`} />
-        <NeedRow label="Sleep debt" value={`+${formatDuration(sleepNeed?.debtMin ?? 0)}`} />
+        <NeedRow label="Baseline" value={formatDuration(lastNightNeed?.baselineMin ?? BASE_NEED_MIN)} />
+        <NeedRow label="Recent naps" value={`−${formatDuration(lastNightNeed?.napMin ?? 0)}`} />
+        <NeedRow label="Recent strain" value={`+${formatDuration(lastNightNeed?.strainMin ?? 0)}`} />
+        <NeedRow label="Sleep debt" value={`+${formatDuration(lastNightNeed?.debtMin ?? 0)}`} />
         <View style={styles.divider} />
         <NeedRow label="Sleep needed" value={formatDuration(neededMin)} strong />
         {sleep ? <NeedRow label="Hours of sleep" value={formatDuration(sleep.asleepMin)} strong /> : null}
@@ -451,6 +452,9 @@ export function SleepScreen({ nav }: { nav: Nav }) {
             <StressBar label="High" color="#FFA722" pct={stress.highPct} minutes={stress.highMin} />
             <StressBar label="Medium" color="#00F19F" pct={stress.medPct} minutes={stress.medMin} />
             <StressBar label="Low" color={colors.sleepTeal} pct={stress.lowPct} minutes={stress.lowMin} />
+            {stress.unscoredMin > 0 ? (
+              <StressBar label="Unscored" color={colors.textTertiary} pct={stress.unscoredPct} minutes={stress.unscoredMin} />
+            ) : null}
           </>
         ) : (
           <Empty text="Overnight stress (0–3) is derived from your heart-rate variability and heart rate through the night." />
@@ -528,6 +532,21 @@ function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): Da
   if (today) byDay.set(today.day, today);
   for (const d of recent) byDay.set(d.day, d);
   return [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day));
+}
+
+function storedSleepNeed(
+  detail: DailyMetricRow['sleepDetail'] | undefined,
+): NonNullable<ReturnType<typeof appStore.getState>['sleepNeed']> | null {
+  if (detail?.needMin == null) return null;
+  const minutes = (value: number | null | undefined, fallback = 0) =>
+    Math.max(0, Math.round(value ?? fallback));
+  return {
+    baselineMin: minutes(detail.baselineMin, BASE_NEED_MIN),
+    strainMin: minutes(detail.strainMin),
+    debtMin: minutes(detail.debtMin),
+    napMin: minutes(detail.napMin),
+    neededMin: minutes(detail.needMin, BASE_NEED_MIN),
+  };
 }
 
 function sleepVerdict(input: {

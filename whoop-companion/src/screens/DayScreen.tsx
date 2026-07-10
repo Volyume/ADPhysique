@@ -1,9 +1,10 @@
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import type { DailyMetricRow } from '../db/database';
+import type { CardioRow, DailyMetricRow } from '../db/database';
 import { Card, Dial, Empty, Screen, SectionLabel, Stat } from '../ui/components';
 import { colors, fonts, recoveryColor, sleepStageColors } from '../ui/theme';
 import type { Nav } from '../ui/navigation';
@@ -19,12 +20,18 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
   const today = useStoreSelector(appStore, (s) => s.today);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
-  const days = orderedDays(today, recentDays);
+  const lastSyncTs = useStoreSelector(appStore, (s) => s.lastSyncTs);
+  const [loadedMetric, setLoadedMetric] = useState<{ day: string; row: DailyMetricRow | null } | null>(null);
+  const [loadedActivities, setLoadedActivities] = useState<{ day: string; rows: CardioRow[] } | null>(null);
+  const olderRow = loadedMetric?.day === day ? loadedMetric.row : null;
+  const days = orderedDays(today, olderRow ? [olderRow, ...recentDays] : recentDays);
+  const railDays = calendarRailDays(days, day);
   const metric = days.find((d) => d.day === day) ?? null;
-  const idx = days.findIndex((d) => d.day === day);
-  const previous = idx >= 0 ? days[idx + 1] : null;
-  const next = idx > 0 ? days[idx - 1] : null;
-  const acts = cardio.filter((c) => dayForTs(c.startTs) === day);
+  const previousDay = offsetDayKey(day, -1);
+  const nextDay = day < localDayKey(Date.now()) ? offsetDayKey(day, 1) : null;
+  const acts = loadedActivities?.day === day
+    ? loadedActivities.rows
+    : cardio.filter((c) => dayForTs(c.startTs) === day);
   const sleepPerf = metric?.sleepDetail?.performance != null
     ? clampPct(metric.sleepDetail.performance)
     : metric?.sleepPerf != null
@@ -39,6 +46,18 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
   const sleepReview = metric ? daySleepReview(metric) : null;
   const vitalsReview = metric ? dayVitalsReview(metric) : null;
 
+  useEffect(() => {
+    let active = true;
+    void Promise.all([appStore.loadDay(day), appStore.loadActivitiesForDay(day)]).then(([row, activities]) => {
+      if (!active) return;
+      setLoadedMetric({ day, row });
+      setLoadedActivities({ day, rows: activities });
+    });
+    return () => {
+      active = false;
+    };
+  }, [day, lastSyncTs]);
+
   return (
     <Screen
       title="Day"
@@ -46,18 +65,17 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
       right={
         <View style={styles.arrows}>
           <TouchableOpacity
-            onPress={() => previous && nav.navigate({ name: 'day', day: previous.day })}
-            disabled={!previous}
+            onPress={() => nav.replace({ name: 'day', day: previousDay })}
             hitSlop={10}
-            style={[styles.iconBtn, !previous && styles.disabled]}
+            style={styles.iconBtn}
           >
             <Ionicons name="chevron-back" size={18} color={colors.text} />
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => next && nav.navigate({ name: 'day', day: next.day })}
-            disabled={!next}
+            onPress={() => nextDay && nav.replace({ name: 'day', day: nextDay })}
+            disabled={!nextDay}
             hitSlop={10}
-            style={[styles.iconBtn, !next && styles.disabled]}
+            style={[styles.iconBtn, !nextDay && styles.disabled]}
           >
             <Ionicons name="chevron-forward" size={18} color={colors.text} />
           </TouchableOpacity>
@@ -65,7 +83,7 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
       }
     >
       <Text style={styles.date}>{formatDayLong(day)}</Text>
-      <DayRail days={days} selected={day} onSelect={(selected) => nav.navigate({ name: 'day', day: selected })} />
+      <DayRail days={railDays} selected={day} onSelect={(selected) => nav.replace({ name: 'day', day: selected })} />
 
       {!metric ? (
         <Card>
@@ -254,7 +272,7 @@ export function DayRail({
   selected,
   onSelect,
 }: {
-  days: DailyMetricRow[];
+  days: DayRailItem[];
   selected: string;
   onSelect: (day: string) => void;
 }) {
@@ -279,6 +297,8 @@ export function DayRail({
   );
 }
 
+type DayRailItem = Pick<DailyMetricRow, 'day' | 'recovery' | 'sleepMin' | 'sleepDetail' | 'strain'>;
+
 function StageRow({ label, minutes, total, color }: { label: string; minutes: number | null; total: number; color: string }) {
   const pct = total > 0 && minutes != null ? Math.round((minutes / total) * 100) : 0;
   return (
@@ -294,7 +314,7 @@ function StageRow({ label, minutes, total, color }: { label: string; minutes: nu
   );
 }
 
-function sleepDotColor(day: DailyMetricRow): string {
+function sleepDotColor(day: DayRailItem): string {
   if (day.sleepMin == null) return colors.surface;
   const tier = sleepTrustTier(day.sleepDetail);
   if (tier === 'low') return colors.recoveryRed;
@@ -307,6 +327,30 @@ function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): Da
   if (today) byDay.set(today.day, today);
   for (const d of recent) byDay.set(d.day, d);
   return [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day));
+}
+
+function calendarRailDays(metrics: DailyMetricRow[], selected: string, count = 30): DayRailItem[] {
+  const byDay = new Map(metrics.map((metric) => [metric.day, metric]));
+  const today = localDayKey(Date.now());
+  const newest = selected > today ? today : selected < offsetDayKey(today, -(count - 1)) ? selected : today;
+  return Array.from({ length: count }, (_, index) => {
+    const day = offsetDayKey(newest, -index);
+    return byDay.get(day) ?? { day, recovery: null, sleepMin: null, sleepDetail: null, strain: null };
+  });
+}
+
+function localDayKey(ts: number): string {
+  const date = new Date(ts);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function offsetDayKey(day: string, offset: number): string {
+  const date = new Date(`${day}T12:00:00`);
+  date.setDate(date.getDate() + offset);
+  return localDayKey(date.getTime());
 }
 
 function dayForTs(ts: number): string {

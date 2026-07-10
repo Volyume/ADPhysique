@@ -26,11 +26,12 @@ export function StressScreen({ nav }: { nav: Nav }) {
   const liveStress = useStoreSelector(appStore, (s) => s.liveStress);
   const storedStress = useStoreSelector(appStore, (s) => s.storedStress);
   const status = useStoreSelector(appStore, (s) => s.status);
+  const lastSyncTs = useStoreSelector(appStore, (s) => s.lastSyncTs);
   const [series, setSeries] = useState<Array<{ tsMs: number; score: number }>>([]);
 
   useEffect(() => {
     void appStore.stressSeries().then(setSeries);
-  }, []);
+  }, [lastSyncTs]);
 
   const stressValue = liveStress ?? storedStress;
   const tint = stressColor(stressValue);

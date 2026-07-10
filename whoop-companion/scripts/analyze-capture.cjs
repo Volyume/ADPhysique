@@ -76,7 +76,7 @@ function main() {
   console.log(`chunks: ${chunks.length}`);
   console.log(`maverick_frames: ${frames.length}`);
   console.log(`packet_counts: ${JSON.stringify(Object.fromEntries([...byPacket.entries()].sort((a, b) => a[0] - b[0])))}`);
-  console.log(`metadata: starts=${meta.starts} ends=${meta.ends} completes=${meta.completes}`);
+  console.log(`metadata: starts=${meta.starts} ends=${meta.ends} unique_ends=${meta.uniqueEnds} unique_ends_after_prior_end=${meta.uniqueEndsAfterPriorEnd} completes=${meta.completes}`);
   console.log(`command_responses: ${JSON.stringify(commandResponses)}`);
   console.log(
     `history: records=${decoded.records} decoded=${decoded.decodedRecords} rejected=${decoded.rejectedRecords} dropped_ts=${decoded.droppedImplausibleTs} versions=${versions}`,
@@ -520,14 +520,28 @@ function summarizeMetadata(framesIn) {
   let starts = 0;
   let ends = 0;
   let completes = 0;
+  const uniqueEndData = new Set();
+  let endSeenSinceStart = false;
+  let uniqueEndsAfterPriorEnd = 0;
   for (const frame of framesIn) {
     if (frame.packetType !== PACKET_METADATA && frame.packetType !== PACKET_PUFFIN_METADATA) continue;
     const metaType = frame.inner[2];
-    if (metaType === 1) starts += 1;
-    else if (metaType === 2) ends += 1;
+    if (metaType === 1) {
+      starts += 1;
+      endSeenSinceStart = false;
+    }
+    else if (metaType === 2) {
+      ends += 1;
+      if (frame.inner.length >= 21) {
+        const key = bytesToHex(frame.inner.subarray(13, 21));
+        if (endSeenSinceStart && !uniqueEndData.has(key)) uniqueEndsAfterPriorEnd += 1;
+        uniqueEndData.add(key);
+      }
+      endSeenSinceStart = true;
+    }
     else if (metaType === 3) completes += 1;
   }
-  return { starts, ends, completes };
+  return { starts, ends, uniqueEnds: uniqueEndData.size, uniqueEndsAfterPriorEnd, completes };
 }
 
 function summarizeCommandResponses(framesIn) {

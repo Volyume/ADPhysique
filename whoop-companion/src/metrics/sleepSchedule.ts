@@ -15,6 +15,7 @@ export type SleepSchedule = {
 };
 
 type SleepDay = {
+  day?: string | null;
   sleepStart: number | null;
   sleepEnd: number | null;
   sleepMin: number | null;
@@ -38,6 +39,27 @@ function clockMinute(ts: number): number {
   return date.getHours() * 60 + date.getMinutes();
 }
 
+function localDayKey(ts: number): string {
+  const date = new Date(ts);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function sleepDayKey(day: SleepDay): string | null {
+  if (typeof day.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day.day)) return day.day;
+  return day.sleepEnd != null && Number.isFinite(day.sleepEnd) ? localDayKey(day.sleepEnd) : null;
+}
+
+function newestFirst(a: SleepDay, b: SleepDay): number {
+  const aKey = sleepDayKey(a);
+  const bKey = sleepDayKey(b);
+  if (aKey == null) return bKey == null ? 0 : 1;
+  if (bKey == null) return -1;
+  return aKey < bKey ? 1 : aKey > bKey ? -1 : 0;
+}
+
 function nightMinute(ts: number): number {
   const minute = clockMinute(ts);
   // Keep after-midnight bedtimes next to late-evening ones for the median.
@@ -59,7 +81,7 @@ export const FALLBACK_SLEEP_SCHEDULE: SleepSchedule = {
 };
 
 export function inferSleepSchedule(days: SleepDay[]): SleepSchedule {
-  const usable = days
+  const reliable = days
     .filter((day) => {
       const duration = day.sleepStart != null && day.sleepEnd != null ? (day.sleepEnd - day.sleepStart) / 60000 : 0;
       const confidence = day.sleepDetail?.confidence;
@@ -70,7 +92,15 @@ export function inferSleepSchedule(days: SleepDay[]): SleepSchedule {
         (day.sleepMin != null && (confidence === 'high' || confidence === 'medium') && coverage >= 70)
       );
     })
-    .slice(0, 28);
+    .sort(newestFirst);
+  const seenDays = new Set<string>();
+  const usable = reliable.filter((day) => {
+    const key = sleepDayKey(day);
+    if (key == null) return true;
+    if (seenDays.has(key)) return false;
+    seenDays.add(key);
+    return true;
+  }).slice(0, 28);
   if (!usable.length) return FALLBACK_SLEEP_SCHEDULE;
 
   const beds = usable.map((day) => nightMinute(day.sleepStart as number));

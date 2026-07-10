@@ -61,6 +61,8 @@ const AUTO_SLEEP_BOUNDARY_SIGNAL_MIN = 10;
 type SleepWindowOptions = {
   minWindowMin: number;
   maxWindowMin: number;
+  endAfterTs?: number;
+  endBeforeTs?: number;
 };
 
 /**
@@ -192,6 +194,8 @@ function findSleepWindow(
     if (runStart < 0 || endExclusive <= runStart) return;
     const startTs = samples[runStart]?.ts ?? 0;
     const endTs = (samples[endExclusive - 1]?.ts ?? startTs) + 60000;
+    if (opts.endAfterTs != null && endTs < opts.endAfterTs) return;
+    if (opts.endBeforeTs != null && endTs >= opts.endBeforeTs) return;
     const elapsed = Math.round((endTs - startTs) / 60000);
     if (elapsed > bestElapsed) {
       bestElapsed = elapsed;
@@ -254,7 +258,9 @@ function findSleepWindow(
     p80 - p20 <= 25 &&
     activeRatio <= 0.08 &&
     overnightRatio >= 0.65 &&
-    motionProof
+    motionProof &&
+    (opts.endAfterTs == null || lastTs + 60000 >= opts.endAfterTs) &&
+    (opts.endBeforeTs == null || lastTs + 60000 < opts.endBeforeTs)
   ) {
     return trimSleepWindow(samples, 0, samples.length, p20, spread, opts) ?? { start: 0, end: samples.length };
   }
@@ -306,11 +312,22 @@ function trimSleepWindow(
     }
   }
 
-  if (trimmedEnd - trimmedStart < opts.minWindowMin) return { start, end };
-  if (trimmedEnd - trimmedStart > opts.maxWindowMin) {
-    return lowestHrSubwindow(samples, trimmedStart, trimmedEnd, opts.maxWindowMin);
-  }
-  return { start: trimmedStart, end: trimmedEnd };
+  const constrainedWindow = (
+    windowStart: number,
+    windowEnd: number,
+  ): { start: number; end: number } | null => {
+    if (windowEnd - windowStart < opts.minWindowMin) return null;
+    if (windowEnd - windowStart > opts.maxWindowMin) {
+      return lowestHrSubwindow(samples, windowStart, windowEnd, opts.maxWindowMin, opts);
+    }
+    const window = { start: windowStart, end: windowEnd };
+    return sleepWindowEndAllowed(samples, window, opts) ? window : null;
+  };
+
+  // Trimming and the 11-hour safety cap must preserve the requested wake day.
+  // Otherwise an unusually long run crossing midnight can be capped to the
+  // previous day even though its raw end was valid.
+  return constrainedWindow(trimmedStart, trimmedEnd) ?? constrainedWindow(start, end);
 }
 
 function lowestHrSubwindow(
@@ -318,10 +335,16 @@ function lowestHrSubwindow(
   start: number,
   end: number,
   sizeMin: number,
-): { start: number; end: number } {
-  let bestStart = start;
+  opts: SleepWindowOptions,
+): { start: number; end: number } | null {
+  let bestStart: number | null = null;
   let bestScore = Number.POSITIVE_INFINITY;
-  for (let i = start; i + sizeMin <= end; i += 5) {
+  const candidateStarts = new Set<number>();
+  for (let i = start; i + sizeMin <= end; i += 5) candidateStarts.add(i);
+  candidateStarts.add(Math.max(start, end - sizeMin));
+  for (const i of candidateStarts) {
+    const candidate = { start: i, end: Math.min(end, i + sizeMin) };
+    if (!sleepWindowEndAllowed(samples, candidate, opts)) continue;
     let hrSum = 0;
     let hrCount = 0;
     let active = 0;
@@ -341,7 +364,23 @@ function lowestHrSubwindow(
       bestStart = i;
     }
   }
-  return { start: bestStart, end: Math.min(end, bestStart + sizeMin) };
+  return bestStart == null ? null : { start: bestStart, end: Math.min(end, bestStart + sizeMin) };
+}
+
+function sleepWindowEndAllowed(
+  samples: SleepMinute[],
+  window: { start: number; end: number },
+  opts: Pick<SleepWindowOptions, 'endAfterTs' | 'endBeforeTs'>,
+): boolean {
+  if (window.end <= window.start) return false;
+  const startTs = samples[window.start]?.ts;
+  const endSampleTs = samples[window.end - 1]?.ts;
+  if (startTs == null || endSampleTs == null) return false;
+  const endTs = endSampleTs + 60000;
+  return (
+    (opts.endAfterTs == null || endTs >= opts.endAfterTs) &&
+    (opts.endBeforeTs == null || endTs < opts.endBeforeTs)
+  );
 }
 
 export function durationOnlySleep(
@@ -392,6 +431,8 @@ export function computeSleep(
     source?: SleepSource;
     minWindowMin?: number;
     maxWindowMin?: number;
+    endAfterTs?: number;
+    endBeforeTs?: number;
   } = {},
 ): SleepResult | null {
   // forceWindow: treat the WHOLE input as the sleep window (used when the user
@@ -402,6 +443,8 @@ export function computeSleep(
     : findSleepWindow(samples, {
         minWindowMin: opts.minWindowMin ?? 90,
         maxWindowMin: opts.maxWindowMin ?? MAX_AUTO_SLEEP_WINDOW_MIN,
+        endAfterTs: opts.endAfterTs,
+        endBeforeTs: opts.endBeforeTs,
       });
   if (!win || win.end - win.start < 1) {
     if (opts.forceWindow && opts.startTs != null && opts.endTs != null) {
@@ -545,12 +588,30 @@ export function autoSleepBoundariesCovered(
   const distanceMs = AUTO_SLEEP_BOUNDARY_DISTANCE_MIN * 60000;
   const before = evidence.filter((sample) => sample.ts >= sleep.startTs - windowMs && sample.ts < sleep.startTs);
   const after = evidence.filter((sample) => sample.ts >= sleep.endTs && sample.ts <= sleep.endTs + windowMs);
+  const insideHr = samples
+    .filter((sample) => sample.ts >= sleep.startTs && sample.ts < sleep.endTs && sample.hr != null)
+    .map((sample) => sample.hr as number);
+  if (insideHr.length < 30) return false;
+  const restingReference = percentile(insideHr, 0.35);
   return (
     before.length >= AUTO_SLEEP_BOUNDARY_SIGNAL_MIN &&
     before.some((sample) => sample.ts <= sleep.startTs - distanceMs) &&
+    boundaryShowsWake(before, restingReference) &&
     after.length >= AUTO_SLEEP_BOUNDARY_SIGNAL_MIN &&
-    after.some((sample) => sample.ts >= sleep.endTs + distanceMs)
+    after.some((sample) => sample.ts >= sleep.endTs + distanceMs) &&
+    boundaryShowsWake(after, restingReference)
   );
+}
+
+function boundaryShowsWake(samples: SleepMinute[], restingReference: number): boolean {
+  const motion = samples.filter((sample) => sample.motion != null).map((sample) => sample.motion as number);
+  const activeMotion = motion.filter((value) => value >= 0.35).length;
+  if (activeMotion >= Math.max(2, Math.ceil(motion.length * 0.1))) return true;
+
+  const hrs = samples.map((sample) => sample.hr).filter((value): value is number => value != null);
+  const wakeThreshold = restingReference + Math.max(4, restingReference * 0.06);
+  const elevated = hrs.filter((hr) => hr >= wakeThreshold).length;
+  return elevated >= Math.max(3, Math.ceil(hrs.length * 0.15));
 }
 
 function smoothStageTimeline(timeline: SleepStage[]): SleepStage[] {

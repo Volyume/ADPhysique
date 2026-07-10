@@ -45,6 +45,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const readiness = useStoreSelector(appStore, (s) => s.trainingReadiness);
   const energyReserve = useStoreSelector(appStore, (s) => s.energyReserve);
   const sleepPerformance = useStoreSelector(appStore, (s) => s.sleepPerformance);
+  const sleepNeed = useStoreSelector(appStore, (s) => s.sleepNeed);
   // Composite Sleep Performance (WHOOP's headline) when available, else the
   // hours-vs-needed ratio as a fallback for older rows.
   const sleepPerf =
@@ -118,7 +119,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
     readiness,
     recovery,
     strain,
-    sleepDebtMin: today?.sleepDetail?.debtMin ?? null,
+    sleepDebtMin: sleepNeed?.debtMin ?? null,
     sleepPerformanceCapped: !!sleepPerformance?.cappedByConfidence,
     sleepLowTrust: sleepNeedsReview,
   });

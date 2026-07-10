@@ -21,9 +21,11 @@ export type SleepStress = {
   highMin: number;
   medMin: number;
   lowMin: number;
+  unscoredMin: number;
   highPct: number; // % of TIB in HIGH (the contributor), 0..100
   medPct: number;
   lowPct: number;
+  unscoredPct: number;
   meanLevel: number; // 0..3 average
 };
 
@@ -45,8 +47,9 @@ export type StressBaseline = { rmssdMean: number; rmssdSd: number; hrMean: numbe
 export function computeSleepStress(
   epochs: StressEpoch[],
   baseline?: StressBaseline | null,
+  totalMinutes = epochs.length,
 ): SleepStress | null {
-  if (epochs.length < 5) return null;
+  if (epochs.length < 5 || totalMinutes < epochs.length) return null;
   const hrs = epochs.map((e) => e.hr).filter((v) => Number.isFinite(v));
   const rmssds = epochs.map((e) => e.rmssd).filter((v): v is number => v != null && Number.isFinite(v));
   if (hrs.length < 5) return null;
@@ -66,19 +69,22 @@ export function computeSleepStress(
     return 0;
   });
 
-  const total = curve.length;
+  const total = Math.max(1, totalMinutes);
   const highMin = curve.filter((l) => l === 3).length;
   const medMin = curve.filter((l) => l === 2).length;
-  const lowMin = total - highMin - medMin;
+  const lowMin = curve.length - highMin - medMin;
+  const unscoredMin = Math.max(0, total - curve.length);
   const pct = (n: number) => Math.round((n / total) * 100);
   return {
     curve,
     highMin,
     medMin,
     lowMin,
+    unscoredMin,
     highPct: pct(highMin),
     medPct: pct(medMin),
     lowPct: pct(lowMin),
+    unscoredPct: pct(unscoredMin),
     meanLevel: Math.round((mean(curve) + Number.EPSILON) * 100) / 100,
   };
 }

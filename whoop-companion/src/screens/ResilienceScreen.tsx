@@ -19,11 +19,12 @@ const TIER_COLOR: Record<string, string> = {
 
 export function ResilienceScreen({ nav }: { nav: Nav }) {
   const res = useStoreSelector(appStore, (s) => s.resilience);
+  const lastSyncTs = useStoreSelector(appStore, (s) => s.lastSyncTs);
   const [history, setHistory] = useState<DailyMetricRow[]>([]);
 
   useEffect(() => {
     void appStore.loadHistory(14).then(setHistory);
-  }, []);
+  }, [lastSyncTs]);
 
   const tint = res ? TIER_COLOR[res.tier] ?? colors.recoveryGreen : colors.textTertiary;
   const bars = history.map((d) => ({

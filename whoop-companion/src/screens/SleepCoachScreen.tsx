@@ -43,7 +43,7 @@ const MODES: Array<{ key: number; name: string; pct: string; desc: string }> = [
   { key: 0.85, name: 'Perform', pct: '85%', desc: 'Balance sleep with performance' },
   { key: 1.0, name: 'Peak', pct: '100%', desc: 'Fully optimise recovery' },
 ];
-const SMART_WINDOWS = [0, 15, 30, 45] as const;
+const PLANNING_WINDOWS = [0, 15, 30, 45] as const;
 type GoalMode = (typeof MODES)[number];
 
 export function SleepCoachScreen({ nav }: { nav: Nav }) {
@@ -61,42 +61,49 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const schedule = useStoreSelector(appStore, (s) => s.sleepSchedule);
   const [alarmBusy, setAlarmBusy] = useState<'set' | 'disable' | null>(null);
   const [wakeLoaded, setWakeLoaded] = useState(false);
-  const [hasSavedWake, setHasSavedWake] = useState(false);
+  const [wakePinned, setWakePinned] = useState(false);
 
   const neededMin = need?.neededMin ?? 480;
   const targetMin = Math.round(neededMin * goal);
 
   // Sleep Planner (per WHOOP's published model): the recommended TIME IN BED to
   // hit your goal accounts for your typical sleep efficiency; the suggested
-  // bedtime is your wake time minus that. Wake time is user-set and persisted.
+  // bedtime is your wake time minus that. Learned wake time remains the default
+  // until the user explicitly pins a different time.
   const [wakeMin, setWakeMin] = useState(schedule.wakeMin);
-  const [smartWindowMin, setSmartWindowMin] = useState(30);
+  const [planningWindowMin, setPlanningWindowMin] = useState(30);
   useEffect(() => {
-    void kvGet('wakeTime').then((v) => {
-      const n = v ? Number(v) : NaN;
-      if (Number.isFinite(n) && n >= 0 && n < 1440) {
-        setWakeMin(n);
-        setHasSavedWake(true);
-      }
+    void Promise.all([kvGet('wakeTime'), kvGet('wakeTimePinned')]).then(([wakeTimeRaw, wakePinnedRaw]) => {
+      const n = wakeTimeRaw ? Number(wakeTimeRaw) : NaN;
+      const validWake = Number.isFinite(n) && n >= 0 && n < 1440;
+      const pinned = validWake && (wakePinnedRaw === '1' || wakePinnedRaw == null);
+      if (pinned) setWakeMin(n);
+      setWakePinned(pinned);
+      if (pinned && wakePinnedRaw == null) void kvSet('wakeTimePinned', '1');
       setWakeLoaded(true);
     });
     void kvGet('smartWakeWindowMin').then((v) => {
       const n = v ? Number(v) : NaN;
-      if (SMART_WINDOWS.includes(n as (typeof SMART_WINDOWS)[number])) setSmartWindowMin(n);
+      if (PLANNING_WINDOWS.includes(n as (typeof PLANNING_WINDOWS)[number])) setPlanningWindowMin(n);
     });
   }, []);
   useEffect(() => {
-    if (wakeLoaded && !hasSavedWake) setWakeMin(schedule.wakeMin);
-  }, [hasSavedWake, schedule.wakeMin, wakeLoaded]);
+    if (wakeLoaded && !wakePinned) setWakeMin(schedule.wakeMin);
+  }, [schedule.wakeMin, wakeLoaded, wakePinned]);
   const setWake = (m: number) => {
     const next = ((m % 1440) + 1440) % 1440;
     setWakeMin(next);
-    setHasSavedWake(true);
-    void kvSet('wakeTime', String(next));
+    setWakePinned(true);
+    void Promise.all([kvSet('wakeTime', String(next)), kvSet('wakeTimePinned', '1')]);
   };
-  const setSmartWindow = (m: number) => {
-    setSmartWindowMin(m);
+  const setPlanningWindow = (m: number) => {
+    setPlanningWindowMin(m);
     void kvSet('smartWakeWindowMin', String(m));
+  };
+  const useLearnedWake = () => {
+    setWakeMin(schedule.wakeMin);
+    setWakePinned(false);
+    void kvSet('wakeTimePinned', '0');
   };
   const effSamples = recentDays
     .filter((d) => sleepTrustTier(d.sleepDetail) !== 'low')
@@ -104,10 +111,10 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
     .filter((v): v is number => v != null && v > 0);
   const expectedEff = (median(effSamples) ?? 85) / 100; // fraction, fallback 85%
   const tibNeededMin = Math.round(targetMin / Math.max(0.5, expectedEff));
-  const bedMin = wakeMin - tibNeededMin;
-  const smartStartMin = wakeMin - smartWindowMin;
+  const planningStartMin = wakeMin - planningWindowMin;
+  const bedMin = planningStartMin - tibNeededMin;
   const nextWakeTs = nextWakeTimestamp(wakeMin);
-  const plannedBedTs = nextWakeTs - tibNeededMin * 60000;
+  const plannedBedTs = nextWakeTs - (planningWindowMin + tibNeededMin) * 60000;
   const bedCountdownMin = relativeMin(plannedBedTs);
   const wakeCountdownMin = relativeMin(nextWakeTs);
   const inSleepWindow = Date.now() >= plannedBedTs;
@@ -139,7 +146,7 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
         : strapAlarm.pendingWrite === 'disable'
           ? 'Disable queued for next connection'
           : strapAlarm.enabled
-            ? `Set for ${formatAlarmDate(strapAlarm.wakeTs)}`
+            ? `Arm sent for ${formatAlarmDate(strapAlarm.wakeTs)}`
             : 'Off on this app';
   const alarmActionTitle = alarmMatchesWakeTarget
     ? `${connected ? 'Re-arm' : 'Queue'} latest alarm for ${fmtClock(wakeMin)}`
@@ -163,9 +170,9 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
     try {
       const result = await appStore.setStrapWakeAlarm(nextWakeTs);
       Alert.alert(
-        result === 'sent' ? 'Wake alarm set' : 'Wake alarm queued',
+        result === 'sent' ? 'Wake alarm command sent' : 'Wake alarm queued',
         result === 'sent'
-          ? `The strap wake alarm is set for ${formatAlarmDate(nextWakeTs)}.`
+          ? `Pulse sent the WHOOP 5 arm command for ${formatAlarmDate(nextWakeTs)} and will roll it forward during daily auto-sync while enabled. Scheduled firing remains experimental on Gen5 firmware.`
           : `Pulse will set the strap wake alarm for ${formatAlarmDate(nextWakeTs)} when it reconnects.`,
       );
     } catch (e) {
@@ -304,7 +311,7 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
         </View>
         {schedule.source !== 'fallback' ? (
           <Pressable
-            onPress={() => setWake(schedule.wakeMin)}
+            onPress={useLearnedWake}
             style={({ pressed }) => [styles.learnedSchedule, pressed && styles.pressed]}
           >
             <Ionicons name="moon-outline" size={17} color={colors.sleepTeal} />
@@ -315,7 +322,8 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
         ) : null}
         <Text style={styles.planNote}>
           To reach {MODES.find((m) => m.key === goal)?.pct} of your sleep need ({formatDuration(targetMin)} asleep),
-          allowing for your typical {Math.round(expectedEff * 100)}% efficiency.
+          allowing for your typical {Math.round(expectedEff * 100)}% efficiency
+          {planningWindowMin > 0 ? ` even if you wake at ${fmtClock(planningStartMin)}.` : '.'}
         </Text>
         <View style={styles.tonightRow}>
           <View style={[styles.tonightDot, { backgroundColor: inSleepWindow ? colors.recoveryYellow : colors.sleepTeal }]} />
@@ -334,22 +342,23 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
       <Card>
         <View style={styles.alarmRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.alarmTitle}>Wake window</Text>
+            <Text style={styles.alarmTitle}>Fixed strap alarm</Text>
             <Text style={styles.alarmMeta}>{alarmMeta}</Text>
           </View>
           <Text style={styles.alarmTime}>{fmtClock(wakeMin)}</Text>
         </View>
         <View style={styles.smartSummary}>
           <Text style={styles.smartText}>
-            {smartWindowMin > 0
-              ? `${fmtClock(smartStartMin)}-${fmtClock(wakeMin)} window; strap fallback at latest wake time.`
-              : `Fixed wake alarm at ${fmtClock(wakeMin)}.`}
+            {planningWindowMin > 0
+              ? `${fmtClock(planningStartMin)}-${fmtClock(wakeMin)} planning window only; fixed strap haptic alarm at ${fmtClock(wakeMin)}.`
+              : `Fixed strap haptic alarm at ${fmtClock(wakeMin)}.`}
           </Text>
         </View>
+        <Text style={styles.windowLabel}>Planning window (guidance only)</Text>
         <View style={styles.windowChips}>
-          {SMART_WINDOWS.map((m) => (
-            <Pressable key={m} onPress={() => setSmartWindow(m)} style={[styles.windowChip, smartWindowMin === m && styles.windowChipOn]}>
-              <Text style={[styles.windowText, smartWindowMin === m && styles.windowTextOn]}>{m === 0 ? 'Fixed' : `${m}m`}</Text>
+          {PLANNING_WINDOWS.map((m) => (
+            <Pressable key={m} onPress={() => setPlanningWindow(m)} style={[styles.windowChip, planningWindowMin === m && styles.windowChipOn]}>
+              <Text style={[styles.windowText, planningWindowMin === m && styles.windowTextOn]}>{m === 0 ? 'None' : `${m}m`}</Text>
             </Pressable>
           ))}
         </View>
@@ -364,8 +373,8 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
           disabled={!!alarmBusy}
         />
         <Text style={styles.planNote}>
-          Pulse stores the wake window locally and arms the strap at the latest wake time so you still have a
-          reliable haptic fallback if the phone is asleep or disconnected.
+          The planning window changes bedtime guidance only. Pulse arms one fixed strap haptic alarm at the
+          latest wake time and re-arms that local time during connected daily sync; it does not wake you early within the window.
         </Text>
       </Card>
 
@@ -662,6 +671,7 @@ const styles = StyleSheet.create({
   planNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 12, fontFamily: fonts.text },
   smartSummary: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12, marginBottom: 12 },
   smartText: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, fontFamily: fonts.textSemibold },
+  windowLabel: { color: colors.textTertiary, fontSize: 11, fontFamily: fonts.textBold, marginBottom: 8 },
   windowChips: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   windowChip: { flex: 1, borderRadius: 8, borderWidth: 1, borderColor: colors.border, paddingVertical: 10, alignItems: 'center', backgroundColor: colors.surface },
   windowChipOn: { backgroundColor: colors.white, borderColor: colors.white },

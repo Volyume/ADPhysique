@@ -54,6 +54,7 @@ export default function App() {
   const nav: Nav = useMemo(
     () => ({
       navigate: (route: Route) => setStack((s) => [...s, route]),
+      replace: (route: Route) => setStack((s) => (s.length ? [...s.slice(0, -1), route] : [route])),
       back: () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s)),
       setTab: (t: TabKey) => {
         setTabState(t);

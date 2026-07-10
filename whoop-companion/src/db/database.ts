@@ -610,6 +610,26 @@ export async function getRecentDailyMetrics(limit = 30): Promise<DailyMetricRow[
 }
 
 // ---- Cardio ----
+type CardioDbRow = {
+  id: string;
+  start_ts: number;
+  end_ts: number;
+  activity: string;
+  avg_hr: number | null;
+  max_hr: number | null;
+  trimp: number | null;
+  strain: number | null;
+  kcal: number | null;
+  distance_m: number | null;
+  route: string | null;
+  steps: number | null;
+  cadence_spm: number | null;
+  step_source: string | null;
+  lap_count: number | null;
+  source: string;
+  notes: string | null;
+};
+
 export async function insertCardio(c: CardioRow): Promise<void> {
   await serializeWrite(async () => {
     const db = await getDb();
@@ -635,7 +655,7 @@ export async function insertCardio(c: CardioRow): Promise<void> {
     c.stepSource,
     c.lapCount,
     c.source,
-      c.notes,
+    c.notes,
     );
   });
 }
@@ -649,54 +669,71 @@ export async function deleteCardio(id: string): Promise<void> {
 
 export async function listCardio(limit = 50): Promise<CardioRow[]> {
   const db = await getDb();
-  const rows = await db.getAllAsync<{
-    id: string;
-    start_ts: number;
-    end_ts: number;
-    activity: string;
-    avg_hr: number | null;
-    max_hr: number | null;
-    trimp: number | null;
-    strain: number | null;
-    kcal: number | null;
-    distance_m: number | null;
-    route: string | null;
-    steps: number | null;
-    cadence_spm: number | null;
-    step_source: string | null;
-    lap_count: number | null;
-    source: string;
-    notes: string | null;
-  }>('SELECT * FROM cardio ORDER BY start_ts DESC LIMIT ?', limit);
-  return rows.map((r) => {
-    let route: Array<{ lat: number; lng: number }> | null = null;
-    if (r.route) {
-      try {
-        route = JSON.parse(r.route) as Array<{ lat: number; lng: number }>;
-      } catch {
-        route = null;
-      }
+  const rows = await db.getAllAsync<CardioDbRow>('SELECT * FROM cardio ORDER BY start_ts DESC LIMIT ?', limit);
+  return rows.map(mapCardio);
+}
+
+export async function listNapsBetween(startTs: number, endTs: number): Promise<CardioRow[]> {
+  if (endTs <= startTs) return [];
+  const db = await getDb();
+  const rows = await db.getAllAsync<CardioDbRow>(
+    "SELECT * FROM cardio WHERE source = 'nap' AND start_ts >= ? AND start_ts < ? ORDER BY start_ts ASC",
+    startTs,
+    endTs,
+  );
+  return rows.map(mapCardio);
+}
+
+export async function listCardioBetween(startTs: number, endTs: number): Promise<CardioRow[]> {
+  if (endTs <= startTs) return [];
+  const db = await getDb();
+  const rows = await db.getAllAsync<CardioDbRow>(
+    'SELECT * FROM cardio WHERE start_ts < ? AND end_ts > ? ORDER BY start_ts ASC',
+    endTs,
+    startTs,
+  );
+  return rows.map(mapCardio);
+}
+
+export async function listCardioStartingBetween(startTs: number, endTs: number): Promise<CardioRow[]> {
+  if (endTs <= startTs) return [];
+  const db = await getDb();
+  const rows = await db.getAllAsync<CardioDbRow>(
+    'SELECT * FROM cardio WHERE start_ts >= ? AND start_ts < ? ORDER BY start_ts ASC',
+    startTs,
+    endTs,
+  );
+  return rows.map(mapCardio);
+}
+
+function mapCardio(row: CardioDbRow): CardioRow {
+  let route: Array<{ lat: number; lng: number }> | null = null;
+  if (row.route) {
+    try {
+      route = JSON.parse(row.route) as Array<{ lat: number; lng: number }>;
+    } catch {
+      route = null;
     }
-    return {
-      id: r.id,
-      startTs: r.start_ts,
-      endTs: r.end_ts,
-      activity: r.activity,
-      avgHr: r.avg_hr,
-      maxHr: r.max_hr ?? null,
-      trimp: r.trimp,
-      strain: r.strain,
-      kcal: r.kcal,
-      distanceM: r.distance_m ?? null,
-      route,
-      steps: r.steps ?? null,
-      cadenceSpm: r.cadence_spm ?? null,
-      stepSource: r.step_source ?? null,
-      lapCount: r.lap_count ?? null,
-      source: r.source,
-      notes: r.notes,
-    };
-  });
+  }
+  return {
+    id: row.id,
+    startTs: row.start_ts,
+    endTs: row.end_ts,
+    activity: row.activity,
+    avgHr: row.avg_hr,
+    maxHr: row.max_hr,
+    trimp: row.trimp,
+    strain: row.strain,
+    kcal: row.kcal,
+    distanceM: row.distance_m,
+    route,
+    steps: row.steps,
+    cadenceSpm: row.cadence_spm,
+    stepSource: row.step_source,
+    lapCount: row.lap_count,
+    source: row.source,
+    notes: row.notes,
+  };
 }
 
 // ---- Journal ----

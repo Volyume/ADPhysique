@@ -16,6 +16,7 @@ export enum Command {
   TOGGLE_REALTIME_HR = 3, // realtime HR over proprietary fd4b stream
   SET_CLOCK = 10, // epoch_u32_LE + tz byte (0=UTC); part of bring-up
   TOGGLE_GENERIC_HR_PROFILE = 14, // makes the strap broadcast standard GATT 0x2A37
+  RUN_HAPTIC_PATTERN_MAVERICK = 19,
   ABORT_HISTORICAL_TRANSMITS = 20,
   SEND_HISTORICAL_DATA = 22,
   HISTORICAL_DATA_RESULT = 23,
@@ -98,7 +99,7 @@ export function cmdToggleRealtimeHr(on = true): Uint8Array {
 
 /** Clear the strap's stored wake/haptic alarm. */
 export function cmdDisableAlarm(): Uint8Array {
-  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.DISABLE_ALARM, new Uint8Array([0x01])));
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.DISABLE_ALARM, new Uint8Array([0x02, 0xff])));
 }
 
 /** Stop any currently-running haptic vibration pattern. */
@@ -108,20 +109,32 @@ export function cmdStopHaptics(): Uint8Array {
 
 /** Trigger the strap alarm haptic immediately. Pair with STOP_HAPTICS for tests. */
 export function cmdRunAlarm(): Uint8Array {
-  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.RUN_ALARM, new Uint8Array([0x01])));
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.RUN_ALARM, new Uint8Array([0x02, 0x01])));
 }
 
-/** Arm the strap's stored wake/haptic alarm at a Unix epoch timestamp. */
+/** Hardware-confirmed one-shot WHOOP 5/MG notification haptic. */
+export function cmdNotificationBuzz(loops = 0): Uint8Array {
+  const overallLoops = Math.max(0, Math.min(255, Math.round(loops)));
+  const payload = new Uint8Array([0x01, 47, 152, 0, 0, 0, 0, 0, 0, 0, 0, overallLoops]);
+  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.RUN_HAPTIC_PATTERN_MAVERICK, payload));
+}
+
+/** Arm the WHOOP 5/MG stored wake alarm with its revision-4 payload. */
 export function cmdSetAlarmTime(wakeTsMs: number): Uint8Array {
-  const epoch = Math.floor(wakeTsMs / 1000) >>> 0;
-  const payload = new Uint8Array(7);
-  payload[0] = 0x01;
-  payload[1] = epoch & 0xff;
-  payload[2] = (epoch >> 8) & 0xff;
-  payload[3] = (epoch >> 16) & 0xff;
-  payload[4] = (epoch >> 24) & 0xff;
-  payload[5] = 0x00;
-  payload[6] = 0x00;
+  const clampedMs = Math.max(0, Math.round(wakeTsMs));
+  const epoch = Math.floor(clampedMs / 1000) >>> 0;
+  const subseconds = Math.max(0, Math.min(0xffff, Math.floor(((clampedMs % 1000) * 32768) / 1000)));
+  const payload = new Uint8Array(20);
+  payload[0] = 0x04;
+  payload[1] = 0x01;
+  payload[2] = epoch & 0xff;
+  payload[3] = (epoch >> 8) & 0xff;
+  payload[4] = (epoch >> 16) & 0xff;
+  payload[5] = (epoch >> 24) & 0xff;
+  payload[6] = subseconds & 0xff;
+  payload[7] = (subseconds >> 8) & 0xff;
+  payload.set([47, 152, 0, 0, 0, 0, 0, 0], 8);
+  payload.set([0, 0, 7, 30], 16);
   return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.SET_ALARM_TIME, payload));
 }
 

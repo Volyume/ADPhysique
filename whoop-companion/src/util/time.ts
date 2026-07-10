@@ -15,7 +15,9 @@ export function startOfDayMs(ms: number): number {
 }
 
 export function addDays(ms: number, days: number): number {
-  return ms + days * 24 * 60 * 60 * 1000;
+  const date = new Date(ms);
+  date.setDate(date.getDate() + days);
+  return date.getTime();
 }
 
 /** Epoch-day integer (days since 1970), for EMA spacing. */

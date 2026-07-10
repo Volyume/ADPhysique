@@ -20,6 +20,7 @@ import {
   cmdAbortHistoricalTransmits,
   cmdGetDataRange,
   cmdHistoricalDataResult,
+  cmdNotificationBuzz,
   cmdSendHistoricalData,
   cmdDisableAlarm,
   cmdRunAlarm,
@@ -54,6 +55,9 @@ import {
   kvGet,
   kvSet,
   listCardio,
+  listCardioBetween,
+  listCardioStartingBetween,
+  listNapsBetween,
   listJournal,
   listJournalSince,
   deleteCardio,
@@ -62,6 +66,7 @@ import {
   upsertDailyMetric,
 } from '../db/database';
 import { startBgLocation, stopBgLocation } from '../sensors/bgLocation';
+import { localAlarmMinuteOfDay, nextLocalAlarmTimestamp } from '../util/alarmSchedule';
 import { isKeepAliveRunning, setKeepAliveHeartbeat, startKeepAlive, stopKeepAlive } from '../sensors/keepAlive';
 import { DEFAULT_PROFILE, loadProfile, saveProfile } from '../db/profile';
 import { computeHrv, computeHrvSegments } from '../metrics/hrv';
@@ -81,7 +86,7 @@ import { kcalPerMinute, totalKcal } from '../metrics/calories';
 import { respiratoryRate } from '../metrics/respiratory';
 import { computeStress } from '../metrics/stress';
 import { computeHealthMonitor, HealthMonitorResult } from '../metrics/healthMonitor';
-import { encodeNapDetail, napCreditMin, napDetailFromSleep, StoredNapDetail } from '../metrics/naps';
+import { encodeNapDetail, napCreditMin, napDetailFromSleep, parseNapDetail, StoredNapDetail } from '../metrics/naps';
 import { decodeHeartbeatSteps } from '../whoop/strapEvents';
 import { hrvBalance, HrvBalance } from '../metrics/hrvBalance';
 import { illnessRisk, IllnessResult } from '../metrics/illness';
@@ -158,6 +163,7 @@ export type HistorySyncReport = {
 export type StrapAlarmState = {
   enabled: boolean;
   wakeTs: number | null;
+  localMinuteOfDay: number | null;
   updatedAt: number | null;
   pendingWrite: 'set' | 'disable' | null;
 };
@@ -283,7 +289,7 @@ const initialState: AppState = {
   historySync: null,
   lastHistorySync: null,
   lastSyncTs: null,
-  strapAlarm: { enabled: false, wakeTs: null, updatedAt: null, pendingWrite: null },
+  strapAlarm: { enabled: false, wakeTs: null, localMinuteOfDay: null, updatedAt: null, pendingWrite: null },
   profile: DEFAULT_PROFILE,
   error: null,
 };
@@ -303,6 +309,7 @@ const RAW_CAPTURE_FLUSH_COUNT = 250;
 const RAW_CAPTURE_FLUSH_MS = 1000;
 const AUTO_HISTORY_SYNC_RETRY_MS = 15000;
 const AUTO_HISTORY_SYNC_MIN_INTERVAL_MS = 5 * 60 * 1000;
+const AUTO_HISTORY_MAX_CONTINUOUS_PASSES = 6;
 const AUTO_SYNC_SUPERVISOR_INTERVAL_MS = 45 * 1000;
 const KEEP_ALIVE_PERMISSION_RETRY_MS = 10 * 60 * 1000;
 const CONNECT_IN_FLIGHT_STALE_MS = 20 * 1000;
@@ -311,8 +318,8 @@ const STEP_DIVISOR_KEY = 'whoopStepTicksPerStep';
 const STEP_DIVISOR_MIGRATION_KEY = 'whoopStepDivisorCaptureDefaultV2';
 const STEP_TRUST_RECOMPUTE_KEY = 'whoopStepTrustRecomputeV1';
 const K21_MOTION_BACKFILL_KEY = 'whoopK21MotionBackfillV1';
-const HISTORY_BIOMETRIC_REDECODE_KEY = 'whoopHistoryBiometricMergeV2';
-const SLEEP_EVIDENCE_RECOMPUTE_KEY = 'sleepEvidenceRecomputeV9';
+const HISTORY_BIOMETRIC_REDECODE_KEY = 'whoopHistoryBiometricMergeV3';
+const SLEEP_EVIDENCE_RECOMPUTE_KEY = 'sleepEvidenceRecomputeV10';
 const STRAP_ALARM_KEY = 'strapAlarm';
 
 function bandStepsAreTrusted(estimate: BandStepEstimate | null | undefined, divisor: number): boolean {
@@ -333,10 +340,12 @@ class AppStore extends Store<AppState> {
   private historyWatchdogTimer: ReturnType<typeof setInterval> | null = null;
   private historyLastActivityTs = 0;
   private historyStopQueued = false;
-  private historyEndAckSentThisBurst = false;
+  private historyQueuedEndKeys = new Set<string>();
+  private historyAckedChunks = 0;
   private historyStallRecoveries = 0;
   private historyNudgeInFlight = false;
   private historyPersisting = false;
+  private historyPpgContext: Uint8Array[] = [];
   private rawCaptureBuffer: RawFrame[] = [];
   private rawCaptureFlushTimer: ReturnType<typeof setTimeout> | null = null;
   private commandResponseWaiters = new Map<
@@ -474,6 +483,7 @@ class AppStore extends Store<AppState> {
       this.autoDrainedFor = '';
       this.clearAutoSyncTimer();
       this.stopConnectedAutoSync();
+      this.autoSyncAttempts = 0;
       if (this.getState().draining) this.enqueueHistoryStop('disconnect');
     }
     this.lastStatus = status;
@@ -715,7 +725,7 @@ class AppStore extends Store<AppState> {
       const page = await getStoredHistoryPage(afterRowId);
       if (!page.length) break;
       const frames = page.map((row) => hexToBytes(row.hex));
-      const decoded = decodeWhoop5HistoryFrames([...ppgOverlap, ...frames]);
+      const decoded = decodeWhoop5HistoryFrames(frames, undefined, { ppgContextFrames: ppgOverlap });
       if (decoded.hr.length || decoded.rawVitals.length) {
         await persistHistoryBatch({
           rawTs: Date.now(),
@@ -845,30 +855,52 @@ class AppStore extends Store<AppState> {
   }
 
   private async flushPendingStrapAlarm(context: string): Promise<void> {
-    const alarm = this.getState().strapAlarm;
+    let alarm = this.getState().strapAlarm;
+    const now = Date.now();
+    const missedQueuedAlarm = alarm.pendingWrite === 'set' && alarm.wakeTs != null && alarm.wakeTs <= now;
+    const firedAlarmPastGrace = alarm.pendingWrite == null && alarm.wakeTs != null && alarm.wakeTs <= now - 5 * 60 * 1000;
+    const localClockShifted =
+      alarm.wakeTs != null &&
+      alarm.localMinuteOfDay != null &&
+      localAlarmMinuteOfDay(alarm.wakeTs) !== alarm.localMinuteOfDay;
+    if (
+      alarm.enabled &&
+      alarm.pendingWrite !== 'disable' &&
+      (missedQueuedAlarm || firedAlarmPastGrace || localClockShifted)
+    ) {
+      const localMinuteOfDay = alarm.localMinuteOfDay ?? localAlarmMinuteOfDay(alarm.wakeTs as number);
+      alarm = {
+        ...alarm,
+        wakeTs: nextLocalAlarmTimestamp(localMinuteOfDay, now),
+        localMinuteOfDay,
+        updatedAt: now,
+        pendingWrite: 'set',
+      };
+      await this.saveStrapAlarm(alarm, `Daily wake alarm rolled forward during ${context}`);
+    }
     if (!alarm.pendingWrite) return;
     const ble = await this.optionalCommandChannel();
     if (!ble) return;
     try {
       if (alarm.pendingWrite === 'set') {
-        if (!alarm.wakeTs || alarm.wakeTs <= Date.now() + 30 * 1000) {
+        if (!alarm.wakeTs || alarm.wakeTs <= Date.now()) {
           await this.saveStrapAlarm(
-            { enabled: false, wakeTs: null, updatedAt: Date.now(), pendingWrite: null },
+            { enabled: false, wakeTs: null, localMinuteOfDay: null, updatedAt: Date.now(), pendingWrite: null },
             'Queued wake alarm expired before the strap connected',
           );
           return;
         }
         await withTimeout(ble.writeCommand(cmdSetAlarmTime(alarm.wakeTs)), 8000, 'Queued wake alarm');
         await this.saveStrapAlarm(
-          { enabled: true, wakeTs: alarm.wakeTs, updatedAt: Date.now(), pendingWrite: null },
-          `Queued wake alarm sent on ${context}`,
+          { enabled: true, wakeTs: alarm.wakeTs, localMinuteOfDay: alarm.localMinuteOfDay, updatedAt: Date.now(), pendingWrite: null },
+          `Queued WHOOP 5 wake-alarm arm command sent on ${context}`,
         );
         return;
       }
       await withTimeout(ble.writeCommand(cmdDisableAlarm()), 8000, 'Queued wake alarm disable');
       await withTimeout(ble.writeCommand(cmdStopHaptics()), 8000, 'Stop haptics').catch(() => {});
       await this.saveStrapAlarm(
-        { enabled: false, wakeTs: null, updatedAt: Date.now(), pendingWrite: null },
+        { enabled: false, wakeTs: null, localMinuteOfDay: null, updatedAt: Date.now(), pendingWrite: null },
         `Queued wake alarm disable sent on ${context}`,
       );
     } catch (e) {
@@ -880,7 +912,13 @@ class AppStore extends Store<AppState> {
     if (!Number.isFinite(wakeTs) || wakeTs <= Date.now() + 30 * 1000) {
       throw new Error('Choose a wake time at least 30 seconds in the future.');
     }
-    const alarm: StrapAlarmState = { enabled: true, wakeTs: Math.round(wakeTs), updatedAt: Date.now(), pendingWrite: null };
+    const alarm: StrapAlarmState = {
+      enabled: true,
+      wakeTs: Math.round(wakeTs),
+      localMinuteOfDay: localAlarmMinuteOfDay(wakeTs),
+      updatedAt: Date.now(),
+      pendingWrite: null,
+    };
     const ble = await this.optionalCommandChannel();
     if (!ble) {
       const queued = { ...alarm, pendingWrite: 'set' as const };
@@ -890,7 +928,7 @@ class AppStore extends Store<AppState> {
     }
     try {
       await withTimeout(ble.writeCommand(cmdSetAlarmTime(wakeTs)), 8000, 'Wake alarm');
-      await this.saveStrapAlarm(alarm, 'Wake alarm set on strap');
+      await this.saveStrapAlarm(alarm, 'WHOOP 5 wake-alarm arm command sent');
       return 'sent';
     } catch {
       const queued = { ...alarm, pendingWrite: 'set' as const };
@@ -901,7 +939,7 @@ class AppStore extends Store<AppState> {
   };
 
   disableStrapAlarm = async (): Promise<'sent' | 'queued'> => {
-    const alarm: StrapAlarmState = { enabled: false, wakeTs: null, updatedAt: Date.now(), pendingWrite: null };
+    const alarm: StrapAlarmState = { enabled: false, wakeTs: null, localMinuteOfDay: null, updatedAt: Date.now(), pendingWrite: null };
     const ble = await this.optionalCommandChannel();
     if (!ble) {
       const queued = { ...alarm, pendingWrite: 'disable' as const };
@@ -930,6 +968,7 @@ class AppStore extends Store<AppState> {
 
   testStrapAlarm = async (): Promise<void> => {
     const ble = await this.requireCommandChannel('Test alarm');
+    await withTimeout(ble.writeCommand(cmdNotificationBuzz()), 8000, 'Test haptic');
     await withTimeout(ble.writeCommand(cmdRunAlarm()), 8000, 'Test alarm');
     await delay(1200);
     await withTimeout(ble.writeCommand(cmdStopHaptics()), 8000, 'Stop haptics').catch(() => {});
@@ -1115,7 +1154,6 @@ class AppStore extends Store<AppState> {
 
     if (meta.kind === 'start') {
       this.historyRecords = [];
-      this.historyEndAckSentThisBurst = false;
       this.setState((s) => ({
         historySync: s.historySync
           ? { ...s.historySync, status: 'History started' }
@@ -1137,13 +1175,9 @@ class AppStore extends Store<AppState> {
     } else if (meta.kind === 'end') {
       const chunk = this.historyRecords;
       this.historyRecords = [];
-      if (this.historyEndAckSentThisBurst) {
-        if (chunk.length) {
-          this.enqueueHistoryPersistChunk(chunk);
-        }
-        return;
-      }
-      this.historyEndAckSentThisBurst = true;
+      const endKey = bytesToHex(meta.endData);
+      if (this.historyQueuedEndKeys.has(endKey)) return;
+      this.historyQueuedEndKeys.add(endKey);
       this.enqueueHistoryChunk(chunk, meta);
     } else if (meta.kind === 'complete') {
       this.enqueueHistoryStop('complete');
@@ -1228,14 +1262,23 @@ class AppStore extends Store<AppState> {
 
   private enqueueHistoryChunk(frames: Uint8Array[], meta: Extract<HistoryMetadata, { kind: 'end' }>): void {
     if (this.historyStopQueued) return;
+    const endKey = bytesToHex(meta.endData);
     this.historyCommitQueue = this.historyCommitQueue
       .then(async () => {
-        await this.persistHistoryFrames(frames);
-        const ble = this.ble;
-        if (!ble) return;
-        const commandReady = ble.canSendCommands || (await ble.refreshCommandChannel()) === true;
-        if (commandReady) {
-          await withTimeout(ble.writeCommand(cmdHistoricalDataResult(meta.endData)), 8000, 'History acknowledgement');
+        try {
+          await this.persistHistoryFrames(frames);
+          const ble = this.ble;
+          if (!ble) return;
+          const commandReady = ble.canSendCommands || (await ble.refreshCommandChannel()) === true;
+          if (commandReady) {
+            await withTimeout(ble.writeCommand(cmdHistoricalDataResult(meta.endData)), 8000, 'History acknowledgement');
+            this.historyAckedChunks += 1;
+          }
+        } finally {
+          // Suppress duplicate END notifications only while this exact durable
+          // write/ack is in flight. A later retransmit is safe to acknowledge
+          // again and must not be blocked forever by a session-wide cache.
+          this.historyQueuedEndKeys.delete(endKey);
         }
       })
       .catch((e) => {
@@ -1284,7 +1327,14 @@ class AppStore extends Store<AppState> {
         await this.refreshBandSteps();
         await this.refreshDerived();
         const stats = this.historySessionStats;
-        if (mode === 'auto' && reason === 'complete') this.autoSyncAttempts = 0;
+        const shouldContinueAutoDrain =
+          mode === 'auto' &&
+          reason === 'complete' &&
+          (stats?.decodedRecords ?? 0) > 0 &&
+          this.historyAckedChunks > 0 &&
+          this.autoSyncAttempts < AUTO_HISTORY_MAX_CONTINUOUS_PASSES &&
+          this.getState().status === 'connected' &&
+          this.getState().device != null;
         if (reason === 'timeout') {
           if (mode === 'auto') {
             this.retryAutoHistoryDrain();
@@ -1297,6 +1347,15 @@ class AppStore extends Store<AppState> {
           }
         }
         this.historyDrainActive = false;
+        if (shouldContinueAutoDrain) {
+          const deviceId = this.getState().device?.id;
+          if (deviceId) {
+            this.autoDrainedFor = '';
+            this.scheduleAutoHistoryDrain(deviceId, 1500);
+          }
+        } else if (mode === 'auto' && reason === 'complete') {
+          this.autoSyncAttempts = 0;
+        }
       })
       .catch((e) => {
         this.clearHistoryTimeout();
@@ -1318,7 +1377,7 @@ class AppStore extends Store<AppState> {
     }));
     let decoded: HistoricalDecodeResult;
     try {
-      decoded = decodeWhoop5HistoryFrames(frames);
+      decoded = decodeWhoop5HistoryFrames(frames, undefined, { ppgContextFrames: this.historyPpgContext });
       await persistHistoryBatch({
         rawTs,
         framesHex: frames.map(bytesToHex),
@@ -1328,6 +1387,7 @@ class AppStore extends Store<AppState> {
         motion: decoded.motion,
         rawVitals: decoded.rawVitals,
       });
+      this.historyPpgContext = [...this.historyPpgContext, ...frames.filter((frame) => frame[9] === 26)].slice(-16);
     } finally {
       this.historyPersisting = false;
       this.markHistoryActivity();
@@ -1364,7 +1424,7 @@ class AppStore extends Store<AppState> {
     const addOvernightDay = (ts: number) => {
       days.add(dayKey(ts));
       const hour = new Date(ts).getHours();
-      if (hour >= 16) days.add(dayKey(addDays(ts, 1)));
+      if (hour >= 16) days.add(dayKey(localDayStartOffset(ts, 1)));
       if (hour < 12) days.add(dayKey(ts));
     };
     for (const sample of stats.hr) {
@@ -1374,6 +1434,12 @@ class AppStore extends Store<AppState> {
     for (const sample of stats.sleepStates) addOvernightDay(sample.ts);
     for (const sample of stats.motion) addOvernightDay(sample.ts);
     for (const sample of stats.rawVitals) addOvernightDay(sample.ts);
+    const earliest = [...days].sort((a, b) => a.localeCompare(b))[0];
+    if (earliest) {
+      for (const row of await getRecentDailyMetrics(HR_RETENTION_DAYS)) {
+        if (row.day >= earliest && row.day < today) days.add(row.day);
+      }
+    }
     const ordered = [...days].filter((d) => d !== today).sort((a, b) => a.localeCompare(b));
     for (const day of ordered) {
       await this.backfillDailyMetric(day);
@@ -1402,7 +1468,7 @@ class AppStore extends Store<AppState> {
     const profile = this.getState().profile;
     const now = Date.now();
     const sod = dayStartFromKey(day);
-    const dayEnd = Math.min(sod + 24 * 60 * 60 * 1000, now);
+    const dayEnd = Math.min(localDayStartOffset(sod, 1), now);
     if (dayEnd <= sod) return;
 
     const dayHr = await getHrSamplesBetween(sod, dayEnd);
@@ -1415,8 +1481,9 @@ class AppStore extends Store<AppState> {
 
     const manualRaw = await kvGet(`manualSleep:${day}`);
     const manual = manualRaw ? (JSON.parse(manualRaw) as { startTs: number; endTs: number }) : null;
-    const winStart = manual ? manual.startTs : sod - 8 * 3600 * 1000;
-    const winEnd = manual ? manual.endTs : Math.min(sod + 16 * 3600 * 1000, now);
+    const wakeDayEnd = localDayStartOffset(sod, 1);
+    const winStart = manual ? manual.startTs : localDayHour(sod, -1, 10);
+    const winEnd = manual ? manual.endTs : Math.min(localDayHour(sod, 1, 2), now);
     const nightHr = await getHrSamplesBetween(winStart, winEnd);
     const nightPerMin = perMinuteHr(nightHr);
     const sleepInput = await buildSleepInput(nightPerMin, winStart, winEnd, nightHr);
@@ -1427,9 +1494,12 @@ class AppStore extends Store<AppState> {
           endTs: manual.endTs,
           source: nightPerMin.length >= 10 ? 'manual_hr' : 'manual_duration',
         })
-      : computeSleep(sleepInput);
+      : computeSleep(sleepInput, undefined, { endAfterTs: sod, endBeforeTs: wakeDayEnd });
     if (manual && !candidateSleep) candidateSleep = durationOnlySleep(manual.startTs, manual.endTs);
-    const sleep = sleepIsReliable(candidateSleep, !!manual, sleepInput) ? candidateSleep : null;
+    const sleep =
+      sleepIsReliable(candidateSleep, !!manual, sleepInput) && sleepBelongsToDay(candidateSleep, day, !!manual)
+        ? candidateSleep
+        : null;
 
     let rmssd: number | null = null;
     let rhr: number | null = null;
@@ -1443,7 +1513,7 @@ class AppStore extends Store<AppState> {
       rhr = vitals.rhr;
       resp = vitals.resp;
     }
-    const rawVitalWindow = sleep ?? candidateSleep;
+    const rawVitalWindow = sleep;
     if (rawVitalWindow) {
       const rawVitals = averageRawVitals(
         await getRawVitalSamplesBetween(rawVitalWindow.startTs - 30 * 60000, rawVitalWindow.endTs + 30 * 60000),
@@ -1460,18 +1530,19 @@ class AppStore extends Store<AppState> {
       .map((d) => ({ neededMin: debtAccrualTarget(d), asleepMin: d.sleepMin as number }));
     const accruedDebtMin = sleepDebt(debtNights);
     await this.autoDetectNapsForDay(sod, dayEnd, sleep);
-    const napMin = (await listCardio(CARDIO_RECENT_LIMIT))
-      .filter((c) => c.source === 'nap' && c.startTs >= sod && c.startTs < dayEnd)
+    const completedLoadWindow = sleepNeedLoadWindow(recent, sleep, sod);
+    const completedStrain = await strainBetween(completedLoadWindow.startTs, completedLoadWindow.endTs, profile);
+    const completedNapMin = (await listNapsBetween(completedLoadWindow.startTs, completedLoadWindow.endTs))
       .reduce((a, c) => a + napCreditMin(c), 0);
     const need = computeSleepNeed({
       baselineMin: personalSleepBaseline(recent),
-      recentStrain: strain,
+      recentStrain: completedStrain,
       accruedDebtMin,
-      napMin,
+      napMin: completedNapMin,
     });
     if (sleep) applySleepNeed(sleep, need);
 
-    const sleepStressResult = sleep ? buildSleepStress(scoredNightHr) : null;
+    const sleepStressResult = sleep ? buildSleepStress(scoredNightHr, sleep.inBedMin) : null;
 
     let sleepDetail: SleepDetail | null = null;
     let sleepPerformanceResult: SleepPerformance | null = null;
@@ -1713,10 +1784,12 @@ class AppStore extends Store<AppState> {
     this.historyRecords = [];
     this.historySessionStats = null;
     this.historyStopQueued = false;
-    this.historyEndAckSentThisBurst = false;
+    this.historyQueuedEndKeys.clear();
+    this.historyAckedChunks = 0;
     this.historyStallRecoveries = 0;
     this.historyNudgeInFlight = false;
     this.historyPersisting = false;
+    this.historyPpgContext = [];
     this.historyDrainMode = mode;
     this.historyLastActivityTs = Date.now();
     this.setState({ draining: true, error: null });
@@ -1946,11 +2019,17 @@ class AppStore extends Store<AppState> {
   }
 
   private async autoDetectNapsForDay(sod: number, dayEnd: number, mainSleep: SleepResult | null): Promise<void> {
-    const scanStart = sod + 5 * 3600 * 1000;
-    const scanEnd = Math.min(dayEnd, sod + 22 * 3600 * 1000);
+    const scanStart = localDayHour(sod, 0, 5);
+    const scanEnd = Math.min(dayEnd, localDayHour(sod, 0, 22));
     if (scanEnd - scanStart < 20 * 60000) return;
 
-    const existing = (await listCardio(CARDIO_RECENT_LIMIT)).filter((c) => c.startTs < scanEnd && c.endTs > scanStart);
+    const allHr = await getHrSamplesBetween(scanStart, scanEnd).catch(() => []);
+    let existing = await listCardioBetween(scanStart, scanEnd);
+    if (sod < startOfDayMs(Date.now()) && perMinuteHr(allHr).length >= 120) {
+      const staleAutoNaps = existing.filter((row) => row.source === 'nap' && parseNapDetail(row.notes)?.autoDetected === true);
+      for (const nap of staleAutoNaps) await deleteCardio(nap.id);
+      if (staleAutoNaps.length) existing = await listCardioBetween(scanStart, scanEnd);
+    }
     const napRanges = existing.filter((c) => c.source === 'nap').map((c) => ({ startTs: c.startTs, endTs: c.endTs }));
     const blocked = existing
       .filter((c) => c.source !== 'nap')
@@ -1959,7 +2038,6 @@ class AppStore extends Store<AppState> {
       blocked.push({ startTs: mainSleep.startTs - 30 * 60000, endTs: mainSleep.endTs + 30 * 60000 });
     }
 
-    const allHr = await getHrSamplesBetween(scanStart, scanEnd).catch(() => []);
     const allPerMin = perMinuteHr(allHr).filter((p) => !blocked.some((b) => rangesOverlap(p.tsMs, p.tsMs + 60000, b.startTs, b.endTs)));
     if (allPerMin.length < 120) return;
     const dayMedianHr = median(allPerMin.map((p) => p.hr));
@@ -2194,6 +2272,13 @@ class AppStore extends Store<AppState> {
       return;
     }
     await this.backfillDailyMetric(day);
+    const today = dayKey(Date.now());
+    const dependents = (await getRecentDailyMetrics(HR_RETENTION_DAYS))
+      .filter((row) => row.day > day && row.day < today)
+      .map((row) => row.day)
+      .sort((a, b) => a.localeCompare(b));
+    for (const dependentDay of dependents) await this.backfillDailyMetric(dependentDay);
+    await this.recomputeToday();
     const recentDays = await getRecentDailyMetrics(30);
     this.setState({
       recentDays,
@@ -2220,11 +2305,15 @@ class AppStore extends Store<AppState> {
 
     // Last night's window. A manual override (logged/adjusted by the user) takes
     // precedence and is scored over exactly those bounds; otherwise auto-detect
-    // within 16:00 previous day -> 16:00 today, then attribute by wake day.
+    // Scan late morning on the previous day through two hours after this wake
+    // day, then
+    // require the detected block to end on this day. The wider search supports
+    // late sleepers and shift workers without writing one night twice.
     const manualRaw = await kvGet(`manualSleep:${today}`);
     const manual = manualRaw ? (JSON.parse(manualRaw) as { startTs: number; endTs: number }) : null;
-    const winStart = manual ? manual.startTs : sod - 8 * 3600 * 1000;
-    const winEnd = manual ? manual.endTs : Math.min(sod + 16 * 3600 * 1000, now);
+    const wakeDayEnd = localDayStartOffset(sod, 1);
+    const winStart = manual ? manual.startTs : localDayHour(sod, -1, 10);
+    const winEnd = manual ? manual.endTs : Math.min(localDayHour(sod, 1, 2), now);
     const nightHr = await getHrSamplesBetween(winStart, winEnd);
     const nightPerMin = perMinuteHr(nightHr);
     const captureWindowMin = Math.max(1, Math.round((winEnd - winStart) / 60000));
@@ -2236,11 +2325,14 @@ class AppStore extends Store<AppState> {
           endTs: manual.endTs,
           source: nightPerMin.length >= 10 ? 'manual_hr' : 'manual_duration',
         })
-      : computeSleep(sleepInput);
+      : computeSleep(sleepInput, undefined, { endAfterTs: sod, endBeforeTs: wakeDayEnd });
     if (manual && !candidateSleep) {
       candidateSleep = durationOnlySleep(manual.startTs, manual.endTs);
     }
-    const sleep = sleepIsReliable(candidateSleep, !!manual, sleepInput) ? candidateSleep : null;
+    const sleep =
+      sleepIsReliable(candidateSleep, !!manual, sleepInput) && sleepBelongsToDay(candidateSleep, today, !!manual)
+        ? candidateSleep
+        : null;
 
     // Overnight RMSSD + RHR + respiratory rate within the detected sleep window.
     let rmssd: number | null = null;
@@ -2255,7 +2347,7 @@ class AppStore extends Store<AppState> {
       rhr = vitals.rhr;
       resp = vitals.resp;
     }
-    const rawVitalWindow = sleep ?? candidateSleep;
+    const rawVitalWindow = sleep;
     if (rawVitalWindow) {
       const rawVitals = averageRawVitals(
         await getRawVitalSamplesBetween(rawVitalWindow.startTs - 30 * 60000, rawVitalWindow.endTs + 30 * 60000),
@@ -2276,17 +2368,33 @@ class AppStore extends Store<AppState> {
       .map((d) => ({ neededMin: debtAccrualTarget(d), asleepMin: d.sleepMin as number }));
     const accruedDebtMin = sleepDebt(debtNights);
     await this.autoDetectNapsForDay(sod, now, sleep);
-    const cardioAfterNapDetect = await listCardio(CARDIO_RECENT_LIMIT);
-    const napMin = cardioAfterNapDetect
-      .filter((c) => c.source === 'nap' && c.startTs >= sod)
+    const completedLoadWindow = sleepNeedLoadWindow(recent, sleep, sod);
+    const completedStrain = await strainBetween(completedLoadWindow.startTs, completedLoadWindow.endTs, profile);
+    const completedNapMin = (await listNapsBetween(completedLoadWindow.startTs, completedLoadWindow.endTs))
       .reduce((a, c) => a + napCreditMin(c), 0);
+    const napMin = (await listNapsBetween(sod, now)).reduce((a, c) => a + napCreditMin(c), 0);
     const need = computeSleepNeed({
       baselineMin: personalSleepBaseline(recent),
-      recentStrain: strain,
+      recentStrain: completedStrain,
       accruedDebtMin,
-      napMin,
+      napMin: completedNapMin,
     });
     if (sleep) applySleepNeed(sleep, need);
+    const tonightDebtMin = sleep
+      ? sleepDebt([
+          ...debtNights,
+          {
+            neededMin: Math.max(0, need.baselineMin + need.strainMin - need.napMin),
+            asleepMin: sleep.asleepMin,
+          },
+        ].slice(-14))
+      : accruedDebtMin;
+    const tonightNeed = computeSleepNeed({
+      baselineMin: personalSleepBaseline(recent),
+      recentStrain: strain,
+      accruedDebtMin: tonightDebtMin,
+      napMin,
+    });
     const captureSleep = candidateSleep ?? sleep;
     const captureEvidence = captureSleep
       ? sleepResultCaptureEvidence(captureSleep)
@@ -2324,7 +2432,7 @@ class AppStore extends Store<AppState> {
     const consistency = sleepConsistency(priorWindows);
 
     // ---- WHOOP-style Sleep Stress (0-3) over time-in-bed, from R-R + HR ----
-    const sleepStressResult = sleep ? buildSleepStress(scoredNightHr) : null;
+    const sleepStressResult = sleep ? buildSleepStress(scoredNightHr, sleep.inBedMin) : null;
 
     // ---- WHOOP-style Sleep Performance composite + 4 contributors ----
     let sleepPerformanceResult: SleepPerformance | null = null;
@@ -2396,7 +2504,7 @@ class AppStore extends Store<AppState> {
     const trainingReadiness = computeTrainingReadiness({
       recovery,
       sleepPerformance: sleepPerfPct,
-      sleepDebtMin: need.debtMin,
+      sleepDebtMin: tonightNeed.debtMin,
       hrvBalance: hrvBal?.score ?? null,
       acwr: loadStatus.acwr,
       sleepConfidence: sleepDetail?.confidence ?? null,
@@ -2406,7 +2514,7 @@ class AppStore extends Store<AppState> {
     const energyReserve = computeEnergyReserve({
       recovery,
       sleepPerformance: energySleepPerfPct,
-      sleepDebtMin: need.debtMin,
+      sleepDebtMin: tonightNeed.debtMin,
       hrvBalance: hrvBal?.score ?? null,
       strain,
       stress: this.getState().liveStress ?? storedStress,
@@ -2438,7 +2546,7 @@ class AppStore extends Store<AppState> {
     this.setState({
       today: row,
       lastSleep: sleep,
-      sleepNeed: need,
+      sleepNeed: tonightNeed,
       sleepScore: sleepScoreResult,
       sleepReg,
       sleepConsistency: consistency,
@@ -2493,6 +2601,13 @@ class AppStore extends Store<AppState> {
   loadHistory = async (days: number): Promise<DailyMetricRow[]> => {
     const rows = await getRecentDailyMetrics(days);
     return rows.slice().reverse(); // chronological
+  };
+
+  loadDay = async (day: string): Promise<DailyMetricRow | null> => getDailyMetric(day);
+
+  loadActivitiesForDay = async (day: string): Promise<CardioRow[]> => {
+    const start = dayStartFromKey(day);
+    return listCardioStartingBetween(start, localDayStartOffset(start, 1));
   };
 
   // ---- Sleep goal (Get By / Perform / Peak) ----
@@ -2616,6 +2731,14 @@ function perMinuteHr(samples: { ts: number; bpm: number }[]): { tsMs: number; hr
   return [...buckets.entries()]
     .sort((a, b) => a[0] - b[0])
     .map(([minute, b]) => ({ tsMs: minute * 60000, hr: b.sum / b.n }));
+}
+
+async function strainBetween(fromTs: number, toTs: number, profile: UserProfile): Promise<number | null> {
+  if (toTs <= fromTs) return null;
+  const rows = await getHrSamplesBetween(fromTs, toTs);
+  const samples = perMinuteHr(rows).map((point) => ({ hr: point.hr, minutes: 1 }));
+  if (!samples.length) return null;
+  return strainFromLoad(edwardsTrimp(samples, profile));
 }
 
 async function buildSleepInput(
@@ -2954,7 +3077,7 @@ function boundedSleepCoveragePct(sleep: SleepResult): number {
   return Math.max(0, Math.min(100, sleepCoveragePct(sleep)));
 }
 
-function buildSleepStress(samples: HrSampleRow[]): SleepStress | null {
+function buildSleepStress(samples: HrSampleRow[], inBedMin: number): SleepStress | null {
   const directSamples = directPhysiologyHrSamples(samples);
   const byMin = new Map<number, HrSampleRow[]>();
   for (const s of directSamples) {
@@ -2969,7 +3092,8 @@ function buildSleepStress(samples: HrSampleRow[]): SleepStress | null {
       hr: minuteRows.reduce((sum, row) => sum + row.bpm, 0) / minuteRows.length,
       rmssd: computeHrvSegments(contiguousRrSegments(minuteRows))?.rmssd ?? null,
     }));
-  return computeSleepStress(epochs);
+  if (epochs.length < Math.max(60, Math.ceil(inBedMin * 0.8))) return null;
+  return computeSleepStress(epochs, null, inBedMin);
 }
 
 function buildSleepDetail(input: {
@@ -3464,6 +3588,41 @@ function dayStartFromKey(day: string): number {
   return new Date(`${day}T00:00:00`).getTime();
 }
 
+function localDayStartOffset(fromTs: number, days: number): number {
+  const date = new Date(fromTs);
+  date.setDate(date.getDate() + days);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+}
+
+function localDayHour(fromDayTs: number, days: number, hour: number): number {
+  const date = new Date(fromDayTs);
+  date.setDate(date.getDate() + days);
+  date.setHours(hour, 0, 0, 0);
+  return date.getTime();
+}
+
+function sleepNeedLoadWindow(
+  recent: DailyMetricRow[],
+  sleep: SleepResult | null,
+  wakeDayStart: number,
+): { startTs: number; endTs: number } {
+  const endTs = sleep?.startTs ?? wakeDayStart;
+  const priorWake = recent
+    .filter(isUsableSleepTrendNight)
+    .map((row) => row.sleepEnd as number)
+    .filter((ts) => ts < endTs && endTs - ts <= 36 * 60 * 60 * 1000)
+    .sort((a, b) => b - a)[0];
+  return {
+    startTs: priorWake ?? localDayStartOffset(wakeDayStart, -1),
+    endTs,
+  };
+}
+
+function sleepBelongsToDay(sleep: SleepResult, day: string, manual: boolean): boolean {
+  return manual || dayKey(sleep.endTs) === day;
+}
+
 function sleepCaptureNote(input: {
   hasSleep: boolean;
   hasCandidate?: boolean;
@@ -3593,9 +3752,17 @@ function parseStrapAlarm(raw: string | null): StrapAlarmState {
   if (!raw) return initialState.strapAlarm;
   try {
     const parsed = JSON.parse(raw) as Partial<StrapAlarmState>;
+    const wakeTs = typeof parsed.wakeTs === 'number' && Number.isFinite(parsed.wakeTs) ? Math.round(parsed.wakeTs) : null;
+    const localMinuteOfDay =
+      typeof parsed.localMinuteOfDay === 'number' && Number.isFinite(parsed.localMinuteOfDay)
+        ? Math.max(0, Math.min(24 * 60 - 1, Math.round(parsed.localMinuteOfDay)))
+        : wakeTs == null
+          ? null
+          : localAlarmMinuteOfDay(wakeTs);
     return {
       enabled: parsed.enabled === true,
-      wakeTs: typeof parsed.wakeTs === 'number' && Number.isFinite(parsed.wakeTs) ? Math.round(parsed.wakeTs) : null,
+      wakeTs,
+      localMinuteOfDay,
       updatedAt: typeof parsed.updatedAt === 'number' && Number.isFinite(parsed.updatedAt) ? Math.round(parsed.updatedAt) : null,
       pendingWrite: parsed.pendingWrite === 'set' || parsed.pendingWrite === 'disable' ? parsed.pendingWrite : null,
     };

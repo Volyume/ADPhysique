@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test:band-steps": "node scripts/test-band-steps.cjs",
     "test:sleep": "node scripts/test-sleep.cjs",
+    "test:sleep-schedule": "node scripts/test-sleep-schedule.cjs",
     "test:physiology": "node scripts/test-physiology.cjs"
   },
   "dependencies": {

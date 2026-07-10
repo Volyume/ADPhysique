@@ -66,10 +66,12 @@ export type HistoricalDecodeResult = {
 
 type PpgSample = { ts: number; value: number };
 type PpgEstimate = { ts: number; bpm: number; conf: number };
+export type HistoricalDecodeOptions = { ppgContextFrames?: Uint8Array[] };
 
 export function decodeWhoop5HistoryFrames(
   frames: Uint8Array[],
   wallNowSec = Math.floor(Date.now() / 1000),
+  options: HistoricalDecodeOptions = {},
 ): HistoricalDecodeResult {
   const hr: HistoricalHrSample[] = [];
   const steps: HistoricalStepSample[] = [];
@@ -87,6 +89,11 @@ export function decodeWhoop5HistoryFrames(
   let v21Records = 0;
   let v26Records = 0;
   let rawSensorRecords = 0;
+
+  // PPG autocorrelation needs several adjacent seconds. Include a bounded tail
+  // from the prior durable chunk as signal context, but never count it again as
+  // records or other decoded streams.
+  appendPpgContext(options.ppgContextFrames ?? [], ppg, wallNowSec);
 
   for (const frame of frames) {
     if (!isHistoryFrame(frame)) continue;
@@ -214,6 +221,17 @@ export function decodeWhoop5HistoryFrames(
     rawSensorRecords,
     versions: [...versions].sort((a, b) => a - b),
   };
+}
+
+function appendPpgContext(frames: Uint8Array[], ppg: PpgSample[], wallNowSec: number): void {
+  for (const frame of frames) {
+    if (!isHistoryFrame(frame) || u8(frame, 9) !== 26 || !verifyWhoop5Frame(frame)) continue;
+    const rec = decodeV26(frame);
+    if (!rec) continue;
+    const ts = plausibleUnix(rec.unix, wallNowSec);
+    if (ts == null) continue;
+    for (const value of rec.samples) ppg.push({ ts, value });
+  }
 }
 
 function mergeHistoricalHrSamples(samples: HistoricalHrSample[]): HistoricalHrSample[] {

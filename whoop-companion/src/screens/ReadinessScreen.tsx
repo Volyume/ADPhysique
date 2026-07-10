@@ -23,10 +23,12 @@ function confidenceColor(confidence: 'high' | 'medium' | 'low'): string {
 export function ReadinessScreen({ nav }: { nav: Nav }) {
   const readiness = useStoreSelector(appStore, (s) => s.trainingReadiness);
   const today = useStoreSelector(appStore, (s) => s.today);
+  const sleepNeed = useStoreSelector(appStore, (s) => s.sleepNeed);
   const sleepDetail = today?.sleepDetail ?? null;
   const sleepStateConflict = sleepStateWakeConflict(sleepDetail);
-  const trainingCall = readiness ? readinessCall(readiness, sleepDetail) : null;
-  const limiter = readiness ? readinessLimiter(readiness, sleepDetail) : null;
+  const tonightDebtMin = sleepNeed?.debtMin ?? null;
+  const trainingCall = readiness ? readinessCall(readiness, sleepDetail, tonightDebtMin) : null;
+  const limiter = readiness ? readinessLimiter(readiness, sleepDetail, tonightDebtMin) : null;
   const sleepNeedsSync = sleepNeedsMoreSync(sleepDetail);
   const qualityAction =
     !readiness
@@ -131,7 +133,7 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
                 </View>
                 <View style={styles.statRow}>
                   <Stat label="Target strain" value={trainingCall.targetStrain} color={trainingCall.color} />
-                  <Stat label="Sleep debt" value={sleepDetail?.debtMin != null ? `${Math.round(sleepDetail.debtMin)}m` : '-'} />
+                  <Stat label="Sleep debt" value={tonightDebtMin != null ? `${Math.round(tonightDebtMin)}m` : '-'} />
                   <Stat label="Confidence" value={`${readiness.confidencePct}%`} color={confidenceColor(readiness.confidence)} />
                 </View>
                 <NavRow
@@ -211,6 +213,7 @@ function contributorDotColor(c: { key: string; value: string; good: boolean | nu
 function readinessLimiter(
   readiness: NonNullable<ReturnType<typeof appStore.getState>['trainingReadiness']>,
   sleepDetail: NonNullable<ReturnType<typeof appStore.getState>['today']>['sleepDetail'] | null,
+  tonightDebtMin: number | null,
 ): {
   badge: string;
   title: string;
@@ -254,7 +257,7 @@ function readinessLimiter(
     };
   }
 
-  const debtMin = sleepDetail?.debtMin ?? 0;
+  const debtMin = tonightDebtMin ?? 0;
   if (debtMin >= 60) {
     return {
       badge: 'DEBT',
@@ -328,6 +331,7 @@ function limiterBody(key: string): string {
 function readinessCall(
   readiness: NonNullable<ReturnType<typeof appStore.getState>['trainingReadiness']>,
   sleepDetail: NonNullable<ReturnType<typeof appStore.getState>['today']>['sleepDetail'] | null,
+  tonightDebtMin: number | null,
 ): {
   badge: string;
   title: string;
@@ -419,10 +423,10 @@ function readinessCall(
       body: 'A lighter session can maintain momentum while protecting recovery for tomorrow.',
       targetStrain: '5-8',
       actionLabel: 'Open sleep plan',
-      actionValue: sleepDetail?.debtMin != null && sleepDetail.debtMin >= 45 ? 'debt' : 'recover',
+      actionValue: tonightDebtMin != null && tonightDebtMin >= 45 ? 'debt' : 'recover',
       icon: 'moon',
       color: colors.recoveryYellow,
-      route: sleepDetail?.debtMin != null && sleepDetail.debtMin >= 45 ? { name: 'sleepCoach' } : { name: 'strain' },
+      route: tonightDebtMin != null && tonightDebtMin >= 45 ? { name: 'sleepCoach' } : { name: 'strain' },
     };
   }
 

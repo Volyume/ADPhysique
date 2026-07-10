@@ -69,6 +69,7 @@ export const TABS: Array<{ key: TabKey; label: string; icon: string }> = [
 
 export interface Nav {
   navigate: (route: Route) => void;
+  replace: (route: Route) => void;
   back: () => void;
   setTab: (tab: TabKey) => void;
   canBack: boolean;
