@@ -4062,8 +4062,23 @@ export async function logBodyMetric(userId, data) {
   return bodyMetricsRepository.logBodyMetric(userId, data);
 }
 
-export async function getBodyMetricLog(userId, limitRows = 90) {
-  return bodyMetricsRepository.getBodyMetricLog(userId, limitRows);
+// D16 (NAV-2): options.includeDeleted lets the per-table sync push (which
+// must still see tombstoned rows so a delete propagates to the cloud) opt
+// back in; every UI read stays on the default (live, non-deleted) series.
+export async function getBodyMetricLog(userId, limitRows = 90, options = {}) {
+  return bodyMetricsRepository.getBodyMetricLog(userId, limitRows, options);
+}
+
+// D16 (NAV-2): correct any field (including the logged date) on an existing
+// body-metric entry. Returns true if a live row was found and updated.
+export async function updateBodyMetric(userId, id, data) {
+  return bodyMetricsRepository.updateBodyMetric(userId, id, data);
+}
+
+// D16 (NAV-2): soft-delete an entry (tombstone, same convention as recipes /
+// food_entries). Returns true if a live row was found and deleted.
+export async function deleteBodyMetric(userId, id) {
+  return bodyMetricsRepository.deleteBodyMetric(userId, id);
 }
 
 export async function getLatestBodyWeight(userId) {

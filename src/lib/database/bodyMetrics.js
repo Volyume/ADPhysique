@@ -44,10 +44,18 @@ export function createBodyMetricsRepository({
     return { id, userId, createdAt, ...data };
   }
 
-  async function getBodyMetricLog(userId, limitRows = 90) {
+  // D16 (NAV-2, weigh-in edit/delete/history): reads default to the live,
+  // non-deleted series so an edited value or a deleted row never lingers in
+  // the trend, the history list, or anything downstream that treats "the
+  // weigh-ins" as this function's output. The per-table sync push (which must
+  // still see soft-deleted rows so a delete propagates as a tombstone to the
+  // cloud, mirroring the recipes/food pattern) passes includeDeleted: true.
+  async function getBodyMetricLog(userId, limitRows = 90, { includeDeleted = false } = {}) {
     const d = await db();
     const rows = await d.getAllAsync(
-      'SELECT * FROM body_metric_log WHERE user_id = ? ORDER BY logged_at DESC LIMIT ?',
+      `SELECT * FROM body_metric_log
+        WHERE user_id = ?${includeDeleted ? '' : ' AND deleted_at IS NULL'}
+        ORDER BY logged_at DESC LIMIT ?`,
       [userId, limitRows],
     );
     return rows.map(rowToCamel);
@@ -58,13 +66,13 @@ export function createBodyMetricsRepository({
     const [bodyRow, morningRow] = await Promise.all([
       d.getFirstAsync(
         `SELECT weight_kg, logged_at FROM body_metric_log
-         WHERE user_id = ? AND weight_kg IS NOT NULL
+         WHERE user_id = ? AND weight_kg IS NOT NULL AND deleted_at IS NULL
          ORDER BY logged_at DESC LIMIT 1`,
         [userId],
       ),
       d.getFirstAsync(
         `SELECT weight_kg, logged_at FROM morning_weights
-         WHERE user_id = ? AND weight_kg IS NOT NULL
+         WHERE user_id = ? AND weight_kg IS NOT NULL AND deleted_at IS NULL
          ORDER BY logged_at DESC LIMIT 1`,
         [userId],
       ),
@@ -83,10 +91,10 @@ export function createBodyMetricsRepository({
     const d = await db();
     const union = `
       SELECT weight_kg, logged_at FROM body_metric_log
-        WHERE user_id = ? AND weight_kg IS NOT NULL
+        WHERE user_id = ? AND weight_kg IS NOT NULL AND deleted_at IS NULL
       UNION ALL
       SELECT weight_kg, logged_at FROM morning_weights
-        WHERE user_id = ? AND weight_kg IS NOT NULL`;
+        WHERE user_id = ? AND weight_kg IS NOT NULL AND deleted_at IS NULL`;
     const onOrBefore = await d.getFirstAsync(
       `SELECT weight_kg, logged_at FROM (${union})
          WHERE logged_at <= ?
@@ -109,7 +117,7 @@ export function createBodyMetricsRepository({
     const row = await d.getFirstAsync(
       `SELECT body_fat_percent, body_fat_source, logged_at
          FROM body_metric_log
-        WHERE user_id = ? AND body_fat_percent IS NOT NULL
+        WHERE user_id = ? AND body_fat_percent IS NOT NULL AND deleted_at IS NULL
         ORDER BY logged_at DESC LIMIT 1`,
       [userId],
     ).catch(() => null);
@@ -168,11 +176,65 @@ export function createBodyMetricsRepository({
     return row?.updated_at ?? null;
   }
 
+  // D16 (NAV-2): correct any field, including the logged date, on an
+  // existing entry. Same column set + ?? null semantics as logBodyMetric
+  // (the edit form always resubmits every field, not a partial patch), plus
+  // updated_at so the LWW sync gate and any live trend re-read see the
+  // correction immediately. Scoped to (id, user_id, deleted_at IS NULL) so a
+  // stale screen can't resurrect a tombstoned row or edit another user's data.
+  async function updateBodyMetric(userId, id, data) {
+    if (!id || !userId) return false;
+    const d = await db();
+    const updatedAt = now();
+    const result = await d.runAsync(
+      `UPDATE body_metric_log SET
+         logged_at = ?, weight_kg = ?, body_fat_percent = ?, body_fat_source = ?,
+         waist_cm = ?, chest_cm = ?, hips_cm = ?, thigh_cm = ?, arm_cm = ?,
+         shoulders_cm = ?, forearm_cm = ?, ham_cm = ?, calf_cm = ?, notes = ?,
+         updated_at = ?
+       WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
+      [
+        data.loggedAt ?? updatedAt,
+        data.weightKg ?? null, data.bodyFatPercent ?? null, data.bodyFatSource ?? null,
+        data.waistCm ?? null, data.chestCm ?? null, data.hipsCm ?? null,
+        data.thighCm ?? null, data.armCm ?? null,
+        data.shouldersCm ?? null, data.forearmCm ?? null, data.hamCm ?? null,
+        data.calfCm ?? null, data.notes ?? null,
+        updatedAt,
+        id, userId,
+      ],
+    );
+    scheduleSync();
+    return (result?.changes ?? 0) > 0;
+  }
+
+  // D16 (NAV-2): soft-delete only, same tombstone convention as recipes /
+  // food_entries / saved_meals (set deleted_at + bump updated_at, never a hard
+  // DELETE), so the deletion is a normal LWW-synced row change: the push side
+  // (sync/tables/bodyComposition.js) already stamps deleted_at onto the cloud
+  // row from this column, and insertBodyMetricFromCloud already honours an
+  // incoming deleted_at, so a delete on one device tombstones cleanly on
+  // every other device that pulls it, instead of a resurrecting hard delete.
+  async function deleteBodyMetric(userId, id) {
+    if (!id || !userId) return false;
+    const d = await db();
+    const ts = now();
+    const result = await d.runAsync(
+      `UPDATE body_metric_log SET deleted_at = ?, updated_at = ?
+       WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
+      [ts, ts, id, userId],
+    );
+    scheduleSync();
+    return (result?.changes ?? 0) > 0;
+  }
+
   return {
+    deleteBodyMetric,
     getAllBodyMetricsForUser,
     getBodyMetricLog,
     getBodyMetricUpdatedAt,
     getBodyWeightNearestTo,
+    updateBodyMetric,
     getLatestBodyComposition,
     getLatestBodyWeight,
     insertBodyMetricFromCloud,

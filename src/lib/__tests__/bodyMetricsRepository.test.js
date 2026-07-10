@@ -73,6 +73,76 @@ describe('bodyMetricsRepository', () => {
     expect(conn.getAllAsync.mock.calls[1][1]).toEqual(['u1']);
   });
 
+  // D16 (NAV-2): the default read excludes soft-deleted rows so an edited-away
+  // entry never reappears in the history list or in anything that treats this
+  // function's output as "the weigh-ins"; the sync push opts back in via
+  // includeDeleted so a delete still tombstones to the cloud.
+  test('getBodyMetricLog excludes soft-deleted rows by default, includes them for sync push', async () => {
+    const { conn, repo } = createHarness();
+
+    await repo.getBodyMetricLog('u1', 50);
+    expect(conn.getAllAsync.mock.calls[0][0]).toMatch(/deleted_at IS NULL/);
+    expect(conn.getAllAsync.mock.calls[0][1]).toEqual(['u1', 50]);
+
+    await repo.getBodyMetricLog('u1', 365, { includeDeleted: true });
+    expect(conn.getAllAsync.mock.calls[1][0]).not.toMatch(/deleted_at IS NULL/);
+    expect(conn.getAllAsync.mock.calls[1][1]).toEqual(['u1', 365]);
+  });
+
+  test('updateBodyMetric corrects an existing entry and bumps updated_at', async () => {
+    const { conn, repo, scheduleSync } = createHarness({
+      conn: { runAsync: jest.fn(async () => ({ changes: 1 })) },
+    });
+
+    await expect(repo.updateBodyMetric('u1', 'bm1', {
+      loggedAt: 2000,
+      weightKg: 80.1,
+      notes: 'corrected',
+    })).resolves.toBe(true);
+
+    expect(conn.runAsync.mock.calls[0][0]).toMatch(/UPDATE body_metric_log SET/);
+    expect(conn.runAsync.mock.calls[0][0]).toMatch(/WHERE id = \? AND user_id = \? AND deleted_at IS NULL/);
+    expect(conn.runAsync.mock.calls[0][1]).toEqual([
+      2000,
+      80.1, null, null,
+      null, null, null,
+      null, null,
+      null, null, null,
+      null, 'corrected',
+      123456,
+      'bm1', 'u1',
+    ]);
+    expect(scheduleSync).toHaveBeenCalledTimes(1);
+  });
+
+  test('updateBodyMetric returns false when no live row matched (missing/deleted/wrong user)', async () => {
+    const { repo } = createHarness({
+      conn: { runAsync: jest.fn(async () => ({ changes: 0 })) },
+    });
+    await expect(repo.updateBodyMetric('u1', 'missing', { weightKg: 80 })).resolves.toBe(false);
+    await expect(repo.updateBodyMetric('', 'bm1', {})).resolves.toBe(false);
+  });
+
+  test('deleteBodyMetric soft-deletes (tombstones), never a hard DELETE', async () => {
+    const { conn, repo, scheduleSync } = createHarness({
+      conn: { runAsync: jest.fn(async () => ({ changes: 1 })) },
+    });
+
+    await expect(repo.deleteBodyMetric('u1', 'bm1')).resolves.toBe(true);
+    expect(conn.runAsync.mock.calls[0][0]).toMatch(/UPDATE body_metric_log SET deleted_at = \?, updated_at = \?/);
+    expect(conn.runAsync.mock.calls[0][0]).not.toMatch(/DELETE FROM/);
+    expect(conn.runAsync.mock.calls[0][1]).toEqual([123456, 123456, 'bm1', 'u1']);
+    expect(scheduleSync).toHaveBeenCalledTimes(1);
+  });
+
+  test('deleteBodyMetric returns false when no live row matched', async () => {
+    const { repo } = createHarness({
+      conn: { runAsync: jest.fn(async () => ({ changes: 0 })) },
+    });
+    await expect(repo.deleteBodyMetric('u1', 'missing')).resolves.toBe(false);
+    await expect(repo.deleteBodyMetric('u1', '')).resolves.toBe(false);
+  });
+
   test('getLatestBodyWeight chooses the newest body-metric or morning-weight row', async () => {
     const { conn, repo } = createHarness();
     conn.getFirstAsync.mockImplementation(async (sql) => (

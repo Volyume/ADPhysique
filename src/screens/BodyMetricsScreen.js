@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions,
   KeyboardAvoidingView, Platform,
@@ -32,7 +32,8 @@ import { GLOSSARY } from '../lib/coachGlossary';
 import { useToast } from '../components/Toast';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { logBodyMetric, getBodyMetricLog, getOpenEdPatternFlag, getWorkoutSetsSince, getAllExercises } from '../lib/database';
+import { logBodyMetric, updateBodyMetric, deleteBodyMetric, getBodyMetricLog, getOpenEdPatternFlag, getWorkoutSetsSince, getAllExercises } from '../lib/database';
+import { appAlert } from '../components/AppAlert';
 import { deriveRecomp, buildRecompShareParams } from '../lib/recompReframe';
 import { localDayKey } from '../lib/dayKey';
 import WindowChips from '../components/WindowChips';
@@ -52,7 +53,7 @@ import { robustValues } from '../lib/robustTrend';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { toEnergy, energyUnitLabel } from '../lib/format';
-import { formatBodyWeight, formatBodyWeightShort } from '../lib/units';
+import { formatBodyWeight, formatBodyWeightShort, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
 import { isCalm, WELLBEING_HELPLINE, WELLBEING_KEY } from '../lib/wellbeing';
 import { validateBodyMetricForm } from '../lib/bodyMetricValidate';
 
@@ -92,6 +93,17 @@ function rowToEntry(row) {
     hamstrings:  row.hamCm ?? null,
     calves:      row.calfCm ?? null,
     notes:       row.notes ?? '',
+  };
+}
+
+// D16 (NAV-2): shared blank-form shape, reused for a fresh "New entry" and
+// for closing an in-progress edit (never left holding a stale entry's data).
+function blankMetricForm() {
+  return {
+    body_weight: '', body_weight_st: '', body_weight_st_lbs: '0', body_fat: '',
+    chest: '', shoulders: '', arms: '', forearms: '',
+    waist: '', hips: '', quads: '', hamstrings: '', calves: '',
+    metric_date: format(new Date(), 'yyyy-MM-dd'), notes: '',
   };
 }
 
@@ -428,15 +440,16 @@ export default function BodyMetricsScreen() {
   const [recentIntake, setRecentIntake] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [showMeasurements, setShowMeasurements] = useState(false);
-  const [form, setForm] = useState({
-    body_weight: '', body_weight_st: '', body_weight_st_lbs: '0', body_fat: '',
-    chest: '', shoulders: '', arms: '', forearms: '',
-    waist: '', hips: '', quads: '', hamstrings: '', calves: '',
-    metric_date: format(new Date(), 'yyyy-MM-dd'), notes: '',
-  });
+  const [form, setForm] = useState(blankMetricForm());
   const [saving, setSaving] = useState(false);
+  // D16 (NAV-2): null while logging a new entry; set to an existing entry's
+  // id while editing it, so saveMetrics() knows whether to insert or correct.
+  const [editingId, setEditingId] = useState(null);
   const [selectedMeasurement, setSelectedMeasurement] = useState(null);
   const [ewmaData, setEwmaData] = useState([]);
+  // D16 (NAV-2): scroll the "New entry"/"Edit entry" form into view when the
+  // user taps Edit on a history row further down the page.
+  const scrollRef = useRef(null);
 
   // Estimated daily burn: Precision Coaching's reverse-engineered TDEE from
   // the weight trend and logged intake. A point estimate with a confidence
@@ -651,6 +664,97 @@ export default function BodyMetricsScreen() {
     } catch (_e) { setRecentIntake(null); }
   }
 
+  // D16 (NAV-2): closes the New/Edit entry form and always drops back to a
+  // blank, non-editing state, so Cancel from an edit can never leave a stale
+  // editingId around to silently redirect the next "Log weight" tap.
+  function closeMetricForm() {
+    setShowForm(false);
+    setShowMeasurements(false);
+    setEditingId(null);
+    setForm(blankMetricForm());
+  }
+
+  // D16 (NAV-2): prefill the existing New-entry form from a history row and
+  // switch it into edit mode. Converts the entry's stored kg back into the
+  // user's display unit (mirrors TodayStrip's kg -> st/lb prefill) so editing
+  // in stone-and-pounds never shows a raw kilogram figure.
+  function startEditEntry(entry) {
+    if (useAppStore.getState().tier !== 'pro') return;
+    const hasMeasurements = MEASUREMENTS.some(m => entry[m.key] != null);
+    let body_weight = '';
+    let body_weight_st = '';
+    let body_weight_st_lbs = '0';
+    if (entry.body_weight) {
+      if (bwu === 'st') {
+        const { stoneStr, lbsStr } = kgToStoneLbsStrings(entry.body_weight);
+        body_weight_st = stoneStr;
+        body_weight_st_lbs = lbsStr;
+      } else if (bwu === 'lbs') {
+        body_weight = String(Math.round(kgToLbs(entry.body_weight) * 10) / 10);
+      } else {
+        body_weight = String(Math.round(entry.body_weight * 10) / 10);
+      }
+    }
+    setForm({
+      body_weight, body_weight_st, body_weight_st_lbs,
+      body_fat: entry.body_fat != null ? String(entry.body_fat) : '',
+      chest: entry.chest != null ? String(entry.chest) : '',
+      shoulders: entry.shoulders != null ? String(entry.shoulders) : '',
+      arms: entry.arms != null ? String(entry.arms) : '',
+      forearms: entry.forearms != null ? String(entry.forearms) : '',
+      waist: entry.waist != null ? String(entry.waist) : '',
+      hips: entry.hips != null ? String(entry.hips) : '',
+      quads: entry.quads != null ? String(entry.quads) : '',
+      hamstrings: entry.hamstrings != null ? String(entry.hamstrings) : '',
+      calves: entry.calves != null ? String(entry.calves) : '',
+      metric_date: entry.metric_date || format(new Date(), 'yyyy-MM-dd'),
+      notes: entry.notes || '',
+    });
+    setShowMeasurements(hasMeasurements);
+    setEditingId(entry.id);
+    setShowForm(true);
+    // Jump the form into view: the History row that started the edit can be
+    // well below the fold.
+    scrollRef.current?.scrollTo?.({ y: 0, animated: true });
+  }
+
+  // D16 (NAV-2): calm confirm, the app's existing workout delete-confirm
+  // idiom (appAlert, neutral "Cancel"/"Delete" pair, no haptics). Plain,
+  // factual copy only, no judgement of the values being removed.
+  function confirmDeleteEntry(entry) {
+    if (useAppStore.getState().tier !== 'pro') return;
+    appAlert(
+      'Delete this entry?',
+      'The weight and any measurements logged for this date are removed from your history. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteMetricEntry(entry) },
+      ],
+    );
+  }
+
+  async function deleteMetricEntry(entry) {
+    if (useAppStore.getState().tier !== 'pro') return;
+    const prevHistory = history;
+    // Optimistic removal; restored on failure.
+    setHistory(prev => prev.filter(h => h.id !== entry.id));
+    if (editingId === entry.id) closeMetricForm();
+    try {
+      const ok = await deleteBodyMetric(user.id, entry.id);
+      if (!ok) throw new Error('deleteBodyMetric: no live row matched');
+      if (session?.user?.id) {
+        syncAll({ userId: session.user.id, localUserId: user.id, triggeredBy: 'write' }).catch(() => {});
+      }
+      toast.show('Entry deleted.', { variant: 'success' });
+      await loadHistory();
+    } catch (e) {
+      setHistory(prevHistory);
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('BodyMetricsScreen.deleteEntry', e, { entryId: entry.id }); } catch (_) {}
+      toast.show("Couldn't delete. Try again.", { variant: 'error' });
+    }
+  }
+
   async function saveMetrics() {
     // Live-tier re-check (hostile review E10 #1 class): a pro-to-free flip
     // while the form is open must not let this closure write.
@@ -666,8 +770,35 @@ export default function BodyMetricsScreen() {
       return;
     }
     const data = result.data;
+    // D16 (NAV-2): captured before the form resets under us.
+    const targetId = editingId;
+    const isEdit = !!targetId;
     setSaving(true);
     try {
+      if (isEdit) {
+        // Optimistic UI: replace the edited row in place, in the same
+        // rowToEntry() shape every other history entry is in, so the
+        // snapshot/trend/history all reflect the correction immediately
+        // rather than showing blank fields until the reload below lands.
+        const optimisticEntry = rowToEntry({ id: targetId, ...data });
+        setHistory(prev => prev.map(h => (h.id === targetId ? optimisticEntry : h)));
+        closeMetricForm();
+        try {
+          const ok = await updateBodyMetric(user.id, targetId, data);
+          if (!ok) throw new Error('updateBodyMetric: no live row matched');
+          if (session?.user?.id) {
+            syncAll({ userId: session.user.id, localUserId: user.id, triggeredBy: 'write' }).catch(() => {});
+          }
+          // Reload so downstream reads (trend chart, EWMA, recomp reframe)
+          // recompute from the corrected series, not the optimistic guess.
+          await loadHistory();
+        } catch (_e) {
+          await loadHistory(); // revert the optimistic row to the real (unsaved) state
+          toast.show('Couldn\'t save. Try again.', { variant: 'error' });
+        }
+        return;
+      }
+
       // Optimistic UI: insert the new entry at the top of the history
       // list immediately so the user sees it land in real time, rather
       // than waiting for the SQLite write + a full reload. Same pattern
@@ -678,13 +809,7 @@ export default function BodyMetricsScreen() {
         ...data,
       };
       setHistory(prev => [optimisticEntry, ...prev]);
-      setShowForm(false);
-      setForm({
-        body_weight: '', body_weight_st: '', body_weight_st_lbs: '0',
-        chest: '', shoulders: '', arms: '', forearms: '',
-        waist: '', hips: '', quads: '', hamstrings: '', calves: '',
-        metric_date: format(new Date(), 'yyyy-MM-dd'), notes: '',
-      });
+      closeMetricForm();
       // Background: persist to SQLite + cloud. On success, replace the
       // optimistic entry with the real saved row. On failure, remove
       // the optimistic entry and show a toast.
@@ -778,7 +903,7 @@ export default function BodyMetricsScreen() {
           reachable above the keyboard, for consistency, no fixed footer
           was found below this scroll. */}
       <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
 
         {/* E10 read-only lapse views: say plainly what this state is, and keep
             the one honest way out. Calm voice, no shame. */}
@@ -970,7 +1095,14 @@ export default function BodyMetricsScreen() {
             title={showForm ? 'Cancel' : 'Log weight'}
             icon={showForm ? 'chevron-up' : 'add-circle'}
             style={styles.logBtn}
-            onPress={() => { setShowForm(!showForm); setShowMeasurements(false); }}
+            onPress={() => {
+              // D16 (NAV-2): opening fresh always starts a new entry, even if
+              // the form was last left mid-edit; closing always clears edit
+              // state too, so a stray editingId can never redirect a later
+              // "Log weight" tap into silently overwriting a past entry.
+              if (showForm) closeMetricForm();
+              else { setEditingId(null); setShowForm(true); setShowMeasurements(false); }
+            }}
             accessibilityState={{ expanded: showForm }}
             accessibilityLabel={showForm ? 'Cancel' : 'Log weight'}
             size="lg"
@@ -978,10 +1110,10 @@ export default function BodyMetricsScreen() {
           />
         )}
 
-        {/* Log Form */}
+        {/* Log / Edit Form */}
         {!readOnly && showForm && (
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>New entry</Text>
+            <Text style={styles.formTitle}>{editingId ? 'Edit entry' : 'New entry'}</Text>
             <View style={styles.formRow}>
               <Text style={styles.formLabel}>Date</Text>
               <TextField
@@ -1105,13 +1237,13 @@ export default function BodyMetricsScreen() {
               accessibilityLabel="Notes"
             />
             <Button
-              title="Save entry"
+              title={editingId ? 'Save changes' : 'Save entry'}
               onPress={saveMetrics}
               disabled={saving}
               loading={saving}
               style={styles.saveBtn}
               textStyle={styles.saveBtnText}
-              accessibilityLabel="Save entry"
+              accessibilityLabel={editingId ? 'Save changes' : 'Save entry'}
             />
           </View>
         )}
@@ -1179,25 +1311,55 @@ export default function BodyMetricsScreen() {
           </Card>
         )}
 
-        {/* History */}
-        {history.length > 1 && (
+        {/* History. D16 (NAV-2): full weigh-in management, edit any entry,
+            delete entries, visible history list, so this now shows from a
+            single logged entry (not only once there are 2+), and every row
+            carries a calm edit/delete pair for Pro (view-only free users see
+            the list with no write affordances, matching the rest of this
+            screen). */}
+        {history.length > 0 && (
           <View style={styles.section}>
             <SectionLabel>History</SectionLabel>
             {history.slice(0, 12).map(entry => {
               const measuredKeys = MEASUREMENTS.filter(m => entry[m.key] != null);
+              const entryLabel = safeFormatDate(entry.metric_date, 'd MMM yyyy') || 'this date';
               return (
                 <Card key={entry.id} radius="md" padding="md" style={styles.historyRow}>
-                  <Text style={styles.historyDate}>{safeFormatDate(entry.metric_date, 'd MMM yyyy') || '-'}</Text>
-                  <View style={styles.historyValues}>
-                    {entry.body_weight ? (
-                      <Text style={styles.historyWeight}>{formatBodyWeightShort(entry.body_weight, bwu)}</Text>
-                    ) : null}
-                    {measuredKeys.slice(0, 2).map(m => (
-                      <Text key={m.key} style={styles.historyMeasure}>
-                        {m.label.split(' ')[0]} {entry[m.key]}cm
-                      </Text>
-                    ))}
+                  <View style={styles.historyMain}>
+                    <Text style={styles.historyDate}>{safeFormatDate(entry.metric_date, 'd MMM yyyy') || '-'}</Text>
+                    <View style={styles.historyValues}>
+                      {entry.body_weight ? (
+                        <Text style={styles.historyWeight}>{formatBodyWeightShort(entry.body_weight, bwu)}</Text>
+                      ) : null}
+                      {measuredKeys.slice(0, 2).map(m => (
+                        <Text key={m.key} style={styles.historyMeasure}>
+                          {m.label.split(' ')[0]} {entry[m.key]}cm
+                        </Text>
+                      ))}
+                    </View>
                   </View>
+                  {!readOnly && (
+                    <View style={styles.historyActions}>
+                      <TouchableOpacity
+                        style={styles.historyActionBtn}
+                        onPress={() => startEditEntry(entry)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Edit entry from ${entryLabel}`}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="pencil-outline" size={16} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.historyActionBtn}
+                        onPress={() => confirmDeleteEntry(entry)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Delete entry from ${entryLabel}`}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="trash-outline" size={16} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </Card>
               );
             })}
@@ -1437,10 +1599,24 @@ const styles = StyleSheet.create({
   historyRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
+  // D16 (NAV-2): date + values sit in their own flexible row so the
+  // edit/delete pair (historyActions) can sit alongside without the two
+  // competing for the same justify-content: space-between.
+  historyMain: {
+    flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+  },
   historyDate: { fontSize: fontSize.sm, color: colors.textSecondary },
   historyValues: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   historyWeight: { ...type.num('bodyStrong'), color: colors.textPrimary },
   historyMeasure: { ...type.num('caption'), color: colors.textMuted },
+  historyActions: { flexDirection: 'row', gap: spacing.xs, marginLeft: spacing.sm },
+  // Quiet destructive affordance, same neutral-until-confirm treatment as
+  // WorkoutHistoryScreen's deleteBtn (no shouting red, no haptics).
+  historyActionBtn: {
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
+    borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+  },
 
   ewmaCard: {
     gap: spacing.xs,

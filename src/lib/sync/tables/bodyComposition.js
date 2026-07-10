@@ -60,7 +60,11 @@ export async function pushBodyComposition(sb, { userId, localUserId } = {}) {
   try {
     // eslint-disable-next-line global-require
     const { getBodyMetricLog } = require('../../database');
-    const metrics = await getBodyMetricLog(localUserId, PUSH_WINDOW_DAYS);
+    // D16 (NAV-2): includeDeleted so a soft-deleted (edited-away) entry still
+    // pushes as a body_metrics tombstone (deleted_at set below) instead of
+    // silently vanishing from the cloud sync while surviving on another
+    // device's pull.
+    const metrics = await getBodyMetricLog(localUserId, PUSH_WINDOW_DAYS, { includeDeleted: true });
     if (!metrics?.length) return { count: 0, errors: 0 };
 
     const nowIso = new Date().toISOString();
