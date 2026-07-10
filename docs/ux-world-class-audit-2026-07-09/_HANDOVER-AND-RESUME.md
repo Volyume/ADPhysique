@@ -1114,3 +1114,14 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   doc: branded name is for named/sold surfaces). D16 SMALL THREE COMPLETE
   (13, 12, 11). NEXT: scoping reads for items 15 (timeline food logging)
   and 16 (micronutrients/NRV completion).
+- ITEM 15 SCOPING LANDED (item-15-timeline-scoping.md, read-only):
+  ruling verified ("Timeline replaces the meal buckets for everyone",
+  pass3-v2:67+:190). Better-placed than feared: logged_at timestamp has
+  ALWAYS existed (database.js:928, indexed), EntryRow already shows it,
+  within-meal chronological sort exists. Remaining delta = the diary's
+  per-meal card structure -> one continuous list (LARGE, staged 1-3).
+  KEY NEW FINDING: logged_at = write time not eaten time, and bulk
+  mark-eaten stamps ALL rows the same instant -> a true timeline would
+  clump a 9pm bulk-confirm into one false 9pm eating event (honesty/ED
+  flag, needs founder sign-off). 4 founder questions in section 6 -
+  bring TOGETHER with item 16's round when its scoping lands.
