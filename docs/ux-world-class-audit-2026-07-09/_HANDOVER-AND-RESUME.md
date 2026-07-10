@@ -1325,3 +1325,41 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   allergen excludes at every additions render site: CuratedMealSheet,
   diary season-to-taste row, MealPlan additions). Runway confirmed GO in
   full. IN FLIGHT: theming stage 2 + image polish.
+- THEMING STAGE 2 LANDED: App.js's StatusBar (t.resolvedTheme/t.colors.background,
+  useTheme()) and RootNavigator.js's NavigationContainer theme +
+  stackOptions shipped TOGETHER as the plan's risk register #7 requires.
+  stackOptions and the NavigationContainer theme derivation were pulled out
+  of RootNavigator.js into a new standalone src/navigation/navTheme.js
+  (buildNavTheme pure fn + useNavTheme/useStackOptions hooks) specifically
+  because RootNavigator.js itself is NOT require()-able under this jest
+  config (@react-navigation/bottom-tabs hits an unmocked native module,
+  confirmed directly - same wall src/__tests__/appLockGateRouting.guard.test.js
+  already documents) - navTheme.js has no such import, so its derivation is
+  unit-tested for real parity with resolveTheme() across every a11y-pref
+  combination, plus a memoization-stability test (risk register #8). A
+  second new test (cp10Stage2LiveChrome.test.js) proves StatusBar's live
+  props + the nav theme + a Stage-1 primitive (Card) all flip inside ONE
+  act()/render pass via a harness component (App.js/RootNavigator.js
+  themselves stay unmountable here; the harness runs the same useTheme()
+  wiring). proScreenGating.guard.test.js's block-end anchor moved from
+  `stackOptions` to `heroZoomTransition` (mechanical, same boundary).
+  NONE of the four SettingsDisplayScreen restart prompts were retired -
+  the plan's Stage 5 gate is explicit that retirement waits for Stage 3
+  (all 85 screens) + Stage 4 (Skia/chart consumers); Stage 2 only touches
+  root chrome, so every screen body is still frozen at import time and
+  removing any prompt now would ship a torn state, not a fixed one. Dated
+  comment left in SettingsDisplayScreen.js citing this. Zero visual change
+  pinned; full lint + jest green (643 suites). NEXT: theming stage 3
+  (screens, batched ~10-15, highest-traffic first).
+- IMAGE POLISH LANDED (lead-reviewed): all 9 photo surfaces on
+  expo-image (contentFit, reduce-motion-aware transitions, recyclingKey
+  on the two true-recycling surfaces - grid cells can never flash a
+  stale photo); AUDIT FINDING: the app renders ZERO remote images
+  anywhere (OFF image_url never rendered), so no network placeholders
+  needed; thumbhash pipeline = PROPOSAL ONLY (needs a schema column +
+  vendored ~200-line encoder - founder-gated, recorded not built);
+  expo-image jest mock added to the mocks convention. 42 targeted tests
+  green. IN FLIGHT NOW: theming stage 2 (App.js/RootNavigator/
+  SettingsDisplayScreen lane) + R1 allergen fix (tag all 94 meals'
+  additions vs FSA-14 fail-safe, central filterAdditionsForProfile at
+  every render site, tags REQUIRED via completeness test).
