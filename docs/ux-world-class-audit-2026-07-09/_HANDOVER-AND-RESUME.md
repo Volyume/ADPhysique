@@ -1516,3 +1516,11 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   proposal). Founder running CODEX ADVERSARIAL in parallel (D28) -
   findings return here as work items. Founder-side: migrations 110-116,
   refresh-off-snapshot manual run, App Groups + EAS, SHA-1.
+- FOUNDER MERGE ORDER (2026-07-10, explicit): when the theming FINAL
+  batch lands and completes (review + full suite green + lint), push
+  the branch AND ship to MAIN - PR + squash-merge per CLAUDE.md's
+  shipping path. NOTE flagged to founder: merging changes the
+  main...branch diff basis for the Codex adversarial (point Codex at
+  the PR/merge-commit diff, or run Codex first); merge proceeds unless
+  founder says hold. If budget ends before the batch lands, the NEXT
+  SESSION executes this order at the batch's landing boundary.
