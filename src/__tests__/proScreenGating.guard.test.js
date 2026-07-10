@@ -4,7 +4,7 @@
  * WHY THIS EXISTS: free/Pro gating is absolute and binary (CLAUDE.md §2 --
  * "never expose Pro to free"). RootNavigator.js declares every Pro-only
  * screen inside one deliberately fenced block (the "Pro-only screens."
- * comment through to the `stackOptions` declaration) as a
+ * comment through to the `heroZoomTransition` declaration) as a
  * `const Gated<Name> = lazyScreen(() => withProGuard(...))` or
  * `withReadOnlyProGuard(...)` wrapper (see src/components/ProGate.js for the
  * HOCs). That fenced block is the app's single canonical enumeration of every
@@ -46,18 +46,22 @@ const NAV = fs.readFileSync(
 );
 
 // Isolate the fenced "Pro-only screens" block: from its header comment to the
-// `stackOptions` declaration that immediately follows it. This is the file's
-// own canonical enumeration -- every Pro screen in the app is declared here,
+// `heroZoomTransition` declaration that immediately follows it (CP-10 stage 2,
+// docs/ux-world-class-audit-2026-07-09/CP-10-restart-free-theming-plan.md --
+// the old module-scope `stackOptions` const that used to anchor this end
+// moved into its own ./navTheme module for testability, so the boundary now
+// anchors on the next stable declaration instead). This is the file's own
+// canonical enumeration -- every Pro screen in the app is declared here,
 // nowhere else (see the comment on that block in RootNavigator.js itself:
 // "Pro-only screens. The guard renders an upgrade prompt for free users,
 // enforcing Pro access no matter how the route is reached.").
 const blockStart = NAV.indexOf('// Pro-only screens.');
-const blockEnd = NAV.indexOf('\nconst stackOptions', blockStart);
+const blockEnd = NAV.indexOf('\nconst heroZoomTransition', blockStart);
 if (blockStart === -1 || blockEnd === -1) {
   throw new Error(
     'proScreenGating.guard.test.js: could not locate the fenced "Pro-only ' +
     'screens" block in RootNavigator.js (expected between the ' +
-    '"// Pro-only screens." comment and the `stackOptions` declaration). ' +
+    '"// Pro-only screens." comment and the `heroZoomTransition` declaration). ' +
     'Has it been renamed or restructured? Update this guard to match before ' +
     'trusting it.'
   );

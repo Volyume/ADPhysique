@@ -31,6 +31,25 @@ const ENERGY_OPTIONS = [
 // they only take effect after the app is re-launched and bootstrapAccessibility
 // in App.js re-applies them before screens load. Prompt the user to reload now
 // rather than leaving them confused that the toggle "did nothing".
+//
+// D24 CP-10 stage 2 status (docs/ux-world-class-audit-2026-07-09/
+// CP-10-restart-free-theming-plan.md, 2026-07-10): ALL FOUR prompts below
+// stay exactly as they are. The plan's own Stage 5 ("Retire the reload
+// prompt") is explicit that a toggle's promptRestartForA11y call is removed
+// only "once Stage 3+4 cover every screen a toggle's dependency set
+// touches" -- i.e. after every one of the 85 screens (Stage 3) and the four
+// Skia/chart consumers (Stage 4) have been migrated off the frozen
+// StyleSheet.create/module-const pattern onto useTheme(). Stage 2 (this
+// pass) converts ONLY App.js's StatusBar + themeReady gate and
+// RootNavigator.js's NavigationContainer theme + stackOptions -- root chrome,
+// not screen content. Every screen's own background/text/border colours
+// (Home, Diary, Settings itself, all 85) are still frozen at import time.
+// Retiring even the Appearance prompt now would be actively dishonest: a
+// user switching to Light would see the status bar and nav header flip
+// instantly while every screen body stayed on the old palette until they
+// manually reloaded -- precisely the half-migrated "torn" state the plan's
+// risk register #1/#7 warns against, worse than the existing reload prompt.
+// No toggle is genuinely restart-free yet. Revisit this comment at Stage 5.
 async function promptRestartForA11y(label) {
   appAlert(
     `${label} saved`,

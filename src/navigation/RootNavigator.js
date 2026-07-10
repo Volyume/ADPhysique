@@ -12,7 +12,19 @@ const HERO_ASPECT = 1032 / 277;
 const SPLASH_W = Math.round(Dimensions.get('window').width * 0.7);
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, spacing, resolvedTheme, motion, type } from '../styles/theme';
+import { colors, spacing, motion, type } from '../styles/theme';
+// CP-10 stage 2 (docs/ux-world-class-audit-2026-07-09/
+// CP-10-restart-free-theming-plan.md, "Stage 2 — Root chrome"): the
+// NavigationContainer theme prop and the stackOptions header/card colours
+// below now read the LIVE hook instead of the static colors/resolvedTheme
+// imports, via ./navTheme (a standalone module for testability -- see its
+// header comment). `colors` stays imported for the rest of this file (the
+// SplashScreen StyleSheet.create at the bottom, out of Stage 2's scope, still
+// frozen until Stage 3) -- `resolvedTheme` had no remaining static reader in
+// this file once both its call sites moved to the hook, so it is dropped from
+// this import (not from theme.js itself -- App.js's boot-time
+// bootstrapAccessibility still uses it there).
+import { useNavTheme, useStackOptions } from './navTheme';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
@@ -232,17 +244,14 @@ const GatedMyRecipes        = lazyScreen(() => withProGuard(require('../screens/
 const GatedMyMeals          = lazyScreen(() => withProGuard(require('../screens/MyMealsScreen').default, 'Saved meals'));
 const GatedRecipeBuilder    = lazyScreen(() => withProGuard(require('../screens/RecipeBuilderScreen').default, 'Recipes'));
 
-const stackOptions = {
-  headerStyle: { backgroundColor: colors.surface, borderBottomColor: colors.border },
-  headerTintColor: colors.textPrimary,
-  headerTitleStyle: { fontWeight: '700', color: colors.textPrimary },
-  cardStyle: { backgroundColor: colors.background },
-  // No header sync indicator. Founder call 2026-05-31: sync is automatic and
-  // failures surface in logs and Sentry, so a permanent status badge in the
-  // header was noise (and its transient red "error" state was alarming).
-  // Overrides the old PRODUCTION_READINESS_LOCKED.md § 1 "visible in the UI"
-  // requirement; see that doc for the recorded override.
-};
+// CP-10 stage 2: `useStackOptions` (was a module-scope `stackOptions` const
+// baked from the static `colors` singleton at import time, class 2, CP-10
+// plan section 1.4/2.2 -- listed there by name) now lives in ./navTheme, a
+// standalone module with no @react-navigation import so it stays unit-
+// testable (see that file's header comment). Every Stack.Navigator
+// screenOptions call site below calls it inline (same pattern as the
+// pre-existing useStackMotionOverride()), so header/card colours follow a
+// live theme change with no restart.
 
 // Hero-zoom transition for screens that "expand" out of a card on the
 // previous screen (ActiveWorkout opening from the Continue / Next
@@ -299,7 +308,7 @@ function DiaryStack({ navigation }) {
     });
   }, [navigation]);
   return (
-    <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
+    <Stack.Navigator screenOptions={{ ...useStackOptions(), ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Diary" component={GatedDiary} options={{ headerShown: false }} />
       <Stack.Screen
         name="MealPlan"
@@ -376,7 +385,7 @@ function HomeStack({ navigation }) {
     });
   }, [navigation]);
   return (
-    <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
+    <Stack.Navigator screenOptions={{ ...useStackOptions(), ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BuildWorkout" component={BuildWorkoutScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={{ headerShown: false, ...heroZoomTransition }} />
@@ -406,7 +415,7 @@ function PlansStack({ navigation }) {
     });
   }, [navigation]);
   return (
-    <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
+    <Stack.Navigator screenOptions={{ ...useStackOptions(), ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Plans" component={PlansScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlanUpdate" component={GatedPlanUpdate} options={{ headerShown: false }} />
       <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
@@ -433,7 +442,7 @@ function ProgressStack({ navigation }) {
     });
   }, [navigation]);
   return (
-    <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
+    <Stack.Navigator screenOptions={{ ...useStackOptions(), ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Analytics" component={AnalyticsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ headerShown: false, ...heroZoomTransition }} />
@@ -468,7 +477,7 @@ function ProfileStack({ navigation }) {
     });
   }, [navigation]);
   return (
-    <Stack.Navigator screenOptions={{ ...stackOptions, ...(useStackMotionOverride() || {}) }}>
+    <Stack.Navigator screenOptions={{ ...useStackOptions(), ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="You" component={YouScreen} options={{ headerShown: false }} />
       <Stack.Screen name="AthleteProfile" component={AthleteProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
@@ -603,7 +612,7 @@ function LockedMainTabs() {
 
 function WelcomeStack() {
   return (
-    <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
+    <Stack.Navigator screenOptions={{ ...useStackOptions(), headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       {/* COMP-030: quiz-first pre-account screens. Registered always (harmless);
           only reached when ONBOARDING_QUIZ_FIRST is on and the user picks Pro. */}
@@ -616,7 +625,7 @@ function WelcomeStack() {
 
 function FirstRunStack() {
   return (
-    <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
+    <Stack.Navigator screenOptions={{ ...useStackOptions(), headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="FirstRunBranch" component={FirstRunScreen} />
       {/* B2: free guided on-ramp (founder decision 4a). Three plain questions
           straight after the name screen install + activate a difficulty-0
@@ -636,7 +645,7 @@ function FirstRunStack() {
 // normal flow (FirstRunStack / ProOnboardingStack / MainTabs).
 function Article9ConsentStack() {
   return (
-    <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
+    <Stack.Navigator screenOptions={{ ...useStackOptions(), headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Article9Consent" component={Article9ConsentScreen} />
       {/* Registered here so the consent gate can show the policy in-app
           (native PrivacyPolicyScreen, with its own BackHeader) rather than
@@ -648,7 +657,7 @@ function Article9ConsentStack() {
 
 function ProOnboardingStack() {
   return (
-    <Stack.Navigator screenOptions={{ ...stackOptions, headerShown: false, ...(useStackMotionOverride() || {}) }}>
+    <Stack.Navigator screenOptions={{ ...useStackOptions(), headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="ProOnboarding" component={ProOnboardingScreen} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
@@ -784,6 +793,13 @@ export default function RootNavigator() {
   const checkTier = useAppStore(s => s.checkTier);
   const refreshTierFromCloud = useAppStore(s => s.refreshTierFromCloud);
   const [splashReady, setSplashReady] = useState(false);
+  // CP-10 stage 2: drives the NavigationContainer theme prop below live (was
+  // the static resolvedTheme/colors imports, class 3 per the CP-10 plan --
+  // already inline JSX, so it only needed RootNavigator itself to re-render
+  // on a theme change, which this hook subscription now causes). Derivation
+  // + memoization live in ./navTheme (a standalone module for testability --
+  // see its header comment).
+  const navTheme = useNavTheme();
 
   useEffect(() => {
     const t = setTimeout(() => setSplashReady(true), SPLASH_MIN_MS);
@@ -1492,17 +1508,7 @@ export default function RootNavigator() {
           instrumentNavigation(navigationRef);
         } catch (_) { /* tolerate */ }
       }}
-      theme={{
-        dark: resolvedTheme !== 'light',
-        colors: {
-          primary: colors.primary,
-          background: colors.background,
-          card: colors.surface,
-          text: colors.textPrimary,
-          border: colors.border,
-          notification: colors.primary,
-        },
-      }}
+      theme={navTheme}
     >
       {renderNavigator()}
     </NavigationContainer>

@@ -127,6 +127,14 @@ import { applyAccessibility, resolvedTheme } from './src/styles/theme';
 import { appFonts, installTextDefaults } from './src/styles/fonts';
 import { loadA11yPrefs } from './src/lib/accessibilityPrefs';
 import * as Updates from 'expo-updates';
+// CP-10 stage 2 (docs/ux-world-class-audit-2026-07-09/
+// CP-10-restart-free-theming-plan.md, "Stage 2 — Root chrome"): App()'s own
+// StatusBar reads the LIVE hook instead of the static `resolvedTheme` import
+// above, so the status bar re-renders when the user flips a theme pref with
+// no restart. The static `resolvedTheme` import stays — `bootstrapAccessibility`
+// below is a plain boot-time function, not a component, and still needs the
+// legacy mutated singleton for the pre-hydration native-surface alignment call.
+import useTheme from './src/hooks/useTheme';
 
 // Read accessibility prefs at app boot and mutate the exported theme
 // tokens before any screen module is loaded. Idempotent — safe to call
@@ -402,6 +410,11 @@ export default function App() {
   const loadPrivacyPrefs = useAppStore(s => s.loadPrivacyPrefs);
   const [calm, setCalm] = useState(false);
   const [themeReady, setThemeReady] = useState(false);
+  // CP-10 stage 2: drives the StatusBar below live. Reads the existing
+  // accessibility slice (see src/hooks/useTheme.js) — cheap even before
+  // themeReady flips, since resolveTheme() is a pure function of four
+  // primitive prefs, not the app's boot state.
+  const t = useTheme();
 
   // (The daily-steps launch prompt was removed with the Health Connect / Apple
   // Health integration, founder 2026-06-30.)
@@ -931,9 +944,15 @@ export default function App() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <BottomSheetModalProvider>
           <SafeAreaProvider initialWindowMetrics={initialWindowMetrics}>
+            {/* CP-10 stage 2: live theme read (useTheme, not the static
+                resolvedTheme import) so the status bar flips with the rest of
+                the app's chrome on a theme change, no restart. t.colors.background
+                is byte-identical to the hard-coded '#FAFAF7'/'#0D0D0D' this
+                replaces (theme.js baseColors/lightColors) — zero visual change
+                at rest, in either theme. */}
             <StatusBar
-              style={resolvedTheme === 'light' ? 'dark' : 'light'}
-              backgroundColor={resolvedTheme === 'light' ? '#FAFAF7' : '#0D0D0D'}
+              style={t.resolvedTheme === 'light' ? 'dark' : 'light'}
+              backgroundColor={t.colors.background}
             />
             <ToastProvider>
               <FeedbackProvider>
