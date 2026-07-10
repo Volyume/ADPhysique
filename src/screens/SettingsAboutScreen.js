@@ -4,7 +4,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, letterSpacing } fr
 import { useFeedback } from '../components/FeedbackSheet';
 import { SettingsPage, SettingRow, settingsStyles } from '../components/SettingsPrimitives';
 
-// Help & about: feedback, store rating, credits, and the build footer.
+// Help & about: FAQ, feedback, store rating, credits, and the build footer.
 // Long-pressing the version opens the on-device debug log.
 export default function SettingsAboutScreen({ navigation }) {
   const feedback = useFeedback();
@@ -12,6 +12,12 @@ export default function SettingsAboutScreen({ navigation }) {
   return (
     <SettingsPage title="About">
       <View style={settingsStyles.section}>
+        <SettingRow
+          icon="help-circle-outline"
+          label="Help & FAQ"
+          sub="Common questions, answered offline"
+          onPress={() => navigation.navigate('SettingsFaq')}
+        />
         <SettingRow
           icon="chatbubble-ellipses-outline"
           label="Send feedback"

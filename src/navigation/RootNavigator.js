@@ -83,6 +83,7 @@ const SettingsDietaryScreen = lazyScreen(() => require('../screens/SettingsDieta
 const SnapshotsScreen = lazyScreen(() => require('../screens/SnapshotsScreen').default);
 const SettingsPrivacyScreen = lazyScreen(() => require('../screens/SettingsPrivacyScreen').default);
 const SettingsAboutScreen = lazyScreen(() => require('../screens/SettingsAboutScreen').default);
+const SettingsFaqScreen = lazyScreen(() => require('../screens/SettingsFaqScreen').default);
 const LiftProgressScreen = lazyScreen(() => require('../screens/LiftProgressScreen').default);
 const ConsistencyScreen = lazyScreen(() => require('../screens/ConsistencyScreen').default);
 const YouScreen = lazyScreen(() => require('../screens/YouScreen').default);
@@ -482,6 +483,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="Snapshots" component={SnapshotsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsPrivacy" component={SettingsPrivacyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsAbout" component={SettingsAboutScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SettingsFaq" component={SettingsFaqScreen} options={{ headerShown: false }} />
       <Stack.Screen name="NutritionTargets" component={GatedNutritionTargets} options={{ headerShown: false }} />
       <Stack.Screen name="MealNames" component={GatedMealNames} options={{ headerShown: false }} />
       <Stack.Screen name="PerDayTargets" component={GatedPerDayTargets} options={{ headerShown: false }} />
