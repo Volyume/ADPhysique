@@ -1,10 +1,12 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Card from './Card';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 import {
-  colors, spacing, radius, type, iconSize,
+  colors, spacing, radius, type, iconSize, motion,
 } from '../styles/theme';
+import useAppStore from '../store/useAppStore';
 import {
   formatVolyumeScore,
   progressScanAssessmentForDisplay,
@@ -132,6 +134,7 @@ export default function ProgressScanHistoryCard({
   onDeleteScan,
   onOpenPhoto,
 }) {
+  const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   if (!Array.isArray(scans) || scans.length === 0) return null;
   return (
     <Card padding="md" style={styles.scanCard}>
@@ -200,7 +203,13 @@ export default function ProgressScanHistoryCard({
                     accessibilityLabel={`${POSE_LABEL[asset.pose] || 'Progress'} photo from ${formatProgressPhotoDay(asset.takenAt)}.`}
                     style={styles.scanAssetThumb}
                   >
-                    <Image source={{ uri: asset.uri }} style={styles.scanAssetImage} />
+                    <Image
+                      source={{ uri: asset.uri }}
+                      style={styles.scanAssetImage}
+                      contentFit="cover"
+                      recyclingKey={asset.photoName || String(asset.id)}
+                      transition={reduceMotion ? 0 : motion.state}
+                    />
                     <Text style={styles.scanAssetPose} numberOfLines={1}>{POSE_LABEL[asset.pose] || asset.pose}</Text>
                   </TouchableOpacity>
                 ))}

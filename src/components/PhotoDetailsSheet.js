@@ -21,14 +21,15 @@
  */
 import { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, ScrollView, Image,
+  View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, ScrollView,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from './Button';
 import PhotoDatePicker from './PhotoDatePicker';
 import useAppStore from '../store/useAppStore';
 import {
-  colors, spacing, radius, type, iconSize,
+  colors, spacing, radius, type, iconSize, motion,
 } from '../styles/theme';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 
@@ -99,7 +100,8 @@ export default function PhotoDetailsSheet({
                 <Image
                   source={{ uri: previewUri }}
                   style={styles.previewImage}
-                  resizeMode="cover"
+                  contentFit="cover"
+                  transition={reduceMotion ? 0 : motion.state}
                   accessibilityIgnoresInvertColors
                   accessibilityLabel="Selected progress photo preview"
                 />

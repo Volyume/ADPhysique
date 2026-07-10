@@ -28,13 +28,14 @@ import {
   useState, useEffect, useMemo, useCallback, useRef,
 } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Image, Platform,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type,
+  colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, motion,
 } from '../styles/theme';
 import { useToast } from './Toast';
 import { appAlert } from './AppAlert';
@@ -139,6 +140,7 @@ export default function BeforeAfterShareSheet({
   const tier = useAppStore((s) => s.tier);
   const userId = useAppStore((s) => s.user?.id);
   const bodyWeightUnits = useAppStore((s) => s.bodyWeightUnits) || 'kg';
+  const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
 
   const sorted = useMemo(
     () => (Array.isArray(photos) ? photos : [])
@@ -460,7 +462,13 @@ export default function BeforeAfterShareSheet({
                   accessibilityState={{ selected: on }}
                   accessibilityLabel={`${usingScans ? 'Scan' : 'Photo'} from ${formatCardDate(item.ts)}${on ? ', chosen' : ''}`}
                 >
-                  <Image source={{ uri: item.uri }} style={[styles.thumb, on && styles.thumbOn]} resizeMode="cover" />
+                  <Image
+                    source={{ uri: item.uri }}
+                    style={[styles.thumb, on && styles.thumbOn]}
+                    contentFit="cover"
+                    recyclingKey={item.name}
+                    transition={reduceMotion ? 0 : motion.state}
+                  />
                   {on ? (
                     <View pointerEvents="none" style={styles.thumbCheck}>
                       <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
@@ -496,7 +504,8 @@ export default function BeforeAfterShareSheet({
               <Image
                 source={{ uri: `data:image/png;base64,${previewB64}` }}
                 style={{ width: PREVIEW_DISPLAY_W, height: previewH, borderRadius: radius.lg }}
-                resizeMode="contain"
+                contentFit="contain"
+                transition={reduceMotion ? 0 : motion.state}
               />
             ) : (
               <View style={[styles.previewPlaceholder, { width: PREVIEW_DISPLAY_W, height: previewH }]}>

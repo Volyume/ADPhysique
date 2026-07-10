@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image, Modal, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView,
 } from 'react-native';
+import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +15,7 @@ import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 import { SkeletonCard } from '../components/Skeleton';
 import {
-  colors, spacing, radius, fontWeight, type, iconSize,
+  colors, spacing, radius, fontWeight, type, iconSize, motion,
 } from '../styles/theme';
 import { useToast } from '../components/Toast';
 import useAppStore from '../store/useAppStore';
@@ -1259,7 +1260,20 @@ export default function ProgressPhotosScreen({ navigation }) {
         style={styles.checkInCard}
       >
         <View style={styles.checkInCover}>
-          <Image source={{ uri: cover.uri }} style={styles.checkInCoverImage} resizeMethod="resize" />
+          <Image
+            source={{ uri: cover.uri }}
+            style={styles.checkInCoverImage}
+            contentFit="cover"
+            // FlashList reuses this cell's underlying view for a DIFFERENT
+            // check-in as the user scrolls; without a per-item recyclingKey
+            // expo-image can blend from the recycled cell's previous photo
+            // into the new one, so a stranger's frame (really: an unrelated
+            // earlier photo) would flash for a moment. Keying on the cover
+            // photo's own filename tells expo-image this is a logically new
+            // image, so a reused cell renders it fresh instead of crossfading.
+            recyclingKey={cover.name}
+            transition={reduceMotion ? 0 : motion.state}
+          />
           <View pointerEvents="none" style={styles.checkInCoverBadge}>
             <Ionicons name="images-outline" size={13} color={colors.textPrimary} />
             <Text style={styles.checkInCoverBadgeText}>{item.photos.length}</Text>
@@ -1938,7 +1952,8 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Image
                   source={{ uri: scanReview.saved.uri }}
                   style={styles.scanReviewImage}
-                  resizeMode="contain"
+                  contentFit="contain"
+                  transition={reduceMotion ? 0 : motion.state}
                   accessibilityIgnoresInvertColors
                   accessibilityLabel={`${POSE_LABEL[scanReview?.pose] || 'Progress'} photo preview`}
                 />

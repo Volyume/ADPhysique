@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  colors, spacing, radius, type, fontWeight,
+  colors, spacing, radius, type, fontWeight, motion,
 } from '../styles/theme';
+import useAppStore from '../store/useAppStore';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 import {
@@ -77,7 +79,7 @@ function ScanSummary({ scan, label, hideExact }) {
   );
 }
 
-function ScanAssetCell({ asset, dateLabel }) {
+function ScanAssetCell({ asset, dateLabel, reduceMotion }) {
   if (!asset) {
     return (
       <View style={[styles.photoCell, styles.photoMissing]}>
@@ -89,8 +91,9 @@ function ScanAssetCell({ asset, dateLabel }) {
     <Image
       source={{ uri: asset.uri }}
       style={styles.photoCell}
-      resizeMode="cover"
-      resizeMethod="resize"
+      contentFit="cover"
+      recyclingKey={asset.photoName || String(asset.id)}
+      transition={reduceMotion ? 0 : motion.state}
       accessible
       accessibilityLabel={`${POSE_LABEL[asset.pose] || 'Scan'} photo from ${dateLabel}`}
     />
@@ -99,6 +102,7 @@ function ScanAssetCell({ asset, dateLabel }) {
 
 export default function ProgressScanCompare({ scans = [], onClose, hideExact = false }) {
   const suppressed = usePhotoSuppression();
+  const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const entries = useMemo(() => orderedScanEntries(scans), [scans]);
   const [selected, setSelected] = useState([]);
 
@@ -192,11 +196,11 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
                   <Text style={styles.poseTitle}>{POSE_LABEL[row.pose] || row.pose}</Text>
                   <View style={styles.photoPair}>
                     <View style={styles.photoSide}>
-                      <ScanAssetCell asset={row.earlier} dateLabel={earlierDate} />
+                      <ScanAssetCell asset={row.earlier} dateLabel={earlierDate} reduceMotion={reduceMotion} />
                       <Text style={styles.photoLabel}>Earlier</Text>
                     </View>
                     <View style={styles.photoSide}>
-                      <ScanAssetCell asset={row.later} dateLabel={laterDate} />
+                      <ScanAssetCell asset={row.later} dateLabel={laterDate} reduceMotion={reduceMotion} />
                       <Text style={styles.photoLabel}>Later</Text>
                     </View>
                   </View>

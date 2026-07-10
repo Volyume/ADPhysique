@@ -43,9 +43,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image, Modal,
+  View, Text, StyleSheet, TouchableOpacity, Modal,
   ScrollView, useWindowDimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -366,8 +367,13 @@ export default function ProgressPhotoViewer({
                 <Image
                   source={{ uri: current.uri }}
                   style={{ width: imgW, height: imgH }}
-                  resizeMode="contain"
-                  resizeMethod="resize"
+                  contentFit="contain"
+                  // One Image element is reused across the whole gallery as the
+                  // user swipes; recyclingKey per photo name plus a transition
+                  // gives a calm crossfade between photos instead of a hard cut
+                  // or a stale frame lingering from the previous page.
+                  recyclingKey={current.name}
+                  transition={reduceMotion ? 0 : motion.state}
                   accessible
                   accessibilityLabel={`Photo from ${formatProgressPhotoDay(currentMeta.takenAt)}`}
                 />

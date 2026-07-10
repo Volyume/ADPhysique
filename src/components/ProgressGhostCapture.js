@@ -34,13 +34,13 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
-  Image,
   Pressable,
   PanResponder,
   Platform,
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
@@ -63,6 +63,7 @@ import {
   iconSize,
   hitSlop,
   withAlpha,
+  motion,
 } from '../styles/theme';
 
 // expo-camera is a native module (config plugin). Lazy-require at module load
@@ -427,7 +428,8 @@ export default function ProgressGhostCapture({
         <Image
           source={{ uri: pendingCaptureUri }}
           style={StyleSheet.absoluteFill}
-          resizeMode="contain"
+          contentFit="contain"
+          transition={reduceMotion ? 0 : motion.state}
           accessibilityIgnoresInvertColors
           accessibilityLabel="Photo preview"
         />
@@ -481,7 +483,8 @@ export default function ProgressGhostCapture({
           <Image
             source={{ uri: referencePhoto.uri }}
             style={[StyleSheet.absoluteFill, { opacity: clampOpacity(opacity) }]}
-            resizeMode="cover"
+            contentFit="cover"
+            transition={reduceMotion ? 0 : motion.state}
             accessibilityIgnoresInvertColors
             accessible={false}
           />

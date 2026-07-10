@@ -29,8 +29,9 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, useWindowDimensions,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, useWindowDimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import Reanimated, {
   useSharedValue, useAnimatedStyle, withTiming, runOnJS,
 } from 'react-native-reanimated';
@@ -100,7 +101,7 @@ function Segmented({ options, value, onChange, groupLabel }) {
 
 // A dated pane: one bounded, resize-decoded image with its neutral label and
 // date. Shared by the side-by-side mode. `role` is 'Earlier' or 'Later'.
-function Pane({ item, role, w, h, failed, onError }) {
+function Pane({ item, role, w, h, failed, onError, reduceMotion }) {
   return (
     <View style={styles.pane}>
       {failed ? (
@@ -111,8 +112,9 @@ function Pane({ item, role, w, h, failed, onError }) {
         <Image
           source={{ uri: item.uri }}
           style={[styles.paneImage, { width: w, height: h }]}
-          resizeMode="contain"
-          resizeMethod="resize"
+          contentFit="contain"
+          recyclingKey={item.name}
+          transition={reduceMotion ? 0 : motion.state}
           accessible
           accessibilityLabel={`${role} photo, ${formatProgressPhotoDay(item.takenAt)}`}
           onError={onError}
@@ -169,8 +171,9 @@ function CompareSlider({
           <Image
             source={{ uri: later.uri }}
             style={{ width: w, height: h }}
-            resizeMode="contain"
-            resizeMethod="resize"
+            contentFit="contain"
+            recyclingKey={later.name}
+            transition={reduceMotion ? 0 : motion.state}
             accessible
             accessibilityLabel={`Later photo, ${formatProgressPhotoDay(later.takenAt)}`}
             onError={() => onError(later)}
@@ -185,8 +188,9 @@ function CompareSlider({
             <Image
               source={{ uri: earlier.uri }}
               style={{ width: w, height: h }}
-              resizeMode="contain"
-              resizeMethod="resize"
+              contentFit="contain"
+              recyclingKey={earlier.name}
+              transition={reduceMotion ? 0 : motion.state}
               accessible
               accessibilityLabel={`Earlier photo, ${formatProgressPhotoDay(earlier.takenAt)}`}
               onError={() => onError(earlier)}
@@ -449,7 +453,7 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
   const win = useWindowDimensions();
   // Bounded decode: two half-width panes for side-by-side, one single frame for
   // the slider and overlay. Every dimension is an explicit number kept inside
-  // the window, paired with resizeMethod="resize" on the RN images.
+  // the window, and expo-image decodes each photo to that same bounded size.
   const paneW = (win.width - spacing.lg * 2 - spacing.sm) / 2;
   const paneH = Math.min(Math.round(paneW * (4 / 3)), Math.round(win.height * 0.5));
   const frameW = win.width - spacing.lg * 2;
@@ -564,8 +568,8 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
 
             {mode === 'sideBySide' ? (
               <View style={styles.panes}>
-                <Pane item={earlier} role="Earlier" w={paneW} h={paneH} failed={!!failed[earlier.name]} onError={() => onImageError(earlier)} />
-                <Pane item={later} role="Later" w={paneW} h={paneH} failed={!!failed[later.name]} onError={() => onImageError(later)} />
+                <Pane item={earlier} role="Earlier" w={paneW} h={paneH} failed={!!failed[earlier.name]} onError={() => onImageError(earlier)} reduceMotion={reduceMotion} />
+                <Pane item={later} role="Later" w={paneW} h={paneH} failed={!!failed[later.name]} onError={() => onImageError(later)} reduceMotion={reduceMotion} />
               </View>
             ) : null}
 
@@ -614,8 +618,9 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
                 <Image
                   source={{ uri: item.uri }}
                   style={[styles.thumb, isChosen && styles.thumbChosen]}
-                  resizeMode="cover"
-                  resizeMethod="resize"
+                  contentFit="cover"
+                  recyclingKey={item.name}
+                  transition={reduceMotion ? 0 : motion.state}
                 />
               </TouchableOpacity>
             );

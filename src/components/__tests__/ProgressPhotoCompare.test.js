@@ -158,7 +158,7 @@ describe('ProgressPhotoCompare, calm default', () => {
     ]);
   });
 
-  test('panes decode at explicit bounded dimensions with resize downscaling', async () => {
+  test('panes decode at explicit bounded dimensions via expo-image contentFit', async () => {
     const tree = await render();
     for (const img of paneImages(tree)) {
       const s = Array.isArray(img.props.style)
@@ -169,8 +169,20 @@ describe('ProgressPhotoCompare, calm default', () => {
       expect(s.width).toBeGreaterThan(0);
       expect(s.width).toBeLessThanOrEqual(375 / 2);
       expect(s.height).toBeLessThanOrEqual(812 * 0.6);
-      expect(img.props.resizeMode).toBe('contain');
-      expect(img.props.resizeMethod).toBe('resize');
+      // expo-image polish (D24 item 3): contentFit replaces the RN resizeMode
+      // prop, and recyclingKey (the photo's own filename) plus a transition
+      // are set so this pane never flashes a stale photo.
+      expect(img.props.contentFit).toBe('contain');
+      expect(typeof img.props.recyclingKey).toBe('string');
+      expect(img.props.recyclingKey.length).toBeGreaterThan(0);
+      expect(img.props.transition).toBe(200);
+    }
+  });
+
+  test('reduce motion zeroes the pane transition to an instant swap', async () => {
+    const tree = await render([NEW, MID, OLD], { reduceMotion: true });
+    for (const img of paneImages(tree)) {
+      expect(img.props.transition).toBe(0);
     }
   });
 

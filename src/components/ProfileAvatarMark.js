@@ -1,7 +1,9 @@
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontWeight, radius, type, circle, withAlpha, alpha } from '../styles/theme';
+import { colors, fontWeight, radius, type, circle, withAlpha, alpha, motion } from '../styles/theme';
 import { avatarPresetFor } from '../lib/profileAvatarPresets';
+import useAppStore from '../store/useAppStore';
 
 function initialFor(displayName) {
   const first = String(displayName || 'Athlete').trim()[0];
@@ -17,6 +19,7 @@ export default function ProfileAvatarMark({
   selected = false,
   style,
 }) {
+  const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const preset = presetKey ? avatarPresetFor(presetKey) : null;
   const accent = colors[preset?.tone || 'primary'] || colors.primary;
   const borderColor = selected ? colors.primary : withAlpha(accent, alpha.edge);
@@ -37,7 +40,12 @@ export default function ProfileAvatarMark({
   if (avatarUri) {
     return (
       <View style={baseStyle}>
-        <Image source={{ uri: avatarUri }} style={styles.image} />
+        <Image
+          source={{ uri: avatarUri }}
+          style={styles.image}
+          contentFit="cover"
+          transition={reduceMotion ? 0 : motion.state}
+        />
         {editable ? (
           <View style={[styles.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: colors.primaryFill }]}>
             <Ionicons name="camera-outline" size={Math.max(12, Math.round(size * 0.17))} color={colors.onPrimary} />
