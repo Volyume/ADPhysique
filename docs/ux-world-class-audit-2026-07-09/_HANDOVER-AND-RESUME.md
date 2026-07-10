@@ -1151,3 +1151,24 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   decisions): product decisions are made ENTIRELY on what produces the
   better end product - never on build effort. Effort may inform
   sequencing, never the choice itself.
+- ITEM 16 DATA SPIKE LANDED (D22 data-first, Sonnet, lead-reviewed):
+  CoFID workbook fetched from the script's own existing URL (raw xlsx
+  never repo-committed by design); Inorganics + Vitamins sheets join 1:1
+  on all 2,886 codes. MEASURED COVERAGE: median 20/27 nutrients per
+  food; minerals mostly 86-98%; B-vitamins 78-90%; vit K only 9.9% (K1
+  only); fluoride/chromium/molybdenum permanently 0% from CoFID (not
+  published). No unit conversions needed (verified per nutrient; vit A =
+  retinol equivalents, niacin = equivalents, both matching NRV basis).
+  Tr/N markers -> null (new numMicro; unknown never zero). seed.js now
+  writes the 27 columns with a COALESCE top-up upsert (existing devices
+  get micro data on version bump; never touches macros). migrate_116
+  re-issues food_library_pull with the 27 columns (FOUNDER-RUN; queue
+  now 110-116). 37 tests green, lint clean on the spike's files.
+  DISCLOSED: agent briefly ran git stash on the shared tree (immediately
+  popped, verified restored) - agent briefs now include a no-stash rule.
+  COVERAGE PROVES VIABILITY -> per D22 the display build is GO: per-food
+  detail sheet primary + Food Insights weekly average secondary, quiet
+  non-quantified-first register; presentation shown to founder at
+  landing. Display build firing into the free slot. Item 15 timeline
+  build still in flight (its WIP explains the transient DiaryScreen lint
+  error + 4 eaten_at test failures on the shared tree).
