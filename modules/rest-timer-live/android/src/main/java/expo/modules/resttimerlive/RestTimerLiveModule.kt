@@ -37,8 +37,52 @@ class RestTimerLiveModule : Module() {
   private val DEFAULT_CHANNEL_ID = "rest-timer"
   private val VOLYUME_AMBER = 0xFFF59E0B.toInt()
 
+  companion object {
+    // D34: Service→module→JS bridge. WorkoutForegroundService lives in a
+    // separate process-side class and cannot call sendEvent directly, so the
+    // live module registers a lightweight emitter here (set in OnCreate,
+    // cleared in OnDestroy). A notification-action tap calls emitRestAction,
+    // which forwards to JS when the module is alive and is a safe no-op
+    // otherwise (module torn down / app process gone).
+    @Volatile
+    private var actionEmitter: ((String) -> Unit)? = null
+
+    fun setActionEmitter(emitter: ((String) -> Unit)?) {
+      actionEmitter = emitter
+    }
+
+    fun emitRestAction(actionId: String) {
+      try {
+        actionEmitter?.invoke(actionId)
+      } catch (_: Throwable) {
+        // The JS bridge may be gone; never let a notification tap crash.
+      }
+    }
+  }
+
   override fun definition() = ModuleDefinition {
     Name("RestTimerLive")
+
+    // D34: the single event this module emits — a rest-timer notification
+    // action tap (the "+15s" / "Skip rest" chronometer buttons). The payload
+    // carries the REST_TIMER_ACTION id so JS routes it through the SAME
+    // handleRestTimerAction seam the expo sticky path uses.
+    Events("onRestTimerAction")
+
+    OnCreate {
+      RestTimerLiveModule.setActionEmitter { actionId ->
+        try {
+          sendEvent("onRestTimerAction", mapOf("actionId" to actionId))
+        } catch (_: Throwable) {
+          // sendEvent can throw if the JS context is not ready; the native
+          // notification update path is independent and still runs.
+        }
+      }
+    }
+
+    OnDestroy {
+      RestTimerLiveModule.setActionEmitter(null)
+    }
 
     AsyncFunction("start") { options: Map<String, Any?>, promise: Promise ->
       try {

@@ -90,3 +90,56 @@ function _defaultStore() {
     return require('../../store/useAppStore').default;
   } catch (_) { return null; }
 }
+
+function _restTimerLive() {
+  try {
+    // eslint-disable-next-line global-require
+    return require('rest-timer-live');
+  } catch (_) { return null; }
+}
+
+/**
+ * D34: wire the native rest-timer notification bridge into this seam.
+ *
+ * The Android FGS chronometer notification (short rests, <170 s) carries its
+ * own "+15s" / "Skip rest" buttons whose taps arrive via a native
+ * Service→module→JS event, NOT through expo-notifications. This installer
+ * subscribes to that event and routes each tap through handleRestTimerAction —
+ * the exact same store guards (active workout + running rest, clampRestDelta
+ * floor, stale-tap no-op) that gate the expo sticky path. One vocabulary
+ * (REST_TIMER_ACTION ids), two transports.
+ *
+ * The two paths never both fire for one tap: the FGS chronometer and the expo
+ * sticky are mutually exclusive (only one rest notification shows at a time,
+ * per RestTimer.js), and the chronometer's buttons are native getService
+ * intents that expo-notifications never observes.
+ *
+ * Graceful no-op when the native module is absent (iOS / Expo Go / older
+ * build): addRestActionListener returns a no-op subscription, so this returns
+ * a no-op dispose.
+ *
+ * @param {object} [opts]
+ * @param {object} [opts.module]   injected native module (defaults to rest-timer-live)
+ * @param {Function} [opts.handler] injected action handler (defaults to handleRestTimerAction)
+ * @returns {Function} dispose  removes the subscription. Idempotent.
+ */
+export function installRestActionBridge({ module, handler } = {}) {
+  const rtl = module || _restTimerLive();
+  if (!rtl || typeof rtl.addRestActionListener !== 'function') return () => {};
+  const h = handler || handleRestTimerAction;
+  let sub = null;
+  try {
+    sub = rtl.addRestActionListener((actionId) => {
+      if (!actionId) return;
+      try { h(actionId); } catch (_) { /* never crash on a tap */ }
+    });
+  } catch (_) {
+    return () => {};
+  }
+  let disposed = false;
+  return function dispose() {
+    if (disposed) return;
+    disposed = true;
+    try { sub?.remove?.(); } catch (_) { /* tolerate */ }
+  };
+}

@@ -22,6 +22,10 @@ type RestForegroundOptions = {
   deepLink?: string;
 };
 
+type RestActionEvent = { actionId: string };
+
+type EventSubscriptionLike = { remove: () => void };
+
 type NativeModuleShape = {
   start(options: StartOptions): Promise<boolean>;
   cancel(): Promise<void>;
@@ -31,6 +35,13 @@ type NativeModuleShape = {
   stopRestForeground?(): Promise<void>;
   canScheduleExactAlarms?(): Promise<boolean>;
   requestExactAlarmAccess?(): Promise<boolean>;
+  // D34: Events("onRestTimerAction") makes the native module an EventEmitter,
+  // exposing addListener at runtime. Optional so an older installed build
+  // (no Events declaration) degrades to a no-op listener.
+  addListener?(
+    eventName: 'onRestTimerAction',
+    listener: (event: RestActionEvent) => void,
+  ): EventSubscriptionLike;
 };
 
 let nativeModule: NativeModuleShape | null = null;
@@ -152,6 +163,36 @@ export async function stopRestForeground(): Promise<void> {
   try {
     await nativeModule!.stopRestForeground!();
   } catch (_e) { /* swallow */ }
+}
+
+/**
+ * D34: subscribe to rest-timer notification-action taps ("+15s" / "Skip
+ * rest") on the native chronometer notification. The event's actionId is a
+ * REST_TIMER_ACTION id (categories.js), so the app layer can route it through
+ * the same handleRestTimerAction seam as the expo sticky path.
+ *
+ * Graceful no-op when the native module is absent (iOS / Expo Go) OR present
+ * but built without the Events declaration (older install): returns a
+ * subscription whose remove() is a safe no-op, so callers never need to guard.
+ *
+ * @returns a subscription with a remove() method.
+ */
+export function addRestActionListener(
+  listener: (actionId: string) => void,
+): EventSubscriptionLike {
+  if (!isAvailable() || typeof nativeModule?.addListener !== 'function') {
+    return { remove: () => {} };
+  }
+  try {
+    const sub = nativeModule!.addListener!('onRestTimerAction', (event) => {
+      try {
+        if (event?.actionId) listener(event.actionId);
+      } catch (_e) { /* never let a tap crash the JS bridge */ }
+    });
+    return { remove: () => { try { sub.remove(); } catch (_e) { /* tolerate */ } } };
+  } catch (_e) {
+    return { remove: () => {} };
+  }
 }
 
 /**

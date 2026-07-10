@@ -33,6 +33,7 @@ import * as haptics from '../lib/haptics';
 import {
   configureNotificationHandler,
   installNotificationListeners,
+  installRestActionBridge,
   restoreNotifications,
   routeForNotificationType,
 } from '../lib/notifications';
@@ -906,7 +907,17 @@ export default function RootNavigator() {
       tryNavigate();
     }
 
-    return installNotificationListeners({ onTap });
+    const disposeListeners = installNotificationListeners({ onTap });
+    // D34: the Android FGS chronometer notification (short rests) carries its
+    // own "+15s" / "Skip rest" buttons, delivered via a native
+    // Service→module→JS event rather than expo-notifications. Route those taps
+    // through the same handleRestTimerAction seam (store guards + clampRestDelta
+    // floor + stale-tap no-op). No-op on iOS / Expo Go / older native builds.
+    const disposeRestBridge = installRestActionBridge();
+    return () => {
+      try { disposeListeners(); } catch (_) { /* tolerate */ }
+      try { disposeRestBridge(); } catch (_) { /* tolerate */ }
+    };
   }, []);
 
   useEffect(() => {

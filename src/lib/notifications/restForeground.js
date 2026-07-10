@@ -11,10 +11,19 @@
  *   - protection from OS reap mid-rest,
  *   - JS execution while backgrounded, so the 3-2-1 end cues actually fire.
  *
- * Known trade-off, recorded for the founder's device walk: the chronometer
- * notification does not carry the four category action buttons the JS sticky
- * has; for short rests the shade shows a live countdown without +15s/skip.
- * Rests longer than the window keep the sticky-with-buttons path unchanged.
+ * Update (2026-07-10, D34): the chronometer notification now DOES carry timer
+ * controls — a "+15s" and a "Skip rest" action button, added natively in
+ * WorkoutForegroundService.buildRestNotification. Their taps route back into
+ * the service via getService PendingIntents (never getActivity, so the app is
+ * never foregrounded — mirroring the JS sticky's opensAppToForeground:false),
+ * are emitted to JS through the module's onRestTimerAction event, and land in
+ * the SAME handleRestTimerAction seam the expo sticky uses (store guards +
+ * clampRestDelta floor + stale-tap no-op). +15 extends the chronometer end
+ * time natively (the JS re-anchor is background-blocked) and the in-app timer
+ * via the store; Skip stops the rest in both places. The chronometer path now
+ * exposes two of the sticky's controls (not Log set / Add exercise, which
+ * open the app by design). Rests longer than the window keep the full
+ * sticky-with-five-buttons path unchanged.
  *
  * Everything here is best-effort: the in-app timer, the end-of-rest alarm
  * (restEnd.js) and the session snapshot never depend on this layer.

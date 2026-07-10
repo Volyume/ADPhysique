@@ -34,6 +34,10 @@ export { configureNotificationHandler } from './handler';
 
 export { installNotificationListeners } from './listeners';
 
+// D34: native rest-timer chronometer action bridge (Skip / +15s on the FGS
+// notification), routed into the same handleRestTimerAction seam.
+export { installRestActionBridge } from './restTimerActions';
+
 export { routeForNotificationType } from './notificationRoute';
 
 export {

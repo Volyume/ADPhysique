@@ -24,13 +24,23 @@ jest.mock('expo-notifications', () => ({
   setNotificationCategoryAsync: (...a) => mockSetCategory(...a),
 }));
 
+// D34: react-native + expo-modules-core are mocked so the REAL rest-timer-live
+// module can be required in the addRestActionListener graceful-no-op test below
+// without a native runtime. These mocks are inert for every test above — the
+// import graph of the code under test (categories.js, restTimerMath.js) touches
+// neither module.
+jest.mock('react-native', () => ({ Platform: { OS: 'android' } }));
+jest.mock('expo-modules-core', () => ({
+  requireNativeModule: () => { throw new Error('no native module in jest'); },
+}));
+
 const {
   REST_TIMER_ACTION,
   REST_TIMER_ACTIONS,
   REST_TIMER_CATEGORY_ID,
   registerRestTimerCategory,
 } = require('../categories');
-const { handleRestTimerAction } = require('../restTimerActions');
+const { handleRestTimerAction, installRestActionBridge } = require('../restTimerActions');
 
 beforeEach(() => { mockSetCategory.mockClear(); });
 
@@ -151,5 +161,117 @@ describe('handleRestTimerAction — mapping + active-rest guard', () => {
   test('a missing / malformed store is tolerated', () => {
     expect(handleRestTimerAction(REST_TIMER_ACTION.SKIP, { store: null })).toBe(false);
     expect(handleRestTimerAction(REST_TIMER_ACTION.SKIP, { store: {} })).toBe(false);
+  });
+});
+
+describe('installRestActionBridge — native chronometer action bridge (D34)', () => {
+  // The native FGS chronometer notification (short rests) carries its own
+  // "+15s" / "Skip rest" buttons; taps arrive as a native Service→module→JS
+  // event and MUST land in the same handleRestTimerAction seam as the expo
+  // sticky path, so the store guards apply identically to both transports.
+
+  function makeStore(overrides = {}) {
+    const calls = { addRestTime: [], stopRestTimer: 0 };
+    const state = {
+      activeWorkout: { id: 'w1' },
+      restTimerActive: true,
+      restTimerRemaining: 60,
+      addRestTime: (n) => calls.addRestTime.push(n),
+      stopRestTimer: () => { calls.stopRestTimer += 1; },
+      ...overrides,
+    };
+    return { store: { getState: () => state }, calls };
+  }
+
+  function fakeModule() {
+    let captured = null;
+    const remove = jest.fn();
+    const module = {
+      addRestActionListener: jest.fn((cb) => { captured = cb; return { remove }; }),
+    };
+    return { module, remove, fire: (id) => { if (captured) captured(id); } };
+  }
+
+  test('native action ids ARE the REST_TIMER_ACTION identifiers (one vocabulary, two transports)', () => {
+    // The Kotlin service emits these exact strings (REST_ACTION_ID_PLUS_15 /
+    // _SKIP); they must equal the shared enum so JS routes them unchanged.
+    expect(REST_TIMER_ACTION.PLUS_15).toBe('rest_plus_15');
+    expect(REST_TIMER_ACTION.SKIP).toBe('rest_skip');
+  });
+
+  test('a +15s tap routes through handleRestTimerAction into the store (clampRestDelta floor honoured)', () => {
+    const { module, fire } = fakeModule();
+    const { store, calls } = makeStore();
+    installRestActionBridge({ module, handler: (id) => handleRestTimerAction(id, { store }) });
+    fire(REST_TIMER_ACTION.PLUS_15);
+    expect(calls.addRestTime).toEqual([15]);
+    expect(calls.stopRestTimer).toBe(0);
+  });
+
+  test('a Skip rest tap stops the rest through the store', () => {
+    const { module, fire } = fakeModule();
+    const { store, calls } = makeStore();
+    installRestActionBridge({ module, handler: (id) => handleRestTimerAction(id, { store }) });
+    fire(REST_TIMER_ACTION.SKIP);
+    expect(calls.stopRestTimer).toBe(1);
+    expect(calls.addRestTime).toEqual([]);
+  });
+
+  test('the stale-tap guard applies to the native transport too (workout finished → no-op)', () => {
+    const { module, fire } = fakeModule();
+    const { store, calls } = makeStore({ activeWorkout: null });
+    installRestActionBridge({ module, handler: (id) => handleRestTimerAction(id, { store }) });
+    fire(REST_TIMER_ACTION.PLUS_15);
+    fire(REST_TIMER_ACTION.SKIP);
+    expect(calls.addRestTime).toEqual([]);
+    expect(calls.stopRestTimer).toBe(0);
+  });
+
+  test('double-fire safety: one native tap invokes the handler exactly once (no internal duplication)', () => {
+    const { module, fire } = fakeModule();
+    const handler = jest.fn();
+    installRestActionBridge({ module, handler });
+    fire(REST_TIMER_ACTION.PLUS_15);
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith('rest_plus_15');
+    // A second discrete tap is a second discrete action (mirrors two sticky
+    // taps); the seam adds neither dedupe nor duplication.
+    fire(REST_TIMER_ACTION.PLUS_15);
+    expect(handler).toHaveBeenCalledTimes(2);
+  });
+
+  test('an empty actionId is ignored (defensive)', () => {
+    const { module, fire } = fakeModule();
+    const handler = jest.fn();
+    installRestActionBridge({ module, handler });
+    fire('');
+    fire(null);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  test('dispose removes the native subscription and is idempotent', () => {
+    const { module, remove } = fakeModule();
+    const dispose = installRestActionBridge({ module, handler: jest.fn() });
+    dispose();
+    dispose();
+    expect(remove).toHaveBeenCalledTimes(1);
+  });
+
+  test('graceful no-op when the module is absent or lacks the listener', () => {
+    expect(typeof installRestActionBridge({ module: null })).toBe('function');
+    expect(typeof installRestActionBridge({ module: {} })).toBe('function');
+    // Calling the returned dispose never throws.
+    expect(() => installRestActionBridge({ module: {} })()).not.toThrow();
+  });
+
+  test('addRestActionListener (real module) is a graceful no-op without a native runtime', () => {
+    // requireNativeModule is mocked to throw, so nativeModule is null and the
+    // subscription is inert — callers never need to guard.
+    // eslint-disable-next-line global-require
+    const rtl = require('rest-timer-live');
+    expect(rtl.isAvailable()).toBe(false);
+    const sub = rtl.addRestActionListener(() => {});
+    expect(typeof sub.remove).toBe('function');
+    expect(() => sub.remove()).not.toThrow();
   });
 });
