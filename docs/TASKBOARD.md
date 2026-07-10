@@ -27,6 +27,14 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 
 ### DONE THIS SESSION (for the record; full detail in the handover)
+- Theming component tail LANDED: 3 real statics converted
+  (TierComparisonStrip, ProgressGhostCapture, ScreenBoundary per D39
+  wrapper + static-fallback proof); 5 files exempt (motion/alpha-only,
+  nothing theme-dependent); reconciled coverage 105/110 live. Stage-5
+  stays gated on SCREEN coverage (D39 note).
+- WhatsNewSheet close-animation defect CONFIRMED and fixed (the one
+  consumer unmounting the sheet on dismiss; now matches the pattern).
+  Full suite green at this boundary: 8,412 passed / 0 failed.
 - D36b LANDED `d1bf193`: FeedbackSheet + PeekMenu onto shared BottomSheet,
   imperative ref APIs preserved, zero call-site changes; PlansScreen's
   folder-rename prompt is now the only hand-rolled backdrop. WhatsNewSheet
@@ -77,7 +85,7 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 - **ELEVATES BECAUSE:** screen-reader users get correct modal isolation across every sheet in the app; a genuine accessibility defect closes.
 - **Bounds:** own cross-cutting slot; do not weaken any existing sheet a11y guard.
 
-### WhatsNewSheet close-animation early return (small, from the D36b aside)
+### LANDED - WhatsNewSheet close animation (see DONE)
 - **Source:** D36b agent aside, 2026-07-10. CURRENT STATE: WhatsNewSheet.js
   returns null when not visible above its <BottomSheet>, which likely skips
   the shared close animation on dismiss. END STATE: dismissal animates like
@@ -85,7 +93,7 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
   others glide breaks the cohesion mandate. Verify-first (may be a non-issue
   if gorhom unmount-dismisses gracefully).
 
-### Theming - remaining static components + ScreenBoundary + stage-5 gate
+### Theming - stage-5 gate ONLY (component tail LANDED, see DONE)
 - **Source:** `CP-10-restart-free-theming-plan.md`; D16, D24, D29; handover THEMING COVERAGE TRACKER.
 - **CURRENT STATE:** 100/108 theme-consuming components are live-reactive; 8 remain static (won't react to a live theme toggle). `ScreenBoundary` is a class error boundary that cannot consume the theme hook (open architecture question, not forced). The stage-5 honesty gate (retiring the restart prompt) stays blocked until a toggle's full dependency set is live.
 - **END STATE:** the last 8 components live-themed, the ScreenBoundary architecture question resolved, and stage-5 cleared so restart-free theming ships fully with no stale surfaces.
