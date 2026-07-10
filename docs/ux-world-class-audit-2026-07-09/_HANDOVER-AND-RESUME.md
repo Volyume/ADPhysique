@@ -102,6 +102,20 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
   discipline: licence+health+lockfile same commit, register entry, EAS
   flag; zeego lands on logged sets first). NOTE: fresh EAS build needed
   after item 14 (native module) — founder-side.
+- ⏸ FOUNDER ORDER (2026-07-10, mid-Pair-4): PAUSE after the current
+  pair — 5-hour usage window near its limit. Pair 4 runs to completion
+  and is reviewed+landed; NO Pair 5 launches this session. On resume:
+  next slots are (1) the D30 dynamic-type codemod sweep (founder-ruled,
+  see DECISIONS D30) and (2) item 15 shared-element transitions +
+  Android polish, then the slate order continues (item 16 MLKit, Pair 6
+  drag reorder + giant sets, Pair 7 Live Activity + Android rest-timer
+  actions, Pair 8 dietary discoverability + small tails; smalls 7/9/10/
+  11 interleave). If this session dies before Pair 4 lands, the two
+  agents' uncommitted work sits in the tree: review the diff against
+  the briefs recorded above before committing anything; item 13's lane
+  is ProgressPhotos/Viewer/Compare + usePhotoSuppression guards; item
+  14's lane is package.json+lockfile+App.js+app.json+ActiveWorkout set
+  rows + non-sheet typing surfaces.
 - THEMING COVERAGE TRACKER (for the stage-5 honesty gate): after batch
   A, live = 20/85 screens (+3 in flight via item 8), ~52/111
   theme-consuming components. Remaining static components ~59 (food/*,
