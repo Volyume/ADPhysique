@@ -4,6 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as Font from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+// D24 item 2 (design/UX leveling slate, 2026-07-10): @gorhom/bottom-sheet
+// adoption behind src/components/BottomSheet.js. BottomSheetModalProvider
+// hosts the portal every BottomSheet.js instance presents into — it must be
+// an ancestor of any screen that renders one, so it sits at the app root,
+// inside GestureHandlerRootView (the library's own requirement) and above
+// everything else. No screen needs to know it exists.
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -922,30 +929,32 @@ export default function App() {
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaProvider initialWindowMetrics={initialWindowMetrics}>
-          <StatusBar
-            style={resolvedTheme === 'light' ? 'dark' : 'light'}
-            backgroundColor={resolvedTheme === 'light' ? '#FAFAF7' : '#0D0D0D'}
-          />
-          <ToastProvider>
-            <FeedbackProvider>
-              <RootNavigator />
-              {prCelebration && (
-                <PRCelebration
-                  pr={prCelebration}
-                  onDismiss={hidePRCelebration}
-                  // Honour either calm-mode (wellbeing preference) OR the
-                  // accessibility "reduce motion" pref. Both should suppress
-                  // particles + heavy spring animations.
-                  subdued={calm || reduceMotion}
-                />
-              )}
-              <CrashRecoveryToast priorCrash={priorCrash} />
-              <AppAlertHost />
-              <PostLapseSheetHost />
-            </FeedbackProvider>
-          </ToastProvider>
-        </SafeAreaProvider>
+        <BottomSheetModalProvider>
+          <SafeAreaProvider initialWindowMetrics={initialWindowMetrics}>
+            <StatusBar
+              style={resolvedTheme === 'light' ? 'dark' : 'light'}
+              backgroundColor={resolvedTheme === 'light' ? '#FAFAF7' : '#0D0D0D'}
+            />
+            <ToastProvider>
+              <FeedbackProvider>
+                <RootNavigator />
+                {prCelebration && (
+                  <PRCelebration
+                    pr={prCelebration}
+                    onDismiss={hidePRCelebration}
+                    // Honour either calm-mode (wellbeing preference) OR the
+                    // accessibility "reduce motion" pref. Both should suppress
+                    // particles + heavy spring animations.
+                    subdued={calm || reduceMotion}
+                  />
+                )}
+                <CrashRecoveryToast priorCrash={priorCrash} />
+                <AppAlertHost />
+                <PostLapseSheetHost />
+              </FeedbackProvider>
+            </ToastProvider>
+          </SafeAreaProvider>
+        </BottomSheetModalProvider>
       </GestureHandlerRootView>
     </ErrorBoundary>
   );

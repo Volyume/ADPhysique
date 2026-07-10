@@ -73,7 +73,10 @@ describe('fit rule 4: the JS-thread Animated API is a frozen allowlist', () => {
   // entry. Files LEAVING the list are removed freely — that is the migration
   // direction; set-equality keeps the list honest but the update trivial.
   const JS_ANIMATED_ALLOWLIST = [
-    'components/BottomSheet.js',
+    // components/BottomSheet.js left this list in D24 item 2 (@gorhom/
+    // bottom-sheet adoption, 2026-07-10): the hand-rolled Animated slide/
+    // backdrop is retired in favour of the library's own UI-thread
+    // (Reanimated) animation.
     'components/FeedbackSheet.js',
     'components/PRCelebration.js',
     'components/PeekMenu.js',
