@@ -1236,3 +1236,16 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   input fork stays OPEN. Queue slots them after the D24/D25 design
   waves; Live Activity wiring can pair earlier since it is small and
   the module exists.
+- NRV DISPLAY LANDED (item 16 complete pending one seam; lead-reviewed):
+  MicronutrientDetail (per-food, collapsed, known-values-only, <3-known
+  fallback line) + WeeklyMicronutrientsCard on Food Insights (rolling 7
+  days, 50%-of-logged-kcal coverage floor per nutrient, awareness copy,
+  no NRV% on the aggregate per the screen's own convention - lead
+  ACCEPTED that judgement + the "Vitamins and minerals" header). 40
+  tests green, lint clean. DELIBERATELY HELD BACK from this commit:
+  FoodDetailSheet.js (shared with item 15's live WIP - carries the
+  4-line render hook) + micronutrientDisplay.guard.test.js (pins that
+  hook) - BOTH commit at item 15's landing boundary after reviewing the
+  two agents' edits to that file together. AI food input fork: HELD by
+  founder (D27 addendum). Item 15 timeline agent still in flight (file
+  mtimes active).
