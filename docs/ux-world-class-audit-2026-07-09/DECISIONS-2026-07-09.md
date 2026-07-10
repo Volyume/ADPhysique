@@ -386,3 +386,13 @@ D23 discipline on every adoption (licence, health, lockfile same commit,
 register entry, EAS flag for native deps). Sequencing after the D24
 five, two agents at a time: keyboard-controller + FTS5; zeego + gallery;
 scrub haptics + Android polish; Rive/font as assets and shortlist land.
+
+## D26 — Competitor-separation picks approved (founder, 2026-07-10)
+Founder: "Approve your suggestions." Approved: (1) OFF micronutrient
+parsing into the bundled snapshot (branded/retail foods gain verified-
+style micro depth; same honest Tr/N-null pattern as the CoFID landing);
+(2) MLKit code-scanner frame processor on vision-camera (faster,
+low-light-tolerant barcode scanning; D23 dependency discipline).
+NOT covered by this approval: the AI-assisted food input fork (photo
+meal-scan / voice) - explicitly left with the founder, still OPEN,
+neither approved nor on the never-re-propose register.
