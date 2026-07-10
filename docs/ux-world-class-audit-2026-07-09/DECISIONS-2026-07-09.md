@@ -598,3 +598,13 @@ other than price still get a written test plan per docs/rules/
 billing.md; new dependencies still get the D23 discipline (register
 entry, licence check, pinning). Every ruling under this delegation is
 recorded in this register with rationale.
+
+## D33 REAFFIRMATION (founder, 2026-07-10, third statement)
+Founder's words, verbatim: "Under the same basis, best solution always
+wins. Never the cheaper option as far as work you do, if there's one
+that brings a better app and service for users." No scope change from
+the two amendments above; recorded because the founder has now stated
+the principle three times in one day — it is the operating basis, not
+a preference. When two candidate solutions differ in product quality
+AT ALL, the better one is chosen regardless of how much more work it
+costs the lead or agents.
