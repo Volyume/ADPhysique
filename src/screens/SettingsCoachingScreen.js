@@ -35,12 +35,28 @@ export default function SettingsCoachingScreen() {
   // merge in sync/tables/profiles.js spreads local first, so they survive).
   const [coachTone, setCoachToneState] = useState(userProfile?.coachTone ?? 'automatic');
   const [showScience, setShowScience] = useState(userProfile?.showScience === true);
+  // Ultimate-Audit item 11 (D16, founder ruling 2026-07-10,
+  // pass3-v2-founder-decisions.md:166): named autonomy modes governing
+  // apply-control (WHO confirms an adjustment), orthogonal to Coaching
+  // tone above (which is voice register only). Same local-only field
+  // pattern as coachTone/showScience: no synced column, survives the pull
+  // merge (sync/tables/profiles.js spreads local first). Default
+  // 'collaborative' so existing users see no behaviour change.
+  const [coachAutonomy, setCoachAutonomyState] = useState(userProfile?.coachAutonomy ?? 'collaborative');
 
   async function setTone(next) {
     haptics.selection();
     setCoachToneState(next);
     if (user?.id) {
       await saveLocalProfile(user.id, { ...(userProfile || {}), coachTone: next });
+    }
+  }
+
+  async function setAutonomy(next) {
+    haptics.selection();
+    setCoachAutonomyState(next);
+    if (user?.id) {
+      await saveLocalProfile(user.id, { ...(userProfile || {}), coachAutonomy: next });
     }
   }
 
@@ -171,6 +187,43 @@ export default function SettingsCoachingScreen() {
                       accessibilityRole="radio"
                       accessibilityState={{ checked: sel }}
                       accessibilityLabel={`Coaching tone ${label}`}
+                    >
+                      <Text style={[styles.toneChipText, sel && styles.toneChipTextOn]}>{label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+            {/* Ultimate-Audit item 11: autonomy (apply-control). Every mode
+                shows the same decision and reason; only who confirms it
+                differs. A safety hold (deload, poor recovery, safety hold,
+                FFM floor, ED flag, rapid loss, calm mode) always forces
+                confirm-first, whatever mode is chosen (D16), so Coached is
+                never a promise to bypass a hold. */}
+            <View style={styles.toneBlock}>
+              <Text style={styles.toneLabel}>Autonomy</Text>
+              <Text style={styles.toneSub}>
+                {coachAutonomy === 'coached'
+                  ? "The coach applies each week's changes for you."
+                  : coachAutonomy === 'manual'
+                    ? 'The coach shows each change and the reason. You make the change yourself.'
+                    : 'The coach suggests each change. You tap to apply it.'}
+              </Text>
+              <View style={styles.toneChips}>
+                {[
+                  { key: 'coached', label: 'Coached' },
+                  { key: 'collaborative', label: 'Collaborative' },
+                  { key: 'manual', label: 'Manual' },
+                ].map(({ key, label }) => {
+                  const sel = coachAutonomy === key;
+                  return (
+                    <TouchableOpacity
+                      key={key}
+                      style={[styles.toneChip, sel && styles.toneChipOn]}
+                      onPress={() => setAutonomy(key)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: sel }}
+                      accessibilityLabel={`Autonomy ${label}`}
                     >
                       <Text style={[styles.toneChipText, sel && styles.toneChipTextOn]}>{label}</Text>
                     </TouchableOpacity>

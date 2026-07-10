@@ -1096,3 +1096,21 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   (ingredients/servings vs items_json/total_servings) NOT fixed, queued
   as a founder-visible investigation. 5-step device checklist in agent
   report. NEXT: item 11 autonomy modes firing.
+- ITEM 11 LANDED (D16 order 3/5, Sonnet + hands-on lead review of the
+  coaching diff): Coached/Collaborative/Manual autonomy modes per the
+  June ruling (source verified pass3-v2:166 + NA-coaching-10:186-187).
+  Engine emits ONE flag autoApplyHoldActive (weeklyCoach.js ~1396, pure,
+  derived from in-scope booleans); Coached mode auto-invokes the SAME
+  existing apply handlers via effect, gated on that flag (hold open ->
+  falls back to tap-to-apply); Manual strips Apply controls (decision +
+  reason still shown); every clamp identical in all modes (coachApply
+  untouched). Preference = userProfile.coachAutonomy, default
+  collaborative, local-only like coachTone. LEAD RESTORE hands-on:
+  scoffPositive ADDED to the hold set (the June rule's "suppression"
+  covers it; D15/D18 sibling gates include it; my D16 brief enumeration
+  had omitted it) + mirrored test. 28 new tests (15 engine incl. per-hold
+  + determinism, 13 screen guards); 48 targeted green; lint clean. Copy
+  uses "the coach" matching SettingsCoaching's own sibling rows (voice
+  doc: branded name is for named/sold surfaces). D16 SMALL THREE COMPLETE
+  (13, 12, 11). NEXT: scoping reads for items 15 (timeline food logging)
+  and 16 (micronutrients/NRV completion).

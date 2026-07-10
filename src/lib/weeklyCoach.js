@@ -641,6 +641,9 @@ export function runWeeklyCoach(inputs) {
       adherenceNote: null, prsThisWeek, sessionsCompleted, sessionsPlanned,
       volumeSignal: 0, loadSignal: 'hold', recoveryFlag: 'normal', goalPhase,
       exceededEscalationApplied: false,
+      // D16: no adjustments exist on this path (all null above), so there is
+      // nothing an autonomous mode could auto-apply either way.
+      autoApplyHoldActive: false,
     };
   }
 
@@ -1375,6 +1378,35 @@ export function runWeeklyCoach(inputs) {
     }
   }
 
+  // ── AUTONOMY-MODE HOLD GATE (D16, Ultimate-Audit item 11 refinement) ──────
+  // Founder ruling 2026-07-10 (pass3-v2-founder-decisions.md:166 named the
+  // Coached/Collaborative/Manual modes; NA-coaching-10, :186-187, "Coached
+  // never auto-applies while a safety hold / ED-flag / suppression is
+  // active"). Hold set: deload, poor recovery, safety hold, FFM floor, ED
+  // flag, rapid loss, wellbeing-screen restriction, calm mode (D16 list
+  // plus scoffPositive, restored hands-on: the June rule's "suppression"
+  // covers it and every sibling gate, D15/D18, already includes it). Whatever coachAutonomy
+  // mode is active in the caller, an open hold forces confirm-first
+  // behaviour -- a more autonomous mode changes WHO confirms, never whether
+  // the apply path's clamps run. This is the ONE place that answers "is a
+  // hold open right now"; CoachOutputScreen reads this single emitted flag
+  // rather than re-deriving the hold list, the same "emit one flag so a
+  // display-only consumer never has to re-derive the reads it cannot see"
+  // pattern as photoCorroborationBlocked (D18) below. Deterministic: derived
+  // only from already-computed named booleans in this run, no I/O, no
+  // randomness, no new engine input required.
+  const autoApplyHoldActive = !!(
+    deloadSuggested ||
+    matrixDeload ||
+    poorRecovery ||
+    safetyHold ||
+    ffmFloorHeld ||
+    edPatternHeld ||
+    rapidWeightLossFlag ||
+    scoffPositive ||
+    calmMode
+  );
+
   // ── SUSTAINED OVER-PERFORMANCE ESCALATION (D15) ───────────────────────────
   // Founder ruling 2026-07-09 (D15 / plan-G section 3.2, "BOTH (a) and (b)"):
   // once the check-in's own trainingPerformance verdict has read 'exceeded'
@@ -1652,6 +1684,9 @@ export function runWeeklyCoach(inputs) {
     safetyHold,
     noteFlags,
     goalPhase,
+    // D16: single emitted "any hold is open" flag for autonomy-mode
+    // auto-apply gating (see the AUTONOMY-MODE HOLD GATE block above).
+    autoApplyHoldActive,
     differential_output,
     // COMP-026 (B): the full modifier result for telemetry
     // (step_tdee_modifier_evaluated) and the COMP-004 trend line. stepTrendApplied
@@ -1696,6 +1731,9 @@ function _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, we
     recoveryFlag: 'normal',
     goalPhase: 'maint',
     exceededEscalationApplied: false,
+    // D16: no adjustments exist on this path (all null above), so there is
+    // nothing an autonomous mode could auto-apply either way.
+    autoApplyHoldActive: false,
   };
 }
 
@@ -1729,5 +1767,8 @@ function _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, w
     recoveryFlag: 'normal',
     goalPhase: 'maint',
     exceededEscalationApplied: false,
+    // D16: no adjustments exist on this path (all null above), so there is
+    // nothing an autonomous mode could auto-apply either way.
+    autoApplyHoldActive: false,
   };
 }

@@ -918,6 +918,18 @@ export default function CoachOutputScreen({ navigation, route }) {
   })));
   const latestProfile = () => useAppStore.getState().userProfile || userProfile || {};
 
+  // Ultimate-Audit item 11 (D16, founder ruling 2026-07-10): apply-control
+  // mode, read the same local-only way coachTone is read for register
+  // resolution (userProfile?.coachTone ?? 'automatic', line ~1088 below).
+  // Orthogonal to coachTone: this governs WHO confirms an adjustment, never
+  // what the engine decides. Manual removes every Apply control below;
+  // Coached and Collaborative both keep the SAME handlers wired -- the
+  // effect after the load effect races Coached ahead of the tap when no
+  // safety hold is open (output.autoApplyHoldActive), otherwise it falls
+  // back to the identical confirm-first behaviour Collaborative always has.
+  const coachAutonomy = userProfile?.coachAutonomy ?? 'collaborative';
+  const applyDisabled = coachAutonomy === 'manual';
+
   const [output, setOutput] = useState(null);
   const [checkin, setCheckin] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1832,6 +1844,64 @@ export default function CoachOutputScreen({ navigation, route }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, reloadKey]);
 
+  // Ultimate-Audit item 11 (D16, founder ruling 2026-07-10,
+  // pass3-v2-founder-decisions.md:166 + NA-coaching-10, pass4-blueprints-
+  // coaching-progress.md:283-291): Coached mode invokes the SAME apply
+  // handlers a Collaborative tap would, instead of waiting for the tap.
+  // Every clamp and floor inside those handlers and inside coachApply.js
+  // (kcalFloorForSex, the [mev, mrv] volume clamp) runs identically either
+  // way -- only who confirms differs. D16 refinement: any open safety hold
+  // (output.autoApplyHoldActive, the ONE place weeklyCoach.js computes
+  // "is a hold open right now") forces confirm-first regardless of mode, so
+  // Coached falls back to the standard tap-to-apply Collaborative already
+  // has (the onApply props below stay wired in both modes; only Manual
+  // strips them). One apply at a time: each handler's own applyingKey guard
+  // stops two running together, and this effect re-fires as `output` (and
+  // nextTrainingWeekId) settle after every apply, walking the list until
+  // nothing un-applied remains -- never re-deriving order from anything but
+  // the engine's own output.
+  useEffect(() => {
+    if (coachAutonomy !== 'coached') return;
+    if (!output || !user?.id) return;
+    if (applyingKey) return;
+    if (output.autoApplyHoldActive) return; // D16: hold forces confirm-first
+
+    // Deload supersedes the incremental training-volume push for the week
+    // (TrainingNextWeekCard shows one or the other, never both); Coached
+    // mode follows the same either/or so it can never apply a push the
+    // Collaborative UI would never have offered this week.
+    if (output.deloadSuggested) {
+      if (!isApplied(output, 'deload') && nextTrainingWeekId) {
+        handleApplyDeload();
+      }
+      return;
+    }
+    if (output.volumeSignal && !isApplied(output, 'training') && nextTrainingWeekId) {
+      handleApplyTraining();
+      return;
+    }
+    if (output.adjustments?.calories && output.adjustments.calories.change !== 0 && !isApplied(output, 'calories')) {
+      handleApplyCalories();
+      return;
+    }
+    if (output.adjustments?.cardio && !isApplied(output, 'cardio')) {
+      handleApplyCardio();
+      return;
+    }
+    if (output.dietBreakSuggested && !isApplied(output, 'dietBreak')) {
+      handleApplyDietBreak();
+      return;
+    }
+    if (output.macroCycle && !isApplied(output, 'macroCycle')) {
+      handleApplyMacroCycle();
+      return;
+    }
+    if (output.refeed && !isApplied(output, 'refeed')) {
+      handleApplyRefeed();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coachAutonomy, output, applyingKey, nextTrainingWeekId, user?.id]);
+
   function handleClose() {
     // The user arrived here from the Coach tab via WeeklyCheckIn. Closing
     // the coach output should land them back on the You root, not on the
@@ -2042,13 +2112,13 @@ export default function CoachOutputScreen({ navigation, route }) {
   const trainingCardEl = (
     <TrainingNextWeekCard
       output={output}
-      onApply={handleApplyTraining}
+      onApply={applyDisabled ? undefined : handleApplyTraining}
       canApply={!!nextTrainingWeekId}
       applyStateFor={applyStateFor}
       onApplySettled={onApplySettled}
       deloadSuggested={deloadSuggested}
       deloadNote={deloadNote}
-      onApplyDeload={handleApplyDeload}
+      onApplyDeload={applyDisabled ? undefined : handleApplyDeload}
       hero={zones.heroKind === 'training'}
       navigation={navigation}
     />
@@ -2056,8 +2126,8 @@ export default function CoachOutputScreen({ navigation, route }) {
   const nutritionCardEl = (
     <NextWeekCard
       adjustments={adjustments}
-      onApplyCalories={handleApplyCalories}
-      onApplyCardio={handleApplyCardio}
+      onApplyCalories={applyDisabled ? undefined : handleApplyCalories}
+      onApplyCardio={applyDisabled ? undefined : handleApplyCardio}
       applyStateFor={applyStateFor}
       onApplySettled={onApplySettled}
       cardioVerdict={checkin?.cardioAdherence ?? null}
@@ -2072,7 +2142,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     <MacroCycleCard
       macroCycle={macroCycle}
       applied={isApplied(output, 'macroCycle') || !!userProfile?.macroCycle}
-      onApply={handleApplyMacroCycle}
+      onApply={applyDisabled ? undefined : handleApplyMacroCycle}
       applyState={applyStateFor('macroCycle')}
       onApplySettled={() => onApplySettled('macroCycle')}
       energyUnit={energyUnit}
@@ -2088,7 +2158,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     <RefeedCard
       refeed={refeed}
       applied={isApplied(output, 'refeed')}
-      onApply={handleApplyRefeed}
+      onApply={applyDisabled ? undefined : handleApplyRefeed}
       applyState={applyStateFor('refeed')}
       onApplySettled={() => onApplySettled('refeed')}
       energyUnit={energyUnit}
@@ -2099,7 +2169,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     <DietBreakCard
       weeksInDeficit={dietBreakWeeksInDeficit}
       applied={isApplied(output, 'dietBreak')}
-      onApply={handleApplyDietBreak}
+      onApply={applyDisabled ? undefined : handleApplyDietBreak}
       applyState={applyStateFor('dietBreak')}
       onApplySettled={() => onApplySettled('dietBreak')}
       energyUnit={energyUnit}
