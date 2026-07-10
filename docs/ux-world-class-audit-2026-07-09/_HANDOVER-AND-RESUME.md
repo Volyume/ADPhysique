@@ -1484,3 +1484,16 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   elevate discoverability (visible diet/allergen summary chip on the
   builder's primary surface + consider a one-time pointer hint; calm,
   no redesign of the preferences panel itself).
+- OFF MICRONUTRIENT PARSING LANDED (lead-reviewed): 27-nutrient mapping
+  in snapshot builder + cloud upsert + live fetch; OFF units verified
+  against real barcodes (grams internally: x1000 mg, x1e6 ug); literal
+  zeros -> null (Twix sodium 0 vs salt 0.4 = crowdsourced zeros
+  untrustworthy); REAL GAP FIXED: waterfall _promoteToLocal dropped
+  micros on cache. Snapshot asset deliberately NOT regenerated (sandbox
+  rate-limiting would have SHRUNK the food list - honest refusal);
+  columns arrive via the existing refresh-off-snapshot.yml weekly cron
+  or a FOUNDER manual "Run workflow" click. Sampled UK coverage: calcium
+  11.6%, iron 8.4%, median 0/food - patchy as expected, display omits
+  unknowns. 34 new tests; food+seed suites 61/61. IN FLIGHT: theming
+  final batch only (its WIP explains 17 transient failures in workout/
+  theme suites - must be green at ITS boundary).
