@@ -330,24 +330,63 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
   worklets untouched. COVERAGE: components now 100/108 live (was
   71/108); food + photo/scan families fully live.
 
+- ✅ PAIR 10 + D36d FIX LANDED (2026-07-10 late; lead-reviewed, full
+  suite green at the boundary: 672/673 suites, 8,382 passed / 0
+  failed, lint clean). (a) `60ebbd9` **D36a item 17 modal slot**: four
+  hand-rolled Modals migrated to shared BottomSheet (Home
+  change-workout + block-shape — dead insetsBottom/reduceMotion prop
+  plumbing removed; PlanLibrary quiz + RoutineDetail edit-exercise —
+  both had genuine missing-bottom-inset bugs, edit sheet keeps
+  keyboard behaviour via the sheet's keyboardAvoiding +
+  BottomSheetTextInput swap); ExerciseDetail goal sheet ALSO migrated
+  (lead-sanctioned agent choice under D33 — same input-bearing class
+  as the edit sheet); ActiveWorkout supersetHeadsUp/unilateralSuggest
+  stay raw by design but their shared content style now carries the
+  safe-area inset (Math.max contract, new guard pins it). AY-3/AY-4
+  a11y guard updated by the LEAD to the superseding structure (the
+  shared sheet provides the labelled backdrop + modal isolation those
+  pins enforced; guard now locks the migrations can't silently
+  revert). New guards: supSheetInset, editSheetBottomSheet,
+  quizBottomSheet, + render tests for both Home sheets.
+  (b) `601fd08` **D36d photo-modal insets**: all seven SafeAreaView
+  instances in ProgressScanCompare/ScanTrend/PhotoCompare now request
+  the bottom edge (ProgressPhotoViewer precedent); photo-compare
+  scroll content bottom padding inset-aware; source guard pins it;
+  suppression pins untouched. Device checklists for both are in the
+  agents' reports (9-step modal walk; 4-step photo-modal walk incl. a
+  calm/ED suppression check).
+- ✅ CI ANDROID BUILD GREEN on run 2611 (`3daa3ae`) — the D34 Kotlin
+  bridge COMPILED and the signed APK/AAB built; all three
+  compile-risk notes cleared. Later pushes trigger fresh runs; check
+  the latest before calling a build walkable.
+- ⚠ STALENESS TRIAGE IN FLIGHT (founder concern, 2026-07-10 late):
+  the founder flagged that the Ultimate-Audit (2026-06-13) items
+  11–16 are a month old and may be superseded by newer work (known
+  signals: haptic-feedback adopted; raw/cooked basis chip landed
+  c1f0973; micronutrient/vitamins components + OFF snapshot shipped;
+  the timeline diary was BUILT AND REVERTED — reintroducing it would
+  contradict recent direction). STANDING RULE from the founder
+  exchange: NO item from any pre-campaign audit is built from its old
+  blueprint; each first gets a verify-first triage against today's
+  tree + the decision register, and anything superseded/reverted is
+  CLOSED in the register, not resurrected. A read-only Sonnet triage
+  of all six items is running; its verdicts land in the register.
+
 ## ⏸ RESUME POINT — current state and queue (2026-07-10 late):
-1. IN FLIGHT: (a) item 17 six-modal slot per D36a (Sonnet — migrate
-   HomeChangeWorkoutSheet, HomeBlockShapeSheet, PlanLibrary quiz,
-   RoutineDetail edit-exercise to BottomSheet; fix the two genuine
-   bottom-inset gaps: ActiveWorkout supersetHeadsUp/unilateralSuggest
-   shared styles + ExerciseDetail goal modal); (b) D36d ProgressPhotos
-   content-modal read pass (read-only: do the four full-screen content
-   modals' child components handle insets under edge-to-edge?).
-2. NEXT SLOTS once the pair lands: D35 drag edge auto-scroll (Sonnet —
-   sequenced AFTER item 17, both touch RoutineDetail/ActiveWorkout);
-   FeedbackSheet/PeekMenu migration slot (D36b); TalkBack sheet
-   isolation slot (D36c, cross-cutting, RootNavigator-adjacent); then
-   the D33-unblocked decision cluster (Ultimate-Audit 11–16 rulings
-   from source blueprints, watch-app round, kala namak, brand font) —
-   each with a verify-first read agent before any ruling/build.
+1. IN FLIGHT: the Ultimate-Audit 11–16 staleness triage (read-only,
+   verdicts → register; do NOT build any of the six before it lands
+   and the lead rules on each verdict).
+2. NEXT SLOTS: D35 drag edge auto-scroll (Sonnet — item 17 landed, so
+   RoutineDetail/ActiveWorkout are free); FeedbackSheet/PeekMenu
+   migration slot (D36b); TalkBack sheet isolation slot (D36c,
+   cross-cutting, RootNavigator-adjacent); then the remaining
+   delegated decision rounds (watch-app scoping, kala namak, brand
+   font) — each verify-first.
 3. PROCESS NOTE: two consecutive campaign lines (16, 19) were stale
    against the tree — every remaining item gets a verify-first read
-   agent before any build brief is written.
+   agent before any build brief is written. The same rule applies
+   with more force to anything from pre-campaign audits (see the
+   staleness-triage entry above).
 4. Standing discipline at every landing: full suite over the clean
    tree, this handover's stage log updated, push.
 
