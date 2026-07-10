@@ -57,11 +57,23 @@ jest.mock('../../lib/food/db', () => ({
   clearPlannedDay: jest.fn(),
 }));
 jest.mock('../../components/AppAlert', () => ({ appAlert: jest.fn() }));
+jest.mock('../../lib/haptics', () => ({ selection: jest.fn() }));
+// Campaign item 4's one-time dietary-chip hint (DIETARY_CHIP_HINT_KEY) reads
+// and writes AsyncStorage directly, same mock idiom as
+// FoodSearchScreen.holdHint.test.js. mockGetItem's return value is
+// reconfigured per test to prove the once-ever seen-flag contract.
+const mockGetItem = jest.fn(() => Promise.resolve(null));
+const mockSetItem = jest.fn(() => Promise.resolve());
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: (...a) => mockGetItem(...a),
+  setItem: (...a) => mockSetItem(...a),
+}));
 
 import useAppStore from '../../store/useAppStore';
 import { loadActiveMealPlan, swapMealInPlan, repeatPlanDayOnActivePlan } from '../../lib/food/mealPlanService';
 import { updateMealPlan } from '../../lib/food/db';
 import { appAlert } from '../../components/AppAlert';
+import * as haptics from '../../lib/haptics';
 import MealPlanScreen from '../MealPlanScreen';
 
 // parentNavigate stands in for the tab navigator's own `navigate`, reached
@@ -445,5 +457,126 @@ describe('MealPlanScreen — Dietary needs row (founder ask 2026-07-09)', () => 
       expect(call).toContain('dietSummary={dietSummary}');
       expect(call).toContain('onOpenDietary={handleOpenDietary}');
     });
+  });
+});
+
+// Campaign item 4 (dietary-needs discoverability,
+// docs/ux-world-class-audit-2026-07-09/CAMPAIGN-2026-07-10-APPROVED-SLATE.md):
+// the "Dietary needs" row above only shows once the preferences accordion is
+// opened, and that accordion defaults CLOSED once a plan exists (prefsOpen
+// starts false), so a whole session could pass without it ever being seen.
+// These tests cover the new chip on the primary surface (visible with the
+// accordion closed), the one-time pointer hint, and that both stay on
+// theme tokens.
+describe('MealPlanScreen — dietary needs chip on the primary surface (campaign item 4)', () => {
+  const source = require('fs').readFileSync(require('path').join(__dirname, '..', 'MealPlanScreen.js'), 'utf8');
+
+  // The outer beforeEach only clears call history (jest.clearAllMocks), it
+  // does not remove a `.mockImplementation` set by an earlier test in this
+  // describe, so pin the default back to "no flag stored" before each test
+  // here (the "shows once" test below is the one that changes it).
+  beforeEach(() => {
+    mockGetItem.mockImplementation(() => Promise.resolve(null));
+  });
+
+  // Loaded-plan mount (the state where the preferences accordion defaults
+  // CLOSED, prefsOpen starts false) with a caller-chosen userProfile, so the
+  // chip's summary/active state can be proven for each field combination.
+  async function mountLoadedWithProfile(userProfile) {
+    loadActiveMealPlan.mockResolvedValue({ id: 'rec1', plan: makePlan() });
+    useAppStore.mockImplementation((selector) => selector({ ...store, userProfile: userProfile || {} }));
+    let tree;
+    await act(async () => {
+      tree = create(<MealPlanScreen navigation={nav} />);
+    });
+    return tree;
+  }
+
+  test('reads plain "Dietary needs" (no diet, no exclusions)', async () => {
+    const tree = await mountLoadedWithProfile({ dietPreference: 'omnivore' });
+    const chipBtn = buttons(tree).find((b) => String(b.props.accessibilityLabel || '').startsWith('Dietary needs,'));
+    expect(chipBtn).toBeTruthy();
+    expect(chipBtn.props.accessibilityLabel).toBe('Dietary needs, Dietary needs');
+  });
+
+  test('diet only: shows just the diet name, no "excluded" clause', async () => {
+    const tree = await mountLoadedWithProfile({ dietPreference: 'pescatarian' });
+    const chipBtn = buttons(tree).find((b) => String(b.props.accessibilityLabel || '').startsWith('Dietary needs,'));
+    expect(chipBtn.props.accessibilityLabel).toBe('Dietary needs, Pescatarian');
+  });
+
+  test('exclusions only: shows the combined count with the short "excluded" wording (not "foods excluded")', async () => {
+    const tree = await mountLoadedWithProfile({
+      dietPreference: 'omnivore',
+      mealPlanExcludeTags: ['gluten', 'dairy'],
+      mealPlanExcludeFoods: ['peanut_butter'],
+    });
+    const chipBtn = buttons(tree).find((b) => String(b.props.accessibilityLabel || '').startsWith('Dietary needs,'));
+    expect(chipBtn.props.accessibilityLabel).toBe('Dietary needs, 3 excluded');
+  });
+
+  test('both diet and exclusions: middot-joined, matching the campaign example wording', async () => {
+    const tree = await mountLoadedWithProfile({
+      dietPreference: 'vegetarian',
+      mealPlanExcludeTags: ['gluten'],
+      mealPlanExcludeFoods: ['peanut_butter'],
+    });
+    const chipBtn = buttons(tree).find((b) => String(b.props.accessibilityLabel || '').startsWith('Dietary needs,'));
+    expect(chipBtn.props.accessibilityLabel).toBe('Dietary needs, Vegetarian · 2 excluded');
+    expect(chipBtn.props.accessibilityLabel).not.toContain('—'); // never an em dash
+  });
+
+  test('tapping the chip fires the meal-builder selection haptic and navigates via navigateCrossTab to ProfileTab -> SettingsDietary', async () => {
+    const tree = await mountLoadedWithProfile({ dietPreference: 'vegan' });
+    const chipBtn = buttons(tree).find((b) => String(b.props.accessibilityLabel || '').startsWith('Dietary needs,'));
+    expect(chipBtn).toBeTruthy();
+    act(() => chipBtn.props.onPress());
+    expect(haptics.selection).toHaveBeenCalledTimes(1);
+    expect(nav.getParent).toHaveBeenCalled();
+    expect(parentNavigate).toHaveBeenCalledWith('ProfileTab', { screen: 'SettingsDietary', initial: false });
+  });
+
+  test('the one-time hint shows on first sight and is never shown again once dismissed (seen-flag idiom)', async () => {
+    // First mount: no stored flag yet (mockGetItem's default resolves null),
+    // so the hint renders.
+    mockGetItem.mockImplementation(() => Promise.resolve(null));
+    const firstTree = await mountLoadedWithProfile({});
+    expect(JSON.stringify(firstTree.toJSON())).toContain('Tap to set your diet and foods to avoid.');
+    expect(mockGetItem).toHaveBeenCalledWith('@volyume_seen_mealplan_dietary_chip');
+
+    // Dismissing persists the flag, same '@volyume_seen_*' once-ever idiom
+    // as DIARY_MARKEATEN_HINT_KEY / UNILATERAL_WALKTHROUGH_SEEN_KEY.
+    const dismissBtn = buttons(firstTree).find((b) => b.props.accessibilityLabel === 'Got it, dismiss this hint');
+    expect(dismissBtn).toBeTruthy();
+    await act(async () => { dismissBtn.props.onPress(); });
+    expect(mockSetItem).toHaveBeenCalledWith('@volyume_seen_mealplan_dietary_chip', 'true');
+
+    // Simulate the flag now being persisted ('true'), same as a real second
+    // app open would read: the hint must not render again.
+    mockGetItem.mockImplementation(() => Promise.resolve('true'));
+    const secondTree = await mountLoadedWithProfile({});
+    expect(JSON.stringify(secondTree.toJSON())).not.toContain('Tap to set your diet and foods to avoid.');
+  });
+
+  test('guard: source uses the @volyume_seen_* once-ever convention and theme tokens only for the new chip/hint styles', () => {
+    expect(source).toContain("const DIETARY_CHIP_HINT_KEY = '@volyume_seen_mealplan_dietary_chip';");
+    expect(source).toMatch(
+      /AsyncStorage\.getItem\(DIETARY_CHIP_HINT_KEY\)\.then\(\(v\) => \{\s*if \(active && v !== 'true'\) setShowDietaryChipHint\(true\);\s*\}\)/,
+    );
+    expect(source).toMatch(
+      /const dismissDietaryChipHint = useCallback\(\(\) => \{\s*setShowDietaryChipHint\(false\);\s*AsyncStorage\.setItem\(DIETARY_CHIP_HINT_KEY, 'true'\)\.catch\(\(\) => \{\}\);\s*\}, \[\]\);/,
+    );
+    // Neutral tokens only: the new styles read spacing/radius tokens, never a
+    // hard-coded hex colour or literal RGB.
+    const stylesBody = source.slice(source.indexOf('const styles = StyleSheet.create({'));
+    const dietaryChipRowBlock = stylesBody.slice(
+      stylesBody.indexOf('dietaryChipRow:'),
+      stylesBody.indexOf('dietaryChipHint:') + 200,
+    );
+    expect(dietaryChipRowBlock).not.toMatch(/#[0-9a-fA-F]{3,8}/);
+    expect(dietaryChipRowBlock).not.toMatch(/rgba?\(/);
+    // No em dash anywhere in the new hint copy.
+    expect(source).toContain('Tap to set your diet and foods to avoid.');
+    expect(source).not.toMatch(/Tap to set your diet[^"']*—/);
   });
 });

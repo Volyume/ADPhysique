@@ -15,6 +15,7 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions, Share,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
@@ -22,12 +23,14 @@ import Button from '../components/Button';
 import Card from '../components/Card';
 import Chip from '../components/Chip';
 import EmptyState from '../components/EmptyState';
+import HintCaption from '../components/HintCaption';
 import SectionLabel from '../components/SectionLabel';
 import { SettingRow } from '../components/SettingsPrimitives';
 import { SkeletonCard } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { appAlert } from '../components/AppAlert';
+import * as haptics from '../lib/haptics';
 import useAppStore from '../store/useAppStore';
 import { colors, fontSize, fontWeight, spacing, radius, hitSlop, type, circle } from '../styles/theme';
 import { mealSlotLabel } from '../lib/food/mealSlots';
@@ -129,6 +132,37 @@ function dietaryNeedsSummary(userProfile) {
   if (excludedCount > 0) parts.push(`${excludedCount} food${excludedCount === 1 ? '' : 's'} excluded`);
   return parts.length ? parts.join(' · ') : 'Not set';
 }
+
+// Campaign item 4 (dietary-needs discoverability,
+// docs/ux-world-class-audit-2026-07-09/CAMPAIGN-2026-07-10-APPROVED-SLATE.md):
+// the "Dietary needs" row above only shows once the preferences accordion is
+// opened, and that accordion defaults CLOSED once a plan exists (prefsOpen
+// starts false below), so the row can go unseen for an entire session. This
+// reads the exact SAME synced profile fields as dietaryNeedsSummary above
+// (dietPreference, mealPlanExcludeTags, mealPlanExcludeFoods; one source of
+// truth, no second store) for a small chip on the primary surface, outside
+// the accordion. Wording is shorter than the settings-row summary ("2
+// excluded" not "2 foods excluded") because a chip has less room than a
+// full row; when nothing is set it reads as a calm, unstated entry point
+// ("Dietary needs") rather than staying invisible, since discoverability is
+// the entire point of this chip.
+function dietaryChipInfo(userProfile) {
+  const diet = userProfile?.dietPreference;
+  const dietLabel = diet && diet !== 'omnivore' ? DIET_LABELS[diet] : null;
+  const tags = Array.isArray(userProfile?.mealPlanExcludeTags) ? userProfile.mealPlanExcludeTags : [];
+  const foods = Array.isArray(userProfile?.mealPlanExcludeFoods) ? userProfile.mealPlanExcludeFoods : [];
+  const excludedCount = tags.length + foods.length;
+  const parts = [];
+  if (dietLabel) parts.push(dietLabel);
+  if (excludedCount > 0) parts.push(`${excludedCount} excluded`);
+  return { active: parts.length > 0, label: parts.length ? parts.join(' · ') : 'Dietary needs' };
+}
+
+// Same '@volyume_seen_*' once-ever convention as DIARY_MARKEATEN_HINT_KEY /
+// UNILATERAL_WALKTHROUGH_SEEN_KEY: shown once, the first time the meal
+// builder's primary surface renders the new chip, then never again once
+// dismissed or once the chip is tapped (discovery proven either way).
+const DIETARY_CHIP_HINT_KEY = '@volyume_seen_mealplan_dietary_chip';
 
 // One labelled segmented row of preference options (a small radio group).
 function PrefRow({
@@ -250,6 +284,11 @@ export default function MealPlanScreen({ navigation, route }) {
   const [foodSwapSheet, setFoodSwapSheet] = useState(null);
   const [grocerySheet, setGrocerySheet] = useState(null); // built grocery list or null
   const [repeatSheet, setRepeatSheet] = useState(false); // "repeat this day" target picker
+  // Campaign item 4: one-time pointer hint for the new dietary chip, same
+  // once-ever '@volyume_seen_*' convention as DIARY_MARKEATEN_HINT_KEY /
+  // UNILATERAL_WALKTHROUGH_SEEN_KEY (read on mount, set true on dismiss or
+  // on first use of the thing it points at).
+  const [showDietaryChipHint, setShowDietaryChipHint] = useState(false);
   const planStartDate = useMemo(() => normaliseDayKey(route?.params?.entryDate), [route?.params?.entryDate]);
   const planStartLabel = useMemo(() => dateLabelForKey(planStartDate), [planStartDate]);
 
@@ -268,6 +307,18 @@ export default function MealPlanScreen({ navigation, route }) {
   }, [user?.id]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    let active = true;
+    AsyncStorage.getItem(DIETARY_CHIP_HINT_KEY).then((v) => {
+      if (active && v !== 'true') setShowDietaryChipHint(true);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
+  const dismissDietaryChipHint = useCallback(() => {
+    setShowDietaryChipHint(false);
+    AsyncStorage.setItem(DIETARY_CHIP_HINT_KEY, 'true').catch(() => {});
+  }, []);
 
   const plan = record?.plan || null;
   const planDayCount = plan?.days?.length ?? 0;
@@ -719,6 +770,9 @@ export default function MealPlanScreen({ navigation, route }) {
   // change, not gated by screen focus, so no useFocusEffect/read-on-focus
   // is needed here (unlike a screen reading through a local DB call).
   const dietSummary = useMemo(() => dietaryNeedsSummary(userProfile), [userProfile]);
+  // Campaign item 4's primary-surface chip: same profile fields as
+  // dietSummary above, shorter wording (see dietaryChipInfo's header comment).
+  const dietaryChip = useMemo(() => dietaryChipInfo(userProfile), [userProfile]);
   // F4 (audit NAV-2 idiom, see the no-target redirect above): SettingsDietary
   // lives in ProfileStack; a bare navigation.navigate from DiaryStack would
   // silently no-op, so this goes through navigateCrossTab like the existing
@@ -726,6 +780,16 @@ export default function MealPlanScreen({ navigation, route }) {
   const handleOpenDietary = useCallback(() => {
     navigateCrossTab(navigation, 'ProfileTab', 'SettingsDietary');
   }, [navigation]);
+  // Chip variant of the handler above: same destination, plus the
+  // meal-builder selection haptic (allowed vocabulary on this surface, not a
+  // weight/food-log surface) and marking the pointer hint discovered by use,
+  // same "dismiss on the action it teaches" idiom as DiaryScreen's
+  // dismissMarkEatenHint (called from handleConfirmPlanned).
+  const handleOpenDietaryChip = useCallback(() => {
+    haptics.selection();
+    dismissDietaryChipHint();
+    navigateCrossTab(navigation, 'ProfileTab', 'SettingsDietary');
+  }, [navigation, dismissDietaryChipHint]);
   const dayTypeLabel = day?.variant === 'training' ? 'Training day' : 'Rest day';
   const hasSwappableFoods = (day?.slots || []).some((slot) => (
     !!slot.components && (slot.items || []).some((it) => (it.foodRef || '').startsWith('curated:'))
@@ -900,6 +964,32 @@ export default function MealPlanScreen({ navigation, route }) {
             </Text>
           ) : null}
           {honestyLine ? <Text maxFontSizeMultiplier={1.3} style={styles.honesty}>{honestyLine}</Text> : null}
+
+          {/* Campaign item 4 (dietary-needs discoverability): a quiet chip on
+              this primary surface, visible whether or not the preferences
+              accordion below is open (it defaults closed once a plan
+              exists, see prefsOpen). Tapping it opens the exact same
+              SettingsDietary route as the accordion's "Dietary needs" row;
+              this is a second entry point to one place, not a second
+              source of truth (dietaryChip reads the same profile fields as
+              dietSummary above). Informational only, never a judgement on
+              the exclusions themselves. */}
+          <View style={styles.dietaryChipRow}>
+            <Chip
+              icon="leaf-outline"
+              label={dietaryChip.label}
+              selected={dietaryChip.active}
+              onPress={handleOpenDietaryChip}
+              accessibilityLabel={`Dietary needs, ${dietaryChip.label}`}
+            />
+          </View>
+          {showDietaryChipHint ? (
+            <HintCaption
+              text="Tap to set your diet and foods to avoid."
+              onDismiss={dismissDietaryChipHint}
+              style={styles.dietaryChipHint}
+            />
+          ) : null}
 
           <View style={styles.preferencesCard}>
             <TouchableOpacity
@@ -1374,6 +1464,11 @@ const styles = StyleSheet.create({
   planOptionTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
   planOptionDesc: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.xs },
   scroll: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
+  dietaryChipRow: { flexDirection: 'row' },
+  // The `scroll` container already pads/gaps its children (padding: lg, gap:
+  // md), so HintCaption's own padding would double up here; same "flush
+  // instance" idiom as DiaryScreen's waterHint.
+  dietaryChipHint: { paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 },
   dayRow: {
     flexDirection: 'row',
     gap: spacing.xs,
