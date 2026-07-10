@@ -27,6 +27,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   colors, spacing, radius, fontWeight, type, withAlpha, iconSize, alpha,
 } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import DifferentialBadge from './DifferentialBadge';
 
 // The single decision point for which variant (if any) shows. Pass each
@@ -48,39 +49,57 @@ export default function AttentionCard({
   // differential
   differential, onDifferentialCta,
 }) {
+  // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
+  // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
+  // keys only. Called unconditionally before the variant branches below so
+  // hook order stays stable.
+  const t = useTheme();
+  const live = {
+    trialBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
+    trialBannerText: { ...t.type.bodySm, fontWeight: fontWeight.semibold, color: t.colors.textPrimary },
+    trialLedgerTitle: { ...t.type.caption, color: t.colors.textMuted },
+    trialLedgerRowText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    trialLedgerRowTextDone: { color: t.colors.textPrimary },
+    trialMethodologyButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    trialBannerLink: { ...t.type.label, color: t.colors.textPrimary },
+    freeCoachCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
+    freeCoachLineText: { ...t.type.bodySm, fontWeight: fontWeight.semibold, color: t.colors.textPrimary },
+    freeCoachFooter: { ...t.type.label, color: t.colors.textPrimary },
+    freeCoachFooterButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+  };
   if (variant === 'trial' && trialBanner) {
     return (
       <TouchableOpacity
-        style={styles.trialBanner}
+        style={[styles.trialBanner, live.trialBanner]}
         onPress={onTrialPress}
         activeOpacity={0.85}
         accessibilityRole="button"
         accessibilityLabel={trialBanner.line}
       >
         <View style={styles.trialBannerTopRow}>
-          <Ionicons name="checkmark-done-outline" size={18} color={colors.primary} />
-          <Text style={styles.trialBannerText} numberOfLines={2}>{trialBanner.line}</Text>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
+          <Ionicons name="checkmark-done-outline" size={18} color={t.colors.primary} />
+          <Text style={[styles.trialBannerText, live.trialBannerText]} numberOfLines={2}>{trialBanner.line}</Text>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
           <TouchableOpacity
             onPress={onTrialDismiss}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityRole="button"
             accessibilityLabel="Dismiss trial banner"
           >
-            <Ionicons name="close" size={15} color={colors.textMuted} />
+            <Ionicons name="close" size={15} color={t.colors.textMuted} />
           </TouchableOpacity>
         </View>
         {trialBanner.ledger?.rows?.length ? (
           <View style={styles.trialLedger}>
-            <Text style={styles.trialLedgerTitle}>{trialBanner.ledger.title}</Text>
+            <Text style={[styles.trialLedgerTitle, live.trialLedgerTitle]}>{trialBanner.ledger.title}</Text>
             {trialBanner.ledger.rows.map((row) => (
               <View key={row.key} style={styles.trialLedgerRow}>
                 <Ionicons
                   name={row.done ? 'checkmark-circle' : 'ellipse-outline'}
                   size={14}
-                  color={row.done ? colors.success : colors.textMuted}
+                  color={row.done ? t.colors.success : t.colors.textMuted}
                 />
-                <Text style={[styles.trialLedgerRowText, row.done && styles.trialLedgerRowTextDone]}>
+                <Text style={[styles.trialLedgerRowText, live.trialLedgerRowText, row.done && [styles.trialLedgerRowTextDone, live.trialLedgerRowTextDone]]}>
                   {row.label}
                 </Text>
               </View>
@@ -94,11 +113,11 @@ export default function AttentionCard({
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           accessibilityRole="button"
           accessibilityLabel="How Precision Coaching works"
-          style={styles.trialMethodologyButton}
+          style={[styles.trialMethodologyButton, live.trialMethodologyButton]}
         >
-          <Ionicons name="information-circle-outline" size={iconSize.sm} color={colors.textSecondary} />
-          <Text style={styles.trialBannerLink}>How Precision Coaching works</Text>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+          <Ionicons name="information-circle-outline" size={iconSize.sm} color={t.colors.textSecondary} />
+          <Text style={[styles.trialBannerLink, live.trialBannerLink]}>How Precision Coaching works</Text>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
       </TouchableOpacity>
     );
@@ -106,17 +125,17 @@ export default function AttentionCard({
 
   if (variant === 'free_line' && freeCoachLine) {
     return (
-      <View style={styles.freeCoachCard}>
+      <View style={[styles.freeCoachCard, live.freeCoachCard]}>
         <View style={styles.freeCoachTopRow}>
-          <Ionicons name="pulse-outline" size={16} color={colors.primary} style={{ marginTop: spacing.hair }} />
-          <Text style={styles.freeCoachLineText}>{freeCoachLine}</Text>
+          <Ionicons name="pulse-outline" size={16} color={t.colors.primary} style={{ marginTop: spacing.hair }} />
+          <Text style={[styles.freeCoachLineText, live.freeCoachLineText]}>{freeCoachLine}</Text>
           <TouchableOpacity
             onPress={onFreeLineDismiss}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityRole="button"
             accessibilityLabel="Dismiss this week's summary"
           >
-            <Ionicons name="close" size={15} color={colors.textMuted} />
+            <Ionicons name="close" size={15} color={t.colors.textMuted} />
           </TouchableOpacity>
         </View>
         <TouchableOpacity
@@ -124,11 +143,11 @@ export default function AttentionCard({
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           accessibilityRole="button"
           accessibilityLabel="Pro reads the full story. Learn about Pro coaching."
-          style={styles.freeCoachFooterButton}
+          style={[styles.freeCoachFooterButton, live.freeCoachFooterButton]}
         >
-          <Ionicons name="lock-open-outline" size={iconSize.sm} color={colors.textSecondary} />
-          <Text style={styles.freeCoachFooter}>Pro reads the full story</Text>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+          <Ionicons name="lock-open-outline" size={iconSize.sm} color={t.colors.textSecondary} />
+          <Text style={[styles.freeCoachFooter, live.freeCoachFooter]}>Pro reads the full story</Text>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
       </View>
     );

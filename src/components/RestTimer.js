@@ -5,6 +5,7 @@ import { appAlert } from './AppAlert';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useShallow } from 'zustand/react/shallow';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, letterSpacing, alpha } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 // D2: all haptics ride the named vocabulary so the reduce-motion setting
 // silences them (the old raw expo-haptics calls bypassed it).
@@ -69,6 +70,31 @@ export default function RestTimer() {
     addRestTime: s.addRestTime,
     reduceMotion: s.accessibility?.reduceMotion,
   })));
+
+  // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
+  // as batch 1. `styles` stays frozen; `live` carries the colour/fontSize-
+  // bearing keys only. Called before every early return below so hook order
+  // stays stable across renders.
+  const t = useTheme();
+  const live = {
+    container: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    timeText: { color: t.colors.textPrimary },
+    almostDone: { color: t.colors.warning },
+    countdownNum: { fontSize: t.fontSize.xxl, color: t.colors.warning },
+    countdownNumCompact: { fontSize: t.fontSize.xl },
+    label: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    skipBtn: { borderColor: t.colors.border },
+    skipText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    adjBtn: { borderColor: withAlpha(t.colors.primary, alpha.mid), backgroundColor: t.colors.primaryBg },
+    adjBtnNeg: { borderColor: t.colors.border, backgroundColor: t.colors.surface3 },
+    adjBtnText: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    adjBtnTextNeg: { color: t.colors.textSecondary },
+    drainTrack: { backgroundColor: t.colors.surface3 },
+    drainFill: { backgroundColor: t.colors.primaryFill },
+    drainFillWarm: { backgroundColor: t.colors.warning },
+    doneContainer: { backgroundColor: t.colors.successBg },
+    doneText: { fontSize: t.fontSize.md, color: t.colors.onSuccessBg },
+  };
 
   const intervalRef = useRef(null);
   const [showDone, setShowDone] = useState(false);
@@ -362,15 +388,15 @@ export default function RestTimer() {
 
   if (showDone && !restTimerActive) {
     return (
-      <View style={styles.doneContainer}>
-        <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-        <Text style={styles.doneText}>Start next set</Text>
+      <View style={[styles.doneContainer, live.doneContainer]}>
+        <Ionicons name="checkmark-circle" size={18} color={t.colors.success} />
+        <Text style={[styles.doneText, live.doneText]}>Start next set</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, live.container]}>
       {/* Timer row. Deliberately NOT a live region: TalkBack announces every
           label change, so a per-second label spoke the whole rest aloud,
           minute after minute (P9 audit finding 1). The row stays accessible
@@ -387,20 +413,20 @@ export default function RestTimer() {
             ? `Rest, ${restTimerRemaining} second${restTimerRemaining === 1 ? '' : 's'} remaining`
             : `Rest timer, ${mins} minute${mins === 1 ? '' : 's'} ${secs} second${secs === 1 ? '' : 's'} remaining`}
         >
-          <Ionicons name="timer-outline" size={18} color={isAlmostDone ? colors.warning : colors.primary} />
+          <Ionicons name="timer-outline" size={18} color={isAlmostDone ? t.colors.warning : t.colors.primary} />
           {isCountdown ? (
-            <Text style={[styles.countdownNum, compact && styles.countdownNumCompact]} maxFontSizeMultiplier={1.15}>{restTimerRemaining}</Text>
+            <Text style={[styles.countdownNum, live.countdownNum, compact && [styles.countdownNumCompact, live.countdownNumCompact]]} maxFontSizeMultiplier={1.15}>{restTimerRemaining}</Text>
           ) : (
-            <Text style={[styles.timeText, compact && styles.timeTextCompact, isAlmostDone && styles.almostDone]} maxFontSizeMultiplier={1.15}>{timeStr}</Text>
+            <Text style={[styles.timeText, live.timeText, compact && styles.timeTextCompact, isAlmostDone && [styles.almostDone, live.almostDone]]} maxFontSizeMultiplier={1.15}>{timeStr}</Text>
           )}
-          <Text style={styles.label} numberOfLines={1}>{isCountdown ? 'seconds' : 'rest'}</Text>
+          <Text style={[styles.label, live.label]} numberOfLines={1}>{isCountdown ? 'seconds' : 'rest'}</Text>
         </View>
         {TIME_ADJUSTMENTS.map(({ delta, label }) => {
           const isNeg = delta < 0;
           return (
             <TouchableOpacity
               key={delta}
-              style={[styles.adjBtn, isNeg && styles.adjBtnNeg]}
+              style={[styles.adjBtn, live.adjBtn, isNeg && [styles.adjBtnNeg, live.adjBtnNeg]]}
               onPress={() => handleAdjust(delta)}
               onLongPress={() => startRepeat(delta)}
               delayLongPress={300}
@@ -409,32 +435,33 @@ export default function RestTimer() {
               accessibilityRole="button"
               accessibilityLabel={isNeg ? 'Remove 15 seconds' : 'Add 15 seconds'}
             >
-              <Text style={[styles.adjBtnText, isNeg && styles.adjBtnTextNeg]}>{label}</Text>
+              <Text style={[styles.adjBtnText, live.adjBtnText, isNeg && [styles.adjBtnTextNeg, live.adjBtnTextNeg]]}>{label}</Text>
             </TouchableOpacity>
           );
         })}
         <TouchableOpacity
           onPress={stopRestTimer}
-          style={styles.skipBtn}
+          style={[styles.skipBtn, live.skipBtn]}
           hitSlop={{ top: 12, bottom: 12, left: 4, right: 8 }}
           accessibilityLabel="Skip rest timer"
           accessibilityRole="button"
         >
-          <Text style={styles.skipText}>Skip</Text>
+          <Text style={[styles.skipText, live.skipText]}>Skip</Text>
         </TouchableOpacity>
       </View>
       {/* D2: the draining remaining-rest fill. Decorative (the live region
           above carries the accessible announcement), so hidden from AT. */}
       <View
-        style={styles.drainTrack}
+        style={[styles.drainTrack, live.drainTrack]}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
         <Animated.View
           style={[
             styles.drainFill,
+            live.drainFill,
             { transform: [{ scaleX: drain }] },
-            isAlmostDone && styles.drainFillWarm,
+            isAlmostDone && [styles.drainFillWarm, live.drainFillWarm],
           ]}
         />
       </View>

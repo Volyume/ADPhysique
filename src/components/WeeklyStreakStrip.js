@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 /**
  * "This week" strip (COMP-018), the first section of the Progress tab.
@@ -16,6 +17,21 @@ import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/t
  * synced pause/goal table and a copy review).
  */
 export default function WeeklyStreakStrip({ vm }) {
+  // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
+  // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
+  // keys only. Called before the early-return below so hook order stays
+  // stable across renders (vm can flip from null to populated).
+  const t = useTheme();
+  const live = {
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    // type.num('h3') (theme.js) is { ...type.h3, fontVariant: ['tabular-nums'] }
+    // bound to the frozen `type` singleton; the live equivalent spreads the
+    // hook's own live t.type.h3 instead so fontSize follows Larger Text too.
+    count: { ...t.type.h3, fontVariant: ['tabular-nums'], color: t.colors.textPrimary },
+    countSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    run: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+  };
+
   if (!vm || !vm.render) return null;
 
   const { current, runLength, suppressed, hasTarget } = vm;
@@ -46,12 +62,12 @@ export default function WeeklyStreakStrip({ vm }) {
   ].filter(Boolean).join(' ');
 
   return (
-    <View style={styles.card} accessible accessibilityLabel={a11y}>
+    <View style={[styles.card, live.card]} accessible accessibilityLabel={a11y}>
       <View style={styles.left}>
-        <Text style={styles.count}>{left}</Text>
-        <Text style={styles.countSub}>{leftSub}</Text>
+        <Text style={[styles.count, live.count]}>{left}</Text>
+        <Text style={[styles.countSub, live.countSub]}>{leftSub}</Text>
       </View>
-      {right ? <Text style={styles.run}>{right}</Text> : null}
+      {right ? <Text style={[styles.run, live.run]}>{right}</Text> : null}
     </View>
   );
 }

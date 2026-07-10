@@ -42,6 +42,7 @@ import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
 import ActiveSessionMiniBar from './ActiveSessionMiniBar';
 import { colors, radius, spacing, motion, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 // Sits behind the ACTIVE ICON AND ITS LABEL as one soft cushion (founder
 // review 2026-07-03: a pill behind only the icon left the label hanging
@@ -68,6 +69,18 @@ function TabIcon({ focused, reduceMotion, children }) {
 }
 
 export default function VolyumeTabBar({ state, descriptors, navigation }) {
+  // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
+  // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
+  // keys only. `color` (the per-tab icon/label ink) already read the
+  // frozen singleton directly at render time (class 3, CP-10 plan section
+  // 1.4) -- now reads the live hook instead so it re-renders on a flip.
+  const t = useTheme();
+  const live = {
+    bar: { backgroundColor: t.colors.surfaceElevated, borderTopColor: t.colors.borderSubtle },
+    pill: { backgroundColor: t.colors.primaryBg },
+    badgeDot: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.surfaceElevated },
+    label: { ...t.type.caption, fontFamily: t.type.label.fontFamily },
+  };
   const insets = useSafeAreaInsets();
   const reduceMotion = useAppStore((s) => !!s.accessibility?.reduceMotion);
   // T2: unseen weekly coach review, mirrored into the store by HomeScreen and
@@ -98,16 +111,16 @@ export default function VolyumeTabBar({ state, descriptors, navigation }) {
     <View>
       <ActiveSessionMiniBar navigation={navigation} />
       <View
-        style={[styles.bar, { height: 60 + insets.bottom, paddingBottom: 4 + insets.bottom }]}
+        style={[styles.bar, live.bar, { height: 60 + insets.bottom, paddingBottom: 4 + insets.bottom }]}
         onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
       >
         {barWidth > 0 ? (
-          <Animated.View pointerEvents="none" style={[styles.pill, { width: pillWidth }, pillStyle]} />
+          <Animated.View pointerEvents="none" style={[styles.pill, live.pill, { width: pillWidth }, pillStyle]} />
         ) : null}
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const isFocused = state.index === index;
-          const color = isFocused ? colors.primary : colors.textMuted;
+          const color = isFocused ? t.colors.primary : t.colors.textMuted;
           const label = options.title ?? route.name;
           // T2: CoachOutput lives in ProfileStack only (RootNavigator), so
           // the Coach tab is the one that carries the unseen-review badge.
@@ -147,9 +160,9 @@ export default function VolyumeTabBar({ state, descriptors, navigation }) {
                     ? options.tabBarIcon({ focused: isFocused, color, size: 22 })
                     : null}
                 </TabIcon>
-                {showCoachBadge ? <View style={styles.badgeDot} pointerEvents="none" /> : null}
+                {showCoachBadge ? <View style={[styles.badgeDot, live.badgeDot]} pointerEvents="none" /> : null}
               </View>
-              <Text style={[styles.label, { color }]} numberOfLines={1}>{label}</Text>
+              <Text style={[styles.label, live.label, { color }]} numberOfLines={1}>{label}</Text>
             </Pressable>
           );
         })}

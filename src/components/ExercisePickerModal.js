@@ -9,6 +9,7 @@ import { FlashList } from '@shopify/flash-list';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontWeight, spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getAllExercises, insertExercise, getRecentlyUsedExerciseIds } from '../lib/database';
 import { matchesEquipmentFilter, matchesMuscleFilter } from '../lib/exerciseDisplay';
@@ -51,6 +52,28 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
   const toast = useToast();
   const userId = useAppStore(s => s.user?.id);
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
+  // as batch 1. `styles` stays frozen; `live` carries the colour/fontSize/
+  // type-bearing keys only.
+  const t = useTheme();
+  const live = {
+    pickerSafe: { backgroundColor: t.colors.background },
+    pickerHeader: { borderBottomColor: t.colors.borderSubtle },
+    pickerClose: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    pickerExName: { ...t.type.label, color: t.colors.textPrimary },
+    pickerMuscle: { ...t.type.caption, color: t.colors.textMuted },
+    pickerEmptyText: { ...t.type.body, color: t.colors.textMuted },
+    separator: { backgroundColor: t.colors.borderSubtle },
+    createNewBtn: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    createNewBtnText: { ...t.type.label, color: t.colors.textPrimary },
+    createTitle: { ...t.type.title, color: t.colors.textPrimary },
+    createNameInputText: { ...t.type.bodyStrong },
+    createLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
+    filterChipText: { ...t.type.label, color: t.colors.textSecondary },
+    filterChipTextActive: { color: t.colors.primary },
+    createSaveBtn: { backgroundColor: t.colors.primaryFill },
+    createSaveBtnText: { ...t.type.label, color: t.colors.onPrimary },
+  };
   const buttonLabel = saveLabel || actionLabel || 'Add exercise';
   const isSwapAction = buttonLabel.toLowerCase().includes('swap');
   const showBrowseFilters = !isSwapAction;
@@ -187,26 +210,26 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
           status bar / Dynamic Island. A nested provider makes the modal
           measure its own insets. */}
       <SafeAreaProvider>
-      <SafeAreaView style={styles.pickerSafe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.pickerSafe, live.pickerSafe]} edges={['top', 'bottom']}>
         {showCreate ? (
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <View style={styles.pickerHeader}>
+            <View style={[styles.pickerHeader, live.pickerHeader]}>
               <TouchableOpacity accessibilityRole="button"
                 accessibilityLabel="Back to exercise search"
                 onPress={() => setShowCreate(false)}
-                style={styles.pickerClose}
+                style={[styles.pickerClose, live.pickerClose]}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
-                <Ionicons name="arrow-back" size={24} color={colors.textSecondary} />
+                <Ionicons name="arrow-back" size={24} color={t.colors.textSecondary} />
               </TouchableOpacity>
-              <Text style={styles.createTitle} numberOfLines={1} ellipsizeMode="tail">New exercise</Text>
+              <Text style={[styles.createTitle, live.createTitle]} numberOfLines={1} ellipsizeMode="tail">New exercise</Text>
               <TouchableOpacity accessibilityRole="button"
                 accessibilityLabel="Close exercise picker"
                 onPress={onClose}
-                style={styles.pickerClose}
+                style={[styles.pickerClose, live.pickerClose]}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
-                <Ionicons name="close" size={24} color={colors.textSecondary} />
+                <Ionicons name="close" size={24} color={t.colors.textSecondary} />
               </TouchableOpacity>
             </View>
             <ScrollView contentContainerStyle={styles.createContent} keyboardShouldPersistTaps="handled">
@@ -215,15 +238,15 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 value={createName}
                 onChangeText={setCreateName}
                 placeholder="Exercise name"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={t.colors.textMuted}
                 autoFocus
                 autoCapitalize="words"
-                surface={colors.inputBg}
+                surface={t.colors.inputBg}
                 containerStyle={styles.createNameInputContainer}
                 fieldStyle={styles.createNameInputField}
-                inputStyle={styles.createNameInputText}
+                inputStyle={[styles.createNameInputText, live.createNameInputText]}
               />
-              <Text style={styles.createLabel}>Muscle group</Text>
+              <Text style={[styles.createLabel, live.createLabel]}>Muscle group</Text>
               <View style={styles.chipRow}>
                 {PICKER_MUSCLES.map(m => (
                   <Chip
@@ -240,7 +263,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                   secondary_muscles column already does. The current primary
                   muscle is left out of the list so the same muscle cannot be
                   picked as both. */}
-              <Text style={styles.createLabel}>Secondary muscles (optional)</Text>
+              <Text style={[styles.createLabel, live.createLabel]}>Secondary muscles (optional)</Text>
               <View style={styles.chipRow}>
                 {PICKER_MUSCLES.filter(m => m !== createMuscle).map(m => {
                   const selected = createSecondaryMuscles.includes(m);
@@ -255,7 +278,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                   );
                 })}
               </View>
-              <Text style={styles.createLabel}>Equipment</Text>
+              <Text style={[styles.createLabel, live.createLabel]}>Equipment</Text>
               <View style={styles.chipRow}>
                 {PICKER_EQUIPMENT.map(eq => (
                   <Chip
@@ -270,7 +293,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                   exercise_type enum so a custom plank/carry/sprint can get the
                   correct SetEntry input schema instead of always defaulting
                   to weight_reps. */}
-              <Text style={styles.createLabel}>Exercise type</Text>
+              <Text style={[styles.createLabel, live.createLabel]}>Exercise type</Text>
               <View style={styles.chipRow}>
                 {EXERCISE_TYPE_OPTIONS.map(opt => (
                   <Chip
@@ -284,18 +307,18 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               </View>
               <TouchableOpacity accessibilityRole="button"
                 accessibilityLabel={buttonLabel}
-                style={[styles.createSaveBtn, creating && { opacity: 0.5 }]}
+                style={[styles.createSaveBtn, live.createSaveBtn, creating && { opacity: 0.5 }]}
                 onPress={handleCreate}
                 disabled={creating}
               >
-                <Ionicons name={isSwapAction ? 'swap-horizontal' : 'add-circle'} size={20} color={colors.onPrimary} />
-                <Text style={styles.createSaveBtnText} numberOfLines={1}>{buttonLabel}</Text>
+                <Ionicons name={isSwapAction ? 'swap-horizontal' : 'add-circle'} size={20} color={t.colors.onPrimary} />
+                <Text style={[styles.createSaveBtnText, live.createSaveBtnText]} numberOfLines={1}>{buttonLabel}</Text>
               </TouchableOpacity>
             </ScrollView>
           </KeyboardAvoidingView>
         ) : (
           <>
-            <View style={styles.pickerHeader}>
+            <View style={[styles.pickerHeader, live.pickerHeader]}>
               <SearchBar
                 style={styles.pickerSearchBar}
                 value={query}
@@ -306,10 +329,10 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               <TouchableOpacity accessibilityRole="button"
                 accessibilityLabel="Close exercise picker"
                 onPress={onClose}
-                style={styles.pickerClose}
+                style={[styles.pickerClose, live.pickerClose]}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
-                <Ionicons name="close" size={24} color={colors.textSecondary} />
+                <Ionicons name="close" size={24} color={t.colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -356,8 +379,8 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                       onPress={() => setMuscleFilter(prev => (prev === m ? '' : m))}
                       accessibilityLabel={`Filter by ${MUSCLE_DISPLAY_NAMES[m]}`}
                       style={styles.filterChip}
-                      labelStyle={styles.filterChipText}
-                      selectedLabelStyle={styles.filterChipTextActive}
+                      labelStyle={[styles.filterChipText, live.filterChipText]}
+                      selectedLabelStyle={[styles.filterChipTextActive, live.filterChipTextActive]}
                     />
                   ))}
                 </ScrollView>
@@ -375,8 +398,8 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                       onPress={() => setEquipmentFilter(prev => (prev === eq ? '' : eq))}
                       accessibilityLabel={`Filter by ${eq}`}
                       style={styles.filterChip}
-                      labelStyle={styles.filterChipText}
-                      selectedLabelStyle={styles.filterChipTextActive}
+                      labelStyle={[styles.filterChipText, live.filterChipText]}
+                      selectedLabelStyle={[styles.filterChipTextActive, live.filterChipTextActive]}
                     />
                   ))}
                 </ScrollView>
@@ -395,15 +418,15 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                   onPress={() => { onSelect(item); onClose(); }}
                 >
                   <View style={styles.pickerRowContent}>
-                    <Text style={styles.pickerExName}>{item.name}</Text>
+                    <Text style={[styles.pickerExName, live.pickerExName]}>{item.name}</Text>
                     {item.primaryMuscle ? (
-                      <Text style={styles.pickerMuscle}>{item.primaryMuscle}</Text>
+                      <Text style={[styles.pickerMuscle, live.pickerMuscle]}>{item.primaryMuscle}</Text>
                     ) : null}
                   </View>
-                  <Ionicons name={isSwapAction ? 'swap-horizontal' : 'add-circle-outline'} size={20} color={colors.textSecondary} />
+                  <Ionicons name={isSwapAction ? 'swap-horizontal' : 'add-circle-outline'} size={20} color={t.colors.textSecondary} />
                 </TouchableOpacity>
               )}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
+              ItemSeparatorComponent={() => <View style={[styles.separator, live.separator]} />}
               ListFooterComponent={!isSwapAction ? (
                 // Always offer "create custom", with or without a query, so the
                 // option to add your own exercise is never hidden behind an
@@ -413,11 +436,11 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                   accessibilityLabel={query.trim().length > 0
                     ? `Create ${query.trim()} as custom exercise`
                     : 'Create a custom exercise'}
-                  style={[styles.createNewBtn, { marginTop: spacing.md }]}
+                  style={[styles.createNewBtn, live.createNewBtn, { marginTop: spacing.md }]}
                   onPress={openCreate}
                 >
-                  <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-                  <Text style={styles.createNewBtnText}>
+                  <Ionicons name="add-circle-outline" size={18} color={t.colors.primary} />
+                  <Text style={[styles.createNewBtnText, live.createNewBtnText]}>
                     {query.trim().length > 0
                       ? `Create "${query.trim()}" as custom exercise`
                       : 'Create a custom exercise'}
@@ -426,8 +449,8 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               ) : null}
               ListEmptyComponent={
                 <View style={styles.pickerEmpty}>
-                  <Ionicons name="search-outline" size={32} color={colors.textMuted} style={{ marginBottom: spacing.md }} />
-                  <Text style={styles.pickerEmptyText}>
+                  <Ionicons name="search-outline" size={32} color={t.colors.textMuted} style={{ marginBottom: spacing.md }} />
+                  <Text style={[styles.pickerEmptyText, live.pickerEmptyText]}>
                     {isSwapAction ? 'No swaps found. Try a different search.' : 'No matches found. Try a different search.'}
                   </Text>
                 </View>

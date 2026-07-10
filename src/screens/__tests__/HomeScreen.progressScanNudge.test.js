@@ -44,7 +44,14 @@ describe('HomeScreen check-in nudge scan subline', () => {
     const ctaIdx = cardBlock.indexOf('Open check-in');
     expect(sublineIdx).toBeGreaterThan(bodyIdx);
     expect(sublineIdx).toBeLessThan(ctaIdx);
-    expect(cardBlock).toMatch(/\{!photoScanSuppressed && \(\s*\n\s*<Text style=\{styles\.coachingNudgeScanSubline\}>/);
+    // CP-10 stage 3 (theming batch 2, 2026-07-10): HomeScreen appends a live
+    // theme override after the frozen style in each array (batch 1's
+    // pattern), so this call site is `style={[styles.X, live.X]}` instead of
+    // `style={styles.X}`. The pinned RULE (subline gated on
+    // !photoScanSuppressed, positioned between body and CTA) is unchanged --
+    // the static coachingNudgeScanSubline definition (asserted below) is
+    // byte-identical to before.
+    expect(cardBlock).toMatch(/\{!photoScanSuppressed && \(\s*\n\s*<Text style=\{\[styles\.coachingNudgeScanSubline, live\.coachingNudgeScanSubline\]\}>/);
     expect(cardBlock).toMatch(/If you like, add a progress scan first for extra visual context\. Skipping it is fine\./);
   });
 

@@ -11,6 +11,16 @@
  * `continueIcon`'s `withAlpha(colors.background, alpha.soft)` is a genuine
  * background FILL (the icon-circle backing), not ink, and is deliberately
  * left untouched.
+ *
+ * CP-10 stage 3 (theming batch 2, 2026-07-10): HomeScreen now reads a live
+ * theme (src/hooks/useTheme.js) for its colour tokens, so the frozen
+ * `colors.*` singleton import was replaced with `t.colors.*` at JSX call
+ * sites (the STATIC StyleSheet.create definitions below stay byte-identical
+ * -- see the "still reads withAlpha(colors.background, ...)" test, which is
+ * unchanged and still passes against that frozen block). The chevron's
+ * inline `color` prop is one such call site, so its literal text moved from
+ * `colors.onPrimary` to `t.colors.onPrimary`; the pinned RULE -- onPrimary,
+ * never background, as the ink on the filled continue-card -- is unchanged.
  */
 const fs = require('fs');
 const path = require('path');
@@ -18,9 +28,9 @@ const path = require('path');
 const HOME = fs.readFileSync(path.resolve(__dirname, '../HomeScreen.js'), 'utf8');
 
 describe('AC-3: Continue-workout card ink uses colors.onPrimary, not colors.background', () => {
-  test('the chevron ink is withAlpha(colors.onPrimary, 0.8)', () => {
+  test('the chevron ink is withAlpha(t.colors.onPrimary, 0.8)', () => {
     expect(HOME).toMatch(
-      /<Ionicons name="chevron-forward" size=\{18\} color=\{withAlpha\(colors\.onPrimary, 0\.8\)\} \/>/,
+      /<Ionicons name="chevron-forward" size=\{18\} color=\{withAlpha\(t\.colors\.onPrimary, 0\.8\)\} \/>/,
     );
   });
 

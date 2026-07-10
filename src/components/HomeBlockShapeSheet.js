@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { colors, fontSize, spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BlockShapeCard from './BlockShapeCard';
 import { GLOSSARY } from '../lib/coachGlossary';
 
@@ -10,6 +11,19 @@ import { GLOSSARY } from '../lib/coachGlossary';
 // chip. Makes periodisation visible and the recovery week a destination
 // rather than a dip.
 function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek, reduceMotion, insetsBottom }) {
+  // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
+  // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
+  // keys only.
+  const t = useTheme();
+  const live = {
+    sheetBackdrop: { backgroundColor: t.colors.scrim },
+    sheet: { backgroundColor: t.colors.surface },
+    sheetHandle: { backgroundColor: t.colors.border },
+    sheetTitle: { ...t.type.h3, color: t.colors.textPrimary },
+    sheetSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    sheetDefn: { ...t.type.bodySm, color: t.colors.textSecondary },
+    sheetCancelText: { ...t.type.body, color: t.colors.textSecondary },
+  };
   return (
     <Modal
       visible={visible}
@@ -18,16 +32,16 @@ function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek, reduceMotion, 
       onRequestClose={onClose}
     >
       <TouchableOpacity
-        style={styles.sheetBackdrop}
+        style={[styles.sheetBackdrop, live.sheetBackdrop]}
         activeOpacity={1}
         onPress={onClose}
         accessibilityRole="button"
         accessibilityLabel="Close"
       />
-      <View style={[styles.sheet, { paddingBottom: spacing.xxxl + insetsBottom }]}>
-        <View style={styles.sheetHandle} />
-        <Text style={styles.sheetTitle}>Your block</Text>
-        {currentMesoWeek?.mesoName ? <Text style={styles.sheetSub}>{currentMesoWeek.mesoName}</Text> : null}
+      <View style={[styles.sheet, live.sheet, { paddingBottom: spacing.xxxl + insetsBottom }]}>
+        <View style={[styles.sheetHandle, live.sheetHandle]} />
+        <Text style={[styles.sheetTitle, live.sheetTitle]}>Your block</Text>
+        {currentMesoWeek?.mesoName ? <Text style={[styles.sheetSub, live.sheetSub]}>{currentMesoWeek.mesoName}</Text> : null}
         <View style={{ paddingVertical: spacing.md }}>
           <BlockShapeCard
             weekIndex={currentMesoWeek?.weekIndex}
@@ -37,10 +51,10 @@ function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek, reduceMotion, 
         </View>
         {/* U-E-1/U-D-3: the chip is whole-tappable, so the plain-English
             definitions of its terms live here, in the sheet it opens. */}
-        <Text style={styles.sheetDefn}>{GLOSSARY.deload}</Text>
-        <Text style={styles.sheetDefn}>{GLOSSARY.rir}</Text>
+        <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.deload}</Text>
+        <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.rir}</Text>
         <TouchableOpacity style={styles.sheetCancel} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close">
-          <Text style={styles.sheetCancelText}>Close</Text>
+          <Text style={[styles.sheetCancelText, live.sheetCancelText]}>Close</Text>
         </TouchableOpacity>
       </View>
     </Modal>

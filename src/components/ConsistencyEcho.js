@@ -19,10 +19,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import useWeeklyStreak from '../hooks/useWeeklyStreak';
+import useTheme from '../hooks/useTheme';
 
 const EXPLAINER_SEEN_KEY = '@volyume_consistency_explainer_seen';
 
 export default function ConsistencyEcho({ userId, scoffScore = 0 }) {
+  // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
+  // as batch 1. Colour/type plumbing only -- the ED-safety suppression
+  // logic below (vm.suppressed/vm.hasTarget, from useWeeklyStreak, which
+  // itself reads wellbeing.js) is untouched.
+  const t = useTheme();
+  const live = {
+    echoText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    explainer: { backgroundColor: withAlpha(t.colors.primary, 0.08) },
+    explainerText: { ...t.type.bodySm, color: t.colors.textSecondary },
+  };
   const vm = useWeeklyStreak(userId, scoffScore);
   // Default hidden until the flag resolves, so the explainer never flashes on a
   // slow or failed read.
@@ -57,12 +68,12 @@ export default function ConsistencyEcho({ userId, scoffScore = 0 }) {
   return (
     <View style={styles.wrap}>
       <View style={styles.echoRow} accessible accessibilityLabel={line}>
-        <Ionicons name="ellipse" size={9} color={colors.primary} />
-        <Text style={styles.echoText}>{line}</Text>
+        <Ionicons name="ellipse" size={9} color={t.colors.primary} />
+        <Text style={[styles.echoText, live.echoText]}>{line}</Text>
       </View>
       {!explainerSeen ? (
-        <View style={styles.explainer}>
-          <Text style={styles.explainerText}>
+        <View style={[styles.explainer, live.explainer]}>
+          <Text style={[styles.explainerText, live.explainerText]}>
             One off week never breaks your run. Life happens, and your run carries on.
           </Text>
           <TouchableOpacity
@@ -71,7 +82,7 @@ export default function ConsistencyEcho({ userId, scoffScore = 0 }) {
             accessibilityRole="button"
             accessibilityLabel="Got it"
           >
-            <Ionicons name="close" size={16} color={colors.textMuted} />
+            <Ionicons name="close" size={16} color={t.colors.textMuted} />
           </TouchableOpacity>
         </View>
       ) : null}

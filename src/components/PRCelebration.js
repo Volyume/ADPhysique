@@ -12,16 +12,31 @@ import * as haptics from '../lib/haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle, motion, letterSpacing, alpha, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 const NUM_PARTICLES = 40;
 
 // Decorative confetti palette: brand tokens plus the two festive accents,
 // tokenised in D0 (design audit 03) so no raw hex remains here. The gold-only
 // variant dresses the big milestone rungs (D2).
-const PR_PALETTE = [colors.primary, colors.gold, colors.success, colors.celebrationEmber, colors.celebrationViolet];
-const GOLD_PALETTE = [colors.gold, colors.celebrationEmber, colors.gold];
+//
+// CP-10 stage 3 (theming batch 2): these were module-scope consts baked at
+// import time from the static `colors` singleton (class 2, CP-10 plan
+// section 1.4) -- frozen until an app restart. Now built per-render from the
+// live theme (src/hooks/useTheme.js), same pattern as Button.js's
+// buildVariants/buildSizes (CP-10 stage 1).
+function buildPrPalette(c) {
+  return [c.primary, c.gold, c.success, c.celebrationEmber, c.celebrationViolet];
+}
+function buildGoldPalette(c) {
+  return [c.gold, c.celebrationEmber, c.gold];
+}
 
-function createParticle(index, palette = PR_PALETTE, screenWidth, screenHeight) {
+// Both call sites always pass an explicit palette (buildPrPalette/
+// buildGoldPalette against the live theme); the default below only exists as
+// a defensive fallback and intentionally uses the static `colors` singleton
+// (never reached in practice, so it does not need to be theme-reactive).
+function createParticle(index, palette = buildPrPalette(colors), screenWidth, screenHeight) {
   return {
     x: new Animated.Value(screenWidth / 2),
     y: new Animated.Value(screenHeight / 2),
@@ -43,9 +58,10 @@ function createParticle(index, palette = PR_PALETTE, screenWidth, screenHeight) 
  */
 export function MilestoneBurst({ onDone }) {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  const t = useTheme();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const particles = useRef(
-    reduceMotion ? [] : Array.from({ length: NUM_PARTICLES }, (_, i) => createParticle(i, GOLD_PALETTE, screenWidth, screenHeight)),
+    reduceMotion ? [] : Array.from({ length: NUM_PARTICLES }, (_, i) => createParticle(i, buildGoldPalette(t.colors), screenWidth, screenHeight)),
   ).current;
 
   useEffect(() => {
@@ -113,6 +129,23 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
   // didn't pass subdued. This keeps the app's reduce-motion discipline intact
   // at a flagship moment rather than breaking it here.
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
+  // as batch 1. `styles` stays frozen; `live` carries the colour/fontSize-
+  // bearing keys only.
+  const t = useTheme();
+  const live = {
+    overlay: { backgroundColor: t.colors.background },
+    card: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.gold, alpha.strong) },
+    iconContainer: { backgroundColor: withAlpha(t.colors.gold, alpha.tint) },
+    prBadge: { fontSize: t.fontSize.xs, color: t.colors.gold },
+    prType: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
+    prValue: { fontSize: t.fontSize.md, color: t.colors.primary },
+    prDelta: { fontSize: t.fontSize.sm, color: t.colors.gold },
+    dismiss: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    toast: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    toastTitle: { ...t.type.captionStrong, color: t.colors.textMuted },
+    toastValue: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+  };
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   // Wave A A1: a first-ever lift is an honest first, not a record, it beats
   // nothing, so it never gets the confetti/heavy-haptic PERSONAL RECORD
@@ -124,7 +157,7 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
   // into translate constants instead of allocating new Animated.Values
   // every render (was a slow memory leak on long PR streaks).
   const particles = useRef(
-    subduedMode ? [] : Array.from({ length: NUM_PARTICLES }, (_, i) => createParticle(i, PR_PALETTE, screenWidth, screenHeight)),
+    subduedMode ? [] : Array.from({ length: NUM_PARTICLES }, (_, i) => createParticle(i, buildPrPalette(t.colors), screenWidth, screenHeight)),
   ).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const cardScale = useRef(new Animated.Value(0.5)).current;
@@ -218,11 +251,11 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
         activeOpacity={0.9}
         onPress={onDismiss}
       >
-        <Animated.View style={[styles.toast, { opacity: cardOpacity }]}>
-          <Ionicons name={prIcon} size={20} color={colors.primary} />
+        <Animated.View style={[styles.toast, live.toast, { opacity: cardOpacity }]}>
+          <Ionicons name={prIcon} size={20} color={t.colors.primary} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.toastTitle}>{prLabel}</Text>
-            <Text style={styles.toastValue}>{pr.label}</Text>
+            <Text style={[styles.toastTitle, live.toastTitle]}>{prLabel}</Text>
+            <Text style={[styles.toastValue, live.toastValue]}>{pr.label}</Text>
           </View>
         </Animated.View>
       </TouchableOpacity>
@@ -235,7 +268,7 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
       activeOpacity={1}
       onPress={onDismiss}
     >
-      <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]} />
+      <Animated.View style={[styles.overlay, live.overlay, { opacity: overlayOpacity }]} />
 
       {particles.map((p, i) => (
         <Animated.View
@@ -266,15 +299,16 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
       <Animated.View
         style={[
           styles.card,
+          live.card,
           { top: screenHeight / 2 - 160, transform: [{ scale: cardScale }], opacity: cardOpacity },
         ]}
       >
-        <View style={styles.iconContainer}>
-          <Ionicons name={prIcon} size={48} color={colors.gold} />
+        <View style={[styles.iconContainer, live.iconContainer]}>
+          <Ionicons name={prIcon} size={48} color={t.colors.gold} />
         </View>
-        <Text style={styles.prBadge}>PERSONAL RECORD</Text>
-        <Text style={styles.prType}>{prLabel}</Text>
-        <Text style={styles.prValue}>{pr.label}</Text>
+        <Text style={[styles.prBadge, live.prBadge]}>PERSONAL RECORD</Text>
+        <Text style={[styles.prType, live.prType]}>{prLabel}</Text>
+        <Text style={[styles.prValue, live.prValue]}>{pr.label}</Text>
         {pr.previousValue > 0 && pr.value > 0 && (() => {
           // Show "+X% over previous PR" so the user feels the magnitude.
           // Only show for meaningful improvements (>=1%); below that
@@ -282,12 +316,12 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
           const pct = ((pr.value - pr.previousValue) / pr.previousValue) * 100;
           if (pct < 1) return null;
           return (
-            <Text style={styles.prDelta}>
+            <Text style={[styles.prDelta, live.prDelta]}>
               +{pct.toFixed(pct >= 10 ? 0 : 1)}% over your previous best
             </Text>
           );
         })()}
-        <Text style={styles.dismiss}>Tap to continue</Text>
+        <Text style={[styles.dismiss, live.dismiss]}>Tap to continue</Text>
       </Animated.View>
     </TouchableOpacity>
   );

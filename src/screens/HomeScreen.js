@@ -9,6 +9,7 @@ import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns/format';
 
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import ScreenHeader from '../components/ScreenHeader';
 import ConsistencyEcho from '../components/ConsistencyEcho';
 import Button from '../components/Button';
@@ -19,7 +20,7 @@ import WhatsNewSheet from '../components/WhatsNewSheet';
 import { SkeletonCard } from '../components/Skeleton';
 import TodayStrip from '../components/TodayStrip';
 import { useToast } from '../components/Toast';
-import CoachBriefCard, { BRIEF_ICON_COLOR } from '../components/CoachBriefCard';
+import CoachBriefCard, { buildBriefIconColor } from '../components/CoachBriefCard';
 import HomeWelcomeCard from '../components/HomeWelcomeCard';
 import HomeProTeaserCard from '../components/HomeProTeaserCard';
 import HomeLastSessionCard from '../components/HomeLastSessionCard';
@@ -117,6 +118,83 @@ export default function HomeScreen({ navigation, route }) {
   const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments, reduceMotion } = useAppStore(
     useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments, reduceMotion: s.accessibility?.reduceMotion }))
   );
+
+  // CP-10 stage 3 (theming batch 2): live theme (src/hooks/useTheme.js).
+  // `styles` below stays frozen (byte-identical StyleSheet.create, matching
+  // batch 1's pattern); `live` carries every colour/fontSize/type-bearing
+  // key from that frozen block, appended AFTER the frozen base in each style
+  // array so a theme change re-renders this screen with no restart, at
+  // identical rest values. Keys with no colour/fontSize token (pure layout:
+  // flex/gap/padding/width/etc.) are omitted -- there is nothing to unfreeze.
+  const t = useTheme();
+  const live = {
+    safe: { backgroundColor: t.colors.background },
+    scheduleContextLine: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    scheduleContextLineToday: { color: t.colors.primary },
+    continueCard: { backgroundColor: t.colors.success },
+    continueIcon: { backgroundColor: withAlpha(t.colors.background, alpha.soft) },
+    continueTitle: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    continueSub: { ...t.type.caption, color: withAlpha(t.colors.onPrimary, 0.8) },
+    workoutName: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
+    workoutMeta: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    mesoBriefChip: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    mesoBriefText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    workoutOptionsText: { color: t.colors.textSecondary },
+    proRecoverBtn: { backgroundColor: t.colors.primaryFill },
+    proRecoverBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    noPlanIconWrap: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
+    noPlanTitle: { ...t.type.h3, color: t.colors.textPrimary },
+    noPlanSub: { ...t.type.bodySm, color: t.colors.textSecondary },
+    blankSessionLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    blankSessionLinkText: { ...t.type.label, color: t.colors.textPrimary },
+    starterCard: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    glanceTitle: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    glanceStatValue: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
+    glanceStatLabel: { ...t.type.caption, color: t.colors.textMuted },
+    glanceDivider: { backgroundColor: t.colors.border },
+    coachingNudge: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    coachingNudgeLeft: { backgroundColor: t.colors.primaryBg },
+    coachingNudgeTitle: { ...t.type.label, color: t.colors.textPrimary },
+    coachingNudgeBody: { ...t.type.captionTight, color: t.colors.textSecondary },
+    coachingNudgeScanSubline: { ...t.type.captionTight, color: t.colors.textMuted },
+    coachingNudgeBtnText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    intentOverlay: { backgroundColor: t.colors.scrim },
+    intentSheet: { backgroundColor: t.colors.surface },
+    intentTitle: { ...t.type.h3, color: t.colors.textPrimary },
+    intentSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    intentOption: { backgroundColor: t.colors.surface2 ?? t.colors.background, borderColor: t.colors.border },
+    intentOptionIcon: { backgroundColor: t.colors.primaryBg },
+    intentOptionLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    intentOptionSub: { ...t.type.caption, color: t.colors.textSecondary },
+    readinessLabel: { ...t.type.caption, color: t.colors.textSecondary },
+    readinessChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 ?? t.colors.background },
+    readinessChipActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
+    readinessChipText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    readinessChipTextActive: { color: t.colors.primary },
+    intentSkipText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    intentOptOutText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    intentOptOutSub: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    coachBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
+    coachBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    coachBannerBody: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    deloadBanner: { backgroundColor: withAlpha(t.colors.primary, alpha.tint), borderColor: withAlpha(t.colors.primary, alpha.mid) },
+    deloadBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    deloadBannerBody: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    plateauBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    plateauBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },
+    activationBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    activationBannerTitle: { ...t.type.bodySm, color: t.colors.textPrimary },
+    activationBannerBody: { ...t.type.bodySm, color: t.colors.textMuted },
+    phaseBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    phaseBannerText: { ...t.type.captionTight, color: t.colors.textSecondary },
+    quickStartCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    quickStartIcon: { backgroundColor: t.colors.surface2 },
+    quickStartTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    quickStartSub: { ...t.type.bodySm, color: t.colors.textSecondary },
+  };
+  // S15#7 readiness chip's tone colours, built live so it stays in the same
+  // theme generation as CoachBriefCard (buildBriefIconColor, imported above).
+  const BRIEF_ICON_COLOR = buildBriefIconColor(t.colors);
 
   // WK-1: recover an in-progress workout after an app kill/crash. The store
   // holds the session in memory only, so a kill stranded the logged sets
@@ -1353,13 +1431,13 @@ export default function HomeScreen({ navigation, route }) {
   const closeChangeWorkout = useCallback(() => setShowChangeWorkout(false), []);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardDismissMode="on-drag"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={t.colors.primary} />}
       >
         {/* ── Branded header ── */}
         <ScreenHeader title="Today" subtitle={getGreeting(userProfile?.firstName)} />
@@ -1368,7 +1446,8 @@ export default function HomeScreen({ navigation, route }) {
         {scheduleContext && (
           <Text style={[
             styles.scheduleContextLine,
-            scheduleContext.daysUntil === 0 && styles.scheduleContextLineToday,
+            live.scheduleContextLine,
+            scheduleContext.daysUntil === 0 && [styles.scheduleContextLineToday, live.scheduleContextLineToday],
           ]}>
             {scheduleContext.daysUntil === 0
               ? 'Today is a training day'
@@ -1392,7 +1471,7 @@ export default function HomeScreen({ navigation, route }) {
         {/* ── Fresh coach update banner ── */}
         {showCoachBanner && (
           <TouchableOpacity
-            style={styles.coachBanner}
+            style={[styles.coachBanner, live.coachBanner]}
             // F4 (audit NAV-1): CoachOutput is registered in ProfileStack only.
             // A bare navigate from HomeStack is silently dropped in production,
             // making the flagship banner a dead tap; route via the parent tab
@@ -1403,10 +1482,10 @@ export default function HomeScreen({ navigation, route }) {
             accessibilityLabel="This week's coaching review. Tap to open."
           >
             <View style={styles.coachBannerLeft}>
-              <Ionicons name="pulse-outline" size={18} color={colors.primary} />
+              <Ionicons name="pulse-outline" size={18} color={t.colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.coachBannerTitle}>Coach - this week's decision</Text>
-                <Text style={styles.coachBannerBody}>
+                <Text style={[styles.coachBannerTitle, live.coachBannerTitle]}>Coach - this week's decision</Text>
+                <Text style={[styles.coachBannerBody, live.coachBannerBody]}>
                   {latestCoachOutput.adjustments?.calories?.applied
                     ? `Calories adjusted to ${latestCoachOutput.adjustments.calories.newKcal} kcal. Tap to see why.`
                     : 'Tap to see what changed and why.'}
@@ -1422,7 +1501,7 @@ export default function HomeScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Dismiss coaching review banner"
             >
-              <Ionicons name="close" size={16} color={colors.textMuted} />
+              <Ionicons name="close" size={16} color={t.colors.textMuted} />
             </TouchableOpacity>
           </TouchableOpacity>
         )}
@@ -1449,7 +1528,7 @@ export default function HomeScreen({ navigation, route }) {
         {/* ── Recovery week banner ── */}
         {showDeloadBanner && (
           <TouchableOpacity
-            style={styles.deloadBanner}
+            style={[styles.deloadBanner, live.deloadBanner]}
             onPress={() => navigation.navigate('CoachReview')}
             activeOpacity={0.85}
             accessibilityRole="button"
@@ -1458,10 +1537,10 @@ export default function HomeScreen({ navigation, route }) {
             <View style={styles.deloadBannerLeft}>
               {/* Class C (COMP-027): recovery is rest-positive, the coach
                   working for you, not a hazard. Primary amber, not warning. */}
-              <Ionicons name="battery-charging-outline" size={20} color={colors.primary} />
+              <Ionicons name="battery-charging-outline" size={20} color={t.colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.deloadBannerTitle}>Recovery week suggested</Text>
-                <Text style={styles.deloadBannerBody}>
+                <Text style={[styles.deloadBannerTitle, live.deloadBannerTitle]}>Recovery week suggested</Text>
+                <Text style={[styles.deloadBannerBody, live.deloadBannerBody]}>
                   {deloadSuggestion.reasons?.[0] ?? 'Your recent training signals it is time for a lighter week.'}
                 </Text>
               </View>
@@ -1472,16 +1551,16 @@ export default function HomeScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Dismiss recovery week banner"
             >
-              <Ionicons name="close" size={16} color={colors.textMuted} />
+              <Ionicons name="close" size={16} color={t.colors.textMuted} />
             </TouchableOpacity>
           </TouchableOpacity>
         )}
 
         {/* ── Nutrition phase sync banner ── */}
         {showPhaseBanner && (
-          <View style={styles.phaseBanner}>
-            <Ionicons name="information-circle-outline" size={18} color={colors.primary} style={{ marginTop: spacing.hair }} />
-            <Text style={styles.phaseBannerText} numberOfLines={3}>
+          <View style={[styles.phaseBanner, live.phaseBanner]}>
+            <Ionicons name="information-circle-outline" size={18} color={t.colors.primary} style={{ marginTop: spacing.hair }} />
+            <Text style={[styles.phaseBannerText, live.phaseBannerText]} numberOfLines={3}>
               Your nutrition targets are set for {phaseMismatch.savedPhaseLabel}. Update them in Coach to reflect your current plan.
             </Text>
             <TouchableOpacity
@@ -1491,14 +1570,14 @@ export default function HomeScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Go to nutrition targets"
             >
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={dismissPhaseBanner}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityLabel="Dismiss nutrition phase banner"
             >
-              <Ionicons name="close" size={15} color={colors.textMuted} />
+              <Ionicons name="close" size={15} color={t.colors.textMuted} />
             </TouchableOpacity>
           </View>
         )}
@@ -1509,16 +1588,16 @@ export default function HomeScreen({ navigation, route }) {
             parent tab navigator (F4 / NAV-1 bug class). ── */}
         {showPlateauBanner && (
           <TouchableOpacity
-            style={styles.plateauBanner}
+            style={[styles.plateauBanner, live.plateauBanner]}
             onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'ExerciseDetail', { exerciseId: plateauBanner.exerciseId })}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel={plateauBanner.line}
           >
             <View style={styles.plateauBannerLeft}>
-              <Ionicons name="analytics-outline" size={18} color={colors.primary} />
-              <Text style={styles.plateauBannerText} numberOfLines={2}>{plateauBanner.line}</Text>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.primary} />
+              <Ionicons name="analytics-outline" size={18} color={t.colors.primary} />
+              <Text style={[styles.plateauBannerText, live.plateauBannerText]} numberOfLines={2}>{plateauBanner.line}</Text>
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
             </View>
             <TouchableOpacity
               onPress={dismissPlateauBanner}
@@ -1526,7 +1605,7 @@ export default function HomeScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Dismiss plateau banner"
             >
-              <Ionicons name="close" size={16} color={colors.textMuted} />
+              <Ionicons name="close" size={16} color={t.colors.textMuted} />
             </TouchableOpacity>
           </TouchableOpacity>
         )}
@@ -1535,19 +1614,19 @@ export default function HomeScreen({ navigation, route }) {
             welcomeCard's). Taps through to start the next session. ── */}
         {showActivationBanner && (
           <TouchableOpacity
-            style={styles.activationBanner}
+            style={[styles.activationBanner, live.activationBanner]}
             onPress={() => handleStartNextWorkout(false)}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel={activationBannerLine(activationNudge.stage)?.title}
           >
             <View style={styles.activationBannerLeft}>
-              <Ionicons name="barbell-outline" size={18} color={colors.primary} />
+              <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.activationBannerTitle} numberOfLines={1}>
+                <Text style={[styles.activationBannerTitle, live.activationBannerTitle]} numberOfLines={1}>
                   {activationBannerLine(activationNudge.stage)?.title}
                 </Text>
-                <Text style={styles.activationBannerBody} numberOfLines={2}>
+                <Text style={[styles.activationBannerBody, live.activationBannerBody]} numberOfLines={2}>
                   {activationBannerLine(activationNudge.stage)?.body}
                 </Text>
               </View>
@@ -1558,7 +1637,7 @@ export default function HomeScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Dismiss"
             >
-              <Ionicons name="close" size={16} color={colors.textMuted} />
+              <Ionicons name="close" size={16} color={t.colors.textMuted} />
             </TouchableOpacity>
           </TouchableOpacity>
         )}
@@ -1652,19 +1731,19 @@ export default function HomeScreen({ navigation, route }) {
         {/* ── Primary workout area ── */}
         {hasActiveWorkout ? (
           <PressableCard
-            style={styles.continueCard}
+            style={[styles.continueCard, live.continueCard]}
             onPress={() => navigation.navigate('ActiveWorkout')}
             accessibilityLabel="Continue active workout"
           >
             <View style={styles.continueInner}>
-              <View style={styles.continueIcon}>
-                <Ionicons name="play" size={20} color={colors.onPrimary} />
+              <View style={[styles.continueIcon, live.continueIcon]}>
+                <Ionicons name="play" size={20} color={t.colors.onPrimary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.continueTitle}>Workout in progress</Text>
-                <Text style={styles.continueSub}>Tap to return to your workout</Text>
+                <Text style={[styles.continueTitle, live.continueTitle]}>Workout in progress</Text>
+                <Text style={[styles.continueSub, live.continueSub]}>Tap to return to your workout</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={withAlpha(colors.onPrimary, 0.8)} />
+              <Ionicons name="chevron-forward" size={18} color={withAlpha(t.colors.onPrimary, 0.8)} />
             </View>
           </PressableCard>
         ) : activePlan && nextWorkout ? (
@@ -1672,11 +1751,11 @@ export default function HomeScreen({ navigation, route }) {
             <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={1}>
               {planProgress}
             </SectionLabel>
-            <Text style={styles.workoutName} numberOfLines={2}>
+            <Text style={[styles.workoutName, live.workoutName]} numberOfLines={2}>
               {displayWorkout?.routine?.name}
             </Text>
             {exerciseCounts[displayWorkout?.routine?.id] ? (
-              <Text style={styles.workoutMeta}>
+              <Text style={[styles.workoutMeta, live.workoutMeta]}>
                 {exerciseCounts[displayWorkout.routine.id]} exercises
               </Text>
             ) : null}
@@ -1690,7 +1769,7 @@ export default function HomeScreen({ navigation, route }) {
                 because the row is glanceable on its own. */}
             {readinessSummary && (
               <TouchableOpacity
-                style={styles.mesoBriefChip}
+                style={[styles.mesoBriefChip, live.mesoBriefChip]}
                 onPress={() => setShowBlockShape(true)}
                 accessibilityRole="button"
                 accessibilityLabel="See the shape of your training block"
@@ -1700,8 +1779,8 @@ export default function HomeScreen({ navigation, route }) {
                   size={12}
                   color={BRIEF_ICON_COLOR[readinessSummary.tone] ?? BRIEF_ICON_COLOR.go}
                 />
-                <Text style={styles.mesoBriefText}>{readinessSummary.line}</Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+                <Text style={[styles.mesoBriefText, live.mesoBriefText]}>{readinessSummary.line}</Text>
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
             )}
             {coachBrief && (
@@ -1730,7 +1809,7 @@ export default function HomeScreen({ navigation, route }) {
                 accessibilityLabel="Workout options"
                 fullWidth={false}
                 style={styles.workoutOptionsBtn}
-                textStyle={styles.workoutOptionsText}
+                textStyle={[styles.workoutOptionsText, live.workoutOptionsText]}
               />
             </View>
             {/* S2: the compact consistency echo + one-time forgiveness explainer,
@@ -1743,16 +1822,16 @@ export default function HomeScreen({ navigation, route }) {
             {tier === 'pro' ? (
               <>
                 <View style={styles.noPlanHero}>
-                  <View style={styles.noPlanIconWrap}>
-                    <Ionicons name="barbell-outline" size={28} color={colors.primary} />
+                  <View style={[styles.noPlanIconWrap, live.noPlanIconWrap]}>
+                    <Ionicons name="barbell-outline" size={28} color={t.colors.primary} />
                   </View>
-                  <Text style={styles.noPlanTitle}>No active plan yet</Text>
-                  <Text style={styles.noPlanSub}>
+                  <Text style={[styles.noPlanTitle, live.noPlanTitle]}>No active plan yet</Text>
+                  <Text style={[styles.noPlanSub, live.noPlanSub]}>
                     If you just signed in, we may still be pulling your data from the cloud. If nothing arrives, start with a plan and we'll rebuild it from your profile.
                   </Text>
                 </View>
                 <TouchableOpacity
-                  style={styles.proRecoverBtn}
+                  style={[styles.proRecoverBtn, live.proRecoverBtn]}
                   accessibilityRole="button"
                   accessibilityLabel="Start with a plan"
                   onPress={async () => {
@@ -1765,20 +1844,20 @@ export default function HomeScreen({ navigation, route }) {
                   }}
                   activeOpacity={0.88}
                 >
-                  <Ionicons name="clipboard-outline" size={18} color={colors.onPrimary} />
-                  <Text style={styles.proRecoverBtnText}>Start with a plan</Text>
+                  <Ionicons name="clipboard-outline" size={18} color={t.colors.onPrimary} />
+                  <Text style={[styles.proRecoverBtnText, live.proRecoverBtnText]}>Start with a plan</Text>
                 </TouchableOpacity>
               </>
             ) : (
               /* B2: the free "what do I do today" answer. One strong, calm
                  card: the micro-quiz first, the library second. Replaces the
                  old low-emphasis welcome + stacked builder cards. */
-              <View style={styles.starterCard}>
-                <View style={styles.noPlanIconWrap}>
-                  <Ionicons name="compass-outline" size={28} color={colors.primary} />
+              <View style={[styles.starterCard, live.starterCard]}>
+                <View style={[styles.noPlanIconWrap, live.noPlanIconWrap]}>
+                  <Ionicons name="compass-outline" size={28} color={t.colors.primary} />
                 </View>
-                <Text style={styles.noPlanTitle}>No active plan yet</Text>
-                <Text style={styles.noPlanSub}>
+                <Text style={[styles.noPlanTitle, live.noPlanTitle]}>No active plan yet</Text>
+                <Text style={[styles.noPlanSub, live.noPlanSub]}>
                   {lastSession == null
                     ? "Answer three quick questions and we'll suggest a starter plan. You can also browse the library."
                     : "You've been training without a set plan. Answer three quick questions and we'll suggest a starter plan, or browse the library."}
@@ -1802,18 +1881,18 @@ export default function HomeScreen({ navigation, route }) {
             {/* Progress at a glance, shown when there's history but no plan */}
             {lastSession != null && (
               <Card style={styles.glanceCard}>
-                <Text style={styles.glanceTitle}>Your progress at a glance</Text>
+                <Text style={[styles.glanceTitle, live.glanceTitle]}>Your progress at a glance</Text>
                 <View style={styles.glanceRow}>
                   <View style={styles.glanceStat}>
-                    <Text style={styles.glanceStatValue}>{weekStats.sessions}</Text>
-                    <Text style={styles.glanceStatLabel}>Sessions this week</Text>
+                    <Text style={[styles.glanceStatValue, live.glanceStatValue]}>{weekStats.sessions}</Text>
+                    <Text style={[styles.glanceStatLabel, live.glanceStatLabel]}>Sessions this week</Text>
                   </View>
-                  <View style={styles.glanceDivider} />
+                  <View style={[styles.glanceDivider, live.glanceDivider]} />
                   <View style={styles.glanceStat}>
-                    <Text style={styles.glanceStatValue}>
+                    <Text style={[styles.glanceStatValue, live.glanceStatValue]}>
                       {getRelativeDay(lastSession.startedAt)}
                     </Text>
-                    <Text style={styles.glanceStatLabel}>Last session</Text>
+                    <Text style={[styles.glanceStatLabel, live.glanceStatLabel]}>Last session</Text>
                   </View>
                 </View>
               </Card>
@@ -1824,31 +1903,31 @@ export default function HomeScreen({ navigation, route }) {
                 below the starter card instead. */}
             {tier === 'pro' && (
               <PressableCard
-                style={styles.quickStartCard}
+                style={[styles.quickStartCard, live.quickStartCard]}
                 onPress={() => startBlankSession()}
                 accessibilityLabel="Start your first workout"
               >
-                <View style={styles.quickStartIcon}>
-                  <Ionicons name="barbell-outline" size={28} color={colors.primary} />
+                <View style={[styles.quickStartIcon, live.quickStartIcon]}>
+                  <Ionicons name="barbell-outline" size={28} color={t.colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.quickStartTitle}>Start your first workout</Text>
-                  <Text style={styles.quickStartSub}>Log sets as you go. No plan needed to start. Your profile builds as you train.</Text>
+                  <Text style={[styles.quickStartTitle, live.quickStartTitle]}>Start your first workout</Text>
+                  <Text style={[styles.quickStartSub, live.quickStartSub]}>Log sets as you go. No plan needed to start. Your profile builds as you train.</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </PressableCard>
             )}
 
             {tier !== 'pro' && (
               <TouchableOpacity
-                style={styles.blankSessionLink}
+                style={[styles.blankSessionLink, live.blankSessionLink]}
                 onPress={() => startBlankSession()}
                 accessibilityRole="button"
                 accessibilityLabel="Just want to log? Start a blank workout"
               >
-                <Ionicons name="play-outline" size={14} color={colors.textSecondary} />
-                <Text style={styles.blankSessionLinkText}>Just want to log? Start a blank workout</Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+                <Ionicons name="play-outline" size={14} color={t.colors.textSecondary} />
+                <Text style={[styles.blankSessionLinkText, live.blankSessionLinkText]}>Just want to log? Start a blank workout</Text>
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
             )}
           </View>
@@ -1892,17 +1971,17 @@ export default function HomeScreen({ navigation, route }) {
 
         {/* ── Coaching discovery nudge (Pro, one-time) ── */}
         {showCoachingNudge && (
-          <View style={styles.coachingNudge}>
-            <View style={styles.coachingNudgeLeft}>
-              <Ionicons name="pulse-outline" size={20} color={colors.primary} />
+          <View style={[styles.coachingNudge, live.coachingNudge]}>
+            <View style={[styles.coachingNudgeLeft, live.coachingNudgeLeft]}>
+              <Ionicons name="pulse-outline" size={20} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1, gap: spacing.xs }}>
-              <Text style={styles.coachingNudgeTitle}>Your weekly check-in is ready</Text>
-              <Text style={styles.coachingNudgeBody}>
+              <Text style={[styles.coachingNudgeTitle, live.coachingNudgeTitle]}>Your weekly check-in is ready</Text>
+              <Text style={[styles.coachingNudgeBody, live.coachingNudgeBody]}>
                 It's your check-in day. See how your week went and what to adjust.
               </Text>
               {!photoScanSuppressed && (
-                <Text style={styles.coachingNudgeScanSubline}>
+                <Text style={[styles.coachingNudgeScanSubline, live.coachingNudgeScanSubline]}>
                   If you like, add a progress scan first for extra visual context. Skipping it is fine.
                 </Text>
               )}
@@ -1916,8 +1995,8 @@ export default function HomeScreen({ navigation, route }) {
                 }}
                 activeOpacity={0.8}
               >
-                <Text style={styles.coachingNudgeBtnText}>Open check-in</Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+                <Text style={[styles.coachingNudgeBtnText, live.coachingNudgeBtnText]}>Open check-in</Text>
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
             </View>
             <TouchableOpacity
@@ -1925,7 +2004,7 @@ export default function HomeScreen({ navigation, route }) {
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               accessibilityLabel="Dismiss coaching nudge"
             >
-              <Ionicons name="close" size={16} color={colors.textMuted} />
+              <Ionicons name="close" size={16} color={t.colors.textMuted} />
             </TouchableOpacity>
           </View>
         )}
@@ -1968,10 +2047,10 @@ export default function HomeScreen({ navigation, route }) {
         animationType={reduceMotion ? 'none' : 'slide'}
         onRequestClose={() => { setShowIntentPrompt(false); pendingStartRef.current = null; }}
       >
-        <View style={styles.intentOverlay}>
-          <View style={[styles.intentSheet, { paddingBottom: spacing.xxxl + insets.bottom }]}>
-            <Text style={styles.intentTitle}>How are you feeling today?</Text>
-            <Text style={styles.intentSub}>Takes a second. Helps us read your sessions better over time.</Text>
+        <View style={[styles.intentOverlay, live.intentOverlay]}>
+          <View style={[styles.intentSheet, live.intentSheet, { paddingBottom: spacing.xxxl + insets.bottom }]}>
+            <Text style={[styles.intentTitle, live.intentTitle]}>How are you feeling today?</Text>
+            <Text style={[styles.intentSub, live.intentSub]}>Takes a second. Helps us read your sessions better over time.</Text>
             {[
               { key: 'sharp', label: 'Sharp', sub: 'Energised and ready', icon: 'flash-outline' },
               { key: 'average', label: 'Average', sub: 'Normal day, feeling fine', icon: 'remove-outline' },
@@ -1979,20 +2058,20 @@ export default function HomeScreen({ navigation, route }) {
             ].map(opt => (
               <TouchableOpacity
                 key={opt.key}
-                style={styles.intentOption}
+                style={[styles.intentOption, live.intentOption]}
                 onPress={() => confirmStart(opt.key)}
                 activeOpacity={0.85}
                 accessibilityRole="button"
                 accessibilityLabel={`${opt.label}. ${opt.sub}`}
               >
-                <View style={styles.intentOptionIcon}>
-                  <Ionicons name={opt.icon} size={20} color={colors.primary} />
+                <View style={[styles.intentOptionIcon, live.intentOptionIcon]}>
+                  <Ionicons name={opt.icon} size={20} color={t.colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.intentOptionLabel}>{opt.label}</Text>
-                  <Text style={styles.intentOptionSub}>{opt.sub}</Text>
+                  <Text style={[styles.intentOptionLabel, live.intentOptionLabel]}>{opt.label}</Text>
+                  <Text style={[styles.intentOptionSub, live.intentOptionSub]}>{opt.sub}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
             ))}
 
@@ -2001,14 +2080,14 @@ export default function HomeScreen({ navigation, route }) {
                 still starts immediately, carrying whatever is selected here. */}
             {READINESS_ROWS.map(row => (
               <View key={row.key} style={styles.readinessRow}>
-                <Text style={styles.readinessLabel}>{row.label}</Text>
+                <Text style={[styles.readinessLabel, live.readinessLabel]}>{row.label}</Text>
                 <View style={styles.readinessChips} accessibilityRole="radiogroup" accessibilityLabel={row.label}>
                   {row.chips.map(chip => {
                     const selected = readiness[row.key] === chip.value;
                     return (
                       <TouchableOpacity
                         key={chip.value}
-                        style={[styles.readinessChip, selected && styles.readinessChipActive]}
+                        style={[styles.readinessChip, live.readinessChip, selected && [styles.readinessChipActive, live.readinessChipActive]]}
                         onPress={() => setReadiness(r => ({
                           // Tapping the selected chip again clears it, so the
                           // row stays genuinely optional.
@@ -2019,7 +2098,7 @@ export default function HomeScreen({ navigation, route }) {
                         accessibilityState={{ selected }}
                         accessibilityLabel={`${row.label}: ${chip.label}`}
                       >
-                        <Text style={[styles.readinessChipText, selected && styles.readinessChipTextActive]}>
+                        <Text style={[styles.readinessChipText, live.readinessChipText, selected && [styles.readinessChipTextActive, live.readinessChipTextActive]]}>
                           {chip.label}
                         </Text>
                       </TouchableOpacity>
@@ -2035,7 +2114,7 @@ export default function HomeScreen({ navigation, route }) {
               accessibilityLabel="Skip and start without answering"
               onPress={() => confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null })}
             >
-              <Text style={styles.intentSkipText}>Skip</Text>
+              <Text style={[styles.intentSkipText, live.intentSkipText]}>Skip</Text>
             </TouchableOpacity>
 
             {/* D2 (Option A): the standing opt-out. Persists, then starts this
@@ -2050,8 +2129,8 @@ export default function HomeScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Don't ask before each session"
             >
-              <Text style={styles.intentOptOutText}>Don't ask before each session</Text>
-              <Text style={styles.intentOptOutSub}>
+              <Text style={[styles.intentOptOutText, live.intentOptOutText]}>Don't ask before each session</Text>
+              <Text style={[styles.intentOptOutSub, live.intentOptOutSub]}>
                 Without it, sessions are not adjusted to how you're feeling. Turn it back on any time in Settings, Coaching.
               </Text>
             </TouchableOpacity>

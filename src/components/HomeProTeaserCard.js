@@ -2,23 +2,32 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontWeight, spacing, radius, withAlpha, alpha, type, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 // Extracted from HomeScreen.js (behaviour-preserving decomposition).
 // Pro teaser (free tier only, after 3+ sessions). Sits below the hero, same
 // hero-first reorder as everything else on the free no-plan path.
 function HomeProTeaserCard({ totalSessions, teaserInsight, onPress }) {
+  // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
+  // as batch 1 (see HomeWelcomeCard.js). `styles` stays frozen; `live`
+  // carries the colour-bearing keys only.
+  const t = useTheme();
+  const live = {
+    proTeaserCard: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    proTeaserTitle: { ...t.type.bodySm, fontWeight: fontWeight.semibold, color: t.colors.textPrimary },
+  };
   return (
     <TouchableOpacity
-      style={styles.proTeaserCard}
+      style={[styles.proTeaserCard, live.proTeaserCard]}
       onPress={onPress}
       activeOpacity={0.88}
       accessibilityRole="button"
       accessibilityLabel="Learn about Pro coaching"
     >
       <View style={styles.proTeaserLeft}>
-        <Ionicons name="barbell-outline" size={18} color={colors.primary} />
+        <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
         <View style={{ flex: 1 }}>
-          <Text style={styles.proTeaserTitle}>
+          <Text style={[styles.proTeaserTitle, live.proTeaserTitle]}>
             {teaserInsight?.progressed && teaserInsight?.stalled
               ? `${teaserInsight.progressed} went up. ${teaserInsight.stalled} held. Pro tells you what to do next.`
               : teaserInsight?.progressed
@@ -29,7 +38,7 @@ function HomeProTeaserCard({ totalSessions, teaserInsight, onPress }) {
           </Text>
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+      <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
     </TouchableOpacity>
   );
 }

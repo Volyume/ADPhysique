@@ -15,6 +15,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from './Button';
 import TextField from './TextField';
 import { colors, spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import {
   stoneLbsToKg,
   parseBodyWeightToKg,
@@ -32,6 +33,24 @@ export default function TodayStrip({
   onOpenTrend,
   openWeightSignal = null,
 }) {
+  // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
+  // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
+  // keys only. Captured by closure in the nested WeightInputRow/
+  // WeightLogged/WeightEmpty helpers below (unchanged decomposition).
+  const t = useTheme();
+  const live = {
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    metricIcon: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    cellLabel: { ...t.type.caption, color: t.colors.textMuted },
+    cellValue: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    loggedPill: { borderColor: t.colors.success, backgroundColor: t.colors.surface2 },
+    loggedPillText: { ...t.type.caption, color: t.colors.textPrimary },
+    logPrompt: { ...t.type.label, color: t.colors.textPrimary },
+    metricAction: { backgroundColor: t.colors.primaryFill },
+    metricActionText: { ...t.type.label, color: t.colors.onPrimary },
+    unit: { ...t.type.caption, color: t.colors.textMuted },
+    logBtnText: { ...t.type.label, color: t.colors.onPrimary },
+  };
   const [weightInput, setWeightInput] = useState('');
   const [weightInputSt, setWeightInputSt] = useState('');
   const [weightInputStLbs, setWeightInputStLbs] = useState('');
@@ -96,7 +115,7 @@ export default function TodayStrip({
               value={weightInputSt}
               onChangeText={setWeightInputSt}
               placeholder="12st"
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={t.colors.textMuted}
               keyboardType="number-pad"
               maxLength={3}
             />
@@ -108,7 +127,7 @@ export default function TodayStrip({
               value={weightInputStLbs}
               onChangeText={setWeightInputStLbs}
               placeholder="7lb"
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={t.colors.textMuted}
               keyboardType="decimal-pad"
               maxLength={4}
               returnKeyType="done"
@@ -125,12 +144,12 @@ export default function TodayStrip({
               value={weightInput}
               onChangeText={setWeightInput}
               placeholder={bwu}
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={t.colors.textMuted}
               keyboardType="decimal-pad"
               returnKeyType="done"
               onSubmitEditing={submitWeight}
             />
-            <Text style={styles.unit}>{bwu}</Text>
+            <Text style={[styles.unit, live.unit]}>{bwu}</Text>
           </View>
         )}
         <Button
@@ -138,7 +157,7 @@ export default function TodayStrip({
           size="sm"
           fullWidth={false}
           style={[styles.logBtn, (!hasDraft || savingWeight) && styles.logBtnDisabled]}
-          textStyle={styles.logBtnText}
+          textStyle={[styles.logBtnText, live.logBtnText]}
           onPress={submitWeight}
           disabled={!hasDraft || savingWeight}
           accessibilityLabel="Log morning weight"
@@ -162,17 +181,17 @@ export default function TodayStrip({
           : `Weight ${formatBodyWeightShort(todayWeight, bwu)} logged today. Tap to edit.`}
       >
         <View style={styles.metricLeft}>
-          <View style={styles.metricIcon}>
-            <Ionicons name="scale-outline" size={16} color={colors.textPrimary} />
+          <View style={[styles.metricIcon, live.metricIcon]}>
+            <Ionicons name="scale-outline" size={16} color={t.colors.textPrimary} />
           </View>
           <View style={styles.metricCopy}>
-            <Text style={styles.cellLabel}>Morning weight</Text>
-            <Text style={styles.cellValue} numberOfLines={1}>{formatBodyWeightShort(todayWeight, bwu)}</Text>
+            <Text style={[styles.cellLabel, live.cellLabel]}>Morning weight</Text>
+            <Text style={[styles.cellValue, live.cellValue]} numberOfLines={1}>{formatBodyWeightShort(todayWeight, bwu)}</Text>
           </View>
         </View>
-        <View style={styles.loggedPill}>
-          <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-          <Text style={styles.loggedPillText}>Logged</Text>
+        <View style={[styles.loggedPill, live.loggedPill]}>
+          <Ionicons name="checkmark-circle" size={14} color={t.colors.success} />
+          <Text style={[styles.loggedPillText, live.loggedPillText]}>Logged</Text>
         </View>
       </TouchableOpacity>
     );
@@ -187,16 +206,16 @@ export default function TodayStrip({
         accessibilityLabel="Log morning weight"
       >
         <View style={styles.metricLeft}>
-          <View style={styles.metricIcon}>
-            <Ionicons name="scale-outline" size={16} color={colors.textPrimary} />
+          <View style={[styles.metricIcon, live.metricIcon]}>
+            <Ionicons name="scale-outline" size={16} color={t.colors.textPrimary} />
           </View>
           <View style={styles.metricCopy}>
-            <Text style={styles.cellLabel}>Morning weight</Text>
-            <Text style={styles.logPrompt} numberOfLines={1}>Not logged yet</Text>
+            <Text style={[styles.cellLabel, live.cellLabel]}>Morning weight</Text>
+            <Text style={[styles.logPrompt, live.logPrompt]} numberOfLines={1}>Not logged yet</Text>
           </View>
         </View>
-        <View style={styles.metricAction}>
-          <Text style={styles.metricActionText}>Log</Text>
+        <View style={[styles.metricAction, live.metricAction]}>
+          <Text style={[styles.metricActionText, live.metricActionText]}>Log</Text>
         </View>
       </TouchableOpacity>
     );
@@ -204,12 +223,12 @@ export default function TodayStrip({
 
   if (editing) {
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, live.card]}>
         <View style={styles.editHeader}>
-          <View style={styles.metricIcon}>
-            <Ionicons name="scale-outline" size={16} color={colors.textPrimary} />
+          <View style={[styles.metricIcon, live.metricIcon]}>
+            <Ionicons name="scale-outline" size={16} color={t.colors.textPrimary} />
           </View>
-          <Text style={styles.cellLabel}>Morning weight</Text>
+          <Text style={[styles.cellLabel, live.cellLabel]}>Morning weight</Text>
         </View>
         <WeightInputRow />
       </View>
@@ -217,7 +236,7 @@ export default function TodayStrip({
   }
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, live.card]}>
       {todayWeight != null ? <WeightLogged /> : <WeightEmpty />}
     </View>
   );

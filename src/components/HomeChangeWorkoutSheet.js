@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import SectionLabel from './SectionLabel';
 
 // Extracted from HomeScreen.js (behaviour-preserving decomposition).
@@ -15,6 +16,31 @@ function HomeChangeWorkoutSheet({
   exerciseCounts, selectedWorkoutOverride, onSelectOverride, navigation,
   reduceMotion, insetsBottom,
 }) {
+  // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
+  // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
+  // keys only.
+  const t = useTheme();
+  const live = {
+    sheetBackdrop: { backgroundColor: t.colors.scrim },
+    sheet: { backgroundColor: t.colors.surface },
+    sheetHandle: { backgroundColor: t.colors.border },
+    sheetTitle: { ...t.type.h3, color: t.colors.textPrimary },
+    sheetSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    sheetActionIcon: { backgroundColor: t.colors.primaryBg },
+    sheetActionTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    sheetActionSub: { ...t.type.caption, color: t.colors.textSecondary },
+    pickerRow: { borderBottomColor: t.colors.border },
+    pickerRowActive: { backgroundColor: t.colors.primaryBg },
+    dayBadge: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    dayBadgeActive: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.strong) },
+    dayNum: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    dayNumActive: { color: t.colors.primary },
+    pickerName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    pickerMeta: { ...t.type.caption, color: t.colors.textMuted },
+    nextBadge: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    nextBadgeText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    sheetCancelText: { ...t.type.body, color: t.colors.textSecondary },
+  };
   return (
     <Modal
       visible={visible}
@@ -23,16 +49,16 @@ function HomeChangeWorkoutSheet({
       onRequestClose={onClose}
     >
       <TouchableOpacity
-        style={styles.sheetBackdrop}
+        style={[styles.sheetBackdrop, live.sheetBackdrop]}
         activeOpacity={1}
         onPress={onClose}
         accessibilityRole="button"
         accessibilityLabel="Close"
       />
-      <View style={[styles.sheet, { paddingBottom: spacing.xxxl + insetsBottom }]}>
-        <View style={styles.sheetHandle} />
-        <Text style={styles.sheetTitle}>Workout options</Text>
-        {activePlan && <Text style={styles.sheetSub}>{activePlan.name}</Text>}
+      <View style={[styles.sheet, live.sheet, { paddingBottom: spacing.xxxl + insetsBottom }]}>
+        <View style={[styles.sheetHandle, live.sheetHandle]} />
+        <Text style={[styles.sheetTitle, live.sheetTitle]}>Workout options</Text>
+        {activePlan && <Text style={[styles.sheetSub, live.sheetSub]}>{activePlan.name}</Text>}
         <ScrollView showsVerticalScrollIndicator={false}>
           {displayWorkout?.routine?.id ? (
             <TouchableOpacity
@@ -48,14 +74,14 @@ function HomeChangeWorkoutSheet({
               accessibilityRole="button"
               accessibilityLabel={`View ${displayWorkout?.routine?.name || 'workout'} before starting`}
             >
-              <View style={styles.sheetActionIcon}>
-                <Ionicons name="reader-outline" size={18} color={colors.primary} />
+              <View style={[styles.sheetActionIcon, live.sheetActionIcon]}>
+                <Ionicons name="reader-outline" size={18} color={t.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.sheetActionTitle}>View workout</Text>
-                <Text style={styles.sheetActionSub}>Review the exercises before you start.</Text>
+                <Text style={[styles.sheetActionTitle, live.sheetActionTitle]}>View workout</Text>
+                <Text style={[styles.sheetActionSub, live.sheetActionSub]}>Review the exercises before you start.</Text>
               </View>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
           ) : null}
           <TouchableOpacity
@@ -67,14 +93,14 @@ function HomeChangeWorkoutSheet({
             accessibilityRole="button"
             accessibilityLabel="Start a blank workout"
           >
-            <View style={styles.sheetActionIcon}>
-              <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+            <View style={[styles.sheetActionIcon, live.sheetActionIcon]}>
+              <Ionicons name="add-circle-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.sheetActionTitle}>Blank workout</Text>
-              <Text style={styles.sheetActionSub}>Log freely without changing your plan.</Text>
+              <Text style={[styles.sheetActionTitle, live.sheetActionTitle]}>Blank workout</Text>
+              <Text style={[styles.sheetActionSub, live.sheetActionSub]}>Log freely without changing your plan.</Text>
             </View>
-            <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
           </TouchableOpacity>
           {planAllWorkouts.length > 0 ? (
             <SectionLabel tone="muted" style={styles.sheetSectionLabel}>Choose a different workout</SectionLabel>
@@ -85,7 +111,7 @@ function HomeChangeWorkoutSheet({
             return (
               <TouchableOpacity
                 key={routine.id ?? i}
-                style={[styles.pickerRow, (isNext || isSel) && styles.pickerRowActive]}
+                style={[styles.pickerRow, live.pickerRow, (isNext || isSel) && [styles.pickerRowActive, live.pickerRowActive]]}
                 onPress={() => {
                   onSelectOverride(
                     i === nextWorkout?.idx ? null : { routine, total: planAllWorkouts.length, idx: i },
@@ -96,29 +122,29 @@ function HomeChangeWorkoutSheet({
                 accessibilityLabel={`Day ${i + 1}, ${routine.name}`}
                 accessibilityState={{ selected: isNext || isSel }}
               >
-                <View style={[styles.dayBadge, (isNext || isSel) && styles.dayBadgeActive]}>
-                  <Text style={[styles.dayNum, (isNext || isSel) && styles.dayNumActive]}>
+                <View style={[styles.dayBadge, live.dayBadge, (isNext || isSel) && [styles.dayBadgeActive, live.dayBadgeActive]]}>
+                  <Text style={[styles.dayNum, live.dayNum, (isNext || isSel) && [styles.dayNumActive, live.dayNumActive]]}>
                     D{i + 1}
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.pickerName} numberOfLines={1}>{routine.name}</Text>
+                  <Text style={[styles.pickerName, live.pickerName]} numberOfLines={1}>{routine.name}</Text>
                   {exerciseCounts[routine.id] ? (
-                    <Text style={styles.pickerMeta}>{exerciseCounts[routine.id]} exercises</Text>
+                    <Text style={[styles.pickerMeta, live.pickerMeta]}>{exerciseCounts[routine.id]} exercises</Text>
                   ) : null}
                 </View>
                 {isNext && (
-                  <View style={styles.nextBadge}>
-                    <Text style={styles.nextBadgeText}>Next up</Text>
+                  <View style={[styles.nextBadge, live.nextBadge]}>
+                    <Text style={[styles.nextBadgeText, live.nextBadgeText]}>Next up</Text>
                   </View>
                 )}
-                {isSel && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
+                {isSel && <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} />}
               </TouchableOpacity>
             );
           })}
         </ScrollView>
         <TouchableOpacity style={styles.sheetCancel} onPress={onClose} accessibilityRole="button" accessibilityLabel="Cancel">
-          <Text style={styles.sheetCancelText}>Cancel</Text>
+          <Text style={[styles.sheetCancelText, live.sheetCancelText]}>Cancel</Text>
         </TouchableOpacity>
       </View>
     </Modal>

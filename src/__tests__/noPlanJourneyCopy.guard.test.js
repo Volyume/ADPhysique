@@ -25,7 +25,13 @@ describe('no-plan / start-plan copy', () => {
   });
 
   test('HomeScreen blank-workout fallback is a contained neutral control', () => {
-    expect(HOME).toContain('Ionicons name="play-outline" size={14} color={colors.textSecondary}');
+    // CP-10 stage 3 (theming batch 2, 2026-07-10): HomeScreen now reads a
+    // live theme (src/hooks/useTheme.js), so this inline colour prop moved
+    // from `colors.textSecondary` to `t.colors.textSecondary`. The pinned
+    // RULE (contained neutral control, not a loose text link) is unchanged
+    // -- the static blankSessionLink/blankSessionLinkText definitions
+    // (asserted next) are byte-identical to before.
+    expect(HOME).toContain('Ionicons name="play-outline" size={14} color={t.colors.textSecondary}');
     expect(HOME).toMatch(/blankSessionLink: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(HOME).toContain('blankSessionLinkText: { ...type.label, color: colors.textPrimary }');
     expect(HOME).not.toContain('blankSessionLinkText: { fontSize: fontSize.sm, color: colors.textMuted }');

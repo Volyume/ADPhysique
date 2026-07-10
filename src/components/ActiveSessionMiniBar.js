@@ -32,6 +32,7 @@ import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import PressableCard from './PressableCard';
 import { colors, spacing, fontSize, fontWeight, circle, shadow, motion, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 
 const BAR_HEIGHT = 44;
 
@@ -40,6 +41,9 @@ const BAR_HEIGHT = 44;
 // recommended count it reads plain sets-done; that numbering confusion is
 // the class the founder retired on the Android notification).
 function MiniBarStatus() {
+  // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
+  // as batch 1.
+  const t = useTheme();
   const { restActive, remaining, setsDone, recommended } = useAppStore(useShallow((s) => {
     const ex = s.workoutExercises?.[s.currentExerciseIndex];
     return {
@@ -57,30 +61,40 @@ function MiniBarStatus() {
         style={styles.statusWrap}
         accessibilityLabel={`Rest, ${mins} minute${mins === 1 ? '' : 's'} ${secs} second${secs === 1 ? '' : 's'} remaining`}
       >
-        <Ionicons name="timer-outline" size={13} color={colors.primary} />
-        <Text style={styles.statusTimer}>{`${mins}:${String(secs).padStart(2, '0')}`}</Text>
+        <Ionicons name="timer-outline" size={13} color={t.colors.primary} />
+        <Text style={[styles.statusTimer, { fontSize: t.fontSize.sm, color: t.colors.primary }]}>{`${mins}:${String(secs).padStart(2, '0')}`}</Text>
       </Animated.View>
     );
   }
   const label = recommended && setsDone < recommended
     ? `Set ${setsDone + 1} of ${recommended}`
     : `${setsDone} ${setsDone === 1 ? 'set' : 'sets'} done`;
-  return <Text style={styles.statusText}>{label}</Text>;
+  return <Text style={[styles.statusText, { ...t.type.captionStrong, color: t.colors.textMuted }]}>{label}</Text>;
 }
 
 // The pulsing "live" dot: one opacity worklet on motion.pulse; static under
 // Reduce Motion.
-function LiveDot({ reduceMotion }) {
+function LiveDot({ reduceMotion, live }) {
   const opacity = useSharedValue(1);
   useEffect(() => {
     if (reduceMotion) { opacity.value = 1; return; }
     opacity.value = withRepeat(withTiming(0.35, { duration: motion.pulse }), -1, true);
   }, [reduceMotion, opacity]);
   const pulse = useAnimatedStyle(() => ({ opacity: opacity.value }));
-  return <Animated.View style={[styles.liveDot, pulse]} />;
+  return <Animated.View style={[styles.liveDot, live, pulse]} />;
 }
 
 export default function ActiveSessionMiniBar({ navigation }) {
+  // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
+  // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
+  // keys only. Called before the early-return below so hook order stays
+  // stable across renders.
+  const t = useTheme();
+  const live = {
+    bar: { backgroundColor: t.colors.surfaceElevated, borderTopColor: t.colors.borderSubtle },
+    liveDot: { backgroundColor: t.colors.success },
+    exercise: { ...t.type.label, color: t.colors.textPrimary },
+  };
   const { hasActiveWorkout, exerciseName, reduceMotion } = useAppStore(useShallow((s) => {
     const ex = s.workoutExercises?.[s.currentExerciseIndex];
     return {
@@ -98,17 +112,17 @@ export default function ActiveSessionMiniBar({ navigation }) {
       exiting={reduceMotion ? undefined : SlideOutDown.duration(motion.exit)}
     >
       <PressableCard
-        style={styles.bar}
+        style={[styles.bar, live.bar]}
         // ActiveWorkout is registered in HomeStack, so from any other tab
         // this must be the parent-tab form (the F4 silent-drop class), with
         // initial: false per the lazy-tab rule.
         onPress={() => navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false })}
         accessibilityLabel={`Workout in progress: ${exerciseName}. Return to your session.`}
       >
-        <LiveDot reduceMotion={reduceMotion} />
-        <Text style={styles.exercise} numberOfLines={1}>{exerciseName}</Text>
+        <LiveDot reduceMotion={reduceMotion} live={live.liveDot} />
+        <Text style={[styles.exercise, live.exercise]} numberOfLines={1}>{exerciseName}</Text>
         <MiniBarStatus />
-        <Ionicons name="chevron-up" size={16} color={colors.textMuted} />
+        <Ionicons name="chevron-up" size={16} color={t.colors.textMuted} />
       </PressableCard>
     </Animated.View>
   );
