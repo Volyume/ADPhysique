@@ -608,3 +608,16 @@ the principle three times in one day — it is the operating basis, not
 a preference. When two candidate solutions differ in product quality
 AT ALL, the better one is chosen regardless of how much more work it
 costs the lead or agents.
+
+## D36d RULING (lead-ruled under D33, 2026-07-10): fix the three photo-modal inset gaps
+The read pass verified ProgressScanCompare / ProgressScanTrend /
+ProgressPhotoCompare use SafeAreaView edges={['top']} only, so their
+bottom-most interactive controls sit under the Android gesture-nav
+strip on devices where the inset exceeds the static padding token.
+ProgressScanMeaningMoment is already correct, as is the
+ProgressPhotoViewer precedent (edges top+bottom, same family, same
+day's commit). RULING: build the fix — add the 'bottom' edge on all
+six SafeAreaView instances and make ProgressPhotoCompare's
+scrollContent bottom padding inset-aware. DO-NOT-DISTURB contract:
+usePhotoSuppression call sites, suppressed-branch JSX and placeholder
+copy are pinned by tests and must not change.
