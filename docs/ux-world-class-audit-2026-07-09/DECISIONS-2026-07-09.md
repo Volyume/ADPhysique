@@ -333,3 +333,17 @@ Founder: "You make these decisions." Lead rulings:
   Visual register: quiet, non-quantified-first, consistent with
   femaleNutritionAwareness precedent; exact presentation returns for
   founder eyes with the spike's coverage numbers.
+
+## D23 — Design/UX leveling mandate + dependency standing approval (founder, 2026-07-10)
+- Founder (verbatim intent): "Is there anything we can do to level up the
+  design and UX even further? Extra dependencies and things are allowed
+  if they genuinely enhance our product. Mark this as approved too going
+  forward."
+- STANDING APPROVAL: new dependencies no longer need a per-dependency
+  founder round WHEN they genuinely enhance the product. Discipline that
+  remains mandatory for every adoption: permissive licence verified,
+  maintenance health verified, lockfile regenerated in the same commit,
+  recorded in this register with name/purpose/licence, native deps
+  flagged for an EAS build. The never-re-propose register still stands
+  (media, plate calculator, social proof, RPE/RIR).
+- Design/UX leveling work is authorised as a fresh order in this run.
