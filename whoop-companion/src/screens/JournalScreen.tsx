@@ -7,15 +7,22 @@ import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { BEHAVIOURS, BEHAVIOUR_CATEGORIES, Behaviour } from '../data/journalBehaviours';
 import { dayKey } from '../util/time';
+import { computeJournalImpacts, JournalImpact } from '../metrics/journalImpact';
 
 export function JournalScreen({ nav }: { nav: Nav }) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [impacts, setImpacts] = useState<JournalImpact[]>([]);
+  const [journalDays, setJournalDays] = useState(0);
 
   useEffect(() => {
     void appStore.journalForDay(dayKey(Date.now())).then((rows) => {
       const map: Record<string, string> = {};
       for (const r of rows) map[r.behaviour] = r.value;
       setAnswers(map);
+    });
+    void Promise.all([appStore.journalHistory(60), appStore.loadHistory(61)]).then(([entries, days]) => {
+      setJournalDays(new Set(entries.map((entry) => entry.day)).size);
+      setImpacts(computeJournalImpacts(entries, days, BEHAVIOURS));
     });
   }, []);
 
@@ -36,6 +43,22 @@ export function JournalScreen({ nav }: { nav: Nav }) {
         </Text>
       </Card>
 
+      <SectionLabel>Patterns</SectionLabel>
+      <Card style={{ paddingVertical: impacts.length ? 4 : 14 }}>
+        {impacts.length ? (
+          <>
+            {impacts.map((impact, index) => (
+              <ImpactRow key={impact.behaviour} impact={impact} last={index === impacts.length - 1} />
+            ))}
+            <Text style={styles.patternNote}>Next-day associations from trusted sleep and recovery, not proof of cause.</Text>
+          </>
+        ) : (
+          <Text style={styles.patternEmpty}>
+            Building patterns from {journalDays} logged {journalDays === 1 ? 'day' : 'days'}. Each yes/no behaviour needs at least five trusted yes and five trusted no outcomes before an association appears.
+          </Text>
+        )}
+      </Card>
+
       {BEHAVIOUR_CATEGORIES.map((cat) => (
         <View key={cat}>
           <SectionLabel>{cat}</SectionLabel>
@@ -53,6 +76,25 @@ export function JournalScreen({ nav }: { nav: Nav }) {
         </View>
       ))}
     </Screen>
+  );
+}
+
+function ImpactRow({ impact, last }: { impact: JournalImpact; last: boolean }) {
+  const formatDelta = (value: number | null, suffix: string) =>
+    value == null ? null : `${value > 0 ? '+' : ''}${value.toFixed(1)}${suffix}`;
+  const recovery = formatDelta(impact.recoveryDelta, ' recovery');
+  const sleep = formatDelta(impact.sleepDelta, '% sleep');
+  return (
+    <View style={[styles.impactRow, last && styles.last]}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.impactQuestion}>{impact.question}</Text>
+        <Text style={styles.impactMeta}>{impact.yesCount} yes / {impact.noCount} no · {impact.confidence}</Text>
+      </View>
+      <View style={styles.impactValues}>
+        {recovery ? <Text style={[styles.impactValue, { color: (impact.recoveryDelta ?? 0) >= 0 ? colors.recoveryGreen : colors.recoveryRed }]}>{recovery}</Text> : null}
+        {sleep ? <Text style={[styles.impactValue, { color: (impact.sleepDelta ?? 0) >= 0 ? colors.sleepTeal : colors.recoveryRed }]}>{sleep}</Text> : null}
+      </View>
+    </View>
   );
 }
 
@@ -143,6 +185,13 @@ function TimeInput({ value, onChange }: { value?: string; onChange: (v: string) 
 const styles = StyleSheet.create({
   intro: { color: colors.text, fontSize: 18, fontFamily: fonts.textBold },
   introSub: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 6, fontFamily: fonts.text },
+  patternEmpty: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, fontFamily: fonts.text },
+  patternNote: { color: colors.textTertiary, fontSize: 11, lineHeight: 16, marginTop: 10, fontFamily: fonts.text },
+  impactRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: colors.border },
+  impactQuestion: { color: colors.text, fontSize: 13, lineHeight: 18, fontFamily: fonts.textSemibold },
+  impactMeta: { color: colors.textTertiary, fontSize: 11, marginTop: 2, fontFamily: fonts.text },
+  impactValues: { alignItems: 'flex-end', gap: 3 },
+  impactValue: { fontSize: 12, fontFamily: fonts.textBold },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   last: { borderBottomWidth: 0 },
   q: { color: colors.text, fontSize: 14, flex: 1, marginRight: 12, fontFamily: fonts.text },

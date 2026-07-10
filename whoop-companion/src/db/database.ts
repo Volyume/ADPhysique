@@ -688,6 +688,24 @@ export async function listJournal(day: string): Promise<JournalRow[]> {
   }));
 }
 
+export async function listJournalSince(day: string): Promise<JournalRow[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<{
+    id: string;
+    day: string;
+    behaviour: string;
+    value: string;
+    created_at: number;
+  }>('SELECT * FROM journal WHERE day >= ? ORDER BY day ASC, created_at ASC', day);
+  return rows.map((row) => ({
+    id: row.id,
+    day: row.day,
+    behaviour: row.behaviour,
+    value: row.value,
+    createdAt: row.created_at,
+  }));
+}
+
 // ---- Raw frames ----
 export async function insertRawFrame(ts: number, source: string, hex: string): Promise<void> {
   await serializeWrite(async () => {

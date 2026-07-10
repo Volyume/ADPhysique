@@ -53,6 +53,7 @@ import {
   kvSet,
   listCardio,
   listJournal,
+  listJournalSince,
   deleteCardio,
   clearUntrustedLegacyData,
   pruneHrSamples,
@@ -2427,6 +2428,8 @@ class AppStore extends Store<AppState> {
 
   // ---- Journal ----
   journalForDay = async (day: string) => listJournal(day);
+
+  journalHistory = async (days = 60) => listJournalSince(dayKey(addDays(Date.now(), -(Math.max(1, days) - 1))));
 
   /** Today's HR-zone breakdown for the Strain screen. */
   todayZones = async () => {
