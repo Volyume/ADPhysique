@@ -374,6 +374,15 @@ yet investigated.
 - **Fable coordinates; agents do the work.** You (main loop) do
   architecture, safety-adjacent code, design judgement, and ALL hands-on
   review. Agents do the leverage work (well-specified builds, reads, audits).
+- **NO main-loop file reading beyond judgement-critical review (founder,
+  reinforced 2026-07-10).** Recon, verification sweeps, "what exists
+  already" surveys, pattern look-ups, spec extraction — ALL of it goes to
+  a Haiku/Sonnet read agent, even when it feels quicker to grep yourself.
+  The main loop opens files ONLY for the judgement the founder relies on
+  directly: the diff under lead review at a landing, safety-adjacent
+  hunks, and the handover/decision docs needed to coordinate. If you are
+  about to Read/Grep to LEARN something rather than to JUDGE something,
+  dispatch an agent instead.
 - **Lowest capable agent tier, ALWAYS.** Every subagent/workflow call MUST
   carry an explicit model: 'sonnet' for builds/tests/well-specified work,
   'haiku' for mechanical (greps, simple writes, triage), 'opus' ONLY where
