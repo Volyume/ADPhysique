@@ -42,9 +42,20 @@ describe('NU-1: coach narration speaks the engine adherence vocabulary', () => {
 });
 
 describe('NU-8: weekly data confidence is rendered, not just computed', () => {
-  test('confidence is destructured from the output and captioned', () => {
+  test('confidence is destructured from the output', () => {
     expect(COACH).toMatch(/\n    confidence,\n/);
-    expect(COACH).toMatch(/CONFIDENCE_CAPTIONS\[confidence\]/);
+  });
+  // Updated mechanically for D18 (lead ruling, 2026-07-09 resume session;
+  // docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md D18;
+  // plan-F §4.4 render-time-caption fork, delegated to the lead). The
+  // caption site now renders `displayConfidence` -- a RENDER-TIME-ONLY
+  // transform of the raw persisted `confidence` via the engine's own
+  // `corroborateConfidenceLevel` -- never `confidence` directly, so a
+  // stale direct-index pin here would silently pass even if the transform
+  // were reverted.
+  test('the caption renders the render-time corroborated level, never the raw persisted confidence directly', () => {
+    expect(COACH).toMatch(/CONFIDENCE_CAPTIONS\[displayConfidence\]/);
+    expect(COACH).not.toMatch(/CONFIDENCE_CAPTIONS\[confidence\]/);
   });
   test('captions exist for every level that reaches the main card', () => {
     for (const level of ['high', 'medium', 'low']) {

@@ -77,6 +77,20 @@ function weightRows(days = 14) {
   return rows;
 }
 
+// D18: a clearly losing 14-day series (recent week noticeably lighter than
+// the week before) -- weightDir 'losing' against the default 'maint' goal
+// (expectation 'flat'), well past classifyWeightDirection's 0.25kg flat
+// band, so a scan direction that reads 'fuller' ('up') produces a direct
+// sign contradiction -> 'conflicts', the classification the D18 lead-ruled
+// routine sentence attaches to.
+function decliningWeightRows(days = 14) {
+  const rows = [];
+  for (let i = 0; i < days; i++) {
+    rows.push({ weightKg: i < 7 ? 78 : 84, loggedAt: Date.now() - i * 86400000 });
+  }
+  return rows;
+}
+
 function scoredScan(overrides = {}) {
   return {
     source: 'photo_scan',
@@ -116,7 +130,7 @@ async function flush() {
   await act(async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); });
 }
 
-async function render({ suppressed = false, scan = null, note = undefined, sessions = { completed: 3, planned: 3 } } = {}) {
+async function render({ suppressed = false, scan = null, note = undefined, sessions = { completed: 3, planned: 3 }, weights = undefined } = {}) {
   useAppStore.mockImplementation((sel) => sel({
     user: { id: 'u-test' },
     userProfile: { sex: 'male' },
@@ -126,7 +140,7 @@ async function render({ suppressed = false, scan = null, note = undefined, sessi
   usePhotoSuppression.mockReturnValue(suppressed);
   getProgressScanCoachSummary.mockImplementation(async () => (suppressed ? null : scan));
   resolveProgressScanCoachNote.mockImplementation(() => (note === undefined ? noteFor(scan) : note));
-  database.getMorningWeightsLast14Days.mockResolvedValue(weightRows(14));
+  database.getMorningWeightsLast14Days.mockResolvedValue(weights ?? weightRows(14));
   database.getWeeklySessionStats.mockResolvedValue(sessions);
   const todayDay = new Date().getDay();
   await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify({ checkinDay: todayDay }));
@@ -249,6 +263,39 @@ describe('WeeklyCheckInScreen step 1 ("This week\'s data"): evidence block per p
     const tree = await renderWizardStep1({ scan, note: noteFor(scan) });
     const text = flattenText(tree.toJSON());
     expect(text).toContain('This photo set was not comparable with your earlier sets, so it was kept as a record rather than evidence.');
+  });
+
+  // D18 (lead ruling, 2026-07-09): the conflicts classification's receipt
+  // carries the lead-ruled routine sentence, verbatim, appended after the
+  // existing hierarchy sentence.
+  test('conflicts: renders the hierarchy sentence AND the lead-ruled routine sentence, verbatim', async () => {
+    const scan = scoredScan();
+    const tree = await renderWizardStep1({ scan, note: noteFor(scan, { trendDirection: 'up' }), weights: decliningWeightRows(14) });
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('Your photo trend and scale trend disagree this week.');
+    expect(text).toContain('The coach used weight and intake for the decision and kept the scan as context.');
+    expect(text).toContain(
+      'Your logs and photos point in slightly different directions this week. '
+      + 'A steady weigh-in routine, same time, same conditions, usually brings them back into line.',
+    );
+  });
+
+  test('conflicts under photo suppression: the packet is null, so the routine sentence is entirely absent', async () => {
+    const scan = scoredScan();
+    const tree = await renderWizardStep1({
+      suppressed: true, scan, note: noteFor(scan, { trendDirection: 'up' }), weights: decliningWeightRows(14),
+    });
+    const text = flattenText(tree.toJSON());
+    expect(text).not.toContain('disagree this week');
+    expect(text).not.toContain('A steady weigh-in routine');
+  });
+
+  test('the routine sentence never appears on a non-conflicts classification (supports)', async () => {
+    const scan = scoredScan();
+    const tree = await renderWizardStep1({ scan, note: noteFor(scan) });
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('Your photo trend points the same way as your weight trend.');
+    expect(text).not.toContain('A steady weigh-in routine');
   });
 
   test('no scan: renders only the single quiet line, nothing else', async () => {

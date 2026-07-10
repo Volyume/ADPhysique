@@ -248,6 +248,15 @@ const NON_AUTHORITY_SENTENCE = 'The weekly target still comes from your logs, we
 const TARGETS_CHANGED_SENTENCE = 'Your scan was considered as context. Targets changed because of your logged trend, not the scan.';
 const TARGETS_HELD_SENTENCE = 'Your scan was considered as context. Targets were held based on your logged data, for the reasons above.';
 
+// D18 fork, founder-delegated to the lead (2026-07-09 resume session;
+// docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md D18, plan-F
+// §4.2 Stage 0). Lead-ruled wording, verbatim -- do not edit. Appears ONLY
+// on the 'conflicts' classification, appended after the existing mandated
+// hierarchy sentence (never replacing it): a calm, blame-free nudge toward a
+// steadier weigh-in routine, never a judgement of the body or of logging
+// honesty (CLAUDE.md §2 "no appearance-judgement language, ever").
+const CONFLICT_ROUTINE_SENTENCE = 'Your logs and photos point in slightly different directions this week. A steady weigh-in routine, same time, same conditions, usually brings them back into line.';
+
 function baseReceiptFor(status, assessment) {
   if (status === 'no_scan_ever' || status === 'no_recent_scan') {
     return { headline: 'No comparable photo set this period.', detail: 'The coach worked from your logged data.' };
@@ -275,7 +284,13 @@ function baseReceiptFor(status, assessment) {
       return { headline: 'Your photo trend points the same way as your weight trend.', detail: 'Targets are set from your logged data.' };
     }
     if (assessment === 'conflicts') {
-      return { headline: 'Your photo trend and scale trend disagree this week.', detail: 'The coach used weight and intake for the decision and kept the scan as context.' };
+      // D18: the mandated hierarchy sentence stays first and unedited; the
+      // lead-ruled routine sentence is appended after it, never in place of
+      // it (see CONFLICT_ROUTINE_SENTENCE above).
+      return {
+        headline: 'Your photo trend and scale trend disagree this week.',
+        detail: `The coach used weight and intake for the decision and kept the scan as context. ${CONFLICT_ROUTINE_SENTENCE}`,
+      };
     }
     if (assessment === 'visual_change_weight_stable') {
       return { headline: 'Your scale trend is steady while your photos suggest visual change. That can happen during recomposition.', detail: 'Targets are set from your logged data.' };
@@ -505,4 +520,43 @@ export function composeScanEvidencePacket({
   return buildScanEvidencePacket({
     evidence, weightTrend, goalPhase, targetsChanged, heldDecisions, loadSignal, nowMs, windowDays,
   });
+}
+
+/**
+ * Derives the `{ eligible, direction }` photo-corroboration signal that
+ * `corroborateConfidenceLevel` (`weeklyCoach.js`, D18 / plan-F §4.4) expects,
+ * from a v2 evidence packet (`buildScanEvidencePacket` /
+ * `composeScanEvidencePacket`'s return value). This is the ONE derivation of
+ * that signal anywhere in the app -- any caller that needs to feed a packet
+ * into `corroborateConfidenceLevel` (e.g. a render-time confidence-caption
+ * transform) must call this rather than re-deriving the mapping inline, per
+ * `corroborateConfidenceLevel`'s own JSDoc contract:
+ *
+ *  - `eligible` passes through the packet's own data-quality gate
+ *    (`eligibleForAssessment` -- scored, High/Moderate confidence tier,
+ *    comparable, in-window, 3+ trend points; never re-computed here).
+ *  - `direction` passes through only 'supports' or 'conflicts' -- the only
+ *    two values `corroborateConfidenceLevel` ever reads -- and collapses
+ *    every other assessment ('visual_change_weight_stable', 'inconclusive',
+ *    'not_used', 'insufficient_data') to `null`, matching
+ *    `corroborateConfidenceLevel`'s own "never lowers, never originates"
+ *    contract (only an explicit 'supports' agreement can ever raise the
+ *    level; 'conflicts' and everything else are inert).
+ *
+ * A `null`/absent packet (no scan, or the caller has already nulled the
+ * packet under photo suppression) derives to `{ eligible: false, direction:
+ * null }`, which is itself inert for `corroborateConfidenceLevel` -- so an
+ * unavailable packet fails to the base level with no separate branch needed.
+ *
+ * Pure: no I/O, no engine import, no randomness, no `Date.now()`.
+ *
+ * @param {object|null} packet - a v2 evidence packet, or null.
+ * @returns {{eligible: boolean, direction: (string|null)}}
+ */
+export function derivePhotoCorroborationSignal(packet) {
+  if (!packet) return { eligible: false, direction: null };
+  const direction = (packet.assessment === 'supports' || packet.assessment === 'conflicts')
+    ? packet.assessment
+    : null;
+  return { eligible: packet.eligibleForAssessment === true, direction };
 }

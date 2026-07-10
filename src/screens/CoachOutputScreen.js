@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { runWeeklyCoach, mapCalsAdherence } from '../lib/weeklyCoach';
+import { runWeeklyCoach, mapCalsAdherence, corroborateConfidenceLevel } from '../lib/weeklyCoach';
 import { buildHoldReceipt } from '../lib/coachLedger';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -45,7 +45,7 @@ import { getProgressScanHideExactPreference } from '../lib/progressScanPreferenc
 // extends the existing "Progress photo context" card. composeScanEvidencePacket
 // is the shared v1-evidence-then-v2-packet composition (progressScanCheckInEvidence.js)
 // also used by WeeklyCheckInScreen, so the two-step assembly lives in one place.
-import { composeScanEvidencePacket } from '../lib/progressScanCheckInEvidence';
+import { composeScanEvidencePacket, derivePhotoCorroborationSignal } from '../lib/progressScanCheckInEvidence';
 import { confidenceChipLabel } from '../lib/progressScanResultsContract';
 // Suppression unification (Wave 4): this screen already fails-closed on calm
 // mode / an open ED-pattern flag with its own raw reads, reused across many
@@ -1914,6 +1914,30 @@ export default function CoachOutputScreen({ navigation, route }) {
   const scanAssessmentUsedSentence = scanAssessmentPacket
     ? dedupeUsedSentence(progressScanCoachContext.body, scanAssessmentPacket.receipt.usedSentence)
     : null;
+  // D18 lead ruling (2026-07-09 resume session; docs/ux-world-class-audit-
+  // 2026-07-09/DECISIONS-2026-07-09.md D18; plan-F §4.4 fork, delegated to
+  // the lead): a RENDER-TIME-ONLY confidence-caption transform. This never
+  // writes back to `output`, `saveCoachOutput`, or any synced field --
+  // runWeeklyCoach above is still ALWAYS called with photoCorroboration
+  // absent/null, so the persisted/synced coach output stays byte-identical.
+  // The signal is derived from the SAME device-local v2 packet the receipt
+  // card above already shows, via the ONE shared derivation
+  // (derivePhotoCorroborationSignal, progressScanCheckInEvidence.js) rather
+  // than a second invented mapping. `corroborateConfidenceLevel` itself
+  // (weeklyCoach.js) is the engine's own pure one-step rule -- calling it
+  // here does not change what it does, only when its result is looked at.
+  const photoCorroborationSignal = derivePhotoCorroborationSignal(scanAssessmentPacket);
+  // Fail to base, never fail upward: `photoCorroborationBlocked` is `true`
+  // on a genuinely blocked run and simply ABSENT (undefined) on an older
+  // stored output that predates D18 -- both must suppress the render-time
+  // raise. Only an explicit `false` (this run positively cleared every
+  // hold) allows it.
+  const photoCorroborationRenderSuppressed = output.photoCorroborationBlocked !== false;
+  const displayConfidence = corroborateConfidenceLevel(
+    confidence,
+    photoCorroborationSignal,
+    { suppressed: photoCorroborationRenderSuppressed },
+  );
   let trendIcon = 'remove-outline';
   let trendColor = colors.textMuted;
   if (trend.delta !== null && !edPatternOpen) {
@@ -2396,12 +2420,16 @@ export default function CoachOutputScreen({ navigation, route }) {
         {/* NU-8: the engine grades every weekly decision's data confidence
             (assessDataConfidence) and persists it, but it was never surfaced.
             One calm line so the user knows how solid this week's read was. */}
-        {CONFIDENCE_CAPTIONS[confidence] ? (
+        {CONFIDENCE_CAPTIONS[displayConfidence] ? (
           <Text style={styles.confidenceCaption}>
-            {CONFIDENCE_CAPTIONS[confidence]}
+            {CONFIDENCE_CAPTIONS[displayConfidence]}
             {/* Wave A B6: name WHICH data was thin when it was the weigh-ins.
                 No threshold claim here, so this line can never disagree with
-                the coachLedger's own gate numbers. */}
+                the coachLedger's own gate numbers. This stays keyed off the
+                real logged-data `confidence` (never `displayConfidence`): a
+                photo-corroborated caption word must never hide or reframe a
+                genuine thin-weigh-in disclosure, per D18's "only the caption
+                moves" bound. */}
             {confidence !== 'high' && weighInsThisWeek != null && weighInsThisWeek < 4
               ? ` Only ${weighInsThisWeek} weigh-in${weighInsThisWeek === 1 ? '' : 's'} landed this week.`
               : ''}

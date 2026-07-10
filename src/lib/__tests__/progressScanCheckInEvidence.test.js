@@ -36,6 +36,7 @@ import {
   buildScanEvidencePacket,
   buildScanEvidenceReceipt,
   composeScanEvidencePacket,
+  derivePhotoCorroborationSignal,
 } from '../progressScanCheckInEvidence';
 import { buildProgressScanCoachEvidence } from '../progressScanCoachEvidence';
 
@@ -352,14 +353,51 @@ describe('receipt copy (verbatim, integration-plan.md §7)', () => {
   test('conflicts (scale)', () => {
     const r = receiptFor('valid', 'conflicts');
     expect(r.headline).toBe('Your photo trend and scale trend disagree this week.');
-    expect(r.detail).toBe('The coach used weight and intake for the decision and kept the scan as context.');
+    // D18 (lead ruling, 2026-07-09): the mandated hierarchy sentence is
+    // followed by the lead-ruled routine sentence, verbatim.
+    expect(r.detail).toBe(
+      'The coach used weight and intake for the decision and kept the scan as context. '
+      + 'Your logs and photos point in slightly different directions this week. '
+      + 'A steady weigh-in routine, same time, same conditions, usually brings them back into line.',
+    );
   });
 
   test('conflicts keeps its hierarchy sentence even when targets context is supplied', () => {
     // The conflict detail already attributes the decision to weight and
     // intake; it is never replaced by the changed/held wording.
     const r = receiptFor('valid', 'conflicts', { targetsChanged: true });
-    expect(r.detail).toBe('The coach used weight and intake for the decision and kept the scan as context.');
+    expect(r.detail).toBe(
+      'The coach used weight and intake for the decision and kept the scan as context. '
+      + 'Your logs and photos point in slightly different directions this week. '
+      + 'A steady weigh-in routine, same time, same conditions, usually brings them back into line.',
+    );
+  });
+
+  test('D18: the lead-ruled conflict routine sentence appears verbatim on conflicts, and nowhere else', () => {
+    const ROUTINE_SENTENCE = 'Your logs and photos point in slightly different directions this week. '
+      + 'A steady weigh-in routine, same time, same conditions, usually brings them back into line.';
+    const conflictsReceipt = receiptFor('valid', 'conflicts');
+    expect(conflictsReceipt.detail).toContain(ROUTINE_SENTENCE);
+
+    const otherStates = [
+      ['no_scan_ever', 'insufficient_data'],
+      ['no_recent_scan', 'not_used'],
+      ['withheld', 'not_used'],
+      ['low_confidence', 'not_used'],
+      ['not_comparable', 'not_used'],
+      ['baseline', 'inconclusive'],
+      ['valid', 'supports'],
+      ['valid', 'visual_change_weight_stable'],
+      ['valid', 'inconclusive'],
+    ];
+    for (const [status, assessment] of otherStates) {
+      for (const targetsChanged of [true, false, undefined]) {
+        const r = receiptFor(status, assessment, { targetsChanged });
+        expect(r.headline).not.toContain(ROUTINE_SENTENCE);
+        expect(r.detail ?? '').not.toContain(ROUTINE_SENTENCE);
+        expect(r.usedSentence).not.toContain(ROUTINE_SENTENCE);
+      }
+    }
   });
 
   test('low confidence', () => {
@@ -592,6 +630,47 @@ describe('composeScanEvidencePacket (integration-plan.md §3 "Small lib addition
       scan: fixtureScan(), note: fixtureNote(), weightTrend: trend(-0.6), goalPhase: 'mild_cut', heldDecisions, nowMs: NOW,
     });
     expect(composed.receipt.detail).toBe('Your scan was considered as context. Targets were held based on your logged data, for the reasons above.');
+  });
+});
+
+describe('derivePhotoCorroborationSignal (D18, weeklyCoach.js corroborateConfidenceLevel caller-shape)', () => {
+  test('null/absent packet derives to inert (eligible false, direction null)', () => {
+    expect(derivePhotoCorroborationSignal(null)).toEqual({ eligible: false, direction: null });
+    expect(derivePhotoCorroborationSignal(undefined)).toEqual({ eligible: false, direction: null });
+  });
+
+  test('eligible passes through the packet\'s own eligibleForAssessment gate, unmodified', () => {
+    const evidence = scoredEvidence({ trendWindow: { count: 4, spanDays: null, direction: 'down', magnitudePoints: 3, comparableOnly: true } });
+    const eligiblePacket = buildScanEvidencePacket({ evidence, weightTrend: trend(-0.6), goalPhase: 'mild_cut', nowMs: NOW });
+    expect(eligiblePacket.eligibleForAssessment).toBe(true);
+    expect(derivePhotoCorroborationSignal(eligiblePacket)).toEqual({ eligible: true, direction: 'supports' });
+
+    const thinEvidence = scoredEvidence({ trendWindow: { count: 1, spanDays: null, direction: 'down', magnitudePoints: 1, comparableOnly: true } });
+    const ineligiblePacket = buildScanEvidencePacket({ evidence: thinEvidence, weightTrend: trend(-0.6), goalPhase: 'mild_cut', nowMs: NOW });
+    expect(ineligiblePacket.eligibleForAssessment).toBe(false);
+    expect(derivePhotoCorroborationSignal(ineligiblePacket)).toEqual({ eligible: false, direction: null });
+  });
+
+  test('direction passes through only supports/conflicts; every other assessment collapses to null', () => {
+    const conflictEvidence = scoredEvidence({ trendWindow: { count: 4, spanDays: null, direction: 'up', magnitudePoints: 3, comparableOnly: true } });
+    const conflictPacket = buildScanEvidencePacket({ evidence: conflictEvidence, weightTrend: trend(-0.6), goalPhase: 'mild_cut', nowMs: NOW });
+    expect(conflictPacket.assessment).toBe('conflicts');
+    expect(derivePhotoCorroborationSignal(conflictPacket).direction).toBe('conflicts');
+
+    const bulkEvidence = scoredEvidence({ trendWindow: { count: 4, spanDays: null, direction: 'up', magnitudePoints: 3, comparableOnly: true } });
+    const stableWeightPacket = buildScanEvidencePacket({ evidence: bulkEvidence, weightTrend: trend(0.1), goalPhase: 'mild_bulk', nowMs: NOW });
+    expect(stableWeightPacket.assessment).toBe('visual_change_weight_stable');
+    expect(derivePhotoCorroborationSignal(stableWeightPacket)).toEqual({ eligible: true, direction: null });
+
+    const inconclusivePacket = buildScanEvidencePacket({ evidence: null, nowMs: NOW });
+    expect(inconclusivePacket.assessment).toBe('insufficient_data');
+    expect(derivePhotoCorroborationSignal(inconclusivePacket)).toEqual({ eligible: false, direction: null });
+  });
+
+  test('is a pure function: identical packet input always derives the same signal', () => {
+    const evidence = scoredEvidence({ trendWindow: { count: 4, spanDays: null, direction: 'down', magnitudePoints: 3, comparableOnly: true } });
+    const packet = buildScanEvidencePacket({ evidence, weightTrend: trend(-0.6), goalPhase: 'mild_cut', nowMs: NOW });
+    expect(derivePhotoCorroborationSignal(packet)).toEqual(derivePhotoCorroborationSignal({ ...packet }));
   });
 });
 

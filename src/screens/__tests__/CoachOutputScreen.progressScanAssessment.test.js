@@ -76,7 +76,11 @@ function callBlocks(source, callName) {
 
 describe('CoachOutputScreen v2 assessment receipt: packet composition', () => {
   test('imports composeScanEvidencePacket from the shared evidence layer', () => {
-    expect(SCREEN).toMatch(/import \{ composeScanEvidencePacket \} from '\.\.\/lib\/progressScanCheckInEvidence';/);
+    // D18 (2026-07-09): this import line also brings in
+    // derivePhotoCorroborationSignal for the render-time confidence-caption
+    // transform (see CoachOutputScreen.photoCorroborationCaption.test.js);
+    // updated mechanically alongside that addition.
+    expect(SCREEN).toMatch(/import \{ composeScanEvidencePacket, derivePhotoCorroborationSignal \} from '\.\.\/lib\/progressScanCheckInEvidence';/);
   });
 
   test('the packet is composed at the same site progressScanCoachContext is resolved, from the engine\'s own result fields', () => {
