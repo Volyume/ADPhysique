@@ -25,6 +25,7 @@ jest.mock('../../food/db', () => ({
 const AsyncStorage = require('@react-native-async-storage/async-storage').default
   ?? require('@react-native-async-storage/async-storage');
 const food = require('../../food/db');
+const { logSyncError } = require('../telemetry');
 const { foodPullFor, beginRun } = require('../tables/foodDomain');
 
 const KEY = '@volyume_food_last_pulled_u1';
@@ -82,4 +83,30 @@ test('a failure on one table does not report as an error for an unrelated table'
   expect(cfRes.errors).toBe(0); // not multiplied onto a healthy table
   // Any failure in the cycle holds the shared watermark.
   expect(await AsyncStorage.getItem(KEY)).toBeNull();
+});
+
+test('a rollup failure is reported, holds the watermark, and succeeds on retry', async () => {
+  food.applyFoodEntryFromCloud.mockResolvedValue('2026-06-03');
+  food.recomputeRollup.mockRejectedValueOnce(new Error('rollup write failed'));
+  const changes = { food_entries: { created: [{ id: 'fe1' }], updated: [], deleted: [] } };
+
+  const firstSb = pullSb(changes);
+  await foodPullFor('food_entries')(firstSb, { userId: 'u1' });
+  const failedRollup = await foodPullFor('daily_intake_rollups')(firstSb, { userId: 'u1' });
+
+  expect(failedRollup.errors).toBe(1);
+  expect(await AsyncStorage.getItem(KEY)).toBeNull();
+  expect(logSyncError).toHaveBeenCalledWith(
+    'sync.tables.foodDomain.pull.daily_intake_rollups',
+    expect.any(Error),
+  );
+
+  beginRun();
+  food.recomputeRollup.mockResolvedValue(undefined);
+  const retrySb = pullSb(changes);
+  await foodPullFor('food_entries')(retrySb, { userId: 'u1' });
+  const retriedRollup = await foodPullFor('daily_intake_rollups')(retrySb, { userId: 'u1' });
+
+  expect(retriedRollup.errors).toBe(0);
+  expect(await AsyncStorage.getItem(KEY)).toBe(String(Date.parse(SERVER_TS) - 1));
 });

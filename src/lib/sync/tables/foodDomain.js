@@ -367,6 +367,7 @@ async function _doPullAll(sb, { userId }) {
   const errorsByTable = {};
   const datesToRecompute = new Set();
   let anyFailed = false;
+  let recomputeFailed = false;
 
   // F2: count per-row apply failures instead of swallowing them. A failed row
   // must (a) be visible to the runner so the push-first sign-out guard refuses
@@ -407,7 +408,13 @@ async function _doPullAll(sb, { userId }) {
 
   if (typeof food.recomputeRollup === 'function') {
     for (const d of datesToRecompute) {
-      try { await food.recomputeRollup(userId, d); } catch (_) { /* tolerate */ }
+      try {
+        await food.recomputeRollup(userId, d);
+      } catch (e) {
+        recomputeFailed = true;
+        errorsByTable.daily_intake_rollups = (errorsByTable.daily_intake_rollups ?? 0) + 1;
+        logSyncError('sync.tables.foodDomain.pull.daily_intake_rollups', e);
+      }
     }
   }
 
@@ -420,7 +427,7 @@ async function _doPullAll(sb, { userId }) {
   // we leave it so the failed rows re-pull next cycle; the applies are
   // INSERT OR REPLACE under the F1 last-write-wins gate, so re-pulling already
   // applied rows is idempotent.
-  if (!anyFailed) {
+  if (!anyFailed && !recomputeFailed) {
     // D1-#7: this cursor is compared next cycle against the server-clock
     // `updated_at` inside food_sync_pull, so it MUST stay on server time.
     // Never fall back to `new Date().toISOString()` (the device clock): a
@@ -439,7 +446,7 @@ async function _doPullAll(sb, { userId }) {
       try { await AsyncStorage.setItem(key, String(tsMs - 1)); } catch (_) { /* tolerate */ }
     }
   }
-  return { counts, errorsByTable, errors: anyFailed ? 1 : 0 };
+  return { counts, errorsByTable, errors: anyFailed || recomputeFailed ? 1 : 0 };
 }
 
 /**
