@@ -1,13 +1,23 @@
 /**
  * FeedbackSheet
  *
- * Minimal, non-blocking feedback collection. The sheet animates up
- * from the bottom, asks one question (sentiment chip), accepts an
- * optional line of text, and submits.
+ * Minimal, non-blocking feedback collection. The sheet asks one question
+ * (sentiment chip), accepts an optional line of text, and submits.
  *
- * Visual pattern mirrors PeekMenu, backdrop + slide-up sheet with
- * a handle pill. Auto-dismisses after 12 s of inactivity if the
- * user hasn't engaged so we never linger.
+ * D36b (BottomSheet migration, 2026-07-10): renders through the shared
+ * <BottomSheet> chrome (backdrop, handle, insets, reduce-motion, gesture
+ * dismiss) instead of a hand-rolled Modal + Animated slide. The exported
+ * imperative ref API is UNCHANGED (open/close) so every call site
+ * (WorkoutSummaryScreen, SettingsAboutScreen, the shake handler below, the
+ * FeedbackProvider singleton) needed zero changes: this component is now a
+ * thin adapter that turns open()/close() into internal `visible` state fed
+ * to <BottomSheet visible onClose>. `config` (the sheet's content data) is
+ * only ever SET by open() and is deliberately never cleared on close — the
+ * shared BottomSheet keeps the last-rendered children mounted for the
+ * duration of its own close animation (real gorhom behaviour, mirrored by
+ * __mocks__/@gorhom/bottom-sheet.js), so nulling it out on close would blank
+ * the panel mid-slide; the next open() call replaces it before it is ever
+ * shown again.
  *
  * Imperative usage from any screen:
  *
@@ -25,19 +35,18 @@
  */
 
 import {
-  useImperativeHandle, useRef, useState, useEffect, forwardRef, createContext, useContext,
+  useImperativeHandle, useRef, useState, useEffect, useCallback, forwardRef, createContext, useContext,
 } from 'react';
 import {
-  View, Text, StyleSheet, Modal, Pressable,
-  Animated, Easing, Platform, Keyboard, TouchableWithoutFeedback,
+  View, Text, StyleSheet, Keyboard, TouchableWithoutFeedback, Platform,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as haptics from '../lib/haptics';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 import { submitFeedback, markPromptShown } from '../lib/feedback';
+import BottomSheet from './BottomSheet';
 import Button from './Button';
 import Chip from './Chip';
 import TextField from './TextField';
@@ -129,21 +138,42 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
   const live = buildLiveStyles(t);
-  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const userId = useAppStore(s => s.user?.id);
 
+  const [visible, setVisible] = useState(false);
   const [config, setConfig] = useState(null);
   const [sentiment, setSentiment] = useState(null);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
-  const translateY = useRef(new Animated.Value(reduceMotion ? 0 : 500)).current;
-  // Bottom-anchored Modal: overlays the tab band, so it must absorb the
-  // system inset itself (edge-to-edge sweep, 2026-07-03).
-  const insets = useSafeAreaInsets();
-  const backdrop = useRef(new Animated.Value(0)).current;
   const autoDismissRef = useRef(null);
+
+  function clearAutoDismiss() {
+    if (autoDismissRef.current) {
+      clearTimeout(autoDismissRef.current);
+      autoDismissRef.current = null;
+    }
+  }
+
+  function scheduleAutoDismiss() {
+    clearAutoDismiss();
+    autoDismissRef.current = setTimeout(() => {
+      if (!sentiment && !message) closeSheet();
+    }, 12_000);
+  }
+
+  // D36b: the single close path, replacing the old animateOut(). BottomSheet
+  // owns the close animation (and its reduce-motion branch) itself; this only
+  // has to flip the controlling `visible` prop and tidy up side effects that
+  // used to live in animateOut's completion callback (dismiss the keyboard,
+  // stop the auto-dismiss timer).
+  const closeSheet = useCallback(() => {
+    clearAutoDismiss();
+    Keyboard.dismiss();
+    setVisible(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useImperativeHandle(ref, () => ({
     open: (cfg = {}) => {
@@ -156,63 +186,20 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
       // starts even if the user dismisses without submitting.
       if (cfg.triggerKey) markPromptShown(cfg.triggerKey).catch(() => {});
       haptics.selection();
+      setVisible(true);
     },
-    close: () => animateOut(),
+    close: () => closeSheet(),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), []);
+  }), [closeSheet]);
 
+  // Auto-dismiss if untouched for 12s. Resets every time the user interacts
+  // (sentiment select or text change, via scheduleAutoDismiss() calls below).
   useEffect(() => {
-    if (!config) return;
-    translateY.setValue(reduceMotion ? 0 : 500);
-    backdrop.setValue(0);
-    Animated.parallel([
-      Animated.timing(backdrop, {
-        toValue: 1, duration: reduceMotion ? 0 : 220,
-        easing: Easing.out(Easing.cubic), useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: 0, duration: reduceMotion ? 0 : 280,
-        easing: Easing.out(Easing.cubic), useNativeDriver: true,
-      }),
-    ]).start();
-    // Auto-dismiss if untouched for 12s. Resets every time the user
-    // interacts (sentiment select or text change).
+    if (!visible) return undefined;
     scheduleAutoDismiss();
     return () => clearAutoDismiss();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config]);
-
-  function scheduleAutoDismiss() {
-    clearAutoDismiss();
-    autoDismissRef.current = setTimeout(() => {
-      if (!sentiment && !message) animateOut();
-    }, 12_000);
-  }
-
-  function clearAutoDismiss() {
-    if (autoDismissRef.current) {
-      clearTimeout(autoDismissRef.current);
-      autoDismissRef.current = null;
-    }
-  }
-
-  function animateOut(then) {
-    clearAutoDismiss();
-    Keyboard.dismiss();
-    Animated.parallel([
-      Animated.timing(backdrop, {
-        toValue: 0, duration: reduceMotion ? 0 : 180,
-        easing: Easing.in(Easing.cubic), useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: reduceMotion ? 0 : 500, duration: reduceMotion ? 0 : 220,
-        easing: Easing.in(Easing.cubic), useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setConfig(null);
-      if (then) then();
-    });
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
 
   async function handleSubmit() {
     if (!sentiment) return;
@@ -231,152 +218,112 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
       haptics.planReady();
       setDone(true);
       // Stay on the success state briefly, then dismiss.
-      setTimeout(() => animateOut(), 1400);
+      setTimeout(() => closeSheet(), 1400);
     } catch (_) {
       // submitFeedback never throws, but be defensive.
       setSubmitting(false);
     }
   }
 
-  if (!config) return null;
+  const sheetLabel = done ? 'Thanks' : (config?.trigger === 'shake' ? "What's wrong?" : 'How was that?');
 
   return (
-    <Modal
-      transparent
-      visible
-      onRequestClose={() => animateOut()}
-      animationType="none"
-      statusBarTranslucent={Platform.OS === 'android'}
+    <BottomSheet
+      visible={visible}
+      onClose={closeSheet}
+      keyboardAvoiding
+      accessibilityLabel={sheetLabel}
     >
-      <Animated.View style={[styles.backdrop, live.backdrop, { opacity: backdrop }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Close" style={StyleSheet.absoluteFillObject} onPress={() => animateOut()} />
-      </Animated.View>
-      <Animated.View
-        style={[
-          styles.sheet,
-          live.sheet,
-          { paddingBottom: Math.max(spacing.xxl + spacing.md, insets.bottom + spacing.lg) },
-          { transform: [{ translateY }] },
-        ]}
-        accessibilityViewIsModal
-      >
-        <View style={[styles.handle, live.handle]} />
+      {!config ? null : done ? (
+        <View style={styles.doneBlock}>
+          <Ionicons name="checkmark-circle" size={36} color={t.colors.success} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.doneTitle, live.doneTitle]}>Thanks</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.doneSub, live.doneSub]}>Your feedback's on its way.</Text>
+        </View>
+      ) : (
+        <>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>
+            {config.trigger === 'shake' ? "What's wrong?" : 'How was that?'}
+          </Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.sub, live.sub]}>
+            {config.trigger === 'shake'
+              ? "Tell us what just happened. We attach the rest automatically."
+              : "Pick the closest match. One tap is plenty."}
+          </Text>
 
-        {done ? (
-          <View style={styles.doneBlock}>
-            <Ionicons name="checkmark-circle" size={36} color={t.colors.success} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.doneTitle, live.doneTitle]}>Thanks</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.doneSub, live.doneSub]}>Your feedback's on its way.</Text>
+          <View style={styles.chipRow}>
+            {SENTIMENTS.map(s => (
+              <Chip
+                key={s.key}
+                label={s.label}
+                icon={s.icon}
+                selected={sentiment === s.key}
+                onPress={() => {
+                  setSentiment(s.key);
+                  scheduleAutoDismiss();
+                  haptics.selection();
+                }}
+                accessibilityRole="radio"
+                accessibilityLabel={`${s.label} sentiment`}
+                style={styles.sentimentChip}
+                labelStyle={[styles.sentimentChipText, live.sentimentChipText]}
+                selectedLabelStyle={[styles.sentimentChipTextSelected, live.sentimentChipTextSelected]}
+              />
+            ))}
           </View>
-        ) : (
-          <>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>
-              {config.trigger === 'shake' ? "What's wrong?" : 'How was that?'}
-            </Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.sub, live.sub]}>
-              {config.trigger === 'shake'
-                ? "Tell us what just happened. We attach the rest automatically."
-                : "Pick the closest match. One tap is plenty."}
-            </Text>
 
-            <View style={styles.chipRow}>
-              {SENTIMENTS.map(s => (
-                <Chip
-                  key={s.key}
-                  label={s.label}
-                  icon={s.icon}
-                  selected={sentiment === s.key}
-                  onPress={() => {
-                    setSentiment(s.key);
-                    scheduleAutoDismiss();
-                    haptics.selection();
-                  }}
-                  accessibilityRole="radio"
-                  accessibilityLabel={`${s.label} sentiment`}
-                  style={styles.sentimentChip}
-                  labelStyle={[styles.sentimentChipText, live.sentimentChipText]}
-                  selectedLabelStyle={[styles.sentimentChipTextSelected, live.sentimentChipTextSelected]}
-                />
-              ))}
-            </View>
-
-            <TouchableWithoutFeedback accessibilityRole="button" onPress={() => scheduleAutoDismiss()}>
-              <View>
-                <TextField
-                  placeholder="Anything specific? (optional)"
-                  placeholderTextColor={t.colors.textMuted}
-                  multiline
-                  numberOfLines={3}
-                  maxLength={500}
-                  value={message}
-                  onChangeText={(txt) => { setMessage(txt); scheduleAutoDismiss(); }}
-                  accessibilityLabel="Optional details"
-                  surface="surface2"
-                  containerStyle={styles.inputContainer}
-                  fieldStyle={styles.inputField}
-                  inputStyle={styles.inputText}
-                />
-              </View>
-            </TouchableWithoutFeedback>
-
-            <View style={styles.actions}>
-              <Button
-                title="Cancel"
-                onPress={() => animateOut()}
-                variant="secondary"
-                fullWidth={false}
-                style={styles.cancelBtn}
-                textStyle={[styles.cancelText, live.cancelText]}
-                accessibilityLabel="Cancel feedback"
-              />
-              <Button
-                title="Send"
-                onPress={handleSubmit}
-                disabled={!sentiment || submitting}
-                loading={submitting}
-                fullWidth={false}
-                style={styles.submitBtn}
-                textStyle={[styles.submitText, live.submitText]}
-                accessibilityLabel="Send feedback"
+          <TouchableWithoutFeedback accessibilityRole="button" onPress={() => scheduleAutoDismiss()}>
+            <View>
+              <TextField
+                placeholder="Anything specific? (optional)"
+                placeholderTextColor={t.colors.textMuted}
+                multiline
+                numberOfLines={3}
+                maxLength={500}
+                value={message}
+                onChangeText={(txt) => { setMessage(txt); scheduleAutoDismiss(); }}
+                accessibilityLabel="Optional details"
+                surface="surface2"
+                containerStyle={styles.inputContainer}
+                fieldStyle={styles.inputField}
+                inputStyle={styles.inputText}
               />
             </View>
+          </TouchableWithoutFeedback>
 
-            <Text maxFontSizeMultiplier={1.3} style={[styles.privacy, live.privacy]}>
-              Sent with build info, your last few actions, and a recent error if any.
-              Body measurements and names are stripped before sending.
-            </Text>
-          </>
-        )}
-      </Animated.View>
-    </Modal>
+          <View style={styles.actions}>
+            <Button
+              title="Cancel"
+              onPress={() => closeSheet()}
+              variant="secondary"
+              fullWidth={false}
+              style={styles.cancelBtn}
+              textStyle={[styles.cancelText, live.cancelText]}
+              accessibilityLabel="Cancel feedback"
+            />
+            <Button
+              title="Send"
+              onPress={handleSubmit}
+              disabled={!sentiment || submitting}
+              loading={submitting}
+              fullWidth={false}
+              style={styles.submitBtn}
+              textStyle={[styles.submitText, live.submitText]}
+              accessibilityLabel="Send feedback"
+            />
+          </View>
+
+          <Text maxFontSizeMultiplier={1.3} style={[styles.privacy, live.privacy]}>
+            Sent with build info, your last few actions, and a recent error if any.
+            Body measurements and names are stripped before sending.
+          </Text>
+        </>
+      )}
+    </BottomSheet>
   );
 });
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.scrim,
-    opacity: 0.55,
-  },
-  sheet: {
-    position: 'absolute',
-    left: 0, right: 0, bottom: 0,
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xxl + spacing.md,
-    borderTopWidth: 1,
-    borderColor: colors.border,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 36, height: 4,
-    borderRadius: radius.hair,
-    backgroundColor: colors.border,
-    marginBottom: spacing.md,
-  },
   title: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
@@ -472,12 +419,10 @@ const styles = StyleSheet.create({
 // frozen `styles` block above, same "frozen base + live override" pattern as
 // BottomSheet.js's buildLiveStyles. chipRow/sentimentChip/inputContainer/
 // inputField/inputText/actions/cancelBtn/submitBtn/doneBlock have no colour
-// tokens.
+// tokens. D36b (2026-07-10): backdrop/sheet/handle entries removed, that
+// chrome now lives in BottomSheet.js's own buildLiveStyles.
 function buildLiveStyles(t) {
   return {
-    backdrop: { backgroundColor: t.colors.scrim },
-    sheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    handle: { backgroundColor: t.colors.border },
     title: { color: t.colors.textPrimary },
     sub: { color: t.colors.textMuted },
     sentimentChipText: { color: t.colors.textSecondary },

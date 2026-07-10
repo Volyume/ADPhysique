@@ -3,10 +3,14 @@
  * findings AY-3/AY-4/AY-5 (docs/design-usability-audit-2026-07-09/
  * coverage-04-accessibility.md). Pins the mechanical fixes so they cannot
  * silently regress:
- *  - AY-3: the five hand-rolled modal backdrops each carry
+ *  - AY-3: the five hand-rolled modal backdrops each carry (or, once
+ *    migrated onto <BottomSheet>, inherit by construction)
  *    accessibilityLabel="Close", matching BottomSheet.js:112-117's
  *    established convention (a labelled, roled backdrop, not a bare
- *    unlabelled "button").
+ *    unlabelled "button"). D36b (2026-07-10): FeedbackSheet.js and
+ *    PeekMenu.js join RoutineDetailScreen.js/PlanLibraryScreen.js on the
+ *    "rides BottomSheet" side of this list; PlansScreen.js's folder-rename
+ *    prompt is the one hand-rolled backdrop left.
  *  - AY-4: RoutineDetailScreen's edit-exercise sheet's inner capture-layer
  *    TouchableOpacity (the phantom node right before the Sets field) is
  *    accessible={false} so TalkBack/VoiceOver skips it, and both raw
@@ -52,16 +56,26 @@ describe('AY-3: modal backdrops label themselves "Close"', () => {
     );
   });
 
-  test('FeedbackSheet.js backdrop', () => {
+  // D36b (2026-07-10): FeedbackSheet.js and PeekMenu.js migrated off their
+  // hand-rolled Modal + Pressable backdrop onto the shared <BottomSheet>,
+  // same treatment as the RoutineDetailScreen/PlanLibraryScreen pins above --
+  // BottomSheet's own labelled, roled backdrop (BottomSheet.js:112-117) IS
+  // the convention this suite was pinning those hand-rolled copies against,
+  // so their backdrop pins are superseded by construction. What these two
+  // tests still guard: the components must actually use BottomSheet (no
+  // hand-rolled backdrop can silently return).
+  test('FeedbackSheet.js rides BottomSheet (labelled backdrop by construction)', () => {
     const source = read('components/FeedbackSheet.js');
-    expect(source).toMatch(
+    expect(source).toMatch(/<BottomSheet/);
+    expect(source).not.toMatch(
       /<Pressable accessibilityRole="button" accessibilityLabel="Close" style=\{StyleSheet\.absoluteFillObject\}/,
     );
   });
 
-  test('PeekMenu.js backdrop', () => {
+  test('PeekMenu.js rides BottomSheet (labelled backdrop by construction)', () => {
     const source = read('components/PeekMenu.js');
-    expect(source).toMatch(
+    expect(source).toMatch(/<BottomSheet/);
+    expect(source).not.toMatch(
       /<Pressable accessibilityRole="button" accessibilityLabel="Close" style=\{StyleSheet\.absoluteFillObject\}/,
     );
   });

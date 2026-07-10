@@ -27,32 +27,55 @@
  *   <PeekMenu ref={menuRef} />
  *
  * The menu honours reduce-motion: snap-in instead of slide-up.
+ *
+ * D36b (BottomSheet migration, 2026-07-10): renders through the shared
+ * <BottomSheet> chrome (backdrop, handle, insets, reduce-motion, gesture
+ * dismiss) instead of a hand-rolled Modal + Animated slide. The exported
+ * imperative ref API is UNCHANGED (open/close) so both call sites
+ * (PlansScreen, LiftProgressScreen) needed zero changes: this component is
+ * now a thin adapter that turns open()/close() into internal `visible` state
+ * fed to <BottomSheet visible onClose>. `config` (title/items) is only ever
+ * SET by open() and deliberately never cleared on close, for the same
+ * "don't blank the panel mid-close-animation" reason documented in
+ * FeedbackSheet.js's header.
+ *
+ * Selecting an item still defers running its onPress until the sheet has
+ * finished closing (the item may itself open another sheet/dialog, e.g. a
+ * delete confirmation, and firing it while this menu is still visually
+ * sliding away looked wrong under the old hand-rolled animation too). The
+ * shared BottomSheet doesn't expose an "animation finished" callback, so
+ * this uses the same duration BottomSheet uses for its own settle spring
+ * when motion is off, and motion.state otherwise (this component's own
+ * historical close duration) — reduce-motion still collapses it to 0.
  */
 
 import {
-  useImperativeHandle, useRef, useState, useEffect, forwardRef,
+  useImperativeHandle, useRef, useState, useCallback, forwardRef,
 } from 'react';
-import {
-  View, Text, StyleSheet, Modal, Pressable, Animated, Easing, Platform,
-} from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fontSize, fontWeight, spacing, radius, motion, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 import * as haptics from '../lib/haptics';
+import BottomSheet from './BottomSheet';
 
 const PeekMenu = forwardRef(function PeekMenu(_, ref) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
   const live = buildLiveStyles(t);
+  const [visible, setVisible] = useState(false);
   const [config, setConfig] = useState(null);
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
-  const translateY = useRef(new Animated.Value(reduceMotion ? 0 : 400)).current;
-  const backdrop = useRef(new Animated.Value(0)).current;
-  // Bottom-anchored Modal: overlays the tab band, so it must absorb the
-  // system inset itself (edge-to-edge sweep, 2026-07-03).
-  const insets = useSafeAreaInsets();
+  const closeTimerRef = useRef(null);
+
+  const closeSheet = useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    setVisible(false);
+  }, []);
 
   useImperativeHandle(ref, () => ({
     open: (cfg) => {
@@ -61,148 +84,82 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
       // through the vocabulary so reduce-motion silences it).
       haptics.commit();
       setConfig(cfg);
+      setVisible(true);
     },
-    close: () => animateOut(),
+    close: () => closeSheet(),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), []);
-
-  function animateOut(then) {
-    Animated.parallel([
-      Animated.timing(backdrop, {
-        toValue: 0, duration: reduceMotion ? 0 : motion.state,
-        easing: Easing.in(Easing.cubic), useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: reduceMotion ? 0 : 400, duration: reduceMotion ? 0 : motion.state,
-        easing: Easing.in(Easing.cubic), useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setConfig(null);
-      if (then) then();
-    });
-  }
-
-  useEffect(() => {
-    if (!config) return;
-    translateY.setValue(reduceMotion ? 0 : 400);
-    backdrop.setValue(0);
-    Animated.parallel([
-      Animated.timing(backdrop, {
-        toValue: 1, duration: reduceMotion ? 0 : motion.state,
-        easing: Easing.out(Easing.cubic), useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: 0, duration: reduceMotion ? 0 : motion.sheet,
-        easing: Easing.out(Easing.cubic), useNativeDriver: true,
-      }),
-    ]).start();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config, reduceMotion]);
-
-  if (!config) return null;
+  }), [closeSheet]);
 
   function handleItem(item) {
-    animateOut(() => {
+    closeSheet();
+    // Preserve the old animateOut(then)-style deferral: run the action after
+    // the close animation would have finished, not the instant the tap lands.
+    closeTimerRef.current = setTimeout(() => {
+      closeTimerRef.current = null;
       try { item.onPress?.(); } catch (_) {}
-    });
+    }, reduceMotion ? 0 : motion.state);
   }
 
   return (
-    <Modal
-      transparent
-      visible
-      onRequestClose={() => animateOut()}
-      animationType="none"
-      statusBarTranslucent={Platform.OS === 'android'}
+    <BottomSheet
+      visible={visible}
+      onClose={closeSheet}
+      accessibilityLabel={config?.title || 'Menu'}
     >
-      <Animated.View style={[styles.backdrop, live.backdrop, { opacity: backdrop }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Close" style={StyleSheet.absoluteFillObject} onPress={() => animateOut()} />
-      </Animated.View>
-      <Animated.View
-        style={[
-          styles.sheet,
-          live.sheet,
-          { paddingBottom: Math.max(spacing.xxl + spacing.md, insets.bottom + spacing.lg) },
-          { transform: [{ translateY }] },
-        ]}
-        accessibilityViewIsModal
-      >
-        <View style={[styles.handle, live.handle]} />
-        {config.title ? (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]} numberOfLines={1}>{config.title}</Text>
-        ) : null}
-        {config.subtitle ? (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]} numberOfLines={2}>{config.subtitle}</Text>
-        ) : null}
-        <View style={styles.itemList}>
-          {config.items.map((item, i) => (
-            <Pressable
-              key={i}
-              onPress={() => handleItem(item)}
-              style={({ pressed }) => [
-                styles.item,
-                pressed && { backgroundColor: t.colors.surface2 },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={item.label}
-            >
-              <Ionicons
-                name={item.icon || 'ellipse-outline'}
-                size={18}
-                color={item.destructive ? t.colors.error : t.colors.primary}
-              />
-              <Text maxFontSizeMultiplier={1.3}
-                style={[
-                  styles.itemText,
-                  live.itemText,
-                  item.destructive && { color: t.colors.error },
+      {config ? (
+        <>
+          {config.title ? (
+            <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]} numberOfLines={1}>{config.title}</Text>
+          ) : null}
+          {config.subtitle ? (
+            <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]} numberOfLines={2}>{config.subtitle}</Text>
+          ) : null}
+          <View style={styles.itemList}>
+            {config.items.map((item, i) => (
+              <Pressable
+                key={i}
+                onPress={() => handleItem(item)}
+                style={({ pressed }) => [
+                  styles.item,
+                  pressed && { backgroundColor: t.colors.surface2 },
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel={item.label}
               >
-                {item.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-        <Pressable
-          onPress={() => animateOut()}
-          style={[styles.cancel, live.cancel]}
-          accessibilityRole="button"
-          accessibilityLabel="Cancel"
-        >
-          <Text maxFontSizeMultiplier={1.3} style={[styles.cancelText, live.cancelText]}>Cancel</Text>
-        </Pressable>
-      </Animated.View>
-    </Modal>
+                <Ionicons
+                  name={item.icon || 'ellipse-outline'}
+                  size={18}
+                  color={item.destructive ? t.colors.error : t.colors.primary}
+                />
+                <Text maxFontSizeMultiplier={1.3}
+                  style={[
+                    styles.itemText,
+                    live.itemText,
+                    item.destructive && { color: t.colors.error },
+                  ]}
+                >
+                  {item.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <Pressable
+            onPress={() => closeSheet()}
+            style={[styles.cancel, live.cancel]}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel"
+          >
+            <Text maxFontSizeMultiplier={1.3} style={[styles.cancelText, live.cancelText]}>Cancel</Text>
+          </Pressable>
+        </>
+      ) : null}
+    </BottomSheet>
   );
 });
 
 export default PeekMenu;
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.scrim,
-    opacity: 0.55,
-  },
-  sheet: {
-    position: 'absolute',
-    left: 0, right: 0, bottom: 0,
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xxl + spacing.md,
-    borderTopWidth: 1,
-    borderColor: colors.border,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 36, height: 4,
-    borderRadius: radius.hair,
-    backgroundColor: colors.border,
-    marginBottom: spacing.md,
-  },
   title: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
@@ -244,11 +201,10 @@ const styles = StyleSheet.create({
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the
 // frozen `styles` block above, same "frozen base + live override" pattern as
 // BottomSheet.js's buildLiveStyles. itemList/item have no colour tokens.
+// D36b (2026-07-10): backdrop/sheet/handle entries removed, that chrome now
+// lives in BottomSheet.js's own buildLiveStyles.
 function buildLiveStyles(t) {
   return {
-    backdrop: { backgroundColor: t.colors.scrim },
-    sheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    handle: { backgroundColor: t.colors.border },
     title: { color: t.colors.textPrimary },
     subtitle: { ...t.type.caption, color: t.colors.textMuted },
     itemText: { color: t.colors.textPrimary },

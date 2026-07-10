@@ -49,13 +49,22 @@ describe('ActiveWorkout bottom bar vs the hidden tab band', () => {
   // screen edge, so each absorbs the inset itself. Pins the edge-to-edge
   // sweep (2026-07-03): hand-rolled sheets own the inset expression directly;
   // migrated sheets must use the shared BottomSheet chrome, which owns it.
+  //
+  // D36b (2026-07-10): FeedbackSheet.js and PeekMenu.js migrated off their
+  // hand-rolled Modal onto the shared BottomSheet, exactly the "migrated
+  // sheets" case this comment already anticipated -- they no longer own an
+  // `insets.bottom + spacing.*` expression themselves, BottomSheet.js does,
+  // so they are removed from this loop (still asserted for BottomSheet.js
+  // below) and pinned as BottomSheet consumers instead.
   test('bottom-anchored modal sheets absorb the system inset', () => {
     for (const rel of [
       'components/BottomSheet.js',
-      'components/FeedbackSheet.js',
-      'components/PeekMenu.js',
     ]) {
       expect(read(rel)).toMatch(/insets\.bottom \+ spacing\.(lg|sm)/);
+    }
+    for (const rel of ['components/FeedbackSheet.js', 'components/PeekMenu.js']) {
+      expect(read(rel)).toMatch(/<BottomSheet/);
+      expect(read(rel)).not.toMatch(/insets\.bottom/);
     }
     const foodSearch = read('screens/FoodSearchScreen.js');
     expect(foodSearch).toMatch(/<BottomSheet[\s\S]*visible=\{showPlate\}/);

@@ -77,9 +77,12 @@ describe('fit rule 4: the JS-thread Animated API is a frozen allowlist', () => {
     // bottom-sheet adoption, 2026-07-10): the hand-rolled Animated slide/
     // backdrop is retired in favour of the library's own UI-thread
     // (Reanimated) animation.
-    'components/FeedbackSheet.js',
+    // components/FeedbackSheet.js and components/PeekMenu.js left this list
+    // in D36b (2026-07-10): both migrated their hand-rolled Modal + Animated
+    // slide/backdrop onto the shared <BottomSheet> (same library-owned
+    // Reanimated animation BottomSheet.js already left this list for), so
+    // neither imports `Animated` from 'react-native' any more.
     'components/PRCelebration.js',
-    'components/PeekMenu.js',
     'components/RestTimer.js',
     'components/Skeleton.js',
     'components/Toast.js',
