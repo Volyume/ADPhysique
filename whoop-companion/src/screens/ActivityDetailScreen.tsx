@@ -9,7 +9,7 @@ import { Bar, Card, Empty, LineChart, Screen, SectionLabel, Stat } from '../ui/c
 import { colors, fonts, strainZoneColors } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { formatDistance, formatPace } from '../sensors/location';
-import { formatClock, formatDuration } from '../util/time';
+import { dayKey, formatClock, formatDuration } from '../util/time';
 import type { HrZone } from '../metrics/strain';
 import { recoveryTimeHours, trainingEffect } from '../metrics/training';
 import { parseNapDetail } from '../metrics/naps';
@@ -73,6 +73,23 @@ export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
         },
       },
     ]);
+
+  const convertNap = () =>
+    Alert.alert(
+      'Convert nap to sleep?',
+      `This removes the nap and uses ${formatClock(activity.startTs)}-${formatClock(activity.endTs)} as the main sleep window for ${new Date(activity.endTs).toLocaleDateString()}. Any existing manual sleep window for that wake day will be replaced.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Convert',
+          onPress: () => {
+            void appStore.convertNapToSleep(activity.id)
+              .then(() => nav.navigate({ name: 'day', day: dayKey(activity.endTs) }))
+              .catch((error) => Alert.alert('Could not convert nap', String(error)));
+          },
+        },
+      ],
+    );
 
   return (
     <Screen title={activity.activity} onBack={nav.back} tint={tint}>
@@ -140,6 +157,12 @@ export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
               <Stat label="Source" value={nap?.autoDetected ? 'auto-detected' : 'timer'} />
             </Card>
           </View>
+          {durMin >= 90 ? (
+            <Pressable onPress={convertNap} style={({ pressed }) => [styles.convertButton, pressed && styles.pressed]}>
+              <Ionicons name="moon" size={18} color="#000" />
+              <Text style={styles.convertButtonText}>Convert to main sleep</Text>
+            </Pressable>
+          ) : null}
         </>
       ) : (
         <>
@@ -354,4 +377,7 @@ const styles = StyleSheet.create({
   qualityBadgeText: { color: '#000', fontSize: 10, fontFamily: fonts.black },
   qualityTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.textBold },
   qualityBody: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 3, fontFamily: fonts.text },
+  convertButton: { minHeight: 46, borderRadius: 8, backgroundColor: colors.sleepTeal, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 14, marginBottom: 12 },
+  convertButtonText: { color: '#000', fontSize: 14, fontFamily: fonts.textBold },
+  pressed: { opacity: 0.7 },
 });

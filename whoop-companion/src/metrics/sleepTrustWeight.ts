@@ -6,6 +6,7 @@ export type SleepTrustSource = {
   confidence?: 'high' | 'medium' | 'low' | null;
   coveragePct?: number | null;
   signalMin?: number | null;
+  inBedMin?: number | null;
 };
 
 export const SLEEP_TRUST_LOW_COVERAGE_PCT = 60;
@@ -17,8 +18,15 @@ export function sleepTrustTier(source: SleepTrustSource | null | undefined): Sle
   if (!source) return 'none';
   const coveragePct = source.coveragePct ?? 100;
   const signalMin = source.signalMin ?? 999;
-  if (source.confidence === 'low' || coveragePct < SLEEP_TRUST_LOW_COVERAGE_PCT || signalMin < SLEEP_TRUST_LOW_SIGNAL_MIN) return 'low';
-  if (source.confidence === 'medium' || coveragePct < SLEEP_TRUST_MEDIUM_COVERAGE_PCT || signalMin < SLEEP_TRUST_MEDIUM_SIGNAL_MIN) return 'medium';
+  const inBedMin = source.inBedMin ?? 0;
+  const lowSignalMin = inBedMin > 0
+    ? Math.min(SLEEP_TRUST_LOW_SIGNAL_MIN, Math.max(60, Math.ceil(inBedMin * 0.5)))
+    : SLEEP_TRUST_LOW_SIGNAL_MIN;
+  const mediumSignalMin = inBedMin > 0
+    ? Math.min(SLEEP_TRUST_MEDIUM_SIGNAL_MIN, Math.max(90, Math.ceil(inBedMin * 0.7)))
+    : SLEEP_TRUST_MEDIUM_SIGNAL_MIN;
+  if (source.confidence === 'low' || coveragePct < SLEEP_TRUST_LOW_COVERAGE_PCT || signalMin < lowSignalMin) return 'low';
+  if (source.confidence === 'medium' || coveragePct < SLEEP_TRUST_MEDIUM_COVERAGE_PCT || signalMin < mediumSignalMin) return 'medium';
   return 'high';
 }
 

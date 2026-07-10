@@ -308,7 +308,7 @@ const LAST_DEVICE_ID_KEY = 'lastWhoopDeviceId';
 const STEP_DIVISOR_KEY = 'whoopStepTicksPerStep';
 const STEP_DIVISOR_MIGRATION_KEY = 'whoopStepDivisorCaptureDefaultV2';
 const K21_MOTION_BACKFILL_KEY = 'whoopK21MotionBackfillV1';
-const SLEEP_EVIDENCE_RECOMPUTE_KEY = 'sleepEvidenceRecomputeV4';
+const SLEEP_EVIDENCE_RECOMPUTE_KEY = 'sleepEvidenceRecomputeV5';
 const STRAP_ALARM_KEY = 'strapAlarm';
 
 function bandStepsAreTrusted(estimate: BandStepEstimate | null | undefined, divisor: number): boolean {
@@ -1835,6 +1835,18 @@ class AppStore extends Store<AppState> {
     await this.recomputeToday();
   };
 
+  convertNapToSleep = async (id: string): Promise<void> => {
+    const nap = this.getState().cardio.find((row) => row.id === id && row.source === 'nap');
+    if (!nap) throw new Error('Nap is no longer available.');
+    const wakeDay = dayKey(nap.endTs);
+    // Remove nap credit before scoring the same interval as main sleep. Doing
+    // both operations before one recompute avoids a transient double count.
+    await deleteCardio(nap.id);
+    await kvSet(`manualSleep:${wakeDay}`, JSON.stringify({ startTs: nap.startTs, endTs: nap.endTs }));
+    this.setState({ cardio: await listCardio(CARDIO_RECENT_LIMIT) });
+    await this.recomputeDay(wakeDay);
+  };
+
   // ---- manual / adjusted sleep window ----
   setManualSleep = async (startTs: number, endTs: number, day = dayKey(Date.now())): Promise<void> => {
     await kvSet(`manualSleep:${day}`, JSON.stringify({ startTs, endTs }));
@@ -2852,6 +2864,15 @@ function sleepCoveragePct(sleep: SleepResult): number {
   return Math.round((sleep.signalMin / Math.max(1, sleep.inBedMin)) * 100);
 }
 
+function durationAwareSignalMin(
+  inBedMin: number,
+  maximum: number,
+  minimum: number,
+  coverageRatio: number,
+): number {
+  return Math.min(maximum, Math.max(minimum, Math.ceil(inBedMin * coverageRatio)));
+}
+
 function boundedSleepCoveragePct(sleep: SleepResult): number {
   return Math.max(0, Math.min(100, sleepCoveragePct(sleep)));
 }
@@ -2958,7 +2979,7 @@ function sleepStagesAreTrusted(
   return (
     confidence === 'high' &&
     coveragePct >= 85 &&
-    sleep.signalMin >= 300 &&
+    sleep.signalMin >= durationAwareSignalMin(sleep.inBedMin, 300, 90, 0.75) &&
     sleep.hrvMin >= 45 &&
     sleepHasCorroboration(sleep)
   );
@@ -2967,14 +2988,15 @@ function sleepStagesAreTrusted(
 function sleepIsReliable(sleep: SleepResult | null, manual: boolean): sleep is SleepResult {
   if (!sleep) return false;
   if (sleepStateWakeConflict(sleep)) return false;
-  if (manual) return sleep.signalMin >= MIN_SLEEP_SCORE_SIGNAL_MIN && sleepCoveragePct(sleep) >= MIN_SLEEP_SCORE_COVERAGE_PCT;
+  const requiredSignalMin = durationAwareSignalMin(sleep.inBedMin, MIN_SLEEP_SCORE_SIGNAL_MIN, 90, 0.7);
+  if (manual) return sleep.signalMin >= requiredSignalMin && sleepCoveragePct(sleep) >= MIN_SLEEP_SCORE_COVERAGE_PCT;
   if (!sleepHasCorroboration(sleep)) return false;
   if (longAutoSleepNeedsCorroboration(sleep, manual)) return false;
   if (sleep.motionMin >= Math.max(30, sleep.inBedMin * 0.15)) {
     const stillPct = Math.round((sleep.stillMin / Math.max(1, sleep.inBedMin)) * 100);
     if (stillPct < 10 && sleep.movingMin > sleep.stillMin) return false;
   }
-  return sleep.signalMin >= MIN_SLEEP_SCORE_SIGNAL_MIN && sleepCoveragePct(sleep) >= MIN_SLEEP_SCORE_COVERAGE_PCT;
+  return sleep.signalMin >= requiredSignalMin && sleepCoveragePct(sleep) >= MIN_SLEEP_SCORE_COVERAGE_PCT;
 }
 
 function sleepConfidence(
@@ -2987,10 +3009,13 @@ function sleepConfidence(
   const corroborated = sleepHasCorroboration(evidence);
   const stateConflict = sleepStateWakeConflict(evidence);
   const longUncorroboratedAuto = longAutoSleepNeedsCorroboration(evidence, manual);
+  const inBedMin = evidence?.inBedMin ?? 0;
+  const highSignalMin = inBedMin > 0 ? durationAwareSignalMin(inBedMin, 300, 90, 0.75) : 300;
+  const mediumSignalMin = inBedMin > 0 ? durationAwareSignalMin(inBedMin, SLEEP_TRUST_LOW_SIGNAL_MIN, 60, 0.5) : SLEEP_TRUST_LOW_SIGNAL_MIN;
   if (!manual && stateConflict && (coveragePct < 90 || signalMin < 420)) return 'low';
-  if (signalMin >= 300 && coveragePct >= 85 && (manual || corroborated)) return 'high';
+  if (signalMin >= highSignalMin && coveragePct >= 85 && (manual || corroborated)) return 'high';
   if (longUncorroboratedAuto) return 'low';
-  if (signalMin >= SLEEP_TRUST_LOW_SIGNAL_MIN && coveragePct >= SLEEP_TRUST_LOW_COVERAGE_PCT) return 'medium';
+  if (signalMin >= mediumSignalMin && coveragePct >= SLEEP_TRUST_LOW_COVERAGE_PCT) return 'medium';
   return 'low';
 }
 
@@ -3106,7 +3131,8 @@ function sleepCaptureEvidenceAsSleepEvidence(evidence: SleepCaptureEvidence): Sl
 function computeOvernightVitals(samples: HrSampleRow[], sleep: SleepResult | null): OvernightVitals {
   if (!sleep) return { rmssd: null, rhr: null, resp: null };
   const coveragePct = sleepCoveragePct(sleep);
-  if (sleep.signalMin < MIN_VITAL_SIGNAL_MIN || coveragePct < MIN_VITAL_COVERAGE_PCT) {
+  const requiredSignalMin = durationAwareSignalMin(sleep.inBedMin, MIN_VITAL_SIGNAL_MIN, 120, 0.7);
+  if (sleep.signalMin < requiredSignalMin || coveragePct < MIN_VITAL_COVERAGE_PCT) {
     return { rmssd: null, rhr: null, resp: null };
   }
 
@@ -3348,6 +3374,9 @@ function sleepCaptureNote(input: {
   evidence?: SleepEvidence | null;
 }): string {
   const confidence = sleepConfidence(input.signalMin, input.coveragePct, input.manual, input.evidence);
+  const vitalSignalMin = input.evidence?.inBedMin
+    ? durationAwareSignalMin(input.evidence.inBedMin, MIN_VITAL_SIGNAL_MIN, 120, 0.7)
+    : MIN_VITAL_SIGNAL_MIN;
   if (input.hasSleep && sleepStateWakeConflict(input.evidence) && !input.manual) {
     return 'Sleep is capped because decoded strap-state evidence is mostly wake; review the window after auto sync finishes.';
   }
@@ -3372,7 +3401,7 @@ function sleepCaptureNote(input: {
   if (!input.hasSleep && input.hasCandidate) {
     return 'Partial overnight sync found a possible sleep window, but coverage is too sparse to score sleep accurately yet.';
   }
-  if (input.hasSleep && (input.signalMin < MIN_VITAL_SIGNAL_MIN || input.coveragePct < MIN_VITAL_COVERAGE_PCT)) {
+  if (input.hasSleep && (input.signalMin < vitalSignalMin || input.coveragePct < MIN_VITAL_COVERAGE_PCT)) {
     return 'Partial history only; not enough synced overnight coverage to score vitals or recovery yet.';
   }
   if (input.hasSleep && input.signalMin >= 30) {
