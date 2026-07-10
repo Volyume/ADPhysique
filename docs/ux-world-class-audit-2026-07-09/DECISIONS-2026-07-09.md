@@ -651,3 +651,19 @@ may be re-dispatched from the old pass4 blueprints.
 STANDING RULE (restated): nothing from a pre-campaign audit is built
 from its old blueprint; triage against today's tree + this register
 first; superseded items are closed here, not resurrected.
+
+## D38 — Jobs must elevate the CURRENT app, never run off a list (founder, 2026-07-10)
+Founder's words, verbatim: "Ok ensure all jobs actually enhance what we
+have and are built by comparing what we have to the end solution and
+that they elevate the app form its current state. Not just because
+they're on a list at some stage."
+Effect, standing: before ANY job is dispatched, the brief must state
+(a) what the app does TODAY on that surface (verified against the
+tree, not a doc), (b) the end solution, and (c) why the delta elevates
+the app as it is now. A task being on a list, in an audit, or in an
+old queue is NEVER sufficient reason to build it. If the delta cannot
+be articulated or has been eroded by newer work, the item is closed or
+sent back to triage, not built. TASKBOARD.md carries this per line:
+every queued item states current state → end state → elevation
+rationale, and items that cannot are parked in a needs-justification
+section rather than queued.
