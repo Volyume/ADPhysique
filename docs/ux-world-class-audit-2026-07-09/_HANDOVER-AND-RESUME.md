@@ -1397,3 +1397,13 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   replaced with a UK staple of equivalent macros (macro changes flagged,
   not silent); allergen tags re-checked for any replaced item (R1 map
   stays complete via its completeness test). Sonnet, lead review.
+- FOUNDER ADDITION to the queued UK meals audit: the meals must also be
+  LEGITIMATE HEALTHY MEALS BODYBUILDERS EAT - credible physique-athlete
+  food (chicken/rice/broccoli class, lean mince, oats, eggs, Greek
+  yoghurt, salmon, tuna, cottage cheese...), sensible per-meal protein,
+  real training food; nothing token, faddish or implausible for a
+  lifter. Meals failing the bar get rewritten/replaced (macros kept
+  equivalent or improvements flagged, never silent; allergen tags
+  maintained via the R1 completeness test; diet-axis pool sizes must
+  still clear the no-repeat bar from dietary Phase B). Same audit, same
+  next slot.
