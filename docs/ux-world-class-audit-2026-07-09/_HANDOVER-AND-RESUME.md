@@ -1180,3 +1180,16 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   display): theming stage 1 + bottom-sheet adoption, then transitions +
   blurhash, then dynamic type. Every landing keeps the usual boundary
   (lead review, tests, commit, push, stage-log).
+- BEST-IN-CLASS DEPENDENCY MAP given to founder in chat (2026-07-10,
+  AWAITING founder picks - do not build until named): (1) react-native-
+  keyboard-controller (keyboard feel on every input moment); (2) zeego
+  (native long-press context menus); (3) react-native-awesome-gallery or
+  Reanimated hand-roll (progress-photo viewing/compare); (4) Rive for
+  onboarding/empty-state motion (needs founder-side animation assets);
+  (5) brand variable font via expo-font (founder taste call). NO-DEP
+  enhancements recommended: SQLite FTS5 instant search (foods/exercises/
+  history), chart scrub haptics via the new pattern API, Android themed
+  icon/edge-to-edge/splash polish. Deliberately NOT recommended: chart
+  lib swap, state/forms/list/toast libs (ours are strong); held/rejected
+  register untouched. Lead recommendation: keyboard-controller + zeego +
+  gallery + FTS5 join the design campaign after the D24 five.
