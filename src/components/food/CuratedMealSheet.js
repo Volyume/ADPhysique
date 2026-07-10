@@ -5,7 +5,8 @@ import BottomSheet from '../BottomSheet';
 import SectionLabel from '../SectionLabel';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import { CURATED_MEALS, mealItems } from '../../lib/food/curatedMeals';
-import { getMealAdditions, ADDITIONS_INTRO, ADDITIONS_FOOTNOTE } from '../../lib/food/mealAdditions';
+import { getMealAdditions, filterAdditionsForProfile, ADDITIONS_INTRO, ADDITIONS_FOOTNOTE } from '../../lib/food/mealAdditions';
+import useAppStore from '../../store/useAppStore';
 
 /**
  * CuratedMealSheet, "visit" a suggested curated meal before logging it
@@ -31,7 +32,11 @@ export default function CuratedMealSheet({
   // set if the meal isn't explicitly authored.
   const def = meal ? CURATED_MEALS.find((x) => x.id === meal.id) : null;
   const items = def ? mealItems(def) : [];
-  const additions = getMealAdditions(def || meal);
+  // R1 safety fix (2026-07-10): additions carrying an FSA allergen the user
+  // excluded in Settings > Dietary needs are silently omitted. Read from the
+  // store here (not a prop) so no caller of this sheet can forget to filter.
+  const userProfile = useAppStore((s) => s.userProfile);
+  const additions = filterAdditionsForProfile(getMealAdditions(def || meal), userProfile);
   const macros = meal?.macros || null;
 
   return (
@@ -61,20 +66,25 @@ export default function CuratedMealSheet({
               </View>
             ) : null}
 
-            <View style={styles.section}>
-              <View style={styles.addHead}>
-                <Ionicons name="leaf-outline" size={15} color={colors.primary} />
-                <SectionLabel>Optional extras</SectionLabel>
-              </View>
-              <Text style={styles.intro}>{ADDITIONS_INTRO}</Text>
-              {additions.map((a) => (
-                <View key={a.name} style={styles.addRow}>
-                  <Text style={styles.addName}>{a.name}</Text>
-                  <Text style={styles.addWhy}>{a.why}</Text>
+            {/* When every addition is filtered out by the user's allergen
+                excludes, the whole block renders nothing, no "hidden because"
+                copy (the user asked never to see that allergen). */}
+            {additions.length ? (
+              <View style={styles.section}>
+                <View style={styles.addHead}>
+                  <Ionicons name="leaf-outline" size={15} color={colors.primary} />
+                  <SectionLabel>Optional extras</SectionLabel>
                 </View>
-              ))}
-              <Text style={styles.footnote}>{ADDITIONS_FOOTNOTE}</Text>
-            </View>
+                <Text style={styles.intro}>{ADDITIONS_INTRO}</Text>
+                {additions.map((a) => (
+                  <View key={a.name} style={styles.addRow}>
+                    <Text style={styles.addName}>{a.name}</Text>
+                    <Text style={styles.addWhy}>{a.why}</Text>
+                  </View>
+                ))}
+                <Text style={styles.footnote}>{ADDITIONS_FOOTNOTE}</Text>
+              </View>
+            ) : null}
           </ScrollView>
 
           <View style={styles.actions}>

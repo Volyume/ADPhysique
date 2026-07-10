@@ -69,7 +69,7 @@ import { buildMealSlots, highestLoggedMeal, inferMealSlotForHour, mealSlotLabel,
 import { scaleMacros } from '../lib/food/macros';
 import { deriveDiaryDayViewModel } from '../lib/food/diaryViewModel';
 import { buildDiaryTimeline } from '../lib/food/diaryTimeline';
-import { getMealAdditionsForEntries } from '../lib/food/mealAdditions';
+import { getMealAdditionsForEntries, filterAdditionsForProfile } from '../lib/food/mealAdditions';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import { parseLocalDay } from '../lib/dayKey';
 
@@ -90,7 +90,9 @@ function isValidDayKey(value) {
 
 export default function DiaryScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const { user, macroCycle, refeed, calorieBank, sex, energyUnit, tier } = useAppStore(useShallow((s) => ({
+  const {
+    user, macroCycle, refeed, calorieBank, sex, energyUnit, tier, mealPlanExcludeTags,
+  } = useAppStore(useShallow((s) => ({
     user: s.user,
     macroCycle: s.userProfile?.macroCycle ?? null,
     refeed: s.userProfile?.refeed ?? null,
@@ -98,6 +100,9 @@ export default function DiaryScreen({ navigation, route }) {
     sex: s.userProfile?.sex ?? null,
     energyUnit: s.accessibility?.energyUnit ?? 'kcal',
     tier: s.tier,
+    // R1 safety fix (2026-07-10): the FSA allergen excludes, so the
+    // season-to-taste row can drop additions the user must never be shown.
+    mealPlanExcludeTags: s.userProfile?.mealPlanExcludeTags ?? null,
   })));
   const setCalorieBank = useAppStore((s) => s.setCalorieBank);
   const saveLocalProfile = useAppStore((s) => s.saveLocalProfile);
@@ -816,11 +821,14 @@ export default function DiaryScreen({ navigation, route }) {
     for (const slot of mealSlots) {
       const es = entriesBySlot[slot.key];
       if (!es || !es.length) continue;
-      const adds = getMealAdditionsForEntries(es);
-      if (adds) out[slot.key] = adds;
+      // R1 safety fix (2026-07-10): additions carrying an FSA allergen the
+      // user excluded are silently omitted; when every addition for a meal
+      // is filtered out, the row does not render at all.
+      const adds = filterAdditionsForProfile(getMealAdditionsForEntries(es), { mealPlanExcludeTags });
+      if (adds.length) out[slot.key] = adds;
     }
     return out;
-  }, [mealSlots, entriesBySlot, selectionMode]);
+  }, [mealSlots, entriesBySlot, selectionMode, mealPlanExcludeTags]);
 
   // Hostile review (E10 #1): the write SURFACES render on their own state, so
   // one already open when the tier flips pro-to-free would stay live for a

@@ -19,6 +19,17 @@
  *
  * Shape: keyed by curated meal id -> [{ name, why }]. A generic fallback covers
  * any meal not explicitly listed (and any future meal) so the sheet never blanks.
+ *
+ * FSA allergen tags (R1 safety fix, 2026-07-10): additions are tagged with the
+ * SAME FSA-14 vocabulary the curated foods use (foodRoles.js ALLERGENS), keyed
+ * by addition NAME in ADDITION_TAGS below, and every list this module returns
+ * carries `tags` on each item. Every render site must pass what it shows
+ * through filterAdditionsForProfile, so a user who has excluded an allergen in
+ * Settings > Dietary needs is never shown it as a suggested extra on a meal
+ * that was itself correctly filtered. Tagging is conservative: a composite
+ * item (jarred sauce, vinegar, spice blend) carries every plausible FSA
+ * allergen for its common UK form, because over-tagging only hides a
+ * suggestion while under-tagging exposes an allergic user.
  */
 
 import { CURATED_MEALS } from './curatedMeals';
@@ -597,21 +608,144 @@ const MEAL_ADDITIONS = {
   ],
 };
 
+// ─── FSA allergen tags per addition NAME (R1 safety fix, 2026-07-10) ─────
+// One entry per distinct addition name, using foodRoles.js's FSA-14 tag
+// vocabulary (celery, cereals_gluten, crustaceans, eggs, fish, lupin, milk,
+// molluscs, mustard, nuts, peanuts, sesame, soya, sulphites). Keying by NAME
+// (not per-meal entry) means the same item can never be tagged in one meal
+// and untagged in another. EVERY name must have an explicit entry, an
+// allergen-free item carries an explicit [] so the completeness test (and
+// the fail-safe filter below) can tell "audited as clean" apart from
+// "never audited". Tagging judgements are conservative for the common UK
+// form of each item; each non-empty entry says why.
+export const ADDITION_TAGS = Object.freeze({
+  // Allergen-bearing (the audit's reasoning, per item):
+  // Brewed soy sauce is soya beans + wheat (tamari is the exception, not the rule).
+  'A splash of soy sauce': ['soya', 'cereals_gluten'],
+  // Mustard in any form (condiment or flour) is the FSA mustard allergen.
+  'Mustard': ['mustard'],
+  'Mustard powder': ['mustard'],
+  // "Vinegar" on a UK tuna jacket is most often barley malt vinegar (a named
+  // gluten cereal); wine and cider vinegars commonly carry sulphites.
+  'A splash of vinegar': ['cereals_gluten', 'sulphites'],
+  // Balsamic vinegar is wine-based and almost always declares sulphites.
+  'A splash of balsamic': ['sulphites'],
+  // Many UK chilli/hot sauces are vinegar-based and declare sulphites;
+  // precautionary because brands vary and none is named here.
+  'A dash of hot sauce': ['sulphites'],
+  // Capers are sold pickled in vinegar/brine; sulphites are common in
+  // pickled goods, so tagged precautionarily.
+  'Capers': ['sulphites'],
+  // In UK reality this is jarred horseradish/creamed horseradish sauce:
+  // commonly cream (milk) and mustard flour, in a sulphited vinegar base.
+  // Fresh root alone would be clean, but the jar is what gets reached for.
+  'Horseradish': ['milk', 'mustard', 'sulphites'],
+  // Kala namak is a sulphurous salt (its eggy taste IS its sulphur
+  // compounds); tagged precautionarily for sulphite-sensitive users.
+  'Kala namak (black salt)': ['sulphites'],
+  // UK curry powder blends commonly include mustard seed/flour.
+  'Curry powder & turmeric': ['mustard'],
+
+  // Audited allergen-free (herbs, spices, aromatics, citrus, zero-cal
+  // flavourings; none is or commonly contains an FSA-14 allergen):
+  'A little sweetener': [],
+  'Black pepper': [],
+  'Black pepper & chilli': [],
+  'Black pepper & chives': [],
+  'Black pepper & dill': [],
+  'Black pepper & garlic': [],
+  'Black pepper & parsley': [],
+  'Black pepper & spring onion': [],
+  'Chilli': [],
+  'Chilli & spring onion': [],
+  'Chilli flakes': [],
+  'Chilli powder': [],
+  'Chinese five-spice': [],
+  'Chives': [],
+  'Cinnamon': [],
+  'Cocoa powder': [],
+  'Coriander & lime': [],
+  'Cumin': [],
+  'Cumin & smoked paprika': [],
+  'Dill & lemon': [],
+  'Dried oregano': [],
+  'Fresh basil': [],
+  'Fresh coriander': [],
+  'Fresh coriander & chilli': [],
+  'Fresh coriander & lemon': [],
+  'Fresh dill': [],
+  'Fresh ginger & garlic': [],
+  'Fresh herbs': [],
+  'Fresh mint': [],
+  'Fresh thyme': [],
+  'Garam masala & turmeric': [],
+  'Garlic': [],
+  'Garlic & basil': [],
+  'Garlic & black pepper': [],
+  'Garlic & chilli': [],
+  'Garlic & dried oregano': [],
+  'Garlic & ginger': [],
+  'Garlic & mixed herbs': [],
+  'Garlic & oregano': [],
+  'Garlic & paprika': [],
+  'Garlic & rosemary': [],
+  'Ginger & garlic': [],
+  'Lemon': [],
+  'Lemon & garlic': [],
+  'Lemon & parsley': [],
+  'Lemon or lime': [],
+  'Lemon zest': [],
+  'Lime': [],
+  'Lime & coriander': [],
+  'Lime & spring onion': [],
+  'Lime zest': [],
+  'Nutmeg': [],
+  'Nutritional yeast': [],
+  'Paprika': [],
+  'Paprika & cumin': [],
+  'Paprika or chilli flakes': [],
+  'Paprika or cumin': [],
+  'Rosemary': [],
+  'Rosemary & garlic': [],
+  'Rosemary or thyme': [],
+  'Saffron or turmeric': [],
+  'Sea salt flakes & chilli': [],
+  'Smoked paprika': [],
+  'Smoked paprika & cumin': [],
+  'Spring onion': [],
+  'Sugar-free syrup': [],
+  'Turmeric': [],
+  'Vanilla extract': [],
+});
+
+// Attach tags to every authored entry. A name MISSING from ADDITION_TAGS gets
+// no `tags` field at all: the completeness test fails on it, and until that is
+// fixed the fail-safe filter below treats it as potentially allergen-bearing
+// (hidden for any user with an allergen exclude), never as clean.
+const withTags = (a) => (Object.prototype.hasOwnProperty.call(ADDITION_TAGS, a.name)
+  ? { ...a, tags: ADDITION_TAGS[a.name] }
+  : { ...a });
+
+for (const id of Object.keys(MEAL_ADDITIONS)) {
+  MEAL_ADDITIONS[id] = Object.freeze(MEAL_ADDITIONS[id].map(withTags));
+}
+Object.freeze(MEAL_ADDITIONS);
+
 // Generic fallback: savoury vs sweet, chosen by a light heuristic on the meal
 // name so any meal not explicitly authored (or any future meal) still teaches a
 // few safe, free additions rather than showing nothing.
-const SWEET_FALLBACK = [
+const SWEET_FALLBACK = Object.freeze([
   { name: 'Cinnamon', why: 'Sweet flavour with no sugar.' },
   { name: 'Vanilla extract', why: 'A warm, dessert-like aroma.' },
   { name: 'Cocoa powder', why: 'A chocolate twist, no sugar.' },
   { name: 'A little sweetener', why: 'Extra sweetness, no sugar.' },
-];
-const SAVOURY_FALLBACK = [
+].map(withTags));
+const SAVOURY_FALLBACK = Object.freeze([
   { name: 'Black pepper & garlic', why: 'Savoury depth for almost any meal.' },
   { name: 'Paprika or chilli flakes', why: 'Warmth and a little heat.' },
   { name: 'Fresh herbs', why: 'A fresh lift over the top.' },
   { name: 'Lemon or lime', why: 'A squeeze brightens the plate.' },
-];
+].map(withTags));
 
 const SWEET_HINT = /(oat|porridge|pancake|yogurt|skyr|shake|berr|banana|granola)/i;
 
@@ -652,6 +786,34 @@ export function getMealAdditionsForEntries(entries) {
   }
   if (!best || bestScore < 0.6) return null;
   return getMealAdditions(best);
+}
+
+/**
+ * THE one allergen filter for additions (R1 safety fix, 2026-07-10). Every
+ * surface that renders addition items, the curated meal sheet, the diary's
+ * season-to-taste row, the meal plan's per-meal lists, must pass its list
+ * through here with the user's profile, so an addition carrying an allergen
+ * the user excluded in Settings > Dietary needs is silently OMITTED (no
+ * "hidden because" copy: the user asked never to see that allergen).
+ *
+ * Rules, deliberately narrow:
+ *  - Filters by the profile's FSA allergen excludes (mealPlanExcludeTags)
+ *    ONLY. Taste exclusions (mealPlanExcludeFoods) govern meals, not these
+ *    seasoning-scale extras, and are never consulted here.
+ *  - FAIL SAFE: with any allergen excluded, an addition WITHOUT an explicit
+ *    tags array is treated as potentially allergen-bearing and hidden. Only
+ *    an explicit empty-tag entry (audited clean) is shown.
+ *  - With no allergen excludes there is nothing to protect: the list passes
+ *    through unchanged.
+ *
+ * Pure. Returns an array (possibly empty); callers render nothing when it is
+ * empty. Accepts null/undefined additions (returns []).
+ */
+export function filterAdditionsForProfile(additions, profile) {
+  const list = Array.isArray(additions) ? additions : [];
+  const excludes = Array.isArray(profile?.mealPlanExcludeTags) ? profile.mealPlanExcludeTags : [];
+  if (excludes.length === 0) return list;
+  return list.filter((a) => Array.isArray(a?.tags) && !a.tags.some((t) => excludes.includes(t)));
 }
 
 export { MEAL_ADDITIONS };

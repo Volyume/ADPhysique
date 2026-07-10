@@ -48,7 +48,7 @@ import {
 import { updateMealPlan, getFoodEntriesForDay, clearPlannedDay } from '../lib/food/db';
 import { defaultWeightStateFor } from '../lib/food/foodRoles';
 import { buildGroceryList, formatGroceryListForShare } from '../lib/food/groceryList';
-import { getMealAdditions, ADDITIONS_INTRO } from '../lib/food/mealAdditions';
+import { getMealAdditions, filterAdditionsForProfile, ADDITIONS_INTRO } from '../lib/food/mealAdditions';
 import { formatNumber, formatEnergy, energyUnitLabel } from '../lib/format';
 import { logError } from '../lib/errorLog';
 
@@ -1018,9 +1018,15 @@ export default function MealPlanScreen({ navigation, route }) {
                     </Text>
                     {/* Season to taste: the free additions that suit this meal
                         (e.g. saffron on chicken & rice). Maps by the meal's
-                        curated id; falls back to generic savoury/sweet. */}
+                        curated id; falls back to generic savoury/sweet.
+                        R1 safety fix (2026-07-10): additions carrying an FSA
+                        allergen the user excluded are silently omitted; if
+                        that empties the list, the block renders nothing. */}
                     {(() => {
-                      const adds = getMealAdditions({ id: slot.mealId, name: slot.name });
+                      const adds = filterAdditionsForProfile(
+                        getMealAdditions({ id: slot.mealId, name: slot.name }),
+                        userProfile,
+                      );
                       if (!adds || !adds.length) return null;
                       return (
                         <View style={styles.seasonWrap}>
