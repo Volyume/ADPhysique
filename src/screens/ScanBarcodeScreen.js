@@ -19,7 +19,24 @@
  *   - Pauses the camera while the app is backgrounded or the screen
  *     is unfocused. Saves battery and avoids holding the camera
  *     resource captive when the user navigates away.
- *   - Torch toggle in the header.
+ *   - Torch toggle in the header (haptics.selection() on toggle, item 16
+ *     / D26).
+ *
+ * Item 16 / D26 (2026-07-10, MLKit code-scanner): `codeScanner` above is
+ * already vision-camera's built-in MLKit-backed detector, not a
+ * placeholder. app.json's react-native-vision-camera plugin sets
+ * `enableCodeScanner: true`, which (per
+ * node_modules/react-native-vision-camera's expo-plugin/
+ * withAndroidMLKitVisionModel.ts) sets the Android Gradle property
+ * `VisionCamera_enableCodeScanner=true` and bundles the full Google
+ * ML Kit barcode-scanning dependency; `useCodeScanner` below runs on
+ * that native MLKit pipeline on Android (Apple's Vision framework on
+ * iOS). There is no separate "dedicated frame processor" to add: a
+ * custom vision-camera frame-processor plugin would be a strictly
+ * slower, more battery-hungry duplicate of the native path already
+ * wired here. Item 16's real (small) delta was the torch haptic above;
+ * see ScanBarcodeScreen.test.js's "item 16 / D26" describe block for
+ * what's pinned.
  *
  * Voice rules from CLAUDE.md: short sentences, no AI tells, no
  * encouragement.
@@ -37,7 +54,7 @@ import {
 } from 'react-native-vision-camera';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import NetInfo from '@react-native-community/netinfo';
-import { planReady as hapticScanSuccess } from '../lib/haptics';
+import { planReady as hapticScanSuccess, selection as hapticSelection } from '../lib/haptics';
 import { colors, fontSize, spacing, radius, type } from '../styles/theme';
 import { resolveBarcode } from '../lib/food/waterfall';
 import { logError, logInfo } from '../lib/errorLog';
@@ -62,6 +79,15 @@ export function isValidManualBarcode(value) {
 // is included for some UK weighed-deli labels. QR / DataMatrix
 // excluded: food products almost never use them and adding them
 // slows the detector.
+//
+// Item 16 / D26 (2026-07-10) considered narrowing this to the strict
+// retail set (ean-13/ean-8/upc-a/upc-e) since that's all the waterfall
+// needs. Left unchanged deliberately: code-128 is a marketed, documented
+// capability (marketing/FACT-BASE.md, marketing/parts/2-nutrition.md,
+// CURRENT-STATE-DOSSIER.md all list "Code-128" support for weighed-deli
+// labels), not an accidental leftover. Dropping it would be a silent
+// feature removal against a founder-facing marketing claim -- flagged in
+// the item 16 report instead of changed here.
 const CODE_TYPES = ['ean-13', 'ean-8', 'upc-a', 'upc-e', 'code-128'];
 
 export default function ScanBarcodeScreen({ navigation, route }) {
@@ -295,7 +321,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
         onClose={() => navigation.goBack()}
         rightAccessory={(
         <TouchableOpacity
-          onPress={() => setTorch(v => !v)}
+          onPress={() => { hapticSelection(); setTorch(v => !v); }}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityState={{ selected: torch }}

@@ -51,7 +51,7 @@ jest.mock('react-native-vision-camera', () => ({
   useCodeScanner: jest.fn((cfg) => { capturedScanner = cfg; return cfg; }),
 }));
 
-jest.mock('../../lib/haptics', () => ({ planReady: jest.fn() }));
+jest.mock('../../lib/haptics', () => ({ planReady: jest.fn(), selection: jest.fn() }));
 jest.mock('../../lib/observability', () => ({ audit: jest.fn() }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn(), logInfo: jest.fn() }));
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: mockToastShow }) }));
@@ -59,6 +59,7 @@ jest.mock('../../lib/food/waterfall', () => ({ resolveBarcode: jest.fn() }));
 
 import useAppStore from '../../store/useAppStore';
 import { resolveBarcode } from '../../lib/food/waterfall';
+import { selection as hapticSelection } from '../../lib/haptics';
 import ScanBarcodeScreen from '../ScanBarcodeScreen';
 
 const store = { user: { id: 'u1' } };
@@ -249,5 +250,101 @@ describe('ScanBarcodeScreen manual barcode-number entry (L05-SB2)', () => {
     expect(resolveBarcode).not.toHaveBeenCalled();
     expect(nav.replace).not.toHaveBeenCalled();
     expect(JSON.stringify(tree.toJSON())).toContain('8 to 14 digits');
+  });
+});
+
+// Item 16 / D26 (2026-07-10, MLKit code-scanner pass): `codeScanner` fed to
+// vision-camera's `useCodeScanner` is already the native MLKit-backed
+// detector on Android (app.json's `enableCodeScanner: true` bundles the
+// Google ML Kit barcode dependency -- see the ScanBarcodeScreen.js header
+// comment). These tests pin what item 16 actually needed pinning: the
+// symbology set is unchanged (code-128 stays -- it's a marketed capability,
+// not an oversight), the existing scan-lock still swallows a second
+// detection while the first is resolving, the camera still pauses while the
+// manual-entry sheet is open, and the torch toggle now carries the app's
+// haptics.selection() vocabulary and only that surface does.
+describe('ScanBarcodeScreen item 16 / D26 (MLKit scanner pass)', () => {
+  test('codeTypes is the retail set plus code-128 for weighed-deli labels, unchanged by item 16', async () => {
+    await mount(makeNav());
+
+    expect(capturedScanner.codeTypes).toEqual(['ean-13', 'ean-8', 'upc-a', 'upc-e', 'code-128']);
+  });
+
+  test('a second code detected while the first is still resolving does not trigger a second lookup', async () => {
+    let resolveLookup;
+    resolveBarcode.mockReturnValue(new Promise((res) => { resolveLookup = res; }));
+    const nav = makeNav();
+    await mount(nav);
+
+    await act(async () => {
+      capturedScanner.onCodeScanned([{ value: '5000112637922', type: 'ean-13' }]);
+    });
+    // A second frame detection arrives before the first lookup settles
+    // (the same code re-read, or a different code drifting into frame) --
+    // the scan lock must swallow it, not start a second lookup.
+    await act(async () => {
+      capturedScanner.onCodeScanned([{ value: '9999999999999', type: 'ean-13' }]);
+    });
+
+    expect(resolveBarcode).toHaveBeenCalledTimes(1);
+    expect(resolveBarcode).toHaveBeenCalledWith('5000112637922', 'u1');
+
+    await act(async () => { resolveLookup({ food_ref: 'off:1', source: 'off', name: 'X' }); });
+    await flush();
+
+    expect(nav.replace).toHaveBeenCalledTimes(1);
+    expect(nav.replace).toHaveBeenCalledWith('FoodSearch', expect.objectContaining({
+      scannedFood: expect.objectContaining({ food_ref: 'off:1' }),
+    }));
+  });
+
+  test('the camera pauses (isActive false) while the manual-entry sheet is open, so nothing can scan underneath it', async () => {
+    const tree = await mount(makeNav());
+
+    const cameraBefore = tree.root.findAll((n) => n.props.codeScanner !== undefined)[0];
+    expect(cameraBefore.props.isActive).toBe(true);
+
+    const link = tree.root.findAll((n) => n.props.accessibilityRole === 'button'
+      && n.props.accessibilityLabel === 'Enter barcode number'
+      && typeof n.props.onPress === 'function')[0];
+    act(() => { link.props.onPress(); });
+
+    const cameraAfter = tree.root.findAll((n) => n.props.codeScanner !== undefined)[0];
+    expect(cameraAfter.props.isActive).toBe(false);
+  });
+
+  test('the torch toggle exists and fires haptics.selection() on press, nothing else does on mount', async () => {
+    const tree = await mount(makeNav());
+
+    expect(hapticSelection).not.toHaveBeenCalled();
+
+    const torch = tree.root.findAll((n) => n.props.accessibilityRole === 'button'
+      && (n.props.accessibilityLabel === 'Torch off' || n.props.accessibilityLabel === 'Torch on')
+      && typeof n.props.onPress === 'function')[0];
+    expect(torch).toBeTruthy();
+
+    act(() => { torch.props.onPress(); });
+
+    expect(hapticSelection).toHaveBeenCalledTimes(1);
+  });
+
+  test('haptics.selection() does not fire on a scan hit or a scan miss', async () => {
+    resolveBarcode.mockResolvedValue(null);
+    await mount(makeNav());
+
+    await scan('9999999999999');
+
+    expect(hapticSelection).not.toHaveBeenCalled();
+  });
+
+  test('haptics.selection() does not fire when opening the manual-entry sheet', async () => {
+    const tree = await mount(makeNav());
+
+    const link = tree.root.findAll((n) => n.props.accessibilityRole === 'button'
+      && n.props.accessibilityLabel === 'Enter barcode number'
+      && typeof n.props.onPress === 'function')[0];
+    act(() => { link.props.onPress(); });
+
+    expect(hapticSelection).not.toHaveBeenCalled();
   });
 });
