@@ -122,8 +122,8 @@ export function StrainScreen({ nav }: { nav: Nav }) {
         <MetricRow label="Heart rate zones 4–5" display={hm(z45)} current={z45} prior={null} />
         <MetricRow label="Strength activity time" display={hm(strengthMin)} current={strengthMin} prior={null} />
         <MetricRow
-          label={stepSource === 'phone' ? 'Steps (phone)' : stepSource === 'band' ? 'Steps (band calibrated)' : 'Steps'}
-          display={steps != null ? steps.toLocaleString() : 'Needs motion permission'}
+          label={stepSource === 'band' ? 'Steps (WHOOP)' : 'Steps'}
+          display={steps != null ? steps.toLocaleString() : 'Awaiting WHOOP sync'}
           current={steps}
           prior={null}
         />

@@ -7,10 +7,13 @@ export type BandStepCounterRow = {
 export type BandStepEstimate = {
   steps: number;
   rawTicks: number;
+  sampleCount: number;
   usedIntervals: number;
+  activeIntervals: number;
   droppedIntervals: number;
+  resetCount: number;
   calibrationDivisor: number;
-  confidence: 'low' | 'medium';
+  confidence: 'low' | 'medium' | 'high';
   firstTs: number;
   lastTs: number;
 };
@@ -42,6 +45,7 @@ export function estimateBandStepsFromCounters(
   let usedIntervals = 0;
   let droppedIntervals = 0;
   let activeIntervals = 0;
+  let resetCount = 0;
 
   for (let i = 1; i < sorted.length; i += 1) {
     const prev = sorted[i - 1];
@@ -57,6 +61,9 @@ export function estimateBandStepsFromCounters(
     let delta = cur.counter - prev.counter;
     if (delta < 0 && prev.counter > 60_000 && cur.counter < 5_000) {
       delta += 65_536;
+    } else if (delta < 0) {
+      resetCount += 1;
+      continue;
     }
     if (delta <= 0) continue;
 
@@ -75,16 +82,30 @@ export function estimateBandStepsFromCounters(
   }
 
   if (usedIntervals <= 0) return null;
+  const confidence =
+    activeIntervals >= 5 && usedIntervals >= 20 && resetCount <= 1
+      ? 'high'
+      : activeIntervals >= 1 && usedIntervals >= 2
+        ? 'medium'
+        : 'low';
   return {
     steps: Math.max(0, Math.round(rawTicks / calibrationDivisor)),
     rawTicks,
+    sampleCount: sorted.length,
     usedIntervals,
+    activeIntervals,
     droppedIntervals,
+    resetCount,
     calibrationDivisor,
-    confidence: activeIntervals > 0 ? 'medium' : 'low',
+    confidence,
     firstTs,
     lastTs,
   };
+}
+
+/** Only publish counters corroborated by the WHOOP's own movement class. */
+export function bandStepEstimateIsTrusted(estimate: BandStepEstimate | null | undefined): boolean {
+  return !!estimate && estimate.steps > 0 && estimate.usedIntervals >= 2 && estimate.confidence !== 'low';
 }
 
 export function estimateStepsFromBandCounters(

@@ -51,6 +51,7 @@ const DIRECT_CONNECT_TIMEOUT_MS = 9000;
 const DEVICE_CONNECT_TIMEOUT_MS = 12000;
 const DISCOVER_TIMEOUT_MS = 15000;
 const SCAN_TIMEOUT_MS = 30000;
+const COMMAND_WRITE_TIMEOUT_MS = 6000;
 
 export type WhoopStatus =
   | 'idle'
@@ -101,6 +102,8 @@ export class WhoopBle {
   private wantConnected = false; // user wants a connection → auto-reconnect on drop
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
+  private commandQueue: Promise<void> = Promise.resolve();
+  private commandEpoch = 0;
 
   constructor(events: WhoopEvents) {
     this.events = events;
@@ -194,6 +197,7 @@ export class WhoopBle {
         return;
       } catch {
         // Known-device reconnect failed; scan below so a changed OS BLE id still works.
+        await this.abandonCurrentConnection();
       }
     }
 
@@ -246,11 +250,7 @@ export class WhoopBle {
       );
       await this.afterConnect(connected);
     } catch (e) {
-      this.clearKeepalive();
-      this.clearSubscriptions();
-      this.device = null;
-      this.writeService = null;
-      this.writeChar = null;
+      await this.abandonCurrentConnection();
       this.setStatus('disconnected', `Connect failed: ${String(e)}`);
       if (this.wantConnected) this.scheduleReconnect();
     }
@@ -258,6 +258,7 @@ export class WhoopBle {
 
   /** Post-connect bring-up — shared by first connect and auto-reconnect. */
   private async afterConnect(connected: Device): Promise<void> {
+    this.invalidateCommandQueue();
     this.clearKeepalive();
     this.clearSubscriptions();
     if (this.disconnectSub) {
@@ -268,6 +269,7 @@ export class WhoopBle {
     this.lastDeviceId = connected.id;
     this.events.onDevice?.({ id: connected.id, name: connected.name ?? connected.localName ?? 'WHOOP' });
     this.disconnectSub = connected.onDisconnected((error) => {
+      this.invalidateCommandQueue();
       this.clearKeepalive();
       this.clearSubscriptions();
       this.device = null;
@@ -319,6 +321,7 @@ export class WhoopBle {
         return;
       } catch {
         // fall through to scan
+        await this.abandonCurrentConnection();
       }
     }
     if (this.wantConnected) await this.scan();
@@ -373,7 +376,7 @@ export class WhoopBle {
           failures += 1;
           if (failures >= 3) this.recoverStaleLink('Link validation failed - reconnecting...');
         });
-    }, 4000);
+    }, 2000);
   }
 
   private async runGentleHandshake(): Promise<void> {
@@ -457,9 +460,15 @@ export class WhoopBle {
       const lc = dc.characteristic.toLowerCase();
       if (dc.notifiable && lc.startsWith(WHOOP_CHAR_PREFIX)) {
         const label = lc.slice(0, 8);
-        this.trySubscribe(device, dc.service, dc.characteristic, (bytes) => {
-          this.events.onRawFrame?.({ ts: Date.now(), source: label, hex: bytesToHex(bytes) });
-        });
+        this.trySubscribe(
+          device,
+          dc.service,
+          dc.characteristic,
+          (bytes) => {
+            this.events.onRawFrame?.({ ts: Date.now(), source: label, hex: bytesToHex(bytes) });
+          },
+          lc.startsWith('fd4b0005'),
+        );
       }
       // Remember the command-write characteristic for the drain. Trust the UUID
       // even if Android's cached properties do not mark it writable.
@@ -501,26 +510,77 @@ export class WhoopBle {
   }
 
   /** Write a framed Maverick command to fd4b0002. */
-  async writeCommand(bytes: Uint8Array): Promise<void> {
-    if (!this.device || !this.writeService || !this.writeChar) {
+  writeCommand(bytes: Uint8Array): Promise<void> {
+    const epoch = this.commandEpoch;
+    const queued = this.commandQueue.then(() => {
+      if (epoch !== this.commandEpoch) throw new Error('Discarded command queued before reconnect');
+      return this.writeCommandNow(bytes, epoch);
+    });
+    this.commandQueue = queued.catch(() => {});
+    return queued;
+  }
+
+  private async writeCommandNow(bytes: Uint8Array, epoch: number): Promise<void> {
+    const device = this.device;
+    const service = this.writeService;
+    const characteristic = this.writeChar;
+    if (epoch !== this.commandEpoch || !device || !service || !characteristic) {
       throw new Error('Command-write characteristic not available');
     }
     const payload = bytesToBase64(bytes);
     try {
-      await this.device.writeCharacteristicWithResponseForService(this.writeService, this.writeChar, payload);
+      await withTimeout(
+        device.writeCharacteristicWithResponseForService(service, characteristic, payload),
+        COMMAND_WRITE_TIMEOUT_MS,
+        'WHOOP command write timed out',
+      );
     } catch (withResponseError) {
-      try {
-        await this.device.writeCharacteristicWithoutResponseForService(this.writeService, this.writeChar, payload);
-      } catch {
-        this.writeService = null;
-        this.writeChar = null;
+      if (epoch !== this.commandEpoch || isTimeoutError(withResponseError, 'WHOOP command write timed out')) {
+        this.clearCommandChannelIfCurrent(device, epoch);
         throw withResponseError;
+      }
+      try {
+        await withTimeout(
+          device.writeCharacteristicWithoutResponseForService(service, characteristic, payload),
+          COMMAND_WRITE_TIMEOUT_MS,
+          'WHOOP command write without response timed out',
+        );
+      } catch (withoutResponseError) {
+        this.clearCommandChannelIfCurrent(device, epoch);
+        throw withoutResponseError;
       }
     }
   }
 
+  private invalidateCommandQueue(): void {
+    this.commandEpoch += 1;
+    this.commandQueue = Promise.resolve();
+  }
+
+  private clearCommandChannelIfCurrent(device: Device, epoch: number): void {
+    if (epoch !== this.commandEpoch || this.device?.id !== device.id) return;
+    this.writeService = null;
+    this.writeChar = null;
+  }
+
+  private async abandonCurrentConnection(): Promise<void> {
+    const stale = this.device;
+    this.invalidateCommandQueue();
+    this.clearKeepalive();
+    this.clearSubscriptions();
+    if (this.disconnectSub) {
+      this.disconnectSub.remove();
+      this.disconnectSub = null;
+    }
+    this.device = null;
+    this.writeService = null;
+    this.writeChar = null;
+    await stale?.cancelConnection().catch(() => {});
+  }
+
   private recoverStaleLink(detail: string): void {
     const stale = this.device;
+    this.invalidateCommandQueue();
     this.clearKeepalive();
     this.clearSubscriptions();
     this.device = null;
@@ -536,6 +596,7 @@ export class WhoopBle {
     serviceUuid: string,
     charUuid: string,
     onBytes: (bytes: Uint8Array) => void,
+    critical = false,
   ): void {
     try {
       const sub = device.monitorCharacteristicForService(
@@ -543,8 +604,14 @@ export class WhoopBle {
         charUuid,
         (error, characteristic) => {
           if (error) {
-            // A characteristic that isn't present simply won't notify; ignore
-            // cancellation errors on teardown.
+            if (critical && this.wantConnected && this.device?.id === device.id && !this.reArm) {
+              this.reArm = setTimeout(() => {
+                this.reArm = null;
+                if (this.wantConnected && this.device?.id === device.id) {
+                  this.recoverStaleLink('WHOOP history subscription stopped - reconnecting...');
+                }
+              }, 1500);
+            }
             return;
           }
           const value = characteristic?.value;
@@ -572,6 +639,7 @@ export class WhoopBle {
   /** Tear down subscriptions, disconnect, and release the manager. */
   async stop(): Promise<void> {
     this.wantConnected = false; // user asked to disconnect → stop auto-reconnect
+    this.invalidateCommandQueue();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -622,6 +690,10 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   return Promise.race([promise, timeout]).finally(() => {
     if (timer) clearTimeout(timer);
   });
+}
+
+function isTimeoutError(error: unknown, label: string): boolean {
+  return error instanceof Error && error.message === label;
 }
 
 function shortPermissionName(permission: string): string {

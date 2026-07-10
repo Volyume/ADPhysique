@@ -22,10 +22,10 @@ import * as TaskManager from 'expo-task-manager';
 import { PermissionsAndroid, Platform } from 'react-native';
 
 const TASK = 'volyume-pulse-keepalive';
+let heartbeat: (() => void) | null = null;
 
-// The task is a no-op: the foreground SERVICE is what keeps us alive, not the work.
 TaskManager.defineTask(TASK, async () => {
-  // intentionally empty
+  heartbeat?.();
 });
 
 let running = false;
@@ -43,7 +43,7 @@ export async function startKeepAlive(): Promise<boolean> {
     }
     await Location.startLocationUpdatesAsync(TASK, {
       accuracy: Location.Accuracy.Lowest,
-      timeInterval: 300000, // 5 min — we don't need the data, just the service
+      timeInterval: 60000,
       distanceInterval: 0,
       pausesUpdatesAutomatically: false,
       showsBackgroundLocationIndicator: false,
@@ -90,4 +90,9 @@ export async function stopKeepAlive(): Promise<void> {
 
 export function isKeepAliveRunning(): boolean {
   return running;
+}
+
+/** Let the foreground service wake the sync supervisor while the phone is locked. */
+export function setKeepAliveHeartbeat(listener: (() => void) | null): void {
+  heartbeat = listener;
 }

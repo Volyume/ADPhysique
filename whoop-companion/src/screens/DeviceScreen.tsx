@@ -93,11 +93,13 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
     lastSyncTs: effectiveSyncTs ?? null,
   });
   const stepCalibrated = Math.abs(bandStepDivisor - WHOOP5_STEP_TICKS_PER_STEP) > 0.05;
-  const stepTrust = stepCalibrated
-    ? 'calibrated'
-    : stepSource === 'phone' && bandSteps
-        ? 'phone verified'
-        : 'needs calibration';
+  const stepTrust = !bandStepEstimate
+    ? 'awaiting sync'
+    : bandStepEstimate.confidence === 'low'
+      ? 'diagnostic only'
+      : stepCalibrated
+        ? 'band calibrated'
+        : 'band corroborated';
   const strapAlarmText =
     strapAlarm.pendingWrite === 'set'
       ? `queued for ${formatAlarmDate(strapAlarm.wakeTs)}`
@@ -345,7 +347,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
       <Card>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Stat label="Today" value={steps != null ? steps.toLocaleString() : '-'} color={colors.recoveryGreen} />
-          <Stat label="Source" value={stepSource === 'band' ? 'band calibrated' : stepSource ?? '-'} />
+          <Stat label="Source" value={stepSource === 'band' ? 'WHOOP counter' : '-'} />
           <Stat label="Trust" value={stepTrust} />
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
@@ -373,8 +375,8 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           </View>
         </View>
         <Text style={styles.hint}>
-          Uncalibrated band steps stay diagnostic. To make strap steps official, enter the real step count for the
-          synced band range above; until then the app uses phone steps when available.
+          Steps come only from the WHOOP history counter. Movement-class evidence must corroborate the counter before
+          it is shown; calibration is optional and adjusts this strap's counter-to-step ratio.
         </Text>
       </Card>
 
@@ -400,8 +402,9 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
         <Text style={styles.diagText}>HR samples backfilled: {effectiveSync?.hrSamples ?? 0}</Text>
         <Text style={styles.diagText}>R-R intervals backfilled: {effectiveSync?.rrSamples ?? 0}</Text>
         <Text style={styles.diagText}>Band step counters: {effectiveSync?.stepSamples ?? 0}</Text>
-        <Text style={styles.diagText}>Raw sensor records: {effectiveSync?.rawSensorRecords ?? 0}</Text>
-        <Text style={styles.diagText}>Raw vital rows: {effectiveSync?.rawVitalSamples ?? 0}</Text>
+        <Text style={styles.diagText}>WHOOP IMU samples: {effectiveSync?.motionSamples ?? 0}</Text>
+        <Text style={styles.diagText}>Raw sensor packets: {effectiveSync?.rawSensorRecords ?? 0}</Text>
+        <Text style={styles.diagText}>Validated vital rows: {effectiveSync?.rawVitalSamples ?? 0}</Text>
         <Text style={styles.diagText}>
           History layouts: {effectiveSync?.versions.length ? effectiveSync.versions.join(', ') : 'none yet'}
         </Text>

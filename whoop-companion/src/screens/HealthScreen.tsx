@@ -9,8 +9,6 @@ import { colors, fonts } from '../ui/theme';
 import { MetricKey, Nav } from '../ui/navigation';
 import { Vital } from '../metrics/healthMonitor';
 import { RhythmResult } from '../metrics/afib';
-import { sleepNeedsMoreSync } from '../metrics/sleepSync';
-import { sleepTrustTier } from '../metrics/sleepTrustWeight';
 
 const RHYTHM_COLOR: Record<string, string> = {
   regular: colors.recoveryGreen,
@@ -33,7 +31,7 @@ export function HealthScreen({ nav }: { nav: Nav }) {
   const hm = useMemo(() => appStore.healthMonitor(), [today, recent]);
   const [rhythm, setRhythm] = useState<RhythmResult | null>(null);
   const effectiveSync = historySync ?? lastHistorySync;
-  const readiness = healthDataReadiness(hm, effectiveSync?.rawVitalSamples ?? 0, today?.sleepDetail ?? null);
+  const readiness = healthDataReadiness(hm, effectiveSync?.rawSensorRecords ?? 0);
 
   useEffect(() => {
     void appStore.rhythmScreen().then(setRhythm);
@@ -78,7 +76,7 @@ export function HealthScreen({ nav }: { nav: Nav }) {
         <View style={styles.sourceRow}>
           <Stat label="Recovery vitals" value={`${readiness.trustedReady}/3`} color={readiness.trustedReady === 3 ? colors.recoveryGreen : colors.recoveryYellow} />
           <Stat label="Raw channels" value={`${readiness.candidatesReady}/2`} color={readiness.rawColor} />
-          <Stat label="Raw rows" value={effectiveSync?.rawVitalSamples ?? '-'} />
+          <Stat label="Sensor packets" value={effectiveSync?.rawSensorRecords ?? '-'} />
         </View>
         <NavRow
           label={readiness.actionLabel}
@@ -107,7 +105,7 @@ export function HealthScreen({ nav }: { nav: Nav }) {
         <View style={styles.sourceRow}>
           <Stat label="HR samples" value={effectiveSync?.hrSamples ?? '-'} />
           <Stat label="R-R beats" value={effectiveSync?.rrSamples ?? '-'} />
-          <Stat label="Raw vitals" value={effectiveSync?.rawVitalSamples ?? '-'} />
+          <Stat label="Sensor packets" value={effectiveSync?.rawSensorRecords ?? '-'} />
         </View>
         <Text style={styles.sourceNote}>
           {effectiveSync
@@ -130,7 +128,7 @@ export function HealthScreen({ nav }: { nav: Nav }) {
       </Card>
 
       <Text style={styles.footnote}>
-        Blood Oxygen, Skin Temperature and rhythm screening are wellness signals. They are not medical diagnostics.
+        Blood Oxygen and Skin Temperature stay unavailable until their WHOOP 5 packet mappings are validated. Rhythm screening is not a medical diagnostic.
       </Text>
     </Screen>
   );
@@ -147,7 +145,7 @@ function VitalRow({ vital, last, onPress }: { vital: Vital; last: boolean; onPre
     ? colors.recoveryGreen
     : colors.recoveryYellow;
   const rangeText = !vital.available
-    ? 'Needs decoded overnight data'
+    ? vital.experimental ? 'Decoder not validated' : 'Needs trusted overnight data'
     : vital.experimental && vital.range
     ? `Decoded typical ${vital.range.lo}-${vital.range.hi} ${vital.unit}`
     : vital.experimental
@@ -174,16 +172,10 @@ function VitalRow({ vital, last, onPress }: { vital: Vital; last: boolean; onPre
 
 function healthDataReadiness(
   hm: ReturnType<typeof appStore.healthMonitor>,
-  rawVitalRows: number,
-  sleepDetail: NonNullable<ReturnType<typeof appStore.getState>['today']>['sleepDetail'] | null,
+  sensorPackets: number,
 ) {
   const trustedReady = hm.vitals.filter((v) => !v.experimental && v.value != null).length;
   const candidatesReady = hm.vitals.filter((v) => v.experimental && v.value != null).length;
-  const hasRawRows = rawVitalRows > 0;
-  const sleepNeedsReview =
-    hasRawRows &&
-    candidatesReady === 0 &&
-    (sleepTrustTier(sleepDetail) === 'low' || sleepNeedsMoreSync(sleepDetail));
 
   if (trustedReady < 3) {
     return {
@@ -201,33 +193,18 @@ function healthDataReadiness(
     };
   }
 
-  if (!hasRawRows || candidatesReady === 0) {
-    if (sleepNeedsReview) {
-      return {
-        badge: 'SLEEP',
-        color: colors.strainBlue,
-        title: 'Raw rows need a clearer sleep window',
-        body: 'Raw sensor rows were decoded, but Blood Oxygen and Skin Temperature need enough valid samples inside the sleep or candidate-sleep window.',
-        trustedReady,
-        candidatesReady,
-        rawColor: colors.recoveryYellow,
-        actionLabel: 'Review sleep evidence',
-        actionValue: `${rawVitalRows} raw rows`,
-        icon: 'moon',
-        route: { name: 'sleep' } as const,
-      };
-    }
+  if (candidatesReady === 0) {
     return {
-      badge: 'RAW',
+      badge: 'DECODE',
       color: colors.recoveryYellow,
-      title: 'Raw channels are missing',
-      body: 'Core recovery vitals are ready. Blood oxygen and skin temperature need valid decoded samples inside the overnight sleep window.',
+      title: 'Two sensor metrics are withheld',
+      body: 'Blood Oxygen and Skin Temperature packet mappings have not passed validation, so Pulse will not display plausible-looking guesses.',
       trustedReady,
       candidatesReady,
-      rawColor: hasRawRows ? colors.recoveryYellow : colors.textTertiary,
-      actionLabel: 'Check device sync',
-      actionValue: hasRawRows ? `${candidatesReady}/2 channels` : 'no raw rows',
-      icon: 'sync',
+      rawColor: sensorPackets > 0 ? colors.recoveryYellow : colors.textTertiary,
+      actionLabel: 'View decoder status',
+      actionValue: sensorPackets > 0 ? `${sensorPackets} packets` : 'awaiting packets',
+      icon: 'code-slash',
       route: { name: 'device' } as const,
     };
   }

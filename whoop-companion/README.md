@@ -10,18 +10,12 @@ This is a **separate app** from VOLYUME. It only reuses VOLYUME's toolchain
 (Expo SDK 54 / React Native 0.81 / React 19) and the same no-Mac
 GitHub Actions → EAS → TestFlight build pipeline.
 
-> **Status: full app built, pending first on-device run.** The app reads the
-> strap over Bluetooth (live heart rate + R-R via the standard GATT Heart Rate
-> Service — the same source the official app uses — plus battery), logs the
-> stream to a local database, and derives WHOOP-style metrics on device:
-> recovery, sleep (duration/stages/performance), strain (0–21) with heart-rate
-> zones, HRV (RMSSD/SDNN/pNN50) and resting HR. It also supports cardio/activity
-> logging and a behaviour journal. The proprietary history-drain + per-second
-> record decode (for backfill, steps and richer sleep) is wired but EXPERIMENTAL
-> — it needs a few real captured frames to finalise, which the Device screen can
-> capture and export. **None of this has been compiled or run on a device yet**
-> (no Mac/iOS toolchain in the build environment); first real validation is the
-> TestFlight build on your iPhone.
+> **Status: on-device WHOOP 5 testing in progress.** The app reads live heart
+> rate, R-R and battery, drains stored proprietary history, and derives local
+> recovery, sleep, strain, steps and activity metrics. Captures from firmware
+> 50.40.1.0 validate the history layouts used here, but the resulting wellness
+> metrics remain independent estimates rather than WHOOP's proprietary models.
+> Every uncertain decode is kept unavailable or visibly low-confidence.
 
 ## Android: an APK you can sideload (easiest first test, zero setup)
 
@@ -81,7 +75,7 @@ build costs credits).
 - `src/whoop/` — the "Maverick" protocol: CRC, frame codec + reassembler,
   command encoders, history-drain handshake, (experimental) record parsing.
 - `src/metrics/` — pure scoring: HRV (Task Force 1996), strain (Banister TRIMP /
-  Karvonen / Tanaka), recovery, sleep staging, steps, EMA baseline.
+  Karvonen / Tanaka), recovery, sleep staging, WHOOP counter steps, EMA baseline.
 - `src/db/` — offline-first SQLite (HR stream, daily metrics, cardio, journal,
   raw frames, profile).
 - `src/state/` — observable store + the sync orchestrator wiring it together.
@@ -97,9 +91,18 @@ per-second record layout is confirmed against frames captured from this firmware
 - Proprietary characteristics `fd4b0002` (write/commands), `fd4b0003` (command
   responses), `fd4b0004` (events), `fd4b0005` (historical + realtime data),
   `fd4b0007` (logs).
-- Historical drain (Phase 2): `ENTER_HIGH_FREQ_SYNC` (96) → wait 0.5 s →
-  `SEND_HISTORICAL_DATA` (22) → ACK each chunk with `HISTORICAL_DATA_RESULT` (23);
-  payloads are 4-byte aligned (the strap silently drops unaligned commands).
+- Historical drain: `GET_DATA_RANGE` (34) → wait through `PENDING` for the final
+  `SUCCESS` → `SEND_HISTORICAL_DATA` (22) → ACK each chunk with
+  `HISTORICAL_DATA_RESULT` (23). Payloads are 4-byte aligned.
+- K21 history blocks are decoded into per-second WHOOP IMU movement intensity
+  and aggregated by minute for sleep/wake corroboration. Existing archived K21
+  records are backfilled locally once after upgrade.
+- Automatic sleep requires at least 240 distinct HR minutes, 70% window
+  coverage and independent WHOOP motion corroboration. Stage estimates remain
+  hidden until coverage, R-R/HRV and IMU evidence clear stricter gates.
+- Daily steps are decoded only from the strap's cumulative history counter and
+  require its movement-state field to corroborate counter changes. The app does
+  not request phone motion permission and does not use phone-pedometer fallback.
 
 ## Legal / safety
 Interoperability with hardware you own, for private use. Runs against WHOOP's Terms

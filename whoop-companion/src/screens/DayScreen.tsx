@@ -487,7 +487,7 @@ function dayVitalsReview(metric: DailyMetricRow): {
     return {
       label: 'CORE',
       title: 'Core recovery is usable',
-      body: `HRV, resting HR and respiration are present. ${healthMissing.join(' and ')} need decoded raw sleep-window samples before Health Monitor is complete for this day.`,
+      body: `HRV, resting HR and respiration are present. ${healthMissing.join(' and ')} remain unavailable until their WHOOP 5 packet mappings pass decoder validation.`,
       facts,
       color: colors.strainBlue,
       tint: `${colors.strainBlue}16`,
@@ -499,7 +499,7 @@ function dayVitalsReview(metric: DailyMetricRow): {
     return {
       label: 'STEP',
       title: 'Vitals ready, activity incomplete',
-      body: 'Overnight recovery inputs are present, but the daily step total is missing. Keep the strap connected or calibrate with the real steps for the synced counter range.',
+      body: 'Overnight recovery inputs are present, but the WHOOP step counter has not synced with enough movement evidence yet.',
       facts,
       color: colors.recoveryYellow,
       tint: `${colors.recoveryYellow}14`,

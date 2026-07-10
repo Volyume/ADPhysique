@@ -40,7 +40,8 @@ export type SleepResult = {
   neededMin: number;
   source: SleepSource;
   signalMin: number; // minutes that had a heart-rate sample
-  motionMin: number; // minutes with any step/activity-row evidence
+  hrvMin: number; // minutes with enough clean R-R intervals for RMSSD
+  motionMin: number; // minutes with WHOOP IMU or counter-derived motion evidence
   stillMin: number; // minutes where the band reports still/low motion
   movingMin: number; // minutes where the band reports movement/activity
   sleepStateMin: number; // minutes with decoded band sleep-state evidence
@@ -233,15 +234,33 @@ function findSleepWindow(
     return trimSleepWindow(samples, bestStart, bestEnd, p20, spread, opts);
   }
 
-  // If the app was opened only for a sleep session, the whole capture may be a
-  // low-variance sleeping HR stream. Treat that as a valid main sleep instead of
-  // requiring a relative HR dip that cannot exist in an already-sleep-only set.
+  // A low-variance capture can be sleep, but HR alone cannot distinguish it
+  // from lying awake. Only accept the whole-span fallback when band motion or a
+  // validated sleep-state stream independently corroborates the window.
   const firstTs = samples[0]?.ts ?? 0;
   const lastTs = samples[samples.length - 1]?.ts ?? firstTs;
   const spanMin = Math.round((lastTs - firstTs) / 60000) + 1;
+  const motionMin = samples.filter((s) => s.motion != null).length;
+  const stillMin = samples.filter((s) => s.motion != null && s.motion < 0.2).length;
   const activeMin = samples.filter((s) => s.motion != null && s.motion >= 0.35).length;
   const activeRatio = activeMin / Math.max(1, samples.length);
-  if (spanMin >= opts.minWindowMin && spanMin <= opts.maxWindowMin && p50 <= 85 && p80 - p20 <= 25 && activeRatio <= 0.08) {
+  const stateMin = samples.filter((s) => s.bandSleepState != null).length;
+  const stateAsleepMin = samples.filter((s) => s.bandSleepState === 2).length;
+  const motionProof = motionMin >= spanMin * 0.6 && stillMin >= motionMin * 0.85;
+  const stateProof = stateMin >= 60 && stateAsleepMin >= 30 && stateAsleepMin >= stateMin * 0.25;
+  const overnightRatio = samples.filter((s) => {
+    const hour = new Date(s.ts).getHours();
+    return hour >= 21 || hour < 10;
+  }).length / Math.max(1, samples.length);
+  if (
+    spanMin >= opts.minWindowMin &&
+    spanMin <= opts.maxWindowMin &&
+    p50 <= 85 &&
+    p80 - p20 <= 25 &&
+    activeRatio <= 0.08 &&
+    overnightRatio >= 0.65 &&
+    (motionProof || stateProof)
+  ) {
     return trimSleepWindow(samples, 0, samples.length, p20, spread, opts) ?? { start: 0, end: samples.length };
   }
 
@@ -357,6 +376,7 @@ export function durationOnlySleep(
     neededMin,
     source: 'manual_duration',
     signalMin: 0,
+    hrvMin: 0,
     motionMin: 0,
     stillMin: 0,
     movingMin: 0,
@@ -400,6 +420,7 @@ export function computeSleep(
   const window = expandToMinutes(rawWindow, opts.startTs, opts.endTs);
   if (window.length < 1) return null;
   const hrs = window.map((s) => s.hr).filter((v): v is number => v != null);
+  const hrvMin = window.filter((s) => s.rmssd != null).length;
   const motionMin = window.filter((s) => s.motion != null).length;
   const stillMin = window.filter((s) => s.motion != null && s.motion < 0.2).length;
   const movingMin = window.filter((s) => s.motion != null && s.motion >= 0.4).length;
@@ -512,6 +533,7 @@ export function computeSleep(
     neededMin,
     source: opts.source ?? (opts.forceWindow ? 'manual_hr' : 'auto_hr'),
     signalMin: hrs.length,
+    hrvMin,
     motionMin,
     stillMin,
     movingMin,

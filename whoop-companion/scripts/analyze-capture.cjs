@@ -51,8 +51,11 @@ function main() {
   }
 
   const historyFrames = frames.filter((f) => f.packetType === PACKET_HISTORICAL_DATA).map((f) => f.raw);
+  const historyShapes = summarizeHistoryShapes(historyFrames);
   const meta = summarizeMetadata(frames);
+  const commandResponses = summarizeCommandResponses(frames);
   const decoded = decodeWhoop5HistoryFrames(historyFrames, Math.floor(Date.now() / 1000));
+  const motionStats = summarizeK21Motion(historyFrames, decoded.steps);
   const hrDates = summarizeTimed(decoded.hr.map((s) => s.ts));
   const stepDates = summarizeTimed(decoded.steps.map((s) => s.ts));
   const sleepStateDates = summarizeTimed(decoded.sleepStates.map((s) => s.ts));
@@ -74,17 +77,21 @@ function main() {
   console.log(`maverick_frames: ${frames.length}`);
   console.log(`packet_counts: ${JSON.stringify(Object.fromEntries([...byPacket.entries()].sort((a, b) => a[0] - b[0])))}`);
   console.log(`metadata: starts=${meta.starts} ends=${meta.ends} completes=${meta.completes}`);
+  console.log(`command_responses: ${JSON.stringify(commandResponses)}`);
   console.log(
     `history: records=${decoded.records} decoded=${decoded.decodedRecords} rejected=${decoded.rejectedRecords} dropped_ts=${decoded.droppedImplausibleTs} versions=${versions}`,
   );
   console.log(
-    `layouts: v18=${decoded.v18Records} v20=${decoded.v20Records} v21=${decoded.v21Records} v26=${decoded.v26Records} raw_sensor=${decoded.rawSensorRecords}`,
+    `layouts: v18=${decoded.v18Records} v20=${decoded.v20Records} v21=${decoded.v21Records} v26=${decoded.v26Records} raw_sensor=${decoded.rawSensorRecords} imu=${decoded.motion.length}`,
   );
+  console.log(`history_frame_shapes: ${JSON.stringify(historyShapes)}`);
+  console.log(`k21_motion: ${JSON.stringify(motionStats)}`);
+  console.log(`imu_minute_motion: ${JSON.stringify(summarizeImuMinutes(decoded.motion))}`);
   console.log(
     `hr: samples=${decoded.hr.length} rr=${rrCount} rr_clean=${cleanRrCount} bpm_min=${min(bpm)} bpm_max=${max(bpm)} ${formatRange(hrDates)}`,
   );
   console.log(
-    `steps: rows=${decoded.steps.length} calibrated_total=${stepEstimate?.steps ?? 'n/a'} raw_ticks=${stepEstimate?.rawTicks ?? 'n/a'} divisor=${stepEstimate?.calibrationDivisor ?? WHOOP5_STEP_TICKS_PER_STEP} used_intervals=${stepEstimate?.usedIntervals ?? 0} dropped_intervals=${stepEstimate?.droppedIntervals ?? 0} confidence=${stepEstimate?.confidence ?? 'n/a'} ${formatRange(stepDates)}`,
+    `steps: rows=${decoded.steps.length} calibrated_total=${stepEstimate?.steps ?? 'n/a'} raw_ticks=${stepEstimate?.rawTicks ?? 'n/a'} divisor=${stepEstimate?.calibrationDivisor ?? WHOOP5_STEP_TICKS_PER_STEP} used_intervals=${stepEstimate?.usedIntervals ?? 0} active_intervals=${stepEstimate?.activeIntervals ?? 0} dropped_intervals=${stepEstimate?.droppedIntervals ?? 0} confidence=${stepEstimate?.confidence ?? 'n/a'} publishable=${stepEstimate?.confidence === 'high' || stepEstimate?.confidence === 'medium'} ${formatRange(stepDates)}`,
   );
   console.log(
     `step_activity_class: still=${activityClassCounts[0] ?? 0} walk=${activityClassCounts[1] ?? 0} run=${activityClassCounts[2] ?? 0} unknown=${activityClassCounts.unknown ?? 0}`,
@@ -135,6 +142,134 @@ function main() {
       `  ${hint.day}: rows=${hint.rows} evidence_min=${hint.evidenceMin} moving_min=${hint.movingMin} still_min=${hint.stillMin}`,
     );
   }
+}
+
+function summarizeHistoryShapes(frames) {
+  const shapes = {};
+  for (const frame of frames) {
+    const version = frame[9];
+    const key = String(version ?? 'unknown');
+    const shape = shapes[key] ?? { count: 0, lengths: {}, prefix: '' };
+    shape.count += 1;
+    shape.lengths[frame.length] = (shape.lengths[frame.length] ?? 0) + 1;
+    if (!shape.prefix) shape.prefix = bytesToHex(frame.subarray(8, Math.min(frame.length - 4, 40)));
+    shapes[key] = shape;
+  }
+  return shapes;
+}
+
+function summarizeK21Motion(frames, steps) {
+  const rows = frames.filter((frame) => frame[9] === 21).map(decodeK21Motion).filter(Boolean);
+  const group1 = rows.map((row) => row.group1Mad);
+  const group2 = rows.map((row) => row.group2Mad);
+  const classByTs = new Map(steps.map((row) => [row.ts, row.activityClass]));
+  const byClass = {};
+  for (const row of rows) {
+    const activityClass = classByTs.get(row.ts);
+    const key = activityClass == null ? 'unknown' : String(activityClass);
+    const bucket = byClass[key] ?? { group1: [], group2: [] };
+    bucket.group1.push(row.group1Mad);
+    bucket.group2.push(row.group2Mad);
+    byClass[key] = bucket;
+  }
+  const classStats = {};
+  for (const [key, bucket] of Object.entries(byClass)) {
+    classStats[key] = {
+      rows: bucket.group1.length,
+      group1_mad: summarizeQuantiles(bucket.group1),
+      group2_mad: summarizeQuantiles(bucket.group2),
+    };
+  }
+  return {
+    rows: rows.length,
+    first: rows.length ? new Date(rows[0].ts).toISOString() : null,
+    last: rows.length ? new Date(rows[rows.length - 1].ts).toISOString() : null,
+    group1_mad: summarizeQuantiles(group1),
+    group2_mad: summarizeQuantiles(group2),
+    by_activity_class: classStats,
+  };
+}
+
+function summarizeImuMinutes(rows) {
+  const buckets = new Map();
+  for (const row of rows) {
+    const minute = Math.floor(row.ts / 60000);
+    const values = buckets.get(minute) ?? [];
+    values.push(row.intensity);
+    buckets.set(minute, values);
+  }
+  const values = [];
+  for (const bucket of buckets.values()) {
+    if (bucket.length < 5) continue;
+    bucket.sort((a, b) => a - b);
+    values.push(bucket[Math.min(bucket.length - 1, Math.round((bucket.length - 1) * 0.75))] ?? 0);
+  }
+  return {
+    minutes: values.length,
+    still: values.filter((value) => value < 0.2).length,
+    moving: values.filter((value) => value >= 0.4).length,
+    intensity: summarizeQuantiles(values),
+  };
+}
+
+function decodeK21Motion(frame) {
+  const payload = frame.subarray(8, frame.length - 4);
+  const unix = readU32(payload, 7);
+  const count1 = readU16(payload, 16);
+  const count2 = readU16(payload, 622);
+  if (!unix || !count1 || !count2 || count1 > 100 || count2 > 100) return null;
+  const group1Mad = groupMeanAbsDiff(payload, [20, 220, 420], count1);
+  const group2Mad = groupMeanAbsDiff(payload, [632, 832, 1032], count2);
+  if (group1Mad == null || group2Mad == null) return null;
+  const energy = Math.max(group1Mad, group2Mad * 1.5);
+  const intensity = Math.max(0, Math.min(1, (energy - 20) / 180));
+  return { ts: unix * 1000, group1Mad, group2Mad, intensity: Math.round(intensity * 1000) / 1000 };
+}
+
+function groupMeanAbsDiff(payload, offsets, count) {
+  let sum = 0;
+  let n = 0;
+  for (const offset of offsets) {
+    let prev = null;
+    for (let i = 0; i < count; i += 1) {
+      const value = readI16(payload, offset + i * 2);
+      if (value == null) return null;
+      if (prev != null) {
+        sum += Math.abs(value - prev);
+        n += 1;
+      }
+      prev = value;
+    }
+  }
+  return n ? Math.round((sum / n) * 100) / 100 : null;
+}
+
+function summarizeQuantiles(values) {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const at = (p) => sorted[Math.min(sorted.length - 1, Math.round((sorted.length - 1) * p))];
+  return { min: at(0), p25: at(0.25), p50: at(0.5), p75: at(0.75), p95: at(0.95), max: at(1) };
+}
+
+function readU16(bytes, offset) {
+  if (offset + 2 > bytes.length) return null;
+  return bytes[offset] | (bytes[offset + 1] << 8);
+}
+
+function readI16(bytes, offset) {
+  const value = readU16(bytes, offset);
+  return value == null ? null : value >= 0x8000 ? value - 0x10000 : value;
+}
+
+function readU32(bytes, offset) {
+  if (offset + 4 > bytes.length) return null;
+  return (bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16) | (bytes[offset + 3] << 24)) >>> 0;
+}
+
+function bytesToHex(bytes) {
+  let out = '';
+  for (const byte of bytes) out += byte.toString(16).padStart(2, '0');
+  return out;
 }
 
 function hexToBytes(hex) {
@@ -189,6 +324,7 @@ function decodeWhoop5HistoryFrames(framesIn, wallNowSec) {
   const hr = [];
   const steps = [];
   const sleepStates = [];
+  const motion = [];
   const rawVitals = [];
   const ppg = [];
   const versions = new Set();
@@ -253,7 +389,7 @@ function decodeWhoop5HistoryFrames(framesIn, wallNowSec) {
       continue;
     }
 
-    if (version === 20 || version === 21) {
+    if (version === 20) {
       const rec = decodeRawSensorHistory(frame, version);
       if (!rec) {
         rejectedRecords += 1;
@@ -266,11 +402,26 @@ function decodeWhoop5HistoryFrames(framesIn, wallNowSec) {
       }
       decodedRecords += 1;
       rawSensorRecords += 1;
-      if (version === 20) v20Records += 1;
-      else v21Records += 1;
-      if (rec.spo2 != null || rec.skinTempC != null) {
-        rawVitals.push({ ts: ts * 1000, spo2: rec.spo2, skinTempC: rec.skinTempC });
+      v20Records += 1;
+      // K20 remains packet diagnostics only; its vital offsets are unvalidated.
+      continue;
+    }
+
+    if (version === 21) {
+      const rec = decodeK21Motion(frame);
+      if (!rec) {
+        rejectedRecords += 1;
+        continue;
       }
+      const ts = plausibleUnix(rec.ts / 1000, wallNowSec);
+      if (ts == null) {
+        droppedImplausibleTs += 1;
+        continue;
+      }
+      decodedRecords += 1;
+      rawSensorRecords += 1;
+      v21Records += 1;
+      motion.push({ ts: rec.ts, intensity: rec.intensity });
       continue;
     }
 
@@ -284,11 +435,13 @@ function decodeWhoop5HistoryFrames(framesIn, wallNowSec) {
   hr.sort((a, b) => a.ts - b.ts);
   steps.sort((a, b) => a.ts - b.ts);
   sleepStates.sort((a, b) => a.ts - b.ts);
+  motion.sort((a, b) => a.ts - b.ts);
   rawVitals.sort((a, b) => a.ts - b.ts);
   return {
     hr,
     steps,
     sleepStates,
+    motion,
     rawVitals,
     records,
     decodedRecords,
@@ -350,19 +503,10 @@ function decodeV26(frame) {
   return samples.length ? { unix, samples } : null;
 }
 
-function decodeRawSensorHistory(frame, version) {
+function decodeRawSensorHistory(frame, _version) {
   const unix = u32(frame, 15);
   if (unix == null) return null;
-  let spo2 = null;
-  let skinTempC = null;
-  if (version === 21) {
-    const candidate = u8(frame, 24);
-    if (candidate != null && candidate >= 70 && candidate <= 100) spo2 = candidate;
-  } else if (version === 20) {
-    const candidate = i16(frame, 26);
-    if (candidate != null && candidate >= 150 && candidate <= 450) skinTempC = Math.round(candidate) / 10;
-  }
-  return { unix, spo2, skinTempC };
+  return { unix, spo2: null, skinTempC: null };
 }
 
 function summarizeMetadata(framesIn) {
@@ -377,6 +521,18 @@ function summarizeMetadata(framesIn) {
     else if (metaType === 3) completes += 1;
   }
   return { starts, ends, completes };
+}
+
+function summarizeCommandResponses(framesIn) {
+  const counts = {};
+  for (const frame of framesIn) {
+    if (frame.packetType !== 36 || frame.inner.length < 5) continue;
+    const command = frame.inner[2];
+    const result = frame.inner[4];
+    const key = `${command}:${result}`;
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
+  return counts;
 }
 
 function plausibleUnix(ts, wallNowSec) {
@@ -592,6 +748,7 @@ function estimateBandStepsFromCounters(rows, calibrationDivisor = WHOOP5_STEP_TI
   let usedIntervals = 0;
   let droppedIntervals = 0;
   let activeIntervals = 0;
+  let resetCount = 0;
   for (let i = 1; i < sorted.length; i += 1) {
     const prev = sorted[i - 1];
     const cur = sorted[i];
@@ -603,6 +760,10 @@ function estimateBandStepsFromCounters(rows, calibrationDivisor = WHOOP5_STEP_TI
     const dtSec = Math.max(1, dtMs / 1000);
     let delta = cur.counter - prev.counter;
     if (delta < 0 && prev.counter > 60_000 && cur.counter < 5_000) delta += 65_536;
+    else if (delta < 0) {
+      resetCount += 1;
+      continue;
+    }
     if (delta <= 0) continue;
     if (delta / dtSec > MAX_STEP_RATE_PER_SEC * calibrationDivisor || delta > MAX_STEP_RAW_DELTA) {
       droppedIntervals += 1;
@@ -615,13 +776,21 @@ function estimateBandStepsFromCounters(rows, calibrationDivisor = WHOOP5_STEP_TI
     }
   }
   if (usedIntervals <= 0) return null;
+  const confidence =
+    activeIntervals >= 5 && usedIntervals >= 20 && resetCount <= 1
+      ? 'high'
+      : activeIntervals >= 1 && usedIntervals >= 2
+        ? 'medium'
+        : 'low';
   return {
     steps: Math.max(0, Math.round(rawTicks / calibrationDivisor)),
     rawTicks,
     usedIntervals,
+    activeIntervals,
     droppedIntervals,
+    resetCount,
     calibrationDivisor,
-    confidence: activeIntervals > 0 ? 'medium' : 'low',
+    confidence,
   };
 }
 

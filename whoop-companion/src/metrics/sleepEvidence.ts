@@ -24,7 +24,9 @@ const MIN_LONG_AUTO_SLEEP_WINDOW_PROOF_RATIO = 0.12;
 
 export function sleepStateWakeConflict(evidence: SleepStateEvidence | null | undefined): boolean {
   const stateMin = evidence?.sleepStateMin ?? 0;
-  if (stateMin < 30) return false;
+  // This byte is still a candidate decode. Do not treat an all-zero stream as
+  // authoritative wake until the same capture has emitted sleep-like state 2.
+  if (stateMin < 30 || (evidence?.sleepStateAsleepMin ?? 0) < 3) return false;
   const wakeLike = sleepStateWakeLikeMin(evidence);
   const sleepLike = (evidence?.sleepStateAsleepMin ?? 0) + (evidence?.sleepStateStillMin ?? 0);
   return sleepLike < 10 && wakeLike / Math.max(1, stateMin) >= 0.85;
@@ -41,10 +43,11 @@ export function sleepStateWakeDisplay(evidence: SleepStateEvidence | null | unde
 export function sleepEvidencePct(evidence: SleepCorroborationEvidence | null | undefined): number {
   const windowMin = evidenceWindowMin(evidence);
   if (!windowMin) return 0;
+  const stateValidated = (evidence?.sleepStateAsleepMin ?? 0) >= 3;
   const stillMin = Math.max(
     evidence?.stillMin ?? 0,
-    evidence?.sleepStateAsleepMin ?? 0,
-    evidence?.sleepStateStillMin ?? 0,
+    stateValidated ? evidence?.sleepStateAsleepMin ?? 0 : 0,
+    stateValidated ? evidence?.sleepStateStillMin ?? 0 : 0,
     Math.max(0, (evidence?.motionMin ?? 0) - (evidence?.movingMin ?? 0)),
   );
   return Math.round((stillMin / Math.max(1, windowMin)) * 100);
@@ -71,6 +74,7 @@ function hasSleepStateProof(evidence: SleepCorroborationEvidence | null | undefi
   const proofMin = (evidence?.sleepStateAsleepMin ?? 0) + (evidence?.sleepStateStillMin ?? 0);
   return (
     stateMin >= MIN_LONG_AUTO_SLEEP_STATE_MIN &&
+    (evidence?.sleepStateAsleepMin ?? 0) >= 10 &&
     proofMin / Math.max(1, stateMin) >= MIN_LONG_AUTO_SLEEP_STATE_PROOF_RATIO &&
     proofMin / Math.max(1, windowMin) >= MIN_LONG_AUTO_SLEEP_WINDOW_PROOF_RATIO
   );

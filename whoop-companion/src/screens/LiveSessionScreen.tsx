@@ -74,7 +74,7 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
   const zoneMax = Math.max(1, ...(stats?.zones.map((z) => z.minutes) ?? [1]));
   const usesSteps = session.kind === 'workout' && activityUsesSteps(activityLabel);
   const stepSource =
-    stats?.stepSource === 'band' ? 'band calibrated' : stats?.stepSource === 'phone' ? 'phone' : 'waiting';
+    stats?.stepSource === 'band' ? 'WHOOP counter' : 'sync pending';
   const quality = recordingQuality({
     session,
     stats,
@@ -269,15 +269,6 @@ function recordingQuality({
     };
   }
 
-  if (elapsedSec >= 60 && usesSteps && !hasSteps) {
-    return {
-      badge: 'STEP',
-      title: 'Waiting for step source',
-      body: 'Walking/running sessions need phone pedometer or calibrated band steps for cadence and step totals.',
-      color: colors.recoveryYellow,
-    };
-  }
-
   if (session.kind === 'sleep' || session.kind === 'nap') {
     return {
       badge: 'REC',
@@ -292,7 +283,9 @@ function recordingQuality({
   return {
     badge: 'GOOD',
     title: 'Recording looks healthy',
-    body: 'Heart rate is coming in and available sensors are contributing to the session.',
+    body: usesSteps && !hasSteps
+      ? 'Heart rate is recording. WHOOP steps and cadence will backfill from band history after sync.'
+      : 'Heart rate is coming in and available sensors are contributing to the session.',
     color: colors.recoveryGreen,
   };
 }

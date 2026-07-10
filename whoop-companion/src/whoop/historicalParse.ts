@@ -34,16 +34,22 @@ export type HistoricalSleepStateSample = {
   state: number; // v18 @81 high nibble candidate: 0 wake-like, 1 still, 2 sleep-like, 3 up-like
 };
 
+export type HistoricalMotionSample = {
+  ts: number;
+  intensity: number; // 0..1, derived from within-frame K21 IMU axis movement
+};
+
 export type HistoricalRawVitalSample = {
   ts: number; // epoch milliseconds
-  spo2: number | null; // experimental v21 candidate
-  skinTempC: number | null; // experimental v20 candidate
+  spo2: number | null;
+  skinTempC: number | null;
 };
 
 export type HistoricalDecodeResult = {
   hr: HistoricalHrSample[];
   steps: HistoricalStepSample[];
   sleepStates: HistoricalSleepStateSample[];
+  motion: HistoricalMotionSample[];
   rawVitals: HistoricalRawVitalSample[];
   records: number;
   decodedRecords: number;
@@ -67,6 +73,7 @@ export function decodeWhoop5HistoryFrames(
   const hr: HistoricalHrSample[] = [];
   const steps: HistoricalStepSample[] = [];
   const sleepStates: HistoricalSleepStateSample[] = [];
+  const motion: HistoricalMotionSample[] = [];
   const rawVitals: HistoricalRawVitalSample[] = [];
   const ppg: PpgSample[] = [];
   const versions = new Set<number>();
@@ -131,7 +138,7 @@ export function decodeWhoop5HistoryFrames(
       continue;
     }
 
-    if (version === 20 || version === 21) {
+    if (version === 20) {
       const rec = decodeRawSensorHistory(frame, version);
       if (!rec) {
         rejectedRecords += 1;
@@ -144,11 +151,27 @@ export function decodeWhoop5HistoryFrames(
       }
       decodedRecords += 1;
       rawSensorRecords += 1;
-      if (version === 20) v20Records += 1;
-      else v21Records += 1;
-      if (rec.spo2 != null || rec.skinTempC != null) {
-        rawVitals.push({ ts: ts * 1000, spo2: rec.spo2, skinTempC: rec.skinTempC });
+      v20Records += 1;
+      // Count these packet families for diagnostics, but do not promote guessed
+      // offsets. Gen5 SpO2 is not decoded and temperature units are unverified.
+      continue;
+    }
+
+    if (version === 21) {
+      const rec = decodeK21Motion(frame);
+      if (!rec) {
+        rejectedRecords += 1;
+        continue;
       }
+      const ts = plausibleUnix(rec.unix, wallNowSec);
+      if (ts == null) {
+        droppedImplausibleTs += 1;
+        continue;
+      }
+      decodedRecords += 1;
+      rawSensorRecords += 1;
+      v21Records += 1;
+      motion.push({ ts: ts * 1000, intensity: rec.intensity });
       continue;
     }
 
@@ -168,11 +191,13 @@ export function decodeWhoop5HistoryFrames(
   hr.sort((a, b) => a.ts - b.ts);
   steps.sort((a, b) => a.ts - b.ts);
   sleepStates.sort((a, b) => a.ts - b.ts);
+  motion.sort((a, b) => a.ts - b.ts);
   rawVitals.sort((a, b) => a.ts - b.ts);
   return {
     hr,
     steps,
     sleepStates,
+    motion,
     rawVitals,
     records,
     decodedRecords,
@@ -241,22 +266,60 @@ function decodeV26(frame: Uint8Array): { unix: number; samples: number[] } | nul
   return samples.length ? { unix, samples } : null;
 }
 
+function decodeK21Motion(frame: Uint8Array): { unix: number; intensity: number } | null {
+  const payload = frame.subarray(8, frame.length - 4);
+  const unix = u32(payload, 7);
+  const group1Count = u16(payload, 16);
+  const group2Count = u16(payload, 622);
+  if (
+    unix == null ||
+    group1Count == null ||
+    group2Count == null ||
+    group1Count < 20 ||
+    group2Count < 20 ||
+    group1Count > 100 ||
+    group2Count > 100
+  ) {
+    return null;
+  }
+
+  const group1Mad = axisGroupMeanAbsDiff(payload, [20, 220, 420], group1Count);
+  const group2Mad = axisGroupMeanAbsDiff(payload, [632, 832, 1032], group2Count);
+  if (group1Mad == null || group2Mad == null) return null;
+
+  // The axes' engineering units are still unpublished, so use a bounded
+  // within-frame movement index. Thresholds come from this device's capture:
+  // stationary K21 frames cluster in the low tens, while walk/run frames rise sharply.
+  const energy = Math.max(group1Mad, group2Mad * 1.5);
+  const intensity = Math.max(0, Math.min(1, (energy - 20) / 180));
+  return { unix, intensity: Math.round(intensity * 1000) / 1000 };
+}
+
+function axisGroupMeanAbsDiff(payload: Uint8Array, offsets: number[], count: number): number | null {
+  let total = 0;
+  let differences = 0;
+  for (const offset of offsets) {
+    let previous: number | null = null;
+    for (let i = 0; i < count; i += 1) {
+      const value = i16(payload, offset + i * 2);
+      if (value == null) return null;
+      if (previous != null) {
+        total += Math.abs(value - previous);
+        differences += 1;
+      }
+      previous = value;
+    }
+  }
+  return differences ? total / differences : null;
+}
+
 function decodeRawSensorHistory(
   frame: Uint8Array,
-  version: number,
+  _version: number,
 ): { unix: number; spo2: number | null; skinTempC: number | null } | null {
   const unix = u32(frame, 15);
   if (unix == null) return null;
-  let spo2: number | null = null;
-  let skinTempC: number | null = null;
-  if (version === 21) {
-    const candidate = u8(frame, 24);
-    if (candidate != null && candidate >= 70 && candidate <= 100) spo2 = candidate;
-  } else if (version === 20) {
-    const candidate = i16(frame, 26);
-    if (candidate != null && candidate >= 150 && candidate <= 450) skinTempC = Math.round(candidate) / 10;
-  }
-  return { unix, spo2, skinTempC };
+  return { unix, spo2: null, skinTempC: null };
 }
 
 function plausibleUnix(ts: number, wallNowSec: number): number | null {

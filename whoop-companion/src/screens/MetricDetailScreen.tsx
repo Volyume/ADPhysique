@@ -81,9 +81,9 @@ const DEFS: Record<string, Def> = {
     unit: '%',
     color: () => NEUTRAL,
     pick: (d) => d.spo2,
-    measured: true,
+    measured: false,
     blurb:
-      'Blood oxygen (SpO2) measures how much oxygen your red blood cells are carrying. This build decodes it from WHOOP 5 v21 raw history records and includes it in Health Monitor once a personal range is available.',
+      'Blood oxygen (SpO2) measures how much oxygen your red blood cells are carrying. WHOOP 5 sensor packets are captured, but no public Gen5 byte mapping has passed validation yet, so Pulse does not publish a guessed value.',
   },
   skin_temp: {
     title: 'Skin Temperature',
@@ -91,9 +91,9 @@ const DEFS: Record<string, Def> = {
     color: () => NEUTRAL,
     decimals: 1,
     pick: (d) => d.skinTempC,
-    measured: true,
+    measured: false,
     blurb:
-      'Skin temperature indicates how your body regulates heat and varies day to day, unlike core body temperature. This build decodes it from WHOOP 5 v20 raw history records and includes it in Health Monitor once a personal range is available.',
+      'Skin temperature varies day to day and is different from core temperature. Candidate WHOOP 5 fields exist, but their units and delta semantics are not validated, so Pulse keeps them diagnostic-only.',
   },
   recovery: {
     title: 'Recovery',
@@ -167,7 +167,7 @@ const DEFS: Record<string, Def> = {
     pick: (d) => d.steps,
     measured: true,
     blurb:
-      'Daily steps use the captured WHOOP history counter by default, with phone pedometer fallback for live/today totals when available. Calibrate with the real step count for the synced band counter range if your strap drifts high or low.',
+      'Daily steps come only from the decoded WHOOP history counter. The app requires the band\'s movement classification to corroborate counter changes; optional calibration can correct a consistent strap-specific ratio.',
   },
   calories: {
     title: 'Calories',
@@ -410,7 +410,11 @@ function renderQualityCard(input: {
           <View style={styles.statRow}>
             <Stat label="Current source" value={stepSourceLabel(input.stepSource)} color={input.stepSource === 'band' ? colors.recoveryGreen : colors.textSecondary} />
             <Stat label="Band estimate" value={input.bandSteps != null ? input.bandSteps.toLocaleString() : '-'} color={colors.recoveryGreen} />
-            <Stat label="Confidence" value={input.bandStepEstimate?.confidence ?? '-'} color={input.bandStepEstimate?.confidence === 'medium' ? colors.recoveryYellow : colors.textTertiary} />
+            <Stat
+              label="Confidence"
+              value={input.bandStepEstimate?.confidence ?? '-'}
+              color={input.bandStepEstimate?.confidence === 'high' ? colors.recoveryGreen : input.bandStepEstimate?.confidence === 'medium' ? colors.recoveryYellow : colors.textTertiary}
+            />
           </View>
           <View style={[styles.statRow, styles.statRowTight]}>
             <Stat label="Raw counter" value={input.bandStepEstimate?.rawTicks ?? '-'} />
@@ -419,8 +423,8 @@ function renderQualityCard(input: {
           </View>
           <Text style={styles.qualityNote}>
             {input.bandStepEstimate
-              ? `${range}. Calibration adjusts the counter-to-step ratio for this strap and firmware.`
-              : 'No decoded band step counter yet. Sync history or use phone pedometer fallback for today.'}
+              ? `${range}. WHOOP movement-state corroboration controls whether this counter is published; calibration adjusts its ratio.`
+              : 'No decoded WHOOP step counter yet. Connect the band and allow history sync to finish.'}
           </Text>
         </Card>
       </>
@@ -429,9 +433,8 @@ function renderQualityCard(input: {
 
   if (input.key === 'spo2' || input.key === 'skin_temp') {
     const current = input.key === 'spo2' ? input.today?.spo2 ?? null : input.today?.skinTempC ?? null;
-    const hasRawRows = (input.historySync?.rawVitalSamples ?? 0) > 0;
-    const sleepBlocked = hasRawRows && current == null && rawVitalSleepBlocked(detail);
-    const status = current != null ? 'decoded' : sleepBlocked ? 'review sleep' : hasRawRows ? 'awaiting sleep' : 'needs raw rows';
+    const hasSensorPackets = (input.historySync?.rawSensorRecords ?? 0) > 0;
+    const status = current != null ? 'validated' : hasSensorPackets ? 'decoder unvalidated' : 'needs sensor sync';
     return (
       <>
         <SectionLabel>Decode status</SectionLabel>
@@ -440,9 +443,9 @@ function renderQualityCard(input: {
             <Stat
               label="Status"
               value={status}
-              color={current != null ? colors.recoveryYellow : sleepBlocked ? colors.sleepTeal : colors.textTertiary}
+              color={current != null ? colors.recoveryGreen : hasSensorPackets ? colors.recoveryYellow : colors.textTertiary}
             />
-            <Stat label="Raw vitals" value={input.historySync?.rawVitalSamples ?? '-'} />
+            <Stat label="Sensor packets" value={input.historySync?.rawSensorRecords ?? '-'} />
             <Stat label="Sync state" value={input.historySync?.status ? shortStatus(input.historySync.status) : '-'} />
           </View>
           <View style={[styles.statRow, styles.statRowTight]}>
@@ -452,12 +455,10 @@ function renderQualityCard(input: {
           </View>
           <Text style={styles.qualityNote}>
             {current != null
-              ? 'This decoded raw channel is averaged from valid WHOOP 5 history samples inside the sleep or candidate-sleep window and contributes to Health Monitor once a personal range is available.'
-              : sleepBlocked
-                ? 'Raw vital rows were decoded, but Pulse needs a clearer sleep window before assigning them to Blood Oxygen or Skin Temperature. Keep auto sync connected, or review the sleep window if the timing looks wrong.'
-              : hasRawRows
-                ? 'Raw vital rows were decoded, but there are not enough valid samples inside the overnight sleep window yet. Finish auto sync or review the sleep window before trusting this metric.'
-                : 'No raw vital rows have been decoded yet. Keep the strap connected long enough for history sync to backfill the overnight raw sensor records.'}
+              ? 'This channel has passed the local decoder validation gate.'
+              : hasSensorPackets
+                ? 'WHOOP sensor packets are present, but this metric remains blocked until its byte offset, units and expected range are validated against known labels.'
+                : 'No WHOOP raw sensor packets have synced yet. Even after they arrive, this metric remains unavailable until decoder validation passes.'}
           </Text>
         </Card>
       </>
@@ -510,12 +511,6 @@ function trustedMetricRows(
   }
 
   return { trustedValues, rawValues, excludedLowTrust };
-}
-
-function rawVitalSleepBlocked(detail: DailyMetricRow['sleepDetail']): boolean {
-  if (!detail) return true;
-  if (sleepTrustTier(detail) === 'low') return true;
-  return sleepNeedsMoreSync(detail);
 }
 
 function ringFraction(key: MetricKey, value: number | null): number {
@@ -575,10 +570,8 @@ function sleepQualityNote(detail: DailyMetricRow['sleepDetail']): string {
   return `Low-confidence estimate: ${detail.coveragePct ?? 0}% coverage. Sync more history before trusting score, recovery, or readiness.`;
 }
 
-function stepSourceLabel(source: 'band' | 'phone' | null): string {
-  if (source === 'band') return 'band calibrated';
-  if (source === 'phone') return 'phone';
-  return '-';
+function stepSourceLabel(source: 'band' | null): string {
+  return source === 'band' ? 'WHOOP counter' : '-';
 }
 
 function formatSampleRange(firstTs?: number, lastTs?: number): string {

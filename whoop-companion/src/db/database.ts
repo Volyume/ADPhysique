@@ -9,6 +9,8 @@
  *   cardio         logged or auto-detected activities with per-session strain
  *   journal        lightweight daily behaviour entries
  *   raw_frames     captured proprietary fd4b frames (for offline decoding)
+ *   motion_samples per-second WHOOP K21 IMU movement intensity
+ *   history_records deduplicated raw WHOOP history for local re-decoding
  *   kv             profile + settings
  */
 
@@ -17,8 +19,10 @@ import * as SQLite from 'expo-sqlite';
 export type HrSampleRow = { ts: number; bpm: number; rr: number[] };
 export type StepSampleRow = { ts: number; counter: number; activityClass: number | null };
 export type SleepStateSampleRow = { ts: number; state: number };
+export type MotionSampleRow = { ts: number; intensity: number };
 export type RawVitalSampleRow = { ts: number; spo2: number | null; skinTempC: number | null };
 export type RawFrameExportRow = { rowId: number; ts: number; source: string; hex: string };
+export type StoredHistoryRow = { rowId: number; hex: string };
 /**
  * Full WHOOP-style sleep breakdown for one night, stored as JSON so the many
  * sub-metrics (Sleep Need breakdown, the four Sleep Performance contributors,
@@ -44,7 +48,8 @@ export type SleepDetail = {
   stressLow: number | null;
   source?: string | null; // auto_hr | manual_hr | manual_duration
   signalMin?: number | null; // minutes with HR samples in the scored window
-  motionMin?: number | null; // minutes with any step/activity evidence in the scored window
+  hrvMin?: number | null; // minutes with enough clean R-R intervals for RMSSD
+  motionMin?: number | null; // minutes with WHOOP IMU or counter-derived motion evidence
   stillMin?: number | null; // minutes with still/low-motion evidence in the scored window
   movingMin?: number | null; // minutes with moving/activity evidence in the scored window
   sleepStateMin?: number | null; // minutes with decoded band sleep-state evidence
@@ -67,6 +72,7 @@ export type DailyMetricRow = {
   sleepPerf: number | null;
   strain: number | null;
   steps: number | null;
+  stepSource: 'band' | null;
   // Per-night sleep window + stage minutes (for regularity / timing trends).
   sleepStart: number | null;
   sleepEnd: number | null;
@@ -120,7 +126,7 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
         CREATE TABLE IF NOT EXISTS daily_metrics (
           day TEXT PRIMARY KEY,
           recovery INTEGER, rmssd REAL, rhr INTEGER, resp REAL, spo2 REAL, skin_temp_c REAL,
-          sleep_min INTEGER, sleep_perf REAL, strain REAL, steps INTEGER,
+          sleep_min INTEGER, sleep_perf REAL, strain REAL, steps INTEGER, step_source TEXT,
           sleep_start INTEGER, sleep_end INTEGER,
           deep_min INTEGER, rem_min INTEGER, light_min INTEGER, awake_min INTEGER,
           sleep_json TEXT,
@@ -156,6 +162,10 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
           ts INTEGER PRIMARY KEY,
           state INTEGER NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS motion_samples (
+          ts INTEGER PRIMARY KEY,
+          intensity REAL NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS raw_vital_samples (
           ts INTEGER PRIMARY KEY,
           spo2 REAL,
@@ -166,6 +176,7 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
         CREATE INDEX IF NOT EXISTS idx_journal_day ON journal(day);
         CREATE INDEX IF NOT EXISTS idx_step_samples_ts ON step_samples(ts);
         CREATE INDEX IF NOT EXISTS idx_sleep_state_samples_ts ON sleep_state_samples(ts);
+        CREATE INDEX IF NOT EXISTS idx_motion_samples_ts ON motion_samples(ts);
         CREATE INDEX IF NOT EXISTS idx_raw_vital_samples_ts ON raw_vital_samples(ts);
       `);
       // Migrations: add columns for DBs created before these features. Each
@@ -181,6 +192,7 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
         'light_min INTEGER',
         'awake_min INTEGER',
         'sleep_json TEXT',
+        'step_source TEXT',
       ]) {
         try {
           await db.execAsync(`ALTER TABLE daily_metrics ADD COLUMN ${col}`);
@@ -202,6 +214,20 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
         } catch {
           // Column already exists.
         }
+      }
+      const historyDedupe = await db.getFirstAsync<{ value: string }>(
+        "SELECT value FROM kv WHERE key = 'historyRecordDedupeV1'",
+      );
+      if (historyDedupe?.value !== '1') {
+        // Replayed history can contain the same immutable record across syncs.
+        await db.execAsync(`
+          DELETE FROM history_records
+           WHERE rowid NOT IN (SELECT MIN(rowid) FROM history_records GROUP BY hex);
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_history_records_hex ON history_records(hex);
+          INSERT OR REPLACE INTO kv (key, value) VALUES ('historyRecordDedupeV1', '1');
+        `);
+      } else {
+        await db.execAsync('CREATE UNIQUE INDEX IF NOT EXISTS idx_history_records_hex ON history_records(hex)');
       }
       return db;
     })();
@@ -277,6 +303,16 @@ export async function getSleepStateSamplesBetween(fromTs: number, toTs: number):
   return rows;
 }
 
+// ---- WHOOP K21 IMU motion ----
+export async function getMotionSamplesBetween(fromTs: number, toTs: number): Promise<MotionSampleRow[]> {
+  const db = await getDb();
+  return db.getAllAsync<MotionSampleRow>(
+    'SELECT ts, intensity FROM motion_samples WHERE ts >= ? AND ts <= ? ORDER BY ts ASC',
+    fromTs,
+    toTs,
+  );
+}
+
 // ---- Experimental raw sensor vitals ----
 export async function insertRawVitalSample(s: RawVitalSampleRow): Promise<void> {
   const db = await getDb();
@@ -308,14 +344,14 @@ export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
   const sleepPerf = cleanSleepFraction(m.sleepPerf);
   const sleepDetail = cleanSleepDetail(m.sleepDetail);
   await db.runAsync(
-    `INSERT INTO daily_metrics (day, recovery, rmssd, rhr, resp, spo2, skin_temp_c, sleep_min, sleep_perf, strain, steps,
+    `INSERT INTO daily_metrics (day, recovery, rmssd, rhr, resp, spo2, skin_temp_c, sleep_min, sleep_perf, strain, steps, step_source,
        sleep_start, sleep_end, deep_min, rem_min, light_min, awake_min, sleep_json, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(day) DO UPDATE SET
        recovery=excluded.recovery, rmssd=excluded.rmssd, rhr=excluded.rhr, resp=excluded.resp,
        spo2=excluded.spo2, skin_temp_c=excluded.skin_temp_c,
        sleep_min=excluded.sleep_min, sleep_perf=excluded.sleep_perf,
-       strain=excluded.strain, steps=excluded.steps,
+       strain=excluded.strain, steps=excluded.steps, step_source=excluded.step_source,
        sleep_start=excluded.sleep_start, sleep_end=excluded.sleep_end,
        deep_min=excluded.deep_min, rem_min=excluded.rem_min,
        light_min=excluded.light_min, awake_min=excluded.awake_min,
@@ -332,6 +368,7 @@ export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
     sleepPerf,
     m.strain,
     m.steps,
+    m.stepSource,
     m.sleepStart,
     m.sleepEnd,
     m.deepMin,
@@ -394,6 +431,7 @@ function cleanSleepDetail(detail: SleepDetail | null | undefined): SleepDetail |
     stressMed: cleanPct(detail.stressMed),
     stressLow: cleanPct(detail.stressLow),
     signalMin: cleanNonNegative(detail.signalMin),
+    hrvMin: cleanNonNegative(detail.hrvMin),
     motionMin: cleanNonNegative(detail.motionMin),
     stillMin: cleanNonNegative(detail.stillMin),
     movingMin: cleanNonNegative(detail.movingMin),
@@ -419,6 +457,7 @@ function mapDaily(r: {
   sleep_perf: number | null;
   strain: number | null;
   steps: number | null;
+  step_source: string | null;
   sleep_start: number | null;
   sleep_end: number | null;
   deep_min: number | null;
@@ -447,7 +486,8 @@ function mapDaily(r: {
     sleepMin: r.sleep_min,
     sleepPerf: cleanSleepFraction(r.sleep_perf),
     strain: r.strain,
-    steps: r.steps,
+    steps: r.step_source === 'band' ? r.steps : null,
+    stepSource: r.step_source === 'band' ? 'band' : null,
     sleepStart: r.sleep_start ?? null,
     sleepEnd: r.sleep_end ?? null,
     deepMin: r.deep_min ?? null,
@@ -457,6 +497,25 @@ function mapDaily(r: {
     sleepDetail: cleanSleepDetail(sleepDetail),
     updatedAt: r.updated_at,
   };
+}
+
+/**
+ * Remove legacy values that cannot be proven to come from validated WHOOP
+ * fields: phone steps and the old speculative raw-vital byte offsets.
+ */
+export async function clearUntrustedLegacyData(): Promise<void> {
+  const db = await getDb();
+  await db.execAsync(`
+    UPDATE daily_metrics
+       SET steps = NULL, step_source = NULL
+     WHERE steps IS NOT NULL AND (step_source IS NULL OR step_source != 'band');
+    UPDATE cardio
+       SET steps = NULL, cadence_spm = NULL, step_source = NULL
+     WHERE step_source = 'phone';
+    DELETE FROM raw_vital_samples;
+    UPDATE daily_metrics SET spo2 = NULL, skin_temp_c = NULL
+     WHERE spo2 IS NOT NULL OR skin_temp_c IS NOT NULL;
+  `);
 }
 
 export async function getDailyMetric(day: string): Promise<DailyMetricRow | null> {
@@ -643,7 +702,7 @@ export async function insertHistoryRecord(
 ): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    'INSERT INTO history_records (ts, start_id, end_id, hex, decoded) VALUES (?, ?, ?, ?, 0)',
+    'INSERT OR IGNORE INTO history_records (ts, start_id, end_id, hex, decoded) VALUES (?, ?, ?, ?, 0)',
     ts,
     startId,
     endId,
@@ -651,10 +710,83 @@ export async function insertHistoryRecord(
   );
 }
 
+export type HistoryPersistBatch = {
+  rawTs: number;
+  framesHex: string[];
+  hr: HrSampleRow[];
+  steps: StepSampleRow[];
+  sleepStates: SleepStateSampleRow[];
+  motion: MotionSampleRow[];
+  rawVitals: RawVitalSampleRow[];
+};
+
+/** Persist one decoded history chunk in a single transaction. */
+export async function persistHistoryBatch(batch: HistoryPersistBatch): Promise<void> {
+  const db = await getDb();
+  await db.withExclusiveTransactionAsync(async (tx) => {
+    const historyStmt = await tx.prepareAsync(
+      'INSERT OR IGNORE INTO history_records (ts, start_id, end_id, hex, decoded) VALUES (?, NULL, NULL, ?, 0)',
+    );
+    const hrStmt = await tx.prepareAsync(
+      'INSERT OR REPLACE INTO hr_samples (ts, bpm, rr) VALUES (?, ?, ?)',
+    );
+    const stepStmt = await tx.prepareAsync(
+      'INSERT OR REPLACE INTO step_samples (ts, counter, activity_class) VALUES (?, ?, ?)',
+    );
+    const sleepStmt = await tx.prepareAsync(
+      'INSERT OR REPLACE INTO sleep_state_samples (ts, state) VALUES (?, ?)',
+    );
+    const motionStmt = await tx.prepareAsync(
+      'INSERT OR REPLACE INTO motion_samples (ts, intensity) VALUES (?, ?)',
+    );
+    const vitalStmt = await tx.prepareAsync(
+      `INSERT INTO raw_vital_samples (ts, spo2, skin_temp_c) VALUES (?, ?, ?)
+       ON CONFLICT(ts) DO UPDATE SET
+         spo2=COALESCE(excluded.spo2, raw_vital_samples.spo2),
+         skin_temp_c=COALESCE(excluded.skin_temp_c, raw_vital_samples.skin_temp_c)`,
+    );
+    try {
+      for (const hex of batch.framesHex) await historyStmt.executeAsync(batch.rawTs, hex);
+      for (const sample of batch.hr) {
+        await hrStmt.executeAsync(sample.ts, sample.bpm, JSON.stringify(sample.rr ?? []));
+      }
+      for (const sample of batch.steps) {
+        await stepStmt.executeAsync(sample.ts, sample.counter, sample.activityClass);
+      }
+      for (const sample of batch.sleepStates) await sleepStmt.executeAsync(sample.ts, sample.state);
+      for (const sample of batch.motion) await motionStmt.executeAsync(sample.ts, sample.intensity);
+      for (const sample of batch.rawVitals) {
+        await vitalStmt.executeAsync(sample.ts, sample.spo2, sample.skinTempC);
+      }
+    } finally {
+      await historyStmt.finalizeAsync();
+      await hrStmt.finalizeAsync();
+      await stepStmt.finalizeAsync();
+      await sleepStmt.finalizeAsync();
+      await motionStmt.finalizeAsync();
+      await vitalStmt.finalizeAsync();
+    }
+  });
+}
+
 export async function countHistoryRecords(): Promise<number> {
   const db = await getDb();
   const r = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM history_records');
   return r?.n ?? 0;
+}
+
+export async function getStoredK21HistoryPage(afterRowId = 0, limit = 250): Promise<StoredHistoryRow[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<{ row_id: number; hex: string }>(
+    `SELECT rowid AS row_id, hex
+       FROM history_records
+      WHERE rowid > ? AND lower(substr(hex, 19, 2)) = '15'
+      ORDER BY rowid ASC
+      LIMIT ?`,
+    afterRowId,
+    limit,
+  );
+  return rows.map((row) => ({ rowId: row.row_id, hex: row.hex }));
 }
 
 export async function lastHistoryRecordTs(): Promise<number | null> {

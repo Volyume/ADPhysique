@@ -155,7 +155,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             <Stat label="Confidence" value={sleepConfidenceLabel(confidence)} color={sleepConfidenceColor(confidence)} />
           </View>
           <Text style={styles.qualityMeta}>
-            {decodedRange} / history {effectiveSync?.decodedRecords ?? 0} / R-R {effectiveSync?.rrSamples ?? 0} / raw vitals {effectiveSync?.rawVitalSamples ?? 0}
+            {decodedRange} / history {effectiveSync?.decodedRecords ?? 0} / R-R {effectiveSync?.rrSamples ?? 0} / IMU {effectiveSync?.motionSamples ?? 0}
           </Text>
           {effectiveSync?.status ? <Text style={styles.qualityNote}>{effectiveSync.status}</Text> : null}
           {sleepCapture?.note ? <Text style={styles.qualityNote}>{sleepCapture.note}</Text> : null}
@@ -303,7 +303,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             icon="footsteps"
             color={colors.recoveryGreen}
             value={steps != null ? steps.toLocaleString() : '—'}
-            sub={stepSource === 'band' ? 'band calibrated' : stepSource === 'phone' ? 'phone pedometer' : 'waiting'}
+            sub={stepSource === 'band' ? 'WHOOP band' : 'awaiting sync'}
             onPress={() => nav.navigate({ name: 'metric', key: 'steps' })}
             style={styles.half}
           />

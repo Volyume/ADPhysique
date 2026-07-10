@@ -4,15 +4,15 @@ import { formatDistance } from '../sensors/location';
 import { formatDuration } from '../util/time';
 
 export function stepSourceLabel(source: string | null | undefined): string {
-  if (source === 'band') return 'band estimate';
-  if (source === 'phone') return 'phone pedometer';
+  if (source === 'band') return 'WHOOP counter';
+  if (source === 'phone') return 'legacy phone data';
   if (source === 'manual') return 'manual entry';
   return 'source unknown';
 }
 
 export function stepSourceShort(source: string | null | undefined): string {
-  if (source === 'band') return 'band est.';
-  if (source === 'phone') return 'phone';
+  if (source === 'band') return 'WHOOP';
+  if (source === 'phone') return 'legacy';
   if (source === 'manual') return 'manual';
   return 'unknown';
 }

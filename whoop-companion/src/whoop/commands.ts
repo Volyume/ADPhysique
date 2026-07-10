@@ -3,20 +3,10 @@
  * builder). Each returns a fully framed Maverick packet ready to write to the
  * proprietary command characteristic (fd4b0002).
  *
- * IMPORTANT (deep research finding): a freshly-connected client gets ONLY live
- * HR over the standard 0x2A37 service. The "deep" streams — skin temperature,
- * motion/IMU and per-second history — stay off until they are UNLOCKED. The
- * full sequence (per NOOP WHOOP5_DEEP_DATA.md + whoop-vault + my-whoop) is:
- *   1. BLE bond + CLIENT_HELLO handshake   (exact hello bytes vary by project;
- *      capture from this firmware or port from NOOP/my-whoop — NOT yet encoded
- *      here, flagged below)
- *   2. SET_CONFIG enable_r22_packets        (turns on the deep optical/PPG stream)
- *   3. ENTER_HIGH_FREQ_SYNC (96) → wait ~0.5 s → SEND_HISTORICAL_DATA (22)
- *   4. ACK each HISTORY_END chunk with HISTORICAL_DATA_RESULT (23),
- *      payload [SUCCESS=1] + the HISTORY_END end_data bytes.
- *
- * Until step 1/2 are validated on real 50.40.1.0 frames, the historical drain
- * may return little/nothing; live HR (standard GATT) is unaffected.
+ * Historical sync uses the observed WHOOP 5 range, replay and per-chunk
+ * acknowledgement flow. Persistent firmware feature flags are intentionally
+ * not written: their Gen5 meanings and values have not been validated against
+ * this device's firmware.
  */
 
 import { buildInner, encodeFrame, PacketType } from './maverick';
@@ -39,7 +29,6 @@ export enum Command {
   EXIT_HIGH_FREQ_SYNC = 97,
   START_RAW_DATA = 81, // accel raw (~1 Hz) via REALTIME_RAW_DATA
   TOGGLE_IMU_MODE = 106, // IMU realtime (accel+gyro) via REALTIME_IMU_DATA_STREAM (51)
-  SET_FF_VALUE = 0x78, // 120 — write a persistent feature-flag value (deep streams)
   STOP_HAPTICS = 122,
   GET_HELLO = 145, // alternate hello
 }
@@ -70,7 +59,7 @@ export function cmdSetClock(): Uint8Array {
   return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.SET_CLOCK, payload));
 }
 
-/** Keepalive — must be sent ~every 10 s or the strap disconnects. */
+/** Keepalive sent every two seconds while the command channel is connected. */
 export function cmdLinkValid(): Uint8Array {
   return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.LINK_VALID));
 }
@@ -134,48 +123,6 @@ export function cmdSetAlarmTime(wakeTsMs: number): Uint8Array {
   payload[5] = 0x00;
   payload[6] = 0x00;
   return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.SET_ALARM_TIME, payload));
-}
-
-/**
- * SET_CONFIG body (per NOOP WHOOP5_DEEP_DATA.md): 40 bytes — flag name in ASCII
- * NUL-padded to 32 bytes, the value byte at offset 32, remainder zero.
- * Offsets beyond the flag name are NOOP's interpretation and should be
- * validated against captured frames.
- */
-export function cmdSetConfig(flag: string, value = 0x32): Uint8Array {
-  const body = new Uint8Array(40);
-  for (let i = 0; i < flag.length && i < 32; i += 1) body[i] = flag.charCodeAt(i) & 0x7f;
-  body[32] = value & 0xff;
-  const payload = new Uint8Array(1 + body.length);
-  payload[0] = 0x01;
-  payload.set(body, 1);
-  return encodeFrame(buildInner(PacketType.COMMAND, nextSeq(), Command.SET_FF_VALUE, payload));
-}
-
-/** The "most load-bearing" flag — opens the deep optical/PPG + history streams. */
-export function cmdEnableDeepStreams(): Uint8Array {
-  return cmdSetConfig('enable_r22_packets', 0x32);
-}
-
-export function cmdEnableDeepStreamSequence(): Uint8Array[] {
-  const flags: Array<[string, number]> = [
-    ['enable_r22_packets', 0x32],
-    ['enable_r22_v2_packets', 0x32],
-    ['enable_r22_v3_packets', 0x32],
-    ['enable_r22_v4_packets', 0x31],
-    ['enable_r22_v5_packets', 0x32],
-    ['enable_r22_v6_packets', 0x32],
-    ['enable_r22_v8_packets', 0x32],
-    ['make_hrfm_visible', 0x32],
-    ['disable_pip_r26_packets', 0x32],
-    ['wear_detect_bias', 0x32],
-    ['hr_ch_switching', 0x32],
-    ['ir_hw_switching', 0x32],
-    ['enable_passive_strap_fit_gen5', 0x31],
-    ['enable_sig11_during_sleep', 0x32],
-    ['dorset_inhibit_wpt', 0x32],
-  ];
-  return flags.map(([name, value]) => cmdSetConfig(name, value));
 }
 
 let seq = 0;

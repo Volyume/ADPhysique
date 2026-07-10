@@ -68,15 +68,17 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const naps = cardio.filter((c) => c.source === 'nap' && c.startTs >= todayStart).slice(0, 4);
   const captureAction = capture ? sleepCaptureAction(capture) : null;
   const captureSummary = capture ? sleepEvidenceSummary(capture) : null;
+  const stateCandidateValidated = (capture?.sleepStateAsleepMin ?? 0) >= 3;
   const trustStrip = capture ? sleepTrustStrip(capture, !!perf?.cappedByConfidence) : null;
   const perfScore = perf ? displayPct(perf.score) : null;
   const surplusSleepMin = sleep ? Math.max(0, sleep.asleepMin - neededMin) : 0;
   const largeSurplusSleepMin = sleep ? Math.max(0, sleep.asleepMin - Math.round(neededMin * 1.1)) : 0;
+  const stagesTrusted = today?.sleepDetail?.restorativeMin != null;
   const scoreDrivers = useMemo(
     () => sleepScoreDrivers({ perf, sleepScore, sleep, capture, sleepNeed, stress }),
     [perf, sleepScore, sleep, capture, sleepNeed, stress],
   );
-  const stageQuality = useMemo(() => stageQualityCheck(sleep, capture), [sleep, capture]);
+  const stageQuality = useMemo(() => stageQualityCheck(sleep, capture, stagesTrusted), [sleep, capture, stagesTrusted]);
   const verdict = sleepVerdict({ sleep, capture, perfCapped: !!perf?.cappedByConfidence, rmssd: today?.rmssd ?? null, rhr: today?.rhr ?? null });
   const tonightFocus = sleepFocus({
     sleep,
@@ -285,10 +287,10 @@ export function SleepScreen({ nav }: { nav: Nav }) {
                   color={capture.stillMin >= Math.max(45, capture.windowMin * 0.2) ? colors.recoveryGreen : colors.recoveryYellow}
                 />
                 <EvidenceMeter
-                  label="Decoded state"
-                  value={capture.sleepStateMin > 0 ? Math.round((sleepStateWakeLikeMin(capture) / Math.max(1, capture.sleepStateMin)) * 100) : 0}
-                  detail={capture.sleepStateMin > 0 ? sleepStateWakeDisplay(capture) : 'no state rows'}
-                  color={sleepStateWakeConflict(capture) ? colors.recoveryRed : capture.sleepStateMin > 0 ? colors.recoveryGreen : colors.textTertiary}
+                  label="State candidate"
+                  value={stateCandidateValidated ? Math.round((sleepStateWakeLikeMin(capture) / Math.max(1, capture.sleepStateMin)) * 100) : 0}
+                  detail={stateCandidateValidated ? sleepStateWakeDisplay(capture) : capture.sleepStateMin > 0 ? `${capture.sleepStateMin} unvalidated rows` : 'no state rows'}
+                  color={sleepStateWakeConflict(capture) ? colors.recoveryRed : stateCandidateValidated ? colors.recoveryGreen : capture.sleepStateMin > 0 ? colors.recoveryYellow : colors.textTertiary}
                   inverse
                 />
               </View>
@@ -296,6 +298,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
             <View style={styles.grid}>
               <Stat label="HR coverage" value={`${capture.coveragePct}%`} color={sleepCoverageColor(capture.coveragePct)} />
               <Stat label="R-R beats" value={capture.rrCount} />
+              <Stat label="HRV minutes" value={capture.hrvMin} />
             </View>
             <View style={[styles.grid, { marginTop: 12 }]}>
               <Stat label="Signal minutes" value={capture.signalMin} />
@@ -305,18 +308,18 @@ export function SleepScreen({ nav }: { nav: Nav }) {
             <View style={[styles.grid, { marginTop: 12 }]}>
               <Stat label="Still evidence" value={capture.stillMin} />
               <Stat label="Moving minutes" value={capture.movingMin} />
-              <Stat label="Sleep-state evidence" value={capture.sleepStateMin} />
+              <Stat label="State candidate rows" value={capture.sleepStateMin} />
             </View>
             {capture.sleepStateMin > 0 ? (
               <View style={[styles.grid, { marginTop: 12 }]}>
-                <Stat label="State wake" value={capture.sleepStateWakeMin} color={stateEvidenceColor(capture, 'wake')} />
-                <Stat label="State still" value={capture.sleepStateStillMin} color={stateEvidenceColor(capture, 'still')} />
-                <Stat label="State asleep" value={capture.sleepStateAsleepMin} color={stateEvidenceColor(capture, 'asleep')} />
+                <Stat label="Candidate 0" value={capture.sleepStateWakeMin} color={stateEvidenceColor(capture, 'wake')} />
+                <Stat label="Candidate 1" value={capture.sleepStateStillMin} color={stateEvidenceColor(capture, 'still')} />
+                <Stat label="Candidate 2" value={capture.sleepStateAsleepMin} color={stateEvidenceColor(capture, 'asleep')} />
               </View>
             ) : null}
             <View style={[styles.grid, { marginTop: 12 }]}>
               <Stat label="History rows" value={effectiveSync?.decodedRecords ?? '-'} />
-              <Stat label="Raw vitals" value={effectiveSync?.rawVitalSamples ?? '-'} />
+              <Stat label="WHOOP IMU" value={effectiveSync?.motionSamples ?? '-'} />
             </View>
             <Text style={styles.captureSource}>
               {formatDecodedRange(effectiveSync?.firstSampleTs, effectiveSync?.lastSampleTs)}
@@ -348,7 +351,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
               <Text style={styles.headSub}>asleep · {formatDuration(sleep.inBedMin)} in bed</Text>
             </View>
             <LineChart values={nightHr} color={colors.sleepTeal} leftLabel={formatClock(sleep.startTs)} rightLabel={formatClock(sleep.endTs)} />
-            <Hypnogram segments={sleep.hypnogram} showLabels />
+            {stagesTrusted ? <Hypnogram segments={sleep.hypnogram} showLabels /> : null}
             {stageQuality ? (
               <View style={[styles.stageQuality, { borderColor: stageQuality.color }]}>
                 <View style={[styles.stageQualityDot, { backgroundColor: stageQuality.color }]} />
@@ -358,18 +361,22 @@ export function SleepScreen({ nav }: { nav: Nav }) {
                 </Text>
               </View>
             ) : null}
-            <View style={{ marginTop: 14 }}>
-              {STAGE_EDU.map((s) => (
-                <StageBar
-                  key={s.key}
-                  name={s.name}
-                  color={s.color}
-                  minutes={sleep.stages[s.key]}
-                  total={tib}
-                  typicalPct={typical[s.key]}
-                />
-              ))}
-            </View>
+            {stagesTrusted ? (
+              <View style={{ marginTop: 14 }}>
+                {STAGE_EDU.map((s) => (
+                  <StageBar
+                    key={s.key}
+                    name={s.name}
+                    color={s.color}
+                    minutes={sleep.stages[s.key]}
+                    total={tib}
+                    typicalPct={typical[s.key]}
+                  />
+                ))}
+              </View>
+            ) : (
+              <Empty text="Stage detail is held back until HR coverage, clean R-R variability and band motion evidence are all strong enough." />
+            )}
           </>
         ) : (
           <Empty text="No sleep recorded last night. Wear the strap to bed, then reconnect to sync stored history; you can also log it manually above." />
@@ -379,7 +386,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
       {/* Key metrics */}
       <View style={styles.grid}>
         <Card style={styles.half}>
-          <Stat label="Restorative (deep+REM)" value={sleep ? formatDuration(sleep.restorativeMin) : '—'} color={sleepStageColors.rem} />
+          <Stat label="Restorative (deep+REM)" value={sleep && stagesTrusted ? formatDuration(sleep.restorativeMin) : '—'} color={sleepStageColors.rem} />
         </Card>
         <Card style={styles.half}>
           <Stat label="Wake events" value={sleep ? sleep.wakeEvents : '—'} />
@@ -942,7 +949,13 @@ function sleepScoreDrivers(input: {
         : 'This contributor supported the sleep result.',
       color: colors.recoveryGreen,
     });
-  } else if (input.sleep && input.sleep.restorativeMin >= 120) {
+  } else if (
+    input.sleep &&
+    input.capture &&
+    sleepTrustTier(input.capture) === 'high' &&
+    input.capture.hrvMin >= 45 &&
+    input.sleep.restorativeMin >= 120
+  ) {
     drivers.push({
       tone: 'help',
       label: 'Restorative sleep',
@@ -966,8 +979,16 @@ function performanceDriverDetail(label: string, value: number, inverse: boolean)
 function stageQualityCheck(
   sleep: ReturnType<typeof appStore.getState>['lastSleep'],
   capture: ReturnType<typeof appStore.getState>['sleepCapture'],
+  stagesTrusted: boolean,
 ): { label: string; body: string; color: string } | null {
   if (!sleep || !capture) return null;
+  if (!stagesTrusted) {
+    return {
+      label: 'Stages withheld',
+      body: `${capture.coveragePct}% HR coverage and ${capture.hrvMin} clean HRV minutes; timing remains available.`,
+      color: colors.recoveryYellow,
+    };
+  }
   const evidencePct = sleepEvidencePct(capture);
   if (sleepStateWakeConflict(capture)) {
     return {
