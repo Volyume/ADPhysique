@@ -78,6 +78,15 @@ describe('target-reached bottom bar swaps "Next exercise" / "Finish workout" in 
     expect(bottomBarWindow).toContain('<Text style={styles.completeBtnText}>Finish workout</Text>');
   });
 
+  test('a trailing time-crunch-skipped exercise cannot leave the finish offer unreachable: last means no un-skipped exercise remains after this one', () => {
+    // Product ruling 2026-07-10: handleNextExercise skips _timeCrunchSkipped
+    // slots, so isLastExercise must use the same skip-aware definition or the
+    // second-to-last slot would show a Next button that no-ops.
+    expect(SRC).toContain('const isLastExercise = !workoutExercises.some(');
+    expect(SRC).toContain('(entry, i) => i > currentExerciseIndex && !entry?._timeCrunchSkipped,');
+    expect(SRC).not.toContain('const isLastExercise = currentExerciseIndex === workoutExercises.length - 1;');
+  });
+
   test('before target is reached, the bar still shows the ordinary Log set action, never the nav buttons', () => {
     expect(bottomBarWindow).toContain('testID="volyume-btn-complete-set"');
     expect(bottomBarWindow).toContain('onPress={handleCompleteSetPress}');

@@ -423,7 +423,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const currentEntry = workoutExercises[currentExerciseIndex];
   const exercise = currentEntry?.exercise;
   const routineExercise = currentEntry?.routineExercise;
-  const isLastExercise = currentExerciseIndex === workoutExercises.length - 1;
+  // "Last" means no exercise AFTER this one still counts: handleNextExercise
+  // skips _timeCrunchSkipped slots, so a trailing time-crunched exercise must
+  // not make the second-to-last slot offer a Next button that would no-op --
+  // it gets the Finish offer instead (product ruling 2026-07-10, closing the
+  // gap the next-exercise landing surfaced).
+  const isLastExercise = !workoutExercises.some(
+    (entry, i) => i > currentExerciseIndex && !entry?._timeCrunchSkipped,
+  );
 
   // COMP-015: this session's adjustment for the current exercise, if any. Only
   // Pro sessions ever carry adjustments; a reverted one is ignored. A nonzero
