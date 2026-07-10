@@ -57,6 +57,7 @@ import { appAlert } from './AppAlert';
 import Button from './Button';
 import Chip from './Chip';
 import TextField from './TextField';
+import * as haptics from '../lib/haptics';
 import useAppStore from '../store/useAppStore';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { getPhotoMetaMap, upsertPhotoMeta } from '../lib/progressPhotoMeta';
@@ -77,6 +78,22 @@ const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
 const MAX_ZOOM = 4;
 
 function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
+
+// Worklet-safe axis clamp for panning a zoomed image: a translation cannot
+// exceed the overflow the current scale produces beyond the resting box size,
+// so a zoomed photo can never be dragged past its own edge. Pure arithmetic
+// only (CP-10 plan §5.1: worklets never read theme tokens), called from both
+// the pinch and pan gesture worklets below.
+function clampAxis(value, boxSize, scaleValue) {
+  'worklet';
+  const max = Math.max(0, (boxSize * (scaleValue - 1)) / 2);
+  return Math.min(max, Math.max(-max, value));
+}
+
+// Fire-and-forget selection haptic for the double-tap zoom toggle, called via
+// runOnJS from the UI-thread doubleTap worklet below. haptics.selection()
+// already no-ops under Reduce Motion (src/lib/haptics.js).
+function triggerZoomHaptic() { haptics.selection(); }
 
 export default function ProgressPhotoViewer({
   photos = [],
@@ -145,7 +162,13 @@ export default function ProgressPhotoViewer({
   const lenRef = useRef(photos.length);
   lenRef.current = photos.length;
   const changePage = useCallback((dir) => {
-    setIndex((i) => clamp(i + dir, 0, Math.max(0, lenRef.current - 1)));
+    setIndex((i) => {
+      const next = clamp(i + dir, 0, Math.max(0, lenRef.current - 1));
+      // Only announce a haptic when the page genuinely changed (not at the
+      // first/last photo, where the gesture or a11y action is a no-op).
+      if (next !== i) haptics.selection();
+      return next;
+    });
     resetZoom();
   }, [resetZoom]);
 
@@ -166,7 +189,12 @@ export default function ProgressPhotoViewer({
     const pinch = Gesture.Pinch()
       .onUpdate((e) => {
         'worklet';
-        scale.value = Math.min(MAX_ZOOM, Math.max(1, savedScale.value * e.scale));
+        const next = Math.min(MAX_ZOOM, Math.max(1, savedScale.value * e.scale));
+        scale.value = next;
+        // Re-clamp the current offset as the scale changes, so zooming out
+        // mid-pinch can't leave the image parked past its new, smaller bound.
+        tx.value = clampAxis(tx.value, imgW, next);
+        ty.value = clampAxis(ty.value, imgH, next);
       })
       .onEnd(() => {
         'worklet';
@@ -175,6 +203,13 @@ export default function ProgressPhotoViewer({
           scale.value = settle(1);
           tx.value = settle(0); ty.value = settle(0);
           savedTx.value = 0; savedTy.value = 0;
+        } else {
+          const boundedTx = clampAxis(tx.value, imgW, scale.value);
+          const boundedTy = clampAxis(ty.value, imgH, scale.value);
+          tx.value = settle(boundedTx);
+          ty.value = settle(boundedTy);
+          savedTx.value = boundedTx;
+          savedTy.value = boundedTy;
         }
       });
 
@@ -182,10 +217,13 @@ export default function ProgressPhotoViewer({
       .onUpdate((e) => {
         'worklet';
         if (scale.value > 1) {
-          tx.value = savedTx.value + e.translationX;
-          ty.value = savedTy.value + e.translationY;
+          // Panning a zoomed image: clamp to bounds so the photo can never be
+          // dragged past its own edge.
+          tx.value = clampAxis(savedTx.value + e.translationX, imgW, scale.value);
+          ty.value = clampAxis(savedTy.value + e.translationY, imgH, scale.value);
         } else {
-          // Drag feedback while paging between photos.
+          // At rest: this is a page swipe, not a pan, so zoom wins whenever
+          // it's active (the branch above) and paging only drives here.
           tx.value = e.translationX;
         }
       })
@@ -212,10 +250,11 @@ export default function ProgressPhotoViewer({
         } else {
           scale.value = settle(2); savedScale.value = 2;
         }
+        runOnJS(triggerZoomHaptic)();
       });
 
     return Gesture.Exclusive(doubleTap, Gesture.Simultaneous(pinch, pan));
-  }, [reduceMotion, win.width, scale, savedScale, tx, ty, savedTx, savedTy]);
+  }, [reduceMotion, win.width, imgW, imgH, scale, savedScale, tx, ty, savedTx, savedTy]);
 
   const imgAnimStyle = useAnimatedStyle(() => ({
     transform: [
@@ -294,6 +333,17 @@ export default function ProgressPhotoViewer({
     applyMeta({ takenAt: Math.min(ts, Date.now()) });
   }
 
+  // Screen-reader paging: pinch/swipe are gestures a VoiceOver/TalkBack user
+  // typically can't perform through the same touch path as sighted users, so
+  // the stage itself exposes standard adjustable increment/decrement actions
+  // that drive the same changePage the swipe gesture uses (zoom always resets
+  // on either route).
+  const onStageAccessibilityAction = useCallback((e) => {
+    const name = e?.nativeEvent?.actionName;
+    if (name === 'increment') changePage(1);
+    else if (name === 'decrement') changePage(-1);
+  }, [changePage]);
+
   function onPressReference() {
     if (!current) return;
     onSetReference?.(current.name);
@@ -360,7 +410,18 @@ export default function ProgressPhotoViewer({
           </Text>
         </View>
 
-        <View style={styles.stage}>
+        <View
+          style={styles.stage}
+          accessible={!!current}
+          accessibilityRole={photos.length > 1 ? 'adjustable' : 'image'}
+          accessibilityLabel={current ? `Photo from ${formatProgressPhotoDay(currentMeta.takenAt)}` : 'No photo to show'}
+          accessibilityValue={photos.length > 1 ? { min: 1, max: photos.length, now: safeIndex + 1 } : undefined}
+          accessibilityActions={photos.length > 1 ? [
+            { name: 'increment', label: 'Next photo' },
+            { name: 'decrement', label: 'Previous photo' },
+          ] : undefined}
+          onAccessibilityAction={onStageAccessibilityAction}
+        >
           {current ? (
             <GestureDetector gesture={composed}>
               <Animated.View style={[styles.stageInner, imgAnimStyle]}>

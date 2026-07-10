@@ -76,6 +76,7 @@ import ProgressPhotoViewer from '../ProgressPhotoViewer';
 import usePhotoSuppression from '../../hooks/usePhotoSuppression';
 import { getPhotoMetaMap, upsertPhotoMeta } from '../../lib/progressPhotoMeta';
 import useAppStore from '../../store/useAppStore';
+import { selectionAsync } from 'expo-haptics';
 
 const TS = new Date(2026, 6, 3, 9, 0, 0).getTime(); // 3 Jul 2026
 const NAME_A = `${TS}.jpg`;
@@ -328,4 +329,118 @@ test('set-as-reference and compare-from-here call their callbacks with the photo
   const [cmpBtn] = findByLabel(tree, 'Compare from here');
   await act(async () => { cmpBtn.props.onPress(); });
   expect(props.onCompareFrom).toHaveBeenCalledWith(NAME_A);
+});
+
+// ─── Pinch-zoom + fluid swipe (item 13, D25) ───────────────────────────────
+//
+// The native pinch/pan/tap recognisers are stubbed above (react-test-renderer
+// cannot drive real gesture-handler touches), so the zoom/pan/threshold math
+// itself is pinned at the source level: these regexes fail the instant the
+// clamp, the reduce-motion branch, or the haptic wiring is edited away. The
+// screen-reader paging path (accessibilityActions) IS real React behaviour
+// and is driven end to end below.
+
+test('gesture architecture: pinch and pan both clamp translation to the image bounds', () => {
+  // clampAxis is defined once and reused by both recognisers, so a zoomed
+  // photo can never be dragged or pinch-panned past its own edge.
+  expect(SOURCE).toMatch(/function clampAxis\(value, boxSize, scaleValue\) \{\s*'worklet';/);
+  expect(SOURCE).toContain('tx.value = clampAxis(tx.value, imgW, next);');
+  expect(SOURCE).toContain('ty.value = clampAxis(ty.value, imgH, next);');
+  expect(SOURCE).toContain('tx.value = clampAxis(savedTx.value + e.translationX, imgW, scale.value);');
+  expect(SOURCE).toContain('ty.value = clampAxis(savedTy.value + e.translationY, imgH, scale.value);');
+});
+
+test('gesture architecture: zoom wins over paging (pan only drives the swipe at rest)', () => {
+  // The pan worklet's zoomed branch (scale.value > 1) is checked first; the
+  // page-swipe translation only runs in the else branch, so an active pinch
+  // always takes the gesture over a page swipe.
+  const panBlock = SOURCE.slice(SOURCE.indexOf('const pan = Gesture.Pan()'), SOURCE.indexOf('const doubleTap ='));
+  expect(panBlock).toMatch(/onUpdate\(\(e\) => \{\s*'worklet';\s*if \(scale\.value > 1\) \{/);
+});
+
+test('reduce motion disables springs for zoom, pan and paging alike (one settle helper)', () => {
+  expect(SOURCE).toContain("const settle = (target) => (reduceMotion ? target : withSpring(target, motion.springs.settle));");
+});
+
+test('zoom state resets whenever the page changes, both by swipe and by accessibility action', () => {
+  const changePageBlock = SOURCE.slice(
+    SOURCE.indexOf('const changePage = useCallback'),
+    SOURCE.indexOf('}, [resetZoom]);'),
+  );
+  expect(changePageBlock).toContain('resetZoom();');
+});
+
+test('page change fires a selection haptic only when the index actually moves', () => {
+  expect(SOURCE).toMatch(/if \(next !== i\) haptics\.selection\(\);/);
+});
+
+test('double-tap zoom toggle fires a selection haptic', () => {
+  expect(SOURCE).toContain('function triggerZoomHaptic() { haptics.selection(); }');
+  expect(SOURCE).toContain('runOnJS(triggerZoomHaptic)();');
+});
+
+test('the photo stage exposes next/previous accessibility actions so screen-reader users can page without the swipe gesture', async () => {
+  const tree = await mount(baseProps());
+  const stage = tree.root.findAll(
+    (n) => n.props && typeof n.props.onAccessibilityAction === 'function',
+  )[0];
+  expect(stage).toBeTruthy();
+  expect(stage.props.accessibilityRole).toBe('adjustable');
+  expect(stage.props.accessibilityValue).toEqual({ min: 1, max: 2, now: 1 });
+  expect(stage.props.accessibilityActions).toEqual([
+    { name: 'increment', label: 'Next photo' },
+    { name: 'decrement', label: 'Previous photo' },
+  ]);
+
+  selectionAsync.mockClear();
+  await act(async () => {
+    stage.props.onAccessibilityAction({ nativeEvent: { actionName: 'increment' } });
+  });
+
+  // Paged from NAME_A (3 Jul) to NAME_B (2 Jul): the header counter moves and
+  // a selection haptic fires for the genuine page change.
+  expect(allText(tree)).toContain('2 / 2');
+  expect(selectionAsync).toHaveBeenCalledTimes(1);
+
+  // Decrementing past the first photo again is a genuine move (back to 1/2)
+  // and fires again; a further decrement at the boundary is a no-op and must
+  // NOT re-fire (no page to go to).
+  selectionAsync.mockClear();
+  await act(async () => {
+    stage.props.onAccessibilityAction({ nativeEvent: { actionName: 'decrement' } });
+  });
+  expect(allText(tree)).toContain('1 / 2');
+  expect(selectionAsync).toHaveBeenCalledTimes(1);
+
+  selectionAsync.mockClear();
+  await act(async () => {
+    stage.props.onAccessibilityAction({ nativeEvent: { actionName: 'decrement' } });
+  });
+  expect(allText(tree)).toContain('1 / 2');
+  expect(selectionAsync).not.toHaveBeenCalled();
+});
+
+test('a single-photo gallery gets no paging actions (nothing to page to)', async () => {
+  const tree = await mount(baseProps({ photos: [PHOTOS[0]] }));
+  const stage = tree.root.findAll(
+    (n) => n.props && typeof n.props.onAccessibilityAction === 'function',
+  )[0];
+  expect(stage.props.accessibilityRole).toBe('image');
+  expect(stage.props.accessibilityActions).toBeUndefined();
+  expect(stage.props.accessibilityValue).toBeUndefined();
+});
+
+test('suppression still gates the comparison entry and bodyweight line around the new zoom/swipe surface (fail-closed)', async () => {
+  usePhotoSuppression.mockReturnValue(true);
+  const tree = await mount(baseProps());
+  // The high-risk numeric-over-a-body line stays withheld...
+  expect(allText(tree)).not.toContain('72.4');
+  // ...while paging (a pure viewing action) is untouched by suppression.
+  const stage = tree.root.findAll(
+    (n) => n.props && typeof n.props.onAccessibilityAction === 'function',
+  )[0];
+  expect(stage.props.accessibilityActions).toEqual([
+    { name: 'increment', label: 'Next photo' },
+    { name: 'decrement', label: 'Previous photo' },
+  ]);
 });
