@@ -1025,3 +1025,11 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   round). Build stages queue after the D16 11-16 sequence unless the
   founder reorders. Meanwhile running: next-exercise button (founder
   order) + Core-Haptics research.
+- FOUNDER CORRECTION (2026-07-10): old-audit-sourced work is NOT
+  authorised in this run. CP-10 plan doc stays as a record only - NO
+  build, NO further reads/plans from old audits without a fresh founder
+  order IN THIS RUN. Authorised live queue is ONLY: next-exercise button
+  (founder order this run), Core-Haptics research (approved this run),
+  Ultimate-Audit 11-16 in order (approved this run via D16 round).
+  Tomorrow-queue items sourced from old audits are SUSPENDED pending
+  explicit founder re-approval.
