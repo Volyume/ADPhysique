@@ -25,6 +25,7 @@ import { useToast } from '../components/Toast';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import Card from '../components/Card';
 import SectionLabel from '../components/SectionLabel';
+import DragReorderList from '../components/DragReorderList';
 import * as haptics from '../lib/haptics';
 
 // Same reading order the enrollment reveal uses: how the week is structured,
@@ -191,6 +192,29 @@ export default function PlanDetailScreen({ navigation, route }) {
     }
   }
 
+  // D32 (2026-07-10, campaign item 20): true long-press drag, additive to
+  // the chevron swap above (handleMoveDay stays untouched). DragReorderList
+  // already fires the pickup/drop haptics, so this handler doesn't repeat
+  // one. Persists every day whose position actually moved, via the SAME
+  // updateRoutinePosition call and the same optimistic-revert-and-toast
+  // failure shape handleMoveDay uses -- generalised from exactly two writes
+  // to however many days a single drag actually moved.
+  async function handleReorderWorkouts(nextWorkouts) {
+    const previous = workouts;
+    setWorkouts(nextWorkouts);
+    try {
+      for (let i = 0; i < nextWorkouts.length; i++) {
+        if (previous[i]?.id !== nextWorkouts[i].id) {
+          await updateRoutinePosition(nextWorkouts[i].id, i);
+        }
+      }
+    } catch (e) {
+      logError('PlanDetailScreen.handleReorderWorkouts', e, { planId });
+      setWorkouts(previous);
+      toast.show("Couldn't reorder, try again", { variant: 'error' });
+    }
+  }
+
   async function handleArchive() {
     appAlert(
       'Archive plan?',
@@ -346,6 +370,60 @@ export default function PlanDetailScreen({ navigation, route }) {
                 {isLibrary ? 'No workouts in this plan.' : 'No workouts yet. Edit the plan to add workouts.'}
               </Text>
             </Card>
+          ) : !isLibrary && isReordering ? (
+            // D32 (2026-07-10): true long-press drag, additive to the
+            // chevrons below (which stay the accessible move path -- the
+            // drag handle is hidden from screen readers, see
+            // DragReorderList's own header comment). No blocks at the
+            // day level, so this degrades to a plain single-item reorder.
+            <DragReorderList
+              items={workouts}
+              keyExtractor={(w) => w.id}
+              onReorder={handleReorderWorkouts}
+              handleAccessibilityLabel={(w) => `Drag to reorder ${w.name}`}
+              gap={spacing.md}
+              renderRow={({ item: routine, index: i }) => (
+                <Card style={styles.workoutCard}>
+                  <View style={styles.workoutIndex}>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.workoutIndexText}>{i + 1}</Text>
+                  </View>
+                  <View style={styles.workoutInfo}>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.workoutName}>{routine.name}</Text>
+                    {exerciseCounts[routine.id] ? (
+                      <Text maxFontSizeMultiplier={1.3} style={styles.workoutMeta}>
+                        {exerciseCounts[routine.id]} exercise{exerciseCounts[routine.id] !== 1 ? 's' : ''}
+                      </Text>
+                    ) : (
+                      <Text maxFontSizeMultiplier={1.3} style={styles.workoutMeta}>No exercises yet</Text>
+                    )}
+                  </View>
+                  <View style={styles.reorderActions}>
+                    <TouchableOpacity
+                      onPress={() => handleMoveDay(routine.id, 'up')}
+                      style={[styles.reorderBtn, i === 0 && styles.reorderBtnDisabled]}
+                      disabled={i === 0}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityRole="button"
+                      accessibilityState={{ disabled: i === 0 }}
+                      accessibilityLabel={`Move ${routine.name} up`}
+                    >
+                      <Ionicons name="chevron-up" size={16} color={i === 0 ? colors.border : colors.textMuted} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleMoveDay(routine.id, 'down')}
+                      style={[styles.reorderBtn, i === workouts.length - 1 && styles.reorderBtnDisabled]}
+                      disabled={i === workouts.length - 1}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityRole="button"
+                      accessibilityState={{ disabled: i === workouts.length - 1 }}
+                      accessibilityLabel={`Move ${routine.name} down`}
+                    >
+                      <Ionicons name="chevron-down" size={16} color={i === workouts.length - 1 ? colors.border : colors.textMuted} />
+                    </TouchableOpacity>
+                  </View>
+                </Card>
+              )}
+            />
           ) : (
             workouts.map((routine, i) => (
               <Card key={routine.id} style={styles.workoutCard}>
@@ -363,53 +441,26 @@ export default function PlanDetailScreen({ navigation, route }) {
                   )}
                 </View>
                 {!isLibrary && (
-                  isReordering ? (
-                    <View style={styles.reorderActions}>
-                      <TouchableOpacity
-                        onPress={() => handleMoveDay(routine.id, 'up')}
-                        style={[styles.reorderBtn, i === 0 && styles.reorderBtnDisabled]}
-                        disabled={i === 0}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        accessibilityRole="button"
-                        accessibilityState={{ disabled: i === 0 }}
-                        accessibilityLabel={`Move ${routine.name} up`}
-                      >
-                        <Ionicons name="chevron-up" size={16} color={i === 0 ? colors.border : colors.textMuted} />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => handleMoveDay(routine.id, 'down')}
-                        style={[styles.reorderBtn, i === workouts.length - 1 && styles.reorderBtnDisabled]}
-                        disabled={i === workouts.length - 1}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        accessibilityRole="button"
-                        accessibilityState={{ disabled: i === workouts.length - 1 }}
-                        accessibilityLabel={`Move ${routine.name} down`}
-                      >
-                        <Ionicons name="chevron-down" size={16} color={i === workouts.length - 1 ? colors.border : colors.textMuted} />
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <View style={styles.workoutActions}>
-                      <TouchableOpacity
-                        style={styles.editWorkoutBtn}
-                        onPress={() => navigation.navigate('RoutineDetail', { routineId: routine.id })}
-                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Edit ${routine.name}`}
-                      >
-                        <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.startWorkoutBtn}
-                        onPress={() => handleStartWorkout(routine)}
-                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Start ${routine.name}`}
-                      >
-                        <Ionicons name="play" size={13} color={colors.onPrimary} />
-                      </TouchableOpacity>
-                    </View>
-                  )
+                  <View style={styles.workoutActions}>
+                    <TouchableOpacity
+                      style={styles.editWorkoutBtn}
+                      onPress={() => navigation.navigate('RoutineDetail', { routineId: routine.id })}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Edit ${routine.name}`}
+                    >
+                      <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.startWorkoutBtn}
+                      onPress={() => handleStartWorkout(routine)}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Start ${routine.name}`}
+                    >
+                      <Ionicons name="play" size={13} color={colors.onPrimary} />
+                    </TouchableOpacity>
+                  </View>
                 )}
               </Card>
             ))

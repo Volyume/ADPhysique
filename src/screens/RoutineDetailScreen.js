@@ -20,6 +20,8 @@ import { buildPlanInputs } from '../lib/planAutoGen';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getExerciseWhyThis, getSplitRationale } from '../lib/whyThisTemplates';
 import { rankSwaps } from '../lib/swapEngine';
+import { swapAdjacentBlocks } from '../lib/reorder';
+import DragReorderList from '../components/DragReorderList';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
@@ -235,27 +237,53 @@ export default function RoutineDetailScreen({ navigation, route }) {
     );
   }
 
+  // D32 (2026-07-10, campaign item 20): made BLOCK-AWARE, closing this
+  // surface's pre-existing gap -- the old plain adjacent-index swap above
+  // could split a superset/giant-set pair (e.g. moving a lone exercise past
+  // a paired one landed it BETWEEN the pair's members). Reuses the same
+  // block-move arithmetic every other reorder surface shares
+  // (src/lib/reorder.js, unit-tested there directly): a block moves and
+  // lands whole. Persists every exercise whose position actually changed
+  // via the SAME updateRoutineExerciseOrder call this always used --
+  // byte-identical two writes for the common lone-exercise-vs-lone-exercise
+  // case, generalised to more writes only when a block of 2+ actually moved.
   async function handleMoveExercise(routineExerciseId, direction) {
     const index = exercises.findIndex(e => e.routineExercise.id === routineExerciseId);
     if (index === -1) return;
-    const swapIndex = direction === 'up' ? index - 1 : index + 1;
-    if (swapIndex < 0 || swapIndex >= exercises.length) return;
+    const updated = swapAdjacentBlocks(exercises, index, direction, e => e.routineExercise?.supersetGroupId ?? null);
+    if (updated === exercises) return; // already at the boundary
     haptics.selection();
 
-    // Optimistic update
-    const updated = [...exercises];
-    const temp = updated[index];
-    updated[index] = updated[swapIndex];
-    updated[swapIndex] = temp;
+    const previous = exercises;
     setExercises(updated);
 
-    // Persist both swapped items using their new positions
     try {
-      await updateRoutineExerciseOrder(updated[index].routineExercise.id, index);
-      await updateRoutineExerciseOrder(updated[swapIndex].routineExercise.id, swapIndex);
+      for (let i = 0; i < updated.length; i++) {
+        if (previous[i]?.routineExercise.id !== updated[i].routineExercise.id) {
+          await updateRoutineExerciseOrder(updated[i].routineExercise.id, i);
+        }
+      }
     } catch (_err) {
       // Revert on failure
-      setExercises(exercises);
+      setExercises(previous);
+    }
+  }
+
+  // D32: true long-press drag, additive to the chevrons above.
+  // DragReorderList already fires the pickup/drop haptics itself. Persists
+  // every exercise whose position actually changed, via the SAME
+  // updateRoutineExerciseOrder call handleMoveExercise uses.
+  async function handleReorderExercises(nextExercises) {
+    const previous = exercises;
+    setExercises(nextExercises);
+    try {
+      for (let i = 0; i < nextExercises.length; i++) {
+        if (previous[i]?.routineExercise.id !== nextExercises[i].routineExercise.id) {
+          await updateRoutineExerciseOrder(nextExercises[i].routineExercise.id, i);
+        }
+      }
+    } catch (_err) {
+      setExercises(previous);
     }
   }
 
@@ -318,32 +346,34 @@ export default function RoutineDetailScreen({ navigation, route }) {
     </TouchableOpacity>
   );
 
-  return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <BackHeader title="Edit workout" right={reorderToggle} />
-      <FlashList
-        data={exercises}
-        keyExtractor={item => item.routineExercise.id}
-        contentContainerStyle={styles.list}
-        ListHeaderComponent={
-          <>
-            <Button
-              title="Start this workout"
-              icon="play-circle"
-              size="lg"
-              onPress={handleStartWorkout}
-              style={styles.startBtn}
-            />
-            <MuscleTagRow exercises={exercises} />
-            {divisionLine ? (
-              <Text maxFontSizeMultiplier={1.3} style={styles.divisionLine}>{divisionLine}</Text>
-            ) : null}
-            {routine.split_type ? (
-              <Text maxFontSizeMultiplier={1.3} style={styles.splitRationale}>{getSplitRationale(routine.split_type)}</Text>
-            ) : null}
-          </>
-        }
-        renderItem={({ item: { routineExercise, exercise }, index }) => (
+  // D32 (2026-07-10): the header above the exercise list is identical
+  // whether it renders inside FlashList's ListHeaderComponent (browsing) or
+  // above the drag list (reorder mode, see below) -- one JSX value shared
+  // by both so the two containers can never drift apart.
+  const listHeader = (
+    <>
+      <Button
+        title="Start this workout"
+        icon="play-circle"
+        size="lg"
+        onPress={handleStartWorkout}
+        style={styles.startBtn}
+      />
+      <MuscleTagRow exercises={exercises} />
+      {divisionLine ? (
+        <Text maxFontSizeMultiplier={1.3} style={styles.divisionLine}>{divisionLine}</Text>
+      ) : null}
+      {routine.split_type ? (
+        <Text maxFontSizeMultiplier={1.3} style={styles.splitRationale}>{getSplitRationale(routine.split_type)}</Text>
+      ) : null}
+    </>
+  );
+
+  // Same function either way (FlashList's renderItem and DragReorderList's
+  // renderRow share the exact `{ item, index }` call shape) -- this already
+  // branches internally on `isReordering` for its trailing action column, so
+  // nothing here needs to change between the two containers below.
+  const renderExerciseRow = ({ item: { routineExercise, exercise }, index }) => (
           <TouchableOpacity
             style={[styles.exerciseCard, exercise.unresolved && styles.exerciseCardUnresolved]}
             onPress={() => {
@@ -485,27 +515,70 @@ export default function RoutineDetailScreen({ navigation, route }) {
               </View>
             )}
           </TouchableOpacity>
-        )}
-        ListFooterComponent={
-          <Button
-            title="Add exercise"
-            icon="add"
-            variant="tertiary"
-            onPress={() => setShowAddExercise(true)}
-            style={[styles.addBtn, { backgroundColor: 'transparent' }]}
-            textStyle={styles.addBtnText}
-            accessibilityLabel="Add exercise"
-          />
-        }
-        ListEmptyComponent={
-          !exercises.length ? (
+  );
+
+  const addExerciseFooter = (
+    <Button
+      title="Add exercise"
+      icon="add"
+      variant="tertiary"
+      onPress={() => setShowAddExercise(true)}
+      style={[styles.addBtn, { backgroundColor: 'transparent' }]}
+      textStyle={styles.addBtnText}
+      accessibilityLabel="Add exercise"
+    />
+  );
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <BackHeader title="Edit workout" right={reorderToggle} />
+      {isReordering ? (
+        // D32 (2026-07-10): true long-press drag, block-aware (see
+        // handleMoveExercise's own comment). FlashList's virtualisation
+        // doesn't suit an absolute-positioned drag overlay, so reorder mode
+        // swaps to a plain ScrollView + DragReorderList -- browsing mode
+        // (below) is completely untouched. The chevrons inside each row
+        // stay the accessible move path; DragReorderList hides its own
+        // drag handle from screen readers.
+        <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
+          {listHeader}
+          {exercises.length > 0 ? (
+            <DragReorderList
+              items={exercises}
+              keyExtractor={(item) => item.routineExercise.id}
+              getGroupId={(item) => item.routineExercise?.supersetGroupId ?? null}
+              onReorder={handleReorderExercises}
+              handleAccessibilityLabel={(item) => `Drag to reorder ${item.exercise.name}`}
+              renderRow={renderExerciseRow}
+              gap={spacing.md}
+            />
+          ) : (
             <View style={styles.empty}>
               <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>No exercises yet. Add some below.</Text>
             </View>
-          ) : null
-        }
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
-      />
+          )}
+          {/* Same footer FlashList renders below -- reorder mode showed it
+              before this browse/reorder split, so it stays reachable here. */}
+          {addExerciseFooter}
+        </ScrollView>
+      ) : (
+        <FlashList
+          data={exercises}
+          keyExtractor={item => item.routineExercise.id}
+          contentContainerStyle={styles.list}
+          ListHeaderComponent={listHeader}
+          renderItem={renderExerciseRow}
+          ListFooterComponent={addExerciseFooter}
+          ListEmptyComponent={
+            !exercises.length ? (
+              <View style={styles.empty}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>No exercises yet. Add some below.</Text>
+              </View>
+            ) : null
+          }
+          ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+        />
+      )}
 
       {/* Edit exercise modal */}
       <Modal

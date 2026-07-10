@@ -15,6 +15,7 @@ import Chip from '../components/Chip';
 import TextField from '../components/TextField';
 import BottomSheet from '../components/BottomSheet';
 import InfoTooltip from '../components/InfoTooltip';
+import DragReorderList from '../components/DragReorderList';
 
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import {
@@ -28,6 +29,7 @@ import { suggestRestSeconds } from '../lib/restSuggest';
 import { classifySupersetPair } from '../lib/planEngine';
 import { logError } from '../lib/errorLog';
 import { GLOSSARY } from '../lib/coachGlossary';
+import { swapAdjacentBlocks } from '../lib/reorder';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
@@ -644,26 +646,26 @@ export default function ManualBuilderScreen({ navigation, route }) {
       // sharing a supersetGroupId must stay adjacent (ActiveWorkout only treats
       // two ADJACENT same-group rows as a superset), so a move must never split
       // one: a pair travels as a single unit, and a lone exercise hops over a
-      // whole pair rather than landing between its members.
-      const blocks = [];
-      for (const ex of d.exercises) {
-        const last = blocks[blocks.length - 1];
-        if (ex.supersetGroupId && last && last[last.length - 1].supersetGroupId === ex.supersetGroupId) {
-          last.push(ex);
-        } else {
-          blocks.push([ex]);
-        }
-      }
-      const bIdx = blocks.findIndex(b => b.some(e => e.localId === exLocalId));
-      if (bIdx === -1) return d;
-      const swapIdx = direction === 'up' ? bIdx - 1 : bIdx + 1;
-      if (swapIdx < 0 || swapIdx >= blocks.length) return d;
+      // whole pair rather than landing between its members. The block-move
+      // arithmetic itself is shared (src/lib/reorder.js, D32 2026-07-10) with
+      // every other reorder surface, unit-tested there directly.
+      const exIndex = d.exercises.findIndex(e => e.localId === exLocalId);
+      if (exIndex === -1) return d;
+      const next = swapAdjacentBlocks(d.exercises, exIndex, direction, ex => ex.supersetGroupId ?? null);
+      if (next === d.exercises) return d;
       moved = true;
-      const next = blocks.slice();
-      [next[bIdx], next[swapIdx]] = [next[swapIdx], next[bIdx]];
-      return { ...d, exercises: next.flat() };
+      return { ...d, exercises: next };
     }));
     if (moved) haptics.selection();
+  }
+
+  // D32 (2026-07-10, campaign item 20): true long-press drag, additive to
+  // the chevrons above. DragReorderList already fires the pickup/drop
+  // haptics itself. Nothing writes to the DB here, same as every other edit
+  // on this page (see moveExercise's own comment): the reordered array is
+  // just the new in-memory day.exercises, persisted on Save by persistDays.
+  function handleReorderDayExercises(dayIndex, nextExercises) {
+    setDayList(prev => prev.map((d, i) => (i === dayIndex ? { ...d, exercises: nextExercises } : d)));
   }
 
   // ── Validation & persistence ──────────────────────────────────────────────
@@ -981,14 +983,29 @@ export default function ManualBuilderScreen({ navigation, route }) {
               }
               return (
                 <View style={styles.exList}>
-                  {day.exercises.map((ex, exIdx) => {
+                  {/* D32 (2026-07-10, campaign item 20): true long-press
+                      drag, block-aware (a superset/giant-set pair/group
+                      always moves as one unit -- src/lib/reorder.js, shared
+                      with moveExercise's chevron path just above). Additive:
+                      the chevrons inside each row (styles.reorderCol) stay
+                      the accessible move path, DragReorderList hides its
+                      own drag handle from screen readers. Nothing writes to
+                      the DB here, same as every other edit on this page --
+                      persistDays() on Save is what commits the new order. */}
+                  <DragReorderList
+                    items={day.exercises}
+                    keyExtractor={(ex) => ex.localId}
+                    getGroupId={(ex) => ex.supersetGroupId ?? null}
+                    onReorder={(next) => handleReorderDayExercises(dayIdx, next)}
+                    handleAccessibilityLabel={(ex) => `Drag to reorder ${ex.name}`}
+                    gap={spacing.xs}
+                    renderRow={({ item: ex, index: exIdx }) => {
                     const isSelected = selected.has(ex.localId);
                     const groupIdx = ex.supersetGroupId ? groupOrder.indexOf(ex.supersetGroupId) : -1;
                     const isFirst = exIdx === 0;
                     const isLast = exIdx === day.exercises.length - 1;
                     return (
                       <TouchableOpacity
-                        key={ex.localId}
                         style={[styles.exRow, isSelected && styles.exRowSelected]}
                         onPress={() => toggleSupersetSelect(dayIdx, ex.localId)}
                         onLongPress={() => handleLongPressExercise(dayIdx, ex.localId, ex.name)}
@@ -1100,7 +1117,8 @@ export default function ManualBuilderScreen({ navigation, route }) {
                         )}
                       </TouchableOpacity>
                     );
-                  })}
+                    }}
+                  />
 
                   {selected.size >= 2 && (
                     <View style={styles.groupBtnRow}>

@@ -21,6 +21,7 @@ import RestTimer from '../components/RestTimer';
 import AnimatedRow from '../components/AnimatedRow';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 import BottomSheet from '../components/BottomSheet';
+import DragReorderList from '../components/DragReorderList';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import useAppStore from '../store/useAppStore';
@@ -29,6 +30,7 @@ import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, delete
 import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
+import { swapAdjacentBlocks } from '../lib/reorder';
 import {
   detectPR,
   bestPRPerExercise,
@@ -372,6 +374,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [showSetTypePicker, setShowSetTypePicker] = useState(false);
   const [showOverflow, setShowOverflow] = useState(false);
   const [showExecution, setShowExecution] = useState(false);
+  // D32 (2026-07-10, campaign item 20): the purpose-built reorder sheet
+  // (whole-workout drag), opened from the existing overflow menu. NO in-view
+  // drag on this screen -- the single-exercise focus view stays untouched;
+  // see the sheet's own render block further down for the rationale.
+  const [showReorderSheet, setShowReorderSheet] = useState(false);
   // B8 gym basics: the warm-up helper opens ONLY from the exercise overflow menu,
   // pull, never push (the recorded no-auto-suggest decision below stands).
   const [showWarmupRamp, setShowWarmupRamp] = useState(false);
@@ -417,6 +424,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const warmupHintSeenRef = useRef(false); // show one-liner warmup note only on first warmup of this session
   const finishingRef = useRef(false); // gates handleFinishWorkout so a rapid double-tap can't double-finish
   const shownNoteIdsRef = useRef(new Set()); // note IDs already shown in this session
+  // D32 (2026-07-10, campaign item 20): workoutExercises entries carry no
+  // stable id of their own (a routineExercise-less ad-hoc add has none), so
+  // the reorder sheet's DragReorderList needs SOME per-entry key. Object
+  // identity is stable across a reorder (the array is only ever reshuffled,
+  // never cloned per-entry, except where an entry is genuinely replaced --
+  // e.g. a swap -- which correctly earns a fresh key). A WeakMap lazily
+  // assigns one string id per entry object the first time it's seen.
+  const workoutExerciseKeysRef = useRef(new WeakMap());
+  const workoutExerciseKeySeqRef = useRef(0);
+  function keyForWorkoutExercise(entry) {
+    const map = workoutExerciseKeysRef.current;
+    if (!map.has(entry)) {
+      workoutExerciseKeySeqRef.current += 1;
+      map.set(entry, `wx-${workoutExerciseKeySeqRef.current}`);
+    }
+    return map.get(entry);
+  }
 
   const scrollRef = useRef(null);
   const insets = useSafeAreaInsets();
@@ -673,6 +697,41 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     useAppStore.getState().setWorkoutExercises(updated);
     setCurrentExerciseIndex(swapIndex);
     hapticsVocab.selection();
+  }
+
+  // D32 (2026-07-10, campaign item 20): the purpose-built reorder SHEET's
+  // own accessible move path (chevrons inside the sheet, same shape the
+  // sheet's drag rows use) -- distinct from handleMoveExercise above, which
+  // stays untouched and still only moves the CURRENT exercise one step from
+  // the main view's overflow menu. This one is block-aware (a superset/
+  // giant-set group in the sheet's whole-workout list moves as a unit,
+  // src/lib/reorder.js) and can move ANY row in the sheet, not just the one
+  // currently focused. Persists through the SAME setWorkoutExercises path
+  // (see handleReorderWorkoutExercises below) and keeps currentExerciseIndex
+  // pointing at the same exercise.
+  function handleSheetMoveExercise(index, direction) {
+    const updated = swapAdjacentBlocks(workoutExercises, index, direction, (e) => e.supersetGroupId ?? null);
+    if (updated === workoutExercises) return;
+    const movedEntry = workoutExercises[currentExerciseIndex];
+    useAppStore.getState().setWorkoutExercises(updated);
+    const newIndex = updated.indexOf(movedEntry);
+    if (newIndex !== -1 && newIndex !== currentExerciseIndex) setCurrentExerciseIndex(newIndex);
+    hapticsVocab.selection();
+  }
+
+  // D32: the reorder sheet's drag path. DragReorderList already fires the
+  // pickup/drop haptics itself. Persists through the SAME
+  // setWorkoutExercises -> _persistActiveWorkout flow every other order-
+  // affecting action here uses (add/remove/move/pair exercise); sets on
+  // every entry are untouched (order metadata only), and
+  // currentExerciseIndex is re-pointed at whichever array slot the exercise
+  // the user was actually on ends up in, so the main view never jumps to a
+  // different exercise underneath them after closing the sheet.
+  function handleReorderWorkoutExercises(nextExercises) {
+    const movedEntry = workoutExercises[currentExerciseIndex];
+    useAppStore.getState().setWorkoutExercises(nextExercises);
+    const newIndex = nextExercises.indexOf(movedEntry);
+    if (newIndex !== -1 && newIndex !== currentExerciseIndex) setCurrentExerciseIndex(newIndex);
   }
 
   function handleRemoveExercise() {
@@ -3509,6 +3568,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 </View>
               </TouchableOpacity>
               )}
+              {/* D32 (2026-07-10, campaign item 20): opens the purpose-built
+                  reorder sheet (whole-workout drag). Additive to the
+                  Move exercise up/down entries above, which stay exactly as
+                  they were (still one step, still just the current
+                  exercise). */}
+              {workoutExercises.length > 1 && (
+              <TouchableOpacity
+                style={[styles.sheetOption, live.sheetOption]}
+                onPress={() => { setShowOverflow(false); setShowReorderSheet(true); }}
+                accessibilityRole="button"
+                accessibilityLabel="Reorder exercises"
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons name="reorder-three-outline" size={18} color={t.colors.textSecondary} />
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Reorder exercises</Text>
+                </View>
+              </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={[styles.sheetOption, live.sheetOption]}
                 onPress={() => {
@@ -3653,6 +3730,99 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel, { color: t.colors.error }]}>Remove exercise</Text>
                 </View>
               </TouchableOpacity>
+            </>
+          ) : null}
+        </WorkoutBottomSheet>
+
+        {/* Reorder sheet (D32, 2026-07-10, campaign item 20): the whole
+            workout as a draggable list, opened from the overflow menu
+            above. NO in-view drag on the main single-exercise view (that
+            view is a deliberate focus design, and in-view drag mid-training
+            is ergonomically risky); this sheet is the purpose-built surface
+            instead. Block-aware: a superset/giant-set group moves and lands
+            whole (src/lib/reorder.js). Every row also carries its own
+            up/down chevrons as the accessible move path (drag's handle is
+            hidden from screen readers, see DragReorderList's own header
+            comment) -- this sheet's chevrons are ADDITIONAL to, and
+            distinct from, the Move exercise up/down overflow entries above
+            (those still move only the current exercise one step; these move
+            any row in the sheet). Both persist through the same
+            setWorkoutExercises -> _persistActiveWorkout flow every other
+            order-affecting action uses; completed/in-progress sets are
+            untouched (order metadata only), and currentExerciseIndex is
+            re-pointed at the same exercise after either path. */}
+        <WorkoutBottomSheet
+          visible={showReorderSheet}
+          onClose={() => setShowReorderSheet(false)}
+          accessibilityLabel="Reorder exercises"
+        >
+          {showReorderSheet ? (
+            <>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Reorder exercises</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.sheetExplainer, live.sheetExplainer]}>
+                Hold and drag the handle, or use the arrows. Exercises in a superset or giant set move together.
+              </Text>
+              <DragReorderList
+                items={workoutExercises}
+                keyExtractor={keyForWorkoutExercise}
+                getGroupId={(e) => e.supersetGroupId ?? null}
+                onReorder={handleReorderWorkoutExercises}
+                handleAccessibilityLabel={(e) => `Drag to reorder ${e.exercise?.name ?? 'exercise'}`}
+                gap={spacing.sm}
+                renderRow={({ item, index }) => {
+                  const gid = item.supersetGroupId ?? null;
+                  // Same 2-vs-3+ naming the heads-up modal uses (item 21):
+                  // "Superset" for a pair, "Giant set" for three or more.
+                  const groupSize = gid != null
+                    ? workoutExercises.filter((e) => (e.supersetGroupId ?? null) === gid).length
+                    : 0;
+                  const canUp = swapAdjacentBlocks(workoutExercises, index, 'up', (e) => e.supersetGroupId ?? null) !== workoutExercises;
+                  const canDown = swapAdjacentBlocks(workoutExercises, index, 'down', (e) => e.supersetGroupId ?? null) !== workoutExercises;
+                  const setsLogged = item.sets?.length ?? 0;
+                  return (
+                    <View style={[styles.reorderSheetRow, live.reorderSheetRow]}>
+                      <View style={styles.reorderSheetRowInfo}>
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.reorderSheetRowName, live.reorderSheetRowName]} numberOfLines={1}>
+                          {item.exercise?.name ?? 'Exercise'}
+                        </Text>
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.reorderSheetRowMeta, live.reorderSheetRowMeta]}>
+                          {setsLogged} set{setsLogged !== 1 ? 's' : ''} logged
+                        </Text>
+                        {gid != null && (
+                          <View style={[styles.reorderSheetSupersetChip, live.reorderSheetSupersetChip]}>
+                            <Ionicons name="link" size={11} color={t.colors.primary} />
+                            <Text maxFontSizeMultiplier={1.3} style={[styles.reorderSheetSupersetChipText, live.reorderSheetSupersetChipText]}>{groupSize > 2 ? 'Giant set' : 'Superset'}</Text>
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.reorderSheetChevrons}>
+                        <TouchableOpacity
+                          onPress={() => handleSheetMoveExercise(index, 'up')}
+                          disabled={!canUp}
+                          style={[styles.reorderSheetChevronBtn, live.reorderSheetChevronBtn, !canUp && styles.reorderSheetChevronBtnDisabled]}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          accessibilityRole="button"
+                          accessibilityState={{ disabled: !canUp }}
+                          accessibilityLabel={`Move ${item.exercise?.name ?? 'exercise'} up`}
+                        >
+                          <Ionicons name="chevron-up" size={16} color={canUp ? t.colors.textSecondary : t.colors.border} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => handleSheetMoveExercise(index, 'down')}
+                          disabled={!canDown}
+                          style={[styles.reorderSheetChevronBtn, live.reorderSheetChevronBtn, !canDown && styles.reorderSheetChevronBtnDisabled]}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          accessibilityRole="button"
+                          accessibilityState={{ disabled: !canDown }}
+                          accessibilityLabel={`Move ${item.exercise?.name ?? 'exercise'} down`}
+                        >
+                          <Ionicons name="chevron-down" size={16} color={canDown ? t.colors.textSecondary : t.colors.border} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                }}
+              />
             </>
           ) : null}
         </WorkoutBottomSheet>
@@ -4270,6 +4440,27 @@ const styles = StyleSheet.create({
   sheetOptionLabel: { ...type.bodyStrong, color: colors.textPrimary },
   sheetOptionLabelActive: { color: colors.primary },
   sheetOptionDesc: { ...type.caption, color: colors.textMuted },
+  // D32 (2026-07-10, campaign item 20): the whole-workout reorder sheet.
+  reorderSheetRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+  },
+  reorderSheetRowInfo: { flex: 1, gap: spacing.xxs },
+  reorderSheetRowName: { ...type.bodyStrong, color: colors.textPrimary },
+  reorderSheetRowMeta: { ...type.caption, color: colors.textMuted },
+  reorderSheetSupersetChip: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xxs,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.sm,
+    backgroundColor: colors.primaryBg, alignSelf: 'flex-start', marginTop: spacing.xxs,
+  },
+  reorderSheetSupersetChipText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
+  reorderSheetChevrons: { flexDirection: 'column', alignItems: 'center', gap: spacing.xxs },
+  reorderSheetChevronBtn: {
+    width: 28, height: 28, alignItems: 'center', justifyContent: 'center',
+    borderRadius: radius.sm, backgroundColor: colors.surface2,
+  },
+  reorderSheetChevronBtnDisabled: { opacity: 0.3 },
   infoTargetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.md },
   infoTarget: { ...type.label, color: colors.primary },
   infoMuscle: { ...type.caption, color: colors.textMuted, marginBottom: spacing.sm },
@@ -4481,6 +4672,12 @@ function buildLiveStyles(t) {
     sheetOptionLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     sheetOptionLabelActive: { color: t.colors.primary },
     sheetOptionDesc: { ...t.type.caption, color: t.colors.textMuted },
+    reorderSheetRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    reorderSheetRowName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    reorderSheetRowMeta: { ...t.type.caption, color: t.colors.textMuted },
+    reorderSheetSupersetChip: { backgroundColor: t.colors.primaryBg },
+    reorderSheetSupersetChipText: { color: t.colors.primary },
+    reorderSheetChevronBtn: { backgroundColor: t.colors.surface2 },
     infoTarget: { ...t.type.label, color: t.colors.primary },
     infoMuscle: { ...t.type.caption, color: t.colors.textMuted },
     infoNotesLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },

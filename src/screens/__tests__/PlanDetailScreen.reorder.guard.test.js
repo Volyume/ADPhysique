@@ -1,10 +1,22 @@
-// Day-level plan reorder (old founder-GO item, verified unbuilt). Founder
-// direction: reuse the EXISTING no-new-dependency reorder pattern already
-// shipped for RoutineDetailScreen (exercise-level swap-adjacent-indices, no
-// drag library) one level up, for the days/routines within a plan. This
-// suite pins the reuse (no drag library import) and that a move persists via
-// updateRoutinePosition for both swapped rows, the same two-write shape
-// RoutineDetailScreen.handleMoveExercise uses for updateRoutineExerciseOrder.
+// Day-level plan reorder (old founder-GO item, verified unbuilt). Original
+// founder direction: reuse the EXISTING no-new-dependency reorder pattern
+// already shipped for RoutineDetailScreen (exercise-level swap-adjacent-
+// indices, no drag library) one level up, for the days/routines within a
+// plan. That chevron-only ruling (D5/D6, 2026-07-09) is SUPERSEDED by D32
+// (founder-delegated, lead-ruled 2026-07-10, campaign item 20): true
+// long-press drag now ships here too, built on gesture-handler + Reanimated
+// (already in the tree) via the shared DragReorderList component --
+// PanResponder and runOnJS are no longer banned strings (runOnJS is exactly
+// how DragReorderList dispatches its worklet state changes, matching the
+// established ProgressPhotoViewer.js hero-morph pattern). What stays pinned
+// from the original suite: no new dependency, no draggable-flatlist (or any
+// other reorder) library, ever; the chevron move persists via
+// updateRoutinePosition for both swapped rows (same two-write shape
+// RoutineDetailScreen.handleMoveExercise uses for updateRoutineExerciseOrder);
+// the optimistic-revert-and-toast failure shape; and tier-blindness. New:
+// the drag path is additive (chevrons remain, DragReorderList is imported
+// and wired, and a drag-completed reorder persists through the SAME
+// updateRoutinePosition call, generalised to however many days moved).
 import fs from 'fs';
 import path from 'path';
 
@@ -14,12 +26,23 @@ const PLAN_DETAIL = fs.readFileSync(
 );
 
 describe('PlanDetailScreen day-level reorder', () => {
-  test('reuses the existing no-dependency swap-adjacent pattern, no new drag library', () => {
+  test('the chevron swap-adjacent path is untouched and still reachable', () => {
     expect(PLAN_DETAIL).toContain("async function handleMoveDay(routineId, direction) {");
     expect(PLAN_DETAIL).toContain("const swapIndex = direction === 'up' ? index - 1 : index + 1;");
+  });
+
+  test('D32: no new dependency -- drag reuses DragReorderList (gesture-handler + Reanimated), never a reorder library', () => {
+    expect(PLAN_DETAIL).toContain("import DragReorderList from '../components/DragReorderList';");
+    expect(PLAN_DETAIL).toContain('<DragReorderList');
     expect(PLAN_DETAIL).not.toMatch(/draggable-flatlist/i);
-    expect(PLAN_DETAIL).not.toContain('PanResponder.create');
-    expect(PLAN_DETAIL).not.toContain('runOnJS');
+    expect(PLAN_DETAIL).not.toMatch(/react-native-sortable/i);
+  });
+
+  test('D32: a drag reorder persists through the same updateRoutinePosition call', () => {
+    const dragMoveWindow = PLAN_DETAIL.match(/async function handleReorderWorkouts\(nextWorkouts\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+    expect(dragMoveWindow).toContain('await updateRoutinePosition(nextWorkouts[i].id, i);');
+    expect(dragMoveWindow).toContain('setWorkouts(previous);');
+    expect(dragMoveWindow).toContain("toast.show(\"Couldn't reorder, try again\", { variant: 'error' });");
   });
 
   test('a move persists both swapped positions via updateRoutinePosition', () => {
