@@ -1,3 +1,5 @@
+⚠ STATUS (2026-07-10): PRE-CAMPAIGN BLUEPRINT/SPEC - GATED. Do not build from this document. Any item here requires the D37 triage (verify against today's tree + the decision register) and the D38 elevation test before consideration. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md.
+
 # watchOS scoping memo - evidence pack (P12)
 
 Date: 2026-07-02. Researcher: agent (read-only on product code). Branch at time

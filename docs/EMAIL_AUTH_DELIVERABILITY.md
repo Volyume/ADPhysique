@@ -1,3 +1,5 @@
+⚠ STATUS (2026-07-10): STALE OPS REFERENCE - email/password auth was removed 2026-07-01 (Apple + Google OAuth only). Kept for history; do not action. Current work runs from docs/TASKBOARD.md.
+
 # Email and auth-email deliverability
 
 Status: SET UP AND WORKING | Date: 2026-06-08 | Owner: founder (console

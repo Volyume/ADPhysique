@@ -1,3 +1,5 @@
+⚠ STATUS (2026-07-10): PRE-CAMPAIGN BLUEPRINT/SPEC - GATED. Do not build from this document. Any item here requires the D37 triage (verify against today's tree + the decision register) and the D38 elevation test before consideration. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md.
+
 # F5 — Legacy sync completion: verified plan (Wave 4)
 
 Date: 2026-07-02 · Source: recon workflow wf_0577013b-d69 (five parallel code
