@@ -1422,3 +1422,12 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   approval (75ms index build over 28.8k rows, ~0.1-0.6ms queries,
   re-rank preserved; exercise + history search verified honestly left
   alone); one accent/case test added. IN FLIGHT: theming stage 3 only.
+- THEMING STAGE 3 BATCH 1 LANDED (lead-reviewed): full Settings family
+  (SettingsPrimitives useSettingsStyles hook + 14 screens) live-themed,
+  zero visual change at rest, 646 suites green; PerDayTargets treated
+  ED-adjacent (colour plumbing only, floors untouched, guard green).
+  REMAINING stage 3: Home + Home* components, workout family, rest of
+  ~85 screens; stage 4 Skia/chart consumers; stage 5 retire reload
+  prompts (gated on all of it). ANDROID BUILD: fix commit 4de5604's run
+  IN PROGRESS at last check - confirm green. IN FLIGHT: UK meals audit
+  (data lane).
