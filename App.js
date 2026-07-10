@@ -3,6 +3,7 @@ import 'react-native-url-polyfill/auto';
 import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as Font from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 // D24 item 2 (design/UX leveling slate, 2026-07-10): @gorhom/bottom-sheet
 // adoption behind src/components/BottomSheet.js. BottomSheetModalProvider
@@ -29,6 +30,18 @@ import { installGlobalHandlers, logError } from './src/lib/errorLog';
 import { parseInviteCode } from './src/lib/partners/link';
 import { rememberPendingPartnerCode } from './src/lib/partners/pendingInvite';
 import { loadMealLabelOverrides } from './src/lib/food/mealSlots';
+
+// Campaign item 15 (D25): keep the native splash on screen past its default
+// autohide-on-first-render point so it can fade smoothly into the app instead
+// of cutting hard into the pre-theme placeholder below. Both calls are
+// best-effort and run as early as possible (module scope, before anything
+// else) — if the native module isn't linked in a given build the OS just
+// falls back to its normal instant-hide behaviour, so this can never leave
+// the splash stuck or blank the app.
+SplashScreen.preventAutoHideAsync().catch(() => {});
+try {
+  SplashScreen.setOptions({ fade: true, duration: 400 });
+} catch (_) { /* older/newer native module mismatch — falls back to an instant hide */ }
 
 // Install verbose error logging — ring buffer in AsyncStorage, viewable from
 // Settings → Debug logs. Catches uncaught exceptions and unhandled promise
@@ -441,6 +454,19 @@ export default function App() {
       .catch(() => {})
       .finally(() => setThemeReady(true));
   }, []);
+
+  // Campaign item 15 (D25): hide the native splash only once themeReady flips,
+  // i.e. once the real RootNavigator is about to paint rather than the
+  // pre-theme placeholder above — otherwise the splash's hero image would cut
+  // to a blank frame first and only then fade into the app, defeating the
+  // point of a smooth fade. bootstrapVisualSystem above is a few fast local
+  // reads, so this rarely holds the splash for more than a frame or two.
+  // Best-effort: hideAsync() rejects harmlessly if the splash was never shown
+  // (e.g. preventAutoHideAsync above failed) or is already hidden.
+  useEffect(() => {
+    if (!themeReady) return;
+    SplashScreen.hideAsync().catch(() => {});
+  }, [themeReady]);
 
   // Boot the observability layer — session id, build identity, crash
   // detection, shutdown handler. Returns the prior-crash flag so we

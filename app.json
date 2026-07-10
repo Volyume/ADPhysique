@@ -19,11 +19,6 @@
     "newArchEnabled": true,
     "backgroundColor": "#0D0D0D",
     "primaryColor": "#F59E0B",
-    "splash": {
-      "image": "./assets/volyume-splash-hero.png",
-      "backgroundColor": "#000000",
-      "resizeMode": "contain"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.volyume",
@@ -66,7 +61,8 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0D0D0D"
+        "backgroundColor": "#0D0D0D",
+        "monochromeImage": "./assets/adaptive-icon-monochrome.png"
       },
       "package": "app.volyume",
       "versionCode": 27,
@@ -118,6 +114,18 @@
     },
     "plugins": [
       "./plugins/withVolyumeWidget",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/volyume-splash-hero.png",
+          "backgroundColor": "#000000",
+          "resizeMode": "contain",
+          "dark": {
+            "image": "./assets/volyume-splash-hero.png",
+            "backgroundColor": "#000000"
+          }
+        }
+      ],
       "expo-secure-store",
       [
         "expo-media-library",
