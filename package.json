@@ -71,7 +71,7 @@
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-community/netinfo": "11.4.1",
     "@react-native-google-signin/google-signin": "^16.1.2",
-    "@react-native-menu/menu": "^1.2.2",
+    "@react-native-menu/menu": "^2.0.0",
     "@react-native-ml-kit/text-recognition": "^2.0.0",
     "@react-navigation/bottom-tabs": "^6.6.1",
     "@react-navigation/native": "^6.1.18",
@@ -160,7 +160,8 @@
     "undici": "^6.27.0",
     "@expo/plist": {
       "@xmldom/xmldom": "^0.8.13"
-    }
+    },
+    "@react-native-menu/menu": "$@react-native-menu/menu"
   },
   "expo": {
     "autolinking": {
