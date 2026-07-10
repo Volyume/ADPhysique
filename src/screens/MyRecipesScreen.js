@@ -17,13 +17,14 @@
  */
 import { todayLocalKey } from '../lib/dayKey';
 import { appAlert } from '../components/AppAlert';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, spacing, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { SkeletonRow } from '../components/Skeleton';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
@@ -44,6 +45,12 @@ export default function MyRecipesScreen({ navigation, route }) {
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const userId = user?.id;
   const toast = useToast();
+  // CP-10 batch D (2026-07-10): live theme (src/hooks/useTheme.js).
+  // Memoised because this is a list-heavy screen (renderItem runs once per
+  // FlashList row). See buildLiveStyles header comment after the frozen
+  // `styles` block below.
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   // Returned-from-builder hint: pass mealSlot + entryDate forward
   // so the Diary "Add" CTA can hand off seamlessly later.
@@ -152,7 +159,7 @@ export default function MyRecipesScreen({ navigation, route }) {
   function renderItem({ item }) {
     const busy = loggingId === item.id;
     return (
-      <View style={styles.row}>
+      <View style={[styles.row, live.row]}>
         <TouchableOpacity
           style={styles.rowMain}
           onPress={() => { haptics.selection(); onLog(item); }}
@@ -162,8 +169,8 @@ export default function MyRecipesScreen({ navigation, route }) {
           accessibilityHint="Choose servings before adding it to your diary"
         >
           <View style={styles.rowText}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.name} numberOfLines={1}>{item.name}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.meta}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.name, live.name]} numberOfLines={1}>{item.name}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.meta, live.meta]}>
               {item.total_servings} {item.total_servings === 1 ? 'serving' : 'servings'}
               {item.notes ? ` - ${item.notes}` : ''}
             </Text>
@@ -174,17 +181,17 @@ export default function MyRecipesScreen({ navigation, route }) {
                 sitting next to "N servings" read as ambiguous about which
                 one it was. */}
             {item.totals ? (
-              <Text maxFontSizeMultiplier={1.3} style={styles.meta}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.meta, live.meta]}>
                 {toEnergy(perServingTotals(item.totals, item.total_servings).kcal, energyUnit)} {energyUnitLabel(energyUnit)} per serving - P {perServingTotals(item.totals, item.total_servings).protein}g
               </Text>
             ) : null}
           </View>
           {busy
-            ? <ActivityIndicator size="small" color={colors.primary} />
+            ? <ActivityIndicator size="small" color={t.colors.primary} />
             : (
-              <View style={styles.logPill}>
-                <Ionicons name="add" size={16} color={colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={styles.logPillText}>Log</Text>
+              <View style={[styles.logPill, live.logPill]}>
+                <Ionicons name="add" size={16} color={t.colors.primary} />
+                <Text maxFontSizeMultiplier={1.3} style={[styles.logPillText, live.logPillText]}>Log</Text>
               </View>
             )}
         </TouchableOpacity>
@@ -197,7 +204,7 @@ export default function MyRecipesScreen({ navigation, route }) {
             accessibilityLabel={`Edit ${item.name}`}
             style={styles.actionBtn}
           >
-            <Ionicons name="create-outline" size={18} color={colors.textMuted} />
+            <Ionicons name="create-outline" size={18} color={t.colors.textMuted} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => onDelete(item)}
@@ -207,7 +214,7 @@ export default function MyRecipesScreen({ navigation, route }) {
             accessibilityLabel={`Delete ${item.name}`}
             style={styles.actionBtn}
           >
-            <Ionicons name="trash-outline" size={18} color={colors.error} />
+            <Ionicons name="trash-outline" size={18} color={t.colors.error} />
           </TouchableOpacity>
         </View>
       </View>
@@ -215,12 +222,12 @@ export default function MyRecipesScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <BackHeader
         title="Recipes"
         right={(
           <TouchableOpacity onPress={() => { haptics.selection(); onCreate(); }} hitSlop={12} accessibilityRole="button" accessibilityLabel="New recipe">
-            <Ionicons name="add" size={26} color={colors.primary} />
+            <Ionicons name="add" size={26} color={t.colors.primary} />
           </TouchableOpacity>
         )}
       />
@@ -262,8 +269,8 @@ export default function MyRecipesScreen({ navigation, route }) {
         accessibilityLabel="Choose recipe servings"
         sheetStyle={styles.servingsSheet}
       >
-        <Text maxFontSizeMultiplier={1.3} style={styles.sheetTitle} numberOfLines={1}>{servePrompt?.name}</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.sheetSub}>How many servings did you eat?</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]} numberOfLines={1}>{servePrompt?.name}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sheetSub, live.sheetSub]}>How many servings did you eat?</Text>
         <Stepper
           value={servings}
           onChange={setServings}
@@ -335,3 +342,23 @@ const styles = StyleSheet.create({
   sheetSub: { color: colors.textMuted, fontSize: fontSize.sm },
   servingsStepper: { justifyContent: 'center', alignSelf: 'center' },
 });
+
+// CP-10 batch D (2026-07-10): the frozen `styles` block above stays
+// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing
+// sub-properties of the matching frozen style, at identical rest values, so
+// this screen's tokens stay live under a theme/accessibility toggle. Pure
+// layout keys (flex/gap/padding/width, no token) are correctly omitted --
+// there is nothing to unfreeze for them. Same pattern as
+// CardioHistoryScreen.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    row: { borderBottomColor: t.colors.border },
+    name: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    meta: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
+    logPill: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.border },
+    logPillText: { ...t.type.label, color: t.colors.primary },
+    sheetTitle: { ...t.type.title, color: t.colors.textPrimary },
+    sheetSub: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
+  };
+}

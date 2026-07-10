@@ -19,6 +19,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { KeyboardAwareScrollView, KeyboardGestureArea } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import Button from '../components/Button';
 import ModalHeader from '../components/ModalHeader';
 import SectionLabel from '../components/SectionLabel';
@@ -42,6 +43,11 @@ export default function AddCustomFoodScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
   const userId = user?.id;
   const toast = useToast();
+  // CP-10 batch D (2026-07-10): live theme (src/hooks/useTheme.js). This
+  // screen never renders a FlatList/FlashList/SectionList row, so an
+  // unmemoised call matches ScanBarcodeScreen's own precedent.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
 
   const mealSlot = route?.params?.mealSlot ?? 'snack';
   const entryDate = route?.params?.entryDate ?? todayLocalKey();
@@ -305,7 +311,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <ModalHeader title="New food" onClose={() => navigation.goBack()} />
 
       {/* L03-C5 (2026-07-09 design audit) originally standardised this on the
@@ -315,13 +321,13 @@ export default function AddCustomFoodScreen({ navigation, route }) {
           plus interactive dismiss, no fixed footer below this scroll. */}
       <KeyboardGestureArea interpolator="ios" style={styles.keyboardAvoid}>
       <KeyboardAwareScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <Text maxFontSizeMultiplier={1.3} style={styles.contextLabel}>Save this food, then add it to your diary.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.contextLabel, live.contextLabel]}>Save this food, then add it to your diary.</Text>
         {prefillBarcode ? (
-          <Text maxFontSizeMultiplier={1.3} style={styles.barcodeHint}>Scanned barcode: {prefillBarcode}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.barcodeHint, live.barcodeHint]}>Scanned barcode: {prefillBarcode}</Text>
         ) : null}
         {dupeFood ? (
-          <View style={styles.dupeBanner}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.dupeText}>
+          <View style={[styles.dupeBanner, live.dupeBanner]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.dupeText, live.dupeText]}>
               You've saved this barcode before as {dupeFood.name}.
             </Text>
             <Button
@@ -339,7 +345,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         {(_unsure('kcal100g', kcal) || _unsure('protein100g', protein)
           || _unsure('carbs100g', carbs) || _unsure('fat100g', fat)
           || _unsure('fibre100g', fibre)) ? (
-          <Text maxFontSizeMultiplier={1.3} style={styles.unsureNote}>Amber figures aren't certain, check them.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.unsureNote, live.unsureNote]}>Amber figures aren't certain, check them.</Text>
         ) : null}
         <View style={styles.row}>
           <NumField label="Calories" value={kcal} onChange={setKcal} suffix="kcal" unsure={_unsure('kcal100g', kcal)} />
@@ -368,11 +374,11 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         </View>
         {/* L05-ACF3 (2026-07-09 design audit): the two gram fields sat side by
             side with no explanation of which drives what. */}
-        <Text maxFontSizeMultiplier={1.3} style={styles.unsureNote}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.unsureNote, live.unsureNote]}>
           Serving is this food's usual portion, saved for next time. Eaten is how much you had today, logged now.
         </Text>
         {portionPreview ? (
-          <Text maxFontSizeMultiplier={1.3} style={styles.portionPreview}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.portionPreview, live.portionPreview]}>
             {`${quantityG} g${portionPreview.unitPrefix} works out to ${portionPreview.kcal} kcal - P ${portionPreview.protein}g - C ${portionPreview.carbs}g - F ${portionPreview.fat}g.`}
           </Text>
         ) : null}
@@ -415,6 +421,12 @@ export default function AddCustomFoodScreen({ navigation, route }) {
 }
 
 function Field({ label, value, onChange, placeholder, autoFocus }) {
+  // CP-10 batch D (2026-07-10): Field is a sibling function-component scope
+  // (not prop-drilled `live`/`t` from AddCustomFoodScreen, it is called from
+  // several places in one render), so its own useTheme() call is cleaner
+  // than threading two extra props through. Same shared buildLiveStyles(t)
+  // as the parent screen.
+  const t = useTheme();
   return (
     <TextField
       label={label}
@@ -423,13 +435,17 @@ function Field({ label, value, onChange, placeholder, autoFocus }) {
       placeholder={placeholder}
       autoFocus={autoFocus}
       accessibilityLabel={label}
-      surface={colors.inputBg}
+      surface={t.colors.inputBg}
       containerStyle={styles.field}
     />
   );
 }
 
 function NumField({ label, value, onChange, suffix, unsure }) {
+  // CP-10 batch D (2026-07-10): same rationale as Field above, own useTheme()
+  // call rather than prop-drilling.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <TextField
       label={label}
@@ -439,10 +455,10 @@ function NumField({ label, value, onChange, suffix, unsure }) {
       keyboardType="decimal-pad"
       accessibilityLabel={suffix === 'g' ? `${label}, grams` : label}
       accessibilityHint={unsure ? 'Not certain, check this value' : undefined}
-      surface={colors.inputBg}
+      surface={t.colors.inputBg}
       containerStyle={[styles.field, styles.numField]}
-      fieldStyle={unsure && styles.numWrapUnsure}
-      trailing={<Text maxFontSizeMultiplier={1.3} style={styles.numSuffix}>{suffix}</Text>}
+      fieldStyle={unsure && [styles.numWrapUnsure, live.numWrapUnsure]}
+      trailing={<Text maxFontSizeMultiplier={1.3} style={[styles.numSuffix, live.numSuffix]}>{suffix}</Text>}
     />
   );
 }
@@ -480,3 +496,25 @@ const styles = StyleSheet.create({
 
   saveBtn: { marginTop: spacing.xl },
 });
+
+// CP-10 batch D (2026-07-10): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, shared
+// by this file's three function-component scopes (AddCustomFoodScreen,
+// Field, NumField) so they can never drift out of step with each other or
+// the frozen block. Pure layout keys (flex/gap/padding/width, no token) are
+// correctly omitted -- there is nothing to unfreeze for them. Same pattern
+// as LogCardioScreen.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    contextLabel: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
+    barcodeHint: { ...t.type.label, color: t.colors.primary },
+    dupeBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    dupeText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    numSuffix: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
+    numWrapUnsure: { borderColor: t.colors.primary },
+    unsureNote: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
+    portionPreview: { color: t.colors.textPrimary, fontSize: t.fontSize.sm },
+  };
+}

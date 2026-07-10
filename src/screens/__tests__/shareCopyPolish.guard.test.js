@@ -60,7 +60,10 @@ describe('share copy polish', () => {
     expect(upgrade).not.toContain('secondaryLinkText');
     expect(upgrade).not.toContain("textDecorationLine: 'underline'");
 
-    expect(credits.match(/style=\{styles\.linkButton\}/g)?.length).toBe(3);
+    // CP-10 batch D, 2026-07-10: CreditsScreen is live-themed, so the three
+    // trust links now carry the style-array form [styles.linkButton,
+    // live.linkButton]. Same pin (three contained links), new shape.
+    expect(credits.match(/style=\{\[styles\.linkButton, live\.linkButton\]\}/g)?.length).toBe(3);
     expect(credits).toMatch(/linkButton: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(credits).toContain('link: {\n    ...type.label,\n    color: colors.textPrimary,');
     expect(credits).not.toMatch(/link: \{[\s\S]*color: colors\.primary/);

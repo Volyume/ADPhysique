@@ -33,6 +33,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import { SkeletonCard } from '../components/Skeleton';
 import SectionLabel from '../components/SectionLabel';
@@ -56,6 +57,10 @@ const EMPTY = { weekLabel: null, chapters: [] };
 
 export default function WeeklyStoryScreen() {
   const { user } = useAppStore(useShallow(s => ({ user: s.user })));
+  // CP-10 batch D (2026-07-10): live theme (src/hooks/useTheme.js). See
+  // buildLiveStyles header comment after the frozen `styles` block below.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const [story, setStory] = useState(EMPTY);
   const [loading, setLoading] = useState(true);
 
@@ -108,10 +113,10 @@ export default function WeeklyStoryScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom', 'left', 'right']}>
       <BackHeader title="Your week" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.intro}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.intro, live.intro]}>
           {story.weekLabel ? `The week of ${story.weekLabel}, in one place.` : 'This week, in one place.'}
         </Text>
 
@@ -125,12 +130,12 @@ export default function WeeklyStoryScreen() {
         )}
 
         {!loading && story.chapters.map((c) => (
-          <View key={c.key} style={styles.chapterCard}>
+          <View key={c.key} style={[styles.chapterCard, live.chapterCard]}>
             <View style={styles.chapterHeaderRow}>
-              <Ionicons name={c.icon} size={18} color={colors.primary} />
+              <Ionicons name={c.icon} size={18} color={t.colors.primary} />
               <SectionLabel tone="muted">{c.heading}</SectionLabel>
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.chapterBody, c.empty && styles.chapterBodyEmpty]}>{c.body}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.chapterBody, live.chapterBody, c.empty && [styles.chapterBodyEmpty, live.chapterBodyEmpty]]}>{c.body}</Text>
           </View>
         ))}
       </ScrollView>
@@ -174,3 +179,20 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
 });
+
+// CP-10 batch D (2026-07-10): the frozen `styles` block above stays
+// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing
+// sub-properties of the matching frozen style, at identical rest values, so
+// this screen's tokens stay live under a theme/accessibility toggle. Pure
+// layout keys (flex/gap/padding/width, no token) are correctly omitted --
+// there is nothing to unfreeze for them. Same pattern as
+// LogCardioScreen.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    intro: { ...t.type.bodySm, color: t.colors.textMuted },
+    chapterCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    chapterBody: { ...t.type.body, color: t.colors.textPrimary },
+    chapterBodyEmpty: { color: t.colors.textMuted },
+  };
+}

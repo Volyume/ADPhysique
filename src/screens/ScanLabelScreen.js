@@ -37,6 +37,7 @@ import { Camera, useCameraDevice } from 'react-native-vision-camera';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, spacing, radius, type, circle } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import Button from '../components/Button';
 import ModalHeader from '../components/ModalHeader';
 import NetInfo from '@react-native-community/netinfo';
@@ -72,6 +73,11 @@ export default function ScanLabelScreen({ navigation, route }) {
   const mealSlot = route?.params?.mealSlot ?? 'snack';
   const entryDate = route?.params?.entryDate ?? todayLocalKey();
   const prefillBarcode = route?.params?.prefillBarcode ?? null;
+  // CP-10 batch D (2026-07-10): live theme (src/hooks/useTheme.js). This
+  // screen never renders a FlatList/FlashList row, so an unmemoised call
+  // matches ScanBarcodeScreen's own precedent as a plain camera screen.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
 
   const [permission, setPermission] = useState(Camera.getCameraPermissionStatus());
   const [busy, setBusy] = useState(false);
@@ -235,20 +241,20 @@ export default function ScanLabelScreen({ navigation, route }) {
 
   if (permission === 'not-determined') {
     return (
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.center}><ActivityIndicator color={colors.textMuted} /></View>
+      <SafeAreaView style={[styles.safe, live.safe]}>
+        <View style={styles.center}><ActivityIndicator color={t.colors.textMuted} /></View>
       </SafeAreaView>
     );
   }
 
   if (permission !== 'granted') {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
         <ModalHeader title="Snap label" closePosition="left" onClose={() => navigation.goBack()} />
         <View style={styles.fallbackWrap}>
-          <Ionicons name="camera-outline" size={48} color={colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.fallbackTitle}>Camera access needed</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.fallbackBody}>
+          <Ionicons name="camera-outline" size={48} color={t.colors.textMuted} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackTitle, live.fallbackTitle]}>Camera access needed</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackBody, live.fallbackBody]}>
             Volyume uses the camera to read nutrition labels.
           </Text>
           {permission === 'denied' ? (
@@ -264,11 +270,11 @@ export default function ScanLabelScreen({ navigation, route }) {
 
   if (!device) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
         <ModalHeader title="Snap label" closePosition="left" onClose={() => navigation.goBack()} />
         <View style={styles.fallbackWrap}>
-          <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.fallbackTitle}>No camera available</Text>
+          <Ionicons name="alert-circle-outline" size={48} color={t.colors.textMuted} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackTitle, live.fallbackTitle]}>No camera available</Text>
           <Button title="Type it in instead" variant="tertiary" onPress={gotoManual} />
         </View>
       </SafeAreaView>
@@ -282,7 +288,7 @@ export default function ScanLabelScreen({ navigation, route }) {
     : onFront ? 'Front of pack (1 of 2)' : 'Nutrition panel (2 of 2)';
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <ModalHeader
         title="Snap label"
         closePosition="left"
@@ -298,13 +304,13 @@ export default function ScanLabelScreen({ navigation, route }) {
           <Ionicons
             name={torch ? 'flashlight' : 'flashlight-outline'}
             size={22}
-            color={torch ? colors.primary : colors.textPrimary}
+            color={torch ? t.colors.primary : t.colors.textPrimary}
           />
         </TouchableOpacity>
         )}
       />
 
-      <View style={styles.cameraWrap}>
+      <View style={[styles.cameraWrap, live.cameraWrap]}>
         <Camera
           ref={cameraRef}
           style={StyleSheet.absoluteFillObject}
@@ -315,13 +321,13 @@ export default function ScanLabelScreen({ navigation, route }) {
           enableZoomGesture
         />
         {prefillBarcode ? (
-          <View style={styles.missBanner} pointerEvents="none">
-            <Text maxFontSizeMultiplier={1.3} style={styles.missTitle}>
+          <View style={[styles.missBanner, live.missBanner]} pointerEvents="none">
+            <Text maxFontSizeMultiplier={1.3} style={[styles.missTitle, live.missTitle]}>
               {offline
                 ? `Barcode ${prefillBarcode}`
                 : `Barcode ${prefillBarcode} not in our database`}
             </Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.missBody}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.missBody, live.missBody]}>
               {!ocrAvailable
                 ? 'Enter the nutrition facts. The barcode is saved with them, so next time it scans straight away.'
                 : onFront
@@ -332,25 +338,25 @@ export default function ScanLabelScreen({ navigation, route }) {
         ) : null}
         {ocrAvailable ? (
           <View style={styles.overlay} pointerEvents="none">
-            <View style={styles.frame} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.hint}>{hintText}</Text>
+            <View style={[styles.frame, live.frame]} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.hint, live.hint]}>{hintText}</Text>
           </View>
         ) : null}
         <View style={styles.captureRow}>
           {ocrAvailable ? (
             <>
               <TouchableOpacity
-                style={[styles.captureBtn, busy && styles.captureBtnDisabled]}
+                style={[styles.captureBtn, live.captureBtn, busy && styles.captureBtnDisabled]}
                 onPress={onCapture}
                 disabled={busy}
                 accessibilityRole="button"
                 accessibilityLabel={onFront ? 'Capture front of pack' : 'Capture nutrition panel'}
               >
-                {busy ? <ActivityIndicator color={colors.camera} /> : <View style={styles.captureInner} />}
+                {busy ? <ActivityIndicator color={t.colors.camera} /> : <View style={[styles.captureInner, live.captureInner]} />}
               </TouchableOpacity>
               {onFront && !busy ? (
                 <TouchableOpacity onPress={skipName} hitSlop={12} style={styles.skipBtn} accessibilityRole="button" accessibilityLabel="Skip name">
-                  <Text maxFontSizeMultiplier={1.3} style={styles.skipText}>Skip name</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.skipText, live.skipText]}>Skip name</Text>
                 </TouchableOpacity>
               ) : null}
               {/* C8: quiet, discoverable way back to the name step for this
@@ -358,14 +364,14 @@ export default function ScanLabelScreen({ navigation, route }) {
                   remembered flag). Never clears the flag. */}
               {shouldOfferAddNameLink({ step, skipRemembered, busy }) ? (
                 <TouchableOpacity onPress={addNameBack} hitSlop={12} style={styles.skipBtn} accessibilityRole="button" accessibilityLabel="Add a name">
-                  <Text maxFontSizeMultiplier={1.3} style={styles.skipText}>Add a name</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.skipText, live.skipText]}>Add a name</Text>
                 </TouchableOpacity>
               ) : null}
               {/* COMP-022: a barcode heal must never dead-end mid-capture, a
                   persistent escape that keeps the barcode (✕ would discard it). */}
               {prefillBarcode && !busy ? (
                 <TouchableOpacity onPress={gotoManual} hitSlop={12} style={styles.skipBtn} accessibilityRole="button" accessibilityLabel="Type it in">
-                  <Text maxFontSizeMultiplier={1.3} style={styles.skipText}>Type it in</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.skipText, live.skipText]}>Type it in</Text>
                 </TouchableOpacity>
               ) : null}
             </>
@@ -378,12 +384,12 @@ export default function ScanLabelScreen({ navigation, route }) {
       {/* COMP-022 arrival choice: camera warm behind the scrim, one tap in. */}
       {arrivalChoice ? (
         <View style={styles.choiceOverlay}>
-          <View style={styles.choiceScrim} />
-          <View style={styles.choiceCard}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.choiceTitle}>
+          <View style={[styles.choiceScrim, live.choiceScrim]} />
+          <View style={[styles.choiceCard, live.choiceCard]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.choiceTitle, live.choiceTitle]}>
               {offline ? 'Couldn’t check the full database' : 'Not in the database yet'}
             </Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.choiceBody}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.choiceBody, live.choiceBody]}>
               {offline
                 ? 'You’re offline, so only the on-device list was checked. Label scanning still works offline. Whatever you save is kept on this phone.'
                 : 'Fix it once and it’s yours. Scan the label, about 30 seconds, or type it in. The barcode is saved either way, so next time it scans instantly.'}
@@ -458,3 +464,31 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm, marginBottom: spacing.xl, lineHeight: 22,
   },
 });
+
+// CP-10 batch D (2026-07-10): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so a
+// theme/accessibility toggle applies without an app restart. Pure layout
+// keys (flex/gap/padding/width/position, no token) are correctly omitted --
+// there is nothing to unfreeze for them. Same pattern as LogCardioScreen.js's
+// buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    choiceScrim: { backgroundColor: t.colors.scrim },
+    choiceCard: { backgroundColor: t.colors.surface },
+    choiceTitle: { ...t.type.title, color: t.colors.textPrimary },
+    choiceBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+    cameraWrap: { backgroundColor: t.colors.camera },
+    frame: { borderColor: t.colors.primary },
+    hint: { ...t.type.body, color: t.colors.textPrimary, backgroundColor: t.colors.scrim },
+    missBanner: { backgroundColor: t.colors.scrim },
+    missTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    missBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+    captureBtn: { backgroundColor: t.colors.primaryFill },
+    skipText: { ...t.type.body, color: t.colors.textPrimary, backgroundColor: t.colors.scrim },
+    captureInner: { backgroundColor: t.colors.camera },
+    fallbackTitle: { ...t.type.title, color: t.colors.textPrimary },
+    fallbackBody: { color: t.colors.textMuted, fontSize: t.fontSize.md },
+  };
+}

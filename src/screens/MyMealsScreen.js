@@ -25,13 +25,14 @@
  */
 import { todayLocalKey } from '../lib/dayKey';
 import { appAlert } from '../components/AppAlert';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, spacing, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
@@ -55,6 +56,12 @@ export default function MyMealsScreen({ navigation, route }) {
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const userId = user?.id;
   const toast = useToast();
+  // CP-10 batch D (2026-07-10): live theme (src/hooks/useTheme.js).
+  // Memoised because this is a list-heavy screen (renderItem runs once per
+  // FlashList row). See buildLiveStyles header comment after the frozen
+  // `styles` block below.
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   const mealSlot = route?.params?.mealSlot ?? 'snack';
   const entryDate = route?.params?.entryDate ?? todayLocalKey();
@@ -183,7 +190,7 @@ export default function MyMealsScreen({ navigation, route }) {
     // haptic.
     return (
       <TouchableOpacity
-        style={styles.row}
+        style={[styles.row, live.row]}
         onPress={() => onLog(item)}
         onLongPress={() => openMenu(item)}
         accessibilityRole="button"
@@ -191,20 +198,20 @@ export default function MyMealsScreen({ navigation, route }) {
         accessibilityHint="Use the info button to view what's inside, or the more actions button to rename or delete"
       >
         <View style={{ flex: 1 }}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.name} numberOfLines={1}>{item.name}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.meta}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.name, live.name]} numberOfLines={1}>{item.name}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.meta, live.meta]}>
             {item.itemCount} {item.itemCount === 1 ? 'food' : 'foods'} | {toEnergy(item.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)} | {item.totals.protein}g protein
           </Text>
         </View>
         <View style={styles.rowActions}>
-          <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+          <Ionicons name="add-circle-outline" size={22} color={t.colors.primary} />
           <TouchableOpacity
             onPress={() => { haptics.selection(); setInspecting(item); }}
             hitSlop={10}
             accessibilityRole="button"
             accessibilityLabel={`View ${item.name}`}
           >
-            <Ionicons name="information-circle-outline" size={22} color={colors.textMuted} />
+            <Ionicons name="information-circle-outline" size={22} color={t.colors.textMuted} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => { haptics.selection(); openMenu(item); }}
@@ -212,7 +219,7 @@ export default function MyMealsScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel={`More actions for ${item.name}`}
           >
-            <Ionicons name="ellipsis-horizontal-circle-outline" size={22} color={colors.textMuted} />
+            <Ionicons name="ellipsis-horizontal-circle-outline" size={22} color={t.colors.textMuted} />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -220,7 +227,7 @@ export default function MyMealsScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <BackHeader title="Saved meals" />
 
       {loading ? (
@@ -264,12 +271,12 @@ export default function MyMealsScreen({ navigation, route }) {
         keyboardAvoiding
         accessibilityLabel="Rename meal"
       >
-        <Text maxFontSizeMultiplier={1.3} style={styles.sheetTitle}>Rename meal</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Rename meal</Text>
         <TextField
           value={renameText}
           onChangeText={setRenameText}
           placeholder="Meal name"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={t.colors.textMuted}
           autoFocus
           maxLength={60}
           returnKeyType="done"
@@ -310,3 +317,20 @@ const styles = StyleSheet.create({
   sheetTitle: { ...type.bodyStrong, color: colors.textPrimary },
   sheetActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm },
 });
+
+// CP-10 batch D (2026-07-10): the frozen `styles` block above stays
+// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing
+// sub-properties of the matching frozen style, at identical rest values, so
+// this screen's tokens stay live under a theme/accessibility toggle. Pure
+// layout keys (flex/gap/padding/width, no token) are correctly omitted --
+// there is nothing to unfreeze for them. Same pattern as
+// CardioHistoryScreen.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    row: { borderBottomColor: t.colors.border },
+    name: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    meta: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
+    sheetTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+  };
+}

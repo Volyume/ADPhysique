@@ -56,6 +56,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import NetInfo from '@react-native-community/netinfo';
 import { planReady as hapticScanSuccess, selection as hapticSelection } from '../lib/haptics';
 import { colors, fontSize, spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { resolveBarcode } from '../lib/food/waterfall';
 import { logError, logInfo } from '../lib/errorLog';
 import { audit } from '../lib/observability';
@@ -94,6 +95,11 @@ export default function ScanBarcodeScreen({ navigation, route }) {
   const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
   const userId = user?.id;
   const toast = useToast();
+  // CP-10 batch D (2026-07-10): live theme (src/hooks/useTheme.js). This
+  // screen never renders a FlatList/FlashList row, so an unmemoised call
+  // matches ScanBarcodeScreen's own precedent as a plain camera screen.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
 
   const mealSlot = route?.params?.mealSlot ?? 'snack';
   const entryDate = route?.params?.entryDate ?? todayLocalKey();
@@ -251,9 +257,9 @@ export default function ScanBarcodeScreen({ navigation, route }) {
 
   if (permission === 'not-determined') {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={[styles.safe, live.safe]}>
         <View style={styles.center}>
-          <ActivityIndicator color={colors.textMuted} />
+          <ActivityIndicator color={t.colors.textMuted} />
         </View>
       </SafeAreaView>
     );
@@ -261,12 +267,12 @@ export default function ScanBarcodeScreen({ navigation, route }) {
 
   if (permission !== 'granted') {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
         <ModalHeader title="Scan" closePosition="left" onClose={() => navigation.goBack()} />
         <View style={styles.permissionWrap}>
-          <Ionicons name="camera-outline" size={48} color={colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.permissionTitle}>Camera access needed</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.permissionBody}>
+          <Ionicons name="camera-outline" size={48} color={t.colors.textMuted} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.permissionTitle, live.permissionTitle]}>Camera access needed</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.permissionBody, live.permissionBody]}>
             Volyume uses the camera to scan barcodes. Turn it on in Settings.
           </Text>
           {permission === 'denied' ? (
@@ -295,11 +301,11 @@ export default function ScanBarcodeScreen({ navigation, route }) {
 
   if (!device) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
         <ModalHeader title="Scan" closePosition="left" onClose={() => navigation.goBack()} />
         <View style={styles.permissionWrap}>
-          <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.permissionTitle}>No camera available</Text>
+          <Ionicons name="alert-circle-outline" size={48} color={t.colors.textMuted} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.permissionTitle, live.permissionTitle]}>No camera available</Text>
           <Button
             title="Type it in instead"
             variant="tertiary"
@@ -314,7 +320,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
   const isActive = focused && appActive && !resolving && !manualOpen;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <ModalHeader
         title="Scan barcode"
         closePosition="left"
@@ -330,13 +336,13 @@ export default function ScanBarcodeScreen({ navigation, route }) {
           <Ionicons
             name={torch ? 'flashlight' : 'flashlight-outline'}
             size={22}
-            color={torch ? colors.primary : colors.textPrimary}
+            color={torch ? t.colors.primary : t.colors.textPrimary}
           />
         </TouchableOpacity>
         )}
       />
 
-      <View style={styles.cameraWrap}>
+      <View style={[styles.cameraWrap, live.cameraWrap]}>
         <Camera
           style={StyleSheet.absoluteFillObject}
           device={device}
@@ -346,14 +352,14 @@ export default function ScanBarcodeScreen({ navigation, route }) {
           enableZoomGesture
         />
         <View style={styles.overlay} pointerEvents="none">
-          <View style={styles.reticle} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.hint}>
+          <View style={[styles.reticle, live.reticle]} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.hint, live.hint]}>
             {resolving ? 'Looking it up' : 'Point at a barcode'}
           </Text>
         </View>
         {resolving ? (
-          <View style={styles.resolvingBadge}>
-            <ActivityIndicator size="small" color={colors.textPrimary} />
+          <View style={[styles.resolvingBadge, live.resolvingBadge]}>
+            <ActivityIndicator size="small" color={t.colors.textPrimary} />
           </View>
         ) : null}
         {/* L05-SB2: escape hatch for a damaged/curved barcode the camera
@@ -368,7 +374,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Enter barcode number"
             >
-              <Text maxFontSizeMultiplier={1.3} style={styles.manualLinkText}>Enter barcode number</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.manualLinkText, live.manualLinkText]}>Enter barcode number</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -380,8 +386,8 @@ export default function ScanBarcodeScreen({ navigation, route }) {
         keyboardAvoiding
         accessibilityLabel="Enter barcode number"
       >
-        <Text maxFontSizeMultiplier={1.3} style={styles.manualTitle}>Enter barcode number</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.manualBody}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.manualTitle, live.manualTitle]}>Enter barcode number</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.manualBody, live.manualBody]}>
           Type the number printed under the barcode, 8 to 14 digits.
         </Text>
         <TextField
@@ -395,7 +401,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
           accessibilityLabel="Barcode number"
           onSubmitEditing={submitManual}
         />
-        {manualError ? <Text maxFontSizeMultiplier={1.3} style={styles.manualErrorText}>{manualError}</Text> : null}
+        {manualError ? <Text maxFontSizeMultiplier={1.3} style={[styles.manualErrorText, live.manualErrorText]}>{manualError}</Text> : null}
         <Button
           title="Look up"
           onPress={submitManual}
@@ -452,3 +458,28 @@ const styles = StyleSheet.create({
   },
   permissionBtnText: { color: colors.onPrimary, ...type.bodyStrong },
 });
+
+// CP-10 batch D (2026-07-10): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so a
+// theme/accessibility toggle applies without an app restart. Pure layout
+// keys (flex/gap/padding/width/position, no token) are correctly omitted --
+// there is nothing to unfreeze for them. Same pattern as LogCardioScreen.js's
+// buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    cameraWrap: { backgroundColor: t.colors.background },
+    reticle: { borderColor: t.colors.primary },
+    hint: { color: t.colors.textPrimary, ...t.type.body, backgroundColor: t.colors.scrim },
+    resolvingBadge: { backgroundColor: t.colors.scrim },
+    manualLinkText: { ...t.type.body, color: t.colors.textPrimary, backgroundColor: t.colors.scrim },
+    manualTitle: { ...t.type.title, color: t.colors.textPrimary },
+    manualBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+    manualErrorText: { ...t.type.bodySm, color: t.colors.error },
+    permissionTitle: { color: t.colors.textPrimary, ...t.type.title },
+    permissionBody: { color: t.colors.textMuted, fontSize: t.fontSize.md },
+    permissionBtn: { backgroundColor: t.colors.primaryFill },
+    permissionBtnText: { color: t.colors.onPrimary, ...t.type.bodyStrong },
+  };
+}
