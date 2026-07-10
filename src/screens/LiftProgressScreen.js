@@ -175,12 +175,16 @@ export default function LiftProgressScreen({ navigation }) {
     return colors.textMuted;
   }
 
-  function openLiftMenu(row) {
+  function openLiftMenu(row, originRect) {
     const items = [
       {
         icon: 'analytics-outline',
         label: 'View exercise detail',
-        onPress: () => navigation.navigate('ExerciseDetail', { exerciseId: row.exerciseId }),
+        // Origin-aware hero zoom (D31): grow ExerciseDetail from the tapped
+        // row even via the peek menu; the card sits behind the menu, so the
+        // growth still reads from its real position. Falls back to centre
+        // zoom when the rect couldn't be measured.
+        onPress: () => navigation.navigate('ExerciseDetail', { exerciseId: row.exerciseId, __heroOrigin: originRect || undefined }),
       },
     ];
     if (row.bestE1rm) {
@@ -361,8 +365,11 @@ export default function LiftProgressScreen({ navigation }) {
             <AnimatedEntrance index={index}>
             <PressableCard
               style={styles.card}
-              onPress={() => navigation.navigate('ExerciseDetail', { exerciseId: item.exerciseId })}
-              onLongPress={() => openLiftMenu(item)}
+              // Origin-aware hero zoom (D31): the pushed ExerciseDetail grows
+              // from this row's measured rect; a null rect (unmeasurable
+              // handle) falls back to the app's centre zoom.
+              onPressWithLayout={(rect) => navigation.navigate('ExerciseDetail', { exerciseId: item.exerciseId, __heroOrigin: rect || undefined })}
+              onLongPressWithLayout={(rect) => openLiftMenu(item, rect)}
               accessibilityLabel={[
                 item.name,
                 `${item.bestE1rm}${units} estimated max`,

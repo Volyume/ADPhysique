@@ -50,7 +50,8 @@ import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  useSharedValue, useAnimatedStyle, withSpring, runOnJS,
+  useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS,
+  interpolate, Extrapolation,
 } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { appAlert } from './AppAlert';
@@ -76,6 +77,16 @@ const POSES = [
 const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
 
 const MAX_ZOOM = 4;
+
+// The tapped thumbnail cross-fades to the real (gesture-owning) photo over
+// this closing slice of the morph, so the cover->contain fit change dissolves
+// instead of popping. Pure numeric constant, safe to read inside worklets.
+const MORPH_HANDOFF = 0.85;
+
+// Reanimated-driven expo-image for the hero-morph overlay (grid -> viewer).
+// createAnimatedComponent keeps expo-image's contentFit/recycling behaviour
+// while letting the transform run on the UI thread.
+const AnimatedImage = Animated.createAnimatedComponent(Image);
 
 function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
 
@@ -104,6 +115,12 @@ export default function ProgressPhotoViewer({
   onCompareFrom,
   onSetReference,
   hideWeight = false,
+  // Measured rect of the tapped thumbnail (window coords) for the grid ->
+  // viewer hero morph (D31). When present and Reduce Motion is off, the photo
+  // grows from this rect on open and shrinks back to it on close; the viewer
+  // chrome cross-fades. Absent (or under Reduce Motion) the viewer keeps its
+  // instant/fade Modal behaviour, byte-identical to before.
+  originRect,
 }) {
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const userId = useAppStore((s) => s.user?.id);
@@ -264,6 +281,119 @@ export default function ProgressPhotoViewer({
     ],
   }));
 
+  // ── Hero morph (grid -> viewer, D31) ──────────────────────────────────────
+  // Only when a measured origin rect is supplied and Reduce Motion is off.
+  // The zoom/pan/paging gesture system above is untouched; the morph owns the
+  // open/close transition only, then hands the stage back to the gestures.
+  const morphEnabled = !!originRect
+    && !reduceMotion
+    && Number.isFinite(originRect.width)
+    && originRect.width > 0;
+
+  // Origin geometry captured once as plain numbers (safe to close over inside
+  // the worklet below — no theme reads, pure arithmetic, CP-10 plan §5.1).
+  const oX = originRect?.x ?? 0;
+  const oY = originRect?.y ?? 0;
+  const oW = originRect?.width ?? 0;
+  const oH = originRect?.height ?? 0;
+
+  // morph: 0 = at the tapped thumbnail, 1 = settled full-screen photo.
+  const morph = useSharedValue(morphEnabled ? 0 : 1);
+  const destX = useSharedValue(0);
+  const destY = useSharedValue(0);
+  const destW = useSharedValue(0);
+  const destH = useSharedValue(0);
+
+  // 'opening' shows the growing overlay; 'done' hands off to the real gesture
+  // image; 'closing' shrinks back before the parent unmounts the viewer.
+  const [morphPhase, setMorphPhase] = useState(morphEnabled ? 'opening' : 'done');
+  const measuredRef = useRef(false);
+  const closingRef = useRef(false);
+  const stageImageRef = useRef(null);
+
+  // Measure the resting photo rect once the stage lays out, then grow from the
+  // thumbnail to it. Runs on the real device (react-test-renderer never lays
+  // out, so this is inert in tests — the guard below keeps it crash-free).
+  const onStageLayout = useCallback(() => {
+    if (!morphEnabled || measuredRef.current) return;
+    const node = stageImageRef.current;
+    if (!node || typeof node.measureInWindow !== 'function') return;
+    measuredRef.current = true;
+    node.measureInWindow((x, y, w, h) => {
+      destX.value = x; destY.value = y; destW.value = w; destH.value = h;
+      morph.value = withTiming(1, { duration: motion.enter }, (finished) => {
+        if (finished) runOnJS(setMorphPhase)('done');
+      });
+    });
+  }, [morphEnabled, destX, destY, destW, destH, morph]);
+
+  // Safety net: if the stage never reports a layout / cannot be measured, do
+  // not leave the viewer stuck at the origin — settle it open.
+  useEffect(() => {
+    if (!morphEnabled) return undefined;
+    const t = setTimeout(() => {
+      if (measuredRef.current) return;
+      measuredRef.current = true;
+      morph.value = withTiming(1, { duration: motion.enter }, (finished) => {
+        if (finished) runOnJS(setMorphPhase)('done');
+      });
+    }, 120);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [morphEnabled]);
+
+  const closeParent = useCallback(() => { onClose?.(); }, [onClose]);
+
+  // Close: shrink the photo back into the thumbnail while the chrome fades
+  // out, then hand control to the parent. Without the morph (or under Reduce
+  // Motion) this is the plain dismiss the header/back button always had.
+  const handleClose = useCallback(() => {
+    if (!morphEnabled) { onClose?.(); return; }
+    if (closingRef.current) return;
+    closingRef.current = true;
+    resetZoom();
+    setMorphPhase('closing');
+    morph.value = withTiming(0, { duration: motion.exit }, (finished) => {
+      if (finished) runOnJS(closeParent)();
+    });
+  }, [morphEnabled, onClose, resetZoom, morph, closeParent]);
+
+  // Overlay transform: a destination-sized box scaled/translated back toward
+  // the origin as morph goes 0 -> 1. Pure arithmetic worklet (no theme reads).
+  const overlayStyle = useAnimatedStyle(() => {
+    const dw = destW.value || oW;
+    const dh = destH.value || oH;
+    const scaleX = interpolate(morph.value, [0, 1], [oW / dw, 1]);
+    const scaleY = interpolate(morph.value, [0, 1], [oH / dh, 1]);
+    const destCx = destX.value + dw / 2;
+    const destCy = destY.value + dh / 2;
+    const originCx = oX + oW / 2;
+    const originCy = oY + oH / 2;
+    const translateX = interpolate(morph.value, [0, 1], [originCx - destCx, 0]);
+    const translateY = interpolate(morph.value, [0, 1], [originCy - destCy, 0]);
+    const opacity = interpolate(morph.value, [MORPH_HANDOFF, 1], [1, 0], Extrapolation.CLAMP);
+    return {
+      left: destX.value,
+      top: destY.value,
+      width: dw,
+      height: dh,
+      opacity,
+      transform: [{ translateX }, { translateY }, { scaleX }, { scaleY }],
+    };
+  });
+
+  // The viewer chrome (background, header, metadata) fades in a touch ahead of
+  // the photo settling, and fades out on close.
+  const chromeStyle = useAnimatedStyle(() => ({
+    opacity: morphEnabled ? interpolate(morph.value, [0, 0.7], [0, 1], Extrapolation.CLAMP) : 1,
+  }));
+
+  // The real gesture-owning photo stays hidden during the morph and cross-fades
+  // in over the handoff slice, so the overlay hands off without a visible cut.
+  const stageImageStyle = useAnimatedStyle(() => ({
+    opacity: morphEnabled ? interpolate(morph.value, [MORPH_HANDOFF, 1], [0, 1], Extrapolation.CLAMP) : 1,
+  }));
+
   // ── Metadata writes ───────────────────────────────────────────────────────
   const applyMeta = useCallback(async (patch) => {
     if (!current) return;
@@ -393,19 +523,25 @@ export default function ProgressPhotoViewer({
   return (
     <Modal
       visible
-      animationType={reduceMotion ? 'none' : 'fade'}
-      onRequestClose={onClose}
+      // With the hero morph we own the whole open/close animation, so the OS
+      // fade is off and the Modal is transparent (the underlying grid shows
+      // through while the chrome fades in). Without a morph — or under Reduce
+      // Motion — this is byte-identical to the original fade/none behaviour.
+      animationType={morphEnabled ? 'none' : (reduceMotion ? 'none' : 'fade')}
+      transparent={morphEnabled}
+      onRequestClose={handleClose}
       statusBarTranslucent
     >
+      <Animated.View style={[StyleSheet.absoluteFill, chromeStyle]}>
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
+          <TouchableOpacity onPress={handleClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="chevron-back" size={26} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerDate} numberOfLines={1}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.headerDate} numberOfLines={1}>
             {current ? formatProgressPhotoDay(currentMeta.takenAt) : ''}
           </Text>
-          <Text style={styles.counter}>
+          <Text maxFontSizeMultiplier={1.3} style={styles.counter}>
             {photos.length > 1 ? `${safeIndex + 1} / ${photos.length}` : ''}
           </Text>
         </View>
@@ -424,7 +560,11 @@ export default function ProgressPhotoViewer({
         >
           {current ? (
             <GestureDetector gesture={composed}>
-              <Animated.View style={[styles.stageInner, imgAnimStyle]}>
+              <Animated.View
+                ref={stageImageRef}
+                onLayout={onStageLayout}
+                style={[styles.stageInner, imgAnimStyle, stageImageStyle]}
+              >
                 <Image
                   source={{ uri: current.uri }}
                   style={{ width: imgW, height: imgH }}
@@ -441,7 +581,7 @@ export default function ProgressPhotoViewer({
               </Animated.View>
             </GestureDetector>
           ) : (
-            <Text style={styles.emptyText}>No photo to show.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>No photo to show.</Text>
           )}
         </View>
 
@@ -451,23 +591,23 @@ export default function ProgressPhotoViewer({
               <View style={styles.metaRow}>
                 {currentMeta.pose ? (
                   <View style={styles.poseTag}>
-                    <Text style={styles.poseTagText}>{POSE_LABEL[currentMeta.pose]}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.poseTagText}>{POSE_LABEL[currentMeta.pose]}</Text>
                   </View>
                 ) : null}
-                <Text style={styles.metaDate}>{formatProgressPhotoDay(currentMeta.takenAt)}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.metaDate}>{formatProgressPhotoDay(currentMeta.takenAt)}</Text>
               </View>
 
-              {showWeight ? <Text style={styles.metaWeight}>{weightLine}</Text> : null}
-              {currentMeta.note ? <Text style={styles.metaNote}>{currentMeta.note}</Text> : null}
+              {showWeight ? <Text maxFontSizeMultiplier={1.3} style={styles.metaWeight}>{weightLine}</Text> : null}
+              {currentMeta.note ? <Text maxFontSizeMultiplier={1.3} style={styles.metaNote}>{currentMeta.note}</Text> : null}
 
               <View style={styles.storageNote}>
                 <Ionicons name="phone-portrait-outline" size={iconSize.sm} color={colors.primary} />
-                <Text style={styles.storageNoteText}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.storageNoteText}>
                   Stored on this device. Export anything you want to keep before uninstalling, clearing app data or changing phones.
                 </Text>
               </View>
 
-              <Text style={styles.sectionLabel}>Pose</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.sectionLabel}>Pose</Text>
               <View style={styles.poseSelector}>
                 {POSES.map((p) => {
                   const active = currentMeta.pose === p.key;
@@ -525,6 +665,22 @@ export default function ProgressPhotoViewer({
           ) : null}
         </ScrollView>
       </SafeAreaView>
+      </Animated.View>
+
+      {/* Hero-morph overlay (D31): the tapped photo growing into place on open
+          and shrinking back on close. Rendered above the fading chrome, and
+          only while the morph runs; once settled the real gesture image owns
+          the stage. pointerEvents none so the gestures always win. */}
+      {morphEnabled && morphPhase !== 'done' && current ? (
+        <AnimatedImage
+          source={{ uri: current.uri }}
+          contentFit="cover"
+          pointerEvents="none"
+          style={[styles.morphOverlay, overlayStyle]}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+      ) : null}
 
       {/* Note editor */}
       <Modal
@@ -535,7 +691,7 @@ export default function ProgressPhotoViewer({
       >
         <View style={styles.sheetBackdrop}>
           <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>Note</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.sheetTitle}>Note</Text>
             <TextField
               containerStyle={styles.noteFieldContainer}
               fieldStyle={styles.noteField}
@@ -581,6 +737,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.camera, overflow: 'hidden',
   },
   stageInner: { alignItems: 'center', justifyContent: 'center' },
+  // Absolute box for the hero-morph overlay; left/top/width/height + transform
+  // are supplied per-frame by overlayStyle (window coords), so no colour or
+  // size token belongs here.
+  morphOverlay: { position: 'absolute' },
   emptyText: { ...type.body, color: colors.textMuted },
   panel: { maxHeight: 320 },
   panelContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xl },

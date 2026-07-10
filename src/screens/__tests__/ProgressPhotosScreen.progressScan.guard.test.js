@@ -43,7 +43,13 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).not.toMatch(/<ProgressScanHistoryCard/);
     expect(SCREEN).toMatch(/const scanSummary = libraryScanSummary\(scanForDay\);/);
     expect(SCREEN).toMatch(/scanSummary\.map/);
-    expect(SCREEN).toMatch(/onPress=\{readOnly \? undefined : \(\) => openViewer\(cover\.name\)\}/);
+    // Pin updated for the grid -> viewer hero morph (D31): the card now taps
+    // through openWithMorph, which measures the tapped thumbnail's window rect
+    // and opens the SAME full-size viewer for the cover photo. The read-only
+    // gate (inert tap in view-only state) is unchanged and still pinned; the
+    // second assertion locks that the tap still opens the cover's viewer.
+    expect(SCREEN).toMatch(/onPress=\{readOnly \? undefined : openWithMorph\}/);
+    expect(SCREEN).toMatch(/openViewer\(cover\.name, \{ x, y, width, height \}\)/);
   });
 
   test('scan entries have scan-specific comparison and share surfaces', () => {
@@ -155,7 +161,12 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   });
 
   test('photo-set sheets keep titles and date fields narrow-screen safe', () => {
-    expect(SCREEN).toMatch(/<Text style=\{styles\.scanDateValue\} numberOfLines=\{1\} ellipsizeMode="tail">/);
+    // Pin extended for the D30 dynamic-type codemod sweep (campaign item 6):
+    // the sweep inserts the exact, grep-able cap maxFontSizeMultiplier={1.3}
+    // immediately after the tag name, before existing props. The narrow-screen
+    // guarantee this test pins (single line, tail-ellipsised) is unchanged; the
+    // literal is extended to the exact attribute, never weakened to a wildcard.
+    expect(SCREEN).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.scanDateValue\} numberOfLines=\{1\} ellipsizeMode="tail">/);
     expect(SCREEN).toMatch(/captureRouteTitle: \{ \.\.\.type\.title/);
     expect(SCREEN).toMatch(/scanDateTitle: \{ \.\.\.type\.bodyStrong/);
   });

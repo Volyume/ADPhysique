@@ -22,6 +22,7 @@
  * defaults to 'button'.
  */
 
+import { useRef } from 'react';
 import { Pressable } from 'react-native';
 import Reanimated, {
   useSharedValue,
@@ -35,6 +36,15 @@ import { motion } from '../styles/theme';
 export default function PressableCard({
   onPress,
   onLongPress,
+  // Origin-aware variants (shared-element transitions, D31): when supplied,
+  // the card measures its own on-screen rect {x, y, width, height} in window
+  // coordinates at press time and hands it to the callback, so a pushed
+  // screen can grow FROM the tapped card instead of the screen centre. If
+  // the native handle can't be measured the callback still fires with null,
+  // so a tap is never lost (the destination just falls back to centre zoom).
+  // Behaviour is byte-identical for every consumer that doesn't pass these.
+  onPressWithLayout,
+  onLongPressWithLayout,
   disabled = false,
   style,
   children,
@@ -50,6 +60,27 @@ export default function PressableCard({
 }) {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const pressed = useSharedValue(0); // 0 = at rest, 1 = fully pressed
+  const viewRef = useRef(null);
+
+  // Measure this card in window coordinates, then hand the rect to the
+  // origin-aware callback. Falls back to a null rect when the native handle
+  // isn't measurable so the action still fires (never a lost tap).
+  function measureThen(cb) {
+    if (!cb) return;
+    const node = viewRef.current;
+    if (node && typeof node.measureInWindow === 'function') {
+      node.measureInWindow((x, y, width, height) => cb({ x, y, width, height }));
+    } else {
+      cb(null);
+    }
+  }
+
+  // Only used when the origin-aware callbacks are supplied. Consumers that pass
+  // a plain onPress/onLongPress keep that exact handler identity on the
+  // Pressable below (byte-compatible), so nothing about their behaviour or
+  // tree shape changes.
+  function handlePressWithLayout() { measureThen(onPressWithLayout); }
+  function handleLongPressWithLayout() { measureThen(onLongPressWithLayout); }
 
   function pressIn() {
     if (reduceMotion) return;
@@ -73,8 +104,8 @@ export default function PressableCard({
 
   return (
     <Pressable
-      onPress={onPress}
-      onLongPress={onLongPress}
+      onPress={onPressWithLayout ? handlePressWithLayout : onPress}
+      onLongPress={onLongPressWithLayout ? handleLongPressWithLayout : onLongPress}
       onPressIn={pressIn}
       onPressOut={pressOut}
       disabled={disabled}
@@ -85,7 +116,7 @@ export default function PressableCard({
       accessibilityHint={accessibilityHint}
       accessibilityState={accessibilityState}
     >
-      <Reanimated.View style={[style, animatedStyle]}>
+      <Reanimated.View ref={viewRef} style={[style, animatedStyle]}>
         {children}
       </Reanimated.View>
     </Pressable>

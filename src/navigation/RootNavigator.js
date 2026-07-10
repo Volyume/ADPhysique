@@ -263,8 +263,22 @@ const GatedRecipeBuilder    = lazyScreen(() => withProGuard(require('../screens/
 // so it reads as the source card growing into a full screen rather
 // than a flat slide. Matches the Whoop / Apple Health pattern of
 // "tap a card → it expands".
-const heroZoomTransition = {
-  cardStyleInterpolator: ({ current }) => {
+// Shared timing for every hero-zoom registration (calm enter, quicker exit).
+const heroZoomTransitionSpec = {
+  open: { animation: 'timing', config: { duration: motion.enter } },
+  close: { animation: 'timing', config: { duration: motion.exit } },
+};
+
+// Builds the card interpolator for a hero-zoom push. When `origin` is a
+// measured rect ({ x, y, width, height } in window coords, supplied by the
+// tapping card via PressableCard's measure API in the destination route's
+// __heroOrigin param, D31), the incoming screen grows FROM that rect: it
+// starts scaled down and offset so it reads as the tapped card expanding
+// into the full screen, then settles to identity. When `origin` is absent
+// (cross-tab pushes, programmatic navigation) this is byte-identical to the
+// original centre zoom (opacity 0->1, scale 0.92->1).
+function makeHeroZoomCardStyle(origin) {
+  return ({ current, layouts }) => {
     // Defensive: react-navigation can call this with current.progress
     // missing during certain pop/back gestures, which throws an
     // "interpolate of undefined" the user reads as an app crash on
@@ -277,17 +291,57 @@ const heroZoomTransition = {
       inputRange: [0, 1],
       outputRange: [0, 1],
     });
+    const screen = layouts?.screen;
+    if (origin && Number.isFinite(origin.width) && origin.width > 0 && screen?.width && screen?.height) {
+      const originCx = origin.x + origin.width / 2;
+      const originCy = origin.y + origin.height / 2;
+      // Uniform scale kept in a calm band so the screen always grows a little
+      // (never a distant, tiny-far zoom, never an overshoot past 1); the
+      // translate carries that growth out of the card's real position on the
+      // previous screen.
+      const startScale = Math.min(0.95, Math.max(0.85, origin.width / screen.width));
+      const translateX = current.progress.interpolate({
+        inputRange: [0, 1],
+        outputRange: [originCx - screen.width / 2, 0],
+      });
+      const translateY = current.progress.interpolate({
+        inputRange: [0, 1],
+        outputRange: [originCy - screen.height / 2, 0],
+      });
+      const scale = current.progress.interpolate({
+        inputRange: [0, 1],
+        outputRange: [startScale, 1],
+      });
+      return { cardStyle: { opacity, transform: [{ translateX }, { translateY }, { scale }] } };
+    }
     const scale = current.progress.interpolate({
       inputRange: [0, 1],
       outputRange: [0.92, 1],
     });
     return { cardStyle: { opacity, transform: [{ scale }] } };
-  },
-  transitionSpec: {
-    open: { animation: 'timing', config: { duration: motion.enter } },
-    close: { animation: 'timing', config: { duration: motion.exit } },
-  },
+  };
+}
+
+// Static centre-zoom transition: every registration that never supplies an
+// origin (ActiveWorkout / WorkoutSummary / PlanDetail / RoutineDetail) keeps
+// exactly this behaviour.
+const heroZoomTransition = {
+  cardStyleInterpolator: makeHeroZoomCardStyle(null),
+  transitionSpec: heroZoomTransitionSpec,
 };
+
+// Origin-aware screen options for hero-zoom destinations that CAN receive a
+// tapped-card origin (currently ExerciseDetail). Reads the destination
+// route's __heroOrigin and builds the growing interpolator; with no origin
+// present it produces the identical centre zoom, so this is a safe drop-in
+// for any hero-zoom registration.
+function heroZoomOptions(extra) {
+  return ({ route }) => ({
+    ...(extra || {}),
+    transitionSpec: heroZoomTransitionSpec,
+    cardStyleInterpolator: makeHeroZoomCardStyle(route?.params?.__heroOrigin || null),
+  });
+}
 
 // Pulled from the store at render time so toggling Reduce Motion takes
 // effect on the next navigation push without an app restart. Returns an
@@ -420,7 +474,7 @@ function PlansStack({ navigation }) {
       <Stack.Screen name="PlanUpdate" component={GatedPlanUpdate} options={{ headerShown: false }} />
       <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
-      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
+      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={heroZoomOptions({ headerShown: false })} />
       <Stack.Screen name="ManualBuilder" component={ManualBuilderScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ headerShown: false }} />
@@ -453,7 +507,7 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="LiftProgress" component={LiftProgressScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Consistency" component={ConsistencyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Partner" component={GatedPartner} options={{ headerShown: false }} />
-      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
+      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={heroZoomOptions({ headerShown: false })} />
       <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="RecapStory" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />

@@ -187,6 +187,10 @@ export default function ProgressPhotosScreen({ navigation }) {
   // Overlay surfaces (all device-local; rendered as Modals over the timeline).
   const [viewerName, setViewerName] = useState(null);
   const [viewerOpen, setViewerOpen] = useState(false);
+  // Measured rect of the tapped thumbnail (window coords) for the grid ->
+  // viewer hero morph (D31). Null falls the viewer back to its instant/fade
+  // open; Reduce Motion also flattens it inside ProgressPhotoViewer.
+  const [viewerOrigin, setViewerOrigin] = useState(null);
   const [compareOpen, setCompareOpen] = useState(false);
   const [compareInitialName, setCompareInitialName] = useState(null);
   const [scanCompareOpen, setScanCompareOpen] = useState(false);
@@ -905,7 +909,8 @@ export default function ProgressPhotosScreen({ navigation }) {
     setCaptureRouteOpen(true);
   }
 
-  function openViewer(name) {
+  function openViewer(name, originRect) {
+    setViewerOrigin(originRect || null);
     setViewerName(name);
     setViewerOpen(true);
   }
@@ -1245,13 +1250,25 @@ export default function ProgressPhotosScreen({ navigation }) {
     const showCheckInValueLine = isLatestScanCard && !readOnly && receipt?.outcome === 'scored';
     const metaText = [weightText, poseSummary].filter(Boolean).join(' - ');
     const cover = item.cover || item.photos[0];
+    // Per-render node holder for the tapped thumbnail so the hero morph grows
+    // the viewer from this exact cover's window rect (D31). FlashList recycles
+    // cells, so we capture at press time from this render's own closure rather
+    // than a shared ref; an unmeasurable handle simply opens with no origin.
+    let coverNode = null;
+    const openWithMorph = () => {
+      if (coverNode && typeof coverNode.measureInWindow === 'function') {
+        coverNode.measureInWindow((x, y, width, height) => openViewer(cover.name, { x, y, width, height }));
+      } else {
+        openViewer(cover.name, null);
+      }
+    };
     return (
       <TouchableOpacity
         key={item.key}
         // E10 read-only: opening the editable viewer would expose writes
         // (pose/date/note), so a plain tap is inert in the view-only state;
         // Compare (pure viewing) stays available below.
-        onPress={readOnly ? undefined : () => openViewer(cover.name)}
+        onPress={readOnly ? undefined : openWithMorph}
         disabled={readOnly}
         accessibilityRole={readOnly ? 'image' : 'button'}
         accessibilityLabel={readOnly
@@ -1259,7 +1276,7 @@ export default function ProgressPhotosScreen({ navigation }) {
           : `Photos from ${dateLabel}. Tap to open.`}
         style={styles.checkInCard}
       >
-        <View style={styles.checkInCover}>
+        <View ref={(n) => { coverNode = n; }} style={styles.checkInCover}>
           <Image
             source={{ uri: cover.uri }}
             style={styles.checkInCoverImage}
@@ -1276,14 +1293,14 @@ export default function ProgressPhotosScreen({ navigation }) {
           />
           <View pointerEvents="none" style={styles.checkInCoverBadge}>
             <Ionicons name="images-outline" size={13} color={colors.textPrimary} />
-            <Text style={styles.checkInCoverBadgeText}>{item.photos.length}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={styles.checkInCoverBadgeText}>{item.photos.length}</Text>
           </View>
         </View>
         <View style={styles.checkInBody}>
           <View style={styles.checkInTopRow}>
             <View style={styles.checkInTitleBlock}>
-              <Text style={styles.checkInDate} numberOfLines={1}>{dateLabel}</Text>
-              <Text style={styles.checkInMeta} numberOfLines={1}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.checkInDate} numberOfLines={1}>{dateLabel}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.checkInMeta} numberOfLines={1}>
                 {metaText}
               </Text>
             </View>
@@ -1300,8 +1317,8 @@ export default function ProgressPhotosScreen({ navigation }) {
                     accessibilityRole="button"
                     accessibilityLabel={part.accessibilityLabel}
                   >
-                    <Text style={styles.libraryScoreLabel}>{part.label}</Text>
-                    <Text style={styles.libraryScoreValue} numberOfLines={2}>{part.value}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.libraryScoreLabel}>{part.label}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.libraryScoreValue} numberOfLines={2}>{part.value}</Text>
                   </TouchableOpacity>
                 ) : (
                   <View
@@ -1310,8 +1327,8 @@ export default function ProgressPhotosScreen({ navigation }) {
                     accessible={!!part.accessibilityLabel}
                     accessibilityLabel={part.accessibilityLabel}
                   >
-                    <Text style={styles.libraryScoreLabel}>{part.label}</Text>
-                    <Text style={styles.libraryScoreValue} numberOfLines={2}>{part.value}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.libraryScoreLabel}>{part.label}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.libraryScoreValue} numberOfLines={2}>{part.value}</Text>
                   </View>
                 )
               ))}
@@ -1319,9 +1336,9 @@ export default function ProgressPhotosScreen({ navigation }) {
           ) : null}
           {receipt ? (
             <View style={styles.scanReceiptBlock}>
-              <Text style={styles.scanReceiptSentence}>{receipt.sentence}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.scanReceiptSentence}>{receipt.sentence}</Text>
               {showRecalibrationNote ? (
-                <Text style={styles.scanRecalibrationNote}>{RECALIBRATION_NOTE_TEXT}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.scanRecalibrationNote}>{RECALIBRATION_NOTE_TEXT}</Text>
               ) : null}
               {receipt.whyLines.length > 0 ? (
                 <CollapsibleSection
@@ -1330,12 +1347,12 @@ export default function ProgressPhotosScreen({ navigation }) {
                   onToggle={() => toggleWhyOpen(scanForDay.id)}
                 >
                   {receipt.whyLines.map((line) => (
-                    <Text key={line} style={styles.scanReceiptWhyLine}>{line}</Text>
+                    <Text maxFontSizeMultiplier={1.3} key={line} style={styles.scanReceiptWhyLine}>{line}</Text>
                   ))}
                 </CollapsibleSection>
               ) : null}
               {showCheckInValueLine ? (
-                <Text style={styles.scanCheckInValueLine}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.scanCheckInValueLine}>
                   If you check in this week, the coach can use this as context.
                 </Text>
               ) : null}
@@ -1346,24 +1363,24 @@ export default function ProgressPhotosScreen({ navigation }) {
               const complete = item.poses.includes(pose);
               return (
                 <View key={pose} style={[styles.checkInPoseChip, complete && styles.checkInPoseChipDone]}>
-                  <Text style={[styles.checkInPoseText, complete && styles.checkInPoseTextDone]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.checkInPoseText, complete && styles.checkInPoseTextDone]}>
                     {POSE_LABEL[pose]}
                   </Text>
                 </View>
               );
             })}
           </View>
-          {item.note ? <Text style={styles.checkInNote} numberOfLines={2}>{item.note}</Text> : null}
+          {item.note ? <Text maxFontSizeMultiplier={1.3} style={styles.checkInNote} numberOfLines={2}>{item.note}</Text> : null}
           {missingPoses.length > 0 ? (
-            <Text style={styles.checkInHint} numberOfLines={2}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.checkInHint} numberOfLines={2}>
               Add {missingPoses.map((pose) => `${POSE_LABEL[pose].toLowerCase()} photo`).join(', ')} for this date to score it.
             </Text>
           ) : !hasSide ? (
-            <Text style={styles.checkInHint} numberOfLines={2}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.checkInHint} numberOfLines={2}>
               Front and back are saved. Add side next time for a complete set.
             </Text>
           ) : (
-            <Text style={styles.checkInHint} numberOfLines={2}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.checkInHint} numberOfLines={2}>
               Front, back and side photos are saved together.
             </Text>
           )}
@@ -1375,7 +1392,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               accessibilityLabel={`Add a ${POSE_LABEL[nextMissingPose]} photo for this date`}
             >
               <Ionicons name="camera-outline" size={iconSize.sm} color={colors.textSecondary} />
-              <Text style={styles.completeCheckInText}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.completeCheckInText}>
                 Add {POSE_LABEL[nextMissingPose]} photo
               </Text>
             </TouchableOpacity>
@@ -1395,8 +1412,8 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Ionicons name="images-outline" size={iconSize.md} color={colors.primary} />
               </View>
               <View style={styles.heroTitleCopy}>
-                <Text style={styles.heroTextEyebrow}>Progress Photos</Text>
-                <Text style={styles.heroTextTitle}>Physique progress</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.heroTextEyebrow}>Progress Photos</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.heroTextTitle}>Physique progress</Text>
               </View>
             </View>
             <TouchableOpacity
@@ -1407,11 +1424,11 @@ export default function ProgressPhotosScreen({ navigation }) {
               accessibilityLabel="Progress photos privacy note"
             >
               <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.textSecondary} />
-              <Text style={styles.heroPrivacyText} numberOfLines={1}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.heroPrivacyText} numberOfLines={1}>
                 Private on this device
               </Text>
             </TouchableOpacity>
-            <Text style={styles.heroTextSubtitle}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.heroTextSubtitle}>
               Take clear front, back and side photos once a week. Volyume scores the set and saves it to your library.
             </Text>
 
@@ -1455,7 +1472,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             </View>
 
             {readOnly ? (
-              <Text style={styles.readOnlyNote}>View-only on the free plan. Your photos stay yours.</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.readOnlyNote}>View-only on the free plan. Your photos stay yours.</Text>
             ) : null}
           </View>
         </Card>
@@ -1464,9 +1481,9 @@ export default function ProgressPhotosScreen({ navigation }) {
           <Card style={styles.loadErrorCard}>
             <View style={styles.loadErrorTop}>
               <Ionicons name="warning-outline" size={iconSize.sm} color={colors.warning} />
-              <Text style={styles.loadErrorTitle}>Couldn't refresh photos</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.loadErrorTitle}>Couldn't refresh photos</Text>
             </View>
-            <Text style={styles.loadErrorBody}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.loadErrorBody}>
               Your saved photos are still here. Try again to refresh the library and latest score.
             </Text>
             <Button
@@ -1484,7 +1501,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         {!loading && photos.length > 0 ? (
           <View style={styles.libraryControls}>
             <View style={styles.libraryHeader}>
-              <Text style={styles.libraryTitle}>Photo library</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.libraryTitle}>Photo library</Text>
             </View>
             <View
               style={styles.segmentTrack}
@@ -1503,7 +1520,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                     accessibilityState={{ checked: active }}
                     accessibilityLabel={p.a11y}
                   >
-                    <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{p.label}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.segmentText, active && styles.segmentTextActive]}>{p.label}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -1527,7 +1544,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                       accessibilityState={{ checked: active }}
                       accessibilityLabel={s.a11y}
                     >
-                      <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{s.label}</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.segmentText, active && styles.segmentTextActive]}>{s.label}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -1541,7 +1558,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                   accessibilityLabel={hasRange ? `Filter by date, currently ${rangeLabel}. Tap to change.` : 'Filter by date'}
                 >
                   <Ionicons name="calendar-outline" size={iconSize.sm} color={hasRange ? colors.textPrimary : colors.textMuted} />
-                  <Text style={[styles.dateButtonText, hasRange && styles.dateButtonTextActive]} numberOfLines={1}>{rangeLabel}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.dateButtonText, hasRange && styles.dateButtonTextActive]} numberOfLines={1}>{rangeLabel}</Text>
                 </TouchableOpacity>
 
                 {hasRange ? (
@@ -1656,7 +1673,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => {
           if (item.type === 'header') {
-            return <Text style={styles.monthHeader}>{item.label}</Text>;
+            return <Text maxFontSizeMultiplier={1.3} style={styles.monthHeader}>{item.label}</Text>;
           }
           return renderCheckInCard(item);
         }}
@@ -1668,6 +1685,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         <ProgressPhotoViewer
           photos={viewerPhotos}
           initialName={viewerName}
+          originRect={viewerOrigin}
           onClose={() => setViewerOpen(false)}
           onDelete={onViewerDelete}
           deleteModeForPhoto={viewerDeleteModeForPhoto}
@@ -1752,8 +1770,8 @@ export default function ProgressPhotosScreen({ navigation }) {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              <Text style={styles.scanDateTitle}>Date for this photo set</Text>
-              <Text style={styles.scanDateIntro}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.scanDateTitle}>Date for this photo set</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.scanDateIntro}>
                 Pick the day these photos were taken. Volyume uses that date for the library entry and the weight shown with the set.
               </Text>
               <TouchableOpacity
@@ -1763,7 +1781,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 accessibilityLabel={`Change photo set date, currently ${formatProgressPhotoDay(scanDateMs)}`}
               >
                 <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-                <Text style={styles.scanDateValue} numberOfLines={1} ellipsizeMode="tail">{formatProgressPhotoDay(scanDateMs)}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.scanDateValue} numberOfLines={1} ellipsizeMode="tail">{formatProgressPhotoDay(scanDateMs)}</Text>
                 <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
               </TouchableOpacity>
               <View style={styles.scanDateActions}>
@@ -1814,7 +1832,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               <View style={styles.captureRouteSheet}>
                 <View style={styles.captureRouteHandle} />
                 <View style={styles.captureRouteHeader}>
-                  <Text style={styles.captureRouteTitle}>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.captureRouteTitle}>
                     {latestPartialCapture ? 'Add missing angle' : 'Add photos'}
                   </Text>
                   <TouchableOpacity
@@ -1826,7 +1844,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                     <Ionicons name="close" size={24} color={colors.textPrimary} />
                   </TouchableOpacity>
                 </View>
-                <Text style={styles.captureRouteIntro}>
+                <Text maxFontSizeMultiplier={1.3} style={styles.captureRouteIntro}>
                   {latestPartialCapture
                     ? `Your latest set is missing the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo. Add it there, or start a separate set if these photos are from another day.`
                     : 'Add a new set from the camera or your photo library. Use front, back and side photos.'}
@@ -1855,21 +1873,21 @@ export default function ProgressPhotosScreen({ navigation }) {
                       </View>
                       <View style={styles.captureRouteCopy}>
                         <View style={styles.captureRouteTopLine}>
-                          <Text style={styles.captureRouteEyebrow}>{route.eyebrow}</Text>
+                          <Text maxFontSizeMultiplier={1.3} style={styles.captureRouteEyebrow}>{route.eyebrow}</Text>
                           {route.recommended ? (
                             <View style={styles.captureRoutePill}>
-                              <Text style={styles.captureRoutePillText}>{route.recommendationLabel || 'Recommended'}</Text>
+                              <Text maxFontSizeMultiplier={1.3} style={styles.captureRoutePillText}>{route.recommendationLabel || 'Recommended'}</Text>
                             </View>
                           ) : null}
                         </View>
-                        <Text style={styles.captureRouteName}>{route.title}</Text>
-                        <Text style={styles.captureRouteBody}>{route.disabled ? route.disabledReason : route.body}</Text>
+                        <Text maxFontSizeMultiplier={1.3} style={styles.captureRouteName}>{route.title}</Text>
+                        <Text maxFontSizeMultiplier={1.3} style={styles.captureRouteBody}>{route.disabled ? route.disabledReason : route.body}</Text>
                         {route.steps?.length ? (
                           <View style={styles.captureRouteSteps}>
                             {route.steps.map((step) => (
                               <View key={step} style={styles.captureRouteStep}>
                                 <View style={styles.captureRouteStepDot} />
-                                <Text style={styles.captureRouteStepText}>{step}</Text>
+                                <Text maxFontSizeMultiplier={1.3} style={styles.captureRouteStepText}>{step}</Text>
                               </View>
                             ))}
                           </View>
@@ -1932,8 +1950,8 @@ export default function ProgressPhotosScreen({ navigation }) {
         <SafeAreaView style={styles.scanReviewSafe}>
           <View style={styles.scanReviewHeader}>
             <View style={styles.scanReviewTitleBlock}>
-              <Text style={styles.scanReviewEyebrow}>Photo review</Text>
-              <Text style={styles.scanReviewTitle}>
+              <Text maxFontSizeMultiplier={1.3} style={styles.scanReviewEyebrow}>Photo review</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.scanReviewTitle}>
                 Check {POSE_LABEL[scanReview?.pose]?.toLowerCase() || 'this'} photo
               </Text>
             </View>
@@ -1961,7 +1979,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             </View>
           </ScrollView>
           <View style={[styles.scanReviewFooter, { paddingBottom: Math.max(spacing.lg, insets.bottom + spacing.md) }]}>
-            <Text style={styles.scanReviewCopy}>
+            <Text maxFontSizeMultiplier={1.3} style={styles.scanReviewCopy}>
               Use it if your whole body is visible, the photo is sharp, and the picture is upright.
             </Text>
             <View style={styles.scanReviewActions}>

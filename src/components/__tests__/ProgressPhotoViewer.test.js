@@ -420,6 +420,50 @@ test('the photo stage exposes next/previous accessibility actions so screen-read
   expect(selectionAsync).not.toHaveBeenCalled();
 });
 
+// ─── Grid -> viewer hero morph (item 15, D31) ──────────────────────────────
+//
+// The morph owns the open/close transition only; item 13's suppression gate
+// and paging must be exactly as before when a morph origin rect is present.
+// Reduce Motion flattening and the centre/instant fallback are pinned at the
+// source level below (react-test-renderer never lays out, so the timed morph
+// itself cannot be driven here — same posture as the gesture pins above).
+
+test('suppression still withholds the bodyweight line with the hero morph present (fail-closed)', async () => {
+  usePhotoSuppression.mockReturnValue(true);
+  const tree = await mount(baseProps({ originRect: { x: 20, y: 300, width: 120, height: 120 } }));
+  // The high-risk numeric-over-a-body line stays withheld even with the morph
+  // origin supplied — the morph never touches the suppression gate.
+  expect(allText(tree)).not.toContain('72.4');
+});
+
+test('paging stays available (pure viewing) with the hero morph present', async () => {
+  usePhotoSuppression.mockReturnValue(false);
+  const tree = await mount(baseProps({ originRect: { x: 20, y: 300, width: 120, height: 120 } }));
+  const stage = tree.root.findAll(
+    (n) => n.props && typeof n.props.onAccessibilityAction === 'function',
+  )[0];
+  expect(stage.props.accessibilityActions).toEqual([
+    { name: 'increment', label: 'Next photo' },
+    { name: 'decrement', label: 'Previous photo' },
+  ]);
+});
+
+test('Reduce Motion disables the morph and keeps the original fade/instant Modal open', () => {
+  // Source-level: the morph only arms when an origin rect is present AND
+  // Reduce Motion is off; the Modal falls back to the exact prior
+  // reduceMotion ? 'none' : 'fade' behaviour when the morph is off.
+  expect(SOURCE).toContain("const morphEnabled = !!originRect\n    && !reduceMotion");
+  expect(SOURCE).toContain("animationType={morphEnabled ? 'none' : (reduceMotion ? 'none' : 'fade')}");
+});
+
+test('the morph overlay transform is a pure-arithmetic worklet (no theme reads)', () => {
+  // Overlay geometry is interpolated from morph + measured rects only, the
+  // same pure-arithmetic worklet discipline item 13 used for clampAxis.
+  expect(SOURCE).toContain('const overlayStyle = useAnimatedStyle(() => {');
+  expect(SOURCE).toMatch(/const scaleX = interpolate\(morph\.value, \[0, 1\], \[oW \/ dw, 1\]\);/);
+  expect(SOURCE).toContain("morph.value = withTiming(0, { duration: motion.exit }");
+});
+
 test('a single-photo gallery gets no paging actions (nothing to page to)', async () => {
   const tree = await mount(baseProps({ photos: [PHOTOS[0]] }));
   const stage = tree.root.findAll(

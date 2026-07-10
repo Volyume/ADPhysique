@@ -43,6 +43,11 @@ export default function Card({
   padding = 'lg',
   onPress,
   onLongPress,
+  // Origin-aware press variants forwarded to PressableCard (shared-element
+  // transitions, D31): let a tappable Card hand its measured rect to the
+  // callback so a pushed screen grows from the card. No effect when unset.
+  onPressWithLayout,
+  onLongPressWithLayout,
   style,
   accessibilityLabel,
   accessibilityHint,
@@ -103,11 +108,13 @@ export default function Card({
     style,
   ];
 
-  if (onPress || onLongPress) {
+  if (onPress || onLongPress || onPressWithLayout || onLongPressWithLayout) {
     return (
       <PressableCard
         onPress={onPress}
         onLongPress={onLongPress}
+        onPressWithLayout={onPressWithLayout}
+        onLongPressWithLayout={onLongPressWithLayout}
         style={cardStyle}
         disabled={disabled}
         hitSlop={hitSlop}
