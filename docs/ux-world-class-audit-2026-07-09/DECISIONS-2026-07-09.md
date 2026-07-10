@@ -284,7 +284,11 @@ Source: docs/ux-world-class-audit-2026-07-09/SCORECARD.md (25 functions).
   builds, Haiku for mechanical work; Opus only where engine-grade
   judgement is unavoidable; Fable never dispatched.
 
-## D16 — Ultimate-Audit items 11-16 GO (founder, 2026-07-10)
+## D20 — Ultimate-Audit items 11-16 GO (founder, 2026-07-10)
+(Originally mis-numbered D16, colliding with the 2026-07-09 Settings-cluster
+D16; renumbered. Code and tests citing "D16" dated 2026-07-10 — the
+autonomy-hold flag in weeklyCoach.js and the d16Autonomy test files —
+mean THIS ruling.)
 Source rulings: docs/ux-world-class-audit-2026-07-09/ultimate-audit-11-16-reconciliation.md
 (June register reconciliation). Founder: "Start all, in that order":
 13 (mid-session swap clause) -> 12 (raw/cooked basis toggle) -> 11
@@ -296,10 +300,36 @@ Item 14 Core-Haptics: RESEARCH approved (package name, purpose, licence,
 maintenance health; managed-Expo-compatible) - returns for the founder's
 final yes/no BEFORE any install (never-add-deps-without-asking rule).
 
-## D17 — Core-Haptics adoption (founder, 2026-07-10)
+## D21 — Core-Haptics adoption (founder, 2026-07-10)
+(Originally mis-numbered D17, colliding with the 2026-07-09 rest-day D17;
+renumbered. The haptics commit message citing "D17" means THIS ruling.)
 Item 14 final yes: ADOPT react-native-haptic-feedback v3 (MIT), restricted
 to its triggerPattern() JS API (no .ahap, no manual Xcode edits). Scope:
 richer iOS curves for rest-timer completion and PR celebration only;
 Android keeps existing behaviour; expo-haptics remains for everything
 else. Dependency added with package-lock.json regenerated in the same
 commit (lockfile rule). Needs a fresh EAS build (founder-side).
+
+## D22 — Items 15 and 16 rulings (founder-delegated to lead, 2026-07-10)
+Founder: "You make these decisions." Lead rulings:
+- **15a layout: CONTINUOUS LIST WITH QUIET DAY-PART LABELS.** One
+  chronological scroll, soft Morning/Afternoon/Evening markers, meal
+  names become small tags on entries. Truest to the June ruling
+  ("timeline replaces rigid meal buckets") while staying scannable.
+- **15b time truth: EDITABLE EATEN-TIME + UNTIMED BULK.** Entries gain
+  an optional editable eaten-at time; bulk-confirmed entries carry no
+  precise time and display grouped under their meal tag rather than a
+  false timestamp. Resolves the honesty/ED flag properly; additive
+  eaten_at column (local + cloud, founder-run) per the item-12 pattern.
+- **16a path: DATA FIRST, THEN DISPLAY.** Feasibility spike parsing
+  CoFID's vitamin/mineral sheets into the bundled snapshot + re-issue
+  the food_library_pull RPC for the 27 columns. Shipping a display on
+  0% coverage would repeat the exact dead-space failure D12 killed;
+  parking would defer codeable work. Display ships only once measured
+  coverage is real.
+- **16b home: PER-FOOD DETAIL SHEET primary + FOOD INSIGHTS weekly
+  average secondary, CONTINGENT on the spike proving truthful coverage.**
+  Never a daily-policing surface; the diary placement stays dead (D12).
+  Visual register: quiet, non-quantified-first, consistent with
+  femaleNutritionAwareness precedent; exact presentation returns for
+  founder eyes with the spike's coverage numbers.
