@@ -25,6 +25,14 @@ import { colors, spacing, motion, type } from '../styles/theme';
 // this import (not from theme.js itself -- App.js's boot-time
 // bootstrapAccessibility still uses it there).
 import { useNavTheme, useStackOptions } from './navTheme';
+// D36c (TalkBack sheet isolation, 2026-07-10): SheetIsolationBoundary wraps
+// the screen container below and hides it from TalkBack/VoiceOver while any
+// shared BottomSheet is open, restoring it on close. See that module's
+// header for the full design -- in short, the sheet portal (@gorhom/bottom-
+// sheet's hosting container) renders as a SIBLING of the wrapped tree, not a
+// descendant of it, so hiding this boundary while a sheet is open never
+// hides the open sheet itself.
+import { SheetIsolationBoundary } from '../lib/sheetA11yIsolation';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
@@ -1558,25 +1566,30 @@ export default function RootNavigator() {
   }
 
   return (
-    <NavigationContainer
-      ref={navigationRef}
-      linking={linking}
-      onReady={() => {
-        // Wire the observability layer's screen-tracking. Emits a
-        // breadcrumb on every navigation so any error fired later
-        // in the session carries the user's path. Idempotent
-        // re-mounting the navigator (e.g. signing out and back in)
-        // re-subscribes cleanly.
-        try {
-          // eslint-disable-next-line global-require
-          const { instrumentNavigation } = require('../lib/observability');
-          instrumentNavigation(navigationRef);
-        } catch (_) { /* tolerate */ }
-      }}
-      theme={navTheme}
-    >
-      {renderNavigator()}
-    </NavigationContainer>
+    // D36c: hides this screen container from TalkBack/VoiceOver while any
+    // shared BottomSheet is open, restored on close -- see
+    // SheetIsolationBoundary and src/lib/sheetA11yIsolation.js's header.
+    <SheetIsolationBoundary style={{ flex: 1 }}>
+      <NavigationContainer
+        ref={navigationRef}
+        linking={linking}
+        onReady={() => {
+          // Wire the observability layer's screen-tracking. Emits a
+          // breadcrumb on every navigation so any error fired later
+          // in the session carries the user's path. Idempotent
+          // re-mounting the navigator (e.g. signing out and back in)
+          // re-subscribes cleanly.
+          try {
+            // eslint-disable-next-line global-require
+            const { instrumentNavigation } = require('../lib/observability');
+            instrumentNavigation(navigationRef);
+          } catch (_) { /* tolerate */ }
+        }}
+        theme={navTheme}
+      >
+        {renderNavigator()}
+      </NavigationContainer>
+    </SheetIsolationBoundary>
   );
 }
 

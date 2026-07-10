@@ -11,10 +11,12 @@
  * individual tests can flip it) matching the project's synchronous-in-tests
  * convention.
  */
+import { useState } from 'react';
 import { Text } from 'react-native';
 import { create, act } from 'react-test-renderer';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { motion } from '../../styles/theme';
+import { useOpenSheetCount, __resetOpenSheetCountForTests } from '../../lib/sheetA11yIsolation';
 
 const storeState = { accessibility: { reduceMotion: true } };
 jest.mock('../../store/useAppStore', () => {
@@ -243,5 +245,121 @@ describe('BottomSheet', () => {
     const modal = findModal(tree);
     expect(modal.props.handleComponent).not.toBeUndefined();
     expect(modal.props.handleComponent()).toBeNull();
+  });
+});
+
+// D36c (TalkBack sheet isolation, 2026-07-10): BottomSheet.js's own side of
+// the shared open-sheet counter (../lib/sheetA11yIsolation). The
+// RootNavigator-side toggling of the a11y props is pinned separately in
+// src/lib/__tests__/sheetA11yIsolation.test.js (SheetIsolationBoundary) and
+// src/navigation/__tests__/rootNavigatorSheetIsolation.guard.test.js
+// (wiring); this suite pins that BottomSheet reports its real open/closed
+// transitions into that counter correctly, including the cases the counter
+// exists specifically to get right: stacked sheets and unmount-while-open.
+describe('BottomSheet reports into the shared TalkBack-isolation counter', () => {
+  beforeEach(() => {
+    __resetOpenSheetCountForTests();
+  });
+
+  function CountProbe() {
+    return <Text testID="sheet-count">{String(useOpenSheetCount())}</Text>;
+  }
+
+  function readCount(tree) {
+    return Number(tree.root.findByProps({ testID: 'sheet-count' }).props.children);
+  }
+
+  test('mounting already invisible never increments the counter (no-op guard)', () => {
+    let tree;
+    act(() => {
+      tree = create(
+        <>
+          <CountProbe />
+          <BottomSheet visible={false} onClose={() => {}}><Text>x</Text></BottomSheet>
+        </>,
+      );
+    });
+    expect(readCount(tree)).toBe(0);
+  });
+
+  test('opening increments the counter; the consumer flipping `visible` false decrements it', () => {
+    let tree;
+    act(() => {
+      tree = create(
+        <>
+          <CountProbe />
+          <BottomSheet visible onClose={() => {}}><Text>x</Text></BottomSheet>
+        </>,
+      );
+    });
+    expect(readCount(tree)).toBe(1);
+    act(() => {
+      tree.update(
+        <>
+          <CountProbe />
+          <BottomSheet visible={false} onClose={() => {}}><Text>x</Text></BottomSheet>
+        </>,
+      );
+    });
+    expect(readCount(tree)).toBe(0);
+  });
+
+  test('a real gesture dismissal (library onDismiss -> consumer onClose -> visible=false) decrements the counter', () => {
+    // Mirrors real usage end to end: the consumer owns `visible` in its own
+    // state, exactly like every actual BottomSheet call site.
+    function Host() {
+      const [visible, setVisible] = useState(true);
+      return (
+        <>
+          <CountProbe />
+          <BottomSheet visible={visible} onClose={() => setVisible(false)}><Text>x</Text></BottomSheet>
+        </>
+      );
+    }
+    let tree;
+    act(() => { tree = create(<Host />); });
+    expect(readCount(tree)).toBe(1);
+    act(() => { findModal(tree).props.onDismiss(); });
+    expect(readCount(tree)).toBe(0);
+  });
+
+  test('stacked sheets: two simultaneously open BottomSheets hold the count at 2, not a boolean', () => {
+    let tree;
+    act(() => {
+      tree = create(
+        <>
+          <CountProbe />
+          <BottomSheet visible onClose={() => {}}><Text>a</Text></BottomSheet>
+          <BottomSheet visible onClose={() => {}}><Text>b</Text></BottomSheet>
+        </>,
+      );
+    });
+    expect(readCount(tree)).toBe(2);
+    act(() => {
+      tree.update(
+        <>
+          <CountProbe />
+          <BottomSheet visible={false} onClose={() => {}}><Text>a</Text></BottomSheet>
+          <BottomSheet visible onClose={() => {}}><Text>b</Text></BottomSheet>
+        </>,
+      );
+    });
+    // One of the two stacked sheets closed: still one left open.
+    expect(readCount(tree)).toBe(1);
+  });
+
+  test('unmounting a still-open sheet decrements the counter (no leaked increment)', () => {
+    let tree;
+    act(() => {
+      tree = create(
+        <>
+          <CountProbe />
+          <BottomSheet visible onClose={() => {}}><Text>x</Text></BottomSheet>
+        </>,
+      );
+    });
+    expect(readCount(tree)).toBe(1);
+    act(() => { tree.update(<CountProbe />); });
+    expect(readCount(tree)).toBe(0);
   });
 });

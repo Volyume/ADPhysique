@@ -35,16 +35,16 @@
  * own onClose directly, this component never sees that call, it only sees
  * `visible` become false afterwards and animates the panel out).
  *
- * Known limitation (flagged, not silently accepted): @gorhom/bottom-sheet
- * renders through a React-tree portal, not a native `Modal`/window, so
- * Android's automatic "background is a separate accessibility window"
- * isolation that the old RN Modal gave for free is not fully replicated —
- * TalkBack can in principle still reach the screen behind the sheet. Fixing
- * that app-wide (marking the active screen `importantForAccessibility=
- * "no-hide-descendants"` while any sheet is open) would need a cross-cutting
- * change outside this component (RootNavigator / a shared "sheet open"
- * signal) and is out of scope for a same-interface wrapper; noted for a
- * follow-up decision rather than parked silently.
+ * D36c (TalkBack sheet isolation, 2026-07-10): the limitation noted above
+ * (@gorhom/bottom-sheet's portal render skips Android's automatic
+ * background-window isolation a raw RN Modal gives for free) is now fixed
+ * app-wide. This component reports its own visible/mounted state to the
+ * shared module-level open-sheet counter in `../lib/sheetA11yIsolation`;
+ * RootNavigator wraps the app's screen container with that counter (via
+ * `useAnySheetOpen`) and hides it from TalkBack/VoiceOver while any sheet is
+ * open, restoring it the moment the count returns to zero. See
+ * sheetA11yIsolation.js's header for the full design (why a module-level
+ * counter, why not a boolean, why the wrapper never hides the sheet itself).
  */
 
 import { useCallback, useEffect, useMemo, useRef, createContext } from 'react';
@@ -61,6 +61,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useAppStore from '../store/useAppStore';
+import { incrementOpenSheets, decrementOpenSheets } from '../lib/sheetA11yIsolation';
 import { colors, spacing, radius, motion } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
@@ -121,6 +122,36 @@ export default function BottomSheet({
       modalRef.current?.dismiss();
     }
   }, [visible]);
+
+  // D36c (TalkBack sheet isolation): mirrors this sheet's real open/closed
+  // state into the shared module-level counter (../lib/sheetA11yIsolation),
+  // kept as its OWN effect, independent from the present()/dismiss() sync
+  // above, so a future change to either can never affect the other's
+  // correctness. `countedRef` tracks whether THIS instance currently holds
+  // an increment, so a fast reopen (visible true -> false -> true) can never
+  // double-count, and the cleanup effect below can never leak a stale
+  // increment on unmount-while-open.
+  const countedRef = useRef(false);
+  useEffect(() => {
+    if (visible && !countedRef.current) {
+      countedRef.current = true;
+      incrementOpenSheets();
+    } else if (!visible && countedRef.current) {
+      countedRef.current = false;
+      decrementOpenSheets();
+    }
+  }, [visible]);
+
+  // Unmount-while-open: a plain cleanup-only effect (empty deps) so this
+  // runs exactly once, on unmount, and reads `countedRef`'s value AT that
+  // moment rather than depending on `visible` (which the effect above
+  // already reacts to for every other transition).
+  useEffect(() => () => {
+    if (countedRef.current) {
+      countedRef.current = false;
+      decrementOpenSheets();
+    }
+  }, []);
 
   // The ONE path where the library, not the consumer, is first to know the
   // sheet closed: the user dragged it down. Every other close reaches here
