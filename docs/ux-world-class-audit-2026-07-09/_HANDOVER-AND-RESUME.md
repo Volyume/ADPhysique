@@ -1200,3 +1200,18 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   keyboard-controller + zeego; (5) gallery + scrub-haptics/Android
   polish; (6) Rive + brand font (asset/shortlist gated). Font shortlist
   = lead prepares for founder taste call.
+- COMPETITOR-SEPARATION ANALYSIS given in chat (2026-07-10, AWAITING
+  founder picks): MFP/Cronometer separate on DATA + INPUT ASSIST, not
+  client libs (our client stack already equal/better). Recommended for
+  the queue: (a) OFF micronutrient parsing into the snapshot (branded/
+  retail foods gain verified-style micro depth; same pattern as the
+  landed CoFID spike; no dep, data work) - the biggest remaining
+  Cronometer-gap closer; (b) MLKit code-scanner frame processor on
+  vision-camera (faster, low-light-tolerant barcode scanning; small).
+  OPEN FOUNDER FORK, not a lead call: AI-assisted food input (photo
+  meal-scan / voice logging, MFP-style). Constitution bans AI in the
+  COACHING ENGINE (stands regardless); input-assist is a product-shape
+  + server-cost decision that belongs to the founder alone - yes =
+  proper scoping; no = never-re-propose register. Context note: CoFID
+  landing already gives UK foods Cronometer-class verified micro depth
+  (median 20/27) - a home-market edge over MFP's crowdsourced UK data.
