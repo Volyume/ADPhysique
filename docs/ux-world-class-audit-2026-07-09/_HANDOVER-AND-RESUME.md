@@ -218,38 +218,66 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
   logic untouched; ScreenBoundary flagged (class error boundary cannot
   take the theme hook — architecture question, not forced).
 
+- ✅ ITEM 20 DRAG REORDER LANDED `534e0e0` (D32; fresh session
+  2026-07-10 after chat clear). The prior session died with NO
+  uncommitted drag work (tree clean at 27c4c34), so a fresh Sonnet
+  agent was relaunched with the D32 brief per this file's recovery
+  path, then lead-reviewed hands-on. NEW pure `src/lib/reorder.js`
+  (block-move arithmetic: groupIntoBlocks / moveItemOrBlock /
+  swapAdjacentBlocks; 28 tests incl. a 300-trial fuzz invariant —
+  multiset preserved, no block ever split) + NEW
+  `src/components/DragReorderList.js` (long-press pick-up via
+  Gesture.Pan().activateAfterLongPress on the in-tree gesture-handler
+  + Reanimated, NO new dependency; pure-arithmetic worklets with
+  runOnJS dispatch per the ProgressPhotoViewer precedent; dragged
+  block floats absolute over a placeholder; LinearTransition reflow
+  dropped under Reduce Motion; pickup/drop haptics only; drag handle
+  hidden from screen readers — chevrons stay the accessible path
+  everywhere). Surfaces: PlanDetail days (drag inside the existing
+  reorder mode; updateRoutinePosition, optimistic-revert+toast);
+  ManualBuilder (chevrons rebuilt on the shared helper, behaviour
+  unchanged; drag additive; persists on Save as ever); RoutineDetail
+  (chevron path made BLOCK-AWARE — the old plain swap could SPLIT a
+  superset pair, closed per D32's authority text; reorder mode swaps
+  FlashList for ScrollView+DragReorderList, browse mode untouched);
+  ActiveWorkout ("Reorder exercises" overflow entry when >1 exercise
+  opens a purpose-built sheet — the whole workout as a block-aware
+  drag list with per-row accessible chevrons; persists via
+  setWorkoutExercises → _persistActiveWorkout; currentExerciseIndex
+  re-pointed by object identity; handleMoveExercise, its pinned
+  strings and the single-exercise view UNTOUCHED). Guard tests
+  updated exactly per D32 (kept no-dependency / no-reorder-library
+  pins, dropped only the runOnJS/PanResponder-era bans, dated
+  comments); NEW RoutineDetail reorder guard (first for that
+  surface); global Jest mock for gesture-handler added (mirrors the
+  reanimated one). LEAD FIXES at review: Add-exercise footer restored
+  in RoutineDetail reorder mode (it rendered there before the
+  browse/reorder split); sheet group chip follows the landed item-21
+  naming (Superset for a pair, Giant set for 3+) with matching
+  explainer copy; comment typo. Lint clean; FULL suite 666/667 suites
+  (1 pre-existing skip), 8,347 passed / 9 skipped / 0 failed.
+- ⚠ OPEN FOUNDER ROUND (item 20, new): DragReorderList has NO edge
+  auto-scroll — dragging to the top/bottom of a screen-overflowing
+  list will not scroll the parent; the user drops and re-drags to
+  cross off-screen (disclosed in the component's header comment, not
+  silently dropped; every current list is short enough that this
+  rarely bites). Founder to rule: build edge auto-scroll as a
+  follow-up, or accept the limit. Also flagged for awareness:
+  RoutineDetail's CHEVRON behaviour changed as part of the block-gap
+  fix (the old path could split a superset pair; D32's authority text
+  names closing that gap; no pinned test protected the old
+  behaviour).
+
 ## ⏸ RESUME POINT — next slots, in order:
-1. IN FLIGHT AT HANDOVER TIME: item 20 drag reorder under **D32**
-   (read it in DECISIONS-2026-07-09.md — founder GO supersedes the old
-   chevron-only D5/D6; lead ruled the scope after founder delegation).
-   The agent first STOPPED on the D5/D6 conflict (correct procedure),
-   was resumed at ~2026-07-10 17:0x with the D32 brief: true
-   long-press drag on PlanDetail days + ManualBuilder exercises
-   (superset/giant-set blocks move whole) + RoutineDetail (made
-   block-aware too, closing its pre-existing gap); the ACTIVE SESSION
-   gets a purpose-built draggable reorder sheet from the overflow (the
-   single-exercise view stays untouched); the two reorder guard tests
-   update to the superseding decision KEEPING the no-new-dependency /
-   no-draggable-flatlist pins and dropping only the runOnJS/
-   PanResponder-era bans; accessible chevron/sheet paths remain
-   everywhere (drag is additive); no new dependency; agent does not
-   commit. IF THIS SESSION DIED MID-RUN: check `git status` — if drag
-   work sits uncommitted, lead-review it against this spec (surfaces,
-   block moves, guard-test treatment, Reduce Motion, pure-arithmetic
-   worklets), run `npm run lint && npm test -- --runInBand` (tree was
-   otherwise CLEAN at cf15fa8 — every failure is this diff's), then
-   commit per-feature; if no drag work exists, relaunch a Sonnet agent
-   with D32 + the original item 20 brief (both in this file's history
-   and the decisions register).
-2. At that landing: FULL suite over the clean tree + this handover's
-   stage log updated + push (standing discipline).
-3. Pair 7: iOS Live Activity wiring (item 19) + Android rest-timer
+1. Pair 7: iOS Live Activity wiring (item 19) + Android rest-timer
    actions (item 12). Then item 17 small tails (+ remaining
    edge-to-edge Modal inset audits from the item 15 recon list above);
    theming stage-4 tail (remaining static: food domain 19, photo/scan
    family 10, ProgressSections, chart exclusions, ScreenBoundary
    architecture question); stage 5 stays honesty-gated. Coverage after
    batch B: 71/108 components live.
+2. Standing discipline at every landing: full suite over the clean
+   tree, this handover's stage log updated, push.
 
 **AWAITING FOUNDER (asked in chat 2026-07-10, unanswered at handover):**
 - migrate_117 apply (telemetry-view REVOKE, drafted + committed at
@@ -315,6 +343,23 @@ yet investigated.
   instant snaps, calm/ED suppression intact); item 14 (keyboard on the
   four adopted surfaces incl. drag-dismiss, set-row long-press menu on
   BOTH platforms, delete confirm intact).
+- Device checklist, item 20 drag reorder (physical Android):
+  1 Plan detail → Reorder → long-press a day's grip, drag past
+  another, release — day follows the finger, others glide aside,
+  order persists after leaving and returning; chevrons unchanged.
+  2 Manual builder, day with a superset pair → drag a lone exercise
+  past the pair — it lands before/after the pair, never between;
+  dragging a paired exercise moves the whole pair. 3 Same day,
+  chevrons only — identical block behaviour; Save persists.
+  4 Routine detail with a superset → Reorder → drag past the pair —
+  no split; reopening shows the persisted order. 5 Active workout,
+  3+ exercises → overflow → Reorder exercises → drag one, close —
+  main view stays on the SAME exercise, nav strip shows the new
+  order. 6 Overflow Move exercise up/down still work as before.
+  7 Reduce Motion on → repeat 5 — drag still follows the finger, other
+  rows snap instantly. 8 TalkBack → reorder modes — drag handle never
+  announced, Move up/down announced and activatable. 9 Single-exercise
+  session — Reorder exercises absent from the overflow.
 - Still outstanding from before: supabase migrations 110-116 to
   EU-Dublin; refresh-off-snapshot workflow (OFF micronutrients); iOS
   App Groups + Live Activity provisioning; Play OAuth SHA-1.
