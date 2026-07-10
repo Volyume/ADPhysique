@@ -1229,3 +1229,10 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   horizon programme, scoping only on founder request. D26 recorded: OFF
   micronutrient parsing + MLKit scanner approved; AI-input fork still
   open with founder.
+- D27 RECORDED: four logger separators approved — Live Activity HOLD
+  LIFTED (wire modules/rest-timer-live; founder-side App Groups + EAS
+  stand), Android rest-timer notification actions (verify+build), zeego
+  first on logged sets, watch-app SCOPING (memo then round). AI food
+  input fork stays OPEN. Queue slots them after the D24/D25 design
+  waves; Live Activity wiring can pair earlier since it is small and
+  the module exists.

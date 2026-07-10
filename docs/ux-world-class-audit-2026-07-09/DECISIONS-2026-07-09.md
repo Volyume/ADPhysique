@@ -396,3 +396,17 @@ low-light-tolerant barcode scanning; D23 dependency discipline).
 NOT covered by this approval: the AI-assisted food input fork (photo
 meal-scan / voice) - explicitly left with the founder, still OPEN,
 neither approved nor on the never-re-propose register.
+
+## D27 — Workout-logger separators approved (founder, 2026-07-10)
+Founder approved the FOUR logger items (corrected count; the AI food
+input fork remains OPEN, neither approved nor rejected):
+1. iOS Live Activity rest timer: HOLD LIFTED — wire the already-built
+   modules/rest-timer-live module. Founder-side prerequisites stand:
+   App Groups provisioning + fresh EAS build.
+2. Android rest-timer notification actions (skip / +15s from the
+   notification): verify what exists, build the gap.
+3. Context menus on logged sets: emphasis within the already-approved
+   zeego adoption (D25) — the logger is its first surface.
+4. Watch app: SCOPING programme approved (memo -> founder round before
+   any build; builds on the existing P12 watchOS memo; must respect the
+   removed-HealthKit state).
