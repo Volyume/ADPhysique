@@ -1249,3 +1249,28 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   two agents' edits to that file together. AI food input fork: HELD by
   founder (D27 addendum). Item 15 timeline agent still in flight (file
   mtimes active).
+- ITEM 15 TIMELINE LANDED (lead-reviewed; the largest build of the run):
+  D22 shape built in full - continuous list + day-part labels + meal
+  tags (diaryTimeline.js pure builder), eaten_at semantics exactly as
+  ruled (individual/per-meal = stamped + editable, bulk = NULL grouped
+  by meal ladder, history backfilled from logged_at), local v67 + cloud
+  migrate_115 (FOUNDER-RUN; queue now 110-116), sync end-to-end,
+  MealSection deleted with capabilities re-homed (extras pick-any copy
+  VERIFIED surviving at DiaryScreen:1446). FoodDetailSheet committed
+  with BOTH seams + micronutrientDisplay guard. Full suite 638/8052
+  green, lint clean, independent re-run 255 targeted green. ITEM 16
+  now fully complete (display seam landed). ULTIMATE-AUDIT 11-16: ALL
+  SIX COMPLETE. DISCLOSED DROPS (agent surfaced, lead-accepted interim,
+  QUEUED to restore product-first): per-meal "usuals" one-tap chips
+  (re-home into the add-food flow) + per-meal subtotal chip (assess in
+  the timeline idiom) - both small follow-ups, founder-visible.
+  DEVICE CHECKLIST (next EAS build): (1) diary shows one chronological
+  list with Morning/Afternoon/Evening markers + meal tags; (2) log a
+  food now -> it carries the current time; (3) build a plan day, bulk
+  mark-all -> entries group under meal names with NO times; (4) mark
+  ONE planned meal eaten -> it gains the real time; (5) edit any entry
+  -> calm "Eaten at" time field, change it, order updates; (6) food
+  detail shows collapsed "Vitamins and minerals" with real values;
+  (7) Food Insights shows the 7-day awareness card once enough logged
+  foods carry data. NEXT: design campaign pair 1 (theming stage 1 +
+  bottom-sheet) firing.
