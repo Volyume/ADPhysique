@@ -666,7 +666,11 @@ export default function usePartners(userId, tier) {
       // invite's row stays status='invited' and its pending card keeps showing
       // until the next pull ("Cancel doesn't do anything", founder 2026-07-03).
       try { await markLocalPartnershipEnded(pairId); } catch (_) { /* best-effort */ }
-      try { await deleteLocalPairSharedData(pairId); } catch (_) { /* best-effort */ }
+      try {
+        await deleteLocalPairSharedData(pairId);
+      } catch (e) {
+        logError('usePartners.unpair.localSharedData', e, { userId, pairId });
+      }
     }
     await load();
     return r;

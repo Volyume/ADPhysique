@@ -109,6 +109,14 @@ describe('wipeAllUserData direct-table set (A4)', () => {
     expect(FATAL_LOCAL_WIPE_TABLES.has('progress_scan_assets')).toBe(true);
   });
 
+  test('every local partner table is fatal during account wipe', () => {
+    const partnerTables = [
+      'partner_cheers', 'partner_week_signals', 'partner_shared_blocks',
+      'partner_weekly_intentions', 'partner_win_cards', 'partnerships',
+    ];
+    for (const table of partnerTables) expect(FATAL_LOCAL_WIPE_TABLES.has(table)).toBe(true);
+  });
+
   test('account-bound wipe purges SQLite snapshots', () => {
     const database = fs.readFileSync(path.resolve(__dirname, '../database.js'), 'utf8');
     const snapshots = fs.readFileSync(path.resolve(__dirname, '../dbSnapshot.js'), 'utf8');
@@ -175,6 +183,23 @@ describe('wipeAllUserData two-user photo scope (safety-privacy-blueprint.md §6.
     fsMock.deleteAsync.mockImplementationOnce(async () => { throw new Error('disk busy'); });
 
     await expect(wipeAllUserData('user-a')).rejects.toThrow('disk busy');
+  });
+
+  test('a partner-table failure rejects the account wipe transaction', async () => {
+    const conn = await require('../database').db();
+    const originalRun = conn.runAsync.getMockImplementation();
+    conn.runAsync.mockImplementation(async (sql) => {
+      if (sql.includes('DELETE FROM partner_weekly_intentions')) {
+        throw new Error('partner purge failed');
+      }
+      return { changes: 0, lastInsertRowId: 0 };
+    });
+
+    try {
+      await expect(wipeAllUserData('user-a')).rejects.toThrow('partner purge failed');
+    } finally {
+      conn.runAsync.mockImplementation(originalRun);
+    }
   });
 
   test('refusing to wipe without a userId means no photo directory is ever touched', async () => {

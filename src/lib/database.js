@@ -4507,7 +4507,22 @@ export const FATAL_LOCAL_WIPE_TABLES = new Set([
   'progress_photo_meta',
   'progress_scan_sessions',
   'progress_scan_assets',
+  'partner_cheers',
+  'partner_week_signals',
+  'partner_shared_blocks',
+  'partner_weekly_intentions',
+  'partner_win_cards',
+  'partnerships',
 ]);
+
+const PARTNER_LOCAL_WIPE_TABLES = [
+  'partner_cheers',
+  'partner_week_signals',
+  'partner_shared_blocks',
+  'partner_weekly_intentions',
+  'partner_win_cards',
+  'partnerships',
+];
 
 export async function wipeAllUserData(userId) {
   if (!userId) return;
@@ -4635,18 +4650,15 @@ export async function wipeAllUserData(userId) {
     // 7. NEW-002 partner mirror. Local SQLite is single-user, so a flat wipe of
     //    all partner rows is correct on sign-out (partnerships/cheers aren't
     //    user_id-keyed). The cloud copy is intact; it re-pulls on next sign-in.
-    //    partner_shared_blocks is wiped here too so this path matches
-    //    clearLocalPartners exactly (A1 s8.5: the two wipe paths must clear the
-    //    SAME partner tables; shared blocks + intentions must not be left behind).
-    try {
-      await d.runAsync('DELETE FROM partner_cheers');
-      await d.runAsync('DELETE FROM partner_week_signals');
-      await d.runAsync('DELETE FROM partner_shared_blocks');
-      await d.runAsync('DELETE FROM partner_weekly_intentions');
-      await d.runAsync('DELETE FROM partner_win_cards');
-      await d.runAsync('DELETE FROM partnerships');
-    } catch (e) {
-      logError('database.wipeAllUserData.partners', e, { userId });
+    //    Every partner table is fatal: shared data must not survive a user
+    //    boundary because one delete failed partway through this transaction.
+    for (const table of PARTNER_LOCAL_WIPE_TABLES) {
+      try {
+        await d.runAsync(`DELETE FROM ${table}`);
+      } catch (e) {
+        logError(`database.wipeAllUserData.${table}`, e, { userId });
+        if (FATAL_LOCAL_WIPE_TABLES.has(table)) throw e;
+      }
     }
 
     // 8. Rebuild the custom-foods search index from the (now wiped) base
@@ -5385,11 +5397,13 @@ export async function getLocalPartnershipIds(userId) {
 export async function deleteLocalPairSharedData(pairId) {
   if (!pairId) return;
   const d = await db();
-  await d.runAsync('DELETE FROM partner_cheers WHERE pair_id = ?', [pairId]);
-  await d.runAsync('DELETE FROM partner_week_signals WHERE pair_id = ?', [pairId]);
-  await d.runAsync('DELETE FROM partner_shared_blocks WHERE pair_id = ?', [pairId]);
-  await d.runAsync('DELETE FROM partner_weekly_intentions WHERE pair_id = ?', [pairId]);
-  await d.runAsync('DELETE FROM partner_win_cards WHERE pair_id = ?', [pairId]);
+  await runInTransaction(d, async () => {
+    await d.runAsync('DELETE FROM partner_cheers WHERE pair_id = ?', [pairId]);
+    await d.runAsync('DELETE FROM partner_week_signals WHERE pair_id = ?', [pairId]);
+    await d.runAsync('DELETE FROM partner_shared_blocks WHERE pair_id = ?', [pairId]);
+    await d.runAsync('DELETE FROM partner_weekly_intentions WHERE pair_id = ?', [pairId]);
+    await d.runAsync('DELETE FROM partner_win_cards WHERE pair_id = ?', [pairId]);
+  });
 }
 
 /**
@@ -5409,17 +5423,6 @@ export async function markLocalPartnershipEnded(pairId) {
     "UPDATE partnerships SET status = 'ended', ended_at = ?, updated_at = ? WHERE id = ?",
     [now, now, pairId],
   );
-}
-
-/** Wipe all local partner data (sign-out guard). */
-export async function clearLocalPartners() {
-  const d = await db();
-  await d.runAsync('DELETE FROM partner_cheers');
-  await d.runAsync('DELETE FROM partner_week_signals');
-  await d.runAsync('DELETE FROM partner_shared_blocks');
-  await d.runAsync('DELETE FROM partner_weekly_intentions');
-  await d.runAsync('DELETE FROM partner_win_cards');
-  await d.runAsync('DELETE FROM partnerships');
 }
 
 // ─── Pro: Weekly Check-Ins ────────────────────────────────────────────────────

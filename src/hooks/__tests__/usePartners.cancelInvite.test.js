@@ -59,8 +59,11 @@ jest.mock('../../lib/partners/pendingInvite', () => ({
   clearPendingPartnerCode: jest.fn(async () => {}),
 }));
 
+jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
+
 const db = require('../../lib/database');
 const service = require('../../lib/partners/service');
+const { logError } = require('../../lib/errorLog');
 const usePartners = require('../usePartners').default;
 
 function renderHook() {
@@ -91,6 +94,20 @@ describe('usePartners.unpair clears the pending card locally', () => {
     await act(async () => { await ref.unpair('pair1'); });
     expect(db.markLocalPartnershipEnded).not.toHaveBeenCalled();
     expect(db.deleteLocalPairSharedData).not.toHaveBeenCalled();
+  });
+
+  test('a failed local shared-data purge is logged', async () => {
+    service.unpairPartner.mockResolvedValueOnce({ ok: true });
+    db.deleteLocalPairSharedData.mockRejectedValueOnce(new Error('disk busy'));
+    const { ref } = renderHook();
+
+    await act(async () => { await ref.unpair('pair1'); });
+
+    expect(logError).toHaveBeenCalledWith(
+      'usePartners.unpair.localSharedData',
+      expect.any(Error),
+      { userId: 'me', pairId: 'pair1' },
+    );
   });
 
   test('once the row is ended, load derives no pending invite', async () => {

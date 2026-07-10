@@ -6,7 +6,7 @@
  * end_partnership AND on account deletion, exactly like partner_shared_blocks
  * (migrate_100). This pins that at source level: the cloud migration's
  * end_partnership + status->ended trigger delete the intentions; the client's
- * three local purge paths clear them; and the delete-account edge function
+ * the local unpair and account-wipe paths clear them; and the delete-account edge function
  * sweeps them too. A future edit that drops any of these fails loudly.
  */
 import fs from 'fs';
@@ -54,13 +54,8 @@ describe('client + edge purge paths clear intentions', () => {
     expect(fn).toMatch(/DELETE FROM partner_weekly_intentions WHERE pair_id = \?/);
   });
 
-  test('clearLocalPartners (sign-out guard) clears intentions', () => {
-    const fn = database.slice(database.indexOf('export async function clearLocalPartners'));
-    expect(fn.slice(0, 400)).toMatch(/DELETE FROM partner_weekly_intentions/);
-  });
-
   test('wipeAllUserData partner block clears intentions', () => {
-    expect(database).toMatch(/DELETE FROM partner_weekly_intentions'\)/);
+    expect(database).toMatch(/'partner_weekly_intentions'/);
   });
 
   test('delete-account edge function sweeps the pair intentions (account deletion)', () => {
@@ -82,7 +77,7 @@ describe('migrate_107: partner win cards keep the same deletion promise', () => 
 
   test('local and delete-account purge paths clear win cards', () => {
     expect(database).toMatch(/DELETE FROM partner_win_cards WHERE pair_id = \?/);
-    expect(database).toMatch(/DELETE FROM partner_win_cards'\)/);
+    expect(database).toMatch(/'partner_win_cards'/);
     expect(deleteAccount).toMatch(/partner_win_cards'\)\.delete\(\)\.in\('pair_id', pairIds\)/);
   });
 });
