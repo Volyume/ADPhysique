@@ -70,7 +70,7 @@ export function inferSleepSchedule(days: SleepDay[]): SleepSchedule {
         (day.sleepMin != null && (confidence === 'high' || confidence === 'medium') && coverage >= 70)
       );
     })
-    .slice(0, 14);
+    .slice(0, 28);
   if (!usable.length) return FALLBACK_SLEEP_SCHEDULE;
 
   const beds = usable.map((day) => nightMinute(day.sleepStart as number));

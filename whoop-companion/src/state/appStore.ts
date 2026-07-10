@@ -1403,7 +1403,12 @@ class AppStore extends Store<AppState> {
     const napMin = (await listCardio(CARDIO_RECENT_LIMIT))
       .filter((c) => c.source === 'nap' && c.startTs >= sod && c.startTs < dayEnd)
       .reduce((a, c) => a + napCreditMin(c), 0);
-    const need = computeSleepNeed({ recentStrain: strain, accruedDebtMin, napMin });
+    const need = computeSleepNeed({
+      baselineMin: personalSleepBaseline(recent),
+      recentStrain: strain,
+      accruedDebtMin,
+      napMin,
+    });
     if (sleep) applySleepNeed(sleep, need);
 
     const sleepStressResult = sleep ? buildSleepStress(scoredNightHr) : null;
@@ -2185,7 +2190,12 @@ class AppStore extends Store<AppState> {
     const napMin = cardioAfterNapDetect
       .filter((c) => c.source === 'nap' && c.startTs >= sod)
       .reduce((a, c) => a + napCreditMin(c), 0);
-    const need = computeSleepNeed({ recentStrain: strain, accruedDebtMin, napMin });
+    const need = computeSleepNeed({
+      baselineMin: personalSleepBaseline(recent),
+      recentStrain: strain,
+      accruedDebtMin,
+      napMin,
+    });
     if (sleep) applySleepNeed(sleep, need);
     const captureSleep = candidateSleep ?? sleep;
     const captureEvidence = captureSleep
@@ -2782,6 +2792,28 @@ function applySleepNeed(sleep: SleepResult, need: SleepNeed): void {
 function isUsableDebtNight(day: DailyMetricRow): boolean {
   if (day.sleepMin == null) return false;
   return sleepTrustTier(day.sleepDetail) !== 'low';
+}
+
+/**
+ * A personal sleep baseline should be learned from enough credible, well-
+ * recovered nights, not from every night someone happened to spend in bed.
+ * This lets the need adapt to the wearer without normalising a short-sleep run.
+ */
+function personalSleepBaseline(days: DailyMetricRow[]): number {
+  const restorativeNights = days
+    .filter((day) =>
+      isUsableDebtNight(day) &&
+      (day.recovery ?? 0) >= 67 &&
+      (day.sleepMin ?? 0) >= 300 &&
+      (day.sleepMin ?? 0) <= 11 * 60,
+    )
+    .map((day) => day.sleepMin as number)
+    .slice(0, 28);
+  if (restorativeNights.length < 5) return 480;
+  const baseline = median(restorativeNights.slice().sort((a, b) => a - b));
+  // Keep a personal baseline within a wellbeing-oriented, non-prescriptive
+  // range. Debt remains a separate add-on, so it cannot be learned away.
+  return Math.round(Math.max(420, Math.min(540, baseline)));
 }
 
 function isUsableSleepTrendNight(day: DailyMetricRow): boolean {
