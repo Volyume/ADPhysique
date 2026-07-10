@@ -44,21 +44,20 @@ export function computeSleepPerformance(input: {
   hoursVsNeededPct: number;
   efficiencyPct: number;
   consistencyPct: number | null;
-  highStressPct: number;
+  highStressPct: number | null;
   confidenceCapPct?: number | null;
 }): SleepPerformance {
   const hoursVsNeededPct = clampPct(input.hoursVsNeededPct);
   const efficiencyPct = clampPct(input.efficiencyPct);
   const consistencyPct = input.consistencyPct == null ? null : clampPct(input.consistencyPct);
-  const highStressPct = clampPct(input.highStressPct);
-  const stressGood = 100 - highStressPct;
+  const highStressPct = input.highStressPct == null ? null : clampPct(input.highStressPct);
 
   // Weighted blend; renormalise if consistency is still calibrating.
   const terms: Array<[number, number]> = [
     [0.5, hoursVsNeededPct],
     [0.2, efficiencyPct],
-    [0.1, stressGood],
   ];
+  if (highStressPct != null) terms.push([0.1, 100 - highStressPct]);
   if (consistencyPct != null) terms.push([0.2, consistencyPct]);
   const wSum = terms.reduce((a, [w]) => a + w, 0);
   const blended = Math.round(terms.reduce((a, [w, v]) => a + w * v, 0) / wSum);
@@ -70,7 +69,13 @@ export function computeSleepPerformance(input: {
     { key: 'hoursVsNeeded', label: 'Hours vs Needed', value: Math.round(hoursVsNeededPct), band: hoursVsNeededBand(hoursVsNeededPct), inverse: false },
     { key: 'consistency', label: 'Sleep Consistency', value: consistencyPct == null ? null : Math.round(consistencyPct), band: consistencyPct == null ? null : consistencyBand(consistencyPct), inverse: false },
     { key: 'efficiency', label: 'Sleep Efficiency', value: Math.round(efficiencyPct), band: efficiencyBand(efficiencyPct), inverse: false },
-    { key: 'highStress', label: 'High Sleep Stress', value: Math.round(highStressPct), band: highStressBand(highStressPct), inverse: true },
+    {
+      key: 'highStress',
+      label: 'High Sleep Stress',
+      value: highStressPct == null ? null : Math.round(highStressPct),
+      band: highStressPct == null ? null : highStressBand(highStressPct),
+      inverse: true,
+    },
   ];
 
   return { score, band: performanceBand(score), estimated: true, confidenceCapPct, cappedByConfidence, contributors };

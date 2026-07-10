@@ -16,7 +16,14 @@
 
 import * as SQLite from 'expo-sqlite';
 
-export type HrSampleRow = { ts: number; bpm: number; rr: number[] };
+export type HrSampleSource = 'live_standard' | 'whoop5_v18' | 'whoop5_v26_ppg';
+export type HrSampleRow = {
+  ts: number;
+  bpm: number;
+  rr: number[];
+  source?: HrSampleSource | null;
+  confidence?: number | null;
+};
 export type StepSampleRow = { ts: number; counter: number; activityClass: number | null };
 export type SleepStateSampleRow = { ts: number; state: number };
 export type MotionSampleRow = { ts: number; intensity: number };
@@ -66,8 +73,8 @@ export type DailyMetricRow = {
   rmssd: number | null;
   rhr: number | null;
   resp: number | null; // respiratory rate (brpm), overnight
-  spo2: number | null; // experimental raw-sensor candidate (%)
-  skinTempC: number | null; // experimental raw-sensor candidate (C)
+  spo2: number | null; // unavailable until a WHOOP 5 mapping is validated
+  skinTempC: number | null; // degrees C from validated WHOOP 5 v18 @73 centi-degree register
   sleepMin: number | null;
   sleepPerf: number | null;
   strain: number | null;
@@ -136,7 +143,9 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
         CREATE TABLE IF NOT EXISTS hr_samples (
           ts INTEGER PRIMARY KEY,
           bpm INTEGER NOT NULL,
-          rr TEXT
+          rr TEXT,
+          source TEXT,
+          confidence REAL
         );
         CREATE TABLE IF NOT EXISTS daily_metrics (
           day TEXT PRIMARY KEY,
@@ -215,6 +224,13 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
           // Column already exists — nothing to do.
         }
       }
+      for (const col of ['source TEXT', 'confidence REAL']) {
+        try {
+          await db.execAsync(`ALTER TABLE hr_samples ADD COLUMN ${col}`);
+        } catch {
+          // Column already exists.
+        }
+      }
       for (const col of [
         'distance_m REAL',
         'route TEXT',
@@ -259,18 +275,32 @@ export async function insertHrSample(s: HrSampleRow): Promise<void> {
       s.ts,
       s.bpm,
       JSON.stringify(s.rr ?? []),
+      s.source ?? 'live_standard',
+      s.confidence ?? null,
     );
   });
 }
 
 export async function getHrSamplesBetween(fromTs: number, toTs: number): Promise<HrSampleRow[]> {
   const db = await getDb();
-  const rows = await db.getAllAsync<{ ts: number; bpm: number; rr: string | null }>(
-    'SELECT ts, bpm, rr FROM hr_samples WHERE ts >= ? AND ts <= ? ORDER BY ts ASC',
+  const rows = await db.getAllAsync<{
+    ts: number;
+    bpm: number;
+    rr: string | null;
+    source: HrSampleSource | null;
+    confidence: number | null;
+  }>(
+    'SELECT ts, bpm, rr, source, confidence FROM hr_samples WHERE ts >= ? AND ts <= ? ORDER BY ts ASC',
     fromTs,
     toTs,
   );
-  return rows.map((r) => ({ ts: r.ts, bpm: r.bpm, rr: r.rr ? (JSON.parse(r.rr) as number[]) : [] }));
+  return rows.map((r) => ({
+    ts: r.ts,
+    bpm: r.bpm,
+    rr: r.rr ? (JSON.parse(r.rr) as number[]) : [],
+    source: r.source,
+    confidence: r.confidence,
+  }));
 }
 
 /** Trim the raw HR stream to keep storage bounded (default: keep 30 days). */
@@ -533,6 +563,23 @@ function mapDaily(r: {
 export async function clearUntrustedLegacyData(): Promise<void> {
   await serializeWrite(async () => {
     const db = await getDb();
+    const skinTempMigration = await db.getFirstAsync<{ value: string }>(
+      "SELECT value FROM kv WHERE key = 'validatedWhoop5SkinTempV1'",
+    );
+    if (!skinTempMigration) {
+      await db.execAsync(`
+      DELETE FROM raw_vital_samples;
+      UPDATE daily_metrics SET spo2 = NULL, skin_temp_c = NULL
+       WHERE spo2 IS NOT NULL OR skin_temp_c IS NOT NULL;
+      INSERT OR REPLACE INTO kv (key, value) VALUES ('validatedWhoop5SkinTempV1', '1');
+      `);
+    } else {
+      await db.execAsync(`
+      UPDATE raw_vital_samples SET spo2 = NULL WHERE spo2 IS NOT NULL;
+      DELETE FROM raw_vital_samples WHERE skin_temp_c IS NULL;
+      UPDATE daily_metrics SET spo2 = NULL WHERE spo2 IS NOT NULL;
+      `);
+    }
     await db.execAsync(`
     UPDATE daily_metrics
        SET steps = NULL, step_source = NULL
@@ -540,9 +587,6 @@ export async function clearUntrustedLegacyData(): Promise<void> {
     UPDATE cardio
        SET steps = NULL, cadence_spm = NULL, step_source = NULL
      WHERE step_source = 'phone';
-    DELETE FROM raw_vital_samples;
-    UPDATE daily_metrics SET spo2 = NULL, skin_temp_c = NULL
-     WHERE spo2 IS NOT NULL OR skin_temp_c IS NOT NULL;
     `);
   });
 }
@@ -822,7 +866,13 @@ export async function persistHistoryBatch(batch: HistoryPersistBatch): Promise<v
     try {
       for (const hex of batch.framesHex) await historyStmt.executeAsync(batch.rawTs, hex);
       for (const sample of batch.hr) {
-        await hrStmt.executeAsync(sample.ts, sample.bpm, JSON.stringify(sample.rr ?? []));
+        await hrStmt.executeAsync(
+          sample.ts,
+          sample.bpm,
+          JSON.stringify(sample.rr ?? []),
+          sample.source ?? null,
+          sample.confidence ?? null,
+        );
       }
       for (const sample of batch.steps) {
         await stepStmt.executeAsync(sample.ts, sample.counter, sample.activityClass);
@@ -856,15 +906,56 @@ export async function persistHistoryBatch(batch: HistoryPersistBatch): Promise<v
 }
 
 const UPSERT_HR_SAMPLE_SQL = `
-  INSERT INTO hr_samples (ts, bpm, rr) VALUES (?, ?, ?)
+  INSERT INTO hr_samples (ts, bpm, rr, source, confidence) VALUES (?, ?, ?, ?, ?)
   ON CONFLICT(ts) DO UPDATE SET
     bpm=CASE
-      WHEN excluded.rr != '[]' OR hr_samples.rr IS NULL OR hr_samples.rr = '[]' THEN excluded.bpm
+      WHEN excluded.rr != '[]' OR (
+        (hr_samples.rr IS NULL OR hr_samples.rr = '[]') AND
+        (
+          hr_samples.source IS NULL OR
+          excluded.source != 'whoop5_v26_ppg' OR
+          (
+            hr_samples.source = 'whoop5_v26_ppg' AND
+            excluded.source = 'whoop5_v26_ppg' AND
+            COALESCE(excluded.confidence, 0) > COALESCE(hr_samples.confidence, 0)
+          )
+        )
+      ) THEN excluded.bpm
       ELSE hr_samples.bpm
     END,
     rr=CASE
       WHEN excluded.rr != '[]' THEN excluded.rr
       ELSE COALESCE(hr_samples.rr, excluded.rr)
+    END,
+    source=CASE
+      WHEN excluded.rr != '[]' OR (
+        (hr_samples.rr IS NULL OR hr_samples.rr = '[]') AND
+        (
+          hr_samples.source IS NULL OR
+          excluded.source != 'whoop5_v26_ppg' OR
+          (
+            hr_samples.source = 'whoop5_v26_ppg' AND
+            excluded.source = 'whoop5_v26_ppg' AND
+            COALESCE(excluded.confidence, 0) > COALESCE(hr_samples.confidence, 0)
+          )
+        )
+      ) THEN excluded.source
+      ELSE hr_samples.source
+    END,
+    confidence=CASE
+      WHEN excluded.rr != '[]' OR (
+        (hr_samples.rr IS NULL OR hr_samples.rr = '[]') AND
+        (
+          hr_samples.source IS NULL OR
+          excluded.source != 'whoop5_v26_ppg' OR
+          (
+            hr_samples.source = 'whoop5_v26_ppg' AND
+            excluded.source = 'whoop5_v26_ppg' AND
+            COALESCE(excluded.confidence, 0) > COALESCE(hr_samples.confidence, 0)
+          )
+        )
+      ) THEN excluded.confidence
+      ELSE hr_samples.confidence
     END
 `;
 

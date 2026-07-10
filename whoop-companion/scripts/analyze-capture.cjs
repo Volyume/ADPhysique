@@ -369,6 +369,9 @@ function decodeWhoop5HistoryFrames(framesIn, wallNowSec) {
       if (rec.sleepState != null) {
         sleepStates.push({ ts: ts * 1000, state: rec.sleepState });
       }
+      if (rec.skinTempC != null) {
+        rawVitals.push({ ts: ts * 1000, spo2: null, skinTempC: rec.skinTempC });
+      }
       continue;
     }
 
@@ -488,7 +491,11 @@ function decodeV18(frame) {
   const activityClass = act === 0 || act === 1 || act === 2 ? act : null;
   const sleepStateByte = u8(frame, 81);
   const sleepState = sleepStateByte == null ? null : (sleepStateByte >> 4) & 0x03;
-  return { unix, bpm, rr, stepCounter, activityClass, sleepState };
+  const skinTempRaw = u16(frame, 73);
+  const skinTempC = skinTempRaw != null && skinTempRaw / 100 >= 5 && skinTempRaw / 100 <= 45
+    ? Math.round(skinTempRaw) / 100
+    : null;
+  return { unix, bpm, rr, stepCounter, activityClass, sleepState, skinTempC };
 }
 
 function decodeV26(frame) {

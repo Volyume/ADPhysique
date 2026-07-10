@@ -31,7 +31,7 @@ export function HealthScreen({ nav }: { nav: Nav }) {
   const hm = useMemo(() => appStore.healthMonitor(), [today, recent]);
   const [rhythm, setRhythm] = useState<RhythmResult | null>(null);
   const effectiveSync = historySync ?? lastHistorySync;
-  const readiness = healthDataReadiness(hm, effectiveSync?.rawSensorRecords ?? 0);
+  const readiness = healthDataReadiness(hm);
 
   useEffect(() => {
     void appStore.rhythmScreen().then(setRhythm);
@@ -74,9 +74,9 @@ export function HealthScreen({ nav }: { nav: Nav }) {
           </View>
         </View>
         <View style={styles.sourceRow}>
-          <Stat label="Recovery vitals" value={`${readiness.trustedReady}/3`} color={readiness.trustedReady === 3 ? colors.recoveryGreen : colors.recoveryYellow} />
-          <Stat label="Raw channels" value={`${readiness.candidatesReady}/2`} color={readiness.rawColor} />
-          <Stat label="Sensor packets" value={effectiveSync?.rawSensorRecords ?? '-'} />
+          <Stat label="Recovery vitals" value={`${readiness.recoveryReady}/3`} color={readiness.recoveryReady === 3 ? colors.recoveryGreen : colors.recoveryYellow} />
+          <Stat label="Skin temp" value={readiness.skinReady ? 'ready' : 'pending'} color={readiness.skinReady ? colors.recoveryGreen : colors.textTertiary} />
+          <Stat label="Blood oxygen" value="withheld" color={colors.textTertiary} />
         </View>
         <NavRow
           label={readiness.actionLabel}
@@ -128,7 +128,7 @@ export function HealthScreen({ nav }: { nav: Nav }) {
       </Card>
 
       <Text style={styles.footnote}>
-        Blood Oxygen and Skin Temperature stay unavailable until their WHOOP 5 packet mappings are validated. Rhythm screening is not a medical diagnostic.
+        Skin Temperature comes from validated WHOOP 5 v18 history. Blood Oxygen remains unavailable until its Gen5 mapping is validated. Rhythm screening is not a medical diagnostic.
       </Text>
     </Screen>
   );
@@ -170,69 +170,49 @@ function VitalRow({ vital, last, onPress }: { vital: Vital; last: boolean; onPre
   );
 }
 
-function healthDataReadiness(
-  hm: ReturnType<typeof appStore.healthMonitor>,
-  sensorPackets: number,
-) {
-  const trustedReady = hm.vitals.filter((v) => !v.experimental && v.value != null).length;
-  const candidatesReady = hm.vitals.filter((v) => v.experimental && v.value != null).length;
+function healthDataReadiness(hm: ReturnType<typeof appStore.healthMonitor>) {
+  const recoveryReady = hm.vitals.filter(
+    (v) => (v.key === 'rhr' || v.key === 'hrv' || v.key === 'respiratory') && v.value != null,
+  ).length;
+  const skinReady = hm.vitals.some((v) => v.key === 'skin_temp' && v.value != null);
 
-  if (trustedReady < 3) {
+  if (recoveryReady < 3) {
     return {
       badge: 'SYNC',
       color: colors.strainBlue,
       title: 'Recovery vitals need a fuller night',
       body: 'RHR, HRV and respiratory rate need more clean overnight heart-rate and R-R signal.',
-      trustedReady,
-      candidatesReady,
-      rawColor: colors.textTertiary,
+      recoveryReady,
+      skinReady,
       actionLabel: 'Sync overnight history',
-      actionValue: `${trustedReady}/3 ready`,
+      actionValue: `${recoveryReady}/3 ready`,
       icon: 'sync',
       route: { name: 'device' } as const,
     };
   }
 
-  if (candidatesReady === 0) {
+  if (!skinReady) {
     return {
-      badge: 'DECODE',
-      color: colors.recoveryYellow,
-      title: 'Two sensor metrics are withheld',
-      body: 'Blood Oxygen and Skin Temperature packet mappings have not passed validation, so Pulse will not display plausible-looking guesses.',
-      trustedReady,
-      candidatesReady,
-      rawColor: sensorPackets > 0 ? colors.recoveryYellow : colors.textTertiary,
-      actionLabel: 'View decoder status',
-      actionValue: sensorPackets > 0 ? `${sensorPackets} packets` : 'awaiting packets',
-      icon: 'code-slash',
+      badge: 'SYNC',
+      color: colors.sleepTeal,
+      title: 'Skin temperature needs a full night',
+      body: 'The validated temperature channel is ready; finish an overnight history sync to build its nightly value.',
+      recoveryReady,
+      skinReady,
+      actionLabel: 'Sync overnight history',
+      actionValue: 'temperature pending',
+      icon: 'sync',
       route: { name: 'device' } as const,
     };
   }
 
-  if (candidatesReady < 2) {
-    return {
-      badge: 'PART',
-      color: colors.sleepTeal,
-      title: 'Raw vitals partially decoded',
-      body: 'One raw channel has enough sleep-window samples. Future nights will build its personal range.',
-      trustedReady,
-      candidatesReady,
-      rawColor: colors.recoveryYellow,
-      actionLabel: 'Review metric detail',
-      actionValue: `${candidatesReady}/2 channels`,
-      icon: 'analytics',
-      route: { name: 'metric', key: 'spo2' } as const,
-    };
-  }
-
   return {
-    badge: 'GOOD',
+    badge: '4/4',
     color: colors.recoveryGreen,
-    title: 'Health data is ready',
-    body: 'Recovery vitals and decoded raw sleep-window channels are available for review.',
-    trustedReady,
-    candidatesReady,
-    rawColor: colors.recoveryGreen,
+    title: 'Measured health data is ready',
+    body: 'RHR, HRV, respiratory rate and skin temperature are available. Blood Oxygen stays blank until its mapping is validated.',
+    recoveryReady,
+    skinReady,
     actionLabel: 'Open trends',
     actionValue: 'health',
     icon: 'trending-up',

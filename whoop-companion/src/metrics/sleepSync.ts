@@ -4,9 +4,10 @@ type SleepSyncSource = { coveragePct?: number | null; signalMin?: number | null 
 
 export function sleepNeedsMoreSync(sleepDetail: SleepSyncSource | null): boolean {
   if (!sleepDetail) return true;
+  if (sleepDetail.coveragePct == null || sleepDetail.signalMin == null) return true;
   return (
-    (sleepDetail.coveragePct ?? 100) < SLEEP_TRUST_LOW_COVERAGE_PCT ||
-    (sleepDetail.signalMin ?? 999) < SLEEP_TRUST_LOW_SIGNAL_MIN
+    sleepDetail.coveragePct < SLEEP_TRUST_LOW_COVERAGE_PCT ||
+    sleepDetail.signalMin < SLEEP_TRUST_LOW_SIGNAL_MIN
   );
 }
 

@@ -10,6 +10,7 @@
  */
 
 import { crc16modbus, crc32 } from './crc';
+import { decodeWhoop5SkinTemp } from './skinTemperature';
 
 const PACKET_HISTORICAL_DATA = 47;
 const MIN_PLAUSIBLE_UNIX = 1_700_000_000;
@@ -118,6 +119,9 @@ export function decodeWhoop5HistoryFrames(
       if (rec.sleepState != null) {
         sleepStates.push({ ts: ts * 1000, state: rec.sleepState });
       }
+      if (rec.skinTempC != null) {
+        rawVitals.push({ ts: ts * 1000, spo2: null, skinTempC: rec.skinTempC });
+      }
       continue;
     }
 
@@ -153,7 +157,7 @@ export function decodeWhoop5HistoryFrames(
       rawSensorRecords += 1;
       v20Records += 1;
       // Count these packet families for diagnostics, but do not promote guessed
-      // offsets. Gen5 SpO2 is not decoded and temperature units are unverified.
+      // offsets. v20 SpO2 and temperature channel identities remain unverified.
       continue;
     }
 
@@ -252,6 +256,7 @@ function decodeV18(frame: Uint8Array): {
   stepCounter: number | null;
   activityClass: number | null;
   sleepState: number | null;
+  skinTempC: number | null;
 } | null {
   const unix = u32(frame, 15);
   const bpm = u8(frame, 22);
@@ -267,7 +272,8 @@ function decodeV18(frame: Uint8Array): {
   const activityClass = act === 0 || act === 1 || act === 2 ? act : null;
   const sleepStateByte = u8(frame, 81);
   const sleepState = sleepStateByte == null ? null : (sleepStateByte >> 4) & 0x03;
-  return { unix, bpm, rr, stepCounter, activityClass, sleepState };
+  const skinTempC = decodeWhoop5SkinTemp(u16(frame, 73));
+  return { unix, bpm, rr, stepCounter, activityClass, sleepState, skinTempC };
 }
 
 function decodeV26(frame: Uint8Array): { unix: number; samples: number[] } | null {

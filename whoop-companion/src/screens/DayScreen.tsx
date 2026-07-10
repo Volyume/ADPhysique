@@ -458,7 +458,6 @@ function dayVitalsReview(metric: DailyMetricRow): {
     metric.resp == null ? 'Resp' : null,
   ].filter(Boolean) as string[];
   const healthMissing = [
-    metric.spo2 == null ? 'SpO2' : null,
     metric.skinTempC == null ? 'Skin temp' : null,
   ].filter(Boolean) as string[];
   const sleepCoverage = metric.sleepDetail?.coveragePct ?? null;
@@ -505,7 +504,7 @@ function dayVitalsReview(metric: DailyMetricRow): {
     return {
       label: 'CORE',
       title: 'Core recovery is usable',
-      body: `HRV, resting HR and respiration are present. ${healthMissing.join(' and ')} remain unavailable until their WHOOP 5 packet mappings pass decoder validation.`,
+      body: 'HRV, resting HR and respiration are present. Validated skin temperature still needs a fuller overnight history sync for this day.',
       facts,
       color: colors.strainBlue,
       tint: `${colors.strainBlue}16`,

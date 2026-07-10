@@ -23,12 +23,13 @@ function alphaForGap(gap: number, halfLife: number): number {
  */
 export function emaSeries(samples: DayValue[], halfLifeDays = 7): number[] {
   if (samples.length === 0) return [];
+  const chronological = samples.slice().sort((a, b) => a.day - b.day);
   const out: number[] = [];
-  let ema = samples[0]!.value;
-  let prevDay = samples[0]!.day;
+  let ema = chronological[0]!.value;
+  let prevDay = chronological[0]!.day;
   out.push(ema);
-  for (let i = 1; i < samples.length; i += 1) {
-    const s = samples[i]!;
+  for (let i = 1; i < chronological.length; i += 1) {
+    const s = chronological[i]!;
     const w = alphaForGap(s.day - prevDay, halfLifeDays); // weight on history
     ema = w * ema + (1 - w) * s.value;
     prevDay = s.day;

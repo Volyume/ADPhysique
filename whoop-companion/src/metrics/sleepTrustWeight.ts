@@ -16,8 +16,9 @@ export const SLEEP_TRUST_MEDIUM_SIGNAL_MIN = 240;
 
 export function sleepTrustTier(source: SleepTrustSource | null | undefined): SleepTrustTier {
   if (!source) return 'none';
-  const coveragePct = source.coveragePct ?? 100;
-  const signalMin = source.signalMin ?? 999;
+  if (source.confidence == null || source.coveragePct == null || source.signalMin == null) return 'low';
+  const coveragePct = source.coveragePct;
+  const signalMin = source.signalMin;
   const inBedMin = source.inBedMin ?? 0;
   const lowSignalMin = inBedMin > 0
     ? Math.min(SLEEP_TRUST_LOW_SIGNAL_MIN, Math.max(60, Math.ceil(inBedMin * 0.5)))

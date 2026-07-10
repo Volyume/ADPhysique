@@ -91,9 +91,9 @@ const DEFS: Record<string, Def> = {
     color: () => NEUTRAL,
     decimals: 1,
     pick: (d) => d.skinTempC,
-    measured: false,
+    measured: true,
     blurb:
-      'Skin temperature varies day to day and is different from core temperature. Candidate WHOOP 5 fields exist, but their units and delta semantics are not validated, so Pulse keeps them diagnostic-only.',
+      'Skin temperature varies day to day and is different from core temperature. Pulse decodes the validated WHOOP 5 v18 skin-temperature register and compares overnight averages with your own range.',
   },
   recovery: {
     title: 'Recovery',

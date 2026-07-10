@@ -12,7 +12,8 @@
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
     "test:band-steps": "node scripts/test-band-steps.cjs",
-    "test:sleep": "node scripts/test-sleep.cjs"
+    "test:sleep": "node scripts/test-sleep.cjs",
+    "test:physiology": "node scripts/test-physiology.cjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

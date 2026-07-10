@@ -55,9 +55,18 @@ function validityMask(rr: number[]): boolean[] {
 }
 
 export function computeHrv(rr: number[]): HrvResult | null {
-  if (rr.length < MIN_CLEAN_INTERVALS) return null;
-  const valid = validityMask(rr);
-  const accepted = rr.filter((_, i) => valid[i]);
+  return computeHrvSegments([rr]);
+}
+
+/** Calculate HRV without treating the edges of missing-packet runs as adjacent beats. */
+export function computeHrvSegments(segments: number[][]): HrvResult | null {
+  const usable = segments.filter((segment) => segment.length > 0);
+  const totalIntervals = usable.reduce((sum, segment) => sum + segment.length, 0);
+  if (totalIntervals < MIN_CLEAN_INTERVALS) return null;
+  const masks = usable.map(validityMask);
+  const accepted = usable.flatMap((segment, segmentIndex) =>
+    segment.filter((_, index) => masks[segmentIndex]?.[index]),
+  );
   if (accepted.length < MIN_CLEAN_INTERVALS) return null;
 
   const n = accepted.length;
@@ -67,12 +76,16 @@ export function computeHrv(rr: number[]): HrvResult | null {
   let sumSqDiff = 0;
   let pairs = 0;
   let nn50 = 0;
-  for (let i = 1; i < rr.length; i += 1) {
-    if (!valid[i] || !valid[i - 1]) continue;
-    const d = (rr[i] as number) - (rr[i - 1] as number);
-    sumSqDiff += d * d;
-    if (Math.abs(d) > 50) nn50 += 1;
-    pairs += 1;
+  for (let segmentIndex = 0; segmentIndex < usable.length; segmentIndex += 1) {
+    const segment = usable[segmentIndex]!;
+    const valid = masks[segmentIndex]!;
+    for (let i = 1; i < segment.length; i += 1) {
+      if (!valid[i] || !valid[i - 1]) continue;
+      const d = (segment[i] as number) - (segment[i - 1] as number);
+      sumSqDiff += d * d;
+      if (Math.abs(d) > 50) nn50 += 1;
+      pairs += 1;
+    }
   }
   if (pairs < MIN_CLEAN_INTERVALS - 1) return null;
   const rmssd = Math.sqrt(sumSqDiff / pairs);

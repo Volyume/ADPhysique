@@ -6,10 +6,8 @@
  * - Heart Rate Variability
  * - Respiratory Rate
  *
- * WHOOP 5 history also exposes raw-sensor layouts in this user's captures. SpO2
- * and skin-temperature are decoded raw channels: they count toward the headline
- * range once they have a value and personal range, while the UI still labels the
- * source clearly because the mapping is reverse-engineered.
+ * WHOOP 5 v18 also exposes a validated skin-temperature register. SpO2 remains
+ * unavailable because no Gen5 optical mapping has passed labelled validation.
  */
 
 import { stdev } from './ema';
@@ -111,7 +109,7 @@ export function computeHealthMonitor(input: {
       'spo2',
       'Blood Oxygen',
       '%',
-      'Blood oxygen measures how much oxygen your red blood cells are carrying. This channel is decoded from raw WHOOP 5 v21 history records and contributes to Health Monitor once a personal range is available.',
+      'Blood oxygen measures how much oxygen your red blood cells are carrying. Pulse keeps this blank until a WHOOP 5 mapping is validated against labelled measurements.',
       input.spo2,
       true,
     ),
@@ -119,9 +117,8 @@ export function computeHealthMonitor(input: {
       'skin_temp',
       'Skin Temperature',
       'C',
-      'Skin temperature indicates how your body is regulating heat and varies day to day. This channel is decoded from raw WHOOP 5 v20 history records and contributes to Health Monitor once a personal range is available.',
+      'Skin temperature indicates how your body is regulating heat and varies day to day. It is decoded from the validated WHOOP 5 v18 skin-temperature register and builds a personal nightly range.',
       input.skinTemp,
-      true,
     ),
   ];
 

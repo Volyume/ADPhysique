@@ -64,7 +64,7 @@ import {
 import { startBgLocation, stopBgLocation } from '../sensors/bgLocation';
 import { isKeepAliveRunning, setKeepAliveHeartbeat, startKeepAlive, stopKeepAlive } from '../sensors/keepAlive';
 import { DEFAULT_PROFILE, loadProfile, saveProfile } from '../db/profile';
-import { computeHrv } from '../metrics/hrv';
+import { computeHrv, computeHrvSegments } from '../metrics/hrv';
 import { emaBaseline, stdev } from '../metrics/ema';
 import { computeRecovery } from '../metrics/recovery';
 import { autoSleepBoundariesCovered, computeSleep, computeSleepNeed, durationOnlySleep, SleepMinute, SleepNeed, SleepResult } from '../metrics/sleep';
@@ -311,8 +311,8 @@ const STEP_DIVISOR_KEY = 'whoopStepTicksPerStep';
 const STEP_DIVISOR_MIGRATION_KEY = 'whoopStepDivisorCaptureDefaultV2';
 const STEP_TRUST_RECOMPUTE_KEY = 'whoopStepTrustRecomputeV1';
 const K21_MOTION_BACKFILL_KEY = 'whoopK21MotionBackfillV1';
-const HISTORY_HR_REDECODE_KEY = 'whoopHistoryHrMergeV1';
-const SLEEP_EVIDENCE_RECOMPUTE_KEY = 'sleepEvidenceRecomputeV8';
+const HISTORY_BIOMETRIC_REDECODE_KEY = 'whoopHistoryBiometricMergeV2';
+const SLEEP_EVIDENCE_RECOMPUTE_KEY = 'sleepEvidenceRecomputeV9';
 const STRAP_ALARM_KEY = 'strapAlarm';
 
 function bandStepsAreTrusted(estimate: BandStepEstimate | null | undefined, divisor: number): boolean {
@@ -436,7 +436,7 @@ class AppStore extends Store<AppState> {
         return;
       }
       void this.backfillStoredK21Motion()
-        .then(() => this.redecodeStoredHistoryHr())
+        .then(() => this.redecodeStoredHistoryBiometrics())
         .then(() => this.recomputeRecentSleepEvidence())
         .then(() => this.recomputeRecentStepTrust())
         .then(() => this.refreshDerived())
@@ -707,14 +707,16 @@ class AppStore extends Store<AppState> {
     await kvSet(SLEEP_EVIDENCE_RECOMPUTE_KEY, '1');
   }
 
-  private async redecodeStoredHistoryHr(): Promise<void> {
-    if ((await kvGet(HISTORY_HR_REDECODE_KEY)) === '1') return;
+  private async redecodeStoredHistoryBiometrics(): Promise<void> {
+    if ((await kvGet(HISTORY_BIOMETRIC_REDECODE_KEY)) === '1') return;
     let afterRowId = 0;
+    let ppgOverlap: Uint8Array[] = [];
     for (;;) {
       const page = await getStoredHistoryPage(afterRowId);
       if (!page.length) break;
-      const decoded = decodeWhoop5HistoryFrames(page.map((row) => hexToBytes(row.hex)));
-      if (decoded.hr.length) {
+      const frames = page.map((row) => hexToBytes(row.hex));
+      const decoded = decodeWhoop5HistoryFrames([...ppgOverlap, ...frames]);
+      if (decoded.hr.length || decoded.rawVitals.length) {
         await persistHistoryBatch({
           rawTs: Date.now(),
           framesHex: [],
@@ -722,12 +724,13 @@ class AppStore extends Store<AppState> {
           steps: [],
           sleepStates: [],
           motion: [],
-          rawVitals: [],
+          rawVitals: decoded.rawVitals,
         });
       }
+      ppgOverlap = [...ppgOverlap, ...frames.filter((frame) => frame[9] === 26)].slice(-16);
       afterRowId = page[page.length - 1]!.rowId;
     }
-    await kvSet(HISTORY_HR_REDECODE_KEY, '1');
+    await kvSet(HISTORY_BIOMETRIC_REDECODE_KEY, '1');
   }
 
   private async recomputeRecentStepTrust(): Promise<void> {
@@ -1494,7 +1497,7 @@ class AppStore extends Store<AppState> {
       sleepDetail = manualTimingOnlyDetail(manual.startTs, manual.endTs);
     }
 
-    const trustedRecoveryNights = recent.filter(isUsableRecoveryNight);
+    const trustedRecoveryNights = recent.filter(isUsableRecoveryNight).slice(0, 30);
     const toDayValues = (pick: (d: DailyMetricRow) => number | null) =>
       trustedRecoveryNights
         .filter((d) => pick(d) != null)
@@ -2343,7 +2346,7 @@ class AppStore extends Store<AppState> {
     } else if (manual) {
       sleepDetail = manualTimingOnlyDetail(manual.startTs, manual.endTs);
     }
-    const trustedRecoveryNights = recent.filter(isUsableRecoveryNight);
+    const trustedRecoveryNights = recent.filter(isUsableRecoveryNight).slice(0, 30);
     const toDayValues = (pick: (d: DailyMetricRow) => number | null) =>
       trustedRecoveryNights
         .filter((d) => pick(d) != null)
@@ -2352,10 +2355,9 @@ class AppStore extends Store<AppState> {
     const rhrSamples = toDayValues((d) => d.rhr);
     const respSamples = toDayValues((d) => d.resp);
 
-    const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
     const rmssdBaseline = emaBaseline(rmssdSamples) ?? null;
     const rhrBaseline = emaBaseline(rhrSamples) ?? null;
-    const respBaseline = mean(respSamples.map((s) => s.value));
+    const respBaseline = emaBaseline(respSamples);
     const rmssdSd = stdev(rmssdSamples.map((s) => s.value)) || 1;
     const rhrSd = stdev(rhrSamples.map((s) => s.value)) || 1;
     const respSd = stdev(respSamples.map((s) => s.value)) || 1;
@@ -2672,18 +2674,16 @@ function imuMotionByMinute(rows: Array<{ ts: number; intensity: number }>): Map<
 }
 
 function perMinuteRmssd(rows: HrSampleRow[]): Map<number, number> {
-  const rrByMinute = new Map<number, number[]>();
+  const rowsByMinute = new Map<number, HrSampleRow[]>();
   for (const row of rows) {
-    const clean = cleanSampleRr(row);
-    if (!clean.length) continue;
     const minute = Math.floor(row.ts / 60000);
-    const rr = rrByMinute.get(minute) ?? [];
-    rr.push(...clean);
-    rrByMinute.set(minute, rr);
+    const minuteRows = rowsByMinute.get(minute) ?? [];
+    minuteRows.push(row);
+    rowsByMinute.set(minute, minuteRows);
   }
   const out = new Map<number, number>();
-  for (const [minute, rr] of rrByMinute) {
-    const hrv = computeHrv(rr);
+  for (const [minute, minuteRows] of rowsByMinute) {
+    const hrv = computeHrvSegments(contiguousRrSegments(minuteRows));
     if (hrv && hrv.rmssd >= 5 && hrv.rmssd <= 180) out.set(minute, hrv.rmssd);
   }
   return out;
@@ -2955,19 +2955,19 @@ function boundedSleepCoveragePct(sleep: SleepResult): number {
 }
 
 function buildSleepStress(samples: HrSampleRow[]): SleepStress | null {
-  const byMin = new Map<number, { hrs: number[]; rr: number[] }>();
-  for (const s of samples) {
+  const directSamples = directPhysiologyHrSamples(samples);
+  const byMin = new Map<number, HrSampleRow[]>();
+  for (const s of directSamples) {
     const m = Math.floor(s.ts / 60000);
-    const b = byMin.get(m) ?? { hrs: [], rr: [] };
-    b.hrs.push(s.bpm);
-    b.rr.push(...s.rr);
+    const b = byMin.get(m) ?? [];
+    b.push(s);
     byMin.set(m, b);
   }
   const epochs: StressEpoch[] = [...byMin.entries()]
     .sort((a, b) => a[0] - b[0])
-    .map(([, v]) => ({
-      hr: v.hrs.reduce((a, b) => a + b, 0) / v.hrs.length,
-      rmssd: computeHrv(v.rr)?.rmssd ?? null,
+    .map(([, minuteRows]) => ({
+      hr: minuteRows.reduce((sum, row) => sum + row.bpm, 0) / minuteRows.length,
+      rmssd: computeHrvSegments(contiguousRrSegments(minuteRows))?.rmssd ?? null,
     }));
   return computeSleepStress(epochs);
 }
@@ -2998,7 +2998,7 @@ function buildSleepDetail(input: {
     hoursVsNeededPct,
     efficiencyPct,
     consistencyPct,
-    highStressPct: sleepStress?.highPct ?? 0,
+    highStressPct: sleepStress?.highPct ?? null,
     confidenceCapPct: sleepPerformanceCap(confidence, coveragePct, sleep),
   });
   const score = input.includeQualityScore && stagesTrusted
@@ -3208,14 +3208,22 @@ function computeOvernightVitals(samples: HrSampleRow[], sleep: SleepResult | nul
   if (sleep.signalMin < requiredSignalMin || coveragePct < MIN_VITAL_COVERAGE_PCT) {
     return { rmssd: null, rhr: null, resp: null };
   }
+  const directSamples = directPhysiologyHrSamples(samples);
+  if (perMinuteHr(directSamples).length < requiredSignalMin) {
+    return { rmssd: null, rhr: null, resp: null };
+  }
 
-  const resp = overnightRespiratoryRate(samples);
-  const rhr = restingHrFromSleep(samples);
+  const resp = overnightRespiratoryRate(directSamples);
+  const rhr = restingHrFromSleep(directSamples);
   return {
-    rmssd: overnightRmssd(samples, rhr),
+    rmssd: overnightRmssd(directSamples, rhr),
     rhr,
     resp,
   };
+}
+
+function directPhysiologyHrSamples(samples: HrSampleRow[]): HrSampleRow[] {
+  return samples.filter((sample) => sample.source === 'whoop5_v18' || sample.source === 'live_standard');
 }
 
 function overnightRespiratoryRate(samples: HrSampleRow[]): number | null {
@@ -3295,28 +3303,25 @@ function restingHrFromSleep(samples: HrSampleRow[]): number | null {
 }
 
 function overnightRmssd(samples: HrSampleRow[], rhr: number | null): number | null {
-  const buckets = new Map<number, { rr: number[]; hrs: number[] }>();
+  const buckets = new Map<number, HrSampleRow[]>();
   for (const s of samples) {
-    const cleanRr = cleanSampleRr(s);
-    if (!cleanRr.length) continue;
     const bucket = Math.floor(s.ts / (5 * 60000));
-    const cur = buckets.get(bucket) ?? { rr: [], hrs: [] };
-    cur.rr.push(...cleanRr);
-    cur.hrs.push(s.bpm);
+    const cur = buckets.get(bucket) ?? [];
+    cur.push(s);
     buckets.set(bucket, cur);
   }
 
   const windows = [...buckets.values()]
-    .map((b) => {
-      const avgHr = b.hrs.reduce((a, v) => a + v, 0) / b.hrs.length;
-      const hrv = b.rr.length >= 90 ? computeHrv(b.rr) : null;
+    .map((bucketRows) => {
+      const avgHr = bucketRows.reduce((sum, row) => sum + row.bpm, 0) / bucketRows.length;
+      const hrv = computeHrvSegments(contiguousRrSegments(bucketRows));
       if (!hrv) return null;
       if (hrv.rmssd < 5 || hrv.rmssd > 180) return null;
       if (Math.abs(hrv.meanHr - avgHr) > Math.max(8, avgHr * 0.12)) return null;
       return {
         rmssd: hrv.rmssd,
         avgHr,
-        hrSamples: b.hrs.length,
+        hrSamples: bucketRows.length,
         rrCount: hrv.count,
       };
     })
@@ -3335,6 +3340,27 @@ function overnightRmssd(samples: HrSampleRow[], rhr: number | null): number | nu
   const upper = Math.min(160, med + Math.max(18, mad * 3));
   const filtered = rmssd.filter((v) => v <= upper);
   return round1(median((filtered.length >= 3 ? filtered : rmssd).sort((a, b) => a - b)));
+}
+
+function contiguousRrSegments(rows: HrSampleRow[], maxGapMs = 5000): number[][] {
+  const segments: number[][] = [];
+  let current: number[] | null = null;
+  let lastTs: number | null = null;
+  for (const row of rows.slice().sort((a, b) => a.ts - b.ts)) {
+    const clean = cleanSampleRr(row);
+    if (!clean.length) {
+      current = null;
+      lastTs = null;
+      continue;
+    }
+    if (!current || lastTs == null || row.ts <= lastTs || row.ts - lastTs > maxGapMs) {
+      current = [];
+      segments.push(current);
+    }
+    current.push(...clean);
+    lastTs = row.ts;
+  }
+  return segments;
 }
 
 function cleanSampleRr(sample: HrSampleRow): number[] {
@@ -3368,7 +3394,7 @@ function recoveryEstimate(input: {
 
   const rmssdBaseline = emaBaseline(rmssdSamples) ?? null;
   const rhrBaseline = emaBaseline(rhrSamples) ?? null;
-  const respBaseline = respSamples.length ? respSamples.reduce((a, b) => a + b.value, 0) / respSamples.length : null;
+  const respBaseline = emaBaseline(respSamples);
   const rmssdSd = Math.max(MIN_RMSSD_BASELINE_SD_MS, stdev(rmssdSamples.map((s) => s.value)) || 0);
   const rhrSd = Math.max(MIN_RHR_BASELINE_SD_BPM, stdev(rhrSamples.map((s) => s.value)) || 0);
   const respSd = Math.max(MIN_RESP_BASELINE_SD_RPM, stdev(respSamples.map((s) => s.value)) || 0);
