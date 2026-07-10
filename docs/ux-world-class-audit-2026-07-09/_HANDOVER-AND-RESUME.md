@@ -380,10 +380,46 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
   the current campaign. The cluster is CLOSED; only operational
   remainders exist (founder runs refresh-off-snapshot.yml).
 
-## ⏸ RESUME POINT — current state and queue (2026-07-10 late):
-1. IN FLIGHT: D35 drag edge auto-scroll (Sonnet — DragReorderList +
-   its four consumer surfaces; the crux is scroll-offset-aware
-   hit-testing; lead reviews the worklet arithmetic at landing).
+## ⏸ RESUME POINT — current state and queue (2026-07-10 late,
+## defensive mid-flight snapshot — founder warned the token window may
+## die before the 5-hour mark; a fresh session resumes from HERE):
+
+**PUSHED THROUGH `6db4d33`. Tree dirt at snapshot time = the two
+in-flight agents below. If resuming after a dead session, run
+`git status` and apply each agent's recovery path:**
+
+1. IN FLIGHT (a): **D35 drag edge auto-scroll** (Sonnet). Spec = D35
+   register entry + this file's earlier queue text: extend
+   src/components/DragReorderList.js with edge auto-scroll on all four
+   consumer surfaces (PlanDetail, ManualBuilder, RoutineDetail reorder
+   mode, ActiveWorkout reorder sheet); crux = scroll-offset-aware
+   hit-testing (content-relative centre = viewport position + scroll
+   offset); pure-arithmetic worklets + runOnJS only; optional
+   backwards-compatible props; Reduce Motion = linear but functional;
+   keep every reorder-guard pin; no new dependency; agent does not
+   commit. RECOVERY: if DragReorderList/screen edits sit uncommitted,
+   lead-review against that spec, `npm run lint && npm test --
+   --runInBand` (base tree was green at 8,382), commit per-feature +
+   update this file + push. If no such edits exist, relaunch a Sonnet
+   agent from the spec above.
+2. IN FLIGHT (b): **audit staleness sweep + TASKBOARD.md** (Opus,
+   docs/** only). Spec: verdict (LIVE / SUPERSEDED / PARTIALLY LIVE,
+   evidence-based) for every dated audit folder + loose audit/backlog
+   docs; SUPERSEDED ones get a top-of-file banner ("do not build from
+   this; current work runs from this handover + docs/TASKBOARD.md;
+   D37 triage rule"); locked docs + rules/ excluded; builds
+   docs/TASKBOARD.md as THE single task list (header restates D37 +
+   D38; queued items carry CURRENT STATE / END STATE / ELEVATES
+   BECAUSE per D38, else they sit in a NEEDS-JUSTIFICATION section;
+   sections: in flight, queued, founder-side ops, held/never-
+   re-propose). RECOVERY: if docs edits/TASKBOARD.md sit uncommitted,
+   lead-review banners + board against D37/D38 and the register, fix
+   gaps, commit + push, then wire CLAUDE.md's status block and this
+   file to point at TASKBOARD.md. If absent, relaunch an Opus agent
+   from the spec above.
+3. AT BOTH LANDINGS: full suite over the settled tree, per-feature
+   commits, this handover + TASKBOARD.md updated, push (standing
+   discipline, reaffirmed by the founder 2026-07-10 late).
 2. NEXT SLOTS, in order:
    a. **NEW FOUNDER ASK (2026-07-10, priority — direct defect report):
       inline dietary preferences + allergies in the meal builder.**
