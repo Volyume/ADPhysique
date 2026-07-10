@@ -454,3 +454,20 @@ approved slate documented in CAMPAIGN-2026-07-10-APPROVED-SLATE.md.
   our branch rebased onto that tip; combined tree green (657/8223).
 - Chat cleared after this; a fresh Fable session resumes from the handover's
   FRESH SESSION START block.
+
+## D30 — Dynamic-type global ceiling = codemod sweep (founder, 2026-07-10)
+Context: campaign item 6. React 19's automatic JSX runtime silently drops
+Text.defaultProps (empirically proven against this repo's babel pipeline
+with a compiled-JSX probe), so the standard one-line app-wide
+maxFontSizeMultiplier default cannot work under RN 0.81 + React 19. The
+targeted 1.3 caps on dense fixed-size surfaces landed first (0c85864).
+Options put to founder: (1) scripted codemod adding an explicit cap to
+every raw Text/TextInput across ~85 screens; (2) boot-time wrap of RN's
+Text/TextInput exports (works, but undocumented and upgrade-fragile);
+(3) per-component caps only; (4) new shared AppText primitive + rolling
+migration.
+- FOUNDER RULING: **Option 1 — codemod sweep, full build.** Every cap
+  explicit, standard and grep-able; no unusual techniques. Queued for the
+  next free agent slot after Pair 4 (photo gallery + keyboard/zeego).
+- House cap value stays 1.3 (the existing precedent); RestTimer's 1.15
+  outlier and RollingNumber's uncapped default are untouched by the sweep.
