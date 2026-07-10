@@ -1291,3 +1291,19 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   StatusBar + themeReady gate + NavigationContainer theme TOGETHER,
   risk register #7) - fires after the bottom-sheet landing settles
   App.js. Then stage 3 screens.
+- BOTTOM-SHEET ADOPTION LANDED (lead-reviewed): @gorhom/bottom-sheet
+  5.2.14 (MIT, 9.37M/mo) wired behind BottomSheet.js's unchanged API -
+  17 consumers verified zero-change; backdrop/back onClose stays
+  SYNCHRONOUS (one-time contracts intact, test-pinned exactly-once
+  across all four dismiss paths); swipe-dismiss is the one new path
+  (post-animation, no prior contract); provider in App.js; dep was
+  ALREADY in the lockfile (18ab135, approved 2026-07-02) - no
+  package.json change; motionFitRules allowlist updated with dated
+  citation. 640 suites green. QUEUED FOLLOW-UP (flagged, not parked):
+  Android TalkBack can in principle reach behind an open sheet (portal
+  vs native-window) - fix = importantForAccessibility on the host
+  screen while a sheet is open; folds into the dynamic-type/a11y wave.
+  NEXT PAIR: theming STAGE 2 (App.js StatusBar + themeReady +
+  NavigationContainer theme TOGETHER - App.js now free) + blurhash
+  image polish (disjoint files); transitions follow (they'd collide
+  with stage 2's RootNavigator work).
