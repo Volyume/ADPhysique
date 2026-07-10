@@ -15,6 +15,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, spacing, type, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import ModalHeader from '../components/ModalHeader';
@@ -55,6 +56,11 @@ export default function LogCardioScreen({ navigation, route }) {
   const { user, userProfile, saveLocalProfile } = useAppStore(useShallow((s) => ({
     user: s.user, userProfile: s.userProfile, saveLocalProfile: s.saveLocalProfile,
   })));
+  // Campaign 2026-07-10 item 8 (history + cardio theme migration): live
+  // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
+  // (defined further down this file, after the frozen `styles` block).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const userId = user?.id;
   // P10: only estimate kcal when we actually know the bodyweight; no silent 75.
   const weightKnown = Number(userProfile?.weightKg) > 0;
@@ -153,7 +159,7 @@ export default function LogCardioScreen({ navigation, route }) {
   const recents = recentIds.map(getCardioActivity).filter(Boolean);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <ModalHeader title={activity ? 'Log cardio' : 'Pick activity'} onClose={() => navigation.goBack()} />
 
       {!activity ? (
@@ -192,11 +198,11 @@ export default function LogCardioScreen({ navigation, route }) {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Card onPress={() => setActivity(null)} surface="surface2" radius="md" padding="md" style={styles.chosenRow} accessibilityLabel="Change activity">
             <View style={styles.chosenCopy}>
-              <Text style={styles.chosenName} numberOfLines={1} ellipsizeMode="tail">{activity.displayName}</Text>
-              <Text style={styles.chosenMeta}>{CATEGORY_LABELS[activity.category]} · tap to change</Text>
+              <Text style={[styles.chosenName, live.chosenName]} numberOfLines={1} ellipsizeMode="tail">{activity.displayName}</Text>
+              <Text style={[styles.chosenMeta, live.chosenMeta]}>{CATEGORY_LABELS[activity.category]} · tap to change</Text>
             </View>
             <TouchableOpacity onPress={toggleFavourite} hitSlop={10} accessibilityRole="button" accessibilityState={{ selected: isFavourite }} accessibilityLabel={isFavourite ? 'Remove from your cardio' : 'Add to your cardio'}>
-              <Ionicons name={isFavourite ? 'star' : 'star-outline'} size={22} color={colors.primary} />
+              <Ionicons name={isFavourite ? 'star' : 'star-outline'} size={22} color={t.colors.primary} />
             </TouchableOpacity>
           </Card>
 
@@ -221,10 +227,10 @@ export default function LogCardioScreen({ navigation, route }) {
           {estKcal != null && (
             <>
               <View style={styles.kcalRow}>
-                <Ionicons name="flame-outline" size={16} color={colors.textMuted} />
-                <Text style={styles.kcalText}>Burned about {estKcal} kcal</Text>
+                <Ionicons name="flame-outline" size={16} color={t.colors.textMuted} />
+                <Text style={[styles.kcalText, live.kcalText]}>Burned about {estKcal} kcal</Text>
               </View>
-              <Text style={styles.footnote}>
+              <Text style={[styles.footnote, live.footnote]}>
                 Already counted. This isn't added to your calorie target, your weight trend includes everything you burn.
               </Text>
             </>
@@ -247,13 +253,20 @@ function Section({ title, children }) {
 }
 
 function ActivityList({ items, onPick }) {
+  // Campaign 2026-07-10 item 8: ActivityList is a sibling function-component
+  // scope, not prop-drilled `live` from LogCardioScreen (it is called from
+  // several places in one render -- favourites/recents/category sections --
+  // so its own useTheme() call is cleaner than threading a prop through
+  // every call site). Same shared buildLiveStyles(t) as the parent screen.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <View>
       {items.map((a) => (
-        <TouchableOpacity key={a.id} style={styles.activityRow} onPress={() => onPick(a)} accessibilityRole="button" accessibilityLabel={`Log ${a.displayName}`}>
-          <Ionicons name={CATEGORY_ICON[a.category] || 'heart-outline'} size={18} color={colors.primary} style={styles.activityIcon} />
-          <Text style={styles.activityName} numberOfLines={1} ellipsizeMode="tail">{a.displayName}</Text>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+        <TouchableOpacity key={a.id} style={[styles.activityRow, live.activityRow]} onPress={() => onPick(a)} accessibilityRole="button" accessibilityLabel={`Log ${a.displayName}`}>
+          <Ionicons name={CATEGORY_ICON[a.category] || 'heart-outline'} size={18} color={t.colors.primary} style={styles.activityIcon} />
+          <Text style={[styles.activityName, live.activityName]} numberOfLines={1} ellipsizeMode="tail">{a.displayName}</Text>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
       ))}
     </View>
@@ -286,3 +299,24 @@ const styles = StyleSheet.create({
   kcalText: { fontSize: fontSize.sm, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
   footnote: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xs },
 });
+
+// Campaign 2026-07-10 item 8 (history + cardio theme migration): the frozen
+// `styles` block above stays byte-identical. This mirrors ONLY the colour/
+// fontSize/type-bearing sub-properties of the matching frozen style, at
+// identical rest values, shared by LogCardioScreen's two function-component
+// scopes (the screen itself and ActivityList) so they can never drift out
+// of step with each other or the frozen block. Pure layout keys (flex/gap/
+// padding/width, no token) are correctly omitted -- there is nothing to
+// unfreeze for them. Same pattern as WorkoutSummaryScreen.js's
+// buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    activityRow: { borderBottomColor: t.colors.border },
+    activityName: { ...t.type.body, color: t.colors.textPrimary },
+    chosenName: { ...t.type.title, color: t.colors.textPrimary },
+    chosenMeta: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    kcalText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    footnote: { ...t.type.captionTight, color: t.colors.textMuted },
+  };
+}

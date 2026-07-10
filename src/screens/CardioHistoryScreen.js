@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import SectionLabel from '../components/SectionLabel';
 import EmptyState from '../components/EmptyState';
@@ -36,6 +37,12 @@ import {
 import { isHealthAvailable, getHealthProviderLabel } from '../lib/health';
 import { logError } from '../lib/errorLog';
 
+// Campaign 2026-07-10 item 8: checked against the CP-10 plan's "18 module-
+// scope const object maps baking colors.*" list (section 2.2), which names
+// these two as colour-baking. On direct inspection they are NOT -- both are
+// plain label-string lookups with no colour/fontSize/type token anywhere in
+// their values, so there is nothing to unfreeze here; this is the plan's
+// one known stale list entry. Left untouched.
 const INTENSITY_LABEL = { low: 'Easy', moderate: 'Moderate', high: 'Hard' };
 
 // Imported cardio rows carry a platform source tag (ULTIMATE-CUX-PCI, NA-cux-6);
@@ -44,18 +51,38 @@ const CARDIO_SOURCE_LABEL = { apple_health: 'Apple Health', health_connect: 'Hea
 const cardioSourceLabel = (source) => CARDIO_SOURCE_LABEL[source] || null;
 const TREND_WEEKS = 8; // recent weeks shown in the "done vs planned" trend
 
-function markStyle(verdict) {
-  if (verdict === 'hit') return { color: colors.success };
-  if (verdict === 'mostly') return { color: colors.textSecondary };
-  return { color: colors.textMuted }; // never red: a quiet marker, not a grade
+// Campaign 2026-07-10 item 8 (history + cardio theme migration): live
+// variant of the frozen markStyle(verdict) this file used to define inline
+// (reading the frozen `colors.*` singleton at call time), same "build"
+// pattern as WeightTrendCard's buildDotColour / FatigueTrendCard's
+// buildFatigueBarColor -- resolves the SAME verdict -> tone mapping off a
+// passed-in colour table (t.colors) instead of the frozen singleton, so the
+// trend mark's colour stays in step with a theme flip. Wording/logic
+// byte-identical (NA-cux-11: cardio trend section is founder-decided,
+// style plumbing only).
+function buildMarkStyle(c) {
+  return function markStyle(verdict) {
+    if (verdict === 'hit') return { color: c.success };
+    if (verdict === 'mostly') return { color: c.textSecondary };
+    return { color: c.textMuted }; // never red: a quiet marker, not a grade
+  };
 }
 
 // Inline "done vs planned over time" section (ULTIMATE-CUX-CTV, NA-cux-10:
 // founder wording "turn the history list into a trend" → inline, no new route).
 function CardioTrend({ weeks, goal }) {
+  // Campaign 2026-07-10 item 8: CardioTrend is a sibling function-component
+  // scope (rendered once as FlashList's ListHeaderComponent, not prop-
+  // drilled `live`/`t` from CardioHistoryScreen), so its own useTheme() call
+  // is cleaner than threading two extra props through. Same shared
+  // buildLiveStyles(t) as the parent screen. Zero copy/logic change here
+  // (NA-cux-11): style plumbing only.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
+  const resolveMarkStyle = buildMarkStyle(t.colors);
   return (
-    <View style={styles.trend}>
-      <Text style={styles.trendLabel}>How often you did your cardio</Text>
+    <View style={[styles.trend, live.trend]}>
+      <Text style={[styles.trendLabel, live.trendLabel]}>How often you did your cardio</Text>
       {weeks.map((w, idx) => {
         const when = cardioTrendWhenLabel(w, idx);
         const mark = goal > 0 ? cardioVerdictLabel(w.verdict) : null;
@@ -66,13 +93,13 @@ function CardioTrend({ weeks, goal }) {
             accessible
             accessibilityLabel={cardioTrendAccessibilityLabel({ when, sessions: w.sessions, goal, mark })}
           >
-            <Text style={styles.trendWhen}>{when}</Text>
-            <Text style={styles.trendCount}>{goal > 0 ? `${w.sessions} of ${goal}` : `${w.sessions}`}</Text>
-            {mark ? <Text style={[styles.trendMark, markStyle(w.verdict)]}>{mark}</Text> : null}
+            <Text style={[styles.trendWhen, live.trendWhen]}>{when}</Text>
+            <Text style={[styles.trendCount, live.trendCount]}>{goal > 0 ? `${w.sessions} of ${goal}` : `${w.sessions}`}</Text>
+            {mark ? <Text style={[styles.trendMark, live.trendMark, resolveMarkStyle(w.verdict)]}>{mark}</Text> : null}
           </View>
         );
       })}
-      <Text style={styles.trendFootnote}>
+      <Text style={[styles.trendFootnote, live.trendFootnote]}>
         {goal > 0
           ? 'Sessions you logged each week, compared with your current cardio target.'
           : 'Sessions you logged each week. The coach sets a target only if a cut stalls.'}
@@ -86,6 +113,11 @@ export default function CardioHistoryScreen() {
   const { user, userProfile, energyUnit } = useAppStore(useShallow((s) => ({
     user: s.user, userProfile: s.userProfile, energyUnit: s.accessibility?.energyUnit ?? 'kcal',
   })));
+  // Campaign 2026-07-10 item 8 (history + cardio theme migration): live
+  // theme (src/hooks/useTheme.js). Memoised because this is a list-heavy
+  // screen (renderItem runs once per FlashList row).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const userId = user?.id;
   const toast = useToast();
   const goal = userProfile?.cardioTarget?.sessionsPerWeek ?? 0;
@@ -166,7 +198,7 @@ export default function CardioHistoryScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Cardio history" />
 
       {loading ? (
@@ -201,21 +233,21 @@ export default function CardioHistoryScreen() {
           ListHeaderComponent={weeks.length > 0 ? <CardioTrend weeks={weeks} goal={goal} /> : null}
           getItemType={(item) => (item._kind === 'header' ? 'header' : 'row')}
           renderItem={({ item }) => (item._kind === 'header' ? (
-            <SectionLabel style={styles.dayHeader}>{prettyCardioDate(item.title)}</SectionLabel>
+            <SectionLabel style={[styles.dayHeader, live.dayHeader]}>{prettyCardioDate(item.title)}</SectionLabel>
           ) : (
-            <View style={styles.row}>
+            <View style={[styles.row, live.row]}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.activity}>{item.activityName}</Text>
-                <Text style={styles.meta}>
+                <Text style={[styles.activity, live.activity]}>{item.activityName}</Text>
+                <Text style={[styles.meta, live.meta]}>
                   {item.durationMin} min · {INTENSITY_LABEL[item.intensity] || item.intensity}
                   {item.estKcal != null ? ` · ~${toEnergy(item.estKcal, energyUnit)} ${energyUnitLabel(energyUnit)}` : ''}
                 </Text>
                 {cardioSourceLabel(item.source) ? (
-                  <Text style={styles.sourceTag}>from {cardioSourceLabel(item.source)}</Text>
+                  <Text style={[styles.sourceTag, live.sourceTag]}>from {cardioSourceLabel(item.source)}</Text>
                 ) : null}
               </View>
               <TouchableOpacity onPress={() => confirmDelete(item)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${item.activityName} session`}>
-                <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
+                <Ionicons name="trash-outline" size={18} color={t.colors.textMuted} />
               </TouchableOpacity>
             </View>
           ))}
@@ -251,3 +283,29 @@ const styles = StyleSheet.create({
   trendMark: { width: 76, textAlign: 'right', fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   trendFootnote: { ...type.caption, color: colors.textMuted, marginTop: spacing.sm },
 });
+
+// Campaign 2026-07-10 item 8 (history + cardio theme migration): the frozen
+// `styles` block above stays byte-identical. This mirrors ONLY the colour/
+// fontSize/type-bearing sub-properties of the matching frozen style, at
+// identical rest values, shared by this screen's two function-component
+// scopes (CardioHistoryScreen and CardioTrend) so they can never drift out
+// of step with each other or the frozen block. Pure layout keys (flex/gap/
+// padding/width, no token) are correctly omitted -- there is nothing to
+// unfreeze for them. Same pattern as WorkoutSummaryScreen.js's
+// buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    dayHeader: { backgroundColor: t.colors.background },
+    row: { borderBottomColor: t.colors.border },
+    activity: { ...t.type.body, color: t.colors.textPrimary },
+    meta: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    sourceTag: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    trend: { borderBottomColor: t.colors.border },
+    trendLabel: { ...t.type.title, color: t.colors.textPrimary },
+    trendWhen: { ...t.type.body, color: t.colors.textSecondary },
+    trendCount: { ...t.type.body, color: t.colors.textPrimary },
+    trendMark: { fontSize: t.fontSize.sm },
+    trendFootnote: { ...t.type.caption, color: t.colors.textMuted },
+  };
+}

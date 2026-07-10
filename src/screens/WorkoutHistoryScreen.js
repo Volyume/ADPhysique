@@ -12,6 +12,7 @@ import { addMonths } from 'date-fns/addMonths';
 import { subMonths } from 'date-fns/subMonths';
 import { isSameDay } from 'date-fns/isSameDay';
 import { colors, fontSize, fontWeight, spacing, radius, type, circle, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import PressableCard from '../components/PressableCard';
 import Button from '../components/Button';
@@ -77,6 +78,12 @@ export function formatHistoryExerciseSummary(sets = [], exerciseType = 'weight_r
 
 export default function WorkoutHistoryScreen({ navigation }) {
   const { user, startWorkout, session, units = 'kg' } = useAppStore(useShallow(s => ({ user: s.user, startWorkout: s.startWorkout, session: s.session, units: s.units })));
+  // Campaign 2026-07-10 item 8 (history + cardio theme migration): live
+  // theme (src/hooks/useTheme.js), same "frozen base + live override"
+  // pattern as WorkoutSummaryScreen's buildLiveStyles. Memoised because this
+  // is a list-heavy screen (renderItem runs once per FlashList row).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const toast = useToast();
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -385,46 +392,46 @@ export default function WorkoutHistoryScreen({ navigation }) {
         >
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
-              <Text style={styles.cardDate}>{format(date, 'd MMM yyyy')}</Text>
-              <Text style={styles.cardTime}>{calendarRelativeLabel(workoutDayMs(workout))}</Text>
+              <Text style={[styles.cardDate, live.cardDate]}>{format(date, 'd MMM yyyy')}</Text>
+              <Text style={[styles.cardTime, live.cardTime]}>{calendarRelativeLabel(workoutDayMs(workout))}</Text>
             </View>
             <View style={styles.cardHeaderRight}>
               <View style={styles.cardMeta}>
-                <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-                <Text style={styles.cardMetaText}>{workout.durationMinutes || 0}m</Text>
-                <Text style={styles.cardMetaDivider}>-</Text>
-                <Ionicons name="layers-outline" size={14} color={colors.textMuted} />
-                <Text style={styles.cardMetaText}>{workingSetCount} sets</Text>
+                <Ionicons name="time-outline" size={14} color={t.colors.textMuted} />
+                <Text style={[styles.cardMetaText, live.cardMetaText]}>{workout.durationMinutes || 0}m</Text>
+                <Text style={[styles.cardMetaDivider, live.cardMetaDivider]}>-</Text>
+                <Ionicons name="layers-outline" size={14} color={t.colors.textMuted} />
+                <Text style={[styles.cardMetaText, live.cardMetaText]}>{workingSetCount} sets</Text>
               </View>
               <Ionicons
                 name={isExpanded ? 'chevron-up' : 'chevron-down'}
                 size={16}
-                color={colors.textMuted}
+                color={t.colors.textMuted}
                 style={{ marginTop: spacing.xs }}
               />
             </View>
           </View>
-          <Text style={styles.exerciseList} numberOfLines={isExpanded ? undefined : 2}>
+          <Text style={[styles.exerciseList, live.exerciseList]} numberOfLines={isExpanded ? undefined : 2}>
             {exerciseNames.join(', ') || 'No exercises logged'}
           </Text>
         </PressableCard>
 
         {/* Expanded detail */}
         {isExpanded && (
-          <View style={styles.expandedContent}>
+          <View style={[styles.expandedContent, live.expandedContent]}>
             {/* Stat chips */}
             <View style={styles.statChipRow}>
               {!!workout.durationMinutes && (
-                <View style={styles.statChip}>
-                  <Text style={styles.statChipText}>{workout.durationMinutes} min</Text>
+                <View style={[styles.statChip, live.statChip]}>
+                  <Text style={[styles.statChipText, live.statChipText]}>{workout.durationMinutes} min</Text>
                 </View>
               )}
-              <View style={styles.statChip}>
-                <Text style={styles.statChipText}>{workingSetCount} working set{workingSetCount !== 1 ? 's' : ''}</Text>
+              <View style={[styles.statChip, live.statChip]}>
+                <Text style={[styles.statChipText, live.statChipText]}>{workingSetCount} working set{workingSetCount !== 1 ? 's' : ''}</Text>
               </View>
               {tonnage > 0 && (
-                <View style={styles.statChip}>
-                  <Text style={styles.statChipText}>{Math.round(tonnage).toLocaleString('en-GB')}kg lifted</Text>
+                <View style={[styles.statChip, live.statChip]}>
+                  <Text style={[styles.statChipText, live.statChipText]}>{Math.round(tonnage).toLocaleString('en-GB')}kg lifted</Text>
                 </View>
               )}
             </View>
@@ -440,27 +447,27 @@ export default function WorkoutHistoryScreen({ navigation }) {
                     accessibilityRole="button"
                     accessibilityLabel={`See progress for ${ex.name}`}
                   >
-                    <Text style={styles.exerciseBreakdownName} numberOfLines={1}>
+                    <Text style={[styles.exerciseBreakdownName, live.exerciseBreakdownName]} numberOfLines={1}>
                       {ex.name}
                     </Text>
-                    <Text style={styles.exerciseBreakdownSummary} numberOfLines={1}>
+                    <Text style={[styles.exerciseBreakdownSummary, live.exerciseBreakdownSummary]} numberOfLines={1}>
                       {ex.summary}
                     </Text>
-                    <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+                    <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
                   </TouchableOpacity>
                 ))}
               </View>
             ) : (
               <View style={styles.exerciseBreakdown}>
-                <Text style={styles.loadingText}>Loading exercises…</Text>
+                <Text style={[styles.loadingText, live.loadingText]}>Loading exercises…</Text>
               </View>
             )}
 
             {/* Session notes */}
             {!!workout.notes && (
-              <View style={styles.notesRow}>
-                <Ionicons name="document-text-outline" size={13} color={colors.textMuted} />
-                <Text style={styles.notesText}>{workout.notes}</Text>
+              <View style={[styles.notesRow, live.notesRow]}>
+                <Ionicons name="document-text-outline" size={13} color={t.colors.textMuted} />
+                <Text style={[styles.notesText, live.notesText]}>{workout.notes}</Text>
               </View>
             )}
 
@@ -484,15 +491,15 @@ export default function WorkoutHistoryScreen({ navigation }) {
                   readOnly: true,
                 })
               }
-              style={styles.fullSummaryBtn}
-              textStyle={styles.fullSummaryBtnText}
+              style={[styles.fullSummaryBtn, live.fullSummaryBtn]}
+              textStyle={[styles.fullSummaryBtnText, live.fullSummaryBtnText]}
               accessibilityLabel="View summary"
             />
           </View>
         )}
 
         {/* Card actions */}
-        <View style={styles.cardActions}>
+        <View style={[styles.cardActions, live.cardActions]}>
           {!isExpanded && (
             <Button
               title="View summary"
@@ -512,8 +519,12 @@ export default function WorkoutHistoryScreen({ navigation }) {
                   readOnly: true,
                 })
               }
-              style={styles.viewBtn}
-              textStyle={styles.viewBtnText}
+              // Campaign item 8 (2026-07-10): pinned by
+              // WorkoutHistoryScreen.loadState.test.js's "history cards
+              // expose expansion state..." guard, which was updated in the
+              // same change to expect this array form.
+              style={[styles.viewBtn, live.viewBtn]}
+              textStyle={[styles.viewBtnText, live.viewBtnText]}
               accessibilityLabel="View summary"
             />
           )}
@@ -523,18 +534,18 @@ export default function WorkoutHistoryScreen({ navigation }) {
             variant="secondary"
             size="sm"
             onPress={() => handleRepeatWorkout(workout)}
-            style={[styles.repeatBtn, isExpanded && styles.repeatBtnFull]}
-            textStyle={styles.repeatBtnText}
+            style={[styles.repeatBtn, live.repeatBtn, isExpanded && styles.repeatBtnFull]}
+            textStyle={[styles.repeatBtnText, live.repeatBtnText]}
             accessibilityLabel="Repeat workout"
           />
           <TouchableOpacity
-            style={styles.deleteBtn}
+            style={[styles.deleteBtn, live.deleteBtn]}
             onPress={() => handleDeleteWorkout(workout)}
             accessibilityRole="button"
             accessibilityLabel="Delete workout"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="trash-outline" size={16} color={colors.textSecondary} />
+            <Ionicons name="trash-outline" size={16} color={t.colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </Card>
@@ -586,9 +597,9 @@ export default function WorkoutHistoryScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="Previous month"
         >
-          <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+          <Ionicons name="chevron-back" size={20} color={t.colors.textSecondary} />
         </TouchableOpacity>
-        <Text style={styles.calendarMonthTitle}>{format(calendarDate, 'MMMM yyyy')}</Text>
+        <Text style={[styles.calendarMonthTitle, live.calendarMonthTitle]}>{format(calendarDate, 'MMMM yyyy')}</Text>
         <TouchableOpacity
           onPress={() => {
             setCalendarDate(prev => addMonths(prev, 1));
@@ -598,7 +609,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="Next month"
         >
-          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          <Ionicons name="chevron-forward" size={20} color={t.colors.textSecondary} />
         </TouchableOpacity>
       </View>
     );
@@ -646,14 +657,15 @@ export default function WorkoutHistoryScreen({ navigation }) {
             >
               <View style={[
                 styles.dayCircle,
-                trained && styles.dayCircleTrained,
-                isToday && styles.dayCircleToday,
-                isSelected && styles.dayCircleSelected,
+                trained && [styles.dayCircleTrained, live.dayCircleTrained],
+                isToday && [styles.dayCircleToday, live.dayCircleToday],
+                isSelected && [styles.dayCircleSelected, live.dayCircleSelected],
               ]}>
                 <Text style={[
                   styles.dayNum,
-                  trained && styles.dayNumTrained,
-                  isSelected && styles.dayNumSelected,
+                  live.dayNum,
+                  trained && [styles.dayNumTrained, live.dayNumTrained],
+                  isSelected && [styles.dayNumSelected, live.dayNumSelected],
                 ]} maxFontSizeMultiplier={1.3}>
                   {dayNum}
                 </Text>
@@ -669,11 +681,11 @@ export default function WorkoutHistoryScreen({ navigation }) {
     <View style={styles.listHeaderWrap}>
       {/* Top bar: title + toggle */}
       <View style={styles.topBar}>
-        <Text style={styles.topBarTitle}>
+        <Text style={[styles.topBarTitle, live.topBarTitle]}>
           {workouts.length} session{workouts.length !== 1 ? 's' : ''}
         </Text>
         <TouchableOpacity
-          style={[styles.toggleBtn, viewMode === 'calendar' && styles.toggleBtnActive]}
+          style={[styles.toggleBtn, live.toggleBtn, viewMode === 'calendar' && [styles.toggleBtnActive, live.toggleBtnActive]]}
           onPress={() => {
             setViewMode(prev => (prev === 'list' ? 'calendar' : 'list'));
             setSelectedDay(null);
@@ -685,7 +697,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
           <Ionicons
             name={viewMode === 'calendar' ? 'list-outline' : 'calendar-outline'}
             size={18}
-            color={viewMode === 'calendar' ? colors.primary : colors.textSecondary}
+            color={viewMode === 'calendar' ? t.colors.primary : t.colors.textSecondary}
           />
         </TouchableOpacity>
       </View>
@@ -714,8 +726,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
               accessibilityRole="radio"
               accessibilityLabel={`Filter: ${f.label}`}
               style={styles.filterChip}
-              labelStyle={styles.filterChipText}
-              selectedLabelStyle={styles.filterChipTextActive}
+              labelStyle={[styles.filterChipText, live.filterChipText]}
+              selectedLabelStyle={[styles.filterChipTextActive, live.filterChipTextActive]}
             />
           );
         })}
@@ -729,7 +741,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
           <View style={styles.calendarRow}>
             {DAY_HEADERS.map((h, i) => (
               <View key={i} style={styles.calendarCell}>
-                <Text style={styles.dayHeader}>{h}</Text>
+                <Text style={[styles.dayHeader, live.dayHeader]}>{h}</Text>
               </View>
             ))}
           </View>
@@ -742,8 +754,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
               size="sm"
               fullWidth={false}
               onPress={() => setSelectedDay(null)}
-              style={styles.clearDayBtn}
-              textStyle={styles.clearDayText}
+              style={[styles.clearDayBtn, live.clearDayBtn]}
+              textStyle={[styles.clearDayText, live.clearDayText]}
               accessibilityLabel="Show all this month"
             />
           )}
@@ -753,7 +765,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Workout history" />
       <FlashList
         data={filteredWorkouts}
@@ -768,8 +780,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
               setRefreshing(true);
               try { await loadWorkouts(); } finally { setRefreshing(false); }
             }}
-            tintColor={colors.textMuted}
-            colors={[colors.primary]}
+            tintColor={t.colors.textMuted}
+            colors={[t.colors.primary]}
           />
         }
         ListEmptyComponent={
@@ -1109,3 +1121,55 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
 });
+
+// Campaign 2026-07-10 item 8 (history + cardio theme migration): the frozen
+// `styles` block above stays byte-identical (module-scope StyleSheet.create
+// bakes colours/fontSize/type at import time -- CP-10 plan section 1.4,
+// class 1). This mirrors ONLY the colour/fontSize/type-bearing
+// sub-properties of the matching frozen style, at identical rest values, so
+// appending `live.KEY` after `styles.KEY` in a style array changes nothing
+// visually today and picks up a theme flip once useTheme's store slice
+// changes. Pure layout keys (flex/gap/padding/width, no token) are
+// correctly omitted -- there is nothing to unfreeze for them. Same pattern
+// as WorkoutSummaryScreen.js's buildLiveStyles (lines 2018-2100+).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    topBarTitle: { ...t.type.label, color: t.colors.textMuted },
+    toggleBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    toggleBtnActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
+    filterChipText: { ...t.type.label, color: t.colors.textSecondary },
+    filterChipTextActive: { color: t.colors.primary },
+    calendarMonthTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    dayHeader: { ...t.type.captionStrong, color: t.colors.textMuted },
+    dayCircleTrained: { backgroundColor: t.colors.primaryBg },
+    dayCircleToday: { borderColor: t.colors.primary },
+    dayCircleSelected: { backgroundColor: t.colors.primaryFill },
+    dayNum: { ...t.type.num('caption'), color: t.colors.textMuted },
+    dayNumTrained: { color: t.colors.primary },
+    dayNumSelected: { color: t.colors.onPrimary },
+    clearDayBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    clearDayText: { ...t.type.label, color: t.colors.textPrimary },
+    cardDate: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    cardTime: { ...t.type.caption, color: t.colors.textMuted },
+    cardMetaText: { ...t.type.num('caption'), color: t.colors.textMuted },
+    cardMetaDivider: { color: t.colors.border },
+    exerciseList: { ...t.type.bodySm, color: t.colors.textSecondary },
+    expandedContent: { borderTopColor: t.colors.border },
+    statChip: { backgroundColor: t.colors.surface2 },
+    statChipText: { ...t.type.captionStrong, color: t.colors.textSecondary },
+    exerciseBreakdownName: { ...t.type.label, color: t.colors.textPrimary },
+    exerciseBreakdownSummary: { ...t.type.num('caption'), color: t.colors.textSecondary },
+    loadingText: { ...t.type.caption, color: t.colors.textMuted },
+    notesRow: { backgroundColor: t.colors.surface2 },
+    notesText: { ...t.type.captionTight, color: t.colors.textSecondary },
+    fullSummaryBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    fullSummaryBtnText: { ...t.type.label, color: t.colors.textPrimary },
+    cardActions: { borderTopColor: t.colors.border },
+    viewBtn: { backgroundColor: t.colors.surface2 },
+    viewBtnText: { ...t.type.label, color: t.colors.textSecondary },
+    repeatBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    deleteBtn: { borderColor: t.colors.border },
+    repeatBtnText: { ...t.type.label, color: t.colors.textPrimary },
+  };
+}

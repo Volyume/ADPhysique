@@ -448,7 +448,12 @@ describe('WorkoutHistoryScreen summary polish', () => {
     // Button primitive (title prop, not a raw <Text> child), reusing the
     // SAME viewBtnText/fullSummaryBtnText style objects via Button's
     // textStyle prop, so this pins the Button call sites instead of the JSX.
-    expect(WORKOUT_HISTORY_SOURCE).toMatch(/title="View summary"[\s\S]*?style=\{styles\.viewBtn\}[\s\S]*?textStyle=\{styles\.viewBtnText\}/);
+    // 2026-07-10 (campaign item 8, history + cardio theme migration): style/
+    // textStyle now carry a live-theme override alongside the frozen style
+    // (`[styles.viewBtn, live.viewBtn]`), so the pin matches the array form
+    // instead of the bare `styles.viewBtn` reference. Same call sites,
+    // same frozen style object, still asserted below.
+    expect(WORKOUT_HISTORY_SOURCE).toMatch(/title="View summary"[\s\S]*?style=\{\[styles\.viewBtn, live\.viewBtn\]\}[\s\S]*?textStyle=\{\[styles\.viewBtnText, live\.viewBtnText\]\}/);
     expect(WORKOUT_HISTORY_SOURCE).toMatch(/title="View summary"[\s\S]*?trailingIcon="arrow-forward"/);
     expect(WORKOUT_HISTORY_SOURCE).not.toContain('View Details');
     expect(WORKOUT_HISTORY_SOURCE).not.toContain('View full summary');

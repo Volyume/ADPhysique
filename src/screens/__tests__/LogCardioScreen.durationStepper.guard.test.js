@@ -21,8 +21,13 @@ describe('LogCardioScreen duration stepper', () => {
   });
 
   test('long activity names truncate instead of pushing controls around', () => {
-    expect(source).toMatch(/<Text style=\{styles\.activityName\} numberOfLines=\{1\} ellipsizeMode="tail">/);
-    expect(source).toMatch(/<Text style=\{styles\.chosenName\} numberOfLines=\{1\} ellipsizeMode="tail">/);
+    // 2026-07-10 (campaign item 8, history + cardio theme migration): style
+    // now carries a live-theme override alongside the frozen style
+    // (`[styles.activityName, live.activityName]`), so the pin matches the
+    // array form instead of the bare `styles.X` reference. Same call sites,
+    // same frozen style objects, still asserted below.
+    expect(source).toMatch(/<Text style=\{\[styles\.activityName, live\.activityName\]\} numberOfLines=\{1\} ellipsizeMode="tail">/);
+    expect(source).toMatch(/<Text style=\{\[styles\.chosenName, live\.chosenName\]\} numberOfLines=\{1\} ellipsizeMode="tail">/);
     expect(source).toMatch(/chosenCopy: \{ flex: 1, minWidth: 0 \}/);
   });
 });
