@@ -2011,6 +2011,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           // best-effort; never blocks the finish flow.
           // eslint-disable-next-line global-require
           require('../lib/notifications/scheduler').scheduleActivationNudge(uid2).catch(() => {});
+          // D17: a completed session can shift the habit-derived training-
+          // reminder schedule, so refresh it here too. Self-guarding
+          // (no-ops until there is enough history) and best-effort; never
+          // blocks the finish flow.
+          // eslint-disable-next-line global-require
+          require('../lib/notifications/trainingHabitSchedule').refreshHabitDerivedTrainingSchedule(uid2).catch(() => {});
         }
       } catch (_) { /* tolerate */ }
       // Push to cloud IMMEDIATELY on finish. Previously the

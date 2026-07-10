@@ -673,7 +673,7 @@ export default function NotificationSettingsScreen({ navigation }) {
           {/* Helper text */}
           <View style={styles.helperRow}>
             <Text style={styles.helperText}>
-              Pick the time. Volyume sends it only on the training days from your active plan.
+              Pick the time. Volyume learns the days you usually train from your recent workouts, and reminds you then.
             </Text>
           </View>
         </Card>

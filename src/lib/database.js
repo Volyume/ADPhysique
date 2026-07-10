@@ -2280,6 +2280,23 @@ export async function getAllWorkouts(userId) {
   return rows.map(rowToCamel);
 }
 
+// D17: raw completed-workout start timestamps, unfiltered by date, for the
+// habit-derived training-reminder schedule (trainingHabitSchedule.js). That
+// module needs the full history (to find how far back it goes, then bucket
+// the trailing window itself), not a bounded/paged read, so this is
+// deliberately separate from getRecentCompletedWorkouts above.
+export async function getCompletedWorkoutStartTimestamps(userId) {
+  if (!userId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT started_at FROM workouts
+     WHERE user_id = ? AND is_completed = 1 AND started_at IS NOT NULL
+     ORDER BY started_at ASC`,
+    [userId],
+  );
+  return rows.map((r) => r.started_at);
+}
+
 // Workout History renders a bounded recent page. Keep this separate from
 // getAllWorkouts because analytics, sync and coach flows still need full
 // history reads.

@@ -853,6 +853,17 @@ export default function App() {
           const { rescheduleForTimezoneIfChanged } = require('./src/lib/notifications');
           const uid = useAppStore.getState().user?.id ?? null;
           rescheduleForTimezoneIfChanged(uid).catch(() => {});
+          // D17: refresh the habit-derived training-reminder schedule on
+          // every foreground, alongside the timezone re-lay above (both are
+          // "catch this up now the app is active again" refreshes). Self-
+          // guarding and best-effort; a workout completed on another device
+          // (or while this device was backgrounded) still updates the
+          // pattern promptly rather than waiting for this device's next
+          // workout finish.
+          // eslint-disable-next-line global-require
+          require('./src/lib/notifications/trainingHabitSchedule')
+            .refreshHabitDerivedTrainingSchedule(uid)
+            .catch(() => {});
         } catch (_) { /* tolerate */ }
       }
     });
