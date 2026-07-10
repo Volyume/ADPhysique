@@ -388,6 +388,16 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
 in-flight agents below. If resuming after a dead session, run
 `git status` and apply each agent's recovery path:**
 
+0. LANDINGS SINCE THE SNAPSHOT (all pushed, tree clean at cf8ace6):
+   D35 auto-scroll `ed62aab` (still-finger reaction fix; 8,382-suite
+   base + 20 targeted suites green; CI arbitrates); staleness sweep
+   `56838f8` (43 banners + docs/TASKBOARD.md, the single task source)
+   + blueprint pass `ee3b52c` (33 more banners); inline dietary
+   preferences `af1a898` (shared DietaryPreferencesEditor in Settings
+   AND the meal builder's new sheet, stranding removed, full suite
+   8,391/0). NEXT SLOTS per TASKBOARD.md: D36b FeedbackSheet/PeekMenu;
+   D36c TalkBack sheet isolation; theming remainder; decision rounds.
+   The two IN FLIGHT entries below are HISTORICAL (both landed).
 1. IN FLIGHT (a): **D35 drag edge auto-scroll** (Sonnet). Spec = D35
    register entry + this file's earlier queue text: extend
    src/components/DragReorderList.js with edge auto-scroll on all four
