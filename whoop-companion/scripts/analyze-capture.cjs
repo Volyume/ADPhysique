@@ -91,7 +91,7 @@ function main() {
     `hr: samples=${decoded.hr.length} rr=${rrCount} rr_clean=${cleanRrCount} bpm_min=${min(bpm)} bpm_max=${max(bpm)} ${formatRange(hrDates)}`,
   );
   console.log(
-    `steps: rows=${decoded.steps.length} calibrated_total=${stepEstimate?.steps ?? 'n/a'} raw_ticks=${stepEstimate?.rawTicks ?? 'n/a'} divisor=${stepEstimate?.calibrationDivisor ?? WHOOP5_STEP_TICKS_PER_STEP} used_intervals=${stepEstimate?.usedIntervals ?? 0} active_intervals=${stepEstimate?.activeIntervals ?? 0} dropped_intervals=${stepEstimate?.droppedIntervals ?? 0} confidence=${stepEstimate?.confidence ?? 'n/a'} publishable=${stepEstimate?.confidence === 'high' || stepEstimate?.confidence === 'medium'} ${formatRange(stepDates)}`,
+    `steps: rows=${decoded.steps.length} calibrated_total=${stepEstimate?.steps ?? 'n/a'} raw_ticks=${stepEstimate?.rawTicks ?? 'n/a'} active_ticks=${stepEstimate?.activeRawTicks ?? 0} inactive_ticks=${stepEstimate?.inactiveRawTicks ?? 0} movement_linked=${stepEstimate?.movementLinkedPct ?? 0}% divisor=${stepEstimate?.calibrationDivisor ?? WHOOP5_STEP_TICKS_PER_STEP} used_intervals=${stepEstimate?.usedIntervals ?? 0} active_intervals=${stepEstimate?.activeIntervals ?? 0} dropped_intervals=${stepEstimate?.droppedIntervals ?? 0} confidence=${stepEstimate?.confidence ?? 'n/a'} publishable=${stepEstimate?.confidence === 'high' || stepEstimate?.confidence === 'medium'} ${formatRange(stepDates)}`,
   );
   console.log(
     `step_activity_class: still=${activityClassCounts[0] ?? 0} walk=${activityClassCounts[1] ?? 0} run=${activityClassCounts[2] ?? 0} unknown=${activityClassCounts.unknown ?? 0}`,
@@ -113,7 +113,7 @@ function main() {
   for (const [day, rows] of Object.entries(stepRowsByDay)) {
     const est = estimateBandStepsFromCounters(rows);
     console.log(
-      `  ${day}: steps=${est?.steps ?? 'n/a'} raw_ticks=${est?.rawTicks ?? 'n/a'} used=${est?.usedIntervals ?? 0} dropped=${est?.droppedIntervals ?? 0}`,
+      `  ${day}: steps=${est?.steps ?? 'n/a'} raw_ticks=${est?.rawTicks ?? 'n/a'} active_ticks=${est?.activeRawTicks ?? 0} inactive_ticks=${est?.inactiveRawTicks ?? 0} movement_linked=${est?.movementLinkedPct ?? 0}% used=${est?.usedIntervals ?? 0} dropped=${est?.droppedIntervals ?? 0}`,
     );
   }
   console.log('sleep_state_by_day:');
@@ -748,6 +748,8 @@ function estimateBandStepsFromCounters(rows, calibrationDivisor = WHOOP5_STEP_TI
   let usedIntervals = 0;
   let droppedIntervals = 0;
   let activeIntervals = 0;
+  let activeRawTicks = 0;
+  let inactiveRawTicks = 0;
   let resetCount = 0;
   for (let i = 1; i < sorted.length; i += 1) {
     const prev = sorted[i - 1];
@@ -769,17 +771,22 @@ function estimateBandStepsFromCounters(rows, calibrationDivisor = WHOOP5_STEP_TI
       droppedIntervals += 1;
       continue;
     }
+    const active = prev.activityClass === 1 || prev.activityClass === 2 || cur.activityClass === 1 || cur.activityClass === 2;
     rawTicks += delta;
     usedIntervals += 1;
-    if (prev.activityClass === 1 || prev.activityClass === 2 || cur.activityClass === 1 || cur.activityClass === 2) {
+    if (active) {
       activeIntervals += 1;
+      activeRawTicks += delta;
+    } else {
+      inactiveRawTicks += delta;
     }
   }
   if (usedIntervals <= 0) return null;
+  const movementLinkedPct = Math.round((activeRawTicks / Math.max(1, rawTicks)) * 100);
   const confidence =
-    activeIntervals >= 5 && usedIntervals >= 20 && resetCount <= 1
+    activeIntervals >= 5 && usedIntervals >= 20 && resetCount <= 1 && movementLinkedPct >= 55
       ? 'high'
-      : activeIntervals >= 1 && usedIntervals >= 2
+      : activeIntervals >= 1 && usedIntervals >= 2 && movementLinkedPct >= 40
         ? 'medium'
         : 'low';
   return {
@@ -787,6 +794,9 @@ function estimateBandStepsFromCounters(rows, calibrationDivisor = WHOOP5_STEP_TI
     rawTicks,
     usedIntervals,
     activeIntervals,
+    activeRawTicks,
+    inactiveRawTicks,
+    movementLinkedPct,
     droppedIntervals,
     resetCount,
     calibrationDivisor,

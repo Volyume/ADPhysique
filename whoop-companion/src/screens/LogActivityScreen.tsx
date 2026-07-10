@@ -5,7 +5,7 @@ import { appStore } from '../state/appStore';
 import { Card, PrimaryButton, Screen, SectionLabel } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
-import { ACTIVITY_CATALOGUE, ACTIVITY_CATEGORIES } from '../data/activities';
+import { ACTIVITY_CATALOGUE, ACTIVITY_CATEGORIES, activityUsesSteps } from '../data/activities';
 
 const DURATIONS = [15, 30, 45, 60, 90, 120];
 const DAYS = [
@@ -28,6 +28,7 @@ export function LogActivityScreen({ nav }: { nav: Nav }) {
   const [notes, setNotes] = useState('');
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const usesSteps = activityUsesSteps(activity);
 
   const save = () => {
     const end = endTimeForOffset(dayOffset, endTime);
@@ -42,7 +43,7 @@ export function LogActivityScreen({ nav }: { nav: Nav }) {
     }
     const avg = parsePositiveNumber(avgHr);
     const max = parsePositiveNumber(maxHr);
-    const stepCount = parsePositiveNumber(steps);
+    const stepCount = usesSteps ? parsePositiveNumber(steps) : null;
     const distance = parsePositiveNumber(distanceKm);
     const start = end - Math.round(durationMin) * 60000;
     setError(null);
@@ -54,7 +55,7 @@ export function LogActivityScreen({ nav }: { nav: Nav }) {
       maxHr: max,
       steps: stepCount,
       distanceM: distance != null ? distance * 1000 : null,
-      stepSource: stepCount != null ? 'manual' : null,
+      stepSource: usesSteps && stepCount != null ? 'manual' : null,
       notes: notes.trim() || undefined,
       source: 'manual',
     });
@@ -171,17 +172,19 @@ export function LogActivityScreen({ nav }: { nav: Nav }) {
               placeholderTextColor={colors.textTertiary}
             />
           </View>
-          <View style={styles.detailField}>
-            <Text style={styles.fieldLabel}>Steps</Text>
-            <TextInput
-              value={steps}
-              onChangeText={setSteps}
-              keyboardType="number-pad"
-              style={styles.smallInput}
-              placeholder="0"
-              placeholderTextColor={colors.textTertiary}
-            />
-          </View>
+          {usesSteps ? (
+            <View style={styles.detailField}>
+              <Text style={styles.fieldLabel}>Steps</Text>
+              <TextInput
+                value={steps}
+                onChangeText={setSteps}
+                keyboardType="number-pad"
+                style={styles.smallInput}
+                placeholder="0"
+                placeholderTextColor={colors.textTertiary}
+              />
+            </View>
+          ) : null}
         </View>
         <View style={styles.detailField}>
           <Text style={styles.fieldLabel}>Distance (km)</Text>

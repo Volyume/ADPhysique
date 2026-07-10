@@ -57,6 +57,12 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
+      - name: Validate metrics and TypeScript
+        run: |
+          npm run typecheck
+          npm run test:band-steps
+          npm run test:sleep
+
       - name: Expo prebuild (generate android/)
         run: npx expo prebuild --platform android --no-install
 

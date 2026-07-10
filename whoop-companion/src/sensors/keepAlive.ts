@@ -29,35 +29,49 @@ TaskManager.defineTask(TASK, async () => {
 });
 
 let running = false;
+let startPromise: Promise<boolean> | null = null;
+let stopPromise: Promise<void> | null = null;
 
 export async function startKeepAlive(): Promise<boolean> {
+  if (stopPromise) {
+    await stopPromise;
+    return startKeepAlive();
+  }
   if (running) return true;
-  try {
-    const fg = await Location.requestForegroundPermissionsAsync();
-    if (fg.status !== 'granted') return false;
-    await requestBackgroundPermission();
-    await requestNotificationPermission();
-    if (await TaskManager.isTaskRegisteredAsync(TASK)) {
+  if (startPromise) return startPromise;
+
+  const pendingStart = Promise.resolve().then(async (): Promise<boolean> => {
+    try {
+      const fg = await Location.requestForegroundPermissionsAsync();
+      if (fg.status !== 'granted') return false;
+      await requestBackgroundPermission();
+      await requestNotificationPermission();
+      if (await TaskManager.isTaskRegisteredAsync(TASK)) {
+        running = true;
+        return true;
+      }
+      await Location.startLocationUpdatesAsync(TASK, {
+        accuracy: Location.Accuracy.Lowest,
+        timeInterval: 60000,
+        distanceInterval: 0,
+        pausesUpdatesAutomatically: false,
+        showsBackgroundLocationIndicator: false,
+        foregroundService: {
+          notificationTitle: 'VOLYUME Pulse',
+          notificationBody: 'Keeping WHOOP sync running in the background',
+          notificationColor: '#F59E0B',
+        },
+      });
       running = true;
       return true;
+    } catch {
+      return false;
+    } finally {
+      startPromise = null;
     }
-    await Location.startLocationUpdatesAsync(TASK, {
-      accuracy: Location.Accuracy.Lowest,
-      timeInterval: 60000,
-      distanceInterval: 0,
-      pausesUpdatesAutomatically: false,
-      showsBackgroundLocationIndicator: false,
-      foregroundService: {
-        notificationTitle: 'VOLYUME Pulse',
-        notificationBody: 'Keeping WHOOP sync running in the background',
-        notificationColor: '#F59E0B',
-      },
-    });
-    running = true;
-    return true;
-  } catch {
-    return false;
-  }
+  });
+  startPromise = pendingStart;
+  return pendingStart;
 }
 
 async function requestBackgroundPermission(): Promise<boolean> {
@@ -78,13 +92,26 @@ async function requestNotificationPermission(): Promise<void> {
 }
 
 export async function stopKeepAlive(): Promise<void> {
+  if (stopPromise) return stopPromise;
+
   running = false;
-  try {
-    if (await TaskManager.isTaskRegisteredAsync(TASK)) {
-      await Location.stopLocationUpdatesAsync(TASK);
+  const pendingStart = startPromise;
+  const pendingStop = (async (): Promise<void> => {
+    await pendingStart?.catch(() => false);
+    running = false;
+    try {
+      if (await TaskManager.isTaskRegisteredAsync(TASK)) {
+        await Location.stopLocationUpdatesAsync(TASK);
+      }
+    } catch {
+      // already stopped
     }
-  } catch {
-    // already stopped
+  })();
+  stopPromise = pendingStop;
+  try {
+    await pendingStop;
+  } finally {
+    stopPromise = null;
   }
 }
 

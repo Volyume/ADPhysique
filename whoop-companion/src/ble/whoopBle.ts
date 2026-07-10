@@ -104,6 +104,14 @@ export class WhoopBle {
   private reconnectAttempts = 0;
   private commandQueue: Promise<void> = Promise.resolve();
   private commandEpoch = 0;
+  private connectionFlight: Promise<void> | null = null;
+  private lifecycleGeneration = 0;
+  private connectionGeneration = 0;
+  private stateChangeSub: Subscription | null = null;
+  private resolveStateWait: (() => void) | null = null;
+  private stateWaitLifecycle: number | null = null;
+  private resolveScan: (() => void) | null = null;
+  private scanLifecycle: number | null = null;
 
   constructor(events: WhoopEvents) {
     this.events = events;
@@ -119,7 +127,10 @@ export class WhoopBle {
           const restoredDevice = peripherals[0] ?? null;
           if (restoredDevice) {
             this.wantConnected = true;
-            void this.afterConnect(restoredDevice);
+            this.clearReconnectTimer();
+            void this.runConnectionFlight((lifecycle) =>
+              this.adoptConnectedDevice(restoredDevice, lifecycle),
+            );
           }
         }
       },
@@ -165,67 +176,127 @@ export class WhoopBle {
   /** Full flow: permissions -> wait for BT on -> scan -> connect -> subscribe. */
   async start(preferredDeviceId?: string | null): Promise<void> {
     this.wantConnected = true;
+    this.clearReconnectTimer();
     if (preferredDeviceId) this.lastDeviceId = preferredDeviceId;
+    await this.runConnectionFlight((lifecycle) => this.startFlow(lifecycle));
+  }
+
+  private runConnectionFlight(task: (lifecycle: number) => Promise<void>): Promise<void> {
+    if (this.connectionFlight) return this.connectionFlight;
+    const lifecycle = ++this.lifecycleGeneration;
+    let flight!: Promise<void>;
+    flight = task(lifecycle).finally(() => {
+      if (this.connectionFlight === flight) this.connectionFlight = null;
+    });
+    this.connectionFlight = flight;
+    return flight;
+  }
+
+  private async startFlow(lifecycle: number): Promise<void> {
     const ok = await this.ensurePermissions();
-    if (!ok) {
-      this.setStatus('unauthorized', 'Bluetooth permission denied');
+    if (!ok || !this.isLifecycleCurrent(lifecycle)) {
+      if (this.wantConnected && this.isLifecycleCurrent(lifecycle)) {
+        this.setStatus('unauthorized', 'Bluetooth permission denied');
+      }
       return;
     }
 
     const state = await this.manager.state();
+    if (!this.isLifecycleCurrent(lifecycle)) return;
     if (state !== State.PoweredOn) {
       this.setStatus('bluetooth-off', `Bluetooth state: ${state}`);
-      // Wait for it to come on, then scan.
-      const sub = this.manager.onStateChange((s) => {
-        if (s === State.PoweredOn) {
-          sub.remove();
-          void this.scan();
-        }
-      }, true);
-      return;
+      if (!(await this.waitForPoweredOn(lifecycle))) return;
     }
 
     if (this.lastDeviceId) {
-      try {
-        this.setStatus('connecting', 'reconnecting…');
-        const reconnected = await withTimeout(
-          this.manager.connectToDevice(this.lastDeviceId, { requestMTU: 247 }),
-          DIRECT_CONNECT_TIMEOUT_MS,
-          'Saved WHOOP reconnect timed out',
-        );
-        await this.afterConnect(reconnected);
-        return;
-      } catch {
-        // Known-device reconnect failed; scan below so a changed OS BLE id still works.
-        await this.abandonCurrentConnection();
-      }
+      const reconnected = await this.connectById(this.lastDeviceId, lifecycle);
+      if (reconnected) return;
     }
-
-    await this.scan();
+    this.clearReconnectTimer();
+    if (this.wantConnected && this.isLifecycleCurrent(lifecycle)) await this.scan(lifecycle);
   }
 
-  private async scan(): Promise<void> {
-    if (this.scanning) return;
-    this.scanning = true;
-    this.setStatus('scanning', 'Scanning for WHOOP advertisements...');
-
-    this.manager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
-      if (error) {
-        this.scanning = false;
-        this.fail(`Scan error: ${error.message}`);
-        return;
-      }
-      const name = device?.name ?? device?.localName ?? '';
-      if (device && name.toUpperCase().startsWith(WHOOP_NAME_PREFIX)) {
-        this.manager.stopDeviceScan();
-        this.scanning = false;
-        void this.connect(device);
+  private async waitForPoweredOn(lifecycle: number): Promise<boolean> {
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (poweredOn: boolean) => {
+        if (settled) return;
+        settled = true;
+        if (this.stateWaitLifecycle === lifecycle) {
+          this.stateChangeSub?.remove();
+          this.stateChangeSub = null;
+          this.stateWaitLifecycle = null;
+          this.resolveStateWait = null;
+        }
+        resolve(poweredOn && this.isLifecycleCurrent(lifecycle));
+      };
+      const cancel = () => finish(false);
+      this.stateWaitLifecycle = lifecycle;
+      this.resolveStateWait = cancel;
+      const sub = this.manager.onStateChange((nextState) => {
+        if (nextState === State.PoweredOn) finish(true);
+      }, false);
+      if (!settled && this.stateWaitLifecycle === lifecycle) {
+        this.stateChangeSub = sub;
+      } else {
+        sub.remove();
       }
     });
+  }
 
-    // Stop scanning after 30s if nothing found.
-    setTimeout(() => {
-      if (this.scanning) {
+  private async scan(lifecycle: number): Promise<void> {
+    if (!this.isLifecycleCurrent(lifecycle) || this.scanning) return;
+    this.scanning = true;
+    this.scanLifecycle = lifecycle;
+    this.setStatus('scanning', 'Scanning for WHOOP advertisements...');
+
+    await new Promise<void>((resolve) => {
+      let settled = false;
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        if (this.resolveScan === finish) this.resolveScan = null;
+        if (this.scanLifecycle === lifecycle) this.scanLifecycle = null;
+        resolve();
+      };
+      this.resolveScan = finish;
+      this.manager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
+        if (this.scanLifecycle !== lifecycle) {
+          finish();
+          return;
+        }
+        if (!this.isLifecycleCurrent(lifecycle)) {
+          this.manager.stopDeviceScan();
+          this.scanning = false;
+          finish();
+          return;
+        }
+        if (error) {
+          this.scanning = false;
+          this.fail(`Scan error: ${error.message}`);
+          finish();
+          return;
+        }
+        const name = device?.name ?? device?.localName ?? '';
+        if (device && name.toUpperCase().startsWith(WHOOP_NAME_PREFIX)) {
+          this.manager.stopDeviceScan();
+          this.scanning = false;
+          void this.connect(device, lifecycle).finally(finish);
+        }
+      });
+
+      // Stop scanning after 30s if nothing found.
+      timer = setTimeout(() => {
+        if (this.scanLifecycle !== lifecycle) {
+          finish();
+          return;
+        }
+        if (!this.scanning || !this.isLifecycleCurrent(lifecycle)) {
+          finish();
+          return;
+        }
         this.manager.stopDeviceScan();
         this.scanning = false;
         if (this.wantConnected) {
@@ -234,30 +305,107 @@ export class WhoopBle {
           this.setStatus('disconnected', 'No strap found — retrying…');
           this.scheduleReconnect();
         }
-      }
-    }, SCAN_TIMEOUT_MS);
+        finish();
+      }, SCAN_TIMEOUT_MS);
+    });
   }
 
-  private async connect(device: Device): Promise<void> {
+  private async connect(device: Device, lifecycle: number): Promise<boolean> {
+    return this.connectDevice(
+      lifecycle,
+      () => device.connect({ requestMTU: 247 }),
+      DEVICE_CONNECT_TIMEOUT_MS,
+      'WHOOP connect timed out',
+      device,
+    );
+  }
+
+  private async connectById(deviceId: string, lifecycle: number): Promise<boolean> {
+    return this.connectDevice(
+      lifecycle,
+      () => this.manager.connectToDevice(deviceId, { requestMTU: 247 }),
+      DIRECT_CONNECT_TIMEOUT_MS,
+      'Saved WHOOP reconnect timed out',
+    );
+  }
+
+  private async connectDevice(
+    lifecycle: number,
+    connect: () => Promise<Device>,
+    timeoutMs: number,
+    timeoutLabel: string,
+    candidate?: Device,
+  ): Promise<boolean> {
+    const generation = this.beginConnectionAttempt();
+    if (!this.isLifecycleCurrent(lifecycle)) return false;
+    if (candidate) {
+      this.lastDeviceId = candidate.id;
+      this.events.onDevice?.({
+        id: candidate.id,
+        name: candidate.name ?? candidate.localName ?? 'WHOOP',
+      });
+      this.setStatus('connecting', candidate.name ?? candidate.id);
+    } else {
+      this.setStatus('connecting', 'reconnecting…');
+    }
+
+    let connected: Device | null = null;
     try {
-      this.setStatus('connecting', device.name ?? device.id);
-      this.lastDeviceId = device.id;
-      this.events.onDevice?.({ id: device.id, name: device.name ?? device.localName ?? 'WHOOP' });
-      const connected = await withTimeout(
-        device.connect({ requestMTU: 247 }),
-        DEVICE_CONNECT_TIMEOUT_MS,
-        'WHOOP connect timed out',
-      );
-      await this.afterConnect(connected);
+      connected = await withTimeout(connect(), timeoutMs, timeoutLabel);
+      if (!this.isAttemptCurrent(lifecycle, generation)) {
+        await connected.cancelConnection().catch(() => {});
+        return false;
+      }
+      await this.afterConnect(connected, lifecycle, generation);
+      return this.isConnectionCurrent(connected, lifecycle, generation);
     } catch (e) {
-      await this.abandonCurrentConnection();
-      this.setStatus('disconnected', `Connect failed: ${String(e)}`);
-      if (this.wantConnected) this.scheduleReconnect();
+      if (connected && !this.isAttemptCurrent(lifecycle, generation)) {
+        await connected.cancelConnection().catch(() => {});
+        return false;
+      }
+      if (this.isAttemptCurrent(lifecycle, generation)) {
+        await this.abandonCurrentConnection(generation);
+        this.setStatus('disconnected', `Connect failed: ${String(e)}`);
+        if (this.wantConnected) this.scheduleReconnect();
+      }
+      return false;
     }
   }
 
   /** Post-connect bring-up — shared by first connect and auto-reconnect. */
-  private async afterConnect(connected: Device): Promise<void> {
+  private async adoptConnectedDevice(restored: Device, lifecycle: number): Promise<void> {
+    const generation = this.beginConnectionAttempt();
+    if (!this.isLifecycleCurrent(lifecycle)) {
+      await restored.cancelConnection().catch(() => {});
+      return;
+    }
+    try {
+      if (!this.isAttemptCurrent(lifecycle, generation)) {
+        await restored.cancelConnection().catch(() => {});
+        return;
+      }
+      await this.afterConnect(restored, lifecycle, generation);
+    } catch (e) {
+      if (this.isConnectionCurrent(restored, lifecycle, generation)) {
+        await this.abandonCurrentConnection(generation);
+        this.setStatus('disconnected', `Restored connection failed: ${String(e)}`);
+        if (this.wantConnected) this.scheduleReconnect();
+      } else {
+        await restored.cancelConnection().catch(() => {});
+      }
+    }
+  }
+
+  /** Post-connect bring-up — shared by first connect and auto-reconnect. */
+  private async afterConnect(
+    connected: Device,
+    lifecycle: number,
+    generation: number,
+  ): Promise<void> {
+    if (!this.isAttemptCurrent(lifecycle, generation)) {
+      await connected.cancelConnection().catch(() => {});
+      return;
+    }
     this.invalidateCommandQueue();
     this.clearKeepalive();
     this.clearSubscriptions();
@@ -269,7 +417,8 @@ export class WhoopBle {
     this.lastDeviceId = connected.id;
     this.events.onDevice?.({ id: connected.id, name: connected.name ?? connected.localName ?? 'WHOOP' });
     this.disconnectSub = connected.onDisconnected((error) => {
-      this.invalidateCommandQueue();
+      if (!this.isConnectionCurrent(connected, lifecycle, generation)) return;
+      this.invalidateConnection(generation);
       this.clearKeepalive();
       this.clearSubscriptions();
       this.device = null;
@@ -287,17 +436,21 @@ export class WhoopBle {
       DISCOVER_TIMEOUT_MS,
       'WHOOP service discovery timed out',
     );
-    await this.locateWriteChar(connected);
-    await this.subscribeAll(connected);
-    this.subscribeStandardHr(connected);
+    if (!this.isConnectionCurrent(connected, lifecycle, generation)) return;
+    await this.locateWriteChar(connected, generation);
+    if (!this.isConnectionCurrent(connected, lifecycle, generation)) return;
+    await this.subscribeAll(connected, generation);
+    if (!this.isConnectionCurrent(connected, lifecycle, generation)) return;
+    this.subscribeStandardHr(connected, generation);
     this.reconnectAttempts = 0; // healthy connection — reset backoff
+    this.clearReconnectTimer();
     this.setStatus('connected', connected.name ?? connected.id);
-    this.startLinkMaintenance();
+    this.startLinkMaintenance(connected, generation);
   }
 
   /** Schedule a reconnect attempt with exponential backoff (2s → 60s cap). */
   private scheduleReconnect(): void {
-    if (!this.wantConnected || this.reconnectTimer) return;
+    if (!this.wantConnected || this.reconnectTimer || this.isConnected) return;
     const delayMs = Math.min(60000, 2000 * 2 ** Math.min(this.reconnectAttempts, 5));
     this.reconnectAttempts += 1;
     this.reconnectTimer = setTimeout(() => {
@@ -306,30 +459,63 @@ export class WhoopBle {
     }, delayMs);
   }
 
+  private clearReconnectTimer(): void {
+    if (!this.reconnectTimer) return;
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
+  }
+
   private async attemptReconnect(): Promise<void> {
-    if (!this.wantConnected) return;
-    // Fast path: reconnect to the known device by id; fall back to a fresh scan.
-    if (this.lastDeviceId) {
-      try {
-        this.setStatus('connecting', 'reconnecting…');
-        const reconnected = await withTimeout(
-          this.manager.connectToDevice(this.lastDeviceId, { requestMTU: 247 }),
-          DIRECT_CONNECT_TIMEOUT_MS,
-          'Saved WHOOP reconnect timed out',
-        );
-        await this.afterConnect(reconnected);
-        return;
-      } catch {
-        // fall through to scan
-        await this.abandonCurrentConnection();
-      }
+    await this.runConnectionFlight(async (lifecycle) => {
+      if (!this.wantConnected || this.isConnected) return;
+      // Fast path: reconnect to the known device by id; fall back to a fresh scan.
+      if (this.lastDeviceId && (await this.connectById(this.lastDeviceId, lifecycle))) return;
+      this.clearReconnectTimer();
+      if (this.wantConnected && this.isLifecycleCurrent(lifecycle)) await this.scan(lifecycle);
+    });
+  }
+
+  private isLifecycleCurrent(lifecycle: number): boolean {
+    return this.wantConnected && this.lifecycleGeneration === lifecycle;
+  }
+
+  private isAttemptCurrent(lifecycle: number, generation: number): boolean {
+    return this.isLifecycleCurrent(lifecycle) && this.connectionGeneration === generation;
+  }
+
+  private isConnectionCurrent(device: Device, lifecycle: number, generation: number): boolean {
+    return (
+      this.isAttemptCurrent(lifecycle, generation) &&
+      this.device?.id === device.id
+    );
+  }
+
+  private beginConnectionAttempt(): number {
+    const stale = this.device;
+    const generation = ++this.connectionGeneration;
+    this.invalidateCommandQueue();
+    this.clearKeepalive();
+    this.clearSubscriptions();
+    if (this.disconnectSub) {
+      this.disconnectSub.remove();
+      this.disconnectSub = null;
     }
-    if (this.wantConnected) await this.scan();
+    this.device = null;
+    this.writeService = null;
+    this.writeChar = null;
+    void stale?.cancelConnection().catch(() => {});
+    return generation;
+  }
+
+  private invalidateConnection(generation?: number): void {
+    if (generation !== undefined && this.connectionGeneration !== generation) return;
+    this.connectionGeneration += 1;
   }
 
   /** Scan the GATT table for the proprietary command-write characteristic. */
-  private async locateWriteChar(device: Device): Promise<void> {
+  private async locateWriteChar(device: Device, generation?: number): Promise<void> {
     const services = await device.services();
+    if (generation !== undefined && !this.isDeviceGenerationCurrent(device, generation)) return;
     let knownService: string | null = null;
     for (const service of services) {
       const serviceUuid = service.uuid.toLowerCase();
@@ -337,9 +523,11 @@ export class WhoopBle {
         knownService = service.uuid;
       }
       const chars = await service.characteristics();
+      if (generation !== undefined && !this.isDeviceGenerationCurrent(device, generation)) return;
       for (const ch of chars) {
         const lc = ch.uuid.toLowerCase();
         if (isCommandWriteChar(lc)) {
+          if (generation !== undefined && !this.isDeviceGenerationCurrent(device, generation)) return;
           this.writeService = service.uuid;
           this.writeChar = ch.uuid;
           return;
@@ -350,6 +538,7 @@ export class WhoopBle {
     // the command char from the cached characteristic list after bonding. The
     // WHOOP command UUIDs are stable, so fall back to the known service/char
     // pair before declaring history sync impossible.
+    if (generation !== undefined && !this.isDeviceGenerationCurrent(device, generation)) return;
     if (knownService?.toLowerCase() === WHOOP5_SERVICE) {
       this.writeService = knownService;
       this.writeChar = WHOOP5_CMD_WRITE;
@@ -359,39 +548,45 @@ export class WhoopBle {
     }
   }
 
+  private isDeviceGenerationCurrent(device: Device, generation: number): boolean {
+    return this.device?.id === device.id && this.connectionGeneration === generation;
+  }
+
   /** Keep the command link alive without starting live-only streams. */
-  private startLinkMaintenance(): void {
-    if (!this.canSendCommands) return;
+  private startLinkMaintenance(device: Device, generation: number): void {
+    if (!this.isDeviceGenerationCurrent(device, generation) || !this.canSendCommands) return;
     this.clearKeepalive();
-    void this.runGentleHandshake();
+    void this.runGentleHandshake(device, generation);
     // LINK_VALID keepalive every 2s — the strap drops the link without it
     // (whoop-vault LINK_VALID_INTERVAL_S = 2.0).
     let failures = 0;
     this.keepalive = setInterval(() => {
+      if (!this.isDeviceGenerationCurrent(device, generation)) return;
       this.writeCommand(cmdLinkValid())
         .then(() => {
           failures = 0;
         })
         .catch(() => {
+          if (!this.isDeviceGenerationCurrent(device, generation)) return;
           failures += 1;
           if (failures >= 3) this.recoverStaleLink('Link validation failed - reconnecting...');
         });
     }, 2000);
   }
 
-  private async runGentleHandshake(): Promise<void> {
+  private async runGentleHandshake(device: Device, generation: number): Promise<void> {
     await delay(750);
-    await this.safeWriteCommand(cmdGetHelloHarvard());
+    await this.safeWriteCommand(cmdGetHelloHarvard(), device, generation);
     await delay(150);
-    await this.safeWriteCommand(cmdGetHello());
+    await this.safeWriteCommand(cmdGetHello(), device, generation);
     await delay(150);
-    await this.safeWriteCommand(cmdSetClock());
+    await this.safeWriteCommand(cmdSetClock(), device, generation);
     await delay(150);
-    await this.safeWriteCommand(cmdEnableHrBroadcast(true));
+    await this.safeWriteCommand(cmdEnableHrBroadcast(true), device, generation);
   }
 
-  private async safeWriteCommand(bytes: Uint8Array): Promise<boolean> {
-    if (!this.canSendCommands) return false;
+  private async safeWriteCommand(bytes: Uint8Array, device: Device, generation: number): Promise<boolean> {
+    if (!this.isDeviceGenerationCurrent(device, generation) || !this.canSendCommands) return false;
     try {
       await this.writeCommand(bytes);
       return true;
@@ -400,11 +595,17 @@ export class WhoopBle {
     }
   }
 
-  private subscribeStandardHr(device: Device): void {
-    this.trySubscribe(device, HEART_RATE_SERVICE, HEART_RATE_MEASUREMENT, (bytes) => {
-      const sample = decodeHeartRate(bytes);
-      if (sample) this.events.onHeartRate?.(sample);
-    });
+  private subscribeStandardHr(device: Device, generation: number): void {
+    this.trySubscribe(
+      device,
+      HEART_RATE_SERVICE,
+      HEART_RATE_MEASUREMENT,
+      (bytes) => {
+        const sample = decodeHeartRate(bytes);
+        if (sample) this.events.onHeartRate?.(sample);
+      },
+      generation,
+    );
   }
 
   private clearKeepalive(): void {
@@ -429,12 +630,14 @@ export class WhoopBle {
     this.subscriptions = [];
   }
 
-  private async subscribeAll(device: Device): Promise<void> {
+  private async subscribeAll(device: Device, generation: number): Promise<void> {
     const services = await device.services();
+    if (!this.isDeviceGenerationCurrent(device, generation)) return;
     const discovered: DiscoveredChar[] = [];
 
     for (const service of services) {
       const chars = await service.characteristics();
+      if (!this.isDeviceGenerationCurrent(device, generation)) return;
       for (const ch of chars) {
         discovered.push({
           service: service.uuid,
@@ -444,16 +647,17 @@ export class WhoopBle {
         });
       }
     }
+    if (!this.isDeviceGenerationCurrent(device, generation)) return;
     this.events.onDiscovered?.(discovered);
 
     // Standard HR (0x2A37) is subscribed AFTER the HR-broadcast is enabled
     // (see subscribeStandardHr), since it isn't notifying yet at this point.
 
     // Standard battery level.
-    this.tryReadBattery(device);
+    this.tryReadBattery(device, generation);
     this.trySubscribe(device, BATTERY_SERVICE, BATTERY_LEVEL, (bytes) => {
       if (bytes.length >= 1) this.events.onBattery?.(bytes[0] as number);
-    });
+    }, generation);
 
     // 3) Proprietary fd4b notify characteristics -> capture raw frames.
     for (const dc of discovered) {
@@ -467,12 +671,14 @@ export class WhoopBle {
           (bytes) => {
             this.events.onRawFrame?.({ ts: Date.now(), source: label, hex: bytesToHex(bytes) });
           },
+          generation,
           lc.startsWith('fd4b0005'),
         );
       }
       // Remember the command-write characteristic for the drain. Trust the UUID
       // even if Android's cached properties do not mark it writable.
       if (isCommandWriteChar(lc)) {
+        if (!this.isDeviceGenerationCurrent(device, generation)) return;
         this.writeService = dc.service;
         this.writeChar = dc.characteristic;
       }
@@ -482,14 +688,16 @@ export class WhoopBle {
   async refreshCommandChannel(): Promise<boolean> {
     if (!this.device) return false;
     if (this.canSendCommands) return true;
+    const device = this.device;
+    const generation = this.connectionGeneration;
     try {
       await withTimeout(
-        this.device.discoverAllServicesAndCharacteristics(),
+        device.discoverAllServicesAndCharacteristics(),
         DISCOVER_TIMEOUT_MS,
         'WHOOP command rediscovery timed out',
       );
-      await this.locateWriteChar(this.device);
-      return this.canSendCommands;
+      await this.locateWriteChar(device, generation);
+      return this.isDeviceGenerationCurrent(device, generation) && this.canSendCommands;
     } catch {
       return false;
     }
@@ -563,8 +771,10 @@ export class WhoopBle {
     this.writeChar = null;
   }
 
-  private async abandonCurrentConnection(): Promise<void> {
+  private async abandonCurrentConnection(generation?: number): Promise<void> {
+    if (generation !== undefined && this.connectionGeneration !== generation) return;
     const stale = this.device;
+    this.invalidateConnection(generation);
     this.invalidateCommandQueue();
     this.clearKeepalive();
     this.clearSubscriptions();
@@ -580,9 +790,14 @@ export class WhoopBle {
 
   private recoverStaleLink(detail: string): void {
     const stale = this.device;
+    this.invalidateConnection(this.connectionGeneration);
     this.invalidateCommandQueue();
     this.clearKeepalive();
     this.clearSubscriptions();
+    if (this.disconnectSub) {
+      this.disconnectSub.remove();
+      this.disconnectSub = null;
+    }
     this.device = null;
     this.writeService = null;
     this.writeChar = null;
@@ -596,6 +811,7 @@ export class WhoopBle {
     serviceUuid: string,
     charUuid: string,
     onBytes: (bytes: Uint8Array) => void,
+    generation: number,
     critical = false,
   ): void {
     try {
@@ -603,11 +819,12 @@ export class WhoopBle {
         serviceUuid,
         charUuid,
         (error, characteristic) => {
+          if (!this.isDeviceGenerationCurrent(device, generation)) return;
           if (error) {
-            if (critical && this.wantConnected && this.device?.id === device.id && !this.reArm) {
+            if (critical && !this.reArm) {
               this.reArm = setTimeout(() => {
                 this.reArm = null;
-                if (this.wantConnected && this.device?.id === device.id) {
+                if (this.isDeviceGenerationCurrent(device, generation)) {
                   this.recoverStaleLink('WHOOP history subscription stopped - reconnecting...');
                 }
               }, 1500);
@@ -624,10 +841,10 @@ export class WhoopBle {
     }
   }
 
-  private async tryReadBattery(device: Device): Promise<void> {
+  private async tryReadBattery(device: Device, generation: number): Promise<void> {
     try {
       const ch = await device.readCharacteristicForService(BATTERY_SERVICE, BATTERY_LEVEL);
-      if (ch.value) {
+      if (ch.value && this.isDeviceGenerationCurrent(device, generation)) {
         const bytes = base64ToBytes(ch.value);
         if (bytes.length >= 1) this.events.onBattery?.(bytes[0] as number);
       }
@@ -639,11 +856,16 @@ export class WhoopBle {
   /** Tear down subscriptions, disconnect, and release the manager. */
   async stop(): Promise<void> {
     this.wantConnected = false; // user asked to disconnect → stop auto-reconnect
+    this.lifecycleGeneration += 1;
+    this.invalidateConnection();
+    this.connectionFlight = null;
+    this.resolveStateWait?.();
+    this.resolveStateWait = null;
+    this.stateWaitLifecycle = null;
+    this.resolveScan?.();
+    this.resolveScan = null;
     this.invalidateCommandQueue();
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
+    this.clearReconnectTimer();
     this.reconnectAttempts = 0;
     this.clearKeepalive();
     this.clearSubscriptions();
@@ -655,6 +877,7 @@ export class WhoopBle {
       this.manager.stopDeviceScan();
       this.scanning = false;
     }
+    this.scanLifecycle = null;
     if (this.device) {
       try {
         await this.device.cancelConnection();

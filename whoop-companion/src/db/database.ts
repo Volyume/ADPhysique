@@ -255,7 +255,7 @@ export async function insertHrSample(s: HrSampleRow): Promise<void> {
   await serializeWrite(async () => {
     const db = await getDb();
     await db.runAsync(
-      'INSERT OR REPLACE INTO hr_samples (ts, bpm, rr) VALUES (?, ?, ?)',
+      UPSERT_HR_SAMPLE_SQL,
       s.ts,
       s.bpm,
       JSON.stringify(s.rr ?? []),
@@ -708,9 +708,21 @@ export async function listJournalSince(day: string): Promise<JournalRow[]> {
 
 // ---- Raw frames ----
 export async function insertRawFrame(ts: number, source: string, hex: string): Promise<void> {
+  await insertRawFrameBatch([{ ts, source, hex }]);
+}
+
+export async function insertRawFrameBatch(frames: Array<{ ts: number; source: string; hex: string }>): Promise<void> {
+  if (!frames.length) return;
   await serializeWrite(async () => {
     const db = await getDb();
-    await db.runAsync('INSERT INTO raw_frames (ts, source, hex) VALUES (?, ?, ?)', ts, source, hex);
+    await db.withTransactionAsync(async () => {
+      const statement = await db.prepareAsync('INSERT INTO raw_frames (ts, source, hex) VALUES (?, ?, ?)');
+      try {
+        for (const frame of frames) await statement.executeAsync(frame.ts, frame.source, frame.hex);
+      } finally {
+        await statement.finalizeAsync();
+      }
+    });
   });
 }
 
@@ -785,23 +797,23 @@ export async function persistHistoryBatch(batch: HistoryPersistBatch): Promise<v
     const db = await getDb();
     for (let attempt = 0; ; attempt += 1) {
       try {
-        await db.withExclusiveTransactionAsync(async (tx) => {
-    const historyStmt = await tx.prepareAsync(
+        await db.withTransactionAsync(async () => {
+    const historyStmt = await db.prepareAsync(
       'INSERT OR IGNORE INTO history_records (ts, start_id, end_id, hex, decoded) VALUES (?, NULL, NULL, ?, 0)',
     );
-    const hrStmt = await tx.prepareAsync(
-      'INSERT OR REPLACE INTO hr_samples (ts, bpm, rr) VALUES (?, ?, ?)',
+    const hrStmt = await db.prepareAsync(
+      UPSERT_HR_SAMPLE_SQL,
     );
-    const stepStmt = await tx.prepareAsync(
+    const stepStmt = await db.prepareAsync(
       'INSERT OR REPLACE INTO step_samples (ts, counter, activity_class) VALUES (?, ?, ?)',
     );
-    const sleepStmt = await tx.prepareAsync(
+    const sleepStmt = await db.prepareAsync(
       'INSERT OR REPLACE INTO sleep_state_samples (ts, state) VALUES (?, ?)',
     );
-    const motionStmt = await tx.prepareAsync(
+    const motionStmt = await db.prepareAsync(
       'INSERT OR REPLACE INTO motion_samples (ts, intensity) VALUES (?, ?)',
     );
-    const vitalStmt = await tx.prepareAsync(
+    const vitalStmt = await db.prepareAsync(
       `INSERT INTO raw_vital_samples (ts, spo2, skin_temp_c) VALUES (?, ?, ?)
        ON CONFLICT(ts) DO UPDATE SET
          spo2=COALESCE(excluded.spo2, raw_vital_samples.spo2),
@@ -843,6 +855,19 @@ export async function persistHistoryBatch(batch: HistoryPersistBatch): Promise<v
   });
 }
 
+const UPSERT_HR_SAMPLE_SQL = `
+  INSERT INTO hr_samples (ts, bpm, rr) VALUES (?, ?, ?)
+  ON CONFLICT(ts) DO UPDATE SET
+    bpm=CASE
+      WHEN excluded.rr != '[]' OR hr_samples.rr IS NULL OR hr_samples.rr = '[]' THEN excluded.bpm
+      ELSE hr_samples.bpm
+    END,
+    rr=CASE
+      WHEN excluded.rr != '[]' THEN excluded.rr
+      ELSE COALESCE(hr_samples.rr, excluded.rr)
+    END
+`;
+
 export async function countHistoryRecords(): Promise<number> {
   const db = await getDb();
   const r = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM history_records');
@@ -855,6 +880,20 @@ export async function getStoredK21HistoryPage(afterRowId = 0, limit = 250): Prom
     `SELECT rowid AS row_id, hex
        FROM history_records
       WHERE rowid > ? AND lower(substr(hex, 19, 2)) = '15'
+      ORDER BY rowid ASC
+      LIMIT ?`,
+    afterRowId,
+    limit,
+  );
+  return rows.map((row) => ({ rowId: row.row_id, hex: row.hex }));
+}
+
+export async function getStoredHistoryPage(afterRowId = 0, limit = 500): Promise<StoredHistoryRow[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<{ row_id: number; hex: string }>(
+    `SELECT rowid AS row_id, hex
+       FROM history_records
+      WHERE rowid > ?
       ORDER BY rowid ASC
       LIMIT ?`,
     afterRowId,

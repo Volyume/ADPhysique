@@ -356,6 +356,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           <Stat label="Units/step" value={bandStepDivisor.toFixed(1)} />
         </View>
         <Text style={styles.diagText}>Band confidence: {bandStepEstimate?.confidence ?? '-'}</Text>
+        <Text style={styles.diagText}>Movement-linked counter: {bandStepEstimate ? `${bandStepEstimate.movementLinkedPct}%` : '-'}</Text>
         <Text style={styles.diagText}>Band counter range: {stepRangeText}</Text>
         <View style={styles.calibrationRow}>
           <View style={{ flex: 1 }}>

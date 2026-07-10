@@ -10,6 +10,9 @@ export type BandStepEstimate = {
   sampleCount: number;
   usedIntervals: number;
   activeIntervals: number;
+  activeRawTicks: number;
+  inactiveRawTicks: number;
+  movementLinkedPct: number;
   droppedIntervals: number;
   resetCount: number;
   calibrationDivisor: number;
@@ -45,6 +48,8 @@ export function estimateBandStepsFromCounters(
   let usedIntervals = 0;
   let droppedIntervals = 0;
   let activeIntervals = 0;
+  let activeRawTicks = 0;
+  let inactiveRawTicks = 0;
   let resetCount = 0;
 
   for (let i = 1; i < sorted.length; i += 1) {
@@ -74,18 +79,24 @@ export function estimateBandStepsFromCounters(
       continue;
     }
 
+    const movementLinked =
+      prev.activityClass === 1 || prev.activityClass === 2 || cur.activityClass === 1 || cur.activityClass === 2;
     rawTicks += delta;
     usedIntervals += 1;
-    if (prev.activityClass === 1 || prev.activityClass === 2 || cur.activityClass === 1 || cur.activityClass === 2) {
+    if (movementLinked) {
       activeIntervals += 1;
+      activeRawTicks += delta;
+    } else {
+      inactiveRawTicks += delta;
     }
   }
 
   if (usedIntervals <= 0) return null;
+  const movementLinkedPct = Math.round((activeRawTicks / Math.max(1, rawTicks)) * 100);
   const confidence =
-    activeIntervals >= 5 && usedIntervals >= 20 && resetCount <= 1
+    activeIntervals >= 5 && usedIntervals >= 20 && resetCount <= 1 && movementLinkedPct >= 55
       ? 'high'
-      : activeIntervals >= 1 && usedIntervals >= 2
+      : activeIntervals >= 1 && usedIntervals >= 2 && movementLinkedPct >= 40
         ? 'medium'
         : 'low';
   return {
@@ -94,6 +105,9 @@ export function estimateBandStepsFromCounters(
     sampleCount: sorted.length,
     usedIntervals,
     activeIntervals,
+    activeRawTicks,
+    inactiveRawTicks,
+    movementLinkedPct,
     droppedIntervals,
     resetCount,
     calibrationDivisor,
@@ -105,7 +119,7 @@ export function estimateBandStepsFromCounters(
 
 /** Only publish counters corroborated by the WHOOP's own movement class. */
 export function bandStepEstimateIsTrusted(estimate: BandStepEstimate | null | undefined): boolean {
-  return !!estimate && estimate.steps > 0 && estimate.usedIntervals >= 2 && estimate.confidence !== 'low';
+  return !!estimate && estimate.steps > 0 && estimate.usedIntervals >= 2 && estimate.movementLinkedPct >= 40 && estimate.confidence !== 'low';
 }
 
 export function estimateStepsFromBandCounters(

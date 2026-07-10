@@ -54,6 +54,9 @@ export type SleepResult = {
 const BASE_NEED_MIN = 480; // 8h baseline sleep need
 const MAX_AUTO_SLEEP_WINDOW_MIN = 11 * 60;
 const MAX_AUTO_BRIDGE_MIN = 25;
+const AUTO_SLEEP_BOUNDARY_WINDOW_MIN = 90;
+const AUTO_SLEEP_BOUNDARY_DISTANCE_MIN = 20;
+const AUTO_SLEEP_BOUNDARY_SIGNAL_MIN = 10;
 
 type SleepWindowOptions = {
   minWindowMin: number;
@@ -162,25 +165,19 @@ function findSleepWindow(
   const spread = Math.max(6, p80 - p20);
   const sleepishThreshold = p20 + spread * 0.75;
   const bridgeThreshold = p20 + spread * 1.15;
-  const bandStateActive = samples.some((s) => s.bandSleepState === 2);
-
   const asleepFlag = samples.map((s, i) => {
-    const band = s.bandSleepState;
-    if (bandStateActive && (band === 0 || band === 3)) return false;
-    if (s.hr == null) return band === 2;
+    if (s.hr == null) return false;
     const smooth = smoothedHr(samples, i) ?? s.hr;
     const lowHr = smooth <= sleepishThreshold;
     const lowMotion = s.motion != null ? s.motion < 0.2 : true;
-    return (band === 2 ? smooth <= bridgeThreshold : lowHr) && lowMotion;
+    return lowHr && lowMotion;
   });
   const bridgeFlag = samples.map((s, i) => {
-    const band = s.bandSleepState;
-    if (bandStateActive && (band === 0 || band === 3)) return false;
-    if (s.hr == null) return band === 2;
+    if (s.hr == null) return false;
     const smooth = smoothedHr(samples, i) ?? s.hr;
     const quietEnough = smooth <= bridgeThreshold;
     const lowMotion = s.motion != null ? s.motion < 0.35 : true;
-    return (band === 2 || quietEnough) && lowMotion;
+    return quietEnough && lowMotion;
   });
 
   // Longest quiet HR run, tolerating normal awakenings/arousals. The previous
@@ -235,8 +232,9 @@ function findSleepWindow(
   }
 
   // A low-variance capture can be sleep, but HR alone cannot distinguish it
-  // from lying awake. Only accept the whole-span fallback when band motion or a
-  // validated sleep-state stream independently corroborates the window.
+  // from lying awake. Only accept the whole-span fallback when band motion
+  // independently corroborates the window. The v18 state nibble is diagnostic
+  // until a labelled capture validates it.
   const firstTs = samples[0]?.ts ?? 0;
   const lastTs = samples[samples.length - 1]?.ts ?? firstTs;
   const spanMin = Math.round((lastTs - firstTs) / 60000) + 1;
@@ -244,10 +242,7 @@ function findSleepWindow(
   const stillMin = samples.filter((s) => s.motion != null && s.motion < 0.2).length;
   const activeMin = samples.filter((s) => s.motion != null && s.motion >= 0.35).length;
   const activeRatio = activeMin / Math.max(1, samples.length);
-  const stateMin = samples.filter((s) => s.bandSleepState != null).length;
-  const stateAsleepMin = samples.filter((s) => s.bandSleepState === 2).length;
   const motionProof = motionMin >= spanMin * 0.6 && stillMin >= motionMin * 0.85;
-  const stateProof = stateMin >= 60 && stateAsleepMin >= 30 && stateAsleepMin >= stateMin * 0.25;
   const overnightRatio = samples.filter((s) => {
     const hour = new Date(s.ts).getHours();
     return hour >= 21 || hour < 10;
@@ -259,7 +254,7 @@ function findSleepWindow(
     p80 - p20 <= 25 &&
     activeRatio <= 0.08 &&
     overnightRatio >= 0.65 &&
-    (motionProof || stateProof)
+    motionProof
   ) {
     return trimSleepWindow(samples, 0, samples.length, p20, spread, opts) ?? { start: 0, end: samples.length };
   }
@@ -280,7 +275,6 @@ function trimSleepWindow(
   const core = (index: number): boolean => {
     const s = samples[index];
     if (!s) return false;
-    if (s.bandSleepState === 2) return true;
     const hr = smoothedHr(samples, index);
     if (hr == null) return false;
     const still = s.motion == null || s.motion < 0.2;
@@ -442,15 +436,13 @@ export function computeSleep(
   const sustainedWakeHr = Math.min(meanHr * 1.08, Math.max(p50 + 6, p20 + spread * 0.85));
   const rmssds = window.map((s) => s.rmssd).filter((v): v is number => v != null);
   const meanRmssd = rmssds.length ? rmssds.reduce((a, b) => a + b, 0) / rmssds.length : 0;
-  const bandStateActive = window.some((s) => s.bandSleepState === 2);
-
   const stages: Record<SleepStage, number> = { awake: 0, light: 0, deep: 0, rem: 0 };
   const timeline: SleepStage[] = [];
   for (const s of window) {
     const hasMotion = s.motion != null;
     const motion = s.motion ?? 0;
     if (s.hr == null) {
-      const stage: SleepStage = s.bandSleepState === 2 ? 'light' : 'awake';
+      const stage: SleepStage = 'awake';
       stages[stage] += 1;
       timeline.push(stage);
       continue;
@@ -461,8 +453,7 @@ export function computeSleep(
     // Cardiac-first staging: the overnight stream is HR/HRV (no motion channel
     // over BLE), so awake/REM are detected from heart-rate arousal relative to
     // the night's sleeping mean, with motion used as an extra signal when present.
-    if (bandStateActive && (s.bandSleepState === 0 || s.bandSleepState === 3)) stage = 'awake';
-    else if ((hasMotion && motion > 0.4) || hr >= sustainedWakeHr) stage = 'awake';
+    if ((hasMotion && motion > 0.4) || hr >= sustainedWakeHr) stage = 'awake';
     else if (hr <= meanHr * 0.95 && (meanRmssd === 0 || rmssd >= meanRmssd)) stage = 'deep';
     else if (hr >= meanHr * 1.0 && (meanRmssd === 0 || rmssd < meanRmssd) && (!hasMotion || motion < 0.2))
       stage = 'rem';
@@ -543,6 +534,23 @@ export function computeSleep(
     sleepStateAsleepMin,
     sleepStateUpMin,
   };
+}
+
+export function autoSleepBoundariesCovered(
+  sleep: Pick<SleepResult, 'startTs' | 'endTs'>,
+  samples: SleepMinute[],
+): boolean {
+  const evidence = samples.filter((sample) => sample.hr != null || sample.motion != null);
+  const windowMs = AUTO_SLEEP_BOUNDARY_WINDOW_MIN * 60000;
+  const distanceMs = AUTO_SLEEP_BOUNDARY_DISTANCE_MIN * 60000;
+  const before = evidence.filter((sample) => sample.ts >= sleep.startTs - windowMs && sample.ts < sleep.startTs);
+  const after = evidence.filter((sample) => sample.ts >= sleep.endTs && sample.ts <= sleep.endTs + windowMs);
+  return (
+    before.length >= AUTO_SLEEP_BOUNDARY_SIGNAL_MIN &&
+    before.some((sample) => sample.ts <= sleep.startTs - distanceMs) &&
+    after.length >= AUTO_SLEEP_BOUNDARY_SIGNAL_MIN &&
+    after.some((sample) => sample.ts >= sleep.endTs + distanceMs)
+  );
 }
 
 function smoothStageTimeline(timeline: SleepStage[]): SleepStage[] {

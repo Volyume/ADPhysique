@@ -68,7 +68,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const naps = cardio.filter((c) => c.source === 'nap' && c.startTs >= todayStart).slice(0, 4);
   const captureAction = capture ? sleepCaptureAction(capture) : null;
   const captureSummary = capture ? sleepEvidenceSummary(capture) : null;
-  const stateCandidateValidated = (capture?.sleepStateAsleepMin ?? 0) >= 3;
+  const stateCandidateObserved = (capture?.sleepStateMin ?? 0) > 0;
   const trustStrip = capture ? sleepTrustStrip(capture, !!perf?.cappedByConfidence) : null;
   const perfScore = perf ? displayPct(perf.score) : null;
   const surplusSleepMin = sleep ? Math.max(0, sleep.asleepMin - neededMin) : 0;
@@ -288,9 +288,9 @@ export function SleepScreen({ nav }: { nav: Nav }) {
                 />
                 <EvidenceMeter
                   label="State candidate"
-                  value={stateCandidateValidated ? Math.round((sleepStateWakeLikeMin(capture) / Math.max(1, capture.sleepStateMin)) * 100) : 0}
-                  detail={stateCandidateValidated ? sleepStateWakeDisplay(capture) : capture.sleepStateMin > 0 ? `${capture.sleepStateMin} unvalidated rows` : 'no state rows'}
-                  color={sleepStateWakeConflict(capture) ? colors.recoveryRed : stateCandidateValidated ? colors.recoveryGreen : capture.sleepStateMin > 0 ? colors.recoveryYellow : colors.textTertiary}
+                  value={stateCandidateObserved ? Math.round((sleepStateWakeLikeMin(capture) / Math.max(1, capture.sleepStateMin)) * 100) : 0}
+                  detail={stateCandidateObserved ? `${sleepStateWakeDisplay(capture)} · experimental` : 'no state rows'}
+                  color={stateCandidateObserved ? colors.recoveryYellow : colors.textTertiary}
                   inverse
                 />
               </View>
@@ -1188,13 +1188,10 @@ function sourceLabel(source: 'auto_hr' | 'manual_hr' | 'manual_duration' | null)
 
 function stateEvidenceColor(
   capture: NonNullable<ReturnType<typeof appStore.getState>['sleepCapture']>,
-  key: 'wake' | 'still' | 'asleep',
+  _key: 'wake' | 'still' | 'asleep',
 ): string {
   if (capture.sleepStateMin <= 0) return colors.textTertiary;
-  const wakeLike = sleepStateWakeLikeMin(capture);
-  if (key === 'wake') return wakeLike / capture.sleepStateMin >= 0.85 ? colors.recoveryRed : colors.textSecondary;
-  if (key === 'asleep') return capture.sleepStateAsleepMin > 0 ? colors.recoveryGreen : colors.textTertiary;
-  return capture.sleepStateStillMin > 0 ? colors.recoveryYellow : colors.textTertiary;
+  return colors.recoveryYellow;
 }
 
 function longHrOnlyCapture(capture: NonNullable<ReturnType<typeof appStore.getState>['sleepCapture']>): boolean {

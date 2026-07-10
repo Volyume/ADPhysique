@@ -188,13 +188,13 @@ export function decodeWhoop5HistoryFrames(
     });
   }
 
-  hr.sort((a, b) => a.ts - b.ts);
+  const mergedHr = mergeHistoricalHrSamples(hr);
   steps.sort((a, b) => a.ts - b.ts);
   sleepStates.sort((a, b) => a.ts - b.ts);
   motion.sort((a, b) => a.ts - b.ts);
   rawVitals.sort((a, b) => a.ts - b.ts);
   return {
-    hr,
+    hr: mergedHr,
     steps,
     sleepStates,
     motion,
@@ -210,6 +210,22 @@ export function decodeWhoop5HistoryFrames(
     rawSensorRecords,
     versions: [...versions].sort((a, b) => a - b),
   };
+}
+
+function mergeHistoricalHrSamples(samples: HistoricalHrSample[]): HistoricalHrSample[] {
+  const byTimestamp = new Map<number, HistoricalHrSample>();
+  for (const sample of samples) {
+    const existing = byTimestamp.get(sample.ts);
+    if (!existing || preferHistoricalHrSample(sample, existing)) byTimestamp.set(sample.ts, sample);
+  }
+  return [...byTimestamp.values()].sort((a, b) => a.ts - b.ts);
+}
+
+function preferHistoricalHrSample(candidate: HistoricalHrSample, existing: HistoricalHrSample): boolean {
+  const candidateHasRr = candidate.rr.length > 0;
+  const existingHasRr = existing.rr.length > 0;
+  if (candidateHasRr !== existingHasRr) return candidateHasRr;
+  return (candidate.confidence ?? 1) > (existing.confidence ?? 1);
 }
 
 function isHistoryFrame(frame: Uint8Array): boolean {
