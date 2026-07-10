@@ -2,12 +2,8 @@
  * Mount + snapshot tests for the src/components/food/ component set
  * per UI_FLOWS_LOCKED.md lines 18-28. Covers the four added in the
  * prior batch (EmptyDiary, SourceChip, HeldDecisionCard, ServingPicker)
- * plus EntryRow/FoodRow (extracted from inline DiaryScreen /
- * FoodSearchScreen) and TimelineEntryRow (Ultimate-Audit item 15, D22
- * 15a/15b: the flat timeline's per-row wrapper, replacing MealSection's
- * retired per-meal card -- MealSection.js and its three dedicated test
- * files were deleted, not left orphaned, once DiaryScreen stopped
- * rendering it).
+ * plus the three extracted from inline DiaryScreen / FoodSearchScreen
+ * (MealSection, EntryRow, FoodRow).
  *
  * Also locks the EmptyDiary copy to the exact spec string
  * (UI_FLOWS_LOCKED.md line 275) so any future drift breaks here.
@@ -39,7 +35,7 @@ import EmptyDiary, { EMPTY_DIARY_COPY } from '../EmptyDiary';
 import SourceChip from '../SourceChip';
 import HeldDecisionCard from '../HeldDecisionCard';
 import ServingPicker from '../ServingPicker';
-import TimelineEntryRow from '../TimelineEntryRow';
+import MealSection from '../MealSection';
 import { EntryRow, SwipeableEntryRow, friendlyFoodName } from '../EntryRow';
 import FoodRow, { SOURCE_LABEL, kcalForServing } from '../FoodRow';
 import { colors } from '../../../styles/theme';
@@ -205,40 +201,16 @@ describe('EntryRow', () => {
     const tree = create(<EntryRow entry={baseEntry} onEdit={() => {}} />).toJSON();
     const txt = JSON.stringify(tree);
     expect(txt).toContain('"143"');
-    expect(txt).toContain('170g'); // quantity is shown in the meta line ("170g", + an eaten time when present)
+    expect(txt).toContain('170g'); // quantity is shown in the meta line ("170g", + a logged time when present)
     expect(txt).toContain('"10"');
     expect(txt).toContain('"4"');
   });
 
-  // Ultimate-Audit item 15 (D22 15b): the quiet time shown is eaten_at, not
-  // logged_at ("the moment the client wrote the row" -- item-15-timeline-
-  // scoping.md Stage 0). logged_at alone (no eaten_at) shows NO time.
-  test('shows the eaten time in the meta line when eaten_at is present', () => {
-    const tree = create(<EntryRow entry={{ ...baseEntry, eaten_at: new Date('2026-06-29T13:42:00').getTime() }} onEdit={() => {}} />).toJSON();
+  test('shows the logged time in the meta line when logged_at is present', () => {
+    const tree = create(<EntryRow entry={{ ...baseEntry, logged_at: new Date('2026-06-29T13:42:00').getTime() }} onEdit={() => {}} />).toJSON();
     const txt = JSON.stringify(tree);
     expect(txt).toContain('13:42');
     expect(txt).toContain('170g');
-  });
-
-  test('shows NO time when eaten_at is absent, even if logged_at is present (never a false timestamp)', () => {
-    const tree = create(<EntryRow entry={{ ...baseEntry, logged_at: new Date('2026-06-29T13:42:00').getTime() }} onEdit={() => {}} />).toJSON();
-    const txt = JSON.stringify(tree);
-    expect(txt).not.toContain('13:42');
-    expect(txt).toContain('170g');
-  });
-
-  // Ultimate-Audit item 15 (D22 15a): the meal name as a small quiet tag.
-  test('renders the meal tag when mealLabel is supplied', () => {
-    const tree = create(<EntryRow entry={baseEntry} mealLabel="Meal 2" onEdit={() => {}} />).toJSON();
-    expect(JSON.stringify(tree)).toContain('Meal 2');
-  });
-
-  test('renders no meal tag when mealLabel is omitted (null, the default)', () => {
-    const tree = create(<EntryRow entry={baseEntry} onEdit={() => {}} />).toJSON();
-    // No stray tag text: the only strings this row can render are the food
-    // name, brand, quantity/time meta line and macro figures, none of which
-    // is a "Meal N"-shaped label.
-    expect(JSON.stringify(tree)).not.toMatch(/Meal \d/);
   });
 
   test('renders resolved name and brand', () => {
@@ -262,75 +234,95 @@ describe('EntryRow', () => {
   });
 });
 
-// Ultimate-Audit item 15 (D22 15a/15b): TimelineEntryRow is the flat
-// timeline's per-row wrapper, replacing MealSection's retired per-meal card
-// (MealSection.js and its three dedicated test files were deleted, not left
-// orphaned). It reuses SwipeableEntryRow/EntryRow verbatim and adds only the
-// one piece of chrome MealSection's per-meal card is no longer around to
-// provide: a per-ENTRY "Mark eaten" for a still-planned row.
-describe('TimelineEntryRow', () => {
-  const plannedEntry = {
-    id: 'p1', _name: 'Chicken breast', kcal: 250, protein_g: 40, carbs_g: 0, fat_g: 8,
-    quantity_g: 150, food_ref: 'off:1', meal_slot: 'meal_1', is_planned: 1,
-  };
-  const eatenEntry = {
-    id: 'e1', _name: 'Oats', kcal: 200, protein_g: 7, carbs_g: 30, fat_g: 4,
-    quantity_g: 50, food_ref: 'off:3', meal_slot: 'meal_1', is_planned: 0,
-  };
+// L05-D1/D6 (design-usability audit 2026-07-09): re-confirmed by the
+// write-affordance build. The action-hub assertions below (single add-food
+// action, no saved/scan/quick-add buttons) still hold unchanged; MealSection
+// separately gained a decorative per-row edit chevron (entries.map block),
+// which carries no accessibilityLabel and cannot match any assertion here.
+describe('MealSection', () => {
+  const slot = { key: 'breakfast', label: 'Breakfast' };
+  const entries = [
+    { id: 'a', _name: 'Oats', kcal: 200, protein_g: 7, carbs_g: 30, fat_g: 4, quantity_g: 50, food_ref: 'off:1' },
+    { id: 'b', _name: 'Banana', kcal: 105, protein_g: 1, carbs_g: 27, fat_g: 0, quantity_g: 120, food_ref: 'off:2' },
+  ];
 
-  test('renders the underlying EntryRow with its meal tag', () => {
+  test('renders the meal name + a kcal and protein subtotal', () => {
     const tree = create(
-      <TimelineEntryRow entry={eatenEntry} mealLabel="Meal 1" onEdit={() => {}} onDelete={() => {}} />
+      <MealSection slot={slot} entries={entries} onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} />
     ).toJSON();
     const txt = JSON.stringify(tree);
-    expect(txt).toContain('Oats');
-    expect(txt).toContain('Meal 1');
+    // Title case, not the old shouty uppercase (diary-tab redesign).
+    expect(txt).toContain('Breakfast');
+    expect(txt).not.toContain('BREAKFAST');
+    expect(txt).toContain('305'); // summed kcal
+    expect(txt).toContain('kcal');
+    expect(txt).toContain('g P'); // protein readout present (7 + 1 = 8)
   });
 
-  test('shows "Mark eaten" for a planned entry when a confirm handler is supplied', () => {
-    const onConfirmPlanned = jest.fn();
+  test('an empty section shows the name and Add food, no zero subtotal', () => {
     const tree = create(
-      <TimelineEntryRow entry={plannedEntry} mealLabel="Meal 1" onEdit={() => {}} onDelete={() => {}} onConfirmPlanned={onConfirmPlanned} />,
-    );
-    const btn = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Mark this Meal 1 food as eaten')[0];
-    expect(btn).toBeDefined();
-    btn.props.onPress();
-    expect(onConfirmPlanned).toHaveBeenCalledTimes(1);
-  });
-
-  test('never shows "Mark eaten" for an already-eaten entry', () => {
-    const tree = create(
-      <TimelineEntryRow entry={eatenEntry} mealLabel="Meal 1" onEdit={() => {}} onDelete={() => {}} onConfirmPlanned={jest.fn()} />,
-    );
-    expect(tree.root.findAll((n) => n.props?.accessibilityLabel?.startsWith?.('Mark this'))).toHaveLength(0);
-  });
-
-  test('never shows "Mark eaten" when the parent withheld the handler (read-only / future day)', () => {
-    const tree = create(
-      <TimelineEntryRow entry={plannedEntry} mealLabel="Meal 1" onEdit={() => {}} onDelete={() => {}} />,
-    );
-    expect(tree.root.findAll((n) => n.props?.accessibilityLabel?.startsWith?.('Mark this'))).toHaveLength(0);
-  });
-
-  test('never shows "Mark eaten" during multi-select or in read-only', () => {
-    const selecting = create(
-      <TimelineEntryRow entry={plannedEntry} mealLabel="Meal 1" onEdit={() => {}} onDelete={() => {}} onConfirmPlanned={jest.fn()} selectionMode />,
-    );
-    expect(selecting.root.findAll((n) => n.props?.accessibilityLabel?.startsWith?.('Mark this'))).toHaveLength(0);
-    const readOnly = create(
-      <TimelineEntryRow entry={plannedEntry} mealLabel="Meal 1" onEdit={() => {}} onDelete={() => {}} onConfirmPlanned={jest.fn()} readOnly />,
-    );
-    expect(readOnly.root.findAll((n) => n.props?.accessibilityLabel?.startsWith?.('Mark this'))).toHaveLength(0);
-  });
-
-  test('carries no score, streak, or pass/fail colour-judgement copy (constitution ban)', () => {
-    const tree = create(
-      <TimelineEntryRow entry={plannedEntry} mealLabel="Meal 1" onEdit={() => {}} onDelete={() => {}} onConfirmPlanned={jest.fn()} />,
+      <MealSection
+        slot={slot}
+        entries={[]}
+        onAdd={() => {}}
+        onQuickAdd={() => {}}
+        onSavedMeals={() => {}}
+        onScan={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />
     ).toJSON();
     const txt = JSON.stringify(tree);
-    expect(txt).not.toMatch(/streak/i);
-    expect(txt).not.toMatch(/score/i);
-    expect(txt).not.toMatch(/adherence/i);
+    expect(txt).toContain('Breakfast');
+    expect(txt).toContain('Add food');
+    expect(txt).not.toContain('Add saved meal to Breakfast');
+    expect(txt).not.toContain('Scan barcode for Breakfast');
+    expect(txt).not.toContain('Quick add to Breakfast');
+    expect(txt).not.toContain('Nothing logged yet.');
+    expect(txt).not.toContain('kcal'); // no "0 kcal" noise on an empty section
+  });
+
+  test('Add food button carries the slot label in its a11y label', () => {
+    const tree = create(
+      <MealSection slot={slot} entries={[]} onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} />
+    ).toJSON();
+    expect(JSON.stringify(tree)).toContain('Add food to Breakfast');
+  });
+
+  test('empty slots with usuals explain every fast path', () => {
+    const tree = create(
+      <MealSection
+        slot={slot}
+        entries={[]}
+        usuals={[{ food_ref: 'off:9', name: 'Eggs' }]}
+        onAdd={() => {}}
+        onQuickAdd={() => {}}
+        onSavedMeals={() => {}}
+        onScan={() => {}}
+        onLogUsual={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />,
+    ).toJSON();
+    const txt = JSON.stringify(tree);
+    expect(txt).toContain('Eggs');
+    expect(txt).toContain('Your usual foods are below. Pick something else if this meal was different.');
+  });
+
+  test('meal action hub stays focused on the single add-food action', () => {
+    const tree = create(
+      <MealSection
+        slot={slot}
+        entries={entries}
+        onAdd={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />,
+    );
+    const add = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Add food to Breakfast')[0];
+    expect(add).toBeDefined();
+    expect(tree.root.findAll((n) => n.props?.accessibilityLabel === 'Add saved meal to Breakfast')).toHaveLength(0);
+    expect(tree.root.findAll((n) => n.props?.accessibilityLabel === 'Scan barcode for Breakfast')).toHaveLength(0);
   });
 });
 
@@ -345,11 +337,9 @@ describe('read-only diary components (E10 lapse views)', () => {
     { id: 'a', _name: 'Oats', kcal: 200, protein_g: 7, carbs_g: 30, fat_g: 4, quantity_g: 50, food_ref: 'off:1' },
   ];
 
-  // Ultimate-Audit item 15 (D22 15a/15b): MealSection's per-meal card is
-  // gone; TimelineEntryRow is the flat timeline's per-row read-only surface.
-  test('TimelineEntryRow readOnly still shows the food and meal tag', () => {
+  test('MealSection readOnly still shows the food, subtotal and meal name', () => {
     const tree = create(
-      <TimelineEntryRow entry={entries[0]} mealLabel={slot.label} onEdit={() => {}} onDelete={() => {}} readOnly />
+      <MealSection slot={slot} entries={entries} onAdd={() => {}} onEdit={() => {}} onDelete={() => {}} readOnly />
     ).toJSON();
     const txt = JSON.stringify(tree);
     expect(txt).toContain('Breakfast');
@@ -357,13 +347,21 @@ describe('read-only diary components (E10 lapse views)', () => {
     expect(txt).toContain('200');
   });
 
-  test('TimelineEntryRow readOnly renders NO mark-eaten affordance even for a planned entry', () => {
-    const planned = { ...entries[0], is_planned: 1 };
+  test('MealSection readOnly renders NO add, quick add, saved, scan or usuals affordance', () => {
+    const usuals = [{ food_ref: 'off:9', name: 'Eggs' }];
     const tree = create(
-      <TimelineEntryRow entry={planned} mealLabel={slot.label} onEdit={() => {}} onDelete={() => {}} onConfirmPlanned={jest.fn()} readOnly />
+      <MealSection
+        slot={slot} entries={[]} usuals={usuals}
+        onAdd={() => {}} onQuickAdd={() => {}} onSavedMeals={() => {}} onScan={() => {}} onLogUsual={() => {}}
+        onEdit={() => {}} onDelete={() => {}} readOnly
+      />
     ).toJSON();
     const txt = JSON.stringify(tree);
-    expect(txt).not.toContain('Mark eaten');
+    expect(txt).not.toContain('Add food');
+    expect(txt).not.toContain('Quick add');
+    expect(txt).not.toContain('Add saved meal');
+    expect(txt).not.toContain('Scan barcode');
+    expect(txt).not.toContain('Eggs'); // usuals are one-tap writes
   });
 
   test('SwipeableEntryRow readOnly disables the swipe-to-delete gesture', () => {
@@ -385,19 +383,24 @@ describe('read-only diary components (E10 lapse views)', () => {
     expect(row.props.accessibilityLabel).not.toContain('Tap to edit');
   });
 
-  test('without readOnly a planned entry\'s mark-eaten affordance stays (the Pro diary is unchanged)', () => {
-    const planned = { ...entries[0], is_planned: 1 };
+  test('without readOnly the write affordances stay (the Pro diary is unchanged)', () => {
     const tree = create(
-      <TimelineEntryRow
-        entry={planned}
-        mealLabel={slot.label}
+      <MealSection
+        slot={slot}
+        entries={entries}
+        onAdd={() => {}}
+        onQuickAdd={() => {}}
+        onSavedMeals={() => {}}
+        onScan={() => {}}
         onEdit={() => {}}
         onDelete={() => {}}
-        onConfirmPlanned={() => {}}
       />
     ).toJSON();
     const txt = JSON.stringify(tree);
-    expect(txt).toContain('Mark eaten');
+    expect(txt).toContain('Add food');
+    expect(txt).not.toContain('Add saved meal to Breakfast');
+    expect(txt).not.toContain('Scan barcode for Breakfast');
+    expect(txt).not.toContain('Quick add to Breakfast');
   });
 });
 

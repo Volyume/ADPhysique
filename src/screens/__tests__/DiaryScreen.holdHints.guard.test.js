@@ -67,12 +67,8 @@ describe('DiaryScreen hold-to-discover hints (Wave A C7)', () => {
     );
   });
 
-  // Ultimate-Audit item 15 (D22 15a): MealSection's onLongPressEntry prop
-  // (a per-meal-card indirection) is gone with the meal-card layout;
-  // TimelineEntryRow wires the long-press straight to enterSelection(entry)
-  // per row, same target function, same effect.
-  test('TimelineEntryRow still wires the long-press straight to enterSelection', () => {
-    expect(SRC).toMatch(/onLongPress=\{\(\) => enterSelection\(entry\)\}/);
+  test('MealSection still wires the long-press straight to enterSelection', () => {
+    expect(SRC).toMatch(/onLongPressEntry=\{enterSelection\}/);
   });
 
   test('the water row long-press handlers are unchanged (still onSub(500) / onAdd(500))', () => {
