@@ -11,6 +11,7 @@
  * (the +debt term in computeSleepNeed).
  */
 
+/** neededMin is the debt-free target for that night (baseline + strain - naps). */
 export type SleepNightHistory = { neededMin: number; asleepMin: number };
 
 const DEBT_CAP_MIN = 240; // never carry more than 4 h of debt

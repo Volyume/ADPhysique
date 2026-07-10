@@ -308,7 +308,7 @@ const LAST_DEVICE_ID_KEY = 'lastWhoopDeviceId';
 const STEP_DIVISOR_KEY = 'whoopStepTicksPerStep';
 const STEP_DIVISOR_MIGRATION_KEY = 'whoopStepDivisorCaptureDefaultV2';
 const K21_MOTION_BACKFILL_KEY = 'whoopK21MotionBackfillV1';
-const SLEEP_EVIDENCE_RECOMPUTE_KEY = 'sleepEvidenceRecomputeV5';
+const SLEEP_EVIDENCE_RECOMPUTE_KEY = 'sleepEvidenceRecomputeV6';
 const STRAP_ALARM_KEY = 'strapAlarm';
 
 function bandStepsAreTrusted(estimate: BandStepEstimate | null | undefined, divisor: number): boolean {
@@ -1411,7 +1411,7 @@ class AppStore extends Store<AppState> {
       .filter(isUsableDebtNight)
       .slice(0, 14)
       .reverse()
-      .map((d) => ({ neededMin: d.sleepDetail?.needMin ?? 480, asleepMin: d.sleepMin as number }));
+      .map((d) => ({ neededMin: debtAccrualTarget(d), asleepMin: d.sleepMin as number }));
     const accruedDebtMin = sleepDebt(debtNights);
     await this.autoDetectNapsForDay(sod, dayEnd, sleep);
     const napMin = (await listCardio(CARDIO_RECENT_LIMIT))
@@ -2204,12 +2204,12 @@ class AppStore extends Store<AppState> {
     const recent = (await getRecentDailyMetrics(30)).filter((d) => d.day !== today);
 
     // Sleep Debt: rolling deficit over the trailing nights (needed − asleep),
-    // using each night's stored Sleep Need where available, else the baseline.
+    // Use each night's debt-free requirement so carried debt is accumulated once.
     const debtNights = recent
       .filter(isUsableDebtNight)
       .slice(0, 14)
       .reverse() // oldest → newest for the rolling carry
-      .map((d) => ({ neededMin: d.sleepDetail?.needMin ?? 480, asleepMin: d.sleepMin as number }));
+      .map((d) => ({ neededMin: debtAccrualTarget(d), asleepMin: d.sleepMin as number }));
     const accruedDebtMin = sleepDebt(debtNights);
     await this.autoDetectNapsForDay(sod, now, sleep);
     const cardioAfterNapDetect = await listCardio(CARDIO_RECENT_LIMIT);
@@ -2820,6 +2820,20 @@ function applySleepNeed(sleep: SleepResult, need: SleepNeed): void {
 function isUsableDebtNight(day: DailyMetricRow): boolean {
   if (day.sleepMin == null) return false;
   return sleepTrustTier(day.sleepDetail) !== 'low';
+}
+
+/** Debt accrues against the debt-free requirement for that night. Stored
+ * needMin already includes carried debt; feeding it back into the accumulator
+ * would count yesterday's debt a second time on every following night. */
+function debtAccrualTarget(day: DailyMetricRow): number {
+  const detail = day.sleepDetail;
+  if (detail?.baselineMin != null) {
+    return Math.max(0, Math.round(detail.baselineMin + (detail.strainMin ?? 0) - (detail.napMin ?? 0)));
+  }
+  if (detail?.needMin != null) {
+    return Math.max(0, Math.round(detail.needMin - (detail.debtMin ?? 0)));
+  }
+  return 480;
 }
 
 /**
