@@ -25,16 +25,20 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ## 1. IN FLIGHT
 
-### CP-10 screen theming batch D (Sonnet, dispatched 2026-07-10 late)
-- Up to 15 food-domain-first static screens onto the batch pattern
-  (precedents 0ac5de9 / 504d657); care around MealPlanScreen's new
-  dietarySheet. Agent split into sub-groups (A: PlanPreview, FirstRun,
-  Credits, WeeklyStory, MyMeals, MyRecipes; B: ScanBarcode, ScanLabel,
-  AddCustomFood) then was ordered to CONSOLIDATE - no further groups.
-  RECOVERY if the session dies: review the dirt against the batch
-  pattern (frozen sheets byte-identical, valence mappings unchanged);
-  revert any half-converted screen to pristine rather than shipping it;
-  lint + full suite; commit per-feature; or relaunch from this entry.
+### LANDED - CP-10 screen theming batch D (9 screens)
+- MyMeals, MyRecipes, ScanBarcode, ScanLabel, AddCustomFood,
+  PlanPreview, FirstRun, Credits, WeeklyStory. Frozen sheets verified
+  byte-identical; full suite green at the boundary (8,412 / 0).
+  Screen coverage 31/85 live, 50 static remaining.
+
+### NEXT - CP-10 screen theming batch E (queued)
+- The six food heavyweights: DiaryScreen, FoodSearchScreen,
+  MealPlanScreen (CARE: convert around the new dietarySheet code,
+  no behaviour change), NutritionTargetsScreen (imports wellbeing -
+  valence mappings byte-identical, ED-adjacent care),
+  RecipeBuilderScreen, FoodInsightsScreen. Same batch pattern and
+  bounds as batch D; then further batches until 0 static, which
+  unlocks the stage-5 restart-prompt retirement.
 
 
 ### DONE THIS SESSION (for the record; full detail in the handover)
