@@ -1387,3 +1387,13 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   polish, Live Activity wiring, rest-timer notif actions, OFF micros +
   MLKit, watch memo, smalls (usuals chips, per-meal subtotal, TalkBack
   isolation, thumbhash proposal).
+- FOUNDER ORDER (2026-07-10): "Make sure all things in meals are things
+  available and named for the UK market." QUEUED NEXT SLOT: full UK
+  audit of the curated corpus - all 94 meals (names, ingredients,
+  authored additions, fallback sets) checked for genuine UK supermarket
+  availability AND UK naming conventions (courgette/aubergine/coriander/
+  rocket/spring onion/prawns/minced beef/porridge oats etc.); anything
+  US-named gets renamed, anything not genuinely UK-available gets
+  replaced with a UK staple of equivalent macros (macro changes flagged,
+  not silent); allergen tags re-checked for any replaced item (R1 map
+  stays complete via its completeness test). Sonnet, lead review.
