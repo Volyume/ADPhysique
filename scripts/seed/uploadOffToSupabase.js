@@ -18,11 +18,35 @@
  * Idempotent: upsert with onConflict=(source,source_id) keeps re-
  * runs harmless and reflects any OFF updates back into cloud.
  *
+ * MN-1 (item 16 data spike / D26 data enhancement, 2026-07-10): carries the
+ * same 27 micronutrient columns buildOffSnapshot.js now populates onto each
+ * cloud row, keyed off the same MICRO_COLUMNS list as every other writer of
+ * `foods` (src/lib/food/micronutrients.js) so libraryDelta.js's client pull
+ * (which already SELECTs + upserts those columns) receives real values
+ * instead of always-null ones the moment a regenerated snapshot is uploaded.
+ * This is a plain Node CLI (no Metro/Babel) like buildOffSnapshot.js, so it
+ * cannot `import` that ES module -- MICRO_COLUMNS is duplicated here in the
+ * same order; __tests__/uploadOffToSupabase.test.js cross-checks it against
+ * the canonical list.
+ *
  * Free: Supabase free tier + GitHub Actions free tier cover this
  * indefinitely for our scale. No paid services.
  */
 const fs = require('node:fs');
 const path = require('node:path');
+
+// Mirrors src/lib/food/micronutrients.js's MICRO_COLUMNS exactly (same 27,
+// same order -- order doesn't matter for a keyed JSON payload, but kept
+// identical for easy comparison). Duplicated, not imported: see header.
+const MICRO_COLUMNS = [
+  'vit_a_100g', 'vit_d_100g', 'vit_e_100g', 'vit_k_100g', 'vit_c_100g',
+  'thiamin_100g', 'riboflavin_100g', 'niacin_100g', 'vit_b6_100g',
+  'folate_100g', 'vit_b12_100g', 'biotin_100g', 'pantothenic_100g',
+  'potassium_100g', 'chloride_100g', 'calcium_100g', 'phosphorus_100g',
+  'magnesium_100g', 'iron_100g', 'zinc_100g', 'copper_100g',
+  'manganese_100g', 'fluoride_100g', 'selenium_100g', 'chromium_100g',
+  'molybdenum_100g', 'iodine_100g',
+];
 
 const SNAPSHOT_PATH = path.resolve(__dirname, '..', '..', 'assets', 'seed', 'off_uk_snapshot.dat');
 const CHUNK_SIZE = 1000;
@@ -67,7 +91,38 @@ async function upsertChunk(supabaseUrl, serviceRoleKey, rows) {
   }
 }
 
-(async function main() {
+// One snapshot row -> one cloud `foods` upsert row. Exported for testing
+// (see header). `stamp` is pre-computed by the caller so a bulk run can
+// stagger updated_at per row (see the comment at the call site).
+function toCloudRow(r, stamp) {
+  const row = {
+    id: cryptoUuid(),
+    source: 'off',
+    source_id: r.ean,
+    barcode_ean: r.ean,
+    name: r.name,
+    brand: r.brand ?? null,
+    serving_g: r.serving_g ?? 100,
+    serving_label: r.serving_label ?? null,
+    kcal_100g: r.kcal_100g,
+    protein_100g: r.protein_100g,
+    carbs_100g: r.carbs_100g,
+    fat_100g: r.fat_100g,
+    fibre_100g: r.fibre_100g ?? null,
+    sodium_100g: r.sodium_100g ?? null,
+    sugar_100g: r.sugar_100g ?? null,
+    verified: false,
+    fetched_at: stamp,
+    created_at: stamp,
+    updated_at: stamp,
+  };
+  // MN-1: carry whatever micronutrient values this row has (null if the
+  // snapshot doesn't have them yet -- honest, never defaulted to 0).
+  for (const col of MICRO_COLUMNS) row[col] = r[col] ?? null;
+  return row;
+}
+
+async function main() {
   const t0 = Date.now();
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -105,30 +160,7 @@ async function upsertChunk(supabaseUrl, serviceRoleKey, rows) {
     .filter(r => r && r.ean && r.name
       && r.kcal_100g != null && r.protein_100g != null
       && r.carbs_100g != null && r.fat_100g != null)
-    .map((r, i) => {
-      const stamp = new Date(baseMs + i).toISOString();
-      return {
-        id: cryptoUuid(),
-        source: 'off',
-        source_id: r.ean,
-        barcode_ean: r.ean,
-        name: r.name,
-        brand: r.brand ?? null,
-        serving_g: r.serving_g ?? 100,
-        serving_label: r.serving_label ?? null,
-        kcal_100g: r.kcal_100g,
-        protein_100g: r.protein_100g,
-        carbs_100g: r.carbs_100g,
-        fat_100g: r.fat_100g,
-        fibre_100g: r.fibre_100g ?? null,
-        sodium_100g: r.sodium_100g ?? null,
-        sugar_100g: r.sugar_100g ?? null,
-        verified: false,
-        fetched_at: stamp,
-        created_at: stamp,
-        updated_at: stamp,
-      };
-    });
+    .map((r, i) => toCloudRow(r, new Date(baseMs + i).toISOString()));
 
   log(`uploading ${cloudRows.length} rows in chunks of ${CHUNK_SIZE}`);
 
@@ -154,7 +186,13 @@ async function upsertChunk(supabaseUrl, serviceRoleKey, rows) {
     err('all chunks failed; treating as fatal');
     process.exit(1);
   }
-})().catch((e) => {
-  err('fatal:', e.message);
-  process.exit(1);
-});
+}
+
+if (require.main === module) {
+  main().catch((e) => {
+    err('fatal:', e.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { MICRO_COLUMNS, toCloudRow };

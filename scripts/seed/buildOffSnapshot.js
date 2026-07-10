@@ -32,6 +32,50 @@
  * the parsed JSON into the JS bundle. See metro.config.js.
  *
  * Source: openfoodfacts.org search API, ODbL 1.0.
+ *
+ * MN-1 micronutrients (item 16 data spike / D26 data-enhancement,
+ * 2026-07-10): the search API's `fields=...,nutriments` projection already
+ * returns the FULL nutriments hash for a matched product (verified live --
+ * requesting only `code,product_name,brands,nutriments` still returns every
+ * vitamin/mineral key OFF holds for that product, not just the ones named in
+ * `fields`), so no request-shape change was needed to reach this data --
+ * only `toRow()` below gained a mapping step.
+ *
+ * OFF UNIT QUIRK (verified against live product JSON, not assumed): every
+ * mass-based nutriment's `_100g` (and `_value`/`_serving`) field is stored in
+ * PLAIN GRAMS internally, regardless of the nutrient's natural display unit.
+ * E.g. a Kellogg's Corn Flakes product (barcode 3159470000120) reports
+ * `"iron_100g": 0.008` (= 8 mg) and `"vitamin-d_100g": 0.0000084` (= 8.4 µg);
+ * a Twix bar (5900951313592) reports `"pantothenic-acid_100g": 0.000113`
+ * (= 0.113 mg). The taxonomy's documented "display unit" for each nutrient
+ * (mg or µg, see openfoodfacts-server's taxonomies/nutrients.txt) is NOT the
+ * unit the API value is expressed in -- it always comes back in grams, so
+ * every mapped field here needs the ×1000 (mg) or ×1,000,000 (µg) conversion
+ * in OFF_MICRO_FIELDS applied before it matches micronutrients.js's mg/µg
+ * columns.
+ *
+ * OFF ZERO-VS-UNKNOWN (judgement call, evidence-based): unlike CoFID (a
+ * curated government dataset with explicit "Tr"/"N" markers for trace/
+ * not-measured), OFF is crowdsourced/bulk-imported and has no such marker --
+ * every value is a bare number. Concrete proof that a literal 0 cannot be
+ * trusted as a genuine measurement: the same Twix product (5900951313592)
+ * reports `"sodium_100g": 0` alongside `"salt_100g": 0.4` -- physically
+ * inconsistent, since sodium ~= salt / 2.5, so a real value would be ~0.16 g
+ * (160 mg), not 0. That product also carries `"iron_100g": 0`,
+ * `"vitamin-a_100g": 0`, `"zinc_100g": 0` etc. alongside genuinely nonzero
+ * `"calcium_100g": 0.035731`, `"potassium_100g": 0.075285` and
+ * `"pantothenic-acid_100g": 0.000113` on the SAME product -- consistent with
+ * an edit-form default of 0 surviving for fields the contributor never
+ * touched, not a declared zero. Per the app's "unknown, never 0" honesty
+ * mandate (micronutrients.js header), and because a false zero is worse than
+ * a missing value for a health-adjacent nutrient calculation, this builder
+ * treats a literal 0 (or any non-finite/negative reading) for any of the 27
+ * micronutrient fields as unknown (null) -- NEVER as a verified zero. This
+ * is stricter than the treatment of OFF's core macro fields (kcal/protein/
+ * carbs/fat/fibre/sodium/sugar), which are left exactly as before (a
+ * pre-existing, out-of-scope behaviour -- see task report) because those are
+ * the mandatory UK/EU label fields, cross-checked by Nutri-Score computation
+ * and therefore far less likely to be silently defaulted.
  */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -67,6 +111,71 @@ const BRANDS = [
   'cadbury', 'walkers', 'mcvitie-s', 'nestle', 'kellogg-s',
 ];
 
+// MN-1 (item 16 data spike, 2026-07-10) -- OFF nutriment key -> one of the 27
+// columns in `src/lib/food/micronutrients.js` (`MICRO_COLUMNS`). This is a
+// plain Node CLI (no Metro/Babel), so, like scripts/seed/buildCofidSnapshot.js,
+// it cannot `import` that ES module directly; `scripts/seed/__tests__/
+// buildOffSnapshot.test.js` cross-checks this list's `column` values against
+// the canonical MICRO_COLUMNS so the two cannot silently drift.
+//
+// Every OFF key here was confirmed against openfoodfacts-server's
+// taxonomies/nutrients.txt (canonical nutrient IDs) AND against real product
+// JSON pulled live during this spike (see header comment). `unit` drives the
+// grams -> mg/µg conversion in `microConvert()` (OFF always stores the raw
+// `_100g` value in grams, see header).
+const OFF_MICRO_FIELDS = [
+  // Vitamins (13)
+  {
+    column: 'vit_a_100g', offKey: 'vitamin-a', unit: 'µg',
+    note: 'LIMITATION: openfoodfacts-server\'s nutrients taxonomy glosses '
+      + '"vitamin-a" with "(Retinol)" in several languages (de/es/pt/fr), '
+      + 'i.e. this is raw retinol, NOT the Retinol Equivalent (RE) CoFID '
+      + 'supplies. The app\'s 800 µg NRV is an RE reference value, so '
+      + 'OFF-sourced vitamin A will read systematically LOW for '
+      + 'carotene-rich plant foods (carrots, leafy greens, sweet potato) '
+      + 'versus their CoFID-sourced equivalents. A source-format '
+      + 'limitation, not a mapping bug -- flagged for the founder, matches '
+      + 'the spirit of CoFID\'s own documented vitamin-K1/niacin caveats.',
+  },
+  { column: 'vit_d_100g', offKey: 'vitamin-d', unit: 'µg', note: 'Direct match.' },
+  { column: 'vit_e_100g', offKey: 'vitamin-e', unit: 'mg', note: 'Direct match.' },
+  { column: 'vit_k_100g', offKey: 'vitamin-k', unit: 'µg', note: 'OFF does not split K1/K2 in its taxonomy (unlike CoFID\'s explicit K1-only column) -- mapped as-is, whatever total the source declares.' },
+  { column: 'vit_c_100g', offKey: 'vitamin-c', unit: 'mg', note: 'Direct match.' },
+  { column: 'thiamin_100g', offKey: 'vitamin-b1', unit: 'mg', note: 'Direct match.' },
+  { column: 'riboflavin_100g', offKey: 'vitamin-b2', unit: 'mg', note: 'Direct match.' },
+  {
+    column: 'niacin_100g', offKey: 'vitamin-pp', unit: 'mg',
+    note: 'LIMITATION: OFF\'s "vitamin-pp" taxonomy entry (aliases: '
+      + '"Vitamin B3/PP (Niacin)") is plain niacin, with no niacin-equivalent '
+      + '(NE, preformed niacin + tryptophan/60) variant published anywhere '
+      + 'in the taxonomy -- unlike CoFID, which supplies NE directly. The '
+      + 'app\'s 16 mg NRV is conventionally an NE reference, so OFF-sourced '
+      + 'niacin can read slightly low versus its CoFID-sourced equivalent. '
+      + 'Source-format limitation, not fixable from this field.',
+  },
+  { column: 'vit_b6_100g', offKey: 'vitamin-b6', unit: 'mg', note: 'Direct match.' },
+  { column: 'folate_100g', offKey: 'folates', unit: 'µg', note: 'OFF\'s taxonomy ID is "folates" (not "vitamin-b9", which is a synonym in the taxonomy but not the live nutriment key) -- verified against real product JSON.' },
+  { column: 'vit_b12_100g', offKey: 'vitamin-b12', unit: 'µg', note: 'Direct match.' },
+  { column: 'biotin_100g', offKey: 'biotin', unit: 'µg', note: 'Direct match.' },
+  { column: 'pantothenic_100g', offKey: 'pantothenic-acid', unit: 'mg', note: 'Direct match.' },
+  // Minerals (14). Sodium is already tracked separately (sodium_100g,
+  // pre-existing, out of MN-1's 27-nutrient scope) -- not touched here.
+  { column: 'potassium_100g', offKey: 'potassium', unit: 'mg', note: 'Direct match.' },
+  { column: 'chloride_100g', offKey: 'chloride', unit: 'mg', note: 'Direct match.' },
+  { column: 'calcium_100g', offKey: 'calcium', unit: 'mg', note: 'Direct match.' },
+  { column: 'phosphorus_100g', offKey: 'phosphorus', unit: 'mg', note: 'Direct match.' },
+  { column: 'magnesium_100g', offKey: 'magnesium', unit: 'mg', note: 'Direct match.' },
+  { column: 'iron_100g', offKey: 'iron', unit: 'mg', note: 'Direct match.' },
+  { column: 'zinc_100g', offKey: 'zinc', unit: 'mg', note: 'Direct match.' },
+  { column: 'copper_100g', offKey: 'copper', unit: 'mg', note: 'Direct match.' },
+  { column: 'manganese_100g', offKey: 'manganese', unit: 'mg', note: 'Direct match.' },
+  { column: 'fluoride_100g', offKey: 'fluoride', unit: 'mg', note: 'OFF\'s taxonomy defines this field (unlike CoFID, which never publishes fluoride at all) -- real-world coverage is expected to be extremely low; measured honestly below, not assumed.' },
+  { column: 'selenium_100g', offKey: 'selenium', unit: 'µg', note: 'Direct match.' },
+  { column: 'chromium_100g', offKey: 'chromium', unit: 'µg', note: 'OFF\'s taxonomy defines this field (unlike CoFID) -- coverage expected to be extremely low; measured, not assumed.' },
+  { column: 'molybdenum_100g', offKey: 'molybdenum', unit: 'µg', note: 'OFF\'s taxonomy defines this field (unlike CoFID) -- coverage expected to be extremely low; measured, not assumed.' },
+  { column: 'iodine_100g', offKey: 'iodine', unit: 'µg', note: 'Direct match.' },
+];
+
 function log(...args) { console.log('[off-snapshot]', ...args); }
 function warn(...args) { console.warn('[off-snapshot]', ...args); }
 function err(...args) { console.error('[off-snapshot]', ...args); }
@@ -76,6 +185,38 @@ function num(v) {
   if (v == null) return null;
   const n = typeof v === 'string' ? parseFloat(v) : v;
   return Number.isFinite(n) ? n : null;
+}
+
+// grams -> mg/µg, per the header's OFF-always-stores-grams finding. Rounded
+// to 4dp: enough precision at both the mg scale (e.g. calcium) and the µg
+// scale (e.g. biotin) while clearing binary floating-point noise the ×1000/
+// ×1e6 multiply introduces.
+function microConvert(grams, unit) {
+  const factor = unit === 'µg' ? 1e6 : 1000;
+  return Math.round(grams * factor * 10000) / 10000;
+}
+
+// A raw OFF micronutrient reading, honest per the header's zero-vs-unknown
+// policy: null/non-finite/zero/negative all resolve to null (unknown),
+// never 0. Only a genuinely positive reading converts.
+function microRaw(n, offKey, per100) {
+  const raw = num(n[`${offKey}_100g`]) ?? (per100 ? num(n[`${offKey}_value`]) : null);
+  return (raw == null || raw <= 0) ? null : raw;
+}
+
+/**
+ * Map a product's `nutriments` hash onto the 27 MICRO_COLUMNS, per
+ * OFF_MICRO_FIELDS. `per100` mirrors toRow()'s own per-100g/`_value`
+ * fallback logic so a product tagged `nutrition_data_per: '100g'` is read
+ * identically for micronutrients and macros.
+ */
+function microValuesFromNutriments(n, per100) {
+  const out = {};
+  for (const f of OFF_MICRO_FIELDS) {
+    const raw = microRaw(n, f.offKey, per100);
+    out[f.column] = raw == null ? null : microConvert(raw, f.unit);
+  }
+  return out;
 }
 
 function toRow(product) {
@@ -110,6 +251,7 @@ function toRow(product) {
     fibre_100g: valueOf('fiber_100g', 'fiber_value'),
     sodium_100g: valueOf('sodium_100g', 'sodium_value'),
     sugar_100g: valueOf('sugars_100g', 'sugars_value'),
+    ...microValuesFromNutriments(n, per100),
   };
   if (!row.ean || !row.name) return null;
   if (row.kcal_100g == null || row.protein_100g == null
@@ -117,6 +259,29 @@ function toRow(product) {
     return null;
   }
   return row;
+}
+
+// MN-1 coverage measurement (item 16 data spike, 2026-07-10): how many of
+// the retained rows carry a value for each of the 27 tracked micronutrients,
+// plus the median nutrients-with-data per food. Shared between the snapshot
+// build and its test suite so the numbers reported to the founder and the
+// numbers pinned in tests can never silently diverge.
+function measureMicronutrientCoverage(rows) {
+  const coverage = {};
+  for (const f of OFF_MICRO_FIELDS) coverage[f.column] = 0;
+  const perFoodCounts = [];
+  for (const row of rows) {
+    let rowCount = 0;
+    for (const f of OFF_MICRO_FIELDS) {
+      if (row[f.column] != null) { coverage[f.column]++; rowCount++; }
+    }
+    perFoodCounts.push(rowCount);
+  }
+  perFoodCounts.sort((a, b) => a - b);
+  const medianPerFood = perFoodCounts.length
+    ? perFoodCounts[Math.floor(perFoodCounts.length / 2)]
+    : 0;
+  return { coverage, medianPerFood };
 }
 
 // Build a search URL with stacked tag filters. Each axis is a
@@ -197,7 +362,7 @@ async function runAxis({ axes, label, seenEan, rows }) {
   log(`${label}: +${newRowsThisAxis} (${pagesFetched}p, skipped ${skippedThisAxis}, ${(ms/1000).toFixed(1)}s, total=${rows.length})`);
 }
 
-(async function main() {
+async function main() {
   const t0 = Date.now();
   log('starting multi-axis UK snapshot build');
   log(`axes: 1 country-only + ${CATEGORIES.length} category + ${BRANDS.length} brand = ${1 + CATEGORIES.length + BRANDS.length} runs`);
@@ -231,17 +396,31 @@ async function runAxis({ axes, label, seenEan, rows }) {
     });
   }
 
+  // MN-1 coverage measurement (item 16 data spike, 2026-07-10): logged
+  // plainly, no estimation -- OFF's crowdsourced coverage is expected to be
+  // much patchier than CoFID's, especially for the 3 nutrients (fluoride,
+  // chromium, molybdenum) CoFID cannot supply at all but OFF's taxonomy at
+  // least defines.
+  const { coverage, medianPerFood } = measureMicronutrientCoverage(rows);
+
   const ms = Date.now() - t0;
   const out = {
     _meta: {
       format: 'off-uk-snapshot',
-      version: 3,
+      version: 4,
       generatedAt: new Date().toISOString(),
       rowCount: rows.length,
       source: 'openfoodfacts.org search API, multi-axis UK + category + brand',
       sourceLicense: 'Open Database License (ODbL) 1.0',
       buildMs: ms,
       axesRun: 1 + CATEGORIES.length + BRANDS.length,
+      micronutrientCoverage: coverage,
+      micronutrientCoverageNote: 'Count of rows (out of rowCount) carrying a non-null value per column. '
+        + 'OFF is crowdsourced, so this is expected to be far patchier than CoFID\'s curated coverage; '
+        + 'a literal 0 read from the raw API is treated as unknown (see file header), never as data, '
+        + 'so these counts are not inflated by placeholder zeros.',
+      medianMicronutrientsWithDataPerFood: medianPerFood,
+      totalTrackedNutrients: OFF_MICRO_FIELDS.length,
     },
     rows,
   };
@@ -251,8 +430,29 @@ async function runAxis({ axes, label, seenEan, rows }) {
   const bytes = fs.statSync(OUT_PATH).size;
   const mb = (bytes / 1024 / 1024).toFixed(2);
   log(`wrote ${rows.length.toLocaleString()} unique rows (${mb} MB) in ${(ms/1000).toFixed(1)}s`);
+  log(`median micronutrients-with-data per food: ${medianPerFood} / ${OFF_MICRO_FIELDS.length}`);
+  for (const f of OFF_MICRO_FIELDS) {
+    const pct = rows.length ? ((coverage[f.column] / rows.length) * 100).toFixed(2) : '0.00';
+    log(`  ${f.column}: ${coverage[f.column]}/${rows.length} (${pct}%)`);
+  }
   log('done. commit assets/seed/off_uk_snapshot.dat + push.');
-})().catch((e) => {
-  err('fatal:', e.message);
-  process.exit(1);
-});
+}
+
+if (require.main === module) {
+  main().catch((e) => {
+    err('fatal:', e.message);
+    err(e.stack);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  num,
+  toRow,
+  buildUrl,
+  microConvert,
+  microRaw,
+  microValuesFromNutriments,
+  measureMicronutrientCoverage,
+  OFF_MICRO_FIELDS,
+};

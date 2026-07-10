@@ -25,6 +25,13 @@ import { searchUsda, lookupBarcodeUsda, lookupUsdaById } from './sources/usda';
 import { track as trackEvent } from '../engineTelemetry';
 import { isEligibleForRefetch } from './freshness';
 import { logWarn } from '../errorLog';
+import { MICRO_COLUMNS, microSqlColumns, microSqlPlaceholders, microValuesFromRow } from './micronutrients';
+
+// MN-1 (item 16 data spike, 2026-07-10): the `SET col = ?` fragment used to
+// carry a refreshed live row's 27 micronutrient columns into the manual
+// UPDATE below (that statement isn't an upsert, so it can't reuse
+// micronutrients.js's `microSqlUpsertExcluded`, which is `excluded.col`-shaped).
+const MICRO_UPDATE_SET = MICRO_COLUMNS.map((c) => `${c} = ?`).join(', ');
 
 const MIN_QUERY_LEN = 2;
 const NETWORK_SEARCH_FANOUT_LIMIT = 10;
@@ -66,7 +73,10 @@ function _localIsStrong(local, limit) {
  * Source rows arrive shaped as:
  *   { food_ref: 'off:<ean>' | 'usda:<fdcId>', source, name, brand,
  *     serving_g, serving_label, kcal_*, protein_*, carbs_*, fat_*,
- *     fibre_*, barcode_ean }
+ *     fibre_*, barcode_ean, <27 MICRO_COLUMNS>? }
+ *   liveOff.js populates the micronutrient columns (MN-1, item 16 data
+ *   spike, 2026-07-10); usda.js rows simply omit them, which resolves to
+ *   null (unknown) via microValuesFromRow, same as any other missing field.
  *
  * Returns the local food_ref (`global:<uuid>`) replacing the
  * source-prefixed ref so downstream callers store a stable id.
@@ -107,6 +117,7 @@ async function _promoteToLocal(row, userId = null, { refresh = false } = {}) {
              name = ?, brand = ?, serving_g = ?, serving_label = ?,
              kcal_100g = ?, protein_100g = ?, carbs_100g = ?, fat_100g = ?,
              fibre_100g = ?, sodium_100g = ?, sugar_100g = ?,
+             ${MICRO_UPDATE_SET},
              fetched_at = ?, updated_at = ?
            WHERE id = ?`,
           [
@@ -114,6 +125,7 @@ async function _promoteToLocal(row, userId = null, { refresh = false } = {}) {
             row.serving_g ?? 100, row.serving_label ?? null,
             row.kcal_100g, row.protein_100g, row.carbs_100g, row.fat_100g,
             row.fibre_100g ?? null, row.sodium_100g ?? null, row.sugar_100g ?? null,
+            ...microValuesFromRow(row),
             now, now, existing.id,
           ]
         );
@@ -131,9 +143,9 @@ async function _promoteToLocal(row, userId = null, { refresh = false } = {}) {
         (id, source, source_id, barcode_ean, name, brand,
          serving_g, serving_label,
          kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
-         sodium_100g, sugar_100g,
+         sodium_100g, sugar_100g, ${microSqlColumns},
          verified, fetched_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${microSqlPlaceholders}, 0, ?, ?, ?)`,
       [
         id, source, sourceId, row.barcode_ean ?? null,
         row.name ?? 'Unknown', row.brand ?? null,
@@ -143,6 +155,11 @@ async function _promoteToLocal(row, userId = null, { refresh = false } = {}) {
         // Carry sodium/sugar when the source has them, matching the bundled +
         // custom-food rows so the cache shape is consistent (food review D-m1).
         row.sodium_100g ?? null, row.sugar_100g ?? null,
+        // MN-1 (item 16 data spike, 2026-07-10): carry the 27 micronutrient
+        // columns straight from the source row (liveOff.js now maps them;
+        // usda.js rows simply have none, so every column stays null here,
+        // honestly, not a regression).
+        ...microValuesFromRow(row),
         now, now, now,
       ]
     );
