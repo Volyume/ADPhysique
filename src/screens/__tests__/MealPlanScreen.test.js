@@ -75,6 +75,7 @@ import { updateMealPlan } from '../../lib/food/db';
 import { appAlert } from '../../components/AppAlert';
 import * as haptics from '../../lib/haptics';
 import MealPlanScreen from '../MealPlanScreen';
+import DietaryPreferencesEditor from '../../components/food/DietaryPreferencesEditor';
 
 // parentNavigate stands in for the tab navigator's own `navigate`, reached
 // via navigation.getParent() the way navigateCrossTab always does (see
@@ -370,12 +371,15 @@ describe('MealPlanScreen review-before-add flow', () => {
   });
 });
 
-// Founder ask (recorded 2026-07-09): a "Dietary needs" entry point inside the
-// Meal Builder's preferences area, opening the SAME registered SettingsDietary
-// screen Settings uses (single source of truth, no second store) with a live
-// summary. These tests prove that contract at the state level: same route,
-// same profile fields as SettingsDietaryScreen reads/writes.
-describe('MealPlanScreen — Dietary needs row (founder ask 2026-07-09)', () => {
+// Founder ask (recorded 2026-07-09; superseded 2026-07-10 by the inline-editor
+// fix below): a "Dietary needs" entry point inside the Meal Builder's
+// preferences area, reading the same profile fields SettingsDietaryScreen
+// reads/writes (single source of truth, no second store) with a live
+// summary. The row used to navigate to Settings; the founder reported that
+// as a stranding defect (tapping it left no way back), so it now opens the
+// SAME DietaryPreferencesEditor component inline, in a sheet on this
+// screen, instead of leaving it.
+describe('MealPlanScreen — Dietary needs row (founder ask 2026-07-09, inline fix 2026-07-10)', () => {
   const source = require('fs').readFileSync(require('path').join(__dirname, '..', 'MealPlanScreen.js'), 'utf8');
 
   test('summarises the diet choice and combined exclusion count, the same fields SettingsDietaryScreen writes', async () => {
@@ -408,31 +412,44 @@ describe('MealPlanScreen — Dietary needs row (founder ask 2026-07-09)', () => 
     expect(text).not.toContain('excluded');
   });
 
-  test('tapping the row navigates via navigateCrossTab to ProfileTab -> SettingsDietary, the exact route SettingsScreen registers', async () => {
+  test('tapping the row opens the inline dietary sheet on THIS screen, never navigates away (the founder-reported stranding defect is gone)', async () => {
     const tree = await mountEmpty({ dietPreference: 'vegetarian', mealPlanExcludeTags: [], mealPlanExcludeFoods: [] });
 
     const row = buttons(tree).find((b) => b.props.accessibilityLabel === 'Dietary needs');
     expect(row).toBeTruthy();
-    act(() => row.props.onPress());
+    await act(async () => { row.props.onPress(); });
 
-    // navigateCrossTab always reaches the parent tab navigator (never a bare
-    // navigation.navigate, which silently no-ops across stacks, F4).
-    expect(nav.getParent).toHaveBeenCalled();
-    expect(parentNavigate).toHaveBeenCalledWith('ProfileTab', { screen: 'SettingsDietary', initial: false });
+    // No cross-tab jump: nothing to strand the user away from any more.
+    expect(parentNavigate).not.toHaveBeenCalled();
+
+    // The sheet now renders DietaryPreferencesEditor inline, on this screen,
+    // by component identity (not by guessing at its rendered copy).
+    expect(tree.root.findAllByType(DietaryPreferencesEditor).length).toBe(1);
   });
 
-  test('SettingsDietary resolves to the same SettingsDietaryScreen component RootNavigator registers for the Settings entry point', () => {
+  test('SettingsDietary still resolves to SettingsDietaryScreen for Settings own entry point, and BOTH screens render the SAME DietaryPreferencesEditor (single source of truth, no fork)', () => {
     const rootNavSource = require('fs').readFileSync(
       require('path').join(__dirname, '..', '..', 'navigation', 'RootNavigator.js'), 'utf8',
     );
     // Settings' own row (SettingsScreen.js) navigates straight to
     // 'SettingsDietary'; RootNavigator registers exactly one screen under
-    // that name, backed by SettingsDietaryScreen. This screen's row must
-    // target the identical route name, not a fork or a duplicate screen.
+    // that name, backed by SettingsDietaryScreen. That path is untouched by
+    // the inline-editor fix -- only the meal builder's own link-out is gone.
     expect(rootNavSource).toMatch(
       /<Stack\.Screen name="SettingsDietary" component=\{SettingsDietaryScreen\}/,
     );
-    expect(source).toContain("navigateCrossTab(navigation, 'ProfileTab', 'SettingsDietary')");
+    // Extraction-and-reuse, not duplication: both files import the exact
+    // same component from the exact same path and render it, so a change to
+    // the selection UI can only ever happen in one place.
+    const settingsScreenSource = require('fs').readFileSync(
+      require('path').join(__dirname, '..', 'SettingsDietaryScreen.js'), 'utf8',
+    );
+    expect(source).toContain("import DietaryPreferencesEditor from '../components/food/DietaryPreferencesEditor';");
+    expect(settingsScreenSource).toContain("import DietaryPreferencesEditor from '../components/food/DietaryPreferencesEditor';");
+    expect(source).toContain('<DietaryPreferencesEditor />');
+    expect(settingsScreenSource).toContain('<DietaryPreferencesEditor />');
+    // No more cross-tab jump to Settings from the meal builder for this.
+    expect(source).not.toContain("navigateCrossTab(navigation, 'ProfileTab', 'SettingsDietary')");
   });
 
   test('guard: the row sits inside the preferences area, ahead of the meals-per-day dial, in both the empty-builder and built-plan panels', () => {
@@ -467,7 +484,9 @@ describe('MealPlanScreen — Dietary needs row (founder ask 2026-07-09)', () => 
 // starts false), so a whole session could pass without it ever being seen.
 // These tests cover the new chip on the primary surface (visible with the
 // accordion closed), the one-time pointer hint, and that both stay on
-// theme tokens.
+// theme tokens. The chip used to navigate to Settings (founder-reported
+// stranding defect); it now opens the same inline dietarySheet the
+// accordion's "Dietary needs" row opens (founder ask, fixed 2026-07-10).
 describe('MealPlanScreen — dietary needs chip on the primary surface (campaign item 4)', () => {
   const source = require('fs').readFileSync(require('path').join(__dirname, '..', 'MealPlanScreen.js'), 'utf8');
 
@@ -526,14 +545,14 @@ describe('MealPlanScreen — dietary needs chip on the primary surface (campaign
     expect(chipBtn.props.accessibilityLabel).not.toContain('—'); // never an em dash
   });
 
-  test('tapping the chip fires the meal-builder selection haptic and navigates via navigateCrossTab to ProfileTab -> SettingsDietary', async () => {
+  test('tapping the chip fires the meal-builder selection haptic and opens the inline dietary sheet (no navigation, no stranding)', async () => {
     const tree = await mountLoadedWithProfile({ dietPreference: 'vegan' });
     const chipBtn = buttons(tree).find((b) => String(b.props.accessibilityLabel || '').startsWith('Dietary needs,'));
     expect(chipBtn).toBeTruthy();
-    act(() => chipBtn.props.onPress());
+    await act(async () => { chipBtn.props.onPress(); });
     expect(haptics.selection).toHaveBeenCalledTimes(1);
-    expect(nav.getParent).toHaveBeenCalled();
-    expect(parentNavigate).toHaveBeenCalledWith('ProfileTab', { screen: 'SettingsDietary', initial: false });
+    expect(parentNavigate).not.toHaveBeenCalled();
+    expect(tree.root.findAllByType(DietaryPreferencesEditor).length).toBe(1);
   });
 
   test('the one-time hint shows on first sight and is never shown again once dismissed (seen-flag idiom)', async () => {

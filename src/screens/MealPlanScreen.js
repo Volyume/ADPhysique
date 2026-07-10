@@ -22,6 +22,7 @@ import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import Chip from '../components/Chip';
+import DietaryPreferencesEditor from '../components/food/DietaryPreferencesEditor';
 import EmptyState from '../components/EmptyState';
 import HintCaption from '../components/HintCaption';
 import SectionLabel from '../components/SectionLabel';
@@ -200,11 +201,12 @@ function MealPreferencesControls({
 }) {
   return (
     <>
-      {/* Dietary needs: opens the SAME registered screen Settings uses
-          (SettingsDietary), so a choice made here IS the user's default and
-          shows ticked in Settings automatically (founder ask 2026-07-09, one
-          profile, no second store). Sits first because diet and exclusions
-          decide which meals are even eligible before any of the dials below. */}
+      {/* Dietary needs: opens the inline dietarySheet, which renders the
+          SAME DietaryPreferencesEditor component SettingsDietaryScreen does
+          (founder ask 2026-07-10, no second store), so a choice made here IS
+          the user's default and shows ticked in Settings automatically.
+          Sits first because diet and exclusions decide which meals are even
+          eligible before any of the dials below. */}
       <SettingRow
         icon="leaf-outline"
         label="Dietary needs"
@@ -284,6 +286,12 @@ export default function MealPlanScreen({ navigation, route }) {
   const [foodSwapSheet, setFoodSwapSheet] = useState(null);
   const [grocerySheet, setGrocerySheet] = useState(null); // built grocery list or null
   const [repeatSheet, setRepeatSheet] = useState(false); // "repeat this day" target picker
+  // Inline dietary preferences + allergies (founder ask 2026-07-10): the
+  // selection UI itself now opens INLINE in this sheet rather than linking
+  // out to Settings and stranding the user there with no way back. Same
+  // DietaryPreferencesEditor component SettingsDietaryScreen renders, same
+  // store fields, one source of truth.
+  const [dietarySheetOpen, setDietarySheetOpen] = useState(false);
   // Campaign item 4: one-time pointer hint for the new dietary chip, same
   // once-ever '@volyume_seen_*' convention as DIARY_MARKEATEN_HINT_KEY /
   // UNILATERAL_WALKTHROUGH_SEEN_KEY (read on mount, set true on dismiss or
@@ -773,23 +781,25 @@ export default function MealPlanScreen({ navigation, route }) {
   // Campaign item 4's primary-surface chip: same profile fields as
   // dietSummary above, shorter wording (see dietaryChipInfo's header comment).
   const dietaryChip = useMemo(() => dietaryChipInfo(userProfile), [userProfile]);
-  // F4 (audit NAV-2 idiom, see the no-target redirect above): SettingsDietary
-  // lives in ProfileStack; a bare navigation.navigate from DiaryStack would
-  // silently no-op, so this goes through navigateCrossTab like the existing
-  // NutritionTargets redirect.
+  // Founder ask 2026-07-10 (defect report): this used to navigateCrossTab to
+  // SettingsDietary, which stranded the user on a different tab with no
+  // path back to the meal builder. The selection now opens INLINE in this
+  // screen's own dietarySheet instead, rendering the exact same
+  // DietaryPreferencesEditor SettingsDietaryScreen uses (one source of
+  // truth; see the sheet below, near the other BottomSheets).
   const handleOpenDietary = useCallback(() => {
-    navigateCrossTab(navigation, 'ProfileTab', 'SettingsDietary');
-  }, [navigation]);
-  // Chip variant of the handler above: same destination, plus the
-  // meal-builder selection haptic (allowed vocabulary on this surface, not a
+    setDietarySheetOpen(true);
+  }, []);
+  // Chip variant of the handler above: same sheet, plus the meal-builder
+  // selection haptic (allowed vocabulary on this surface, not a
   // weight/food-log surface) and marking the pointer hint discovered by use,
   // same "dismiss on the action it teaches" idiom as DiaryScreen's
   // dismissMarkEatenHint (called from handleConfirmPlanned).
   const handleOpenDietaryChip = useCallback(() => {
     haptics.selection();
     dismissDietaryChipHint();
-    navigateCrossTab(navigation, 'ProfileTab', 'SettingsDietary');
-  }, [navigation, dismissDietaryChipHint]);
+    setDietarySheetOpen(true);
+  }, [dismissDietaryChipHint]);
   const dayTypeLabel = day?.variant === 'training' ? 'Training day' : 'Rest day';
   const hasSwappableFoods = (day?.slots || []).some((slot) => (
     !!slot.components && (slot.items || []).some((it) => (it.foodRef || '').startsWith('curated:'))
@@ -965,15 +975,15 @@ export default function MealPlanScreen({ navigation, route }) {
           ) : null}
           {honestyLine ? <Text maxFontSizeMultiplier={1.3} style={styles.honesty}>{honestyLine}</Text> : null}
 
-          {/* Campaign item 4 (dietary-needs discoverability): a quiet chip on
-              this primary surface, visible whether or not the preferences
-              accordion below is open (it defaults closed once a plan
-              exists, see prefsOpen). Tapping it opens the exact same
-              SettingsDietary route as the accordion's "Dietary needs" row;
-              this is a second entry point to one place, not a second
-              source of truth (dietaryChip reads the same profile fields as
-              dietSummary above). Informational only, never a judgement on
-              the exclusions themselves. */}
+          {/* Campaign item 4 (dietary-needs discoverability), inline per the
+              founder ask 2026-07-10: a quiet chip on this primary surface,
+              visible whether or not the preferences accordion below is open
+              (it defaults closed once a plan exists, see prefsOpen).
+              Tapping it opens the same dietarySheet as the accordion's
+              "Dietary needs" row; this is a second entry point to one
+              inline editor, not a second source of truth (dietaryChip reads
+              the same profile fields as dietSummary above). Informational
+              only, never a judgement on the exclusions themselves. */}
           <View style={styles.dietaryChipRow}>
             <Chip
               icon="leaf-outline"
@@ -1414,6 +1424,27 @@ export default function MealPlanScreen({ navigation, route }) {
             </TouchableOpacity>
           )))}
         </ScrollView>
+      </BottomSheet>
+
+      {/* Inline dietary preferences + allergies (founder ask 2026-07-10): the
+          "Dietary needs" row and chip above both open this sheet instead of
+          navigating away to Settings, which used to strand the user on a
+          different tab with no path back to the meal builder. Same
+          DietaryPreferencesEditor component SettingsDietaryScreen renders
+          (one source of truth); `scroll` because diet + all 14 allergens +
+          any avoid-list entries can run taller than the sheet's default
+          content cap, same idiom as PartnerScreen's manage-pair sheet. */}
+      <BottomSheet
+        visible={dietarySheetOpen}
+        onClose={() => setDietarySheetOpen(false)}
+        accessibilityLabel="Dietary needs"
+        scroll
+      >
+        <Text maxFontSizeMultiplier={1.3} style={styles.swapSheetTitle}>Dietary needs</Text>
+        <Text maxFontSizeMultiplier={1.3} style={styles.swapSheetSub}>
+          This is the same selection as Settings. A change here updates everywhere.
+        </Text>
+        <DietaryPreferencesEditor />
       </BottomSheet>
     </SafeAreaView>
   );
