@@ -268,7 +268,8 @@
           ]
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "react-native-haptic-feedback"
     ],
     "notification": {
       "icon": "./assets/notification-icon.png",

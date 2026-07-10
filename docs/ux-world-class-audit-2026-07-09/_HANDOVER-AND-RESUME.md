@@ -1070,3 +1070,13 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   pins). Full suite green (progressScanVision even passed this run).
   NEXT per D16: item 12 raw/cooked basis toggle firing now; haptics
   adoption still in flight.
+- D17 HAPTICS ADOPTION LANDED (Sonnet, lead-reviewed): react-native-
+  haptic-feedback ^3.0.0 added with lockfile regenerated in the SAME
+  commit (npm ci --dry-run clean, 16-line lock diff verified - lockfile
+  rule enforced); its documented no-op config plugin added to app.json.
+  haptics.js: iOS-only lazy resolver, REST_DONE/PR_ACHIEVED pattern
+  constants (calm sub-0.9 curves, exported for retuning), byte-identical
+  legacy ladder on Android/any failure, reduce-motion gate first. 9 new
+  tests incl. both fallback surfaces; full suite 627 green; lint +
+  check:imports + tsc clean. FOUNDER-SIDE: fresh EAS build REQUIRED
+  before this (or the iOS widget) reaches a device - native dep added.
