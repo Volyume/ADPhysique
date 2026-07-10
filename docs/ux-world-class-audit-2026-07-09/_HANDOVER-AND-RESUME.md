@@ -1018,3 +1018,10 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   build + Core-Haptics research. CLAUDE.md STATUS note ("MUST NOT start
   11-16 without structured founder decision") is now SATISFIED by D16 -
   update that STATUS block when 11-16 complete.
+- CP-10 PLAN LANDED (docs/ux-world-class-audit-2026-07-09/
+  CP-10-restart-free-theming-plan.md): the pre-approved restart-free
+  theming build's plan-first investigation (blast radius, staged rollout;
+  section 8 holds the few genuinely open sub-decisions for a founder
+  round). Build stages queue after the D16 11-16 sequence unless the
+  founder reorders. Meanwhile running: next-exercise button (founder
+  order) + Core-Haptics research.
