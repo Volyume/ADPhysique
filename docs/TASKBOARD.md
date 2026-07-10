@@ -25,12 +25,13 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ## 1. IN FLIGHT
 
-### PRIORITY - Inline dietary preferences + allergies in the meal builder
-- Moved from QUEUED: Sonnet agent dispatched 2026-07-10 late; spec = the
-  QUEUED entry below (kept for reference until landing). Lead reviews at
-  landing; full suite gates the boundary.
 
 ### DONE THIS SESSION (for the record; full detail in the handover)
+- Inline dietary preferences LANDED (founder ask): shared
+  DietaryPreferencesEditor rendered by BOTH SettingsDietaryScreen and the
+  meal builder's new dietary sheet; link-out + stranding removed; ED nudge
+  extraction-only; full suite green 8,391/0. Device checklist (9 steps) in
+  the agent report via the handover.
 - D35 edge auto-scroll LANDED `ed62aab` (still-finger reaction fix included;
   20 targeted suites / 152 tests + lint green; CI full suite arbitrates on
   push). Device checklist steps 1-12 in the agent reports via the handover.
@@ -47,7 +48,7 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ## 2. QUEUED (build slots - two agents at a time, lowest capable tier)
 
-### PRIORITY - Inline dietary preferences + allergies in the meal builder (founder ask, 2026-07-10)
+### LANDED - Inline dietary preferences + allergies in the meal builder (founder ask, 2026-07-10)
 - **Source:** founder direct ask (verbatim in the handover resume point, committed `6db4d33`); item 4 landed `85c5fe1` as a chip/link + once-ever hint.
 - **CURRENT STATE:** the meal builder's preferences surface only LINKS to the Settings dietary screen; tapping it navigates to Settings with no way back (founder-reported defect), and no selection can be made in place.
 - **END STATE:** the diet + allergy selection is editable INLINE in the meal builder's meal preferences, reading and writing the SAME store/profile fields as SettingsDietaryScreen - one source of truth, a change in either place is the same change everywhere (suggestions, plans, sync); the navigation dead-end is gone.
