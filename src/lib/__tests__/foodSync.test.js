@@ -62,12 +62,15 @@ describe('applyFoodEntryFromCloud', () => {
     expect(params[1]).toBe(UID);
     expect(params[2]).toBe('2026-05-23');
     expect(params[3]).toBe('breakfast');
+    // weight_state (Ultimate-Audit item 12): defaults to 'as_weighed' when
+    // the cloud row carries none.
+    expect(params[11]).toBe('as_weighed');
     // logged_at, created_at, updated_at as ms numbers
-    expect(typeof params[11]).toBe('number');
-    expect(params[11]).toBe(Date.parse('2026-05-23T08:15:00Z'));
-    expect(params[12]).toBeNull(); // deleted_at
-    expect(params[13]).toBe(params[11]); // created_at
-    expect(params[14]).toBe(params[11]); // updated_at
+    expect(typeof params[12]).toBe('number');
+    expect(params[12]).toBe(Date.parse('2026-05-23T08:15:00Z'));
+    expect(params[13]).toBeNull(); // deleted_at
+    expect(params[14]).toBe(params[12]); // created_at
+    expect(params[15]).toBe(params[12]); // updated_at
   });
 
   test('soft-delete tombstone surfaces as a non-null deleted_at', async () => {
@@ -86,7 +89,7 @@ describe('applyFoodEntryFromCloud', () => {
       deleted_at: '2026-05-22T15:00:00Z',
     });
     const { params } = writes[0];
-    expect(params[12]).toBe(Date.parse('2026-05-22T15:00:00Z'));
+    expect(params[13]).toBe(Date.parse('2026-05-22T15:00:00Z'));
   });
 
   test('returns null and skips the write when the row has no id', async () => {
