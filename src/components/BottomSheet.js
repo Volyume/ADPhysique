@@ -47,7 +47,14 @@
  * follow-up decision rather than parked silently.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, createContext } from 'react';
+
+// Any TextField rendered inside a sheet must use gorhom's own
+// BottomSheetTextInput (library requirement): a plain TextInput inside a
+// dynamically-sized sheet fights the keyboard for focus on Android and the
+// keyboard dismisses after every keystroke (founder-reported, 2026-07-10).
+// TextField consumes this context to pick the right input primitive.
+export const InsideBottomSheetContext = createContext(false);
 import { BackHandler, Platform, StyleSheet, useWindowDimensions } from 'react-native';
 import {
   BottomSheetModal, BottomSheetView, BottomSheetScrollView, BottomSheetBackdrop,
@@ -202,7 +209,9 @@ export default function BottomSheet({
       accessibilityLabel={accessibilityLabel}
     >
       <Body {...bodyProps}>
-        {children}
+        <InsideBottomSheetContext.Provider value>
+          {children}
+        </InsideBottomSheetContext.Provider>
       </Body>
     </BottomSheetModal>
   );

@@ -23,6 +23,10 @@ function passthrough(name) {
 
 const BottomSheetView = passthrough('BottomSheetView');
 const BottomSheetScrollView = passthrough('BottomSheetScrollView');
+// Real library requirement: inputs inside sheets use BottomSheetTextInput.
+// In jest it behaves as a plain RN TextInput so existing tests keep working.
+const { TextInput: RNTextInput } = require('react-native');
+const BottomSheetTextInput = RNTextInput;
 const BottomSheetHandle = passthrough('BottomSheetHandle');
 
 // Renders as a plain pressable-shaped host node carrying whatever onPress /
@@ -87,6 +91,7 @@ module.exports = {
   BottomSheetModalProvider,
   BottomSheetView,
   BottomSheetScrollView,
+  BottomSheetTextInput,
   BottomSheetHandle,
   BottomSheetBackdrop,
   useBottomSheetModal: () => ({ dismiss: () => {}, dismissAll: () => {} }),

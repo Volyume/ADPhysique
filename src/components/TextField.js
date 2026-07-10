@@ -1,7 +1,9 @@
-import { forwardRef, useState } from 'react';
+import { forwardRef, useState, useContext } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { spacing, radius, withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { InsideBottomSheetContext } from './BottomSheet';
 
 // CP-10 stage 1: SURFACES (colour) and SIZES (fontSize) were module-scope
 // consts baked at import time (class 2, CP-10 plan section 1.4). Built
@@ -52,6 +54,12 @@ const TextField = forwardRef(function TextField({
 }, ref) {
   const [focused, setFocused] = useState(false);
   const t = useTheme();
+  // Inside a bottom sheet the input MUST be gorhom's BottomSheetTextInput
+  // (library requirement): a plain TextInput fights the sheet's keyboard
+  // coordination and Android dismisses the keyboard after each keystroke
+  // (founder-reported, 2026-07-10). Outside a sheet, the ordinary TextInput.
+  const insideSheet = useContext(InsideBottomSheetContext);
+  const InputComponent = insideSheet ? BottomSheetTextInput : TextInput;
   const SURFACES = buildSurfaces(t.colors);
   const SIZES = buildSizes(t.fontSize);
   const sizeStyle = SIZES[size] || SIZES.md;
@@ -91,7 +99,7 @@ const TextField = forwardRef(function TextField({
         ]}
       >
         {leading ? <View style={styles.leading}>{leading}</View> : null}
-        <TextInput
+        <InputComponent
           ref={ref}
           style={[
             styles.input,
