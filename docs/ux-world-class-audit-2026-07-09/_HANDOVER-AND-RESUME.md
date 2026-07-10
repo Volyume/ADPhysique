@@ -1033,3 +1033,11 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   Ultimate-Audit 11-16 in order (approved this run via D16 round).
   Tomorrow-queue items sourced from old audits are SUSPENDED pending
   explicit founder re-approval.
+- CORE-HAPTICS RESEARCH LANDED (core-haptics-research.md): expo-haptics
+  has NO Core Haptics/AHAP surface (checked SDK 55 changelog) so "wait
+  for Expo" is unavailable. Best candidate: react-native-haptic-feedback
+  v3 (MIT, ~438k weekly, 2026-03 release) via its triggerPattern() JS
+  API only (.ahap path needs manual Xcode edits - incompatible with the
+  managed workflow). Honest read: iOS-only texture polish for two
+  already-tuned moments; marginal, not functional. Founder decision A
+  (adopt, triggerPattern only) vs C (close item 14) - ASKED.
