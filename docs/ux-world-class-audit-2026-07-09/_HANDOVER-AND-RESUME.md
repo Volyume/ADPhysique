@@ -384,10 +384,27 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
 1. IN FLIGHT: D35 drag edge auto-scroll (Sonnet — DragReorderList +
    its four consumer surfaces; the crux is scroll-offset-aware
    hit-testing; lead reviews the worklet arithmetic at landing).
-2. NEXT SLOTS: FeedbackSheet/PeekMenu migration slot (D36b); TalkBack
-   sheet isolation slot (D36c, cross-cutting, RootNavigator-adjacent);
-   then the remaining delegated decision rounds (watch-app scoping,
-   kala namak, brand font) — each verify-first.
+2. NEXT SLOTS, in order:
+   a. **NEW FOUNDER ASK (2026-07-10, priority — direct defect report):
+      inline dietary preferences + allergies in the meal builder.**
+      Founder's words: "I asked for food preferences and allergies to
+      be in meal preferences in the meal builder. Instead a link to
+      meal preferences in settings is there. People click on it and it
+      takes you to settings with no way back. The selection needs to
+      be independent in meal preferences too. Not just a link to
+      settings. Changing it in either place changes it fully."
+      Verify-first per D38: establish the current surface (item 4
+      landed `85c5fe1` as a chip/link + once-ever hint), confirm the
+      no-way-back navigation defect, then build the selection UI
+      INLINE in the meal builder's preferences — same store/profile
+      fields as SettingsDietaryScreen (single source of truth, both
+      surfaces always agree), same ED-safe soft exclusion nudge,
+      same sync (allergen_excludes ladder), tier posture unchanged.
+      No duplicate state anywhere.
+   b. FeedbackSheet/PeekMenu migration slot (D36b); TalkBack sheet
+      isolation slot (D36c, cross-cutting, RootNavigator-adjacent);
+      then the remaining delegated decision rounds (watch-app scoping,
+      kala namak, brand font) — each verify-first.
 3. PROCESS NOTE: two consecutive campaign lines (16, 19) were stale
    against the tree — every remaining item gets a verify-first read
    agent before any build brief is written. The same rule applies
