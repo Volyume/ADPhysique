@@ -1363,3 +1363,7 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   SettingsDisplayScreen lane) + R1 allergen fix (tag all 94 meals'
   additions vs FSA-14 fail-safe, central filterAdditionsForProfile at
   every render site, tags REQUIRED via completeness test).
+- R1 agent hit a transient API server error mid-run BEFORE any writes
+  (verified: zero R1 files in the tree); resumed from its transcript
+  with the full brief restated. In flight: theming stage 2 (navTheme.js
+  + nav tests visibly progressing) + resumed R1.
