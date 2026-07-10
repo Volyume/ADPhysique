@@ -1443,3 +1443,20 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   but not mainstream-UK-stocked (Asian grocers/online only) - keep as
   educational tip, or swap/drop. IN FLIGHT: theming stage 3 batch 2
   (Home + workout families).
+- FOUNDER DEVICE VERDICT (2026-07-10): the item-15 flat timeline diary
+  READ AS A MESS ("every single item stacked on top of each other") -
+  the D22 15a layout call was WRONG on device. HANDS-ON EMERGENCY
+  RESTORATION (Fable, lead): DiaryScreen + MealSection + their guard
+  tests restored to the pre-timeline meal-card layout (git ae9c311^);
+  KEPT from item 15: eaten_at schema/write semantics (v67 +
+  migrate_115), EntryRow's quiet eaten-at time, FoodDetailSheet's
+  editable eaten-at field (now wired through saveEditSheet + initial
+  prop - it was silently dead in the old handler), untimed bulk
+  confirms. R1 allergen filter RELOCATED into the restored MealSection
+  (reads profile itself; site guard updated). TimelineEntryRow +
+  timelineNoJudgement guard deleted; diaryTimeline.js lib kept (pure,
+  tested, unused - available for a future refined view). 18 diary
+  suites / 199 tests green; lint clean. DECISION RECORD: the June
+  "timeline replaces buckets" ruling is SUPERSEDED by the founder's
+  device verdict - meal cards are canonical; do not re-propose a flat
+  diary. Theming batch 2 agent fenced off the food lane mid-flight.
