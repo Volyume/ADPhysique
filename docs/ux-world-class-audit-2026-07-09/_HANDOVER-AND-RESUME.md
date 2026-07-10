@@ -1193,3 +1193,10 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   lib swap, state/forms/list/toast libs (ours are strong); held/rejected
   register untouched. Lead recommendation: keyboard-controller + zeego +
   gallery + FTS5 join the design campaign after the D24 five.
+- D25 RECORDED: the dependency map is APPROVED IN FULL (see DECISIONS
+  D25). Master design-campaign queue (two at a time, after the in-flight
+  item 15 + NRV pair): (1) theming stage 1 + bottom-sheet; (2)
+  transitions + blurhash; (3) dynamic type + FTS5 search; (4)
+  keyboard-controller + zeego; (5) gallery + scrub-haptics/Android
+  polish; (6) Rive + brand font (asset/shortlist gated). Font shortlist
+  = lead prepares for founder taste call.

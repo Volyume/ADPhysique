@@ -367,3 +367,22 @@ Founder: "OK approved all those." The five leveling items are GO:
 Sequencing (two agents max, product-first): theming stages + bottom-sheet
 first (bottom-sheet waits for the NRV agent to release the food sheet
 surfaces), then transitions + blurhash, then the dynamic-type pass.
+
+## D25 — Best-in-class dependency slate approved (founder, 2026-07-10)
+Founder: "I approve all those too." Approved in full:
+- react-native-keyboard-controller (keyboard feel, every input moment)
+- zeego (native long-press context menus)
+- react-native-awesome-gallery or Reanimated hand-roll (lead decides at
+  build by product quality) for progress-photo viewing/compare
+- Rive for onboarding/empty-state motion — NOTE: needs designed
+  animation assets; adoption lands when assets exist (founder-side or
+  commissioned), library work may precede content
+- Brand variable font via expo-font — founder taste retained on the
+  final typeface choice; lead brings a shortlist
+- No-dep enhancements: SQLite FTS5 instant search (foods/exercises/
+  history), chart scrub haptics (new pattern API), Android themed icon /
+  edge-to-edge / splash polish
+D23 discipline on every adoption (licence, health, lockfile same commit,
+register entry, EAS flag for native deps). Sequencing after the D24
+five, two agents at a time: keyboard-controller + FTS5; zeego + gallery;
+scrub haptics + Android polish; Rive/font as assets and shortlist land.
