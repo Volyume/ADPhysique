@@ -1172,3 +1172,11 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
   landing. Display build firing into the free slot. Item 15 timeline
   build still in flight (its WIP explains the transient DiaryScreen lint
   error + 4 eaten_at test failures on the shared tree).
+- D24 RECORDED (2026-07-10): five design-leveling items approved (see
+  DECISIONS D24) - restart-free theming REINSTATED (build from
+  CP-10-restart-free-theming-plan.md), @gorhom/bottom-sheet, blurhash
+  image polish, shared-element transitions, dynamic-type completion.
+  QUEUE after the in-flight pair (item 15 timeline + item 16 NRV
+  display): theming stage 1 + bottom-sheet adoption, then transitions +
+  blurhash, then dynamic type. Every landing keeps the usual boundary
+  (lead review, tests, commit, push, stage-log).

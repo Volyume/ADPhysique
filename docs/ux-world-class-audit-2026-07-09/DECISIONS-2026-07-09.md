@@ -347,3 +347,23 @@ Founder: "You make these decisions." Lead rulings:
   flagged for an EAS build. The never-re-propose register still stands
   (media, plate calculator, social proof, RPE/RIR).
 - Design/UX leveling work is authorised as a fresh order in this run.
+
+## D24 — Design/UX leveling slate approved (founder, 2026-07-10)
+Founder: "OK approved all those." The five leveling items are GO:
+1. RESTART-FREE THEMING — reinstated (the 2026-07-10 suspension is
+   lifted for this item); build proceeds from the plan doc
+   CP-10-restart-free-theming-plan.md, primitives-first staged rollout,
+   flagship design project.
+2. @gorhom/bottom-sheet adoption (MIT) — gesture-native snap-point
+   sheets, migrating the app's custom sheets; D23 dependency discipline
+   applies (licence/health verified, lockfile same commit, register
+   entry, EAS build flag).
+3. Image polish — blurhash/thumbhash placeholders via the installed
+   expo-image on progress photos and remote imagery.
+4. Shared-element transitions (Reanimated 4, already installed) —
+   exercise card->detail, photo grid->viewer.
+5. Dynamic-type completion pass — every screen resilient at the largest
+   font sizes (extends the approved ability/ease emphasis).
+Sequencing (two agents max, product-first): theming stages + bottom-sheet
+first (bottom-sheet waits for the NRV agent to release the food sheet
+surfaces), then transitions + blurhash, then the dynamic-type pass.
