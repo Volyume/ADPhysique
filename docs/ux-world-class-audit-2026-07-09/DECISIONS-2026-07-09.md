@@ -564,3 +564,19 @@ accessibility gap that compounds with every migration. (d)
 ProgressPhotosScreen's four content modals get a child-component read
 pass before any ruling. AppAlert / InfoTooltip / EatenTimePicker /
 centred dialogs stay raw Modals by design (correct semantics).
+
+## D33 AMENDMENT (founder, 2026-07-10, later the same day — strengthened)
+Founder's words, verbatim: "Regarding decisions when they come up. You
+have permission to make them for me. Now make them based on the
+absolute best possible solution for the app and end users never on the
+work that it takes to get there. If it takes more work to get a
+slightly better app, we do more work. Always."
+Effect: the delegation is GENERAL and STANDING for decision forks as
+they come up, and the criterion is absolute — even a SLIGHTLY better
+outcome for users justifies MORE work, always. Effort is never a
+tiebreaker. Scope note kept from D33 unless the founder explicitly
+says otherwise: the CLAUDE.md Section 2 inviolables (ED-safety,
+billing, tier gating, GDPR, schema rules, new dependencies) have their
+own explicit founder gates and are not treated as loosened by this
+delegation; everything else is lead-ruled on product-best and recorded
+here with rationale.
