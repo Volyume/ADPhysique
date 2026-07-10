@@ -160,19 +160,42 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
   scrim (tunable via androidNavigationBar.enforceContrast once screens
   verified).
 
+- ✅ PAIR 5 COMPLETE + PUSHED (2026-07-10 late). (a) `c589b00` item 15
+  transitions per D31 (founder delegated the technique call; lead ruled
+  "both, split by content" — D31 in the register): PressableCard opt-in
+  measure API (byte-compatible), makeHeroZoomCardStyle grows the screen
+  from the tapped card's rect via route param __heroOrigin (centre zoom
+  byte-identical when absent, defensive fallback kept), wired on
+  LiftProgress rows + peek menu + ExerciseDetail substitutes; cross-tab
+  keeps centre zoom by design. Photo grid->viewer true hero morph
+  (thumbnail expands into the viewer, shrinks back on close;
+  pure-arithmetic worklets; no new dep); Reduce Motion flattens both;
+  calm/ED weight suppression untouched and newly pinned fail-closed
+  WITH the morph present. D30 codemod swept the 4 lane files (103
+  caps). (b) `2a42fe4` item 16 scanner: VERIFIED ALREADY MLKIT
+  (enableCodeScanner + useCodeScanner IS the native MLKit pipeline);
+  real gap was the torch selection haptic; 6 new pinned tests;
+  Code-128 kept (marketed capability — agent rightly refused the
+  brief's narrower symbology set). (c) `b41731a` ANDROID BUILD FIX:
+  the APK build had failed since zeego landed — @react-native-menu/menu
+  1.2.2 overrides setHitSlopRect (removed in RN 0.80) and dies in
+  compileReleaseKotlin; bumped to 2.0.0 (the compat release; JS type
+  surface diffed byte-identical) with an overrides entry over zeego's
+  exact 1.2.2 peer pin. (d) `8984968` partnerIntentionPurge guard
+  updated to the applied-migration reality. Full suite green at the
+  boundary: 658 suites / 8,254 tests, lint clean.
+
 ## ⏸ RESUME POINT — next slots, in order:
-1. Item 15 transitions half — BLOCKED on the founder fork above. Photo
-   grid->viewer hero morph is buildable the moment the round is answered
-   (its technique is fixed either way); then sweep the 4 excluded lane
-   files with the D30 codemod.
-2. Item 16 MLKit scanner (Pair 5's second half, not started).
-3. Then slate order: Pair 6 drag reorder + giant sets (item 21 is
-   ENGINE-ADJACENT — lead reviews the planEngine/logging diff hands-on);
-   Pair 7 iOS Live Activity wiring + Android rest-timer actions; Pair 8
-   dietary discoverability + item 17 small tails (+ the edge-to-edge
-   fixes above); smalls 7/9/10/11 interleave into spare slots. The
-   theming stage-4 tail continues as component/screen batches (coverage
-   tracker below); stage 5 stays honesty-gated.
+1. Confirm the CI Android release build is GREEN on c589b00 or later
+   (the b41731a menu fix is validated by that build, not by Jest).
+2. Pair 6: drag reorder (item 20) + giant sets (item 21 — ENGINE-
+   ADJACENT, lead reviews the planEngine/logging diff hands-on).
+3. Then slate order: Pair 7 iOS Live Activity wiring + Android
+   rest-timer actions; Pair 8 dietary discoverability + item 17 small
+   tails (+ the edge-to-edge fixes above); smalls 7/9/10/11 interleave
+   into spare slots. The theming stage-4 tail continues as
+   component/screen batches (coverage tracker below); stage 5 stays
+   honesty-gated.
 
 **SUPABASE / MIGRATIONS (2026-07-10, DONE — Claude-run model live):**
 Founder connected a Supabase connector and switched cloud migrations to
