@@ -310,6 +310,11 @@ export default function HomeScreen({ navigation, route }) {
   const [showCoachingNudge, setShowCoachingNudge] = useState(false);
   const [totalSessions, setTotalSessions] = useState(0);
   const [showIntentPrompt, setShowIntentPrompt] = useState(false);
+  // R2-1: single-flight guard across every start surface (start button,
+  // repeat-last-session). Synchronous ref, so a double-tap or a second
+  // surface can never queue a second intent-sheet open that would resolve
+  // after the workout has already begun.
+  const startFlowRef = useRef(false);
   // COMP-008: the three "walked-in-with" readiness facts, captured on the
   // pre-workout prompt where they are accurate rather than recalled after the
   // session. All optional, reset each time the prompt opens. Stored on the
@@ -1163,6 +1168,14 @@ export default function HomeScreen({ navigation, route }) {
   async function handleStartNextWorkout(starter = false) {
     const target = selectedWorkoutOverride || nextWorkout;
     if (!target?.routine) return;
+    // R2-1 (founder defect, build 2684): a second trigger while the routine
+    // was still loading (or the sheet already up / a start committing) queued
+    // a second prompt-open that resolved AFTER the workout began - and the
+    // shared BottomSheet floats above the navigator, so the ask re-appeared
+    // over the live session. One start flow at a time; the ref is synchronous
+    // so a rapid double-tap can't race the state reads.
+    if (startFlowRef.current || showIntentPrompt || isStartingWorkout) return;
+    startFlowRef.current = true;
     try {
       const routine = target.routine;
       const withExercises = await getRoutineExercisesWithDetails(routine.id);
@@ -1192,6 +1205,8 @@ export default function HomeScreen({ navigation, route }) {
       setIsStartingWorkout(false);
       logError('HomeScreen.handleStartNextWorkout', e, { userId: user?.id, routineId: target?.routine?.id });
       toast.show("Couldn't load workout, try again", { variant: 'error' });
+    } finally {
+      startFlowRef.current = false;
     }
   }
 
@@ -1256,6 +1271,10 @@ export default function HomeScreen({ navigation, route }) {
   // handler identity actually stops it re-rendering on every Home tick.
   const handleRepeatLastSession = useCallback(async () => {
     if (!lastSession) return;
+    // R2-1: same single-flight guard as handleStartNextWorkout - this is the
+    // other surface that opens the intent sheet, and the two must never race.
+    if (startFlowRef.current || showIntentPrompt || isStartingWorkout) return;
+    startFlowRef.current = true;
     const routineId = lastSession.routineId || lastSession.routine_id || null;
 
     try {
@@ -1290,7 +1309,10 @@ export default function HomeScreen({ navigation, route }) {
     } catch (e) {
       logError('HomeScreen.handleRepeatLastSession', e, { userId: user?.id, lastSessionId: lastSession?.id, routineId });
       toast.show("Couldn't load last session, try again", { variant: 'error' });
+    } finally {
+      startFlowRef.current = false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastSession, user?.id, toast]);
 
   const hasActiveWorkout = !!activeWorkout && !isStartingWorkout;

@@ -33,7 +33,45 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## R. REMEDIATION CAMPAIGN (founder order 2026-07-11, second device walk) — ABOVE ALL ELSE
+## R2. THIRD DEVICE WALK (founder, build 2684, 2026-07-11 evening) — ABOVE ALL ELSE
+
+_The founder's verdict: the logger was ordered PERFECT and got a token tidy;
+the summary gaps got point patches (three in two weeks) instead of a
+structural fix; the coach setup surface was untouched. This wave executes
+the full mandate. Fixes land per-feature on this branch; every push
+auto-builds an APK (build-android.yml, claude/**)._
+
+- **R2-1 DONE IN TREE (lead, hands-on):** intent sheet re-appeared over the
+  just-started workout. Root cause: no single-flight guard on the two start
+  surfaces; a second queued open resolved after navigation and the shared
+  BottomSheet floats above the navigator. Fix: synchronous `startFlowRef`
+  guard on handleStartNextWorkout + handleRepeatLastSession. Guard test
+  with the wave's landing.
+- **R2-2 (agent A):** logger header design pass - X, elapsed timer and
+  Finish unified into one visual family (lead ruling in brief). D66 was an
+  under-scoped token tidy; this is the redesign.
+- **R2-3 (agent A):** set-card region - edit pencil + the control clipped
+  half off the right screen edge beside the rest bar ("pencil and arrow on
+  top of each other"); root-cause the overflow, one icon-button family.
+- **R2-4 (agent A):** exercise title + "..." button vertical misalignment;
+  "Est. max" cramped/wrapping under the Reps label.
+- **R2-5 (agent B):** summary footer -> tab-bar dead band (~70dp). Prime
+  suspect: ActiveSessionMiniBar (rendered above the tab bar by
+  VolyumeTabBar) lingering/reserving space right after finish. STRUCTURAL
+  fix of the footer/tab-bar/mini-bar system, render-level test.
+- **R2-6 (agent B, root cause CONFIRMED):** scroll-end gap - the footer is
+  in normal flow below the scroll (never overlays), yet contentContainer
+  pads bottom by footerHeight + lg (phantom overlay clearance,
+  WorkoutSummaryScreen.js:979). Remove double reservation.
+- **R2-7 (agent B):** Coach screen Weekly check-in card is a text wall
+  next to one-line siblings; tighten to one line, detail moves into the
+  check-in screen.
+
+RECOVERY: any dead session -> `git status`, review uncommitted diff against
+this entry, relaunch the affected agent with the same brief. Lead-held
+uncommitted edit: HomeScreen.js R2-1 guard (commits with the wave).
+
+## R. REMEDIATION CAMPAIGN (founder order 2026-07-11, second device walk) — superseded by R2 above for live defects
 
 _The first must-fix wave FAILED the founder's device walk: items were built on
 the wrong surfaces, "verified" claims were false (heading strip never matched
