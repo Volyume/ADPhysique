@@ -330,7 +330,7 @@ function maintenanceFloor(effectiveDays) {
 // to their MEV. Caps: every muscle to its MRV, and the three delt heads to a
 // combined 26. This is the phase-1 guarantee: no judged/structural zero, no
 // muscle over MRV.
-function enforceWeeklyFloorsAndCaps(weeklyTargets, goal, effectiveDays, weakPointKeys = []) {
+function enforceWeeklyFloorsAndCaps(weeklyTargets, goal, effectiveDays, weakPointKeys = [], equipment = null) {
   const t = { ...weeklyTargets };
   const overlay = GOAL_OVERLAYS[goal] ?? {};
   const maint = maintenanceFloor(effectiveDays);
@@ -407,8 +407,22 @@ function enforceWeeklyFloorsAndCaps(weeklyTargets, goal, effectiveDays, weakPoin
   // Women's Physique 1.20) the glute volume IS the division signature
   // (divisionMRV 30, Contreras split-by-type) and must never be discounted
   // against its own squat and hinge work. Balanced or de-emphasised
-  // divisions get the honest credit.
-  if ((overlay.glutes ?? 1.0) < 1.2) {
+  // divisions get the honest credit - but ONLY when the user's equipment
+  // can actually deliver it: the credit assumes the driver volume arrives
+  // through glute-loading compounds, and a thin pool (bodyweight quads =
+  // sissy squats; machine-only hamstrings = leg curls) delivers none of
+  // that indirect work. Each driver must offer at least one available
+  // compound tagged with a glutes secondary, or the trim is skipped and
+  // the full direct maintenance floor stands (adversarial-review fix,
+  // D46: bodyweight/machine-only Men's Physique kept its old floor-exact
+  // glute delivery instead of dropping below maintenance).
+  const driverDeliversGlutes = (driver) =>
+    (_effectivePool[driver] ?? []).some((e) =>
+      e.p !== 'isolation'
+      && (!Array.isArray(e.eq) || e.eq.includes(equipment))
+      && (e.secondary ?? []).includes('glutes'));
+  if ((overlay.glutes ?? 1.0) < 1.2
+    && driverDeliversGlutes('quads') && driverDeliversGlutes('hamstrings')) {
     trimSynergist('glutes', [['quads', 0.3], ['hamstrings', 0.4]], {
       structuralMaintenance: true,
     });
@@ -2793,7 +2807,7 @@ function _generatePlanInner(inputs) {
   // structural/judged muscles never zero, no muscle over MRV, delts capped at
   // a combined 26.
   const overlaidTargets = applyGoalOverlay(weeklyTargets, landmarks, goal, weakPointKeys, phase, effectiveDays);
-  const adjustedTargets = enforceWeeklyFloorsAndCaps(overlaidTargets, goal, effectiveDays, weakPointKeys);
+  const adjustedTargets = enforceWeeklyFloorsAndCaps(overlaidTargets, goal, effectiveDays, weakPointKeys, equipment);
 
   // Build workouts
   let rawWorkouts;

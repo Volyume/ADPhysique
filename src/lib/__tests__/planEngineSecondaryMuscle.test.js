@@ -63,14 +63,36 @@ describe('D46 half B: de-emphasised glutes are credited for squat/hinge work', (
     }
   });
 
-  test('effective glute volume (direct + indirect) never falls below the maintenance floor', () => {
+  test('effective glute volume (direct + indirect) never falls below the maintenance floor, on EVERY equipment', () => {
+    // Equipment matters: the adversarial review caught the first cut of this
+    // trim crediting indirect glute work that a thin pool (bodyweight quads =
+    // sissy squats; machine-only hamstrings = leg curls) cannot deliver. The
+    // trim now requires each driver's equipment-filtered pool to offer a
+    // glute-tagged compound, so this must hold everywhere - not just full_gym.
+    for (const equipment of ['full_gym', 'barbell_plates', 'dumbbells_only', 'home_gym', 'machines_cables', 'bodyweight'])
     for (const goal of ['general', 'mens_physique', 'classic_physique', 'bodybuilding', 'bikini', 'wellness'])
     for (const daysPerWeek of [2, 3, 4, 5, 6])
     for (const experience of ['beginner', 'intermediate', 'advanced']) {
-      const plan = generatePlan({ ...BASE, experience, daysPerWeek, goal });
+      const plan = generatePlan({ ...BASE, equipment, experience, daysPerWeek, goal });
       const g = plan.weeklyVolumeSummary.glutes;
       const maint = daysPerWeek <= 3 ? 4 : 6;
       expect(g.plannedSets + g.indirectSets).toBeGreaterThanOrEqual(maint);
+    }
+  });
+
+  test('thin-equipment regression pin: bodyweight / machine-only Men\'s Physique keeps its full direct glute floor', () => {
+    // The exact review reproduction: these pools have no glute-tagged
+    // compound on one or both drivers, so the trim must not fire at all and
+    // DIRECT delivery alone must reach the maintenance floor, as it did
+    // before D46.
+    for (const equipment of ['bodyweight', 'machines_cables'])
+    for (const daysPerWeek of [2, 4, 5]) {
+      const plan = generatePlan({
+        ...BASE, experience: 'beginner', daysPerWeek, goal: 'mens_physique',
+        equipment, sessionLengthMinutes: 60,
+      });
+      const maint = daysPerWeek <= 3 ? 4 : 6;
+      expect(plan.weeklyVolumeSummary.glutes.plannedSets).toBeGreaterThanOrEqual(maint);
     }
   });
 
