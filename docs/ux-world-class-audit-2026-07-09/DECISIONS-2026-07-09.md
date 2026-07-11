@@ -1212,3 +1212,40 @@ one clean winner (verified coherent: no duplicate style keys/testIDs,
 comments consistent with code, all suites green), but ~420k agent tokens
 were burned on duplicate work. Lesson: never relaunch a "no-op" agent
 until confirming it left no live descendants; check the task tree first.
+
+## D60 — Logger S5 cohesion pass: three design calls ruled (2026-07-11)
+
+S5 (cohesion polish) found the logger surface already largely tokenised
+(S1-S4 did the token work inline: no hard-coded colours, haptics already
+on the shared vocabulary). Two pure token substitutions applied and
+committed (`bf72c51`: inline-pill minHeight 44 -> workoutLoggerSize
+token; orientationRow paddingVertical 2 -> spacing.xxs; byte-identical).
+Three design-JUDGEMENT calls were correctly flagged, not guessed; ruled
+here on the best-for-users criterion:
+
+1. Logged-row corner radius (radius.xs=4) vs the house Card (radius.lg=16)
+   -- KEEP DENSE. The "This workout" logged-set list is a data-dense
+   session receipt (one row per set); the house idiom for dense lists is
+   compact rows (Diary food entries are dense rows, not cards). The
+   cohesion mandate targets the Now card (the hero), which S2 put on the
+   house Card. Bumping every row to a 16px card would bloat the receipt
+   and cut scannability -- worse for a log. The inline set editor stays
+   tied to its row at the same radius. No change.
+2. beatLineLabel line-height (hand-rolled 18 vs type.bodySm's 20) -- KEEP
+   TIGHT. The beat line is a space-constrained anchor row directly above
+   the inputs (D58); the 2px-tighter line-height is intentional density
+   where vertical space is most precious. Not forcing the type role here
+   is correct. No change. (The other one-off line-heights the agent noted
+   -- swapItemReason, firstSetHintText -- are outside the logger hero
+   surface and out of this slot's scope.)
+3. type.num() on the logged-set data numerals (setNumText, loggedEst1RM)
+   -- APPLY. The app-wide "numerals as hero" system puts type.num() +
+   tabular-nums on every data number; a stacked column of logged sets
+   (100 x 8, 102.5 x 8) genuinely reads better with aligned digits. This
+   is the one genuine cohesion win, consistent with the house numerals
+   system. Delegated as a small follow-up edit (re-anchor the
+   cp10Stage3WorkoutShellsLiveTheme pin to the new invariant, same
+   contract).
+
+Calls 1 and 2 (like D58/D59) remain subject to the founder's S5
+device-walk taste veto.

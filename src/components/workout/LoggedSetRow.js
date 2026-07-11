@@ -6,7 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 // added to weight/nutrition surfaces.
 import * as ContextMenu from 'zeego/context-menu';
 
-import { colors, spacing, radius, fontSize, fontWeight, type, iconSize, withAlpha } from '../../styles/theme';
+import { colors, spacing, radius, fontWeight, type, iconSize, withAlpha } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { workoutLoggerSize } from '../../styles/layout';
 import { calculate1RM } from '../../lib/algorithms';
@@ -188,9 +188,16 @@ const styles = StyleSheet.create({
   loggedSetRowWarmup: { borderColor: withAlpha(colors.warning, 0.376), backgroundColor: colors.warningBg || colors.surface },
   loggedSetTextWarmup: { color: colors.warning },
   setNumBadge: { width: workoutLoggerSize.setNumberBadge, height: workoutLoggerSize.setNumberBadge, borderRadius: radius.lg, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
-  setNumText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
-  loggedSetText: { ...type.bodySm, flex: 1, color: colors.textPrimary, minWidth: 0 },
-  loggedEst1RM: { ...type.caption, color: colors.textMuted },
+  // D43 S5 (D60 call 3): logged-set data numerals (set number, weight x
+  // reps, est. 1RM) move onto the house numerals role (type.num(<role>)),
+  // matching the app-wide "numerals as hero" system (see e.g.
+  // src/screens/DiaryScreen.js, src/components/SetEntry.js) so the house
+  // numeral fontFamily + tabular-nums apply and stacked logged sets align.
+  // setNumText keeps its bold emphasis (captionStrong is the nearest xs/
+  // semibold house role; fontWeight.bold restores the original weight).
+  setNumText: { ...type.num('captionStrong'), fontWeight: fontWeight.bold, color: colors.textSecondary },
+  loggedSetText: { ...type.num('bodySm'), flex: 1, color: colors.textPrimary, minWidth: 0 },
+  loggedEst1RM: { ...type.num('caption'), color: colors.textMuted },
   // D43 S4: in-place editor block, replaces the modal sheet's chrome with a
   // house Card-adjacent surface local to the row -- same radius/border
   // language as loggedSetRow, no new one-off idiom.
@@ -216,9 +223,9 @@ function buildLiveStyles(t) {
     loggedSetRowWarmup: { borderColor: withAlpha(t.colors.warning, 0.376), backgroundColor: t.colors.warningBg || t.colors.surface },
     loggedSetTextWarmup: { color: t.colors.warning },
     setNumBadge: { backgroundColor: t.colors.surface2 },
-    setNumText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
-    loggedSetText: { ...t.type.bodySm, color: t.colors.textPrimary },
-    loggedEst1RM: { ...t.type.caption, color: t.colors.textMuted },
+    setNumText: { ...t.type.num('captionStrong'), fontWeight: fontWeight.bold, color: t.colors.textSecondary },
+    loggedSetText: { ...t.type.num('bodySm'), color: t.colors.textPrimary },
+    loggedEst1RM: { ...t.type.num('caption'), color: t.colors.textMuted },
     editingWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     editingTitle: { ...t.type.label, color: t.colors.textPrimary },
     editingCancelText: { ...t.type.label, color: t.colors.textSecondary },
