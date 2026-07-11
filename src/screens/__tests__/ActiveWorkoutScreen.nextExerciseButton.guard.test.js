@@ -128,17 +128,21 @@ describe('target-reached bottom bar gains "Next exercise" / "Finish workout" BES
 });
 
 describe('extra sets beyond the plan stay loggable (D8 junk-volume: never a wall)', () => {
-  test('D43 S3: the promoted in-scroll "Log another set" button retires -- the now-permanent bar primary arms AND logs the extra set in the same tap', () => {
+  test('D43 S3: the promoted in-scroll "Log another set" button retires -- the permanent bar primary logs the extra set, which arms extraSetArmed on SUCCESS', () => {
     // The separate arm-then-log round trip is gone: there is no more
     // standalone "Log another set" control anywhere in source.
     expect(SRC).not.toContain('testID="volyume-btn-extra-set"');
     expect(SRC).not.toContain('accessibilityLabel="Log another set"');
-    // handleCompleteSetPress -- the SAME function the bar's primary always
-    // calls (pinned above via onPress={handleCompleteSetPress}) -- now arms
-    // extraSetArmed itself the moment it is invoked past target, folding the
-    // old two-step "arm, then tap Log set" into the primary's one tap.
+    // L1 review fix (re-anchored): the arm no longer happens on the TAP in
+    // handleCompleteSetPress (an invalid/aborted tap past target must NOT flip
+    // the mode). handleCompleteSetPress must NOT arm extraSetArmed itself...
     const pressFn = SRC.match(/function handleCompleteSetPress\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
-    expect(pressFn).toContain('if (targetComplete && !extraSetArmed) setExtraSetArmed(true);');
+    expect(pressFn).not.toContain('setExtraSetArmed(true)');
+    // ...instead handleCompleteSet arms it in its SUCCESS path (after the set
+    // is actually created), only for a working set logged with the target
+    // already met -- the extra-set case.
+    expect(SRC).toContain("if (currentSet.setType !== 'warmup' && targetSets && workingLogged >= targetSets && !extraSetArmed) {");
+    expect(SRC).toContain('setExtraSetArmed(true);');
   });
 
   test('arming extraSetArmed flips the bar back to Log-set-only (the advance action gate), exactly as it did before', () => {

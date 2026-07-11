@@ -1566,6 +1566,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Auto-advance to next exercise when target sets just completed
       const newWorkingCount = countProgressSets(newLoggedSets);
       const justHitTarget = targetSets && newWorkingCount >= targetSets && workingLogged < targetSets;
+      // L1 (D43 S3 review): arm extraSetArmed HERE, in the success path, when a
+      // working set is logged with the target ALREADY met -- the "extra set"
+      // case. This used to fire on the tap in handleCompleteSetPress, before
+      // validation, so an invalid/aborted past-target tap flipped the mode and
+      // hid the advance CTA (Next exercise / Finish) until the next successful
+      // log. Arming only after a real log fixes that. This sits after the
+      // superset forward-jump return above, so it arms only when we stay on the
+      // exercise (a jump changes currentExerciseIndex, which resets this flag
+      // anyway) -- exactly when the advance CTA is showing.
+      if (currentSet.setType !== 'warmup' && targetSets && workingLogged >= targetSets && !extraSetArmed) {
+        setExtraSetArmed(true);
+      }
       if (justHitTarget && !isLastExercise) {
         if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
         autoAdvanceRef.current = setTimeout(() => {
@@ -1873,10 +1885,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (perSide) return;
     // D43 S3: the bottom bar's logging primary is now permanent (blueprint
     // 3.7), so there is no separate "Log another set" tap to arm the extra
-    // set first -- tapping the ever-present primary past target both arms
-    // extraSetArmed (same flag, same downstream header/auto-advance
-    // behaviour as before) and logs, in one gesture.
-    if (targetComplete && !extraSetArmed) setExtraSetArmed(true);
+    // set first -- tapping the ever-present primary past target logs another
+    // set. extraSetArmed is armed inside handleCompleteSet's SUCCESS path
+    // (L1 review fix), NOT here on the tap, so an invalid or aborted tap past
+    // target no longer flips the mode and hides the advance CTA.
     const uni = exercise ? unilateralExercises.has(exercise.id) : false;
     if (uni) return startPerSide();
     if (isClusterType(currentSet.setType)) return startCluster();

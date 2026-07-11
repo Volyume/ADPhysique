@@ -1249,3 +1249,34 @@ here on the best-for-users criterion:
 
 Calls 1 and 2 (like D58/D59) remain subject to the founder's S5
 device-walk taste veto.
+
+## D61 — Logger adversarial review triaged; L1 CTA-arming fixed (founder GO, 2026-07-11)
+
+The mandated fresh-eyes Opus adversarial review of the full S1-S5 logger
+arc returned NO blocker/high findings and cleared the arc as safe for the
+device walk. It confirmed the S4 edit path reuses the same PR/celebration/
+ED-suppression store action (no bypass), every re-pinned guard locks the
+same invariant (not a weaker one), and no Section 2 inviolable was
+touched. Four minor findings, all triaged:
+- L2 (stale "PR not re-run on edit" comment) and N1 (all logged rows
+  re-render per keystroke while editing) - FIXED (`49d56db`): comment
+  corrected to reflect the L07-F2 re-eval that IS present; the live
+  editValue/saving props now flow only to the row being edited so the
+  memo shields the rest. Also re-anchored the screen-mount U-A-1 mounted
+  test the slot's scoped runs had missed (full suite caught it).
+- M1 (inline set editor keyboard occlusion on small Android) - added to
+  the founder device-walk checklist as an explicit verify item; the
+  editor is now inline in the screen ScrollView (Android adjustResize),
+  which is likely better than the old modal, but only a device confirms.
+- L1 (an invalid/aborted "Log set" tap past target flipped extraSetArmed
+  before the set logged, hiding the advance CTA until the next successful
+  log) - founder chose FIX NOW. Fixed by moving the arm OUT of
+  handleCompleteSetPress (the tap) and INTO handleCompleteSet's success
+  path: a working set logged with the target already met arms
+  extraSetArmed only after the set is actually created. Placed after the
+  superset forward-jump early-return (a jump changes currentExerciseIndex,
+  which resets the flag anyway), so it arms only when we stay on the
+  exercise - exactly when the advance CTA shows. Invalid entry (returns at
+  validation) and errors (caught) never reach the arm. Guard re-anchored:
+  nextExerciseButton.guard now pins that handleCompleteSetPress does NOT
+  arm and handleCompleteSet's success path does. Full suite green.
