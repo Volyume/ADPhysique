@@ -1,17 +1,24 @@
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fontSize, spacing, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 
 const LAST_UPDATED = '4 July 2026';
 
 export default function PrivacyPolicyScreen() {
+  // CP-10 batch F (2026-07-11): live theme (src/hooks/useTheme.js). This
+  // screen renders its sections via .map()-free static JSX inside a plain
+  // ScrollView (no FlatList/FlashList/SectionList), so an unmemoised call
+  // matches AddCustomFoodScreen's own precedent (batch D).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, live.safe]}>
       <BackHeader title="Privacy Policy" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.updated}>Last updated {LAST_UPDATED}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.updated, live.updated]}>Last updated {LAST_UPDATED}</Text>
 
         <Section title="What Volyume collects">
           <Body>
@@ -124,16 +131,26 @@ export default function PrivacyPolicyScreen() {
 }
 
 function Section({ title, children }) {
+  // CP-10 batch F (2026-07-11): sibling function-component scope (not
+  // prop-drilled `live`/`t` from PrivacyPolicyScreen, matching
+  // AddCustomFoodScreen's Field/NumField precedent from batch D), own
+  // useTheme() call and shared buildLiveStyles(t).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <View style={styles.section}>
-      <Text maxFontSizeMultiplier={1.3} style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.sectionTitle, live.sectionTitle]} accessibilityRole="header">{title}</Text>
       {children}
     </View>
   );
 }
 
 function Body({ children }) {
-  return <Text maxFontSizeMultiplier={1.3} style={styles.body}>{children}</Text>;
+  // CP-10 batch F (2026-07-11): sibling function-component scope, own
+  // useTheme() call, same reasoning as Section above.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
+  return <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>{children}</Text>;
 }
 
 const styles = StyleSheet.create({
@@ -155,3 +172,20 @@ const styles = StyleSheet.create({
   },
   footer: { height: spacing.xl },
 });
+
+// CP-10 batch F (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, shared
+// by this file's three function-component scopes (PrivacyPolicyScreen,
+// Section, Body) so they can never drift out of step with each other or the
+// frozen block. Pure layout keys (flex/padding/height, no token) are
+// correctly omitted -- there is nothing to unfreeze for them. Same pattern
+// as AddCustomFoodScreen.js's buildLiveStyles (batch D).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    updated: { ...t.type.caption, color: t.colors.textMuted },
+    sectionTitle: { ...t.type.label, color: t.colors.textPrimary },
+    body: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+  };
+}

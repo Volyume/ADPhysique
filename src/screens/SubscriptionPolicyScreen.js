@@ -14,24 +14,32 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import { storeName } from '../lib/storeName';
 
 export default function SubscriptionPolicyScreen() {
   const platformStore = storeName();
+  // CP-10 batch F (2026-07-11): live theme (src/hooks/useTheme.js). This
+  // screen renders its sections/bullets via .map()-free static JSX inside a
+  // plain ScrollView (no FlatList/FlashList/SectionList), so an unmemoised
+  // call matches AddCustomFoodScreen's own precedent (batch D). Billing-
+  // adjacent copy and links are untouched -- theming only.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Free, Pro, and your data" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.intro}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.intro, live.intro]}>
           Here's what you get on Free, what Pro adds, and what happens to
           your data if you ever switch back.
         </Text>
 
         <Section
           icon="checkmark-done-outline"
-          tint={colors.success}
+          tint={t.colors.success}
           title="What's always free"
         >
           <Body>
@@ -52,7 +60,7 @@ export default function SubscriptionPolicyScreen() {
 
         <Section
           icon="barbell-outline"
-          tint={colors.primary}
+          tint={t.colors.primary}
           title="What Pro adds"
         >
           <Body>
@@ -69,7 +77,7 @@ export default function SubscriptionPolicyScreen() {
 
         <Section
           icon="swap-horizontal-outline"
-          tint={colors.warning}
+          tint={t.colors.warning}
           title="If you switch from Pro back to Free"
         >
           <Body>
@@ -90,7 +98,7 @@ export default function SubscriptionPolicyScreen() {
 
         <Section
           icon="time-outline"
-          tint={colors.primary}
+          tint={t.colors.primary}
           title="Your free trial"
         >
           <Body>
@@ -106,7 +114,7 @@ export default function SubscriptionPolicyScreen() {
 
         <Section
           icon="trash-outline"
-          tint={colors.error}
+          tint={t.colors.error}
           title="Deleting your account"
         >
           <Body>
@@ -117,7 +125,7 @@ export default function SubscriptionPolicyScreen() {
           </Body>
         </Section>
 
-        <Text maxFontSizeMultiplier={1.3} style={styles.footer}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.footer, live.footer]}>
           We won't quietly raise prices, change what's free, or hold your data behind a paywall. If something changes, you'll hear about it first.
         </Text>
       </ScrollView>
@@ -126,13 +134,21 @@ export default function SubscriptionPolicyScreen() {
 }
 
 function Section({ icon, tint, title, children }) {
+  // CP-10 batch F (2026-07-11): sibling function-component scope (not
+  // prop-drilled `live`/`t` from SubscriptionPolicyScreen, matching
+  // AddCustomFoodScreen's Field/NumField precedent from batch D), own
+  // useTheme() call and shared buildLiveStyles(t). `tint` itself already
+  // arrives live from the caller (t.colors.*), so the icon and its
+  // withAlpha() wash need no separate live entry here.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
-    <View style={styles.section}>
+    <View style={[styles.section, live.section]}>
       <View style={styles.sectionHeader}>
         <View style={[styles.sectionIconWrap, { backgroundColor: withAlpha(tint, 0.125) }]}>
           <Ionicons name={icon} size={18} color={tint} />
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionTitle, live.sectionTitle]} accessibilityRole="header">{title}</Text>
       </View>
       <View style={styles.sectionBody}>{children}</View>
     </View>
@@ -140,27 +156,44 @@ function Section({ icon, tint, title, children }) {
 }
 
 function Body({ children }) {
-  return <Text maxFontSizeMultiplier={1.3} style={styles.body}>{children}</Text>;
+  // CP-10 batch F (2026-07-11): sibling function-component scope, own
+  // useTheme() call, same reasoning as Section above.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
+  return <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>{children}</Text>;
 }
 
 function Strong({ children }) {
-  return <Text maxFontSizeMultiplier={1.3} style={styles.strong}>{children}</Text>;
+  // CP-10 batch F (2026-07-11): sibling function-component scope, own
+  // useTheme() call, same reasoning as Section above. fontWeight is not
+  // part of useTheme()'s returned shape, so it stays frozen in styles.strong.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
+  return <Text maxFontSizeMultiplier={1.3} style={[styles.strong, live.strong]}>{children}</Text>;
 }
 
 function Bullet({ children }) {
+  // CP-10 batch F (2026-07-11): sibling function-component scope, own
+  // useTheme() call, same reasoning as Section above.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <View style={styles.bulletRow}>
-      <View style={styles.bulletDot} />
-      <Text maxFontSizeMultiplier={1.3} style={styles.bulletText}>{children}</Text>
+      <View style={[styles.bulletDot, live.bulletDot]} />
+      <Text maxFontSizeMultiplier={1.3} style={[styles.bulletText, live.bulletText]}>{children}</Text>
     </View>
   );
 }
 
 function KeyPoint({ children }) {
+  // CP-10 batch F (2026-07-11): sibling function-component scope, own
+  // useTheme() call, same reasoning as Section above.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
-    <View style={styles.keypoint}>
-      <Ionicons name="bookmark" size={14} color={colors.primary} />
-      <Text maxFontSizeMultiplier={1.3} style={styles.keypointText}>{children}</Text>
+    <View style={[styles.keypoint, live.keypoint]}>
+      <Ionicons name="bookmark" size={14} color={t.colors.primary} />
+      <Text maxFontSizeMultiplier={1.3} style={[styles.keypointText, live.keypointText]}>{children}</Text>
     </View>
   );
 }
@@ -190,3 +223,33 @@ const styles = StyleSheet.create({
 
   footer: { ...type.captionTight, color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm, fontStyle: 'italic' },
 });
+
+// CP-10 batch F (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, shared
+// by this file's six function-component scopes (SubscriptionPolicyScreen,
+// Section, Body, Strong, Bullet, KeyPoint) so they can never drift out of
+// step with each other or the frozen block. Pure layout keys
+// (flex/gap/padding/width, no token) are correctly omitted -- there is
+// nothing to unfreeze for them. `sectionIconWrap` needs no live entry: its
+// colour comes entirely from the `tint` prop, itself already live at the
+// call site. fontWeight.* is not part of useTheme()'s returned shape
+// (src/hooks/useTheme.js) because it never varies by theme/contrast, so it
+// stays frozen wherever the source style spreads it (styles.strong,
+// styles.keypointText). Same pattern as AddCustomFoodScreen.js's
+// buildLiveStyles (batch D).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    intro: { color: t.colors.textSecondary, fontSize: t.fontSize.md },
+    section: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    sectionTitle: { ...t.type.title, color: t.colors.textPrimary },
+    body: { color: t.colors.textPrimary, fontSize: t.fontSize.sm },
+    strong: { color: t.colors.textPrimary },
+    bulletDot: { backgroundColor: t.colors.primary },
+    bulletText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    keypoint: { backgroundColor: t.colors.primaryBg, borderLeftColor: t.colors.primary },
+    keypointText: { ...t.type.bodySm, color: t.colors.textPrimary },
+    footer: { ...t.type.captionTight, color: t.colors.textMuted },
+  };
+}

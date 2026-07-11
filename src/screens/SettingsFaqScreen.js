@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, spacing, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { SettingsPage } from '../components/SettingsPrimitives';
 import CollapsibleSection from '../components/CollapsibleSection';
 
@@ -105,10 +106,17 @@ export const FAQS = [
 export default function SettingsFaqScreen() {
   const [openKeys, setOpenKeys] = useState({});
   const toggle = (key) => setOpenKeys((prev) => ({ ...prev, [key]: !prev[key] }));
+  // CP-10 batch F (2026-07-11): live theme (src/hooks/useTheme.js). This
+  // screen renders its FAQ list via .map() inside a plain ScrollView
+  // (SettingsPage's own chrome, no FlatList/FlashList/SectionList), so an
+  // unmemoised call matches AddCustomFoodScreen's/MealPlanScreen's own
+  // precedent (batch D/E).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
 
   return (
     <SettingsPage title="Help & FAQ">
-      <Text maxFontSizeMultiplier={1.3} style={styles.intro}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.intro, live.intro]}>
         Answers to what people ask most. Nothing here needs a connection, and it works the same whether you are on Free or Pro.
       </Text>
       <View style={styles.list}>
@@ -130,3 +138,15 @@ const styles = StyleSheet.create({
   intro: { ...type.body, color: colors.textPrimary, lineHeight: 22, marginBottom: spacing.md },
   list: { gap: spacing.sm },
 });
+
+// CP-10 batch F (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values. `list`
+// is a pure layout key (gap only, no token) and is correctly omitted -- there
+// is nothing to unfreeze for it. Same pattern as AddCustomFoodScreen.js's
+// buildLiveStyles (batch D).
+function buildLiveStyles(t) {
+  return {
+    intro: { ...t.type.body, color: t.colors.textPrimary },
+  };
+}
