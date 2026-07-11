@@ -1067,3 +1067,14 @@ confirmed the divergent ask is gone and the record path writes one
 value. Landed `f94d156`, unilateral guard rewritten to the new contract
 23/23, full suite green. Terminology: this is the sequential/unilateral
 case (all reps one side then the other), not alternating.
+
+## D55 — Pause for founder review before the big backlog (founder, 2026-07-11)
+Founder instruction: once the current device-testing wave fixes (the 12
+hands-on items) are all landed, PAUSE the queue. Do NOT auto-proceed into
+the remaining board backlog (D43 logger S2-S5, the pristine pass, growth,
+etc.). Instead bring the founder a reviewed remaining-task list: for each
+item, what it brings to the app, whether it is genuinely necessary, and
+how much it improves the user experience - so the founder steers what is
+built next. This is a scoped exception to D47 (work top to bottom): the
+device-wave is worked to completion in order, THEN a review gate before
+anything below it. Standing until the founder resumes the queue.
