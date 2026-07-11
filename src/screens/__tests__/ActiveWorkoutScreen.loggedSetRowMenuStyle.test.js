@@ -7,7 +7,9 @@
  * `asChild` Trigger (Android AND iOS) does
  * `cloneElement(children, { style, ...props })`; with no `style` prop of its
  * own that clobbers the row's whole style array to `undefined`, dropping
- * `flexDirection: 'row'` (see styles.loggedSetRow in ActiveWorkoutScreen.js).
+ * `flexDirection: 'row'` (see styles.loggedSetRow, now in
+ * src/components/workout/LoggedSetRow.js after the D43 S1 extraction --
+ * ActiveWorkoutScreen.js at the time of this defect held it directly).
  * The existing cp10Stage3WorkoutShellsLiveTheme.test.js only ever mounts
  * LoggedSetRow WITHOUT `onDelete` (the unwrapped, no-menu path), so it never
  * exercised the wrapped path and could not have caught this regression.
@@ -107,7 +109,14 @@ jest.mock('../../components/FeedbackSheet', () => {
 
 import { create, act } from 'react-test-renderer';
 import { StyleSheet } from 'react-native';
-import { LoggedSetRow } from '../ActiveWorkoutScreen';
+// Re-pinned for D43 S1 extraction: LoggedSetRow moved out of
+// ActiveWorkoutScreen.js into src/components/workout/LoggedSetRow.js (pure
+// extraction, no behaviour/visual change). ActiveWorkoutScreen.js still
+// re-exports it (`export { LoggedSetRow };`), but this suite now imports the
+// real module directly rather than through that re-export, so it keeps
+// pinning the actual component regardless of whether a later slot ever
+// drops the re-export.
+import { LoggedSetRow } from '../../components/workout/LoggedSetRow';
 
 describe('ActiveWorkoutScreen/LoggedSetRow: zeego menu wrap does not clobber row layout (founder defect 2026-07-11)', () => {
   test('row mounted WITH onDelete (the only path production uses) still lays out horizontally', () => {

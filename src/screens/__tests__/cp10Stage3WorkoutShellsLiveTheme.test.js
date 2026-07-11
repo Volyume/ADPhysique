@@ -19,8 +19,9 @@
  * Rather than mount the whole screen, this pins ONE representative element
  * per screen, each exported specifically for this purpose (see the "Named
  * export" comments at their definitions):
- *   - LoggedSetRow (ActiveWorkoutScreen.js): pure props-in/JSX-out, no store
- *     dependency at all.
+ *   - LoggedSetRow (src/components/workout/LoggedSetRow.js since the D43 S1
+ *     extraction; ActiveWorkoutScreen.js re-exports it): pure props-in/
+ *     JSX-out, no store dependency at all.
  *   - StatBox (WorkoutSummaryScreen.js): one store field (reduceMotion) plus
  *     primitive props.
  *
@@ -113,7 +114,12 @@ jest.mock('../../components/FeedbackSheet', () => {
 import { create, act } from 'react-test-renderer';
 import { StyleSheet } from 'react-native';
 import useAppStore from '../../store/useAppStore';
-import { LoggedSetRow } from '../ActiveWorkoutScreen';
+// Re-pinned for D43 S1 extraction: LoggedSetRow moved out of
+// ActiveWorkoutScreen.js into src/components/workout/LoggedSetRow.js (pure
+// extraction, no behaviour/visual change). ActiveWorkoutScreen.js still
+// re-exports it (`export { LoggedSetRow };`), but this suite now imports the
+// real module directly.
+import { LoggedSetRow } from '../../components/workout/LoggedSetRow';
 import { StatBox } from '../WorkoutSummaryScreen';
 import * as theme from '../../styles/theme';
 

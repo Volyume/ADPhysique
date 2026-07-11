@@ -9,6 +9,20 @@ const SET_ENTRY = fs.readFileSync(
   path.join(__dirname, '..', '..', 'components', 'SetEntry.js'),
   'utf8',
 );
+// Re-pinned for D43 S1 extraction: LoggedSetRow and EmptyExerciseView moved
+// out of ActiveWorkoutScreen.js into src/components/workout/ (pure
+// extraction, no behaviour/visual change -- see the extraction's own header
+// comments in each moved file). The assertions below that used to read these
+// components' JSX/styles off ACTIVE_WORKOUT now read the same source text
+// off the new files instead; the invariant each assertion pins is unchanged.
+const LOGGED_SET_ROW = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'LoggedSetRow.js'),
+  'utf8',
+);
+const EMPTY_EXERCISE_VIEW = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'EmptyExerciseView.js'),
+  'utf8',
+);
 
 describe('ActiveWorkoutScreen gym-use polish', () => {
   test('terminal workout completion has one primary finish control', () => {
@@ -91,7 +105,10 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   });
 
   test('empty workout state uses the same fixed header layout as the logger', () => {
-    const emptyWindow = ACTIVE_WORKOUT.match(/function EmptyExerciseView[\s\S]*?const styles = StyleSheet\.create/)?.[0] ?? '';
+    // Re-pinned for D43 S1 extraction: EmptyExerciseView is now its own
+    // module (src/components/workout/EmptyExerciseView.js), so the window is
+    // the whole file rather than a slice of ActiveWorkoutScreen.js.
+    const emptyWindow = EMPTY_EXERCISE_VIEW.match(/export default function EmptyExerciseView[\s\S]*?const styles = StyleSheet\.create/)?.[0] ?? '';
 
     expect(emptyWindow).toContain('style={styles.headerSide}');
     expect(emptyWindow).toContain('style={styles.headerCenter}');
@@ -100,10 +117,14 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   });
 
   test('logged set edit rows include the set content in the spoken label', () => {
-    expect(ACTIVE_WORKOUT).toContain('const spokenSetLabel = [');
-    expect(ACTIVE_WORKOUT).toContain("isWarmup ? 'Edit warm-up set' : `Edit set ${progressNum}`");
-    expect(ACTIVE_WORKOUT).toContain('accessibilityLabel={spokenSetLabel}');
-    const loggedRowWindow = ACTIVE_WORKOUT.match(/const LoggedSetRow[\s\S]*?\n\}\);/)?.[0] ?? '';
+    // Re-pinned for D43 S1 extraction: LoggedSetRow is now its own module
+    // (src/components/workout/LoggedSetRow.js); ActiveWorkoutScreen.js only
+    // keeps `export { LoggedSetRow };` as a re-export, so this invariant
+    // reads the new file's source instead.
+    expect(LOGGED_SET_ROW).toContain('const spokenSetLabel = [');
+    expect(LOGGED_SET_ROW).toContain("isWarmup ? 'Edit warm-up set' : `Edit set ${progressNum}`");
+    expect(LOGGED_SET_ROW).toContain('accessibilityLabel={spokenSetLabel}');
+    const loggedRowWindow = LOGGED_SET_ROW.match(/export const LoggedSetRow[\s\S]*?\n\}\);/)?.[0] ?? '';
     expect(loggedRowWindow).toContain('name="chevron-forward"');
     expect(loggedRowWindow).not.toContain('name="checkmark-circle"');
   });
@@ -125,7 +146,9 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.targetText, live.targetText]} numberOfLines={1}>');
     expect(ACTIVE_WORKOUT).toContain('targetText: { flex: 1, ...type.captionTight, color: colors.textMuted }');
     expect(ACTIVE_WORKOUT).toMatch(/beatLine: \{[\s\S]*minHeight: 36/);
-    expect(ACTIVE_WORKOUT).toMatch(/loggedSetRow: \{[\s\S]*minHeight: workoutLoggerSize\.loggedSetMinHeight/);
+    // Re-pinned for D43 S1 extraction: loggedSetRow moved to
+    // src/components/workout/LoggedSetRow.js's own frozen styles.
+    expect(LOGGED_SET_ROW).toMatch(/loggedSetRow: \{[\s\S]*minHeight: workoutLoggerSize\.loggedSetMinHeight/);
     expect(ACTIVE_WORKOUT).toContain('numberOfLines={1}');
     expect(SET_ENTRY).toContain('>Est. max ~{Math.round(live1RM)}{units}</Text>');
     expect(SET_ENTRY).not.toContain('>−</Text>');
@@ -170,9 +193,11 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('inlineActionPill');
     expect(ACTIVE_WORKOUT).toMatch(/completeBtn: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight,[\s\S]*paddingVertical: spacing\.xs/);
     expect(ACTIVE_WORKOUT).toMatch(/extraSetBtnPromoted: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight,[\s\S]*paddingVertical: spacing\.xs/);
-    expect(ACTIVE_WORKOUT).toMatch(/addFirstBtn: \{[\s\S]*minHeight: workoutLoggerSize\.addExerciseMinHeight,[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*paddingHorizontal: spacing\.lg,[\s\S]*paddingVertical: spacing\.sm/);
-    expect(ACTIVE_WORKOUT).toContain('addFirstBtnText: { ...type.label, color: colors.onPrimary }');
-    expect(ACTIVE_WORKOUT).not.toContain('addFirstBtnText: { fontSize: fontSize.lg');
+    // Re-pinned for D43 S1 extraction: addFirstBtn/addFirstBtnText moved to
+    // src/components/workout/EmptyExerciseView.js's own frozen styles.
+    expect(EMPTY_EXERCISE_VIEW).toMatch(/addFirstBtn: \{[\s\S]*minHeight: workoutLoggerSize\.addExerciseMinHeight,[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*paddingHorizontal: spacing\.lg,[\s\S]*paddingVertical: spacing\.sm/);
+    expect(EMPTY_EXERCISE_VIEW).toContain('addFirstBtnText: { ...type.label, color: colors.onPrimary }');
+    expect(EMPTY_EXERCISE_VIEW).not.toContain('addFirstBtnText: { fontSize: fontSize.lg');
     expect(ACTIVE_WORKOUT).toMatch(/inlineActionPill: \{[\s\S]*minHeight: 44/);
     expect(ACTIVE_WORKOUT).toMatch(/notesChip: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
     expect(ACTIVE_WORKOUT).toMatch(/clusterCancel: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
