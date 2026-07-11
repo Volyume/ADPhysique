@@ -53,9 +53,9 @@ import {
   shouldConfirmBeforeFinish,
 } from '../lib/workoutHelpers';
 import {
-  formatPerSide, loadUnilateralExercises, setUnilateralExercise,
+  loadUnilateralExercises, setUnilateralExercise,
   loadUnilateralAsked, markUnilateralAsked,
-  lowerSideReps, perSideRestPlan, halfRestSeconds,
+  perSideRestPlan, halfRestSeconds,
 } from '../lib/unilateral';
 import { FORM_TIPS } from '../lib/formTips';
 import { GLOSSARY } from '../lib/coachGlossary';
@@ -305,10 +305,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // lighter repeat-suggestion for later exercises fires via appAlert
   // directly and never touches this state.
   const [unilateralSuggest, setUnilateralSuggest] = useState(null);
-  // D9: per-side (unilateral) two-phase set in progress. null when not
-  // active. shape: { setType, weight, leftReps }.
+  // D-founder unilateral reversal (2026-07-11, founder device verdict): the
+  // original D9 build asked the user to type an INDEPENDENT rep count for
+  // the second side, which the founder ruled ED-adverse - it normalises
+  // training one side harder than the other. A unilateral set now
+  // prescribes the SAME reps for both sides; this state only GUIDES the
+  // user through completing them - side one, a rest-class-governed pause
+  // (lib/unilateral.js perSideRestPlan, unchanged), side two - and the
+  // pair still commits as ONE workout_sets row (finishPerSide below), same
+  // one-row storage invariant as before. null when no guided per-side set
+  // is in progress.
+  // shape: { setType, weight, reps, phase: 'side1' | 'side2' }
   const [perSide, setPerSide] = useState(null);
-  const [perSideReps, setPerSideReps] = useState('');
   const [setTargets, setSetTargets] = useState([]);
   const [targetReason, setTargetReason] = useState(null);
   const [showSetTypePicker, setShowSetTypePicker] = useState(false);
@@ -784,7 +792,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setCluster(null);
     setClusterReps('');
     setPerSide(null);
-    setPerSideReps('');
     setExtraSetArmed(false);
     setNoteText('');
     setShowNoteInput(false);
@@ -951,7 +958,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (unilateralWalkthroughSeenRef.current) {
       appAlert(
         'Log this one side at a time?',
-        `${exercise.name} is usually trained one side at a time. Do one side, then the other; it still counts as one working set.`,
+        `${exercise.name} is usually trained one side at a time. Do the same reps on each side, one after the other; it still counts as one working set.`,
         [
           { text: 'No, log as normal', style: 'cancel', onPress: () => handleUnilateralAnswer(exercise.id, false) },
           { text: 'Yes, log per side', onPress: () => handleUnilateralAnswer(exercise.id, true) },
@@ -1163,7 +1170,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setCluster(null);
     setClusterReps('');
     setPerSide(null);
-    setPerSideReps('');
 
     // Guard so that async state updates don't land after the exercise
     // changes (rapid swap) or the screen unmounts mid-load. Without this,
@@ -1914,15 +1920,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setClusterReps('');
   }
 
-  // ─── Per-side (unilateral) sets (D9) ─────────────────────────────────
-  // Same two-phase shape as the cluster flow above: side one accumulates
-  // locally, a rest-class-governed pause runs (lib/unilateral.js
-  // perSideRestPlan - D9 amendment 2), side two is entered, and the pair
-  // commits as ONE workout_sets row via the normal handleCompleteSet path -
-  // actual_reps is the LOWER side (lowerSideReps), the breakdown rides in
-  // notes as "L 10 / R 9" (formatPerSide), exactly as the cluster's
-  // breakdown rides in notes (clusterSet.js). No schema change: left_reps/
-  // right_reps (migration 054, legacy) stay untouched and unwritten.
+  // ─── Per-side (unilateral) sets, D-founder reversal ──────────────────
+  // Sequential unilateral logging (all reps on one side, then the other -
+  // not "alternating", which would mean swapping sides every rep): both
+  // sides share the SAME prescribed reps, taken once from the set entry's
+  // own reps field before starting. This flow only GUIDES the user through
+  // completing them - side one, a rest-class-governed pause (lib/
+  // unilateral.js perSideRestPlan, unchanged D9 amendment 2 behaviour),
+  // side two - there is no second number to type. The pair still commits
+  // as ONE workout_sets row via the normal handleCompleteSet path
+  // (finishPerSide below), same one-row storage invariant as before. No
+  // schema change: left_reps/right_reps (migration 054, legacy) stay
+  // untouched and unwritten for every newly logged set; formatPerSide
+  // (lib/unilateral.js) remains the READ path for older sets logged under
+  // the original divergent-count design, so historic rows still display.
 
   async function handleUnilateralAnswer(exerciseId, turnOn) {
     try {
@@ -1937,59 +1948,62 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }
   }
 
+  // Opens the guided sheet at "side one". reps is the ONE prescribed count
+  // used for both sides - never re-asked once side one starts.
   function startPerSide() {
-    const leftReps = parseInt(currentSet.reps, 10);
-    if (!Number.isFinite(leftReps) || leftReps < 1) {
-      appAlert('Enter reps', 'Enter the reps for your first side.');
+    const reps = parseInt(currentSet.reps, 10);
+    if (!Number.isFinite(reps) || reps < 1) {
+      appAlert('Enter reps', 'Enter the reps to do on each side.');
       return;
     }
     const isBodyweight = /body\s*weight/i.test(exercise?.equipment || '');
     const weightNum = parseFloat(currentSet.weight);
     if (!isBodyweight && (currentSet.weight === '' || currentSet.weight == null || isNaN(weightNum) || weightNum <= 0)) {
-      appAlert('Enter weight', `Enter the weight used (in ${units}) before logging your first side.`);
+      appAlert('Enter weight', `Enter the weight used (in ${units}) before starting your first side.`);
       return;
     }
     setPerSide({
       setType: currentSet.setType,
       weight: currentSet.weight,
-      leftReps,
+      reps,
+      phase: 'side1',
     });
-    setPerSideReps('');
+    hapticsVocab.selection();
+  }
+
+  // "Side one done": moves the guided sheet to side two and starts the
+  // rest-class-governed pause (D9 amendment 2, unchanged) - compound gets a
+  // real running rest timer (half the exercise's normal rest); isolation
+  // gets no timer at all, betweenSeconds is null and the sheet shows a
+  // plain "switch sides" prompt instead.
+  function advancePerSideToSideTwo() {
+    if (!perSide || perSide.phase !== 'side1') return;
+    setPerSide(p => (p ? { ...p, phase: 'side2' } : p));
     hapticsVocab.setLogged();
-    // D9 amendment 2: compound gets a real running rest timer for the
-    // between-sides pause (half the exercise's normal rest); isolation gets
-    // no timer here at all, betweenSeconds is null and the banner below
-    // shows a plain "switch sides" prompt instead.
     const restPlan = perSideRestPlan(exercise?.compoundIsolation, routineExercise?.restSeconds || defaultRestSeconds || 90);
     if (restPlan.betweenSeconds != null) startRestTimer(restPlan.betweenSeconds);
   }
 
+  // "Side two done": commits the pair as ONE workout_sets row, using the
+  // SAME reps prescribed at the start for both sides - never a lower/higher
+  // comparison, there is only ever one number.
   async function finishPerSide() {
     if (!perSide) return;
-    const rightReps = parseInt(perSideReps, 10);
-    if (!Number.isFinite(rightReps) || rightReps < 1) {
-      appAlert('Enter reps', 'Enter the reps for your other side.');
-      return;
-    }
-    const notes = mergeClusterNote(noteText, formatPerSide(perSide.leftReps, rightReps));
-    const actualReps = lowerSideReps(perSide.leftReps, rightReps);
     // perSideCompound tells handleCompleteSet's post-set rest (below) to
     // halve the normal rest too (D9 amendment 2: compound halves EVERY
     // pause, between sides AND after the second side); isolation gets the
     // ordinary full rest there, its rest-class difference is only the
-    // between-sides "switch sides" prompt handled in startPerSide above.
+    // between-sides "switch sides" prompt handled in advancePerSideToSideTwo
+    // above.
     await handleCompleteSet({
-      actualReps,
-      notes,
+      actualReps: perSide.reps,
       perSideCompound: exercise?.compoundIsolation === 'compound',
     });
     setPerSide(null);
-    setPerSideReps('');
   }
 
   function cancelPerSide() {
     setPerSide(null);
-    setPerSideReps('');
   }
 
   function handleRevertTimeCrunch() {
@@ -2937,53 +2951,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </View>
           ) : null}
 
-          {/* Per-side (unilateral) banner (D9): drives the two-phase
-              per-side flow. Reuses the cluster banner's exact styling and
-              shape (same interaction pattern, not a new one) - one input
-              row for the second side, one primary "finish" action, one
-              cancel. Rest-class copy (D9 amendment 2) differs: compound
-              names the running rest timer above; isolation shows a plain
-              switch-sides line with no timer at all. */}
-          {perSide ? (
-            <View style={[styles.clusterBanner, live.clusterBanner]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.clusterTitle, live.clusterTitle]}>
-                {exercise?.compoundIsolation === 'compound' ? 'Other side, after your rest' : 'Switch sides'}
-              </Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.clusterReps, live.clusterReps]}>
-                First side: {perSide.leftReps} reps
-                {perSide.weight ? ` @ ${perSide.weight}${units}` : ''}
-              </Text>
-              {exercise?.compoundIsolation !== 'compound' && (
-                <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>Swap sides when you're ready, no rush.</Text>
-              )}
-              <View style={styles.clusterInputRow}>
-                <TextInput maxFontSizeMultiplier={1.3}
-                  style={[styles.clusterInput, live.clusterInput]}
-                  value={perSideReps}
-                  onChangeText={setPerSideReps}
-                  placeholder="Other side reps"
-                  placeholderTextColor={t.colors.textMuted}
-                  accessibilityLabel="Other side reps"
-                  keyboardType="number-pad"
-                  returnKeyType="done"
-                  onSubmitEditing={finishPerSide}
-                />
-              </View>
-              <Button
-                variant="primary"
-                style={[styles.completeBtn, live.completeBtn]}
-                onPress={finishPerSide}
-                disabled={saving}
-                accessibilityLabel="Log the other side and finish this set"
-              >
-                <Ionicons name="checkmark-circle" size={20} color={t.colors.onPrimary} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.completeBtnText, live.completeBtnText]}>Log other side</Text>
-              </Button>
-              <TouchableOpacity onPress={cancelPerSide} style={[styles.clusterCancel, live.clusterCancel]} accessibilityLabel="Cancel this set">
-                <Text maxFontSizeMultiplier={1.3} style={[styles.clusterCancelText, live.clusterCancelText]}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
+          {/* Per-side (unilateral) guided set: moved off this inline banner
+              and onto a proper WorkoutBottomSheet (see below, alongside the
+              screen's other sheets), matching the rest of the logger's
+              sheet/card idiom instead of the old plain-View banner. */}
 
           {/* A2 (audit CL-4): the PRIMARY action moved to the bottom-pinned
               bar (thumb zone, stable position). In the scroll, only the
@@ -3296,14 +3267,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <View style={styles.supSteps}>
                   <View style={styles.supStep}>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>1</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>Do your first side.</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>Do your first side, using the reps in your set entry.</Text>
                   </View>
                   <View style={styles.supStep}>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>2</Text>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>
                       {isCompound
-                        ? 'Half your normal rest, then do the other side.'
-                        : 'Switch sides when you\'re ready, no forced timer.'}
+                        ? 'Half your normal rest, then do the same reps on the other side.'
+                        : 'Switch sides when you\'re ready, no forced timer, then do the same reps.'}
                     </Text>
                   </View>
                   <View style={styles.supStep}>
@@ -3316,7 +3287,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   </View>
                   <View style={styles.supStep}>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>4</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>Logs as one set, using your lower side's reps.</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>Logs as one set, the same reps on both sides.</Text>
                   </View>
                 </View>
 
@@ -3401,6 +3372,70 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
 
 
+
+        {/* Per-side (unilateral) guided set sheet, D-founder reversal
+            (2026-07-11): sequential unilateral logging - all reps on one
+            side, then the other (never "alternating", which would mean
+            swapping sides every rep). Both sides use the SAME prescribed
+            reps (perSide.reps), fixed once at the start; there is no second
+            number to type here, unlike the old two-input cluster-style
+            banner this replaces. Cancel (onClose) matches cancelPerSide so
+            a swipe-down or backdrop tap abandons the guided set exactly
+            like the old Cancel button did. */}
+        <WorkoutBottomSheet
+          visible={!!perSide}
+          onClose={cancelPerSide}
+          accessibilityLabel="Unilateral set, one side at a time"
+        >
+          {perSide ? (
+            <>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>
+                {perSide.phase === 'side1' ? 'Side one' : 'Side two'}
+              </Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.sheetExplainer, live.sheetExplainer]}>
+                {`${perSide.reps} reps${perSide.weight ? ` at ${perSide.weight}${units}` : ''}, the same on each side.`}
+              </Text>
+              {perSide.phase === 'side1' ? (
+                <>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>
+                    Do your first side, then confirm below.
+                  </Text>
+                  <Button
+                    variant="primary"
+                    style={[styles.completeBtn, live.completeBtn]}
+                    onPress={advancePerSideToSideTwo}
+                    disabled={saving}
+                    accessibilityLabel="First side done, move to the other side"
+                  >
+                    <Ionicons name="checkmark-circle" size={20} color={t.colors.onPrimary} />
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.completeBtnText, live.completeBtnText]}>Side one done</Text>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>
+                    {exercise?.compoundIsolation === 'compound'
+                      ? 'Resting, then do the same reps on your other side.'
+                      : 'Switch sides when you\'re ready, then do the same reps.'}
+                  </Text>
+                  <Button
+                    variant="primary"
+                    style={[styles.completeBtn, live.completeBtn]}
+                    onPress={finishPerSide}
+                    disabled={saving}
+                    accessibilityLabel="Other side done, log this set"
+                  >
+                    <Ionicons name="checkmark-circle" size={20} color={t.colors.onPrimary} />
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.completeBtnText, live.completeBtnText]}>Side two done</Text>
+                  </Button>
+                </>
+              )}
+              <TouchableOpacity onPress={cancelPerSide} style={[styles.clusterCancel, live.clusterCancel]} accessibilityLabel="Cancel this set">
+                <Text maxFontSizeMultiplier={1.3} style={[styles.clusterCancelText, live.clusterCancelText]}>Cancel</Text>
+              </TouchableOpacity>
+            </>
+          ) : null}
+        </WorkoutBottomSheet>
 
         {/* Set Type Picker Bottom Sheet */}
         <WorkoutBottomSheet

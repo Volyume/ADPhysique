@@ -1,34 +1,58 @@
 /**
- * Source-level regression guard — D9 unilateral (per-side) logging.
+ * Source-level regression guard — unilateral (per-side) logging.
  *
- * docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md, D9 + its
- * two amendments, built against docs/exercise-planning-2026-07-09/
- * plan-C-unilateral-logging.md (Option 2). ActiveWorkoutScreen.js is a
- * ~3,900-line screen with a huge live dependency surface (store, SQLite,
- * notifications, Live Activity, haptics); mounting it is impractical, so —
- * matching this file's existing convention (reorder.guard,
- * supersetRest.guard, usability.guard) — these are byte-level checks
- * against the source that pin the founder's exact ruling so it cannot
- * silently regress:
+ * REWRITTEN for the D-founder unilateral reversal (2026-07-11): the founder
+ * device-verdicted the original D9 "two-phase per-side" build as
+ * ED-adverse. That design asked the user to type an INDEPENDENT rep count
+ * for the second side (perSideReps), which normalises training one side
+ * harder than the other. This is a founder REVERSAL of D9, not a tweak —
+ * every pin below either survives unchanged (laterality gating, sticky-on
+ * activation, rest-class behaviour, one-time walkthrough) or is rewritten to
+ * assert the NEW contract: a unilateral exercise prescribes the SAME reps
+ * for both sides; the interaction GUIDES side one -> a rest-class-governed
+ * pause -> side two, with no second number ever typed; the pair still
+ * commits as ONE workout_sets row. Terminology: this is SEQUENTIAL
+ * (unilateral) logging — all reps on one side, then the other — not
+ * "alternating" (switching sides every rep), and the copy in
+ * ActiveWorkoutScreen.js is written accordingly.
+ *
+ * ActiveWorkoutScreen.js is a ~3,900-line screen with a huge live dependency
+ * surface (store, SQLite, notifications, Live Activity, haptics); mounting
+ * it is impractical, so — matching this file's existing convention
+ * (reorder.guard, supersetRest.guard, usability.guard) — these are
+ * byte-level checks against the source that pin the founder's exact ruling
+ * so it cannot silently regress:
  *
  *   1. Laterality detection is metadata-driven and never forced: the
- *      suggestion reads exercise.laterality === 'unilateral' (finally
- *      reading exerciseMetadata.js's deriveLaterality — plan-C found it was
- *      computed and stored but never consulted anywhere) and is gated on it,
- *      so a bilateral exercise is never prompted or auto-enrolled.
- *   2. Rest-class behaviour (D9 amendment 2): a compound per-side set halves
- *      the exercise's normal rest BETWEEN sides and AFTER the pair; an
- *      isolation per-side set has no forced between-sides timer (a
- *      switch-sides prompt instead) and takes the FULL normal rest after
- *      the pair — both driven off exercise.compoundIsolation, never a user
- *      setting.
- *   3. Storage invariant: the two-phase flow commits through the SAME
- *      handleCompleteSet a normal set uses (one call, one workout_sets row),
- *      with actualReps computed via lowerSideReps (the lower side, never
- *      the higher) and the breakdown riding in notes — never resurrecting
- *      the legacy left_reps/right_reps columns (migration 054).
+ *      suggestion reads exercise.laterality === 'unilateral' and is gated
+ *      on it, so a bilateral exercise is never prompted or auto-enrolled.
+ *      UNCHANGED by the reversal — still correct under the new contract.
+ *   2. Rest-class behaviour (D9 amendment 2, UNCHANGED): a compound
+ *      per-side set halves the exercise's normal rest BETWEEN sides and
+ *      AFTER the pair; an isolation per-side set has no forced
+ *      between-sides timer (a switch-sides prompt instead) and takes the
+ *      FULL normal rest after the pair — both driven off
+ *      exercise.compoundIsolation, never a user setting. Only WHERE the
+ *      between-sides timer starts moves (side one -> side two, not on
+ *      entry), because entering the guided sheet no longer means side one
+ *      is already done.
+ *   3. Storage invariant, REWRITTEN: the two-phase flow still commits
+ *      through the SAME handleCompleteSet a normal set uses (one call, one
+ *      workout_sets row), but actualReps is now the ONE prescribed reps
+ *      value (perSide.reps) used for both sides — never a lower/higher
+ *      comparison between two independently typed numbers (lowerSideReps
+ *      is gone from this screen). The legacy left_reps/right_reps columns
+ *      (migration 054) stay unwritten for every new set, exactly as
+ *      before; formatPerSide remains the READ path for OLDER sets logged
+ *      under the original divergent-count design (backward compatibility —
+ *      those historic rows must still render).
  *   4. The one-time walkthrough fires once ever, gated by the same
  *      '@volyume_seen_*' AsyncStorage convention as the rest of the app.
+ *      UNCHANGED gating mechanics; its copy is rewritten to describe the
+ *      same-reps-both-sides model instead of "your lower side's reps".
+ *   5. NEW: there is no per-side rep TextInput anywhere in the screen — the
+ *      divergent ask the founder ruled against is fully removed, not hidden
+ *      behind a toggle.
  */
 import fs from 'fs';
 import path from 'path';
@@ -38,7 +62,7 @@ const ACTIVE_WORKOUT = fs.readFileSync(
   'utf8',
 );
 
-describe('D9 unilateral logging: laterality detection never forces bilateral exercises', () => {
+describe('unilateral logging: laterality detection never forces bilateral exercises', () => {
   test('the suggestion effect gates strictly on exercise.laterality === \'unilateral\'', () => {
     expect(ACTIVE_WORKOUT).toContain("if (exercise.laterality !== 'unilateral') return;");
   });
@@ -57,11 +81,17 @@ describe('D9 unilateral logging: laterality detection never forces bilateral exe
   });
 });
 
-describe('D9 amendment 2: rest-class behaviour is derived, never user-set', () => {
-  test('startPerSide derives the between-sides pause from perSideRestPlan(compoundIsolation, restSeconds)', () => {
-    const fn = ACTIVE_WORKOUT.match(/function startPerSide\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+describe('D9 amendment 2: rest-class behaviour is derived, never user-set (unchanged by the reversal)', () => {
+  test('advancePerSideToSideTwo (side one done) derives the between-sides pause from perSideRestPlan(compoundIsolation, restSeconds)', () => {
+    const fn = ACTIVE_WORKOUT.match(/function advancePerSideToSideTwo\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
     expect(fn).toContain('const restPlan = perSideRestPlan(exercise?.compoundIsolation, routineExercise?.restSeconds || defaultRestSeconds || 90);');
     expect(fn).toContain('if (restPlan.betweenSeconds != null) startRestTimer(restPlan.betweenSeconds);');
+  });
+
+  test('startPerSide (opening the guided sheet at side one) no longer starts the between-sides timer itself — that only happens once side one is confirmed done', () => {
+    const fn = ACTIVE_WORKOUT.match(/function startPerSide\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+    expect(fn).not.toContain('perSideRestPlan(');
+    expect(fn).not.toContain('startRestTimer(');
   });
 
   test('the post-pair rest halves for a compound per-side set, stays full for isolation', () => {
@@ -73,17 +103,27 @@ describe('D9 amendment 2: rest-class behaviour is derived, never user-set', () =
     expect(fn).toContain("perSideCompound: exercise?.compoundIsolation === 'compound',");
   });
 
-  test('the per-side banner names the rest-class difference (compound timer vs isolation switch prompt)', () => {
-    expect(ACTIVE_WORKOUT).toContain("exercise?.compoundIsolation === 'compound' ? 'Other side, after your rest' : 'Switch sides'");
-    expect(ACTIVE_WORKOUT).toContain("exercise?.compoundIsolation !== 'compound' && (");
+  test('the guided sheet names the rest-class difference (compound rest vs isolation switch prompt) on side two', () => {
+    expect(ACTIVE_WORKOUT).toContain("? 'Resting, then do the same reps on your other side.'");
+    expect(ACTIVE_WORKOUT).toContain(": 'Switch sides when you\\'re ready, then do the same reps.'");
   });
 });
 
-describe('D9 storage invariant: one workout_sets row, actual_reps = the lower side', () => {
-  test('finishPerSide computes actualReps via lowerSideReps (the conservative floor), not a sum or the higher side', () => {
+describe('storage invariant, rewritten: one workout_sets row, actual_reps = the ONE prescribed reps, both sides', () => {
+  test('startPerSide takes a SINGLE reps value from the set entry — no leftReps/rightReps split', () => {
+    const fn = ACTIVE_WORKOUT.match(/function startPerSide\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+    expect(fn).toContain('const reps = parseInt(currentSet.reps, 10);');
+    expect(fn).not.toContain('leftReps');
+  });
+
+  test('finishPerSide commits actualReps as the ONE prescribed reps value, never lowerSideReps or a sum of two independently typed numbers', () => {
     const fn = ACTIVE_WORKOUT.match(/async function finishPerSide\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
-    expect(fn).toContain('const actualReps = lowerSideReps(perSide.leftReps, rightReps);');
+    expect(fn).toContain('actualReps: perSide.reps,');
+    expect(fn).not.toContain('lowerSideReps(');
     expect(fn).not.toMatch(/actualReps\s*=\s*perSide\.leftReps\s*\+\s*rightReps/);
+    // lowerSideReps implied comparing two independently-entered counts —
+    // that comparison, and the second count itself, no longer exist here.
+    expect(ACTIVE_WORKOUT).not.toContain('lowerSideReps');
   });
 
   test('finishPerSide commits through the ONE shared handleCompleteSet path, exactly once', () => {
@@ -93,20 +133,54 @@ describe('D9 storage invariant: one workout_sets row, actual_reps = the lower si
     expect(fn).toContain('await handleCompleteSet({');
   });
 
-  test('the per-side breakdown rides in notes (formatPerSide), never the legacy left_reps/right_reps columns', () => {
-    const fn = ACTIVE_WORKOUT.match(/async function finishPerSide\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
-    expect(fn).toContain('const notes = mergeClusterNote(noteText, formatPerSide(perSide.leftReps, rightReps));');
-    expect(fn).not.toContain('leftReps: perSide.leftReps');
-    expect(fn).not.toContain('rightReps: rightReps');
+  test('there is no per-side rep TextInput left anywhere in the screen — the divergent ask is removed, not hidden', () => {
+    expect(ACTIVE_WORKOUT).not.toContain('Other side reps');
+    expect(ACTIVE_WORKOUT).not.toContain('setPerSideReps');
+    expect(ACTIVE_WORKOUT).not.toContain('perSideReps');
   });
 
-  test('the createWorkoutSet call still hard-codes leftReps/rightReps null — migration 054 columns stay unwritten', () => {
+  test('the createWorkoutSet call still hard-codes leftReps/rightReps null — migration 054 columns stay unwritten for every new set', () => {
     expect(ACTIVE_WORKOUT).toContain('leftReps: null,');
     expect(ACTIVE_WORKOUT).toContain('rightReps: null,');
   });
+
+  test('formatPerSide is no longer imported by the screen (new sets never produce a left/right breakdown) but stays the READ path for legacy rows elsewhere (LoggedSetRow.js)', () => {
+    expect(ACTIVE_WORKOUT).not.toMatch(/import\s*\{[^}]*formatPerSide/);
+    const loggedSetRow = fs.readFileSync(
+      path.join(__dirname, '..', '..', 'components', 'workout', 'LoggedSetRow.js'),
+      'utf8',
+    );
+    expect(loggedSetRow).toContain("import { formatPerSide } from '../../lib/unilateral';");
+    expect(loggedSetRow).toContain('formatPerSide(set.leftReps, set.rightReps)');
+  });
 });
 
-describe('D9 one-time walkthrough fires once ever, same @volyume_seen_* convention', () => {
+describe('guided two-phase interaction: side one -> rest-class pause -> side two -> one row', () => {
+  test('perSide state carries a phase (side1/side2), not two independently-entered rep counts', () => {
+    expect(ACTIVE_WORKOUT).toContain("const [perSide, setPerSide] = useState(null);");
+    expect(ACTIVE_WORKOUT).toContain("phase: 'side1',");
+  });
+
+  test('advancePerSideToSideTwo only fires from side one, and flips the phase forward', () => {
+    const fn = ACTIVE_WORKOUT.match(/function advancePerSideToSideTwo\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+    expect(fn).toContain("if (!perSide || perSide.phase !== 'side1') return;");
+    expect(fn).toContain("setPerSide(p => (p ? { ...p, phase: 'side2' } : p));");
+  });
+
+  test('the guided sheet renders through the shared WorkoutBottomSheet chrome, not a bespoke inline banner', () => {
+    const sheetWindow = ACTIVE_WORKOUT.match(/<WorkoutBottomSheet[\s\S]{0,400}/)?.[0] ?? '';
+    expect(sheetWindow).toContain('visible={!!perSide}');
+    expect(sheetWindow).toContain('onClose={cancelPerSide}');
+  });
+
+  test('per-side pairs still count as ONE set toward whatever target resolves (finishPerSide -> one handleCompleteSet call, one row)', () => {
+    const fn = ACTIVE_WORKOUT.match(/async function finishPerSide\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+    const calls = fn.match(/handleCompleteSet\(/g) ?? [];
+    expect(calls.length).toBe(1);
+  });
+});
+
+describe('one-time walkthrough fires once ever, same @volyume_seen_* convention (gating unchanged, copy rewritten)', () => {
   test('a dedicated once-ever AsyncStorage key gates the full walkthrough', () => {
     expect(ACTIVE_WORKOUT).toContain("const UNILATERAL_WALKTHROUGH_SEEN_KEY = '@volyume_seen_unilateral_walkthrough';");
   });
@@ -119,5 +193,10 @@ describe('D9 one-time walkthrough fires once ever, same @volyume_seen_* conventi
   test('later exercises get a quick confirm only once the walkthrough has been seen', () => {
     expect(ACTIVE_WORKOUT).toContain('if (unilateralWalkthroughSeenRef.current) {');
     expect(ACTIVE_WORKOUT).toContain("appAlert(\n        'Log this one side at a time?',");
+  });
+
+  test('the walkthrough no longer promises a "lower side" comparison — both sides use the same reps', () => {
+    expect(ACTIVE_WORKOUT).not.toContain("using your lower side's reps");
+    expect(ACTIVE_WORKOUT).toContain('Logs as one set, the same reps on both sides.');
   });
 });
