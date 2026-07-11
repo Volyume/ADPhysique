@@ -1426,3 +1426,39 @@ ENFORCEMENT: two new no-restricted-syntax selectors in eslint.config.js
 than merges) banning the ", always/ever/forever" tail at sentence or
 string end in Literals and JSXText. Same escape hatch as the other
 voice rules: scoped eslint-disable with a reason.
+
+## D68 — R8: Coach page real merge (lead ruling, 2026-07-11)
+
+Sources: DEFECT-MAP.md R8 (side-by-side duplication table), founder ("the
+Coach page is now just cobbled together mess with duplication...
+'Getting to know you' adds nothing and hogs space... asked for a real
+MERGE"), hands-on read of YouScreen.js in full.
+
+FINDINGS: (1) the status card was a third voice - its body pointed at
+"the weekly check-in below" while the check-in NavRow directly beneath
+carried the FULL specific readiness copy; (2) with a completed decision
+the card said "Open it..." but was NOT tappable - the duplicate
+"Coaching decision" NavRow did the opening one card down; (3) the free
+tier showed a non-tappable pitch card PLUS a duplicate "Upgrade to Pro"
+NavRow; (4) the feared readiness-logic drift is already impossible at
+source: coachLedger.js imports MIN_WEIGH_INS / FIRST_CHECKIN_MIN_DAYS /
+firstReviewUnlockDate from trialActivation.js ("so the ledger can never
+disagree with the check-in gate") - the duplication was presentational.
+
+RULINGS (one voice per fact, every surface tappable or gone):
+1. Pro + completed decision: the status card IS the weekly update hero -
+   tone primary, tappable, opens CoachOutput(weekStart), chevron. The
+   "Coaching decision" NavRow disappears in this state (duplicate).
+2. Pro, no completed decision: NO status card. "Getting to know you" is
+   deleted; the check-in NavRow's pendingCoachCopy is the single status.
+   The "Coaching decision" NavRow renders only as the archive path
+   (!latestReview && hasCoachHistory, e.g. Monday's new output before
+   this week's check-in) - history now loads for Pro too (limit 1).
+3. Free: ONE tappable pitch card (opens ProUpgrade) replaces the card +
+   "Upgrade to Pro" NavRow pair; only "Coaching history" remains below,
+   and only when history exists.
+Pins survive by design (label="Weekly check-in" / label="Coaching
+decision" / buildPendingCoachCopy / statusCard-after-profileCard /
+Coaching-decision-inside-This-week); the physiqueTile pin on the
+removed Upgrade NavRow re-anchored to the card path. Full suite
+691 suites / 8,530 tests green. Subject to founder device-walk veto.

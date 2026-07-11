@@ -142,9 +142,22 @@ No item marked done on an agent's self-report. Ever._
   more density there, say so - candidates are two more free-safe 30-day
   stat cells (total reps, time trained); the current two-card layout is
   the audited A5 design, so nothing is built until you choose.
-- **R8 Coach page.** "Getting to know you" rename added no value and hogs
-  space; page is a cobbled mess with duplication against Weekly check-in.
-  Founder asked for a real MERGE. STATUS: queued (lead design after recon).
+- **R8 Coach page.** DONE (lead design + hands-on build; ruling D68).
+  Real merge, one voice per fact: "Getting to know you" DELETED (Pro
+  without a decision shows no status card at all - the check-in row's
+  full readiness copy is the single status); with a decision the status
+  card becomes the TAPPABLE weekly-update hero (opens the decision
+  directly) and the duplicate "Coaching decision" row disappears,
+  surviving only as an archive path when a past decision exists without
+  a current one; free tier's card + "Upgrade to Pro" row pair collapsed
+  to one tappable pitch card. Readiness-logic drift verified impossible
+  at source (coachLedger imports the gate constants from
+  trialActivation). DEVICE CHECK: (1) Coach tab as Pro pre-first-review:
+  profile card then This week rows, no beige status box, check-in row
+  states the exact status once; (2) after a decision: amber-toned
+  "Weekly coach update: {date}" card opens it on tap; no duplicate row
+  below; (3) as free: one tappable Pro pitch card, no duplicate upgrade
+  row.
 
 RECON (done): `docs/remediation-2026-07-11/FOOD-DESIGN-STANDARD.md`
 (the cohesion measuring stick), `DEFECT-MAP.md` (file:line evidence

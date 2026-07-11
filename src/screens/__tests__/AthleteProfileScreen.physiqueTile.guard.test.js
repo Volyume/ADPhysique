@@ -85,7 +85,11 @@ describe('AthleteProfileScreen physique tile', () => {
     // CP-10 batch G: profileFocus gained its live-theme override, same
     // contract-preserving widening as heroFocus above.
     expect(coachSource).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{(?:styles\.profileFocus|\[styles\.profileFocus, live\.profileFocus\])\} numberOfLines=\{2\}>\{profileFocus\}<\/Text>/);
-    expect(coachSource).toMatch(/label="Upgrade to Pro"/);
+    // R8 (D68, 2026-07-11): the free tier's "Upgrade to Pro" NavRow was a
+    // duplicate of the pitch card directly above it; the card is now the
+    // single, tappable upgrade path. Re-anchored to pin that path instead.
+    expect(coachSource).toMatch(/Coach is available on Pro/);
+    expect(coachSource).toMatch(/navigation\.navigate\('ProUpgrade'\)/);
     expect(coachSource).toMatch(/pro=\{!isPro\}/);
   });
 });
