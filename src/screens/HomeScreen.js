@@ -97,20 +97,29 @@ function getGreeting(firstName) {
 // (Fresh/Mild/Sore) scale the adaptive engine + computeRecoveryEMAs read;
 // sleep + energy on the 1-5 domain (chips offer 2/3/4) so the weekly
 // sleep_quality write and CoachReview's <2.5 thresholds stay valid.
+// R2-10 (founder decision "Reorder", 2026-07-11): the rows render ABOVE the
+// intent options now, compacted to one line each (`short` is the inline
+// label; `label` stays the full accessible phrasing). The old layout put
+// them BELOW the three buttons that start the session, so they were
+// unreachable the moment the user answered - the founder rightly called
+// them pointless as laid out.
 const READINESS_ROWS = [
   {
     key: 'soreness24hBefore',
     label: 'Soreness coming in',
+    short: 'Soreness',
     chips: [{ label: 'Fresh', value: 1 }, { label: 'Mild', value: 2 }, { label: 'Sore', value: 3 }],
   },
   {
     key: 'sleepQuality',
     label: 'Sleep last night',
+    short: 'Sleep',
     chips: [{ label: 'Poor', value: 2 }, { label: 'OK', value: 3 }, { label: 'Good', value: 4 }],
   },
   {
     key: 'energyScore',
     label: 'Energy today',
+    short: 'Energy',
     chips: [{ label: 'Low', value: 2 }, { label: 'OK', value: 3 }, { label: 'High', value: 4 }],
   },
 ];
@@ -165,8 +174,8 @@ export default function HomeScreen({ navigation, route }) {
     intentTitle: { ...t.type.h3, color: t.colors.textPrimary },
     intentSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     intentOption: { backgroundColor: t.colors.surface2 ?? t.colors.background, borderColor: t.colors.border },
-    intentOptionSelected: { borderColor: t.colors.primary },
     intentOptionIcon: { backgroundColor: t.colors.primaryBg },
+    readinessGroupLabel: { ...t.type.overline, color: t.colors.textMuted },
     intentOptionLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     intentOptionSub: { ...t.type.caption, color: t.colors.textSecondary },
     readinessLabel: { ...t.type.caption, color: t.colors.textSecondary },
@@ -316,13 +325,6 @@ export default function HomeScreen({ navigation, route }) {
   // surface can never queue a second intent-sheet open that would resolve
   // after the workout has already begun.
   const startFlowRef = useRef(false);
-  // R2-9 (founder redesign, 2026-07-11): tapping an intent now SELECTS it
-  // rather than instantly starting - the old insta-start made the readiness
-  // chips below unreachable (the engine-fed soreness/sleep/energy inputs
-  // arrived null on every session). One primary Start button commits intent
-  // + chips together; Skip and the standing opt-out keep their one-tap
-  // zero-input start.
-  const [selectedIntent, setSelectedIntent] = useState(null);
   // COMP-008: the three "walked-in-with" readiness facts, captured on the
   // pre-workout prompt where they are accurate rather than recalled after the
   // session. All optional, reset each time the prompt opens. Stored on the
@@ -1208,7 +1210,6 @@ export default function HomeScreen({ navigation, route }) {
       // Clear any readiness from a previously-cancelled prompt so each session
       // starts from blank chips and no remembered intent.
       setReadiness({ soreness24hBefore: null, sleepQuality: null, energyScore: null });
-      setSelectedIntent(null);
       setShowIntentPrompt(true);
     } catch (e) {
       setIsStartingWorkout(false);
@@ -1314,7 +1315,7 @@ export default function HomeScreen({ navigation, route }) {
       }
 
       pendingStartRef.current = { routineId, initialExercises };
-      setSelectedIntent(null);
+      setReadiness({ soreness24hBefore: null, sleepQuality: null, energyScore: null });
       setShowIntentPrompt(true);
     } catch (e) {
       logError('HomeScreen.handleRepeatLastSession', e, { userId: user?.id, lastSessionId: lastSession?.id, routineId });
@@ -2092,54 +2093,19 @@ export default function HomeScreen({ navigation, route }) {
       >
         <Text maxFontSizeMultiplier={1.3} style={[styles.intentTitle, live.intentTitle]}>How are you feeling today?</Text>
         <Text maxFontSizeMultiplier={1.3} style={[styles.intentSub, live.intentSub]}>Takes a second. Helps us read your sessions better over time.</Text>
-        {/* R2-9 (founder redesign, 2026-07-11): an intent tap SELECTS - it no
-            longer starts the session instantly. The old insta-start made the
-            readiness chips below unreachable, so the engine-fed
-            soreness/sleep/energy inputs arrived null on every session. The
-            primary Start button beneath the chips commits everything. */}
-        {[
-          { key: 'sharp', label: 'Sharp', sub: 'Energised and ready', icon: 'flash-outline' },
-          { key: 'average', label: 'Average', sub: 'Normal day, feeling fine', icon: 'remove-outline' },
-          { key: 'below_par', label: 'Below par', sub: 'Tired, stressed, or off', icon: 'arrow-down-outline' },
-        ].map(opt => {
-          const selected = selectedIntent === opt.key;
-          return (
-            <PressableCard
-              key={opt.key}
-              style={[styles.intentOption, live.intentOption, selected && [styles.intentOptionSelected, live.intentOptionSelected]]}
-              onPress={() => {
-                haptics.selection();
-                // Tapping the selected option again clears it, matching the
-                // readiness chips, so the answer stays genuinely optional.
-                setSelectedIntent(prev => (prev === opt.key ? null : opt.key));
-              }}
-              accessibilityRole="radio"
-              accessibilityState={{ selected }}
-              accessibilityLabel={`${opt.label}. ${opt.sub}`}
-            >
-              <View style={[styles.intentOptionIcon, live.intentOptionIcon]}>
-                <Ionicons name={opt.icon} size={20} color={t.colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptionLabel, live.intentOptionLabel]}>{opt.label}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptionSub, live.intentOptionSub]}>{opt.sub}</Text>
-              </View>
-              <Ionicons
-                name={selected ? 'checkmark-circle' : 'ellipse-outline'}
-                size={iconSize.sm}
-                color={selected ? t.colors.primary : t.colors.textMuted}
-              />
-            </PressableCard>
-          );
-        })}
-
-        {/* COMP-008: optional readiness chips. These tune the session without
-            blocking it. R2-9: they are set alongside the intent above and
-            committed together by the Start button below (Skip still starts
-            instantly with nothing). */}
+        {/* R2-10 (founder decision "Reorder", 2026-07-11): the optional
+            readiness rows sit ABOVE the intent options, compacted to one
+            aligned line each, because the intent tap below starts the
+            session instantly - anything beneath that trigger is unreachable
+            (the original flaw). Zero added taps: ignoring the rows costs
+            nothing, setting one is a single tap on the way down, and the
+            intent tap carries whatever is set. */}
+        <Text maxFontSizeMultiplier={1.3} style={[styles.readinessGroupLabel, live.readinessGroupLabel]}>
+          Readiness (optional)
+        </Text>
         {READINESS_ROWS.map(row => (
           <View key={row.key} style={styles.readinessRow}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.readinessLabel, live.readinessLabel]}>{row.label}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.readinessLabel, live.readinessLabel]}>{row.short}</Text>
             <View style={styles.readinessChips} accessibilityRole="radiogroup" accessibilityLabel={row.label}>
               {row.chips.map(chip => {
                 const selected = readiness[row.key] === chip.value;
@@ -2148,6 +2114,7 @@ export default function HomeScreen({ navigation, route }) {
                     key={chip.value}
                     label={chip.label}
                     selected={selected}
+                    style={styles.readinessChipThird}
                     accessibilityRole="radio"
                     accessibilityLabel={`${row.label}: ${chip.label}`}
                     onPress={() => {
@@ -2166,17 +2133,29 @@ export default function HomeScreen({ navigation, route }) {
           </View>
         ))}
 
-        {/* R2-9: the one commit point. Disabled until an intent is picked;
-            Skip below stays the zero-input instant start. The Button
-            primitive's primary variant carries its own selection() tick. */}
-        <Button
-          title="Start workout"
-          size="lg"
-          disabled={!selectedIntent}
-          onPress={() => confirmStart(selectedIntent)}
-          style={styles.intentStartBtn}
-          accessibilityLabel="Start workout with the selected answer"
-        />
+        {/* The three answers: one tap starts the session instantly, carrying
+            whatever readiness is set above. */}
+        {[
+          { key: 'sharp', label: 'Sharp', sub: 'Energised and ready', icon: 'flash-outline' },
+          { key: 'average', label: 'Average', sub: 'Normal day, feeling fine', icon: 'remove-outline' },
+          { key: 'below_par', label: 'Below par', sub: 'Tired, stressed, or off', icon: 'arrow-down-outline' },
+        ].map((opt, i) => (
+          <PressableCard
+            key={opt.key}
+            style={[styles.intentOption, live.intentOption, i === 0 && styles.intentOptionFirst]}
+            onPress={() => { haptics.selection(); confirmStart(opt.key); }}
+            accessibilityLabel={`${opt.label}. ${opt.sub}. Starts the workout.`}
+          >
+            <View style={[styles.intentOptionIcon, live.intentOptionIcon]}>
+              <Ionicons name={opt.icon} size={20} color={t.colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptionLabel, live.intentOptionLabel]}>{opt.label}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptionSub, live.intentOptionSub]}>{opt.sub}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+          </PressableCard>
+        ))}
 
         <TouchableOpacity
           style={styles.intentSkip}
@@ -2481,26 +2460,38 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.xxs,
   },
-  // R2-9: the picked intent carries the primary border so the selection
-  // reads at a glance before Start commits it.
-  intentOptionSelected: {
-    borderColor: colors.primary,
+  // R2-10 ("Reorder"): the readiness block above the intent options. A quiet
+  // overline heads it; each row is ONE line - fixed label column so the three
+  // rows align, then three equal-width chips filling the rest.
+  readinessGroupLabel: {
+    ...type.overline,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
   },
-  // R2-9: the one commit point for intent + readiness together.
-  intentStartBtn: {
-    marginTop: spacing.sm,
-  },
-  // COMP-008 readiness chips
   readinessRow: {
-    gap: spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   readinessLabel: {
     ...type.caption,
     color: colors.textSecondary,
+    width: 76,
   },
   readinessChips: {
+    flex: 1,
     flexDirection: 'row',
     gap: spacing.xs,
+  },
+  // Equal thirds: overrides Chip's own alignSelf so the three chips share
+  // the row evenly and every row's columns line up.
+  readinessChipThird: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  // Breathing room between the optional block and the primary answers.
+  intentOptionFirst: {
+    marginTop: spacing.md,
   },
   readinessChip: {
     flex: 1,
