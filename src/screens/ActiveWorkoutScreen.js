@@ -2199,10 +2199,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             duration_min: Math.round(snapshotElapsed / 60),
             exercise_count: snapshotExercises.length,
           }).catch(() => {});
-          // E7.2 activation funnel: first-ever completed workout.
+          // E7.2 activation funnel: first-ever completed workout. C8 phase 1
+          // attaches the coarse first-touch source (sanitised slug or null,
+          // never a URL) so acquisition channels can be judged on activation.
           // eslint-disable-next-line global-require
           const { trackFirst } = require('../lib/telemetry/firsts');
-          trackFirst(uid, 'first_workout_logged').catch(() => {});
+          // eslint-disable-next-line global-require
+          const { getFirstTouchSource } = require('../lib/attribution');
+          trackFirst(uid, 'first_workout_logged', {
+            first_touch_source: getFirstTouchSource(),
+          }).catch(() => {});
         }
       } catch (_) { /* tolerate */ }
       // COMP-019: refresh the home-screen widget snapshot (consistency

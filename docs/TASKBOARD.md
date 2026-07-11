@@ -265,13 +265,23 @@ only after the R-campaign closes. Corrections locked in that message:_
 Order: **C1** trial-copy contradiction (DONE bfa269e - bodies drop the
 trial sentence, converging on the NO_TRIAL shape; the badge CTA is the
 single source of truth; MOVE_4 doc carries a dated amendment; no
-billing logic touched) -> **C2** ProUpgrade telemetry
-(impression + entry source, period choice, CTA, sheet start,
-cancel/failure/completion, restore attempt/result; reuse allow-list +
-opt-out; no duplicate server-authoritative purchase events) -> **C7**
-account-requirement copy sweep -> **C8** attribution phase 1 (deep-link
-source -> persist first touch -> coarse source on first-workout event;
-NO ad SDK / fingerprinting / Install Referrer dep) -> **C3** duplicate
+billing logic touched) -> **C2** ProUpgrade telemetry (DONE fd30f11 -
+impression + entry source, period choice, CTA taps, dismisses and
+sheet-cancel through one trackCta helper on paywall_shown /
+paywall_tapped_cta; restore_purchases_attempted enriched on both store
+variants; entry sources threaded at every navigate('ProUpgrade');
+allow-list reuse so NO new event names and NO server migration; guard
+suite `src/__tests__/proUpgradeTelemetry.guard.test.js`) -> **C7**
+account-requirement copy sweep (DONE f2f2547 - SubscriptionPolicy
+"no account needed" claim corrected; earlier R10 trimmed the clipped
+tail) -> **C8** attribution phase 1 (DONE - `src/lib/attribution.js`:
+?src=/?utm_source= -> sanitised [a-z0-9_-] slug max 32 chars,
+first-write-wins in AsyncStorage, warmed at startup; App.js captures
+passively as the first action on every incoming link;
+`first_touch_source` attached to the first_workout_logged payload in
+ActiveWorkoutScreen (the one attach point, pinned); NO ad SDK /
+fingerprinting / Install Referrer dep — guard suite
+`src/lib/__tests__/attribution.test.js`) -> **C3** duplicate
 paywall READ-ONLY audit then founder decision -> **C5** day-14 factual
 recap decision (ED guardrails mandatory: no outcome language, no
 weight/food lines under calm mode or open ED flag, no thin recap).

@@ -227,7 +227,11 @@ export const TELEMETRY_EVENTS = Object.freeze([
   // supabase/migrate_099_funnel_telemetry.sql.
   //   onboarding_step_completed  payload: { step } — a forward wizard advance
   //   first_plan_generated       first-ever plan generation (once)
-  //   first_workout_logged       first-ever completed workout (once)
+  //   first_workout_logged       first-ever completed workout (once).
+  //                              C8 (2026-07-11) payload: { first_touch_source }
+  //                              — the coarse acquisition slug from
+  //                              lib/attribution.js (sanitised [a-z0-9_-],
+  //                              max 32 chars, or null; never a URL/click id)
   //   first_food_logged          first-ever food-diary entry (once)
   //   trial_lapse_day1_return    a cascade-expired user reopened the app
   { name: 'onboarding_step_completed',       deferred: false, panel: 1 },

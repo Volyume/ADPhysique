@@ -30,6 +30,7 @@ import { installGlobalHandlers, logError } from './src/lib/errorLog';
 import { parseInviteCode } from './src/lib/partners/link';
 import { rememberPendingPartnerCode } from './src/lib/partners/pendingInvite';
 import { loadMealLabelOverrides } from './src/lib/food/mealSlots';
+import { captureFirstTouch, warmFirstTouch } from './src/lib/attribution';
 
 // Campaign item 15 (D25): keep the native splash on screen past its default
 // autohide-on-first-render point so it can fade smoothly into the app instead
@@ -261,6 +262,9 @@ function handleQuickAction(action) {
 // Single entry point for incoming links: invite links first, then auth links.
 function handleIncomingDeepLink(url) {
   if (!url) return;
+  // C8 phase 1: passive first-touch attribution capture (?src= / ?utm_source=,
+  // first-write-wins, sanitised slug only). Never consumes or reroutes the link.
+  captureFirstTouch(url).catch(() => {});
   if (handlePartnerDeepLink(url)) return;
   handleAuthDeepLink(url);
 }
@@ -521,6 +525,7 @@ export default function App() {
   // RootNavigator's onAuthStateChange listener picks up any resulting session
   // automatically and re-routes the user without any extra navigation calls.
   useEffect(() => {
+    warmFirstTouch().catch(() => {});
     Linking.getInitialURL().then(url => { if (url) handleIncomingDeepLink(url); }).catch(() => {});
     const sub = Linking.addEventListener('url', ({ url }) => handleIncomingDeepLink(url));
     return () => sub.remove();
