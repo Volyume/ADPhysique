@@ -172,6 +172,37 @@ No item marked done on an agent's self-report. Ever._
   no tree damage possible). Lead then rules per divergence class and
   builds (hands-on for judgement classes, specced dispatch for
   mechanical sweeps), lead-verified against the rendering line.
+  AUDIT RESULTS (lead-verified):
+  - D65 blast radius: DONE. ~70 restored-intent sites (flex splits,
+    alignSelf links, percentage widths) all render as declared - no fix
+    work. The agent's 59 cautions were downgraded on lead analysis:
+    margins/minWidth/fixed sizes lived on the inner box and were always
+    honoured; only parent-negotiated properties (flex, alignSelf,
+    percentage width) were ever dead. Real device notes: (a) invisible
+    full-width tap zones on fullWidth={false} buttons are gone (visible
+    layout unchanged, tap area now honest); (b) confirm the three
+    restored bars (logger split bar, summary footer, spark row).
+  - R9 card map: DONE, spot-verified. Coach = fully compliant
+    reference; Train shells compliant (~9 hand-rolled inner CTAs +
+    folder-prompt Modal + swap-picker bespoke header); Progress = 6
+    cards on radius.md + 4 red/green colourings; Home = worst (~19
+    divergent boxes: TodayStrip + 7 banners on md, 7 hand-rolled CTAs,
+    intent prompt raw Modal + hand-rolled chips, glance numeral not
+    tabular). Ranked classes and the colour-grammar ruling are in the
+    build plan below.
+  BUILD PLAN (starts when the interaction audit lands): two sanctioned
+  box classes app-wide (Card = radius.lg/surface/borderSubtle; Banner =
+  radius.md/tinted fill/accent border, Home's existing banner grammar);
+  TodayStrip + the six Progress secondary cards -> Card class;
+  hand-rolled CTA -> Button sweep (specced dispatch, lead variant
+  table); 3 raw Modals -> house chrome (judgement, hands-on); tabular
+  numerals + Chip adoption. COLOUR RULING (to record as D69 at landing):
+  weight/food-adjacent surfaces adopt Food's adherence-neutral rule
+  strictly (WeightTrendCard's green/amber trend dot goes neutral -
+  strengthens ED posture); training-mechanics caution signals (volume
+  over MRV, insight severity, unresolved exercise) keep semantic
+  warning/error colour as one consistent status grammar - they are
+  recovery warnings, not body judgements.
 
 RECON (done): `docs/remediation-2026-07-11/FOOD-DESIGN-STANDARD.md`
 (the cohesion measuring stick), `DEFECT-MAP.md` (file:line evidence
