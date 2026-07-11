@@ -15,6 +15,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, radius, fontSize, fontWeight, type, circle } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import Chip from '../components/Chip';
 import useAppStore from '../store/useAppStore';
 import { PHYSIQUE_GOALS, GOAL_LABELS, TRAINING_PHASES, PHASE_LABELS } from '../lib/coachingGoals';
@@ -51,6 +52,12 @@ export default function QuizScreen({ navigation }) {
   }));
   const [touched] = useState(() => { markQuizStep('quiz_open'); return true; });
   void touched;
+  // CP-10 batch F (2026-07-11): live theme (src/hooks/useTheme.js). This
+  // screen never renders a FlatList/FlashList/SectionList row (everything is
+  // a fixed .map inside a ScrollView), so an unmemoised call matches
+  // AddCustomFoodScreen's own precedent (batch D).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
 
   const ready = quiz.experience && quiz.daysPerWeek && quiz.trainingGoal;
   const answeredCount = QUIZ_PROGRESS_FIELDS.filter((k) => quiz[k] !== undefined && quiz[k] !== null).length;
@@ -61,7 +68,7 @@ export default function QuizScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <View style={styles.topBar}>
         {/* NAV-8: the flow had no way back (headerless stack screen), and the
             headline promised eight questions while rendering six. */}
@@ -71,7 +78,7 @@ export default function QuizScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="Back"
         >
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+          <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
         </TouchableOpacity>
         {/* Quiz progress indicator: same dot pattern as FreeStarterScreen's
             sibling quiz, decorative only (the questions themselves already
@@ -82,7 +89,7 @@ export default function QuizScreen({ navigation }) {
           importantForAccessibility="no-hide-descendants"
         >
           {QUIZ_PROGRESS_FIELDS.map((_, i) => (
-            <View key={i} style={[styles.dot, i < answeredCount && styles.dotActive]} />
+            <View key={i} style={[styles.dot, live.dot, i < answeredCount && [styles.dotActive, live.dotActive]]} />
           ))}
         </View>
         {/* Spacer balances the back chevron so the dots sit centred */}
@@ -90,11 +97,11 @@ export default function QuizScreen({ navigation }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.h1}>A few quick questions.</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.lede}>Your plan takes shape as you answer.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.h1, live.h1]}>A few quick questions.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.lede, live.lede]}>Your plan takes shape as you answer.</Text>
 
-        <Text maxFontSizeMultiplier={1.3} style={styles.section}>How do you train?</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.q}>Experience</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.section, live.section]}>How do you train?</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.q, live.q]}>Experience</Text>
         <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Experience">
           {EXPERIENCE.map((o) => (
             <Chip key={o.value} label={o.label} selected={quiz.experience === o.value}
@@ -105,7 +112,7 @@ export default function QuizScreen({ navigation }) {
             />
           ))}
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={styles.q}>Days a week</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.q, live.q]}>Days a week</Text>
         <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Days a week">
           {DAYS.map((d) => (
             <Chip key={d} label={String(d)} selected={quiz.daysPerWeek === d}
@@ -116,7 +123,7 @@ export default function QuizScreen({ navigation }) {
             />
           ))}
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={styles.q}>Session length</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.q, live.q]}>Session length</Text>
         <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Session length">
           {LENGTHS.map((m) => (
             <Chip key={m} label={`${m} min`} selected={quiz.sessionLengthMinutes === m}
@@ -127,7 +134,7 @@ export default function QuizScreen({ navigation }) {
             />
           ))}
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={styles.q}>Equipment</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.q, live.q]}>Equipment</Text>
         <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Equipment">
           {EQUIPMENT.map((o) => (
             <Chip key={o.value} label={o.label} selected={quiz.equipment === o.value}
@@ -139,7 +146,7 @@ export default function QuizScreen({ navigation }) {
           ))}
         </View>
 
-        <Text maxFontSizeMultiplier={1.3} style={styles.section}>What are you training for?</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.section, live.section]}>What are you training for?</Text>
         <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Training goal">
           {PHYSIQUE_GOALS.map((g) => (
             <Chip key={g.value} label={GOAL_LABELS[g.value] || g.label} selected={quiz.trainingGoal === g.value}
@@ -152,7 +159,7 @@ export default function QuizScreen({ navigation }) {
         </View>
         {PHASE_PRE_ACCOUNT && (
           <>
-            <Text maxFontSizeMultiplier={1.3} style={styles.q}>Right now you want to…</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.q, live.q]}>Right now you want to…</Text>
             <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Training phase">
               {TRAINING_PHASES.map((p) => (
                 <Chip key={p.value} label={PHASE_LABELS[p.value] || p.label} selected={quiz.trainingPhase === p.value}
@@ -167,12 +174,12 @@ export default function QuizScreen({ navigation }) {
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, live.footer]}>
         <TouchableOpacity
-          style={[styles.cta, !ready && styles.ctaOff]} onPress={go} disabled={!ready}
+          style={[styles.cta, live.cta, !ready && styles.ctaOff]} onPress={go} disabled={!ready}
           accessibilityRole="button" accessibilityLabel="See your plan"
         >
-          <Text maxFontSizeMultiplier={1.3} style={styles.ctaText}>See your plan</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.ctaText, live.ctaText]}>See your plan</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -200,3 +207,26 @@ const styles = StyleSheet.create({
   ctaOff: { opacity: 0.5 },
   ctaText: { color: colors.onPrimary, fontSize: fontSize.md, fontWeight: fontWeight.heavy },
 });
+
+// CP-10 batch F (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/gap/padding/minHeight, no token) and fontWeight (not part of
+// useTheme()'s shape) are correctly omitted -- there is nothing to unfreeze
+// for them. Same pattern as AddCustomFoodScreen.js's buildLiveStyles
+// (batch D).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    dot: { backgroundColor: t.colors.border },
+    dotActive: { backgroundColor: t.colors.primary },
+    h1: { color: t.colors.textPrimary, fontSize: t.fontSize.xxl },
+    lede: { ...t.type.body, color: t.colors.textSecondary },
+    section: { color: t.colors.textPrimary, fontSize: t.fontSize.lg },
+    q: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
+    footer: { borderTopColor: t.colors.borderSubtle },
+    cta: { backgroundColor: t.colors.primaryFill },
+    ctaText: { color: t.colors.onPrimary, fontSize: t.fontSize.md },
+  };
+}

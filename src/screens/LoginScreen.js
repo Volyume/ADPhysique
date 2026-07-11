@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fontSize, spacing, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { VolyumeMark } from '../components/BrandMark';
 import OAuthButtons from '../components/auth/OAuthButtons';
 import { signInWithGoogle, signInWithApple } from '../lib/supabase';
@@ -19,6 +20,12 @@ export default function LoginScreen() {
   // (IDENTITY_AND_OWNERSHIP_LOCKED.md rule 1).
   const toast = useToast();
   const [loading, setLoading] = useState(false);
+  // CP-10 batch F (2026-07-11): live theme (src/hooks/useTheme.js). This
+  // screen never renders a FlatList/FlashList/SectionList row (a single
+  // ScrollView), so an unmemoised call matches AddCustomFoodScreen's own
+  // precedent (batch D).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
 
   async function handleOAuth(provider) {
     audit('auth.signin.attempt', { method: provider });
@@ -56,7 +63,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       {/* Decorative background wordmark, faint and centred */}
       <View style={styles.bgDecor} pointerEvents="none">
         <VolyumeMark size={120} style={{ opacity: 0.04 }} />
@@ -71,11 +78,11 @@ export default function LoginScreen() {
           {/* ── Brand block ── */}
           <View style={styles.brand}>
             <VolyumeMark size={56} style={styles.brandMark} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.brandTagline}>Less thinking. More lifting.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.brandTagline, live.brandTagline]}>Less thinking. More lifting.</Text>
           </View>
 
           {/* Thin divider below brand */}
-          <View style={styles.brandDivider} />
+          <View style={[styles.brandDivider, live.brandDivider]} />
 
           {/* ── OAuth sign-in ──
               Apple on iOS, Google on Android (see OAuthButtons for the
@@ -89,7 +96,7 @@ export default function LoginScreen() {
               indication anything is actually happening. A calm caption names
               what's in progress. */}
           {loading ? (
-            <Text maxFontSizeMultiplier={1.3} style={styles.oauthWaiting}>Waiting for Google or Apple…</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.oauthWaiting, live.oauthWaiting]}>Waiting for Google or Apple…</Text>
           ) : null}
 
           {/* "Continue without an account" removed per
@@ -143,3 +150,19 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
 });
+
+// CP-10 batch F (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/gap/padding/position, no token) are correctly omitted -- there
+// is nothing to unfreeze for them. Same pattern as AddCustomFoodScreen.js's
+// buildLiveStyles (batch D).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    brandTagline: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    brandDivider: { backgroundColor: t.colors.border },
+    oauthWaiting: { ...t.type.caption, color: t.colors.textSecondary },
+  };
+}

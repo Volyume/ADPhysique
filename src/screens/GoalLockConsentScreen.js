@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, circle, letterSpacing } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { setGoalLockAdvanced, getGoalLockAdvanced, recordEngineTelemetry } from '../lib/database';
@@ -43,6 +44,13 @@ export default function GoalLockConsentScreen({ navigation, route }) {
   const editMode = route?.params?.editMode === true;
   const [choice, setChoice] = useState(null);
   const [busy, setBusy] = useState(false);
+  // CP-10 batch F (2026-07-11): live theme (src/hooks/useTheme.js). This
+  // screen never renders a FlatList/FlashList/SectionList row (a single
+  // ScrollView), so an unmemoised call matches AddCustomFoodScreen's own
+  // precedent (batch D). Consent gate logic, ordering and copy below are
+  // untouched -- colours only.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
 
   // In edit mode we want to show the current value as the default.
   useEffect(() => {
@@ -79,59 +87,59 @@ export default function GoalLockConsentScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Goal lock" />
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.title}>A note on aggressive cuts</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>A note on aggressive cuts</Text>
         {/* Voice: Surface 4 register (COACHING_VOICE_SYNTHESIS_LOCKED §5):
             Precision Coaching named as the decider, signals named plainly,
             no vague personification. */}
-        <Text maxFontSizeMultiplier={1.3} style={styles.body}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
           You picked a goal that involves an aggressive cut. Precision Coaching can support that, with one tradeoff you should know about. Volyume has safety checks: if signs of under-eating and rapid weight loss show up together, Precision Coaching holds the calorie target so the cut doesn't get sharper.
         </Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.body}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
           These checks are there for the at-risk users that calorie-tracking apps have historically harmed. For an aggressive cut, Precision Coaching can raise the bar before those checks fire, so a competition prep doesn't get held up at the standard threshold.
         </Text>
 
-        <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Confirm one of these</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Confirm one of these</Text>
 
         <View accessibilityRole="radiogroup" accessibilityLabel="Confirm your experience with aggressive cuts">
         <Pressable
           onPress={() => setChoice('advanced')}
-          style={({ pressed }) => [styles.optionCard, choice === 'advanced' && styles.optionCardActive, pressed && { opacity: 0.7 }]}
+          style={({ pressed }) => [styles.optionCard, live.optionCard, choice === 'advanced' && [styles.optionCardActive, live.optionCardActive], pressed && { opacity: 0.7 }]}
           accessibilityRole="radio"
           accessibilityState={{ selected: choice === 'advanced' }}
         >
-          <View style={[styles.radio, choice === 'advanced' && styles.radioActive]}>
-            {choice === 'advanced' ? <View style={styles.radioDot} /> : null}
+          <View style={[styles.radio, live.radio, choice === 'advanced' && [styles.radioActive, live.radioActive]]}>
+            {choice === 'advanced' ? <View style={[styles.radioDot, live.radioDot]} /> : null}
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={styles.optionText}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.optionText, live.optionText]}>
             I have prior experience managing aggressive cuts safely, or I'm working with a coach. Raise the safety threshold from 2 signals to 3.
           </Text>
         </Pressable>
 
         <Pressable
           onPress={() => setChoice('standard')}
-          style={({ pressed }) => [styles.optionCard, choice === 'standard' && styles.optionCardActive, pressed && { opacity: 0.7 }]}
+          style={({ pressed }) => [styles.optionCard, live.optionCard, choice === 'standard' && [styles.optionCardActive, live.optionCardActive], pressed && { opacity: 0.7 }]}
           accessibilityRole="radio"
           accessibilityState={{ selected: choice === 'standard' }}
         >
-          <View style={[styles.radio, choice === 'standard' && styles.radioActive]}>
-            {choice === 'standard' ? <View style={styles.radioDot} /> : null}
+          <View style={[styles.radio, live.radio, choice === 'standard' && [styles.radioActive, live.radioActive]]}>
+            {choice === 'standard' ? <View style={[styles.radioDot, live.radioDot]} /> : null}
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={styles.optionText}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.optionText, live.optionText]}>
             I'm new to this and want Volyume's standard safety checks to apply.
           </Text>
         </Pressable>
         </View>
 
-        <Text maxFontSizeMultiplier={1.3} style={styles.body}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
           Either choice keeps the absolute safety floor (eating below the minimum lean-mass energy threshold) in place.
         </Text>
 
         <View style={styles.note}>
-          <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.noteText}>
+          <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.noteText, live.noteText]}>
             You can change this any time from You → Goal lock.
           </Text>
         </View>
@@ -139,12 +147,12 @@ export default function GoalLockConsentScreen({ navigation, route }) {
         <TouchableOpacity
           onPress={save}
           disabled={!choice || busy}
-          style={[styles.cta, (!choice || busy) && styles.ctaDisabled]}
+          style={[styles.cta, live.cta, (!choice || busy) && styles.ctaDisabled]}
           accessibilityRole="button"
           accessibilityState={{ disabled: !choice || busy }}
           accessibilityLabel={editMode ? 'Save' : 'Continue'}
         >
-          <Text maxFontSizeMultiplier={1.3} style={styles.ctaText}>{editMode ? 'Save' : 'Continue'}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.ctaText, live.ctaText]}>{editMode ? 'Save' : 'Continue'}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -227,3 +235,30 @@ const styles = StyleSheet.create({
   ctaDisabled: { opacity: 0.5 },
   ctaText: { ...type.bodyStrong, color: colors.onPrimary },
 });
+
+// CP-10 batch F (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/gap/padding/borderWidth/lineHeight/textTransform/letterSpacing,
+// no token) and fontWeight (not part of useTheme()'s shape) are correctly
+// omitted -- there is nothing to unfreeze for them. Same pattern as
+// AddCustomFoodScreen.js's buildLiveStyles (batch D). Consent gate logic,
+// ordering and copy are untouched -- colours only.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    title: { ...t.type.title, color: t.colors.textPrimary },
+    body: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
+    fieldLabel: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    optionCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    optionCardActive: { borderColor: t.colors.primary },
+    optionText: { ...t.type.bodySm, color: t.colors.textPrimary },
+    radio: { borderColor: t.colors.border },
+    radioActive: { borderColor: t.colors.primary },
+    radioDot: { backgroundColor: t.colors.primary },
+    noteText: { ...t.type.caption, color: t.colors.textMuted },
+    cta: { backgroundColor: t.colors.primaryFill },
+    ctaText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+  };
+}

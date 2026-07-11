@@ -70,13 +70,17 @@ describe('QuizScreen', () => {
     return row.props.children;
   }
 
-  // A dot's style is [styles.dot, i < answeredCount && styles.dotActive]:
-  // styles.dot alone always carries a (border-coloured) backgroundColor, so
-  // "lit" means the second array slot resolved truthy (styles.dotActive),
-  // not merely that some backgroundColor is present.
+  // CP-10 batch F (2026-07-11): QuizScreen now reads a live theme
+  // (src/hooks/useTheme.js), so a dot's style is
+  // [styles.dot, live.dot, i < answeredCount && [styles.dotActive, live.dotActive]]
+  // -- the live.dot override sits at a fixed index 1 and is always present,
+  // so "lit" now means the LAST array slot resolved truthy (the
+  // styles.dotActive/live.dotActive pair), not merely that some
+  // backgroundColor is present. Same contract as before, widened only for
+  // the extra fixed slot the live insertion adds.
   function isLit(dot) {
     const style = dot.props.style;
-    return Array.isArray(style) ? !!style[1] : false;
+    return Array.isArray(style) ? !!style[style.length - 1] : false;
   }
 
   test('progress indicator: no dots lit before any question is answered (first)', () => {

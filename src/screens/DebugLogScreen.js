@@ -4,6 +4,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Share } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import { getRecentErrors, clearErrors, exportErrorsAsText, getCrashLog, clearCrashLog, logInfo } from '../lib/errorLog';
 import { diagnoseSyncConflicts } from '../lib/database';
@@ -19,6 +20,12 @@ export default function DebugLogScreen() {
   const [crash, setCrash] = useState(null);
   const [filter, setFilter] = useState('all'); // 'all' | 'error' | 'warn' | 'info'
   const [loading, setLoading] = useState(true);
+  // CP-10 batch F (2026-07-11): live theme (src/hooks/useTheme.js). This
+  // screen never renders a FlatList/FlashList/SectionList row (a plain
+  // ScrollView over a .map), so an unmemoised call matches
+  // AddCustomFoodScreen's own precedent (batch D).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -82,12 +89,12 @@ export default function DebugLogScreen() {
   const counts = entries.reduce((acc, e) => { acc[e.level] = (acc[e.level] || 0) + 1; return acc; }, {});
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader
         title="Debug logs"
         right={(
           <TouchableOpacity onPress={load} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityLabel="Refresh logs">
-            <Ionicons name="refresh" size={22} color={colors.textSecondary} />
+            <Ionicons name="refresh" size={22} color={t.colors.textSecondary} />
           </TouchableOpacity>
         )}
       />
@@ -99,13 +106,13 @@ export default function DebugLogScreen() {
           return (
             <TouchableOpacity
               key={level}
-              style={[styles.chip, on && styles.chipOn]}
+              style={[styles.chip, live.chip, on && [styles.chipOn, live.chipOn]]}
               onPress={() => setFilter(level)}
               accessibilityRole="button"
               accessibilityState={{ selected: on }}
               accessibilityLabel={`${level}, ${count}`}
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.chipLabel, on && styles.chipLabelOn]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.chipLabel, live.chipLabel, on && [styles.chipLabelOn, live.chipLabelOn]]}>
                 {level} · {count}
               </Text>
             </TouchableOpacity>
@@ -114,51 +121,51 @@ export default function DebugLogScreen() {
       </View>
 
       <View style={styles.actionsRow}>
-        <TouchableOpacity style={styles.actionBtn} onPress={handleShare} accessibilityRole="button" accessibilityLabel="Share logs">
-          <Ionicons name="share-outline" size={16} color={colors.primary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.actionLabel, { color: colors.primary }]}>Share</Text>
+        <TouchableOpacity style={[styles.actionBtn, live.actionBtn]} onPress={handleShare} accessibilityRole="button" accessibilityLabel="Share logs">
+          <Ionicons name="share-outline" size={16} color={t.colors.primary} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.actionLabel, live.actionLabel, { color: t.colors.primary }]}>Share</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={handleDiagnose} accessibilityRole="button" accessibilityLabel="Run sync diagnostics">
-          <Ionicons name="medkit-outline" size={16} color={colors.primary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.actionLabel, { color: colors.primary }]}>Sync diag</Text>
+        <TouchableOpacity style={[styles.actionBtn, live.actionBtn]} onPress={handleDiagnose} accessibilityRole="button" accessibilityLabel="Run sync diagnostics">
+          <Ionicons name="medkit-outline" size={16} color={t.colors.primary} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.actionLabel, live.actionLabel, { color: t.colors.primary }]}>Sync diag</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionBtn, styles.actionBtnDanger]} onPress={handleClear} accessibilityRole="button" accessibilityLabel="Clear logs">
-          <Ionicons name="trash-outline" size={16} color={colors.error} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.actionLabel, { color: colors.error }]}>Clear</Text>
+        <TouchableOpacity style={[styles.actionBtn, live.actionBtn, styles.actionBtnDanger, live.actionBtnDanger]} onPress={handleClear} accessibilityRole="button" accessibilityLabel="Clear logs">
+          <Ionicons name="trash-outline" size={16} color={t.colors.error} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.actionLabel, live.actionLabel, { color: t.colors.error }]}>Clear</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {crash && (
-          <View style={styles.crashCard}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.crashTitle}>Most recent fatal crash</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.crashWhen}>{new Date(crash.ts).toLocaleString()}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.crashMsg} selectable>{crash.message}</Text>
+          <View style={[styles.crashCard, live.crashCard]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.crashTitle, live.crashTitle]}>Most recent fatal crash</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.crashWhen, live.crashWhen]}>{new Date(crash.ts).toLocaleString()}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.crashMsg, live.crashMsg]} selectable>{crash.message}</Text>
             {crash.stack ? (
-              <Text maxFontSizeMultiplier={1.3} style={styles.crashStack} selectable>{crash.stack.slice(0, 1200)}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.crashStack, live.crashStack]} selectable>{crash.stack.slice(0, 1200)}</Text>
             ) : null}
           </View>
         )}
 
         {!loading && filtered.length === 0 && (
           <View style={styles.empty}>
-            <Ionicons name="checkmark-circle-outline" size={36} color={colors.success} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>No {filter === 'all' ? '' : filter + ' '}entries.</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.emptyHint}>Errors caught by handlers will appear here.</Text>
+            <Ionicons name="checkmark-circle-outline" size={36} color={t.colors.success} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.emptyText, live.emptyText]}>No {filter === 'all' ? '' : filter + ' '}entries.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.emptyHint, live.emptyHint]}>Errors caught by handlers will appear here.</Text>
           </View>
         )}
 
         {filtered.map((e, i) => (
-          <View key={`${e.ts}-${i}`} style={[styles.entry, levelStyle(e.level)]}>
+          <View key={`${e.ts}-${i}`} style={[styles.entry, live.entry, buildLevelStyle(t, e.level)]}>
             <View style={styles.entryHeader}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.entryLevel, levelLabelStyle(e.level)]}>{e.level}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.entryScope}>{e.scope}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.entryWhen}>{formatWhen(e.ts)}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.entryLevel, live.entryLevel, buildLevelLabelStyle(t, e.level)]}>{e.level}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.entryScope, live.entryScope]}>{e.scope}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.entryWhen, live.entryWhen]}>{formatWhen(e.ts)}</Text>
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={styles.entryMessage} selectable>{e.message}</Text>
-            {e.context ? <Text maxFontSizeMultiplier={1.3} style={styles.entryContext} selectable>ctx: {e.context}</Text> : null}
+            <Text maxFontSizeMultiplier={1.3} style={[styles.entryMessage, live.entryMessage]} selectable>{e.message}</Text>
+            {e.context ? <Text maxFontSizeMultiplier={1.3} style={[styles.entryContext, live.entryContext]} selectable>ctx: {e.context}</Text> : null}
             {e.stack ? (
-              <Text maxFontSizeMultiplier={1.3} style={styles.entryStack} selectable numberOfLines={6}>{e.stack}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.entryStack, live.entryStack]} selectable numberOfLines={6}>{e.stack}</Text>
             ) : null}
           </View>
         ))}
@@ -175,15 +182,19 @@ function formatWhen(ts) {
   return new Date(ts).toLocaleDateString();
 }
 
-function levelStyle(level) {
-  if (level === 'error') return { borderLeftColor: colors.error };
-  if (level === 'warn') return { borderLeftColor: colors.warning };
-  return { borderLeftColor: colors.borderLight };
+// CP-10 batch F (2026-07-11): converted to accept the live theme `t` on the
+// buildConfidenceColors(t) precedent (NutritionTargetsScreen, batch E) --
+// the error/warn/default severity mapping is byte-identical in meaning,
+// only the token SOURCE moved from the frozen import to the live theme.
+function buildLevelStyle(t, level) {
+  if (level === 'error') return { borderLeftColor: t.colors.error };
+  if (level === 'warn') return { borderLeftColor: t.colors.warning };
+  return { borderLeftColor: t.colors.borderLight };
 }
-function levelLabelStyle(level) {
-  if (level === 'error') return { color: colors.error };
-  if (level === 'warn') return { color: colors.warning };
-  return { color: colors.textSecondary };
+function buildLevelLabelStyle(t, level) {
+  if (level === 'error') return { color: t.colors.error };
+  if (level === 'warn') return { color: t.colors.warning };
+  return { color: t.colors.textSecondary };
 }
 
 const styles = StyleSheet.create({
@@ -216,3 +227,37 @@ const styles = StyleSheet.create({
   entryContext: { color: colors.textMuted, fontSize: fontSize.xs, fontFamily: 'monospace' },
   entryStack: { color: colors.textMuted, fontSize: fontSize.xs, fontFamily: 'monospace' },
 });
+
+// CP-10 batch F (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/gap/padding/borderWidth/fontFamily, no token) are correctly
+// omitted -- there is nothing to unfreeze for them. Same pattern as
+// AddCustomFoodScreen.js's buildLiveStyles (batch D).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    chip: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    chipOn: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    chipLabel: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
+    chipLabelOn: { color: t.colors.primary },
+    actionBtn: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    actionBtnDanger: { borderColor: t.colors.error },
+    actionLabel: { ...t.type.label, color: t.colors.textPrimary },
+    crashCard: { backgroundColor: t.colors.errorBg, borderColor: t.colors.error },
+    crashTitle: { color: t.colors.error, fontSize: t.fontSize.sm },
+    crashWhen: { ...t.type.num('caption'), color: t.colors.textMuted },
+    crashMsg: { ...t.type.label, color: t.colors.textPrimary },
+    crashStack: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
+    emptyText: { color: t.colors.textPrimary, fontSize: t.fontSize.md },
+    emptyHint: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
+    entry: { backgroundColor: t.colors.surface },
+    entryLevel: { fontSize: t.fontSize.xs },
+    entryScope: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
+    entryWhen: { ...t.type.num('caption'), color: t.colors.textMuted },
+    entryMessage: { color: t.colors.textPrimary, fontSize: t.fontSize.sm },
+    entryContext: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
+    entryStack: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
+  };
+}

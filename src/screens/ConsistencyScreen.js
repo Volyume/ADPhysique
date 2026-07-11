@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import BackHeader from '../components/BackHeader';
 import AnimatedEntrance from '../components/AnimatedEntrance';
@@ -38,14 +39,20 @@ export default function ConsistencyScreen({ navigation }) {
     showAllMuscles, setShowAllMuscles, calValues,
     enoughForTrends, refreshing, loading, loadError, hasData, handleRefresh,
   } = useProgressData();
+  // CP-10 batch F (2026-07-11): live theme (src/hooks/useTheme.js). This
+  // screen never renders a FlatList/FlashList/SectionList row (a single
+  // ScrollView), so an unmemoised call matches AddCustomFoodScreen's own
+  // precedent (batch D).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Consistency" />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={t.colors.primary} />
         }
       >
         {/* ── Your weeks (COMP-018 consistency streak) ── */}
@@ -54,10 +61,10 @@ export default function ConsistencyScreen({ navigation }) {
         {/* ── Lighter week banner ── */}
         {deloadAlert && (
           <Card tone="warning" style={styles.deloadBanner}>
-            <Ionicons name="moon-outline" size={18} color={colors.warning} />
+            <Ionicons name="moon-outline" size={18} color={t.colors.warning} />
             <View style={{ flex: 1 }}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.deloadTitle}>Lighter week recommended</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.deloadSub}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.deloadTitle, live.deloadTitle]}>Lighter week recommended</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.deloadSub, live.deloadSub]}>
                 {deloadAlert.reasons?.[0] ?? 'Your body is signalling it needs a recovery week.'}
               </Text>
             </View>
@@ -190,3 +197,18 @@ const styles = StyleSheet.create({
   deloadTitle: { ...type.bodyStrong, color: colors.warning, marginBottom: spacing.xxs },
   deloadSub: { ...type.bodySm, color: colors.textSecondary },
 });
+
+// CP-10 batch F (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/gap/padding, no token) are correctly omitted -- there is
+// nothing to unfreeze for them. Same pattern as AddCustomFoodScreen.js's
+// buildLiveStyles (batch D).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    deloadTitle: { ...t.type.bodyStrong, color: t.colors.warning },
+    deloadSub: { ...t.type.bodySm, color: t.colors.textSecondary },
+  };
+}
