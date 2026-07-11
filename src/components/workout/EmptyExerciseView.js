@@ -23,16 +23,24 @@ export default function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, 
   const live = buildLiveStyles(t);
   return (
     <View style={[styles.emptyView, live.emptyView]}>
+      {/* R2-2 (2026-07-11): header twin of ActiveWorkoutScreen - kept
+          identical. X = contained icon button in the shared chrome family;
+          elapsed = overline micro-label above type.num numerals; Finish
+          chrome matches the X so the bar reads as one family. */}
       <View style={[styles.header, live.header]}>
         <View style={styles.headerSide}>
-          <TouchableOpacity onPress={onCancel} style={styles.headerTapTarget} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Cancel workout">
-            {/* R5 (D66, review catch): matches the main logger header's X,
-                which matches ModalHeader's close (size 24, textPrimary). */}
+          <TouchableOpacity onPress={onCancel} style={[styles.headerTapTarget, styles.headerIconBtn, live.headerIconBtn]} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Cancel workout">
+            {/* R5 (D66): size 24, textPrimary. R2-2: now contained. */}
             <Ionicons name="close" size={24} color={t.colors.textPrimary} />
           </TouchableOpacity>
         </View>
         <View style={styles.headerCenter}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.timerText, live.timerText]}>{elapsed}</Text>
+          <View style={styles.headerTimerBlock}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.headerTimerLabel, live.headerTimerLabel]}>Elapsed</Text>
+            <View style={styles.headerTimerValueRow}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.timerText, live.timerText]}>{elapsed}</Text>
+            </View>
+          </View>
         </View>
         <View style={styles.headerSideRight}>
           <Button
@@ -98,14 +106,27 @@ const styles = StyleSheet.create({
   // purely transparent, no visual change.
   headerTapTarget: { minWidth: workoutLoggerSize.headerButtonMin, minHeight: workoutLoggerSize.headerButtonMin, alignItems: 'center', justifyContent: 'center' },
   headerSideRight: { width: workoutLoggerSize.headerSide, alignItems: 'flex-end', justifyContent: 'center' },
-  // R5 (D66, review catch): this file duplicates the main logger header's
-  // chrome (see the file header comment) and MUST track its D66 shape -
-  // bespoke Finish chrome deleted (Button's secondary variant shows
-  // through), timer is data ink not brand amber.
+  // R2-2 (2026-07-11): shared contained icon-button chrome for the header X
+  // (kept identical to ActiveWorkoutScreen.headerIconBtn).
+  headerIconBtn: {
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  // R5 (D66): this file duplicates the main logger header's chrome (see the
+  // file header comment) and MUST track its shape. R2-2: Finish radius and
+  // height now match the X chrome so the bar bookends as one family.
   headerFinishButton: {
     minWidth: workoutLoggerSize.finishButtonMinWidth,
+    minHeight: workoutLoggerSize.headerButtonMin,
+    borderRadius: radius.md,
   },
   headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
+  // R2-2: elapsed timer as a designed stat block (overline label + numerals).
+  headerTimerBlock: { alignItems: 'center' },
+  headerTimerLabel: { ...type.overline, color: colors.textMuted },
+  headerTimerValueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   timerText: { ...type.num('title'), color: colors.textPrimary },
   exerciseNav: { borderBottomWidth: 1, borderBottomColor: colors.border, maxHeight: workoutLoggerSize.exerciseNavMaxHeight },
   exerciseNavContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, gap: spacing.sm, alignItems: 'center' },
@@ -134,6 +155,9 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     header: { borderBottomColor: t.colors.border },
+    // R2-2: contained icon-button chrome + overline timer label, live-mirrored.
+    headerIconBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    headerTimerLabel: { ...t.type.overline, color: t.colors.textMuted },
     timerText: { ...t.type.num('title'), color: t.colors.textPrimary },
     exerciseNav: { borderBottomColor: t.colors.border },
     navTab: { backgroundColor: t.colors.surface2 },

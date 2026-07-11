@@ -487,7 +487,15 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     minHeight: 64,
   },
+  // R2-3 (2026-07-11, founder build 2684): the readout now absorbs the row's
+  // free space (flex: 1) and may shrink (minWidth: 0) so the ±15 / Skip
+  // controls sit right-aligned and ALWAYS stay on-screen. Before, the readout
+  // was content-sized with no flex and the right controls had no flexShrink,
+  // so on a tight width (the R5 scrollContent md -> lg change removed 8px)
+  // the Skip button overflowed and clipped half off the right screen edge.
   timerReadout: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -521,6 +529,8 @@ const styles = StyleSheet.create({
   },
   skipBtn: {
     minHeight: 44,
+    // R2-3: never shrink below its label width, so it can't clip at the edge.
+    flexShrink: 0,
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
     // R5 (D66): radius.sm -> radius.md, the logger's one small-surface
@@ -532,6 +542,8 @@ const styles = StyleSheet.create({
   skipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
   adjBtn: {
     minHeight: 44,
+    // R2-3: keep full size when the row is tight (see timerReadout).
+    flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,

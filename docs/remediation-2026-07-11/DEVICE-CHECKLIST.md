@@ -91,3 +91,113 @@ expected result. Steps 4, 7 and 8 include the ED-safety-adjacent checks.
 
 If any step fails, quote the step number - each maps to one commit
 range on the board.
+
+---
+
+## R2 wave (build after this branch push, 2026-07-11 evening) - logger cohesion
+
+_Third device walk (build 2684) defects R2-2/R2-3/R2-4, fixed to the Food
+design standard. Physical Android, EAS build. Quote the step number on any
+fail._
+
+### Header (R2-2)
+
+23. Start any workout and look at the top bar. Expected: the close (X) top
+    left sits in a contained square button - surface fill, thin border,
+    the same small rounded corners as the "..." options button - NOT a bare
+    white glyph. The X and the Finish button on the right look like the same
+    family of control (same height, same corner rounding, same border).
+24. Look at the centred elapsed time. Expected: a small uppercase "ELAPSED"
+    label sits directly above the running numerals (e.g. 3:10); the numerals
+    are monospaced/tabular so they do not jitter as they tick. It reads as a
+    designed stat, not a raw number.
+25. On the very first exercise (empty state, before adding an exercise),
+    confirm the same header: contained X, ELAPSED label above the timer,
+    Finish matching the X. It must look identical to the normal header.
+
+### Set-card region (R2-3)
+
+26. Start a set, log it, and let the rest timer appear. Expected: the whole
+    rest bar sits inside the screen - the "-15 / +15" and "Skip" controls are
+    fully on-screen on the right, nothing is cut off the right edge. Try it
+    at the largest system font size (Settings > Display > Font size ~1.3x):
+    still nothing clipped.
+27. Look at the top-right of the white set-entry card. Expected: the note
+    pencil is a small contained button (fill + border + rounded corners),
+    clearly a button, and it does NOT sit on top of / touch the set-type
+    chevron on the row just below it, nor the rest bar above it.
+
+### Title row + est-max (R2-4)
+
+28. Look at the exercise title row ("Cable Lat Pullover" etc.) and the "..."
+    button beside it. Expected: they sit on one row, vertically centred on
+    each other - the title text and the button centre align, consistent row
+    height, at both a short and a wrapping two-line title.
+29. Enter a weight and reps so an "Est. max ~NNkg" line appears. Expected: it
+    is a quiet caption on its OWN line beneath the Reps stepper, right under
+    the value - it does NOT wrap cramped under the word "Reps" and its tail
+    does NOT touch the +/- stepper. Bump the system font to ~1.3x and confirm
+    it still never collides.
+
+### ED-safety spot check (unchanged, confirm no regression)
+
+30. This wave is styling only: confirm logging a set, editing a set, the
+    warm-up flow and the rest timer all behave exactly as before; no new
+    confirm dialogs, no changed numbers, calorie/weight surfaces untouched.
+
+### Workout summary footer / tab-band (R2-5, R2-6 - agent B)
+
+31. Finish a real workout (tap Finish on the logger) so the Workout Summary
+    opens. Expected: there is NO dead band between the Close/Share sticky
+    footer and the bottom tab bar - the footer sits flush on top of the tab
+    bar with no empty strip (the ~70dp band the founder photographed on build
+    2684 is gone). Confirm on a gesture-navigation device AND a 3-button one.
+32. On that same summary, scroll all the way to the bottom (past the exercise
+    breakdown / feedback card). Expected: the content ends a NORMAL single
+    breath above the Close/Share buttons - not a large ~85-100dp gap of dead
+    space, and not crowding the buttons either.
+33. Open the "Rate this workout" section and tap into the "Anything notable"
+    notes field so the keyboard opens. Expected: the focused notes field lifts
+    into view above the keyboard and is never covered; typing works; dismissing
+    the keyboard returns the layout with the footer still flush on the tab bar.
+34. View a PAST workout from history (Progress -> a session -> summary, the
+    read-only view). Expected: same as step 31 - footer flush on the tab bar,
+    no dead band, Back header present at the top.
+
+### Coach / You check-in row (R2-7 - agent B)
+
+35. Go to the Coach ("You") tab as a Pro user whose first check-in has not yet
+    opened. Find the "Weekly check-in" row under "This week". Expected: its
+    subtitle is ONE calm line - a short British date fact like
+    "First check-in 19 July" (day and month, no "19/07/2026", no colon, no em
+    dash), sitting level with the one-line rows around it. It must NOT be a
+    four-line paragraph.
+36. Tap that row to open the Weekly check-in screen. Expected: the fuller
+    explanation ("Volyume waits for enough baseline data... keep logging your
+    morning weight") is present HERE (it was relocated/already lived here), so
+    no information was lost - only moved off the crowded row.
+
+### Save-as-template sheet + summary chrome (compliance - agent B)
+
+37. On a summary reached from a one-off (no-routine) session, tap "Save as
+    Workout Template". Expected: a bottom SHEET slides up (drag handle, rounded
+    top corners, scrim behind) - NOT a centred pop-up dialog. It shows the
+    title, a name field (keyboard opens without covering it), and a Cancel
+    button beside a wider primary Save.
+38. In that sheet: edit the name and tap Save. Expected: the sheet closes and a
+    calm toast confirms "...saved to Workout Templates". Re-open it and swipe
+    the sheet down / tap the scrim: it dismisses with no save.
+39. Trigger the "no exercises" guard if reachable (a summary with no exercise
+    data): tapping Save-as-template shows a calm toast ("No exercise data to
+    save as a template."), NOT a blocking OK dialog.
+40. Eyeball the three stat tiles under the big tonnage number and the amber
+    "Adjusted today"/save-error strips: corners read as the same rounded card
+    family as the cards above them; the muscle-volume rows and status badges
+    are unchanged in wording and numbers.
+
+### ED-safety spot check (summary, confirm no regression)
+
+41. Styling/chrome only: confirm the milestone card, PR row, block-complete
+    card and any share buttons show EXACTLY the same copy and numbers as
+    before; no new weight/outcome language anywhere on the summary; calm-mode /
+    open-ED suppression of the celebratory cards still hides them.

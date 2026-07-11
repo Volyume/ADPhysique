@@ -2450,32 +2450,45 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        {/* Header */}
+        {/* Header. R2-2 (2026-07-11, founder build 2684 device walk; lead
+            ruling): the three top-bar controls read as ONE family now - the X
+            is a contained quiet icon button in the same chrome as the "..."
+            options button (44dp square, surface fill, subtle border, small-
+            surface radius.md); the elapsed timer keeps its type.num tabular
+            numerals but gains the standard's overline micro-label (matching
+            RestTimer's REST label grammar) so it reads as a designed element,
+            not a raw number; Finish keeps its pill but its height/radius/
+            border now match the X chrome so left and right bookend the bar. */}
         <View style={[styles.header, live.header]}>
           <View style={styles.headerSide}>
             <TouchableOpacity
               onPress={handleCancelWorkout}
-              style={styles.headerTapTarget}
+              style={[styles.headerTapTarget, styles.headerIconBtn, live.headerIconBtn]}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
               accessibilityLabel="Cancel workout"
             >
-              {/* R5 (D66): match ModalHeader's close treatment exactly
-                  (size 24, textPrimary) - the house modal-chrome X, not a
-                  quieter one-off. */}
+              {/* R5 (D66): size 24, textPrimary. R2-2: now sits in the shared
+                  contained icon-button chrome (headerIconBtn), matching the
+                  "..." options button. */}
               <Ionicons name="close" size={24} color={t.colors.textPrimary} />
             </TouchableOpacity>
           </View>
           <View style={styles.headerCenter}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.timerText, live.timerText]}>{elapsedStr}</Text>
-            {timeCrunchActive && (
-              <Ionicons
-                name="timer"
-                size={15}
-                color={t.colors.warning}
-                accessibilityLabel="Time crunch active"
-              />
-            )}
+            <View style={styles.headerTimerBlock}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.headerTimerLabel, live.headerTimerLabel]}>Elapsed</Text>
+              <View style={styles.headerTimerValueRow}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.timerText, live.timerText]}>{elapsedStr}</Text>
+                {timeCrunchActive && (
+                  <Ionicons
+                    name="timer"
+                    size={15}
+                    color={t.colors.warning}
+                    accessibilityLabel="Time crunch active"
+                  />
+                )}
+              </View>
+            </View>
           </View>
           <View style={styles.headerSideRight}>
             {targetComplete && !extraSetArmed && isLastExercise ? (
@@ -2728,7 +2741,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 same setShowNoteInput handler and noteActionLabel copy. */}
             <TouchableOpacity
               testID="volyume-note-corner-btn"
-              style={styles.noteCornerBtn}
+              style={[styles.noteCornerBtn, live.noteCornerBtn]}
               onPress={() => setShowNoteInput(true)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
@@ -4119,15 +4132,30 @@ const styles = StyleSheet.create({
   // purely transparent, no visual change.
   headerTapTarget: { minWidth: workoutLoggerSize.headerButtonMin, minHeight: workoutLoggerSize.headerButtonMin, alignItems: 'center', justifyContent: 'center' },
   headerSideRight: { width: workoutLoggerSize.headerSide, alignItems: 'flex-end', justifyContent: 'center' },
-  // R5 (D66): the bespoke chrome (surface2 bg, 1px border, radius.sm,
-  // row+gap) duplicated what Button variant="secondary" already renders,
-  // but at a nonstandard radius - the founder's "Finish differs from X"
-  // header mish-mash. Button's own secondary treatment now shows through;
-  // only the width floor stays local.
+  // R2-2 (2026-07-11): the contained quiet icon-button chrome shared by the
+  // header X and (by convergence) the "..." options button - 44dp square,
+  // surface fill, subtle border, the logger's one small-surface radius.md.
+  // The X, elapsed block and Finish now bookend the bar as one family.
+  headerIconBtn: {
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  // R5 (D66): Button variant="secondary" owns the fill/ink. R2-2: the
+  // radius and height now match the X chrome (headerIconBtn) so left and
+  // right bookend the bar as one family; only the width floor stays local.
   headerFinishButton: {
     minWidth: workoutLoggerSize.finishButtonMinWidth,
+    minHeight: workoutLoggerSize.headerButtonMin,
+    borderRadius: radius.md,
   },
   headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
+  // R2-2: the elapsed timer is a designed stat block - overline micro-label
+  // (RestTimer's REST label grammar) above the type.num tabular numerals.
+  headerTimerBlock: { alignItems: 'center' },
+  headerTimerLabel: { ...type.overline, color: colors.textMuted },
+  headerTimerValueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   // R5 (D66): the elapsed timer is DATA, not brand decoration - Food's
   // rule is textPrimary for the value that is the content, tabular via
   // type.num; brand amber in the header competed with the single filled
@@ -4172,7 +4200,10 @@ const styles = StyleSheet.create({
   // notesExpanded) is retired -- StatusStrip (src/components/workout/
   // StatusStrip.js) owns the equivalent chip-row styling now.
   exerciseHeader: { gap: spacing.xs },
-  exerciseNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  // R2-4 (2026-07-11): a consistent row height (the options button's own
+  // 44dp) with centre alignment so the exercise title and the "..." options
+  // button share one row and align on their centres at any title length.
+  exerciseNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, minHeight: workoutLoggerSize.overflowButton },
   // D43 S3: wraps the exercise name so the whole title is the "Exercise
   // info" tap target (relocated off the overflow sheet); flex: 1 lives here
   // now, exerciseName keeps its own flex: 1 so numberOfLines={2} still wraps
@@ -4198,7 +4229,8 @@ const styles = StyleSheet.create({
     height: workoutLoggerSize.headerButtonMin,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.sm,
+    // R2 compliance: icon button -> radius.md.
+    borderRadius: radius.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
@@ -4221,7 +4253,8 @@ const styles = StyleSheet.create({
   swapItemIcon: {
     width: 32,
     height: 32,
-    borderRadius: radius.sm,
+    // R2 compliance: small icon container -> radius.md.
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface2,
@@ -4246,7 +4279,20 @@ const styles = StyleSheet.create({
   // 700 ms flash, just the colour swaps.
   setEntryCardFlash: { borderColor: colors.primary },
   // D43 S2: the note-pencil corner affordance (blueprint 3.4).
-  noteCornerBtn: { position: 'absolute', top: spacing.sm, right: spacing.sm, zIndex: 1, padding: spacing.xxs },
+  // R2-3 (2026-07-11): now sits in the shared contained icon-button family
+  // (surface fill, subtle border, small-surface radius.md) with a proper
+  // >=44dp hit target via hitSlop, so the card's right rail reads
+  // intentionally instead of a bare glyph clashing with the rest bar above.
+  // orientationRow gains paddingRight below to clear this corner button.
+  noteCornerBtn: {
+    position: 'absolute', top: spacing.sm, right: spacing.sm, zIndex: 1,
+    alignItems: 'center', justifyContent: 'center',
+    padding: spacing.xs,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   warmupBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   warmupBannerText: { ...type.caption, color: colors.warning },
   warmupOneTimeHint: {
@@ -4257,7 +4303,9 @@ const styles = StyleSheet.create({
   // COMP-001 card header: three lines replace the old chip stack.
   // D43 S5: paddingVertical was a hand-rolled 2px; spacing.xxs is the exact
   // same value from the token table (no visual change).
-  orientationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xxs },
+  // R2-3: paddingRight reserves the top-right corner for noteCornerBtn so the
+  // set-type chevron never sits under the contained note button.
+  orientationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xxs, paddingRight: spacing.xl },
   orientationText: { ...type.label, color: colors.textSecondary },
   // D43 S2: the target reps range folded into orientationText's own Text
   // node (was a separate targetRow/targetText line, retired).
@@ -4331,7 +4379,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: withAlpha(colors.primary, alpha.edge),
   },
-  autoAdvanceRowAction: { ...type.caption, color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  autoAdvanceRowAction: { ...type.captionStrong, color: colors.textPrimary },
   // A2: the pinned action bar. Sits above the home indicator; the scroll's
   // bottom spacer keeps content clear of it.
   bottomBar: {
@@ -4351,7 +4399,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg, padding: spacing.md, gap: spacing.sm, marginBottom: spacing.sm,
   },
   clusterTitle: { ...type.label, color: colors.primary },
-  clusterReps: { ...type.bodyStrong, color: colors.textPrimary },
+  // R2 numerals sweep: the cluster rep tally is data -> tabular figures.
+  clusterReps: { ...type.num('bodyStrong'), color: colors.textPrimary },
   clusterInputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   clusterInput: {
     flex: 1, backgroundColor: colors.background, color: colors.textPrimary,
@@ -4369,15 +4418,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   clusterAddBtnText: { ...type.label, color: colors.primary },
-  clusterCancel: { alignSelf: 'center', alignItems: 'center', justifyContent: 'center', minHeight: workoutLoggerSize.primaryActionMinHeight, paddingHorizontal: spacing.lg, borderRadius: radius.sm, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
+  // R2 compliance (2026-07-11): control -> the logger's one small-surface radius.md.
+  clusterCancel: { alignSelf: 'center', alignItems: 'center', justifyContent: 'center', minHeight: workoutLoggerSize.primaryActionMinHeight, paddingHorizontal: spacing.lg, borderRadius: radius.md, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
   clusterCancelText: { ...type.label, color: colors.textPrimary },
+  // R2-2/R2-4 (2026-07-11): the "..." options button is the reference chrome
+  // the header X now shares (headerIconBtn). radius.sm -> radius.md brings it
+  // onto the logger's one small-surface radius (Section 1 compliance sweep,
+  // controls -> md).
   overflowBtn: {
     width: workoutLoggerSize.overflowButton,
     height: workoutLoggerSize.overflowButton,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface2,
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -4386,12 +4440,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     alignSelf: 'flex-start',
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    backgroundColor: colors.primaryBg, borderRadius: radius.sm,
+    // R2 compliance: chip container -> radius.md (standard section 4).
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
     marginTop: spacing.xs,
   },
-  supersetChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+  supersetChipText: { ...type.captionStrong, color: colors.primary },
   loggedSection: { gap: spacing.xs2 },
-  loggedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted },
+  loggedTitle: { ...type.captionStrong, color: colors.textMuted },
   // D43 S1: loggedSetRow/loggedSetRowWarmup/loggedSetTextWarmup/setNumBadge/
   // setNumText/loggedSetText/loggedEst1RM (LoggedSetRow-exclusive) and
   // emptyView/emptyContent/emptyTitle/emptySubtitle/addFirstBtn/
@@ -4420,20 +4475,22 @@ const styles = StyleSheet.create({
   reorderSheetRowMeta: { ...type.caption, color: colors.textMuted },
   reorderSheetSupersetChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xxs,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.sm,
+    // R2 compliance: chip container -> radius.md.
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.md,
     backgroundColor: colors.primaryBg, alignSelf: 'flex-start', marginTop: spacing.xxs,
   },
-  reorderSheetSupersetChipText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
+  reorderSheetSupersetChipText: { ...type.captionStrong, color: colors.primary },
   reorderSheetChevrons: { flexDirection: 'column', alignItems: 'center', gap: spacing.xxs },
   reorderSheetChevronBtn: {
+    // R2 compliance: icon button -> radius.md.
     width: 28, height: 28, alignItems: 'center', justifyContent: 'center',
-    borderRadius: radius.sm, backgroundColor: colors.surface2,
+    borderRadius: radius.md, backgroundColor: colors.surface2,
   },
   reorderSheetChevronBtnDisabled: { opacity: 0.3 },
   infoTargetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.md },
   infoTarget: { ...type.label, color: colors.primary },
   infoMuscle: { ...type.caption, color: colors.textMuted, marginBottom: spacing.sm },
-  infoNotesLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted, marginBottom: spacing.xs, marginTop: spacing.sm },
+  infoNotesLabel: { ...type.captionStrong, color: colors.textMuted, marginBottom: spacing.xs, marginTop: spacing.sm },
   infoNotes: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 22 },
   // COMP-015 "Adjusted today" section in the info sheet
   adjustedSection: {
@@ -4447,7 +4504,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   adjustedHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  adjustedTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
+  adjustedTitle: { ...type.captionStrong, color: colors.primary },
   adjustedReason: { ...type.bodySm, color: colors.textPrimary },
   adjustedSignal: { ...type.caption, color: colors.textMuted },
   adjustedRevertBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs, paddingVertical: spacing.xs },
@@ -4483,7 +4540,7 @@ const styles = StyleSheet.create({
   supPairCard: { borderLeftWidth: 3, borderLeftColor: colors.primary, gap: spacing.xs },
   supPairRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   supPairChip: { width: 22, height: 22, borderRadius: circle(22), backgroundColor: colors.primaryFill, alignItems: 'center', justifyContent: 'center' },
-  supPairChipText: { color: colors.onPrimary, fontSize: fontSize.xs, fontWeight: fontWeight.bold },
+  supPairChipText: { ...type.num('captionStrong'), color: colors.onPrimary },
   supPairName: { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
   supPairConnector: { width: 2, height: 14, backgroundColor: colors.border, marginLeft: 10 },
   supSteps: { gap: spacing.sm, marginTop: spacing.xs },
@@ -4561,6 +4618,9 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     header: { borderBottomColor: t.colors.border },
+    // R2-2: contained icon-button chrome for the header X, live-mirrored.
+    headerIconBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    headerTimerLabel: { ...t.type.overline, color: t.colors.textMuted },
     // R5 (D66): headerFinishButton no longer carries colour keys (Button's
     // secondary variant owns them live), so it needs no live override.
     timerText: { ...t.type.num('title'), color: t.colors.textPrimary },
@@ -4615,20 +4675,22 @@ function buildLiveStyles(t) {
     autoAdvanceRowText: { ...t.type.caption, color: t.colors.textMuted },
     autoAdvanceRowDot: { ...t.type.caption, color: t.colors.textMuted },
     autoAdvanceRowActionBtn: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
-    autoAdvanceRowAction: { ...t.type.caption, color: t.colors.textPrimary },
+    autoAdvanceRowAction: { ...t.type.captionStrong, color: t.colors.textPrimary },
     bottomBar: { backgroundColor: t.colors.background, borderTopColor: t.colors.borderSubtle },
     clusterBanner: { borderColor: withAlpha(t.colors.primary, 0.502), backgroundColor: t.colors.primaryBg },
     clusterTitle: { ...t.type.label, color: t.colors.primary },
-    clusterReps: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    clusterReps: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
     clusterInput: { backgroundColor: t.colors.background, color: t.colors.textPrimary, borderColor: t.colors.border, ...t.type.body },
     clusterAddBtn: { borderColor: withAlpha(t.colors.primary, 0.502) },
     clusterAddBtnText: { ...t.type.label, color: t.colors.primary },
     clusterCancel: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     clusterCancelText: { ...t.type.label, color: t.colors.textPrimary },
     overflowBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    // R2-3: contained note-corner button chrome, live-mirrored.
+    noteCornerBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     supersetChip: { backgroundColor: t.colors.primaryBg },
-    supersetChipText: { fontSize: t.fontSize.xs, color: t.colors.primary },
-    loggedTitle: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    supersetChipText: { ...t.type.captionStrong, color: t.colors.primary },
+    loggedTitle: { ...t.type.captionStrong, color: t.colors.textMuted },
     // D43 S1: LoggedSetRow-exclusive (loggedSetRow/loggedSetRowWarmup/
     // loggedSetTextWarmup/setNumBadge/setNumText/loggedSetText/loggedEst1RM)
     // and EmptyExerciseView-exclusive (emptyView/emptyTitle/emptySubtitle/
@@ -4645,14 +4707,14 @@ function buildLiveStyles(t) {
     reorderSheetRowName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     reorderSheetRowMeta: { ...t.type.caption, color: t.colors.textMuted },
     reorderSheetSupersetChip: { backgroundColor: t.colors.primaryBg },
-    reorderSheetSupersetChipText: { color: t.colors.primary },
+    reorderSheetSupersetChipText: { ...t.type.captionStrong, color: t.colors.primary },
     reorderSheetChevronBtn: { backgroundColor: t.colors.surface2 },
     infoTarget: { ...t.type.label, color: t.colors.primary },
     infoMuscle: { ...t.type.caption, color: t.colors.textMuted },
-    infoNotesLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    infoNotesLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
     infoNotes: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     adjustedSection: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.376) },
-    adjustedTitle: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    adjustedTitle: { ...t.type.captionStrong, color: t.colors.primary },
     adjustedReason: { ...t.type.bodySm, color: t.colors.textPrimary },
     adjustedSignal: { ...t.type.caption, color: t.colors.textMuted },
     adjustedRevertText: { fontSize: t.fontSize.sm, color: t.colors.primary },
@@ -4666,7 +4728,7 @@ function buildLiveStyles(t) {
     supSubtitle: { ...t.type.bodySm, color: t.colors.textSecondary },
     supPairCard: { borderLeftColor: t.colors.primary },
     supPairChip: { backgroundColor: t.colors.primaryFill },
-    supPairChipText: { color: t.colors.onPrimary, fontSize: t.fontSize.xs },
+    supPairChipText: { ...t.type.num('captionStrong'), color: t.colors.onPrimary },
     supPairName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     supPairConnector: { backgroundColor: t.colors.border },
     supStepNum: { color: t.colors.primary, fontSize: t.fontSize.sm },

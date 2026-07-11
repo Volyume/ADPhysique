@@ -18,7 +18,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
   const t = useTheme();
   const live = {
     fieldLabel: { ...t.type.label, color: t.colors.textSecondary },
-    e1rmHint: { ...t.type.caption, color: t.colors.textMuted },
+    e1rmHint: { ...t.type.num('caption'), color: t.colors.textMuted },
     stepper: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     stepBtn: { backgroundColor: t.colors.surface2 },
     stepBtnText: { ...t.type.bodyStrong, color: t.colors.primary },
@@ -329,16 +329,10 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
           reps_only hides only the Weight Row above; the reps field itself is
           unchanged. */}
       {(showWeightReps || exerciseType === 'reps_only') && (
+      <View style={styles.repsBlock}>
       <View style={styles.inputRow}>
         <View style={styles.fieldLabelWrap}>
           <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Reps</Text>
-          {live1RM != null && live1RM > 0 && (
-            <View style={styles.e1rmRow}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.e1rmHint, live.e1rmHint]}>Est. max ~{Math.round(live1RM)}{units}</Text>
-              {/* U-F-5: plain-English gloss for the estimated-1RM jargon. */}
-              <InfoTooltip text={GLOSSARY.estMax} size={13} />
-            </View>
-          )}
         </View>
         <View style={[styles.stepper, live.stepper]}>
           <TouchableOpacity
@@ -390,6 +384,19 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
           </TouchableOpacity>
         </View>
       </View>
+      {/* R2-4 (2026-07-11): the Est. max readout is its own quiet caption
+          line UNDER the reps row now, not wrapped inside the narrow Reps
+          label column where it cramped and its tail collided with the
+          stepper. On its own full-width line it cannot collide at any font
+          scale. */}
+      {live1RM != null && live1RM > 0 && (
+        <View style={styles.e1rmCaptionRow}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.e1rmHint, live.e1rmHint]}>Est. max ~{Math.round(live1RM)}{units}</Text>
+          {/* U-F-5: plain-English gloss for the estimated-1RM jargon. */}
+          <InfoTooltip text={GLOSSARY.estMax} size={13} />
+        </View>
+      )}
+      </View>
       )}
 
       {/* Effort picker removed, was rarely used in practice. RIR still
@@ -434,9 +441,15 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     gap: 1,
   },
-  e1rmRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  // R2-4: reps row + its Est. max caption line as one block.
+  repsBlock: { gap: spacing.xxs },
+  // R2-4: the Est. max caption sits on its own full-width line under the
+  // reps row, right-aligned beneath the value it is derived from, so it
+  // never wraps under the Reps label or collides with the stepper.
+  e1rmCaptionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
   e1rmHint: {
-    ...type.caption,
+    // R2 numerals sweep: the Est. max readout is data -> tabular figures.
+    ...type.num('caption'),
     color: colors.textMuted,
   },
   perSideHint: {
