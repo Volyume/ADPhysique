@@ -129,7 +129,7 @@ _These are open decision forks, not dispatchable builds. Their elevation is
 conditional on the decision; recorded here so they are visible, not lost._
 
 - **Watch-app scoping round.** Source: D27 (watch app SCOPING approved); `docs/ux-world-class-audit-2026-07-09/watch-app-scoping-memo.md` (5 founder questions at the end, unanswered); handover AWAITING FOUNDER. CURRENT STATE: no watch app exists; HealthKit is removed; the scoping memo is written with 5 questions open, plus a side-finding (SD-11 idempotency defect in `applyRemoteSetEvent`) flagged must-fix-before-wrist-traffic. DECISION NEEDED: founder answers the 5 questions before any build brief. ELEVATION: deferred - cannot be claimed until the scope is set.
-- **Brand-font shortlist.** Source: D25 (brand variable font via expo-font approved; founder retains taste on the final typeface, lead brings a shortlist). CURRENT STATE: app uses the system font; no brand typeface adopted. DECISION NEEDED: lead presents a shortlist -> founder picks -> adopt. ELEVATION: distinctive brand typography (asset/taste-gated).
+- **Brand-font shortlist — DELIVERED, AWAITING FOUNDER PICK (2026-07-11).** Source: D25. Shortlist authored: `docs/ux-world-class-audit-2026-07-09/BRAND-FONT-SHORTLIST.md` (5 candidates, tnum-verified where possible, adoption plan; recommendation Manrope, founder holds taste). DECISION NEEDED: founder replies 1-5 or "stay system"; then one adoption slot.
 
 ---
 
