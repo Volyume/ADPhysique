@@ -88,8 +88,12 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
      at planEngine.js:2091 but NO POOL entry populates it; only
      biceps<-back / triceps<-chest weekly trims function). Founder ruled
      **"do it all fully, we do not put off jobs"** = build the FULL
-     per-exercise secondary-muscle model. **QUEUED as D46, TOP job for
-     the next fresh session.** FULL MAPPED SPEC:
+     per-exercise secondary-muscle model. **D46 BUILT (2026-07-11 fresh
+     session, commit `19907a2`, adversarially reviewed): seed-mirrored
+     secondary tags + generalised glute credit; mp leg day sheds the
+     stacked second glute exercise; bikini/wellness/figure/womens
+     untouched; full suite + lint green. Detail: DECISIONS D46 LANDED
+     block.** Original spec (now as-built record): FULL MAPPED SPEC:
      `docs/ux-world-class-audit-2026-07-09/SECONDARY-MUSCLE-MODEL-BUILD-SPEC.md`
      (problem, reproduction, design halves A/B, phases 0-6, invariants,
      device checklist, code anchors). Deterministic-engine build, Fable

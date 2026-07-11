@@ -410,9 +410,18 @@ failed, lint clean.**
    (stage 3) and chart/Skia components (stage 4) — the two batches that
    had landed without one (added when both Pair-1 verify agents found the
    production migration already done and closed the test gap).
-   **★ D46 — FULL SECONDARY-MUSCLE MODEL is the TOP queued job for the
-   next fresh session (founder: "do it all fully, we do not put off
-   jobs", 2026-07-11).** Founder diagnosed a leg+abs day over-stuffing
+   **✅ D46 — FULL SECONDARY-MUSCLE MODEL BUILT (2026-07-11 fresh
+   session, hands-on): commit `19907a2`, adversarially reviewed before
+   push. Both halves per the spec: 65 seed-mirrored `secondary` tags in
+   POOL (indirectSets reporting live for the first time) + generalised
+   synergist trim (glutes<-quads 0.3, glutes<-hamstrings 0.4;
+   de-emphasised structural muscles owe maintenance EFFECTIVELY with one
+   honest 3-set entry; overlay>=1.2 glute divisions exempt; weak points
+   never trimmed; biceps/triceps behaviour byte-identical). Mens
+   physique leg day: stacked second glute exercise gone (8ex->7ex).
+   Implementation rulings in DECISIONS D46 LANDED block. Original queue
+   note (superseded):** founder: "do it all fully, we do not put off
+   jobs", 2026-07-11. Founder diagnosed a leg+abs day over-stuffing
    (engine gives every leg muscle its own exercise, not crediting that
    squats/RDLs already hammer glutes/adductors). Verified: the engine has
    NO working secondary-muscle model (`entry.secondary` read at

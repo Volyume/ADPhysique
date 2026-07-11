@@ -907,3 +907,39 @@ pressure 2026-07-11). Full mapped-out build spec:
 device checklist + code anchors). The acute symptom is already contained by
 D45 (`da59274`, per-session hard caps), which is the safety net that lets D46
 be built properly rather than rushed.
+
+## D46 LANDED (lead, hands-on, 2026-07-11 — fresh session)
+Built in full per the spec, commit `19907a2`. Implementation rulings made
+under D33 during the build, each recorded in code comments:
+1. **Seed is the single source of truth for secondary tags.** POOL's 65 new
+   `secondary` arrays were mirrored programmatically from seedExercises.js
+   (union seed primary, minus the POOL entry's own primary, for the three
+   cross-primary names) so the two taxonomies cannot drift. Abductor Machine
+   (not in seed, isolation) stays untagged.
+2. **No rear-delt / traps / front-delt transfers.** Their landmark overrides
+   already set MEV 0 BECAUSE they are indirect-fed by design (planEngine
+   GENERATOR_LANDMARK_OVERRIDES); adding a transfer would double-count the
+   discount. Quads/hamstrings are only ever drivers. Adductors are only
+   programmed by glute-emphasised (exempt) divisions, so no adductor trim.
+3. **De-emphasised structural floor = effective maintenance with one honest
+   entry.** overlay < 1.0 structural muscles owe maint EFFECTIVELY
+   (direct + indirect) and keep a minimum ONE 3-set direct entry — never a
+   1-2 set sliver, never zero direct (delivery-estimate slack protection,
+   and the structural "maintenance, not zero" promise kept in direct work).
+4. **Glute-emphasis exemption is overlay semantics, not a goal list:**
+   overlay.glutes >= 1.2 (Bikini 1.55, Wellness 1.60, Figure 1.25, Women's
+   Physique 1.20) skips the glute trim entirely. Found via the
+   coachDivisions stage-2b pin when the first goal-name version (bikini/
+   wellness only) trimmed figure's judged glutes 10 -> 8; the overlay rule
+   keeps every glute-signature division untouched at its ORIGINAL pin.
+5. **T-C re-pin.** The structural-volume T-C test now asserts mens_physique
+   glutes effective (direct+indirect) >= 6 with direct >= 3; quads keep the
+   pure direct >= 6 pin (no indirect source exists for them).
+Outcomes: mp 5-day leg day 8ex/24 -> 7ex/22 (stacked second glute exercise
+gone); cp6/general/bikini workout outputs byte-identical; 1,080-config
+sweep: effective-maintenance misses 126 (pre-existing) -> 0; the 8 remaining
+findings are a pre-existing 2-3-day bodybuilding delivery compression,
+byte-identical on the old engine (noted, NOT fixed — out of D46 scope).
+Full suite 683 suites / 8,456 tests green, lint clean. New invariant suite
+`planEngineSecondaryMuscle.test.js`. Adversarial review dispatched before
+push per the operating model.

@@ -1,9 +1,11 @@
-# Secondary-muscle model — full build spec (queued 2026-07-11, D46)
+# Secondary-muscle model — build spec (BUILT 2026-07-11, commit 19907a2, D46)
 
-**Status: QUEUED for the next fresh Fable session. Do NOT start mid-session
-under usage pressure — this is a deterministic-engine build touching every
-live user's generated plan and needs a clean window + full test rework +
-adversarial review.**
+**Status: BUILT AND LANDED (2026-07-11, commit `19907a2`; implementation
+rulings in the DECISIONS D46 LANDED block). This document is now the
+as-built record; the build followed it in full, with four lead rulings
+where the spec left forks open (seed-mirrored tags, no upper-body
+double-count transfers, effective-maintenance floor with one honest
+entry, overlay >= 1.2 glute exemption).**
 
 Founder ruling (2026-07-11): after being shown the leg-day over-stuffing
 diagnosis, the founder ruled **"Do it all fully, we do not put off jobs."**
