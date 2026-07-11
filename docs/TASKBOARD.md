@@ -124,9 +124,18 @@ leg-day engine work (D45 + D46) all LANDED - detail rolled to
     ramp; warm-up-as-a-type is still in the picker). 3 guard suites
     re-anchored, no pin removed. Lead-verified green: 15 suites / 124
     + full src/screens 132 / 1013.
-  - NEXT: S4 (in-place set editing, NO plate per D57) -> S5 (cohesion
-    polish + adversarial review + founder device walk). RECOVERY:
-    blueprint doc committed; work each slot from its Section 7 in order.
+  - S4 LANDED (`335ad64`): edit a logged set IN PLACE - tapping a row
+    (or Edit from its menu) expands it into an inline SetEntry editor
+    with Save/Cancel, the edit modal removed; one editing slot so a
+    second row collapses the first. Save/Delete reuse the existing
+    handlers unchanged, so the PR-re-eval-on-edit/delete contract holds
+    (prReEval.guard passes unmodified); SetEntry untouched; plate stays
+    dropped (D57). Lead-verified green: 15 / 125 + full src/screens
+    132 / 1014.
+  - NEXT: S5 (cohesion polish - token/type/motion/haptics audit of the
+    whole logger vs Diary/Home; density normalised to the house card;
+    adversarial review of the full S1-S4 arc; founder device walk).
+    RECOVERY: blueprint doc committed; work S5 from its Section 7.
     NOTE: D58 (beat line kept as a row) and D59 (warm-up ramp kept in
     overflow) are both subject to the founder's device-walk taste veto
     at S5.

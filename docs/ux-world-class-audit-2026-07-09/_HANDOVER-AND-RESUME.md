@@ -410,8 +410,15 @@ cohesion-first, min cost) is progressing through its staged slots:
   to one clean winner (verified: no dup keys/testIDs, comments consistent,
   all suites green) but ~420k tokens were wasted. Before relaunching any
   "no-op" agent, confirm it left no live descendants (check the task tree).
-NEXT IN ORDER per the board's D43 entry: S4 (in-place set editing, NO
-plate, D57) -> S5 (cohesion polish + adversarial review + device walk).
+- S4 LANDED `335ad64`: edit a logged set IN PLACE (inline SetEntry editor
+  in the row, edit modal removed, one editing slot); Save/Delete reuse the
+  existing handlers so the PR-re-eval contract holds (prReEval.guard passes
+  unmodified); SetEntry untouched; plate stays dropped (D57). No collision
+  this round (single agent). Lead-verified green: 15/125 + src/screens
+  132/1014.
+NEXT IN ORDER per the board's D43 entry: S5 (cohesion polish - whole-logger
+token/type/motion/haptics audit vs Diary/Home, density normalised to the
+house card, adversarial review of the full S1-S4 arc, founder device walk).
 D58 (beat line kept as a row) + D59 (warm-up ramp kept in overflow) are
 both subject to the founder's S5 device-walk taste veto. Then the D43
 pristine pass is HELD (D57), not part of this arc.
