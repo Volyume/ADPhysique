@@ -55,37 +55,50 @@ const SRC = fs.readFileSync(
 // CP-10 stage 3 (theming FINAL batch, 2026-07-10): ActiveWorkoutScreen now
 // reads a live theme (src/hooks/useTheme.js), so `styles.bottomBar` gained a
 // `live.bottomBar` neighbour in its style array (frozen `styles` block is
-// byte-identical; only the JSX call site grew). The regex below is widened
-// to allow that, no other change to the pinned shape.
-const bottomBarWindow = SRC.match(
-  /\{\(cluster \|\| perSide\) \? null : \(\s*<View style=\{\[styles\.bottomBar, live\.bottomBar,[\s\S]*?\)\}\n\s*<\/View>\s*\)\}/,
-)?.[0] ?? '';
+// byte-identical; only the JSX call site grew).
+//
+// D43 S3: the bar now nests a second bottomBarRow View around the primary +
+// advance-action pair (blueprint 3.7's additive layout), so the old
+// "single-nesting-level" regex no longer matches reliably. Located by
+// anchor strings instead, robust to the exact nesting depth.
+const BAR_START = SRC.indexOf('{(cluster || perSide) ? null : (\n          <View style={[styles.bottomBar,');
+const BAR_END = SRC.indexOf('{/* Exercise Picker Modal, shared by Add and Swap', BAR_START);
+const bottomBarWindow = (BAR_START >= 0 && BAR_END > BAR_START) ? SRC.slice(BAR_START, BAR_END) : '';
 
-describe('target-reached bottom bar swaps "Next exercise" / "Finish workout" in for "Log set"', () => {
-  test('the swap gate is targetComplete && !extraSetArmed, not tied to anything else', () => {
+// D43 S3 (blueprint 3.7, "Bottom bar — stable identity"): the bar's
+// primary is now UNCONDITIONAL -- Log set / Log warm-up / Start cluster is
+// always present while an exercise is active. Reaching target no longer
+// swaps it out; instead a second, visually distinct advance action (Next
+// exercise / Finish workout) appears BESIDE it, additive, reusing the exact
+// same targetComplete/isLastExercise/handleNextExercise/handleFinishWorkout
+// gating this suite always pinned. The describe blocks below are re-pinned
+// to that new shape; no invariant is dropped, only re-anchored to the new
+// source structure (see each test's D43 S3 comment for what changed).
+describe('target-reached bottom bar gains "Next exercise" / "Finish workout" BESIDE "Log set", never replacing it', () => {
+  test('the advance-action gate is targetComplete && !extraSetArmed, not tied to anything else', () => {
     expect(SRC).toContain('const targetSets = adjustedSetCount || routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS;');
     expect(SRC).toContain('const workingLogged = countProgressSets(loggedSets);');
     expect(SRC).toContain('const targetComplete = targetSets && workingLogged >= targetSets;');
     expect(bottomBarWindow).toContain('{targetComplete && !extraSetArmed ? (');
   });
 
-  test('reaching target on a non-last exercise shows "Next exercise", wired to the existing handleNextExercise nav', () => {
+  test('reaching target on a non-last exercise shows "Next exercise" ADDITIVELY, wired to the existing handleNextExercise nav', () => {
     expect(bottomBarWindow).toContain('testID="volyume-btn-next-exercise"');
     expect(bottomBarWindow).toContain('onPress={handleNextExercise}');
     expect(bottomBarWindow).toContain('accessibilityLabel="Move to next exercise"');
-    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live theme override
-    // appended after the frozen style, same mechanical change as above.
-    expect(bottomBarWindow).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.completeBtnText, live.completeBtnText]}>Next exercise</Text>');
+    // D43 S3: the secondary advance action reuses the extraSetBtnPromoted
+    // outline style (visually distinct from the filled completeBtn primary
+    // beside it), not styles.completeBtnText -- re-anchored from the old
+    // "same filled style as the primary it replaced" pin.
+    expect(bottomBarWindow).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.extraSetBtnPromotedText, live.extraSetBtnPromotedText]}>Next exercise</Text>');
   });
 
-  test('reaching target on the last exercise shows "Finish workout" instead, routed through handleFinishWorkout', () => {
+  test('reaching target on the last exercise shows "Finish workout" ADDITIVELY instead, routed through handleFinishWorkout', () => {
     expect(bottomBarWindow).toContain('isLastExercise ? (');
     expect(bottomBarWindow).toContain('testID="volyume-btn-finish-primary"');
     expect(bottomBarWindow).toContain('onPress={handleFinishWorkout}');
     expect(bottomBarWindow).toContain('accessibilityLabel="Finish workout"');
-    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live theme override
-    // appended after the frozen style, same mechanical change as above.
-    expect(bottomBarWindow).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.completeBtnText, live.completeBtnText]}>Finish workout</Text>');
+    expect(bottomBarWindow).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.extraSetBtnPromotedText, live.extraSetBtnPromotedText]}>Finish workout</Text>');
   });
 
   test('a trailing time-crunch-skipped exercise cannot leave the finish offer unreachable: last means no un-skipped exercise remains after this one', () => {
@@ -97,48 +110,54 @@ describe('target-reached bottom bar swaps "Next exercise" / "Finish workout" in 
     expect(SRC).not.toContain('const isLastExercise = currentExerciseIndex === workoutExercises.length - 1;');
   });
 
-  test('before target is reached, the bar still shows the ordinary Log set action, never the nav buttons', () => {
+  test('D43 S3: the Log set primary is UNCONDITIONAL -- it appears first in source, and the advance action is the additive sibling gated after it', () => {
     expect(bottomBarWindow).toContain('testID="volyume-btn-complete-set"');
     expect(bottomBarWindow).toContain('onPress={handleCompleteSetPress}');
-    // The Log set branch is the ELSE of the same ternary the nav buttons live
-    // in, so it can only render when targetComplete && !extraSetArmed is false.
+    // Re-anchored: the primary is no longer the ELSE branch of a
+    // target-complete ternary (that ternary is gone). It is unconditional,
+    // so it is written FIRST in source; the gate for the advance action, and
+    // that action's testID, both come AFTER it now -- the inverse order of
+    // the pre-S3 shape this test used to pin.
     const logSetIndex = bottomBarWindow.indexOf('testID="volyume-btn-complete-set"');
-    const nextExerciseIndex = bottomBarWindow.indexOf('testID="volyume-btn-next-exercise"');
     const gateIndex = bottomBarWindow.indexOf('{targetComplete && !extraSetArmed ? (');
-    expect(gateIndex).toBeGreaterThanOrEqual(0);
+    const nextExerciseIndex = bottomBarWindow.indexOf('testID="volyume-btn-next-exercise"');
+    expect(logSetIndex).toBeGreaterThanOrEqual(0);
+    expect(gateIndex).toBeGreaterThan(logSetIndex);
     expect(nextExerciseIndex).toBeGreaterThan(gateIndex);
-    expect(logSetIndex).toBeGreaterThan(nextExerciseIndex);
   });
 });
 
 describe('extra sets beyond the plan stay loggable (D8 junk-volume: never a wall)', () => {
-  test('"Log another set" is offered once target is reached and not yet armed', () => {
-    expect(SRC).toContain('testID="volyume-btn-extra-set"');
-    expect(SRC).toContain('onPress={() => setExtraSetArmed(true)}');
-    expect(SRC).toContain('accessibilityLabel="Log another set"');
-    expect(SRC).toMatch(/\(cluster \|\| perSide\) \? null : \(targetComplete && !extraSetArmed\) \? \(\s*<Button\s*testID="volyume-btn-extra-set"/);
+  test('D43 S3: the promoted in-scroll "Log another set" button retires -- the now-permanent bar primary arms AND logs the extra set in the same tap', () => {
+    // The separate arm-then-log round trip is gone: there is no more
+    // standalone "Log another set" control anywhere in source.
+    expect(SRC).not.toContain('testID="volyume-btn-extra-set"');
+    expect(SRC).not.toContain('accessibilityLabel="Log another set"');
+    // handleCompleteSetPress -- the SAME function the bar's primary always
+    // calls (pinned above via onPress={handleCompleteSetPress}) -- now arms
+    // extraSetArmed itself the moment it is invoked past target, folding the
+    // old two-step "arm, then tap Log set" into the primary's one tap.
+    const pressFn = SRC.match(/function handleCompleteSetPress\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+    expect(pressFn).toContain('if (targetComplete && !extraSetArmed) setExtraSetArmed(true);');
   });
 
-  test('arming extraSetArmed flips the bottom bar back to the normal Log set action', () => {
-    // extraSetArmed is part of the SAME gate the nav buttons check, so once
-    // true, targetComplete && !extraSetArmed is false and the bar falls
-    // through to the ordinary Log-set branch even though target was met.
+  test('arming extraSetArmed flips the bar back to Log-set-only (the advance action gate), exactly as it did before', () => {
+    // extraSetArmed still gates the SAME advance-action ternary; once true,
+    // targetComplete && !extraSetArmed is false and only the (unconditional)
+    // primary remains, same end-state as pre-S3, reached by one tap instead
+    // of two.
     expect(bottomBarWindow).toContain('{targetComplete && !extraSetArmed ? (');
     expect(SRC).toContain('const [extraSetArmed, setExtraSetArmed] = useState(false);');
   });
 });
 
-describe('the button never shows mid-exercise, and never mid a per-side pair', () => {
+describe('the advance action never shows mid-exercise, and never mid a per-side pair', () => {
   test('targetComplete requires the logged working-set count to reach the target, so pre-target never satisfies the gate', () => {
     expect(SRC).toContain('const targetComplete = targetSets && workingLogged >= targetSets;');
   });
 
-  test('the whole bottom bar (and its Next exercise / Finish slot) is hidden while a cluster or per-side pair is mid-flight', () => {
+  test('the whole bottom bar (primary AND the conditional advance action) is hidden while a cluster or per-side pair is mid-flight', () => {
     expect(SRC).toMatch(/\{\(cluster \|\| perSide\) \? null : \(\s*<View style=\{\[styles\.bottomBar/);
-  });
-
-  test('the promoted "Log another set" row is likewise hidden mid-cluster/mid-per-side', () => {
-    expect(SRC).toMatch(/\(cluster \|\| perSide\) \? null : \(targetComplete && !extraSetArmed\) \? \(/);
   });
 
   test('no auto-navigation fires on reaching target from this change — advancing is a tap, never automatic', () => {

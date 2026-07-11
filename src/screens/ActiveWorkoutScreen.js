@@ -567,18 +567,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     ? (partnerNames[0] ?? '')
     : `${partnerNames.slice(0, -1).join(', ')} and ${partnerNames[partnerNames.length - 1]}`;
 
-  // L07-F9 (design-usability-audit-2026-07-09): in-session drag-reorder was
-  // missing, only the nav-strip's tap-to-jump existed. Reusing the existing
-  // no-new-dependency reorder pattern (RoutineDetailScreen.js's
-  // handleMoveExercise: swap-adjacent-and-persist, no PanResponder/library).
-  // Supersets pair two ADJACENT entries sharing a supersetGroupId
-  // (isPairedWithNext above); moving either half would separate them from
-  // that adjacency assumption, so a move is blocked whenever the current
-  // exercise or its swap target is part of a pair.
-  const prevSGI = currentExerciseIndex > 0 ? (workoutExercises[currentExerciseIndex - 1]?.supersetGroupId ?? null) : null;
-  const canMoveUp = currentExerciseIndex > 0 && currentSGI == null && prevSGI == null;
-  const canMoveDown = currentExerciseIndex < workoutExercises.length - 1 && currentSGI == null && nextSGI == null;
-
   // C3: the one place that clears the auto-advance ref, so its "armed" state
   // (drives the "Stay here" row) never drifts from the timer it describes.
   function cancelAutoAdvance() {
@@ -657,26 +645,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     hapticsVocab.selection();
   }
 
-  // L07-F9: move the current exercise one slot earlier/later in the session.
-  // Same swap-adjacent-and-persist pattern as RoutineDetailScreen's
-  // handleMoveExercise, adapted for the single-exercise-focus view here: the
-  // in-memory workoutExercises array is the order of record for a session
-  // (nav-strip order, finish-summary order), and setWorkoutExercises already
-  // persists it via the same crash-recovery snapshot every other
-  // order-affecting action (add/remove exercise) uses.
-  function handleMoveExercise(direction) {
-    const swapIndex = direction === 'up' ? currentExerciseIndex - 1 : currentExerciseIndex + 1;
-    if (swapIndex < 0 || swapIndex >= workoutExercises.length) return;
-    if (currentSGI != null || (workoutExercises[swapIndex]?.supersetGroupId ?? null) != null) return;
-    audit('workout.exercise.reordered', { fromIndex: currentExerciseIndex, toIndex: swapIndex });
-    const updated = [...workoutExercises];
-    const temp = updated[currentExerciseIndex];
-    updated[currentExerciseIndex] = updated[swapIndex];
-    updated[swapIndex] = temp;
-    useAppStore.getState().setWorkoutExercises(updated);
-    setCurrentExerciseIndex(swapIndex);
-    hapticsVocab.selection();
-  }
+  // D43 S3 (blueprint 3.8): handleMoveExercise (the overflow's one-step
+  // chevron move) is DELETED -- the reorder sheet below (D32) is now the
+  // ONE reorder path, superseding D32's original "additive, both stay"
+  // framing. Re-pinned in ActiveWorkoutScreen.reorder.guard.test.js (D43 S3).
 
   // D32 (2026-07-10, campaign item 20): the purpose-built reorder SHEET's
   // own accessible move path (chevrons inside the sheet, same shape the
@@ -1886,6 +1858,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function handleCompleteSetPress() {
     if (saving) return;
     if (perSide) return;
+    // D43 S3: the bottom bar's logging primary is now permanent (blueprint
+    // 3.7), so there is no separate "Log another set" tap to arm the extra
+    // set first -- tapping the ever-present primary past target both arms
+    // extraSetArmed (same flag, same downstream header/auto-advance
+    // behaviour as before) and logs, in one gesture.
+    if (targetComplete && !extraSetArmed) setExtraSetArmed(true);
     const uni = exercise ? unilateralExercises.has(exercise.id) : false;
     if (uni) return startPerSide();
     if (isClusterType(currentSet.setType)) return startCluster();
@@ -2525,7 +2503,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {/* Exercise Title */}
           <View style={styles.exerciseHeader}>
             <View style={styles.exerciseNameRow}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>
+              {/* D43 S3 (blueprint 3.8): "Exercise info" relocates off the
+                  overflow sheet onto the title itself -- tapping the name
+                  fires the same setShowExecution(true) handler the removed
+                  overflow row used. */}
+              <TouchableOpacity
+                onPress={() => setShowExecution(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Exercise info"
+                style={styles.exerciseNameTap}
+                hitSlop={{ top: 8, bottom: 8, left: 0, right: 8 }}
+              >
+                <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.overflowBtn, live.overflowBtn]}
                 onPress={() => {
@@ -2691,10 +2681,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             ]}
           >
             {/* D43 S2: note affordance in the card corner (blueprint 3.4).
-                Additive alongside the overflow's existing Add/edit note row
-                (the overflow diet itself is S3-scoped); same setShowNoteInput
-                handler and noteActionLabel copy, just a second, faster entry
-                point right on the card the user is already looking at. */}
+                D43 S3: the overflow's "Add/edit note" row is now DELETED
+                (blueprint 3.8), so this pencil is the ONE entry point --
+                same setShowNoteInput handler and noteActionLabel copy. */}
             <TouchableOpacity
               testID="volyume-note-corner-btn"
               style={styles.noteCornerBtn}
@@ -2987,30 +2976,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               screen's other sheets), matching the rest of the logger's
               sheet/card idiom instead of the old plain-View banner. */}
 
-          {/* A2 (audit CL-4): the PRIMARY action moved to the bottom-pinned
-              bar (thumb zone, stable position). In the scroll, only the
-              "Log another set" affordance remains, promoted to a full-size
-              outline button in the exact pixels the primary used to occupy,
-              so the muscle-memory tap logs a set instead of navigating. */}
-          {(cluster || perSide) ? null : (targetComplete && !extraSetArmed) ? (
-            <Button
-              testID="volyume-btn-extra-set"
-              variant="secondary"
-              style={[styles.extraSetBtnPromoted, live.extraSetBtnPromoted]}
-              onPress={() => setExtraSetArmed(true)}
-              disabled={saving}
-              accessibilityLabel="Log another set"
-              accessibilityHint="Opens one more set below; nothing is logged until you confirm"
-            >
-              <Ionicons name="add-circle-outline" size={20} color={t.colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.extraSetBtnPromotedText, live.extraSetBtnPromotedText]}>Log another set</Text>
-            </Button>
-          ) : null}
+          {/* D43 S3 (blueprint 3.7): the PRIMARY action moved to the
+              bottom-pinned bar (thumb zone, stable position) and NOW STAYS
+              there permanently -- it never leaves that slot, so the scroll
+              no longer needs a promoted stand-in. The old "Log another set"
+              outline button retires: extraSetArmed still exists (see
+              handleCompleteSetPress) but arms itself the moment the
+              ever-present primary is tapped past target, in the same
+              gesture that logs the set, instead of a separate arm-then-log
+              round trip. extraSetBtnPromoted/extraSetBtnPromotedText are
+              reused below for the bar's new secondary advance action
+              (Next exercise / Finish workout), not deleted. */}
 
           {/* C3 (audit 2026-07-03): the 1.8s move to the next exercise used
               to be a silent setTimeout, the only way to stay was to log
-              another set. Make the wait visible and give it its own
-              cancel, alongside the "Log another set" affordance above. */}
+              another set. Make the wait visible and give it its own cancel.
+              D43 S3: the stand-alone "Log another set" affordance this
+              comment used to sit beside is retired -- the bar's now-
+              permanent primary is the only tap needed. */}
           {autoAdvanceArmed && targetComplete && !extraSetArmed ? (
             <View style={styles.autoAdvanceRow}>
               <Text maxFontSizeMultiplier={1.3} style={[styles.autoAdvanceRowText, live.autoAdvanceRowText]}>Next exercise in a moment</Text>
@@ -3078,35 +3061,25 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             old padding on devices that report no bottom inset. */}
         {(cluster || perSide) ? null : (
           <View style={[styles.bottomBar, live.bottomBar, { paddingBottom: Math.max(spacing.md, insets.bottom + spacing.sm) }]}>
-            {targetComplete && !extraSetArmed ? (
-              isLastExercise ? (
-                <Button
-                  testID="volyume-btn-finish-primary"
-                  variant="primary"
-                  style={[styles.completeBtn, live.completeBtn]}
-                  onPress={handleFinishWorkout}
-                  accessibilityLabel="Finish workout"
-                >
-                  <Ionicons name="checkmark-done" size={20} color={t.colors.onPrimary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.completeBtnText, live.completeBtnText]}>Finish workout</Text>
-                </Button>
-              ) : (
-                <Button
-                  testID="volyume-btn-next-exercise"
-                  variant="primary"
-                  style={[styles.completeBtn, live.completeBtn]}
-                  onPress={handleNextExercise}
-                  accessibilityLabel="Move to next exercise"
-                >
-                  <Ionicons name="arrow-forward-circle" size={20} color={t.colors.onPrimary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.completeBtnText, live.completeBtnText]}>Next exercise</Text>
-                </Button>
-              )
-            ) : (
+            {/* D43 S3 (blueprint 3.7, "Bottom bar — stable identity"): the
+                primary is ALWAYS Log set / Log warm-up / Start cluster while
+                an exercise is active -- it is UNCONDITIONAL now, no longer
+                the ELSE branch of a target-complete ternary. When the target
+                is met, the bar gains a second, visually distinct advance
+                action (Next exercise / Finish workout) BESIDE it, reusing
+                the exact pinned gating (targetComplete, isLastExercise,
+                handleNextExercise, handleFinishWorkout) -- only the
+                placement changed, from replacing to additive.
+                Re-pinned in ActiveWorkoutScreen.nextExerciseButton.guard.test.js
+                (D43 S3): the primary's testID/onPress now appear first and
+                unconditionally in source; the advance action is the
+                additive sibling gated by the unchanged
+                `targetComplete && !extraSetArmed` condition. */}
+            <View style={[styles.bottomBarRow, live.bottomBarRow]}>
               <Button
                 testID="volyume-btn-complete-set"
                 variant="primary"
-                style={[styles.completeBtn, live.completeBtn, currentSet.setType === 'warmup' && [styles.completeBtnWarmup, live.completeBtnWarmup]]}
+                style={[styles.completeBtn, live.completeBtn, { flex: 1 }, currentSet.setType === 'warmup' && [styles.completeBtnWarmup, live.completeBtnWarmup]]}
                 onPress={handleCompleteSetPress}
                 disabled={saving}
                 accessibilityLabel={
@@ -3120,7 +3093,32 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'}
                 </Text>
               </Button>
-            )}
+              {targetComplete && !extraSetArmed ? (
+                isLastExercise ? (
+                  <Button
+                    testID="volyume-btn-finish-primary"
+                    variant="secondary"
+                    style={[styles.extraSetBtnPromoted, live.extraSetBtnPromoted, { flex: 1 }]}
+                    onPress={handleFinishWorkout}
+                    accessibilityLabel="Finish workout"
+                  >
+                    <Ionicons name="checkmark-done" size={20} color={t.colors.primary} />
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.extraSetBtnPromotedText, live.extraSetBtnPromotedText]}>Finish workout</Text>
+                  </Button>
+                ) : (
+                  <Button
+                    testID="volyume-btn-next-exercise"
+                    variant="secondary"
+                    style={[styles.extraSetBtnPromoted, live.extraSetBtnPromoted, { flex: 1 }]}
+                    onPress={handleNextExercise}
+                    accessibilityLabel="Move to next exercise"
+                  >
+                    <Ionicons name="arrow-forward-circle" size={20} color={t.colors.primary} />
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.extraSetBtnPromotedText, live.extraSetBtnPromotedText]}>Next exercise</Text>
+                  </Button>
+                )
+              ) : null}
+            </View>
           </View>
         )}
 
@@ -3621,37 +3619,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Add exercise</Text>
                 </View>
               </TouchableOpacity>
-              {canMoveUp && (
-              <TouchableOpacity
-                style={[styles.sheetOption, live.sheetOption]}
-                onPress={() => { setShowOverflow(false); handleMoveExercise('up'); }}
-                accessibilityRole="button"
-                accessibilityLabel="Move exercise up"
-              >
-                <View style={styles.overflowOptionRow}>
-                  <Ionicons name="chevron-up" size={18} color={t.colors.textSecondary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Move exercise up</Text>
-                </View>
-              </TouchableOpacity>
-              )}
-              {canMoveDown && (
-              <TouchableOpacity
-                style={[styles.sheetOption, live.sheetOption]}
-                onPress={() => { setShowOverflow(false); handleMoveExercise('down'); }}
-                accessibilityRole="button"
-                accessibilityLabel="Move exercise down"
-              >
-                <View style={styles.overflowOptionRow}>
-                  <Ionicons name="chevron-down" size={18} color={t.colors.textSecondary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Move exercise down</Text>
-                </View>
-              </TouchableOpacity>
-              )}
-              {/* D32 (2026-07-10, campaign item 20): opens the purpose-built
-                  reorder sheet (whole-workout drag). Additive to the
-                  Move exercise up/down entries above, which stay exactly as
-                  they were (still one step, still just the current
-                  exercise). */}
+              {/* D43 S3 (blueprint 3.8, overflow diet): Move exercise
+                  up/down DELETED -- the reorder sheet below is now the ONE
+                  reorder path (superseding D32's "additive" framing, which
+                  kept both). handleMoveExercise/canMoveUp/canMoveDown are
+                  removed as genuinely dead code (grepped: no other caller).
+                  Re-pinned in ActiveWorkoutScreen.reorder.guard.test.js
+                  (D43 S3). */}
               {workoutExercises.length > 1 && (
               <TouchableOpacity
                 style={[styles.sheetOption, live.sheetOption]}
@@ -3665,31 +3639,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 </View>
               </TouchableOpacity>
               )}
-              <TouchableOpacity
-                style={[styles.sheetOption, live.sheetOption]}
-                onPress={() => {
-                  setShowOverflow(false);
-                  setShowNoteInput(true);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`${noteActionLabel} for this set`}
-              >
-                <View style={styles.overflowOptionRow}>
-                  <Ionicons name="create-outline" size={18} color={t.colors.textSecondary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{noteActionLabel}</Text>
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.sheetOption, live.sheetOption]}
-                onPress={() => { setShowOverflow(false); setShowExecution(true); }}
-                accessibilityRole="button"
-                accessibilityLabel="Exercise info"
-              >
-                <View style={styles.overflowOptionRow}>
-                  <Ionicons name="information-circle-outline" size={18} color={t.colors.textSecondary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Exercise info</Text>
-                </View>
-              </TouchableOpacity>
+              {/* D43 S3 (blueprint 3.8, overflow diet): "Add/edit note" row
+                  DELETED -- S2's card-corner pencil (volyume-note-corner-btn,
+                  same setShowNoteInput handler, same noteActionLabel copy)
+                  is the one entry point now. "Exercise info" row DELETED --
+                  tapping the exercise title (exerciseNameTap above, same
+                  setShowExecution(true) handler) is the one entry point now. */}
               {/* D9: per-exercise "log per side" preference. Shown only for
                   metadata-flagged unilateral exercises (exercise.laterality,
                   exerciseMetadata.js deriveLaterality) - this is the manual
@@ -4241,6 +4196,11 @@ const styles = StyleSheet.create({
   // StatusStrip.js) owns the equivalent chip-row styling now.
   exerciseHeader: { gap: spacing.xs },
   exerciseNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  // D43 S3: wraps the exercise name so the whole title is the "Exercise
+  // info" tap target (relocated off the overflow sheet); flex: 1 lives here
+  // now, exerciseName keeps its own flex: 1 so numberOfLines={2} still wraps
+  // correctly inside it.
+  exerciseNameTap: { flex: 1 },
   exerciseName: { flex: 1, ...type.title, color: colors.textPrimary },
   swapSafe: { flex: 1, backgroundColor: colors.background },
   swapHeader: {
@@ -4354,9 +4314,13 @@ const styles = StyleSheet.create({
   // Text button below the primary CTA (COMP-001): quiet, 44pt target.
   extraSetBtn: { alignItems: 'center', justifyContent: 'center', minHeight: workoutLoggerSize.primaryActionMinHeight },
   extraSetBtnText: { ...type.label, color: colors.textSecondary },
-  // A2: "Log another set" promoted into the old primary slot as an OUTLINE
-  // button, full-size so the muscle-memory tap logs a set, but not filled,
-  // keeping the bottom bar's CTA the single filled-amber object on screen.
+  // A2: originally "Log another set" promoted into the old primary slot as
+  // an OUTLINE button, not filled, keeping the CTA the single filled-amber
+  // object on screen. D43 S3: that scroll button retired; this outline
+  // treatment (name kept -- still exactly the style it was) is now reused
+  // for the bottom bar's secondary advance action (Next exercise / Finish
+  // workout), which sits BESIDE the still-filled primary for the same
+  // "one filled object" contrast.
   extraSetBtnPromoted: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, paddingVertical: spacing.xs,
@@ -4393,6 +4357,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.borderSubtle,
   },
+  // D43 S3: the row that lets the logging primary and the (conditional)
+  // advance action sit side by side, each taking half the bar via flex: 1
+  // set at the call site (so a lone primary, the common case, still fills
+  // the whole width exactly as it did before this row wrapper existed).
+  bottomBarRow: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.sm },
   clusterBanner: {
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.502), borderRadius: radius.lg,
     backgroundColor: colors.primaryBg, padding: spacing.md, gap: spacing.sm, marginBottom: spacing.sm,

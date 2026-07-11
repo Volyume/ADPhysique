@@ -1165,3 +1165,50 @@ source-guard suites re-pinned to the new structure (notesChip thumb
 target → StatusStrip chip; "N notes" count wording → content labels +
 absence-of-count; targetRow/targetText → orientationTarget fold) with
 STRONGER assertions, no pin deleted.
+
+## D59 — Logger S3 landed; guided warm-up ramp KEEPS its overflow row (not forced into the set-type picker) — lead ruling (2026-07-11)
+
+D43 S3 built and landed. Stable CTA (§3.7): the bottom bar's filled "Log
+set" primary is now permanent and rendered first; the advance action
+("Next exercise" / "Finish workout") appears BESIDE it as an outline
+secondary when the target is met, never swapping identity in the same
+pixels. The redundant in-scroll "Log another set" button retires — one
+tap on the ever-present primary past target both arms `extraSetArmed`
+and logs (fewer taps, and "log stays a single stable tap" per the
+blueprint §2). Overflow diet (§3.8): "Move exercise up/down" deleted
+(the Reorder sheet is the single reorder path; dead
+handleMoveExercise/canMoveUp/canMoveDown removed), the "Add/edit note"
+row retired to the S2 card-corner pencil, and "Exercise info" relocated
+onto a tap of the exercise title.
+
+ONE relocation is ruled DIFFERENTLY on the merits (surfaced per D56, not
+parked). §3.8 proposed folding "Warm-up sets" into "the set-type flow".
+The agent correctly found the set-type picker only flips
+`currentSet.setType` to 'warmup' — it cannot reproduce the guided ramp
+(`showWarmupRamp`/`warmupRamp()`: a computed ladder of suggested warm-up
+loads up to today's working weight, with the "Empty bar" tag). Ruling:
+KEEP the guided warm-up ramp as its own overflow row. Folding it into the
+picker would either DROP the computed ramp (a real capability loss) or
+bloat a flat radio list with a calculator it isn't shaped for — a worse
+app, not a better one. Warm-up as a plain SET TYPE is already reachable
+from the picker (that half of §3.8 is honoured); the RAMP HELPER stays in
+the overflow. The overflow lands at 7 rows (Swap, Add exercise, Reorder,
+Log per side, Warm-up sets, Pair superset, Shorten session, Remove) down
+from 11 — the substantial declutter the slot intended, minus a capability
+drop the blueprint didn't intend. Subject to the founder's device-walk
+taste veto at S5 (same standing as the D58 beat-line ruling).
+
+Verification (lead-run on the settled tree, NOT the agent's self-report):
+eslint clean; ActiveWorkoutScreen + SetEntry + LoggedSetRow +
+cp10Stage3WorkoutShells = 15 suites / 124 tests green; full `src/screens`
+= 132 suites / 1013 tests green. Three guard suites
+(nextExerciseButton, reorder, usability) re-anchored to the new structure
+with a "D43 S3" note, every invariant preserved, no pin deleted.
+
+PROCESS NOTE (not a product decision): the first S3 agent violated its
+brief by spawning a sub-agent, which then ran concurrently with a lead
+relaunch on the SAME files — a collision. The on-disk tree resolved to
+one clean winner (verified coherent: no duplicate style keys/testIDs,
+comments consistent with code, all suites green), but ~420k agent tokens
+were burned on duplicate work. Lesson: never relaunch a "no-op" agent
+until confirming it left no live descendants; check the task tree first.

@@ -10,16 +10,21 @@
 // training is ergonomically risky). PanResponder and runOnJS are no longer
 // banned strings (runOnJS is exactly how DragReorderList, used inside the
 // new sheet, dispatches its worklet state changes -- the established
-// ProgressPhotoViewer.js hero-morph pattern). What stays pinned from the
-// original suite: no new dependency, no draggable-flatlist (or any other
-// reorder) library, ever; handleMoveExercise (the main view's one-step
-// overflow move) is completely UNTOUCHED, including its superset-adjacency
-// guard and its persistence path; and order persists through the same
-// setWorkoutExercises -> _persistActiveWorkout path every other order-
-// affecting action already uses. New: the reorder SHEET (whole-workout
-// drag + its own accessible chevrons, block-aware) is additive, opened from
-// the existing overflow menu, and keeps currentExerciseIndex pointed at the
-// same exercise after either of its move paths.
+// ProgressPhotoViewer.js hero-morph pattern). What stays pinned: no new
+// dependency, no draggable-flatlist (or any other reorder) library, ever;
+// and order persists through the same setWorkoutExercises ->
+// _persistActiveWorkout path every other order-affecting action already
+// uses.
+//
+// D43 S3 (blueprint 3.8, "overflow diet"): the overflow's one-step
+// "Move exercise up/down" entries (handleMoveExercise, canMoveUp,
+// canMoveDown) are DELETED, superseding D32's "additive" framing above --
+// the reorder sheet (block-aware drag + its own accessible chevrons) is now
+// the ONE reorder path. handleMoveExercise/canMoveUp/canMoveDown were
+// grepped for other callers before deletion: none found, genuinely dead.
+// The sheet's own move path (handleSheetMoveExercise) and its
+// superset-adjacency guard (swapAdjacentBlocks) are what the tests below
+// pin instead.
 import fs from 'fs';
 import path from 'path';
 
@@ -28,10 +33,13 @@ const ACTIVE_WORKOUT = fs.readFileSync(
   'utf8',
 );
 
-describe('ActiveWorkoutScreen in-session exercise reorder (L07-F9)', () => {
-  test('handleMoveExercise (the overflow one-step move) is untouched', () => {
-    expect(ACTIVE_WORKOUT).toContain('function handleMoveExercise(direction)');
-    expect(ACTIVE_WORKOUT).toContain("const swapIndex = direction === 'up' ? currentExerciseIndex - 1 : currentExerciseIndex + 1;");
+describe('ActiveWorkoutScreen in-session exercise reorder (L07-F9, re-pinned D43 S3)', () => {
+  test('D43 S3: handleMoveExercise/canMoveUp/canMoveDown (the old overflow one-step move) are gone -- the reorder sheet is the one path', () => {
+    expect(ACTIVE_WORKOUT).not.toContain('function handleMoveExercise(direction)');
+    expect(ACTIVE_WORKOUT).not.toContain('const canMoveUp = currentExerciseIndex > 0');
+    expect(ACTIVE_WORKOUT).not.toContain('const canMoveDown = currentExerciseIndex < workoutExercises.length - 1');
+    expect(ACTIVE_WORKOUT).not.toContain('accessibilityLabel="Move exercise up"');
+    expect(ACTIVE_WORKOUT).not.toContain('accessibilityLabel="Move exercise down"');
   });
 
   test('D32: no new dependency -- the reorder sheet reuses DragReorderList (gesture-handler + Reanimated), never a reorder library', () => {
@@ -41,36 +49,19 @@ describe('ActiveWorkoutScreen in-session exercise reorder (L07-F9)', () => {
     expect(ACTIVE_WORKOUT).not.toMatch(/react-native-sortable/i);
   });
 
-  test('move persists through the same mechanism as every other session order change', () => {
-    const moveWindow = ACTIVE_WORKOUT.match(/function handleMoveExercise\(direction\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+  test('the sheet move path persists through the same mechanism as every other session order change', () => {
+    const moveWindow = ACTIVE_WORKOUT.match(/function handleSheetMoveExercise\(index, direction\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
     expect(moveWindow).toContain('useAppStore.getState().setWorkoutExercises(updated);');
-    expect(moveWindow).toContain('setCurrentExerciseIndex(swapIndex);');
-    expect(moveWindow).toContain('hapticsVocab.selection();');
+    expect(moveWindow).toContain('setCurrentExerciseIndex(newIndex);');
   });
 
-  test('a move is blocked when it would separate an adjacent superset pair', () => {
-    const moveWindow = ACTIVE_WORKOUT.match(/function handleMoveExercise\(direction\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
-    expect(moveWindow).toContain('if (currentSGI != null || (workoutExercises[swapIndex]?.supersetGroupId ?? null) != null) return;');
-    expect(ACTIVE_WORKOUT).toContain('const canMoveUp = currentExerciseIndex > 0 && currentSGI == null && prevSGI == null;');
-    expect(ACTIVE_WORKOUT).toContain('const canMoveDown = currentExerciseIndex < workoutExercises.length - 1 && currentSGI == null && nextSGI == null;');
+  test('a sheet move is block-aware -- a superset pair moves and lands as a unit, via the shared swapAdjacentBlocks helper', () => {
+    expect(ACTIVE_WORKOUT).toContain("import { swapAdjacentBlocks } from '../lib/reorder';");
+    const moveWindow = ACTIVE_WORKOUT.match(/function handleSheetMoveExercise\(index, direction\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+    expect(moveWindow).toContain("swapAdjacentBlocks(workoutExercises, index, direction, (e) => e.supersetGroupId ?? null)");
   });
 
-  test('exercise overflow sheet exposes Move exercise up/down, guarded by canMoveUp/canMoveDown', () => {
-    expect(ACTIVE_WORKOUT).toContain('{canMoveUp && (');
-    expect(ACTIVE_WORKOUT).toContain("onPress={() => { setShowOverflow(false); handleMoveExercise('up'); }}");
-    expect(ACTIVE_WORKOUT).toContain('accessibilityLabel="Move exercise up"');
-    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): ActiveWorkoutScreen now
-    // reads a live theme (src/hooks/useTheme.js); sheetOptionLabel gained a
-    // live.sheetOptionLabel override in its style array. Frozen `styles`
-    // block (asserted elsewhere) is byte-identical -- mechanical only.
-    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Move exercise up</Text>');
-    expect(ACTIVE_WORKOUT).toContain('{canMoveDown && (');
-    expect(ACTIVE_WORKOUT).toContain("onPress={() => { setShowOverflow(false); handleMoveExercise('down'); }}");
-    expect(ACTIVE_WORKOUT).toContain('accessibilityLabel="Move exercise down"');
-    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Move exercise down</Text>');
-  });
-
-  test('D32: the overflow menu opens the new reorder sheet, additive to Move exercise up/down (only when there is more than one exercise)', () => {
+  test('D32: the overflow menu opens the reorder sheet (only when there is more than one exercise)', () => {
     expect(ACTIVE_WORKOUT).toContain('const [showReorderSheet, setShowReorderSheet] = useState(false);');
     expect(ACTIVE_WORKOUT).toContain('{workoutExercises.length > 1 && (');
     expect(ACTIVE_WORKOUT).toContain('onPress={() => { setShowOverflow(false); setShowReorderSheet(true); }}');

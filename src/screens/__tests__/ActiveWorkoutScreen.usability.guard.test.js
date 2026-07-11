@@ -233,8 +233,15 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // gained a live.sheetOptionLabel override in its style array (source:
     // useTheme.js); the frozen `styles.sheetOptionLabel` is byte-identical.
     expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Add exercise</Text>');
+    // Re-pinned for D43 S3 (blueprint 3.8): the overflow's "Add/edit note"
+    // row (a sheetOptionLabel Text showing noteActionLabel) is DELETED --
+    // the S2 card-corner pencil (volyume-note-corner-btn) is the one entry
+    // point, using noteActionLabel only in its accessibilityLabel, not as
+    // visible sheet-row text.
     expect(ACTIVE_WORKOUT).toContain("const noteActionLabel = showNoteInput || noteText.trim().length > 0 ? 'Edit note' : 'Add note';");
-    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{noteActionLabel}</Text>');
+    expect(ACTIVE_WORKOUT).toContain('testID="volyume-note-corner-btn"');
+    expect(ACTIVE_WORKOUT).toContain('accessibilityLabel={`${noteActionLabel} for this set`}');
+    expect(ACTIVE_WORKOUT).not.toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{noteActionLabel}</Text>');
     // Re-pinned for D43 S2: the U-A-1 "N notes"/"N cues" count wording is
     // retired entirely -- StatusStrip labels every chip by content (Deload,
     // Superset, Coach note, Starter session, Target met), never a count.
