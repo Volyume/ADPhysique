@@ -156,13 +156,33 @@ export default function BottomSheet({
   // The ONE path where the library, not the consumer, is first to know the
   // sheet closed: the user dragged it down. Every other close reaches here
   // with dismissingFromPropRef already set (see above) and is a no-op.
+  //
+  // Reopen-after-fast-close bug (founder device report): on a real device
+  // dismiss() drives an animated close that finishes some time AFTER this
+  // function returns, not synchronously (only the reduce-motion/test-mock
+  // path is instant). If the consumer flips `visible` back to true before
+  // that animation settles -- e.g. tap "Dietary needs" to close, then tap
+  // it again to reopen, both well within the close animation's duration --
+  // the effect above already called present() for the reopen, but the
+  // ORIGINAL dismiss's animation is still in flight underneath it. When
+  // that stale animation finally completes, the library calls this same
+  // onDismiss and unconditionally unmounts, silently stomping the sheet
+  // that was just reopened: the sheet then looks like it refuses to open
+  // again, with no error and no further onClose firing (the current
+  // `visible` is already true, so there is nothing left to flip it back).
+  // Re-presenting here when that happens (`visible` is true again by the
+  // time this stale dismiss resolves) closes that race without touching
+  // the synchronous-close contract every other call site already relies on.
   const handleDismiss = useCallback(() => {
     if (dismissingFromPropRef.current) {
       dismissingFromPropRef.current = false;
+      if (visible) {
+        modalRef.current?.present();
+      }
       return;
     }
     onClose?.();
-  }, [onClose]);
+  }, [onClose, visible]);
 
   // Backdrop tap: call onClose directly, synchronously, the same instant as
   // the old Pressable's onPress — never wait for the library's own close

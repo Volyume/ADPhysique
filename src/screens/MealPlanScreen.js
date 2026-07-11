@@ -1452,7 +1452,16 @@ export default function MealPlanScreen({ navigation, route }) {
           CP-10 batch E (2026-07-10): only the two surrounding Text styles
           below are live-themed; the DietaryPreferencesEditor call itself is
           untouched (no new props, no behaviour change), per the founder
-          instruction to convert AROUND the new dietarySheet code. */}
+          instruction to convert AROUND the new dietarySheet code.
+          Founder device bug (fixed): this sheet had no visible completion
+          control -- only a back gesture or backdrop tap closed it, which
+          the founder had to guess at. "Done" (not "Save") because every
+          choice inside DietaryPreferencesEditor writes straight to the
+          profile store the moment it is made (setDietPreference,
+          setAllergenExcludes, removeMealPlanExcludedFood all fire on
+          press, no staged/local draft), same "applies live, Done just
+          dismisses" idiom as EatenTimePicker's iOS sheet
+          (src/components/food/EatenTimePicker.js). */}
       <BottomSheet
         visible={dietarySheetOpen}
         onClose={() => setDietarySheetOpen(false)}
@@ -1464,6 +1473,13 @@ export default function MealPlanScreen({ navigation, route }) {
           This is the same selection as Settings. A change here updates everywhere.
         </Text>
         <DietaryPreferencesEditor />
+        <Button
+          title="Done"
+          onPress={() => setDietarySheetOpen(false)}
+          fullWidth
+          style={styles.dietaryDoneBtn}
+          accessibilityLabel="Done, close dietary needs"
+        />
       </BottomSheet>
     </SafeAreaView>
   );
@@ -1681,6 +1697,7 @@ const styles = StyleSheet.create({
   prefOptText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
   prefOptTextOn: { color: colors.textPrimary },
   prefHelp: { ...type.caption, color: colors.textMuted, lineHeight: 17 },
+  dietaryDoneBtn: { marginTop: spacing.md },
   reviewHeader: { gap: spacing.xxs, marginTop: spacing.xs },
   reviewTitle: { ...type.label, color: colors.textPrimary },
   reviewSub: { ...type.bodySm, color: colors.textSecondary, lineHeight: 19 },

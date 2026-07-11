@@ -432,6 +432,25 @@ describe('MealPlanScreen — Dietary needs row (founder ask 2026-07-09, inline f
     expect(tree.root.findAllByType(DietaryPreferencesEditor).length).toBe(1);
   });
 
+  // Founder device bug: the sheet had no visible completion control, only a
+  // guessable back gesture / backdrop tap. "Done" (not "Save") because every
+  // choice inside DietaryPreferencesEditor writes straight to the profile
+  // store the moment it is made -- there is no staged/local draft to commit.
+  test('the sheet offers a "Done" control that closes it, since every choice inside applies immediately (no staged draft to save)', async () => {
+    const tree = await mountEmpty({ dietPreference: 'vegetarian', mealPlanExcludeTags: [], mealPlanExcludeFoods: [] });
+
+    const row = buttons(tree).find((b) => b.props.accessibilityLabel === 'Dietary needs');
+    await act(async () => { row.props.onPress(); });
+    expect(tree.root.findAllByType(DietaryPreferencesEditor).length).toBe(1);
+
+    const doneBtn = buttons(tree).find((b) => b.props.accessibilityLabel === 'Done, close dietary needs');
+    expect(doneBtn).toBeTruthy();
+    await act(async () => { doneBtn.props.onPress(); });
+
+    // The sheet (and the editor it renders) is gone once Done is pressed.
+    expect(tree.root.findAllByType(DietaryPreferencesEditor).length).toBe(0);
+  });
+
   test('SettingsDietary still resolves to SettingsDietaryScreen for Settings own entry point, and BOTH screens render the SAME DietaryPreferencesEditor (single source of truth, no fork)', () => {
     const rootNavSource = require('fs').readFileSync(
       require('path').join(__dirname, '..', '..', 'navigation', 'RootNavigator.js'), 'utf8',
