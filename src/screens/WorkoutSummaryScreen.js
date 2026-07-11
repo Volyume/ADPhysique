@@ -1,18 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Animated } from 'react-native';
-// Campaign item 14 (D25): react-native-keyboard-controller outside sheets
-// (this screen's Modal + inline notes fields are plain RN, not gorhom
-// BottomSheets, which already route through BottomSheetTextInput).
-// KeyboardAwareScrollView replaces the main content ScrollView, which
-// previously had NO keyboard avoidance at all for the feedback/next-time
-// notes fields below it; KeyboardAvoidingView replaces the template-name
-// modal's iOS-only ternary with the library's cross-platform equivalent.
-// KeyboardGestureArea adds interactive (drag-to-dismiss) keyboard handling
-// on Android to match iOS's native interactive dismiss.
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+// Campaign item 14 (D25): react-native-keyboard-controller for the main
+// content scroll's inline notes fields (which previously had NO keyboard
+// avoidance at all). KeyboardAwareScrollView replaces the main content
+// ScrollView; KeyboardGestureArea adds interactive (drag-to-dismiss) keyboard
+// handling on Android to match iOS's native interactive dismiss. The
+// template-name prompt is now the shared BottomSheet (below), which owns its
+// own keyboard avoidance (keyboardAvoiding prop) - no separate
+// KeyboardAvoidingView needed.
 import {
   KeyboardAwareScrollView,
-  KeyboardAvoidingView,
   KeyboardGestureArea,
 } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -26,6 +23,7 @@ import RollingNumber from '../components/RollingNumber';
 import BlockShapeCard from '../components/BlockShapeCard';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import BottomSheet from '../components/BottomSheet';
 import TextField from '../components/TextField';
 import { useFeedback } from '../components/FeedbackSheet';
 import { shouldPrompt } from '../lib/feedback';
@@ -143,13 +141,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     sessionAdjustments = [],
   } = route.params || {};
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, units, userProfile, session, tier, reduceMotion, hasUnseenCoachChange } = useAppStore(useShallow(s => ({
+  const { user, units, userProfile, session, tier, hasUnseenCoachChange } = useAppStore(useShallow(s => ({
     user: s.user,
     units: s.units,
     userProfile: s.userProfile,
     session: s.session,
     tier: s.tier,
-    reduceMotion: s.accessibility?.reduceMotion,
     // CO-3 (cohesion audit 2026-07-09): the SAME unseen-coach-change signal
     // that drives the Coach-tab icon badge (T2), reused here so the summary
     // only ever links to Coach when there's a genuinely relevant, fresh
@@ -233,12 +230,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [readOnlyExerciseData, setReadOnlyExerciseData] = useState([]);
   const [templateModalVisible, setTemplateModalVisible] = useState(false);
   const [templateName, setTemplateName] = useState('');
-  // 2026-07-11 (founder defect, build 2608): the footer's real rendered
-  // height (it varies with the save-error card and dynamic type), measured
-  // via onLayout so the scroll content's bottom padding can actually clear
-  // it rather than guessing a static token. Same onLayout-into-state pattern
-  // VolyumeTabBar already uses for its own width measurement.
-  const [footerHeight, setFooterHeight] = useState(0);
 
   // 4-week comparison: how does this session stack up against the same
   // routine over the last 4 weeks? null while loading or when there's no
@@ -892,7 +883,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
   function handleSaveAsTemplate() {
     if (!exerciseData.length) {
-      appAlert('No exercises', 'No exercise data available to save as template.');
+      // Compliance pass (remediation 2026-07-11, food design standard section 6
+      // / checklist 11): a non-destructive "nothing to do here" guard is a calm
+      // toast, not a blocking alert. A blocking confirm stays reserved for
+      // genuinely destructive actions (there are none on this screen).
+      toast.show('No exercise data to save as a template.', { variant: 'info' });
       return;
     }
     setTemplateName(exerciseNames.slice(0, 2).join(' & ') || 'My Workout');
@@ -972,11 +967,33 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     .join(', ');
 
   return (
-    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
+    // R2-5 (remediation 2026-07-11, founder device walk build 2684): edges is
+    // ['top'] only, NOT ['top', 'bottom']. This screen always renders INSIDE a
+    // tab stack (HomeStack / ProgressStack) with VolyumeTabBar below it, and
+    // that band already owns the system bottom inset (it pads by insets.bottom;
+    // VolyumeTabBar.js height 60 + insets.bottom). Claiming 'bottom' here made
+    // the SafeAreaView add the inset a SECOND time as padding under the sticky
+    // footer, which is the ~70dp dead band the founder photographed between the
+    // Close/Share footer and the tab bar. Exactly one component owns each system
+    // inset: the tab band owns bottom on this screen, so the screen must not.
+    // (The inverse case, ActiveWorkout, where the band HIDES, is the one that
+    // owns its own bottom inset - bottomBarInset.guard.test.js pins both sides.)
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       {readOnly ? <BackHeader title="Workout summary" /> : null}
       <KeyboardGestureArea interpolator="ios" style={{ flex: 1 }}>
       <KeyboardAwareScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: Math.max(spacing.xxxl, footerHeight + spacing.lg) }]}
+        // R2-6 (remediation 2026-07-11): the scroll content's bottom padding is
+        // its OWN rhythm (styles.content -> paddingBottom: spacing.xxxl), NOT a
+        // footer-height clearance. The sticky footer is a normal-flow SIBLING
+        // below this scroll (SafeAreaView -> KeyboardGestureArea{scroll} ->
+        // footer), so the scroll never renders UNDER the footer and needs no
+        // overlay clearance. The old Math.max(spacing.xxxl, footerHeight + lg)
+        // double-reserved that phantom overlay, leaving ~85-100dp of dead space
+        // above the buttons at the end of the scroll. KeyboardAwareScrollView
+        // manages the keyboard inset itself (bottomOffset), and the footer,
+        // being a sibling, can never cover a focused notes field - so the
+        // footerHeight measurement plumbing is gone entirely.
+        contentContainerStyle={styles.content}
         bottomOffset={24}
         keyboardShouldPersistTaps="handled"
       >
@@ -1456,7 +1473,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 <RatingRow label="Fatigue" field="fatigueLevel" value={feedback.fatigueLevel} max={5} onChange={v => setFeedback(f => ({ ...f, fatigueLevel: v }))} />
                 <TextField accessibilityLabel="Workout feedback notes"
                   fieldStyle={styles.notesField}
-                  inputStyle={styles.notesInput, live.notesInput}
+                  inputStyle={[styles.notesInput, live.notesInput]}
                   value={notes}
                   onChangeText={setNotes}
                   placeholder="Anything notable from this session"
@@ -1469,7 +1486,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <Text maxFontSizeMultiplier={1.3} style={[styles.coachZoneSubHeading, live.coachZoneSubHeading]}>Notes for next time</Text>
             <TextField accessibilityLabel="Notes for next time"
               fieldStyle={styles.nextTimeNoteField}
-              inputStyle={styles.nextTimeNoteInput, live.nextTimeNoteInput}
+              inputStyle={[styles.nextTimeNoteInput, live.nextTimeNoteInput]}
               value={nextTimeNote}
               onChangeText={setNextTimeNote}
               placeholder="Anything to remember for next session? e.g. try 85kg, wider grip, reduce volume"
@@ -1498,29 +1515,20 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       </KeyboardAwareScrollView>
       </KeyboardGestureArea>
 
-      {/* Flat token, NOT insets.bottom: the tab band renders below this
-          screen and already absorbs the system inset, so adding it here
-          doubled the gap under Close (founder screenshot 2026-07-03). The
-          inverse case, ActiveWorkout, where the band hides, is the one
-          that needs the inset; bottomBarInset.guard.test.js pins both.
-          2026-07-11 (founder defect, build 2608) LEAD RULING at review:
-          this flat-token + edges=['top','bottom'] design is frame-relative
-          (SafeAreaView pads only where the view actually intersects the
-          unsafe area) and therefore context-adaptive, so it stays. The
-          founder's photo defect was the SCROLL CLEARANCE, fixed below via
-          the measured footerHeight.
-          R6 (remediation, same day): the photographed dead band beside
-          Close was ROOT-CAUSED, not an inset issue at all. doneBtn's
-          flex: 1 was silently discarded because PressableCard applied the
-          caller's style to an inner view while the unstyled outer
-          Pressable (the element footerRow lays out) shrink-wrapped, so
-          Close rendered at text width and the rest of the bar sat empty.
-          Fixed at the primitive (PressableCard is now a single animated
-          pressable); pinned in pressableCard.rowLayout.guard.test.js. */}
-      <View
-        style={[styles.stickyFooter, live.stickyFooter, { paddingBottom: spacing.lg }]}
-        onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}
-      >
+      {/* Sticky footer, a NORMAL-FLOW sibling below the scroll (not an overlay).
+          Flat spacing.lg bottom token, never insets.bottom: R2-5 (2026-07-11)
+          makes the SafeAreaView own only the top edge, and the VolyumeTabBar
+          band below this screen owns the system bottom inset, so this footer
+          sits flush on the band with no dead space between them. The 2026-07-03
+          founder-evidenced rule (the tab band absorbs the inset, so a sticky
+          footer here uses a flat token) still holds; bottomBarInset.guard.test.js
+          pins it. R2-6 (2026-07-11): the footer no longer measures its own
+          height - the scroll padding is independent of it (the footer never
+          overlays the scroll), so the onLayout/footerHeight plumbing is gone.
+          R6 (2026-07-11): the earlier dead band beside Close was doneBtn's
+          flex: 1 being discarded by PressableCard's old two-view shape; fixed at
+          the primitive, pinned in pressableCard.rowLayout.guard.test.js. */}
+      <View style={[styles.stickyFooter, live.stickyFooter, { paddingBottom: spacing.lg }]}>
         {saveError ? (
           <View style={[styles.saveErrorCard, live.saveErrorCard]}>
             <Ionicons name="warning-outline" size={16} color={t.colors.error} />
@@ -1554,55 +1562,54 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         </View>
       </View>
 
-      {/* Template name modal, cross-platform alternative to Alert.prompt */}
-      <Modal
+      {/* Template name prompt. Compliance pass (remediation 2026-07-11, food
+          design standard section 5): migrated off the raw RN modal onto the
+          shared BottomSheet chrome - one sheet chrome app-wide, never a
+          hand-rolled sheet (checklist item 9). Plain bold title line, the
+          TextField, then a secondary Cancel beside a primary Save that takes the
+          remaining width (item 10). BottomSheet owns the scrim, drag handle,
+          radius.xl top corners and keyboard avoidance (keyboardAvoiding). */}
+      <BottomSheet
         visible={templateModalVisible}
-        transparent
-        animationType={reduceMotion ? 'none' : 'fade'}
-        onRequestClose={() => setTemplateModalVisible(false)}
+        onClose={() => setTemplateModalVisible(false)}
+        keyboardAvoiding
+        accessibilityLabel="Save as workout template"
       >
-        <KeyboardAvoidingView
-          style={[styles.templateModalBg, live.templateModalBg]}
-          behavior="padding"
-        >
-          <Card radius="xl" padding="xl" style={styles.templateModalCard}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.templateModalTitle, live.templateModalTitle]}>Save as Workout Template</Text>
-            <TextField accessibilityLabel="Workout template name"
-              fieldStyle={styles.templateModalField}
-              inputStyle={styles.templateModalInput, live.templateModalInput}
-              value={templateName}
-              onChangeText={setTemplateName}
-              placeholder="Template name"
-              placeholderTextColor={t.colors.textMuted}
-              autoFocus
-              returnKeyType="done"
-              onSubmitEditing={confirmSaveTemplate}
-              selectTextOnFocus
-            />
-            <View style={styles.templateModalBtns}>
-              <Button
-                title="Cancel"
-                variant="secondary"
-                fullWidth={false}
-                style={[styles.templateModalCancel, live.templateModalCancel]}
-                onPress={() => setTemplateModalVisible(false)}
-                accessibilityLabel="Cancel"
-                textStyle={[styles.templateModalCancelText, live.templateModalCancelText]}
-              />
-              <Button
-                title="Save"
-                fullWidth={false}
-                style={[styles.templateModalSave, live.templateModalSave]}
-                onPress={confirmSaveTemplate}
-                disabled={!templateName.trim()}
-                accessibilityLabel="Save template"
-                accessibilityState={{ disabled: !templateName.trim() }}
-                textStyle={[styles.templateModalSaveText, live.templateModalSaveText]}
-              />
-            </View>
-          </Card>
-        </KeyboardAvoidingView>
-      </Modal>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.templateModalTitle, live.templateModalTitle]}>Save as Workout Template</Text>
+        <TextField accessibilityLabel="Workout template name"
+          fieldStyle={styles.templateModalField}
+          inputStyle={[styles.templateModalInput, live.templateModalInput]}
+          value={templateName}
+          onChangeText={setTemplateName}
+          placeholder="Template name"
+          placeholderTextColor={t.colors.textMuted}
+          autoFocus
+          returnKeyType="done"
+          onSubmitEditing={confirmSaveTemplate}
+          selectTextOnFocus
+        />
+        <View style={styles.templateModalBtns}>
+          <Button
+            title="Cancel"
+            variant="secondary"
+            fullWidth={false}
+            style={[styles.templateModalCancel, live.templateModalCancel]}
+            onPress={() => setTemplateModalVisible(false)}
+            accessibilityLabel="Cancel"
+            textStyle={[styles.templateModalCancelText, live.templateModalCancelText]}
+          />
+          <Button
+            title="Save"
+            fullWidth={false}
+            style={[styles.templateModalSave, live.templateModalSave]}
+            onPress={confirmSaveTemplate}
+            disabled={!templateName.trim()}
+            accessibilityLabel="Save template"
+            accessibilityState={{ disabled: !templateName.trim() }}
+            textStyle={[styles.templateModalSaveText, live.templateModalSaveText]}
+          />
+        </View>
+      </BottomSheet>
       {/* D2: gold burst over the summary for the 50/100-session rungs. Set
           only inside the calm/ED-suppressed-free branch; renders nothing
           under reduce-motion; never blocks taps. */}
@@ -1815,8 +1822,11 @@ const styles = StyleSheet.create({
   verdictSub: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
   // The three remaining stats step down to one compact row under the hero.
   statsGrid: { flexDirection: 'row', gap: spacing.md },
+  // Compliance pass (remediation 2026-07-11, food design standard section 2 /
+  // checklist 1): the three stat tiles are card-class surfaces, so radius.lg
+  // (16, the one card radius), colors.surface, 1px border - matching Card.
   statBox: {
-    flex: 1, backgroundColor: colors.surface, borderRadius: radius.md,
+    flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg,
     padding: spacing.md, alignItems: 'center', gap: spacing.xs, borderWidth: 1, borderColor: colors.border,
   },
   statValue: { ...type.num('h3'), color: colors.textPrimary },
@@ -1858,7 +1868,7 @@ const styles = StyleSheet.create({
   volumeRowMain: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
   },
-  muscleName: { flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textPrimary },
+  muscleName: { flex: 1, ...type.bodyStrong, color: colors.textPrimary },
   volumeInsightText: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18 },
   volumeWhyToggle: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
@@ -1871,11 +1881,13 @@ const styles = StyleSheet.create({
   },
   volumeWhyBody: {
     fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 19,
-    backgroundColor: colors.surface2, borderRadius: radius.sm,
+    // R2 (lead ruling): small surface, radius.md per the standard.
+    backgroundColor: colors.surface2, borderRadius: radius.md,
     padding: spacing.sm, marginTop: spacing.xxs,
   },
-  statusBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.sm },
-  statusText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
+  // R2 (lead ruling): a badge is a pill, per the standard's pill class.
+  statusBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.full },
+  statusText: { ...type.captionStrong },
   // D3 "tell the coach" zone: the session's inputs as one distinct card.
   coachZoneCard: {
     gap: spacing.md,
@@ -1887,7 +1899,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md,
     borderWidth: 1, borderColor: colors.border,
   },
-  feedbackToggleBtnText: { fontSize: fontSize.md, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  feedbackToggleBtnText: { ...type.bodyStrong, color: colors.textSecondary },
   feedbackCard: { gap: spacing.md, paddingTop: spacing.xs },
   // COMP-015 confirmation row
   adjustedSummaryRow: {
@@ -1946,7 +1958,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.xs,
-    borderRadius: radius.md,
+    // Compliance pass (remediation 2026-07-11, food design standard section 2 /
+    // checklist 1): card-class surface -> radius.lg (the one card radius).
+    borderRadius: radius.lg,
     backgroundColor: withAlpha(colors.error, 0.12),
     borderWidth: 1,
     borderColor: withAlpha(colors.error, 0.28),
@@ -2027,31 +2041,30 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2 ?? colors.background,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
-    borderRadius: radius.sm,
+    // R2 (lead ruling): a chip is a pill, per the standard's chip idiom.
+    borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
   },
 
-  templateModalBg: {
-    flex: 1, backgroundColor: colors.scrim,
-    justifyContent: 'center', alignItems: 'center', padding: spacing.xl,
-  },
-  templateModalCard: {
-    width: '100%', gap: spacing.md,
-  },
+  // Template-name prompt (now inside the shared BottomSheet; the sheet owns the
+  // scrim + panel, so no templateModalBg/Card wrapper here). Title line, field,
+  // then a Cancel-beside-Save row where Save takes the remaining width per the
+  // food design standard's sheet action-row idiom (section 5 / checklist 10).
   templateModalTitle: {
     ...type.title, color: colors.textPrimary,
   },
   templateModalField: { borderRadius: radius.md },
   templateModalInput: { ...type.body, paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2 },
-  templateModalBtns: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' },
+  templateModalBtns: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
   templateModalCancel: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
   },
   templateModalCancelText: { ...type.label, color: colors.textSecondary },
   templateModalSave: {
+    flex: 1,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
     borderRadius: radius.md, backgroundColor: colors.primaryFill,
   },
@@ -2112,16 +2125,16 @@ function buildLiveStyles(t) {
     sectionTitle: { ...t.type.title, color: t.colors.textPrimary },
     optionalLabel: { ...t.type.caption, color: t.colors.textMuted },
     volumeRow: { borderBottomColor: t.colors.borderSubtle },
-    muscleName: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    muscleName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     volumeInsightText: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     volumeWhyToggle: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     volumeWhyToggleText: { ...t.type.caption, color: t.colors.textSecondary },
     volumeWhyBody: { fontSize: t.fontSize.xs, color: t.colors.textSecondary, backgroundColor: t.colors.surface2 },
-    statusText: { fontSize: t.fontSize.xs },
+    statusText: { ...t.type.captionStrong },
     coachZoneSubHeading: { ...t.type.label, color: t.colors.textSecondary },
     coachZoneDivider: { backgroundColor: t.colors.borderSubtle },
     feedbackToggleBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    feedbackToggleBtnText: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
+    feedbackToggleBtnText: { ...t.type.bodyStrong, color: t.colors.textSecondary },
     adjustedSummaryRow: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.251) },
     adjustedSummaryText: { ...t.type.bodySm, color: t.colors.textSecondary },
     blockRecapRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
@@ -2146,7 +2159,6 @@ function buildLiveStyles(t) {
     exerciseListName: { ...t.type.label, color: t.colors.textPrimary },
     exerciseListMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
     exerciseSetChip: { ...t.type.num('caption'), color: t.colors.textSecondary, backgroundColor: t.colors.surface2 ?? t.colors.background, borderColor: t.colors.border },
-    templateModalBg: { backgroundColor: t.colors.scrim },
     templateModalTitle: { ...t.type.title, color: t.colors.textPrimary },
     templateModalInput: { ...t.type.body },
     templateModalCancel: { borderColor: t.colors.border },

@@ -52,10 +52,15 @@ function formatDate(ms) {
 // in a narrow card and wrapped to a second line with the long-form date
 // (founder D13.1, 2026-07-09). Same en-GB locale as every other date on this
 // screen, just the default numeric format instead of day/month/year options.
+// R2-7 (remediation 2026-07-11, founder device walk build 2684): the check-in
+// row's date fact reads as a calm British day-and-month line ("19 July"), not a
+// numeric DD/MM/YYYY. It titles a one-line NavRow subtitle now that the
+// explanatory sentence lives on WeeklyCheckInScreen (where it was already
+// conveyed in full), so the row sits level with its one-line siblings.
 function formatShortDate(ms) {
   if (!ms) return null;
   try {
-    return new Date(Number(ms)).toLocaleDateString('en-GB');
+    return new Date(Number(ms)).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
   } catch (_) {
     return null;
   }
@@ -137,7 +142,7 @@ function buildPendingCoachCopy(readiness) {
   if (readiness.edSuppressed) {
     return {
       title: readiness.unlockDateMs
-        ? `First check-in: ${formatShortDate(readiness.unlockDateMs)}`
+        ? `First check-in ${formatShortDate(readiness.unlockDateMs)}`
         : 'First check-in not open yet',
       body: 'Volyume is keeping this calm and will not push weigh-in counts here. Use the check-in when it opens.',
     };
@@ -167,7 +172,7 @@ function buildPendingCoachCopy(readiness) {
   }
   return {
     title: readiness.unlockDateMs
-      ? `First check-in: ${formatShortDate(readiness.unlockDateMs)}`
+      ? `First check-in ${formatShortDate(readiness.unlockDateMs)}`
       : 'First check-in not open yet',
     body: 'Keep logging morning weight and training. Volyume waits for enough baseline data before it changes targets.',
   };
@@ -426,12 +431,20 @@ export default function YouScreen({ navigation }) {
         {isPro ? (
           <View style={styles.section}>
             <SectionLabel>This week</SectionLabel>
+            {/* R2-7 (remediation 2026-07-11, founder device walk build 2684):
+                the subtitle is ONE calm line - the readiness title only (a
+                short date fact like "First check-in 19 July", or the open/
+                needs-more one-liner). The explanatory sentence
+                (pendingCoachCopy.body) is NOT concatenated here; it is already
+                conveyed in full on WeeklyCheckInScreen (the row's destination),
+                so this row sits level with its one-line siblings instead of
+                wrapping to a four-line paragraph. */}
             <NavRow
               icon="clipboard-outline"
               label="Weekly check-in"
               sub={latestReview
                 ? "Answer this week's questions so the coach has context."
-                : `${pendingCoachCopy.title}. ${pendingCoachCopy.body}`}
+                : pendingCoachCopy.title}
               onPress={() => navigation.navigate('WeeklyCheckIn')}
             />
             {/* R8 (D68): when a completed decision exists the tappable hero

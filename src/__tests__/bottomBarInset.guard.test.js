@@ -46,23 +46,41 @@ describe('ActiveWorkout bottom bar vs the hidden tab band', () => {
   // The inverse rule: on screens where the tab band IS visible it absorbs
   // the system inset, so a sticky footer there must use a flat token —
   // adding insets.bottom again doubled the gap under WorkoutSummary's
-  // Close (founder screenshot 2026-07-03). Re-affirmed at the 2026-07-11
-  // review (founder defect, build 2608): the flat-token +
-  // edges=['top','bottom'] design is frame-relative and context-adaptive,
-  // so it stays; the photo's real defect was scroll clearance, pinned
-  // below via the measured footerHeight.
-  test('WorkoutSummary sticky footer uses a flat token, never the inset again', () => {
+  // Close (founder screenshot 2026-07-03).
+  //
+  // R2-5 (remediation 2026-07-11, founder device walk build 2684): the
+  // STRUCTURAL fix of the footer/tab-bar system. The earlier design leaned
+  // on SafeAreaView's frame-relative behaviour with edges=['top','bottom'],
+  // assuming the bottom edge would resolve to 0 because the tab band sits
+  // below. On the founder's device it did NOT: the SafeAreaView added the
+  // system bottom inset as padding under the footer a SECOND time (the tab
+  // band already owns it), which was the ~70dp dead band between the footer
+  // and the tab bar. The layout model is now explicit: exactly one component
+  // owns each system inset. On this screen the VolyumeTabBar band owns the
+  // bottom inset, so the screen claims edges=['top'] only. The footer keeps
+  // its flat spacing.lg token and sits flush on the band.
+  test('WorkoutSummary owns only the top edge; the tab band owns the bottom inset', () => {
     const summary = read('screens/WorkoutSummaryScreen.js');
     expect(summary).toMatch(/styles\.stickyFooter,\s*live\.stickyFooter,\s*\{\s*paddingBottom:\s*spacing\.lg\s*\}/);
     expect(summary).not.toMatch(/stickyFooter,\s*live\.stickyFooter,\s*\{\s*paddingBottom:\s*Math\.max/);
-    expect(summary).toMatch(/<SafeAreaView style=\{\[styles\.safe, live\.safe\]\} edges=\{\['top', 'bottom'\]\}>/);
-    // 2026-07-11 (founder defect, build 2608): the scroll content's bottom
-    // padding must clear the footer's real rendered height (measured via
-    // onLayout, since it varies with the save-error card and dynamic
-    // type), not just a static token — the founder's photo showed the
-    // exercise breakdown crowding the footer.
-    expect(summary).toMatch(/paddingBottom:\s*Math\.max\(spacing\.xxxl,\s*footerHeight\s*\+\s*spacing\.lg\)/);
-    expect(summary).toMatch(/onLayout=\{\(e\) => setFooterHeight\(e\.nativeEvent\.layout\.height\)\}/);
+    // R2-5: top edge only. The old ['top', 'bottom'] must stay gone (it was
+    // the double-counted inset the founder photographed).
+    expect(summary).toMatch(/<SafeAreaView style=\{\[styles\.safe, live\.safe\]\} edges=\{\['top'\]\}>/);
+    expect(summary).not.toMatch(/edges=\{\['top', 'bottom'\]\}/);
+    // R2-6 (remediation 2026-07-11): the sticky footer is a normal-flow
+    // sibling BELOW the scroll, never an overlay, so the scroll content's
+    // bottom padding is its OWN rhythm (styles.content -> spacing.xxxl) and
+    // is independent of the footer's height. The phantom footerHeight
+    // clearance (which left ~85-100dp of dead space above the buttons) and
+    // the onLayout measurement plumbing are removed.
+    expect(summary).toMatch(/contentContainerStyle=\{styles\.content\}/);
+    // No footerHeight state or measurement remains (mentions in the
+    // explanatory comments describing the removed plumbing are fine).
+    expect(summary).not.toMatch(/\[footerHeight, setFooterHeight\]/);
+    expect(summary).not.toMatch(/setFooterHeight\(/);
+    expect(summary).not.toMatch(/onLayout=\{\(e\) => setFooterHeight/);
+    // content's own rhythm ends on spacing.xxxl (the scroll's natural breath).
+    expect(summary).toMatch(/content:\s*\{[^}]*paddingBottom:\s*spacing\.xxxl/);
   });
 
   // Bottom-anchored Modals overlay the tab band and touch the physical
