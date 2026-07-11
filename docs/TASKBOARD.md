@@ -282,11 +282,22 @@ passively as the first action on every incoming link;
 ActiveWorkoutScreen (the one attach point, pinned); NO ad SDK /
 fingerprinting / Install Referrer dep — guard suite
 `src/lib/__tests__/attribution.test.js`) -> **C3** duplicate
-paywall READ-ONLY audit then founder decision -> **C5** day-14 factual
-recap decision (ED guardrails mandatory: no outcome language, no
-weight/food lines under calm mode or open ED flag, no thin recap).
-PARKED for usage evidence: C4, C6, C9 (behind C8), C10; win-back
-wording stays founder-gated.
+paywall READ-ONLY audit (AUDIT DONE, decision OPEN - PaywallScreen is
+a verified orphan: registered once, ZERO navigation call sites, still
+defaults annual against the 2026-07-02 monthly ruling, still says
+"7 days"; but holds two capabilities ProUpgrade lacks - Play-review
+social proof + inline restore. Founder brief with options A-D:
+`docs/marketing-2026-07-11/C3-duplicate-paywall-decision-brief.md`.
+NO code touched; DifferentialBadge untouched) -> **C5** day-14 factual
+recap (MEMO DONE, decision OPEN - three forks: surface (enrich
+CascadeGate / RecapStory trial variant / counts-aware day-14 push /
+close C5), fact scope (training-only vs +neutral activity counts),
+thin-recap threshold. ED guardrails baked in as conditions, not
+options: no outcome language ever, weight/food-adjacent lines
+suppressed fail-closed under calm/ED, no thin recap.
+`docs/marketing-2026-07-11/C5-day14-recap-decision-memo.md`. NO code
+touched). PARKED for usage evidence: C4, C6, C9 (behind C8), C10;
+win-back wording stays founder-gated.
 
 ## 0. FOUNDER MUST-FIX LIST (device-testing session, 2026-07-11) — SUPERSEDED BY R-CAMPAIGN
 
