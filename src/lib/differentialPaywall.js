@@ -1,11 +1,12 @@
 /**
  * Differential paywall trigger detection (Move #4).
  *
- * Locked in MOVE_4_DIFFERENTIAL_PAYWALL.md. The conversion lever for
- * free users: when their weekly coach output references a context
- * where food data would change the conclusion, surface a one-tap
- * "Try Pro free for 7 days" badge with the locked copy (7 = the Play
- * intro offer this badge's purchase CTA leads to; see LOCKED_COPY note).
+ * Locked in MOVE_4_DIFFERENTIAL_PAYWALL.md (amended 2026-07-11, C1,
+ * founder ruling): the message BODY carries no trial duration - the two
+ * files stating different numbers (7 here, 14 on the badge CTA) shipped
+ * as a visible contradiction. The CTA rendered by DifferentialBadge.js
+ * is the single source of truth for the offer (14-day cardless trial
+ * while eligible; live store price once spent).
  *
  * Trigger conditions (ALL must hold):
  *   1. user is on the 'free' tier
@@ -39,17 +40,17 @@
 // Locked verbatim copy. Editing requires updating the snapshot test.
 // ────────────────────────────────────────────────────────────────────
 
-// The trial figure here is 7, not 14: this badge's CTA routes to the Play
-// purchase surface (CoachOutputScreen → navigate('Paywall')), where the
-// subscription carries Google's 7-day intro free trial. The 14-day cardless
-// trial runs earlier, before any purchase prompt (founder override
-// 2026-06-06, SUBSCRIPTION_AND_PAYMENT_LOCKED). Stating 14 here would promise
-// a trial length the store will not honour.
+// C1 (founder ruling 2026-07-11): no trial duration in the body. This
+// module and DifferentialBadge.js each carried an opposite-number
+// rationale (7 vs 14) and both rendered together on screen. The body now
+// states only the insight; the badge CTA states the offer and is the
+// single source of truth, so the two can never drift again. These
+// variants are deliberately identical to LOCKED_COPY_NO_TRIAL below.
 export const LOCKED_COPY = Object.freeze({
-  stalled_lift: "Your bench hasn't moved in three weeks. Lifting data alone can't show if the cause is training or fuel. Try Pro free for 7 days.",
-  deload: "Precision Coaching is holding a lighter week. Your food log could show whether fuel is the cause. Try Pro free for 7 days.",
-  missing_tdee: "Your weight is moving faster than your logged calories explain. Pro tracks the calories your body actually uses. Try Pro free for 7 days.",
-  block_summary: "Your training block just ended. With your food log, Precision Coaching could show how fuel shaped your results. Try Pro free for 7 days.",
+  stalled_lift: "Your bench hasn't moved in three weeks. Lifting data alone can't show if the cause is training or fuel.",
+  deload: "Precision Coaching is holding a lighter week. Your food log could show whether fuel is the cause.",
+  missing_tdee: "Your weight is moving faster than your logged calories explain. Pro tracks the calories your body actually uses.",
+  block_summary: "Your training block just ended. With your food log, Precision Coaching could show how fuel shaped your results.",
 });
 
 // Alternate copy for users who've already used their cascade trial.

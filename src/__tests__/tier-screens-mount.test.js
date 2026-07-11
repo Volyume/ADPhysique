@@ -188,7 +188,7 @@ describe('DifferentialBadge mount', () => {
       differential: {
         shown: true,
         trigger: 'deload',
-        with_food_data_message: "Precision Coaching is holding a lighter week. Your food log could show whether fuel is the cause. Try Pro free for 7 days.",
+        with_food_data_message: "Precision Coaching is holding a lighter week. Your food log could show whether fuel is the cause.",
         paywall_cta: 'try_pro_14d',
       },
       pricingWindow: 'open_beta',

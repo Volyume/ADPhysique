@@ -2,6 +2,16 @@
 
 # Move #4: Differential paywall output (locked)
 
+> **AMENDED 2026-07-11 (C1, founder ruling).** The locked message
+> bodies no longer carry a trial duration. The shipped build showed
+> "Try Pro free for 7 days" in the body directly above a CTA reading
+> "Try Pro free for 14 days" (DifferentialBadge.js) - a visible
+> contradiction. Ruling: the body states only the insight; the CTA is
+> the single source of truth for the offer. Every "Try Pro free for 7
+> days." / "free for 7 days" / "7 days free" tail in the copy blocks
+> below is DELETED in code (differentialPaywall.js LOCKED_COPY); the
+> blocks below are kept as written for history.
+
 The conversion lever. When a free user reports adherence as "under"
 or "over" in 2 of the last 3 check-ins, the relevant weekly coach
 insight surfaces a "with food data, this card would have said X"
