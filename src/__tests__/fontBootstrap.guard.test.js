@@ -19,23 +19,21 @@ describe('premium app font bootstrap', () => {
     expect(app.indexOf('bootstrapVisualSystem()')).toBeLessThan(app.indexOf("require('./src/navigation/RootNavigator')"));
   });
 
-  test('the design system registers static Inter files for React Native', () => {
+  test('the design system registers static Manrope files for React Native', () => {
     const fonts = read('src/styles/fonts.js');
     for (const name of [
-      'Inter-Regular.ttf',
-      'Inter-Medium.ttf',
-      'Inter-SemiBold.ttf',
-      'Inter-Bold.ttf',
-      'Inter-ExtraBold.ttf',
-      'InterDisplay-Bold.ttf',
-      'InterDisplay-ExtraBold.ttf',
+      'Manrope-Regular.ttf',
+      'Manrope-Medium.ttf',
+      'Manrope-SemiBold.ttf',
+      'Manrope-Bold.ttf',
+      'Manrope-ExtraBold.ttf',
     ]) {
       expect(fonts).toContain(`require('../../assets/fonts/${name}')`);
       expect(fs.existsSync(path.join(ROOT, 'assets', 'fonts', name))).toBe(true);
     }
   });
 
-  test('Android text uses bundled Inter without extra platform font padding', () => {
+  test('Android text uses bundled Manrope without extra platform font padding', () => {
     const fonts = read('src/styles/fonts.js');
     expect(fonts).toContain('includeFontPadding: false');
     expect(fonts).toContain('Text.defaultProps.style = currentText ? [textDefaultStyle, currentText] : textDefaultStyle;');
