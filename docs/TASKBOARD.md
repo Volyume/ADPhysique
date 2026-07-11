@@ -63,6 +63,21 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
   standard (lead-review vs this spec, lint+suite, commit+push, or
   relaunch).
 
+### QUEUED NEXT - silent exercise auto-advance defect (founder, 2026-07-11)
+- Founder: "It also seems to swap exercise when there's still a set to
+  do at times without saying anything." Verify-first diagnosis next
+  free slot: trace ActiveWorkout's exercise-advance logic (set-count
+  completion checks, superset/giant-set N-aware jump from item 21,
+  currentExerciseIndex re-pointing from the reorder sheet, unilateral
+  two-phase completion) for any path that advances with sets remaining
+  and no announcement. Then fix. ED/engine untouched - this is session
+  navigation logic.
+
+### QUEUED - D43 logger redesign blueprint (after point fixes; see D43 amendment)
+- Founder verdict: logger 3/10, target 10/10, complete redesign
+  cohesive with the app. Lead produces the blueprint (Opus legwork),
+  founder approves, then staged build slots.
+
 ### QUEUED NEXT (founder reports, same session): exercise swapper layout
 - Founder photo (build 2608): in ExercisePickerModal with query "leg",
   a large empty void sits between the muscle-chip row and the

@@ -753,3 +753,18 @@ founder's re-walk; (4) the redesign pass proper - lead-driven design
 judgement, Opus agents for legwork, area by area against best-in-class
 references. The pass is NOT conditional on the founder re-walk; it
 starts once the point fixes land.
+
+## D43 AMENDMENT (founder, 2026-07-11): logger verdict 3/10, target 10/10
+Founder's words: "Let's not hide the entire workout logger is about a
+3/10 now we need 10/10 we need a complete redesign in line with the
+rest of the app." Standing scope for the D43 pass: the workout logger
+gets a COMPLETE redesign to the 10/10 bar, cohesive with the rest of
+the app (the ONE-amalgamated-application mandate), not a
+polish-in-place. Process: point fixes land first (they stop the
+bleeding on the current build); the lead then produces a full
+redesign blueprint (hands-on design judgement, Opus agents for
+research/reference legwork), presented to the founder for approval
+BEFORE the build slots open. The blueprint covers: set entry, logged
+sets, rest/timer surfaces, exercise navigation/swap, progression
+cues, superset/giant-set presentation, and every button/control on
+the logging path, judged against best-in-class references.
