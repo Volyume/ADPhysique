@@ -2454,7 +2454,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Cancel workout"
             >
-              <Ionicons name="close" size={22} color={t.colors.textSecondary} />
+              {/* R5 (D66): match ModalHeader's close treatment exactly
+                  (size 24, textPrimary) - the house modal-chrome X, not a
+                  quieter one-off. */}
+              <Ionicons name="close" size={24} color={t.colors.textPrimary} />
             </TouchableOpacity>
           </View>
           <View style={styles.headerCenter}>
@@ -2479,7 +2482,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 size="sm"
                 fullWidth={false}
                 onPress={handleFinishWorkout}
-                style={[styles.headerTapTarget, styles.headerFinishButton, live.headerFinishButton]}
+                style={[styles.headerTapTarget, styles.headerFinishButton]}
                 accessibilityLabel="Finish workout"
               />
             )}
@@ -4110,18 +4113,20 @@ const styles = StyleSheet.create({
   // purely transparent, no visual change.
   headerTapTarget: { minWidth: workoutLoggerSize.headerButtonMin, minHeight: workoutLoggerSize.headerButtonMin, alignItems: 'center', justifyContent: 'center' },
   headerSideRight: { width: workoutLoggerSize.headerSide, alignItems: 'flex-end', justifyContent: 'center' },
+  // R5 (D66): the bespoke chrome (surface2 bg, 1px border, radius.sm,
+  // row+gap) duplicated what Button variant="secondary" already renders,
+  // but at a nonstandard radius - the founder's "Finish differs from X"
+  // header mish-mash. Button's own secondary treatment now shows through;
+  // only the width floor stays local.
   headerFinishButton: {
-    flexDirection: 'row',
-    gap: spacing.xxs,
     minWidth: workoutLoggerSize.finishButtonMinWidth,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
-  timerText: { ...type.num('title'), color: colors.primary },
+  // R5 (D66): the elapsed timer is DATA, not brand decoration - Food's
+  // rule is textPrimary for the value that is the content, tabular via
+  // type.num; brand amber in the header competed with the single filled
+  // Log set CTA for attention.
+  timerText: { ...type.num('title'), color: colors.textPrimary },
   starterBanner: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
@@ -4152,7 +4157,11 @@ const styles = StyleSheet.create({
   navTabBadge: { width: workoutLoggerSize.exerciseTabBadge, height: workoutLoggerSize.exerciseTabBadge, borderRadius: circle(workoutLoggerSize.exerciseTabBadge), backgroundColor: colors.primaryFill, alignItems: 'center', justifyContent: 'center' },
   navTabBadgeText: { ...type.caption, color: colors.onPrimary, fontSize: fontSize.micro },
   scroll: { flex: 1 },
-  scrollContent: { padding: spacing.md, paddingTop: spacing.sm, gap: spacing.sm },
+  // R5 (D66): paddingHorizontal md -> lg so the working content shares the
+  // same 16px edge as the header, exercise nav and the Food standard
+  // (FOOD-DESIGN-STANDARD.md section 1); the tighter vertical rhythm
+  // (sm gaps) is a deliberate density property of the logger and stays.
+  scrollContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, paddingTop: spacing.sm, gap: spacing.sm },
   // D43 S2: the "N notes" accordion rail (notesRail/notesChip/notesChipText/
   // notesExpanded) is retired -- StatusStrip (src/components/workout/
   // StatusStrip.js) owns the equivalent chip-row styling now.
@@ -4248,7 +4257,9 @@ const styles = StyleSheet.create({
   // node (was a separate targetRow/targetText line, retired).
   orientationTarget: { ...type.label, color: colors.textMuted },
   beatLine: { alignSelf: 'stretch', minHeight: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs, paddingVertical: 0 },
-  beatLineLabel: { flex: 1, minWidth: 0, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
+  // R5 (D66): raw fontSize+lineHeight pair moved onto the house bodySm role
+  // (the token that absorbs exactly this hand-rolled combination, theme.js).
+  beatLineLabel: { flex: 1, minWidth: 0, ...type.bodySm, color: colors.textSecondary },
   beatLineValue: { ...type.bodyStrong, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   beatLineGlyph: { ...type.bodyStrong, color: colors.primary },
   beatLineCue: {
@@ -4257,7 +4268,10 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
     paddingHorizontal: spacing.xs,
     minHeight: 26,
-    borderRadius: radius.sm,
+    // R5 (D66): radius.sm -> radius.md, the logger's one small-surface
+    // radius (RestTimer container, noteInput, completeBtn, inlineActionPill
+    // all sit on md; pills stay radius.full, cards radius.lg).
+    borderRadius: radius.md,
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.border,
@@ -4541,8 +4555,9 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     header: { borderBottomColor: t.colors.border },
-    headerFinishButton: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    timerText: { ...t.type.num('title'), color: t.colors.primary },
+    // R5 (D66): headerFinishButton no longer carries colour keys (Button's
+    // secondary variant owns them live), so it needs no live override.
+    timerText: { ...t.type.num('title'), color: t.colors.textPrimary },
     starterBanner: { backgroundColor: withAlpha(t.colors.primary, alpha.ghost), borderBottomColor: t.colors.border },
     starterBannerText: { ...t.type.bodySm, color: t.colors.textSecondary },
     inlineActionPill: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },

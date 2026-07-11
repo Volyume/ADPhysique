@@ -181,7 +181,10 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   });
 
   test('high-impact workout text uses the semantic Inter type roles', () => {
-    expect(ACTIVE_WORKOUT).toContain("timerText: { ...type.num('title'), color: colors.primary }");
+    // R5 (D66, 2026-07-11): the elapsed timer moved off brand amber onto
+    // textPrimary - it is data, not decoration, and the header amber
+    // competed with the single filled Log set CTA. Same type.num role.
+    expect(ACTIVE_WORKOUT).toContain("timerText: { ...type.num('title'), color: colors.textPrimary }");
     // letterSpacing: 0 literal removed (design campaign D3, 2026-07-09): raw
     // letterSpacing literals are swept to tokens/deleted app-wide; 0 was
     // value-identical to the RN default so the property is simply gone now.

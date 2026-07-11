@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from './AppAlert';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useShallow } from 'zustand/react/shallow';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, letterSpacing, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 // D2: all haptics ride the named vocabulary so the reduce-motion setting
@@ -82,7 +82,7 @@ export default function RestTimer() {
     almostDone: { color: t.colors.warning },
     countdownNum: { fontSize: t.fontSize.xxl, color: t.colors.warning },
     countdownNumCompact: { fontSize: t.fontSize.xl },
-    label: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    label: { ...t.type.overline, color: t.colors.textMuted },
     skipBtn: { borderColor: t.colors.border },
     skipText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     adjBtn: { borderColor: withAlpha(t.colors.primary, alpha.mid), backgroundColor: t.colors.primaryBg },
@@ -512,18 +512,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   countdownNumCompact: { fontSize: fontSize.xl, minWidth: 32 },
+  // R5 (D66): the hand-rolled xs/uppercase/tracked combination IS the house
+  // overline role - named once in theme.js, used here by name.
   label: {
-    fontSize: fontSize.xs,
+    ...type.overline,
     color: colors.textMuted,
     flex: 1,
-    textTransform: 'uppercase',
-    letterSpacing: letterSpacing.overline,
   },
   skipBtn: {
     minHeight: 44,
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
-    borderRadius: radius.sm,
+    // R5 (D66): radius.sm -> radius.md, the logger's one small-surface
+    // radius (matches this timer's own container).
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
   },
