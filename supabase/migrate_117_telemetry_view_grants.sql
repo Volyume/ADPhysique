@@ -19,8 +19,8 @@
 --                   grant is re-stated explicitly for the avoidance of
 --                   doubt).
 -- Applied locally:  N/A -- cloud only; no local-DB analogue.
--- Applied remotely: NO -- pending; Claude-run model, applies only after the
---                   founder's exact "run against production" phrase.
+-- Applied remotely: YES -- applied 2026-07-11 via Claude, founder said
+--                   "run against production".
 -- Safe to re-run:   YES. REVOKE on an absent privilege and a repeated GRANT
 --                   are both no-ops.
 -- Rollback:         GRANT SELECT ON engine_telemetry_daily TO authenticated;
