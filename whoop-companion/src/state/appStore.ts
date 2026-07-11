@@ -100,7 +100,7 @@ import { sleepConsistency, SleepConsistency } from '../metrics/sleepConsistency'
 import { sleepDebt } from '../metrics/sleepDebt';
 import { computeSleepStress, SleepStress, StressEpoch } from '../metrics/sleepStress';
 import { computeSleepPerformance, SleepPerformance } from '../metrics/sleepPerformance';
-import { longAutoSleepNeedsCorroboration, sleepEvidencePct, sleepHasCorroboration, sleepStateWakeConflict } from '../metrics/sleepEvidence';
+import { autoSleepAtSafetyCeiling, longAutoSleepNeedsCorroboration, sleepEvidencePct, sleepHasCorroboration, sleepStateWakeConflict } from '../metrics/sleepEvidence';
 import { edwardsTrimp, hrZones, strainFromLoad, totalTrimp, UserProfile } from '../metrics/strain';
 import { kcalPerMinute, totalKcal } from '../metrics/calories';
 import { computeStress } from '../metrics/stress';
@@ -417,6 +417,12 @@ export type AppState = {
     contributors: RecoveryContributor[];
     calibration: BaselineCalibration | null;
   } | null;
+  recoveryBaseline: {
+    hrvAccepted: number;
+    rhrAccepted: number;
+    acceptedNights: number;
+    requiredNights: number;
+  } | null;
   hrvBal: HrvBalance | null;
   illness: IllnessResult | null;
   resilience: Resilience | null;
@@ -469,6 +475,7 @@ const initialState: AppState = {
   energyReserve: null,
   sleepGoal: 0.85,
   recoveryParts: null,
+  recoveryBaseline: null,
   hrvBal: null,
   illness: null,
   resilience: null,
@@ -491,6 +498,8 @@ const initialState: AppState = {
 };
 
 const HR_RETENTION_DAYS = 21;
+const DERIVED_METRICS_REVISION = 'sleep-vitals-2026-07-11-v2';
+const DERIVED_METRICS_REVISION_KEY = 'derivedMetricsRevision';
 const CARDIO_RECENT_LIMIT = 250;
 const ROLLING_RR_WINDOW = 120; // keep last ~120 R-R intervals for live HRV
 // How often to recompute + persist derived metrics from the stored stream while
@@ -514,8 +523,8 @@ const STEP_DIVISOR_KEY = 'whoopStepTicksPerStep';
 const STEP_DIVISOR_MIGRATION_KEY = 'whoopStepDivisorCaptureDefaultV2';
 const STEP_TRUST_RECOMPUTE_KEY = 'whoopStepTrustRecomputeV1';
 const K21_MOTION_BACKFILL_KEY = 'whoopK21MotionBackfillV1';
-const HISTORY_BIOMETRIC_REDECODE_KEY = 'whoopHistoryBiometricMergeV3';
-const SLEEP_EVIDENCE_RECOMPUTE_KEY = 'sleepEvidenceRecomputeV10';
+const HISTORY_BIOMETRIC_REDECODE_KEY = 'whoopHistoryBiometricMergeV4';
+const SLEEP_EVIDENCE_RECOMPUTE_KEY = 'sleepEvidenceRecomputeV11';
 const STRAP_ALARM_KEY = 'strapAlarm';
 const HISTORY_REPLAY_COUNT_KEY = 'whoopHistoryReplayCountV1';
 const HISTORY_NEXT_AUTO_SYNC_KEY = 'whoopHistoryNextAutoSyncV1';
@@ -600,6 +609,7 @@ class AppStore extends Store<AppState> {
   private pendingHistoryDrainTimer: ReturnType<typeof setTimeout> | null = null;
   private initInFlight: Promise<void> | null = null;
   private sessionPersistenceQueue: Promise<void> = Promise.resolve();
+  private derivedMetricsQueue: Promise<void> = Promise.resolve();
   private sessionPersistTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
@@ -620,6 +630,12 @@ class AppStore extends Store<AppState> {
     );
     this.sessionPersistenceQueue = next.then(() => undefined, () => undefined);
     return next;
+  }
+
+  private enqueueDerivedMetrics<T>(operation: () => Promise<T>): Promise<T> {
+    const queued = this.derivedMetricsQueue.then(operation, operation);
+    this.derivedMetricsQueue = queued.then(() => undefined, () => undefined);
+    return queued;
   }
 
   private scheduleSessionPersistence(): void {
@@ -682,6 +698,13 @@ class AppStore extends Store<AppState> {
       session: restoredSession,
     });
     await clearUntrustedLegacyData();
+    try {
+      await this.rebuildRetainedDerivedMetricsIfNeeded();
+    } catch (error) {
+      // A failed optional rebuild must not prevent BLE startup. Leave the
+      // revision unset so the next launch retries from local raw history.
+      this.setState({ error: `Local sleep and recovery refresh will retry: ${String(error)}` });
+    }
     await this.refreshBandSteps();
     await this.refreshDerived();
     await pruneHrSamples(addDays(Date.now(), -HR_RETENTION_DAYS));
@@ -708,7 +731,6 @@ class AppStore extends Store<AppState> {
     });
     this.startAutoSyncSupervisor();
     this.appStateSub = RNAppState.addEventListener('change', (s) => this.onAppState(s));
-    if (keepAlive) void this.ensureBackgroundSyncKeepAlive('Startup auto-sync');
 
     this.setState({ ready: true });
     setTimeout(() => this.connect(), 750);
@@ -772,7 +794,13 @@ class AppStore extends Store<AppState> {
     if (status === 'connected' && device && this.autoDrainedFor !== device.id) {
       this.scheduleAutoHistoryDrain(device.id, 3500);
     }
-    if (status === 'connected' && this.getState().backgroundKeepAlive) {
+    if (
+      (status === 'scanning' || status === 'discovering' || status === 'connected') &&
+      this.getState().backgroundKeepAlive
+    ) {
+      // Bluetooth permission is available by these phases, so an earlier
+      // pre-permission attempt must not delay the native connected-device FGS.
+      this.keepAliveRetryAfterTs = 0;
       void this.ensureBackgroundSyncKeepAlive('Background auto-sync');
     }
     if (status === 'connected') {
@@ -1087,14 +1115,14 @@ class AppStore extends Store<AppState> {
       if (!page.length) break;
       const frames = page.map((row) => hexToBytes(row.hex));
       const decoded = decodeWhoop5HistoryFrames(frames, undefined, { ppgContextFrames: ppgOverlap });
-      if (decoded.hr.length || decoded.rawVitals.length) {
+      if (decoded.hr.length || decoded.motion.length || decoded.rawVitals.length) {
         await persistHistoryBatch({
           rawTs: Date.now(),
           framesHex: [],
           hr: decoded.hr,
           steps: [],
           sleepStates: [],
-          motion: [],
+          motion: decoded.motion,
           rawVitals: decoded.rawVitals,
         });
       }
@@ -1401,8 +1429,8 @@ class AppStore extends Store<AppState> {
     if (!ok) {
       this.setState({
         error:
-          `${context} needs location permission so Android can keep the WHOOP sync running in the background. ` +
-          'Grant location/notification permission and leave background sync enabled; otherwise keep the app open during sync.',
+          `${context} needs Bluetooth and notification permission so Android can keep WHOOP sync running in the background. ` +
+          'Grant those permissions and leave background sync enabled; otherwise keep the app open during sync.',
       });
     }
     return ok;
@@ -1419,7 +1447,7 @@ class AppStore extends Store<AppState> {
         if (!ok) {
           this.setState({
             error:
-              'Keep-alive needs the “Allow all the time” location permission. Grant it in Settings, then toggle again.',
+              'Background sync needs Bluetooth and notification permission. Grant them in Settings, then toggle again.',
           });
         }
       }
@@ -2189,6 +2217,17 @@ class AppStore extends Store<AppState> {
     });
   }
 
+  private async rebuildRetainedDerivedMetricsIfNeeded(): Promise<void> {
+    if ((await kvGet(DERIVED_METRICS_REVISION_KEY)) === DERIVED_METRICS_REVISION) return;
+    const today = dayKey(Date.now());
+    const retainedDays = (await getRecentDailyMetrics(HR_RETENTION_DAYS))
+      .filter((row) => row.day < today)
+      .map((row) => row.day)
+      .sort((a, b) => a.localeCompare(b));
+    for (const day of retainedDays) await this.backfillDailyMetric(day);
+    await kvSet(DERIVED_METRICS_REVISION_KEY, DERIVED_METRICS_REVISION);
+  }
+
   private async backfillCardioStepsFromHistory(): Promise<void> {
     const rows = await listCardio(200);
     let changed = false;
@@ -2664,7 +2703,7 @@ class AppStore extends Store<AppState> {
 
     const allHr = directPhysiologyHrSamples(await getHrSamplesBetween(scanStart, scanEnd).catch(() => []));
     let existing = await listCardioBetween(scanStart, scanEnd);
-    if (sod < startOfDayMs(Date.now()) && perMinuteHr(allHr).length >= 120) {
+    if (perMinuteHr(allHr).length >= 120) {
       const staleAutoNaps = existing.filter((row) => row.source === 'nap' && parseNapDetail(row.notes)?.autoDetected === true);
       for (const nap of staleAutoNaps) await deleteCardio(nap.id);
       if (staleAutoNaps.length) existing = await listCardioBetween(scanStart, scanEnd);
@@ -2694,7 +2733,7 @@ class AppStore extends Store<AppState> {
         endTs,
         allHr.filter((row) => row.ts >= startTs && row.ts < endTs),
       );
-      const nap = computeSleep(sleepInput, undefined, { minWindowMin: 20, maxWindowMin: 180 });
+      const nap = computeSleep(sleepInput, undefined, { minWindowMin: 20, maxWindowMin: 90 });
       if (!nap || !napIsReliable(nap)) continue;
       if (blocked.some((b) => rangesOverlap(nap.startTs, nap.endTs, b.startTs, b.endTs))) continue;
       if (napRanges.some((n) => rangesOverlap(nap.startTs, nap.endTs, n.startTs, n.endTs))) continue;
@@ -2994,39 +3033,45 @@ class AppStore extends Store<AppState> {
   };
 
   // ---- derived metrics ----
-  refreshDerived = async (): Promise<void> => {
-    if (this.historyPersisting || this.getState().draining) return;
-    await this.recomputeToday();
-    const recentDays = await getRecentDailyMetrics(30);
-    this.setState({
-      recentDays,
-      cardio: await listCardio(CARDIO_RECENT_LIMIT),
-      sleepSchedule: inferSleepSchedule([this.getState().today, ...recentDays].filter((d): d is DailyMetricRow => d != null)),
+  refreshDerived = (): Promise<void> => {
+    return this.enqueueDerivedMetrics(async () => {
+      if (this.historyPersisting || this.getState().draining) return;
+      await this.recomputeTodayNow();
+      const recentDays = await getRecentDailyMetrics(30);
+      this.setState({
+        recentDays,
+        cardio: await listCardio(CARDIO_RECENT_LIMIT),
+        sleepSchedule: inferSleepSchedule([this.getState().today, ...recentDays].filter((d): d is DailyMetricRow => d != null)),
+      });
     });
   };
 
-  recomputeDay = async (day: string): Promise<void> => {
-    if (day === dayKey(Date.now())) {
-      await this.recomputeToday();
-      return;
-    }
-    await this.backfillDailyMetric(day);
-    const today = dayKey(Date.now());
-    const dependents = (await getRecentDailyMetrics(HR_RETENTION_DAYS))
-      .filter((row) => row.day > day && row.day < today)
-      .map((row) => row.day)
-      .sort((a, b) => a.localeCompare(b));
-    for (const dependentDay of dependents) await this.backfillDailyMetric(dependentDay);
-    await this.recomputeToday();
-    const recentDays = await getRecentDailyMetrics(30);
-    this.setState({
-      recentDays,
-      cardio: await listCardio(CARDIO_RECENT_LIMIT),
-      sleepSchedule: inferSleepSchedule([this.getState().today, ...recentDays].filter((d): d is DailyMetricRow => d != null)),
+  recomputeDay = (day: string): Promise<void> => {
+    return this.enqueueDerivedMetrics(async () => {
+      if (day === dayKey(Date.now())) {
+        await this.recomputeTodayNow();
+        return;
+      }
+      await this.backfillDailyMetric(day);
+      const today = dayKey(Date.now());
+      const dependents = (await getRecentDailyMetrics(HR_RETENTION_DAYS))
+        .filter((row) => row.day > day && row.day < today)
+        .map((row) => row.day)
+        .sort((a, b) => a.localeCompare(b));
+      for (const dependentDay of dependents) await this.backfillDailyMetric(dependentDay);
+      await this.recomputeTodayNow();
+      const recentDays = await getRecentDailyMetrics(30);
+      this.setState({
+        recentDays,
+        cardio: await listCardio(CARDIO_RECENT_LIMIT),
+        sleepSchedule: inferSleepSchedule([this.getState().today, ...recentDays].filter((d): d is DailyMetricRow => d != null)),
+      });
     });
   };
 
-  recomputeToday = async (): Promise<void> => {
+  recomputeToday = (): Promise<void> => this.enqueueDerivedMetrics(() => this.recomputeTodayNow());
+
+  private async recomputeTodayNow(): Promise<void> {
     const profile = this.getState().profile;
     const now = Date.now();
     const sod = startOfDayMs(now);
@@ -3318,6 +3363,7 @@ class AppStore extends Store<AppState> {
       trainingReadiness,
       energyReserve,
       recoveryParts,
+      recoveryBaseline: recoveryResult.baseline,
       hrvBal,
       illness,
       resilience: resilienceResult,
@@ -3325,7 +3371,7 @@ class AppStore extends Store<AppState> {
       recentDays: await getRecentDailyMetrics(30),
       cardio: await listCardio(CARDIO_RECENT_LIMIT),
     });
-  };
+  }
 
   // ---- Health Monitor ----
   /** WHOOP-style five-vital health monitor (today's values vs personal ranges). */
@@ -3691,7 +3737,7 @@ function napIsReliable(nap: SleepResult): boolean {
   const hasMotionProof = nap.motionMin >= 12 && corroborationPct >= 20;
   return (
     nap.inBedMin >= 20 &&
-    nap.inBedMin <= 180 &&
+    nap.inBedMin <= 90 &&
     nap.asleepMin >= 15 &&
     nap.signalMin >= 20 &&
     coveragePct >= 60 &&
@@ -3736,7 +3782,9 @@ const MIN_VITAL_SIGNAL_MIN = 240;
 const MIN_VITAL_COVERAGE_PCT = 70;
 const MIN_SLEEP_SCORE_SIGNAL_MIN = 240;
 const MIN_SLEEP_SCORE_COVERAGE_PCT = 70;
-const MIN_RECOVERY_BASELINE_NIGHTS = 5;
+// WHOOP withholds Recovery for the first four days; score from the next
+// trustworthy night once four prior robust baseline nights are available.
+const MIN_RECOVERY_BASELINE_NIGHTS = 4;
 const FULL_RECOVERY_BASELINE_NIGHTS = 28;
 const MIN_RMSSD_BASELINE_SD_MS = 8;
 const MIN_RHR_BASELINE_SD_BPM = 3;
@@ -3964,6 +4012,7 @@ function buildSleepDetail(input: {
       sleepStateUpMin: sleep.sleepStateUpMin,
       coveragePct,
       confidence,
+      stageEstimate: sleep.hypnogram,
     },
     performance,
     score,
@@ -4015,6 +4064,7 @@ function sleepConfidence(
   const inBedMin = evidence?.inBedMin ?? 0;
   const highSignalMin = inBedMin > 0 ? durationAwareSignalMin(inBedMin, 300, 90, 0.75) : 300;
   const mediumSignalMin = inBedMin > 0 ? durationAwareSignalMin(inBedMin, SLEEP_TRUST_LOW_SIGNAL_MIN, 60, 0.5) : SLEEP_TRUST_LOW_SIGNAL_MIN;
+  if (autoSleepAtSafetyCeiling(evidence, manual)) return 'low';
   if (signalMin >= highSignalMin && coveragePct >= 85 && (manual || corroborated)) return 'high';
   if (longUncorroboratedAuto) return 'low';
   if (signalMin >= mediumSignalMin && coveragePct >= SLEEP_TRUST_LOW_COVERAGE_PCT) return 'medium';
@@ -4148,12 +4198,12 @@ function recoveryEstimate(input: {
   rhrSamples: Array<{ day: number; value: number }>;
   respSamples: Array<{ day: number; value: number }>;
   skinTempSamples: Array<{ day: number; value: number }>;
-}): { score: number | null; parts: AppState['recoveryParts'] } {
+}): {
+  score: number | null;
+  parts: AppState['recoveryParts'];
+  baseline: NonNullable<AppState['recoveryBaseline']>;
+} {
   const { rmssd, rhr, resp, skinTempC, sleepPerformance, rmssdSamples, rhrSamples, respSamples, skinTempSamples } = input;
-  if (rmssd == null || rhr == null || !Number.isFinite(rmssd) || !Number.isFinite(rhr)) {
-    return { score: null, parts: null };
-  }
-
   const baselineOptions = recoveryBaselineOptions();
   const rmssdEstimate = robustBaseline(rmssdSamples, baselineOptions);
   const rhrEstimate = robustBaseline(rhrSamples, baselineOptions);
@@ -4167,10 +4217,20 @@ function recoveryEstimate(input: {
   const rhrSd = Math.max(MIN_RHR_BASELINE_SD_BPM, robustStdev(rhrSamples, baselineOptions) || 0);
   const respSd = Math.max(MIN_RESP_BASELINE_SD_RPM, robustStdev(respSamples, baselineOptions) || 0);
   const skinTempSd = Math.max(0.2, robustStdev(skinTempSamples, baselineOptions) || 0);
+  const baseline = {
+    hrvAccepted: rmssdEstimate.acceptedSamples,
+    rhrAccepted: rhrEstimate.acceptedSamples,
+    acceptedNights: Math.min(rmssdEstimate.acceptedSamples, rhrEstimate.acceptedSamples),
+    requiredNights: MIN_RECOVERY_BASELINE_NIGHTS,
+  };
+
+  if (rmssd == null || rhr == null || !Number.isFinite(rmssd) || !Number.isFinite(rhr)) {
+    return { score: null, parts: null, baseline };
+  }
 
   if (
-    rmssdSamples.length >= MIN_RECOVERY_BASELINE_NIGHTS &&
-    rhrSamples.length >= MIN_RECOVERY_BASELINE_NIGHTS &&
+    rmssdEstimate.acceptedSamples >= MIN_RECOVERY_BASELINE_NIGHTS &&
+    rhrEstimate.acceptedSamples >= MIN_RECOVERY_BASELINE_NIGHTS &&
     rmssdBaseline != null &&
     rhrBaseline != null
   ) {
@@ -4192,7 +4252,7 @@ function recoveryEstimate(input: {
       minimumBaselineSamples: MIN_RECOVERY_BASELINE_NIGHTS,
       calibrationSamples: FULL_RECOVERY_BASELINE_NIGHTS,
     });
-    if (!r) return { score: null, parts: null };
+    if (!r) return { score: null, parts: null, baseline };
     return {
       score: r.score,
       parts: {
@@ -4204,12 +4264,13 @@ function recoveryEstimate(input: {
         contributors: r.contributors,
         calibration: r.calibration,
       },
+      baseline,
     };
   }
 
   // Until a personal baseline exists, showing a numerical readiness value would
   // be false precision. Sleep performance remains visible independently.
-  return { score: null, parts: null };
+  return { score: null, parts: null, baseline };
 }
 
 function stressSeriesFromRows(rows: HrSampleRow[]): Array<{ tsMs: number; score: number }> {

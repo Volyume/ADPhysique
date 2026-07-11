@@ -97,6 +97,9 @@ const cappedWakeDayRun = sleep.computeSleep(crossMidnightRun, undefined, {
 });
 assert(cappedWakeDayRun && cappedWakeDayRun.endTs >= nextWakeDay, 'window capping preserves the requested wake day');
 assert(cappedWakeDayRun && cappedWakeDayRun.inBedMin <= 11 * 60, 'wake-day constrained window still obeys the duration cap');
+assert(evidence.autoSleepAtSafetyCeiling(cappedWakeDayRun), 'a cap-hit automatic window is flagged for review');
+assert(!evidence.autoSleepAtSafetyCeiling({ inBedMin: 10 * 60 }), 'a naturally bounded ten-hour window is not flagged');
+assert(!evidence.autoSleepAtSafetyCeiling(cappedWakeDayRun, true), 'manual windows are not mistaken for automatic cap hits');
 
 const stateOnly = {
   source: 'auto_hr',
@@ -132,7 +135,8 @@ const unknownMotionForced = sleep.computeSleep(unknownMotion, undefined, {
   startTs: start,
   endTs: start + 180 * minute,
 });
-assert(unknownMotionForced === null, 'manual HR with wholly unknown motion cannot persist zero sleep');
+assert(unknownMotionForced && unknownMotionForced.asleepMin === 180, 'manual HR window remains scorable when motion history is unavailable');
+assert(unknownMotionForced && unknownMotionForced.motionMin === 0, 'missing motion remains explicit instead of being fabricated as stillness');
 
 const oneMinuteUnknown = [
   ...Array.from({ length: 60 }, (_, i) => ({ ts: start + i * minute, hr: 60, motion: 0, rmssd: 50 })),
@@ -145,8 +149,12 @@ const oneMinuteUnknownResult = sleep.computeSleep(oneMinuteUnknown, undefined, {
   endTs: start + 121 * minute,
   source: 'manual_hr',
 });
-assert(oneMinuteUnknownResult && oneMinuteUnknownResult.stages.awake >= 1, 'an unknown-motion minute remains awake');
-assert(oneMinuteUnknownResult && oneMinuteUnknownResult.asleepMin <= 120, 'unknown motion is not smoothed back into sleep');
+assert(oneMinuteUnknownResult && oneMinuteUnknownResult.stages.awake === 0, 'an HR-observed minute is not forced awake only because motion is missing');
+assert(oneMinuteUnknownResult && oneMinuteUnknownResult.asleepMin === 121, 'missing motion does not erase otherwise observed sleep');
+assert(
+  oneMinuteUnknownResult && oneMinuteUnknownResult.stages.deep === 0 && oneMinuteUnknownResult.stages.rem === 0,
+  'missing beat-to-beat intervals are not imputed as observed deep or REM sleep',
+);
 
 const paddedSleep = [
   ...Array.from({ length: 20 }, (_, i) => ({ ts: start + i * minute, hr: 78, motion: 0 })),
@@ -201,10 +209,9 @@ const fragmentedSleep = [
 ];
 const extendedFragmentedResult = sleep.computeSleep(fragmentedSleep);
 assert(
-  extendedFragmentedResult && extendedFragmentedResult.inBedMin >= 24 * 60 - 5 && extendedFragmentedResult.inBedMin <= 24 * 60,
-  'strong observed cores merge into one conservatively trimmed 24-hour TIB window',
+  extendedFragmentedResult && extendedFragmentedResult.inBedMin <= 16 * 60,
+  'automatic fragmented sleep cannot inflate into an all-day 24-hour window',
 );
-assert(extendedFragmentedResult && extendedFragmentedResult.stages.awake >= 120, 'observed 60-minute awakenings remain awake');
 
 const fragmentedMissingGap = fragmentedSleep.map((sample) => ({ ...sample }));
 for (let i = 15 * 60; i < 16 * 60; i += 1) {
@@ -236,6 +243,25 @@ const manualResult = sleep.computeSleep([], undefined, {
   source: 'manual_duration',
 });
 assert(manualResult && manualResult.inBedMin === 24 * 60, 'manual 24-hour window is scored over its full bounds');
+
+const sparseManualFragmented = fragmentedSleep
+  .filter((sample) => sample.ts >= manualWindowStart && sample.ts < manualWindowEnd)
+  .map((sample, index) => {
+    const inWakeBlock = (index >= 15 * 60 && index < 16 * 60) || (index >= 19 * 60 && index < 20 * 60);
+    if (inWakeBlock) return sample;
+    if (index % 5 === 0) return { ...sample, hr: null, motion: null };
+    return { ...sample, motion: index % 4 === 0 ? 0 : null };
+  });
+const sparseManualResult = sleep.computeSleep(sparseManualFragmented, undefined, {
+  forceWindow: true,
+  startTs: manualWindowStart,
+  endTs: manualWindowEnd,
+  source: 'manual_hr',
+});
+assert(sparseManualResult && sparseManualResult.signalMin >= 1_000, 'partial WHOOP HR history still covers most of the fragmented manual window');
+assert(sparseManualResult && sparseManualResult.motionMin < sparseManualResult.signalMin / 2, 'fixture preserves sparse motion coverage');
+assert(sparseManualResult && sparseManualResult.asleepMin >= 1_000, 'missing motion no longer collapses HR-observed fragmented sleep');
+assert(sparseManualResult && sparseManualResult.stages.awake >= 120, 'observed one-hour awakenings remain awake with sparse motion history');
 
 const quietNineHours = Array.from({ length: 9 * 60 }, (_, i) => ({
   ts: start + i * minute,

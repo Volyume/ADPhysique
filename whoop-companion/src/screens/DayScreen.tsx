@@ -5,13 +5,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
 import type { CardioRow, DailyMetricRow } from '../db/database';
-import { Card, Dial, Empty, Screen, SectionLabel, SleepConfidenceStatus, Stat } from '../ui/components';
+import { Card, Dial, Empty, Hypnogram, Screen, SectionLabel, SleepConfidenceStatus, Stat } from '../ui/components';
 import { colors, fonts, recoveryColor, sleepStageColors } from '../ui/theme';
 import type { Nav } from '../ui/navigation';
 import { formatClock, formatDuration } from '../util/time';
 import { clampPct } from '../util/number';
 import { activitySummary } from '../ui/activityFormat';
-import { sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
+import { autoSleepAtSafetyCeiling, sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
 import { sleepNeedsMoreSync } from '../metrics/sleepSync';
 import { sleepTrustTier } from '../metrics/sleepTrustWeight';
 
@@ -41,7 +41,15 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
   const sleepStart = metric?.sleepStart ?? null;
   const sleepEnd = metric?.sleepEnd ?? null;
   const loggedTimingOnly = metric?.sleepDetail?.source === 'manual_duration' && sleepStart != null && sleepEnd != null;
-  const totalStageMin = (metric?.deepMin ?? 0) + (metric?.remMin ?? 0) + (metric?.lightMin ?? 0) + (metric?.awakeMin ?? 0);
+  const stageEstimate = metric?.sleepDetail?.stageEstimate ?? [];
+  const estimatedStages = stageEstimateTotals(stageEstimate);
+  const stageMinutes = {
+    awake: metric?.awakeMin ?? estimatedStages.awake,
+    light: metric?.lightMin ?? estimatedStages.light,
+    rem: metric?.remMin ?? estimatedStages.rem,
+    deep: metric?.deepMin ?? estimatedStages.deep,
+  };
+  const totalStageMin = stageMinutes.deep + stageMinutes.rem + stageMinutes.light + stageMinutes.awake;
   const sleepReview = metric ? daySleepReview(metric) : null;
   const vitalsReview = metric ? dayVitalsReview(metric) : null;
 
@@ -126,10 +134,16 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
                     {sleepStart && sleepEnd ? `${formatClock(sleepStart)}-${formatClock(sleepEnd)}` : 'sleep window'}
                   </Text>
                 </View>
-                <StageRow label="Awake" minutes={metric.awakeMin} total={totalStageMin} color={sleepStageColors.awake} />
-                <StageRow label="Light" minutes={metric.lightMin} total={totalStageMin} color={sleepStageColors.light} />
-                <StageRow label="REM" minutes={metric.remMin} total={totalStageMin} color={sleepStageColors.rem} />
-                <StageRow label="Deep" minutes={metric.deepMin} total={totalStageMin} color={sleepStageColors.deep} />
+                {stageEstimate.length && sleepStart != null && sleepEnd != null ? (
+                  <>
+                    <Text style={styles.estimatedLabel}>Estimated sleep stages</Text>
+                    <Hypnogram segments={stageEstimate} showLabels startTs={sleepStart} endTs={sleepEnd} />
+                  </>
+                ) : null}
+                <StageRow label="Awake" minutes={stageMinutes.awake} total={totalStageMin} color={sleepStageColors.awake} />
+                <StageRow label="Light" minutes={stageMinutes.light} total={totalStageMin} color={sleepStageColors.light} />
+                <StageRow label="REM" minutes={stageMinutes.rem} total={totalStageMin} color={sleepStageColors.rem} />
+                <StageRow label="Deep" minutes={stageMinutes.deep} total={totalStageMin} color={sleepStageColors.deep} />
                 <SleepConfidenceStatus
                   confidence={sleepTier === 'none' ? null : sleepTier}
                   reason={dayConfidenceReason(metric)}
@@ -314,6 +328,16 @@ function StageRow({ label, minutes, total, color }: { label: string; minutes: nu
   );
 }
 
+function stageEstimateTotals(
+  segments: NonNullable<DailyMetricRow['sleepDetail']>['stageEstimate'] = [],
+): Record<'awake' | 'light' | 'deep' | 'rem', number> {
+  const totals = { awake: 0, light: 0, deep: 0, rem: 0 };
+  for (const segment of segments ?? []) {
+    if (segment.minutes > 0) totals[segment.stage] += segment.minutes;
+  }
+  return totals;
+}
+
 function sleepDotColor(day: DayRailItem): string {
   if (day.sleepMin == null) return colors.surface;
   const tier = sleepTrustTier(day.sleepDetail);
@@ -396,6 +420,17 @@ function daySleepReview(metric: DailyMetricRow): {
     : detail.hoursVsNeeded ?? 0;
   const hasCoreVitals = metric.rmssd != null && metric.rhr != null && metric.resp != null;
   const trustTier = sleepTrustTier(detail);
+
+  if (detail.source === 'auto_hr' && autoSleepAtSafetyCeiling(detail)) {
+    return {
+      label: 'LIMIT',
+      title: 'Automatic window reached 11 hours',
+      body: 'This may be the strongest part of a longer low-activity period. Use the stage timeline to find quiet wakefulness, then adjust and rescan the window.',
+      color: colors.recoveryYellow,
+      tint: `${colors.recoveryYellow}14`,
+      textColor: '#000',
+    };
+  }
 
   if (sleepStateWakeConflict(detail)) {
     return {
@@ -613,6 +648,7 @@ const styles = StyleSheet.create({
   sleepHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 },
   big: { color: colors.text, fontSize: 30, fontFamily: fonts.black },
   sub: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.text },
+  estimatedLabel: { color: colors.text, fontSize: 13, fontFamily: fonts.textBold, marginTop: 8 },
   qualityGrid: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
   reviewBanner: {
     flexDirection: 'row',

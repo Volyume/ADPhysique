@@ -19,6 +19,16 @@ const LONG_AUTO_SLEEP_MIN = 7 * 60;
 const MIN_LONG_AUTO_SLEEP_EVIDENCE_PCT = 35;
 const MIN_VERY_LONG_AUTO_SLEEP_EVIDENCE_PCT = 45;
 const MIN_SLEEP_CORROBORATION_PCT = 25;
+const AUTO_SLEEP_SAFETY_CEILING_MIN = 11 * 60;
+
+/** A result on the automatic ceiling was truncated, not naturally bounded. */
+export function autoSleepAtSafetyCeiling(
+  evidence: Pick<SleepCorroborationEvidence, 'inBedMin' | 'windowMin'> | null | undefined,
+  manual = false,
+): boolean {
+  if (manual) return false;
+  return evidenceWindowMin(evidence) >= AUTO_SLEEP_SAFETY_CEILING_MIN - 5;
+}
 
 export function sleepStateWakeConflict(_evidence: SleepStateEvidence | null | undefined): boolean {
   // Offset 81 has not been validated against labelled WHOOP 5 sleep. Keep its

@@ -69,6 +69,7 @@ jobs:
           npm run test:weekly-plan
           npm run test:physiology
           npm run test:history-sync
+          npm run test:keepalive
           npm run test:readiness
           npm run test:overnight-vitals
           npm run test:training
@@ -91,6 +92,11 @@ jobs:
           echo "app_name:      $NAME"
           if [ "$APPID" != "app.volyume.pulse" ]; then
             echo "::error::Built applicationId is '$APPID', expected 'app.volyume.pulse'. Refusing to build the wrong app (would clash with VOLYUME)."
+            exit 1
+          fi
+          if ! grep -q 'VolyumeKeepAliveService' app/src/main/AndroidManifest.xml || \
+             ! grep -q 'foregroundServiceType="connectedDevice"' app/src/main/AndroidManifest.xml; then
+            echo "::error::Native WHOOP connected-device foreground service is missing from the generated manifest."
             exit 1
           fi
           echo "✓ Independent build confirmed: VOLYUME Pulse (app.volyume.pulse)"

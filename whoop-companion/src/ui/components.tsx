@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Line, Polyline, Rect, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 
 import { colors, radius, spacing, type, fonts, sleepStageColors, tintedWash } from './theme';
+import { formatClock } from '../util/time';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -506,9 +507,13 @@ const STAGE_LANE: Record<string, number> = { awake: 0, rem: 1, light: 2, deep: 3
 export function Hypnogram({
   segments,
   showLabels = false,
+  startTs,
+  endTs,
 }: {
   segments: Array<{ stage: string; minutes: number }>;
   showLabels?: boolean;
+  startTs?: number;
+  endTs?: number;
 }) {
   const total = segments.reduce((a, b) => a + b.minutes, 0) || 1;
   const cleanSegments = segments.filter((s) => s.minutes > 0);
@@ -555,30 +560,44 @@ export function Hypnogram({
     );
   });
   const translateY = reveal.interpolate({ inputRange: [0, 1], outputRange: [8, 0] });
+  const showTimeAxis = startTs != null && endTs != null && endTs > startTs;
+  const midTs = showTimeAxis ? startTs + (endTs - startTs) / 2 : null;
   return (
     <Animated.View style={[hypnogramStyles.wrap, { opacity: reveal, transform: [{ translateY }] }]}>
-      {showLabels ? (
-        <View style={[hypnogramStyles.labels, { height: H }]}>
+      <View style={hypnogramStyles.plotRow}>
+        {showLabels ? (
+          <View style={[hypnogramStyles.labels, { height: H }]}>
+            {rows.map((stage) => (
+              <Text key={stage} style={hypnogramStyles.label}>
+                {rowLabels[stage]}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+        <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={hypnogramStyles.chart}>
           {rows.map((stage) => (
-            <Text key={stage} style={hypnogramStyles.label}>
-              {rowLabels[stage]}
-            </Text>
+            <Rect
+              key={`lane-${stage}`}
+              x={0}
+              y={(STAGE_LANE[stage] ?? 0) * (laneH + gap) + laneH / 2}
+              width={W}
+              height={1}
+              fill={colors.border}
+            />
           ))}
+          {rects}
+        </Svg>
+      </View>
+      {showTimeAxis && midTs != null ? (
+        <View style={hypnogramStyles.axisRow}>
+          {showLabels ? <View style={hypnogramStyles.axisSpacer} /> : null}
+          <View style={hypnogramStyles.axis}>
+            <Text style={hypnogramStyles.axisLabel}>{formatClock(startTs)}</Text>
+            <Text style={hypnogramStyles.axisLabel}>{formatClock(midTs)}</Text>
+            <Text style={hypnogramStyles.axisLabel}>{formatClock(endTs)}</Text>
+          </View>
         </View>
       ) : null}
-      <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={hypnogramStyles.chart}>
-        {rows.map((stage) => (
-          <Rect
-            key={`lane-${stage}`}
-            x={0}
-            y={(STAGE_LANE[stage] ?? 0) * (laneH + gap) + laneH / 2}
-            width={W}
-            height={1}
-            fill={colors.border}
-          />
-        ))}
-        {rects}
-      </Svg>
     </Animated.View>
   );
 }
@@ -1043,10 +1062,15 @@ const dialStyles = StyleSheet.create({
 });
 
 const hypnogramStyles = StyleSheet.create({
-  wrap: { flexDirection: 'row', gap: 8, marginTop: 16, alignItems: 'stretch' },
+  wrap: { marginTop: 16 },
+  plotRow: { flexDirection: 'row', gap: 8, alignItems: 'stretch' },
   labels: { width: 42, justifyContent: 'space-between' },
   label: { color: colors.textTertiary, fontSize: 10, fontFamily: fonts.textBold },
   chart: { flex: 1 },
+  axisRow: { flexDirection: 'row', marginTop: 7 },
+  axisSpacer: { width: 50 },
+  axis: { flex: 1, flexDirection: 'row', justifyContent: 'space-between' },
+  axisLabel: { color: colors.textTertiary, fontSize: 10, fontFamily: fonts.text },
 });
 
 const metricStyles = StyleSheet.create({

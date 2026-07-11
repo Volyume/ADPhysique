@@ -53,7 +53,9 @@ export type SleepResult = {
 
 const BASE_NEED_MIN = 480; // 8h baseline sleep need
 const MAX_AUTO_SLEEP_WINDOW_MIN = 11 * 60;
-const MAX_FRAGMENTED_AUTO_SLEEP_WINDOW_MIN = 30 * 60;
+// Automatic detection must stay conservative: exceptional longer/polyphasic
+// windows remain available through Adjust and rescan with explicit bounds.
+const MAX_FRAGMENTED_AUTO_SLEEP_WINDOW_MIN = 16 * 60;
 const MAX_AUTO_BRIDGE_MIN = 5;
 const MAX_OBSERVED_AWAKENING_MIN = 120;
 const MIN_STRONG_AUTO_CORE_MIN = 90;
@@ -580,14 +582,16 @@ export function computeSleep(
   const spread = Math.max(6, p80 - p20);
   const sustainedWakeHr = Math.min(meanHr * 1.08, Math.max(p50 + 6, p20 + spread * 0.85));
   const rmssds = window.map((s) => s.rmssd).filter((v): v is number => v != null);
-  const meanRmssd = rmssds.length ? rmssds.reduce((a, b) => a + b, 0) / rmssds.length : 0;
+  const meanRmssd = rmssds.length ? rmssds.reduce((a, b) => a + b, 0) / rmssds.length : null;
   const stages: Record<SleepStage, number> = { awake: 0, light: 0, deep: 0, rem: 0 };
   const timeline: SleepStage[] = [];
   const observedTimeline: boolean[] = [];
   for (const s of window) {
-    // Unknown HR or motion is conservatively non-sleep. It must not become a
-    // light/deep/REM minute merely because another signal is quiet.
-    if (s.hr == null || s.motion == null) {
+    // HR is the required sleep signal. Missing motion means the independent
+    // movement channel was not decoded for this minute, not that the wearer
+    // was awake; manual windows and already-corroborated auto windows can still
+    // classify it from observed HR/RR. Missing HR remains unknown/awake.
+    if (s.hr == null) {
       const stage: SleepStage = 'awake';
       stages[stage] += 1;
       timeline.push(stage);
@@ -596,14 +600,19 @@ export function computeSleep(
     }
     const hr = s.hr;
     const motion = s.motion;
-    const rmssd = s.rmssd ?? meanRmssd;
+    const rmssd = s.rmssd;
     let stage: SleepStage;
-    // Cardiac-first staging: the overnight stream is HR/HRV (no motion channel
-    // over BLE), so awake/REM are detected from heart-rate arousal relative to
-    // the night's sleeping mean, with motion used as an extra signal when present.
-    if (motion > 0.4 || hr >= sustainedWakeHr) stage = 'awake';
-    else if (hr <= meanHr * 0.95 && (meanRmssd === 0 || rmssd >= meanRmssd)) stage = 'deep';
-    else if (hr >= meanHr * 1.0 && (meanRmssd === 0 || rmssd < meanRmssd) && motion < 0.2)
+    // Sleep/wake is decided independently from the approximate stage label.
+    // Missing beat-to-beat data must not be imputed as observed REM/deep evidence.
+    if ((motion != null && motion > 0.4) || hr >= sustainedWakeHr) stage = 'awake';
+    else if (rmssd != null && meanRmssd != null && hr <= meanHr * 0.95 && rmssd >= meanRmssd) stage = 'deep';
+    else if (
+      rmssd != null &&
+      meanRmssd != null &&
+      hr >= meanHr &&
+      rmssd < meanRmssd &&
+      (motion == null || motion < 0.2)
+    )
       stage = 'rem';
     else stage = 'light';
     stages[stage] += 1;

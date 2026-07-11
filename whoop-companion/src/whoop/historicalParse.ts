@@ -38,7 +38,8 @@ export type HistoricalSleepStateSample = {
 
 export type HistoricalMotionSample = {
   ts: number;
-  intensity: number; // 0..1, derived from within-frame K21 IMU axis movement
+  intensity: number; // normalized 0..1 movement evidence
+  source: 'whoop5_v18_dynamic_accel' | 'whoop5_v21_imu';
 };
 
 export type HistoricalRawVitalSample = {
@@ -132,6 +133,13 @@ export function decodeWhoop5HistoryFrames(
       if (rec.skinTempC != null) {
         rawVitals.push({ ts: ts * 1000, spo2: null, skinTempC: rec.skinTempC });
       }
+      if (rec.dynamicAcceleration != null) {
+        motion.push({
+          ts: ts * 1000,
+          intensity: Math.max(0, Math.min(1, rec.dynamicAcceleration)),
+          source: 'whoop5_v18_dynamic_accel',
+        });
+      }
       continue;
     }
 
@@ -185,7 +193,7 @@ export function decodeWhoop5HistoryFrames(
       decodedRecords += 1;
       rawSensorRecords += 1;
       v21Records += 1;
-      motion.push({ ts: ts * 1000, intensity: rec.intensity });
+      motion.push({ ts: ts * 1000, intensity: rec.intensity, source: 'whoop5_v21_imu' });
       continue;
     }
 
@@ -204,15 +212,15 @@ export function decodeWhoop5HistoryFrames(
   }
 
   const mergedHr = mergeHistoricalHrSamples(hr);
+  const mergedMotion = mergeHistoricalMotionSamples(motion);
   steps.sort((a, b) => a.ts - b.ts);
   sleepStates.sort((a, b) => a.ts - b.ts);
-  motion.sort((a, b) => a.ts - b.ts);
   rawVitals.sort((a, b) => a.ts - b.ts);
   return {
     hr: mergedHr,
     steps,
     sleepStates,
-    motion,
+    motion: mergedMotion,
     rawVitals,
     records,
     decodedRecords,
@@ -254,6 +262,15 @@ function preferHistoricalHrSample(candidate: HistoricalHrSample, existing: Histo
   return (candidate.confidence ?? 1) > (existing.confidence ?? 1);
 }
 
+function mergeHistoricalMotionSamples(samples: HistoricalMotionSample[]): HistoricalMotionSample[] {
+  const byTimestamp = new Map<number, HistoricalMotionSample>();
+  for (const sample of samples) {
+    const existing = byTimestamp.get(sample.ts);
+    if (!existing || sample.source === 'whoop5_v21_imu') byTimestamp.set(sample.ts, sample);
+  }
+  return [...byTimestamp.values()].sort((a, b) => a.ts - b.ts);
+}
+
 function isHistoryFrame(frame: Uint8Array): boolean {
   return frame.length > 9 && frame[0] === 0xaa && frame[8] === PACKET_HISTORICAL_DATA;
 }
@@ -279,10 +296,16 @@ function decodeV18(frame: Uint8Array): {
   activityClass: number | null;
   sleepState: number | null;
   skinTempC: number | null;
+  dynamicAcceleration: number | null;
 } | null {
   const unix = u32(frame, 15);
-  const bpm = u8(frame, 22);
-  if (unix == null || bpm == null) return null;
+  const integerBpm = u8(frame, 22);
+  if (unix == null || integerBpm == null) return null;
+  const preciseRaw = u16(frame, 36);
+  const preciseBpm = preciseRaw == null ? null : preciseRaw / 256;
+  const bpm = preciseBpm != null && isPlausibleHeartRate(preciseBpm) && Math.abs(preciseBpm - integerBpm) <= 3
+    ? preciseBpm
+    : integerBpm;
   const rrCount = u8(frame, 23) ?? 0;
   const rr: number[] = [];
   for (let i = 0; i < Math.min(rrCount, 4); i += 1) {
@@ -295,7 +318,21 @@ function decodeV18(frame: Uint8Array): {
   const sleepStateByte = u8(frame, 81);
   const sleepState = sleepStateByte == null ? null : (sleepStateByte >> 4) & 0x03;
   const skinTempC = decodeWhoop5SkinTemp(u16(frame, 73));
-  return { unix, bpm, rr, stepCounter, activityClass, sleepState, skinTempC };
+  const dynamicRaw = f32(frame, 41);
+  const gx = f32(frame, 45);
+  const gy = f32(frame, 49);
+  const gz = f32(frame, 53);
+  const gravityMagnitude = gx == null || gy == null || gz == null ? null : Math.sqrt(gx * gx + gy * gy + gz * gz);
+  const dynamicAcceleration =
+    dynamicRaw != null &&
+    dynamicRaw >= 0 &&
+    dynamicRaw <= 8 &&
+    gravityMagnitude != null &&
+    gravityMagnitude >= 0.8 &&
+    gravityMagnitude <= 1.2
+      ? dynamicRaw
+      : null;
+  return { unix, bpm, rr, stepCounter, activityClass, sleepState, skinTempC, dynamicAcceleration };
 }
 
 function decodeV26(frame: Uint8Array): { unix: number; samples: number[] } | null {
@@ -378,6 +415,12 @@ function u8(bytes: Uint8Array, off: number): number | null {
 function u16(bytes: Uint8Array, off: number): number | null {
   if (off + 2 > bytes.length) return null;
   return (bytes[off] as number) | ((bytes[off + 1] as number) << 8);
+}
+
+function f32(bytes: Uint8Array, off: number): number | null {
+  if (off + 4 > bytes.length) return null;
+  const value = new DataView(bytes.buffer, bytes.byteOffset + off, 4).getFloat32(0, true);
+  return Number.isFinite(value) ? value : null;
 }
 
 function i16(bytes: Uint8Array, off: number): number | null {

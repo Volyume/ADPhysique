@@ -178,6 +178,7 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
   const parts = useStoreSelector(appStore, (s) => s.recoveryParts);
+  const recoveryBaseline = useStoreSelector(appStore, (s) => s.recoveryBaseline);
   const sleepNeed = useStoreSelector(appStore, (s) => s.sleepNeed);
   const sleepGoal = useStoreSelector(appStore, (s) => s.sleepGoal);
   const sleepSchedule = useStoreSelector(appStore, (s) => s.sleepSchedule);
@@ -195,12 +196,7 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
   const confidence = sleepDetail?.confidence ?? null;
   const confidenceCap = recoveryConfidenceCap(sleepDetail);
   const prior = recentDays.filter((d) => d.day !== today?.day);
-  const baselineNights = prior.filter(
-    (d) => {
-      const tier = sleepTrustTier(d.sleepDetail);
-      return d.rmssd != null && d.rhr != null && (tier === 'high' || tier === 'medium');
-    },
-  ).length;
+  const baselineNights = recoveryBaseline?.acceptedNights ?? 0;
   const days = orderedDays(today, recentDays);
   const recoveryDriver = recoveryDriverInsight(parts, confidence, sleepDetail, confidenceCap);
   const efficiencySamples = recentDays

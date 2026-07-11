@@ -9,7 +9,7 @@
  *   cardio         logged or auto-detected activities with per-session strain
  *   journal        lightweight daily behaviour entries
  *   raw_frames     captured proprietary fd4b frames (for offline decoding)
- *   motion_samples per-second WHOOP K21 IMU movement intensity
+ *   motion_samples per-second WHOOP movement intensity with decoder provenance
  *   history_records deduplicated raw WHOOP history for local re-decoding
  *   kv             profile + settings
  */
@@ -27,7 +27,8 @@ export type HrSampleRow = {
 };
 export type StepSampleRow = { ts: number; counter: number; activityClass: number | null };
 export type SleepStateSampleRow = { ts: number; state: number };
-export type MotionSampleRow = { ts: number; intensity: number };
+export type MotionSampleSource = 'whoop5_v18_dynamic_accel' | 'whoop5_v21_imu';
+export type MotionSampleRow = { ts: number; intensity: number; source: MotionSampleSource | null };
 export type RawVitalSampleRow = { ts: number; spo2: number | null; skinTempC: number | null };
 export type RawFrameExportRow = { rowId: number; ts: number; source: string; hex: string };
 export type StoredHistoryRow = { rowId: number; hex: string };
@@ -67,6 +68,7 @@ export type SleepDetail = {
   sleepStateUpMin?: number | null; // decoded state 3
   coveragePct?: number | null; // HR sample coverage across the scored window
   confidence?: 'high' | 'medium' | 'low' | null;
+  stageEstimate?: Array<{ stage: 'awake' | 'light' | 'deep' | 'rem'; minutes: number }> | null;
 };
 export type DailyMetricRow = {
   day: string; // YYYY-MM-DD (local)
@@ -199,7 +201,8 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
         );
         CREATE TABLE IF NOT EXISTS motion_samples (
           ts INTEGER PRIMARY KEY,
-          intensity REAL NOT NULL
+          intensity REAL NOT NULL,
+          source TEXT
         );
         CREATE TABLE IF NOT EXISTS raw_vital_samples (
           ts INTEGER PRIMARY KEY,
@@ -243,6 +246,12 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
           if (!isDuplicateColumnError(error)) throw error;
           // Column already exists.
         }
+      }
+      try {
+        await db.execAsync('ALTER TABLE motion_samples ADD COLUMN source TEXT');
+      } catch (error) {
+        if (!isDuplicateColumnError(error)) throw error;
+        // Column already exists.
       }
       for (const col of [
         'distance_m REAL',
@@ -392,11 +401,11 @@ export async function getSleepStateSamplesBetween(fromTs: number, toTs: number):
   return rows;
 }
 
-// ---- WHOOP K21 IMU motion ----
+// ---- WHOOP motion ----
 export async function getMotionSamplesBetween(fromTs: number, toTs: number): Promise<MotionSampleRow[]> {
   const db = await getDb();
   return db.getAllAsync<MotionSampleRow>(
-    'SELECT ts, intensity FROM motion_samples WHERE ts >= ? AND ts < ? ORDER BY ts ASC',
+    'SELECT ts, intensity, source FROM motion_samples WHERE ts >= ? AND ts < ? ORDER BY ts ASC',
     fromTs,
     toTs,
   );
@@ -1071,7 +1080,22 @@ export async function persistHistoryBatch(batch: HistoryPersistBatch): Promise<v
       'INSERT OR REPLACE INTO sleep_state_samples (ts, state) VALUES (?, ?)',
     );
     const motionStmt = await db.prepareAsync(
-      'INSERT OR REPLACE INTO motion_samples (ts, intensity) VALUES (?, ?)',
+      `INSERT INTO motion_samples (ts, intensity, source) VALUES (?, ?, ?)
+       ON CONFLICT(ts) DO UPDATE SET
+         intensity=CASE
+           WHEN excluded.source = 'whoop5_v21_imu'
+             OR motion_samples.source IS NULL
+             OR motion_samples.source != 'whoop5_v21_imu'
+           THEN excluded.intensity
+           ELSE motion_samples.intensity
+         END,
+         source=CASE
+           WHEN excluded.source = 'whoop5_v21_imu'
+             OR motion_samples.source IS NULL
+             OR motion_samples.source != 'whoop5_v21_imu'
+           THEN excluded.source
+           ELSE motion_samples.source
+         END`,
     );
     const vitalStmt = await db.prepareAsync(
       `INSERT INTO raw_vital_samples (ts, spo2, skin_temp_c) VALUES (?, ?, ?)
@@ -1095,7 +1119,9 @@ export async function persistHistoryBatch(batch: HistoryPersistBatch): Promise<v
         await stepStmt.executeAsync(sample.ts, sample.counter, sample.activityClass);
       }
       for (const sample of batch.sleepStates) await sleepStmt.executeAsync(sample.ts, sample.state);
-      for (const sample of batch.motion) await motionStmt.executeAsync(sample.ts, sample.intensity);
+      for (const sample of batch.motion) {
+        await motionStmt.executeAsync(sample.ts, sample.intensity, sample.source);
+      }
       for (const sample of batch.rawVitals) {
         await vitalStmt.executeAsync(sample.ts, sample.spo2, sample.skinTempC);
       }

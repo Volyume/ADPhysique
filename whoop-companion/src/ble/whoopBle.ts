@@ -19,6 +19,7 @@ import { PermissionsAndroid, Platform } from 'react-native';
 import {
   BleManager,
   Device,
+  ScanMode,
   State,
   Subscription,
 } from 'react-native-ble-plx';
@@ -266,30 +267,37 @@ export class WhoopBle {
         resolve();
       };
       this.resolveScan = finish;
-      this.manager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
-        if (this.scanLifecycle !== lifecycle) {
-          finish();
-          return;
-        }
-        if (!this.isLifecycleCurrent(lifecycle)) {
-          this.manager.stopDeviceScan();
-          this.scanning = false;
-          finish();
-          return;
-        }
-        if (error) {
-          this.scanning = false;
-          this.fail(`Scan error: ${error.message}`);
-          finish();
-          return;
-        }
-        const name = device?.name ?? device?.localName ?? '';
-        if (device && name.toUpperCase().startsWith(WHOOP_NAME_PREFIX)) {
-          this.manager.stopDeviceScan();
-          this.scanning = false;
-          void this.connect(device, lifecycle).finally(finish);
-        }
-      });
+      this.manager.startDeviceScan(
+        null,
+        {
+          allowDuplicates: false,
+          ...(Platform.OS === 'android' ? { scanMode: ScanMode.Balanced } : {}),
+        },
+        (error, device) => {
+          if (this.scanLifecycle !== lifecycle) {
+            finish();
+            return;
+          }
+          if (!this.isLifecycleCurrent(lifecycle)) {
+            this.manager.stopDeviceScan();
+            this.scanning = false;
+            finish();
+            return;
+          }
+          if (error) {
+            this.scanning = false;
+            this.fail(`Scan error: ${error.message}`);
+            finish();
+            return;
+          }
+          const name = device?.name ?? device?.localName ?? '';
+          if (device && name.toUpperCase().startsWith(WHOOP_NAME_PREFIX)) {
+            this.manager.stopDeviceScan();
+            this.scanning = false;
+            void this.connect(device, lifecycle).finally(finish);
+          }
+        },
+      );
 
       // Stop scanning after 30s if nothing found.
       timer = setTimeout(() => {

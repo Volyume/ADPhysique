@@ -247,6 +247,46 @@ function writeU32(bytes, offset, value) {
   bytes[offset + 3] = (value >>> 24) & 0xff;
 }
 
+function writeF32(bytes, offset, value) {
+  new DataView(bytes.buffer, bytes.byteOffset + offset, 4).setFloat32(0, value, true);
+}
+
+function refreshFrameCrc(frame) {
+  writeU16(frame, 6, crc.crc16modbus(frame.subarray(0, 6)));
+  writeU32(frame, frame.length - 4, crc.crc32(frame.subarray(8, frame.length - 4)));
+  return frame;
+}
+
+function v18Frame(unix, preciseBpm = 77.5, gravityZ = 1) {
+  const frame = new Uint8Array(124);
+  frame[0] = 0xaa;
+  writeU16(frame, 2, frame.length - 8);
+  frame[8] = 47;
+  frame[9] = 18;
+  writeU32(frame, 15, unix);
+  frame[22] = 77;
+  frame[23] = 2;
+  writeU16(frame, 24, 775);
+  writeU16(frame, 26, 780);
+  writeU16(frame, 36, Math.round(preciseBpm * 256));
+  writeF32(frame, 41, 0.1);
+  writeF32(frame, 45, 0);
+  writeF32(frame, 49, 0);
+  writeF32(frame, 53, gravityZ);
+  writeU16(frame, 73, 3334);
+  return refreshFrameCrc(frame);
+}
+
+const v18Start = Math.floor(Date.now() / 1000) - 1200;
+const decodedV18 = historical.decodeWhoop5HistoryFrames([v18Frame(v18Start)]);
+assert(Math.abs(decodedV18.hr[0].bpm - 77.5) < 0.01, 'concordant v18 fixed-8.8 HR supplies sub-bpm precision');
+assert(decodedV18.motion.length === 1 && Math.abs(decodedV18.motion[0].intensity - 0.1) < 0.001, 'validated v18 dynamic acceleration supplies corroborating motion');
+assert(decodedV18.motion[0].source === 'whoop5_v18_dynamic_accel', 'v18 motion keeps explicit provenance');
+const discordantV18 = historical.decodeWhoop5HistoryFrames([v18Frame(v18Start + 1, 120)]);
+assert(discordantV18.hr[0].bpm === 77, 'discordant fixed-8.8 HR falls back to canonical integer HR');
+const invalidGravityV18 = historical.decodeWhoop5HistoryFrames([v18Frame(v18Start + 2, 77.5, 0.2)]);
+assert(invalidGravityV18.motion.length === 0, 'dynamic acceleration is withheld when gravity magnitude cannot validate the layout');
+
 function ppgFrame(unix, sampleOffset) {
   const frame = new Uint8Array(88);
   frame[0] = 0xaa;
