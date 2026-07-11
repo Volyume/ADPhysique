@@ -237,16 +237,16 @@ function sleepTrendInsight({
 
   if (totalNights === 0) {
     return {
-      badge: 'SYNC',
+      badge: 'DATA',
       title: 'Trend needs sleep nights',
-      body: 'Wear the strap overnight and let history sync complete before using this range to make sleep decisions.',
+      body: 'No complete overnight records are available for this range. Wear the strap overnight, then review the capture before using this range to make sleep decisions.',
       color: colors.strainBlue,
       usableNights,
       totalNights,
       usableColor,
       direction,
       directionColor,
-      nextMove: 'sync',
+      nextMove: 'capture',
     };
   }
 

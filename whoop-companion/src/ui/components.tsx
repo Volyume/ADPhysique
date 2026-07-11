@@ -325,7 +325,7 @@ export function SleepConfidenceStatus({
   const defaultReason = good
     ? 'The overnight record is strong enough to use.'
     : unavailable
-      ? 'Sleep confidence is unavailable until an overnight record is synced.'
+      ? 'Sleep confidence is unavailable until an overnight record is available.'
       : confidence === 'medium'
         ? 'The result is usable, but more detail may refine it.'
         : 'Use timing with care until the overnight record is complete.';

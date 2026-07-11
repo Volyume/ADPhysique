@@ -53,8 +53,10 @@ export type SleepResult = {
 
 const BASE_NEED_MIN = 480; // 8h baseline sleep need
 const MAX_AUTO_SLEEP_WINDOW_MIN = 11 * 60;
+const MAX_FRAGMENTED_AUTO_SLEEP_WINDOW_MIN = 30 * 60;
 const MAX_AUTO_BRIDGE_MIN = 5;
-const MAX_OBSERVED_AWAKENING_MIN = 30;
+const MAX_OBSERVED_AWAKENING_MIN = 120;
+const MIN_STRONG_AUTO_CORE_MIN = 90;
 const LONG_AUTO_SLEEP_MIN = 8 * 60;
 const AUTO_SLEEP_BOUNDARY_WINDOW_MIN = 90;
 const AUTO_SLEEP_BOUNDARY_DISTANCE_MIN = 20;
@@ -192,6 +194,7 @@ function findSleepWindow(
   let bestStart = 0;
   let bestEnd = 0;
   let bestElapsed = 0;
+  let bestCoreCount = 1;
   const runs: Array<{ start: number; end: number }> = [];
   let runStart = -1;
   let gap = 0;
@@ -231,17 +234,35 @@ function findSleepWindow(
     closeRun(asleepFlag.length - gap);
   }
 
-  const considerRun = (start: number, end: number) => {
+  const fragmentedMaxWindowMin =
+    opts.maxWindowMin >= MAX_AUTO_SLEEP_WINDOW_MIN ? MAX_FRAGMENTED_AUTO_SLEEP_WINDOW_MIN : opts.maxWindowMin;
+  const considerRun = (start: number, end: number, coreCount = 1) => {
     const startTs = samples[start]?.ts ?? 0;
     const endTs = (samples[end - 1]?.ts ?? startTs) + 60000;
     if (opts.endAfterTs != null && endTs < opts.endAfterTs) return;
     if (opts.endBeforeTs != null && endTs >= opts.endBeforeTs) return;
     const elapsed = Math.round((endTs - startTs) / 60000);
+    if (coreCount >= 2 && elapsed > fragmentedMaxWindowMin) return;
     if (elapsed > bestElapsed) {
       bestElapsed = elapsed;
       bestStart = start;
       bestEnd = end;
+      bestCoreCount = coreCount;
     }
+  };
+
+  const strongSleepCore = (start: number, end: number): boolean => {
+    const duration = end - start;
+    if (duration < Math.max(MIN_STRONG_AUTO_CORE_MIN, opts.minWindowMin)) return false;
+    let core = 0;
+    const coreThreshold = p20 + spread * 0.65;
+    for (let i = start; i < end; i += 1) {
+      const sample = samples[i];
+      if (!sample || sample.hr == null || sample.motion == null) return false;
+      const hr = smoothedHr(samples, i);
+      if (hr != null && sample.motion < 0.2 && hr <= coreThreshold) core += 1;
+    }
+    return core >= Math.ceil(duration * 0.8);
   };
 
   // A genuine awakening can be longer than the short quiet-arousal bridge, but
@@ -251,17 +272,25 @@ function findSleepWindow(
     const first = runs[i];
     if (!first) continue;
     considerRun(first.start, first.end);
+    if (!strongSleepCore(first.start, first.end)) continue;
     let mergedEnd = first.end;
+    let mergedCoreCount = 1;
     for (let j = i + 1; j < runs.length; j += 1) {
       const next = runs[j];
       if (!next || !observedAwakeningCanJoin(samples, mergedEnd, next.start, bridgeThreshold)) break;
+      if (!strongSleepCore(next.start, next.end)) break;
       mergedEnd = next.end;
-      considerRun(first.start, mergedEnd);
+      mergedCoreCount += 1;
+      const mergedElapsed = mergedEnd - first.start;
+      if (mergedElapsed < LONG_AUTO_SLEEP_MIN || longWindowHasBoundaries(samples, first.start, mergedEnd, p20)) {
+        considerRun(first.start, mergedEnd, mergedCoreCount);
+      }
     }
   }
   if (bestElapsed >= opts.minWindowMin) {
     if (bestElapsed >= LONG_AUTO_SLEEP_MIN && !longWindowHasBoundaries(samples, bestStart, bestEnd, p20)) return null;
-    return trimSleepWindow(samples, bestStart, bestEnd, p20, spread, opts);
+    const selectionOpts = bestCoreCount >= 2 ? { ...opts, maxWindowMin: fragmentedMaxWindowMin } : opts;
+    return trimSleepWindow(samples, bestStart, bestEnd, p20, spread, selectionOpts);
   }
 
   // A low-variance capture can be sleep, but HR alone cannot distinguish it
@@ -322,6 +351,9 @@ function observedAwakeningCanJoin(
 }
 
 function longWindowHasBoundaries(samples: SleepMinute[], start: number, end: number, restingReference: number): boolean {
+  const startTs = samples[start]?.ts;
+  const endTs = (samples[end - 1]?.ts ?? startTs ?? 0) + 60000;
+  if (startTs == null || endTs <= startTs) return false;
   const before = samples
     .slice(Math.max(0, start - AUTO_SLEEP_BOUNDARY_WINDOW_MIN), start)
     .filter((sample) => sample.hr != null || sample.motion != null);
@@ -330,7 +362,9 @@ function longWindowHasBoundaries(samples: SleepMinute[], start: number, end: num
     .filter((sample) => sample.hr != null || sample.motion != null);
   return (
     before.length >= AUTO_SLEEP_BOUNDARY_SIGNAL_MIN &&
+    before.some((sample) => sample.ts <= startTs - AUTO_SLEEP_BOUNDARY_DISTANCE_MIN * 60000) &&
     after.length >= AUTO_SLEEP_BOUNDARY_SIGNAL_MIN &&
+    after.some((sample) => sample.ts >= endTs + AUTO_SLEEP_BOUNDARY_DISTANCE_MIN * 60000) &&
     boundaryShowsWake(before, restingReference) &&
     boundaryShowsWake(after, restingReference)
   );

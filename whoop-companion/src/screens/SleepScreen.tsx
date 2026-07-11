@@ -28,7 +28,7 @@ import { formatClock, formatDuration, startOfDayMs } from '../util/time';
 import { DayRail } from './DayScreen';
 import type { DailyMetricRow } from '../db/database';
 import { napCreditMin, parseNapDetail } from '../metrics/naps';
-import { sleepNeedsMoreSync, sleepSyncActionValue } from '../metrics/sleepSync';
+import { sleepNeedsMoreSync } from '../metrics/sleepSync';
 import { sleepConfidenceLabel } from '../ui/sleepTrust';
 import { sleepTrustTier } from '../metrics/sleepTrustWeight';
 import { kvGet } from '../db/database';
@@ -131,8 +131,8 @@ export function SleepScreen({ nav }: { nav: Nav }) {
       <SleepConfidenceStatus
         confidence={capture ? confidenceStatusTier(capture) : null}
         reason={sleepConfidenceReason(capture)}
-        onDetails={capture ? () => nav.navigate(sleepNeedsMoreSync(capture) ? { name: 'device' } : { name: 'editSleep' }) : undefined}
-        detailsLabel={capture && sleepNeedsMoreSync(capture) ? 'Sync' : 'Review'}
+        onDetails={capture ? () => nav.navigate({ name: 'editSleep' }) : undefined}
+        detailsLabel="Review"
       />
 
       {/* The four Sleep Performance contributors with Poor / Sufficient / Optimal bands */}
@@ -205,10 +205,18 @@ export function SleepScreen({ nav }: { nav: Nav }) {
             ) : (
               <Empty text="Stage detail is limited for this night. Use timing and duration for now." />
             )}
+            <NavRow
+              label="Adjust and rescan"
+              icon="create"
+              iconColor={colors.sleepTeal}
+              value="bed and final wake"
+              onPress={() => nav.navigate({ name: 'editSleep', day: today?.day })}
+              last
+            />
           </>
         ) : (
           <>
-            <Empty text="No sleep recorded last night. Wear the strap to bed, then reconnect to sync stored history, or enter your bed and wake times manually." />
+            <Empty text="No sleep recorded last night. Wear the strap to bed, then reconnect to retrieve stored history, or enter your bed and wake times manually." />
             <NavRow
               label="Log sleep manually"
               icon="create"
@@ -251,7 +259,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
         {sleep ? <NeedRow label="Hours of sleep" value={formatDuration(sleep.asleepMin)} strong /> : null}
         {debtExcludedNights > 0 ? (
           <Text style={styles.needNote}>
-            Sleep debt is based on trusted nights; {debtExcludedNights} low-confidence night{debtExcludedNights === 1 ? '' : 's'} are waiting for stronger sync before changing the carry.
+            Sleep debt is based on trusted nights; {debtExcludedNights} low-confidence night{debtExcludedNights === 1 ? '' : 's'} are waiting for stronger overnight capture before changing the carry.
           </Text>
         ) : null}
       </Card>
@@ -325,7 +333,7 @@ function storedSleepNeed(
 function sleepConfidenceReason(capture: ReturnType<typeof appStore.getState>['sleepCapture']): string {
   if (!capture) return 'Waiting for a complete overnight record.';
   if (sleepStateWakeConflict(capture)) return 'The sleep window may include awake time.';
-  if (sleepNeedsMoreSync(capture)) return 'Some overnight data is still syncing.';
+  if (sleepNeedsMoreSync(capture)) return 'Overnight capture is incomplete; decoded coverage is insufficient.';
   if (!sleepHasCorroboration(capture)) return 'Timing is usable, but the sleep state is still provisional.';
   return 'The overnight record is strong enough to use.';
 }
@@ -382,11 +390,11 @@ function sleepVerdict(input: {
       body: 'Pulse found a long HR-shaped overnight window, but it is not scoring it as sleep until coverage is stronger or band still-state evidence appears.',
       vitalsLabel,
       vitalsColor,
-      actionLabel: 'Sync stored history',
-      actionValue: 'continue syncing',
-      icon: 'sync',
+      actionLabel: 'Review capture',
+      actionValue: `${capture.coveragePct}% coverage`,
+      icon: 'create',
       color: colors.strainBlue,
-      route: { name: 'device' },
+      route: { name: 'editSleep' },
     };
   }
 
@@ -395,15 +403,15 @@ function sleepVerdict(input: {
       badge: 'WAIT',
       title: 'Sleep is not scored yet',
       body: capture
-        ? 'The app has seen some overnight evidence, but not enough reliable signal to close a sleep result.'
-        : 'Reconnect the strap and let stored history finish syncing before judging recovery.',
+        ? 'Overnight capture is incomplete, with insufficient decoded coverage to close a sleep result.'
+        : 'No overnight record is available yet. Reconnect the strap before judging recovery.',
       vitalsLabel,
       vitalsColor,
-      actionLabel: 'Sync stored history',
-      actionValue: capture ? 'continue syncing' : 'device sync',
-      icon: 'sync',
+      actionLabel: capture ? 'Review capture' : 'Open device',
+      actionValue: capture ? `${capture.coveragePct}% coverage` : 'no overnight record',
+      icon: capture ? 'create' : 'sync',
       color: colors.strainBlue,
-      route: { name: 'device' },
+      route: capture ? { name: 'editSleep' } : { name: 'device' },
     };
   }
 
@@ -412,14 +420,14 @@ function sleepVerdict(input: {
     return {
       badge: 'PART',
       title: 'Treat this as partial',
-      body: 'The sleep window exists, but the score is still data-limited. Let auto-sync continue or review the window if the timing looks wrong.',
+      body: 'The sleep window exists, but overnight capture is incomplete. Review the capture if the timing looks wrong.',
       vitalsLabel,
       vitalsColor,
-      actionLabel: needsSync ? 'Sync more data' : 'Review window',
-       actionValue: needsSync ? 'continue syncing' : 'review timing',
-      icon: needsSync ? 'sync' : 'create',
+      actionLabel: needsSync ? 'Review capture' : 'Review window',
+      actionValue: needsSync ? `${capture.coveragePct}% coverage` : 'review timing',
+      icon: 'create',
       color: colors.recoveryYellow,
-      route: needsSync ? { name: 'device' } : { name: 'editSleep' },
+      route: { name: 'editSleep' },
     };
   }
 
@@ -447,18 +455,18 @@ function sleepVerdict(input: {
       body: 'Duration and stages are usable, but recovery will improve once enough clean overnight R-R and heart-rate samples are available.',
       vitalsLabel,
       vitalsColor,
-      actionLabel: 'Open device sync',
-      actionValue: capture ? `${capture.signalMin} min signal` : 'sync',
-      icon: 'sync',
+      actionLabel: capture ? 'Review capture' : sleep ? 'Review sleep window' : 'Open device',
+      actionValue: capture ? `${capture.signalMin} min signal` : sleep ? formatDuration(sleep.inBedMin) : 'no overnight record',
+      icon: capture || sleep ? 'create' : 'sync',
       color: colors.recoveryYellow,
-      route: { name: 'device' },
+      route: capture || sleep ? { name: 'editSleep' } : { name: 'device' },
     };
   }
 
   return {
     badge: 'GOOD',
     title: 'Result looks usable',
-    body: 'Sleep, capture quality and recovery vitals are aligned enough to use today. Keep auto-sync running so trends stay complete.',
+    body: 'Sleep, capture quality and recovery vitals are aligned enough to use today. Review the capture later if more history becomes available.',
     vitalsLabel,
     vitalsColor,
     actionLabel: 'View trends',
@@ -491,7 +499,7 @@ function sleepFocus(input: {
     return {
       badge: 'CHECK',
       title: 'Review the sleep window',
-      body: 'Decoded strap-state evidence is mostly wake. Let sync finish, then adjust the window if you know you were asleep.',
+      body: 'Decoded strap-state evidence is mostly wake. Review the window if you know you were asleep.',
       actionLabel: 'Adjust sleep window',
       actionValue: sleepStateWakeDisplay(capture),
       icon: 'create',
@@ -501,14 +509,16 @@ function sleepFocus(input: {
   }
   if (!input.sleep) {
     return {
-      badge: 'SYNC',
-      title: 'Get a complete overnight sync',
-      body: 'Sleep scoring starts with stored strap history. Reconnect after waking and let auto-sync finish before judging recovery.',
-      actionLabel: 'Open device sync',
-       actionValue: capture ? 'continue syncing' : 'needs data',
-      icon: 'sync',
+      badge: capture ? 'DATA' : 'WAIT',
+      title: capture ? 'Overnight capture needs review' : 'No overnight record yet',
+      body: capture
+        ? 'Sleep scoring is limited by insufficient decoded coverage. Review the capture before judging recovery.'
+        : 'Sleep scoring starts with stored strap history. Reconnect the strap before judging recovery.',
+      actionLabel: capture ? 'Review capture' : 'Open device',
+      actionValue: capture ? `${capture.coveragePct}% coverage` : 'no overnight record',
+      icon: capture ? 'create' : 'sync',
       color: colors.strainBlue,
-      route: { name: 'device' },
+      route: capture ? { name: 'editSleep' } : { name: 'device' },
     };
   }
 
@@ -530,12 +540,12 @@ function sleepFocus(input: {
     return {
       badge: 'DATA',
       title: 'Improve capture confidence first',
-      body: 'Tonight’s score is limited by partial overnight signal, so recovery and readiness may move once more history backfills.',
-      actionLabel: needsSync ? 'Sync more data' : 'Review sleep window',
-       actionValue: needsSync ? 'continue syncing' : 'review timing',
-      icon: needsSync ? 'sync' : 'create',
+      body: 'Tonight’s score is limited by partial overnight capture, so recovery and readiness may move if the window is rescanned.',
+      actionLabel: needsSync ? 'Review capture' : 'Review sleep window',
+      actionValue: needsSync ? `${capture.coveragePct}% coverage` : 'review timing',
+      icon: 'create',
       color: needsSync ? colors.strainBlue : colors.sleepTeal,
-      route: needsSync ? { name: 'device' } : { name: 'editSleep' },
+      route: { name: 'editSleep' },
     };
   }
 
@@ -677,8 +687,8 @@ function sleepScoreDrivers(input: {
       value: `${capture.coveragePct}%`,
       detail:
         sleepNeedsMoreSync(capture)
-          ? 'Partial overnight history is the biggest uncertainty in this result.'
-          : 'Usable signal, but more synced minutes can still refine sleep and recovery.',
+          ? 'Partial overnight capture is the biggest uncertainty in this result.'
+          : 'Usable signal, but more decoded minutes can still refine sleep and recovery.',
       color: sleepNeedsMoreSync(capture) ? colors.recoveryRed : colors.recoveryYellow,
     });
   }
@@ -1036,7 +1046,7 @@ function sleepTrustStrip(
     return {
       score,
       label: 'Needs proof',
-      body: 'Long HR-only window with sparse still-worn or decoded sleep-state evidence. Keep sync running or adjust the window.',
+      body: 'Long HR-only window with sparse still-worn or decoded sleep-state evidence. Review the capture or adjust the window.',
       color: colors.strainBlue,
     };
   }
@@ -1052,7 +1062,7 @@ function sleepTrustStrip(
     return {
       score,
       label: 'Usable',
-      body: 'Good enough to guide the day, but more synced minutes can still refine stages and recovery.',
+      body: 'Good enough to guide the day, but more decoded minutes can still refine stages and recovery.',
       color: colors.recoveryYellow,
     };
   }
@@ -1074,15 +1084,15 @@ function sleepEvidenceSummary(capture: NonNullable<ReturnType<typeof appStore.ge
     return {
       badge: 'CHECK',
       title: 'Sleep evidence conflicts',
-      body: `The decoded strap-state stream is mostly wake (${sleepStateWakeDisplay(capture)}). Pulse should not treat this as final sleep until sync completes or the window is reviewed.`,
+      body: `The decoded strap-state stream is mostly wake (${sleepStateWakeDisplay(capture)}). Pulse should not treat this as final sleep until the window is reviewed.`,
       color: colors.recoveryRed,
     };
   }
   if (longHrOnlyCapture(capture)) {
     return {
-      badge: 'SYNC',
+      badge: 'DATA',
       title: 'HR-only candidate needs more proof',
-      body: 'A long overnight HR window is present, but still-worn or decoded sleep-state corroboration is sparse. Keep auto-sync connected or review the window before trusting duration.',
+      body: 'A long overnight HR window is present, but still-worn or decoded sleep-state corroboration is sparse. Review the capture before trusting duration.',
       color: colors.strainBlue,
     };
   }
@@ -1096,9 +1106,9 @@ function sleepEvidenceSummary(capture: NonNullable<ReturnType<typeof appStore.ge
   }
   if (sleepNeedsMoreSync(capture)) {
     return {
-      badge: 'SYNC',
+      badge: 'DATA',
       title: 'Evidence is still partial',
-      body: 'The strap has not backfilled enough unique overnight minutes yet. Keep auto-sync running before judging the score.',
+      body: 'The overnight capture has insufficient decoded coverage. Review the capture before judging the score.',
       color: colors.strainBlue,
     };
   }
@@ -1120,20 +1130,20 @@ function sleepCaptureAction(capture: NonNullable<ReturnType<typeof appStore.getS
   if (capture.confidence === 'high') return null;
   if (longHrOnlyCapture(capture)) {
     return {
-      label: 'Sync more overnight data',
+      label: 'Review capture',
       value: `${capture.coveragePct}% coverage`,
-      icon: 'sync',
+      icon: 'create',
       color: colors.strainBlue,
-      route: { name: 'device' },
+      route: { name: 'editSleep' },
     };
   }
   if (sleepNeedsMoreSync(capture)) {
     return {
-      label: 'Sync more overnight data',
-      value: sleepSyncActionValue(capture),
-      icon: 'sync',
+      label: 'Review capture',
+      value: `${capture.coveragePct}% coverage`,
+      icon: 'create',
       color: colors.strainBlue,
-      route: { name: 'device' },
+      route: { name: 'editSleep' },
     };
   }
   return {

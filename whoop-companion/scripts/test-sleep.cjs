@@ -31,6 +31,7 @@ function assert(condition, message) {
 }
 
 const sleep = loadTypeScriptModule(path.join('src', 'metrics', 'sleep.ts'));
+const sleepWindow = loadTypeScriptModule(path.join('src', 'util', 'sleepWindow.ts'));
 const evidence = loadTypeScriptModule(path.join('src', 'metrics', 'sleepEvidence.ts'));
 const sleepStress = loadTypeScriptModule(path.join('src', 'metrics', 'sleepStress.ts'));
 const sleepConsistency = loadTypeScriptModule(path.join('src', 'metrics', 'sleepConsistency.ts'));
@@ -184,6 +185,58 @@ const observedAwakeningResult = sleep.computeSleep(observedAwakening);
 assert(observedAwakeningResult && observedAwakeningResult.inBedMin >= 235, 'observed 20-minute awakening keeps one conservative TIB window');
 assert(observedAwakeningResult && observedAwakeningResult.stages.awake >= 15, 'observed awakening minutes remain awake');
 
+const fragmentedStart = Date.UTC(2026, 0, 4, 18, 0);
+const makeFragmentedCore = (offset, count, hr = 58) =>
+  Array.from({ length: count }, (_, i) => ({ ts: fragmentedStart + (offset + i) * minute, hr, motion: 0 }));
+const wakeBlock = (offset, count = 60) =>
+  Array.from({ length: count }, (_, i) => ({ ts: fragmentedStart + (offset + i) * minute, hr: 86, motion: 0.8 }));
+const fragmentedSleep = [
+  ...Array.from({ length: 30 }, (_, i) => ({ ts: fragmentedStart - (30 - i) * minute, hr: 84, motion: 0.8 })),
+  ...makeFragmentedCore(0, 15 * 60),
+  ...wakeBlock(15 * 60),
+  ...makeFragmentedCore(16 * 60, 3 * 60),
+  ...wakeBlock(19 * 60),
+  ...makeFragmentedCore(20 * 60, 4 * 60),
+  ...Array.from({ length: 30 }, (_, i) => ({ ts: fragmentedStart + (24 * 60 + i) * minute, hr: 84, motion: 0.8 })),
+];
+const extendedFragmentedResult = sleep.computeSleep(fragmentedSleep);
+assert(
+  extendedFragmentedResult && extendedFragmentedResult.inBedMin >= 24 * 60 - 5 && extendedFragmentedResult.inBedMin <= 24 * 60,
+  'strong observed cores merge into one conservatively trimmed 24-hour TIB window',
+);
+assert(extendedFragmentedResult && extendedFragmentedResult.stages.awake >= 120, 'observed 60-minute awakenings remain awake');
+
+const fragmentedMissingGap = fragmentedSleep.map((sample) => ({ ...sample }));
+for (let i = 15 * 60; i < 16 * 60; i += 1) {
+  const sample = fragmentedMissingGap.find((candidate) => candidate.ts === fragmentedStart + i * minute);
+  if (sample) {
+    sample.hr = null;
+    sample.motion = null;
+  }
+}
+const fragmentedMissingResult = sleep.computeSleep(fragmentedMissingGap);
+assert(!fragmentedMissingResult || fragmentedMissingResult.inBedMin < 24 * 60, 'missing HR and motion gaps never merge fragmented cores');
+
+const normalSingleRun = [
+  ...Array.from({ length: 30 }, (_, i) => ({ ts: fragmentedStart - (30 - i) * minute, hr: 84, motion: 0.8 })),
+  ...Array.from({ length: 12 * 60 }, (_, i) => ({ ts: fragmentedStart + i * minute, hr: 58, motion: 0 })),
+  ...Array.from({ length: 30 }, (_, i) => ({ ts: fragmentedStart + (12 * 60 + i) * minute, hr: 84, motion: 0.8 })),
+];
+const normalSingleResult = sleep.computeSleep(normalSingleRun);
+assert(normalSingleResult && normalSingleResult.inBedMin <= 11 * 60, 'normal single quiet run remains capped at 11 hours');
+
+const manualWindowStart = Date.UTC(2026, 0, 4, 18, 0);
+const manualWindowEnd = Date.UTC(2026, 0, 5, 18, 0);
+assert(sleepWindow.sleepWindowDurationMin(manualWindowStart, manualWindowEnd) === 24 * 60, 'same-clock manual window is 24 hours');
+assert(sleepWindow.isManualSleepWindowDurationAllowed(manualWindowStart, manualWindowEnd), 'manual 24-hour timestamp window is accepted');
+const manualResult = sleep.computeSleep([], undefined, {
+  forceWindow: true,
+  startTs: manualWindowStart,
+  endTs: manualWindowEnd,
+  source: 'manual_duration',
+});
+assert(manualResult && manualResult.inBedMin === 24 * 60, 'manual 24-hour window is scored over its full bounds');
+
 const quietNineHours = Array.from({ length: 9 * 60 }, (_, i) => ({
   ts: start + i * minute,
   hr: 60,
@@ -193,7 +246,7 @@ assert(sleep.computeSleep(quietNineHours) === null, 'quiet nine-hour data withou
 const boundedNineHours = [
   ...Array.from({ length: 30 }, (_, i) => ({ ts: start + (i - 30) * minute, hr: 84, motion: 0.7 })),
   ...quietNineHours.map((sample) => ({ ...sample, ts: sample.ts + 30 * minute })),
-  ...Array.from({ length: 30 }, (_, i) => ({ ts: start + (9 * 60 + i) * minute, hr: 84, motion: 0.7 })),
+  ...Array.from({ length: 30 }, (_, i) => ({ ts: start + (9 * 60 + 30 + i) * minute, hr: 84, motion: 0.7 })),
 ];
 assert(sleep.computeSleep(boundedNineHours) != null, 'real long rest with observed wake boundaries remains eligible');
 

@@ -10,6 +10,10 @@ import { Nav } from '../ui/navigation';
 import { dayKey, formatDuration, startOfDayMs } from '../util/time';
 import { sleepNeedsMoreSync } from '../metrics/sleepSync';
 import { sleepTrustTier } from '../metrics/sleepTrustWeight';
+import {
+  isManualSleepWindowDurationAllowed,
+  MIN_MANUAL_SLEEP_WINDOW_MIN,
+} from '../util/sleepWindow';
 
 function hmFromTs(ts: number | null, fallbackH: number, fallbackM: number): { h: number; m: number } {
   if (ts == null) return { h: fallbackH, m: fallbackM };
@@ -48,6 +52,7 @@ export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
   const [bed, setBed] = useState(bedInit);
   const [wake, setWake] = useState(wakeInit);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const previewStart = tsFor(targetDay, bed.h, bed.m, bed.h >= 12);
   const previewEnd = tsFor(targetDay, wake.h, wake.m, false);
@@ -63,19 +68,27 @@ export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
     signalMin: currentSignalMin,
   });
 
-  const save = () => {
+  const save = async () => {
+    if (saving) return;
     const bedEvening = bed.h >= 12;
     const startTs = tsFor(targetDay, bed.h, bed.m, bedEvening);
     const endTs = tsFor(targetDay, wake.h, wake.m, false);
-    const durationMin = Math.round((endTs - startTs) / 60000);
-    if (durationMin < 20 || durationMin > 18 * 60) {
-      setError('Choose a sleep window between 20 minutes and 18 hours, with wake time after bed time.');
+    if (!isManualSleepWindowDurationAllowed(startTs, endTs)) {
+      setError(`Choose a sleep window between ${MIN_MANUAL_SLEEP_WINDOW_MIN} minutes and 30 hours, with wake time after bed time.`);
       return;
     }
     setError(null);
-    void appStore.setManualSleep(startTs, endTs, targetDay);
-    setSaved(true);
-    setTimeout(() => nav.back(), 700);
+    setSaving(true);
+    try {
+      await appStore.setManualSleep(startTs, endTs, targetDay);
+      setSaved(true);
+      setTimeout(() => nav.back(), 700);
+    } catch (cause) {
+      setSaved(false);
+      setError(cause instanceof Error ? cause.message : 'Could not apply the sleep window. Try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const confirmClearManual = () => {
@@ -101,9 +114,8 @@ export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
       <Card>
         <Text style={styles.date}>{formatDayLabel(targetDay)}</Text>
         <Text style={styles.intro}>
-          Set when you went to bed and woke up. Pulse re-detects your sleep stages and recovery from
-          the strap’s heart rate over exactly that window — useful if a night was missed or detected
-          with the wrong times.
+          Set when you went to bed and woke up. Pulse rescans strap history over exactly this window;
+          observed awake periods stay awake in the result, even for a long or fragmented night.
         </Text>
         {!metric?.sleepStart ? (
           <Text style={styles.suggestion}>
@@ -131,7 +143,7 @@ export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
 
       <Card>
         <Text style={styles.previewLabel}>Preview</Text>
-        <Text style={[styles.previewValue, { color: previewDurationMin >= 20 && previewDurationMin <= 18 * 60 ? colors.text : colors.danger }]}>
+        <Text style={[styles.previewValue, { color: isManualSleepWindowDurationAllowed(previewStart, previewEnd) ? colors.text : colors.danger }]}>
           {previewDurationMin > 0 ? formatDuration(previewDurationMin) : 'Wake must be after bed'}
         </Text>
         <Text style={styles.previewMeta}>
@@ -149,9 +161,11 @@ export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
       </Card>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Text style={styles.applyNote}>Updates Sleep, Recovery and Readiness.</Text>
-      <PrimaryButton title={saved ? 'Applied - updating' : 'Apply sleep window'} onPress={save} />
-      <SecondaryButton title="Clear manual override (auto-detect)" onPress={confirmClearManual} />
+      <Text style={styles.applyNote}>
+        {saved ? 'Applied successfully. Sleep, Recovery and Readiness are updating.' : 'Apply rescans this full window and keeps observed awake periods awake.'}
+      </Text>
+      <PrimaryButton title={saving ? 'Applying...' : saved ? 'Applied - updating' : 'Apply sleep window'} onPress={save} disabled={saving || saved} />
+      <SecondaryButton title="Clear manual override (auto-detect)" onPress={confirmClearManual} disabled={saving} />
     </Screen>
   );
 }
@@ -164,7 +178,7 @@ function editConfidenceReason(detail: {
   if (!detail) return 'No overnight record is available for this window yet.';
   if (detail.confidence === 'high' && !sleepNeedsMoreSync(detail)) return 'The overnight record is strong enough to use.';
   if (detail.confidence === 'medium') return 'The result is usable, but more detail may refine it.';
-  return 'Use timing with care until the overnight record is complete.';
+  return 'Use timing with care while overnight capture remains incomplete.';
 }
 
 function confidenceStatusTier(detail: {
@@ -204,8 +218,8 @@ function sleepWindowPreview(input: {
   if (input.durationMin > 11 * 60) {
     return {
       badge: 'LONG',
-      title: 'Window may include awake time',
-      body: 'Long windows can inflate sleep duration. Trim bed or wake time if you were awake in bed.',
+      title: 'Full window will be rescanned',
+      body: 'Observed awake periods remain awake, so this can capture a fragmented night without counting wake as sleep.',
       color: colors.recoveryYellow,
       tint: `${colors.recoveryYellow}14`,
     };
@@ -214,7 +228,7 @@ function sleepWindowPreview(input: {
     return {
       badge: 'DATA',
       title: 'Timing will save before detailed confidence exists',
-      body: 'The app will rescore using whatever strap history is available for this window.',
+      body: 'The app will rescan this exact window using available strap history; observed awake periods remain awake.',
       color: colors.strainBlue,
       tint: `${colors.strainBlue}16`,
     };
@@ -223,10 +237,10 @@ function sleepWindowPreview(input: {
   const needsMoreSync = sleepNeedsMoreSync(source);
   if (sleepTrustTier(source) === 'low' || needsMoreSync) {
     return {
-      badge: 'SYNC',
-      title: needsMoreSync ? 'More synced history is needed' : 'Data confidence is still limited',
+      badge: 'DATA',
+      title: needsMoreSync ? 'Partial overnight capture' : 'Data confidence is still limited',
       body: needsMoreSync
-        ? 'Adjusting the window can fix timing, but recovery should stay cautious until overnight history backfills.'
+        ? 'Adjusting the window can fix timing, but recovery should stay cautious with insufficient decoded coverage.'
         : 'Adjusting the window can fix timing. Compare it with how the night felt before trusting recovery.',
       color: colors.recoveryYellow,
       tint: `${colors.recoveryYellow}14`,
@@ -235,7 +249,7 @@ function sleepWindowPreview(input: {
   return {
     badge: 'GOOD',
     title: 'Window looks reasonable',
-    body: 'Saving will rescore stages, sleep performance and recovery using this exact window.',
+    body: 'Applying rescans this exact window; observed awake periods remain awake in stages and recovery.',
     color: colors.recoveryGreen,
     tint: `${colors.recoveryGreen}12`,
   };

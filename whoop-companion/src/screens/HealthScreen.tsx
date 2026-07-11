@@ -58,7 +58,7 @@ export function HealthScreen({ nav }: { nav: Nav }) {
               : 'metrics within your 30-day typical range'
             : hm.valueCount > 0
             ? 'overnight values found; personal ranges are still calibrating'
-            : 'Wear your strap overnight and complete a full sync to populate your vitals'}
+            : 'No vitals are available from the decoded overnight sensor history yet'}
         </Text>
       </Card>
 
@@ -75,7 +75,7 @@ export function HealthScreen({ nav }: { nav: Nav }) {
         </View>
         <View style={styles.sourceRow}>
           <Stat label="Recovery vitals" value={`${readiness.recoveryReady}/3`} color={readiness.recoveryReady === 3 ? colors.recoveryGreen : colors.recoveryYellow} />
-          <Stat label="Skin temp" value={readiness.skinReady ? 'ready' : 'pending'} color={readiness.skinReady ? colors.recoveryGreen : colors.textTertiary} />
+          <Stat label="Skin temp" value={readiness.skinReady ? 'ready' : 'unavailable'} color={readiness.skinReady ? colors.recoveryGreen : colors.textTertiary} />
           <Stat label="Blood oxygen" value="withheld" color={colors.textTertiary} />
         </View>
         <NavRow
@@ -178,30 +178,30 @@ function healthDataReadiness(hm: ReturnType<typeof appStore.healthMonitor>) {
 
   if (recoveryReady < 3) {
     return {
-      badge: 'SYNC',
+      badge: 'DATA',
       color: colors.strainBlue,
       title: 'Recovery vitals need a fuller night',
       body: 'RHR, HRV and respiratory rate need more clean overnight heart-rate and R-R signal.',
       recoveryReady,
       skinReady,
-      actionLabel: 'Sync overnight history',
+      actionLabel: 'Review device data',
       actionValue: `${recoveryReady}/3 ready`,
-      icon: 'sync',
+      icon: 'information-circle',
       route: { name: 'device' } as const,
     };
   }
 
   if (!skinReady) {
     return {
-      badge: 'SYNC',
+      badge: 'DATA',
       color: colors.sleepTeal,
       title: 'Skin temperature needs a full night',
-      body: 'The validated temperature channel is ready; finish an overnight history sync to build its nightly value.',
+      body: 'The temperature channel is validated, but no complete nightly value was decoded from the available sensor history.',
       recoveryReady,
       skinReady,
-      actionLabel: 'Sync overnight history',
-      actionValue: 'temperature pending',
-      icon: 'sync',
+      actionLabel: 'Review device data',
+      actionValue: 'temperature unavailable',
+      icon: 'information-circle',
       route: { name: 'device' } as const,
     };
   }

@@ -1,7 +1,7 @@
 import type { HrSampleRow } from '../db/database';
 import { isDirectSleepHeartRateSample } from './dataQuality';
 import { computeHrvSegments } from './hrv';
-import { respiratoryRate } from './respiratory';
+import { respiratoryRateFromHeartRate, respiratoryRateSegments } from './respiratory';
 import type { SleepResult, SleepStage } from './sleep';
 
 export type OvernightVitals = {
@@ -63,13 +63,15 @@ const ROW_CONTIGUITY_GAP_MS = 5000;
 const QUALITY_WINDOW_MS = 5 * 60 * 1000;
 const MIN_QUALITY_WINDOW_MS = 4 * 60 * 1000;
 const MIN_RHR_WINDOWS = 3;
-const MIN_HRV_WINDOWS = 3;
+const MIN_HRV_WINDOWS = 1;
 const MIN_HRV_INTERVALS = 90;
-const MIN_HRV_WALL_COVERAGE = 0.7;
+// WHOOP 5 v18 history carries at most four RR intervals per one-second record
+// and frequently omits otherwise valid beats. Captured nights provide roughly
+// 40-50% RR-duration coverage, so continuity, beat count and edit quality are
+// the trust gates; requiring 70% wall coverage rejects the wire format itself.
+const MIN_HRV_WALL_COVERAGE = 0.35;
 const MIN_HRV_EDIT_COVERAGE = 0.7;
 const MIN_RHR_WALL_COVERAGE = 0.65;
-const MIN_RESPIRATORY_SEGMENT_INTERVALS = 180;
-const RESPIRATORY_AGREEMENT_MAX_DIFF = 1.5;
 const MIN_RECOVERY_SIGNAL_MIN = 30;
 const MAX_RECOVERY_SIGNAL_MIN = 240;
 const MIN_SLEEP_COVERAGE = 0.7;
@@ -220,22 +222,7 @@ export function computeRhrFromRows(samples: HrSampleRow[]): number | null {
 
 /** RMSSD from independent, well-covered contiguous RR windows. */
 export function computeRmssdFromRows(samples: HrSampleRow[]): number | null {
-  const windows = qualityWindows(samples)
-    .filter(
-      (window) =>
-        window.acceptedCount >= MIN_HRV_INTERVALS &&
-        window.wallCoverage >= MIN_HRV_WALL_COVERAGE &&
-        window.editCoverage >= MIN_HRV_EDIT_COVERAGE &&
-        window.longestContiguousMs >= MIN_QUALITY_WINDOW_MS,
-    )
-    .map((window) => {
-      const hrv = computeHrvSegments(window.segments);
-      if (!hrv || hrv.count < MIN_HRV_INTERVALS || hrv.rmssd < 5 || hrv.rmssd > 180) return null;
-      const medianHr = median(window.hrValues);
-      if (Math.abs(hrv.meanHr - medianHr) > Math.max(8, medianHr * 0.12)) return null;
-      return hrv.rmssd;
-    })
-    .filter((value): value is number => value != null);
+  const windows = rmssdWindowEstimates(samples);
 
   if (windows.length < MIN_HRV_WINDOWS) return null;
   const centre = median(windows);
@@ -245,25 +232,29 @@ export function computeRmssdFromRows(samples: HrSampleRow[]): number | null {
   return round1(median(inliers.length >= MIN_HRV_WINDOWS ? inliers : windows));
 }
 
-/** Respiratory estimates are accepted only when independent segments agree. */
-export function computeRespiratoryRateFromRows(samples: HrSampleRow[]): number | null {
-  const windows = qualityWindows(samples).filter(
-    (window) =>
-      window.acceptedCount >= MIN_RESPIRATORY_SEGMENT_INTERVALS &&
-      window.wallCoverage >= MIN_HRV_WALL_COVERAGE &&
-      window.editCoverage >= MIN_HRV_EDIT_COVERAGE &&
-      window.longestContiguousMs >= MIN_QUALITY_WINDOW_MS,
-  );
-  const candidateSegments = windows.flatMap((window) => window.segments.filter((segment) => segment.length >= MIN_RESPIRATORY_SEGMENT_INTERVALS));
-  if (candidateSegments.length < 2) return null;
+/** Per-window values exposed for capture diagnostics and regression analysis. */
+export function rmssdWindowEstimates(samples: HrSampleRow[]): number[] {
+  return qualityWindows(samples)
+    .filter(
+      (window) =>
+        window.acceptedCount >= MIN_HRV_INTERVALS &&
+        window.wallCoverage >= MIN_HRV_WALL_COVERAGE &&
+        window.editCoverage >= MIN_HRV_EDIT_COVERAGE &&
+        window.segments.some((segment) => segment.length >= MIN_HRV_INTERVALS),
+    )
+    .map((window) => {
+      const hrv = computeHrvSegments(window.segments);
+      if (!hrv || hrv.count < MIN_HRV_INTERVALS || hrv.rmssd < 5 || hrv.rmssd > 180) return null;
+      const medianHr = median(window.hrValues);
+      if (Math.abs(hrv.meanHr - medianHr) > Math.max(8, medianHr * 0.12)) return null;
+      return hrv.rmssd;
+    })
+    .filter((value): value is number => value != null);
+}
 
-  const estimates = candidateSegments.map((segment) => respiratoryRate(segment));
-  if (estimates.some((value) => value == null)) return null;
-  const rates = estimates as number[];
-  if (rates.some((value) => value < 9 || value > 24)) return null;
-  const centre = median(rates);
-  if (rates.some((value) => Math.abs(value - centre) > RESPIRATORY_AGREEMENT_MAX_DIFF)) return null;
-  return Math.round(median(rates) * 2) / 2;
+/** Respiratory rate from naturally contiguous RR runs across the full night. */
+export function computeRespiratoryRateFromRows(samples: HrSampleRow[]): number | null {
+  return respiratoryRateSegments(contiguousRrSegments(samples)) ?? respiratoryRateFromHeartRate(samples);
 }
 
 /** Clean contiguous RR runs for other local physiology consumers. */
@@ -345,10 +336,9 @@ function independentEpochIsStable(
   if (!relevant.length) return true;
 
   for (const entry of relevant) {
-    if (entry.bandSleepState != null) {
-      if (![0, 1, 2, 3].includes(entry.bandSleepState)) return false;
-      if (entry.bandSleepState === 0 || entry.bandSleepState === 3) return false;
-    }
+    // The WHOOP 5 v18 state nibble is not decoded well enough to select or
+    // reject physiology. Captures contain long still-worn periods labelled 0
+    // (wake), so using it as a hard gate can erase an entire night's vitals.
     if (entry.motion != null) {
       if (!Number.isFinite(entry.motion) || entry.motion < 0 || entry.motion > 1) return false;
       if (entry.motion >= 0.35) return false;

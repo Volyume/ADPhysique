@@ -485,7 +485,7 @@ function goalRecommendation(input: {
   if (input.lastSleep && !input.lastSleepTrusted) {
     return {
       mode: modeFor(Math.max(input.currentGoal, 0.85)),
-      reason: 'Last night is low-confidence, so keep a steady target and let auto sync finish before changing the plan from that result.',
+      reason: 'Last night is low-confidence, so keep a steady target and review the sleep capture before changing the plan from that result.',
       color: colors.recoveryYellow,
     };
   }
@@ -546,8 +546,8 @@ function tonightChecklist(input: {
     {
       label: 'Strap sync',
       detail: input.connected
-        ? 'Connected now; stored history can backfill after wake.'
-        : 'Connect before bed or after waking so stored history can drain.',
+        ? 'Connected now; stored history will be available after wake.'
+        : 'Connect before bed or after waking to retrieve stored history.',
       state: input.connected ? 'Ready' : 'Connect',
       icon: input.connected ? 'bluetooth' : 'bluetooth-outline',
       color: input.connected ? colors.recoveryGreen : colors.strainBlue,

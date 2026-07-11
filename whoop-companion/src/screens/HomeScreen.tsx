@@ -11,14 +11,13 @@ import { clampPct } from '../util/number';
 import { DayRail } from './DayScreen';
 import { activitySummary } from '../ui/activityFormat';
 import type { DailyMetricRow } from '../db/database';
-import { longAutoSleepNeedsCorroboration, sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
+import { longAutoSleepNeedsCorroboration, sleepStateWakeConflict } from '../metrics/sleepEvidence';
 import { sleepNeedsMoreSync } from '../metrics/sleepSync';
 import { sleepTrustTier } from '../metrics/sleepTrustWeight';
 
 export function HomeScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
-  const status = useStoreSelector(appStore, (s) => s.status);
   const draining = useStoreSelector(appStore, (s) => s.draining);
   const sleepCapture = useStoreSelector(appStore, (s) => s.sleepCapture);
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
@@ -58,7 +57,6 @@ export function HomeScreen({ nav }: { nav: Nav }) {
         ? 'last night'
         : 'awaiting';
   const todayFocus = dailyFocus({
-    status,
     draining,
     sleepCapture,
     sleep,
@@ -120,18 +118,20 @@ export function HomeScreen({ nav }: { nav: Nav }) {
           </View>
         </Card>
 
-        <Card onPress={() => nav.navigate(todayFocus.route)}>
-          <View style={styles.focusHead}>
-            <View style={[styles.focusBadge, { backgroundColor: todayFocus.color }]}>
-              <Text style={styles.focusBadgeText}>{todayFocus.badge}</Text>
+        {todayFocus ? (
+          <Card onPress={() => nav.navigate(todayFocus.route)}>
+            <View style={styles.focusHead}>
+              <View style={[styles.focusBadge, { backgroundColor: todayFocus.color }]}>
+                <Text style={styles.focusBadgeText}>{todayFocus.badge}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.focusTitle}>{todayFocus.title}</Text>
+                <Text style={styles.focusBody}>{todayFocus.body}</Text>
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.focusTitle}>{todayFocus.title}</Text>
-              <Text style={styles.focusBody}>{todayFocus.body}</Text>
-            </View>
-          </View>
-          <Text style={[styles.focusAction, { color: todayFocus.color }]}>{todayFocus.action}</Text>
-        </Card>
+            <Text style={[styles.focusAction, { color: todayFocus.color }]}>{todayFocus.action}</Text>
+          </Card>
+        ) : null}
 
         <SectionLabel>Today's activities</SectionLabel>
         <Card>
@@ -210,7 +210,6 @@ function energyColor(score: number | null | undefined): string {
 
 
 function dailyFocus(input: {
-  status: string;
   draining: boolean;
   sleepCapture: ReturnType<typeof appStore.getState>['sleepCapture'];
   sleep: ReturnType<typeof appStore.getState>['lastSleep'];
@@ -227,50 +226,18 @@ function dailyFocus(input: {
   action: string;
   color: string;
   route: Parameters<Nav['navigate']>[0];
-} {
-  const coverage = input.sleepCapture?.coveragePct ?? 0;
-  const signalMin = input.sleepCapture?.signalMin ?? 0;
+} | null {
   if (sleepStateWakeConflict(input.sleepCapture)) {
-    return {
-      badge: 'CHECK',
-      title: 'Review sleep before trusting today',
-      body: `Decoded strap-state evidence is mostly wake (${sleepStateWakeDisplay(input.sleepCapture)}), so Pulse is holding back sleep, recovery and readiness confidence.`,
-      action: 'Adjust sleep window',
-      color: colors.recoveryRed,
-      route: { name: 'editSleep' },
-    };
+    return null;
   }
   if (input.sleepCapture && longHrOnlyHomeCapture(input.sleepCapture)) {
-    return {
-      badge: 'PROOF',
-      title: 'Sleep needs corroboration',
-      body: 'A long HR-shaped window is present, but still-worn or decoded sleep-state evidence is sparse. Let sync finish before trusting duration.',
-      action: 'Open Sleep review',
-      color: colors.strainBlue,
-      route: input.sleep ? { name: 'sleep' } : { name: 'device' },
-    };
+    return null;
   }
   if (input.sleepLowTrust) {
-    return {
-      badge: 'CHECK',
-      title: 'Review sleep before trusting today',
-      body: 'Today has a low-confidence sleep window. Review the timing or let auto sync add stronger coverage before using recovery, energy or readiness.',
-      action: input.sleep ? 'Open Sleep review' : 'Open Device sync',
-      color: colors.recoveryRed,
-      route: input.sleep ? { name: 'sleep' } : { name: 'device' },
-    };
+    return null;
   }
   if (input.draining || !input.sleep || sleepNeedsMoreSync(input.sleepCapture) || input.sleepPerformanceCapped) {
-    return {
-      badge: input.draining ? 'SYNC' : 'DATA',
-      title: input.draining ? 'Let history finish syncing' : 'Fix sleep data confidence',
-      body: input.draining
-        ? 'The strap is backfilling stored history. Let it finish before trusting sleep, recovery, or readiness.'
-        : `${coverage || 0}% sleep coverage with ${signalMin || 0} signal minutes. More history or a reviewed window will sharpen today’s numbers.`,
-      action: input.status === 'connected' ? 'Open Device sync' : 'Connect strap',
-      color: colors.strainBlue,
-      route: { name: 'device' },
-    };
+    return null;
   }
 
   if (input.recovery != null && input.recovery < 34) {

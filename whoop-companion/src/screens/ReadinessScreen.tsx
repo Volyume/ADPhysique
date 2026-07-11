@@ -6,7 +6,7 @@ import { Card, Empty, NavRow, Ring, Screen, SectionLabel, Stat } from '../ui/com
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
-import { sleepNeedsMoreSync, sleepSyncActionValue } from '../metrics/sleepSync';
+import { sleepNeedsMoreSync } from '../metrics/sleepSync';
 
 function readyColor(score: number): string {
   if (score >= 70) return colors.recoveryGreen;
@@ -44,10 +44,10 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
           readiness.missingInputs.includes('recovery') ||
           sleepNeedsSync
         ? {
-            label: 'Sync overnight data',
-            value: sleepSyncActionValue(sleepDetail),
-            route: { name: 'device' } as const,
-            icon: 'sync',
+            label: sleepDetail ? 'Review capture' : 'Open device',
+            value: sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}% coverage` : 'no overnight record',
+            route: sleepDetail ? ({ name: 'editSleep' } as const) : ({ name: 'device' } as const),
+            icon: sleepDetail ? 'create' : 'sync',
           }
         : readiness.confidence !== 'high'
           ? {
@@ -249,11 +249,11 @@ function readinessLimiter(
       body: 'The training call should stay conservative until sleep/recovery inputs are complete enough to trust.',
       metric: 'Confidence',
       value: `${readiness.confidencePct}%`,
-      actionLabel: needsSync ? 'Sync overnight data' : 'Review sleep window',
-      actionValue: sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}% coverage` : 'quality',
-      icon: needsSync ? 'sync' : 'create',
+      actionLabel: sleepDetail ? (needsSync ? 'Review capture' : 'Review sleep window') : 'Open device',
+      actionValue: sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}% coverage` : 'no overnight record',
+      icon: sleepDetail ? 'create' : 'sync',
       color: colors.strainBlue,
-      route: needsSync ? { name: 'device' } : { name: 'editSleep' },
+      route: sleepDetail ? { name: 'editSleep' } : { name: 'device' },
     };
   }
 
@@ -278,7 +278,7 @@ function readinessLimiter(
     const sleepTrustNeedsSync = sleepNeedsMoreSync(sleepDetail);
     const route =
       weakContributor.key === 'sleep_trust'
-        ? (sleepTrustNeedsSync ? ({ name: 'device' } as const) : ({ name: 'editSleep' } as const))
+        ? (sleepDetail ? ({ name: 'editSleep' } as const) : ({ name: 'device' } as const))
         : weakContributor.key === 'sleep' || weakContributor.key === 'debt'
         ? ({ name: 'sleep' } as const)
         : weakContributor.key === 'load'
@@ -293,11 +293,11 @@ function readinessLimiter(
       metric: weakContributor.label,
       value: weakContributor.value,
       actionLabel: weakContributor.key === 'sleep_trust'
-        ? sleepTrustNeedsSync ? 'Sync more data' : 'Review sleep window'
+        ? sleepDetail ? (sleepTrustNeedsSync ? 'Review capture' : 'Review sleep window') : 'Open device'
         : 'Open detail',
       actionValue: weakContributor.label.toLowerCase(),
       icon: weakContributor.key === 'sleep_trust'
-        ? sleepTrustNeedsSync ? 'sync' : 'create'
+        ? sleepDetail ? 'create' : 'sync'
         : weakContributor.key === 'load' ? 'barbell' : weakContributor.key === 'sleep' || weakContributor.key === 'debt' ? 'moon' : 'pulse',
       color: weakContributor.key === 'sleep_trust' ? colors.strainBlue : colors.recoveryYellow,
       route,
@@ -361,16 +361,16 @@ function readinessCall(
     const needsSync = sleepNeedsMoreSync(sleepDetail);
     return {
       badge: 'DATA',
-      title: needsSync ? 'Trust the signal before the session' : 'Review sleep before the session',
+      title: needsSync ? 'Review partial overnight capture' : 'Review sleep before the session',
       body: needsSync
-        ? 'Readiness is currently limited by sleep data quality. Finish syncing before choosing a hard workout.'
+        ? 'Readiness is currently limited by incomplete overnight capture. Review the capture before choosing a hard workout.'
         : 'Readiness is currently limited by low sleep confidence despite usable signal. Review the sleep window before choosing a hard workout.',
       targetStrain: 'hold',
-      actionLabel: needsSync ? 'Sync overnight data' : 'Review sleep window',
-      actionValue: sleepSyncActionValue(sleepDetail),
-      icon: needsSync ? 'sync' : 'create',
+      actionLabel: sleepDetail ? (needsSync ? 'Review capture' : 'Review sleep window') : 'Open device',
+      actionValue: sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}% coverage` : 'no overnight record',
+      icon: sleepDetail ? 'create' : 'sync',
       color: colors.strainBlue,
-      route: needsSync ? { name: 'device' } : { name: 'editSleep' },
+      route: sleepDetail ? { name: 'editSleep' } : { name: 'device' },
     };
   }
 

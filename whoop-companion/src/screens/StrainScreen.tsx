@@ -123,7 +123,7 @@ export function StrainScreen({ nav }: { nav: Nav }) {
         <MetricRow label="Strength activity time" display={hm(strengthMin)} current={strengthMin} prior={null} />
         <MetricRow
           label={stepSource === 'band' ? 'Steps (WHOOP)' : 'Steps'}
-          display={steps != null ? steps.toLocaleString() : 'Awaiting WHOOP sync'}
+          display={steps != null ? steps.toLocaleString() : 'Unavailable: no decoded step history'}
           current={steps}
           prior={null}
         />

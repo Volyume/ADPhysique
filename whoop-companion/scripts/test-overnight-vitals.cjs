@@ -105,6 +105,28 @@ function respiratoryRows(rateBrpm, startOffsetSec, seconds) {
   return rows;
 }
 
+function respiratoryHeartRateRows(rateBrpm, seconds = 600) {
+  return Array.from({ length: seconds }, (_, second) => ({
+    ts: BASE_TS + second * 1000,
+    bpm: Math.round(64 + 3 * Math.sin(2 * Math.PI * (rateBrpm / 60) * second)),
+    rr: [],
+    source: 'whoop5_v18',
+  }));
+}
+
+function integerHeartRateNoise(seconds = 600) {
+  let state = 0x12345678;
+  return Array.from({ length: seconds }, (_, second) => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return {
+      ts: BASE_TS + second * 1000,
+      bpm: 60 + (state % 11),
+      rr: [],
+      source: 'whoop5_v18',
+    };
+  });
+}
+
 function directHrRowsWithMissingRr() {
   const rows = [];
   for (let second = 0; second < 40 * 60; second += 1) {
@@ -155,6 +177,34 @@ assert(partialVitals.rhr === 60, `valid RHR must survive invalid HRV (got ${part
 assert(partialVitals.rmssd === null, `marginal zero-variation HRV windows must be rejected (got ${partialVitals.rmssd})`);
 assert(vitals.computeRmssdFromRows(constantRows) === null, 'RMSSD selection is independent of RHR selection');
 
+const sparseV18Rows = [];
+for (let second = 0; second < 40 * 60; second += 2) {
+  const rr = second % 4 === 0 ? 950 : 1050;
+  sparseV18Rows.push({
+    ts: BASE_TS + second * 1000,
+    bpm: 60000 / rr,
+    rr: [rr],
+    source: 'whoop5_v18',
+  });
+}
+assert(
+  vitals.computeRmssdFromRows(sparseV18Rows) != null,
+  'valid sparse WHOOP 5 v18 cadence publishes RMSSD without requiring impossible beat coverage',
+);
+
+const misleadingWakeState = Array.from({ length: 80 }, (_, minute) => ({
+  startTs: BASE_TS + minute * 60_000,
+  motion: 0,
+  bandSleepState: 0,
+}));
+const wakeStateMask = vitals.buildSleepEpochMask(stableSleep, misleadingWakeState);
+assert(wakeStateMask.every((epoch) => epoch.stable), 'unvalidated wake-state nibbles must not erase still overnight epochs');
+const wakeStateVitals = vitals.computeOvernightVitals(endpointRows, stableSleep, wakeStateMask);
+assert(wakeStateVitals.rhr != null && wakeStateVitals.rmssd != null, 'valid overnight HR and RR survive misleading wake-state nibbles');
+
+const movingMask = vitals.buildSleepEpochMask(stableSleep, [{ startTs: BASE_TS, motion: 0.8, bandSleepState: 2 }]);
+assert(movingMask[0]?.stable === false, 'independent high motion still excludes a wake-like epoch');
+
 const directHrMissingRrVitals = vitals.computeOvernightVitals(directHrRowsWithMissingRr(), sleepFor(40, [{ stage: 'light', minutes: 40 }]));
 assert(directHrMissingRrVitals.rhr === 60, 'three quality direct-HR windows with rr=[] still produce RHR');
 assert(directHrMissingRrVitals.rmssd === null, 'direct-HR windows with rr=[] do not invent RMSSD');
@@ -164,15 +214,28 @@ const respiratoryRowsWithDisagreement = [
   ...respiratoryRows(20, 600, 600),
 ];
 assert(
-  vitals.computeRespiratoryRateFromRows(respiratoryRows(15, 0, 600)) === null,
-  'one otherwise valid respiratory segment must remain insufficient for publication',
+  vitals.computeRespiratoryRateFromRows(respiratoryRows(15, 0, 600)) === 15,
+  'one long, clean respiratory segment is sufficient for a robust publication',
+);
+assert(vitals.computeRespiratoryRateFromRows(respiratoryRows(15, 0, 120)) === null, 'short respiratory evidence remains unpublished');
+assert(
+  vitals.computeRespiratoryRateFromRows(respiratoryHeartRateRows(15)) === 15,
+  'timestamped continuous HR recovers a clean 15 brpm RSA rhythm when stored RR is sparse',
+);
+assert(
+  vitals.computeRespiratoryRateFromRows(respiratoryHeartRateRows(15, 120)) === null,
+  'short HR-only respiratory evidence remains unpublished',
+);
+assert(
+  vitals.computeRespiratoryRateFromRows(integerHeartRateNoise()) === null,
+  'integerized one-second HR noise cannot fabricate respiratory rate',
 );
 assert(
   vitals.computeRespiratoryRateFromRows([
     ...respiratoryRows(15, 0, 600),
     ...respiratoryRows(30, 600, 600),
-  ]) === null,
-  'an out-of-band qualifying respiratory segment invalidates the in-band segment',
+  ]) === 15,
+  'an out-of-band respiratory portion cannot erase a robust in-band estimate',
 );
 const respiratorySleep = sleepFor(30, [{ stage: 'light', minutes: 30 }]);
 assert(

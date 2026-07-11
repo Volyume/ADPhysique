@@ -17,7 +17,7 @@ import {
   workoutActivityLabel,
 } from '../metrics/training';
 import { sleepStateWakeConflict } from '../metrics/sleepEvidence';
-import { sleepNeedsMoreSync, sleepSyncActionValue } from '../metrics/sleepSync';
+import { sleepNeedsMoreSync } from '../metrics/sleepSync';
 import { formatDistance, formatPace } from '../sensors/location';
 import { formatDuration } from '../util/time';
 
@@ -325,14 +325,20 @@ function trainingLoadDriver(input: {
   if (input.readinessConfidence === 'low') {
     return {
       badge: 'DATA',
-      title: input.sleepReadinessFix.needsSync ? 'Sync overnight data before training' : 'Review sleep before training',
+      title: input.sleepReadinessFix.needsSync
+        ? input.sleepReadinessFix.hasSleepWindow ? 'Review capture before training' : 'Reconnect strap before training'
+        : 'Review sleep before training',
       body: input.sleepReadinessFix.needsSync
-        ? 'Load status is useful, but the session call should stay conservative until overnight coverage and signal finish backfilling.'
+        ? input.sleepReadinessFix.hasSleepWindow
+          ? 'Load status is useful, but the session call should stay conservative with incomplete overnight capture. Review the capture before using load to go hard.'
+          : 'Load status is useful, but the session call should stay conservative until an overnight record is available.'
         : 'Load status is useful, but low sleep confidence is limiting the session call. Review the sleep window before using load to go hard.',
       metric: 'Readiness',
-      actionLabel: input.sleepReadinessFix.needsSync ? 'Open device sync' : 'Open readiness',
+      actionLabel: input.sleepReadinessFix.needsSync
+        ? input.sleepReadinessFix.hasSleepWindow ? 'Review capture' : 'Open device'
+        : 'Open readiness',
       actionValue: input.sleepReadinessFix.actionValue,
-      icon: input.sleepReadinessFix.needsSync ? 'sync' : 'speedometer',
+      icon: input.sleepReadinessFix.needsSync && !input.sleepReadinessFix.hasSleepWindow ? 'sync' : input.sleepReadinessFix.needsSync ? 'create' : 'speedometer',
       color: colors.strainBlue,
       route: input.sleepReadinessFix.route,
     };
@@ -428,6 +434,7 @@ function readinessColor(score: number | null | undefined): string {
 
 type SleepReadinessFix = {
   needsSync: boolean;
+  hasSleepWindow: boolean;
   actionValue: string;
   route: Parameters<Nav['navigate']>[0];
 };
@@ -438,8 +445,9 @@ function trainingSleepFix(
   const needsSync = sleepNeedsMoreSync(sleepDetail);
   return {
     needsSync,
-    actionValue: needsSync ? sleepSyncActionValue(sleepDetail) : 'review window',
-    route: needsSync ? { name: 'device' } : { name: 'readiness' },
+    hasSleepWindow: sleepDetail != null,
+    actionValue: sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}% coverage` : 'no overnight record',
+    route: sleepDetail ? { name: 'editSleep' } : { name: 'device' },
   };
 }
 
@@ -481,14 +489,20 @@ function trainingPlan(input: {
   if (input.readinessConfidence == null || input.readinessConfidence === 'low') {
     return {
       badge: 'DATA',
-      title: input.sleepReadinessFix.needsSync ? 'Finish overnight sync first' : 'Resolve sleep confidence first',
+      title: input.sleepReadinessFix.needsSync
+        ? input.sleepReadinessFix.hasSleepWindow ? 'Review overnight capture first' : 'Reconnect strap first'
+        : 'Resolve sleep confidence first',
       body: input.sleepReadinessFix.needsSync
-        ? 'Training guidance depends on enough overnight coverage and signal. Let sync finish before using load to make a hard call.'
+        ? input.sleepReadinessFix.hasSleepWindow
+          ? 'Training guidance depends on sufficient overnight coverage and signal. Review the capture before using load to make a hard call.'
+          : 'Training guidance depends on an overnight record. Reconnect the strap before using load to make a hard call.'
         : 'Training guidance depends on a trustworthy overnight recovery signal. Review the sleep window before using load to make a hard call.',
       target: 'hold',
-      actionLabel: input.sleepReadinessFix.needsSync ? 'Open device sync' : 'Open readiness',
+      actionLabel: input.sleepReadinessFix.needsSync
+        ? input.sleepReadinessFix.hasSleepWindow ? 'Review capture' : 'Open device'
+        : 'Open readiness',
       actionValue: input.sleepReadinessFix.actionValue,
-      icon: input.sleepReadinessFix.needsSync ? 'sync' : 'speedometer',
+      icon: input.sleepReadinessFix.needsSync && !input.sleepReadinessFix.hasSleepWindow ? 'sync' : input.sleepReadinessFix.needsSync ? 'create' : 'speedometer',
       color: colors.strainBlue,
       route: input.sleepReadinessFix.route,
     };

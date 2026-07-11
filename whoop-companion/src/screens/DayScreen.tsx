@@ -86,7 +86,7 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
 
       {!metric ? (
         <Card>
-          <Empty text="No synced metrics for this day yet. Reconnect the strap and auto sync will backfill anything still stored on the band." />
+          <Empty text="No metrics are available for this day yet. Reconnect the strap to retrieve any history still stored on the band." />
         </Card>
       ) : (
         <>
@@ -168,7 +168,7 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
                 <TouchableOpacity style={styles.adjustRow} onPress={() => nav.navigate({ name: 'editSleep', day })}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.adjustTitle}>Adjust logged timing</Text>
-                    <Text style={styles.adjustMeta}>Sync strap history later to score this window from real data</Text>
+                    <Text style={styles.adjustMeta}>Rescan this window when overnight strap history is available</Text>
                   </View>
                   <Ionicons name="create" size={18} color={colors.sleepTeal} />
                 </TouchableOpacity>
@@ -362,7 +362,7 @@ function dayConfidenceReason(metric: DailyMetricRow): string {
   const detail = metric.sleepDetail;
   if (!detail) return 'Waiting for a complete overnight record.';
   if (sleepStateWakeConflict(detail)) return 'The sleep window may include awake time.';
-  if (sleepNeedsMoreSync(detail)) return 'Some overnight data is still syncing.';
+  if (sleepNeedsMoreSync(detail)) return 'Overnight capture is incomplete; decoded coverage is insufficient.';
   if (sleepTrustTier(detail) === 'medium') return 'Usable, but more overnight detail may refine it.';
   return 'The overnight record is strong enough to use.';
 }
@@ -411,11 +411,11 @@ function daySleepReview(metric: DailyMetricRow): {
   if (trustTier === 'low' || sleepNeedsMoreSync(detail)) {
     const needsSync = sleepNeedsMoreSync(detail);
     return {
-      label: needsSync ? 'SYNC' : 'CHECK',
+      label: needsSync ? 'DATA' : 'CHECK',
       title: needsSync ? 'Partial overnight capture' : 'Sleep candidate needs corroboration',
       body:
         needsSync
-          ? 'Some overnight data is still syncing. Keep the strap connected before trusting sleep or recovery.'
+          ? 'Overnight capture is partial. Review the capture before trusting sleep or recovery.'
           : 'The overnight record is present, but sleep-state evidence is weak. Review the window if the timing looks wrong.',
       color: colors.recoveryRed,
       tint: `${colors.recoveryRed}12`,
@@ -505,11 +505,11 @@ function dayVitalsReview(metric: DailyMetricRow): {
 
   if (coreMissing.length >= 2 || sleepTrustBlocked) {
     return {
-      label: 'SYNC',
+      label: 'DATA',
       title: sleepTrustBlocked && !sleepNeedsSync ? 'Recovery inputs need trusted sleep' : 'Recovery inputs need more data',
       body: sleepTrustBlocked
         ? sleepNeedsSync
-          ? 'Some overnight data is still syncing, so overnight vitals and recovery should be treated as partial until the record is complete.'
+          ? 'Overnight capture is partial, so overnight vitals and recovery should be treated as incomplete until coverage is sufficient.'
           : 'Sleep is present, but confidence is low. Review the sleep window before trusting recovery or overnight health metrics.'
         : `Missing ${coreMissing.join(', ')} from the overnight window. Recovery, stress and health monitor panels will stay limited until those inputs are captured.`,
       facts,
@@ -535,7 +535,7 @@ function dayVitalsReview(metric: DailyMetricRow): {
     return {
       label: 'CORE',
       title: 'Core recovery is usable',
-      body: 'HRV, resting HR and respiration are present. Validated skin temperature still needs a fuller overnight history sync for this day.',
+      body: 'HRV, resting HR and respiration are present. Validated skin temperature is still missing for this day.',
       facts,
       color: colors.strainBlue,
       tint: `${colors.strainBlue}16`,

@@ -58,7 +58,7 @@ function sleepCaptureTrustScore(sleepDetail: DailyMetricRow['sleepDetail'] | nul
 function recoveryConfidenceReason(sleepDetail: DailyMetricRow['sleepDetail'] | null): string {
   if (!sleepDetail) return 'Waiting for a complete overnight record.';
   if (sleepStateWakeConflict(sleepDetail)) return 'The sleep window may include awake time.';
-  if (sleepNeedsMoreSync(sleepDetail)) return 'Some overnight data is still syncing.';
+  if (sleepNeedsMoreSync(sleepDetail)) return 'Overnight capture is incomplete; decoded coverage is insufficient.';
   if (sleepDetail.confidence === 'medium') return 'Usable, but more overnight detail may refine recovery.';
   return 'The overnight record is strong enough to use.';
 }
@@ -79,10 +79,10 @@ function recoveryStatusLabel(recovery: number | null, cap: number | null): strin
 function recoveryGuidance(recovery: number | null, cap: number | null, baselineNights = 0): string {
   if (recovery == null) {
     return baselineNights < RECOVERY_BASELINE_NIGHTS
-      ? `Personal recovery baseline: ${baselineNights}/${RECOVERY_BASELINE_NIGHTS} trusted nights. Keep syncing complete overnight records.`
+      ? `Personal recovery baseline: ${baselineNights}/${RECOVERY_BASELINE_NIGHTS} trusted nights. Collect complete overnight records.`
       : 'Recovery is waiting for a complete trusted overnight record today.';
   }
-  if (cap != null && cap <= 66) return 'Recovery is capped because the overnight capture is weak. Sync more data or review the sleep window before trusting today\'s training signal.';
+  if (cap != null && cap <= 66) return 'Recovery is capped because the overnight capture is weak. Review the capture or sleep window before trusting today\'s training signal.';
   if (cap != null) return 'Recovery is capped by medium sleep confidence. Treat it as usable but provisional until the overnight record is fuller.';
   if (recovery < 34) return 'Recovery is low - your body is under strain. Prioritise rest, hydration and sleep today.';
   if (recovery < 67) return 'Moderate recovery - you can train, but listen to your body.';
@@ -110,13 +110,13 @@ function recoveryQualityNote(
   cap: number | null,
   baselineNights: number,
 ): string {
-  if (!day) return 'Recovery appears after a synced overnight record.';
+  if (!day) return 'Recovery appears after a complete overnight record.';
   const missing = [
     day.rmssd == null ? 'HRV' : null,
     day.rhr == null ? 'RHR' : null,
     day.resp == null ? 'respiratory rate' : null,
   ].filter((v): v is string => v != null);
-  if (missing.length) return `Recovery is waiting for ${missing.join(', ')} from a stronger overnight sync.`;
+  if (missing.length) return `Recovery is waiting for ${missing.join(', ')} from a stronger overnight capture.`;
   if (day.recovery == null && baselineNights < RECOVERY_BASELINE_NIGHTS) {
     return `${baselineNights}/${RECOVERY_BASELINE_NIGHTS} trusted prior nights are ready. Recovery appears once the personal HRV and RHR baseline reaches ${RECOVERY_BASELINE_NIGHTS}.`;
   }
@@ -124,7 +124,7 @@ function recoveryQualityNote(
   if (cap != null && !sleepNeedsMoreSync(day.sleepDetail)) return `Recovery is capped at ${cap}% until the sleep window is reviewed or corroborated.`;
   if (cap != null) return `Recovery is capped at ${cap}% until sleep confidence improves.`;
   if (confidence === 'high') return 'Recovery is backed by strong overnight coverage and still-worn evidence.';
-  if (confidence === 'medium') return 'Recovery is usable, but sleep confidence is medium; more synced data can refine it.';
+  if (confidence === 'medium') return 'Recovery is usable, but sleep confidence is medium; more decoded coverage can refine it.';
   if (confidence === 'low') return 'Recovery should be treated cautiously until sleep confidence improves.';
   return 'Recovery is using available overnight vitals; sleep confidence is not available yet.';
 }
@@ -155,11 +155,11 @@ function recoveryQualityAction(input: {
 
   if (input.rmssd == null || input.rhr == null || input.resp == null || (input.coveragePct ?? 0) < 60) {
     return {
-      label: 'Sync more overnight data',
-      value: 'continue syncing',
-      icon: 'sync',
+      label: input.sleepDetail ? 'Review capture' : 'Open device',
+      value: input.sleepDetail?.coveragePct != null ? `${input.sleepDetail.coveragePct}% coverage` : 'no overnight record',
+      icon: input.sleepDetail ? 'create' : 'sync',
       color: colors.strainBlue,
-      route: { name: 'device' },
+      route: input.sleepDetail ? { name: 'editSleep' } : { name: 'device' },
     };
   }
   if (input.confidence && input.confidence !== 'high') {
@@ -214,11 +214,9 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
     planningWindowMinutes: planningWindowMin,
     expectedEfficiencyPercent: tonightEfficiencyPercent(efficiencySamples),
   });
-  const overnightActionRoute = sleepStateWakeConflict(sleepDetail)
+  const overnightActionRoute = sleepDetail
     ? { name: 'editSleep' as const }
-    : sleepNeedsMoreSync(sleepDetail)
-      ? { name: 'device' as const }
-      : { name: 'sleepCoach' as const };
+    : { name: 'device' as const };
   return (
     <Screen title="Recovery" onBack={nav.canBack ? nav.back : undefined} tint={recoveryColor(recovery)}>
       <DayRail
@@ -252,7 +250,7 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
         confidence={confidenceStatusTier(sleepDetail)}
         reason={recoveryConfidenceReason(sleepDetail)}
         onDetails={confidenceStatusTier(sleepDetail) !== 'high' ? () => nav.navigate(overnightActionRoute) : undefined}
-        detailsLabel={sleepNeedsMoreSync(sleepDetail) ? 'Sync' : 'Review'}
+        detailsLabel="Review"
       />
       {/* Recovery contributors — Oura-style four-tier */}
       {recovery == null ? (
@@ -401,7 +399,7 @@ function recoveryDriverInsight(
     return {
       badge: 'DATA',
       title: 'Sleep window is limiting recovery',
-      body: 'Decoded strap-state evidence is mostly wake, so recovery stays capped until the sleep window is reviewed or more history arrives.',
+      body: 'Decoded strap-state evidence is mostly wake, so recovery stays capped until the sleep window is reviewed.',
       metric: 'Sleep state',
       value: sleepStateWakeDisplay(sleepDetail, 'min'),
       actionLabel: 'Review sleep window',
@@ -415,15 +413,17 @@ function recoveryDriverInsight(
     const needsMoreSync = sleepNeedsMoreSync(sleepDetail);
     return {
       badge: 'DATA',
-      title: confidenceCap <= 66 ? 'Sleep confidence is limiting recovery' : 'Recovery is provisional today',
+      title: needsMoreSync
+        ? 'Partial overnight capture is limiting recovery'
+        : confidenceCap <= 66 ? 'Sleep confidence is limiting recovery' : 'Recovery is provisional today',
       body: 'The recovery score is limited until the overnight window is complete, corroborated or reviewed.',
       metric: 'Confidence',
       value: confidence === 'high' ? 'Good' : 'Limited',
-      actionLabel: needsMoreSync ? 'Sync more data' : 'Review sleep window',
-      actionValue: confidence === 'high' ? 'good' : 'limited',
-      icon: needsMoreSync ? 'sync' : 'create',
+      actionLabel: sleepDetail ? (needsMoreSync ? 'Review capture' : 'Review sleep window') : 'Open device',
+      actionValue: sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}% coverage` : 'no overnight record',
+      icon: sleepDetail ? 'create' : 'sync',
       color: colors.strainBlue,
-      route: needsMoreSync ? { name: 'device' } : { name: 'editSleep' },
+      route: sleepDetail ? { name: 'editSleep' } : { name: 'device' },
     };
   }
 

@@ -118,6 +118,66 @@ export function respiratoryRateSegments(rawSegments: number[][]): number | null 
 }
 
 /**
+ * RSA estimate from timestamped sleeping heart rate when stored RR is too
+ * sparse. Values are converted to pulse intervals, but timing comes from the
+ * record timestamps, so missing beats never compress the respiratory period.
+ */
+export function respiratoryRateFromHeartRate(
+  samples: ReadonlyArray<{ ts: number; bpm: number }>,
+): number | null {
+  const sorted = samples
+    .filter((sample) => Number.isFinite(sample.ts) && Number.isFinite(sample.bpm) && sample.bpm >= 35 && sample.bpm <= 130)
+    .slice()
+    .sort((a, b) => a.ts - b.ts);
+  const runs: Array<Array<{ ts: number; value: number }>> = [];
+  let run: Array<{ ts: number; value: number }> = [];
+  for (const sample of sorted) {
+    const previous = run[run.length - 1];
+    if (previous && (sample.ts <= previous.ts || sample.ts - previous.ts > 5000)) {
+      if (run.length) runs.push(run);
+      run = [];
+    }
+    if (!run.length || sample.ts > (run[run.length - 1]?.ts ?? -Infinity)) {
+      run.push({ ts: sample.ts, value: 60000 / sample.bpm });
+    }
+  }
+  if (run.length) runs.push(run);
+
+  const estimates: number[] = [];
+  for (const points of runs) {
+    const first = points[0];
+    const last = points[points.length - 1];
+    if (!first || !last || last.ts - first.ts < WIN_SEC * 1.5 * 1000) continue;
+    const durationSec = (last.ts - first.ts) / 1000;
+    const n = Math.floor(durationSec * FS) + 1;
+    const grid = new Array<number>(n);
+    let sourceIndex = 0;
+    for (let i = 0; i < n; i += 1) {
+      const ts = first.ts + (i / FS) * 1000;
+      while (sourceIndex < points.length - 2 && (points[sourceIndex + 1]?.ts ?? Infinity) < ts) sourceIndex += 1;
+      const left = points[sourceIndex] as { ts: number; value: number };
+      const right = (points[Math.min(sourceIndex + 1, points.length - 1)] ?? left) as { ts: number; value: number };
+      const fraction = right.ts > left.ts ? (ts - left.ts) / (right.ts - left.ts) : 0;
+      grid[i] = left.value + (right.value - left.value) * Math.max(0, Math.min(1, fraction));
+    }
+
+    const winN = Math.floor(WIN_SEC * FS);
+    const stepN = Math.floor(STEP_SEC * FS);
+    for (let start = 0; start + winN <= grid.length; start += stepN) {
+      const peak = peakFreqInBand(grid.slice(start, start + winN), FS, F_LO, F_HI);
+      if (peak && peak.prominence >= 6 && peak.concentration >= 0.4) estimates.push(peak.frequencyHz * 60);
+    }
+  }
+
+  if (estimates.length < 3) return null;
+  const centre = median(estimates);
+  const inliers = estimates.filter((value) => Math.abs(value - centre) <= 1.5);
+  if (inliers.length < Math.max(3, Math.ceil(estimates.length * 0.6))) return null;
+  const rate = Math.round(median(inliers) * 2) / 2;
+  return rate >= 9 && rate <= 24 ? rate : null;
+}
+
+/**
  * Band-limited DFT: return the frequency (Hz) of maximum power within [fLo,fHi].
  * Mean-removed and Hann-windowed to suppress leakage.
  */

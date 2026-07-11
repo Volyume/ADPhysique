@@ -294,7 +294,7 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
             size={176}
             color={tint}
             centerMain={current != null ? formatMetricMain(metricKey, current, def) : '-'}
-            centerSub={current != null ? centerSubForMetric(metricKey, current, def) : 'awaiting data'}
+            centerSub={current != null ? centerSubForMetric(metricKey, current, def) : 'data unavailable'}
           />
         ) : (
           <Card style={{ width: '100%' }}>
@@ -345,7 +345,7 @@ export function MetricDetailScreen({ nav, metricKey }: { nav: Nav; metricKey: Me
             {last7.some((d) => d.value != null) ? (
               <WeeklyBars data={last7} />
             ) : (
-              <Empty text="No history yet - wear the strap overnight to build this trend." />
+              <Empty text="No decoded history yet - wear the strap overnight to build this trend." />
             )}
           </Card>
 
@@ -424,7 +424,7 @@ function renderQualityCard(input: {
           <Text style={styles.qualityNote}>
             {input.bandStepEstimate
               ? `${range}. WHOOP movement-state corroboration controls whether this counter is published; calibration adjusts its ratio.`
-              : 'No decoded WHOOP step counter yet. Connect the band and allow history sync to finish.'}
+              : 'No decoded WHOOP step counter is available in the stored sensor history yet.'}
           </Text>
         </Card>
       </>
@@ -434,7 +434,7 @@ function renderQualityCard(input: {
   if (input.key === 'spo2' || input.key === 'skin_temp') {
     const current = input.key === 'spo2' ? input.today?.spo2 ?? null : input.today?.skinTempC ?? null;
     const hasSensorPackets = (input.historySync?.rawSensorRecords ?? 0) > 0;
-    const status = current != null ? 'validated' : hasSensorPackets ? 'decoder unvalidated' : 'needs sensor sync';
+    const status = current != null ? 'validated' : hasSensorPackets ? 'decoder unvalidated' : 'sensor history unavailable';
     return (
       <>
         <SectionLabel>Decode status</SectionLabel>
@@ -458,7 +458,7 @@ function renderQualityCard(input: {
               ? 'This channel has passed the local decoder validation gate.'
               : hasSensorPackets
                 ? 'WHOOP sensor packets are present, but this metric remains blocked until its byte offset, units and expected range are validated against known labels.'
-                : 'No WHOOP raw sensor packets have synced yet. Even after they arrive, this metric remains unavailable until decoder validation passes.'}
+                : 'No WHOOP raw sensor packets are available in the stored sensor history. Even with additional packets, this metric remains unavailable until decoder validation passes.'}
           </Text>
         </Card>
       </>
@@ -567,7 +567,7 @@ function sleepQualityNote(detail: DailyMetricRow['sleepDetail']): string {
   if (tier === 'medium') {
     return `Usable estimate: ${detail.coveragePct ?? 0}% coverage. Review the sleep window if timing feels wrong.`;
   }
-  return `Low-confidence estimate: ${detail.coveragePct ?? 0}% coverage. Sync more history before trusting score, recovery, or readiness.`;
+  return `Low-confidence estimate: ${detail.coveragePct ?? 0}% coverage. Overnight sensor history is incomplete; treat score, recovery, or readiness as provisional.`;
 }
 
 function stepSourceLabel(source: 'band' | null): string {
