@@ -93,6 +93,14 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
   cohesive with the app. Lead produces the blueprint (Opus legwork),
   founder approves, then staged build slots.
 
+### QUEUED LAST - D43 full-app pristine pass (founder, second amendment)
+- CLOSING PHASE by founder order: every area polished to the
+  pristine/world-class bar, cohesive (one-amalgamated-application
+  mandate), using the SCORECARD-2026-07-10 rubric as the baseline
+  instrument. Runs AFTER the defect fixes, the engine verdict, the
+  remaining theming batches and the logger redesign, so it polishes
+  finished surfaces. Lead-driven; founder holds taste vetoes.
+
 ### QUEUED - workout summary footer overlap (founder photo, 2026-07-11)
 - Founder photo (build 2608): on workout complete, the Close/Share
   footer floats OVER the exercise list ("Seated Leg Curl" hidden
