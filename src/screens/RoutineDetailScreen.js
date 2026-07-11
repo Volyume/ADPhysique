@@ -29,6 +29,7 @@ import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
+import ModalHeader from '../components/ModalHeader';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 import BottomSheet from '../components/BottomSheet';
 import * as haptics from '../lib/haptics';
@@ -737,12 +738,11 @@ export default function RoutineDetailScreen({ navigation, route }) {
             this sheet while it's the modal's own content (matches
             BottomSheet.js/AppAlert.js/FeedbackSheet.js/PeekMenu.js). */}
         <SafeAreaView style={[styles.swapSafe, live.swapSafe]} edges={['top', 'bottom']} accessibilityViewIsModal>
-          <View style={[styles.swapHeader, live.swapHeader]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.swapTitle, live.swapTitle]}>Swap exercise</Text>
-            <TouchableOpacity onPress={() => { setSwapState(null); setSwapCandidates([]); }} accessibilityRole="button" accessibilityLabel="Close swap">
-              <Ionicons name="close" size={24} color={t.colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
+          {/* R9 (D70): bespoke header bar replaced by the house ModalHeader
+              (centred title, 44pt close, hairline rule) - the ranked-swap
+              surface itself stays, it is deliberately richer than the plain
+              library picker. */}
+          <ModalHeader title="Swap exercise" onClose={() => { setSwapState(null); setSwapCandidates([]); }} />
           <Text maxFontSizeMultiplier={1.3} style={[styles.swapSubtitle, live.swapSubtitle]}>
             Replacing: <Text maxFontSizeMultiplier={1.3} style={{ color: t.colors.primary }}>{swapState?.exercise?.name}</Text>
           </Text>
@@ -932,15 +932,6 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', paddingVertical: spacing.xl },
   emptyText: { ...type.body, color: colors.textMuted },
   swapSafe: { flex: 1, backgroundColor: colors.background },
-  swapHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  swapTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
   swapSubtitle: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
@@ -1047,8 +1038,6 @@ function buildLiveStyles(t) {
     addBtnText: { fontSize: t.fontSize.md, color: t.colors.primary },
     emptyText: { ...t.type.body, color: t.colors.textMuted },
     swapSafe: { backgroundColor: t.colors.background },
-    swapHeader: { borderBottomColor: t.colors.border },
-    swapTitle: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
     swapSubtitle: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     swapNote: { ...t.type.caption, color: t.colors.textMuted },
     swapItemName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
