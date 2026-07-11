@@ -785,3 +785,17 @@ visible banner naming the destination exercise, voice-locked copy;
 back to the group's first member with the same cue, completing
 A1->B1->A2 as the tests claim. Alternation logic itself unchanged;
 engine untouched; copy lead-reviewed at landing.
+
+## D43 SECOND AMENDMENT (founder, 2026-07-11): full-app pristine pass, sequenced last
+Founder's words: "a full UX pass should be added to the list and
+polish every... absolutely every area to be looking pristine, every
+area to be completely and utterly world class. And fitting in with
+all the work we're doing now, so I guess we'll do the polish at the
+end." STANDING ORDER: after the current defect fixes, the engine
+verdict, and the D43 logger redesign, a FULL-APP polish pass runs as
+the closing phase - every area brought to the pristine/world-class
+bar, cohesive with the one-amalgamated-application mandate. Judged
+area by area (the SCORECARD-2026-07-10 rubric is the baseline
+instrument), lead-driven design judgement, founder holds taste vetoes.
+Sequenced LAST by founder's own call so it polishes the finished
+work, not surfaces that are still changing.
