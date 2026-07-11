@@ -768,3 +768,20 @@ BEFORE the build slots open. The blueprint covers: set entry, logged
 sets, rest/timer surfaces, exercise navigation/swap, progression
 cues, superset/giant-set presentation, and every button/control on
 the logging path, judged against best-in-class references.
+
+## D44 — Superset jumps get cues; round-return built (lead-ruled under D33, 2026-07-11)
+Founder: "seems to swap exercise when there's still a set to do at
+times without saying anything." Diagnosis: the superset/giant-set
+forward jump (handleCompleteSet ~1614-1627) fires on any logged set of
+an earlier group member - intended A1->B1 alternation, but with zero
+cue (no distinct haptic, no announcement, no visible sign); AND no
+mechanism returns focus to the group's first member for the next
+round, despite the giant-set guard's own comment asserting it -
+the user is silently stranded on the last member. RULING: (a) every
+group-driven focus change gets the cue treatment the target-reached
+advance already has - distinct haptic, announceForAccessibility, brief
+visible banner naming the destination exercise, voice-locked copy;
+(b) build the round-return: logging the last member's set moves focus
+back to the group's first member with the same cue, completing
+A1->B1->A2 as the tests claim. Alternation logic itself unchanged;
+engine untouched; copy lead-reviewed at landing.
