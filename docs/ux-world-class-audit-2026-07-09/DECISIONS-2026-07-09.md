@@ -1342,3 +1342,41 @@ a small inline cancel in the side-two state discards the pending pair.
 Invariants preserved: one logged set = one working set (engine/volume/PR
 maths untouched); tier-blind; no new deps; existing crash-recovery draft
 covers the mid-pair state. Subject to founder device-walk veto.
+
+## D65 — R6: PressableCard collapsed to a single animated pressable (lead ruling, 2026-07-11)
+
+Sources: founder photo (build 2608, dead band on the workout summary
+footer beside Close), DEFECT-MAP.md R6, hands-on trace to the rendering
+line.
+
+ROOT CAUSE (whole class, not one screen): PressableCard rendered an
+unstyled Pressable wrapping an inner Reanimated.View that carried the
+caller's style. The parent lays out the OUTER element, so every
+layout-in-parent style passed through Button/Card/Chip (flex: 1,
+alignSelf, width) was silently discarded; in flex rows the button
+shrink-wrapped to text width. Regressed 2026-07-09 (5d98870) when the
+summary footer and the logger's bottom bar moved off raw
+TouchableOpacity (which held flex: 1 directly) onto <Button> - the
+founder's "it was better a month ago". Live victims traced: Workout
+summary Close (dead bar band), ActiveWorkout Log set primary and the
+Next exercise / Finish workout advance action (under-width split bar).
+
+RULING: fix at the primitive, not per call site.
+PressableCard is now ONE animated pressable
+(Reanimated.createAnimatedComponent(Pressable)) carrying
+[style, animatedStyle]. Declared layout styles take effect exactly as
+written at every call site; press physics unchanged (same springs, same
+scale/opacity interpolation, same reduce-motion flat behaviour); the
+origin-aware measure API and its never-lose-a-tap fallback unchanged.
+Side benefit: the press hit area now matches the visible bounds (the
+old outer view could stretch wider than the visible button - an
+invisible tap zone).
+
+Re-anchored pins: button.stateMorph animated-ancestor count 1 -> 0
+(intent unchanged: the morph adds no animated wrapper);
+p9Talkback save-path count 3 -> 2 (the third CTA was retired by design
+in D43 S3, window widened for the grown primary tag). New pin:
+pressableCard.rowLayout.guard.test.js. Verified: full suite
+691 suites / 8,529 tests green; absolute-position sweep found no
+consumer relying on the old inert layer. Subject to founder device-walk
+veto.

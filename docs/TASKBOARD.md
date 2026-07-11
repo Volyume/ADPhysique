@@ -93,7 +93,27 @@ No item marked done on an agent's self-report. Ever._
   surface. Food (Diary etc.) is the explicit standard. STATUS: queued
   (recon -> lead spec -> specced build -> lead verify).
 - **R6 Workout summary bar dead space** between close and share when
-  finishing. STATUS: queued.
+  finishing. DONE (lead, hands-on). ROOT CAUSE: PressableCard (the shared
+  press-physics primitive under Button/Card/Chip/Stepper) applied the
+  caller's style to an INNER Reanimated.View while the outer Pressable,
+  the element the parent actually lays out, carried no style, so every
+  layout-in-parent style passed through Button (flex: 1, alignSelf,
+  width) was silently discarded in flex rows. Close rendered at text
+  width and the rest of the footer bar sat empty; the SAME class left
+  ActiveWorkout's Log set / Next exercise split bar under-width.
+  Regressed 2026-07-09 when those bars adopted <Button> (5d98870) off
+  raw TouchableOpacity (which held flex: 1 directly) - the founder's
+  "it was better a month ago". FIX at the primitive: PressableCard is
+  now ONE animated pressable (Reanimated.createAnimatedComponent(
+  Pressable)) carrying the caller's style, so declared layout takes
+  effect and the press hit area matches visible bounds. Pinned in
+  pressableCard.rowLayout.guard.test.js; the stateMorph animated-
+  ancestor pin re-anchored (1 -> 0, intent unchanged). Absolute-
+  position sweep confirmed no consumer relied on the old inert layer.
+  DEVICE CHECK: (1) finish a workout - Close fills the footer with
+  compact Share beside it, no dead band; (2) logger bar - Log set spans
+  the bar full-width; after target completes, Log set + Next exercise
+  split the bar half-and-half.
 - **R7 Progress: section below Training Load half-empty** (room for 3-4
   cells, only 2). Previously falsely marked "verified correct in source".
   STATUS: queued.
@@ -101,10 +121,43 @@ No item marked done on an agent's self-report. Ever._
   space; page is a cobbled mess with duplication against Weekly check-in.
   Founder asked for a real MERGE. STATUS: queued (lead design after recon).
 
-RECON (running): agent 1 extracts the Food design standard to
-`docs/remediation-2026-07-11/FOOD-DESIGN-STANDARD.md`; agent 2 maps
-current-state defects for R2-R8 with file:line evidence to
-`docs/remediation-2026-07-11/DEFECT-MAP.md`.
+RECON (done): `docs/remediation-2026-07-11/FOOD-DESIGN-STANDARD.md`
+(the cohesion measuring stick), `DEFECT-MAP.md` (file:line evidence
+R2-R8), `COMPETITIVE-LOGGER-BAR.md`.
+
+## M. MARKETING LANE (founder-accepted sequence, 2026-07-11) — AFTER R5-R9
+
+_Founder message 2026-07-11 recorded the working order verbatim. Runs
+only after the R-campaign closes. Corrections locked in that message:_
+
+- _C1 is REAL on current main (my earlier 4/10 "unverified premise"
+  verdict was a false negative - the founder verified the strings
+  directly): `src/lib/differentialPaywall.js:49-52` LOCKED_COPY bodies
+  end "Try Pro free for 7 days." while `src/components/
+  DifferentialBadge.js:62` renders "Try Pro free for 14 days" on the
+  CTA directly beneath. The two files each carry a comment claiming the
+  OTHER'S rationale is inverted. Founder-ruled fix shape: remove the
+  duration from the body copy; the CTA is the single source of truth.
+  Copy + tests only; no billing logic._
+- _M3's "trial begins after first workout" assumption is DISCARDED: the
+  cardless 14-day trial starts at onboarding after Article 9 consent
+  (RootNavigator start_cascade; ProSetupCompleteScreen says so). No
+  moving the trial, no onboarding redesign; any asset claiming
+  otherwise is rejected. "Log your first workout free" stays an
+  acquisition CTA only._
+
+Order: **C1** trial-copy contradiction -> **C2** ProUpgrade telemetry
+(impression + entry source, period choice, CTA, sheet start,
+cancel/failure/completion, restore attempt/result; reuse allow-list +
+opt-out; no duplicate server-authoritative purchase events) -> **C7**
+account-requirement copy sweep -> **C8** attribution phase 1 (deep-link
+source -> persist first touch -> coarse source on first-workout event;
+NO ad SDK / fingerprinting / Install Referrer dep) -> **C3** duplicate
+paywall READ-ONLY audit then founder decision -> **C5** day-14 factual
+recap decision (ED guardrails mandatory: no outcome language, no
+weight/food lines under calm mode or open ED flag, no thin recap).
+PARKED for usage evidence: C4, C6, C9 (behind C8), C10; win-back
+wording stays founder-gated.
 
 ## 0. FOUNDER MUST-FIX LIST (device-testing session, 2026-07-11) — SUPERSEDED BY R-CAMPAIGN
 

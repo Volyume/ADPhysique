@@ -1508,9 +1508,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           (SafeAreaView pads only where the view actually intersects the
           unsafe area) and therefore context-adaptive, so it stays. The
           founder's photo defect was the SCROLL CLEARANCE, fixed below via
-          the measured footerHeight; the bottom-strip observation goes to
-          the device checklist with both hypotheses rather than reversing
-          founder-evidenced inset behaviour blind. */}
+          the measured footerHeight.
+          R6 (remediation, same day): the photographed dead band beside
+          Close was ROOT-CAUSED, not an inset issue at all. doneBtn's
+          flex: 1 was silently discarded because PressableCard applied the
+          caller's style to an inner view while the unstyled outer
+          Pressable (the element footerRow lays out) shrink-wrapped, so
+          Close rendered at text width and the rest of the bar sat empty.
+          Fixed at the primitive (PressableCard is now a single animated
+          pressable); pinned in pressableCard.rowLayout.guard.test.js. */}
       <View
         style={[styles.stickyFooter, live.stickyFooter, { paddingBottom: spacing.lg }]}
         onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}

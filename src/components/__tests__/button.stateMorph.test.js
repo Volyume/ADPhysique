@@ -195,9 +195,11 @@ describe('reduce motion (fit rule 0)', () => {
     act(() => useAppStore.setState({ accessibility: { reduceMotion: true } }));
     let tree;
     act(() => { tree = create(<Button title="Apply" state="loading" onPress={() => {}} />); });
-    // PressableCard's own Animated.View wrapper is always present (it
-    // self-gates internally); the pin is that the MORPH adds no animated
-    // wrapper of its own: exactly one Animated ancestor above the spinner.
+    // R6 (2026-07-11): PressableCard collapsed its two-view structure into
+    // a single animated pressable (see pressableCard.rowLayout.guard.test.js),
+    // so it no longer contributes an Animated.View node of its own. The pin's
+    // intent is unchanged: the MORPH adds no animated wrapper under reduce
+    // motion, so there are now ZERO Animated.View ancestors above the spinner.
     const spinner = tree.root.findByType(ActivityIndicator);
     let node = spinner.parent;
     let animatedAncestors = 0;
@@ -205,7 +207,7 @@ describe('reduce motion (fit rule 0)', () => {
       if (node.type === 'Animated.View') animatedAncestors += 1;
       node = node.parent;
     }
-    expect(animatedAncestors).toBe(1);
+    expect(animatedAncestors).toBe(0);
     // The morph still functions: success still settles (information is not
     // motion), only the cross-fade collapses.
     const onSettled = jest.fn();

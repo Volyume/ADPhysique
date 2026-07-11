@@ -36,20 +36,25 @@ describe('P9: logging a set is spoken', () => {
     expect(src).toMatch(/Set \$\{setNumber\} logged/);
     expect(src).toMatch(/announceForAccessibility\('Set updated'\)/);
   });
-  test('the three save-path buttons expose the in-flight state', () => {
+  test('every save-path button exposes the in-flight state', () => {
     // Stale pin -> corrected: the ActiveWorkoutScreen dedicated Button-
-    // adoption pass (design campaign 2026-07-09) moved these three CTAs
-    // (Finish cluster, Log another set, the main Log set/warm-up/Start
-    // cluster button) onto the shared <Button>, which unconditionally
-    // merges `disabled` into accessibilityState itself
-    // (components/Button.js: `mergedAccessibilityState` sets
-    // `disabled: isDisabled`), so the inline
+    // adoption pass (design campaign 2026-07-09) moved the save-path CTAs
+    // onto the shared <Button>, which unconditionally merges `disabled`
+    // into accessibilityState itself (components/Button.js:
+    // `mergedAccessibilityState` sets `disabled: isDisabled`), so the inline
     // `accessibilityState={{ disabled: saving }}` literal this test used to
     // pin is now redundant at the call site, not dropped a11y coverage. Pin
     // the equivalent guarantee instead: a Button-rendered save-path CTA
     // wired with `disabled={saving}`, backed by Button.js always merging it.
-    const buttonDisabledHits = src.match(/<Button[\s\S]{0,300}?disabled=\{saving\}/g) ?? [];
-    expect(buttonDisabledHits.length).toBeGreaterThanOrEqual(3);
+    // Re-anchored 2026-07-11 (R4/D43 S3): the count is TWO, down from
+    // three, because the third CTA ("Log another set") was retired by
+    // design - the bar's permanent primary logs the extra set in the same
+    // gesture, so there is no separate button left to carry the state. The
+    // two survivors are Finish cluster and the main Log set primary.
+    // Window widened 300 -> 500: the main primary's opening tag grew past
+    // 300 chars when its style line gained the R4 warm-up branch.
+    const buttonDisabledHits = src.match(/<Button[\s\S]{0,500}?disabled=\{saving\}/g) ?? [];
+    expect(buttonDisabledHits.length).toBeGreaterThanOrEqual(2);
     const buttonSrc = read('src/components/Button.js');
     expect(buttonSrc).toMatch(/disabled:\s*isDisabled/);
   });
