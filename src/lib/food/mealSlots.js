@@ -3,10 +3,13 @@
  *
  * A physique athlete runs four to eight structured meals a day, not the
  * three-meals-and-a-snack wellness frame. So the diary uses numbered meals
- * ("Meal 1", "Meal 2", ...) plus Pre-workout and Post-workout as named meals
- * the user places around training whenever they train (no training-day
- * detection). New entries store keys like 'meal_1'; the cloud accepts them via
- * migration 059.
+ * ("Meal 1", "Meal 2", ...) plus, when the user opts in
+ * (userProfile.mealPlanPeriWorkout, "Around training" on MealPlanScreen),
+ * Pre-workout and Post-workout as named meals the user places around
+ * training whenever they train (no training-day detection). The peri-workout
+ * pair is OFF BY DEFAULT and fully hidden until opted in (2026-07-11 fix: was
+ * previously always shown, unbuilt and confusing). New entries store keys
+ * like 'meal_1'; the cloud accepts them via migration 059.
  *
  * Back-compat is the load-bearing rule here: existing users already have
  * entries stored under 'breakfast' / 'lunch' / 'dinner' / 'snack'. Those must
@@ -121,16 +124,29 @@ export function slotOrder(key) {
 }
 
 // The meals to show on the diary for a given day. A numbered ladder
-// (Meal 1..mealsPerDay) plus Pre-workout and Post-workout, unioned with any
-// slot that already has entries so no logged food is hidden, sorted into
-// canonical order.
-export function buildMealSlots(entries = [], mealsPerDay = DEFAULT_MEALS_PER_DAY) {
+// (Meal 1..mealsPerDay), unioned with any slot that already has entries so no
+// logged food is hidden, sorted into canonical order.
+//
+// Pre-workout and Post-workout are OFF BY DEFAULT (founder device report,
+// 2026-07-11: half-built and confusing when every user sees two permanently
+// empty peri-workout cards regardless of whether they train around them).
+// They are the same opt-in the meal-plan generator already gates on
+// (userProfile.mealPlanPeriWorkout, surfaced as "Around training" on
+// MealPlanScreen) so enabling it in one place turns them on everywhere.
+// `periWorkoutSlots` defaults to false so every existing call site that does
+// not yet thread the preference through keeps the slots hidden rather than
+// silently keeping the old always-on behaviour. Back-compat is preserved
+// regardless: any entry already logged under 'preworkout'/'postworkout'
+// still surfaces via the entries union below, opted in or not.
+export function buildMealSlots(entries = [], mealsPerDay = DEFAULT_MEALS_PER_DAY, periWorkoutSlots = false) {
   const byKey = new Map();
   const add = (key) => { if (key && !byKey.has(key)) byKey.set(key, { key, label: mealSlotLabel(key) }); };
   const n = Math.max(1, mealsPerDay | 0);
   for (let i = 1; i <= n; i++) add(`meal_${i}`);
-  add('preworkout');
-  add('postworkout');
+  if (periWorkoutSlots) {
+    add('preworkout');
+    add('postworkout');
+  }
   for (const e of entries) add(e?.meal_slot);
   return [...byKey.values()].sort((a, b) => slotOrder(a.key) - slotOrder(b.key));
 }
@@ -147,10 +163,12 @@ export function highestLoggedMeal(entries = []) {
 }
 
 // Slot options for an edit / quick-add picker (no day context). The numbered
-// ladder plus Pre/Post, always including `current` so an existing entry's slot
-// (including a legacy one like 'breakfast') stays selectable and labelled.
-export function pickerMealSlots(current, mealsPerDay = DEFAULT_MEALS_PER_DAY) {
-  const list = buildMealSlots([], mealsPerDay);
+// ladder, plus Pre/Post when the user has opted in (see buildMealSlots),
+// always including `current` so an existing entry's slot (including a legacy
+// one like 'breakfast', or a peri-workout slot logged before the user turned
+// the preference off) stays selectable and labelled.
+export function pickerMealSlots(current, mealsPerDay = DEFAULT_MEALS_PER_DAY, periWorkoutSlots = false) {
+  const list = buildMealSlots([], mealsPerDay, periWorkoutSlots);
   if (current && !list.some((s) => s.key === current)) {
     list.push({ key: current, label: mealSlotLabel(current) });
     list.sort((a, b) => slotOrder(a.key) - slotOrder(b.key));

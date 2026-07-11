@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
+import useAppStore from '../../store/useAppStore';
 import * as haptics from '../../lib/haptics';
 import BottomSheet from '../BottomSheet';
 // M4 (audit 03b §3.3b): the save CTA rides the Button primitive's
@@ -28,6 +29,10 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
   const t = useTheme();
   const live = buildLiveStyles(t);
   const toast = useToast();
+  // Pre/Post-workout picker options are opt-in (off by default, 2026-07-11
+  // fix): mirrors the DiaryScreen/MealPlanScreen "Around training" gate so
+  // this sheet never offers a slot the diary itself keeps hidden.
+  const periWorkoutSlots = useAppStore((s) => !!s.userProfile?.mealPlanPeriWorkout);
   const [kcal, setKcal] = useState('');
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
@@ -115,7 +120,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
 
           <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Meal</Text>
           <View style={styles.mealRow}>
-            {pickerMealSlots(mealSlot).map(s => (
+            {pickerMealSlots(mealSlot, undefined, periWorkoutSlots).map(s => (
               <Chip
                 key={s.key}
                 label={s.label}

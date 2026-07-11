@@ -89,6 +89,10 @@ export default function FoodDetailSheet({
   const showFibre = useAppStore((s) => s.accessibility?.showFibre !== false);
   const showSugar = useAppStore((s) => s.accessibility?.showSugar !== false);
   const showSodium = useAppStore((s) => s.accessibility?.showSodium !== false);
+  // Pre/Post-workout picker options are opt-in (off by default, 2026-07-11
+  // fix): mirrors the DiaryScreen/MealPlanScreen "Around training" gate so
+  // this sheet never offers a slot the diary itself keeps hidden.
+  const periWorkoutSlots = useAppStore((s) => !!s.userProfile?.mealPlanPeriWorkout);
   // Serving model (food ease, MFP/Cronometer parity): prefer the food's own
   // household serving (e.g. "1 cup", "1 slice") so the common case is RECOGNITION,
   // not gram arithmetic, the list row already shows serving_label, we keep it
@@ -430,7 +434,7 @@ export default function FoodDetailSheet({
 
           <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Meal</Text>
           <View style={styles.mealRow}>
-            {pickerMealSlots(mealSlot).map(s => (
+            {pickerMealSlots(mealSlot, undefined, periWorkoutSlots).map(s => (
               <Chip
                 key={s.key}
                 label={s.label}

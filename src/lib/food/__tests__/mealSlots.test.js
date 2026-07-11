@@ -19,6 +19,9 @@ describe('custom meal-name overrides (gap #1)', () => {
     expect(slots.find((s) => s.key === 'meal_1').label).toBe('Breakfast');
     const picker = pickerMealSlots('meal_1', 2);
     expect(picker.find((s) => s.key === 'meal_1').label).toBe('Breakfast');
+    // The override still applies when the peri-workout slot is opted in.
+    const slotsOn = buildMealSlots([], 2, true);
+    expect(slotsOn.find((s) => s.key === 'preworkout').label).toBe('Intra');
   });
 
   test('defaultMealSlotLabel ignores the override (for the rename UI)', () => {
@@ -58,12 +61,35 @@ describe('mealSlotLabel', () => {
 });
 
 describe('buildMealSlots', () => {
-  test('a new/empty day is the numbered ladder plus the peri-workout meals, in order', () => {
+  test('OFF BY DEFAULT: a new/empty day with no periWorkoutSlots arg is just the numbered ladder', () => {
     const slots = buildMealSlots([], DEFAULT_MEALS_PER_DAY);
+    expect(slots.map((s) => s.key)).toEqual(['meal_1', 'meal_2', 'meal_3', 'meal_4']);
+    expect(slots[0].label).toBe('Meal 1');
+  });
+
+  test('OFF BY DEFAULT: explicit periWorkoutSlots=false hides Pre/Post-workout entirely', () => {
+    const slots = buildMealSlots([], DEFAULT_MEALS_PER_DAY, false);
+    const keys = slots.map((s) => s.key);
+    expect(keys).not.toContain('preworkout');
+    expect(keys).not.toContain('postworkout');
+  });
+
+  test('opting in (periWorkoutSlots=true) shows the numbered ladder plus the peri-workout meals, in order', () => {
+    const slots = buildMealSlots([], DEFAULT_MEALS_PER_DAY, true);
     expect(slots.map((s) => s.key)).toEqual([
       'meal_1', 'meal_2', 'meal_3', 'meal_4', 'preworkout', 'postworkout',
     ]);
-    expect(slots[0].label).toBe('Meal 1');
+  });
+
+  test('HIDDEN WHEN OFF but no empty prompt lost: a slot with no entries and the preference off never appears, and never re-adds itself as an empty card', () => {
+    const slots = buildMealSlots([], DEFAULT_MEALS_PER_DAY, false);
+    expect(slots.some((s) => s.key === 'preworkout' || s.key === 'postworkout')).toBe(false);
+  });
+
+  test('BACK-COMPAT: an entry already logged under preworkout/postworkout still shows even with the preference off', () => {
+    const keys = buildMealSlots([ent('preworkout'), ent('postworkout')], 4, false).map((s) => s.key);
+    expect(keys).toContain('preworkout');
+    expect(keys).toContain('postworkout');
   });
 
   test('BACK-COMPAT: legacy entries are never hidden, and sit in their natural order', () => {
@@ -105,11 +131,22 @@ describe('pickerMealSlots', () => {
     const keys = pickerMealSlots('breakfast', 4).map((s) => s.key);
     expect(keys).toContain('breakfast');
     expect(keys).toContain('meal_1');
-    expect(keys).toContain('preworkout');
   });
   test('does not duplicate the current slot when it is already in the ladder', () => {
     const keys = pickerMealSlots('meal_2', 4).map((s) => s.key);
     expect(keys.filter((k) => k === 'meal_2')).toHaveLength(1);
+  });
+  test('OFF BY DEFAULT: Pre/Post-workout are not offered unless opted in', () => {
+    const keysOff = pickerMealSlots('meal_1', 4).map((s) => s.key);
+    expect(keysOff).not.toContain('preworkout');
+    expect(keysOff).not.toContain('postworkout');
+    const keysOn = pickerMealSlots('meal_1', 4, true).map((s) => s.key);
+    expect(keysOn).toContain('preworkout');
+    expect(keysOn).toContain('postworkout');
+  });
+  test('BACK-COMPAT: an entry already sitting in preworkout stays selectable even with the preference off', () => {
+    const keys = pickerMealSlots('preworkout', 4, false).map((s) => s.key);
+    expect(keys).toContain('preworkout');
   });
 });
 
@@ -123,8 +160,9 @@ describe('slotOrder', () => {
 });
 
 describe('inferMealSlotForHour (barcode-FAB likely slot, dossier C8)', () => {
-  // The 4-meal ladder the diary builds by default.
-  const ladder = buildMealSlots([], 4).map((s) => s.key); // meal_1..4, pre, post
+  // The 4-meal ladder plus peri-workout, opted in (the shape these guessing
+  // tests exercise; buildMealSlots itself defaults periWorkoutSlots to off).
+  const ladder = buildMealSlots([], 4, true).map((s) => s.key); // meal_1..4, pre, post
 
   test('morning maps to the first meal, evening to the last', () => {
     expect(inferMealSlotForHour(7, ladder)).toBe('meal_1');

@@ -87,7 +87,7 @@ function isValidDayKey(value) {
 
 export default function DiaryScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const { user, macroCycle, refeed, calorieBank, sex, energyUnit, tier } = useAppStore(useShallow((s) => ({
+  const { user, macroCycle, refeed, calorieBank, sex, energyUnit, tier, periWorkoutSlots } = useAppStore(useShallow((s) => ({
     user: s.user,
     macroCycle: s.userProfile?.macroCycle ?? null,
     refeed: s.userProfile?.refeed ?? null,
@@ -95,6 +95,10 @@ export default function DiaryScreen({ navigation, route }) {
     sex: s.userProfile?.sex ?? null,
     energyUnit: s.accessibility?.energyUnit ?? 'kcal',
     tier: s.tier,
+    // Pre/Post-workout meal cards are opt-in (off by default, 2026-07-11
+    // fix): the same "Around training" preference the meal-plan generator
+    // already gates on (MealPlanScreen.js), so one toggle controls both.
+    periWorkoutSlots: !!s.userProfile?.mealPlanPeriWorkout,
   })));
   const setCalorieBank = useAppStore((s) => s.setCalorieBank);
   const saveLocalProfile = useAppStore((s) => s.saveLocalProfile);
@@ -666,7 +670,10 @@ export default function DiaryScreen({ navigation, route }) {
   }, []);
 
   const mealsPerDay = Math.max(prefMeals + addedMeals, highestLoggedMeal(viewEntries));
-  const mealSlots = useMemo(() => buildMealSlots(viewEntries, mealsPerDay), [viewEntries, mealsPerDay]);
+  const mealSlots = useMemo(
+    () => buildMealSlots(viewEntries, mealsPerDay, periWorkoutSlots),
+    [viewEntries, mealsPerDay, periWorkoutSlots],
+  );
   const likelyMealSlot = useMemo(() => {
     const keys = mealSlots.map((m) => m.key);
     if (selectedDate === isoDate(new Date())) return inferMealSlotForHour(new Date().getHours(), keys);
