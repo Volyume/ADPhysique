@@ -114,10 +114,22 @@ leg-day engine work (D45 + D46) all LANDED - detail rolled to
     input placeholders can't; SetEntry contract untouched; founder
     device-walk taste veto at S5). eslint clean; 15 suites / 126 tests
     green.
-  - NEXT: S3 (stable CTA + overflow 11->6 + one reorder path) -> S4
-    (in-place set editing, no plate) -> S5 (cohesion polish + device
-    walk). RECOVERY: blueprint doc committed; work each slot from its
-    Section 7 in order.
+  - S3 LANDED (`567c073`): stable dual CTA (Log set stays put; Next
+    exercise / Finish workout appears BESIDE it at target, no
+    same-pixel swap; promoted "Log another set" retired). Overflow
+    trimmed 11 -> 7: Move up/down deleted (Reorder sheet is the one
+    path; dead handlers removed), note row -> S2 card pencil, Exercise
+    info -> tap the exercise title. Guided warm-up ramp KEPT its row
+    (ruling D59 - the set-type picker can't reproduce the computed
+    ramp; warm-up-as-a-type is still in the picker). 3 guard suites
+    re-anchored, no pin removed. Lead-verified green: 15 suites / 124
+    + full src/screens 132 / 1013.
+  - NEXT: S4 (in-place set editing, NO plate per D57) -> S5 (cohesion
+    polish + adversarial review + founder device walk). RECOVERY:
+    blueprint doc committed; work each slot from its Section 7 in order.
+    NOTE: D58 (beat line kept as a row) and D59 (warm-up ramp kept in
+    overflow) are both subject to the founder's device-walk taste veto
+    at S5.
 
 ### LANDED - CP-10 theming batch G, BOTH LANES (2026-07-11)
 - Lane 2 (20 plain screens) `3adf551`; lane 1 (15 high-risk screens;

@@ -398,10 +398,23 @@ cohesion-first, min cost) is progressing through its staged slots:
   ActiveWorkoutScreen + SetEntry + LoggedSetRow + cp10Stage3WorkoutShells
   = 15 suites / 126 tests green (full-suite run pending at the next
   boundary — S2 touched only the screen + StatusStrip + two guard suites).
-NEXT IN ORDER per the board's D43 entry: S3 (stable CTA + overflow
-11->6 + one reorder path) -> S4 (in-place set editing, NO plate, D57)
--> S5 (cohesion polish + adversarial review + device walk). Then the
-D43 pristine pass is HELD (D57), not part of this arc.
+- S3 LANDED `567c073`: stable dual CTA (Log set permanent + Next/Finish
+  beside it at target, no same-pixel swap; "Log another set" retired);
+  overflow trimmed 11->7 (Move up/down + dead handlers deleted, note->card
+  pencil, Exercise info->title tap); guided warm-up ramp KEPT its row
+  (ruling D59). 3 guard suites re-anchored, no pin removed. Lead-verified
+  green: 15/124 + full src/screens 132/1013.
+  CAUTION replayed here so it isn't repeated: S3 hit an agent COLLISION -
+  the first agent spawned a sub-agent against its brief, which ran
+  concurrently with a lead relaunch on the same files. The tree resolved
+  to one clean winner (verified: no dup keys/testIDs, comments consistent,
+  all suites green) but ~420k tokens were wasted. Before relaunching any
+  "no-op" agent, confirm it left no live descendants (check the task tree).
+NEXT IN ORDER per the board's D43 entry: S4 (in-place set editing, NO
+plate, D57) -> S5 (cohesion polish + adversarial review + device walk).
+D58 (beat line kept as a row) + D59 (warm-up ramp kept in overflow) are
+both subject to the founder's S5 device-walk taste veto. Then the D43
+pristine pass is HELD (D57), not part of this arc.
 
 --- superseded slice-2 recovery note (kept for history) ---
 Earlier this session a Sonnet agent was mid-flight on S1 slice 2; that
