@@ -943,3 +943,24 @@ byte-identical on the old engine (noted, NOT fixed — out of D46 scope).
 Full suite 683 suites / 8,456 tests green, lint clean. New invariant suite
 `planEngineSecondaryMuscle.test.js`. Adversarial review dispatched before
 push per the operating model.
+
+## D46 ADVERSARIAL REVIEW OUTCOME (2026-07-11)
+Fresh-eyes hostile review (Opus, against the build spec) of `19907a2`:
+all 20 spot-checked secondary tags seed-faithful; biceps/triceps trims
+byte-identical across a 240-config sweep; overlay exemption gate correct
+for every division; weak-point skip verified; blast radius clean (no
+other consumer of pool entries reads `secondary`; built exercise objects
+never carry it); indirect reporting hand-count matched exactly.
+ONE MAJOR defect found and FIXED (`209c5e1`): the glute credit was
+estimated from weekly TARGETS, but a thin equipment pool (bodyweight
+quads = sissy squats; machine-only hamstrings = leg curls) delivers none
+of the promised indirect work, so a bodyweight/machine-only Men's
+Physique athlete's effective glutes dropped below the structural
+maintenance floor (bodyweight 5-day: 3 delivered vs 6 pre-D46). Fix: the
+trim now requires BOTH driver pools, filtered to the user's equipment,
+to offer at least one glutes-tagged compound (derived from the same pool
+data as the credit, so the gate cannot drift); otherwise the trim skips
+and the full direct floor stands. The review also exposed that every
+probe and test ran full_gym only — the invariant suite now sweeps all
+six equipment settings and pins the exact reproduction. Full suite after
+fix: 683 suites / 8,457 tests green, lint clean.
