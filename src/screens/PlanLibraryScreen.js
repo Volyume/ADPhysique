@@ -15,6 +15,7 @@ import useTheme from '../hooks/useTheme';
 import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock } from '../lib/database';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
+import { planHeadingName } from '../lib/planDisplay';
 import { SkeletonCard } from '../components/Skeleton';
 import SearchBar from '../components/SearchBar';
 import Card from '../components/Card';
@@ -336,8 +337,8 @@ export default function PlanLibraryScreen({ navigation, route }) {
     appAlert(
       'Add this plan?',
       fromFirstRun
-        ? `"${plan.name}" will be added to your plans. Start training now, or just add it for later.`
-        : `Copy "${plan.name}" into your plans. Make it active now, or just add it for later.`,
+        ? `"${planHeadingName(plan.name)}" will be added to your plans. Start training now, or just add it for later.`
+        : `Copy "${planHeadingName(plan.name)}" into your plans. Make it active now, or just add it for later.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -367,10 +368,10 @@ export default function PlanLibraryScreen({ navigation, route }) {
             // Skip the mid-block confirm during first-run, there's no
             // prior block to disrupt (this IS their first plan).
             if (!fromFirstRun) {
-              const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan.name });
+              const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: planHeadingName(plan.name) });
               if (!ok) { navigation.goBack(); return; }
             }
-            await activatePlanWithBlock(user.id, copy.id, plan.name);
+            await activatePlanWithBlock(user.id, copy.id, planHeadingName(plan.name));
             if (fromFirstRun) navigation.navigate('ProSetupComplete');
             else navigation.goBack();
           },
@@ -566,7 +567,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                 activeOpacity={0.88}
                 accessibilityRole="button"
                 accessibilityLabel={[
-                  plan.name,
+                  planHeadingName(plan.name),
                   plan.difficulty != null ? (DIFFICULTY_LABELS[plan.difficulty] ?? 'Intermediate') : null,
                   wc ? `${wc} workout${wc !== 1 ? 's' : ''}` : null,
                 ].filter(Boolean).join(', ')}
@@ -590,7 +591,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   ) : null}
                 </View>
 
-                <Text maxFontSizeMultiplier={1.3} style={[styles.planName, live.planName]}>{plan.name}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.planName, live.planName]}>{planHeadingName(plan.name)}</Text>
 
                 {plan.description ? (
                   <Text maxFontSizeMultiplier={1.3} style={[styles.planDesc, live.planDesc]} numberOfLines={2}>{plan.description}</Text>
@@ -605,7 +606,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: true })}
                   style={[styles.previewBtn, live.previewBtn]}
                   textStyle={[styles.previewText, live.previewText]}
-                  accessibilityLabel={`Preview ${plan.name}`}
+                  accessibilityLabel={`Preview ${planHeadingName(plan.name)}`}
                 />
                 <Button
                   testID="volyume-btn-copy-from-library"
@@ -614,7 +615,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   onPress={() => handleAddToMyPlans(plan)}
                   style={[styles.addBtn, live.addBtn]}
                   textStyle={[styles.addBtnText, live.addBtnText]}
-                  accessibilityLabel={`Add ${plan.name} to my plans`}
+                  accessibilityLabel={`Add ${planHeadingName(plan.name)} to my plans`}
                 />
               </View>
             </Card>

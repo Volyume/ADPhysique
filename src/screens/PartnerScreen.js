@@ -60,6 +60,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
+import { planHeadingName } from '../lib/planDisplay';
 
 // Milestone moments (DESIGN-SPEC B6). C3 delivers src/lib/partners/moments.js
 // in parallel to the exact B6 contract. Consume it defensively so a not-yet-
@@ -1670,8 +1671,8 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
           <SheetRow
             key={prog.id}
             icon="barbell-outline"
-            label={prog.name}
-            onPress={() => onPropose(pair, prog.name)}
+            label={planHeadingName(prog.name)}
+            onPress={() => onPropose(pair, planHeadingName(prog.name))}
           />
         ))
       )}

@@ -16,6 +16,7 @@ import {
   updateRoutinePosition,
 } from '../lib/database';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
+import { planHeadingName } from '../lib/planDisplay';
 import Button from '../components/Button';
 import { Skeleton, SkeletonCard } from '../components/Skeleton';
 import BackHeader from '../components/BackHeader';
@@ -327,7 +328,7 @@ export default function PlanDetailScreen({ navigation, route }) {
               </View>
             )}
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.planName, live.planName]}>{plan.name}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.planName, live.planName]}>{planHeadingName(plan.name)}</Text>
           {plan.description ? (
             <Text maxFontSizeMultiplier={1.3} style={[styles.planDesc, live.planDesc]}>{plan.description}</Text>
           ) : null}

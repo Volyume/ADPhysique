@@ -225,7 +225,7 @@ export default function PlansScreen({ navigation }) {
           text: 'Start new block',
           onPress: async () => {
             try {
-              await activatePlanWithBlock(user.id, activePlan.id, activePlan.name);
+              await activatePlanWithBlock(user.id, activePlan.id, planHeadingName(activePlan.name));
               await AsyncStorage.removeItem(BLOCK_SNOOZE_KEY).catch(() => {});
               await loadData();
             } catch (e) {
@@ -269,9 +269,9 @@ export default function PlansScreen({ navigation }) {
 
   async function handleSetActive(plan) {
     try {
-      const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan.name });
+      const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: planHeadingName(plan.name) });
       if (!ok) return;
-      await activatePlanWithBlock(user.id, plan.id, plan.name);
+      await activatePlanWithBlock(user.id, plan.id, planHeadingName(plan.name));
       await loadData();
     } catch (e) {
       logError('PlansScreen.handleSetActive', e, { userId: user?.id, planId: plan?.id });
@@ -377,7 +377,7 @@ export default function PlansScreen({ navigation }) {
       label: 'No folder',
       onPress: () => handleMovePlanToFolder(plan, null),
     });
-    peekRef.current?.open({ title: `Move ${plan.name}`, items });
+    peekRef.current?.open({ title: `Move ${planHeadingName(plan.name)}`, items });
   }
 
   async function handlePlanOptions(plan) {
@@ -428,7 +428,7 @@ export default function PlansScreen({ navigation }) {
         ),
       });
     }
-    peekRef.current?.open({ title: plan.name, items });
+    peekRef.current?.open({ title: planHeadingName(plan.name), items });
   }
 
   function handleArchivedPlanOptions(plan) {
@@ -444,7 +444,7 @@ export default function PlansScreen({ navigation }) {
         onPress: async () => { await unarchivePlan(plan.id); await loadData(); },
       },
     ];
-    peekRef.current?.open({ title: plan.name, items });
+    peekRef.current?.open({ title: planHeadingName(plan.name), items });
   }
 
   async function handleTemplateOptions(routine) {
@@ -531,7 +531,7 @@ export default function PlansScreen({ navigation }) {
           style={styles.planCardBody}
           onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
           onLongPress={() => handlePlanOptions(plan)}
-          accessibilityLabel={plan.name}
+          accessibilityLabel={planHeadingName(plan.name)}
         >
           <View style={styles.planCardMetaRow}>
             {planWorkoutCounts[plan.id] ? (
@@ -549,14 +549,14 @@ export default function PlansScreen({ navigation }) {
               <Ionicons name="ellipsis-vertical" size={18} color={t.colors.textSecondary} />
             </TouchableOpacity>
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.planCardName, live.planCardName]} numberOfLines={2}>{plan.name}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.planCardName, live.planCardName]} numberOfLines={2}>{planHeadingName(plan.name)}</Text>
         </PressableCard>
         <View style={[styles.planCardFooter, live.planCardFooter]}>
           <TouchableOpacity
             onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityRole="button"
-            accessibilityLabel={`View ${plan.name}`}
+            accessibilityLabel={`View ${planHeadingName(plan.name)}`}
           >
             <Text maxFontSizeMultiplier={1.3} style={[styles.planCardFooterGhost, live.planCardFooterGhost]}>View plan</Text>
           </TouchableOpacity>
@@ -564,7 +564,7 @@ export default function PlansScreen({ navigation }) {
             onPress={() => handleSetActive(plan)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityRole="button"
-            accessibilityLabel={`Set ${plan.name} as active plan`}
+            accessibilityLabel={`Set ${planHeadingName(plan.name)} as active plan`}
           >
             <Text maxFontSizeMultiplier={1.3} style={[styles.planCardFooterPrimary, live.planCardFooterPrimary]}>Set as active</Text>
           </TouchableOpacity>
@@ -876,7 +876,7 @@ export default function PlansScreen({ navigation }) {
                   style={styles.planCardBody}
                   onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
                   onLongPress={() => handleArchivedPlanOptions(plan)}
-                  accessibilityLabel={plan.name}
+                  accessibilityLabel={planHeadingName(plan.name)}
                 >
                   <View style={styles.planCardMetaRow}>
                     {planWorkoutCounts[plan.id] ? (
@@ -894,14 +894,14 @@ export default function PlansScreen({ navigation }) {
                       <Ionicons name="ellipsis-vertical" size={18} color={t.colors.textSecondary} />
                     </TouchableOpacity>
                   </View>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.planCardName, live.planCardName, styles.archivedPlanCardName, live.archivedPlanCardName]} numberOfLines={2}>{plan.name}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.planCardName, live.planCardName, styles.archivedPlanCardName, live.archivedPlanCardName]} numberOfLines={2}>{planHeadingName(plan.name)}</Text>
                 </PressableCard>
                 <View style={[styles.planCardFooter, live.planCardFooter]}>
                   <TouchableOpacity
                     onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     accessibilityRole="button"
-                    accessibilityLabel={`View ${plan.name}`}
+                    accessibilityLabel={`View ${planHeadingName(plan.name)}`}
                   >
                     <Text maxFontSizeMultiplier={1.3} style={[styles.planCardFooterGhost, live.planCardFooterGhost]}>View plan</Text>
                   </TouchableOpacity>
@@ -909,7 +909,7 @@ export default function PlansScreen({ navigation }) {
                     onPress={async () => { await unarchivePlan(plan.id); await loadData(); }}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     accessibilityRole="button"
-                    accessibilityLabel={`Restore ${plan.name}`}
+                    accessibilityLabel={`Restore ${planHeadingName(plan.name)}`}
                   >
                     <Text maxFontSizeMultiplier={1.3} style={[styles.planCardFooterPrimary, live.planCardFooterPrimary]}>Restore</Text>
                   </TouchableOpacity>

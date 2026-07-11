@@ -33,11 +33,61 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## 0. FOUNDER MUST-FIX LIST (device-testing session, 2026-07-11) — TOP PRIORITY
+## R. REMEDIATION CAMPAIGN (founder order 2026-07-11, second device walk) — ABOVE ALL ELSE
 
-_The founder's numbered hands-on list, given at session start. Do ALL of them
-to completion, THEN pause with the detailed remaining task list. Status is
-git-verified, not from memory. This section is worked before anything below it._
+_The first must-fix wave FAILED the founder's device walk: items were built on
+the wrong surfaces, "verified" claims were false (heading strip never matched
+generated plan names; Progress spacing untouched), the unilateral flow got
+WORSE (two taps per side, touching buttons), the logger shipped with the CTA
+under the Android nav bar, a dead half-sliding overlay on set completion, and
+a style mish-mash. Founder verdict: logger is the premium surface and has
+fallen behind Food; Food is the standard; everything in the logger must reach
+it. Discipline for this campaign: cheap agents where equal-quality, but the
+LEAD verifies every quality-bearing diff hands-on against what actually
+renders (trace to the rendering line, tap-by-tap walk, before/after strings).
+No item marked done on an agent's self-report. Ever._
+
+- **R1 Routine display names.** CURRENT: Today card (`HomeScreen.js:1759`)
+  and Train render raw `routine.name`; generated names bake in
+  "4x/week, 9 Jul" (`planAutoGen.js:54-63` dedup suffix); the old strip
+  (`planDisplay.js planHeadingName`) only matches a TRAILING frequency so it
+  does nothing for generated names. END: headings show the clean name
+  ("Men's Physique - Cut - V-Taper") on every surface; generator stops
+  baking dates into new names. RECOVERY: trace is in this entry; re-fix from
+  it. STATUS: in progress (lead, hands-on).
+- **R2 Logger CTA under Android nav bar.** Bottom bar ignores the safe-area
+  inset. STATUS: queued (lead).
+- **R3 Dead set-completion overlay.** Greyed screen + ~1cm slide-up that
+  hangs until tapped. Find what renders on set completion, remove/replace
+  properly. STATUS: queued (lead investigation).
+- **R4 Unilateral logging redesign.** Founder: current flow is terrible -
+  log set then a second "side one done" tap; side-one button touches the
+  text above, cancel touches it below. Needs PROPER investigation and a
+  real design: one tap, self-explanatory. NOT a patch. STATUS: queued
+  (lead design after recon).
+- **R5 Logger cohesion to the Food standard.** Header (X / Finish / elapsed
+  counter all different styles), and differing styles across the whole
+  surface. Food (Diary etc.) is the explicit standard. STATUS: queued
+  (recon -> lead spec -> specced build -> lead verify).
+- **R6 Workout summary bar dead space** between close and share when
+  finishing. STATUS: queued.
+- **R7 Progress: section below Training Load half-empty** (room for 3-4
+  cells, only 2). Previously falsely marked "verified correct in source".
+  STATUS: queued.
+- **R8 Coach page.** "Getting to know you" rename added no value and hogs
+  space; page is a cobbled mess with duplication against Weekly check-in.
+  Founder asked for a real MERGE. STATUS: queued (lead design after recon).
+
+RECON (running): agent 1 extracts the Food design standard to
+`docs/remediation-2026-07-11/FOOD-DESIGN-STANDARD.md`; agent 2 maps
+current-state defects for R2-R8 with file:line evidence to
+`docs/remediation-2026-07-11/DEFECT-MAP.md`.
+
+## 0. FOUNDER MUST-FIX LIST (device-testing session, 2026-07-11) — SUPERSEDED BY R-CAMPAIGN
+
+_The founder's numbered hands-on list, given at session start. Its "done"
+claims FAILED the founder's device walk; every surviving defect is now an
+R-item above. Kept for traceability only._
 
 1. **Revert the new font.** DONE — Manrope backed out (`52e65dd`, `a6083f7`,
    `b2be386`), font is Inter again; D53 recorded (`36fc5d2`).

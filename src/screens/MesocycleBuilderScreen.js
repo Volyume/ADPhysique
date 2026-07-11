@@ -25,6 +25,7 @@ import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 import { predictDeloadWeek, evaluateAutoReg } from '../lib/mesocycle';
+import { planHeadingName } from '../lib/planDisplay';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -174,7 +175,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                     }
                   />
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.planCardName, live.planCardName]}>{activePlan.name}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.planCardName, live.planCardName]}>{planHeadingName(activePlan.name)}</Text>
                 <Text maxFontSizeMultiplier={1.3} style={[styles.planCardMeta, live.planCardMeta]}>
                   {activePlan.splitType ? `${activePlan.splitType} · ` : ''}
                   {activePlan.workoutCount} workout{activePlan.workoutCount !== 1 ? 's' : ''}
