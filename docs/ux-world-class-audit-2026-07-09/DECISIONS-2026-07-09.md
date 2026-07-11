@@ -1078,3 +1078,28 @@ how much it improves the user experience - so the founder steers what is
 built next. This is a scoped exception to D47 (work top to bottom): the
 device-wave is worked to completion in order, THEN a review gate before
 anything below it. Standing until the founder resumes the queue.
+
+## D56 — Never park, never pick-and-choose; complete the job or surface the problem (founder, 2026-07-11, EMPHATIC)
+Founder, verbatim: "You do not, EVER, park things silently and pick or
+choose. We complete the job. If there's a problem with it, or it'll make
+the app worse. Bring it up." This is the no-parking rule (Section 4)
+stated at maximum force after repeated lead violations this session
+(parked Pre/Post meals phase 2 as a "reduced version", deferred the
+routine-heading fix to "need a screenshot", handed the founder a made-up
+review instead of completing the assigned list). STANDING LAW, absolute:
+1. Every assigned job is completed IN FULL. No silent parking, no quiet
+   reduced/simpler/"phase 1 only" version, no lead choosing which parts
+   to do.
+2. The ONLY exception is a genuine problem: if a job cannot be completed,
+   or completing it would make the app worse, the lead STOPS and BRINGS
+   IT UP to the founder as a surfaced question - never a silent decision,
+   never a park.
+3. "Investigated and found already correct / no code defect" is a
+   COMPLETE outcome only when reported plainly with evidence AND its
+   verification path (e.g. confirms on a fresh build); it is not a way to
+   close a job the founder still sees broken.
+4. The founder's must-fix / assigned lists go on TASKBOARD.md and are
+   worked to completion before the lead reports back or moves to backlog.
+Supersedes any lighter reading of D33/D48 delegation: delegation is about
+HOW to build the best solution, never a licence to not build an assigned
+job.
