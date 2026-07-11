@@ -86,4 +86,34 @@ describe('applyRemoteSetEvent', () => {
     const raw = await AsyncStorage.getItem('@volyume_active_workout');
     expect(JSON.parse(raw).appliedRemoteEventIds).toContain('persist-me');
   });
+
+  test('SD-11: a concurrent replay of the same eventId cannot double-log while the first apply is still awaiting the DB', async () => {
+    // Hold the DB write open so the second call arrives mid-await. Before
+    // the SD-11 fix, the duplicate check ran before the await but the id was
+    // only recorded after it, so both calls passed and the set logged twice.
+    let release;
+    db.createWorkoutSet.mockImplementationOnce(
+      (d) => new Promise((resolve) => { release = () => resolve({ id: 'set-1', ...d }); }),
+    );
+    const evt = { eventId: 'evt-race', workoutId: 'w1', payload: { weight: 80, reps: 6 } };
+    const first = useAppStore.getState().applyRemoteSetEvent(evt);   // parked on the await
+    const second = await useAppStore.getState().applyRemoteSetEvent(evt); // arrives mid-flight
+    expect(second).toEqual({ applied: false, reason: 'duplicate' });
+    release();
+    const r1 = await first;
+    expect(r1.applied).toBe(true);
+    expect(db.createWorkoutSet).toHaveBeenCalledTimes(1);
+    expect(useAppStore.getState().workoutExercises[0].sets).toHaveLength(1);
+  });
+
+  test('SD-11: a failed apply releases its reservation so the event stays retryable', async () => {
+    db.createWorkoutSet.mockRejectedValueOnce(new Error('disk full'));
+    const evt = { eventId: 'evt-retry', workoutId: 'w1', payload: { weight: 40, reps: 12 } };
+    const failed = await useAppStore.getState().applyRemoteSetEvent(evt);
+    expect(failed).toEqual({ applied: false, reason: 'error' });
+    expect(useAppStore.getState().appliedRemoteEventIds).not.toContain('evt-retry');
+    const retried = await useAppStore.getState().applyRemoteSetEvent(evt);
+    expect(retried.applied).toBe(true);
+    expect(useAppStore.getState().workoutExercises[0].sets).toHaveLength(1);
+  });
 });

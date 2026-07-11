@@ -1258,6 +1258,15 @@ const useAppStore = create((set, get) => ({
       const exEntry = state.workoutExercises[state.currentExerciseIndex];
       if (!exEntry?.exercise?.id) return { applied: false, reason: 'no_exercise' };
 
+      // SD-11: reserve the eventId SYNCHRONOUSLY, after the validation gates
+      // but before the first await. The duplicate check above and this
+      // reservation run in one synchronous segment, so a same-eventId replay
+      // arriving while createWorkoutSet is still awaiting hits the reserved
+      // id and bounces as a duplicate instead of double-logging. The catch
+      // below releases the reservation so a genuinely failed apply stays
+      // retryable.
+      set((s) => ({ appliedRemoteEventIds: [...(s.appliedRemoteEventIds || []), eventId].slice(-500) }));
+
       // eslint-disable-next-line global-require
       const { createWorkoutSet } = require('../lib/database');
       // eslint-disable-next-line global-require
@@ -1293,10 +1302,15 @@ const useAppStore = create((set, get) => ({
         : (re?.restSeconds ?? 90);
       get().startRestTimer(restSeconds);
 
-      set((s) => ({ appliedRemoteEventIds: [...(s.appliedRemoteEventIds || []), eventId].slice(-500) }));
       _persistActiveWorkout(get());
       return { applied: true, setNumber };
     } catch (e) {
+      // Release the SD-11 reservation so a failed apply can be retried; the
+      // eventId only stays recorded when the set actually landed.
+      const failedId = event?.eventId;
+      if (failedId) {
+        set((s) => ({ appliedRemoteEventIds: (s.appliedRemoteEventIds || []).filter((id) => id !== failedId) }));
+      }
       // eslint-disable-next-line global-require
       try { require('../lib/errorLog').logError('store.applyRemoteSetEvent', e, {}); } catch (_) {}
       return { applied: false, reason: 'error' };
