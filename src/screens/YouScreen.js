@@ -13,6 +13,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import * as haptics from '../lib/haptics';
 import ScreenHeader from '../components/ScreenHeader';
 import Card from '../components/Card';
 import { ProBadge } from '../components/ProGate';
@@ -67,10 +68,16 @@ function formatShortDate(ms) {
 function NavRow({ icon, label, sub, onPress, pro }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
+  // R9 (D70): the house selection() beat on every nav-row tap, added once
+  // here so all consumers gain it together (haptics vocabulary rule;
+  // navigation taps are never the ED diary-marking exception).
+  const handlePress = onPress
+    ? () => { haptics.selection(); onPress(); }
+    : onPress;
   return (
     <Card
       style={styles.navRow}
-      onPress={onPress}
+      onPress={handlePress}
       accessibilityLabel={pro ? `${label}. Part of Pro.` : label}
     >
       <View style={[styles.navRowIcon, live.navRowIcon]}>

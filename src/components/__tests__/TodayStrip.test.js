@@ -78,13 +78,22 @@ describe('weight cell', () => {
   });
 
   test('empty weight prompt uses neutral contained chrome, not an amber text link', () => {
+    // R9/D70 (design-cohesion sweep, 2026-07-11): the hand-rolled
+    // metricAction/metricActionText fill+ink pair (asserted here up to
+    // 2026-07-11) was converted onto the shared <Button variant="primary">
+    // primitive per docs/remediation-2026-07-11/FOOD-DESIGN-STANDARD.md
+    // section 4. The RULE this test pins is UNCHANGED -- a contained solid
+    // action, never a bare amber text link -- Button's primary variant IS
+    // that solid primaryFill/onPrimary treatment (Button.js:53), just
+    // expressed through the shared primitive instead of a bespoke style
+    // block, so there is no longer a static metricActionText to assert
+    // byte-for-byte.
     expect(SOURCE).toContain('metricRow: {');
     expect(SOURCE).toContain('metricIcon: {');
     expect(SOURCE).toContain('metricAction: {');
     expect(SOURCE).toContain('borderColor: colors.border');
     expect(SOURCE).toContain('backgroundColor: colors.surface2');
-    expect(SOURCE).toContain('backgroundColor: colors.primaryFill');
-    expect(SOURCE).toContain('metricActionText: { ...type.label, color: colors.onPrimary }');
+    expect(SOURCE).toMatch(/variant="primary"[\s\S]{0,200}title="Log"/);
     expect(SOURCE).toContain('logPrompt: { ...type.label, color: colors.textPrimary }');
     expect(SOURCE).not.toContain('emptyLogBox: {');
     expect(SOURCE).not.toContain('logPrompt: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary }');

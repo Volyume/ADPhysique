@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
+import { View, Text, StyleSheet } from 'react-native';
+import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Card from './Card';
+import Button from './Button';
 
 // Extracted from HomeScreen.js (behaviour-preserving decomposition).
 //
@@ -23,8 +23,6 @@ function HomeLastSessionCard({ lastSession, lastSessionTonnage, relativeDay, onO
     lastSessionLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     lastSessionMeta: { ...t.type.caption, color: t.colors.textMuted },
     lastSessionName: { ...t.type.label, color: t.colors.textPrimary },
-    repeatBtn: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
-    repeatBtnText: { fontSize: t.fontSize.xs, color: t.colors.primary },
   };
   const meta = [
     lastSession.durationMinutes ? `${lastSession.durationMinutes}m` : null,
@@ -59,17 +57,20 @@ function HomeLastSessionCard({ lastSession, lastSessionTonnage, relativeDay, onO
           <Text maxFontSizeMultiplier={1.3} style={[styles.lastSessionMeta, live.lastSessionMeta]} numberOfLines={1}>{meta}</Text>
         ) : null}
       </View>
-      <TouchableOpacity
-        style={[styles.repeatBtn, live.repeatBtn]}
+      {/* R9 (D70, lead correction): the original chip's colours (primaryBg
+          fill, primary ink and border) are exactly Button's TERTIARY
+          variant - the sweep brief said secondary in error. hitSlop keeps
+          the old 44pt effective target on the compact pill. */}
+      <Button
+        variant="tertiary"
+        size="sm"
+        fullWidth={false}
+        title="Repeat"
+        icon="refresh-outline"
+        hitSlop={8}
         onPress={e => { e.stopPropagation(); onRepeat(); }}
-        activeOpacity={0.75}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        accessibilityRole="button"
         accessibilityLabel="Repeat last session"
-      >
-        <Ionicons name="refresh-outline" size={13} color={t.colors.primary} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.repeatBtnText, live.repeatBtnText]}>Repeat</Text>
-      </TouchableOpacity>
+      />
     </Card>
   );
 }
@@ -91,22 +92,6 @@ const styles = StyleSheet.create({
   },
   lastSessionMeta: {
     ...type.caption, color: colors.textMuted,
-  },
-  repeatBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.primaryBg,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
-  },
-  repeatBtnText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.primary,
   },
   lastSessionName: {
     ...type.label, color: colors.textPrimary,

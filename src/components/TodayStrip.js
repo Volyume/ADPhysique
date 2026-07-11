@@ -46,8 +46,6 @@ export default function TodayStrip({
     loggedPill: { borderColor: t.colors.success, backgroundColor: t.colors.surface2 },
     loggedPillText: { ...t.type.caption, color: t.colors.textPrimary },
     logPrompt: { ...t.type.label, color: t.colors.textPrimary },
-    metricAction: { backgroundColor: t.colors.primaryFill },
-    metricActionText: { ...t.type.label, color: t.colors.onPrimary },
     unit: { ...t.type.caption, color: t.colors.textMuted },
     logBtnText: { ...t.type.label, color: t.colors.onPrimary },
   };
@@ -214,9 +212,15 @@ export default function TodayStrip({
             <Text maxFontSizeMultiplier={1.3} style={[styles.logPrompt, live.logPrompt]} numberOfLines={1}>Not logged yet</Text>
           </View>
         </View>
-        <View style={[styles.metricAction, live.metricAction]}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.metricActionText, live.metricActionText]}>Log</Text>
-        </View>
+        <Button
+          variant="primary"
+          size="sm"
+          fullWidth={false}
+          title="Log"
+          onPress={startEdit}
+          accessibilityLabel="Log morning weight"
+          style={styles.metricAction}
+        />
       </TouchableOpacity>
     );
   }
@@ -245,7 +249,10 @@ export default function TodayStrip({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    // R9/D70 (design-cohesion sweep): app-wide card class is radius.lg
+    // (16px, FOOD-DESIGN-STANDARD.md section 2); this strip's compact
+    // padding/gap stays as-is, the density is deliberate.
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: spacing.sm,
@@ -293,15 +300,13 @@ const styles = StyleSheet.create({
   },
   loggedPillText: { ...type.caption, color: colors.textPrimary },
   logPrompt: { ...type.label, color: colors.textPrimary },
+  // R9/D70: fill/radius/label now come from the shared <Button
+  // variant="primary">; the compact strip keeps its own minHeight/vertical
+  // padding so the pill stays this row's height, not Button's roomier default.
   metricAction: {
     minHeight: 30,
-    borderRadius: radius.sm,
-    backgroundColor: colors.primaryFill,
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: spacing.xs,
   },
-  metricActionText: { ...type.label, color: colors.onPrimary },
   editHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   stFields: { flexDirection: 'row', gap: spacing.xs, alignItems: 'center', flex: 1 },

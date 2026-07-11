@@ -28,6 +28,7 @@ import {
   colors, spacing, radius, fontWeight, type, withAlpha, iconSize, alpha,
 } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import Button from './Button';
 import DifferentialBadge from './DifferentialBadge';
 
 // The single decision point for which variant (if any) shows. Pass each
@@ -60,12 +61,8 @@ export default function AttentionCard({
     trialLedgerTitle: { ...t.type.caption, color: t.colors.textMuted },
     trialLedgerRowText: { ...t.type.bodySm, color: t.colors.textSecondary },
     trialLedgerRowTextDone: { color: t.colors.textPrimary },
-    trialMethodologyButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
-    trialBannerLink: { ...t.type.label, color: t.colors.textPrimary },
     freeCoachCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
     freeCoachLineText: { ...t.type.bodySm, fontWeight: fontWeight.semibold, color: t.colors.textPrimary },
-    freeCoachFooter: { ...t.type.label, color: t.colors.textPrimary },
-    freeCoachFooterButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
   };
   if (variant === 'trial' && trialBanner) {
     return (
@@ -108,17 +105,17 @@ export default function AttentionCard({
         ) : null}
         {/* Wave A B3: the trial should never be a black box. One quiet link
             to the methodology page, from day 0. */}
-        <TouchableOpacity
+        <Button
+          variant="outline"
+          size="sm"
+          fullWidth={false}
+          title="How Precision Coaching works"
+          icon="information-circle-outline"
+          trailingIcon="chevron-forward"
           onPress={onMethodology}
-          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-          accessibilityRole="button"
           accessibilityLabel="How Precision Coaching works"
-          style={[styles.trialMethodologyButton, live.trialMethodologyButton]}
-        >
-          <Ionicons name="information-circle-outline" size={iconSize.sm} color={t.colors.textSecondary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.trialBannerLink, live.trialBannerLink]}>How Precision Coaching works</Text>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-        </TouchableOpacity>
+          style={styles.trialMethodologyButton}
+        />
       </TouchableOpacity>
     );
   }
@@ -138,17 +135,16 @@ export default function AttentionCard({
             <Ionicons name="close" size={15} color={t.colors.textMuted} />
           </TouchableOpacity>
         </View>
-        <TouchableOpacity
+        <Button
+          variant="outline"
+          size="sm"
+          fullWidth={false}
+          title="Pro reads the full story"
+          icon="lock-open-outline"
+          trailingIcon="chevron-forward"
           onPress={onUpgrade}
-          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-          accessibilityRole="button"
           accessibilityLabel="Pro reads the full story. Learn about Pro coaching."
-          style={[styles.freeCoachFooterButton, live.freeCoachFooterButton]}
-        >
-          <Ionicons name="lock-open-outline" size={iconSize.sm} color={t.colors.textSecondary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.freeCoachFooter, live.freeCoachFooter]}>Pro reads the full story</Text>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-        </TouchableOpacity>
+        />
       </View>
     );
   }
@@ -189,19 +185,11 @@ const styles = StyleSheet.create({
   trialLedgerRowTextDone: {
     color: colors.textPrimary,
   },
+  // R9/D70: box/fill/radius/padding/label now come from the shared <Button
+  // variant="outline">; only the layout margin survives.
   trialMethodologyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    minHeight: 40,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.sm,
     marginTop: spacing.sm,
   },
-  trialBannerLink: { ...type.label, color: colors.textPrimary, flex: 1 },
   freeCoachCard: {
     backgroundColor: colors.primaryBg, borderRadius: radius.md,
     borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.mid),
@@ -213,21 +201,5 @@ const styles = StyleSheet.create({
     ...type.bodySm,
     flex: 1, fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
-  },
-  freeCoachFooter: {
-    ...type.label,
-    color: colors.textPrimary,
-    flex: 1,
-  },
-  freeCoachFooterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    minHeight: 40,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.sm,
   },
 });

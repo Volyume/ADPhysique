@@ -144,16 +144,17 @@ export default function HomeScreen({ navigation, route }) {
     mesoBriefChip: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     mesoBriefText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
     workoutOptionsText: { color: t.colors.textSecondary },
-    proRecoverBtn: { backgroundColor: t.colors.primaryFill },
-    proRecoverBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
     noPlanIconWrap: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
     noPlanTitle: { ...t.type.h3, color: t.colors.textPrimary },
     noPlanSub: { ...t.type.bodySm, color: t.colors.textSecondary },
-    blankSessionLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    blankSessionLinkText: { ...t.type.label, color: t.colors.textPrimary },
     starterCard: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     glanceTitle: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    glanceStatValue: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
+    // R9/D70 (design-cohesion sweep): raw fontSize.xl + black weight moved
+    // onto the frozen numeral role that matches it in size (t.type.num('h3')
+    // is fontSizeTable.xl, same 20px this readout always rendered at; h2
+    // steps up to xxl/24px, a visible size jump for a "stat at a glance"
+    // number this compact) -- see FOOD-DESIGN-STANDARD.md section 3.
+    glanceStatValue: { ...t.type.num('h3'), color: t.colors.textPrimary },
     glanceStatLabel: { ...t.type.caption, color: t.colors.textMuted },
     glanceDivider: { backgroundColor: t.colors.border },
     coachingNudge: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
@@ -161,7 +162,6 @@ export default function HomeScreen({ navigation, route }) {
     coachingNudgeTitle: { ...t.type.label, color: t.colors.textPrimary },
     coachingNudgeBody: { ...t.type.captionTight, color: t.colors.textSecondary },
     coachingNudgeScanSubline: { ...t.type.captionTight, color: t.colors.textMuted },
-    coachingNudgeBtnText: { fontSize: t.fontSize.xs, color: t.colors.primary },
     intentTitle: { ...t.type.h3, color: t.colors.textPrimary },
     intentSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     intentOption: { backgroundColor: t.colors.surface2 ?? t.colors.background, borderColor: t.colors.border },
@@ -1482,7 +1482,7 @@ export default function HomeScreen({ navigation, route }) {
             // A bare navigate from HomeStack is silently dropped in production,
             // making the flagship banner a dead tap; route via the parent tab
             // navigator like the phase banner above.
-            onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput', { weekStart: latestCoachOutput.weekStart })}
+            onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput', { weekStart: latestCoachOutput.weekStart }); }}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel="This week's coaching review. Tap to open."
@@ -1535,7 +1535,7 @@ export default function HomeScreen({ navigation, route }) {
         {showDeloadBanner && (
           <TouchableOpacity
             style={[styles.deloadBanner, live.deloadBanner]}
-            onPress={() => navigation.navigate('CoachReview')}
+            onPress={() => { haptics.selection(); navigation.navigate('CoachReview'); }}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel="Recovery week suggested. Tap to review."
@@ -1571,7 +1571,7 @@ export default function HomeScreen({ navigation, route }) {
             </Text>
             <TouchableOpacity
               style={styles.phaseBannerArrow}
-              onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets')}
+              onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets'); }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
               accessibilityLabel="Go to nutrition targets"
@@ -1595,7 +1595,7 @@ export default function HomeScreen({ navigation, route }) {
         {showPlateauBanner && (
           <TouchableOpacity
             style={[styles.plateauBanner, live.plateauBanner]}
-            onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'ExerciseDetail', { exerciseId: plateauBanner.exerciseId })}
+            onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProgressTab', 'ExerciseDetail', { exerciseId: plateauBanner.exerciseId }); }}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel={plateauBanner.line}
@@ -1621,7 +1621,7 @@ export default function HomeScreen({ navigation, route }) {
         {showActivationBanner && (
           <TouchableOpacity
             style={[styles.activationBanner, live.activationBanner]}
-            onPress={() => handleStartNextWorkout(false)}
+            onPress={() => { haptics.selection(); handleStartNextWorkout(false); }}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel={activationBannerLine(activationNudge.stage)?.title}
@@ -1776,7 +1776,7 @@ export default function HomeScreen({ navigation, route }) {
             {readinessSummary && (
               <TouchableOpacity
                 style={[styles.mesoBriefChip, live.mesoBriefChip]}
-                onPress={() => setShowBlockShape(true)}
+                onPress={() => { haptics.selection(); setShowBlockShape(true); }}
                 accessibilityRole="button"
                 accessibilityLabel="See the shape of your training block"
               >
@@ -1836,9 +1836,10 @@ export default function HomeScreen({ navigation, route }) {
                     If you just signed in, we may still be pulling your data from the cloud. If nothing arrives, start with a plan and we'll rebuild it from your profile.
                   </Text>
                 </View>
-                <TouchableOpacity
-                  style={[styles.proRecoverBtn, live.proRecoverBtn]}
-                  accessibilityRole="button"
+                <Button
+                  variant="primary"
+                  title="Start with a plan"
+                  icon="clipboard-outline"
                   accessibilityLabel="Start with a plan"
                   onPress={async () => {
                     const result = await generateAndSavePlan(user.id, userProfile);
@@ -1848,11 +1849,8 @@ export default function HomeScreen({ navigation, route }) {
                       toast.show(`Couldn't start plan: ${result.error}`, { variant: 'error', duration: 5000 });
                     }
                   }}
-                  activeOpacity={0.88}
-                >
-                  <Ionicons name="clipboard-outline" size={18} color={t.colors.onPrimary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.proRecoverBtnText, live.proRecoverBtnText]}>Start with a plan</Text>
-                </TouchableOpacity>
+                  style={styles.proRecoverBtn}
+                />
               </>
             ) : (
               /* B2: the free "what do I do today" answer. One strong, calm
@@ -1925,16 +1923,17 @@ export default function HomeScreen({ navigation, route }) {
             )}
 
             {tier !== 'pro' && (
-              <TouchableOpacity
-                style={[styles.blankSessionLink, live.blankSessionLink]}
+              <Button
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                title="Just want to log? Start a blank workout"
+                icon="play-outline"
+                trailingIcon="chevron-forward"
                 onPress={() => startBlankSession()}
-                accessibilityRole="button"
                 accessibilityLabel="Just want to log? Start a blank workout"
-              >
-                <Ionicons name="play-outline" size={14} color={t.colors.textSecondary} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.blankSessionLinkText, live.blankSessionLinkText]}>Just want to log? Start a blank workout</Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-              </TouchableOpacity>
+                style={styles.blankSessionLink}
+              />
             )}
           </View>
         )}
@@ -1991,19 +1990,19 @@ export default function HomeScreen({ navigation, route }) {
                   If you like, add a progress scan first for extra visual context. Skipping it is fine.
                 </Text>
               )}
-              <TouchableOpacity
-                style={styles.coachingNudgeBtn}
-                accessibilityRole="button"
+              <Button
+                variant="tertiary"
+                size="sm"
+                fullWidth={false}
+                title="Open check-in"
+                trailingIcon="chevron-forward"
                 accessibilityLabel="Open check-in"
                 onPress={() => {
                   dismissCoachingNudge();
                   navigation.navigate('ProfileTab', { screen: 'WeeklyCheckIn', initial: false });
                 }}
-                activeOpacity={0.8}
-              >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.coachingNudgeBtnText, live.coachingNudgeBtnText]}>Open check-in</Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-              </TouchableOpacity>
+                style={styles.coachingNudgeBtn}
+              />
             </View>
             <TouchableOpacity
               onPress={dismissCoachingNudge}
@@ -2267,12 +2266,10 @@ const styles = StyleSheet.create({
 
   // No plan, plan-first section
   noPlanSection: { gap: spacing.md },
+  // R9/D70: box/fill/radius/padding/label now come from the shared <Button
+  // variant="primary">; only the layout margin survives.
   proRecoverBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: colors.primaryFill, borderRadius: radius.lg, paddingVertical: 14, marginTop: spacing.sm,
-  },
-  proRecoverBtnText: {
-    ...type.bodyStrong, color: colors.onPrimary,
+    marginTop: spacing.sm,
   },
   noPlanHero: {
     alignItems: 'center',
@@ -2293,19 +2290,12 @@ const styles = StyleSheet.create({
   noPlanSub: {
     ...type.bodySm, color: colors.textSecondary, textAlign: 'center',
   },
+  // R9/D70: box/fill/radius/padding/label now come from the shared <Button
+  // variant="secondary">; only the self-centering survives (this pill sits
+  // alone under the starter card, not stretched full width).
   blankSessionLink: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     alignSelf: 'center',
-    gap: spacing.xs,
-    minHeight: 40,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
   },
-  blankSessionLinkText: { ...type.label, color: colors.textPrimary },
 
   // B2: free no-plan starter card. One calm card, quiz first, library second.
   starterCard: {
@@ -2340,9 +2330,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
   },
+  // R9/D70: raw fontSize.xl + black weight moved onto the matching frozen
+  // numeral role, see the live twin's comment above for why h3 not h2.
   glanceStatValue: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.black,
+    ...type.num('h3'),
     color: colors.textPrimary,
   },
   glanceStatLabel: {
@@ -2382,12 +2373,10 @@ const styles = StyleSheet.create({
   coachingNudgeScanSubline: {
     ...type.captionTight, color: colors.textMuted,
   },
+  // R9/D70: box/label now come from the shared <Button variant="tertiary">;
+  // only the layout margin survives.
   coachingNudgeBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    alignSelf: 'flex-start', marginTop: spacing.xs,
-  },
-  coachingNudgeBtnText: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary,
+    marginTop: spacing.xs,
   },
 
   // R9 (D70): intentOverlay/intentSheet deleted - the shared BottomSheet

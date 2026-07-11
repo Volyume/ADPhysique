@@ -94,6 +94,10 @@ export default function Button({
   accessibilityLabel,
   accessibilityState,
   testID,
+  // R9 (D70): forwarded to PressableCard so compact size="sm" buttons can
+  // keep a 44pt effective touch target without visual growth (the
+  // converted hand-rolled CTAs relied on TouchableOpacity hitSlop).
+  hitSlop,
   children,
 }) {
   const t = useTheme();
@@ -210,6 +214,7 @@ export default function Button({
       accessibilityLabel={accessibilityLabel || title}
       accessibilityState={mergedAccessibilityState}
       testID={testID}
+      hitSlop={hitSlop}
       style={[
         styles.base,
         {

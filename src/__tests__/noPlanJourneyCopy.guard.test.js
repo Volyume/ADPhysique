@@ -25,15 +25,21 @@ describe('no-plan / start-plan copy', () => {
   });
 
   test('HomeScreen blank-workout fallback is a contained neutral control', () => {
-    // CP-10 stage 3 (theming batch 2, 2026-07-10): HomeScreen now reads a
-    // live theme (src/hooks/useTheme.js), so this inline colour prop moved
-    // from `colors.textSecondary` to `t.colors.textSecondary`. The pinned
-    // RULE (contained neutral control, not a loose text link) is unchanged
-    // -- the static blankSessionLink/blankSessionLinkText definitions
-    // (asserted next) are byte-identical to before.
-    expect(HOME).toContain('Ionicons name="play-outline" size={14} color={t.colors.textSecondary}');
-    expect(HOME).toMatch(/blankSessionLink: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(HOME).toContain('blankSessionLinkText: { ...type.label, color: colors.textPrimary }');
+    // R9/D70 (design-cohesion sweep, 2026-07-11): the hand-rolled
+    // TouchableOpacity pill (bespoke blankSessionLink/blankSessionLinkText
+    // style blocks, asserted here up to 2026-07-11) was converted onto the
+    // shared <Button variant="secondary"> primitive per
+    // docs/remediation-2026-07-11/FOOD-DESIGN-STANDARD.md section 4 ("every
+    // CTA is the shared Button primitive"). The RULE this test pins is
+    // UNCHANGED -- a contained neutral control, never a loose text link --
+    // Button's secondary variant IS that contained neutral treatment
+    // (raised surface2 fill, textPrimary ink, a visible border,
+    // Button.js:54), just expressed through the shared primitive instead of
+    // a bespoke style block, so there is no longer a static
+    // blankSessionLink/blankSessionLinkText pair to assert byte-for-byte.
+    expect(HOME).toMatch(/variant="secondary"[\s\S]{0,200}title="Just want to log\? Start a blank workout"/);
+    expect(HOME).toContain('icon="play-outline"');
+    expect(HOME).toContain('trailingIcon="chevron-forward"');
     expect(HOME).not.toContain('blankSessionLinkText: { fontSize: fontSize.sm, color: colors.textMuted }');
   });
 
