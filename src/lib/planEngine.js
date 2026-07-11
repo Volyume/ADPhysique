@@ -810,10 +810,38 @@ function clampDeliveredToMRV(workouts, goal, _landmarks) {
 // MEV while never shipping an absurd session in the name of volume. Only ever
 // raises/keeps trim protection; never adds sets, so MRV/delt caps are untouched.
 const STRUCTURAL_TRIM_CEILING_OVER = 30;
+
+// Hard per-session ceilings, independent of the clock (founder 2026-07-10:
+// "there has to be a maximum per session... no bodybuilder jams 9 exercises
+// into one day and kills themselves"). Real physique sessions run ~4-7
+// exercises / ~15-25 working sets; these are the absolute upper bounds no
+// generated session may exceed. 8 exercises still allows a legitimate
+// full-body day its breadth while stopping the 9+ marathons; 25 sets lets a
+// genuine hard day pass while trimming junk-fatigue overshoots. Enforced by
+// the SAME lowest-priority-first trim as the time budget, so structural and
+// weak-point floors are protected identically. Same stimulus-to-fatigue
+// evidence base as the per-muscle cap (8/12): past this a session is fatigue,
+// not more growth. Kept internal (matching CAP_COMPOUND et al.); the invariant
+// is verified behaviourally over generated plans, not by importing the number.
+const MAX_EXERCISES_PER_SESSION = 8;
+const MAX_WORKING_SETS_PER_SESSION = 25;
+const sessionSetTotal = (list) => list.reduce((s, e) => s + (e.sets || 0), 0);
+
 function trimToTimeBudget(exercises, sessionLengthMinutes, equipment, structuralFloors = {}) {
-  if (!sessionLengthMinutes || sessionLengthMinutes <= 0) return exercises;
-  const budget = sessionLengthMinutes - 2;
-  if (estimateSessionMinutes(exercises, equipment) <= budget) return exercises;
+  // The time budget is optional (0/null = no clock limit), but the per-session
+  // exercise and working-set ceilings are ALWAYS enforced. `budget` is
+  // Infinity when no length is set, so only the count/set caps bite then.
+  const hasClock = !!(sessionLengthMinutes && sessionLengthMinutes > 0);
+  const budget = hasClock ? sessionLengthMinutes - 2 : Infinity;
+  // Over budget if the clock, the exercise count, OR the total sets exceed
+  // their limit. This single predicate replaces the old time-only check
+  // everywhere below, so the trim shaves lowest-priority-first until ALL
+  // three constraints hold.
+  const overBudget = (list) =>
+    estimateSessionMinutes(list, equipment) > budget
+    || list.length > MAX_EXERCISES_PER_SESSION
+    || sessionSetTotal(list) > MAX_WORKING_SETS_PER_SESSION;
+  if (!overBudget(exercises)) return exercises;
 
   const result = exercises.map(e => ({ ...e }));
 
@@ -839,7 +867,7 @@ function trimToTimeBudget(exercises, sessionLengthMinutes, equipment, structural
     // and never below its protected per-session floor. Below the 3-set floor we
     // drop whole exercises in phase 2 rather than shaving an entry down to 2.
     let safety = 200;
-    while (estimateSessionMinutes(result, equipment) > budget && safety-- > 0) {
+    while (overBudget(result) && safety-- > 0) {
       let trimmed = false;
       // Tier 1: non-structural entries (protected structural deferred to tier 2).
       for (let i = result.length - 1; i >= 1; i--) {
@@ -870,7 +898,7 @@ function trimToTimeBudget(exercises, sessionLengthMinutes, equipment, structural
     // If nothing is safely removable we stop and accept a small overage; the
     // displayed duration is an estimate, not a hard cap.
     let safety2 = 60;
-    while (estimateSessionMinutes(result, equipment) > budget && result.length > 3 && safety2-- > 0) {
+    while (overBudget(result) && result.length > 3 && safety2-- > 0) {
       let removeIdx = -1;
       for (let i = result.length - 1; i >= 1; i--) {
         const ex = result[i];
@@ -888,8 +916,57 @@ function trimToTimeBudget(exercises, sessionLengthMinutes, equipment, structural
   };
 
   runTrim(false);
-  if (estimateSessionMinutes(result, equipment) > sessionLengthMinutes + STRUCTURAL_TRIM_CEILING_OVER) {
+  // Escalate to the desperate pass (which relaxes normal structural floors,
+  // keeping only a weak-point's boosted delivery) when the first pass could
+  // not get under the HARD caps, or when it is still egregiously over the
+  // clock. The hard exercise/set caps are non-negotiable, so they always
+  // trigger the escalation; the trim floor (3 exercises, 3 sets/entry) sits
+  // far below both caps, so this always converges.
+  const stillOverHardCap =
+    result.length > MAX_EXERCISES_PER_SESSION
+    || sessionSetTotal(result) > MAX_WORKING_SETS_PER_SESSION;
+  if (stillOverHardCap
+    || (hasClock && estimateSessionMinutes(result, equipment) > sessionLengthMinutes + STRUCTURAL_TRIM_CEILING_OVER)) {
     runTrim(true);
+  }
+
+  // Final hard-cap backstop (founder ruling 2026-07-10, D45: "There has to be a
+  // maximum per session too, otherwise you try and jam 9 exercises into one day
+  // and absolutely kill yourself. No bodybuilder does that.").
+  //
+  // The trim above deliberately protects a muscle's sole exercise in a session,
+  // so a low-frequency full-body day (2-3 days/week, every muscle every session)
+  // can hold 9-10 single-exercise muscles that the normal trim will not shave -
+  // and, because the same protection defeated the time budget, that session was
+  // already overrunning its own clock. When a muscle appears here as its sole
+  // exercise it is still trained on the split's OTHER day(s), so dropping the
+  // lowest-priority ones from THIS session lowers that muscle's frequency, never
+  // its weekly presence. This pass is the guarantee the caps are HARD: it drops
+  // lowest-priority exercises (back-to-front, never the opener, never below 3
+  // exercises), preferring non-required subregions, then shaves sets to the
+  // ceiling. Real physique sessions run 4-7 exercises / ~15-25 working sets;
+  // 8 / 25 are ceilings no honest session should reach, not targets.
+  let capSafety = 40;
+  while (result.length > MAX_EXERCISES_PER_SESSION && result.length > 3 && capSafety-- > 0) {
+    // Prefer a droppable (non-required) entry, lowest priority first; fall back
+    // to the last non-opener entry so the cap always converges.
+    let dropIdx = -1;
+    for (let i = result.length - 1; i >= 1; i--) {
+      if (!result[i]._req) { dropIdx = i; break; }
+    }
+    if (dropIdx === -1) dropIdx = result.length - 1;
+    result.splice(dropIdx, 1);
+  }
+  // With <= 8 exercises at the 3-set floor a session is <= 24 sets, so this only
+  // shaves the higher-set (structural/weak-point) entries back toward the floor;
+  // it never needs to break the 3-set-per-entry minimum.
+  let setSafety = 200;
+  while (sessionSetTotal(result) > MAX_WORKING_SETS_PER_SESSION && setSafety-- > 0) {
+    let shaved = false;
+    for (let i = result.length - 1; i >= 0; i--) {
+      if (result[i].sets > 3) { result[i].sets--; shaved = true; break; }
+    }
+    if (!shaved) break;
   }
 
   return result;
