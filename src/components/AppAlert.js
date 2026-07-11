@@ -13,7 +13,7 @@
 // non-component code (lib/*), exactly like Alert.alert. Mount <AppAlertHost />
 // once near the app root.
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import useAppStore from '../store/useAppStore';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
@@ -111,8 +111,19 @@ export function AppAlertHost() {
           accessible={false}
           accessibilityViewIsModal
         >
-          {!!title && <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]} accessibilityRole="header">{title}</Text>}
-          {!!message && <Text maxFontSizeMultiplier={1.3} style={[styles.message, live.message]}>{message}</Text>}
+          {/* D42 (founder defect, 2026-07-11): title/message are the only
+              unbounded-length part of the card, so they alone sit inside the
+              scroll region (styles.card caps maxHeight and clips overflow,
+              see that style's comment for the full geometry evidence). The
+              action row below stays a SIBLING, outside this ScrollView, so
+              the buttons are never carried off-screen inside scrollable
+              content and are always reachable without scrolling first --
+              the same "footer stays put, body scrolls" shape as the
+              sup-modal/BottomSheet convention. */}
+          <ScrollView style={styles.cardScroll} showsVerticalScrollIndicator={false}>
+            {!!title && <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]} accessibilityRole="header">{title}</Text>}
+            {!!message && <Text maxFontSizeMultiplier={1.3} style={[styles.message, live.message]}>{message}</Text>}
+          </ScrollView>
           <View style={[styles.actions, stacked ? styles.actionsStacked : styles.actionsRow]}>
             {buttons.map((b, i) => {
               const isCancel = b.style === 'cancel';
@@ -160,15 +171,50 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: spacing.xl,
   },
+  // D42 (founder defect report, 2026-07-11): the card had no height cap and
+  // no scroll, so a long alert (title + message + a stacked multi-button
+  // row -- the reported case was the recurring unilateral one-side-at-a-time
+  // confirm) could be taller than the viewport with the actions rendered
+  // off-screen and unreachable, on both platforms. maxHeight: '88%' (the
+  // same cap ActiveWorkoutScreen's supSheet uses, see git 60ebbd9) plus
+  // overflow: 'hidden' (clips scrolled content to the rounded corners) fixes
+  // that: the card can never exceed the viewport, and cardScroll below makes
+  // the excess scroll instead of clip.
+  //
+  // Bottom safe-area inset: NOT applied here, by evidence, not omission.
+  // The sup-modal Math.max(token, insets.bottom + token) contract (D36a)
+  // exists because those sheets are flush to the physical bottom edge
+  // (supOverlay: justifyContent: 'flex-end') with zero built-in clearance.
+  // This card is centred (backdrop: justifyContent: 'center', padding:
+  // spacing.xl on every edge) with two independent layers of clearance the
+  // flush sheets don't have: (1) centring itself guarantees at least half of
+  // whatever headroom the 88% cap leaves is free on EACH side (a card at the
+  // cap on a 411dp-tall short/landscape viewport still leaves ~46dp between
+  // the card's own edge and the screen edge, before backdrop padding); (2)
+  // the actions row is a further spacing.xl (24dp) inboard of the card's own
+  // bottom edge (this card style's padding applies to the actions row too).
+  // Stacking both layers keeps the actions comfortably clear (~70dp in that
+  // worked example) of even a 48dp three-button nav bar in the shortest
+  // realistic viewports; a centred dialog's geometry structurally cannot
+  // reproduce the flush-sheet failure mode. Revisit only if AppAlert is ever
+  // re-anchored to an edge instead of centred.
   card: {
     width: '100%',
     maxWidth: 420,
+    maxHeight: '88%',
     backgroundColor: colors.surfaceElevated ?? colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.xl,
+    overflow: 'hidden',
   },
+  // Scroll wrapper for the title/message region only (see the D42 comment
+  // above the JSX for why the actions stay outside this). Same
+  // flexShrink/minHeight shape as ActiveWorkoutScreen's supSheetScroll: lets
+  // the ScrollView shrink to whatever the capped card leaves it, instead of
+  // forcing its own natural (unbounded) content height onto the card.
+  cardScroll: { flexShrink: 1, minHeight: 0 },
   title: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
