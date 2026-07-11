@@ -175,8 +175,9 @@ export function ProLocked({ feature = 'This' }) {
 
   // Restore is a read of an existing entitlement, not a purchase: a paid user
   // on a reinstall or new device must recover Pro here without going through
-  // the buy flow. Routes through the same shared restore module PaywallScreen
-  // uses; it re-reads the active subscription from the store and never charges.
+  // the buy flow. Routes through the shared restore module
+  // (lib/payments/restore); it re-reads the active subscription from the
+  // store and never charges.
   async function handleRestore() {
     if (restoring) return;
     setRestoring(true);
@@ -250,7 +251,8 @@ export function ProLocked({ feature = 'This' }) {
         </TouchableOpacity>
         {/* COMP-CLARITY: Play-required restore, so a reinstalled paid user can
             recover Pro from the lock without buying again. Same read-only
-            entitlement path as PaywallScreen; no purchase is made here. */}
+            entitlement path as the sheet above (lib/payments/restore); no
+            purchase is made here. */}
         <TouchableOpacity
           style={[styles.lockedRestore, live.lockedRestore]}
           onPress={handleRestore}

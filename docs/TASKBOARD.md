@@ -296,8 +296,23 @@ thin-recap threshold. ED guardrails baked in as conditions, not
 options: no outcome language ever, weight/food-adjacent lines
 suppressed fail-closed under calm/ED, no thin recap.
 `docs/marketing-2026-07-11/C5-day14-recap-decision-memo.md`. NO code
-touched). PARKED for usage evidence: C4, C6, C9 (behind C8), C10;
-win-back wording stays founder-gated.
+touched). RULINGS (D33, founder reaffirmed delegation 2026-07-11):
+**D71** C3 = option B, port social-proof excerpt + inline restore onto
+ProUpgrade then delete the orphaned PaywallScreen; **D72** C5 = option
+A, training-facts block on the CascadeGate trial-end variant,
+training-mechanics only, floor 3+ completed workouts. Both recorded
+with rationale in the decisions register. BUILDS IN FLIGHT (two Opus
+agents, disjoint lanes): C3-B owns ProUpgradeScreen / PaywallScreen
+deletion / RootNavigator / tier-screens-mount + paywall test
+re-anchors; C5-A owns CascadeGateScreen + cascadeGateRecap guard test.
+RECOVERY PATH if a session dies mid-build: `git status` the working
+tree; lead-review any uncommitted diff against D71/D72 and the briefs
+embedded in this entry's two docs; relaunch the affected agent with
+the same brief rather than hand-finishing. Lead-held uncommitted
+edits: DifferentialBadge.js + ProGate.js stale-comment fixes and this
+board/register update (commit with the C3 landing). PARKED for usage
+evidence: C4, C6, C9 (behind C8), C10; win-back wording stays
+founder-gated.
 
 ## 0. FOUNDER MUST-FIX LIST (device-testing session, 2026-07-11) — SUPERSEDED BY R-CAMPAIGN
 

@@ -1522,3 +1522,49 @@ RULINGS AND LANDINGS:
    centrally.
 8. DifferentialBadge excluded from every sweep (billing surface;
    C3 paywall audit owns it).
+
+## D71 — C3 duplicate paywall: port then delete (lead ruling under D33, 2026-07-11)
+
+Sources: C3 read-only audit (lead-verified),
+docs/marketing-2026-07-11/C3-duplicate-paywall-decision-brief.md.
+Founder reaffirmed D33 delegation mid-lane: decisions are the lead's,
+ruled entirely on the best end result for users and the app.
+
+RULING: Option B. PaywallScreen's two genuinely valuable capabilities
+move to the live surface first — the Play-review social-proof excerpt
+card (paywallExcerpts.js survives with its tests) and an inline
+restore affordance (shared lib/payments/restore module, the ProGate
+pattern) land on ProUpgradeScreen — then the orphaned PaywallScreen,
+its ProfileStack registration and its orphan-only tests are deleted
+and the stale cross-references cleaned. Rationale: the orphan is
+unreachable (zero call sites), carries a superseded annual default
+and pre-C1 "7 days" copy, and is pure future-drift risk; its social
+proof and restore button are real user value the live screen lacks.
+Docs-only cleanup (option D) would have been the lighter path; D33's
+criterion is explicit that effort is never the tiebreak. An earlier
+founder quick-pick of D is superseded by his explicit reaffirmation
+that the lead rules on merits. Constraints: product IDs, restore.js,
+playBilling.js, cascade.js untouched; a written test plan covers the
+restore addition (docs/marketing-2026-07-11/); DifferentialBadge
+behaviour untouched.
+
+## D72 — C5 day-14 factual recap: enrich CascadeGate (lead ruling under D33, 2026-07-11)
+
+Sources: C5 fact recon (lead-verified at the day-14 slot and day-3
+precedent), docs/marketing-2026-07-11/C5-day14-recap-decision-memo.md.
+Founder quick-picks aligned with the merits and are adopted as the
+ruling.
+
+RULING: surface = the CascadeGateScreen trial-end variant gains a
+small factual block above the Stay-on-Pro/Drop-to-Free choice; facts =
+training-mechanics only (workouts completed, sets, unique exercises,
+personal bests) so the surface is flag-invariant and renders
+identically for every user; floor = fewer than 3 completed workouts in
+the trial window renders no block at all (never a thin recap). Window
+is [proTrialEndsAt - 14d, proTrialEndsAt) via the existing
+getRecapData; PBs via getWeeklyPRCount summed over the window's
+Monday-local weeks (the app's one PB definition). No new events, no
+notification, no server migration. ED guardrails hold by construction:
+no outcome or body-change language anywhere in the copy, nothing
+weight/food-adjacent on the surface, and the block is best-effort
+(any load failure renders nothing).

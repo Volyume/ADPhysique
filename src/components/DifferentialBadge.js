@@ -27,7 +27,7 @@ const impressionsSent = new Set();
 
 export default function DifferentialBadge({
   differential,        // { shown, trigger, with_food_data_message, paywall_cta }
-  pricingWindow: _pricingWindow, // legacy, unused; billing period now lives on the Paywall
+  pricingWindow: _pricingWindow, // legacy, unused; billing period now lives on ProUpgrade (the CTA's destination)
   pricingPriceText,    // e.g. "£2.99/month", pre-resolved by caller for the buy_pro CTA
   onTapCta,            // (action: 'pay' | 'dismiss' | 'shown') => void ('shown' is the impression ping)
 }) {
