@@ -147,3 +147,37 @@ number, below it the surface is absent, never apologetic.
   (cascade push copy is documented there) — that doc's rules require the
   change to be recorded, and the identifier strings must not be renamed
   (`scheduler.js:443-447`).
+
+## Build landed — device checklist
+
+Ruling D72 (Option A) built on `CascadeGateScreen.js`: a factual
+training-recap block above the Stay-on-Pro / Drop-to-Free choice on the
+trial-end variant only. Facts are training-mechanics only (workouts, sets,
+exercises, personal bests) so the block is flag-invariant. Run on a physical
+Android device from an EAS build (custom native modules, so not Expo Go).
+
+1. **Trial user with 3 or more workouts sees the block.** Sign in as a Pro
+   trial account that has logged at least 3 completed workouts inside the
+   14-day window. Open the trial-end gate (Subscription screen mid-trial, or
+   the force-show after lapse on Home).
+   *Expected:* a small neutral card sits between the subtitle and the billing
+   period selector, titled "During your trial", with a single facts line such
+   as "6 workouts · 48 sets · 7 exercises · 2 personal bests". Counts match
+   the trial window. The personal-bests segment is absent if there were no PBs.
+   The card is not tappable and has no accent colour.
+2. **Fresh trial with fewer than 3 workouts sees NO block.** Sign in as a Pro
+   trial account with 0 to 2 completed workouts. Open the trial-end gate.
+   *Expected:* no recap card at all — the gate shows exactly its existing
+   title, subtitle and choice, never a sparse "1 workout" line.
+3. **Payment-failure variant shows no block.** Trigger the payment-failure
+   gate (billing failure grace overlay).
+   *Expected:* no recap card — the block is trial-end only.
+4. **ED spot-check (house rule, weight/food-adjacent surface family).** Sign
+   in as a user with an open ED pattern flag, and separately as a user in calm
+   mode, each with 3 or more workouts in the trial window. Open the trial-end
+   gate.
+   *Expected:* the identical recap block renders with the same training facts
+   (the block is flag-invariant by design — it reads no flag), and nothing
+   weight-, food- or outcome-related appears anywhere on the card. No
+   body-change or "progress/results" language. The block is the same for every
+   user.
