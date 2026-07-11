@@ -33,7 +33,7 @@ import { useToast } from '../components/Toast';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { logBodyMetric, updateBodyMetric, deleteBodyMetric, getBodyMetricLog, getOpenEdPatternFlag, getWorkoutSetsSince, getAllExercises } from '../lib/database';
+import { logBodyMetric, updateBodyMetric, deleteBodyMetric, getBodyMetricLog, getMorningWeights, getOpenEdPatternFlag, getWorkoutSetsSince, getAllExercises } from '../lib/database';
 import { appAlert } from '../components/AppAlert';
 import { deriveRecomp, buildRecompShareParams } from '../lib/recompReframe';
 import { localDayKey } from '../lib/dayKey';
@@ -57,6 +57,7 @@ import { toEnergy, energyUnitLabel } from '../lib/format';
 import { formatBodyWeight, formatBodyWeightShort, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
 import { isCalm, WELLBEING_HELPLINE, WELLBEING_KEY } from '../lib/wellbeing';
 import { validateBodyMetricForm } from '../lib/bodyMetricValidate';
+import { mergeMorningWeightsIntoHistory } from '../lib/bodyMetricsHistoryMerge';
 
 const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
@@ -94,8 +95,18 @@ function rowToEntry(row) {
     hamstrings:  row.hamCm ?? null,
     calves:      row.calfCm ?? null,
     notes:       row.notes ?? '',
+    // BUG-WEIGHT-HISTORY (2026-07-11): tags the row's writable table so
+    // edit/delete (which only know how to reach body_metric_log via
+    // updateBodyMetric/deleteBodyMetric) never fire on a merged-in
+    // morning_weights row (see morningWeightToEntry below).
+    source: 'body_metric_log',
   };
 }
+
+// BUG-WEIGHT-HISTORY (2026-07-11): see src/lib/bodyMetricsHistoryMerge.js for
+// the root-cause note and the merge itself, split into a dependency-free lib
+// module so it's unit-testable without mounting this screen (which pulls in
+// react-native-svg via VolyumeChart).
 
 // D16 (NAV-2): shared blank-form shape, reused for a fresh "New entry" and
 // for closing an in-progress edit (never left holding a stale entry's data).
@@ -651,7 +662,14 @@ export default function BodyMetricsScreen() {
         }
       }
 
-      const entries = rows.map(rowToEntry);
+      const bodyMetricEntries = rows.map(rowToEntry);
+
+      // BUG-WEIGHT-HISTORY: fold in any calendar day that only has a
+      // morning_weights row (Home's quick weigh-in), so it appears as a
+      // dated historical record here too.
+      let morningRows = [];
+      try { morningRows = await getMorningWeights(user.id, 90); } catch (_e) { morningRows = []; }
+      const entries = mergeMorningWeightsIntoHistory(bodyMetricEntries, morningRows, 50);
       setHistory(entries);
       const sorted = [...entries].sort((a, b) => a.metric_date.localeCompare(b.metric_date));
       const weightPoints = sorted
@@ -1372,7 +1390,13 @@ export default function BodyMetricsScreen() {
                       ))}
                     </View>
                   </View>
-                  {!readOnly && (
+                  {/* BUG-WEIGHT-HISTORY: a row merged in from morning_weights has no
+                      body_metric_log id, so startEditEntry/deleteMetricEntry (which
+                      call updateBodyMetric/deleteBodyMetric against body_metric_log)
+                      would silently no-op on it. Those rows are logged from Home's
+                      quick weigh-in, which has never had its own edit/delete affordance
+                      either, so omitting the actions here is not a new regression. */}
+                  {!readOnly && entry.source !== 'morning_weight' && (
                     <View style={styles.historyActions}>
                       <TouchableOpacity
                         style={[styles.historyActionBtn, live.historyActionBtn]}
