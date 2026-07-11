@@ -159,6 +159,20 @@ No item marked done on an agent's self-report. Ever._
   below; (3) as free: one tappable Pro pitch card, no duplicate upgrade
   row.
 
+- **R9 Whole-app card/box cohesion** (Today / Workout / Nutrition /
+  Progress / Coach to the Food standard). IN PROGRESS. Two read-only
+  Opus audits running: (1) D65 blast-radius - enumerate every
+  Button/Card/Chip receiving layout-in-parent styles that were inert
+  before the PressableCard collapse and are now active, classified
+  restored-intent vs needs-eyeball; (2) R9 cohesion map - every
+  card-like box on the five areas scored against
+  FOOD-DESIGN-STANDARD.md section 2/3/8 with file:line verdicts.
+  RECOVERY: both briefs are reproducible from this entry + the standard
+  doc; if either agent dies, relaunch with the same brief (read-only,
+  no tree damage possible). Lead then rules per divergence class and
+  builds (hands-on for judgement classes, specced dispatch for
+  mechanical sweeps), lead-verified against the rendering line.
+
 RECON (done): `docs/remediation-2026-07-11/FOOD-DESIGN-STANDARD.md`
 (the cohesion measuring stick), `DEFECT-MAP.md` (file:line evidence
 R2-R8), `COMPETITIVE-LOGGER-BAR.md`.
