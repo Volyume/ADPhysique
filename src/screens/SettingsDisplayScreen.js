@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
-import { appAlert } from '../components/AppAlert';
 import { View, Text, Switch, StyleSheet } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
-import * as Updates from 'expo-updates';
 import useAppStore from '../store/useAppStore';
 import { colors, withAlpha, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
@@ -27,54 +25,15 @@ const ENERGY_OPTIONS = [
   { value: 'kj', label: 'kJ' },
 ];
 
-// Larger Text / Higher Contrast / Colour-Blind Safe mutate theme tokens
-// that StyleSheet.create has already baked at module-evaluation time, so
-// they only take effect after the app is re-launched and bootstrapAccessibility
-// in App.js re-applies them before screens load. Prompt the user to reload now
-// rather than leaving them confused that the toggle "did nothing".
-//
-// D24 CP-10 stage 3 status (docs/ux-world-class-audit-2026-07-09/
-// CP-10-restart-free-theming-plan.md, 2026-07-10): ALL FOUR prompts below
-// stay exactly as they are. The plan's own Stage 5 ("Retire the reload
-// prompt") is explicit that a toggle's promptRestartForA11y call is removed
-// only "once Stage 3+4 cover every screen a toggle's dependency set
-// touches" -- i.e. after every one of the 85 screens (Stage 3) and the four
-// Skia/chart consumers (Stage 4) have been migrated off the frozen
-// StyleSheet.create/module-const pattern onto useTheme(). This screen's OWN
-// body (section cards, labels, switches) is now migrated as part of the
-// Settings-family Stage 3 batch, so it flips live the instant a toggle is
-// switched -- but the vast majority of the other 84 screens (Home, Diary,
-// the workout family, etc.) are not yet migrated, so retiring the prompts
-// now would still be dishonest: a user switching to Light would see THIS
-// screen and the root chrome (Stage 2) flip instantly while most of the
-// rest of the app stayed on the old palette until they manually reloaded --
-// precisely the half-migrated "torn" state the plan's risk register #1/#7
-// warns against, worse than the existing reload prompt. No toggle is
-// genuinely restart-free app-wide yet. Revisit this comment at Stage 5.
-async function promptRestartForA11y(label) {
-  appAlert(
-    `${label} saved`,
-    `Volyume needs to reopen to apply this. Your data and current screen are safe.`,
-    [
-      { text: 'Later', style: 'cancel' },
-      {
-        text: 'Reload now',
-        onPress: async () => {
-          try { await Updates.reloadAsync(); }
-          catch (_) {
-            // Dev clients / Expo Go without OTA support, fall back to a
-            // soft message. The toggle is saved; next manual restart picks
-            // it up.
-            appAlert('Reload failed', 'Close and reopen Volyume to apply the change.');
-          }
-        },
-      },
-    ],
-  );
-}
+// CP-10 stage 5 (docs/ux-world-class-audit-2026-07-09/
+// CP-10-restart-free-theming-plan.md): live theming is now complete across
+// every screen (Stage 3) and Skia/chart consumer (Stage 4), so Appearance,
+// larger text, higher contrast and the colour-blind safe palette all apply
+// immediately, the same as reduce motion always has. There is no reload
+// prompt any more.
 
 // Display & accessibility: font scale, contrast, colour-blind palette,
-// reduced motion. All but reduce-motion need a reload to take effect.
+// reduced motion. All changes apply immediately.
 export default function SettingsDisplayScreen() {
   const { accessibility, setAccessibilityPref, loadAccessibility, accessibilityLoaded } = useAppStore(
     useShallow(s => ({
@@ -96,10 +55,9 @@ export default function SettingsDisplayScreen() {
   const currentEnergy = accessibility.energyUnit ?? 'kcal';
   // CP-10 stage 3: live theme (src/hooks/useTheme.js). This screen is where
   // the Appearance/larger-text/contrast/colour-blind toggles themselves
-  // live, so its own chrome and section labels now flip live the instant a
-  // toggle is switched, same as every other migrated Settings screen; the
-  // reload prompt below is unchanged (still needed until every OTHER screen
-  // migrates too, per the plan's Stage 5 gate).
+  // live, so its own chrome and section labels flip live the instant a
+  // toggle is switched, same as every other migrated Settings screen and,
+  // as of Stage 5, the same as every other screen in the app.
   const t = useTheme();
   const live = useSettingsStyles();
   const liveText = {
@@ -126,10 +84,7 @@ export default function SettingsDisplayScreen() {
                 onPress={async () => {
                   if (active) return;
                   haptics.selection();
-                  // Await the write before prompting reload (a fast tap can tear
-                  // down the VM before the pref persists).
                   await setAccessibilityPref('theme', opt.value);
-                  promptRestartForA11y('Appearance');
                 }}
                 accessibilityRole="radio"
                 accessibilityLabel={opt.label}
@@ -244,11 +199,7 @@ export default function SettingsDisplayScreen() {
               value={!!accessibility.largerText}
               onValueChange={async v => {
                 haptics.selection();
-                // Await the AsyncStorage write before prompting reload, otherwise
-                // a fast "Reload now" tap can tear down the JS VM before the pref
-                // persists, and the user sees no change on restart.
                 await setAccessibilityPref('largerText', v);
-                promptRestartForA11y('Larger text');
               }}
               trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
               thumbColor={accessibility.largerText ? t.colors.primary : t.colors.textMuted}
@@ -266,7 +217,6 @@ export default function SettingsDisplayScreen() {
               onValueChange={async v => {
                 haptics.selection();
                 await setAccessibilityPref('higherContrast', v);
-                promptRestartForA11y('Higher contrast');
               }}
               trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
               thumbColor={accessibility.higherContrast ? t.colors.primary : t.colors.textMuted}
@@ -284,7 +234,6 @@ export default function SettingsDisplayScreen() {
               onValueChange={async v => {
                 haptics.selection();
                 await setAccessibilityPref('colorBlindSafe', v);
-                promptRestartForA11y('Colour-blind safe palette');
               }}
               trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
               thumbColor={accessibility.colorBlindSafe ? t.colors.primary : t.colors.textMuted}
@@ -306,7 +255,7 @@ export default function SettingsDisplayScreen() {
           }
         />
         <Text maxFontSizeMultiplier={1.3} style={[styles.a11yNote, live.a11yNote]}>
-          Reduce motion takes effect immediately. Appearance, larger text, higher contrast, and the colour-blind safe palette need Volyume to reopen. You'll be prompted to reload after changing them.
+          All these settings apply straight away. There is no need to restart or reopen Volyume.
         </Text>
       </View>
     </SettingsPage>
