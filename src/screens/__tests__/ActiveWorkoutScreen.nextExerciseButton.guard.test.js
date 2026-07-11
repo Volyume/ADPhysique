@@ -181,9 +181,13 @@ describe('target-set fallback matrix: targetSets always resolves to a real numbe
   test('a slot with no routineExercise at all falls back to DEFAULT_FREEFORM_TARGET_SETS, never to undefined', () => {
     expect(SRC).toContain('const DEFAULT_FREEFORM_TARGET_SETS = 3;');
     expect(SRC).toContain('const targetSets = adjustedSetCount || routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS;');
-    // 3 is not a new invented number: it matches this file's own existing
-    // display fallback for a missing recommendedSets.
-    expect(SRC).toContain("Target: {adjustedSetCount || routineExercise.recommendedSets || 3} sets");
+    // Re-pinned for D43 S2: the separate "Target: N sets - X-Y reps" display
+    // line is retired (folded into orientationLabel's own "Set X of
+    // targetSets" text on the Now card's Line 1). targetSets is the single
+    // shared source for that display now, so this pins targetSets itself
+    // being read straight into orientationLabel's set-position text, the
+    // same DEFAULT_FREEFORM_TARGET_SETS fallback chain asserted above.
+    expect(SRC).toContain('const pos = targetSets ? `Set ${workingLogged + 1} of ${targetSets}` : `Set ${workingLogged + 1}`;');
   });
 
   test('per-side pairs still count as ONE set toward whatever target resolves', () => {

@@ -1124,3 +1124,44 @@ Founder rulings after the backlog review:
   difficult design decisions; everything else - reads, writes,
   verification - is delegated to the cheapest sensible agent. No big
   reads or writes by the main loop. Be careful about tokens in all ways.
+
+## D58 — Logger S2 landed; beat line KEPT as a compact row (not dissolved into input placeholders) — lead design ruling (2026-07-11)
+
+D43 S2 (Now card + status strip) is built and landed. The two shell
+changes the blueprint §3.3/§3.4 called for are done: the ambiguous "N
+notes" accordion is replaced by content-labelled chips (StatusStrip:
+Deload, Superset, Coach note, Starter session, Target met — named, never
+a count), and the Now card moves onto the house `Card` (radius lg/16,
+spacing.lg padding) with Line 1 folding the old orientation + target rows
+into one tappable line ("Set 2 of 3 - Working - 8-12 reps") and a
+note-pencil corner affordance. Chrome above the inputs drops from up to
+8 stacked lines to 2.
+
+ONE blueprint mechanic is ruled DIFFERENTLY, on the merits (D33/D48
+delegated design authority; surfaced here per D56, not parked). The
+blueprint §3.4 Line 2 proposed the beat line "dissolve into the inputs"
+as ghost placeholders inside the weight/reps fields. Ruling: KEEP the
+beat line as the single compact tappable row it already is, directly
+above the inputs. Rationale — the beat line carries strictly MORE than
+two prefill numbers can: the directional beat-it cue (the ↑ glyph +
+range, a genuine coaching signal), the "Recovery week" deload variant,
+the "First time - Target X" variant, and an explicit labelled "Use"
+affordance. Ghost placeholders in two numeric fields cannot hold the
+glyph, the range, or the deload/first-time context, so dissolving the
+line would either DROP coaching signal or push it straight back out as
+chrome — a worse app, not a better one. The current row is already one
+line, at input size, one-tap-to-apply — exactly the "one honest
+mechanism for previous performance, tappable" that the blueprint's own
+§2 principles demand. It also keeps the pinned, safety-adjacent
+`SetEntry.js` input contract (keyboard-Done-logs, ghost-prefill colour,
+tabular-nums, stepper) untouched. This is the better-for-users choice,
+not the lighter one. Subject to the founder's device-walk taste veto at
+S5 (blueprint §9): if the founder wants the line gone on sight, that
+reopens it.
+
+Verification: eslint clean; ActiveWorkoutScreen + SetEntry + LoggedSetRow
++ cp10Stage3WorkoutShells = 15 suites / 126 tests green; the two
+source-guard suites re-pinned to the new structure (notesChip thumb
+target → StatusStrip chip; "N notes" count wording → content labels +
+absence-of-count; targetRow/targetText → orientationTarget fold) with
+STRONGER assertions, no pin deleted.

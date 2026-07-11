@@ -23,6 +23,15 @@ const EMPTY_EXERCISE_VIEW = fs.readFileSync(
   path.join(__dirname, '..', '..', 'components', 'workout', 'EmptyExerciseView.js'),
   'utf8',
 );
+// Re-pinned for D43 S2: the "N notes" accordion (notesRail/notesChip/
+// notesChipText/notesExpanded) was retired from ActiveWorkoutScreen.js and
+// replaced by StatusStrip (content-labelled chips, tap-to-expand per chip,
+// no count). Assertions that used to read the chip styling off ACTIVE_WORKOUT
+// now read the same source text off StatusStrip.js instead.
+const STATUS_STRIP = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'StatusStrip.js'),
+  'utf8',
+);
 
 describe('ActiveWorkoutScreen gym-use polish', () => {
   test('terminal workout completion has one primary finish control', () => {
@@ -69,8 +78,11 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // now reads a live theme (src/hooks/useTheme.js); inline colour props
     // moved from the frozen `colors.*` singleton to `t.colors.*`.
     expect(ACTIVE_WORKOUT).toContain('name="information-circle-outline" size={14} color={t.colors.primary}');
-    expect(ACTIVE_WORKOUT).toContain('name="information-circle-outline" size={16} color={t.colors.textSecondary}');
-    expect(ACTIVE_WORKOUT).toMatch(/notesChip: \{[\s\S]*backgroundColor: colors\.surface,[\s\S]*borderColor: colors\.borderSubtle/);
+    // Re-pinned for D43 S2: the "16px textSecondary info-circle" belonged to
+    // the retired notesChip; StatusStrip's chip icon carries the equivalent
+    // "content-labelled, textSecondary by default" contract now.
+    expect(STATUS_STRIP).toContain("item.icon && <Ionicons name={item.icon} size={14} color={item.iconColor || t.colors.textSecondary} />");
+    expect(STATUS_STRIP).toMatch(/chip: \{[\s\S]*borderWidth: 1,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
     expect(ACTIVE_WORKOUT).toMatch(/firstSetHint: \{[\s\S]*backgroundColor: colors\.surface,[\s\S]*borderColor: colors\.borderSubtle/);
     expect(ACTIVE_WORKOUT).not.toContain('sparkles');
   });
@@ -137,14 +149,25 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(SET_ENTRY).toContain("...type.num('bodyStrong')");
     expect(SET_ENTRY).not.toContain('fontWeight: fontWeight.bold');
     expect(SET_ENTRY.match(/hitSlop=\{STEPPER_HIT_SLOP\}/g)?.length).toBeGreaterThanOrEqual(10);
-    expect(ACTIVE_WORKOUT).toMatch(/setEntryCard: \{[\s\S]*padding: spacing\.xs2[\s\S]*gap: spacing\.xxs/);
+    // Re-pinned for D43 S2: the bespoke radius.md/6px-padding setEntryCard
+    // is retired -- the Now card now sits on the house Card (radius lg,
+    // padding lg passed as PROPS at the call site, asserted separately
+    // below); this frozen style only carries the internal row gap now.
+    expect(ACTIVE_WORKOUT).toMatch(/setEntryCard: \{ gap: spacing\.xs \}/);
+    expect(ACTIVE_WORKOUT).toContain('radius="lg"\n            padding="lg"');
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): exerciseName/targetText
     // gained a live.* override in their style arrays (source: useTheme.js);
     // the frozen `styles` definitions asserted next are byte-identical.
     expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>');
     expect(ACTIVE_WORKOUT).toContain('exerciseName: { flex: 1, ...type.title, color: colors.textPrimary }');
-    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.targetText, live.targetText]} numberOfLines={1}>');
-    expect(ACTIVE_WORKOUT).toContain('targetText: { flex: 1, ...type.captionTight, color: colors.textMuted }');
+    // Re-pinned for D43 S2: the separate targetRow/targetText line is
+    // retired -- the reps target now folds into orientationText's own Text
+    // node on Line 1 ("Set 2 of 3 - Working - 8-12 reps"), one line where
+    // two stood.
+    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.orientationText, live.orientationText]} numberOfLines={1}>');
+    expect(ACTIVE_WORKOUT).toContain('orientationTarget: { ...type.label, color: colors.textMuted }');
+    expect(ACTIVE_WORKOUT).not.toContain('targetRow:');
+    expect(ACTIVE_WORKOUT).not.toContain('targetText:');
     expect(ACTIVE_WORKOUT).toMatch(/beatLine: \{[\s\S]*minHeight: 36/);
     // Re-pinned for D43 S1 extraction: loggedSetRow moved to
     // src/components/workout/LoggedSetRow.js's own frozen styles.
@@ -199,7 +222,8 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(EMPTY_EXERCISE_VIEW).toContain('addFirstBtnText: { ...type.label, color: colors.onPrimary }');
     expect(EMPTY_EXERCISE_VIEW).not.toContain('addFirstBtnText: { fontSize: fontSize.lg');
     expect(ACTIVE_WORKOUT).toMatch(/inlineActionPill: \{[\s\S]*minHeight: 44/);
-    expect(ACTIVE_WORKOUT).toMatch(/notesChip: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
+    // Re-pinned for D43 S2: notesChip's thumb-target contract moved to
+    // StatusStrip's chip style (see the StatusStrip assertions above).
     expect(ACTIVE_WORKOUT).toMatch(/clusterCancel: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
     expect(ACTIVE_WORKOUT).toMatch(/autoAdvanceRowActionBtn: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
     expect(ACTIVE_WORKOUT).toContain('function openAddExercisePicker()');
@@ -211,12 +235,19 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Add exercise</Text>');
     expect(ACTIVE_WORKOUT).toContain("const noteActionLabel = showNoteInput || noteText.trim().length > 0 ? 'Edit note' : 'Add note';");
     expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{noteActionLabel}</Text>');
-    // Stale pin -> corrected: commit 214b057 (design campaign 2026-07-09)
-    // renamed the collapsed banner rail from "N cues" to "N notes" per the
-    // U-A-1 contract (see ActiveWorkoutScreen.js:365,2036,2039,3342); the
-    // variable is noteCount, not cueCount. This assertion pins the current,
-    // correct wording.
-    expect(ACTIVE_WORKOUT).toContain('note{noteCount !== 1 ? \'s\' : \'\'}');
+    // Re-pinned for D43 S2: the U-A-1 "N notes"/"N cues" count wording is
+    // retired entirely -- StatusStrip labels every chip by content (Deload,
+    // Superset, Coach note, Starter session, Target met), never a count.
+    // This assertion now pins the ABSENCE of the count pattern plus the
+    // presence of the content-labelled chip items StatusStrip receives.
+    expect(ACTIVE_WORKOUT).not.toContain('noteCount');
+    expect(ACTIVE_WORKOUT).not.toMatch(/note\{.*!== 1 \? 's' : ''\}/);
+    expect(ACTIVE_WORKOUT).toContain("label: 'Starter session'");
+    expect(ACTIVE_WORKOUT).toContain("label: 'Superset'");
+    expect(ACTIVE_WORKOUT).toContain("label: 'Coach note'");
+    expect(ACTIVE_WORKOUT).toContain("label: 'Deload'");
+    expect(ACTIVE_WORKOUT).toContain("label: 'Target met'");
+    expect(ACTIVE_WORKOUT).toContain('<StatusStrip items={items} />');
     expect(ACTIVE_WORKOUT).not.toContain('testID="volyume-btn-add-mid-workout"');
     expect(ACTIVE_WORKOUT).not.toContain('secondaryActions: {');
     expect(ACTIVE_WORKOUT).not.toContain('actionBtnText');

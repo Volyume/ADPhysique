@@ -27,6 +27,7 @@ import Card from '../components/Card';
 // imports of it from this screen working.
 import { LoggedSetRow } from '../components/workout/LoggedSetRow';
 import EmptyExerciseView from '../components/workout/EmptyExerciseView';
+import StatusStrip from '../components/workout/StatusStrip';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet } from '../lib/database';
@@ -440,8 +441,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   // First-use info tip highlight
   const [showInfoTipPulse, setShowInfoTipPulse] = useState(false);
-  // U-A-1: the collapsed banner rail ("N notes") above the set-entry card.
-  const [notesExpanded, setNotesExpanded] = useState(false);
+  // D43 S2: the collapsed "N notes" rail is retired (replaced by
+  // StatusStrip, which owns its own per-chip expand state); this flag now
+  // only exists to be reset alongside the other per-exercise note UI state
+  // on exercise change/swap (kept for that pinned reset contract).
+  const [_notesExpanded, setNotesExpanded] = useState(false);
   const infoPulseAnim = useRef(new Animated.Value(1)).current;
   const infoPulseLoop = useRef(null);
 
@@ -2548,109 +2552,123 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 into the collapsed "N notes" rail (U-A-1). */}
           </View>
 
-          {/* U-A-1: collapse the banner stack into one tappable "N notes"
-              rail so the beat line + inputs stay above the fold. The nav
-              strip (above) and the rest timer (below) stay visible; every
-              other banner folds in here and expands on demand. */}
+          {/* D43 S2: the "N notes" accordion is retired. Content-labelled
+              chips (StatusStrip) replace it -- Deload, Superset, Coach note,
+              Starter session, Target met -- named by WHAT they are, never
+              hidden behind a count. Same underlying content/handlers as
+              before, only the collapsed shell changed. Re-pinned in
+              ActiveWorkoutScreen.usability.guard.test.js (D43 S2). */}
           {(() => {
-            const notes = [];
+            const items = [];
             if (starterActive) {
-              notes.push(
-                <View key="starter" style={[styles.starterBanner, live.starterBanner]}>
-                  <Ionicons name="flash-outline" size={16} color={t.colors.primary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.starterBannerText, live.starterBannerText]}>{timeCrunchMsg}</Text>
-                  <TouchableOpacity
-                    style={[styles.inlineActionPill, live.inlineActionPill]}
-                    onPress={handleRevertTimeCrunch}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityRole="button"
-                    accessibilityLabel="Do the full session instead"
-                  >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.inlineActionPillText, live.inlineActionPillText]}>Full session</Text>
-                  </TouchableOpacity>
-                </View>
-              );
+              items.push({
+                key: 'starter',
+                label: 'Starter session',
+                icon: 'flash-outline',
+                iconColor: t.colors.primary,
+                content: (
+                  <View key="starter" style={[styles.starterBanner, live.starterBanner]}>
+                    <Ionicons name="flash-outline" size={16} color={t.colors.primary} />
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.starterBannerText, live.starterBannerText]}>{timeCrunchMsg}</Text>
+                    <TouchableOpacity
+                      style={[styles.inlineActionPill, live.inlineActionPill]}
+                      onPress={handleRevertTimeCrunch}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityRole="button"
+                      accessibilityLabel="Do the full session instead"
+                    >
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.inlineActionPillText, live.inlineActionPillText]}>Full session</Text>
+                    </TouchableOpacity>
+                  </View>
+                ),
+              });
             }
             if (currentSGI != null && !!pairedExerciseName) {
-              notes.push(
-                <View key="superset" style={[styles.supersetChip, live.supersetChip]}>
-                  <Ionicons name="link" size={11} color={t.colors.primary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.supersetChipText, live.supersetChipText]}>
-                    Superset - alternates with {partnerNamesText}
-                  </Text>
-                </View>
-              );
+              items.push({
+                key: 'superset',
+                label: 'Superset',
+                icon: 'link',
+                iconColor: t.colors.primary,
+                content: (
+                  <View key="superset" style={[styles.supersetChip, live.supersetChip]}>
+                    <Ionicons name="link" size={11} color={t.colors.primary} />
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.supersetChipText, live.supersetChipText]}>
+                      Superset - alternates with {partnerNamesText}
+                    </Text>
+                  </View>
+                ),
+              });
             }
             nextTimeNotes.forEach(note => {
-              notes.push(
-                <View key={`note-${note.id}`} style={[styles.nextTimeBanner, live.nextTimeBanner]}>
-                  <Ionicons name="bulb-outline" size={16} color={t.colors.primary} style={{ marginTop: spacing.hair }} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.nextTimeBannerText, live.nextTimeBannerText]} numberOfLines={4}>{note.note}</Text>
-                  <TouchableOpacity
-                    style={[styles.inlineActionPill, live.inlineActionPill]}
-                    onPress={async () => {
-                      try { await markNoteShown(note.id); } catch (_e) {}
-                      setNextTimeNotes(prev => prev.filter(n => n.id !== note.id));
-                    }}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityRole="button"
-                    accessibilityLabel="Dismiss note"
-                  >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.inlineActionPillText, live.inlineActionPillText]}>Got it</Text>
-                  </TouchableOpacity>
-                </View>
-              );
+              items.push({
+                key: `note-${note.id}`,
+                label: 'Coach note',
+                icon: 'bulb-outline',
+                iconColor: t.colors.primary,
+                content: (
+                  <View key={`note-${note.id}`} style={[styles.nextTimeBanner, live.nextTimeBanner]}>
+                    <Ionicons name="bulb-outline" size={16} color={t.colors.primary} style={{ marginTop: spacing.hair }} />
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.nextTimeBannerText, live.nextTimeBannerText]} numberOfLines={4}>{note.note}</Text>
+                    <TouchableOpacity
+                      style={[styles.inlineActionPill, live.inlineActionPill]}
+                      onPress={async () => {
+                        try { await markNoteShown(note.id); } catch (_e) {}
+                        setNextTimeNotes(prev => prev.filter(n => n.id !== note.id));
+                      }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityRole="button"
+                      accessibilityLabel="Dismiss note"
+                    >
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.inlineActionPillText, live.inlineActionPillText]}>Got it</Text>
+                    </TouchableOpacity>
+                  </View>
+                ),
+              });
             });
             if (isDeloadWeek && !deloadDismissed) {
-              notes.push(
-                <View key="deload" style={[styles.deloadBanner, live.deloadBanner]}>
-                  <View style={styles.deloadBannerLeft}>
-                    <Ionicons name="battery-charging-outline" size={18} color={t.colors.warning} />
-                    <View>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.deloadBannerTitle, live.deloadBannerTitle]}>Recovery week</Text>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.deloadBannerSub, live.deloadBannerSub]}>Light loads - full recovery - no PRs</Text>
+              items.push({
+                key: 'deload',
+                label: 'Deload',
+                icon: 'battery-charging-outline',
+                iconColor: t.colors.warning,
+                content: (
+                  <View key="deload" style={[styles.deloadBanner, live.deloadBanner]}>
+                    <View style={styles.deloadBannerLeft}>
+                      <Ionicons name="battery-charging-outline" size={18} color={t.colors.warning} />
+                      <View>
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.deloadBannerTitle, live.deloadBannerTitle]}>Recovery week</Text>
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.deloadBannerSub, live.deloadBannerSub]}>Light loads - full recovery - no PRs</Text>
+                      </View>
                     </View>
+                    <TouchableOpacity
+                      style={[styles.inlineActionPill, live.inlineActionPill]}
+                      onPress={() => setDeloadDismissed(true)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Dismiss deload banner"
+                    >
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.inlineActionPillText, live.inlineActionPillText]}>Skip</Text>
+                    </TouchableOpacity>
                   </View>
-                  <TouchableOpacity
-                    style={[styles.inlineActionPill, live.inlineActionPill]}
-                    onPress={() => setDeloadDismissed(true)}
-                    accessibilityRole="button"
-                    accessibilityLabel="Dismiss deload banner"
-                  >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.inlineActionPillText, live.inlineActionPillText]}>Skip</Text>
-                  </TouchableOpacity>
-                </View>
-              );
+                ),
+              });
             }
             if (targetComplete) {
-              notes.push(
-                <View key="target-reached" style={[styles.targetBanner, live.targetBanner]}>
-                  <Ionicons name="checkmark-circle" size={16} color={t.colors.success} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.targetBannerText, live.targetBannerText]}>
-                    Target reached: {targetSets} working set{targetSets !== 1 ? 's' : ''} done
-                  </Text>
-                </View>
-              );
+              items.push({
+                key: 'target-reached',
+                label: 'Target met',
+                icon: 'checkmark-circle',
+                iconColor: t.colors.success,
+                content: (
+                  <View key="target-reached" style={[styles.targetBanner, live.targetBanner]}>
+                    <Ionicons name="checkmark-circle" size={16} color={t.colors.success} />
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.targetBannerText, live.targetBannerText]}>
+                      Target reached: {targetSets} working set{targetSets !== 1 ? 's' : ''} done
+                    </Text>
+                  </View>
+                ),
+              });
             }
-            if (notes.length === 0) return null;
-            const noteCount = notes.length;
-            return (
-              <View style={styles.notesRail}>
-                <TouchableOpacity
-                  style={[styles.notesChip, live.notesChip]}
-                  onPress={() => setNotesExpanded(v => !v)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  accessibilityRole="button"
-                  accessibilityState={{ expanded: notesExpanded }}
-                  accessibilityLabel={`${noteCount} note${noteCount !== 1 ? 's' : ''}, tap to ${notesExpanded ? 'collapse' : 'expand'}`}
-                >
-                  <Ionicons name="information-circle-outline" size={16} color={t.colors.textSecondary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.notesChipText, live.notesChipText]}>{noteCount} note{noteCount !== 1 ? 's' : ''}</Text>
-                  <Ionicons name={notesExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={t.colors.textSecondary} />
-                </TouchableOpacity>
-                {notesExpanded && <View style={styles.notesExpanded}>{notes}</View>}
-              </View>
-            );
+            return <StatusStrip items={items} />;
           })()}
 
           {/* Rest timer, sits ABOVE the SetEntry card, in the slot vacated
@@ -2660,16 +2678,33 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               empty. */}
           <RestTimer />
 
-          {/* Set Entry */}
+          {/* Set Entry. D43 S2: the house Card idiom (radius lg/16, spacing.lg
+              padding) replaces the old bespoke radius.md/6px-padding card,
+              so the app's most-used surface matches Diary/Home. */}
           <Card
-            radius="md"
-            padding="none"
+            radius="lg"
+            padding="lg"
             style={[
               styles.setEntryCard,
               currentSet.setType === 'warmup' && [styles.setEntryCardWarmup, live.setEntryCardWarmup],
               logFlash && [styles.setEntryCardFlash, live.setEntryCardFlash],
             ]}
           >
+            {/* D43 S2: note affordance in the card corner (blueprint 3.4).
+                Additive alongside the overflow's existing Add/edit note row
+                (the overflow diet itself is S3-scoped); same setShowNoteInput
+                handler and noteActionLabel copy, just a second, faster entry
+                point right on the card the user is already looking at. */}
+            <TouchableOpacity
+              testID="volyume-note-corner-btn"
+              style={styles.noteCornerBtn}
+              onPress={() => setShowNoteInput(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={`${noteActionLabel} for this set`}
+            >
+              <Ionicons name="pencil-outline" size={16} color={t.colors.textMuted} />
+            </TouchableOpacity>
             {/* D44: transient visual sign for a superset/giant-set
                 group-driven focus change. The spoken announcement already
                 fires in announceGroupFocusChange (this exact message), so
@@ -2699,38 +2734,34 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 Get the muscles and joints ready. Light weight, easy reps. Tap Log warm-up when you&apos;re ready to work.
               </Text>
             )}
-            {/* Card header (COMP-001): three fixed lines replace the old
-                chip stack (set title, target chip, coach-reason chip,
-                stalled chip, beat chip, repeat-last button, ghost chip).
-                One mechanism for previous performance, at input size,
-                tappable. Ghost pre-fill state is still communicated by
-                the muted input colour (valueInputGhost). */}
-
-            {/* Line 1: orientation row. Also the set-type picker's only
-                entry point now the SetEntry card-foot row is gone. */}
+            {/* D43 S2: the Now card header. Line 1 folds the old orientation
+                row + separate target row into ONE tappable line -- "Set 2 of
+                3 - Working - 8-12 reps" -- the set-type picker's only entry
+                point (unchanged handler/testID). Line 2 (below) stays the
+                single priority-ordered context line the blueprint calls for
+                (group-focus flash > warm-up > coach line); the beat line's
+                tap-to-apply mechanic is unchanged, just visually compact.
+                Re-pinned in ActiveWorkoutScreen.usability.guard.test.js
+                (D43 S2): targetRow/targetText retired, folded into
+                orientationText. */}
             <TouchableOpacity
               testID="volyume-set-type-btn"
               style={styles.orientationRow}
               onPress={() => setShowSetTypePicker(true)}
               hitSlop={{ top: 8, bottom: 4, left: 8, right: 8 }}
               accessibilityRole="button"
-              accessibilityLabel={`${orientationLabel}, tap to change set type`}
+              accessibilityLabel={`${orientationLabel}${routineExercise ? `, ${routineExercise.recommendedRepsMin} to ${routineExercise.recommendedRepsMax} reps` : ''}, tap to change set type`}
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.orientationText, live.orientationText]}>{orientationLabel}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.orientationText, live.orientationText]} numberOfLines={1}>
+                {orientationLabel}
+                {routineExercise ? (
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.orientationTarget, live.orientationTarget]}>
+                    {' - '}{routineExercise.recommendedRepsMin}-{routineExercise.recommendedRepsMax} reps
+                  </Text>
+                ) : null}
+              </Text>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
-
-            {/* Target line (U-A-1): the sets/reps prescription, moved off
-                the pre-card banner stack into the card header beside the
-                orientation/beat lines. */}
-            {routineExercise && (
-              <View style={styles.targetRow}>
-                <Ionicons name="flag-outline" size={12} color={t.colors.textMuted} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.targetText, live.targetText]} numberOfLines={1}>
-                  Target: {adjustedSetCount || routineExercise.recommendedSets || 3} sets - {routineExercise.recommendedRepsMin}-{routineExercise.recommendedRepsMax} reps
-                </Text>
-              </View>
-            )}
 
             {/* Line 2: beat line. The previous-performance anchor plus
                 target range and direction, promoted from xs italic to
@@ -4205,19 +4236,9 @@ const styles = StyleSheet.create({
   navTabBadgeText: { ...type.caption, color: colors.onPrimary, fontSize: fontSize.micro },
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.md, paddingTop: spacing.sm, gap: spacing.sm },
-  // U-A-1: collapsed "N notes" rail above the set-entry card.
-  notesRail: { gap: spacing.xs },
-  notesChip: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    alignSelf: 'flex-start', minHeight: workoutLoggerSize.primaryActionMinHeight,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
-  notesChipText: { ...type.label, color: colors.textSecondary },
-  notesExpanded: { gap: spacing.sm },
+  // D43 S2: the "N notes" accordion rail (notesRail/notesChip/notesChipText/
+  // notesExpanded) is retired -- StatusStrip (src/components/workout/
+  // StatusStrip.js) owns the equivalent chip-row styling now.
   exerciseHeader: { gap: spacing.xs },
   exerciseNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   exerciseName: { flex: 1, ...type.title, color: colors.textPrimary },
@@ -4277,14 +4298,18 @@ const styles = StyleSheet.create({
   swapEmpty: { alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.xs },
   swapEmptyTitle: { ...type.label, color: colors.textPrimary },
   swapEmptyText: { ...type.caption, color: colors.textMuted },
-  targetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 20 },
-  targetText: { flex: 1, ...type.captionTight, color: colors.textMuted },
-  setEntryCard: { padding: spacing.xs2, gap: spacing.xxs },
+  // D43 S2: setEntryCard now sits on the house Card (radius lg, padding lg,
+  // set via the Card props at the call site) instead of the old bespoke
+  // radius.md/6px-padding card. This style only carries the gap between the
+  // card's internal rows plus the warm-up/flash colour states below.
+  setEntryCard: { gap: spacing.xs },
   setEntryCardWarmup: { borderColor: colors.warning, backgroundColor: colors.warningBg || colors.surface },
   // Short amber flash on the card border to ack a successful Log set tap.
   // Border width stays at 1 so the card doesn't shift its 2px layout for the
   // 700 ms flash, just the colour swaps.
   setEntryCardFlash: { borderColor: colors.primary },
+  // D43 S2: the note-pencil corner affordance (blueprint 3.4).
+  noteCornerBtn: { position: 'absolute', top: spacing.sm, right: spacing.sm, zIndex: 1, padding: spacing.xxs },
   warmupBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   warmupBannerText: { ...type.caption, color: colors.warning },
   warmupOneTimeHint: {
@@ -4295,6 +4320,9 @@ const styles = StyleSheet.create({
   // COMP-001 card header: three lines replace the old chip stack.
   orientationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 2 },
   orientationText: { ...type.label, color: colors.textSecondary },
+  // D43 S2: the target reps range folded into orientationText's own Text
+  // node (was a separate targetRow/targetText line, retired).
+  orientationTarget: { ...type.label, color: colors.textMuted },
   beatLine: { alignSelf: 'stretch', minHeight: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs, paddingVertical: 0 },
   beatLineLabel: { flex: 1, minWidth: 0, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 },
   beatLineValue: { ...type.bodyStrong, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
@@ -4601,8 +4629,6 @@ function buildLiveStyles(t) {
     navTabTextActive: { color: t.colors.primary },
     navTabBadge: { backgroundColor: t.colors.primaryFill },
     navTabBadgeText: { ...t.type.caption, color: t.colors.onPrimary, fontSize: t.fontSize.micro },
-    notesChip: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
-    notesChipText: { ...t.type.label, color: t.colors.textSecondary },
     exerciseName: { ...t.type.title, color: t.colors.textPrimary },
     swapSafe: { backgroundColor: t.colors.background },
     swapHeader: { borderBottomColor: t.colors.borderSubtle },
@@ -4618,7 +4644,6 @@ function buildLiveStyles(t) {
     swapBrowseText: { ...t.type.label, color: t.colors.textPrimary },
     swapEmptyTitle: { ...t.type.label, color: t.colors.textPrimary },
     swapEmptyText: { ...t.type.caption, color: t.colors.textMuted },
-    targetText: { ...t.type.captionTight, color: t.colors.textMuted },
     setEntryCardWarmup: { borderColor: t.colors.warning, backgroundColor: t.colors.warningBg || t.colors.surface },
     setEntryCardFlash: { borderColor: t.colors.primary },
     warmupBannerText: { ...t.type.caption, color: t.colors.warning },
@@ -4626,6 +4651,7 @@ function buildLiveStyles(t) {
     firstSetHint: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     firstSetHintText: { ...t.type.caption, color: t.colors.textSecondary },
     orientationText: { ...t.type.label, color: t.colors.textSecondary },
+    orientationTarget: { ...t.type.label, color: t.colors.textMuted },
     beatLineLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     beatLineValue: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     beatLineGlyph: { ...t.type.bodyStrong, color: t.colors.primary },
