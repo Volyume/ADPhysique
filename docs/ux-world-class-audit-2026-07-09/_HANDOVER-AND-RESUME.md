@@ -417,6 +417,29 @@ handover+board discipline (founder correction — never batch it).
 the boundary: 675/676 suites (1 pre-existing skip), 8,412 passed / 0
 failed, lint clean.**
 
+**2026-07-11 device-testing wave (founder hands-on report, 12 issues):**
+D53 Manrope VETOED and reverted (`52e65dd`/`a6083f7`/`b2be386`) - Inter
+restored, no unilateral visual changes henceforth without founder flag.
+Body Metrics history fix LANDED `94cd1fe` (History only queried
+body_metric_log; Home's quick weigh-in writes morning_weights - now
+merged, read-only for morning rows). IN FLIGHT: Dietary Needs reopen
+bug + completion button (Sonnet). QUEUED in founder's order: Today/Train
+routine heading (name only, drop days+date squeeze); Progress empty
+third card under Training Load; Coach cleanup (remove "Volyume private
+coaching" footer, consolidate the duplicated check-in date into the
+Weekly Check-in card, fix "Come back on Sunday" vs the dated button
+mismatch, fix the "Your" truncated heading -> "Your Week", review "This
+Week" heading); unilateral flow REDESIGN (same reps both sides, guided
+side1 -> rest -> side2, ONE recorded set, research alternating-vs-
+sequential terminology, match design system - the current per-side rep
+ask is ED-adverse and must go); Pre/Post workout meals (OFF by default,
+hidden everywhere when off, no empty sections/add-food prompts; when on,
+populate with evidence-based pre/post meals AND redistribute daily
+macros across all enabled meals within engine tolerance - investigate
+sports-nutrition practice first). Founder usage low: lowest-sensible-tier
+agents for all of it, Fable/premium main loop reserved for judgement +
+safety-adjacent only.
+
 0. LANDED THIS SESSION (2026-07-11, all pushed; detail in
    `_HANDOVER-ARCHIVE.md`): CP-10 batch E COMPLETE — part 1 `c2a9b81`
    (FoodSearch/FoodInsights/RecipeBuilder, recovered from the dead
