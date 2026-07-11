@@ -535,7 +535,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
-    borderRadius: radius.sm,
+    // R5 (D66, review catch): same row as skipBtn - the logger's one
+    // small-surface radius applies to both.
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: withAlpha(colors.primary, alpha.mid),
     backgroundColor: colors.primaryBg,

@@ -26,7 +26,9 @@ export default function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, 
       <View style={[styles.header, live.header]}>
         <View style={styles.headerSide}>
           <TouchableOpacity onPress={onCancel} style={styles.headerTapTarget} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Cancel workout">
-            <Ionicons name="close" size={22} color={t.colors.textSecondary} />
+            {/* R5 (D66, review catch): matches the main logger header's X,
+                which matches ModalHeader's close (size 24, textPrimary). */}
+            <Ionicons name="close" size={24} color={t.colors.textPrimary} />
           </TouchableOpacity>
         </View>
         <View style={styles.headerCenter}>
@@ -40,7 +42,7 @@ export default function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, 
             size="sm"
             fullWidth={false}
             onPress={onFinish}
-            style={[styles.headerTapTarget, styles.headerFinishButton, live.headerFinishButton]}
+            style={[styles.headerTapTarget, styles.headerFinishButton]}
             accessibilityLabel="Finish workout"
           />
         </View>
@@ -96,18 +98,15 @@ const styles = StyleSheet.create({
   // purely transparent, no visual change.
   headerTapTarget: { minWidth: workoutLoggerSize.headerButtonMin, minHeight: workoutLoggerSize.headerButtonMin, alignItems: 'center', justifyContent: 'center' },
   headerSideRight: { width: workoutLoggerSize.headerSide, alignItems: 'flex-end', justifyContent: 'center' },
+  // R5 (D66, review catch): this file duplicates the main logger header's
+  // chrome (see the file header comment) and MUST track its D66 shape -
+  // bespoke Finish chrome deleted (Button's secondary variant shows
+  // through), timer is data ink not brand amber.
   headerFinishButton: {
-    flexDirection: 'row',
-    gap: spacing.xxs,
     minWidth: workoutLoggerSize.finishButtonMinWidth,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
-  timerText: { ...type.num('title'), color: colors.primary },
+  timerText: { ...type.num('title'), color: colors.textPrimary },
   exerciseNav: { borderBottomWidth: 1, borderBottomColor: colors.border, maxHeight: workoutLoggerSize.exerciseNavMaxHeight },
   exerciseNavContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, gap: spacing.sm, alignItems: 'center' },
   navTab: { minHeight: workoutLoggerSize.exerciseTabMinHeight, flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, backgroundColor: colors.surface2 },
@@ -135,8 +134,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     header: { borderBottomColor: t.colors.border },
-    headerFinishButton: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    timerText: { ...t.type.num('title'), color: t.colors.primary },
+    timerText: { ...t.type.num('title'), color: t.colors.textPrimary },
     exerciseNav: { borderBottomColor: t.colors.border },
     navTab: { backgroundColor: t.colors.surface2 },
     navTabActive: { backgroundColor: t.colors.primaryBg },

@@ -20,8 +20,46 @@
  */
 import fs from 'fs';
 import path from 'path';
+import { create, act } from 'react-test-renderer';
+import { Text } from 'react-native';
+import useAppStore from '../../store/useAppStore';
+import PressableCard from '../PressableCard';
 
 const read = (rel) => fs.readFileSync(path.resolve(__dirname, '..', '..', rel), 'utf8');
+
+// Render-level companion to the source pins below (adversarial-review
+// recommendation, 2026-07-11): a future regression could reintroduce an
+// inner wrapper without using the banned substrings, so also assert the
+// RENDERED tree - the caller's layout style must sit on the outermost
+// rendered element (the one the parent lays out), with no styled wrapper
+// between it and the children.
+describe('PressableCard rendered shape (R6)', () => {
+  test("the caller's style lands on the outermost rendered element", () => {
+    act(() => { useAppStore.setState({ accessibility: { reduceMotion: true } }); });
+    let tree;
+    act(() => {
+      tree = create(
+        <PressableCard onPress={() => {}} style={{ flex: 1 }}>
+          <Text>x</Text>
+        </PressableCard>
+      );
+    });
+    const flat = (s) => JSON.stringify(s ?? null);
+    // Exactly the outermost host element carries flex: 1...
+    const styled = tree.root.findAll((n) => typeof n.type === 'string' && flat(n.props.style).includes('"flex":1'));
+    expect(styled.length).toBe(1);
+    // ...and the text content is its direct descendant with no other
+    // styled host view in between.
+    let node = tree.root.findByType(Text).parent;
+    const betweenStyled = [];
+    while (node && node !== styled[0]) {
+      if (typeof node.type === 'string' && node.props.style) betweenStyled.push(node.type);
+      node = node.parent;
+    }
+    expect(node).toBe(styled[0]);
+    expect(betweenStyled).toEqual([]);
+  });
+});
 
 describe('PressableCard single-view layout contract (R6)', () => {
   const src = read('components/PressableCard.js');
