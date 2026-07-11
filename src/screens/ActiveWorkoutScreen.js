@@ -203,9 +203,20 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progr
     fmt.text,
     perSide,
   ].filter(Boolean).join(': ');
+  // Founder defect (2026-07-11): computed once so the SAME array reference
+  // is used both on the row and on the ContextMenu.Trigger below. zeego
+  // 3.0.6's asChild Trigger (Android AND iOS) does
+  // `cloneElement(children, { style, ...props })` -- with no `style` prop of
+  // its own that clobbers the row's entire style array to `undefined`,
+  // dropping flexDirection: 'row' and stacking the row vertically
+  // (photo-verified regression at f1bace6). Passing the identical array as
+  // `style` on the Trigger means the clobber re-applies the SAME styling, so
+  // the row is correct whether or not zeego clobbers -- deterministic either
+  // way, and lossless if zeego ever stops clobbering.
+  const rowStyle = [styles.loggedSetRow, live.loggedSetRow, isWarmup && [styles.loggedSetRowWarmup, live.loggedSetRowWarmup]];
   const row = (
     <TouchableOpacity
-      style={[styles.loggedSetRow, live.loggedSetRow, isWarmup && [styles.loggedSetRowWarmup, live.loggedSetRowWarmup]]}
+      style={rowStyle}
       // F7: the row binds its own set so the parent can pass ONE stable
       // handler; an inline closure per row was defeating this memo.
       onPress={() => onEdit(set)}
@@ -245,7 +256,11 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({ set, units, progr
 
   return (
     <ContextMenu.Root>
-      <ContextMenu.Trigger action="longPress" asChild>
+      {/* `style={rowStyle}` here is NOT decorative -- see rowStyle's comment
+          above. zeego's asChild clobber overwrites the cloned row's style
+          with whatever the Trigger itself was given, so the Trigger must
+          carry the row's own array or the row loses its layout. */}
+      <ContextMenu.Trigger action="longPress" asChild style={rowStyle}>
         {row}
       </ContextMenu.Trigger>
       <ContextMenu.Content>
