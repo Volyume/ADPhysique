@@ -45,6 +45,33 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
   AppAlert.js sits uncommitted, lead-review against this spec, lint +
   full suite, commit + push; if untouched, relaunch from this entry.
 
+### Logged-set row regression fix (founder defect, photo; dispatched 2026-07-11)
+- **Source:** founder photo (build 2608); diagnosis in the session log.
+  CURRENT STATE: zeego 3.0.6's Android asChild Trigger clobbers the
+  cloned child's style with undefined (cloneElement({style: undefined,
+  ...})), so every logged-set row (always menu-wrapped in production
+  since f1bace6, item 14) loses flexDirection:'row' and stacks
+  vertically, overflowing with 4+ sets; same pattern exists in zeego's
+  iOS file. No test renders the wrapped path (gap). END STATE: rows
+  condensed again on both platforms - compute the row style array once
+  and pass it to BOTH the Trigger and the TouchableOpacity (lossless
+  under the clobber, correct if zeego ever fixes it); NEW rendering
+  test mounts the wrapped path (onDelete set) and pins the row layout.
+  ELEVATES BECAUSE: heals a founder-visible layout break on the app's
+  most-used surface. Bounds: menu wiring, openDeleteFromMenu ref flow
+  and pinned zero-arg handleDeleteEditedSet untouched. RECOVERY:
+  standard (lead-review vs this spec, lint+suite, commit+push, or
+  relaunch).
+
+### QUEUED NEXT (founder reports, same session): exercise swapper layout
+- Founder photo (build 2608): in ExercisePickerModal with query "leg",
+  a large empty void sits between the muscle-chip row and the
+  equipment-chip row and no results are visible. Diagnose verify-first
+  (could be zeego-unrelated: chip container growth, empty-results
+  layout, or search regression), then fix. Founder verdict "looks
+  cheap" also queues a wider workout-logger visual audit against the
+  pre-campaign baseline - scope after the two point fixes land.
+
 ### LANDED - CP-10 screen theming batch F (both lanes, `3b182a7` + `c92a5ce`)
 - 9 screens converted + 3 verified already-live (Settings family via
   useSettingsStyles - the recon grep missed wrapper-based theming).
