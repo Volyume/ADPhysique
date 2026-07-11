@@ -7,8 +7,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns/format';
 
-import { colors, fontSize, fontWeight, spacing, radius, buildVolumeStatusColor, type, circle, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, buildVolumeStatusColor, type, circle, iconSize, withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import * as haptics from '../lib/haptics';
+import Button from '../components/Button';
 import Card from '../components/Card';
 import SectionLabel from '../components/SectionLabel';
 import RollingNumber from '../components/RollingNumber';
@@ -447,15 +449,15 @@ export default function AnalyticsScreen({ navigation, route }) {
                 <Ionicons name="ribbon-outline" size={16} color={t.colors.primary} />
                 <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneText, live.milestoneText]}>{STREAK_MILESTONE_COPY[pendingMilestone]}</Text>
                 {pendingMilestone >= 12 ? (
-                  <TouchableOpacity
-                    style={[styles.milestoneCtaButton, live.milestoneCtaButton]}
+                  // R9 (D70): milestoneCtaButton -> shared Button outline sm.
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    fullWidth={false}
+                    title="Create share image"
                     onPress={() => makeStreakCard(pendingMilestone)}
-                    accessibilityRole="button"
                     accessibilityLabel="Create share image"
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneCta, live.milestoneCta]}>Create share image</Text>
-                  </TouchableOpacity>
+                  />
                 ) : null}
               </View>
             ) : null}
@@ -463,15 +465,15 @@ export default function AnalyticsScreen({ navigation, route }) {
               <View style={styles.milestoneRow}>
                 <Ionicons name="ribbon-outline" size={16} color={t.colors.primary} />
                 <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneText, live.milestoneText]}>A perfect month. Four weeks, every target met.</Text>
-                <TouchableOpacity
-                  style={[styles.milestoneCtaButton, live.milestoneCtaButton]}
+                {/* R9 (D70): milestoneCtaButton -> shared Button outline sm. */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  fullWidth={false}
+                  title="Create share image"
                   onPress={makePerfectMonthCard}
-                  accessibilityRole="button"
                   accessibilityLabel="Create share image"
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneCta, live.milestoneCta]}>Create share image</Text>
-                </TouchableOpacity>
+                />
               </View>
             ) : null}
             {longestRunPb ? (
@@ -480,15 +482,15 @@ export default function AnalyticsScreen({ navigation, route }) {
                 <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneText, live.milestoneText]}>
                   {`A new personal best. ${longestRunPb} ${longestRunPb === 1 ? 'week' : 'weeks'} running, your longest yet.`}
                 </Text>
-                <TouchableOpacity
-                  style={[styles.milestoneCtaButton, live.milestoneCtaButton]}
+                {/* R9 (D70): milestoneCtaButton -> shared Button outline sm. */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  fullWidth={false}
+                  title="Create share image"
                   onPress={makeLongestRunPbCard}
-                  accessibilityRole="button"
                   accessibilityLabel="Create share image"
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneCta, live.milestoneCta]}>Create share image</Text>
-                </TouchableOpacity>
+                />
               </View>
             ) : null}
           </View>
@@ -505,15 +507,15 @@ export default function AnalyticsScreen({ navigation, route }) {
               <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneText, live.milestoneText]}>
                 {formatTonnage(tonnageLandmark)} {units === 'lbs' ? 'lbs' : 'kg'} lifted all-time. That's what showing up adds up to.
               </Text>
-              <TouchableOpacity
-                style={[styles.milestoneCtaButton, live.milestoneCtaButton]}
+              {/* R9 (D70): milestoneCtaButton -> shared Button outline sm. */}
+              <Button
+                variant="outline"
+                size="sm"
+                fullWidth={false}
+                title="Create share image"
                 onPress={makeTonnageCard}
-                accessibilityRole="button"
                 accessibilityLabel="Create share image"
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneCta, live.milestoneCta]}>Create share image</Text>
-              </TouchableOpacity>
+              />
             </View>
           </View>
         ) : null}
@@ -644,15 +646,16 @@ export default function AnalyticsScreen({ navigation, route }) {
           <View style={styles.section}>
             <View style={styles.rowBetween}>
               <SectionLabel>Recent sessions</SectionLabel>
-              <TouchableOpacity
-                style={[styles.seeAllButton, live.seeAllButton]}
+              {/* R9 (D70): seeAllButton -> shared Button outline sm. */}
+              <Button
+                variant="outline"
+                size="sm"
+                fullWidth={false}
+                icon="list-outline"
+                title="All sessions"
                 onPress={() => navigation.navigate('WorkoutHistory')}
-                accessibilityRole="button"
                 accessibilityLabel="See all sessions"
-              >
-                <Ionicons name="list-outline" size={14} color={t.colors.textSecondary} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.seeAll, live.seeAll]}>All sessions</Text>
-              </TouchableOpacity>
+              />
             </View>
             {recentSessions.map(w => {
               // L04-1 (design audit 2026-07-09): these cards used to render
@@ -732,7 +735,9 @@ export default function AnalyticsScreen({ navigation, route }) {
         {hasData && completedWorkoutCount > 0 && (
           <View style={styles.section}>
             <SectionLabel>Lifetime totals</SectionLabel>
-            <Card radius="md" padding="none" style={styles.lifetimePanel}>
+            {/* R9 (D70): radius="md" -> default (radius.lg); cards move to
+                the app-wide card radius. */}
+            <Card padding="none" style={styles.lifetimePanel}>
               <View style={styles.lifetimeCell}>
                 <Text maxFontSizeMultiplier={1.3} style={[styles.lifetimeValue, live.lifetimeValue]}>{formatNumber(completedWorkoutCount)}</Text>
                 <Text maxFontSizeMultiplier={1.3} style={[styles.lifetimeLabel, live.lifetimeLabel]}>
@@ -839,12 +844,14 @@ function InsightRow({ insight, onDismiss }) {
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const severityStyle = useMemo(() => buildSeverityStyle(t.colors), [t]);
   const sev = severityStyle[insight.severity ?? 0] ?? severityStyle[0];
+  // R9 (D70): radius="md" -> default (radius.lg).
   return (
-    <Card padding="md" radius="md" style={[styles.insightRow, { borderLeftColor: sev.color }]}>
+    <Card padding="md" style={[styles.insightRow, { borderLeftColor: sev.color }]}>
       <Ionicons name={sev.icon} size={18} color={sev.color} style={{ marginTop: spacing.hair }} />
       <Text maxFontSizeMultiplier={1.3} style={[styles.insightCopy, live.insightCopy]} numberOfLines={5}>{insight.copy}</Text>
       <TouchableOpacity
-        onPress={onDismiss}
+        // R9 (D70): InsightRow dismiss joins the app's haptic vocabulary.
+        onPress={() => { haptics.selection(); onDismiss(); }}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         style={styles.insightDismiss}
         accessibilityRole="button"
@@ -1007,16 +1014,19 @@ function TrainingLoadHero({ series, units, onMakeCard }) {
         <Text maxFontSizeMultiplier={1.3} style={[styles.heroAxisLabel, live.heroAxisLabel]}>this week</Text>
       </View>
       {/* S4: share image extended to training load, reflective and factual,
-          never a comparison to anyone else. */}
-      <TouchableOpacity
-        style={[styles.trainingLoadCtaRow, styles.milestoneCtaButton, live.milestoneCtaButton]}
+          never a comparison to anyone else. R9 (D70): milestoneCtaButton ->
+          shared Button outline sm; trainingLoadCtaRow (alignSelf: flex-end)
+          stays as the style override so the CTA keeps its right-aligned
+          position under the axis row. */}
+      <Button
+        variant="outline"
+        size="sm"
+        fullWidth={false}
+        title="Create share image"
         onPress={onMakeCard}
-        accessibilityRole="button"
         accessibilityLabel="Create share image"
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
-        <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneCta, live.milestoneCta]}>Create share image</Text>
-      </TouchableOpacity>
+        style={styles.trainingLoadCtaRow}
+      />
     </Card>
   );
 }
@@ -1068,9 +1078,9 @@ function SessionCard({ workout, onPress }) {
   const name = workout.name || 'Session';
   const at = workout.startedAt ?? workout.createdAt ?? workout.created_at ?? 0;
   const diff = workout.sessionDifficulty ?? null;
+  // R9 (D70): radius="md" -> default (radius.lg).
   return (
     <Card
-      radius="md"
       style={styles.sessionCard}
       onPress={onPress}
       accessibilityLabel={`View summary for ${name}`}
@@ -1115,7 +1125,8 @@ function NavTile({ icon, color, label, onPress, locked, lockedSub, pro }) {
   return (
     <TouchableOpacity
       style={[styles.navTile, live.navTile, locked && styles.navTileLocked]}
-      onPress={onPress}
+      // R9 (D70): NavTile presses join the app's haptic vocabulary.
+      onPress={() => { haptics.selection(); onPress?.(); }}
       activeOpacity={0.75}
       accessibilityRole="button"
       accessibilityLabel={locked ? `${label}. ${lockedSub ?? 'Not ready yet.'}` : pro ? `${label}. Part of Pro.` : label}
@@ -1162,38 +1173,21 @@ const styles = StyleSheet.create({
   section:     { gap: spacing.md },
   milestoneRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.xs },
   milestoneText: { flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  milestoneCtaButton: {
-    minHeight: 40,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-    paddingHorizontal: spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  milestoneCta: { ...type.label, color: colors.textPrimary },
+  // R9 (D70): milestoneCtaButton/milestoneCta deleted - every "Create share
+  // image" CTA converted to the shared Button primitive (outline sm).
   rowBetween:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  seeAllButton: {
-    minHeight: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-  },
-  seeAll:      { ...type.label, color: colors.textPrimary },
+  // R9 (D70): seeAllButton/seeAll deleted - "All sessions" converted to the
+  // shared Button primitive (outline sm).
 
   // ── Insight rows ──
+  // R9 (D70): recapCard stays radius.md (ephemeral banner class, not a
+  // card) but its solid colors.primary border moves to the banner-grammar
+  // alpha treatment (withAlpha(colors.primary, alpha.mid)), matching the
+  // block-advisor / other ephemeral banners elsewhere in the app.
   recapCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.primary,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.mid),
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
   },
   recapCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
@@ -1315,11 +1309,10 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     milestoneText: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
-    milestoneCtaButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    milestoneCta: { ...t.type.label, color: t.colors.textPrimary },
-    seeAllButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    seeAll: { ...t.type.label, color: t.colors.textPrimary },
-    recapCard: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    // R9 (D70): milestoneCtaButton/milestoneCta/seeAllButton/seeAll live
+    // twins deleted alongside their frozen styles - the shared Button
+    // primitive resolves its own live theme internally.
+    recapCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
     recapCardText: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     insightCopy: { ...t.type.bodySm, color: t.colors.textSecondary },
     heroEyebrow: { ...t.type.label, color: t.colors.textSecondary },

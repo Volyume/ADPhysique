@@ -73,7 +73,8 @@ export default function CardioPlanCard({ userId, target, onPress, onHistory }) {
 
 const styles = StyleSheet.create({
   cardioCard: {
-    backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1,
+    // R9 (D70): radius.md -> radius.lg, cards move to the app-wide card radius.
+    backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1,
     borderColor: colors.border, padding: spacing.md, gap: spacing.sm,
   },
   cardioHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

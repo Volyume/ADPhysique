@@ -79,7 +79,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    // R9 (D70): radius.md -> radius.lg, cards move to the app-wide card radius.
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: spacing.lg,

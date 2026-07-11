@@ -1014,6 +1014,9 @@ const styles = StyleSheet.create({
   statChipText: {
     ...type.captionStrong,
     color: colors.textSecondary,
+    // R9 (D70): stat chip numerals ("45 min"/"12 sets"/tonnage) are data,
+    // so they get tabular numerals like every other numeral readout.
+    fontVariant: ['tabular-nums'],
   },
   exerciseBreakdown: {
     gap: spacing.sm,
@@ -1156,7 +1159,9 @@ function buildLiveStyles(t) {
     exerciseList: { ...t.type.bodySm, color: t.colors.textSecondary },
     expandedContent: { borderTopColor: t.colors.border },
     statChip: { backgroundColor: t.colors.surface2 },
-    statChipText: { ...t.type.captionStrong, color: t.colors.textSecondary },
+    // R9 (D70): fontVariant carried on the live twin too, matching the
+    // frozen statChipText above.
+    statChipText: { ...t.type.captionStrong, color: t.colors.textSecondary, fontVariant: ['tabular-nums'] },
     exerciseBreakdownName: { ...t.type.label, color: t.colors.textPrimary },
     exerciseBreakdownSummary: { ...t.type.num('caption'), color: t.colors.textSecondary },
     loadingText: { ...t.type.caption, color: t.colors.textMuted },

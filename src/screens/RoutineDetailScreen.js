@@ -880,7 +880,11 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
     color: colors.primary,
   },
-  exerciseMeta: { fontSize: fontSize.sm, color: colors.primary },
+  // R9 (D70): tabular numerals ("3 sets, 6-12 reps" is data), and colour
+  // moves from colors.primary to colors.textSecondary - a meta line is
+  // supporting text, not brand decoration (same D66 rationale as the
+  // logger timer).
+  exerciseMeta: { fontSize: fontSize.sm, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
   exerciseMuscle: { ...type.caption, color: colors.textMuted },
   exerciseWhy: { ...type.captionTight, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.xxs },
   splitRationale: { ...type.bodySm, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.sm },
@@ -1024,7 +1028,9 @@ function buildLiveStyles(t) {
     relinkChipText: { fontSize: t.fontSize.xs, color: t.colors.warning },
     supersetChip: { backgroundColor: t.colors.primaryBg },
     supersetChipText: { fontSize: t.fontSize.xs, color: t.colors.primary },
-    exerciseMeta: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    // R9 (D70): colour matches the frozen exerciseMeta above (textSecondary,
+    // not primary - a meta line is supporting text, not brand decoration).
+    exerciseMeta: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     exerciseMuscle: { ...t.type.caption, color: t.colors.textMuted },
     exerciseWhy: { ...t.type.captionTight, color: t.colors.textMuted },
     splitRationale: { ...t.type.bodySm, color: t.colors.textMuted },

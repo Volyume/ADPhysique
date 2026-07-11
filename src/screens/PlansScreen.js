@@ -34,6 +34,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
+import * as haptics from '../lib/haptics';
 
 const BLOCK_SNOOZE_KEY = '@volyume_block_snooze';
 
@@ -281,6 +282,8 @@ export default function PlansScreen({ navigation }) {
   }
 
   function toggleFolder(folderId) {
+    // R9 (D70): folder expand/collapse joins the app's haptic vocabulary.
+    haptics.selection();
     setCollapsedFolders(prev => ({ ...prev, [folderId]: !prev[folderId] }));
   }
 
@@ -344,6 +347,8 @@ export default function PlansScreen({ navigation }) {
   }
 
   function handleFolderOptions(folder) {
+    // R9 (D70): every peek-menu-opening tap ticks selection().
+    haptics.selection();
     peekRef.current?.open({
       title: folder.name,
       items: [
@@ -382,6 +387,8 @@ export default function PlansScreen({ navigation }) {
   }
 
   async function handlePlanOptions(plan) {
+    // R9 (D70): every peek-menu-opening tap ticks selection().
+    haptics.selection();
     const isActiveForUser = activePlan?.id === plan.id;
     // Pro users keep an always-active plan as part of Precision Coaching,
     // so they don't get the Duplicate action. They CAN archive inactive
@@ -441,6 +448,8 @@ export default function PlansScreen({ navigation }) {
   }
 
   function handleArchivedPlanOptions(plan) {
+    // R9 (D70): every peek-menu-opening tap ticks selection().
+    haptics.selection();
     const items = [
       {
         icon: 'eye-outline',
@@ -457,6 +466,10 @@ export default function PlansScreen({ navigation }) {
   }
 
   async function handleTemplateOptions(routine) {
+    // R9 (D70): the "..." options tap ticks selection(), same as the other
+    // plan/folder options affordances, even though this one opens an
+    // appAlert rather than the shared PeekMenu.
+    haptics.selection();
     appAlert(routine.name, undefined, [
       { text: 'Edit', onPress: () => navigation.navigate('RoutineDetail', { routineId: routine.id }) },
       {
@@ -561,22 +574,24 @@ export default function PlansScreen({ navigation }) {
           <Text maxFontSizeMultiplier={1.3} style={[styles.planCardName, live.planCardName]} numberOfLines={2}>{planHeadingName(plan.name)}</Text>
         </PressableCard>
         <View style={[styles.planCardFooter, live.planCardFooter]}>
-          <TouchableOpacity
+          {/* R9 (D70): the footer text links -> shared Button tertiary sm,
+              matching the quiet in-card action idiom (FOOD-DESIGN-STANDARD §4). */}
+          <Button
+            variant="tertiary"
+            size="sm"
+            fullWidth={false}
+            title="View plan"
             onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityRole="button"
             accessibilityLabel={`View ${planHeadingName(plan.name)}`}
-          >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.planCardFooterGhost, live.planCardFooterGhost]}>View plan</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          />
+          <Button
+            variant="tertiary"
+            size="sm"
+            fullWidth={false}
+            title="Set as active"
             onPress={() => handleSetActive(plan)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityRole="button"
             accessibilityLabel={`Set ${planHeadingName(plan.name)} as active plan`}
-          >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.planCardFooterPrimary, live.planCardFooterPrimary]}>Set as active</Text>
-          </TouchableOpacity>
+          />
         </View>
       </Card>
       </AnimatedEntrance>
@@ -653,19 +668,25 @@ export default function PlansScreen({ navigation }) {
                 {/* CTAs only shown when block is complete and recovery is done */}
                 {blockAdvice.action === 'post_recovery' && (
                   <View style={styles.blockCardActions}>
-                    <TouchableOpacity style={[styles.blockRestartBtn, live.blockRestartBtn]} onPress={handleRestartPlan} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel={blockAdvice.nextBlock.actionLabel}>
-                      <Ionicons name="refresh-outline" size={15} color={t.colors.onPrimary} />
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.blockRestartBtnText, live.blockRestartBtnText]}>{blockAdvice.nextBlock.actionLabel}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.blockNewBtn, live.blockNewBtn]}
+                    {/* R9 (D70): blockRestartBtn/blockNewBtn -> shared Button
+                        primary/secondary (matching their former filled/
+                        bordered look). Primary fires its own selection()
+                        tick, so no manual haptic here. */}
+                    <Button
+                      variant="primary"
+                      icon="refresh-outline"
+                      title={blockAdvice.nextBlock.actionLabel}
+                      onPress={handleRestartPlan}
+                      accessibilityLabel={blockAdvice.nextBlock.actionLabel}
+                      style={styles.blockCtaButton}
+                    />
+                    <Button
+                      variant="secondary"
+                      title={blockAdvice.nextBlock.secondaryLabel}
                       onPress={() => navigation.navigate(tier === 'pro' ? 'PlanUpdate' : 'ProUpgrade')}
-                      activeOpacity={0.85}
-                      accessibilityRole="button"
                       accessibilityLabel={blockAdvice.nextBlock.secondaryLabel}
-                    >
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.blockNewBtnText, live.blockNewBtnText]}>{blockAdvice.nextBlock.secondaryLabel}</Text>
-                    </TouchableOpacity>
+                      style={styles.blockCtaButton}
+                    />
                   </View>
                 )}
               </View>
@@ -674,19 +695,34 @@ export default function PlansScreen({ navigation }) {
             {/* Early deload dismiss options */}
             {blockAdvice.action === 'early_deload' && (
               <View style={styles.blockCardActions}>
-                <TouchableOpacity style={[styles.blockRestartBtn, live.blockRestartBtn]} onPress={handleSnoozeBlock} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Got it, ease off this week">
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.blockRestartBtnText, live.blockRestartBtnText]}>Got it, ease off this week</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.blockNewBtn, live.blockNewBtn]} onPress={handleSnoozeBlock} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Keep going">
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.blockNewBtnText, live.blockNewBtnText]}>Keep going</Text>
-                </TouchableOpacity>
+                {/* R9 (D70): blockRestartBtn -> Button primary. handleSnoozeBlock
+                    is shared with the plain snooze text-links below, which get
+                    a manual selection() tick; this one doesn't, since the
+                    primary variant already fires one on press (never double-fire). */}
+                <Button
+                  variant="primary"
+                  title="Got it, ease off this week"
+                  onPress={handleSnoozeBlock}
+                  accessibilityLabel="Got it, ease off this week"
+                  style={styles.blockCtaButton}
+                />
+                {/* blockNewBtn -> Button secondary. Secondary stays silent by
+                    itself, so the snooze tap gets its manual selection() tick
+                    here (R9 (D70) haptics vocabulary sweep). */}
+                <Button
+                  variant="secondary"
+                  title="Keep going"
+                  onPress={() => { haptics.selection(); handleSnoozeBlock(); }}
+                  accessibilityLabel="Keep going"
+                  style={styles.blockCtaButton}
+                />
               </View>
             )}
 
             {/* Snooze links for recovery states */}
             {(blockAdvice.action === 'in_recovery' || blockAdvice.action === 'post_recovery') && (
               <TouchableOpacity
-                onPress={handleSnoozeBlock}
+                onPress={() => { haptics.selection(); handleSnoozeBlock(); }}
                 style={styles.blockSnooze}
                 accessibilityRole="button"
                 accessibilityLabel={blockAdvice.action === 'in_recovery'
@@ -706,7 +742,7 @@ export default function PlansScreen({ navigation }) {
                 recovery states; the next weekly check-in (or fresh signals)
                 will surface the banner again if conditions still apply. */}
             {blockAdvice.action === 'heads_up' && (
-              <TouchableOpacity onPress={handleSnoozeBlock} style={styles.blockSnooze} accessibilityRole="button" accessibilityLabel="Got it">
+              <TouchableOpacity onPress={() => { haptics.selection(); handleSnoozeBlock(); }} style={styles.blockSnooze} accessibilityRole="button" accessibilityLabel="Got it">
                 <Text maxFontSizeMultiplier={1.3} style={[styles.blockSnoozeText, live.blockSnoozeText]}>Got it</Text>
               </TouchableOpacity>
             )}
@@ -745,23 +781,22 @@ export default function PlansScreen({ navigation }) {
                 </Text>
               )}
               <View style={styles.activePlanActions}>
-                <TouchableOpacity
-                  style={[styles.startNextBtn, live.startNextBtn]}
+                {/* R9 (D70): startNextBtn -> shared Button primary (fires its
+                    own selection() tick on press). */}
+                <Button
+                  variant="primary"
+                  icon="play"
+                  title="Start next workout"
                   onPress={() => handleStartNextWorkout(activePlan)}
-                  accessibilityRole="button"
                   accessibilityLabel="Start next workout"
-                >
-                  <Ionicons name="play" size={15} color={t.colors.onPrimary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.startNextBtnText, live.startNextBtnText]}>Start next workout</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.viewPlanBtn, live.viewPlanBtn]}
+                  style={styles.startNextBtnWrap}
+                />
+                <Button
+                  variant="secondary"
+                  title="View plan"
                   onPress={() => navigation.navigate('PlanDetail', { planId: activePlan.id, isLibrary: false })}
-                  accessibilityRole="button"
                   accessibilityLabel="View plan"
-                >
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.viewPlanBtnText, live.viewPlanBtnText]}>View plan</Text>
-                </TouchableOpacity>
+                />
               </View>
             </Card>
           </View>
@@ -906,22 +941,27 @@ export default function PlansScreen({ navigation }) {
                   <Text maxFontSizeMultiplier={1.3} style={[styles.planCardName, live.planCardName, styles.archivedPlanCardName, live.archivedPlanCardName]} numberOfLines={2}>{planHeadingName(plan.name)}</Text>
                 </PressableCard>
                 <View style={[styles.planCardFooter, live.planCardFooter]}>
-                  <TouchableOpacity
+                  {/* R9 (D70): same footer-link -> Button tertiary sm
+                      conversion as the live plan card footer above; this
+                      archived footer shares the identical style contract
+                      (planCardFooterGhost/planCardFooterPrimary), just with
+                      "Restore" in place of "Set as active". */}
+                  <Button
+                    variant="tertiary"
+                    size="sm"
+                    fullWidth={false}
+                    title="View plan"
                     onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityRole="button"
                     accessibilityLabel={`View ${planHeadingName(plan.name)}`}
-                  >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.planCardFooterGhost, live.planCardFooterGhost]}>View plan</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+                  />
+                  <Button
+                    variant="tertiary"
+                    size="sm"
+                    fullWidth={false}
+                    title="Restore"
                     onPress={async () => { await unarchivePlan(plan.id); await loadData(); }}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityRole="button"
                     accessibilityLabel={`Restore ${planHeadingName(plan.name)}`}
-                  >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.planCardFooterPrimary, live.planCardFooterPrimary]}>Restore</Text>
-                  </TouchableOpacity>
+                  />
                 </View>
               </Card>
             ))}
@@ -942,15 +982,16 @@ export default function PlansScreen({ navigation }) {
                   ) : null}
                 </View>
                 <View style={styles.templateActions}>
-                  <TouchableOpacity
-                    style={[styles.startTemplateBtn, live.startTemplateBtn]}
+                  {/* R9 (D70): startTemplateBtn -> shared Button secondary sm. */}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    fullWidth={false}
+                    icon="play"
+                    title="Start"
                     onPress={() => handleStartTemplate(routine)}
-                    accessibilityRole="button"
                     accessibilityLabel={`Start ${routine.name}`}
-                  >
-                    <Ionicons name="play" size={13} color={t.colors.onPrimary} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.startTemplateBtnText, live.startTemplateBtnText]}>Start</Text>
-                  </TouchableOpacity>
+                  />
                   <TouchableOpacity
                     style={styles.moreBtn}
                     onPress={() => handleTemplateOptions(routine)}
@@ -1183,19 +1224,11 @@ const styles = StyleSheet.create({
   activePlanMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
   activePlanWeek: { ...type.num('caption'), color: colors.textMuted },
   activePlanActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
-  startNextBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, backgroundColor: colors.primaryFill, borderRadius: radius.md, paddingVertical: spacing.md,
-    minHeight: 48,
-  },
-  startNextBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
-  viewPlanBtn: {
-    paddingHorizontal: spacing.lg, borderRadius: radius.md, paddingVertical: spacing.md,
-    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
-    minHeight: 48,
-    justifyContent: 'center',
-  },
-  viewPlanBtnText: { ...type.label, color: colors.textSecondary },
+  // R9 (D70): startNextBtn/startNextBtnText/viewPlanBtn/viewPlanBtnText
+  // deleted - converted to the shared Button primitive (primary/secondary).
+  // startNextBtnWrap carries only the pure layout key (flex: 1) the old
+  // startNextBtn used to fill the row; Button owns the rest of the chrome.
+  startNextBtnWrap: { flex: 1 },
 
   planCard: {
     overflow: 'hidden',
@@ -1220,8 +1253,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderTopWidth: 1, borderTopColor: colors.border,
   },
-  planCardFooterGhost: { ...type.label, color: colors.textSecondary },
-  planCardFooterPrimary: { ...type.label, color: colors.primary },
+  // R9 (D70): planCardFooterGhost/planCardFooterPrimary deleted - the
+  // footer links are now Button tertiary sm (both the live and archived
+  // plan card footers).
   moreBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
 
   templateCard: {
@@ -1231,12 +1265,8 @@ const styles = StyleSheet.create({
   templateName: { ...type.bodyStrong, color: colors.textPrimary },
   templateMeta: { ...type.num('caption'), color: colors.textSecondary },
   templateActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  startTemplateBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: colors.primaryFill, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    minHeight: 44,
-  },
-  startTemplateBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
+  // R9 (D70): startTemplateBtn/startTemplateBtnText deleted - converted to
+  // the shared Button primitive (secondary sm).
 
   actionCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
@@ -1337,21 +1367,11 @@ const styles = StyleSheet.create({
 
   // Block card action buttons
   blockCardActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.xs },
-  blockRestartBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, backgroundColor: colors.primaryFill, borderRadius: radius.md, paddingVertical: spacing.md,
-    minWidth: 144,
-    minHeight: 48,
-  },
-  blockRestartBtnText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
-  blockNewBtn: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surface2, borderRadius: radius.md, paddingVertical: spacing.md,
-    borderWidth: 1, borderColor: colors.border,
-    minWidth: 144,
-    minHeight: 48,
-  },
-  blockNewBtnText: { ...type.label, color: colors.textSecondary },
+  // R9 (D70): blockRestartBtn/blockRestartBtnText/blockNewBtn/blockNewBtnText
+  // deleted - converted to the shared Button primitive (primary/secondary).
+  // blockCtaButton carries only the pure layout keys the two old styles
+  // shared (flex: 1, minWidth: 144); Button owns the rest of the chrome.
+  blockCtaButton: { flex: 1, minWidth: 144 },
   blockSnooze: { alignItems: 'center', paddingTop: spacing.xs },
   blockSnoozeText: { ...type.caption, color: colors.textMuted },
 });
@@ -1391,21 +1411,17 @@ function buildLiveStyles(t) {
     activePlanName: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
     activePlanMeta: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     activePlanWeek: { ...t.type.num('caption'), color: t.colors.textMuted },
-    startNextBtn: { backgroundColor: t.colors.primaryFill },
-    startNextBtnText: { fontSize: t.fontSize.sm, color: t.colors.onPrimary },
-    viewPlanBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    viewPlanBtnText: { ...t.type.label, color: t.colors.textSecondary },
+    // R9 (D70): startNextBtn/startNextBtnText/viewPlanBtn/viewPlanBtnText/
+    // planCardFooterGhost/planCardFooterPrimary/startTemplateBtn/
+    // startTemplateBtnText live twins deleted alongside their frozen styles -
+    // the shared Button primitive resolves its own live theme internally.
     archivedPlanCardName: { color: t.colors.textSecondary },
     archivedHeaderText: { ...t.type.label, color: t.colors.textSecondary },
     planCardName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     planCardMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
     planCardFooter: { borderTopColor: t.colors.border },
-    planCardFooterGhost: { ...t.type.label, color: t.colors.textSecondary },
-    planCardFooterPrimary: { ...t.type.label, color: t.colors.primary },
     templateName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     templateMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
-    startTemplateBtn: { backgroundColor: t.colors.primaryFill },
-    startTemplateBtnText: { fontSize: t.fontSize.sm, color: t.colors.onPrimary },
     actionCardIcon: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     actionCardTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     actionCardBadge: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
@@ -1428,10 +1444,9 @@ function buildLiveStyles(t) {
     nextBlockPreLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     nextBlockHeadline: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     nextBlockBody: { ...t.type.bodySm, color: t.colors.textSecondary },
-    blockRestartBtn: { backgroundColor: t.colors.primaryFill },
-    blockRestartBtnText: { fontSize: t.fontSize.sm, color: t.colors.onPrimary },
-    blockNewBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    blockNewBtnText: { ...t.type.label, color: t.colors.textSecondary },
+    // R9 (D70): blockRestartBtn/blockRestartBtnText/blockNewBtn/
+    // blockNewBtnText live twins deleted alongside their frozen styles - the
+    // shared Button primitive resolves its own live theme internally.
     blockSnoozeText: { ...t.type.caption, color: t.colors.textMuted },
   };
 }
