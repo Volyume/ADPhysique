@@ -421,13 +421,28 @@ cohesion-first, min cost) is progressing through its staged slots:
   was small. Three flagged design calls ruled in D60: logged-row radius
   KEEP dense, beat-line line-height KEEP tight, type.num() APPLIED to the
   logged numerals. Lead-verified green throughout.
-REMAINING for S5/D43 completion:
-  (a) Opus fresh-eyes adversarial review of the full S1-S5 arc vs the
-      blueprint + Section 2 inviolables - IN PROGRESS this session; if it
-      finds issues, fix on this branch + re-verify + push.
-  (b) The founder's 10/10 device walk (blueprint Section 9 checklist),
-      which also carries the taste veto on D58 (beat line kept as a row),
-      D59 (warm-up ramp kept in overflow), and D60 calls 1-2.
+S5 REVIEW DONE (`49d56db` + `b7b6761`): the Opus fresh-eyes adversarial
+review of the full S1-S5 arc returned NO blocker/high and cleared it as
+safe for the device walk. It confirmed the S4 edit path reuses the same
+PR/celebration/ED-suppression store action (no bypass), every re-pinned
+guard locks the same invariant, and no Section 2 inviolable was touched.
+Four findings triaged (D61): L2 stale comment + N1 per-keystroke re-render
+FIXED; L1 (invalid past-target tap flipped the CTA mode early) FIXED per
+founder GO (arm moved into handleCompleteSet's success path, re-anchored
+guard); M1 (inline-editor keyboard occlusion on small Android) -> founder
+device-walk verify item. Also re-anchored the screen-mount U-A-1 mounted
+test (outside src/screens/__tests__, so the scoped runs missed it; the
+full suite caught it). Full suite green: 689 suites / 8513 tests.
+
+**D43 LOGGER REDESIGN IS CODE-COMPLETE.** All that remains is the FOUNDER's:
+  (a) the 10/10 device walk (blueprint Section 9 steps 1-10), PLUS the M1
+      verify (edit the LAST logged set on a small Android phone -> Save
+      button not hidden by the keyboard), PLUS the taste-veto decisions
+      D58 (beat line kept as a compact row), D59 (warm-up ramp kept in
+      overflow), D60 calls 1-2 (logged rows kept dense; beat-line
+      line-height kept tight);
+  (b) migrations when the founder is ready (the "run against production"
+      phrase).
 The D43 full-app pristine pass stays HELD (D57), not part of this arc.
 COLLISION LESSON (S3): the first S3 agent spawned a sub-agent against its
 brief, which ran concurrently with a lead relaunch - ~420k tokens wasted,

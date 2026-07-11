@@ -139,13 +139,26 @@ leg-day engine work (D45 + D46) all LANDED - detail rolled to
     radius KEEP dense (data receipt, not cards), beat-line line-height
     KEEP tight, type.num() APPLIED to the logged numerals. Lead-verified
     green throughout.
-  - REMAINING for S5 completion: (a) the mandated fresh-eyes Opus
-    adversarial review of the full S1-S5 arc vs blueprint + Section 2
-    inviolables (IN PROGRESS); (b) the founder's 10/10 device walk (the
-    blueprint Section 9 checklist), which also carries the taste veto on
-    D58 (beat line kept as a row), D59 (warm-up ramp kept in overflow),
-    and D60 calls 1-2. RECOVERY: all S1-S5 commits pushed; if the review
-    finds issues, fix on this branch and re-verify.
+  - S5 REVIEW DONE (`49d56db` + `b7b6761`): the mandated Opus fresh-eyes
+    adversarial review of the full S1-S5 arc returned NO blocker/high and
+    cleared it as safe for the device walk. Four minor findings triaged
+    (D61): L2 stale comment + N1 per-keystroke re-render FIXED; L1 (invalid
+    past-target tap flipped the CTA mode early) FIXED per founder GO (arm
+    moved into handleCompleteSet's success path); M1 (inline-editor keyboard
+    occlusion on small Android) -> device-walk verify item below. Full
+    suite green: 689 suites / 8513 tests.
+  - **D43 LOGGER REDESIGN IS CODE-COMPLETE.** Only two things remain, both
+    the FOUNDER's: (1) the 10/10 device walk (blueprint Section 9), and
+    (2) migrations when ready.
+    DEVICE-WALK ITEMS (blueprint Section 9 + review):
+    - Section 9 steps 1-10 (the 10/10 walk).
+    - M1 verify: edit the LAST logged set in a long session on a small
+      Android phone -> confirm the inline Save button is not hidden behind
+      the keyboard.
+    - Taste-veto decisions open to the founder: D58 (beat line kept as a
+      compact row, not dissolved into input placeholders), D59 (guided
+      warm-up ramp kept its overflow row), D60 calls 1-2 (logged rows kept
+      dense; beat-line line-height kept tight).
 
 ### LANDED - CP-10 theming batch G, BOTH LANES (2026-07-11)
 - Lane 2 (20 plain screens) `3adf551`; lane 1 (15 high-risk screens;
