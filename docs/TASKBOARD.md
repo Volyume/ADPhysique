@@ -102,10 +102,22 @@ leg-day engine work (D45 + D46) all LANDED - detail rolled to
   preserved behind a new shell; 5 staged slots (S1 decomposition -> S2
   Now card + status strip -> S3 stable CTA + overflow diet -> S4
   in-place edit + plate readout -> S5 cohesion polish). RPE stays out
-  per D14/D19 held list.   S1 slice 1 LANDED (LoggedSetRow + EmptyExerciseView extracted,
-  guards re-pinned, suite green); next slices: sheets extraction,
-  then S2-S5 per the blueprint. RECOVERY: blueprint doc is committed; on approval work S1
-  from its Section 7.
+  per D14/D19 held list. S4 = in-place edit ONLY (plate readout DROPPED,
+  D57).
+  - S1 slice 1 LANDED (`31b14a7`): LoggedSetRow + EmptyExerciseView
+    extracted, guards re-pinned, suite green.
+  - S2 LANDED (`ca9bb87`): "N notes" accordion -> StatusStrip
+    (content-labelled chips); Now card onto house Card (radius lg/16);
+    orientation+target folded to one Line 1; note-pencil corner
+    affordance; chrome above inputs 8 -> 2 lines. Beat line KEPT as a
+    compact row (ruling D58 - carries the cue/range/deload variants that
+    input placeholders can't; SetEntry contract untouched; founder
+    device-walk taste veto at S5). eslint clean; 15 suites / 126 tests
+    green.
+  - NEXT: S3 (stable CTA + overflow 11->6 + one reorder path) -> S4
+    (in-place set editing, no plate) -> S5 (cohesion polish + device
+    walk). RECOVERY: blueprint doc committed; work each slot from its
+    Section 7 in order.
 
 ### LANDED - CP-10 theming batch G, BOTH LANES (2026-07-11)
 - Lane 2 (20 plain screens) `3adf551`; lane 1 (15 high-risk screens;

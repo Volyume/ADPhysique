@@ -383,23 +383,30 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
 ## ⏸ RESUME POINT — current state and queue (2026-07-11; a fresh
 ## session resumes from HERE per CLAUDE.md's D40 block):
 
-**★ SESSION-END SNAPSHOT (2026-07-11, usage exhausted — read this first):**
-Everything is COMMITTED AND PUSHED through `788b1e5` except one thing:
-a Sonnet agent was MID-FLIGHT on D43 S1 slice 2 (extracting the 2-3
-most self-contained sheets from ActiveWorkoutScreen.js into
-src/components/workout/, presentational-only, template = `git show
-31b14a7`). A WIP SNAPSHOT COMMIT may sit at the branch tip (message starts
-"WIP SNAPSHOT (unreviewed)") - it is the slice-2 agent's mid-flight
-state, committed ONLY so nothing was lost at session death. It is
-UNREVIEWED: the fresh session must lead-review it against the slice-1
-template and either keep it (lint + full suite + proper commit message
-via amend) or `git revert` it before any other work. If instead the tree holds uncommitted changes to
-ActiveWorkoutScreen.js / src/components/workout/ / logger guard tests:
-lead-review them against the slice-1 template and the blueprint S1
-rules (byte-identical moves, state stays in the screen, guards
-re-pinned invariants-unchanged), run lint + full suite, commit with
-handover+board lines in the same push. If half-done or broken: revert
-the working tree and relaunch slice 2 from the board entry. NEXT IN
+**★ SESSION SNAPSHOT (2026-07-11, D43 logger S2 landed — read this first):**
+Everything is COMMITTED AND PUSHED. The logger redesign (D57 GO,
+cohesion-first, min cost) is progressing through its staged slots:
+- S1 slice 1 LANDED `31b14a7` (LoggedSetRow + EmptyExerciseView extracted).
+- S2 LANDED `ca9bb87`: "N notes" accordion replaced by StatusStrip
+  (content-labelled chips); Now card on the house Card (radius lg/16);
+  orientation+target folded to one Line 1; note-pencil corner; chrome
+  above inputs 8 -> 2 lines. Beat-line design ruling recorded as D58 —
+  KEPT as a compact row (dissolving it into input placeholders would drop
+  the directional cue / range / deload variants and touch the pinned
+  SetEntry contract; it's the better-for-users call, not the lighter one).
+  Subject to the founder's device-walk taste veto at S5. eslint clean;
+  ActiveWorkoutScreen + SetEntry + LoggedSetRow + cp10Stage3WorkoutShells
+  = 15 suites / 126 tests green (full-suite run pending at the next
+  boundary — S2 touched only the screen + StatusStrip + two guard suites).
+NEXT IN ORDER per the board's D43 entry: S3 (stable CTA + overflow
+11->6 + one reorder path) -> S4 (in-place set editing, NO plate, D57)
+-> S5 (cohesion polish + adversarial review + device walk). Then the
+D43 pristine pass is HELD (D57), not part of this arc.
+
+--- superseded slice-2 recovery note (kept for history) ---
+Earlier this session a Sonnet agent was mid-flight on S1 slice 2; that
+path is closed — S2 landed the Now-card redesign directly on the
+slice-1 extraction. NEXT IN
 ORDER after slice 2: remaining S1 slices (ExerciseNav, StatusStrip
 precursor, LoggedSetsList), then S2-S5 per
 D43-LOGGER-REDESIGN-BLUEPRINT.md; then the D43 pristine pass LAST.
