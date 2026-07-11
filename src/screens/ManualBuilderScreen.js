@@ -724,8 +724,10 @@ export default function ManualBuilderScreen({ navigation, route }) {
     // interruption between the delete (removeExerciseFromRoutine) and the
     // reinsert (addExerciseToRoutine) would otherwise leave a previously
     // populated day empty and unrecoverable. One transaction makes the whole
-    // save all-or-nothing (mirrors duplicateRoutine). runInTransaction chains,
-    // so the helpers' own transactions nest safely.
+    // save all-or-nothing (mirrors duplicateRoutine). The helpers called
+    // inside are raw single-statement writers; none may call runInTransaction
+    // itself (nested calls deadlock the queue - contract tightened
+    // 2026-07-11, see runInTransaction in database.js).
     await runInTransaction(d, async () => {
     for (let i = 0; i < days.length; i++) {
       const day = days[i];

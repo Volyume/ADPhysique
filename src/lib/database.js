@@ -2189,13 +2189,27 @@ export async function db() {
 //
 // runInTransaction chains transactions so only one BEGIN/COMMIT is ever in
 // flight across the whole app (database, food, sync all route through here).
-// A reentrancy guard runs the task inline if a transaction is somehow
-// already open, so a task that itself calls runInTransaction cannot deadlock
-// on the queue or nest a second BEGIN.
+//
+// Reentrancy contract (tightened 2026-07-11, R2-11 structural follow-up):
+// nested runInTransaction calls are FORBIDDEN - a nested call would queue
+// behind its own enclosing transaction and deadlock. In-transaction callers
+// use the *InTx variants (deleteProgrammeCascadeInTx) instead; the call-graph
+// audit of every task body found exactly one nest (planAutoGen's zero-match
+// rollback) and it was un-nested. The old blanket inline guard
+// (`if (inTx()) return task()`) is now scoped to transactions the queue does
+// NOT own (a manual BEGIN, e.g. seed/import paths): a runInTransaction call
+// arriving while a QUEUED transaction is open used to inline-join that
+// foreign transaction - its writes committed or rolled back with someone
+// else's work and never serialised. Such callers now queue like everyone
+// else.
 let _txTail = Promise.resolve();
+let _txQueueActive = false;
 export async function runInTransaction(d, task) {
   const inTx = () => typeof d.isInTransactionSync === 'function' && d.isInTransactionSync();
-  if (inTx()) return task();
+  // Inline-join ONLY a transaction the queue does not own (a manual BEGIN
+  // elsewhere): queueing behind a transaction the queue cannot see would
+  // start a second BEGIN inside it.
+  if (inTx() && !_txQueueActive) return task();
   // R2-13 (production, build 2694, founder repro "Cannot read property
   // 'zeroMatch' of undefined" at plan generation): expo-sqlite's
   // withTransactionAsync AWAITS the task but DISCARDS its return value, so
@@ -2205,11 +2219,29 @@ export async function runInTransaction(d, task) {
   // it back on every path; commit/rollback semantics are unchanged.
   const run = _txTail.then(async () => {
     if (inTx()) return task();
-    let result;
-    await d.withTransactionAsync(async () => { result = await task(); });
-    return result;
+    _txQueueActive = true;
+    try {
+      let result;
+      await d.withTransactionAsync(async () => { result = await task(); });
+      return result;
+    } finally {
+      _txQueueActive = false;
+    }
   });
   // Keep the queue alive whatever this transaction's outcome.
+  _txTail = run.then(() => {}, () => {});
+  return run;
+}
+
+// R2-11 structural follow-up: single-statement writes that can fire while a
+// queued transaction holds the connection (set logging, engine telemetry)
+// ride the same queue, so they never contend with an open BEGIN - the
+// busy_timeout pragma then only covers the residual native-thread window.
+// NEVER call this from inside a runInTransaction task: it would queue behind
+// its own transaction and deadlock (call-graph audited 2026-07-11 - neither
+// createWorkoutSet nor recordEngineTelemetry is reachable from a task).
+function queuedWrite(fn) {
+  const run = _txTail.then(() => fn());
   _txTail = run.then(() => {}, () => {});
   return run;
 }
@@ -2899,7 +2931,9 @@ export async function createWorkoutSet(data) {
       exerciseName = exRow?.name ?? null;
     } catch (_) { /* tolerate */ }
   }
-  await d.runAsync(
+  // Queued (R2-11): set logging fires while plan/coach transactions can hold
+  // the connection; riding the write queue removes that contention entirely.
+  await queuedWrite(() => d.runAsync(
     `INSERT INTO workout_sets
       (id, user_id, workout_id, exercise_id, exercise_name, set_number, set_type,
        target_reps_min, target_reps_max, actual_reps, weight, rir, rpe,
@@ -2928,7 +2962,7 @@ export async function createWorkoutSet(data) {
       now,
       now,
     ],
-  );
+  ));
   return { id, ...data, createdAt: now, updatedAt: now };
 }
 
@@ -3185,18 +3219,24 @@ export async function createProgramme(userId, name, description = null, isLibrar
   return { id, userId, name, description, isLibrary, tags, splitType, difficulty, createdAt: now, updatedAt: now };
 }
 
+// Raw cascade for callers ALREADY inside a runInTransaction task
+// (planAutoGen's zero-match rollback). Nested runInTransaction calls are
+// forbidden - a nested call queues behind its own enclosing transaction and
+// deadlocks - so in-transaction callers use this variant on their own handle.
+export async function deleteProgrammeCascadeInTx(d, programmeId) {
+  await d.runAsync(
+    `DELETE FROM routine_exercises
+     WHERE routine_id IN (SELECT id FROM routines WHERE programme_id = ?)`,
+    [programmeId],
+  );
+  await d.runAsync('DELETE FROM routines WHERE programme_id = ?', [programmeId]);
+  await d.runAsync('DELETE FROM programmes WHERE id = ?', [programmeId]);
+}
+
 export async function deleteProgrammeCascade(programmeId, { scheduleSync = true } = {}) {
   if (!programmeId) return;
   const d = await db();
-  await runInTransaction(d, async () => {
-    await d.runAsync(
-      `DELETE FROM routine_exercises
-       WHERE routine_id IN (SELECT id FROM routines WHERE programme_id = ?)`,
-      [programmeId],
-    );
-    await d.runAsync('DELETE FROM routines WHERE programme_id = ?', [programmeId]);
-    await d.runAsync('DELETE FROM programmes WHERE id = ?', [programmeId]);
-  });
+  await runInTransaction(d, () => deleteProgrammeCascadeInTx(d, programmeId));
   if (scheduleSync) _scheduleSync();
 }
 
@@ -7748,11 +7788,13 @@ export async function recordEngineTelemetry(userId, event, payload = null) {
   const d = await db();
   const id = uid();
   const now = Date.now();
-  await d.runAsync(
+  // Queued (R2-11): telemetry fires throughout onboarding, exactly when the
+  // plan-generation transaction holds the connection.
+  await queuedWrite(() => d.runAsync(
     `INSERT INTO engine_telemetry (id, user_id, event, payload_json, occurred_at)
      VALUES (?, ?, ?, ?, ?)`,
     [id, userId, event, payload ? JSON.stringify(payload) : null, now],
-  );
+  ));
   return id;
 }
 

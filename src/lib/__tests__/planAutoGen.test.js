@@ -16,6 +16,7 @@ jest.mock('../database', () => ({
   db: jest.fn(),
   runInTransaction: jest.fn(),
   deleteProgrammeCascade: jest.fn(),
+  deleteProgrammeCascadeInTx: jest.fn(),
   recordEngineTelemetry: jest.fn(async () => 'telemetry-1'),
 }));
 
@@ -24,7 +25,7 @@ import { POOL } from '../planEngine';
 import {
   getAllExercises, createProgramme, createRoutine, addExerciseToRoutine,
   activatePlanWithBlock, archiveOtherUserPlans, getAllProgrammes,
-  db, runInTransaction, deleteProgrammeCascade,
+  db, runInTransaction, deleteProgrammeCascade, deleteProgrammeCascadeInTx,
 } from '../database';
 
 // A library that contains every name the engine can pick, so the match loop
@@ -169,6 +170,7 @@ describe('generateAndSavePlan atomic persistence', () => {
     activatePlanWithBlock.mockResolvedValue('mesocycle-1');
     archiveOtherUserPlans.mockResolvedValue(undefined);
     deleteProgrammeCascade.mockResolvedValue(undefined);
+    deleteProgrammeCascadeInTx.mockResolvedValue(undefined);
   });
 
   test('writes the plan in one transaction and suppresses intermediate sync', async () => {
@@ -193,10 +195,14 @@ describe('generateAndSavePlan atomic persistence', () => {
       ok: false,
       error: 'Plan created but no exercises matched the library',
     });
-    expect(deleteProgrammeCascade).toHaveBeenCalledWith(
+    // The zero-match rollback runs INSIDE the write transaction, so it must
+    // use the raw InTx variant - a nested runInTransaction call would
+    // deadlock the queue (contract tightened 2026-07-11).
+    expect(deleteProgrammeCascadeInTx).toHaveBeenCalledWith(
+      expect.anything(),
       'programme-1',
-      { scheduleSync: false },
     );
+    expect(deleteProgrammeCascade).not.toHaveBeenCalled();
     expect(activatePlanWithBlock).not.toHaveBeenCalled();
   });
 
