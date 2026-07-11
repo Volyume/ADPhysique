@@ -29,6 +29,7 @@ import { formatLoggedSet } from '../lib/workoutHelpers';
 import useAppStore from '../store/useAppStore';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
+import PeekMenu from '../components/PeekMenu';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { useShallow } from 'zustand/react/shallow';
@@ -85,6 +86,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const toast = useToast();
+  const peekRef = useRef(null);
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -191,22 +193,18 @@ export default function WorkoutHistoryScreen({ navigation }) {
     }
   }
 
+  // R9 (D70): a native alert as a choose-an-action menu diverged from the
+  // house options idiom - PlansScreen answers the identical "choose an
+  // action" moment on this same tab with PeekMenu, so this does too.
+  // Swipe/backdrop/back dismiss replaces the Cancel row.
   function handleRepeatWorkout(workout) {
-    appAlert(
-      'Repeat workout',
-      'How would you like to continue?',
-      [
-        {
-          text: 'Repeat as-is',
-          onPress: () => handleRepeatAsIs(workout),
-        },
-        {
-          text: 'View in Plans',
-          onPress: () => navigateCrossTab(navigation, 'PlansTab'),
-        },
-        { text: 'Cancel', style: 'cancel' },
+    peekRef.current?.open({
+      title: 'Repeat workout',
+      items: [
+        { icon: 'repeat-outline', label: 'Repeat as-is', onPress: () => handleRepeatAsIs(workout) },
+        { icon: 'albums-outline', label: 'View in Plans', onPress: () => navigateCrossTab(navigation, 'PlansTab') },
       ],
-    );
+    });
   }
 
   // Founder request 2026-06-12: delete a workout from history (a half-logged
@@ -823,6 +821,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
         }
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       />
+      <PeekMenu ref={peekRef} />
     </SafeAreaView>
   );
 }

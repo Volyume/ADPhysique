@@ -173,10 +173,39 @@ export default function RoutineDetailScreen({ navigation, route }) {
     }
   }
 
-  async function removeExercise(routineExercise) {
+  // R9 (D70): commit-with-undo replaces the old blocking confirm + silent
+  // success. Removing an exercise from a template is trivially reversible
+  // (all its targets live on the captured row), so per the house rule the
+  // write lands immediately and the 8-second undo toast re-adds it with
+  // every field intact - alerts stay reserved for irreversible actions.
+  async function removeExercise(routineExercise, exerciseName) {
     haptics.commit();
+    const captured = { ...routineExercise };
     await removeExerciseFromRoutine(routineExercise.id);
     await loadRoutine();
+    toast.show(`${exerciseName || 'Exercise'} removed.`, {
+      variant: 'undo',
+      action: {
+        label: 'Undo',
+        onPress: async () => {
+          try {
+            await addExerciseToRoutine(
+              captured.routineId ?? routineId,
+              captured.exerciseId,
+              captured.orderInRoutine ?? exercises.length,
+              captured.recommendedRepsMin ?? 6,
+              captured.recommendedRepsMax ?? 12,
+              captured.notes ?? null,
+              captured.recommendedSets ?? 3,
+              captured.startingWeight ?? null,
+              captured.restSeconds ?? null,
+              captured.supersetGroupId ?? null,
+            );
+            await loadRoutine();
+          } catch (_) { /* best effort - the toast window may outlive the screen */ }
+        },
+      },
+    });
   }
 
   async function addExercise(exercise) {
@@ -231,26 +260,34 @@ export default function RoutineDetailScreen({ navigation, route }) {
     setSwapState({ routineExerciseId: routineExercise.id, exercise });
   }
 
-  function handleConfirmSwap(newExercise) {
+  // R9 (D70): the swap commits immediately with an undo toast (swapping
+  // back is the exact inverse write), replacing the old blocking confirm +
+  // silent success. Targets are untouched either way; the toast copy keeps
+  // the old confirm's one load-bearing fact (future sessions change).
+  async function handleConfirmSwap(newExercise) {
     if (!swapState) return;
-    const originalName = swapState.exercise?.name || 'this exercise';
-    appAlert(
-      'Swap this exercise in the routine?',
-      `${originalName} will be replaced with ${newExercise.name}. This affects all future sessions of this routine. Your set, rep and rest targets stay the same.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Swap',
-          onPress: async () => {
-            haptics.selection();
-            await updateRoutineExerciseExercise(swapState.routineExerciseId, newExercise.id);
-            setSwapState(null);
-            setSwapCandidates([]);
-            await loadRoutine();
-          },
+    const originalId = swapState.exercise?.id;
+    const originalName = swapState.exercise?.name || 'exercise';
+    const rowId = swapState.routineExerciseId;
+    haptics.selection();
+    await updateRoutineExerciseExercise(rowId, newExercise.id);
+    setSwapState(null);
+    setSwapCandidates([]);
+    await loadRoutine();
+    toast.show(`${originalName} swapped for ${newExercise.name} in future sessions.`, {
+      variant: 'undo',
+      action: {
+        label: 'Undo',
+        onPress: async () => {
+          try {
+            if (originalId) {
+              await updateRoutineExerciseExercise(rowId, originalId);
+              await loadRoutine();
+            }
+          } catch (_) { /* best effort */ }
         },
-      ],
-    );
+      },
+    });
   }
 
   // D32 (2026-07-10, campaign item 20): made BLOCK-AWARE, closing this
@@ -514,14 +551,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   <Ionicons name="swap-horizontal" size={20} color={t.colors.textMuted} />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => appAlert(
-                    'Remove exercise?',
-                    `Remove ${exercise.name} from this routine?`,
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'Remove', style: 'destructive', onPress: () => removeExercise(routineExercise) },
-                    ],
-                  )}
+                  onPress={() => removeExercise(routineExercise, exercise.name)}
                   hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
                   accessibilityRole="button"
                   accessibilityLabel={`Remove ${exercise.name}`}

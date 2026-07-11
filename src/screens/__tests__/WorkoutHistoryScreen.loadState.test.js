@@ -1,6 +1,13 @@
 import { create, act } from 'react-test-renderer';
 
 jest.mock('../../components/AppAlert', () => ({ appAlert: jest.fn() }));
+jest.mock('../../components/PeekMenu', () => {
+  const React = require('react');
+  // R9 (D70): the repeat menu moved onto PeekMenu, which imports the
+  // haptics vocabulary (expo-haptics) - mocked out like the other shared
+  // components above so this render-only suite stays hermetic.
+  return React.forwardRef(() => null);
+});
 jest.mock('../../components/BackHeader', () => {
   const React = require('react');
   const { Text } = require('react-native');

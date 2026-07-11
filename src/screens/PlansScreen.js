@@ -2,7 +2,6 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
-  Modal, Pressable, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -21,6 +20,7 @@ import SectionLabel from '../components/SectionLabel';
 import PressableCard from '../components/PressableCard';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import PeekMenu from '../components/PeekMenu';
+import BottomSheet from '../components/BottomSheet';
 import {
   getActivePlan, getAllPlansForUser, getArchivedPlansForUser,
   getWorkoutTemplates, getPlanWorkoutCounts, getAllRoutineExerciseCounts,
@@ -102,12 +102,13 @@ export default function PlansScreen({ navigation }) {
   // subscribed to every store mutation (rest timer ticks, PR queue
   // updates, set saves) which forced a full PlansScreen re-render every
   // second during a workout.
-  const { user, startWorkout, tier, userProfile, reduceMotion } = useAppStore(useShallow(s => ({
+  // R9 (D70): reduceMotion left with the raw folder Modal - BottomSheet
+  // owns it now.
+  const { user, startWorkout, tier, userProfile } = useAppStore(useShallow(s => ({
     user: s.user,
     startWorkout: s.startWorkout,
     tier: s.tier,
     userProfile: s.userProfile,
-    reduceMotion: s.accessibility?.reduceMotion,
   })));
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js). Memoised
   // because this screen renders plan/folder/template lists via .map.
@@ -418,14 +419,22 @@ export default function PlansScreen({ navigation }) {
         icon: 'archive-outline',
         label: 'Archive plan',
         destructive: true,
-        onPress: () => appAlert(
-          'Archive Plan?',
-          'The plan will be hidden from My plans. Session history stays intact and you can restore it from the Archived section.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Archive', style: 'destructive', onPress: async () => { await archivePlan(plan.id); await loadData(); } },
-          ],
-        ),
+        // R9 (D70): archiving is reversible by its own copy (the Archived
+        // section restores it), so per the house rule it commits
+        // immediately with an undo toast instead of a blocking confirm.
+        onPress: async () => {
+          await archivePlan(plan.id);
+          await loadData();
+          toast.show(`${planHeadingName(plan.name)} archived. Session history stays intact.`, {
+            variant: 'undo',
+            action: {
+              label: 'Undo',
+              onPress: async () => {
+                try { await unarchivePlan(plan.id); await loadData(); } catch (_) { /* best effort */ }
+              },
+            },
+          });
+        },
       });
     }
     peekRef.current?.open({ title: planHeadingName(plan.name), items });
@@ -1021,61 +1030,59 @@ export default function PlansScreen({ navigation }) {
       <PeekMenu ref={peekRef} />
 
       {/* Folder name prompt, shared by create + rename. */}
-      <Modal
+      {/* R9 (D70): the folder create/rename prompt moves off its hand-rolled
+          centred Modal (backdrop, panel, keyboard maths all bespoke) onto the
+          shared BottomSheet, which owns scrim, chrome, keyboard avoidance and
+          every dismiss path. The title now reflects the actual mode - the old
+          dialog said "Rename folder" even when creating one. */}
+      <BottomSheet
         visible={!!folderPrompt}
-        transparent
-        animationType={reduceMotion ? 'none' : 'fade'}
-        onRequestClose={() => { if (!savingFolder) setFolderPrompt(null); }}
+        onClose={() => { if (!savingFolder) setFolderPrompt(null); }}
+        keyboardAvoiding
+        accessibilityLabel="Folder name"
       >
-        <KeyboardAvoidingView
-          style={styles.folderModalFill}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <Pressable accessibilityRole="button" accessibilityLabel="Close" style={[styles.backdrop, live.backdrop]} onPress={() => { if (!savingFolder) setFolderPrompt(null); }}>
-            <Pressable style={[styles.folderSheet, live.folderSheet]} onPress={() => {}} accessible={false}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.folderSheetTitle, live.folderSheetTitle]}>Rename folder</Text>
-              <TextField
-                fieldStyle={styles.folderInputField}
-                inputStyle={[styles.folderInput, live.folderInput]}
-                value={folderName}
-                onChangeText={setFolderName}
-                placeholder="Folder name"
-                placeholderTextColor={t.colors.textMuted}
-                autoFocus
-                maxLength={60}
-                returnKeyType="done"
-                onSubmitEditing={handleSaveFolder}
-                accessibilityLabel="Folder name"
-              />
-              <View style={styles.folderSheetActions}>
-                <Button
-                  title="Cancel"
-                  variant="secondary"
-                  size="sm"
-                  fullWidth={false}
-                  style={styles.folderSheetCancelButton}
-                  textStyle={[styles.folderSheetCancel, live.folderSheetCancel]}
-                  onPress={() => { if (!savingFolder) setFolderPrompt(null); }}
-                  disabled={savingFolder}
-                  accessibilityLabel="Cancel"
-                />
-                <Button
-                  title="Save"
-                  size="sm"
-                  fullWidth={false}
-                  style={styles.folderSheetSaveButton}
-                  textStyle={[styles.folderSheetSave, live.folderSheetSave]}
-                  onPress={handleSaveFolder}
-                  disabled={!folderName.trim() || savingFolder}
-                  loading={savingFolder}
-                  accessibilityLabel="Save folder name"
-                  accessibilityState={{ disabled: !folderName.trim() || savingFolder }}
-                />
-              </View>
-            </Pressable>
-          </Pressable>
-        </KeyboardAvoidingView>
-      </Modal>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.folderSheetTitle, live.folderSheetTitle]}>
+          {folderPrompt?.mode === 'rename' ? 'Rename folder' : 'New folder'}
+        </Text>
+        <TextField
+          fieldStyle={styles.folderInputField}
+          inputStyle={[styles.folderInput, live.folderInput]}
+          value={folderName}
+          onChangeText={setFolderName}
+          placeholder="Folder name"
+          placeholderTextColor={t.colors.textMuted}
+          autoFocus
+          maxLength={60}
+          returnKeyType="done"
+          onSubmitEditing={handleSaveFolder}
+          accessibilityLabel="Folder name"
+        />
+        <View style={styles.folderSheetActions}>
+          <Button
+            title="Cancel"
+            variant="secondary"
+            size="sm"
+            fullWidth={false}
+            style={styles.folderSheetCancelButton}
+            textStyle={[styles.folderSheetCancel, live.folderSheetCancel]}
+            onPress={() => { if (!savingFolder) setFolderPrompt(null); }}
+            disabled={savingFolder}
+            accessibilityLabel="Cancel"
+          />
+          <Button
+            title="Save"
+            size="sm"
+            fullWidth={false}
+            style={styles.folderSheetSaveButton}
+            textStyle={[styles.folderSheetSave, live.folderSheetSave]}
+            onPress={handleSaveFolder}
+            disabled={!folderName.trim() || savingFolder}
+            loading={savingFolder}
+            accessibilityLabel="Save folder name"
+            accessibilityState={{ disabled: !folderName.trim() || savingFolder }}
+          />
+        </View>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -1111,16 +1118,8 @@ const styles = StyleSheet.create({
   },
 
   // Folder name prompt
-  folderModalFill: { flex: 1 },
-  backdrop: {
-    flex: 1, backgroundColor: withAlpha(colors.background, 0.7),
-    justifyContent: 'center', alignItems: 'center', padding: spacing.lg,
-  },
-  folderSheet: {
-    width: '100%', maxWidth: 420, gap: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.border,
-  },
+  // R9 (D70): folderModalFill/backdrop/folderSheet deleted - the shared
+  // BottomSheet owns scrim and panel chrome now.
   folderSheetTitle: { ...type.bodyStrong, color: colors.textPrimary },
   folderInputField: { borderRadius: radius.md },
   folderInput: {
@@ -1373,8 +1372,6 @@ function buildLiveStyles(t) {
     folderCount: { ...t.type.num('caption'), color: t.colors.textMuted },
     folderBody: { borderTopColor: t.colors.border },
     folderEmpty: { ...t.type.caption, color: t.colors.textMuted },
-    backdrop: { backgroundColor: withAlpha(t.colors.background, 0.7) },
-    folderSheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     folderSheetTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     folderInput: { fontSize: t.fontSize.md },
     folderSheetCancel: { ...t.type.label, color: t.colors.textSecondary },

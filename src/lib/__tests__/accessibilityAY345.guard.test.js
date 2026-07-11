@@ -49,15 +49,14 @@ describe('AY-3: modal backdrops label themselves "Close"', () => {
     expect(source).not.toMatch(/onPress=\{dismissQuiz\}[\s\S]{0,80}styles\.backdrop/);
   });
 
-  test('PlansScreen.js folder-rename prompt backdrop', () => {
+  test('PlansScreen.js folder prompt rides BottomSheet (labelled backdrop by construction)', () => {
+    // R9 (D70, 2026-07-11): the hand-rolled folder Modal (whose backdrop
+    // this test used to pin directly) migrated onto the shared BottomSheet,
+    // which owns the labelled backdrop - the same re-anchor shape as the
+    // PlanLibraryScreen case above.
     const source = read('screens/PlansScreen.js');
-    // CP-10 batch G: the backdrop gained its live-theme override
-    // (style={[styles.backdrop, live.backdrop]}); the pinned a11y contract
-    // (role button, label "Close") is unchanged, so the pattern accepts
-    // either spelling.
-    expect(source).toMatch(
-      /<Pressable accessibilityRole="button" accessibilityLabel="Close" style=\{(?:styles\.backdrop|\[styles\.backdrop, live\.backdrop\])\}/,
-    );
+    expect(source).toMatch(/<BottomSheet/);
+    expect(source).not.toMatch(/styles\.backdrop/);
   });
 
   // D36b (2026-07-10): FeedbackSheet.js and PeekMenu.js migrated off their
