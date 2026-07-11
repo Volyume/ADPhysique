@@ -1016,3 +1016,16 @@ rules - it does NOT do its own bulk reads, writes, probes or doc
 upkeep. All mechanical work (docs recording, recon, conversions, test
 writing) goes to the LOWEST capable tier (haiku for mechanical, sonnet
 for risk-bounded builds). Standing law alongside D40/D47/D48.
+
+## D50 LANDED + CP-10 COMPLETE (2026-07-11)
+Manrope adopted at `9148a6f` per the D50 ruling: five static weight
+instances generated from the verified official variable font (tnum,
+axis range and OFL all checked in-file with fontTools before wiring),
+swapped through the single fontFamily token file on the codebase's
+established static-cuts pattern; full suite green; dead Inter files
+removed in the follow-up commit. Founder device walk: cold launch (no
+font flash), numeral column alignment in the logger and diary, a11y
+toggles, ED surfaces layout-stable.
+CP-10 is COMPLETE: batch G closed the last static screens (3adf551,
+4947509) and stage 5 retired the restart prompt (`3d3eae8`) - 83/83
+screens live-themed, settings apply straight away.

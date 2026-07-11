@@ -62,6 +62,8 @@ leg-day engine work (D45 + D46) all LANDED - detail rolled to
   coverage now ~83/84 live (remaining static count to be re-verified
   at the next recon; stage-5 restart-prompt retirement unlocks at
   zero).
+  Stage 5 landed `3d3eae8` (restart prompt retired - CP-10 COMPLETE).
+  Manrope adopted `9148a6f` (D50 landed; Inter files removed).
 
 ### QUEUED LAST - D43 full-app pristine pass (founder, second amendment)
 - CLOSING PHASE by founder order: every area polished to the
@@ -117,7 +119,8 @@ _These are open decision forks, not dispatchable builds. Their elevation is
 conditional on the decision; recorded here so they are visible, not lost._
 
 - **Watch-app scoping round.** Source: D27 (watch app SCOPING approved); `docs/ux-world-class-audit-2026-07-09/watch-app-scoping-memo.md` (5 founder questions at the end, unanswered); handover AWAITING FOUNDER. CURRENT STATE: no watch app exists; HealthKit is removed; the scoping memo is written with 5 questions open, plus a side-finding (SD-11 idempotency defect in `applyRemoteSetEvent`) flagged must-fix-before-wrist-traffic. DECISION NEEDED: founder answers the 5 questions before any build brief. ELEVATION: deferred - cannot be claimed until the scope is set.
-- **Brand-font shortlist — DELIVERED, AWAITING FOUNDER PICK (2026-07-11).** Source: D25. Shortlist authored: `docs/ux-world-class-audit-2026-07-09/BRAND-FONT-SHORTLIST.md` (5 candidates, tnum-verified where possible, adoption plan; recommendation Manrope, founder holds taste). DECISION NEEDED: founder replies 1-5 or "stay system"; then one adoption slot.
+- **Brand font - LANDED (D50, `9148a6f`).** Manrope adopted and
+  verified; founder holds on-sight veto at the device walk.
 
 ---
 

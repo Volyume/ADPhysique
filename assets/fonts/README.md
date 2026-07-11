@@ -31,6 +31,4 @@ Manrope has no separate "display" optical cut (unlike Inter/Inter Display),
 so the type roles that used InterDisplay-Bold/ExtraBold now reuse
 Manrope-Bold/Manrope-ExtraBold (see src/styles/fontFamily.js).
 
-The prior Inter-*.ttf / InterDisplay-*.ttf files and INTER_LICENSE.txt are
-left in place pending a founder call on whether to remove them (they are
-no longer referenced by src/styles/fonts.js).
+The prior Inter font files and license were removed at commit D50 tail (2026-07-11).
