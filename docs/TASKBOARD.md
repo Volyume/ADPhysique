@@ -93,7 +93,7 @@ auto-advance cues, summary footer, picker first-open, CP-10 batch F and the
 leg-day engine work (D45 + D46) all LANDED - detail rolled to
 `_HANDOVER-ARCHIVE.md` TASKBOARD HISTORY per D41._
 
-### D43 logger redesign blueprint - AUTHORED, AWAITING FOUNDER APPROVAL (2026-07-11)
+### D43 logger redesign blueprint - APPROVED + IN BUILD (D49/D57) (2026-07-11)
 - Research complete (Opus teardown: full ActiveWorkoutScreen read, all
   pinned tests mapped, Hevy corpus synthesised - report in session
   log). Blueprint authored by the lead:
@@ -119,13 +119,14 @@ leg-day engine work (D45 + D46) all LANDED - detail rolled to
   Stage 5 landed `3d3eae8` (restart prompt retired - CP-10 COMPLETE).
   Manrope adopted `9148a6f` (D50 landed; Inter files removed).
 
-### QUEUED LAST - D43 full-app pristine pass (founder, second amendment)
+### HELD (D57) - D43 full-app pristine pass (founder, second amendment)
 - CLOSING PHASE by founder order: every area polished to the
   pristine/world-class bar, cohesive (one-amalgamated-application
   mandate), using the SCORECARD-2026-07-10 rubric as the baseline
   instrument. Runs AFTER the defect fixes, the engine verdict, the
   remaining theming batches and the logger redesign, so it polishes
   finished surfaces. Lead-driven; founder holds taste vetoes.
+- On hold per founder 2026-07-11 (rework risk vs work already done).
 
 ### PRODUCTION CRASH TRIAGE - Sentry TypeError (2026-07-11, gated on connector)
 - Sentry alert (email screenshot): TypeError "undefined is not a
@@ -142,7 +143,7 @@ leg-day engine work (D45 + D46) all LANDED - detail rolled to
   sourcemap - queue a workflow tweak to save the Hermes map artefact
   so future crashes symbolicate exactly.
 
-### OPEN - EAS (APK) build failing after native changes (founder report)
+### OPEN - EAS (APK) build failing after native changes (founder report) PAUSED by founder 2026-07-11, revisit later.
 - Founder reports the EAS build FAILING after item 14/15 native changes
   (keyboard-controller/zeego, expo-splash-screen, monochrome icon). CI
   Android build is GREEN (run 2611), so the break is EAS-specific.
@@ -172,9 +173,8 @@ leg-day engine work (D45 + D46) all LANDED - detail rolled to
 _These are open decision forks, not dispatchable builds. Their elevation is
 conditional on the decision; recorded here so they are visible, not lost._
 
-- **Watch-app scoping round.** Source: D27 (watch app SCOPING approved); `docs/ux-world-class-audit-2026-07-09/watch-app-scoping-memo.md` (5 founder questions at the end, unanswered); handover AWAITING FOUNDER. CURRENT STATE: no watch app exists; HealthKit is removed; the scoping memo is written with 5 questions open, plus a side-finding (SD-11 idempotency defect in `applyRemoteSetEvent`) flagged must-fix-before-wrist-traffic. DECISION NEEDED: founder answers the 5 questions before any build brief. ELEVATION: deferred - cannot be claimed until the scope is set.
-- **Brand font - LANDED (D50, `9148a6f`).** Manrope adopted and
-  verified; founder holds on-sight veto at the device walk.
+- **Watch-app scoping round.** Source: D27 (watch app SCOPING approved); `docs/ux-world-class-audit-2026-07-09/watch-app-scoping-memo.md` (5 founder questions at the end, unanswered); handover AWAITING FOUNDER. CURRENT STATE: no watch app exists; HealthKit is removed; the scoping memo is written with 5 questions open, plus a side-finding (SD-11 idempotency defect in `applyRemoteSetEvent`) flagged must-fix-before-wrist-traffic. DECISION NEEDED: founder answers the 5 questions before any build brief. ELEVATION: deferred - cannot be claimed until the scope is set. PAUSED by founder 2026-07-11.
+- **Brand font - REVERTED to Inter on founder verdict (Manrope backed out); D50 closed.**
 
 ---
 

@@ -45,9 +45,10 @@ What earns the 3/10:
 7. **A 4,872-line monolith** makes every improvement expensive and every
    regression likely (the zeego style-clobber class of bug lives here).
 
-Plus one wire-only feature gap: **the plate calculator is fully built
-and tested with zero call sites** — serious lifters get nothing at the
-bar. (Two other gaps are decision-bound, §8.)
+Plus one wire-only feature gap (DROPPED by founder 2026-07-11, D57): the
+plate calculator was fully built and tested but had zero call sites and
+is now struck entirely — never revisit. (Two other gaps are
+decision-bound, §8.)
 
 ## 2. Design principles (binding for every slot)
 
@@ -91,10 +92,7 @@ bar. (Two other gaps are decision-bound, §8.)
      with the existing one-tap "Use" prefill — the "previous column"
      pattern, without a row of chrome.
    - **Inputs — kept.** The `SetEntry` stepper block is pinned, tested
-     and good. One addition: a small **"Plates" affordance on the
-     weight row for barbell exercises** opening a plate-loading readout
-     (the built-and-tested `calculatePlates()`; the `plateBtn` style
-     slot already exists; no new dependency).
+     and good. No additions.
    - **Note affordance** (pencil icon in the card corner) replaces the
      overflow's "Add/edit note" row.
 5. **Rest timer — kept**, restyled to tokens only (it is functionally
@@ -158,7 +156,7 @@ checklist per slot, ED cases included where weight-adjacent.
 - **S2 — Now card + status strip.** The §3.3/§3.4 redesign; chrome
   lines 8 → 2; accordion retired.
 - **S3 — Stable CTA + overflow diet + one reorder path.**
-- **S4 — In-place set editing + plate readout.**
+- **S4 — In-place set editing.** Plate readout DROPPED by founder 2026-07-11 (D57), never revisit.
 - **S5 — Cohesion polish.** Token/type/motion/haptics audit of the
   whole surface against Diary/Home; density normalised to the house
   card; adversarial review of the full arc; device walk.

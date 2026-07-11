@@ -1103,3 +1103,24 @@ review instead of completing the assigned list). STANDING LAW, absolute:
 Supersedes any lighter reading of D33/D48 delegation: delegation is about
 HOW to build the best solution, never a licence to not build an assigned
 job.
+
+## D57 — Logger redesign GO (cohesion-first, min cost); pristine pass HELD; plate calc DROPPED; token discipline (founder, 2026-07-11)
+
+Founder rulings after the backlog review:
+- Action 1 (D43 logger redesign S2-S5): GO. Goal restated: the logger
+  must match the rest of the app COMPLETELY and hit world-class, since
+  the rest of the app's design is already very good. Build at lowest
+  sensible cost.
+- Action 2 (D43 full-app pristine pass): HELD for now (rework risk vs
+  the CP-10 / consistency / device-wave work already done).
+- Plate calculator: ABSOLUTELY DROPPED, never revisit. So D43 S4 is
+  in-place set editing ONLY, no plate readout. The blueprint's plate
+  reference is struck.
+- EAS build fix and Watch-app: PAUSED, revisit later (not cancelled
+  work, just deferred by the founder).
+- Migrations: founder will trigger (the "run against production" phrase)
+  when ready; device-walk is the founder's after the logger lands.
+- TOKEN DISCIPLINE (standing): the main loop (Fable) makes only the big
+  difficult design decisions; everything else - reads, writes,
+  verification - is delegated to the cheapest sensible agent. No big
+  reads or writes by the main loop. Be careful about tokens in all ways.
