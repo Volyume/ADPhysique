@@ -209,14 +209,17 @@ own information design.**
   legacy sync appliers); fix runInTransaction reentrancy (foreign-tx
   inline-join, audit finding sync-db-findings #1); dbCrypto swallowed
   closeAsync refcount hygiene.
-- FOUNDER DECISION OPEN - sign-out escape (the wipe_failed trap forced
-  the founder to clear storage; force:true does not escape either,
-  useAccountActions.js:113-119): (A) bounded retry with backoff, still
-  fails closed; (B) wipe-verify-then-force - after N failures count
-  remaining rows for the user and allow sign-out only if genuinely
-  zero remain (best correctness, no privacy change); (C) force-with-
-  disclosure after N failures, weakest privacy, must re-arm the
-  next-sign-in wipe net. Lead recommends A+B together.
+- SIGN-OUT ESCAPE LANDED (D73, lead-ruled under founder delegation
+  "do what needs to be done": A+B combined, C rejected on Article 9
+  posture). wipeAllUserDataWithRetry (3 attempts, backoff) then
+  verifyUserWipeClean inspects the fatal surfaces directly (fatal-table
+  row counts incl. legacy NULL-owner photo rows and partner tables, the
+  account's photo directory, snapshots dir); sign-out proceeds ONLY on
+  verified-zero residue, else fails closed with the step named.
+  "no such table" is no longer a fatal wipe failure (holds no data; a
+  plausible R2-12 class on an older schema). Delete-account's local
+  wipe uses the same primitive + honest step-named alert. Pins:
+  signOutWipeEscape.test.js; useAccountActions.guard re-anchored.
 
 RECOVERY: any dead session -> `git status`, review uncommitted diff against
 this entry, relaunch the affected agent with the same brief + the scope

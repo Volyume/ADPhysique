@@ -7,7 +7,7 @@ import * as Updates from 'expo-updates';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient, signOut } from '../lib/supabase';
-import { wipeAllUserData } from '../lib/database';
+import { wipeAllUserDataWithRetry } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import { markAuthDeletionPending } from '../lib/deletionRetry';
 import { audit } from '../lib/observability';
@@ -300,13 +300,13 @@ export default function useAccountActions() {
       }
       // Wipe local SQLite. Reached only when (a) cloud user and cloud
       // wipe succeeded, or (b) local-only user (no cloud to wipe).
-      try { await wipeAllUserData(userId); }
-      catch (e) {
-        logError('SettingsScreen.deleteAccount.wipeLocal', e);
-        appAlert(
-          "Couldn't finish deletion on this device",
-          'Local photo and scan data could not be removed. Try again before uninstalling or sharing this device.',
-        );
+      // Sign-out escape ruling (2026-07-11): same bounded retry + verified-
+      // clean escape as sign-out, and the failure alert names the actual
+      // failing step instead of blaming photos for every failure class.
+      const localWipe = await wipeAllUserDataWithRetry(userId);
+      if (!localWipe.ok) {
+        logError('SettingsScreen.deleteAccount.wipeLocal', new Error(`wipe failed at ${localWipe.step ?? 'unknown step'}`), { userId });
+        appAlert("Couldn't finish deletion on this device", wipeFailedBody(localWipe.step));
         setDeletingAccount(false);
         return;
       }

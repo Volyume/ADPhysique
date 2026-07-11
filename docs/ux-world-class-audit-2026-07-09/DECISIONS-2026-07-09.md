@@ -1568,3 +1568,43 @@ notification, no server migration. ED guardrails hold by construction:
 no outcome or body-change language anywhere in the copy, nothing
 weight/food-adjacent on the surface, and the block is best-effort
 (any load failure renders nothing).
+
+## D73 — Sign-out wipe escape: bounded retry + verified-clean gate (lead ruling under D33, 2026-07-11)
+
+Sources: R2-12 investigation (session log, build-2692 walk), the founder's
+own trapped device (wipe_failed forced a full storage clear to escape),
+useAppStore.clearAuthStateForSignOut, database.wipeAllUserData,
+useAccountActions.performDeleteAccount. Founder delegated the decision
+("do what needs to be done").
+
+RULING: options A and B combined, C rejected. The wipe_failed block was a
+dead end: any throw from a fatal wipe step blocked sign-out forever
+(force:true re-ran the same wipe), which punishes the user for a transient
+error while protecting nothing. The fail-closed privacy rule is UNCHANGED —
+sign-out completes only when zero user data remains on the device — but
+"an exception was thrown" is not the same fact as "data remains", so the
+gate now measures the fact directly:
+
+1. `wipeAllUserDataWithRetry` (database.js) retries the wipe up to 3 times
+   (500ms/1500ms backoff) before concluding anything.
+2. If every attempt throws, `verifyUserWipeClean` inspects the actual fatal
+   surfaces: user-keyed fatal tables + legacy NULL-owner photo rows +
+   flat-wiped partner tables (row counts), this account's photo directory,
+   and the snapshots directory. Zero residue → sign-out proceeds
+   (`verifiedClean`, logged loudly). Any residue, or any verification error
+   other than a missing table → fail closed exactly as before, with the
+   failing step named in the alert (R2-12 honesty rule).
+3. "no such table" is no longer a fatal wipe failure anywhere in the wipe:
+   a table that does not exist holds no data, so it cannot justify trapping
+   the user (a plausible R2-12 class on an older schema).
+4. Delete-account's local-wipe step uses the same retry + verify primitive
+   and the same step-named honest alert (it previously blamed "photo and
+   scan data" for every failure class).
+
+Option C (force-with-disclosure) is rejected outright: it would let a
+sign-out complete with health data verifiably still on the device, which
+Article 9 posture does not permit for a convenience escape.
+
+Regression pins: src/lib/__tests__/signOutWipeEscape.test.js (retry,
+verified-clean escape, fail-closed residue, missing-table tolerance) plus
+re-anchored useAccountActions.guard ordering pin.

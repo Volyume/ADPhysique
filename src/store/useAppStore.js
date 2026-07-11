@@ -427,19 +427,26 @@ const useAppStore = create((set, get) => ({
     // restores via pullFromCloud. On sign-in to a different account,
     // local is already empty so nothing to leak.
     if (prevUid) {
-      try {
-        // eslint-disable-next-line global-require
-        const { wipeAllUserData } = require('../lib/database');
-        await wipeAllUserData(prevUid);
-        log.logInfo('clearAuthStateForSignOut.wipe.ok', `local SQLite wiped for ${prevUid}`);
-      } catch (e) {
-        log.logError('clearAuthStateForSignOut.wipe.failed', e, { prevUid });
+      // Sign-out escape ruling (2026-07-11, D33): bounded retry, then a
+      // verify pass that allows sign-out only when the device is verifiably
+      // clean of user data. The fail-closed rule is unchanged; what died is
+      // the dead end where one spurious throw blocked sign-out forever
+      // (per-attempt errors are logged inside the retry helper).
+      // eslint-disable-next-line global-require
+      const { wipeAllUserDataWithRetry } = require('../lib/database');
+      const wipe = await wipeAllUserDataWithRetry(prevUid);
+      if (wipe.ok) {
+        log.logInfo('clearAuthStateForSignOut.wipe.ok', wipe.verifiedClean
+          ? `wipe threw but device verified clean for ${prevUid}`
+          : `local SQLite wiped for ${prevUid}`);
+      } else {
+        log.logError('clearAuthStateForSignOut.wipe.failed', new Error(`wipe failed at ${wipe.step ?? 'unknown step'}`), { prevUid });
         try {
           // eslint-disable-next-line global-require
           require('../lib/sync/signOutGuard').setSignOutWiping(false);
         } catch (_) { /* tolerate */ }
         // R2-12: carry the failing step so the alert names it honestly.
-        return { ok: false, reason: 'wipe_failed', step: e?.wipeStep ?? null };
+        return { ok: false, reason: 'wipe_failed', step: wipe.step ?? null };
       }
     }
 

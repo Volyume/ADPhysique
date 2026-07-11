@@ -4571,6 +4571,14 @@ const PARTNER_LOCAL_WIPE_TABLES = [
   'partnerships',
 ];
 
+// "no such table" from an older schema means the table holds no data, so a
+// fatal wipe step has nothing to remove there. Fail-closed protects data that
+// exists, not tables that don't - without this a single missing fatal table
+// dead-ends sign-out permanently (sign-out escape ruling, 2026-07-11).
+function isMissingTableError(e) {
+  return /no such table/i.test(e?.message ?? '');
+}
+
 export async function wipeAllUserData(userId) {
   if (!userId) return;
   const d = await db();
@@ -4648,6 +4656,7 @@ export async function wipeAllUserData(userId) {
       } catch (e) {
         // Continue with other tables. A missing table on an older schema
         // shouldn't abort the whole wipe.
+        if (isMissingTableError(e)) continue;
         logError(`database.wipeAllUserData.${table}`, e, { userId });
         // R2-12: name the failing step on the error so the sign-out alert
         // (and the Sentry event) says WHAT failed instead of a generic
@@ -4659,9 +4668,11 @@ export async function wipeAllUserData(userId) {
     try {
       await d.runAsync('DELETE FROM progress_photo_meta WHERE user_id IS NULL');
     } catch (e) {
-      logError('database.wipeAllUserData.progress_photo_meta_legacy', e, { userId });
-      e.wipeStep = 'photo_meta_legacy';
-      throw e;
+      if (!isMissingTableError(e)) {
+        logError('database.wipeAllUserData.progress_photo_meta_legacy', e, { userId });
+        e.wipeStep = 'photo_meta_legacy';
+        throw e;
+      }
     }
 
     try {
@@ -4709,8 +4720,9 @@ export async function wipeAllUserData(userId) {
       try {
         await d.runAsync(`DELETE FROM ${table}`);
       } catch (e) {
+        if (isMissingTableError(e)) continue;
         logError(`database.wipeAllUserData.${table}`, e, { userId });
-        if (FATAL_LOCAL_WIPE_TABLES.has(table)) throw e;
+        if (FATAL_LOCAL_WIPE_TABLES.has(table)) { e.wipeStep = table; throw e; }
       }
     }
 
@@ -4723,6 +4735,130 @@ export async function wipeAllUserData(userId) {
       await d.execAsync(`INSERT INTO custom_foods_fts(custom_foods_fts) VALUES('rebuild')`);
     } catch (_) { /* no FTS index on this install */ }
   });
+}
+
+// ─── Sign-out wipe escape (ruling 2026-07-11, D33) ──────────────────────────
+//
+// The wipe_failed path used to be a dead end: any throw from a fatal wipe
+// step blocked sign-out forever (force:true re-runs the same wipe), and the
+// only way off the founder's own device was clearing app storage. The privacy
+// rule is UNCHANGED - sign-out completes only when zero user data remains on
+// this device - but "an exception was thrown" is not the same fact as "data
+// remains". verifyUserWipeClean inspects the actual fatal surfaces (row
+// counts, this account's photo directory, DB snapshots) so the caller can
+// retry the wipe and, if every retry still throws, allow sign-out only when
+// the device is verifiably clean. Any verification error that is not a
+// missing table counts as residue: fail closed.
+
+export async function verifyUserWipeClean(userId) {
+  if (!userId) return { clean: false, residue: ['no_user'] };
+  const d = await db();
+  const residue = [];
+
+  const userKeyedFatalTables = [...FATAL_LOCAL_WIPE_TABLES]
+    .filter((t) => !PARTNER_LOCAL_WIPE_TABLES.includes(t));
+  for (const table of userKeyedFatalTables) {
+    try {
+      const row = await d.getFirstAsync(
+        `SELECT COUNT(*) AS n FROM ${table} WHERE user_id = ?`, [userId],
+      );
+      if (Number(row?.n ?? 0) > 0) residue.push(table);
+    } catch (e) {
+      if (!isMissingTableError(e)) residue.push(table);
+    }
+  }
+
+  // Legacy pre-ownership photo rows carry no user_id but are fatal too.
+  try {
+    const row = await d.getFirstAsync(
+      'SELECT COUNT(*) AS n FROM progress_photo_meta WHERE user_id IS NULL',
+    );
+    if (Number(row?.n ?? 0) > 0) residue.push('photo_meta_legacy');
+  } catch (e) {
+    if (!isMissingTableError(e)) residue.push('photo_meta_legacy');
+  }
+
+  // Partner tables are wiped flat (local SQLite is single-user).
+  for (const table of PARTNER_LOCAL_WIPE_TABLES) {
+    try {
+      const row = await d.getFirstAsync(`SELECT COUNT(*) AS n FROM ${table}`);
+      if (Number(row?.n ?? 0) > 0) residue.push(table);
+    } catch (e) {
+      if (!isMissingTableError(e)) residue.push(table);
+    }
+  }
+
+  // This account's photo files on disk. Read the directory raw (never via
+  // listProgressPhotos, whose ensurePhotoDir would recreate the directory).
+  try {
+    // eslint-disable-next-line global-require
+    const { photoDir } = require('./progressPhotos');
+    // eslint-disable-next-line global-require
+    const FileSystem = require('expo-file-system/legacy');
+    const dir = photoDir(userId);
+    const info = await FileSystem.getInfoAsync(dir);
+    if (info?.exists) {
+      const names = await FileSystem.readDirectoryAsync(dir).catch(() => null);
+      if (names === null || names.length > 0) residue.push('photo_files');
+    }
+  } catch (_) {
+    residue.push('photo_files');
+  }
+
+  // DB snapshots are byte-for-byte pre-wipe copies; any survivor is residue.
+  try {
+    // eslint-disable-next-line global-require
+    const { SNAP_DIR } = require('./dbSnapshot');
+    // eslint-disable-next-line global-require
+    const FileSystem = require('expo-file-system/legacy');
+    const info = await FileSystem.getInfoAsync(SNAP_DIR);
+    if (info?.exists) {
+      const names = await FileSystem.readDirectoryAsync(SNAP_DIR).catch(() => null);
+      if (names === null || names.length > 0) residue.push('snapshots');
+    }
+  } catch (_) {
+    residue.push('snapshots');
+  }
+
+  return { clean: residue.length === 0, residue };
+}
+
+// Bounded-retry wipe for the account-boundary flows (sign-out, delete
+// account). Returns { ok: true } on success, { ok: true, verifiedClean: true }
+// when every attempt threw but the device is verifiably clean (the wipe's
+// goal is met), or { ok: false, step } to fail closed with the step named for
+// the alert (R2-12).
+export async function wipeAllUserDataWithRetry(userId, { attempts = 3, delaysMs = [500, 1500] } = {}) {
+  if (!userId) return { ok: true };
+  let lastErr = null;
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      await wipeAllUserData(userId);
+      return { ok: true };
+    } catch (e) {
+      lastErr = e;
+      logError('database.wipeAllUserDataWithRetry', e, { userId, attempt: i + 1, attempts });
+      if (i < attempts - 1) {
+        const wait = delaysMs[Math.min(i, delaysMs.length - 1)] ?? 0;
+        if (wait > 0) await new Promise((resolve) => { setTimeout(resolve, wait); });
+      }
+    }
+  }
+  try {
+    const check = await verifyUserWipeClean(userId);
+    if (check.clean) {
+      logWarn(
+        'database.wipeAllUserDataWithRetry.verifiedClean',
+        `wipe threw ${attempts} times but the device is verifiably clean; sign-out may proceed`,
+        { userId },
+      );
+      return { ok: true, verifiedClean: true };
+    }
+    return { ok: false, step: lastErr?.wipeStep ?? check.residue[0] ?? null };
+  } catch (e) {
+    logError('database.wipeAllUserDataWithRetry.verify', e, { userId });
+    return { ok: false, step: lastErr?.wipeStep ?? null };
+  }
 }
 
 // ─── Full local backup / restore ────────────────────────────────────────────
