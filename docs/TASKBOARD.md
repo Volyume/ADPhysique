@@ -132,13 +132,20 @@ leg-day engine work (D45 + D46) all LANDED - detail rolled to
     (prReEval.guard passes unmodified); SetEntry untouched; plate stays
     dropped (D57). Lead-verified green: 15 / 125 + full src/screens
     132 / 1014.
-  - NEXT: S5 (cohesion polish - token/type/motion/haptics audit of the
-    whole logger vs Diary/Home; density normalised to the house card;
-    adversarial review of the full S1-S4 arc; founder device walk).
-    RECOVERY: blueprint doc committed; work S5 from its Section 7.
-    NOTE: D58 (beat line kept as a row) and D59 (warm-up ramp kept in
-    overflow) are both subject to the founder's device-walk taste veto
-    at S5.
+  - S5 BUILT (`bf72c51` token polish + `4e02f9b` house numeral role on
+    the logged numerals): the surface was already largely tokenised by
+    S1-S4 (no hard-coded colours, haptics on the shared vocabulary), so
+    S5 was small. Three flagged design calls ruled in D60: logged-row
+    radius KEEP dense (data receipt, not cards), beat-line line-height
+    KEEP tight, type.num() APPLIED to the logged numerals. Lead-verified
+    green throughout.
+  - REMAINING for S5 completion: (a) the mandated fresh-eyes Opus
+    adversarial review of the full S1-S5 arc vs blueprint + Section 2
+    inviolables (IN PROGRESS); (b) the founder's 10/10 device walk (the
+    blueprint Section 9 checklist), which also carries the taste veto on
+    D58 (beat line kept as a row), D59 (warm-up ramp kept in overflow),
+    and D60 calls 1-2. RECOVERY: all S1-S5 commits pushed; if the review
+    finds issues, fix on this branch and re-verify.
 
 ### LANDED - CP-10 theming batch G, BOTH LANES (2026-07-11)
 - Lane 2 (20 plain screens) `3adf551`; lane 1 (15 high-risk screens;

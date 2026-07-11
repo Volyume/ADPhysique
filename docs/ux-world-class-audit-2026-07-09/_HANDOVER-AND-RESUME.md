@@ -416,12 +416,23 @@ cohesion-first, min cost) is progressing through its staged slots:
   unmodified); SetEntry untouched; plate stays dropped (D57). No collision
   this round (single agent). Lead-verified green: 15/125 + src/screens
   132/1014.
-NEXT IN ORDER per the board's D43 entry: S5 (cohesion polish - whole-logger
-token/type/motion/haptics audit vs Diary/Home, density normalised to the
-house card, adversarial review of the full S1-S4 arc, founder device walk).
-D58 (beat line kept as a row) + D59 (warm-up ramp kept in overflow) are
-both subject to the founder's S5 device-walk taste veto. Then the D43
-pristine pass is HELD (D57), not part of this arc.
+- S5 BUILT `bf72c51` (token polish) + `4e02f9b` (house numeral role on
+  logged numerals): surface was already largely tokenised by S1-S4, so S5
+  was small. Three flagged design calls ruled in D60: logged-row radius
+  KEEP dense, beat-line line-height KEEP tight, type.num() APPLIED to the
+  logged numerals. Lead-verified green throughout.
+REMAINING for S5/D43 completion:
+  (a) Opus fresh-eyes adversarial review of the full S1-S5 arc vs the
+      blueprint + Section 2 inviolables - IN PROGRESS this session; if it
+      finds issues, fix on this branch + re-verify + push.
+  (b) The founder's 10/10 device walk (blueprint Section 9 checklist),
+      which also carries the taste veto on D58 (beat line kept as a row),
+      D59 (warm-up ramp kept in overflow), and D60 calls 1-2.
+The D43 full-app pristine pass stays HELD (D57), not part of this arc.
+COLLISION LESSON (S3): the first S3 agent spawned a sub-agent against its
+brief, which ran concurrently with a lead relaunch - ~420k tokens wasted,
+tree survived clean. Before relaunching any "no-op" agent, confirm no live
+descendants (check the task tree).
 
 --- superseded slice-2 recovery note (kept for history) ---
 Earlier this session a Sonnet agent was mid-flight on S1 slice 2; that
