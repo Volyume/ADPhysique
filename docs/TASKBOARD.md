@@ -1,7 +1,10 @@
 # VOLYUME TASKBOARD — the single current task source
 
 _Created 2026-07-10 by the docs staleness sweep. This is THE list the project
-works from. Update it at every landing (add, move to done, re-verify)._
+works from. Update it at every landing (add, move to done, re-verify).
+Landed-item detail rolls to
+`docs/ux-world-class-audit-2026-07-09/_HANDOVER-ARCHIVE.md` at each landing
+(D41 token hygiene): this board holds only in-flight / queued / held._
 
 ## How this board works (D37 + D38 - restated)
 
@@ -25,20 +28,14 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ## 1. IN FLIGHT
 
-### LANDED - CP-10 screen theming batch D (9 screens)
-- MyMeals, MyRecipes, ScanBarcode, ScanLabel, AddCustomFood,
-  PlanPreview, FirstRun, Credits, WeeklyStory. Frozen sheets verified
-  byte-identical; full suite green at the boundary (8,412 / 0).
-  Screen coverage 31/85 live, 50 static remaining.
-
-### IN FLIGHT - CP-10 screen theming batch E (part 1 LANDED)
-- The six food heavyweights. PART 1 LANDED (recovered from the dead
-  session's uncommitted tree, lead-reviewed): FoodSearchScreen,
+### CP-10 screen theming batch E (part 1 LANDED, part 2 in flight)
+- The six food heavyweights. PART 1 LANDED `c2a9b81` (recovered from the
+  dead session's uncommitted tree, lead-reviewed): FoodSearchScreen,
   FoodInsightsScreen, RecipeBuilderScreen live-themed on the batch
   pattern; bottomBarInset + FoodSearchScreen pins widened with dated
-  comments; DiaryScreen carries only the `t` -> `targetsRow` prep
-  rename (frees `t` for the theme object). Lint + all 21 suites that
-  reference the touched screens green (220 tests).
+  comments. Adversarial review verdict: clean on all six defect
+  categories; its one finding (stray shadowing `t` in proteinTargetRule)
+  fixed at `7c24933`. Lint + all touched-screen suites green.
 - PART 2 IN FLIGHT (Sonnet): DiaryScreen, MealPlanScreen (CARE:
   convert around the new dietarySheet code, no behaviour change),
   NutritionTargetsScreen (imports wellbeing - valence mappings
@@ -49,80 +46,16 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 - Then further batches until 0 static, which unlocks the stage-5
   restart-prompt retirement.
 
-
-### DONE THIS SESSION (for the record; full detail in the handover)
-- Theming component tail LANDED: 3 real statics converted
-  (TierComparisonStrip, ProgressGhostCapture, ScreenBoundary per D39
-  wrapper + static-fallback proof); 5 files exempt (motion/alpha-only,
-  nothing theme-dependent); reconciled coverage 105/110 live. Stage-5
-  stays gated on SCREEN coverage (D39 note).
-- WhatsNewSheet close-animation defect CONFIRMED and fixed (the one
-  consumer unmounting the sheet on dismiss; now matches the pattern).
-  Full suite green at this boundary: 8,412 passed / 0 failed.
-- D36b LANDED `d1bf193`: FeedbackSheet + PeekMenu onto shared BottomSheet,
-  imperative ref APIs preserved, zero call-site changes; PlansScreen's
-  folder-rename prompt is now the only hand-rolled backdrop. WhatsNewSheet
-  early-return may skip its close animation - queue a look (see below).
-- D36c LANDED `b8d9b47`: TalkBack sheet isolation via a module-level
-  open-sheet counter + SheetIsolationBoundary around the navigation
-  container; stacked/fast-reopen/unmount-safe; raw Modals unaffected.
-  Full suite green at this boundary: 8,410 passed / 0 failed.
-- Inline dietary preferences LANDED (founder ask): shared
-  DietaryPreferencesEditor rendered by BOTH SettingsDietaryScreen and the
-  meal builder's new dietary sheet; link-out + stranding removed; ED nudge
-  extraction-only; full suite green 8,391/0. Device checklist (9 steps) in
-  the agent report via the handover.
-- D35 edge auto-scroll LANDED `ed62aab` (still-finger reaction fix included;
-  20 targeted suites / 152 tests + lint green; CI full suite arbitrates on
-  push). Device checklist steps 1-12 in the agent reports via the handover.
-
-### D35 - Drag reorder edge auto-scroll (LANDED, see above)
-- **Source:** D35; handover resume point (1). Files: `src/components/DragReorderList.js` + its four consumer surfaces.
-- **CURRENT STATE:** DragReorderList ships true long-press drag (landed `534e0e0`, D32) but has NO parent auto-scroll at the drag edge - dragging to the top/bottom of a screen-overflowing list will not scroll; the user must drop and re-drag to cross off-screen (disclosed in the component header).
-- **END STATE:** dragging near the top/bottom edge auto-scrolls the parent list so a longer-than-screen list is reorderable in one continuous gesture.
-- **ELEVATES BECAUSE:** drop-and-redrag is not the complete drag experience; edge auto-scroll makes reorder feel native on any list length.
-- **Bounds:** no new dependency, pure-arithmetic worklets, Reduce Motion respected, chevron paths untouched (D35).
-- **NOTE:** a concurrent agent is editing `DragReorderList.js` + four screens (this work). Docs lane must not touch `src/**`.
-
 ---
 
 ## 2. QUEUED (build slots - two agents at a time, lowest capable tier)
 
-### LANDED - Inline dietary preferences + allergies in the meal builder (founder ask, 2026-07-10)
-- **Source:** founder direct ask (verbatim in the handover resume point, committed `6db4d33`); item 4 landed `85c5fe1` as a chip/link + once-ever hint.
-- **CURRENT STATE:** the meal builder's preferences surface only LINKS to the Settings dietary screen; tapping it navigates to Settings with no way back (founder-reported defect), and no selection can be made in place.
-- **END STATE:** the diet + allergy selection is editable INLINE in the meal builder's meal preferences, reading and writing the SAME store/profile fields as SettingsDietaryScreen - one source of truth, a change in either place is the same change everywhere (suggestions, plans, sync); the navigation dead-end is gone.
-- **ELEVATES BECAUSE:** users can set dietary needs where they actually build meals, without being ejected from their flow; the two surfaces can never disagree.
-- **Bounds:** same ED-safe soft exclusion nudge, tier posture unchanged, same allergen_excludes sync ladder, no duplicate state anywhere. Verify-first per D38.
-
-### LANDED - D36b FeedbackSheet + PeekMenu migration (see DONE)
-- **Source:** D36(b); handover resume point (2, NEXT SLOTS). Current state sourced from the D36 verify-first read (docs lane cannot re-read `src/**`).
-- **CURRENT STATE:** FeedbackSheet and PeekMenu are the two never-finished custom-sheet targets named in `BottomSheet.js`'s own header; still hand-rolled, not on the shared gorhom sheet.
-- **END STATE:** both migrated to the shared BottomSheet via a real restructure (imperative singleton API), matching the chrome and bottom insets of the other migrated sheets.
-- **ELEVATES BECAUSE:** removes the last hand-rolled sheets, giving consistent gesture-native behaviour and correct insets everywhere; the header's own TODO is finally closed.
-- **Bounds:** its own slot (real restructure, not folded into another migration).
-
-### LANDED - D36c TalkBack sheet isolation (see DONE)
-- **Source:** D36(c); handover resume point (2). Cross-cutting, RootNavigator-adjacent.
-- **CURRENT STATE:** when a sheet is open, the host screen is not marked `importantForAccessibility` to hide it, so TalkBack can still reach content behind the sheet - a gap that compounds with every sheet migration.
-- **END STATE:** host screen set `importantForAccessibility` (no-hide) while any sheet is open, restored on close.
-- **ELEVATES BECAUSE:** screen-reader users get correct modal isolation across every sheet in the app; a genuine accessibility defect closes.
-- **Bounds:** own cross-cutting slot; do not weaken any existing sheet a11y guard.
-
-### LANDED - WhatsNewSheet close animation (see DONE)
-- **Source:** D36b agent aside, 2026-07-10. CURRENT STATE: WhatsNewSheet.js
-  returns null when not visible above its <BottomSheet>, which likely skips
-  the shared close animation on dismiss. END STATE: dismissal animates like
-  every other sheet. ELEVATES BECAUSE: one sheet snapping shut while all
-  others glide breaks the cohesion mandate. Verify-first (may be a non-issue
-  if gorhom unmount-dismisses gracefully).
-
-### Theming - stage-5 gate ONLY (component tail LANDED, see DONE)
+### CP-10 screen theming - remaining batches after E
 - **Source:** `CP-10-restart-free-theming-plan.md`; D16, D24, D29; handover THEMING COVERAGE TRACKER.
-- **CURRENT STATE:** 100/108 theme-consuming components are live-reactive; 8 remain static (won't react to a live theme toggle). `ScreenBoundary` is a class error boundary that cannot consume the theme hook (open architecture question, not forced). The stage-5 honesty gate (retiring the restart prompt) stays blocked until a toggle's full dependency set is live.
-- **END STATE:** the last 8 components live-themed, the ScreenBoundary architecture question resolved, and stage-5 cleared so restart-free theming ships fully with no stale surfaces.
+- **CURRENT STATE:** components 105/110 live; screens 31/85 live at batch D close (batch E raises this); the stage-5 honesty gate (retiring the restart prompt) stays blocked until a toggle's full dependency set is live.
+- **END STATE:** every screen live-themed, stage-5 cleared so restart-free theming ships fully with no stale surfaces.
 - **ELEVATES BECAUSE:** the theme toggle becomes genuinely live and complete - no static islands, no restart, honest stage-5 retirement.
-- **Bounds:** primitives-first staged rollout; ProGate/tier logic untouched; frozen static stylesheets stay byte-identical unless converted.
+- **Bounds:** batch pattern as D/E; ProGate/tier logic untouched; frozen static stylesheets stay byte-identical unless converted.
 
 ### QUEUED - DECISION ROUNDS (await founder input or assets; do NOT build until resolved)
 _These are open decision forks, not dispatchable builds. Their elevation is
@@ -140,7 +73,7 @@ conditional on the decision; recorded here so they are visible, not lost._
 - **Play OAuth SHA-1 confirm.** Source: CLAUDE.md status banner; handover.
 - **Run `refresh-off-snapshot.yml`.** Lands OFF branded micronutrient data into the bundled snapshot (the operational remainder of item 16). Source: D26/D37; handover.
 - **migrate_117 apply.** Telemetry-view REVOKE (drafted + committed `653fe32`); needs the exact phrase "run against production", then re-verify grants and update the file header + `supabase/README`. Source: handover AWAITING FOUNDER; CLAUDE.md supabase rules.
-- **Device-walk backlog.** The fresh EAS build carries a large walk backlog: item 6 (max system font), item 13 (photo gallery), item 14 (keyboard/zeego + set-row menu), item 20 (drag reorder), weigh-in edit/delete, dietary needs, vitamins/micros, haptics, next-exercise reorder, bottom sheets, Help/FAQ, live theming, and VERIFY the timeline diary reverted to meal cards. Full step-by-step checklists are in the handover per item. Source: handover FOUNDER-SIDE ACTIONS + per-item checklists.
+- **Device-walk backlog.** The fresh EAS build carries a large walk backlog: item 6 (max system font), item 13 (photo gallery), item 14 (keyboard/zeego + set-row menu), item 20 (drag reorder), weigh-in edit/delete, dietary needs, vitamins/micros, haptics, next-exercise reorder, bottom sheets, Help/FAQ, live theming, and VERIFY the timeline diary reverted to meal cards. Full step-by-step checklists are in the handover (and its archive) per item. Source: handover FOUNDER-SIDE ACTIONS + per-item checklists.
 
 ---
 
@@ -167,6 +100,8 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## Appendix - folded-in / reference-only sources (not build queues)
 
+- Landed-item history: `docs/ux-world-class-audit-2026-07-09/_HANDOVER-ARCHIVE.md`
+  (TASKBOARD HISTORY section) + the handover stage log.
 - `docs/exercise-planning-2026-07-09/` (plans A-G): all SHIPPED; retained as
   design reference only. Do not rebuild. Residual engine changes go through the
   register + D37/D38 triage.

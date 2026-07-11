@@ -701,3 +701,21 @@ need the same block in their own CLAUDE.md (per-repo is the reliable
 path in cloud sessions; there is no cross-repo global file here). If
 the handover location ever moves, CLAUDE.md's block is the single
 place to repoint.
+
+## D41 — Token hygiene measures, all four adopted (founder, 2026-07-11)
+Founder asked for sensible token savings at zero cost to design or the
+app; presented four docs/process-only measures; founder approved ALL
+FOUR as standing practice: (1) the handover is SPLIT — the historical
+campaign log lives in `_HANDOVER-ARCHIVE.md` (full history, never
+deleted) and the live `_HANDOVER-AND-RESUME.md` stays under ~600 lines,
+with stage-log entries older than the current resume point rolling to
+the archive at every landing; (2) TASKBOARD.md holds only in-flight /
+queued / held — landed-item detail rolls to the archive's TASKBOARD
+HISTORY section at each landing; (3) CLAUDE.md's STATUS banner is
+slimmed to pointers (live state lives in the docs it points at; the
+D33 restatement dropped as redundant with the permanent D40 block);
+(4) agent briefs cap final reports — structured, evidence-first, no
+narrative padding — with detail-bearing audit evidence exempt. What was
+explicitly NOT adopted: lowering agent tiers below capability, skipping
+the fresh-eyes adversarial review, or shortening the hard-bounds
+sections of briefs — that token cost is deliberate insurance.

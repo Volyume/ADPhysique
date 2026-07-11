@@ -3,39 +3,19 @@
 Live production app on Google Play (Android; iOS via TestFlight). Real users
 are paying. Every change affects them. Work accordingly.
 
-> **STATUS (updated 2026-07-10):** the Ultimate-Audit is FULLY CLOSED.
-> Items 11–16 (formerly decision-gated) were ALL built during the
-> 2026-07-09/10 campaign under decisions D16/D20/D21/D22, verified by
-> triage D37 — see `docs/ux-world-class-audit-2026-07-09/
-> DECISIONS-2026-07-09.md`. Item 15 (timeline diary) was built and then
-> REVERTED on the founder's device verdict: meal cards are canonical,
-> NEVER re-propose a flat diary. Do NOT build anything from
-> `docs/ultimate-audit-2026-06-13/` blueprints — that register is
-> historical; triage any pre-campaign audit item against the current
-> tree and the decision register before considering it (D37 standing
-> rule). Current work runs from
-> `docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md` and the
-> single live task list `docs/TASKBOARD.md` (D38: every queued item
-> carries current state / end state / elevation rationale). Every other
-> audit/status/backlog doc now carries a staleness banner.
-> **Outstanding founder actions:** confirm Google Play OAuth SHA-1; run
-> refresh-off-snapshot.yml (OFF branded micronutrients); iOS App Groups
-> provisioning + fresh EAS build.
-> **Cloud migrations (updated 2026-07-10):** now CLAUDE-RUN via the founder's
-> Supabase connector, gated on the founder's exact phrase "run against
-> production" per apply batch (see supabase/README). EU-Dublin is applied
-> and verified through `migrate_116`; 049/059 remain HELD.
-> **Decision delegation (D33 + amendments, founder 2026-07-10):** decision
-> forks — INCLUDING the Section 2 gate items below, EXCEPT billing PRICE
-> changes — are delegated to the lead, ruled on the absolute best solution
-> for the app and end users, never on effort ("if it takes more work to get
-> a slightly better app, we do more work. Always."). Billing price changes
-> remain founder-gated. Delegation transfers decision authority, NOT the
-> underlying obligations: the ED-safety floors/gates, deterministic engine,
-> GDPR/Article 9 and EU residency, product IDs, billing test-plan and
-> dependency disciplines all remain binding on any ruling. Every ruling is
-> recorded with rationale in
-> `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md`.
+> **STATUS (slimmed 2026-07-11 under D41 — live state lives in the docs
+> it points at, not here):** Current work runs ONLY from
+> `docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md` and
+> `docs/TASKBOARD.md` (D37 staleness + D38 elevation rules in the board
+> header; historical log in `_HANDOVER-ARCHIVE.md`). Never build from any
+> pre-campaign audit blueprint without D37 triage; the flat timeline diary
+> was REVERTED on the founder's device verdict — never re-propose it.
+> Cloud migrations are CLAUDE-RUN, gated on the founder's exact phrase
+> "run against production" per batch (`supabase/README`); applied through
+> `migrate_116`; 049/059 HELD. Decision delegation (D33) and the full
+> operating model are PERMANENT law — Section 4, D40 block. The decisions
+> register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md`.
+> Founder-side outstanding actions: TASKBOARD.md section 3.
 
 ---
 
@@ -317,7 +297,10 @@ campaign operating model as standing law; it is not campaign-scoped.
    file the lead is editing), the lint + test + device-checklist
    expectation, and "STOP and report rather than interpret" on any
    ambiguity or pinned-test conflict. Agents never commit, push, run
-   `git stash`, or touch main. Tier rules per the block above.
+   `git stash`, or touch main. Tier rules per the block above. Briefs cap
+   the final report: structured, evidence-first, no narrative padding
+   (detail-bearing audit evidence exempt — file:line findings ARE the
+   deliverable there) (D41).
 4. **Decision delegation (D33, standing).** Product-fork decisions are
    LEAD-RULED on one criterion: the absolute best solution for the app and
    end users, never on effort ("if it takes more work to get a slightly
