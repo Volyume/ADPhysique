@@ -76,7 +76,12 @@ describe('ActiveWorkout bottom bar vs the hidden tab band', () => {
     // above) sits on a screen outside the tab navigator with nothing else to
     // absorb the bottom inset. It follows the same
     // Math.max(spacing.*, insets.bottom + spacing.*) contract pinned above.
-    expect(foodSearch).toMatch(/styles\.plateBar,\s*\{\s*paddingBottom:\s*Math\.max\(spacing\.md,\s*insets\.bottom\s*\+\s*spacing\.sm\)/);
+    // CP-10 batch E (2026-07-10): FoodSearchScreen now reads a live theme
+    // (src/hooks/useTheme.js); styles.plateBar gained a live.plateBar
+    // override ahead of the inline paddingBottom object, matching the
+    // ActiveWorkoutScreen/WorkoutSummaryScreen precedent above. The pinned
+    // contract itself is unchanged -- widened only to allow the insertion.
+    expect(foodSearch).toMatch(/styles\.plateBar,\s*live\.plateBar,\s*\{\s*paddingBottom:\s*Math\.max\(spacing\.md,\s*insets\.bottom\s*\+\s*spacing\.sm\)/);
     expect(read('components/ProGate.js')).toMatch(/<BottomSheet/);
   });
 });

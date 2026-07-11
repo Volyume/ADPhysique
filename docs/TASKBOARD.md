@@ -31,14 +31,23 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
   byte-identical; full suite green at the boundary (8,412 / 0).
   Screen coverage 31/85 live, 50 static remaining.
 
-### NEXT - CP-10 screen theming batch E (queued)
-- The six food heavyweights: DiaryScreen, FoodSearchScreen,
-  MealPlanScreen (CARE: convert around the new dietarySheet code,
-  no behaviour change), NutritionTargetsScreen (imports wellbeing -
-  valence mappings byte-identical, ED-adjacent care),
-  RecipeBuilderScreen, FoodInsightsScreen. Same batch pattern and
-  bounds as batch D; then further batches until 0 static, which
-  unlocks the stage-5 restart-prompt retirement.
+### IN FLIGHT - CP-10 screen theming batch E (part 1 LANDED)
+- The six food heavyweights. PART 1 LANDED (recovered from the dead
+  session's uncommitted tree, lead-reviewed): FoodSearchScreen,
+  FoodInsightsScreen, RecipeBuilderScreen live-themed on the batch
+  pattern; bottomBarInset + FoodSearchScreen pins widened with dated
+  comments; DiaryScreen carries only the `t` -> `targetsRow` prep
+  rename (frees `t` for the theme object). Lint + all 21 suites that
+  reference the touched screens green (220 tests).
+- PART 2 IN FLIGHT (Sonnet): DiaryScreen, MealPlanScreen (CARE:
+  convert around the new dietarySheet code, no behaviour change),
+  NutritionTargetsScreen (imports wellbeing - valence mappings
+  byte-identical, ED-adjacent care). Same batch pattern and bounds
+  as batch D. RECOVERY: if those three files sit uncommitted,
+  lead-review against this spec, lint + full suite, commit + push;
+  if untouched, relaunch a Sonnet agent from this entry.
+- Then further batches until 0 static, which unlocks the stage-5
+  restart-prompt retirement.
 
 
 ### DONE THIS SESSION (for the record; full detail in the handover)

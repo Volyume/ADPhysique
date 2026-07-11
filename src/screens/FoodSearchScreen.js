@@ -28,6 +28,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { SkeletonRow } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
 import {
@@ -102,6 +103,11 @@ export default function FoodSearchScreen({ navigation, route }) {
   // Energy DISPLAY unit (kcal | kj): display-only, applied at the render sites
   // below. plateKcal and every macros.kcal stay kcal for the maths/log writes.
   const toast = useToast();
+  // CP-10 batch E (2026-07-10): live theme (src/hooks/useTheme.js). Memoised
+  // because this screen renders two FlashLists (rows + suggested cards),
+  // matching MyMealsScreen's own precedent (batch D).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   // This screen is a root-stack modal outside the tab navigator (RootNavigator.js),
   // so nothing else absorbs the bottom system inset for the sticky plateBar footer.
   const insets = useSafeAreaInsets();
@@ -752,7 +758,7 @@ export default function FoodSearchScreen({ navigation, route }) {
     if (item.type === 'cta') {
       return (
         <TouchableOpacity
-          style={styles.ctaRow}
+          style={[styles.ctaRow, live.ctaRow]}
           onPress={() => {
             haptics.selection();
             if (item.action === 'custom') return newCustomFood();
@@ -764,9 +770,9 @@ export default function FoodSearchScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel={item.label}
         >
-          <Ionicons name={item.icon} size={20} color={colors.primary} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.ctaText}>{item.label}</Text>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+          <Ionicons name={item.icon} size={20} color={t.colors.primary} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.ctaText, live.ctaText]}>{item.label}</Text>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
       );
     }
@@ -884,7 +890,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         ListHeaderComponent={
           <View>
             {suggestMeta?.perMeal ? (
-              <Text maxFontSizeMultiplier={1.3} style={styles.suggestHint}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.suggestHint, live.suggestHint]}>
                 Sized for this meal: around {Math.round(suggestMeta.perMeal.protein)}g protein, {toEnergy(suggestMeta.perMeal.kcal, energyUnit)} {energyUnitLabel(energyUnit)}.
               </Text>
             ) : null}
@@ -898,8 +904,8 @@ export default function FoodSearchScreen({ navigation, route }) {
                 mealAdditions.js (single source, also used by CuratedMealSheet)
                 so the two can never say different things again. */}
             <View style={styles.suggestNoteRow}>
-              <Ionicons name="leaf-outline" size={13} color={colors.textMuted} style={{ marginTop: spacing.hair }} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.suggestNote}>
+              <Ionicons name="leaf-outline" size={13} color={t.colors.textMuted} style={{ marginTop: spacing.hair }} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.suggestNote, live.suggestNote]}>
                 {ADDITIONS_INTRO}
               </Text>
             </View>
@@ -910,23 +916,23 @@ export default function FoodSearchScreen({ navigation, route }) {
           const busyKey = isFood ? item.foodRef : item.id;
           return (
             <TouchableOpacity
-              style={styles.suggestCard}
+              style={[styles.suggestCard, live.suggestCard]}
               onPress={() => (isFood ? logSuggestedFood(item) : setMealSheet(item))}
               disabled={!!loggingMealId}
               accessibilityRole="button"
               accessibilityLabel={isFood ? `Add ${item.quantityG}g ${item.name}` : `Open ${item.name}`}
             >
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.suggestName}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.suggestName, live.suggestName]}>
                   {isFood ? `${item.name} - ${item.quantityG}g` : item.name}
                 </Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.suggestMacros}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.suggestMacros, live.suggestMacros]}>
                   {toEnergy(item.macros.kcal, energyUnit)} {energyUnitLabel(energyUnit)} - {item.macros.protein}g protein - {item.macros.carbs}g carbs - {item.macros.fat}g fat
                 </Text>
               </View>
               {loggingMealId === busyKey
-                ? <ActivityIndicator size="small" color={colors.primary} />
-                : <Ionicons name={isFood ? 'add-circle' : 'chevron-forward'} size={isFood ? 26 : 22} color={colors.primary} />}
+                ? <ActivityIndicator size="small" color={t.colors.primary} />
+                : <Ionicons name={isFood ? 'add-circle' : 'chevron-forward'} size={isFood ? 26 : 22} color={t.colors.primary} />}
             </TouchableOpacity>
           );
         }}
@@ -935,26 +941,26 @@ export default function FoodSearchScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <ModalHeader title="Add food" onClose={() => navigation.goBack()} />
 
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.tabBar}
+        style={[styles.tabBar, live.tabBar]}
         contentContainerStyle={styles.tabBarContent}
         keyboardShouldPersistTaps="handled"
       >
-        {SEARCH_TABS.map((t) => (
+        {SEARCH_TABS.map((tab) => (
           <TouchableOpacity
-            key={t.key}
+            key={tab.key}
             style={styles.tab}
-            onPress={() => { haptics.selection(); setActiveTab(t.key); }}
+            onPress={() => { haptics.selection(); setActiveTab(tab.key); }}
             accessibilityRole="tab"
-            accessibilityState={{ selected: activeTab === t.key }}
+            accessibilityState={{ selected: activeTab === tab.key }}
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.tabLabel, activeTab === t.key && styles.tabLabelActive]}>{t.label}</Text>
-            <View style={[styles.tabUnderline, activeTab === t.key && styles.tabUnderlineActive]} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.tabLabel, live.tabLabel, activeTab === tab.key && [styles.tabLabelActive, live.tabLabelActive]]}>{tab.label}</Text>
+            <View style={[styles.tabUnderline, activeTab === tab.key && [styles.tabUnderlineActive, live.tabUnderlineActive]]} />
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -979,7 +985,7 @@ export default function FoodSearchScreen({ navigation, route }) {
           moment a live query (2+ chars) takes over, so it never competes with
           results. */}
       {query.trim().length < 2 ? (
-        <Text maxFontSizeMultiplier={1.3} style={styles.provenanceNote}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.provenanceNote, live.provenanceNote]}>
           Saved foods work offline. Live search can also check trusted UK generics and branded products.
         </Text>
       ) : null}
@@ -1004,8 +1010,8 @@ export default function FoodSearchScreen({ navigation, route }) {
               icon="add"
               onPress={gotoCustomReplace}
               variant="secondary"
-              style={styles.footerBtn}
-              textStyle={styles.footerBtnText}
+              style={[styles.footerBtn, live.footerBtn]}
+              textStyle={[styles.footerBtnText, live.footerBtnText]}
               accessibilityLabel="Add custom food"
             />
           ) : null
@@ -1015,23 +1021,23 @@ export default function FoodSearchScreen({ navigation, route }) {
       )}
 
       {!isRecipePick && plate.length > 0 ? (
-        <View style={[styles.plateBar, { paddingBottom: Math.max(spacing.md, insets.bottom + spacing.sm) }]}>
+        <View style={[styles.plateBar, live.plateBar, { paddingBottom: Math.max(spacing.md, insets.bottom + spacing.sm) }]}>
           <TouchableOpacity
             style={styles.plateInfo}
             onPress={() => { haptics.selection(); setShowPlate(true); }}
             accessibilityRole="button"
             accessibilityLabel="Review selected foods"
           >
-            <Text maxFontSizeMultiplier={1.3} style={styles.plateCount}>{plate.length} selected</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.plateKcalLine}>~{toEnergy(plateKcal, energyUnit)} {energyUnitLabel(energyUnit)} - tap to review</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.plateCount, live.plateCount]}>{plate.length} selected</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.plateKcalLine, live.plateKcalLine]}>~{toEnergy(plateKcal, energyUnit)} {energyUnitLabel(energyUnit)} - tap to review</Text>
           </TouchableOpacity>
           <Button
             title={`Log ${plate.length}`}
             onPress={logPlate}
             variant="primary"
             fullWidth={false}
-            style={styles.plateLogBtn}
-            textStyle={styles.plateLogText}
+            style={[styles.plateLogBtn, live.plateLogBtn]}
+            textStyle={[styles.plateLogText, live.plateLogText]}
             accessibilityLabel={`Log ${plate.length} foods to ${mealSlotLabel(mealSlot)}`}
           />
         </View>
@@ -1044,20 +1050,20 @@ export default function FoodSearchScreen({ navigation, route }) {
         sheetStyle={styles.plateModalSheet}
       >
         <View style={styles.plateModalHeader}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.plateModalTitle} accessibilityRole="header">Selected foods ({plate.length})</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.plateModalTitle, live.plateModalTitle]} accessibilityRole="header">Selected foods ({plate.length})</Text>
           <TouchableOpacity onPress={() => setShowPlate(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-            <Ionicons name="close" size={22} color={colors.textPrimary} />
+            <Ionicons name="close" size={22} color={t.colors.textPrimary} />
           </TouchableOpacity>
         </View>
         <ScrollView style={{ maxHeight: 360 }}>
           {plate.map((it) => (
-            <View key={it.key} style={styles.plateItem}>
+            <View key={it.key} style={[styles.plateItem, live.plateItem]}>
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.plateItemName} numberOfLines={1}>{it.food.name}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.plateItemMeta}>{Math.round(it.quantityG)}g - {toEnergy(it.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.plateItemName, live.plateItemName]} numberOfLines={1}>{it.food.name}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.plateItemMeta, live.plateItemMeta]}>{Math.round(it.quantityG)}g - {toEnergy(it.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
               </View>
               <TouchableOpacity onPress={() => removeFromPlate(it.key)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${it.food.name}`}>
-                <Ionicons name="close-circle" size={22} color={colors.textMuted} />
+                <Ionicons name="close-circle" size={22} color={t.colors.textMuted} />
               </TouchableOpacity>
             </View>
           ))}
@@ -1068,8 +1074,8 @@ export default function FoodSearchScreen({ navigation, route }) {
             onPress={() => { setPlate([]); setShowPlate(false); }}
             variant="outline"
             fullWidth={false}
-            style={styles.plateClearBtn}
-            textStyle={styles.plateClearText}
+            style={[styles.plateClearBtn, live.plateClearBtn]}
+            textStyle={[styles.plateClearText, live.plateClearText]}
             accessibilityLabel="Clear selected foods"
           />
           <Button
@@ -1077,8 +1083,8 @@ export default function FoodSearchScreen({ navigation, route }) {
             onPress={logPlate}
             variant="primary"
             fullWidth={false}
-            style={styles.plateLogBtnWide}
-            textStyle={styles.plateLogText}
+            style={[styles.plateLogBtnWide, live.plateLogBtnWide]}
+            textStyle={[styles.plateLogText, live.plateLogText]}
             accessibilityLabel={`Log ${plate.length} to ${mealSlotLabel(mealSlot)}`}
           />
         </View>
@@ -1248,3 +1254,46 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md, borderRadius: radius.md,
   },
 });
+
+// CP-10 batch E (2026-07-10): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so
+// this screen's tokens stay live under a theme/accessibility toggle. Pure
+// layout keys (flex/gap/padding/width, no token) are correctly omitted --
+// there is nothing to unfreeze for them. Same pattern as MyMealsScreen.js's
+// buildLiveStyles (batch D).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    tabBar: { borderBottomColor: t.colors.border },
+    tabLabel: { color: t.colors.textMuted, fontSize: t.fontSize.sm, lineHeight: t.fontSize.sm + 6 },
+    tabLabelActive: { color: t.colors.textPrimary },
+    tabUnderlineActive: { backgroundColor: t.colors.primary },
+    provenanceNote: { ...t.type.captionTight, color: t.colors.textMuted },
+    ctaRow: { borderBottomColor: t.colors.border },
+    ctaText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    suggestHint: { ...t.type.caption, color: t.colors.textMuted },
+    suggestNote: { ...t.type.caption, color: t.colors.textMuted, lineHeight: t.fontSize.sm + 5 },
+    suggestCard: {
+      backgroundColor: t.colors.surface,
+      borderColor: t.colors.border,
+      borderLeftColor: t.colors.primary,
+    },
+    suggestName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    suggestMacros: { ...t.type.caption, color: t.colors.textSecondary },
+    footerBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    footerBtnText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    plateBar: { borderTopColor: t.colors.border, backgroundColor: t.colors.surface },
+    plateCount: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    plateKcalLine: { ...t.type.caption, color: t.colors.textMuted },
+    plateLogBtn: { backgroundColor: t.colors.primaryFill },
+    plateLogText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    plateModalTitle: { ...t.type.title, color: t.colors.textPrimary },
+    plateItem: { borderBottomColor: t.colors.border },
+    plateItemName: { color: t.colors.textPrimary, fontSize: t.fontSize.md },
+    plateItemMeta: { ...t.type.caption, color: t.colors.textMuted },
+    plateClearBtn: { borderColor: t.colors.border },
+    plateClearText: { color: t.colors.textSecondary, fontSize: t.fontSize.md },
+    plateLogBtnWide: { backgroundColor: t.colors.primaryFill },
+  };
+}

@@ -31,6 +31,7 @@ import { KeyboardAwareScrollView, KeyboardGestureArea } from 'react-native-keybo
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import {
   createRecipe, updateRecipe, getRecipeWithIngredients,
@@ -64,6 +65,12 @@ export default function RecipeBuilderScreen({ navigation, route }) {
   const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
   const userId = user?.id;
   const toast = useToast();
+  // CP-10 batch E (2026-07-10): live theme (src/hooks/useTheme.js). This
+  // screen never renders a FlatList/FlashList/SectionList row (ingredients
+  // render via .map inside a KeyboardAwareScrollView), so an unmemoised call
+  // matches AddCustomFoodScreen's own precedent (batch D).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
 
   const recipeId = route?.params?.recipeId ?? null;
   const mealSlot = route?.params?.mealSlot ?? 'snack';
@@ -296,7 +303,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <ModalHeader
         title={recipeId ? 'Edit recipe' : 'New recipe'}
         closePosition="left"
@@ -345,7 +352,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
               value={importUrl}
               onChangeText={setImportUrl}
               placeholder="Paste a recipe link"
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={t.colors.textMuted}
               surface="surface"
               autoCapitalize="none"
               autoCorrect={false}
@@ -364,7 +371,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
               style={styles.importButton}
             />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={styles.importHint}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.importHint, live.importHint]}>
             We match each ingredient to a food and add a rough amount. Check the amounts after importing.
           </Text>
         </View>
@@ -375,7 +382,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
             value={name}
             onChangeText={setName}
             placeholder="e.g. Sunday chilli"
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={t.colors.textMuted}
             surface="surface"
             maxLength={80}
             autoFocus={!recipeId}
@@ -390,7 +397,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
               value={totalServings}
               onChangeText={setTotalServings}
               placeholder="4"
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={t.colors.textMuted}
               surface="surface"
               keyboardType="decimal-pad"
               maxLength={5}
@@ -405,7 +412,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
             value={notes}
             onChangeText={setNotes}
             placeholder="Optional"
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={t.colors.textMuted}
             surface="surface"
             multiline
             fieldStyle={styles.notesField}
@@ -416,7 +423,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
 
         <View style={styles.section}>
           <View style={styles.ingHeader}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.label}>Ingredients</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.label, live.label]}>Ingredients</Text>
             <Button
               title="Add ingredient"
               icon="add"
@@ -424,22 +431,22 @@ export default function RecipeBuilderScreen({ navigation, route }) {
               variant="secondary"
               size="sm"
               fullWidth={false}
-              style={styles.addIngredientBtn}
-              textStyle={styles.addLink}
+              style={[styles.addIngredientBtn, live.addIngredientBtn]}
+              textStyle={[styles.addLink, live.addLink]}
               accessibilityLabel="Add ingredient"
             />
           </View>
 
           {ingredients.length === 0 ? (
-            <Text maxFontSizeMultiplier={1.3} style={styles.ingEmpty}>No ingredients yet. Add foods and the recipe macros will appear here.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.ingEmpty, live.ingEmpty]}>No ingredients yet. Add foods and the recipe macros will appear here.</Text>
           ) : ingredients.map((ing, i) => (
-            <View key={`${ing.food_ref}-${i}`} style={styles.ingRow}>
+            <View key={`${ing.food_ref}-${i}`} style={[styles.ingRow, live.ingRow]}>
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.ingName} numberOfLines={1}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.ingName, live.ingName]} numberOfLines={1}>
                   {ing.food?.name ?? ing.food_ref}
                 </Text>
                 {ing.food?.brand ? (
-                  <Text maxFontSizeMultiplier={1.3} style={styles.ingBrand} numberOfLines={1}>{ing.food.brand}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.ingBrand, live.ingBrand]} numberOfLines={1}>{ing.food.brand}</Text>
                 ) : null}
               </View>
               <TextField
@@ -451,17 +458,17 @@ export default function RecipeBuilderScreen({ navigation, route }) {
                 accessibilityLabel={`${ing.food?.name ?? ing.food_ref} quantity in grams`}
                 containerStyle={styles.qtyFieldContainer}
                 fieldStyle={styles.qtyField}
-                inputStyle={styles.qtyInput}
+                inputStyle={[styles.qtyInput, live.qtyInput]}
               />
-              <Text maxFontSizeMultiplier={1.3} style={styles.qtyUnit}>g</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.qtyUnit, live.qtyUnit]}>g</Text>
               <TouchableOpacity onPress={() => onRemove(i)} hitSlop={8} style={{ marginLeft: spacing.sm }} accessibilityRole="button" accessibilityLabel={`Remove ${ing.food?.name ?? ing.food_ref}`}>
-                <Ionicons name="close-circle" size={22} color={colors.textMuted} />
+                <Ionicons name="close-circle" size={22} color={t.colors.textMuted} />
               </TouchableOpacity>
             </View>
           ))}
         </View>
 
-        <View style={styles.macros}>
+        <View style={[styles.macros, live.macros]}>
           <SectionLabel style={styles.macrosTitle}>Per serving</SectionLabel>
           <View style={styles.macrosRow}>
             <MacroPill label={energyUnitLabel(energyUnit)} value={toEnergy(macros.perServing.kcal, energyUnit)} />
@@ -469,7 +476,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
             <MacroPill label="C" value={`${macros.perServing.carbs}g`} />
             <MacroPill label="F" value={`${macros.perServing.fat}g`} />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={styles.macrosSub}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.macrosSub, live.macrosSub]}>
             Whole recipe: {toEnergy(macros.total.kcal, energyUnit)} {energyUnitLabel(energyUnit)} - P {macros.total.protein}g - C {macros.total.carbs}g - F {macros.total.fat}g
           </Text>
         </View>
@@ -481,10 +488,16 @@ export default function RecipeBuilderScreen({ navigation, route }) {
 }
 
 function MacroPill({ label, value }) {
+  // CP-10 batch E (2026-07-10): sibling function-component scope (not
+  // prop-drilled `live`/`t` from RecipeBuilderScreen, matching
+  // AddCustomFoodScreen's Field/NumField precedent from batch D), own
+  // useTheme() call and shared buildLiveStyles(t).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
-    <View style={styles.pill}>
-      <Text maxFontSizeMultiplier={1.3} style={styles.pillVal}>{value}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.pillLabel}>{label}</Text>
+    <View style={[styles.pill, live.pill]}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.pillVal, live.pillVal]}>{value}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.pillLabel, live.pillLabel]}>{label}</Text>
     </View>
   );
 }
@@ -552,3 +565,32 @@ const styles = StyleSheet.create({
   pillVal: { color: colors.textPrimary, ...type.num('bodyStrong') },
   pillLabel: { color: colors.textMuted, ...type.caption, marginTop: spacing.xxs },
 });
+
+// CP-10 batch E (2026-07-10): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, shared
+// by this file's two function-component scopes (RecipeBuilderScreen,
+// MacroPill) so they can never drift out of step with each other or the
+// frozen block. Pure layout keys (flex/gap/padding/width, no token) are
+// correctly omitted -- there is nothing to unfreeze for them. Same pattern
+// as AddCustomFoodScreen.js's buildLiveStyles (batch D).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    label: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
+    importHint: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
+    addIngredientBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    addLink: { ...t.type.label, color: t.colors.textPrimary },
+    ingEmpty: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
+    ingRow: { borderBottomColor: t.colors.border },
+    ingName: { color: t.colors.textPrimary, ...t.type.body },
+    ingBrand: { color: t.colors.textMuted, ...t.type.caption },
+    qtyInput: { fontSize: t.fontSize.md },
+    qtyUnit: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
+    macros: { backgroundColor: t.colors.surface },
+    macrosSub: { color: t.colors.textMuted, ...t.type.num('caption') },
+    pill: { backgroundColor: t.colors.background },
+    pillVal: { color: t.colors.textPrimary, ...t.type.num('bodyStrong') },
+    pillLabel: { color: t.colors.textMuted, ...t.type.caption },
+  };
+}

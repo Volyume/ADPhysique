@@ -23,6 +23,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { toEnergy, energyUnitLabel, formatEnergy } from '../lib/format';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
@@ -94,6 +95,12 @@ export default function FoodInsightsScreen({ navigation }) {
   const energyWord = energyUnit === 'kj' ? 'kilojoules' : 'calories';
   const userId = user?.id;
   const toast = useToast();
+  // CP-10 batch E (2026-07-10): live theme (src/hooks/useTheme.js). This
+  // screen renders its rows via plain .map() inside a ScrollView (no
+  // FlatList/FlashList/SectionList), so an unmemoised call matches
+  // AddCustomFoodScreen's own precedent (batch D).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   // Live-subscribing so a resize (e.g. Android split-screen/freeform) picks
   // up the correct chart width, matching RestTimer.js's useWindowDimensions
   // pattern rather than a frozen module-scope Dimensions.get().
@@ -149,13 +156,13 @@ export default function FoodInsightsScreen({ navigation }) {
     setLoading(true);
     setLoadError(false);
     try {
-      const [rs, t] = await Promise.all([
+      const [rs, targetsRow] = await Promise.all([
         getRollupsForRange(userId, fetchStartDate, endDate),
         getNutritionTargets(userId),
       ]);
       if (!isCurrentRequest()) return;
       setRollups(rs);
-      setTargets(t);
+      setTargets(targetsRow);
     } catch (e) {
       if (!isCurrentRequest()) return;
       logError('FoodInsights.load', e, { userId });
@@ -249,9 +256,9 @@ export default function FoodInsightsScreen({ navigation }) {
   // Flat target rule drawn as a faint secondary series behind the calorie line,
   // so "vs target" reads at a glance without a valence colour (data2 convention).
   const calorieTargetRule = useMemo(() => {
-    const t = targets?.targetKcal;
-    if (!t || calorieLine.length < 2) return null;
-    return calorieLine.map(() => ({ value: t }));
+    const targetKcal = targets?.targetKcal;
+    if (!targetKcal || calorieLine.length < 2) return null;
+    return calorieLine.map(() => ({ value: targetKcal }));
   }, [calorieLine, targets]);
 
   // Protein-grams-over-time line (same pattern, reusing the chart). Logged days
@@ -342,7 +349,7 @@ export default function FoodInsightsScreen({ navigation }) {
   }, [chartBars, targets]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Insights" onBack={() => navigation.goBack()} />
 
       {/* Window selector (ULTIMATE-NUT-05). Pinned below the header so it stays
@@ -353,7 +360,7 @@ export default function FoodInsightsScreen({ navigation }) {
           return (
             <TouchableOpacity
               key={n}
-              style={[styles.windowChip, selected && styles.windowChipOn]}
+              style={[styles.windowChip, live.windowChip, selected && [styles.windowChipOn, live.windowChipOn]]}
               onPress={() => { if (!selected) { haptics.selection(); setWindowDays(n); } }}
               disabled={selected}
               hitSlop={8}
@@ -361,7 +368,7 @@ export default function FoodInsightsScreen({ navigation }) {
               accessibilityState={{ selected }}
               accessibilityLabel={`Last ${n} days`}
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.windowChipText, selected && styles.windowChipTextOn]}>{n}d</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.windowChipText, live.windowChipText, selected && [styles.windowChipTextOn, live.windowChipTextOn]]}>{n}d</Text>
             </TouchableOpacity>
           );
         })}
@@ -392,22 +399,22 @@ export default function FoodInsightsScreen({ navigation }) {
             <SectionLabel style={styles.sectionLabelSpacing}>{periodHeadline}</SectionLabel>
             <Card style={styles.card}>
               <Text maxFontSizeMultiplier={1.3}
-                style={styles.summaryValue}
+                style={[styles.summaryValue, live.summaryValue]}
                 accessibilityLabel={`Averaging ${toEnergy(periodAvg.current.avg, energyUnit)} ${energyWord} a day ${periodPhrase}`}
               >
                 {formatEnergy(periodAvg.current.avg, energyUnit)} {energyUnitLabel(energyUnit)}/day
               </Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.summaryCaption}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.summaryCaption, live.summaryCaption]}>
                 Average over {periodAvg.current.n} {periodAvg.current.n === 1 ? 'day' : 'days'} logged{periodIsWeek ? ' this week' : ` in the last ${windowDays} days`}.
               </Text>
               {periodAvg.delta != null ? (
-                <Text maxFontSizeMultiplier={1.3} style={styles.summaryDelta}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.summaryDelta, live.summaryDelta]}>
                   {periodAvg.delta === 0
                     ? `Same as the ${periodIsWeek ? 'week' : `${windowDays} days`} before.`
                     : `${periodAvg.delta > 0 ? '+' : '−'}${formatEnergy(Math.abs(periodAvg.delta), energyUnit)} ${energyUnitLabel(energyUnit)}/day vs the ${periodIsWeek ? 'week' : `${windowDays} days`} before.`}
                 </Text>
               ) : (
-                <Text maxFontSizeMultiplier={1.3} style={styles.summaryDelta}>No logged days before that to compare.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.summaryDelta, live.summaryDelta]}>No logged days before that to compare.</Text>
               )}
             </Card>
           </>
@@ -422,8 +429,8 @@ export default function FoodInsightsScreen({ navigation }) {
                 data2={calorieTargetRule}
                 width={CHART_WIDTH}
                 height={140}
-                color={colors.primary}
-                color2={withAlpha(colors.textMuted, alpha.half)}
+                color={t.colors.primary}
+                color2={withAlpha(t.colors.textMuted, alpha.half)}
                 thickness={2}
                 thickness2={1}
                 curved
@@ -431,7 +438,7 @@ export default function FoodInsightsScreen({ navigation }) {
                 dotRadius={3}
                 sections={3}
                 yAxisSuffix=""
-                backgroundColor={colors.surface}
+                backgroundColor={t.colors.surface}
                 interactive
                 accessibilityLabel="Daily calories trend"
                 formatTooltip={(i) => {
@@ -444,12 +451,12 @@ export default function FoodInsightsScreen({ navigation }) {
                 }}
               />
               {targets?.targetKcal ? (
-                <Text maxFontSizeMultiplier={1.3} style={styles.cardFootnote}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.cardFootnote, live.cardFootnote]}>
                   {`Each point is a logged day. Faint line is your ${formatEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)} target.`}
                 </Text>
               ) : (
                 <Text maxFontSizeMultiplier={1.3}
-                  style={[styles.cardFootnote, styles.cardFootnoteLink]}
+                  style={[styles.cardFootnote, live.cardFootnote, styles.cardFootnoteLink, live.cardFootnoteLink]}
                   onPress={goToNutritionTargets}
                   accessibilityRole="link"
                   accessibilityLabel="Set a calorie target in Nutrition targets to see the target line"
@@ -459,7 +466,7 @@ export default function FoodInsightsScreen({ navigation }) {
               )}
             </>
           ) : (
-            <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.emptyText, live.emptyText]}>
               Log at least two days to see your calorie trend.
             </Text>
           )}
@@ -477,27 +484,28 @@ export default function FoodInsightsScreen({ navigation }) {
                 accessible
                 accessibilityLabel={`${b.label}, ${toEnergy(b.kcal, energyUnit)} ${energyUnitLabel(energyUnit)}${isWeekly ? ' average' : ''}${targetMet ? ', on target' : ''}`}
               >
-                <Text maxFontSizeMultiplier={1.3} style={styles.barDay}>{b.label}</Text>
-                <View style={styles.barTrack}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.barDay, live.barDay]}>{b.label}</Text>
+                <View style={[styles.barTrack, live.barTrack]}>
                   <View style={[
                     styles.barFill,
+                    live.barFill,
                     { width: `${Math.round(pct * 100)}%` },
-                    targetMet && { backgroundColor: colors.success },
+                    targetMet && { backgroundColor: t.colors.success },
                   ]} />
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={styles.barValue}>{toEnergy(b.kcal, energyUnit)}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.barValue, live.barValue]}>{toEnergy(b.kcal, energyUnit)}</Text>
               </View>
             );
           })}
           {targets?.targetKcal ? (
-            <Text maxFontSizeMultiplier={1.3} style={styles.cardFootnote}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.cardFootnote, live.cardFootnote]}>
               {isWeekly
                 ? `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}/day. Each bar is a weekly average; within ${pctLabel(ADHERENCE_TOLERANCE.kcal)} turns green.`
                 : `Target: ${toEnergy(targets.targetKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. Bars within ${pctLabel(ADHERENCE_TOLERANCE.kcal)} turn green.`}
             </Text>
           ) : (
             <Text maxFontSizeMultiplier={1.3}
-              style={[styles.cardFootnote, styles.cardFootnoteLink]}
+              style={[styles.cardFootnote, live.cardFootnote, styles.cardFootnoteLink, live.cardFootnoteLink]}
               onPress={goToNutritionTargets}
               accessibilityRole="link"
               accessibilityLabel="Set a calorie target in Nutrition targets to see target colours"
@@ -516,7 +524,7 @@ export default function FoodInsightsScreen({ navigation }) {
           <>
             <SectionLabel style={styles.sectionLabelSpacing}>PROTEIN</SectionLabel>
             <Card style={styles.card}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.proteinHeadline}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.proteinHeadline, live.proteinHeadline]}>
                 You hit your protein on {adherence.pDays} of {adherence.logged} {adherence.logged === 1 ? 'day' : 'days'} you logged.
               </Text>
               {/* Protein grams over time (reuses the calorie-trend chart pattern):
@@ -528,8 +536,8 @@ export default function FoodInsightsScreen({ navigation }) {
                     data2={proteinTargetRule}
                     width={CHART_WIDTH}
                     height={120}
-                    color={colors.primary}
-                    color2={withAlpha(colors.textMuted, alpha.half)}
+                    color={t.colors.primary}
+                    color2={withAlpha(t.colors.textMuted, alpha.half)}
                     thickness={2}
                     thickness2={1}
                     curved
@@ -537,7 +545,7 @@ export default function FoodInsightsScreen({ navigation }) {
                     dotRadius={3}
                     sections={3}
                     yAxisSuffix=""
-                    backgroundColor={colors.surface}
+                    backgroundColor={t.colors.surface}
                     interactive
                     accessibilityLabel="Daily protein trend in grams"
                     formatTooltip={(i) => {
@@ -548,7 +556,7 @@ export default function FoodInsightsScreen({ navigation }) {
                   />
                 </View>
               ) : null}
-              <Text maxFontSizeMultiplier={1.3} style={styles.cardFootnote}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.cardFootnote, live.cardFootnote]}>
                 {targets?.proteinG
                   ? `Hit = within target range. Faint line is your ${targets.proteinG} g target.`
                   : 'Hit = within target range.'}
@@ -566,16 +574,16 @@ export default function FoodInsightsScreen({ navigation }) {
               <AdherenceRow label="Carbs"    hit={adherence.cDays}     total={adherence.logged} />
               <AdherenceRow label="Fat"      hit={adherence.fDays}     total={adherence.logged} />
               <AdherenceRow label="Fibre"    hit={adherence.fibreDays} total={adherence.logged} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.cardFootnote}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.cardFootnote, live.cardFootnote]}>
                 Out of {adherence.logged} {adherence.logged === 1 ? 'day' : 'days'} logged. Hit = within target range.
               </Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.cardFootnote}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.cardFootnote, live.cardFootnote]}>
                 Fibre counts on days you reached {FIBRE_AIM_G} g or more. More is fine.
               </Text>
             </>
           ) : (
             <View style={styles.emptyActionStack}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.emptyText, live.emptyText]}>
                 Log food on a few days to see this view fill out.
               </Text>
               <Button
@@ -605,16 +613,16 @@ export default function FoodInsightsScreen({ navigation }) {
                   accessible
                   accessibilityLabel={`${row.label}, ${nutrientAverages.avg[row.key]} grams a day on average`}
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={styles.nutrientLabel}>{row.label}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.nutrientValue}>{nutrientAverages.avg[row.key]} g/day</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.nutrientLabel, live.nutrientLabel]}>{row.label}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.nutrientValue, live.nutrientValue]}>{nutrientAverages.avg[row.key]} g/day</Text>
                 </View>
               ))}
-              <Text maxFontSizeMultiplier={1.3} style={styles.cardFootnote}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.cardFootnote, live.cardFootnote]}>
                 Average over {nutrientAverages.days} {nutrientAverages.days === 1 ? 'day' : 'days'} logged.
               </Text>
             </>
           ) : (
-            <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.emptyText, live.emptyText]}>
               Log food on a few days to see your averages.
             </Text>
           )}
@@ -649,14 +657,20 @@ export default function FoodInsightsScreen({ navigation }) {
 }
 
 function AdherenceRow({ label, hit, total }) {
+  // CP-10 batch E (2026-07-10): sibling function-component scope (not
+  // prop-drilled `live`/`t` from FoodInsightsScreen, matching
+  // AddCustomFoodScreen's Field/NumField precedent from batch D), own
+  // useTheme() call and shared buildLiveStyles(t).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const pct = total > 0 ? Math.round((hit / total) * 100) : 0;
   return (
     <View style={styles.adherenceRow} accessible accessibilityLabel={`${label}, hit ${hit} of ${total} days`}>
-      <Text maxFontSizeMultiplier={1.3} style={styles.adherenceLabel}>{label}</Text>
-      <View style={styles.adherenceTrack}>
-        <View style={[styles.adherenceFill, { width: `${pct}%` }]} />
+      <Text maxFontSizeMultiplier={1.3} style={[styles.adherenceLabel, live.adherenceLabel]}>{label}</Text>
+      <View style={[styles.adherenceTrack, live.adherenceTrack]}>
+        <View style={[styles.adherenceFill, live.adherenceFill, { width: `${pct}%` }]} />
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={styles.adherenceValue}>{hit}/{total}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.adherenceValue, live.adherenceValue]}>{hit}/{total}</Text>
     </View>
   );
 }
@@ -729,3 +743,41 @@ const styles = StyleSheet.create({
 
   exportSecondary: { marginTop: spacing.sm },
 });
+
+// CP-10 batch E (2026-07-10): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, shared
+// by this file's two function-component scopes (FoodInsightsScreen,
+// AdherenceRow) so they can never drift out of step with each other or the
+// frozen block. Pure layout keys (flex/gap/padding/width, no token) are
+// correctly omitted -- there is nothing to unfreeze for them. Same pattern
+// as AddCustomFoodScreen.js's buildLiveStyles (batch D). colors.success on
+// the "on target" bar fill is theme-neutral factual state, not an ED-gated
+// valence mapping (that care applies to NutritionTargetsScreen), so it
+// converts mechanically like every other colour token here.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    windowChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    windowChipOn: { borderColor: t.colors.primary, backgroundColor: t.colors.surface2 },
+    windowChipText: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
+    windowChipTextOn: { color: t.colors.primary },
+    cardFootnote: { ...t.type.caption, color: t.colors.textMuted },
+    cardFootnoteLink: { color: t.colors.primary },
+    proteinHeadline: { ...t.type.title, color: t.colors.textPrimary },
+    emptyText: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
+    summaryValue: { ...t.type.title, color: t.colors.textPrimary },
+    summaryCaption: { ...t.type.caption, color: t.colors.textMuted },
+    summaryDelta: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    barDay: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
+    barTrack: { backgroundColor: t.colors.surface2 },
+    barFill: { backgroundColor: t.colors.primary },
+    barValue: { color: t.colors.textPrimary, fontSize: t.fontSize.sm },
+    adherenceLabel: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
+    adherenceTrack: { backgroundColor: t.colors.surface2 },
+    adherenceFill: { backgroundColor: t.colors.primary },
+    adherenceValue: { color: t.colors.textPrimary, fontSize: t.fontSize.sm },
+    nutrientLabel: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
+    nutrientValue: { color: t.colors.textPrimary, fontSize: t.fontSize.sm },
+  };
+}

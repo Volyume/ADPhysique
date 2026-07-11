@@ -191,7 +191,9 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
     expect(SCREEN_SOURCE).not.toMatch(/<ModalHeader title=\{`Add to \$\{mealSlotLabel\(mealSlot\)\}`\}/);
     // Batch 2 wave B (B-2 Button adoption): the hand-rolled TouchableOpacity +
     // raw <Text> pair is now <Button title="Log selected" textStyle={styles.plateLogText}>.
-    expect(SCREEN_SOURCE).toMatch(/title="Log selected"[\s\S]{0,220}textStyle=\{styles\.plateLogText\}/);
+    // CP-10 batch E (2026-07-10): live-themed, so textStyle now carries the
+    // style-array form [styles.plateLogText, live.plateLogText].
+    expect(SCREEN_SOURCE).toMatch(/title="Log selected"[\s\S]{0,220}textStyle=\{\[styles\.plateLogText, live\.plateLogText\]\}/);
     expect(SCREEN_SOURCE).toMatch(/accessibilityLabel=\{`Log \$\{plate\.length\} to \$\{mealSlotLabel\(mealSlot\)\}`\}/);
     expect(SCREEN_SOURCE).not.toMatch(/<Text style=\{styles\.plateLogText\}>Log \{plate\.length\} to \{mealSlotLabel\(mealSlot\)\}<\/Text>/);
   });
@@ -230,7 +232,9 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
   });
 
   test('custom-food fallback uses a bordered button surface, not an orange text link', () => {
-    expect(SCREEN_SOURCE).toMatch(/style=\{styles\.footerBtn\}/);
+    // CP-10 batch E (2026-07-10): live-themed, so style now carries the
+    // style-array form [styles.footerBtn, live.footerBtn]. Same pin, new shape.
+    expect(SCREEN_SOURCE).toMatch(/style=\{\[styles\.footerBtn, live\.footerBtn\]\}/);
     expect(SCREEN_SOURCE).toMatch(/footerBtn: \{[\s\S]*borderRadius: radius\.md[\s\S]*backgroundColor: colors\.surface2/);
     expect(SCREEN_SOURCE).toMatch(/footerBtnText: \{ \.\.\.type\.bodyStrong, color: colors\.textPrimary \}/);
   });

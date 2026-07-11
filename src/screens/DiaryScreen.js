@@ -192,7 +192,7 @@ export default function DiaryScreen({ navigation, route }) {
   const load = useCallback(async () => {
     if (!userId) return;
     const loadToken = loadGuardRef.current.next();
-    const [es, r, w, t, trainingDay, resolvedRefeedDate, edFlag, bodyWeight, bodyComp, yEntries, coachOut, everLogged] = await Promise.all([
+    const [es, r, w, targetsRow, trainingDay, resolvedRefeedDate, edFlag, bodyWeight, bodyComp, yEntries, coachOut, everLogged] = await Promise.all([
       getFoodEntriesForDay(userId, selectedDate),
       getRollupForDay(userId, selectedDate),
       getWater(userId, selectedDate),
@@ -258,7 +258,7 @@ export default function DiaryScreen({ navigation, route }) {
     setEntries(enriched);
     setRollup(r);
     setWaterMl(w);
-    setTargets(t);
+    setTargets(targetsRow);
     setIsTrainingDay(trainingDay);
     setRefeedDate(resolvedRefeedDate);
     setEdFlagOpen(!!edFlag);
