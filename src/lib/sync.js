@@ -709,6 +709,12 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
     // the next boot. Running the cleanup here makes the warning fire
     // at most once per genuine state-drift event, not every 5 minutes.
     await cleanupOrphanRoutineExercises().catch(() => {});
+    // Track which routine ids actually landed in cloud this cycle: a
+    // routine whose own upsert fails must not let its child
+    // routine_exercises through the orphan filter below, or their FK
+    // check (routines.id = routine_exercises.routine_id) fails RLS
+    // against a parent that isn't there (Sentry VOLYUME-1A).
+    const succeededRoutineIds = new Set();
     const routines = await getAllRoutinesForUser(localUserId);
     if (routines?.length) {
       // programme_id, day_of_week, is_sample, is_library, source_routine_id
@@ -746,8 +752,12 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
           const withoutPosition = slice.map(({ position: _pos, ...rest }) => rest);
           ({ error: rErr } = await sb.from('routines').upsert(withoutPosition, { onConflict: 'user_id,id' }));
         }
-        if (rErr) logPgErr('sync._pushRoutines', rErr);
-        else rPushed += slice.length;
+        if (rErr) {
+          logPgErr('sync._pushRoutines', rErr);
+        } else {
+          rPushed += slice.length;
+          for (const row of slice) succeededRoutineIds.add(row.id);
+        }
       }
       if (rPushed < rows.length) {
         logWarn('sync._pushRoutines', 'partial push', { pushed: rPushed, total: rows.length });
@@ -765,14 +775,15 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
       // device even if the exercise_id can't resolve locally.
       //
       // Filter: drop routine_exercises whose routine_id doesn't appear
-      // in the routines we just pushed. Cloud RLS on
-      // routine_exercises checks EXISTS (SELECT 1 FROM routines WHERE
-      // id = routine_id AND user_id = auth.uid()), an orphan
-      // routine_id (left over from a soft-deleted routine or a partial
-      // sync state locally) fails that check and rejects the entire
-      // 200-row chunk. Excluding orphans keeps the rest of the batch
-      // alive.
-      const pushableRoutineIds = new Set((routines || []).map(r => r.id));
+      // among the routines that ACTUALLY succeeded this cycle (not just
+      // every local routine). Cloud RLS on routine_exercises checks
+      // EXISTS (SELECT 1 FROM routines WHERE id = routine_id AND
+      // user_id = auth.uid()); an orphan routine_id (left over from a
+      // soft-deleted routine, a partial local sync state, or -- the bug
+      // this used to miss -- a routine whose own upsert failed this very
+      // cycle) fails that check and rejects the entire 200-row chunk.
+      // Excluding orphans keeps the rest of the batch alive.
+      const pushableRoutineIds = succeededRoutineIds;
       const rows = routineExs
         .filter(re => pushableRoutineIds.has(re.routineId))
         .map(re => ({

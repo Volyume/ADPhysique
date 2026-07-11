@@ -189,6 +189,11 @@ export const TELEMETRY_EVENTS = Object.freeze([
   { name: 'partner_invite_accepted',         deferred: false, panel: 1 },
   { name: 'partner_cheer_sent',              deferred: false, panel: 1 },
   { name: 'partner_blocked',                 deferred: false, panel: 1 },
+  // Emitted by src/lib/partners/service.js on leave. Was already accepted by
+  // the server allow-list (record_engine_telemetry) but never catalogued
+  // client-side, so the client's own allow-list rejected it before send
+  // (Sentry VOLYUME-1Q "unknown event, check the allow-list").
+  { name: 'partner_block_left',              deferred: false, panel: 1 },
 
   // Partner STEP A adoption telemetry (11-DECISION-BRIEF section 0.3 / line 118).
   // Counts/booleans only, never identity or content. Surface views + invite

@@ -23,7 +23,13 @@
 -- Re-runnable: yes. Rollback: DROP COLUMN sleep_quality, energy_score (loses
 -- only the captured readiness values themselves).
 --
--- Apply via Supabase Dashboard -> SQL Editor -> Run.
+-- SUPERSEDED 2026-07-11: this file was written but never applied to
+-- production (Sentry VOLYUME-S/VOLYUME-1C, ~4300 combined occurrences --
+-- every pre-workout readiness value was silently discarded by sync.js's
+-- missingSchemaColumn shim before reaching cloud). Its DDL was carried
+-- forward verbatim as step 1 of migrate_118_workouts_recipes_sync_schema_fix.sql,
+-- applied to production 2026-07-11. Kept here for history; do not re-run
+-- standalone, migrate_118 is now the record of what actually shipped.
 
 ALTER TABLE workouts
   ADD COLUMN IF NOT EXISTS sleep_quality integer,
