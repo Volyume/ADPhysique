@@ -27,6 +27,14 @@ import Card from '../components/Card';
 // imports of it from this screen working.
 import { LoggedSetRow } from '../components/workout/LoggedSetRow';
 import EmptyExerciseView from '../components/workout/EmptyExerciseView';
+// D43 S1 slice 2: DiscardWorkoutModal, StaleWorkoutModal and
+// EditLoggedSetModal extracted verbatim into src/components/workout/ (see
+// each file's own header comment). None was ever exported from this screen
+// (all three were inline JSX, not named components), so there is no
+// re-export to keep -- the imports below are the only call sites.
+import DiscardWorkoutModal from '../components/workout/DiscardWorkoutModal';
+import StaleWorkoutModal from '../components/workout/StaleWorkoutModal';
+import EditLoggedSetModal from '../components/workout/EditLoggedSetModal';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet } from '../lib/database';
@@ -3349,58 +3357,33 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           })() : null}
         </Modal>
 
-        {/* Stale workout recovery modal */}
-        <Modal visible={showStaleModal} transparent animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={() => setShowStaleModal(false)}>
-          {showStaleModal ? (
-          <View style={[styles.staleOverlay, live.staleOverlay]}>
-            <View style={[styles.staleSheet, live.staleSheet]}>
-              <Ionicons name="time-outline" size={32} color={t.colors.warning} style={{ marginBottom: spacing.md }} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.staleTitle, live.staleTitle]}>Resume workout?</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.staleBody, live.staleBody]}>
-                This workout has been inactive for a while. What would you like to do?
-              </Text>
-              <Button
-                variant="primary"
-                style={[styles.staleResume, live.staleResume]}
-                onPress={() => { updateLastActivity(); setShowStaleModal(false); }}
-                title="Resume"
-                textStyle={[styles.staleResumeText, live.staleResumeText]}
-                accessibilityLabel="Resume workout"
-              />
-              <Button
-                variant="secondary"
-                style={[styles.staleFinish, live.staleFinish]}
-                onPress={() => { setShowStaleModal(false); handleFinishWorkout(); }}
-                title="Finish workout"
-                textStyle={[styles.staleFinishText, live.staleFinishText]}
-              />
-              <TouchableOpacity style={styles.staleDiscard} accessibilityRole="button" accessibilityLabel="Discard workout" onPress={() => {
-                appAlert('Discard workout?', 'All logged sets will be lost.', [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Discard',
-                    style: 'destructive',
-                    onPress: async () => {
-                      const discardId = activeWorkout?.id;
-                      endWorkout();
-                      navigation.goBack();
-                      if (discardId) {
-                        try { await deleteIncompleteWorkout(discardId); }
-                        catch (e) { logError('ActiveWorkoutScreen.discardStale', e, { workoutId: discardId }); }
-                      }
-                    },
-                  },
-                ]);
-              }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.staleDiscardText, live.staleDiscardText]}>Discard</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          ) : null}
-        </Modal>
-
-
-
+        {/* Stale workout recovery modal (D43 S1 slice 2: extracted to
+            src/components/workout/StaleWorkoutModal.js, byte-identical). */}
+        <StaleWorkoutModal
+          visible={showStaleModal}
+          reduceMotion={reduceMotion}
+          onClose={() => setShowStaleModal(false)}
+          onResume={() => { updateLastActivity(); setShowStaleModal(false); }}
+          onFinish={() => { setShowStaleModal(false); handleFinishWorkout(); }}
+          onDiscard={() => {
+            appAlert('Discard workout?', 'All logged sets will be lost.', [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Discard',
+                style: 'destructive',
+                onPress: async () => {
+                  const discardId = activeWorkout?.id;
+                  endWorkout();
+                  navigation.goBack();
+                  if (discardId) {
+                    try { await deleteIncompleteWorkout(discardId); }
+                    catch (e) { logError('ActiveWorkoutScreen.discardStale', e, { workoutId: discardId }); }
+                  }
+                },
+              },
+            ]);
+          }}
+        />
 
         {/* Set Type Picker Bottom Sheet */}
         <WorkoutBottomSheet
@@ -4000,112 +3983,42 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             </>
           ) : null}
         </Modal>
-        {/* Discard Workout Modal */}
-        <Modal visible={showDiscardModal} transparent animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={() => setShowDiscardModal(false)}>
-          {showDiscardModal ? (
-          <View style={[styles.discardOverlay, live.discardOverlay]}>
-            <View style={[styles.discardSheet, live.discardSheet]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.discardTitle, live.discardTitle]}>Discard workout?</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.discardBody, live.discardBody]}>
-                This will delete the current workout session. Your plan will not advance.
-              </Text>
-              <Button
-                variant="primary"
-                style={[styles.keepTrainingBtn, live.keepTrainingBtn]}
-                onPress={() => setShowDiscardModal(false)}
-                accessibilityLabel="Keep training"
-              >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.keepTrainingBtnText, live.keepTrainingBtnText]}>Keep training</Text>
-              </Button>
-              <TouchableOpacity
-                style={styles.discardConfirmBtn}
-                accessibilityRole="button"
-                accessibilityLabel="Discard workout"
-                onPress={async () => {
-                  const discardId = activeWorkout?.id;
-                  endWorkout();
-                  navigation.goBack();
-                  if (discardId) {
-                    try { await deleteIncompleteWorkout(discardId); }
-                    catch (e) { logError('ActiveWorkoutScreen.discardModal', e, { workoutId: discardId }); }
-                  }
-                }}
-              >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.discardConfirmBtnText, live.discardConfirmBtnText]}>Discard workout</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          ) : null}
-        </Modal>
+        {/* Discard Workout Modal (D43 S1 slice 2: extracted to
+            src/components/workout/DiscardWorkoutModal.js, byte-identical). */}
+        <DiscardWorkoutModal
+          visible={showDiscardModal}
+          reduceMotion={reduceMotion}
+          onClose={() => setShowDiscardModal(false)}
+          onDiscard={async () => {
+            const discardId = activeWorkout?.id;
+            endWorkout();
+            navigation.goBack();
+            if (discardId) {
+              try { await deleteIncompleteWorkout(discardId); }
+              catch (e) { logError('ActiveWorkoutScreen.discardModal', e, { workoutId: discardId }); }
+            }
+          }}
+        />
 
-        {/* Edit / delete logged set sheet. Mirrors the discard/stale modal
-            chrome (transparent fade overlay + centred sheet). Hosts the same
-            SetEntry component used to log the set, so every exercise type
-            (weight_reps / weighted_bodyweight / reps_only / duration /
-            distance) renders the correct inputs. */}
-        <Modal
+        {/* Edit / delete logged set sheet (D43 S1 slice 2: extracted to
+            src/components/workout/EditLoggedSetModal.js, byte-identical --
+            see that file's header comment). handleSaveEditedSet and
+            handleDeleteEditedSet stay defined in this screen unchanged
+            (pinned by ActiveWorkoutScreen.prReEval.guard.test.js) and are
+            only wired down as props. */}
+        <EditLoggedSetModal
           visible={editingSet != null}
-          transparent
-          animationType={reduceMotion ? 'none' : 'fade'}
-          onRequestClose={() => { setEditingSet(null); setEditValue(null); }}
-        >
-          {editingSet != null ? (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.editSetKeyboard}
-          >
-            <View style={[styles.editSetOverlay, live.editSetOverlay]}>
-              <View style={[styles.editSetSheet, live.editSetSheet]}>
-                <ScrollView
-                  style={styles.editSetScroll}
-                  contentContainerStyle={styles.editSetContent}
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={false}
-                >
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.editSetTitle, live.editSetTitle]}>Edit set</Text>
-                  {editValue && (
-                    <SetEntry
-                      value={editValue}
-                      onChange={setEditValue}
-                      units={units}
-                      isWarmup={editValue.setType === 'warmup'}
-                      exerciseType={activeExerciseType}
-                      weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
-                    />
-                  )}
-                  <Button
-                    variant="primary"
-                    style={[styles.editSetSaveBtn, live.editSetSaveBtn]}
-                    onPress={handleSaveEditedSet}
-                    disabled={saving}
-                    title="Save"
-                    textStyle={[styles.editSetSaveText, live.editSetSaveText]}
-                    accessibilityLabel="Save set changes"
-                  />
-                  <TouchableOpacity
-                    style={styles.editSetCancelBtn}
-                    onPress={() => { setEditingSet(null); setEditValue(null); }}
-                    accessibilityRole="button"
-                    accessibilityLabel="Cancel editing set"
-                  >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.editSetCancelText, live.editSetCancelText]}>Cancel</Text>
-                  </TouchableOpacity>
-                  <View style={[styles.editSetDivider, live.editSetDivider]} />
-                  <TouchableOpacity
-                    style={styles.editSetDeleteBtn}
-                    onPress={handleDeleteEditedSet}
-                    accessibilityRole="button"
-                    accessibilityLabel="Delete set"
-                  >
-                    <Ionicons name="trash-outline" size={16} color={t.colors.error} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.editSetDeleteText, live.editSetDeleteText]}>Delete set</Text>
-                  </TouchableOpacity>
-                </ScrollView>
-              </View>
-            </View>
-          </KeyboardAvoidingView>
-          ) : null}
-        </Modal>
+          reduceMotion={reduceMotion}
+          onClose={() => { setEditingSet(null); setEditValue(null); }}
+          editValue={editValue}
+          onChangeEditValue={setEditValue}
+          units={units}
+          exerciseType={activeExerciseType}
+          weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
+          onSave={handleSaveEditedSet}
+          saving={saving}
+          onDelete={handleDeleteEditedSet}
+        />
 
 
       </KeyboardAvoidingView>
@@ -4481,37 +4394,11 @@ const styles = StyleSheet.create({
   supSecondaryBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent' },
   supSecondaryBtnText: { ...type.label, color: colors.textSecondary },
 
-  staleOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
-  staleSheet: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, width: '100%', maxHeight: '88%', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
-  staleTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },
-  staleBody: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.md },
-  staleResume: { width: '100%', backgroundColor: colors.primaryFill, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center' },
-  staleResumeText: { ...type.bodyStrong, color: colors.onPrimary },
-  staleFinish: { width: '100%', backgroundColor: colors.surface2, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.borderSubtle },
-  staleFinishText: { ...type.label, color: colors.textPrimary },
-  staleDiscard: { width: '100%', paddingVertical: spacing.md, alignItems: 'center' },
-  staleDiscardText: { ...type.label, color: colors.error },
-  discardOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
-  discardSheet: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, width: '100%', maxHeight: '88%', gap: spacing.md, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
-  discardTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },
-  discardBody: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xs },
-  keepTrainingBtn: { backgroundColor: colors.primaryFill, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center' },
-  keepTrainingBtnText: { ...type.bodyStrong, color: colors.onPrimary },
-  discardConfirmBtn: { alignItems: 'center', paddingVertical: spacing.md },
-  discardConfirmBtnText: { ...type.label, color: colors.error },
-  editSetKeyboard: { flex: 1 },
-  editSetOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
-  editSetSheet: { backgroundColor: colors.surface, borderRadius: radius.lg, width: '100%', maxHeight: '88%', borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
-  editSetScroll: { flexShrink: 1, minHeight: 0 },
-  editSetContent: { padding: spacing.lg, gap: spacing.md },
-  editSetTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },
-  editSetSaveBtn: { backgroundColor: colors.primaryFill, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center' },
-  editSetSaveText: { ...type.bodyStrong, color: colors.onPrimary },
-  editSetCancelBtn: { alignItems: 'center', paddingVertical: spacing.md },
-  editSetCancelText: { ...type.label, color: colors.textSecondary },
-  editSetDivider: { height: 1, backgroundColor: colors.border },
-  editSetDeleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md },
-  editSetDeleteText: { ...type.label, color: colors.error },
+  // D43 S1 slice 2: stale*/discard*/keepTrainingBtn*/editSet* (all exclusive
+  // to the stale-recovery, discard-confirm and edit-set modals) moved
+  // verbatim to src/components/workout/StaleWorkoutModal.js,
+  // .../DiscardWorkoutModal.js and .../EditLoggedSetModal.js -- no other
+  // render in this screen used them, so nothing stays behind.
   nextTimeBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     backgroundColor: colors.primaryBg,
@@ -4669,30 +4556,9 @@ function buildLiveStyles(t) {
     supPrimaryBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
     supSecondaryBtn: { borderColor: t.colors.border },
     supSecondaryBtnText: { ...t.type.label, color: t.colors.textSecondary },
-    staleOverlay: { backgroundColor: t.colors.scrim },
-    staleSheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    staleTitle: { ...t.type.h3, color: t.colors.textPrimary },
-    staleBody: { ...t.type.bodySm, color: t.colors.textSecondary },
-    staleResume: { backgroundColor: t.colors.primaryFill },
-    staleResumeText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
-    staleFinish: { backgroundColor: t.colors.surface2, borderColor: t.colors.borderSubtle },
-    staleFinishText: { ...t.type.label, color: t.colors.textPrimary },
-    staleDiscardText: { ...t.type.label, color: t.colors.error },
-    discardOverlay: { backgroundColor: t.colors.scrim },
-    discardSheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    discardTitle: { ...t.type.h3, color: t.colors.textPrimary },
-    discardBody: { ...t.type.bodySm, color: t.colors.textSecondary },
-    keepTrainingBtn: { backgroundColor: t.colors.primaryFill },
-    keepTrainingBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
-    discardConfirmBtnText: { ...t.type.label, color: t.colors.error },
-    editSetOverlay: { backgroundColor: t.colors.scrim },
-    editSetSheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    editSetTitle: { ...t.type.h3, color: t.colors.textPrimary },
-    editSetSaveBtn: { backgroundColor: t.colors.primaryFill },
-    editSetSaveText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
-    editSetCancelText: { ...t.type.label, color: t.colors.textSecondary },
-    editSetDivider: { backgroundColor: t.colors.border },
-    editSetDeleteText: { ...t.type.label, color: t.colors.error },
+    // D43 S1 slice 2: stale*/discard*/keepTrainingBtn*/editSet* live overrides
+    // moved verbatim into StaleWorkoutModal.js's, DiscardWorkoutModal.js's
+    // and EditLoggedSetModal.js's own buildLiveStyles.
     nextTimeBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.251) },
     nextTimeBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },
     deloadBanner: { backgroundColor: t.colors.warningBg, borderColor: t.colors.warning },

@@ -23,6 +23,25 @@ const EMPTY_EXERCISE_VIEW = fs.readFileSync(
   path.join(__dirname, '..', '..', 'components', 'workout', 'EmptyExerciseView.js'),
   'utf8',
 );
+// Re-pinned for D43 S1 slice 2: DiscardWorkoutModal, StaleWorkoutModal and
+// EditLoggedSetModal moved out of ActiveWorkoutScreen.js into
+// src/components/workout/ (pure extraction, no behaviour/visual change --
+// see each moved file's own header comment). The assertions below that used
+// to read these modals' JSX/styles off ACTIVE_WORKOUT now read the same
+// source text off the new files instead; the invariant each assertion pins
+// is unchanged.
+const DISCARD_WORKOUT_MODAL = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'DiscardWorkoutModal.js'),
+  'utf8',
+);
+const STALE_WORKOUT_MODAL = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'StaleWorkoutModal.js'),
+  'utf8',
+);
+const EDIT_LOGGED_SET_MODAL = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'EditLoggedSetModal.js'),
+  'utf8',
+);
 
 describe('ActiveWorkoutScreen gym-use polish', () => {
   test('terminal workout completion has one primary finish control', () => {
@@ -222,8 +241,10 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).not.toContain('actionBtnText');
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live.keepTrainingBtnText
     // override appended (source: useTheme.js); frozen style byte-identical.
-    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.keepTrainingBtnText, live.keepTrainingBtnText]}>Keep training</Text>');
-    expect(ACTIVE_WORKOUT).not.toContain('>Keep Training<');
+    // Re-pinned for D43 S1 slice 2: keepTrainingBtnText JSX moved to
+    // src/components/workout/DiscardWorkoutModal.js.
+    expect(DISCARD_WORKOUT_MODAL).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.keepTrainingBtnText, live.keepTrainingBtnText]}>Keep training</Text>');
+    expect(DISCARD_WORKOUT_MODAL).not.toContain('>Keep Training<');
     expect(ACTIVE_WORKOUT).toContain("const retryAction = currentSet.setType === 'warmup'");
     expect(ACTIVE_WORKOUT).toContain("? 'Log warm-up'");
     expect(ACTIVE_WORKOUT).toMatch(/Your set wasn't saved\. Tap \$\{retryAction\} to try again/);
