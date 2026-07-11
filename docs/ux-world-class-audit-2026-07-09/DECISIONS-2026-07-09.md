@@ -799,3 +799,30 @@ area by area (the SCORECARD-2026-07-10 rubric is the baseline
 instrument), lead-driven design judgement, founder holds taste vetoes.
 Sequenced LAST by founder's own call so it polishes the finished
 work, not surfaces that are still changing.
+
+## D30 — Engine set-cap + ease-in: investigated, NO CHANGE (lead ruling, 2026-07-10)
+Founder delegated two engine questions to the lead with "investigate the
+science and bodybuilding then make the call, don't guess." Investigated
+against the actual engine + settled hypertrophy science. Both question
+premises were misreadings; the engine is already evidence-correct. NO
+change to the deterministic engine (correct outcome, not neglect).
+
+1. "Session stacks 21+ sets" is NOT junk volume. Junk volume is a
+   PER-MUSCLE-per-session concept; the engine caps it at 8 sets/muscle
+   (12 for a weak point) at planEngine.js:1372-1382, matching the ~6-8
+   productive-sets-per-muscle-per-session evidence and the principle that
+   extra weekly volume comes from FREQUENCY not one giant session. Total
+   session size is governed by the user's time budget (trimToTimeBudget),
+   not an arbitrary total-set ceiling. A 21-set session = ~3-4 muscles x
+   ~6-7 sets within budget = a normal full-body/upper day. Correct as is.
+2. "Ease-in week 1 multiplier 1.00 = no reduction" misreads the two
+   layers. The block base is set to MEV (the minimum EFFECTIVE volume, the
+   floor) at planEngine.js:2666; the mesocycle then ramps it week1=1.00x,
+   wk2-4=1.10/1.20/1.25x, wk5/6=0.50x deload (mesocycle.js:17-30). Week 1
+   at 1.00x IS the ease-in - it delivers MEV, the lightest working week -
+   then progressively overloads. Reducing week 1 BELOW MEV would waste a
+   productive week (below-MEV is deload territory, correctly placed at
+   block end). Label "Introduction week. Settle into the movements" is
+   honest. Correct as is.
+Do NOT re-open either as a defect; if a future session believes there is
+a junk-volume or ease-in problem, re-read this ruling first.
