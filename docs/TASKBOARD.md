@@ -203,12 +203,33 @@ own information design.**
   against a discard-faithful fake. Retry path for the founder's
   orphaned attempt: Today -> "Start with a plan" (makeUniquePlanName +
   auto-archive self-heal the unactivated programme).
-- QUEUED (structural, next slot, lead review required - database.js):
-  route ALL writes through the write queue, not just transactions
-  (raw sites: recordEngineTelemetry 7586, createWorkoutSet 2879,
-  legacy sync appliers); fix runInTransaction reentrancy (foreign-tx
-  inline-join, audit finding sync-db-findings #1); dbCrypto swallowed
-  closeAsync refcount hygiene.
+- STRUCTURAL DB FOLLOW-UPS LANDED (lead hands-on + opus call-graph
+  audit, 2026-07-11):
+  (a) runInTransaction foreign-tx inline-join FIXED: a parallel call
+  while a queued transaction is open now queues (never joins the
+  foreign transaction); inline-join survives ONLY for manual BEGINs
+  the queue does not own. Nested runInTransaction calls are forbidden
+  by contract - the audit found exactly one nest (planAutoGen
+  zero-match rollback -> deleteProgrammeCascade) and it was un-nested
+  via a new deleteProgrammeCascadeInTx variant. Pins in
+  runInTransaction.test.js + planAutoGen.test.js.
+  (b) createWorkoutSet + recordEngineTelemetry INSERTs ride the write
+  queue (audit proved neither is reachable from a transaction task, so
+  no deadlock). Legacy sync appliers have NO raw writes - sync.js
+  contains zero runAsync; appliers write via database.js helpers, so
+  that lane closed by evidence.
+  (c) dbCrypto probe-close hygiene: every swallowed closeAsync now
+  logs; classification-critical paths (interrupted-swap recovery,
+  keyed->plain probe, move-aside, pre-swap export) ABORT recoverably
+  on a stuck close instead of misreading the shared ref-counted native
+  connection and acting on wrong evidence (worst prior chain: post-swap
+  writes landing on a deleted inode). Behavioural pins in
+  dbCrypto.closeHygiene.test.js via the injectable SQLite param.
+- QUEUED (enumerated, next slot): migrate the four manual BEGIN/COMMIT
+  blocks onto runInTransaction so no transaction bypasses the queue -
+  database.js:3155 deleteOrphanedRoutines, importExternal.js:346/404,
+  food/seed.js:244/294, food/libraryDelta.js:131/187 (each can still
+  collide with a queued transaction; busy_timeout covers meanwhile).
 - SIGN-OUT ESCAPE LANDED (D73, lead-ruled under founder delegation
   "do what needs to be done": A+B combined, C rejected on Article 9
   posture). wipeAllUserDataWithRetry (3 attempts, backoff) then

@@ -109,6 +109,36 @@ async function readable(db) {
   catch (_) { return false; }
 }
 
+// Close a probe handle, reporting failure instead of swallowing it (R2-11
+// structural follow-up, 2026-07-11). expo-sqlite hands back the SAME
+// ref-counted native connection for every openDatabaseAsync of one path, so a
+// probe whose close silently failed stays live: the next "fresh" open reuses
+// it, inheriting its PRAGMA key state and - after a file move - its old inode.
+// A probe chain that keeps going after a failed close can misclassify the
+// database (keyed state read as plaintext or vice versa) and take a
+// destructive branch on wrong evidence. Callers on classification-critical
+// paths must abort when this returns false.
+async function closeQuietly(handle, stage) {
+  try { await handle.closeAsync(); return true; }
+  catch (e) {
+    logError('dbCrypto.close', e, { stage });
+    return false;
+  }
+}
+
+// Recoverable abort: thrown when the open cannot proceed SAFELY this launch
+// (e.g. a probe connection would not close, so every later probe is
+// untrustworthy). initDatabase resets its init promise on a throw, so the
+// next launch (or retry) probes again with clean state - the same contract as
+// the keyUnavailable blocked start. Never destructive: nothing has been
+// moved or deleted when this is thrown.
+function abortOpen(stage) {
+  const err = new Error(`dbCrypto open aborted (${stage})`);
+  err.dbCryptoAbort = true;
+  logError('dbCrypto.abort', err, { stage });
+  return err;
+}
+
 async function keyed(SQLite, key) {
   const db = await SQLite.openDatabaseAsync(DB_NAME);
   try { await db.execAsync(`PRAGMA key = '${key}'`); } catch (_) { /* probe handles failure */ }
@@ -138,7 +168,7 @@ export async function openEncryptedDb(SQLite) {
       emitPlaintextFallback('key_unavailable');
       return { db: fb, encrypted: false };
     }
-    try { await fb.closeAsync(); } catch (_) {}
+    await closeQuietly(fb, 'key_unavailable_probe');
     const err = new Error('SQLCipher key unavailable and existing DB is not plaintext-readable');
     logError('dbCrypto.keyUnavailable', err, {});
     throw err;
@@ -167,9 +197,23 @@ export async function openEncryptedDb(SQLite) {
       const liveInfo = await FileSystem.getInfoAsync(path(DB_NAME));
       let live = false;
       if (liveInfo.exists) {
-        let probe = await keyed(SQLite, key);
-        live = (await readable(probe)) || await (async () => { try { await probe.closeAsync(); } catch (_) {} const p = await SQLite.openDatabaseAsync(DB_NAME); const r = await readable(p); try { await p.closeAsync(); } catch (_) {} return r; })();
-        try { await probe.closeAsync(); } catch (_) {}
+        // Probe keyed first, then plaintext - closing fully between probes.
+        // A probe that will not close makes every later probe untrustworthy
+        // (shared ref-counted native connection), and the branches below
+        // move/delete database files on the probes' verdict: abort the open
+        // recoverably instead of acting on wrong evidence.
+        const probe = await keyed(SQLite, key);
+        live = await readable(probe);
+        if (!(await closeQuietly(probe, 'recover_keyed_probe'))) {
+          throw abortOpen('recover_keyed_probe_close');
+        }
+        if (!live) {
+          const p = await SQLite.openDatabaseAsync(DB_NAME);
+          live = await readable(p);
+          if (!(await closeQuietly(p, 'recover_plain_probe'))) {
+            throw abortOpen('recover_plain_probe_close');
+          }
+        }
       }
       if (!live) {
         for (const s of ['', '-wal', '-shm']) { try { await FileSystem.deleteAsync(`${path(DB_NAME)}${s}`, { idempotent: true }); } catch (_) {} }
@@ -179,14 +223,21 @@ export async function openEncryptedDb(SQLite) {
         try { await FileSystem.deleteAsync(backup, { idempotent: true }); } catch (_) {}
       }
     }
-  } catch (e) { logError('dbCrypto.recover', e, {}); }
+  } catch (e) {
+    // Abort errors escape: recovery could not run safely and nothing was
+    // touched, so blocking this launch (recoverable) beats probing on.
+    if (e?.dbCryptoAbort) throw e;
+    logError('dbCrypto.recover', e, {});
+  }
 
   // 1. Open keyed. If readable, it's already encrypted (or a brand-new file).
   let db = await keyed(SQLite, key);
   if (await readable(db)) return { db, encrypted: true };
 
-  // 2. Not readable keyed: check for plaintext data.
-  try { await db.closeAsync(); } catch (_) {}
+  // 2. Not readable keyed: check for plaintext data. If the keyed handle will
+  // not close, the "plaintext" open below would reuse the same still-keyed
+  // native connection and misread the state - abort recoverably instead.
+  if (!(await closeQuietly(db, 'keyed_probe'))) throw abortOpen('keyed_probe_close');
   let plain = await SQLite.openDatabaseAsync(DB_NAME);
   if (!(await readable(plain))) {
     // Neither keyed-readable nor plaintext-readable. A brand-new user's file is
@@ -195,8 +246,9 @@ export async function openEncryptedDb(SQLite) {
     // wrong-key or corrupt DB. Do NOT silently create a new encrypted DB over it
     // (that would discard possibly-recoverable data). Preserve it aside (never
     // delete), then start fresh, and only claim encrypted once the fresh DB
-    // verifies readable (F-001).
-    try { await plain.closeAsync(); } catch (_) {}
+    // verifies readable (F-001). The move-aside acts on the two probes'
+    // verdict, so it must never run with a probe connection still live.
+    if (!(await closeQuietly(plain, 'unreadable_plain'))) throw abortOpen('unreadable_plain_close');
     try {
       const info = await FileSystem.getInfoAsync(path(DB_NAME));
       if (info.exists) {
@@ -210,7 +262,7 @@ export async function openEncryptedDb(SQLite) {
     if (await readable(db)) return { db, encrypted: true };
     // Even a fresh keyed DB isn't readable → SQLCipher unavailable on this build.
     // Fall back to a working plaintext handle rather than return a broken one.
-    try { await db.closeAsync(); } catch (_) {}
+    await closeQuietly(db, 'sqlcipher_unavailable_probe');
     const fb = await SQLite.openDatabaseAsync(DB_NAME);
     emitPlaintextFallback('sqlcipher_unavailable');
     return { db: fb, encrypted: false };
@@ -222,13 +274,20 @@ export async function openEncryptedDb(SQLite) {
     await plain.execAsync(`ATTACH DATABASE '${encPath}' AS encrypted KEY '${key}';`);
     await plain.getAllAsync("SELECT sqlcipher_export('encrypted');");
     await plain.execAsync('DETACH DATABASE encrypted;');
-    try { await plain.closeAsync(); } catch (_) {}
+    // A still-open plaintext connection must never survive into the swap:
+    // after the moves below, a reopened DB_NAME would reuse this connection
+    // and every write this session would land on the old (deleted) inode.
+    // Throwing here lands in the migrate_failed fallback BEFORE any move, so
+    // the original file is untouched and the app opens plaintext.
+    if (!(await closeQuietly(plain, 'migrate_export'))) {
+      throw new Error('plaintext handle would not close before the swap');
+    }
 
     // Verify the encrypted copy reads with the key BEFORE touching the original.
     let verify = await SQLite.openDatabaseAsync('volyume-enc.db');
     try { await verify.execAsync(`PRAGMA key = '${key}'`); } catch (_) {}
     const ok = await readable(verify);
-    try { await verify.closeAsync(); } catch (_) {}
+    await closeQuietly(verify, 'verify_encrypted_copy');
     if (!ok) throw new Error('encrypted copy not readable');
 
     // Swap, plaintext preserved as backup until the encrypted DB is promoted.

@@ -1608,3 +1608,26 @@ Article 9 posture does not permit for a convenience escape.
 Regression pins: src/lib/__tests__/signOutWipeEscape.test.js (retry,
 verified-clean escape, fail-closed residue, missing-table tolerance) plus
 re-anchored useAccountActions.guard ordering pin.
+
+## D74 — Transaction-queue contract: no nesting, no foreign joins (lead ruling under D33, 2026-07-11)
+
+Sources: R2-11 investigation (busy_timeout landed a84215c), opus
+call-graph audit of all 18 runInTransaction task bodies (session log,
+2026-07-11), founder delegation "do what needs to be done".
+
+RULING: runInTransaction's blanket inline guard (`if (inTx()) return
+task()`) is replaced by an ownership-aware rule. A parallel call while a
+QUEUED transaction is open now queues - previously it inline-joined the
+foreign transaction, so its writes committed or rolled back with someone
+else's work and never serialised. Inline-join survives only for manual
+BEGINs the queue does not own (seed/import paths). Nested
+runInTransaction calls are forbidden by contract: the audit found
+exactly one (planAutoGen's zero-match rollback via
+deleteProgrammeCascade) and it was un-nested with a raw
+deleteProgrammeCascadeInTx variant. createWorkoutSet and
+recordEngineTelemetry INSERTs ride the same write queue (audit-proven
+unreachable from any task, so deadlock-free). dbCrypto probe closes are
+logged and classification-critical paths abort recoverably on a stuck
+close (shared ref-counted native connection means a leaked probe
+poisons every later probe). Remaining enumerated lane on the board:
+migrate the four manual BEGIN/COMMIT blocks onto the queue.
