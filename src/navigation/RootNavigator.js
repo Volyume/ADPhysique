@@ -125,7 +125,6 @@ const GoalLockConsentScreen = lazyScreen(() => require('../screens/GoalLockConse
 const NotificationSettingsScreen = lazyScreen(() => require('../screens/NotificationSettingsScreen').default);
 const SubscriptionScreen = lazyScreen(() => require('../screens/SubscriptionScreen').default);
 const CascadeGateScreen = lazyScreen(() => require('../screens/CascadeGateScreen').default);
-const PaywallScreen = lazyScreen(() => require('../screens/PaywallScreen').default);
 const CreditsScreen = lazyScreen(() => require('../screens/CreditsScreen').default);
 const ImportScreen = lazyScreen(() => require('../screens/ImportScreen').default);
 const ProOnboardingScreen = lazyScreen(() => require('../screens/ProOnboardingScreen').default);
@@ -581,7 +580,6 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="SubscriptionPolicy" component={SubscriptionPolicyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Subscription" component={SubscriptionScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CascadeGate" component={CascadeGateScreen} options={{ headerShown: false, presentation: 'modal' }} />
-      <Stack.Screen name="Paywall" component={PaywallScreen} options={{ headerShown: false, presentation: 'modal' }} />
       <Stack.Screen name="Credits" component={CreditsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
     </Stack.Navigator>

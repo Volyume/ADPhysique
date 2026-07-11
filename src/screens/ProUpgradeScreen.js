@@ -14,6 +14,7 @@ import { storeName } from '../lib/storeName';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
+import { appAlert } from '../components/AppAlert';
 import { signInWithGoogle, signInWithApple, getSupabaseClient } from '../lib/supabase';
 import { syncAll, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 import { PRO_BETA_ACTIVE } from '../lib/proGate';
@@ -21,7 +22,9 @@ import * as haptics from '../lib/haptics';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
 import { skuFor } from '../lib/payments/catalogue';
+import { restorePurchases } from '../lib/payments/restore';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
+import { pickPaywallExcerpt } from './paywallExcerpts';
 
 const PRO_PERKS = [
   { icon: 'barbell-outline', text: 'A plan built around your schedule, goals, and experience level' },
@@ -92,6 +95,14 @@ export default function ProUpgradeScreen({ navigation, route }) {
   // the session and calls completeUpgrade itself.
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  // C3 (D71): restore is a read of an existing entitlement, not a purchase,
+  // so it carries its own busy flag rather than the purchase/OAuth `busy` (a
+  // quiet chrome action must not spin the primary CTA).
+  const [restoring, setRestoring] = useState(false);
+  // C3 (D71): one verified Google Play excerpt, ported from the deleted
+  // PaywallScreen. Deterministic daily pick; null (block hidden) until the
+  // honesty bar in paywallExcerpts.js is met. Static, offline, no PII.
+  const excerpt = pickPaywallExcerpt();
   // Founder decision 2026-07-02 (supersedes COMP-007's annual anchor): monthly
   // is the pre-selected period on every subscribe surface, matching the
   // cascade gate, so the two revenue surfaces never disagree. Annual stays
@@ -280,6 +291,38 @@ export default function ProUpgradeScreen({ navigation, route }) {
     setBusy(false);
   }
 
+  // C3 (D71): inline restore, ported from PaywallScreen. A paid user on a
+  // reinstall or new device recovers Pro here without buying again. Mirrors
+  // ProGate.handleRestore / PaywallScreen.handleRestore semantics: routes
+  // through the shared restore module (lib/payments/restore), which re-reads
+  // the active subscription from the store and NEVER charges. restorePurchases
+  // has already written the entitlement server-side on success, so we reconcile
+  // tier from the cloud the same light-touch way the purchase path does
+  // (refreshTierFromCloud); if that is a no-op the confirmation alone is enough.
+  async function handleRestore() {
+    if (restoring || busy) return;
+    trackCta('restore');
+    setRestoring(true);
+    try {
+      const result = await restorePurchases();
+      if (!result.ok) {
+        appAlert('Could not restore', 'Try again in a moment.');
+      } else if (result.tier === 'pro') {
+        if (session?.user?.id) {
+          refreshTierFromCloud(getSupabaseClient(), session.user.id).catch(() => {});
+        }
+        appAlert('Pro restored', 'Your subscription is active again.');
+      } else {
+        appAlert('Nothing to restore', 'We could not find an active subscription for this store account.');
+      }
+    } catch (e) {
+      require('../lib/errorLog').logError('ProUpgrade.restoreFailed', e, {});
+      appAlert('Could not restore', 'Try again in a moment.');
+    } finally {
+      setRestoring(false);
+    }
+  }
+
   // OAuth path (Google / Apple). Sign-in completes via the deep-link
   // handler in App.js > onAuthStateChange in RootNavigator. We don't need
   // to call activatePro from here, the SIGNED_IN handler runs
@@ -430,6 +473,22 @@ export default function ProUpgradeScreen({ navigation, route }) {
             Precision Coaching follows clear training rules and explains every change. It uses your recovery, food and progress.
           </Text>
 
+          {/* C3 (D71): one verified Google Play excerpt, ported from the
+              deleted PaywallScreen so proof lands BEFORE price. Renders only
+              when a curated excerpt exists (ships dark until the honesty bar
+              in paywallExcerpts.js is met). */}
+          {excerpt ? (
+            <View style={[styles.reviewCard, live.reviewCard]} accessible accessibilityLabel={`${excerpt.stars} star review. ${excerpt.quote}. ${excerpt.name}, ${excerpt.source}, ${excerpt.date}.`}>
+              <View style={styles.reviewStars} accessibilityElementsHidden importantForAccessibility="no">
+                {Array.from({ length: Math.max(0, Math.min(5, excerpt.stars)) }).map((_, i) => (
+                  <Ionicons key={i} name="star" size={13} color={t.colors.primary} />
+                ))}
+              </View>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.reviewQuote, live.reviewQuote]} numberOfLines={3}>{`"${excerpt.quote}"`}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.reviewMeta, live.reviewMeta]}>{`${excerpt.name} - ${excerpt.source} - ${excerpt.date}`}</Text>
+            </View>
+          ) : null}
+
           {/* Wave-1 A8: the same store-priced Free-vs-Pro strip the Pro locks
               use, so the decision point carries the honest side-by-side.
               Prices come from the active store via usePlayPrices inside the strip;
@@ -502,6 +561,28 @@ export default function ProUpgradeScreen({ navigation, route }) {
             ))}
           </View>
 
+          {/* C3 (D71): quiet inline restore, ported from PaywallScreen and
+              shown only to a signed-in account (a reinstalled paid user can
+              recover Pro without buying again). Text-level chrome, not a
+              primary CTA. Billing-consequential, so like ProGate it carries no
+              added haptic. Same read-only entitlement path (lib/payments/
+              restore) as every other restore surface; no purchase is made. */}
+          {hasAccount ? (
+            <TouchableOpacity
+              style={styles.restoreLink}
+              onPress={handleRestore}
+              disabled={restoring || busy}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Restore purchases"
+            >
+              <Ionicons name="refresh-outline" size={14} color={t.colors.textSecondary} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.restoreLinkText, live.restoreLinkText]}>
+                {restoring ? 'Restoring...' : 'Restore purchases'}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+
           <TouchableOpacity
             style={[styles.policyLink, live.policyLink]}
             onPress={() => { haptics.selection(); navigation.navigate('SubscriptionPolicy'); }}
@@ -564,6 +645,18 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   policyLinkText: { ...type.caption, color: colors.textSecondary },
+  // C3 (D71): quiet text-level restore action (not the contained policyLink
+  // chrome) so it reads as a secondary affordance, not a second CTA.
+  restoreLink: {
+    minHeight: 40,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  restoreLinkText: { ...type.caption, color: colors.textSecondary },
   perkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   perkIcon: {
     width: 32, height: 32, borderRadius: radius.md,
@@ -577,6 +670,17 @@ const styles = StyleSheet.create({
   },
 
   compareWrap: { marginTop: spacing.lg, marginBottom: spacing.xl },
+
+  // C3 (D71): Play-review social-proof card, ported from PaywallScreen and
+  // matched to this screen's card idiom.
+  reviewCard: {
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, padding: spacing.md,
+    marginTop: spacing.lg, gap: spacing.xs,
+  },
+  reviewStars: { flexDirection: 'row', gap: 2 },
+  reviewQuote: { ...type.bodySm, color: colors.textPrimary, fontStyle: 'italic' },
+  reviewMeta: { ...type.caption, color: colors.textMuted },
 
   // Wave-1 A8 FAQ
   faqWrap: { gap: spacing.md, marginTop: spacing.xl },
@@ -662,6 +766,10 @@ function buildLiveStyles(t) {
     subtitle: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
     policyLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     policyLinkText: { ...t.type.caption, color: t.colors.textSecondary },
+    restoreLinkText: { ...t.type.caption, color: t.colors.textSecondary },
+    reviewCard: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    reviewQuote: { ...t.type.bodySm, color: t.colors.textPrimary },
+    reviewMeta: { ...t.type.caption, color: t.colors.textMuted },
     perkIcon: { backgroundColor: t.colors.primaryBg },
     perkText: { ...t.type.bodySm, color: t.colors.textSecondary },
     credentialNote: { ...t.type.captionTight, color: t.colors.textMuted },

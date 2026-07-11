@@ -213,28 +213,9 @@ describe('DifferentialBadge mount', () => {
   });
 });
 
-describe('PaywallScreen mount', () => {
-  test('try_pro_14d variant renders without throwing', async () => {
-    const Screen = require('../screens/PaywallScreen').default;
-    const r = await mount(Screen, {
-      navigation: noopNav,
-      route: { params: { trigger: 'deload', ctaMode: 'try_pro_14d', pricingWindow: 'open_beta' } },
-    });
-    expect(r.toJSON()).toBeTruthy();
-  });
-
-  test('buy_pro variant renders without throwing', async () => {
-    const Screen = require('../screens/PaywallScreen').default;
-    const r = await mount(Screen, {
-      navigation: noopNav,
-      route: { params: { trigger: 'stalled_lift', ctaMode: 'buy_pro', pricingWindow: 'standard' } },
-    });
-    expect(r.toJSON()).toBeTruthy();
-  });
-
-  test('missing params renders the default variant safely', async () => {
-    const Screen = require('../screens/PaywallScreen').default;
-    const r = await mount(Screen, { navigation: noopNav, route: {} });
-    expect(r.toJSON()).toBeTruthy();
-  });
-});
+// C3 (D71), 2026-07-11: the three PaywallScreen mount cases were removed with
+// the screen itself. PaywallScreen was an orphaned duplicate upgrade surface
+// (zero navigation call sites); its two unique capabilities (the Play-review
+// excerpt card and inline restore) were ported onto ProUpgradeScreen and the
+// file deleted. ProUpgrade's own render/telemetry contract is source-guarded
+// by proUpgradeTelemetry.guard.test.js.

@@ -13,13 +13,16 @@
  * CoachingRemindersScreen -- and asserts the root chrome's flattened
  * backgroundColor tracks an accessibility.theme flip through the REAL
  * store, with the tree never unmounted between reads (the restart-free
- * contract). The remaining 11 screens (FreeStarterScreen, PaywallScreen,
+ * contract). The remaining converted screens (FreeStarterScreen,
  * ProGoalSetupScreen, ProOnboardingScreen, ProSetupCompleteScreen,
  * ProUpgradeScreen, Article9ConsentScreen, NotificationSettingsScreen,
  * SettingsDietaryScreen, BodyMetricsScreen, ProgressPhotosScreen) are
  * source-guarded: every converted screen must import useTheme, call it,
  * and define a matching buildLiveStyles(t) (or, for SettingsDietaryScreen,
  * be confirmed as a no-op wrapper around the already-live SettingsPage).
+ * C3 (D71), 2026-07-11: PaywallScreen was dropped from this list when the
+ * orphaned screen was deleted; its live-theme wiring intent is retired with
+ * the file, ProUpgradeScreen (which absorbed its excerpt card) stays guarded.
  *
  * Mock surface: the same subset of src/__tests__/screen-mount.test.js's
  * established mocks the five mounted screens' import graphs need, plus the
@@ -287,7 +290,6 @@ describe('CP-10 batch G lane 1: screen chrome flips live, no remount', () => {
 describe('CP-10 batch G lane 1: remaining screens carry the live-theme wiring', () => {
   test.each([
     'FreeStarterScreen.js',
-    'PaywallScreen.js',
     'ProGoalSetupScreen.js',
     'ProOnboardingScreen.js',
     'ProSetupCompleteScreen.js',

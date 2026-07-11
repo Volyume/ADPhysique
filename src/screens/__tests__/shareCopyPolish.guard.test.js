@@ -62,7 +62,6 @@ describe('share copy polish', () => {
     const welcome = read('WelcomeScreen.js');
     const upgrade = read('ProUpgradeScreen.js');
     const credits = read('CreditsScreen.js');
-    const paywall = read('PaywallScreen.js');
 
     expect(welcome).toMatch(/signInLink: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(welcome).toContain('signInAction: { ...type.label, color: colors.textPrimary }');
@@ -83,14 +82,11 @@ describe('share copy polish', () => {
     expect(credits).toContain('link: {\n    ...type.label,\n    color: colors.textPrimary,');
     expect(credits).not.toMatch(/link: \{[\s\S]*color: colors\.primary/);
 
-    // CP-10 batch G lane 1: legalButton gained its live-theme override
-    // (style={[styles.legalButton, live.legalButton, ...]}); the contract --
-    // at least three legal links render through the contained legalButton
-    // chrome -- is unchanged, so the pattern accepts the live-array spelling.
-    expect(paywall.match(/style=\{\[styles\.legalButton, live\.legalButton/g)?.length).toBeGreaterThanOrEqual(3);
-    expect(paywall).toContain('style={[styles.legalButton, live.legalButton, busy && styles.legalButtonDisabled]}');
-    expect(paywall).toMatch(/legalButton: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(paywall).not.toContain("textDecorationLine: 'underline'");
-    expect(paywall).not.toContain('legalDot');
+    // C3 (D71), 2026-07-11: the PaywallScreen legal-row assertions were retired
+    // with the screen (orphaned duplicate upgrade surface, deleted). Their
+    // intent -- legal/trust links render through contained neutral chrome, not
+    // underlined text -- remains pinned for the live surfaces above (Welcome,
+    // ProUpgrade, Credits). ProUpgrade's own restore/policy chrome is contained
+    // (styles.restoreLink / styles.policyLink), not underlined.
   });
 });
