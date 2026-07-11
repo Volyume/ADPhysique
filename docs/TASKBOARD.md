@@ -186,6 +186,19 @@ No item marked done on an agent's self-report. Ever._
   an options sheet; (3) Progress: cards share one corner radius, share
   CTAs are uniform buttons, locked Recaps shows a toast not a popup;
   (4) taps tick consistently across all five tabs.
+  CLOSE REVIEW (Sonnet, adversarial, full arc 5390f6c..b14d76a): NO
+  BLOCKERS; every commit delivered as claimed; Section 2 confirmed
+  untouched by diff-stat over every safety module. Two SHOULD-FIX edge
+  cases found and FIXED (f80e00f): undo-order collision after a reorder
+  inside the 8s window (deterministic renumber added) and the folder
+  sheet stranding on a swipe mid-save (unconditional onClose). One nit
+  fixed (TodayStrip row haptic consistency); one observation to the
+  founder walk (plan-card footer actions are now equal-weight tertiary
+  pills - the old low/high emphasis pair is gone; glance and rule).
+  CAMPAIGN STATUS: R1-R10 ALL LANDED AND REVIEWED. Founder device walk
+  is the final gate - the one-walk checklist is
+  docs/remediation-2026-07-11/DEVICE-CHECKLIST.md (22 steps). Next
+  lane after the walk: marketing (C1 first, section M below).
   Original audits (both verified):
   RECOVERY: both briefs are reproducible from this entry + the standard
   doc; if either agent dies, relaunch with the same brief (read-only,
