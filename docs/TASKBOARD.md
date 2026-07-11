@@ -87,6 +87,27 @@ required in their reports. Lead acceptance = scorecard re-run on the diff
 device walk of the fresh build. NOTHING on this wave is closed by anyone
 but the founder.
 
+- **R2-8 FIXED IN TREE (lead, hands-on, native): fatal production crash in
+  the unilateral flow.** Founder Sentry screenshot (fatal, 2026-07-11
+  20:19 UTC): ForegroundServiceDidNotStartInTimeException on
+  WorkoutForegroundService. Root cause: ACTION_START_REST arrives via
+  startForegroundService() (hard obligation to call startForeground), but
+  the expired-rest / zero-window paths returned via stopSelf() without
+  ever going foreground - and the unilateral flow's halved, chained
+  per-side rests routinely lapse between the JS expiry check and intent
+  delivery, so repeated use eventually hit a cold-instance expired
+  delivery and Android executed the app. Fix in
+  modules/rest-timer-live/.../WorkoutForegroundService.kt: on a cold
+  instance the obligation is discharged FIRST (goForeground with the rest
+  notification), then the expiry decision runs; expired path tears down a
+  properly-foregrounded service (legal, instant). Commands without an
+  obligation (stop/skip/+15 via startService) deliberately unchanged.
+  Compile gate: the CI Android build on push. NOT related to the OTHER
+  Sentry item (build-2608 JS TypeError, still blocked on the connector).
+  DEVICE CHECK: run a unilateral exercise with several per-side sets,
+  letting some rests run out and skipping others, several sessions in a
+  row - no crash.
+
 RECOVERY: any dead session -> `git status`, review uncommitted diff against
 this entry, relaunch the affected agent with the same brief + the scope
 escalation above. R2-1 guard already landed (3903ccd).
