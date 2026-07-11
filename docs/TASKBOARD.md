@@ -160,13 +160,33 @@ No item marked done on an agent's self-report. Ever._
   row.
 
 - **R9 Whole-app card/box cohesion** (Today / Workout / Nutrition /
-  Progress / Coach to the Food standard). IN PROGRESS. Two read-only
-  Opus audits running: (1) D65 blast-radius - enumerate every
-  Button/Card/Chip receiving layout-in-parent styles that were inert
-  before the PressableCard collapse and are now active, classified
-  restored-intent vs needs-eyeball; (2) R9 cohesion map - every
-  card-like box on the five areas scored against
-  FOOD-DESIGN-STANDARD.md section 2/3/8 with file:line verdicts.
+  Progress / Coach to the Food standard). BUILD LANDED (rulings
+  D69/D70; commits 5390f6c..b14d76a; close review running):
+  - Wave A (lead, hands-on): Home intent prompt -> shared BottomSheet +
+    Chip + haptics; RoutineDetail remove/swap -> commit-with-undo (full
+    field restore / inverse write); Plans folder prompt -> BottomSheet,
+    archive -> undo toast; WorkoutHistory repeat menu -> PeekMenu;
+    swap picker -> ModalHeader chrome; WeightTrendCard -> card class
+    (dot untouched per COMP-027); recap lock alert -> info toast;
+    EmptyExerciseView header twin + rest-timer radius (review catches).
+  - Wave B (Sonnet builds, lead-reviewed + corrected): ~25 hand-rolled
+    CTAs onto shared Button across Home/Train/Progress; TodayStrip +
+    six Progress cards onto radius.lg; banners stay md (sanctioned
+    second class); tabular numerals on the three missing readouts;
+    haptics vocabulary on banners, options openers, NavRow (central),
+    NavTile, InsightRow; Button gains hitSlop forwarding; recapCard
+    border onto banner grammar. Lead corrections: Repeat chip tertiary
+    (brief error), cardio History pill stays chip-idiom, one missed
+    cross-file pin re-anchored.
+  DEVICE CHECK (R9): (1) Home: banners/strip/cards read as two clean
+  classes, every small CTA is a house button, intent prompt is a real
+  sheet with drag handle and chip pickers; (2) Train: archive shows an
+  undo toast (no confirm), removing/swapping an exercise in Edit
+  workout is instant with undo, folder prompt is a sheet, repeat opens
+  an options sheet; (3) Progress: cards share one corner radius, share
+  CTAs are uniform buttons, locked Recaps shows a toast not a popup;
+  (4) taps tick consistently across all five tabs.
+  Original audits (both verified):
   RECOVERY: both briefs are reproducible from this entry + the standard
   doc; if either agent dies, relaunch with the same brief (read-only,
   no tree damage possible). Lead then rules per divergence class and
