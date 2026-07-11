@@ -1040,3 +1040,15 @@ sensitive users, and it is next-day-deliverable online in the UK. The
 copy gains a sourcing note ("Find it in Asian grocers or online") so
 the tip never frustrates. This closes the last NEEDS JUSTIFICATION
 board item.
+
+## D53 — Manrope VETOED on sight; Inter restored; visual-change gate (founder, 2026-07-11)
+Founder device verdict on the D50 typeface: "horrendous... makes the app
+look childish... revert." Executed: `9148a6f` and `982f0d2` reverted
+(`52e65dd`, `a6083f7`), Inter restored byte-identical, guard re-pinned by
+the revert, full suite 8,485 green. D50 is REVERSED - do not re-propose
+Manrope or any typeface change unprompted. STANDING LAW (founder): no
+major visual or interaction change ships unilaterally again - material
+design changes are clearly identified and justified to the founder
+BEFORE they land, even under D48 (D48 still covers non-visual gates).
+The dead slice-2 agent's WIP snapshot was reverted unreviewed
+(`b2be386`); S1 slice 2 restarts clean when the logger queue resumes.
