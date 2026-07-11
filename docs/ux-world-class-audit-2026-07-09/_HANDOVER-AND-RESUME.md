@@ -436,17 +436,23 @@ failed, lint clean.**
    device checklist, code anchors). Decision: D46. Safety net already in:
    D45 (`da59274`) session caps contain the acute symptom.
 
-   **2026-07-11 later session landings (all pushed):** D47 (queue worked
-   top to bottom, never curated), D48 (gates ruled not waited on), D49
-   (D43 blueprint ruled approved; the S1 slice-1 agent was stopped by
-   the founder and its work cancelled with a clean tree - S1 NOT
-   started, relaunch only on explicit founder ask), D50
-   (brand font ruled: Manrope), D51 (lowest-tier agents, lead
-   coordinates only). SD-11 idempotency fix `7e0dabe`. CP-10 batch G
-   both lanes `3adf551` + `4947509` (35 screens live-themed under
-   billing/consent/ED bounds). D43 blueprint + brand-font shortlist
-   docs authored and pushed. EAS failure narrowed: local prebuild
-   clean, break is in the EAS Gradle stage - founder logs still needed.
+   **2026-07-11 later session landings (all pushed; stage log kept
+   CURRENT at every landing from here on - founder correction):** D47
+   (queue worked top to bottom, never curated), D48 (gates ruled not
+   waited on), D49 (D43 blueprint ruled approved; S1 slice-1 agent
+   stopped by the founder mid-run with a clean tree, then RELAUNCHED on
+   the founder's explicit "Go s1" - running at this writing), D50
+   (Manrope ruled and LANDED `9148a6f`, Inter files removed `982f0d2`),
+   D51 (lowest-tier agents, lead coordinates only), D52 (kala namak
+   kept with a sourcing note `bb91f9b`). SD-11 idempotency fix
+   `7e0dabe`. CP-10 COMPLETE: batch G both lanes `3adf551` + `4947509`
+   (35 screens under billing/consent/ED bounds), stage 5 restart-prompt
+   retirement `3d3eae8` - 83/83 screens live-themed, settings apply
+   straight away. D43 blueprint + brand-font shortlist docs authored
+   and pushed. EAS failure narrowed (local prebuild clean, break is in
+   the EAS Gradle stage - founder logs still needed). Full suite green
+   at the D52 boundary: 686 suites / 8,485 tests, lint clean; the only
+   working-tree deltas at this writing are the running S1 agent's.
 1. NEXT SLOTS per docs/TASKBOARD.md: CP-10 batch F (screens 37/85
    live, 48 static remain — lead defines the next batch from the
    coverage tracker); then further batches to 0 static, which unlocks
