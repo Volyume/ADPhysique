@@ -1649,8 +1649,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // exercise type gets the correct inputs for free. Save writes the local row,
   // the store's current-exercise sets array, and the on-screen receipt; the
   // cloud copy ships on the next per-set push (updated_at is bumped by
-  // updateWorkoutSet). PR detection is a log-time concern and is NOT re-run on
-  // an edit/delete, derived analytics recompute from the DB on next view.
+  // updateWorkoutSet). PR detection IS re-run on an edit/delete (L07-F2, in
+  // handleSaveEditedSet / handleDeleteEditedSet below) so an edited-up set can
+  // still earn its celebration and an edited-down one clears a now-stale badge;
+  // derived analytics recompute from the DB on next view.
 
   // F7 (audit UI): stable identity so the memoised LoggedSetRow actually
   // skips on the per-second timer tick, the previous inline `() =>
@@ -3041,11 +3043,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     onEdit={openEditSet}
                     onDelete={openDeleteFromMenu}
                     isEditing={editingSet != null && editingSet.id === s.id}
-                    editValue={editValue}
+                    editValue={editingSet != null && editingSet.id === s.id ? editValue : null}
                     onChangeEditValue={setEditValue}
                     onSaveEdit={handleSaveEditedSet}
                     onCancelEdit={closeEditSet}
-                    saving={saving}
+                    saving={editingSet != null && editingSet.id === s.id ? saving : false}
                     weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
                   />
                 </AnimatedRow>

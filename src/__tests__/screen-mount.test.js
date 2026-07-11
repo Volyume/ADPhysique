@@ -1863,12 +1863,16 @@ describe('ActiveWorkoutScreen with active workout state', () => {
     }
   });
 
-  // U-A-1 invariant (ULTIMATE-003): the pre-card banner stack collapses into
-  // ONE tappable "N notes" chip — banner contents stay hidden until the chip is
-  // tapped, so the beat line + inputs stay above the fold — and the target line
-  // moved into the set-entry card header. Drives a real "Target reached" banner
-  // (recommendedSets met by the logged working sets) so the fold is exercised.
-  test('U-A-1: banners collapse into one "N notes" chip; target line sits in the card header', async () => {
+  // U-A-1 invariant, re-anchored for D43 S2: the pre-card banner stack now
+  // collapses into content-labelled StatusStrip chips (Deload / Superset /
+  // Coach note / Starter session / Target met) instead of one ambiguous
+  // "N notes" count chip — each banner's content stays hidden until its chip
+  // is tapped, so the beat line + inputs stay above the fold — and the target
+  // prescription (reps range) moved into the set-entry card header (folded
+  // beside the orientation line, the old "Target: N sets" row retired). Drives
+  // a real "Target reached" banner (recommendedSets met by the logged working
+  // sets) so the fold is exercised via the "Target met" chip.
+  test('D43 S2: banners collapse into content-labelled status chips; target prescription sits in the card header', async () => {
     const collectText = (node, out = []) => {
       if (node == null) return out;
       if (typeof node === 'string' || typeof node === 'number') { out.push(String(node)); return out; }
@@ -1909,13 +1913,15 @@ describe('ActiveWorkoutScreen with active workout state', () => {
       tree = result.tree;
       expect(tree).not.toBeNull();
 
-      // Collapsed (default): the "N notes" chip shows, but the collapsed banner
-      // content ("Target reached") is NOT in the tree yet — it is behind the tap.
+      // Collapsed (default): the content-labelled "Target met" chip shows, but
+      // its banner content ("Target reached") is NOT in the tree yet — it is
+      // behind the tap.
       const collapsed = collectText(tree.toJSON()).join('  ');
-      expect(collapsed).toMatch(/\d+\s+note/);          // the rail chip is present
+      expect(collapsed).toMatch(/Target met/);          // the content chip is present
       expect(collapsed).not.toMatch(/Target reached/);  // the banner stays folded
-      // The target line moved INTO the card header and still renders.
-      expect(collapsed).toMatch(/Target:\s*2\s*sets/);
+      // The target prescription (reps range) moved INTO the card header, folded
+      // beside the orientation line, and still renders.
+      expect(collapsed).toMatch(/8\s*-\s*12\s*reps/);
 
       // Expand: tap the chip; the folded banner content then appears.
       const chips = tree.root.findAll(
