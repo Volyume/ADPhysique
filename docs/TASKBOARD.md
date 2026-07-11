@@ -108,9 +108,50 @@ but the founder.
   letting some rests run out and skipping others, several sessions in a
   row - no crash.
 
+**WAVE LANDINGS (2026-07-11 late evening, all lead-reviewed, full suite
+697/8586 green at the boundary, pushed - each push cuts a build):**
+- R2-1 double intent prompt: 3903ccd. R2-8 native crash: d3445e3.
+- R2-2/3/4 logger chrome rebuild: f675c6b (header one family; rest-bar
+  overflow root-caused - readout flex/minWidth, controls flexShrink:0;
+  pencil contained; title/options aligned; est-max own caption line;
+  radius.sm eliminated; numerals tabular; loggerHeaderCohesion guard).
+- R2-5/6/7 summary + coach: a08e1c5 (dead band root cause was the screen
+  double-claiming the bottom inset - edges ['top'] now, render-level
+  workoutSummaryFooterBand guard; mini-bar hypothesis REFUTED with
+  evidence; scroll-end phantom clearance removed with the footerHeight
+  plumbing; check-in row one calm line; template prompt onto BottomSheet;
+  last blocking alert -> toast; comma-expression style bugs fixed).
+- R2-9 intent sheet redesign: 721249b (founder report: chips unreachable
+  after insta-start; intent now selects, one Start commits intent+chips,
+  Skip/opt-out keep instant zero-input start; D2 pins hold).
+
+**STOP-ITEM RULINGS (D33, lead, recorded):**
+- Alerts on the logger (13 validation/error -> toast; 2 undo conversions
+  touching PR-reeval/sync paths lead-built): NEXT SLOT, needs
+  ToastProvider ancestry verify first.
+- Raw logger Modals: D36a stands (education + swap modals stay raw); the
+  set-type picker + option menus -> BottomSheet in the next slot; their
+  in-modal CTAs convert with them.
+- Logged "This workout" rows stay radius.md (D60 dense data-receipt
+  ruling stands; recorded exception on the scorecard).
+- Theme gap: no sm/semibold type role exists; 13 sites across
+  logger+summary held rather than de-emphasised. NEXT SLOT: add a
+  `labelStrong` role to theme.js once, then map all listed sites.
+- Summary TouchableOpacity census: all 8 stay pressables (toggles/
+  icon-buttons/quiet pills, not CTAs). Prose numerals stay prose.
+
+**IN FLIGHT - APP-WIDE UNIFORMITY (the founder's "one package" order;
+the previously-held pristine pass is UN-HELD by tonight's order):** two
+Opus agents on disjoint lanes: (1) Progress stack (Analytics,
+Consistency, ProgressSections + ProgressStack residue) full census+fix
+to the food standard; (2) Home/Train/Coach residue census+fix
+(HomeScreen chrome-only around the fresh R2-9 sheet, Plans, You,
+CoachOutput + the six Home components; banners keep the recorded D69/70
+md class; COMP-027 outranks cohesion). Remaining screens batch next.
+
 RECOVERY: any dead session -> `git status`, review uncommitted diff against
 this entry, relaunch the affected agent with the same brief + the scope
-escalation above. R2-1 guard already landed (3903ccd).
+escalation above.
 
 ## R. REMEDIATION CAMPAIGN (founder order 2026-07-11, second device walk) — superseded by R2 above for live defects
 
