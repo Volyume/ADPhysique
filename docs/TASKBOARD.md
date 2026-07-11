@@ -93,7 +93,36 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
   cohesive with the app. Lead produces the blueprint (Opus legwork),
   founder approves, then staged build slots.
 
-### IN FLIGHT - exercise picker first-open fix (diagnosed 2026-07-11)
+### QUEUED - workout summary footer overlap (founder photo, 2026-07-11)
+- Founder photo (build 2608): on workout complete, the Close/Share
+  footer floats OVER the exercise list ("Seated Leg Curl" hidden
+  behind it) - scroll content missing bottom padding for the footer,
+  or the footer missing an opaque background. Verify-first diagnosis
+  + fix next free slot (WorkoutSummaryScreen; item 14 touched its
+  scroll). Fold the surface into the D43 blueprint regardless.
+
+### PRODUCTION CRASH TRIAGE - Sentry TypeError (2026-07-11, gated on connector)
+- Sentry alert (email screenshot): TypeError "undefined is not a
+  function", production, 02:14:15 UTC 2026-07-11, event
+  a82ce651514f4a9085a0e3540b6e17bf, during the founder's live session
+  on build 2608. Minified Hermes stack; lead symbolication from the
+  run-2608 APK bundle narrowed the offset to RN's
+  RefreshControl/ScrollView bytecode region BUT Hermes dedupes
+  identical function bodies, so the offset is not uniquely
+  attributable. NEXT STEP (blocked): founder enables the Sentry
+  connector for this chat (connected at org level, enabledInChat
+  false) -> pull the event's remaining 13 frames + breadcrumbs ->
+  attribute and fix. CI note: android build workflow archives no
+  sourcemap - queue a workflow tweak to save the Hermes map artefact
+  so future crashes symbolicate exactly.
+
+### ENGINE-CHECK EVIDENCE UPDATE (2026-07-11): founder's summary photo
+- confirms 9 exercises / 21 working sets on a "Week 1 of 5 - Ease in"
+  men's physique leg day (Men's Physique - Cut - V-Taper 4x/week).
+  21 working sets is not an ease-in dose; strengthens the queued
+  leg-day over-volume / division-weighting diagnosis above.
+
+### LANDED - exercise picker first-open fix `2fd723b` (diagnosed 2026-07-11)
 - DIAGNOSED (full report in session log): the void is FlashList
   committing a ~zero-height first native paint inside a freshly created
   Android Modal window (native window + insets warm-up race);
