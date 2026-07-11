@@ -417,7 +417,7 @@ const MEAL_ADDITIONS = {
   // ─── VEGAN ──────────────────────────────────────────────────────────────
   curated_vg_tofu_scramble: [
     { name: 'Turmeric', why: 'Gives tofu that golden, eggy colour.' },
-    { name: 'Kala namak (black salt)', why: 'The trick that makes tofu taste of egg.' },
+    { name: 'Kala namak (black salt)', why: 'The trick that makes tofu taste of egg. Find it in Asian grocers or online.' },
     { name: 'Nutritional yeast', why: 'A savoury, cheesy depth.' },
     { name: 'Black pepper & chilli', why: 'Lifts and warms the scramble.' },
   ],
