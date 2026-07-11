@@ -18,6 +18,7 @@ import AnimatedRow from '../AnimatedRow';
 export default function MealSection({
   slot, entries, onAdd, onEdit, onDelete,
   usuals = null, onLogUsual,
+  mealSuggestion = null, onLogMealSuggestion,
   selectionMode = false, selectedIds, onLongPressEntry, onToggleSelect,
   readOnly = false,
   // Food audit item 1 ("mark planned meal eaten", one tap): confirms just
@@ -46,6 +47,13 @@ export default function MealSection({
   // E10 read-only lapse views: never in read-only either, logging a usual is
   // a write.
   const showUsuals = !hasEntries && !selectionMode && !readOnly && Array.isArray(usuals) && usuals.length > 0;
+  // Founder must-fix #6 phase 2: a genuine curated-meal suggestion for an
+  // empty pre/post-workout slot (mealSuggestion is only ever populated for
+  // those two slots - see DiaryScreen). Personal history (usuals) wins when
+  // both exist, so a user's own established habit is offered before a
+  // generic library pick; the suggestion only shows once usuals have
+  // nothing to offer.
+  const showMealSuggestion = !hasEntries && !selectionMode && !readOnly && !showUsuals && !!mealSuggestion;
   const showEmptyActions = !hasEntries && !selectionMode && !readOnly;
   const showActionHub = !selectionMode && !readOnly;
   // Season to taste (founder 2026-07-01): once a curated / meal-plan meal is on
@@ -78,6 +86,26 @@ export default function MealSection({
           <Text maxFontSizeMultiplier={1.3} style={[styles.emptySlotText, live.emptySlotText]}>
             Your usual foods are below. Pick something else if this meal was different.
           </Text>
+        </View>
+      ) : null}
+      {showEmptyActions && showMealSuggestion ? (
+        <View style={styles.emptySlot}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.emptySlotText, live.emptySlotText]}>
+            A meal that fits what's left of your day. Pick something else if this doesn't suit.
+          </Text>
+        </View>
+      ) : null}
+      {showMealSuggestion ? (
+        <View style={styles.usuals}>
+          <TouchableOpacity
+            style={[styles.usualChip, live.usualChip]}
+            onPress={() => onLogMealSuggestion?.(mealSuggestion)}
+            accessibilityRole="button"
+            accessibilityLabel={`Add ${mealSuggestion.name ?? 'meal'} to ${slot.label}`}
+          >
+            <Ionicons name="add" size={14} color={t.colors.primary} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.usualChipText, live.usualChipText]} numberOfLines={1}>{mealSuggestion.name ?? 'Meal'}</Text>
+          </TouchableOpacity>
         </View>
       ) : null}
       {showUsuals ? (

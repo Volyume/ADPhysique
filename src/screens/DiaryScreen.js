@@ -25,6 +25,7 @@ import AnimatedEntrance from '../components/AnimatedEntrance';
 import Card from '../components/Card';
 import {
   getFoodEntriesForDay, getRecentLoggedDays, deleteFoodEntry, restoreFoodEntry, updateFoodEntry, getRollupForDay,
+  applyCuratedMealToDiary,
   setWater, getWater, createSavedMeal, confirmPlannedDay, clearPlannedDay,
   getSlotRecents, logFoodEntry, upsertSlotRecent, hasAnyFoodEntries,
 } from '../lib/food/db';
@@ -35,6 +36,8 @@ import { resolveFoodRef } from '../lib/food/sources/localCache';
 import { getNutritionTargets, hasWorkoutOnDate, getFirstWorkoutDateOnOrAfter, getOpenEdPatternFlag, getLatestBodyWeight, getLatestBodyComposition, getLatestCoachOutput } from '../lib/database';
 import { computeFFMFloor } from '../lib/nutritionEngine';
 import { targetWasFloored } from '../lib/food/mealPlanAssembler';
+import { getCuratedCandidates } from '../lib/food/curatedMeals';
+import { rankSuggestions, mealsLeftToday } from '../lib/food/mealSuggest';
 import { safeDayFloorKcal, displayBankedDelta } from '../lib/food/calorieBank';
 import { resolveEffectiveTargets, dayTypeLabel } from '../lib/food/effectiveTargets';
 import { loadPerDayOffsets, offsetForDate, DEFAULT_PERDAY_OFFSETS } from '../lib/food/perDayTargets';
@@ -87,7 +90,10 @@ function isValidDayKey(value) {
 
 export default function DiaryScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const { user, macroCycle, refeed, calorieBank, sex, energyUnit, tier, periWorkoutSlots } = useAppStore(useShallow((s) => ({
+  const {
+    user, macroCycle, refeed, calorieBank, sex, energyUnit, tier, periWorkoutSlots,
+    dietPreference, mealPlanExcludeFoods, mealPlanExcludeTags,
+  } = useAppStore(useShallow((s) => ({
     user: s.user,
     macroCycle: s.userProfile?.macroCycle ?? null,
     refeed: s.userProfile?.refeed ?? null,
@@ -99,6 +105,12 @@ export default function DiaryScreen({ navigation, route }) {
     // fix): the same "Around training" preference the meal-plan generator
     // already gates on (MealPlanScreen.js), so one toggle controls both.
     periWorkoutSlots: !!s.userProfile?.mealPlanPeriWorkout,
+    // Phase 2 (founder must-fix #6): the curated-meal suggestion for an empty
+    // pre/post-workout slot needs the same diet + exclusion inputs the
+    // FoodSearchScreen "Suggested" tab already uses.
+    dietPreference: s.userProfile?.dietPreference ?? 'omnivore',
+    mealPlanExcludeFoods: s.userProfile?.mealPlanExcludeFoods,
+    mealPlanExcludeTags: s.userProfile?.mealPlanExcludeTags,
   })));
   const setCalorieBank = useAppStore((s) => s.setCalorieBank);
   const saveLocalProfile = useAppStore((s) => s.saveLocalProfile);
@@ -756,6 +768,90 @@ export default function DiaryScreen({ navigation, route }) {
       toast.show("Couldn't add that. Try again.", { variant: 'error' });
     } finally {
       loggingUsualRef.current = false;
+    }
+  }, [canWrite, userId, selectedDate, load, toast]);
+
+  // Founder must-fix #6 phase 2: a genuine meal suggestion for an empty
+  // pre/post-workout slot, not just a visible-but-empty card. Reuses the
+  // exact deterministic ranking FoodSearchScreen's "Suggested" tab already
+  // uses (getCuratedCandidates filtered to the slot's preworkout/postworkout
+  // tag + the user's diet/exclusions, then rankSuggestions against the day's
+  // REMAINING macros, i.e. target minus what's already logged). Because the
+  // candidate is scored on what's left of the day, adding it redistributes
+  // within the existing day target rather than adding on top - the same
+  // aggregate-safety mealPlanAssembler.js relies on, just applied to a
+  // single manual pick instead of a whole generated day. Only ever computed
+  // for a slot that is enabled (mealSlots already gates on periWorkoutSlots)
+  // and currently empty; a slot with food already logged never shows a
+  // suggestion. Read-only diary shows none (a suggestion is a one-tap WRITE).
+  const [slotMealSuggestion, setSlotMealSuggestion] = useState({});
+  useEffect(() => {
+    if (!userId || readOnly) { setSlotMealSuggestion({}); return; }
+    const periSlots = mealSlots.filter(
+      (s) => (s.key === 'preworkout' || s.key === 'postworkout') && !(entriesBySlot[s.key]?.length),
+    );
+    if (!periSlots.length) { setSlotMealSuggestion({}); return; }
+    let active = true;
+    (async () => {
+      try {
+        const [targetsRow, rollup] = await Promise.all([
+          getNutritionTargets(userId),
+          getRollupForDay(userId, selectedDate),
+        ]);
+        if (!targetsRow) { if (active) setSlotMealSuggestion({}); return; }
+        const targets = {
+          kcal: targetsRow.targetKcal, protein: targetsRow.proteinG,
+          carbs: targetsRow.carbsG, fat: targetsRow.fatG,
+        };
+        const consumed = rollup
+          ? { kcal: rollup.kcal_total, protein: rollup.protein_g, carbs: rollup.carbs_g, fat: rollup.fat_g }
+          : { kcal: 0, protein: 0, carbs: 0, fat: 0 };
+        const loggedSlots = viewEntries.map((e) => e.meal_slot);
+        const mealsLeft = mealsLeftToday(mealsPerDay, loggedSlots);
+        const next = {};
+        periSlots.forEach((slot) => {
+          const candidates = getCuratedCandidates({
+            diet: dietPreference,
+            slot: slot.key,
+            excludeFoodKeys: mealPlanExcludeFoods,
+            excludeTags: mealPlanExcludeTags,
+          });
+          const { suggestions } = rankSuggestions({
+            targets, consumed, savedMeals: candidates, foods: [], slot: slot.key, mealsLeft, limit: 1,
+          });
+          if (suggestions.length) next[slot.key] = suggestions[0];
+        });
+        if (active) setSlotMealSuggestion(next);
+      } catch (_) {
+        if (active) setSlotMealSuggestion({});
+      }
+    })();
+    return () => { active = false; };
+  }, [
+    userId, readOnly, selectedDate, mealSlots, entriesBySlot, viewEntries, mealsPerDay,
+    dietPreference, mealPlanExcludeFoods, mealPlanExcludeTags,
+  ]);
+
+  // One-tap log of the pre/post-workout meal suggestion: fans the curated
+  // meal's foods into the diary at this slot/date via the same write path
+  // FoodSearchScreen's "Add to diary" uses (applyCuratedMealToDiary), then
+  // refreshes so the day's rollup/macro rings reflect it immediately. No
+  // silent retry, no partial fallback: a failure surfaces a calm toast and
+  // the slot stays empty for the user to try again or pick manually.
+  const loggingMealSuggestionRef = useRef(false);
+  const onLogMealSuggestion = useCallback(async (suggestion, slotKey) => {
+    if (!userId || !suggestion?.id || loggingMealSuggestionRef.current || !canWrite()) return;
+    loggingMealSuggestionRef.current = true;
+    audit('food.suggestMeal', { surface: 'diary_periworkout', mealId: suggestion.id, mealSlot: slotKey });
+    try {
+      const logged = await applyCuratedMealToDiary(userId, suggestion.id, { mealSlot: slotKey, entryDate: selectedDate });
+      if (!logged) { toast.show("Couldn't add that meal. Try again.", { variant: 'error' }); return; }
+      await load();
+      toast.show(`${suggestion.name ?? 'Meal'} added.`, { variant: 'success' });
+    } catch (_) {
+      toast.show("Couldn't add that meal. Try again.", { variant: 'error' });
+    } finally {
+      loggingMealSuggestionRef.current = false;
     }
   }, [canWrite, userId, selectedDate, load, toast]);
 
@@ -1481,6 +1577,8 @@ export default function DiaryScreen({ navigation, route }) {
                     entries={entriesBySlot[slot.key] ?? []}
                     usuals={(entriesBySlot[slot.key]?.length) ? null : (slotUsuals[slot.key] ?? null)}
                     onLogUsual={(food) => onLogUsual(food, slot.key)}
+                    mealSuggestion={(entriesBySlot[slot.key]?.length) ? null : (slotMealSuggestion[slot.key] ?? null)}
+                    onLogMealSuggestion={(suggestion) => onLogMealSuggestion(suggestion, slot.key)}
                     onAdd={() => addFood(slot.key)}
                     /* L05-D1/D6 (design-usability audit 2026-07-09): kept
                        wired but intentionally unused by MealSection - a
