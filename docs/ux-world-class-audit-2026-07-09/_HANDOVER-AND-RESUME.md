@@ -388,7 +388,12 @@ Everything is COMMITTED AND PUSHED through `788b1e5` except one thing:
 a Sonnet agent was MID-FLIGHT on D43 S1 slice 2 (extracting the 2-3
 most self-contained sheets from ActiveWorkoutScreen.js into
 src/components/workout/, presentational-only, template = `git show
-31b14a7`). If the tree holds uncommitted changes to
+31b14a7`). A WIP SNAPSHOT COMMIT may sit at the branch tip (message starts
+"WIP SNAPSHOT (unreviewed)") - it is the slice-2 agent's mid-flight
+state, committed ONLY so nothing was lost at session death. It is
+UNREVIEWED: the fresh session must lead-review it against the slice-1
+template and either keep it (lint + full suite + proper commit message
+via amend) or `git revert` it before any other work. If instead the tree holds uncommitted changes to
 ActiveWorkoutScreen.js / src/components/workout/ / logger guard tests:
 lead-review them against the slice-1 template and the blueprint S1
 rules (byte-identical moves, state stays in the screen, guards
