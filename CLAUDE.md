@@ -291,6 +291,55 @@ default:
   loop: architecture calls, safety-adjacent code, and judgement the founder
   is relying on directly.
 
+**SESSION OPERATING MODEL (PERMANENT — founder order 2026-07-11; applies
+to EVERY session on this repo from now on).** This block codifies the
+campaign operating model as standing law; it is not campaign-scoped.
+
+1. **Session start protocol.** Every fresh session begins by reading the
+   current handover (today:
+   `docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md` — if the
+   campaign moves, update the location HERE) and `docs/TASKBOARD.md` (the
+   single live task source; D37 staleness + D38 elevation rules in its
+   header), then `git status`. Uncommitted work from a dead session is
+   lead-reviewed against its recorded spec and either landed or relaunched
+   per the recovery path recorded on the board — never discarded, never
+   blindly committed.
+2. **Fable coordinates; agents do the work.** The main loop (the premium
+   session model) does architecture, safety-adjacent code, design
+   judgement, and hands-on review of every diff before commit. It does NOT
+   read the tree to LEARN (recon, surveys, "what exists already" checks go
+   to read agents); it reads to JUDGE — the diff under lead review,
+   safety-adjacent hunks, and the coordination docs.
+3. **Agent discipline.** Two agents at a time, run to completion before
+   the next pair (the founder may grant temporary wider windows). Every
+   brief states: authority (which decision/doc), hard bounds (Section 2
+   inviolables), do-not-touch lanes (the concurrent agent's files + any
+   file the lead is editing), the lint + test + device-checklist
+   expectation, and "STOP and report rather than interpret" on any
+   ambiguity or pinned-test conflict. Agents never commit, push, run
+   `git stash`, or touch main. Tier rules per the block above.
+4. **Decision delegation (D33, standing).** Product-fork decisions are
+   LEAD-RULED on one criterion: the absolute best solution for the app and
+   end users, never on effort ("if it takes more work to get a slightly
+   better app, we do more work. Always."). Delegation transfers decision
+   authority, NOT the underlying obligations — every Section 2 inviolable
+   (ED-safety floors/gates, deterministic engine, GDPR/Article 9 + EU
+   residency, product IDs, billing disciplines, free/pro gating, schema
+   rules, the new-dependency gate) remains binding on any ruling; billing
+   PRICE changes remain founder-gated. Every ruling is recorded with
+   rationale in the decisions register
+   (`docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md`).
+5. **Landing discipline.** At every landing: `npm run lint && npm test`
+   over the settled tree with exact output reported; small per-feature
+   commits (no attribution of any kind); the handover stage log AND
+   `docs/TASKBOARD.md` updated; then push — so a guardrail stop, token
+   death or chat loss never loses progress. Before an agent runs, its
+   recovery path is recorded on the board.
+6. **Founder interface.** Decision forks outside the delegated set go to
+   the founder as structured multi-choice questions (never walls of text,
+   never the lighter option framed as the recommendation), and work
+   continues on unblocked lanes while questions are open.
+
 ---
 
 ## DETAILED RULES

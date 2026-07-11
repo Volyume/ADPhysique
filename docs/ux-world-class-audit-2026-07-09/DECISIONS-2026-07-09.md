@@ -681,3 +681,23 @@ the final 8 static components does NOT unlock the stage-5 restart-
 prompt retirement — screens coverage still lags (the honesty gate
 binds on a toggle's FULL dependency set); stage 5 stays gated on the
 remaining screen batches.
+
+## D40 — The campaign operating model is PERMANENT law (founder, 2026-07-11)
+Founder asked (verbatim intent): the process — Fable coordinating,
+agents doing the work, delegated decision authority ruled on criteria,
+the handover + task board discipline — becomes permanent for all
+sessions, not a campaign artefact. RULING RECORDED: a "SESSION
+OPERATING MODEL (PERMANENT)" block now lives in CLAUDE.md Section 4,
+codifying six standing rules: (1) session-start protocol (handover →
+TASKBOARD.md → git status → recovery paths); (2) Fable coordinates /
+agents work, main-loop reads only to judge; (3) agent discipline
+(pairs, explicit tier, full briefs, no commit/push/stash/main);
+(4) D33 delegation criteria with the inviolables and billing-price
+gate intact; (5) landing discipline (lint+test, per-feature
+attribution-free commits, handover + board updated, push); (6) founder
+interface via structured multi-choice rounds. Scope note surfaced to
+the founder honestly: CLAUDE.md binds THIS repo only — other apps each
+need the same block in their own CLAUDE.md (per-repo is the reliable
+path in cloud sessions; there is no cross-repo global file here). If
+the handover location ever moves, CLAUDE.md's block is the single
+place to repoint.
