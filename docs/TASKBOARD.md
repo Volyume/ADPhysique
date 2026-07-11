@@ -49,8 +49,9 @@ leg-day engine work (D45 + D46) all LANDED - detail rolled to
   preserved behind a new shell; 5 staged slots (S1 decomposition -> S2
   Now card + status strip -> S3 stable CTA + overflow diet -> S4
   in-place edit + plate readout -> S5 cohesion polish). RPE stays out
-  per D14/D19 held list. FOUNDER GATE: approve the blueprint, then S1
-  starts. RECOVERY: blueprint doc is committed; on approval work S1
+  per D14/D19 held list.   S1 slice 1 LANDED (LoggedSetRow + EmptyExerciseView extracted,
+  guards re-pinned, suite green); next slices: sheets extraction,
+  then S2-S5 per the blueprint. RECOVERY: blueprint doc is committed; on approval work S1
   from its Section 7.
 
 ### LANDED - CP-10 theming batch G, BOTH LANES (2026-07-11)

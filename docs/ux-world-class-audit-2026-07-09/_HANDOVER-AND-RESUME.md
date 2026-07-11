@@ -441,7 +441,9 @@ failed, lint clean.**
    (queue worked top to bottom, never curated), D48 (gates ruled not
    waited on), D49 (D43 blueprint ruled approved; S1 slice-1 agent
    stopped by the founder mid-run with a clean tree, then RELAUNCHED on
-   the founder's explicit "Go s1" - running at this writing), D50
+   the founder's explicit "Go s1"; slice 1 LANDED - LoggedSetRow +
+   EmptyExerciseView extracted to src/components/workout/, guards
+   re-pinned, full suite 8,485 green at the boundary), D50
    (Manrope ruled and LANDED `9148a6f`, Inter files removed `982f0d2`),
    D51 (lowest-tier agents, lead coordinates only), D52 (kala namak
    kept with a sourcing note `bb91f9b`). SD-11 idempotency fix
