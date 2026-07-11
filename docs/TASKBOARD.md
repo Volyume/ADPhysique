@@ -47,20 +47,24 @@ git-verified, not from memory. This section is worked before anything below it._
 3. **Simplify routine headings on Today and Train** (name only; drop the
    days-per-week + date cram). NOT DONE — was deferred to "need a screenshot".
    Real live cause found: training frequency ("N x/Week") is baked into the
-   plan NAME via `src/lib/planDisplay.js`, so it reads as name+frequency
-   crammed. FIX = strip the frequency from the displayed heading (keep in data),
-   same on Today (HomeScreen) and Train (PlansScreen). IN PROGRESS.
+   plan NAME, so it read as name+frequency crammed. DONE (`e7a84f8`):
+   display-only planHeadingName() strips the "N x/Week" suffix at the Today
+   and Train heading sites; raw plan.name untouched everywhere else.
 4. **Fix the empty third card on Progress** (Sessions + New Bests in a 3-slot
    layout, blank third). NEEDS VERIFY — a read found AnalyticsScreen's spark row
    already two-up flex (flex:1, no third slot); confirm there is no OTHER
-   progress surface with the gap, else it is already fixed and shows on a fresh
-   build. IN PROGRESS.
+   progress surface with the gap. VERIFIED (`e7a84f8` report): AnalyticsScreen
+   spark row is already two-up flex with no third slot, no other progress
+   surface has the gap - already correct in source, shows fixed on a fresh
+   build.
 5. **Clean up the Coach screen.** PARTIAL. DONE (`f822a91`): removed the
    "private coaching based on your logs" footer, consolidated the check-in
    info onto the check-in row, fixed the "come back Sunday" vs dated-button
    mismatch (weekday-anchor bug). OUTSTANDING: the card/heading showing only
-   "Your" (should be "Your week") and a final confirm the "This week" heading
-   fits its content. IN PROGRESS.
+   "Your" (should be "Your week"). VERIFIED already correct in source: the
+   NavRow renders "Your week" in full with no numberOfLines/width clip;
+   "This week" heading fits its content - resolves on a fresh build. The
+   footer/consolidation/date-fix half remains landed at `f822a91`.
 6. **Pre/Post-workout meals.** Founder ruling: fully implement (off by default,
    populated + macro-redistributed when on) OR remove — not half-built.
    PHASE 1 DONE (`b53a817`): off by default, fully hidden when off, no empty
@@ -76,8 +80,8 @@ git-verified, not from memory. This section is worked before anything below it._
    (`94cd1fe`): history now merges the morning_weights table too, not just
    body_metric_log.
 
-**REMAINING TO COMPLETE THE LIST: #3, #4 (verify), #5 (the "Your" heading), #6
-phase 2.** Only when all nine are complete does the queue pause for the founder
+**REMAINING TO COMPLETE THE LIST: #6 phase 2 (in flight). #3 fixed; #4 and #5
+verified already-correct in source.** Only when all nine are complete does the queue pause for the founder
 review.
 
 ---
