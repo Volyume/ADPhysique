@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { appAlert } from '../components/AppAlert';
+import { useToast } from '../components/Toast';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -85,6 +85,7 @@ function recentMonthRecapParams(earliestWorkoutAt) {
 }
 
 export default function AnalyticsScreen({ navigation, route }) {
+  const toast = useToast();
   const user = useAppStore(s => s.user);
   const userProfile = useAppStore(s => s.userProfile);
   const tier = useAppStore(s => s.tier);
@@ -794,10 +795,11 @@ export default function AnalyticsScreen({ navigation, route }) {
                   lockedSub={`${toGo} session${toGo === 1 ? '' : 's'} to go`}
                   onPress={() => {
                     if (!recapUnlocked) {
-                      appAlert(
-                        'Recaps',
-                        `Your first monthly recap is ready after ${RECAP_GATE} logged sessions. ${toGo} to go.`,
-                      );
+                      // R9 (D70): a blocking alert for purely informational
+                      // copy diverged from the house rule (toast for
+                      // non-destructive feedback; alerts for destructive
+                      // confirms only).
+                      toast.show(`Your first monthly recap is ready after ${RECAP_GATE} logged sessions. ${toGo} to go.`, { variant: 'info' });
                       return;
                     }
                     navigation.navigate('RecapStory', recentMonthRecapParams(earliestWorkoutAt));

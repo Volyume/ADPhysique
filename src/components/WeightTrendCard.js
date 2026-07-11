@@ -141,9 +141,13 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
 }
 
 const styles = StyleSheet.create({
+  // R9 (D69): radius.md -> lg, the app-wide card class. The state dot's
+  // colour grammar is NOT touched: COMP-027 Class B already rules it
+  // (caps at watch, decorative only, stripped under an open ED flag) and
+  // that safety-reviewed decision outranks cohesion styling.
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
