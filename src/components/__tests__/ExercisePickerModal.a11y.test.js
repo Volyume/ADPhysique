@@ -19,7 +19,11 @@ describe('ExercisePickerModal accessibility labels', () => {
 
   test('keeps in-workout swap mode as search and select only', () => {
     expect(source).toContain('const showBrowseFilters = !isSwapAction;');
-    expect(source).toContain('{showBrowseFilters ? (');
+    // 2026-07-11: widened for the first-open native-race fix (TASKBOARD
+    // "exercise picker first-open fix"), which additionally gates this
+    // block on `modalShown` -- the showBrowseFilters half of the condition
+    // is unchanged, so this still pins swap mode staying search-and-select.
+    expect(source).toContain('modalShown && showBrowseFilters ? (');
     expect(source).toContain('Swap mode stays');
     expect(source).toContain('ListFooterComponent={!isSwapAction ? (');
     expect(source).toContain("isSwapAction ? 'No swaps found. Try a different search.'");

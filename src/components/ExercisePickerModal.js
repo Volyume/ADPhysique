@@ -99,9 +99,29 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
   const [createSecondaryMuscles, setCreateSecondaryMuscles] = useState([]);
   const [createExerciseType, setCreateExerciseType] = useState('weight_reps');
   const [creating, setCreating] = useState(false);
+  // 2026-07-11 (TASKBOARD "exercise picker first-open fix", D33): on the
+  // FIRST open of a session the Android Modal's native window is freshly
+  // created, and FlashList's native measurement handshake races that
+  // window's setup (the same class of race the SafeAreaProvider comment
+  // below already documents for insets) -- the list commits a ~zero-height
+  // first paint, clipping results/ListEmptyComponent/the create-custom
+  // footer and the browse-filter chips into a blank gap. Second and later
+  // opens self-heal because Android remounts the modal's child tree each
+  // open, so the native setup is already warm. `modalShown` gates that
+  // content on the Modal's onShow, which only fires after the window is
+  // actually presented, so the first layout pass always runs against a
+  // presented window instead of a still-forming one.
+  const [modalShown, setModalShown] = useState(false);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      // Reset point: this effect already re-arms every other per-open bit
+      // of state (query/filters/showCreate) the moment the modal closes, so
+      // resetting modalShown here too keeps the "next open starts cold"
+      // gate in the same single place rather than adding a second effect.
+      setModalShown(false);
+      return;
+    }
     setQuery('');
     setMuscleFilter('');
     setEquipmentFilter('');
@@ -210,7 +230,14 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
   }
 
   return (
-    <Modal visible={visible} animationType={reduceMotion ? 'none' : 'slide'} onRequestClose={showCreate ? () => setShowCreate(false) : onClose}>
+    <Modal visible={visible} animationType={reduceMotion ? 'none' : 'slide'} onRequestClose={showCreate ? () => setShowCreate(false) : onClose}
+      // 2026-07-11: onShow fires after the modal's native window is actually
+      // presented on both platforms (unlike the `visible` prop, which flips
+      // the instant we ask for it) -- it is the first point we can trust
+      // that a first native layout pass will land against a real, presented
+      // window rather than one still mid-setup.
+      onShow={() => setModalShown(true)}
+    >
       {/* A core RN <Modal> presents in its own window on iOS and does not
           inherit the root SafeAreaProvider's measured frame, so a bare
           SafeAreaView inside reads top:0 and the search field jams against the
@@ -367,11 +394,15 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               </View>
             ) : null}
 
-            {showBrowseFilters ? (
+            {modalShown && showBrowseFilters ? (
               <>
                 {/* Browse filters are for adding exercises. Swap mode stays
                     search-and-select so it does not bury the replacement list
-                    under two rows of unrelated chips mid-workout. */}
+                    under two rows of unrelated chips mid-workout.
+                    2026-07-11: also gated on modalShown -- see the
+                    first-open native-race comment by the modalShown
+                    declaration above. Pre-show frame renders nothing here
+                    (see the FlashList gate below for why). */}
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -413,6 +444,15 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               </>
             ) : null}
 
+            {/* 2026-07-11: gated on modalShown, see the first-open
+                native-race comment by the modalShown declaration above.
+                Pre-show frame renders nothing rather than a placeholder
+                View -- the SafeAreaView above already paints the themed
+                background across this whole area, so there is no black
+                void to cover, and skipping an extra element keeps this
+                change to state + a condition, not a new node that could
+                itself need to survive the same measurement race. */}
+            {modalShown ? (
             <FlashList
               data={filtered}
               keyExtractor={e => String(e.id)}
@@ -463,6 +503,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 </View>
               }
             />
+            ) : null}
           </>
         )}
       </SafeAreaView>
