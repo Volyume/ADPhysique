@@ -55,7 +55,9 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   });
 
   test('primary set CTA speaks the same action the user sees', () => {
-    const spokenLabel = ACTIVE_WORKOUT.match(/accessibilityLabel=\{\s*currentSet\.setType === 'warmup'[\s\S]{0,420}\}/)?.[0] ?? '';
+    // R4 (D64): the per-side branch now leads the ternary - mid-pair the
+    // primary is "Log other side" and the spoken label matches it.
+    const spokenLabel = ACTIVE_WORKOUT.match(/accessibilityLabel=\{\s*perSide \? 'Other side done, log this set'[\s\S]{0,460}\}/)?.[0] ?? '';
 
     expect(spokenLabel).toContain("currentSet.setType === 'warmup' ? 'Log warm-up'");
     expect(spokenLabel).toContain("? 'Start cluster' : 'Log set'");

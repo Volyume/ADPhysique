@@ -1891,7 +1891,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // here is a no-op rather than mis-committing the in-progress pair.
   function handleCompleteSetPress() {
     if (saving) return;
-    if (perSide) return;
+    // R4 (D64): mid-pair, the permanent primary IS the side-two commit -
+    // "Log other side" relabels the same button in the same position, so a
+    // per-side set is exactly two taps on one stable control, no separate
+    // confirm step and no sheet.
+    if (perSide) return finishPerSide();
     // D43 S3: the bottom bar's logging primary is now permanent (blueprint
     // 3.7), so there is no separate "Log another set" tap to arm the extra
     // set first -- tapping the ever-present primary past target logs another
@@ -1978,23 +1982,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       appAlert('Enter weight', `Enter the weight used (in ${units}) before starting your first side.`);
       return;
     }
+    // R4 (D64): pressing "Log set" IS side one's confirmation - the user
+    // taps it when the first side is done, exactly like any other set.
+    // Capture the pair immediately in the side-two phase and start the
+    // rest-class-governed between-sides pause (D9 amendment 2, unchanged:
+    // compound gets a real half-rest timer; isolation gets no timer, the
+    // inline banner shows a plain "switch sides" prompt instead).
     setPerSide({
       setType: currentSet.setType,
       weight: currentSet.weight,
       reps,
-      phase: 'side1',
+      phase: 'side2',
     });
-    hapticsVocab.selection();
-  }
-
-  // "Side one done": moves the guided sheet to side two and starts the
-  // rest-class-governed pause (D9 amendment 2, unchanged) - compound gets a
-  // real running rest timer (half the exercise's normal rest); isolation
-  // gets no timer at all, betweenSeconds is null and the sheet shows a
-  // plain "switch sides" prompt instead.
-  function advancePerSideToSideTwo() {
-    if (!perSide || perSide.phase !== 'side1') return;
-    setPerSide(p => (p ? { ...p, phase: 'side2' } : p));
     hapticsVocab.setLogged();
     const restPlan = perSideRestPlan(exercise?.compoundIsolation, routineExercise?.restSeconds || defaultRestSeconds || 90);
     if (restPlan.betweenSeconds != null) startRestTimer(restPlan.betweenSeconds);
@@ -2956,6 +2955,37 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             ) : null}
           </Card>
 
+          {/* R4 (D64): the between-sides banner. Appears only mid-pair
+              (side one logged via the primary, side two pending on the same
+              relabelled primary below). Cluster-banner visual class: bordered
+              primaryBg card, proper gap rhythm - nothing touches. The rest
+              timer above runs the between-sides pause for compounds;
+              isolation gets the plain switch-sides prompt here instead. */}
+          {perSide ? (
+            <View style={[styles.clusterBanner, live.clusterBanner]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.clusterTitle, live.clusterTitle]}>
+                Side one logged
+              </Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.clusterReps, live.clusterReps]}>
+                {`${perSide.reps} reps${perSide.weight ? ` @ ${perSide.weight}${units}` : ''} - same on your other side`}
+              </Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>
+                {exercise?.compoundIsolation === 'compound'
+                  ? 'Rest, switch sides, then tap Log other side.'
+                  : "Switch sides when you're ready, then tap Log other side."}
+              </Text>
+              <TouchableOpacity
+                onPress={cancelPerSide}
+                style={[styles.clusterCancel, live.clusterCancel]}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel this per-side set, nothing is logged"
+              >
+                <Text maxFontSizeMultiplier={1.3} style={[styles.clusterCancelText, live.clusterCancelText]}>Cancel set</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           {/* Cluster banner: drives myo-rep / rest-pause mini-sets. */}
           {cluster ? (
             <View style={[styles.clusterBanner, live.clusterBanner]}>
@@ -3100,7 +3130,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             The earlier "no insets here" note (2026-07-02) described the stock
             always-visible tab bar and no longer holds. Math.max keeps the
             old padding on devices that report no bottom inset. */}
-        {(cluster || perSide) ? null : (
+        {cluster ? null : (
           <View style={[styles.bottomBar, live.bottomBar, { paddingBottom: Math.max(spacing.md, safeBottom + spacing.sm) }]}>
             {/* D43 S3 (blueprint 3.7, "Bottom bar — stable identity"): the
                 primary is ALWAYS Log set / Log warm-up / Start cluster while
@@ -3124,17 +3154,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 onPress={handleCompleteSetPress}
                 disabled={saving}
                 accessibilityLabel={
-                  currentSet.setType === 'warmup' ? 'Log warm-up'
+                  perSide ? 'Other side done, log this set'
+                  : currentSet.setType === 'warmup' ? 'Log warm-up'
                   : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'
                 }
               >
                 <Ionicons name="checkmark-circle" size={20} color={currentSet.setType === 'warmup' ? t.colors.warning : t.colors.onPrimary} />
                 <Text maxFontSizeMultiplier={1.3} style={[styles.completeBtnText, live.completeBtnText, currentSet.setType === 'warmup' && [styles.completeBtnTextWarmup, live.completeBtnTextWarmup]]}>
-                  {currentSet.setType === 'warmup' ? 'Log warm-up'
+                  {perSide ? 'Log other side'
+                    : currentSet.setType === 'warmup' ? 'Log warm-up'
                     : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'}
                 </Text>
               </Button>
-              {targetComplete && !extraSetArmed ? (
+              {targetComplete && !extraSetArmed && !perSide ? (
                 isLastExercise ? (
                   <Button
                     testID="volyume-btn-finish-primary"
@@ -3337,27 +3369,28 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <View style={styles.supSteps}>
                   <View style={styles.supStep}>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>1</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>Do your first side, using the reps in your set entry.</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>Do your first side, then tap Log set.</Text>
                   </View>
                   <View style={styles.supStep}>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>2</Text>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>
                       {isCompound
-                        ? 'Half your normal rest, then do the same reps on the other side.'
+                        ? 'Half your normal rest, then do the same reps on your other side.'
                         : 'Switch sides when you\'re ready, no forced timer, then do the same reps.'}
                     </Text>
                   </View>
                   <View style={styles.supStep}>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>3</Text>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>
-                      {isCompound
-                        ? 'Rest the same again, then start your next set.'
-                        : 'Rest as normal once both sides are done.'}
-                    </Text>
+                      Tap Log other side - the same button, one more tap.</Text>
                   </View>
                   <View style={styles.supStep}>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>4</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>Logs as one set, the same reps on both sides.</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>
+                      {isCompound
+                        ? 'It logs as one set. Rest as normal, then your next set.'
+                        : 'It logs as one set. Rest as normal once both sides are done.'}
+                    </Text>
                   </View>
                 </View>
 
@@ -3443,69 +3476,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
 
 
-        {/* Per-side (unilateral) guided set sheet, D-founder reversal
-            (2026-07-11): sequential unilateral logging - all reps on one
-            side, then the other (never "alternating", which would mean
-            swapping sides every rep). Both sides use the SAME prescribed
-            reps (perSide.reps), fixed once at the start; there is no second
-            number to type here, unlike the old two-input cluster-style
-            banner this replaces. Cancel (onClose) matches cancelPerSide so
-            a swipe-down or backdrop tap abandons the guided set exactly
-            like the old Cancel button did. */}
-        <WorkoutBottomSheet
-          visible={!!perSide}
-          onClose={cancelPerSide}
-          accessibilityLabel="Unilateral set, one side at a time"
-        >
-          {perSide ? (
-            <>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>
-                {perSide.phase === 'side1' ? 'Side one' : 'Side two'}
-              </Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.sheetExplainer, live.sheetExplainer]}>
-                {`${perSide.reps} reps${perSide.weight ? ` at ${perSide.weight}${units}` : ''}, the same on each side.`}
-              </Text>
-              {perSide.phase === 'side1' ? (
-                <>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>
-                    Do your first side, then confirm below.
-                  </Text>
-                  <Button
-                    variant="primary"
-                    style={[styles.completeBtn, live.completeBtn]}
-                    onPress={advancePerSideToSideTwo}
-                    disabled={saving}
-                    accessibilityLabel="First side done, move to the other side"
-                  >
-                    <Ionicons name="checkmark-circle" size={20} color={t.colors.onPrimary} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.completeBtnText, live.completeBtnText]}>Side one done</Text>
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>
-                    {exercise?.compoundIsolation === 'compound'
-                      ? 'Resting, then do the same reps on your other side.'
-                      : 'Switch sides when you\'re ready, then do the same reps.'}
-                  </Text>
-                  <Button
-                    variant="primary"
-                    style={[styles.completeBtn, live.completeBtn]}
-                    onPress={finishPerSide}
-                    disabled={saving}
-                    accessibilityLabel="Other side done, log this set"
-                  >
-                    <Ionicons name="checkmark-circle" size={20} color={t.colors.onPrimary} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.completeBtnText, live.completeBtnText]}>Side two done</Text>
-                  </Button>
-                </>
-              )}
-              <TouchableOpacity onPress={cancelPerSide} style={[styles.clusterCancel, live.clusterCancel]} accessibilityLabel="Cancel this set">
-                <Text maxFontSizeMultiplier={1.3} style={[styles.clusterCancelText, live.clusterCancelText]}>Cancel</Text>
-              </TouchableOpacity>
-            </>
-          ) : null}
-        </WorkoutBottomSheet>
+        {/* R4 (D64): the per-side confirm sheet is RETIRED. Side one is
+            captured by the "Log set" tap itself (startPerSide), and side two
+            commits from the same permanent bar primary, relabelled "Log
+            other side". What renders here is only the compact BETWEEN-SIDES
+            banner - same visual class as the cluster banner (proper gap
+            rhythm, no touching controls), never a sheet over the inputs.
+            Both sides use the SAME prescribed reps (perSide.reps, D54 -
+            there is only ever one number). Cancel discards the pending
+            pair; nothing has been written yet. */}
 
         {/* Set Type Picker Bottom Sheet */}
         <WorkoutBottomSheet

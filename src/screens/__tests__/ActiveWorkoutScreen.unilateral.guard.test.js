@@ -82,16 +82,10 @@ describe('unilateral logging: laterality detection never forces bilateral exerci
 });
 
 describe('D9 amendment 2: rest-class behaviour is derived, never user-set (unchanged by the reversal)', () => {
-  test('advancePerSideToSideTwo (side one done) derives the between-sides pause from perSideRestPlan(compoundIsolation, restSeconds)', () => {
-    const fn = ACTIVE_WORKOUT.match(/function advancePerSideToSideTwo\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+  test('R4 (D64): startPerSide derives and starts the between-sides pause itself - the Log set tap IS side one done', () => {
+    const fn = ACTIVE_WORKOUT.match(/function startPerSide\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
     expect(fn).toContain('const restPlan = perSideRestPlan(exercise?.compoundIsolation, routineExercise?.restSeconds || defaultRestSeconds || 90);');
     expect(fn).toContain('if (restPlan.betweenSeconds != null) startRestTimer(restPlan.betweenSeconds);');
-  });
-
-  test('startPerSide (opening the guided sheet at side one) no longer starts the between-sides timer itself — that only happens once side one is confirmed done', () => {
-    const fn = ACTIVE_WORKOUT.match(/function startPerSide\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
-    expect(fn).not.toContain('perSideRestPlan(');
-    expect(fn).not.toContain('startRestTimer(');
   });
 
   test('the post-pair rest halves for a compound per-side set, stays full for isolation', () => {
@@ -103,9 +97,9 @@ describe('D9 amendment 2: rest-class behaviour is derived, never user-set (uncha
     expect(fn).toContain("perSideCompound: exercise?.compoundIsolation === 'compound',");
   });
 
-  test('the guided sheet names the rest-class difference (compound rest vs isolation switch prompt) on side two', () => {
-    expect(ACTIVE_WORKOUT).toContain("? 'Resting, then do the same reps on your other side.'");
-    expect(ACTIVE_WORKOUT).toContain(": 'Switch sides when you\\'re ready, then do the same reps.'");
+  test('R4 (D64): the between-sides banner names the rest-class difference (compound rest vs isolation switch prompt)', () => {
+    expect(ACTIVE_WORKOUT).toContain("? 'Rest, switch sides, then tap Log other side.'");
+    expect(ACTIVE_WORKOUT).toContain(': "Switch sides when you\'re ready, then tap Log other side."');
   });
 });
 
@@ -156,21 +150,24 @@ describe('storage invariant, rewritten: one workout_sets row, actual_reps = the 
 });
 
 describe('guided two-phase interaction: side one -> rest-class pause -> side two -> one row', () => {
-  test('perSide state carries a phase (side1/side2), not two independently-entered rep counts', () => {
+  test('R4 (D64): perSide state carries ONE rep count and enters side-two directly - pressing Log set is side one', () => {
     expect(ACTIVE_WORKOUT).toContain("const [perSide, setPerSide] = useState(null);");
-    expect(ACTIVE_WORKOUT).toContain("phase: 'side1',");
+    expect(ACTIVE_WORKOUT).toContain("phase: 'side2',");
+    // The middle confirm tap is gone for good.
+    expect(ACTIVE_WORKOUT).not.toContain('function advancePerSideToSideTwo');
+    expect(ACTIVE_WORKOUT).not.toContain("phase: 'side1',");
   });
 
-  test('advancePerSideToSideTwo only fires from side one, and flips the phase forward', () => {
-    const fn = ACTIVE_WORKOUT.match(/function advancePerSideToSideTwo\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
-    expect(fn).toContain("if (!perSide || perSide.phase !== 'side1') return;");
-    expect(fn).toContain("setPerSide(p => (p ? { ...p, phase: 'side2' } : p));");
-  });
-
-  test('the guided sheet renders through the shared WorkoutBottomSheet chrome, not a bespoke inline banner', () => {
-    const sheetWindow = ACTIVE_WORKOUT.match(/<WorkoutBottomSheet[\s\S]{0,400}/)?.[0] ?? '';
-    expect(sheetWindow).toContain('visible={!!perSide}');
-    expect(sheetWindow).toContain('onClose={cancelPerSide}');
+  test('R4 (D64): the permanent bar primary commits side two (Log other side) - no confirm sheet', () => {
+    // Mid-pair, handleCompleteSetPress routes the same primary to finishPerSide.
+    expect(ACTIVE_WORKOUT).toContain('if (perSide) return finishPerSide();');
+    // The primary relabels in place; the spoken label matches.
+    expect(ACTIVE_WORKOUT).toContain("perSide ? 'Log other side'");
+    expect(ACTIVE_WORKOUT).toContain("perSide ? 'Other side done, log this set'");
+    // The per-side WorkoutBottomSheet is retired; the between-sides state is
+    // the inline banner (cluster-banner visual class, proper gap rhythm).
+    expect(ACTIVE_WORKOUT).not.toContain('visible={!!perSide}');
+    expect(ACTIVE_WORKOUT).toContain('Side one logged');
   });
 
   test('per-side pairs still count as ONE set toward whatever target resolves (finishPerSide -> one handleCompleteSet call, one row)', () => {
@@ -195,8 +192,9 @@ describe('one-time walkthrough fires once ever, same @volyume_seen_* convention 
     expect(ACTIVE_WORKOUT).toContain("appAlert(\n        'Log this one side at a time?',");
   });
 
-  test('the walkthrough no longer promises a "lower side" comparison — both sides use the same reps', () => {
+  test('R4 (D64): the walkthrough teaches the two-tap flow and never promises a "lower side" comparison', () => {
     expect(ACTIVE_WORKOUT).not.toContain("using your lower side's reps");
-    expect(ACTIVE_WORKOUT).toContain('Logs as one set, the same reps on both sides.');
+    expect(ACTIVE_WORKOUT).toContain('Do your first side, then tap Log set.');
+    expect(ACTIVE_WORKOUT).toContain('Tap Log other side - the same button, one more tap.');
   });
 });

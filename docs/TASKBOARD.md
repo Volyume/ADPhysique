@@ -76,11 +76,18 @@ No item marked done on an agent's self-report. Ever._
   big MilestoneBurst stays on the summary screen. Suppression rules
   strictly stronger. firstLift + TalkBack + motion pins pass unchanged.
   DEVICE CHECK: founder confirms no grey hang on set completion.
-- **R4 Unilateral logging redesign.** Founder: current flow is terrible -
-  log set then a second "side one done" tap; side-one button touches the
-  text above, cancel touches it below. Needs PROPER investigation and a
-  real design: one tap, self-explanatory. NOT a patch. STATUS: queued
-  (lead design after recon).
+- **R4 Unilateral logging redesign.** DONE (lead design + hands-on build;
+  ruling D64 from plan-C study + competitive research - no competitor has
+  solved per-side logging). NEW FLOW, 2 taps total: "Log set" captures
+  side one immediately (the tap IS the confirmation) and starts the
+  rest-class between-sides pause; the SAME permanent primary relabels to
+  "Log other side" and commits the pair as one row (D54: one number, same
+  reps both sides). Confirm sheet + middle tap DELETED; between-sides
+  state is a properly-spaced inline banner (cluster-banner class) with a
+  clear cancel. Walkthrough teaches the two taps. Guards re-anchored to
+  D64 (21 unilateral pins green); storage/engine invariants untouched.
+  DEVICE CHECK: founder walks a dumbbell curl - expect exactly two taps,
+  no sheet, nothing touching.
 - **R5 Logger cohesion to the Food standard.** Header (X / Finish / elapsed
   counter all different styles), and differing styles across the whole
   surface. Food (Diary etc.) is the explicit standard. STATUS: queued

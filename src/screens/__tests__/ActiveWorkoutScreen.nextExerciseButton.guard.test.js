@@ -61,7 +61,7 @@ const SRC = fs.readFileSync(
 // advance-action pair (blueprint 3.7's additive layout), so the old
 // "single-nesting-level" regex no longer matches reliably. Located by
 // anchor strings instead, robust to the exact nesting depth.
-const BAR_START = SRC.indexOf('{(cluster || perSide) ? null : (\n          <View style={[styles.bottomBar,');
+const BAR_START = SRC.indexOf('{cluster ? null : (\n          <View style={[styles.bottomBar,');
 const BAR_END = SRC.indexOf('{/* Exercise Picker Modal, shared by Add and Swap', BAR_START);
 const bottomBarWindow = (BAR_START >= 0 && BAR_END > BAR_START) ? SRC.slice(BAR_START, BAR_END) : '';
 
@@ -79,7 +79,7 @@ describe('target-reached bottom bar gains "Next exercise" / "Finish workout" BES
     expect(SRC).toContain('const targetSets = adjustedSetCount || routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS;');
     expect(SRC).toContain('const workingLogged = countProgressSets(loggedSets);');
     expect(SRC).toContain('const targetComplete = targetSets && workingLogged >= targetSets;');
-    expect(bottomBarWindow).toContain('{targetComplete && !extraSetArmed ? (');
+    expect(bottomBarWindow).toContain('{targetComplete && !extraSetArmed && !perSide ? (');
   });
 
   test('reaching target on a non-last exercise shows "Next exercise" ADDITIVELY, wired to the existing handleNextExercise nav', () => {
@@ -119,7 +119,7 @@ describe('target-reached bottom bar gains "Next exercise" / "Finish workout" BES
     // that action's testID, both come AFTER it now -- the inverse order of
     // the pre-S3 shape this test used to pin.
     const logSetIndex = bottomBarWindow.indexOf('testID="volyume-btn-complete-set"');
-    const gateIndex = bottomBarWindow.indexOf('{targetComplete && !extraSetArmed ? (');
+    const gateIndex = bottomBarWindow.indexOf('{targetComplete && !extraSetArmed && !perSide ? (');
     const nextExerciseIndex = bottomBarWindow.indexOf('testID="volyume-btn-next-exercise"');
     expect(logSetIndex).toBeGreaterThanOrEqual(0);
     expect(gateIndex).toBeGreaterThan(logSetIndex);
@@ -150,7 +150,7 @@ describe('extra sets beyond the plan stay loggable (D8 junk-volume: never a wall
     // targetComplete && !extraSetArmed is false and only the (unconditional)
     // primary remains, same end-state as pre-S3, reached by one tap instead
     // of two.
-    expect(bottomBarWindow).toContain('{targetComplete && !extraSetArmed ? (');
+    expect(bottomBarWindow).toContain('{targetComplete && !extraSetArmed && !perSide ? (');
     expect(SRC).toContain('const [extraSetArmed, setExtraSetArmed] = useState(false);');
   });
 });
@@ -160,8 +160,14 @@ describe('the advance action never shows mid-exercise, and never mid a per-side 
     expect(SRC).toContain('const targetComplete = targetSets && workingLogged >= targetSets;');
   });
 
-  test('the whole bottom bar (primary AND the conditional advance action) is hidden while a cluster or per-side pair is mid-flight', () => {
-    expect(SRC).toMatch(/\{\(cluster \|\| perSide\) \? null : \(\s*<View style=\{\[styles\.bottomBar/);
+  test('R4 (D64): the bar hides only for a cluster - mid per-side pair it STAYS, relabelled to commit side two', () => {
+    // Cluster keeps its own in-card controls, so the bar hides there.
+    expect(SRC).toMatch(/\{cluster \? null : \(\s*<View style=\{\[styles\.bottomBar/);
+    // Mid-pair the permanent primary IS the side-two control ("Log other
+    // side" -> finishPerSide), and the advance action stays suppressed via
+    // the && !perSide gate pinned above.
+    expect(SRC).toContain('if (perSide) return finishPerSide();');
+    expect(SRC).toContain("perSide ? 'Log other side'");
   });
 
   test('no auto-navigation fires on reaching target from this change — advancing is a tap, never automatic', () => {
