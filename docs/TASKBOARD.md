@@ -40,17 +40,18 @@ auto-advance cues, summary footer, picker first-open, CP-10 batch F and the
 leg-day engine work (D45 + D46) all LANDED - detail rolled to
 `_HANDOVER-ARCHIVE.md` TASKBOARD HISTORY per D41._
 
-### ACTIVE - D43 logger redesign blueprint (UNBLOCKED 2026-07-11)
-- Founder verdict: logger 3/10, target 10/10, complete redesign
-  cohesive with the app. Its gating point fixes (logged-set row, D44
-  cues, summary footer, picker first-open) are ALL landed, so the
-  blueprint is now the top design job. Lead authors the blueprint
-  (Opus research legwork dispatched 2026-07-11: current-state teardown
-  + best-in-class synthesis from the existing competitive corpus);
-  founder approves the blueprint before any build slot. RECOVERY: if
-  the research report exists in the session log but no blueprint doc,
-  re-author from the report; if neither, relaunch the research agent
-  from this entry.
+### D43 logger redesign blueprint - AUTHORED, AWAITING FOUNDER APPROVAL (2026-07-11)
+- Research complete (Opus teardown: full ActiveWorkoutScreen read, all
+  pinned tests mapped, Hevy corpus synthesised - report in session
+  log). Blueprint authored by the lead:
+  `docs/ux-world-class-audit-2026-07-09/D43-LOGGER-REDESIGN-BLUEPRINT.md`
+  - the 3/10 is presentation/IA/cohesion, not capability; strong core
+  preserved behind a new shell; 5 staged slots (S1 decomposition -> S2
+  Now card + status strip -> S3 stable CTA + overflow diet -> S4
+  in-place edit + plate readout -> S5 cohesion polish). RPE stays out
+  per D14/D19 held list. FOUNDER GATE: approve the blueprint, then S1
+  starts. RECOVERY: blueprint doc is committed; on approval work S1
+  from its Section 7.
 
 ### ACTIVE - CP-10 theming batch G (recon done; lane 2 dispatched 2026-07-11)
 - Recon (Haiku): 48 live / 36 static of 84 screens (2 new files since
@@ -101,8 +102,12 @@ leg-day engine work (D45 + D46) all LANDED - detail rolled to
 - Founder reports the EAS build FAILING after item 14/15 native changes
   (keyboard-controller/zeego, expo-splash-screen, monochrome icon). CI
   Android build is GREEN (run 2611), so the break is EAS-specific.
-  BLOCKED on founder: share the EAS build logs (or grant EAS access);
-  then diagnose + fix.
+  NARROWED (2026-07-11): `npx expo prebuild --platform android` runs
+  CLEAN on this branch locally, so it is NOT a config-plugin/prebuild
+  failure (the haptic-feedback class) - the break is downstream in the
+  EAS Gradle/native compile stage or EAS environment. STILL BLOCKED on
+  founder: share the EAS build logs (or grant EAS access); then
+  diagnose + fix.
 
 ### LANDED - SD-11 applyRemoteSetEvent idempotency `7e0dabe` (2026-07-11)
 - The await-spanning race fixed hands-on: eventId reserved
