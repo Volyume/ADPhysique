@@ -348,6 +348,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // timeout so cycling exercises mid-flash doesn't leave it stuck on.
   const [logFlash, setLogFlash] = useState(false);
   const logFlashTimeoutRef = useRef(null);
+  // D44: superset/giant-set group-driven focus changes (the alternation jump
+  // AND the round-return) previously moved the screen with zero cue - no
+  // haptic distinct from the ordinary set-logged tick, no announcement, no
+  // visible sign (founder report: "seems to swap exercise when there's still
+  // a set to do at times without saying anything"). This transient message
+  // drives a brief banner naming the destination exercise, cleared via a
+  // tracked timeout the same way logFlash above is.
+  const [groupFocusMessage, setGroupFocusMessage] = useState(null);
+  const groupFocusTimeoutRef = useRef(null);
   const [detectedPRs, setDetectedPRs] = useState([]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
@@ -664,6 +673,29 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       autoAdvanceRef.current = null;
     }
     setAutoAdvanceArmed(false);
+  }
+
+  // D44: the cue for a group-driven focus change (the forward alternation
+  // jump in handleCompleteSet AND the round-return it now performs). Mirrors
+  // the "Set N logged" announcement pattern (~1540) plus a haptic distinct
+  // from the ordinary set-logged tick (selection(), not the impact used for
+  // setLogged), plus a brief visible banner naming the destination so a
+  // sighted user isn't just silently relocated. Copy is lead-reviewed voice
+  // (calm, plain, no exclamation, British English): "Superset: now X" /
+  // "Giant set: now X", matching the existing "Superset coming up" /
+  // "Giant set coming up" 2-vs-3+ split used by the pre-set heads-up modal.
+  function announceGroupFocusChange(destIdx, sgi) {
+    const destName = workoutExercises[destIdx]?.exercise?.name ?? '';
+    const groupSize = workoutExercises.filter(e => e.supersetGroupId === sgi).length;
+    const groupLabel = groupSize > 2 ? 'Giant set' : 'Superset';
+    const message = `${groupLabel}: now ${destName}`;
+    hapticsVocab.selection();
+    try {
+      AccessibilityInfo.announceForAccessibility(message);
+    } catch (_) { /* announcement is best-effort */ }
+    if (groupFocusTimeoutRef.current) clearTimeout(groupFocusTimeoutRef.current);
+    setGroupFocusMessage(message);
+    groupFocusTimeoutRef.current = setTimeout(() => setGroupFocusMessage(null), 2500);
   }
 
   function handleNextExercise() {
@@ -1080,6 +1112,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // component (cancel + finish workout mid-flash would otherwise throw a
       // React warning).
       if (logFlashTimeoutRef.current) clearTimeout(logFlashTimeoutRef.current);
+      // D44: same guard for the group-focus banner reset (finish/cancel
+      // within 2.5s of a superset jump would otherwise set state after
+      // unmount).
+      if (groupFocusTimeoutRef.current) clearTimeout(groupFocusTimeoutRef.current);
     };
   }, [workoutStartTime]);
 
@@ -1611,9 +1647,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // ~60-120s post-pair rest finally fires before the next round begins on the
       // first exercise. The old `i !== currentExerciseIndex` matched in BOTH
       // directions, so B jumped straight back to A and the rest timer never ran.
+      let sgi = null;
+      let pairIdx = -1;
       if (currentSet.setType !== 'warmup') {
-        const sgi = workoutExercises[currentExerciseIndex]?.supersetGroupId;
-        const pairIdx = sgi != null
+        sgi = workoutExercises[currentExerciseIndex]?.supersetGroupId;
+        pairIdx = sgi != null
           ? workoutExercises.findIndex((e, i) => i > currentExerciseIndex && e.supersetGroupId === sgi)
           : -1;
         if (pairIdx >= 0) {
@@ -1622,6 +1660,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           setNoteText('');
           setShowNoteInput(false);
           setGhostSet(null);
+          // D44: cue the jump - previously silent (no haptic distinct from
+          // setLogged, no announcement, no visible sign).
+          announceGroupFocusChange(pairIdx, sgi);
           return;
         }
       }
@@ -1649,6 +1690,25 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         // C3: the wait is silent otherwise, arm the visible "Stay here" row
         // for exactly as long as the countdown runs.
         setAutoAdvanceArmed(true);
+      } else if (sgi != null && pairIdx < 0) {
+        // D44 round-return: this set was the LAST member of its group (no
+        // member with a later index shares supersetGroupId, so the forward
+        // jump above found nothing and fell through here - the K-1 rest
+        // timer just started, unchanged). Nothing used to move focus back to
+        // the group's first member for the next round, despite
+        // ActiveWorkoutScreen.giantSet.guard.test.js's own comment asserting
+        // "next round from A"; the user was silently stranded on the last
+        // member. The justHitTarget branch above still wins when this
+        // exercise's own set target completed on this same set - the
+        // ordinary next-exercise auto-advance is correct once the whole
+        // group's prescribed work here is done, so round-return only fires
+        // when the round continues.
+        const firstIdx = workoutExercises.findIndex(e => e.supersetGroupId === sgi);
+        if (firstIdx >= 0 && firstIdx !== currentExerciseIndex) {
+          setCurrentExerciseIndex(firstIdx);
+          setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 50);
+          announceGroupFocusChange(firstIdx, sgi);
+        }
       }
 
       // Clear ghost, will be re-computed for the next set index on the next render cycle
@@ -2694,6 +2754,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               logFlash && [styles.setEntryCardFlash, live.setEntryCardFlash],
             ]}
           >
+            {/* D44: transient visual sign for a superset/giant-set
+                group-driven focus change. The spoken announcement already
+                fires in announceGroupFocusChange (this exact message), so
+                this row is hidden from the accessibility tree to avoid
+                double narration on TalkBack/VoiceOver - it's the visible
+                half of the cue, not a second announcement. */}
+            {groupFocusMessage && (
+              <View
+                style={[styles.groupFocusBanner, live.groupFocusBanner]}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+              >
+                <Ionicons name="swap-horizontal" size={16} color={t.colors.primary} />
+                <Text maxFontSizeMultiplier={1.3} style={[styles.groupFocusBannerText, live.groupFocusBannerText]}>
+                  {groupFocusMessage}
+                </Text>
+              </View>
+            )}
             {currentSet.setType === 'warmup' && (
               <View style={styles.warmupBanner}>
                 <Ionicons name="flame-outline" size={14} color={t.colors.warning} />
@@ -4525,6 +4603,14 @@ const styles = StyleSheet.create({
   // AY-2/D7: onSuccessBg is the text-on-tint ink (the flat `success` mark
   // fails 4.5:1 composited on successBg in light theme at every elevation).
   targetBannerText: { fontSize: fontSize.sm, color: colors.onSuccessBg, fontWeight: fontWeight.semibold, flex: 1 },
+  // D44: transient banner naming the destination exercise after a
+  // superset/giant-set group-driven focus change (forward jump or
+  // round-return). Same shape as targetBanner above, primary tint instead of
+  // success (this isn't a completion, just a navigation notice), and the
+  // primary-on-primaryBg combination already used by navTabActive/
+  // navTabTextActive elsewhere in this file.
+  groupFocusBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.primaryBg, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.primary, marginBottom: spacing.sm },
+  groupFocusBannerText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold, flex: 1 },
   // Superset heads-up modal (shared with the unilateral-suggest modal below
   // -- both use supOverlay/supSheet/supSheetContent). D36a (item 17 modal
   // tails, 2026-07-10): this stays a raw Modal (education moment with its
@@ -4735,6 +4821,8 @@ function buildLiveStyles(t) {
     adjustedRevertText: { fontSize: t.fontSize.sm, color: t.colors.primary },
     targetBanner: { backgroundColor: t.colors.successBg, borderColor: t.colors.success },
     targetBannerText: { fontSize: t.fontSize.sm, color: t.colors.onSuccessBg },
+    groupFocusBanner: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    groupFocusBannerText: { fontSize: t.fontSize.sm, color: t.colors.primary },
     supOverlay: { backgroundColor: t.colors.scrim },
     supSheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     supTitle: { ...t.type.h3, color: t.colors.textPrimary },

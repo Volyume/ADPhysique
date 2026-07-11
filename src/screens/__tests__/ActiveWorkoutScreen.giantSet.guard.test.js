@@ -7,6 +7,11 @@
  * the NEXT LATER member (K-1 fix, pinned by
  * ActiveWorkoutScreen.supersetRest.guard.test.js), which for a group of N gives
  * A -> B -> C -> (no later member -> rest -> next round from A). This suite pins:
+ * (dated note, 2026-07-11: "next round from A" was aspirational when this
+ * comment was first written - nothing actually returned focus to A at the
+ * time. D44 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md)
+ * built the round-return, pinned by ActiveWorkoutScreen.groupFocusCue.guard
+ * .test.js; the comment is now literally true.)
  *   1. the cycling ORDER for a 3-exercise group, by re-deriving the exact rule
  *      the screen uses (independent re-derivation, NOT a re-export) over a
  *      3-member fixture; and
