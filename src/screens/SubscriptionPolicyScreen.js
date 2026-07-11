@@ -40,10 +40,14 @@ export default function SubscriptionPolicyScreen() {
         <Section
           icon="checkmark-done-outline"
           tint={t.colors.success}
-          title="What's always free"
+          title="What stays free"
         >
+          {/* C7 (2026-07-11): 'no account needed' contradicted the identity
+              rule - the app requires an account (Apple/Google sign-in, no
+              anonymous mode, IDENTITY_AND_OWNERSHIP_LOCKED.md). Title
+              aligned with the Welcome screen's card. */}
           <Body>
-            The core logbook is yours, no account needed. Everything stays on your phone.
+            The core logbook is free on every account, and your training data stays on your phone.
           </Body>
           <Bullet>Full workout logger with rest timer, beeps and haptics.</Bullet>
           <Bullet>400+ exercise library with form notes.</Bullet>
