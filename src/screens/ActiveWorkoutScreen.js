@@ -397,6 +397,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   const scrollRef = useRef(null);
   const insets = useSafeAreaInsets();
+  // R2 (remediation 2026-07-11): this is the ONE screen that relies on raw
+  // insets.bottom for its bottom bar (the tab bar hides here, so nothing
+  // else absorbs the system inset). Expo SDK 54 Android is always
+  // edge-to-edge, so a reported bottom inset of 0 on Android is always a
+  // misreport (first-frame provider gap, OEM quirk) - never a real "no
+  // system bar". Floor it at 48 (3-button nav height) so the Log set bar
+  // can never render under the navigation buttons; devices that report
+  // real insets are untouched.
+  const safeBottom = insets.bottom > 0 ? insets.bottom : (Platform.OS === 'android' ? 48 : 0);
   const timerRef = useRef(null);
 
   // B8 (audit 05 §B8): keep the screen awake while the logger is FOCUSED,
@@ -3076,7 +3085,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               state is the timer glyph in the header; revert lives in the
               exercise options sheet. */}
 
-          <View style={{ height: Math.max(spacing.xxl, insets.bottom + spacing.lg) }} />
+          <View style={{ height: Math.max(spacing.xxl, safeBottom + spacing.lg) }} />
         </ScrollView>
 
         {/* A2 (audit CL-4): the primary action lives in a bottom-pinned bar,
@@ -3092,7 +3101,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             always-visible tab bar and no longer holds. Math.max keeps the
             old padding on devices that report no bottom inset. */}
         {(cluster || perSide) ? null : (
-          <View style={[styles.bottomBar, live.bottomBar, { paddingBottom: Math.max(spacing.md, insets.bottom + spacing.sm) }]}>
+          <View style={[styles.bottomBar, live.bottomBar, { paddingBottom: Math.max(spacing.md, safeBottom + spacing.sm) }]}>
             {/* D43 S3 (blueprint 3.7, "Bottom bar — stable identity"): the
                 primary is ALWAYS Log set / Log warm-up / Start cluster while
                 an exercise is active -- it is UNCONDITIONAL now, no longer

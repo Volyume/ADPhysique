@@ -47,7 +47,10 @@ LEAD verifies every quality-bearing diff hands-on against what actually
 renders (trace to the rendering line, tap-by-tap walk, before/after strings).
 No item marked done on an agent's self-report. Ever._
 
-- **R1 Routine display names.** CURRENT: Today card (`HomeScreen.js:1759`)
+- **R1 Routine display names.** DONE `2340f7c` - strip verified against the
+  founder's exact stored shape, 8 pinned tests, routed through every
+  plan-name surface (Home, Train cards + sheets, PlanDetail, Library,
+  Meso builder, Partner). Original entry: CURRENT: Today card (`HomeScreen.js:1759`)
   and Train render raw `routine.name`; generated names bake in
   "4x/week, 9 Jul" (`planAutoGen.js:54-63` dedup suffix); the old strip
   (`planDisplay.js planHeadingName`) only matches a TRAILING frequency so it
@@ -55,8 +58,15 @@ No item marked done on an agent's self-report. Ever._
   ("Men's Physique - Cut - V-Taper") on every surface; generator stops
   baking dates into new names. RECOVERY: trace is in this entry; re-fix from
   it. STATUS: in progress (lead, hands-on).
-- **R2 Logger CTA under Android nav bar.** Bottom bar ignores the safe-area
-  inset. STATUS: queued (lead).
+- **R2 Logger CTA under Android nav bar.** DONE (lead, hands-on). ROOT
+  CAUSE: not the bar's code (its insets.bottom padding existed since
+  2026-07-03) - App.js mounted SafeAreaProvider with a MISNAMED prop
+  (initialWindowMetrics= instead of initialMetrics=), silently ignored, so
+  insets could read 0; ActiveWorkout is the one surface relying on raw
+  insets.bottom (its tab bar hides). FIX: correct prop + Android floor of
+  48 when the inset misreports 0 (safeBottom) + guard test re-pinned
+  STRONGER (pins both the floor and the provider prop). DEVICE CHECK:
+  founder confirms Log set clears the nav buttons on next build.
 - **R3 Dead set-completion overlay.** Greyed screen + ~1cm slide-up that
   hangs until tapped. Find what renders on set completion, remove/replace
   properly. STATUS: queued (lead investigation).

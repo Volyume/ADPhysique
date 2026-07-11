@@ -697,7 +697,10 @@ function FirstRunStack() {
       <Stack.Screen name="FreeStarter" component={FreeStarterScreen} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
-      <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={heroZoomTransition} />
+      {/* headerShown: false is already the navigator-level default here;
+          stated explicitly only so this registration reads identically to
+          its Home-stack twin (no behaviour change). */}
+      <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={{ headerShown: false, ...heroZoomTransition }} />
     </Stack.Navigator>
   );
 }

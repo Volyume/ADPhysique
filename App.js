@@ -977,7 +977,14 @@ export default function App() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <KeyboardProvider>
         <BottomSheetModalProvider>
-          <SafeAreaProvider initialWindowMetrics={initialWindowMetrics}>
+          {/* R2 (remediation 2026-07-11): the provider prop is `initialMetrics`.
+              The old `initialWindowMetrics={...}` passed an UNRECOGNISED prop,
+              so the provider mounted with no metrics and every consumer read
+              insets of 0 until the async native measurement landed - on the
+              founder's device the ActiveWorkout bottom bar (the one surface
+              that relies on raw insets.bottom, because it hides the tab bar)
+              rendered under the Android navigation buttons. */}
+          <SafeAreaProvider initialMetrics={initialWindowMetrics}>
             {/* CP-10 stage 2: live theme read (useTheme, not the static
                 resolvedTheme import) so the status bar flips with the rest of
                 the app's chrome on a theme change, no restart. `style` is the

@@ -14,14 +14,28 @@ const read = (rel) => fs.readFileSync(path.resolve(__dirname, '..', rel), 'utf8'
 describe('ActiveWorkout bottom bar vs the hidden tab band', () => {
   test('the bottom bar padding includes the safe-area inset', () => {
     const screen = read('screens/ActiveWorkoutScreen.js');
-    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): ActiveWorkoutScreen
-    // now reads a live theme (src/hooks/useTheme.js); styles.bottomBar gained
-    // a live.bottomBar override ahead of the inline paddingBottom object.
-    // The pinned contract (Math.max(spacing.md, insets.bottom + spacing.sm))
-    // is unchanged -- widened only to allow the live.bottomBar insertion.
+    // R2 (remediation 2026-07-11): the founder's device walk found the bar
+    // under the Android navigation buttons DESPITE the old insets.bottom
+    // padding - the SafeAreaProvider was mounted with a misnamed prop
+    // (initialWindowMetrics=, ignored) so insets could read 0. The contract
+    // is now STRONGER: the bar pads by safeBottom, which is insets.bottom
+    // floored at 48 on Android when the inset misreports 0 (Expo SDK 54
+    // Android is always edge-to-edge, so a 0 bottom inset is never real).
     expect(screen).toMatch(
-      /styles\.bottomBar,\s*live\.bottomBar,\s*\{\s*paddingBottom:\s*Math\.max\(spacing\.md,\s*insets\.bottom\s*\+\s*spacing\.sm\)/
+      /const safeBottom = insets\.bottom > 0 \? insets\.bottom : \(Platform\.OS === 'android' \? 48 : 0\)/
     );
+    expect(screen).toMatch(
+      /styles\.bottomBar,\s*live\.bottomBar,\s*\{\s*paddingBottom:\s*Math\.max\(spacing\.md,\s*safeBottom\s*\+\s*spacing\.sm\)/
+    );
+  });
+
+  test('the SafeAreaProvider actually receives initial metrics (R2 root cause)', () => {
+    const app = read('../App.js');
+    // The prop is initialMetrics; the old initialWindowMetrics={...} was an
+    // unrecognised prop the provider silently ignored, so every inset
+    // consumer started at 0. This pin stops the misnamed prop coming back.
+    expect(app).toMatch(/<SafeAreaProvider initialMetrics=\{initialWindowMetrics\}>/);
+    expect(app).not.toMatch(/<SafeAreaProvider initialWindowMetrics=/);
   });
 
   test('VolyumeTabBar still hides on ActiveWorkout (the reason the inset is needed)', () => {
