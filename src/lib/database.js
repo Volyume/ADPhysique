@@ -153,6 +153,17 @@ async function _doInit() {
     try { require('./errorLog').logWarn('database.plaintextFallback', 'local DB opened UNENCRYPTED (SQLCipher unavailable / migration fallback)', {}); } catch (_) {}
   }
   await opened.execAsync('PRAGMA journal_mode = WAL;');
+  // R2-11 (production P0, build 2692, founder repro: "database is locked" at
+  // plan build / sign-out wipe / set logging). expo-sqlite runs statements on
+  // a parallel IO pool with no per-connection mutex, and only transaction
+  // BLOCKS are queued app-side (_txTail) - a raw single-statement write that
+  // collides with an open BEGIN got SQLITE_BUSY back INSTANTLY and surfaced
+  // as a hard "database is locked" rejection. With one shared connection a
+  // wait cannot deadlock, so a busy handler that retries through the
+  // sub-second contention window is the correct behaviour. The deeper fix
+  // (queueing ALL writes + the runInTransaction reentrancy flag) is queued
+  // on the board; this line is what stops the user-facing failures.
+  await opened.execAsync('PRAGMA busy_timeout = 5000;');
   await opened.execAsync(`
     CREATE TABLE IF NOT EXISTS exercises (
       id TEXT PRIMARY KEY,
