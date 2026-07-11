@@ -201,3 +201,73 @@ fail._
     card and any share buttons show EXACTLY the same copy and numbers as
     before; no new weight/outcome language anywhere on the summary; calm-mode /
     open-ED suppression of the celebratory cards still hides them.
+
+### Progress stack cohesion (R2 uniformity wave - Analytics / Consistency / ProgressSections)
+
+_Chrome only: shared primitives (radius classes, tabular numerals, type roles)
+unified against the Food design standard. No data, engine, gating or telemetry
+change. Numbers and wording must be byte-identical to the previous build._
+
+42. Open the Progress tab. On the Analytics root, eyeball the nav tiles
+    (Consistency / Lifts / Body Metrics / Full History etc.): every tile reads
+    as the same rounded card family (16px corners) as the cards above, and the
+    tile labels sit at the same small semibold weight as each other - none looks
+    a step lighter or heavier than its neighbours.
+43. On a session card, check the difficulty readout (e.g. "8/10"): the digits
+    are the tabular figures used elsewhere on the screen (they do not jitter or
+    shift width against the neighbouring numbers). The number itself is
+    unchanged from before.
+44. Scroll to the "Training load" card (needs a few weeks of history). The
+    horizontal load meter has fully rounded (pill) ends, matching the mesocycle
+    progress bar higher up - not a slightly-squarer corner. The ratio (e.g.
+    "1.12"), this-week and 4-wk-average tonnage figures line up as tabular
+    columns; the amber/green/grey status colour of the meter is UNCHANGED from
+    before (the D69 training-mechanics caution colours are preserved).
+45. In the "Training frequency" table, the "N this . M last" counts down each
+    row align as tabular columns (digits do not shift the "this"/"last" words
+    around); the green up-tick colour on an increased count is unchanged.
+46. In the "Session length trend" bars, the per-bar minutes readout (e.g. "45m")
+    is tabular. Bar heights/colours and the calendar heat cells are visually
+    identical to before (chart geometry untouched).
+47. Open the Consistency screen (from the Progress nav tile). Confirm it renders
+    normally: the "Lighter week recommended" banner (if shown), section labels,
+    empty/loading states and every card use the same rounded card chrome; no
+    control looks hand-rolled or off-family. Wording and any numbers unchanged.
+48. Flip the device theme (light <-> dark) while on Analytics and Consistency:
+    the nav-tile labels, difficulty readout, load meter and frequency counts all
+    re-theme correctly - no element stays stuck in the previous theme's ink.
+49. ED-safety spot check (chrome only): the training-load caution colours and
+    any wellbeing-gated sections behave exactly as before; no weight/outcome
+    copy changed anywhere on the Progress stack.
+
+### Plans / Coach hub / Coach output / Home components cohesion (R2 uniformity wave)
+
+_Census outcome: this lane was already unified in the R9/D69/D70 sweep. The
+only residue found and fixed was one card radius on CoachOutput. Chrome only
+(box/radius); no data, engine, gating, telemetry, colour logic or ED-suppression
+change. Numbers and wording must be byte-identical to the previous build._
+
+50. Pro user with a competition goal and an active peak-week plan: open the
+    Coach tab, then the weekly coach update (Coach Output). Scroll to the contest
+    countdown card near the bottom (below the held-decisions safety shelf).
+    Confirm its corners now match the rounding of the other content cards on the
+    screen (Nutrition / Training next week / Plan next week's meals) - the same
+    16px card radius, not a slightly squarer corner. The countdown line, any
+    checkpoint text and the peak-week medical disclaimer are byte-identical to
+    before.
+51. ED-safety spot check on Coach Output (chrome only): trigger (or recall) an
+    open ED-pattern flag / calm mode. Confirm the contest countdown card is
+    HIDDEN exactly as before (the suppression gate is untouched), the ED-pattern
+    lockout / cleared blocks render with their existing corner rounding, and no
+    coach copy, figure or Apply behaviour changed anywhere on the screen.
+52. Flip the device theme (light <-> dark) while on Coach Output with the
+    countdown card visible: the card re-themes correctly (surface + border ink),
+    no element stuck in the previous theme.
+53. Regression walk of the rest of the lane (no visual change expected, confirm
+    nothing regressed): Train tab (active-plan hero, folders, archived plans,
+    workout templates, block-advisor card, folder create/rename sheet), Coach hub
+    (profile card, weekly check-in row, nav rows), and the Home components
+    (morning-weight strip, attention card, last-session row, weekly-streak strip,
+    cardio card, weight-trend card) all render with their existing card chrome
+    and controls; no control looks hand-rolled or off-family; wording and numbers
+    unchanged.

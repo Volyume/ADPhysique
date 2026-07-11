@@ -3148,7 +3148,12 @@ const styles = StyleSheet.create({
   // B4 countdown: deliberately neutral (surface + border, no amber).
   countdownCard: {
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    // R2 (remediation 2026-07-11): a plain surface content card, so it takes
+    // the app-wide card radius (radius.lg), matching its four sibling surface
+    // cards in this file (planEditCard/holdHeroCard/coachLeadCard/focusCard).
+    // It is NOT a tinted D69/D70 banner (those keep radius.md). Box only -- the
+    // ED/calm suppression gate that hides this surface is untouched.
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.lg,
