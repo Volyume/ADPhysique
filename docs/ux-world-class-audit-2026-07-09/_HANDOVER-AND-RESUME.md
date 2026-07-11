@@ -435,6 +435,16 @@ failed, lint clean.**
    (problem, exact reproduction, design halves, phases 0-6, invariants,
    device checklist, code anchors). Decision: D46. Safety net already in:
    D45 (`da59274`) session caps contain the acute symptom.
+
+   **2026-07-11 later session landings (all pushed):** D47 (queue worked
+   top to bottom, never curated), D48 (gates ruled not waited on), D49
+   (D43 blueprint ruled approved - S1 decomposition underway), D50
+   (brand font ruled: Manrope), D51 (lowest-tier agents, lead
+   coordinates only). SD-11 idempotency fix `7e0dabe`. CP-10 batch G
+   both lanes `3adf551` + `4947509` (35 screens live-themed under
+   billing/consent/ED bounds). D43 blueprint + brand-font shortlist
+   docs authored and pushed. EAS failure narrowed: local prebuild
+   clean, break is in the EAS Gradle stage - founder logs still needed.
 1. NEXT SLOTS per docs/TASKBOARD.md: CP-10 batch F (screens 37/85
    live, 48 static remain — lead defines the next batch from the
    coverage tracker); then further batches to 0 static, which unlocks

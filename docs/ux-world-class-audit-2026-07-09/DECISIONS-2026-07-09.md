@@ -1007,3 +1007,12 @@ system fonts without reading techy or soft. Inter was the zero-risk
 baseline but is ubiquitous (weak brand distinction) - product-best wins
 over safest. Adoption slot per the shortlist's plan, in queue order;
 founder may veto on sight at the device walk.
+
+## D51 — Token economy: lowest-tier agents, lead coordinates only (founder, 2026-07-11)
+Founder order during the session ("Use the lowest level agents you can
+as well to preserve usage... Do not read and writes from you"): the
+premium main loop dispatches, judges diffs via targeted spot-checks and
+rules - it does NOT do its own bulk reads, writes, probes or doc
+upkeep. All mechanical work (docs recording, recon, conversions, test
+writing) goes to the LOWEST capable tier (haiku for mechanical, sonnet
+for risk-bounded builds). Standing law alongside D40/D47/D48.

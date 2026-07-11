@@ -53,27 +53,15 @@ leg-day engine work (D45 + D46) all LANDED - detail rolled to
   starts. RECOVERY: blueprint doc is committed; on approval work S1
   from its Section 7.
 
-### ACTIVE - CP-10 theming batch G (recon done; lane 2 dispatched 2026-07-11)
-- Recon (Haiku): 48 live / 36 static of 84 screens (2 new files since
-  F close; drift within tolerance). Two lanes defined:
-- **LANE 2 (plain, 20 files) - DISPATCHED (Sonnet):** Analytics,
-  AthleteProfile, BuildWorkout, ExerciseDetail, GoalChangeSummary,
-  Import, LiftProgress, ManualBuilder, MesocycleBuilder, Partner,
-  PlanDetail, PlanLibrary, PlanUpdate, Plans, RoutineDetail, ShareCard
-  (GDPR card-content rules untouched - chrome only), VolumeHeatmap,
-  YearOfLifts, You, Welcome (auth logic untouched). Pattern per
-  c92a5ce; one batch flip-test file. RECOVERY: if these files sit
-  uncommitted, lead-review vs this entry + c92a5ce pattern, lint +
-  suite, commit + push; else relaunch.
-- **LANE 1 (high-risk, 16 files) - QUEUED next slot:** billing 8
-  (CascadeGate, FreeStarter, Paywall, ProGoalSetup, ProOnboarding,
-  ProSetupComplete, ProUpgrade, Subscription - IAP logic/copy
-  untouched, no billing-flow changes), consent/GDPR 3 (Article9Consent
-  STOP-on-doubt locked copy, NotificationSettings, SettingsDietary),
-  ED-safety 5 (BodyMetrics, CoachHeldHistory, CoachingReminders,
-  NutritionEducation, ProgressPhotos - copy + logic byte-identical,
-  STOP on doubt). Dispatch only with the risk-bounded brief; theming
-  only.
+### LANDED - CP-10 theming batch G, BOTH LANES (2026-07-11)
+- Lane 2 (20 plain screens) `3adf551`; lane 1 (15 high-risk screens;
+  SettingsDietary already live) `4947509`. Billing/consent/ED bounds
+  held byte-identical, verified at lead review; guard suites
+  re-anchored contracts-unchanged; batch flip-tests added; full suite
+  685 suites / 8,480 tests green at the lane 1 boundary. Screen
+  coverage now ~83/84 live (remaining static count to be re-verified
+  at the next recon; stage-5 restart-prompt retirement unlocks at
+  zero).
 
 ### QUEUED LAST - D43 full-app pristine pass (founder, second amendment)
 - CLOSING PHASE by founder order: every area polished to the
