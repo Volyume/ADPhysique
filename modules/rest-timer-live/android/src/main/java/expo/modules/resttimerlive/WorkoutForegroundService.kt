@@ -84,9 +84,19 @@ class WorkoutForegroundService : Service() {
   }
 
   private val stopHandler = Handler(Looper.getMainLooper())
+  // R2-8b (founder crash, build 2692): the newest delivered startId. Every
+  // self-stop except onTimeout uses stopSelf(lastStartId) so a START_REST
+  // command that Android has ALREADY ACCEPTED (creating a startForeground
+  // obligation) but not yet run is never dropped by a bare stopSelf() - the
+  // service stays alive, the queued command runs, and the obligation is met.
+  // A dropped queued start was the surviving crash path: rapid chained
+  // per-side rests interleave stop-then-start, and killing the service with
+  // a start still queued left its obligation unmet -> the OS executes the
+  // app (ForegroundServiceDidNotStartInTimeException).
+  private var lastStartId = -1
   private val stopRunnable = Runnable {
     stopForegroundCompat()
-    stopSelf()
+    stopSelf(lastStartId)
   }
   private var foregrounded = false
   // When this instance first called startForeground(). The OS shortService
@@ -106,10 +116,12 @@ class WorkoutForegroundService : Service() {
   override fun onBind(intent: Intent?): IBinder? = null
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    lastStartId = startId
     if (intent?.action == ACTION_STOP) {
       stopHandler.removeCallbacks(stopRunnable)
       stopForegroundCompat()
-      stopSelf()
+      // R2-8b: startId form - never drop a queued later START_REST.
+      stopSelf(startId)
       return START_NOT_STICKY
     }
 
@@ -121,7 +133,8 @@ class WorkoutForegroundService : Service() {
       RestTimerLiveModule.emitRestAction(REST_ACTION_ID_SKIP)
       stopHandler.removeCallbacks(stopRunnable)
       stopForegroundCompat()
-      stopSelf()
+      // R2-8b: startId form - never drop a queued later START_REST.
+      stopSelf(startId)
       return START_NOT_STICKY
     }
 
@@ -154,7 +167,8 @@ class WorkoutForegroundService : Service() {
         // Delivered to a service with no live rest (e.g. a lingering PendingIntent
         // fired after teardown): emit only, then stop without ever going
         // foreground. The JS-side guard turns the emit into a no-op too.
-        stopSelf()
+        // R2-8b: startId form - never drop a queued later START_REST.
+        stopSelf(startId)
       }
       return START_NOT_STICKY
     }
@@ -190,7 +204,8 @@ class WorkoutForegroundService : Service() {
         // Nothing left to count down; tear the (now-foregrounded) host down.
         stopHandler.removeCallbacks(stopRunnable)
         stopForegroundCompat()
-        stopSelf()
+        // R2-8b: startId form - never drop a queued later START_REST.
+        stopSelf(startId)
         return START_NOT_STICKY
       }
       // Self-stop at rest end, capped inside the shortService window. An
@@ -204,7 +219,8 @@ class WorkoutForegroundService : Service() {
       val windowMs = minOf(endTimeMs - now, MAX_WINDOW_MS, instanceCapMs)
       if (windowMs <= 0L) {
         stopForegroundCompat()
-        stopSelf()
+        // R2-8b: startId form - never drop a queued later START_REST.
+        stopSelf(startId)
         return START_NOT_STICKY
       }
       stopHandler.postDelayed(stopRunnable, windowMs)
@@ -249,6 +265,10 @@ class WorkoutForegroundService : Service() {
   override fun onTimeout(startId: Int) {
     stopHandler.removeCallbacks(stopRunnable)
     stopForegroundCompat()
+    // Deliberately the unconditional form: the OS deadline has fired and the
+    // service MUST stop promptly (missing it ANRs). The theoretical race with
+    // a just-queued start is accepted here - the JS churn fix makes fresh
+    // starts near the 180 s deadline vanishingly rare.
     stopSelf()
   }
 

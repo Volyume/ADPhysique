@@ -152,7 +152,17 @@ export default function RestTimer() {
     (async () => {
       try {
         if (AppState.currentState !== 'active') return; // no FGS starts from the background
-        if (fgsActiveRef.current) await stopRestForeground();
+        // R2-8b (founder crash, build 2692): NO stop-before-start on a
+        // re-anchor. The service already treats ACTION_START_REST on a live
+        // instance as an in-place re-anchor (notification update + re-capped
+        // self-stop), and the old stop-then-start churn is what crashed:
+        // Android accepts the new start (creating a startForeground
+        // obligation) while the previous stop's stopSelf() kills the service
+        // with that start still queued, so the obligation is never met and
+        // the OS executes the app. The E6A worry this choreography served
+        // (outliving the fixed OS deadline) is handled NATIVELY by the
+        // instance cap - worst case a very long chained window ends the
+        // chronometer a little early, which is harmless next to a crash.
         const s = useAppStore.getState();
         const ex = s.workoutExercises?.[s.currentExerciseIndex];
         const ok = await startRestForeground({
@@ -160,15 +170,18 @@ export default function RestTimer() {
           exerciseName: ex?.exercise?.name ?? ex?.name,
         });
         if (!ok) { fgsActiveRef.current = false; return; }
-        // In-flight re-check (E6A review): the rest may have been skipped or
-        // re-anchored while the native start was pending. A stale success
-        // must not leave a ghost countdown on the lock screen.
+        // In-flight re-check (E6A review): the rest may have ENDED while the
+        // native start was pending - a stale success must not leave a ghost
+        // countdown. R2-8b: an anchor MISMATCH with the rest still active
+        // means a newer re-anchor owns the host now - leave it alone (the
+        // old stop here could kill the newer rest's queued start).
         const now = useAppStore.getState();
-        if (!now.restTimerActive || now.restTimerEndsAt !== anchor) {
+        if (!now.restTimerActive) {
           fgsActiveRef.current = false;
           stopRestForeground().catch(() => {});
           return;
         }
+        if (now.restTimerEndsAt !== anchor) return;
         fgsActiveRef.current = true;
         fgsDeadlineRef.current = Date.now() + REST_FOREGROUND_MAX_MS;
         // The chronometer replaces the sticky; drop any sticky already
