@@ -1280,3 +1280,27 @@ touched. Four minor findings, all triaged:
   validation) and errors (caught) never reach the arm. Guard re-anchored:
   nextExerciseButton.guard now pins that handleCompleteSetPress does NOT
   arm and handleCompleteSet's success path does. Full suite green.
+
+## D63 — In-session PR celebration: full-screen takeover RETIRED, calm toast for all (R3 ruling, 2026-07-11)
+
+The founder's device walk reported: finishing a set greys the screen, a
+stunted animation appears and hangs until tapped. Hands-on trace of every
+set-completion visual (PRCelebration full path, subdued toast, RestTimer
+inline card, auto-advance inline row, the card-border log flash) found
+exactly ONE element that greys the screen: PRCelebration's full-screen
+overlay (0.85 backdrop + centre card + 40-particle confetti), which fires
+on real PRs. Whatever animation glitch the founder's device hit, the
+pattern itself violates the logger's first principle (never break the
+loop) - no elite logger interrupts logging with a modal takeover.
+
+RULING: the full-screen path is deleted. Every in-session celebration is
+the calm top toast (gold icon for real records, primary for the honest
+first lift; strong PR haptic ladder kept for real records; light tick for
+calm/reduce-motion/first-lift), auto-dismissing at 2.2s, tap to dismiss
+early, never obscuring the inputs. The BIG celebration (MilestoneBurst)
+stays on the summary screen, untouched. ED-safety: celebrations were
+already suppressed via subdued gating; making the subdued surface the
+only surface is strictly stronger. The firstLift pin (never the PERSONAL
+RECORD treatment) and the P9 TalkBack announcement pins pass unchanged.
+Subject to the founder's device-walk taste veto like all R-campaign
+rulings.

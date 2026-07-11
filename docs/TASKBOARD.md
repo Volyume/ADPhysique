@@ -67,9 +67,15 @@ No item marked done on an agent's self-report. Ever._
   48 when the inset misreports 0 (safeBottom) + guard test re-pinned
   STRONGER (pins both the floor and the provider prop). DEVICE CHECK:
   founder confirms Log set clears the nav buttons on next build.
-- **R3 Dead set-completion overlay.** Greyed screen + ~1cm slide-up that
-  hangs until tapped. Find what renders on set completion, remove/replace
-  properly. STATUS: queued (lead investigation).
+- **R3 Dead set-completion overlay.** DONE (lead, hands-on; ruling D63).
+  Traced every set-completion visual: the ONLY greying element was
+  PRCelebration's full-screen takeover (0.85 overlay + confetti + centre
+  card) on real PRs. The takeover is RETIRED - every in-session
+  celebration is now the calm top toast (gold icon for records, PR haptic
+  kept, 2.2s auto-dismiss, tap to dismiss, never obscures inputs); the
+  big MilestoneBurst stays on the summary screen. Suppression rules
+  strictly stronger. firstLift + TalkBack + motion pins pass unchanged.
+  DEVICE CHECK: founder confirms no grey hang on set completion.
 - **R4 Unilateral logging redesign.** Founder: current flow is terrible -
   log set then a second "side one done" tap; side-one button touches the
   text above, cancel touches it below. Needs PROPER investigation and a

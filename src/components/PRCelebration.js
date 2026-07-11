@@ -11,7 +11,7 @@ import {
 import * as haptics from '../lib/haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle, motion, letterSpacing, alpha, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, motion, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
 const NUM_PARTICLES = 40;
@@ -124,47 +124,40 @@ export function MilestoneBurst({ onDone }) {
 }
 
 export default function PRCelebration({ pr, onDismiss, subdued = false }) {
-  // Honour reduce-motion: a user who asked for calmer motion gets the subdued
-  // toast (no confetti burst, no heavy haptic ladder) even when the parent
-  // didn't pass subdued. This keeps the app's reduce-motion discipline intact
-  // at a flagship moment rather than breaking it here.
+  // R3 (remediation 2026-07-11, ruling D63): the full-screen grey overlay +
+  // confetti takeover is RETIRED for in-session PRs. On the founder's device
+  // walk it presented as a greyed-out screen with a stunted animation that
+  // hung until tapped; and as a pattern it broke the logger's first
+  // principle (never break the loop - a mid-session celebration must not
+  // stand between the user and their next set; no elite logger interrupts
+  // logging with a modal takeover). Every in-session celebration is now the
+  // calm top toast the subdued path already proved: gold-accented for real
+  // records, honest for first lifts, auto-dismissing, tappable to dismiss
+  // early, never obscuring the inputs. The BIG celebratory moment
+  // (MilestoneBurst above) stays on the summary screen, where the session
+  // is over and nothing is interrupted. Calm-mode / reduce-motion users get
+  // the identical surface, so the suppression rules are simpler and
+  // strictly stronger than before.
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour/fontSize-
   // bearing keys only.
   const t = useTheme();
   const live = {
-    overlay: { backgroundColor: t.colors.background },
-    card: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.gold, alpha.strong) },
-    iconContainer: { backgroundColor: withAlpha(t.colors.gold, alpha.tint) },
-    prBadge: { fontSize: t.fontSize.xs, color: t.colors.gold },
-    prType: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
-    prValue: { fontSize: t.fontSize.md, color: t.colors.primary },
-    prDelta: { fontSize: t.fontSize.sm, color: t.colors.gold },
-    dismiss: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     toast: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     toastTitle: { ...t.type.captionStrong, color: t.colors.textMuted },
     toastValue: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
   };
-  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   // Wave A A1: a first-ever lift is an honest first, not a record, it beats
-  // nothing, so it never gets the confetti/heavy-haptic PERSONAL RECORD
-  // treatment. It always renders as the quiet toast variant below.
+  // nothing, so it never gets record copy or the heavy haptic ladder.
   const isFirstLift = pr?.type === 'first_lift';
-  const subduedMode = subdued || !!reduceMotion || isFirstLift;
-  // Allocate particles only when we'll render them, subdued mode skips
-  // particles entirely. Each particle's pre-translated offsets are baked
-  // into translate constants instead of allocating new Animated.Values
-  // every render (was a slow memory leak on long PR streaks).
-  const particles = useRef(
-    subduedMode ? [] : Array.from({ length: NUM_PARTICLES }, (_, i) => createParticle(i, buildPrPalette(t.colors), screenWidth, screenHeight)),
-  ).current;
-  const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const cardScale = useRef(new Animated.Value(0.5)).current;
-  const cardOpacity = useRef(new Animated.Value(0)).current;
+  // The subdued flag now gates only the HAPTIC weight (visuals are one calm
+  // toast for everyone): calm / reduce-motion users and first lifts get the
+  // light tick, a real record keeps the PR haptic ladder.
+  const gentleHaptic = subdued || !!reduceMotion || isFirstLift;
+  const toastOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const timers = [];
     // P9/E11: the celebration must be ANNOUNCED, not just shown. Spoken on
     // both paths (a subdued or calm user still gets the fact; only the
     // visual party is suppressed). No-op without a screen reader.
@@ -182,51 +175,18 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
         );
       }
     } catch (_) { /* best-effort */ }
-    if (subduedMode) {
+
+    if (gentleHaptic) {
       // D2: the vocabulary call replaces raw expo-haptics, so the
       // reduce-motion gate covers this flagship moment too.
       haptics.selection();
-      Animated.timing(cardOpacity, { toValue: 1, duration: motion.exit, useNativeDriver: true }).start();
-      timers.push(setTimeout(onDismiss, 2200));
-      return () => timers.forEach(clearTimeout);
+    } else {
+      // The PR ladder (Success + two heavy beats) lives in the vocabulary.
+      haptics.prAchieved();
     }
-
-    // The PR ladder (Success + two heavy beats) lives in the vocabulary now.
-    haptics.prAchieved();
-
-    const overlay = Animated.parallel([
-      Animated.timing(overlayOpacity, { toValue: 0.85, duration: motion.state, useNativeDriver: true }),
-      Animated.spring(cardScale, { toValue: 1, tension: 100, friction: 8, useNativeDriver: true }),
-      Animated.timing(cardOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-    ]);
-    overlay.start();
-
-    const particleAnims = particles.map((p, i) => {
-      const targetX = screenWidth / 2 + Math.cos(p.angle) * p.distance;
-      const targetY = screenHeight / 2 + Math.sin(p.angle) * p.distance;
-
-      return Animated.sequence([
-        Animated.delay(i * 20),
-        Animated.parallel([
-          Animated.spring(p.x, { toValue: targetX, tension: 80, friction: 6, useNativeDriver: true }),
-          Animated.spring(p.y, { toValue: targetY, tension: 80, friction: 6, useNativeDriver: true }),
-          Animated.spring(p.scale, { toValue: 1, tension: 100, friction: 7, useNativeDriver: true }),
-          Animated.sequence([
-            Animated.delay(500),
-            Animated.timing(p.opacity, { toValue: 0, duration: 600, useNativeDriver: true }),
-          ]),
-        ]),
-      ]);
-    });
-
-    const staggered = Animated.stagger(8, particleAnims);
-    staggered.start();
-
-    timers.push(setTimeout(onDismiss, 3000));
-    return () => {
-      timers.forEach(clearTimeout);
-      try { staggered.stop(); overlay.stop(); } catch (_) {}
-    };
+    Animated.timing(toastOpacity, { toValue: 1, duration: motion.exit, useNativeDriver: true }).start();
+    const timer = setTimeout(onDismiss, 2200);
+    return () => clearTimeout(timer);
     // We do not depend on `pr` here because the parent (App.js) keys the
     // celebration off prCelebration; a new PR remounts the component.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -244,151 +204,28 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
     pr.type === '1rm_estimate' ? 'New estimated max lift' :
     pr.type === 'heaviest_weight' ? 'New heaviest weight' : 'Most reps at weight';
 
-  if (subduedMode) {
-    return (
-      <TouchableOpacity accessibilityRole="button"
-        style={styles.toastWrap}
-        activeOpacity={0.9}
-        onPress={onDismiss}
-      >
-        <Animated.View style={[styles.toast, live.toast, { opacity: cardOpacity }]}>
-          <Ionicons name={prIcon} size={20} color={t.colors.primary} />
-          <View style={{ flex: 1 }}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.toastTitle, live.toastTitle]}>{prLabel}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.toastValue, live.toastValue]}>{pr.label}</Text>
-          </View>
-        </Animated.View>
-      </TouchableOpacity>
-    );
-  }
-
   return (
     <TouchableOpacity accessibilityRole="button"
-      style={StyleSheet.absoluteFillObject}
-      activeOpacity={1}
+      style={styles.toastWrap}
+      activeOpacity={0.9}
       onPress={onDismiss}
     >
-      <Animated.View style={[styles.overlay, live.overlay, { opacity: overlayOpacity }]} />
-
-      {particles.map((p, i) => (
-        <Animated.View
-          key={i}
-          style={[
-            styles.particle,
-            {
-              backgroundColor: p.color,
-              width: p.size,
-              height: p.size,
-              borderRadius: p.size / 2,
-              // Translate by a fixed -size/2 offset using a plain number;
-              // Animated.add(value, new Animated.Value(...)) used to allocate
-              // a new Animated.Value every render that was never released.
-              transform: [
-                { translateX: p.x },
-                { translateY: p.y },
-                { translateX: -p.size / 2 },
-                { translateY: -p.size / 2 },
-                { scale: p.scale },
-              ],
-              opacity: p.opacity,
-            },
-          ]}
-        />
-      ))}
-
-      <Animated.View
-        style={[
-          styles.card,
-          live.card,
-          { top: screenHeight / 2 - 160, transform: [{ scale: cardScale }], opacity: cardOpacity },
-        ]}
-      >
-        <View style={[styles.iconContainer, live.iconContainer]}>
-          <Ionicons name={prIcon} size={48} color={t.colors.gold} />
+      <Animated.View style={[styles.toast, live.toast, { opacity: toastOpacity }]}>
+        <Ionicons name={prIcon} size={20} color={isFirstLift ? t.colors.primary : t.colors.gold} />
+        <View style={{ flex: 1 }}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.toastTitle, live.toastTitle]}>{prLabel}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.toastValue, live.toastValue]}>{pr.label}</Text>
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.prBadge, live.prBadge]}>PERSONAL RECORD</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.prType, live.prType]}>{prLabel}</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.prValue, live.prValue]}>{pr.label}</Text>
-        {pr.previousValue > 0 && pr.value > 0 && (() => {
-          // Show "+X% over previous PR" so the user feels the magnitude.
-          // Only show for meaningful improvements (>=1%); below that
-          // it's float noise from the 1RM estimator.
-          const pct = ((pr.value - pr.previousValue) / pr.previousValue) * 100;
-          if (pct < 1) return null;
-          return (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.prDelta, live.prDelta]}>
-              +{pct.toFixed(pct >= 10 ? 0 : 1)}% over your previous best
-            </Text>
-          );
-        })()}
-        <Text maxFontSizeMultiplier={1.3} style={[styles.dismiss, live.dismiss]}>Tap to continue</Text>
       </Animated.View>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    // Near-black base; the dimming comes from the animated opacity at render.
-    backgroundColor: colors.background,
-  },
   particle: {
     position: 'absolute',
     top: 0,
     left: 0,
-  },
-  card: {
-    position: 'absolute',
-    left: spacing.xl,
-    right: spacing.xl,
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    padding: spacing.xxl,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: withAlpha(colors.gold, alpha.strong),
-  },
-  iconContainer: {
-    width: 88,
-    height: 88,
-    borderRadius: circle(88),
-    backgroundColor: withAlpha(colors.gold, alpha.tint),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  prBadge: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
-    color: colors.gold,
-    letterSpacing: letterSpacing.wordmark,
-    marginBottom: spacing.sm,
-  },
-  prType: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-  },
-  prValue: {
-    fontSize: fontSize.md,
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  prDelta: {
-    fontSize: fontSize.sm,
-    color: colors.gold,
-    fontWeight: fontWeight.semibold,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-  },
-  dismiss: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
   },
   toastWrap: {
     position: 'absolute',
