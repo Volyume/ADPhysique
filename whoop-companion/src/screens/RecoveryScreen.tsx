@@ -1,8 +1,9 @@
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import { Card, ContributorRow, Empty, MetricRow, NavRow, Ring, Screen, SectionLabel, Stat, WeeklyBars } from '../ui/components';
+import { calculateTonightPlan, Card, ContributorRow, MetricRow, NavRow, parsePinnedWakeMinute, parsePlanningWindowMinute, Ring, Screen, SectionLabel, SleepConfidenceStatus, Stat, TonightBand, tonightEfficiencyPercent } from '../ui/components';
 import type { DailyMetricRow } from '../db/database';
 import { colors, fonts, recoveryColor } from '../ui/theme';
 import { Nav } from '../ui/navigation';
@@ -10,9 +11,10 @@ import { fourTier } from '../metrics/bands';
 import { sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
 import { illnessTint } from './IllnessScreen';
 import { DayRail } from './DayScreen';
-import { sleepConfidenceColor, sleepConfidenceLabel, sleepCoverageColor } from '../ui/sleepTrust';
+import { sleepConfidenceLabel } from '../ui/sleepTrust';
 import { sleepNeedsMoreSync } from '../metrics/sleepSync';
 import { sleepTrustTier } from '../metrics/sleepTrustWeight';
+import { kvGet } from '../db/database';
 
 const RECOVERY_BASELINE_NIGHTS = 5;
 
@@ -53,11 +55,17 @@ function sleepCaptureTrustScore(sleepDetail: DailyMetricRow['sleepDetail'] | nul
   return 100;
 }
 
-function sleepCaptureTrustLabel(sleepDetail: DailyMetricRow['sleepDetail'] | null): string {
-  if (!sleepDetail) return 'needs data';
-  if (sleepStateWakeConflict(sleepDetail)) return 'wake conflict';
-  const confidence = sleepConfidenceLabel(sleepDetail.confidence);
-  return sleepDetail.coveragePct != null ? `${confidence} · ${sleepDetail.coveragePct}%` : confidence;
+function recoveryConfidenceReason(sleepDetail: DailyMetricRow['sleepDetail'] | null): string {
+  if (!sleepDetail) return 'Waiting for a complete overnight record.';
+  if (sleepStateWakeConflict(sleepDetail)) return 'The sleep window may include awake time.';
+  if (sleepNeedsMoreSync(sleepDetail)) return 'Some overnight data is still syncing.';
+  if (sleepDetail.confidence === 'medium') return 'Usable, but more overnight detail may refine recovery.';
+  return 'The overnight record is strong enough to use.';
+}
+
+function confidenceStatusTier(sleepDetail: DailyMetricRow['sleepDetail'] | null): 'high' | 'medium' | 'low' | null {
+  const tier = sleepTrustTier(sleepDetail);
+  return tier === 'none' ? null : tier;
 }
 
 function recoveryStatusLabel(recovery: number | null, cap: number | null): string {
@@ -148,7 +156,7 @@ function recoveryQualityAction(input: {
   if (input.rmssd == null || input.rhr == null || input.resp == null || (input.coveragePct ?? 0) < 60) {
     return {
       label: 'Sync more overnight data',
-      value: input.coveragePct != null ? `${input.coveragePct}% coverage` : 'needs sync',
+      value: 'continue syncing',
       icon: 'sync',
       color: colors.strainBlue,
       route: { name: 'device' },
@@ -170,16 +178,22 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
   const parts = useStoreSelector(appStore, (s) => s.recoveryParts);
-  const hrvBal = useStoreSelector(appStore, (s) => s.hrvBal);
-  const illness = useStoreSelector(appStore, (s) => s.illness);
-  const res = useStoreSelector(appStore, (s) => s.resilience);
-  const cardioAge = useStoreSelector(appStore, (s) => s.cardioAge);
+  const sleepNeed = useStoreSelector(appStore, (s) => s.sleepNeed);
+  const sleepGoal = useStoreSelector(appStore, (s) => s.sleepGoal);
+  const sleepSchedule = useStoreSelector(appStore, (s) => s.sleepSchedule);
+  const [pinnedWakeMinute, setPinnedWakeMinute] = useState<number | null>(null);
+  const [planningWindowMin, setPlanningWindowMin] = useState(30);
+  useEffect(() => {
+    void Promise.all([kvGet('wakeTime'), kvGet('wakeTimePinned'), kvGet('smartWakeWindowMin')]).then(([wake, pinned, window]) => {
+      setPinnedWakeMinute(parsePinnedWakeMinute(wake, pinned));
+      setPlanningWindowMin(parsePlanningWindowMinute(window));
+    });
+  }, []);
 
   const recovery = today?.recovery ?? null;
   const sleepDetail = today?.sleepDetail ?? null;
   const confidence = sleepDetail?.confidence ?? null;
   const confidenceCap = recoveryConfidenceCap(sleepDetail);
-  const captureTrustScore = sleepCaptureTrustScore(sleepDetail);
   const prior = recentDays.filter((d) => d.day !== today?.day);
   const baselineNights = prior.filter(
     (d) => {
@@ -187,24 +201,37 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
       return d.rmssd != null && d.rhr != null && (tier === 'high' || tier === 'medium');
     },
   ).length;
-  const week = recentDays.slice(0, 7).reverse();
   const days = orderedDays(today, recentDays);
   const recoveryDriver = recoveryDriverInsight(parts, confidence, sleepDetail, confidenceCap);
-  const qualityAction = recoveryQualityAction({
-    rmssd: today?.rmssd ?? null,
-    rhr: today?.rhr ?? null,
-    resp: today?.resp ?? null,
-    confidence,
-    coveragePct: sleepDetail?.coveragePct ?? null,
-    sleepDetail,
+  const efficiencySamples = recentDays
+    .filter((d) => sleepTrustTier(d.sleepDetail) !== 'low')
+    .map((d) => d.sleepDetail?.efficiency)
+    .filter((v): v is number => v != null && v > 0);
+  const tonightPlan = calculateTonightPlan({
+    neededMinutes: sleepNeed?.neededMin ?? 480,
+    goal: sleepGoal,
+    wakeMinute: pinnedWakeMinute ?? sleepSchedule.wakeMin,
+    planningWindowMinutes: planningWindowMin,
+    expectedEfficiencyPercent: tonightEfficiencyPercent(efficiencySamples),
   });
-
+  const overnightActionRoute = sleepStateWakeConflict(sleepDetail)
+    ? { name: 'editSleep' as const }
+    : sleepNeedsMoreSync(sleepDetail)
+      ? { name: 'device' as const }
+      : { name: 'sleepCoach' as const };
   return (
     <Screen title="Recovery" onBack={nav.canBack ? nav.back : undefined} tint={recoveryColor(recovery)}>
       <DayRail
         days={days}
         selected={today?.day ?? ''}
         onSelect={(selected) => nav.navigate({ name: 'day', day: selected })}
+      />
+
+      <TonightBand
+        targetMinutes={tonightPlan.targetMinutes}
+        bedMinute={tonightPlan.bedMinute}
+        wakeMinute={tonightPlan.wakeMinute}
+        onPress={() => nav.navigate({ name: 'sleepCoach' })}
       />
 
       <Card style={{ alignItems: 'center', paddingVertical: 24 }}>
@@ -221,52 +248,30 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
         />
       </Card>
 
-      <SectionLabel>Recovery quality</SectionLabel>
-      <Card>
-        <View style={styles.qualityGrid}>
-          <Stat label="HRV" value={today?.rmssd != null ? 'Ready' : '-'} color={today?.rmssd != null ? colors.recoveryGreen : colors.textTertiary} />
-          <Stat label="RHR" value={today?.rhr != null ? 'Ready' : '-'} color={today?.rhr != null ? colors.recoveryGreen : colors.textTertiary} />
-        </View>
-        <View style={[styles.qualityGrid, { marginTop: 12 }]}>
-          <Stat label="Resp" value={today?.resp != null ? 'Ready' : '-'} color={today?.resp != null ? colors.recoveryGreen : colors.textTertiary} />
-          <Stat label="Skin temp" value={today?.skinTempC != null ? 'Ready' : '-'} color={today?.skinTempC != null ? colors.recoveryGreen : colors.textTertiary} />
-        </View>
-        <View style={[styles.qualityGrid, { marginTop: 12 }]}>
-          <Stat label="Sleep confidence" value={sleepConfidenceLabel(confidence)} color={sleepConfidenceColor(confidence)} />
-          <Stat label="Sleep coverage" value={sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}%` : '-'} color={sleepCoverageColor(sleepDetail?.coveragePct)} />
-          <Stat label="Signal" value={sleepDetail?.signalMin ?? '-'} unit={sleepDetail?.signalMin != null ? 'min' : undefined} />
-        </View>
-        <Text style={styles.qualityNote}>{recoveryQualityNote(today, confidence, confidenceCap, baselineNights)}</Text>
-        {qualityAction ? (
-          <NavRow
-            label={qualityAction.label}
-            icon={qualityAction.icon}
-            iconColor={qualityAction.color}
-            value={qualityAction.value}
-            onPress={() => nav.navigate(qualityAction.route)}
-            last
-          />
-        ) : null}
-      </Card>
-
-      {/* Illness early-warning (recovery-independent) */}
-      {illness && illness.level !== 'none' ? (
-        <Pressable onPress={() => nav.navigate({ name: 'illness' })} style={({ pressed }) => pressed && { opacity: 0.6 }}>
-          <Card style={{ borderColor: illnessTint(illness.level) }}>
-            <View style={styles.illnessHead}>
-              <View style={[styles.illnessDot, { backgroundColor: illnessTint(illness.level) }]} />
-              <Text style={styles.illnessTitle}>
-                {illness.level === 'major' ? 'Major signs you may be getting sick' : 'Minor signs to watch'}
-              </Text>
-            </View>
-            <Text style={styles.illnessSub}>
-              {illness.flaggedCount} overnight vital{illness.flaggedCount > 1 ? 's' : ''} outside your typical range. Tap for the breakdown.
+      <SleepConfidenceStatus
+        confidence={confidenceStatusTier(sleepDetail)}
+        reason={recoveryConfidenceReason(sleepDetail)}
+        onDetails={confidenceStatusTier(sleepDetail) !== 'high' ? () => nav.navigate(overnightActionRoute) : undefined}
+        detailsLabel={sleepNeedsMoreSync(sleepDetail) ? 'Sync' : 'Review'}
+      />
+      {/* Recovery contributors — Oura-style four-tier */}
+      {recovery == null ? (
+        <>
+          <SectionLabel>What recovery needs</SectionLabel>
+          <Card>
+            <Text style={styles.missingTitle}>A trusted overnight record</Text>
+            <Text style={styles.missingBody}>
+              At minimum, Pulse needs overnight HRV and resting heart rate, plus {RECOVERY_BASELINE_NIGHTS} trusted nights to build your personal baseline. Respiratory rate improves the picture when available.
             </Text>
+            <View style={styles.missingStats}>
+              <Stat label="HRV" value={today?.rmssd != null ? `${Math.round(today.rmssd)} ms` : 'missing'} color={today?.rmssd != null ? colors.recoveryGreen : colors.recoveryYellow} />
+              <Stat label="Resting HR" value={today?.rhr != null ? `${today.rhr} bpm` : 'missing'} color={today?.rhr != null ? colors.recoveryGreen : colors.recoveryYellow} />
+              <Stat label="Baseline" value={`${Math.min(baselineNights, RECOVERY_BASELINE_NIGHTS)}/${RECOVERY_BASELINE_NIGHTS}`} color={baselineNights >= RECOVERY_BASELINE_NIGHTS ? colors.recoveryGreen : colors.recoveryYellow} />
+            </View>
           </Card>
-        </Pressable>
+        </>
       ) : null}
 
-      {/* Recovery contributors — Oura-style four-tier */}
       {parts ? (
         <>
           {recoveryDriver ? (
@@ -285,16 +290,7 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
                 <View style={styles.qualityGrid}>
                   <Stat label="Driver" value={recoveryDriver.metric} color={recoveryDriver.color} />
                   <Stat label="Score" value={recoveryDriver.value} />
-                  <Stat label="Sleep conf." value={sleepConfidenceLabel(confidence)} color={sleepConfidenceColor(confidence)} />
-                </View>
-                <NavRow
-                  label={recoveryDriver.actionLabel}
-                  icon={recoveryDriver.icon}
-                  iconColor={recoveryDriver.color}
-                  value={recoveryDriver.actionValue}
-                  onPress={() => nav.navigate(recoveryDriver.route)}
-                  last
-                />
+                 </View>
               </Card>
             </>
           ) : null}
@@ -340,16 +336,6 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
               color={fourTier(parts.sleepSub).color}
               onPress={() => nav.navigate({ name: 'metric', key: 'sleep_performance' })}
             />
-            <ContributorRow
-              label="Sleep capture trust"
-              percent={captureTrustScore}
-              value={sleepCaptureTrustLabel(sleepDetail)}
-              color={sleepStateWakeConflict(sleepDetail) ? colors.recoveryRed : undefined}
-              onPress={() => {
-                if (captureTrustScore != null && captureTrustScore < 80) nav.navigate({ name: 'sleep' });
-                else nav.navigate({ name: 'metric', key: 'sleep_performance' });
-              }}
-            />
           </Card>
         </>
       ) : null}
@@ -386,73 +372,9 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
           unit=" C"
           onPress={() => nav.navigate({ name: 'metric', key: 'skin_temp' })}
         />
+        <NavRow label="Recovery trends" icon="trending-up" iconColor={colors.recoveryGreen} value="compare history" onPress={() => nav.navigate({ name: 'trends' })} last />
       </Card>
 
-      {/* Insights */}
-      <SectionLabel>Insights</SectionLabel>
-      <Card style={{ paddingVertical: 2 }}>
-        <NavRow
-          label="HRV Balance"
-          icon="pulse"
-          iconColor={fourTier(hrvBal?.score ?? null).color}
-          value={hrvBal ? `${hrvBal.ratio}× · ${fourTier(hrvBal.score).label}` : 'needs data'}
-          onPress={() => nav.navigate({ name: 'metric', key: 'hrv_balance' })}
-        />
-        <NavRow
-          label="Resilience"
-          icon="shield-half"
-          iconColor={colors.recoveryGreen}
-          value={res ? res.tier : 'needs ~1 week'}
-          onPress={() => nav.navigate({ name: 'resilience' })}
-        />
-        <NavRow
-          label="Cardiovascular Age"
-          icon="heart"
-          iconColor={colors.strainBlue}
-          value={cardioAge != null ? `${cardioAge} yrs` : 'estimate'}
-          onPress={() => nav.navigate({ name: 'metric', key: 'cardio_age' })}
-        />
-        <NavRow label="Sick-Risk Monitor" icon="medkit" iconColor={illnessTint(illness?.level)} value={illness ? (illness.level === 'none' ? 'No signs' : illness.level === 'minor' ? 'Minor' : 'Major') : '—'} onPress={() => nav.navigate({ name: 'illness' })} />
-        <NavRow label="Health Monitor" icon="fitness" iconColor={colors.recoveryGreen} onPress={() => nav.navigate({ name: 'health' })} last />
-      </Card>
-
-      <Empty text={recoveryGuidanceForDetail(recovery, confidenceCap, sleepDetail, baselineNights)} />
-
-      <SectionLabel>Weekly trends</SectionLabel>
-      <Card>
-        <SectionLabel>Recovery</SectionLabel>
-        {week.length === 0 ? (
-          <Empty text="No history yet." />
-        ) : (
-          <WeeklyBars
-            data={week.map((d) => ({
-              label: dow(d.day),
-              value: d.recovery,
-              display: d.recovery != null ? `${d.recovery}%` : '',
-              color: recoveryColor(d.recovery),
-              confidence: d.recovery != null ? barConfidence(d) : null,
-            }))}
-          />
-        )}
-      </Card>
-      <Card>
-        <SectionLabel>Heart rate variability</SectionLabel>
-        {week.length === 0 ? (
-          <Empty text="No history yet." />
-        ) : (
-          <WeeklyBars
-            data={week.map((d) => ({
-              label: dow(d.day),
-              value: d.rmssd != null ? Math.round(d.rmssd) : null,
-              display: d.rmssd != null ? `${Math.round(d.rmssd)}` : '',
-              color: colors.recoveryGreen,
-              confidence: d.rmssd != null ? barConfidence(d) : null,
-            }))}
-          />
-        )}
-      </Card>
-
-      <Empty text="Recovery blends overnight HRV, resting HR, respiratory stability, skin-temperature stability and sleep performance against your baseline. It is a local estimate, not WHOOP's proprietary score." />
     </Screen>
   );
 }
@@ -494,11 +416,11 @@ function recoveryDriverInsight(
     return {
       badge: 'DATA',
       title: confidenceCap <= 66 ? 'Sleep confidence is limiting recovery' : 'Recovery is provisional today',
-      body: `The recovery score is capped at ${confidenceCap}% until the overnight window has stronger coverage, sleep-state corroboration, or has been reviewed.`,
+      body: 'The recovery score is limited until the overnight window is complete, corroborated or reviewed.',
       metric: 'Confidence',
-      value: sleepDetail?.coveragePct != null ? `${sleepDetail.coveragePct}%` : '-',
+      value: confidence === 'high' ? 'Good' : 'Limited',
       actionLabel: needsMoreSync ? 'Sync more data' : 'Review sleep window',
-      actionValue: sleepConfidenceLabel(confidence),
+      actionValue: confidence === 'high' ? 'good' : 'limited',
       icon: needsMoreSync ? 'sync' : 'create',
       color: colors.strainBlue,
       route: needsMoreSync ? { name: 'device' } : { name: 'editSleep' },
@@ -579,4 +501,7 @@ const styles = StyleSheet.create({
   illnessDot: { width: 9, height: 9, borderRadius: 5, marginRight: 8 },
   illnessTitle: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
   illnessSub: { color: colors.textSecondary, fontSize: 13, marginTop: 6, lineHeight: 18, fontFamily: fonts.text },
+  missingTitle: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
+  missingBody: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 4, fontFamily: fonts.text },
+  missingStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, marginBottom: 4 },
 });

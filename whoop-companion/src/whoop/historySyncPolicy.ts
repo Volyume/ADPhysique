@@ -26,6 +26,13 @@ export function historyRetryDelayMs(failedAttempts: number, baseMs = 15_000, max
   return Math.min(maxMs, baseMs * 2 ** Math.min(6, attempt - 1));
 }
 
+/** A successfully acknowledged endpoint that does not move is not a transport
+ * failure, but repeatedly draining it wastes battery and re-decodes old data. */
+export function historyReplayDelayMs(replayCount: number, baseMs = 15 * 60_000, maxMs = 2 * 60 * 60_000): number {
+  const count = Math.max(1, Math.floor(replayCount));
+  return Math.min(maxMs, baseMs * 2 ** Math.min(4, count - 1));
+}
+
 export function historyEndShouldQueue(
   endKey: string,
   queuedEndKeys: ReadonlySet<string>,

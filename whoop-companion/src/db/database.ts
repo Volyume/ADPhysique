@@ -107,6 +107,10 @@ export type CardioRow = {
   cadenceSpm: number | null;
   stepSource: string | null;
   lapCount: number | null;
+  /** Active recording duration; wall-clock endTs - startTs remains available. */
+  activeDurationMin?: number | null;
+  /** Completed pause windows; used to exclude paused band steps on backfill. */
+  pauseIntervals?: Array<{ startTs: number; endTs: number | null }> | null;
   source: string; // 'manual' | 'auto' | 'live' | 'nap'
   notes: string | null;
 };
@@ -133,6 +137,10 @@ function serializeWrite<T>(operation: () => Promise<T>): Promise<T> {
     () => undefined,
   );
   return next;
+}
+
+function isDuplicateColumnError(error: unknown): boolean {
+  return /duplicate column name/i.test(String(error));
 }
 
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
@@ -163,6 +171,8 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
           activity TEXT NOT NULL, avg_hr INTEGER, max_hr INTEGER, trimp REAL, strain REAL,
           kcal INTEGER, distance_m REAL, route TEXT,
           steps INTEGER, cadence_spm INTEGER, step_source TEXT, lap_count INTEGER,
+          active_duration_min REAL,
+          pause_intervals TEXT,
           source TEXT NOT NULL, notes TEXT
         );
         CREATE TABLE IF NOT EXISTS journal (
@@ -221,14 +231,16 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
       ]) {
         try {
           await db.execAsync(`ALTER TABLE daily_metrics ADD COLUMN ${col}`);
-        } catch {
+        } catch (error) {
+          if (!isDuplicateColumnError(error)) throw error;
           // Column already exists — nothing to do.
         }
       }
       for (const col of ['source TEXT', 'confidence REAL']) {
         try {
           await db.execAsync(`ALTER TABLE hr_samples ADD COLUMN ${col}`);
-        } catch {
+        } catch (error) {
+          if (!isDuplicateColumnError(error)) throw error;
           // Column already exists.
         }
       }
@@ -240,10 +252,13 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
         'cadence_spm INTEGER',
         'step_source TEXT',
         'lap_count INTEGER',
+        'active_duration_min REAL',
+        'pause_intervals TEXT',
       ]) {
         try {
           await db.execAsync(`ALTER TABLE cardio ADD COLUMN ${col}`);
-        } catch {
+        } catch (error) {
+          if (!isDuplicateColumnError(error)) throw error;
           // Column already exists.
         }
       }
@@ -480,7 +495,7 @@ function cleanSleepWindow(
   return { start: cleanStart, end: cleanEnd };
 }
 
-function cleanStageMinutes(
+export function cleanStageMinutes(
   metric: Pick<DailyMetricRow, 'deepMin' | 'remMin' | 'lightMin' | 'awakeMin'>,
   sleepMin: number | null,
   inBedMin: number | null,
@@ -490,9 +505,31 @@ function cleanStageMinutes(
   const rem = finiteRange(metric.remMin, 0, sleepMin, true);
   const light = finiteRange(metric.lightMin, 0, sleepMin, true);
   const asleepTotal = (deep ?? 0) + (rem ?? 0) + (light ?? 0);
-  const stagesValid = deep != null && rem != null && light != null && Math.abs(asleepTotal - sleepMin) <= 5;
-  const awake = finiteRange(metric.awakeMin, 0, Math.max(sleepMin, inBedMin ?? sleepMin), true);
-  return stagesValid ? { deep, rem, light, awake } : { deep: null, rem: null, light: null, awake: null };
+  const stagesValid = deep != null && rem != null && light != null && asleepTotal === sleepMin;
+  const awake = finiteRange(metric.awakeMin, 0, inBedMin ?? sleepMin, true);
+  const awakeValid = awake != null && (inBedMin == null ? awake === 0 : awake + sleepMin <= inBedMin);
+  return stagesValid && awakeValid
+    ? { deep, rem, light, awake }
+    : { deep: null, rem: null, light: null, awake: null };
+}
+
+/** SQLite uses half-open intervals for this query: touching endpoints do not overlap. */
+export function intervalsOverlap(
+  startTs: number,
+  endTs: number,
+  windowStartTs: number,
+  windowEndTs: number,
+): boolean {
+  return (
+    Number.isFinite(startTs) &&
+    Number.isFinite(endTs) &&
+    Number.isFinite(windowStartTs) &&
+    Number.isFinite(windowEndTs) &&
+    endTs > startTs &&
+    windowEndTs > windowStartTs &&
+    startTs < windowEndTs &&
+    endTs > windowStartTs
+  );
 }
 
 function cleanRespiratoryRate(value: number | null | undefined): number | null {
@@ -709,6 +746,8 @@ type CardioDbRow = {
   cadence_spm: number | null;
   step_source: string | null;
   lap_count: number | null;
+  active_duration_min: number | null;
+  pause_intervals: string | null;
   source: string;
   notes: string | null;
 };
@@ -716,12 +755,21 @@ type CardioDbRow = {
 export async function insertCardio(c: CardioRow): Promise<void> {
   await serializeWrite(async () => {
     const db = await getDb();
-    await db.runAsync(
+    const result = await db.runAsync(
     `INSERT OR REPLACE INTO cardio (
        id, start_ts, end_ts, activity, avg_hr, max_hr, trimp, strain, kcal,
-       distance_m, route, steps, cadence_spm, step_source, lap_count, source, notes
+       distance_m, route, steps, cadence_spm, step_source, lap_count, active_duration_min,
+       pause_intervals, source, notes
      )
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      WHERE ? != 'nap'
+         OR NOT EXISTS (
+           SELECT 1 FROM cardio
+            WHERE source = 'nap'
+              AND id != ?
+              AND start_ts < ?
+              AND end_ts > ?
+         )`,
     c.id,
     c.startTs,
     c.endTs,
@@ -735,11 +783,20 @@ export async function insertCardio(c: CardioRow): Promise<void> {
     c.route && c.route.length ? JSON.stringify(c.route) : null,
     c.steps,
     c.cadenceSpm,
-    c.stepSource,
-    c.lapCount,
-    c.source,
-    c.notes,
+     c.stepSource,
+     c.lapCount,
+     cleanNonNegative(c.activeDurationMin),
+     encodePauseIntervals(c.pauseIntervals),
+     c.source,
+     c.notes,
+     c.source,
+     c.id,
+     c.endTs,
+     c.startTs,
     );
+    if (c.source === 'nap' && result.changes === 0) {
+      throw new Error('Nap overlaps an existing nap and was not saved.');
+    }
   });
 }
 
@@ -760,12 +817,15 @@ export async function listNapsBetween(startTs: number, endTs: number): Promise<C
   if (endTs <= startTs) return [];
   const db = await getDb();
   const rows = await db.getAllAsync<CardioDbRow>(
-    "SELECT * FROM cardio WHERE source = 'nap' AND start_ts >= ? AND start_ts < ? ORDER BY start_ts ASC",
-    startTs,
+    NAP_OVERLAP_QUERY,
     endTs,
+    startTs,
   );
   return rows.map(mapCardio);
 }
+
+export const NAP_OVERLAP_QUERY =
+  "SELECT * FROM cardio WHERE source = 'nap' AND start_ts < ? AND end_ts > ? ORDER BY start_ts ASC";
 
 export async function listCardioBetween(startTs: number, endTs: number): Promise<CardioRow[]> {
   if (endTs <= startTs) return [];
@@ -814,9 +874,45 @@ function mapCardio(row: CardioDbRow): CardioRow {
     cadenceSpm: row.cadence_spm,
     stepSource: row.step_source,
     lapCount: row.lap_count,
+    activeDurationMin: cleanNonNegative(row.active_duration_min),
+    pauseIntervals: parsePauseIntervals(row.pause_intervals),
     source: row.source,
     notes: row.notes,
   };
+}
+
+function encodePauseIntervals(intervals: CardioRow['pauseIntervals']): string | null {
+  const cleaned = (intervals ?? [])
+    .filter((pause) => Number.isFinite(pause.startTs) && (pause.endTs == null || Number.isFinite(pause.endTs)))
+    .filter((pause) => pause.endTs == null || pause.endTs > pause.startTs)
+    .map((pause) => ({
+      startTs: Math.round(pause.startTs),
+      endTs: pause.endTs == null ? null : Math.round(pause.endTs),
+    }));
+  return cleaned.length ? JSON.stringify(cleaned) : null;
+}
+
+function parsePauseIntervals(raw: string | null): CardioRow['pauseIntervals'] {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return null;
+    const cleaned = parsed
+      .filter((pause): pause is { startTs: number; endTs?: number | null } => {
+        if (!pause || typeof pause !== 'object') return false;
+        const value = pause as { startTs?: unknown; endTs?: unknown };
+        return typeof value.startTs === 'number' &&
+          (value.endTs == null || typeof value.endTs === 'number');
+      })
+      .map((pause) => ({
+        startTs: Math.round(pause.startTs),
+        endTs: pause.endTs == null ? null : Math.round(pause.endTs),
+      }))
+      .filter((pause) => pause.endTs == null || pause.endTs > pause.startTs);
+    return cleaned.length ? cleaned : null;
+  } catch {
+    return null;
+  }
 }
 
 // ---- Journal ----

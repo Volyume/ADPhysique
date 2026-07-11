@@ -23,19 +23,21 @@ function assert(condition, message) {
 const batched = Array.from({ length: 27 }, (_, i) => ({
   ts: i * 1000,
   counter: i * 8,
-  activityClass: i <= 14 ? 1 : 0,
+  activityClass: 1,
 }));
 const batchedEstimate = estimateBandStepsFromCounters(batched, 1);
 assert(batchedEstimate?.steps === 208, 'preserves legitimate batched increments');
-assert(batchedEstimate?.movementLinkedPct === 58, 'measures movement-linked ticks');
+assert(batchedEstimate?.rawTicks === 208 && batchedEstimate?.acceptedRawTicks === 208, 'publishes accepted movement ticks');
+assert(batchedEstimate?.movementLinkedPct === 100, 'measures movement-linked ticks');
 assert(batchedEstimate?.confidence === 'high', 'trusts capture-like counter movement');
 
 const inactiveDrift = Array.from({ length: 21 }, (_, i) => ({
   ts: i * 1000,
   counter: i * 5,
-  activityClass: i === 0 ? 1 : 0,
+  activityClass: 0,
 }));
 const driftEstimate = estimateBandStepsFromCounters(inactiveDrift, 1);
+assert(driftEstimate?.rawTicks === 0 && driftEstimate?.rejectedInactiveRawTicks === 100, 'excludes off-wrist inactive drift from raw ticks');
 assert(driftEstimate?.confidence === 'low', 'rejects mostly inactive counter drift');
 assert(!bandStepEstimateIsTrusted(driftEstimate), 'does not publish inactive drift');
 
@@ -49,6 +51,17 @@ const rolloverEstimate = estimateBandStepsFromCounters(
 );
 assert(rolloverEstimate?.steps === 21, 'handles a 16-bit counter rollover');
 
+const ambiguousRollover = estimateBandStepsFromCounters(
+  [
+    { ts: 0, counter: 65_000, activityClass: 1 },
+    { ts: 1000, counter: 1000, activityClass: 1 },
+    { ts: 3000, counter: 1010, activityClass: 1 },
+  ],
+  1,
+);
+assert(ambiguousRollover?.resetCount === 1 && ambiguousRollover?.ambiguousResetCount === 1, 'rejects ambiguous large-to-small rollover');
+assert(ambiguousRollover?.rawTicks === 10 && !bandStepEstimateIsTrusted(ambiguousRollover), 'does not publish across an ambiguous epoch');
+
 const dailyRows = [
   { ts: 0, counter: 0, activityClass: 1 },
   { ts: 1000, counter: 100, activityClass: 1 },
@@ -58,6 +71,13 @@ const dailyRows = [
 ];
 const workoutEstimate = estimateBandStepsFromCounters(dailyRows.filter((row) => row.ts >= 10_000), 1);
 assert(workoutEstimate?.steps === 100, 'isolates workout steps from the daily total');
+
+const workoutBoundaryEstimate = estimateBandStepsFromCounters(
+  [dailyRows[1], ...dailyRows.slice(2)],
+  1,
+  { countFromTs: 10_000, countToTs: 40_000 },
+);
+assert(workoutBoundaryEstimate?.steps === 100, 'uses the predecessor for a workout boundary');
 
 const midnightRange = estimateBandStepsFromCounters(
   [
@@ -93,5 +113,6 @@ const reset = estimateBandStepsFromCounters(
   1,
 );
 assert(reset?.resetCount === 1 && !bandStepEstimateIsTrusted(reset), 'counter resets prevent publication');
+assert(reset?.rawTicks === 50, 'recovers after a reset without counting the reset jump');
 
 console.log('band step regression tests passed');

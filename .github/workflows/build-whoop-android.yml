@@ -27,6 +27,9 @@ concurrency:
   group: whoop-android-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 defaults:
   run:
     working-directory: whoop-companion
@@ -65,6 +68,11 @@ jobs:
           npm run test:sleep-schedule
           npm run test:weekly-plan
           npm run test:physiology
+          npm run test:history-sync
+          npm run test:readiness
+          npm run test:overnight-vitals
+          npm run test:training
+          npm run test:session-durability
 
       - name: Expo prebuild (generate android/)
         run: npx expo prebuild --platform android --no-install

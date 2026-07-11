@@ -3,7 +3,7 @@ import { Alert, StyleSheet, Text, Vibration, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Polyline } from 'react-native-svg';
 
-import { appStore, SessionStats } from '../state/appStore';
+import { activeSessionDurationMs, appStore, SessionStats } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
 import { Bar, PrimaryButton, SecondaryButton, Stat } from '../ui/components';
 import { colors, fonts, strainZoneColors } from '../ui/theme';
@@ -11,7 +11,7 @@ import { Nav } from '../ui/navigation';
 import { formatDistance, formatPace } from '../sensors/location';
 import { strainCategory, strainCoachText } from '../metrics/strainCoach';
 import { kcalPerMinute } from '../metrics/calories';
-import { STEP_META, stepAt, totalDurationSec } from '../data/structuredWorkouts';
+import { HR_ZONE_METHOD_LABEL, STEP_META, formatTargetZone, stepAt, totalDurationSec } from '../data/structuredWorkouts';
 import { activityUsesSteps } from '../data/activities';
 
 function fmt(sec: number): string {
@@ -30,18 +30,28 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
   const profile = useStoreSelector(appStore, (s) => s.profile);
   const [now, setNow] = useState(Date.now());
   const [stats, setStats] = useState<SessionStats | null>(null);
+  const [pauseBusy, setPauseBusy] = useState(false);
   const ticked = useRef(0);
   const lastStepIdx = useRef(-1);
+  const latestStats = useRef<SessionStats | null>(null);
 
   useEffect(() => {
+    const refreshStats = () => {
+      void appStore.sessionStats().then((next) => {
+        if (next) {
+          latestStats.current = next;
+          setStats(next);
+        }
+      });
+    };
     const id = setInterval(() => {
       setNow(Date.now());
       ticked.current += 1;
-      if (ticked.current % 2 === 0) void appStore.sessionStats().then(setStats);
+      refreshStats();
       // Buzz on each structured-workout step change (and on completion).
       const s = appStore.getState().session;
       if (s?.plan) {
-        const st = stepAt(s.plan, Math.round((Date.now() - s.startTs) / 1000));
+        const st = stepAt(s.plan, latestStats.current?.elapsedSec ?? Math.round(activeSessionDurationMs(s) / 1000));
         if (lastStepIdx.current === -1) lastStepIdx.current = st.index;
         else if (st.index !== lastStepIdx.current) {
           lastStepIdx.current = st.index;
@@ -49,7 +59,7 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
         }
       }
     }, 1000);
-    void appStore.sessionStats().then(setStats);
+    refreshStats();
     return () => clearInterval(id);
   }, []);
 
@@ -65,7 +75,7 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
     );
   }
 
-  const elapsed = Math.round((now - session.startTs) / 1000);
+  const elapsed = stats?.elapsedSec ?? Math.round(activeSessionDurationMs(session, now) / 1000);
   const isWorkout = session.kind === 'workout';
   const plan = session.plan;
   const planState = plan ? stepAt(plan, elapsed) : null;
@@ -83,27 +93,53 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
     usesSteps,
   });
 
+  const canPause = typeof appStore.pauseSession === 'function';
+  const canResume = typeof appStore.resumeSession === 'function';
+  const apiPaused = session.pausedAtTs != null;
+  const togglePause = async () => {
+    const action = apiPaused ? appStore.resumeSession : appStore.pauseSession;
+    if (!action || pauseBusy) return;
+    setPauseBusy(true);
+    try {
+      await action();
+    } finally {
+      setPauseBusy(false);
+    }
+  };
+
+  const finishAndGoBack = async () => {
+    try {
+      await appStore.stopSession(true);
+      nav.back();
+    } catch (error) {
+      Alert.alert('Could not finish session', String(error));
+    }
+  };
   const save = () => {
     if (session.kind === 'workout' && quality.badge !== 'GOOD' && elapsed >= 60) {
       Alert.alert('Save low-quality recording?', quality.body, [
         { text: 'Keep recording', style: 'cancel' },
         {
           text: 'Save anyway',
-          onPress: () => {
-            void appStore.stopSession(true);
-            nav.back();
-          },
+          onPress: () => void finishAndGoBack(),
         },
       ]);
       return;
     }
-    void appStore.stopSession(true);
-    nav.back();
+    void finishAndGoBack();
   };
   const discard = () => {
     Alert.alert('Discard session?', 'This recording will not be saved.', [
       { text: 'Keep going', style: 'cancel' },
-      { text: 'Discard', style: 'destructive', onPress: () => { appStore.discardSession(); nav.back(); } },
+      {
+        text: 'Discard',
+        style: 'destructive',
+        onPress: () => {
+          void appStore.discardSession()
+            .then(() => nav.back())
+            .catch((error) => Alert.alert('Could not discard session', String(error)));
+        },
+      },
     ]);
   };
 
@@ -137,7 +173,7 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
               </Text>
               <Text style={styles.stepTime}>{fmt(Math.ceil(planState.stepRemaining))}</Text>
               <Text style={styles.stepHint}>
-                {planState.step!.targetZone ? `Target zone ${planState.step!.targetZone}` : 'No HR target'} ·{' '}
+                {formatTargetZone(planState.step!.targetZone)} ·{' '}
                 {fmt(Math.round(totalDurationSec(plan) - elapsed))} left of plan
               </Text>
             </View>
@@ -199,7 +235,7 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
               </>
             ) : null}
 
-            <Text style={styles.sectionLabel}>HEART-RATE ZONES</Text>
+            <Text style={styles.sectionLabel}>{HR_ZONE_METHOD_LABEL} zones</Text>
             <View style={styles.zones}>
               {(stats?.zones ?? []).map((z, i) => (
                 <Bar key={z.zone} label={`Z${z.zone}`} value={z.minutes / zoneMax} color={strainZoneColors[i] ?? colors.strainBlue} right={`${z.minutes}m`} />
@@ -217,6 +253,7 @@ export function LiveSessionScreen({ nav }: { nav: Nav }) {
 
       <View style={styles.controls}>
         {isWorkout ? <SecondaryButton title="Lap" onPress={() => appStore.addLap()} /> : null}
+        {apiPaused ? (canResume ? <SecondaryButton title={pauseBusy ? 'Resuming...' : 'Resume'} onPress={() => void togglePause()} disabled={pauseBusy} /> : null) : canPause ? <SecondaryButton title={pauseBusy ? 'Pausing...' : 'Pause'} onPress={() => void togglePause()} disabled={pauseBusy} /> : null}
         <PrimaryButton title={session.kind === 'workout' ? 'Finish & save' : 'End & save'} onPress={save} />
         <SecondaryButton title="Discard" onPress={discard} />
       </View>

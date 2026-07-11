@@ -1,22 +1,18 @@
 /**
- * Training Readiness — a Garmin-style "should I train hard today?" score, but
- * built ON TOP OF our existing WHOOP Recovery score (Recovery is its dominant
- * input) rather than duplicating it. It fuses Recovery with sleep, HRV, sleep
- * debt and training load.
+ * Training readiness: a Garmin-style training prompt built from the evidence
+ * that is actually present. Missing signals are omitted, never copied from
+ * Recovery, and sparse blends are capped so one measurement cannot look like
+ * a complete physiological assessment.
  */
 
-import {
-  SLEEP_TRUST_LOW_COVERAGE_PCT,
-  SLEEP_TRUST_LOW_SIGNAL_MIN,
-  SLEEP_TRUST_MEDIUM_COVERAGE_PCT,
-  SLEEP_TRUST_MEDIUM_SIGNAL_MIN,
-  sleepTrustTier,
-} from './sleepTrustWeight';
+import { sleepTrustTier } from './sleepTrustWeight';
+
+type Confidence = 'high' | 'medium' | 'low';
 
 export type Readiness = {
   score: number; // 0..100
   label: string; // Poor / Low / Moderate / High / Prime
-  confidence: 'high' | 'medium' | 'low';
+  confidence: Confidence;
   confidencePct: number;
   scoreCap: number | null;
   cappedByConfidence: boolean;
@@ -34,12 +30,32 @@ function readinessLabel(s: number): string {
   return 'Poor';
 }
 
-/** ACWR → 0..100 sub-score (sweet spot 0.8–1.3 best, extremes penalised). */
-function loadSubScore(acwr: number | null): number {
-  if (acwr == null) return 70; // neutral when unknown
-  if (acwr >= 0.8 && acwr <= 1.3) return 100;
-  if (acwr < 0.8) return Math.max(40, 100 - (0.8 - acwr) * 80);
-  return Math.max(10, 100 - (acwr - 1.3) * 90); // overload penalised harder
+function finiteScore(value: number | null): number | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  return Math.max(0, Math.min(100, value));
+}
+
+function debtScore(debtMin: number): number | null {
+  if (!Number.isFinite(debtMin)) return null;
+  return Math.max(0, Math.min(100, 100 - (Math.max(0, debtMin) / 120) * 100));
+}
+
+function sleepTrustContributor(input: {
+  confidence: 'high' | 'medium' | 'low' | null;
+  coveragePct: number | null;
+  signalMin: number | null;
+  included: boolean;
+}): Readiness['contributors'][number] {
+  const { confidence, coveragePct, signalMin, included } = input;
+  const tier = sleepTrustTier({ confidence, coveragePct, signalMin });
+  const label = confidence === 'high' ? 'High' : confidence === 'medium' ? 'Medium' : confidence === 'low' ? 'Low' : '-';
+  const detail = coveragePct != null ? `${label} - ${coveragePct}%` : signalMin != null ? `${label} - ${signalMin}m` : label;
+  return {
+    key: 'sleep_trust',
+    label: 'Sleep trust',
+    value: included ? detail : `${detail} - not scored`,
+    good: confidence == null && coveragePct == null && signalMin == null ? null : tier === 'high',
+  };
 }
 
 export function computeTrainingReadiness(input: {
@@ -47,73 +63,96 @@ export function computeTrainingReadiness(input: {
   sleepPerformance: number | null; // 0..100
   sleepDebtMin: number;
   hrvBalance: number | null; // 0..100 (HRV vs baseline)
-  acwr: number | null;
+  acwr: number | null; // descriptive training-load context, not a risk score
   sleepConfidence?: 'high' | 'medium' | 'low' | null;
   sleepCoveragePct?: number | null;
   sleepSignalMin?: number | null;
 }): Readiness | null {
-  const { recovery, sleepPerformance, sleepDebtMin, hrvBalance, acwr, sleepConfidence = null, sleepCoveragePct = null, sleepSignalMin = null } = input;
-  // Need at least recovery or sleep to say anything.
-  if (recovery == null && sleepPerformance == null) return null;
+  const {
+    recovery,
+    sleepPerformance,
+    sleepDebtMin,
+    hrvBalance,
+    acwr,
+    sleepConfidence = null,
+    sleepCoveragePct = null,
+    sleepSignalMin = null,
+  } = input;
 
-  const rec = recovery ?? sleepPerformance ?? 50;
-  const sleep = sleepPerformance ?? rec;
-  const debtPenalty = Math.max(0, 100 - (sleepDebtMin / 120) * 100); // 2h debt → 0
-  const hrv = hrvBalance ?? rec;
-  const load = loadSubScore(acwr);
+  const rec = finiteScore(recovery);
+  const hrv = finiteScore(hrvBalance);
+  const sleepTier = sleepTrustTier({
+    confidence: sleepConfidence,
+    coveragePct: sleepCoveragePct,
+    signalMin: sleepSignalMin,
+  });
+  const sleep = sleepTier === 'low' ? null : finiteScore(sleepPerformance);
+  const debt = debtScore(sleepDebtMin);
 
-  const score = Math.round(
-    0.35 * rec + 0.25 * sleep + 0.15 * debtPenalty + 0.1 * hrv + 0.15 * load,
-  );
-  const scoreCap = readinessScoreCap({ sleepConfidence, sleepCoveragePct, sleepSignalMin });
-  const clamped = Math.max(1, Math.min(100, Math.min(score, scoreCap ?? 100)));
-  const cappedByConfidence = scoreCap != null && clamped < Math.max(1, Math.min(100, score));
+  // Recovery, sleep and HRV are the primary physiological signals. Debt is
+  // supporting context and must not turn one primary signal into a score.
+  const primaryCount = [rec, sleep, hrv].filter((value) => value != null).length;
+  if (primaryCount < 2) return null;
 
-  const sleepTrust = sleepTrustContributor({ sleepConfidence, sleepCoveragePct, sleepSignalMin });
+  const weighted: Array<{ value: number; weight: number }> = [];
+  if (rec != null) weighted.push({ value: rec, weight: 0.35 });
+  if (sleep != null) weighted.push({ value: sleep, weight: 0.25 });
+  if (debt != null) weighted.push({ value: debt, weight: 0.15 });
+  if (hrv != null) weighted.push({ value: hrv, weight: 0.1 });
+  const weightTotal = weighted.reduce((sum, contributor) => sum + contributor.weight, 0);
+  const rawScore = Math.round(weighted.reduce((sum, contributor) => sum + contributor.value * contributor.weight, 0) / weightTotal);
+
+  // Two primary signals can support a cautious prompt, but not a high score.
+  // Complete, independently corroborated evidence is not capped unless a
+  // sleep-trust gate requires it.
+  let scoreCap: number | null = primaryCount === 2 ? 65 : null;
+  if (sleepTier === 'medium') scoreCap = Math.min(scoreCap ?? 100, 75);
+  if (sleepTier === 'none' && sleep != null) scoreCap = Math.min(scoreCap ?? 100, 65);
+  const score = Math.max(1, Math.min(100, scoreCap == null ? rawScore : Math.min(rawScore, scoreCap)));
+  const cappedByConfidence = score < Math.max(1, Math.min(100, rawScore));
+
+  let confidencePct = primaryCount === 2 ? 48 : 78;
+  if (primaryCount === 3) confidencePct = sleepTier === 'high' ? 88 : sleepTier === 'medium' ? 72 : 58;
+  if (debt == null) confidencePct -= 8;
+  if (sleepTier === 'medium') confidencePct -= 8;
+  if (sleepTier === 'none') confidencePct -= 12;
+  confidencePct = Math.max(25, Math.min(92, Math.round(confidencePct)));
+  const confidence: Confidence = confidencePct >= 80 ? 'high' : confidencePct >= 55 ? 'medium' : 'low';
+
+  const sleepTrust = sleepTrustContributor({
+    confidence: sleepConfidence,
+    coveragePct: sleepCoveragePct,
+    signalMin: sleepSignalMin,
+    included: sleep != null,
+  });
   const contributors = [
-    { key: 'recovery', label: 'Recovery', value: recovery != null ? `${recovery}%` : '—', good: recovery != null ? recovery >= 60 : null },
-    { key: 'sleep', label: 'Sleep', value: sleepPerformance != null ? `${sleepPerformance}%` : '—', good: sleepPerformance != null ? sleepPerformance >= 70 : null },
+    { key: 'recovery', label: 'Recovery', value: rec != null ? `${Math.round(rec)}%` : '-', good: rec != null ? rec >= 60 : null },
+    { key: 'sleep', label: 'Sleep', value: sleep != null ? `${Math.round(sleep)}%` : sleepPerformance != null ? `${Math.round(sleepPerformance)}% - not scored` : '-', good: sleep != null ? sleep >= 70 : null },
     sleepTrust,
-    { key: 'debt', label: 'Sleep debt', value: `${Math.round(sleepDebtMin)}m`, good: sleepDebtMin < 45 },
-    { key: 'hrv', label: 'HRV balance', value: hrvBalance != null ? `${hrvBalance}` : '—', good: hrvBalance != null ? hrvBalance >= 50 : null },
-    { key: 'load', label: 'Training load', value: acwr != null ? acwr.toFixed(2) : '—', good: acwr != null ? acwr >= 0.8 && acwr <= 1.3 : null },
+    { key: 'debt', label: 'Sleep debt', value: debt != null ? `${Math.round(Math.max(0, sleepDebtMin))}m` : '-', good: debt != null ? sleepDebtMin < 45 : null },
+    { key: 'hrv', label: 'HRV balance', value: hrv != null ? `${Math.round(hrv)}` : '-', good: hrv != null ? hrv >= 50 : null },
+    {
+      key: 'load',
+      label: 'Training load context',
+      value: acwr != null && Number.isFinite(acwr) ? `ACWR ${acwr.toFixed(2)}` : '-',
+      good: null,
+    },
   ];
   const missingInputs = [
-    recovery == null ? 'recovery' : null,
-    sleepPerformance == null ? 'sleep performance' : null,
-    hrvBalance == null ? 'HRV balance' : null,
-    acwr == null ? 'training load' : null,
-  ].filter((v): v is string => v != null);
+    rec == null ? 'recovery' : null,
+    sleep == null ? 'sleep performance' : null,
+    hrv == null ? 'HRV balance' : null,
+  ].filter((value): value is string => value != null);
 
-  let confidencePct = 100;
-  if (recovery == null) confidencePct -= 25;
-  if (sleepPerformance == null) confidencePct -= 20;
-  if (hrvBalance == null) confidencePct -= 10;
-  if (acwr == null) confidencePct -= 10;
-  if (sleepConfidence === 'medium') confidencePct -= 12;
-  if (sleepConfidence === 'low') confidencePct -= 30;
-  if (sleepPerformance != null && sleepConfidence == null) confidencePct -= 12;
-  if (sleepCoveragePct != null && sleepCoveragePct < SLEEP_TRUST_LOW_COVERAGE_PCT) confidencePct -= 20;
-  else if (sleepCoveragePct != null && sleepCoveragePct < SLEEP_TRUST_MEDIUM_COVERAGE_PCT) confidencePct -= 8;
-  if (sleepSignalMin != null && sleepSignalMin < SLEEP_TRUST_LOW_SIGNAL_MIN) confidencePct -= 20;
-  else if (sleepSignalMin != null && sleepSignalMin < SLEEP_TRUST_MEDIUM_SIGNAL_MIN) confidencePct -= 8;
-  confidencePct = Math.max(20, Math.min(100, Math.round(confidencePct)));
-
-  const confidence = confidencePct >= 80 ? 'high' : confidencePct >= 55 ? 'medium' : 'low';
-  const qualityLabel =
-    confidence === 'high' ? 'Strong signal' : confidence === 'medium' ? 'Usable estimate' : 'Treat cautiously';
-  const qualityNote =
-    missingInputs.length > 0
-      ? `Readiness is using fallbacks until ${missingInputs.join(', ')} are available.`
-      : sleepConfidence === 'low'
-        ? 'Readiness is limited by low sleep confidence; sync more overnight data or review the sleep window.'
-        : sleepConfidence === 'medium'
-          ? 'Readiness is usable, but fuller sleep coverage or corroboration may refine it.'
-          : 'Readiness is backed by recovery, sleep, HRV balance and recent training load.';
+  const qualityLabel = confidence === 'high' ? 'Strongest available signal' : confidence === 'medium' ? 'Usable estimate' : 'Treat cautiously';
+  const missingNote = missingInputs.length > 0
+    ? `Missing or untrusted inputs are excluded: ${missingInputs.join(', ')}.`
+    : 'The score uses all three primary signals available today.';
+  const qualityNote = `${missingNote} Sleep debt is supporting context, and ACWR is shown for load context rather than used as an injury or optimal-range verdict.${cappedByConfidence ? ` Score capped at ${scoreCap} because the evidence is sparse or uncertain.` : ''}`;
 
   return {
-    score: clamped,
-    label: readinessLabel(clamped),
+    score,
+    label: readinessLabel(score),
     confidence,
     confidencePct,
     scoreCap,
@@ -122,46 +161,5 @@ export function computeTrainingReadiness(input: {
     qualityNote,
     missingInputs,
     contributors,
-  };
-}
-
-function readinessScoreCap(input: {
-  sleepConfidence: 'high' | 'medium' | 'low' | null;
-  sleepCoveragePct: number | null;
-  sleepSignalMin: number | null;
-}): number | null {
-  const tier = sleepTrustTier({
-    confidence: input.sleepConfidence,
-    coveragePct: input.sleepCoveragePct,
-    signalMin: input.sleepSignalMin,
-  });
-  if (tier === 'low') return 65;
-  if (tier === 'medium') return 86;
-  return null;
-}
-
-function sleepTrustContributor(input: {
-  sleepConfidence: 'high' | 'medium' | 'low' | null;
-  sleepCoveragePct: number | null;
-  sleepSignalMin: number | null;
-}): Readiness['contributors'][number] {
-  const confidence = input.sleepConfidence;
-  const coverage = input.sleepCoveragePct;
-  const signal = input.sleepSignalMin;
-  const label = confidence === 'high' ? 'High' : confidence === 'medium' ? 'Medium' : confidence === 'low' ? 'Low' : '—';
-  const detail =
-    coverage != null
-      ? `${label} · ${coverage}%`
-      : signal != null
-        ? `${label} · ${signal}m`
-        : label;
-
-  const tier = sleepTrustTier({ confidence, coveragePct: coverage, signalMin: signal });
-
-  return {
-    key: 'sleep_trust',
-    label: 'Sleep trust',
-    value: detail,
-    good: confidence == null && coverage == null && signal == null ? null : tier === 'high',
   };
 }

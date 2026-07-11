@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import { Card, PrimaryButton, Screen, SecondaryButton, SectionLabel } from '../ui/components';
+import { calculateTonightPlan, Card, parsePinnedWakeMinute, parsePlanningWindowMinute, PrimaryButton, Screen, SecondaryButton, SectionLabel, tonightEfficiencyPercent } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav, Route } from '../ui/navigation';
 import { formatDuration } from '../util/time';
@@ -74,17 +74,15 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
   const [planningWindowMin, setPlanningWindowMin] = useState(30);
   useEffect(() => {
     void Promise.all([kvGet('wakeTime'), kvGet('wakeTimePinned')]).then(([wakeTimeRaw, wakePinnedRaw]) => {
-      const n = wakeTimeRaw ? Number(wakeTimeRaw) : NaN;
-      const validWake = Number.isFinite(n) && n >= 0 && n < 1440;
-      const pinned = validWake && (wakePinnedRaw === '1' || wakePinnedRaw == null);
-      if (pinned) setWakeMin(n);
+      const pinnedWake = parsePinnedWakeMinute(wakeTimeRaw, wakePinnedRaw);
+      const pinned = pinnedWake != null;
+      if (pinned) setWakeMin(pinnedWake);
       setWakePinned(pinned);
       if (pinned && wakePinnedRaw == null) void kvSet('wakeTimePinned', '1');
       setWakeLoaded(true);
     });
     void kvGet('smartWakeWindowMin').then((v) => {
-      const n = v ? Number(v) : NaN;
-      if (PLANNING_WINDOWS.includes(n as (typeof PLANNING_WINDOWS)[number])) setPlanningWindowMin(n);
+      setPlanningWindowMin(parsePlanningWindowMinute(v));
     });
   }, []);
   useEffect(() => {
@@ -109,10 +107,17 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
     .filter((d) => sleepTrustTier(d.sleepDetail) !== 'low')
     .map((d) => d.sleepDetail?.efficiency)
     .filter((v): v is number => v != null && v > 0);
-  const expectedEff = (median(effSamples) ?? 85) / 100; // fraction, fallback 85%
-  const tibNeededMin = Math.round(targetMin / Math.max(0.5, expectedEff));
+  const expectedEfficiencyPercent = tonightEfficiencyPercent(effSamples);
+  const tonightPlan = calculateTonightPlan({
+    neededMinutes: neededMin,
+    goal,
+    wakeMinute: wakeMin,
+    planningWindowMinutes: planningWindowMin,
+    expectedEfficiencyPercent,
+  });
+  const tibNeededMin = tonightPlan.timeInBedMinutes;
   const planningStartMin = wakeMin - planningWindowMin;
-  const bedMin = planningStartMin - tibNeededMin;
+  const bedMin = tonightPlan.bedMinute;
   const nextWakeTs = nextWakeTimestamp(wakeMin);
   const plannedBedTs = nextWakeTs - (planningWindowMin + tibNeededMin) * 60000;
   const bedCountdownMin = relativeMin(plannedBedTs);
@@ -200,6 +205,17 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
     }
   };
 
+  const coachActionTitle = recommendation.mode.key !== goal
+    ? `Use ${recommendation.mode.name} target`
+    : alarmActionTitle;
+  const runCoachAction = () => {
+    if (recommendation.mode.key !== goal) {
+      void appStore.setSleepGoal(recommendation.mode.key);
+    } else {
+      void setWakeAlarm();
+    }
+  };
+
   const rows = need
     ? [
         { label: 'Baseline', min: need.baselineMin, color: colors.sleepTeal },
@@ -211,44 +227,24 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
 
   return (
     <Screen title="Sleep Coach" onBack={nav.back} tint={colors.sleepTeal}>
+      <SectionLabel>Tonight</SectionLabel>
       <Card>
-        <Text style={styles.bigLabel}>SLEEP NEEDED</Text>
-        <Text style={styles.bigValue}>{formatDuration(neededMin)}</Text>
-        <Text style={styles.bigSub}>
-          Recommended for your goal: {formatDuration(targetMin)} ({MODES.find((m) => m.key === goal)?.pct})
-        </Text>
-      </Card>
-
-      <SectionLabel>Recommended tonight</SectionLabel>
-      <Card>
-        <View style={styles.recommendHead}>
-          <View style={[styles.recommendBadge, { backgroundColor: recommendation.color }]}>
-            <Text style={styles.recommendBadgeText}>{recommendation.mode.pct}</Text>
+        <View style={styles.planRow}>
+          <View style={styles.planCell}>
+            <Text style={styles.planValue}>{formatDuration(targetMin)}</Text>
+            <Text style={styles.planLabel}>TARGET</Text>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.recommendTitle}>{recommendation.mode.name}</Text>
-            <Text style={styles.recommendBody}>{recommendation.reason}</Text>
+          <View style={styles.planCell}>
+            <Text style={styles.planValue}>{fmtClock(bedMin)}</Text>
+            <Text style={styles.planLabel}>BED</Text>
+          </View>
+          <View style={styles.planCell}>
+            <Text style={styles.planValue}>{fmtClock(wakeMin)}</Text>
+            <Text style={styles.planLabel}>WAKE</Text>
           </View>
         </View>
-        <View style={styles.recommendStats}>
-          <PlanStat label="Readiness" value={readiness?.score ?? '-'} color={readyColor(readiness?.score)} />
-          <PlanStat label="Recovery" value={today?.recovery != null ? `${today.recovery}%` : '-'} color={readyColor(today?.recovery)} />
-          <PlanStat label="Sleep trust" value={lastSleepTrust === 'none' ? '-' : lastSleepTrust} color={trustColor(lastSleepTrust)} />
-          <PlanStat label="Debt" value={formatDuration(need?.debtMin ?? 0)} color={(need?.debtMin ?? 0) >= 60 ? colors.recoveryYellow : colors.sleepTeal} />
-        </View>
-        {lastSleep && !lastSleepTrusted ? (
-          <View style={styles.trustCallout}>
-            <Ionicons name="sync-circle" size={18} color={colors.recoveryYellow} />
-            <Text style={styles.trustCalloutText}>
-              Sleep is still low-confidence, so this coach is holding the target steady until auto sync improves coverage.
-            </Text>
-          </View>
-        ) : null}
-        {recommendation.mode.key !== goal ? (
-          <SecondaryButton title={`Apply ${recommendation.mode.pct} ${recommendation.mode.name}`} onPress={() => void appStore.setSleepGoal(recommendation.mode.key)} />
-        ) : (
-          <Text style={styles.recommendMeta}>Your current goal already matches tonight's signal.</Text>
-        )}
+        <Text style={styles.recommendBody}>{recommendation.reason}</Text>
+        <PrimaryButton title={alarmBusy ? 'Working...' : coachActionTitle} onPress={runCoachAction} disabled={!!alarmBusy} />
       </Card>
 
       <SectionLabel>Choose your sleep goal</SectionLabel>
@@ -270,18 +266,6 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
             </View>
             <Text style={styles.modeHours}>{formatDuration(Math.round(neededMin * m.key))}</Text>
           </Pressable>
-        ))}
-      </Card>
-
-      <SectionLabel>Tonight readiness</SectionLabel>
-      <Card style={{ paddingVertical: 2 }}>
-        {checklist.map((item, i) => (
-          <ReadinessRow
-            key={item.label}
-            item={item}
-            last={i === checklist.length - 1}
-            onPress={item.route ? () => nav.navigate(item.route!) : undefined}
-          />
         ))}
       </Card>
 
@@ -322,7 +306,7 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
         ) : null}
         <Text style={styles.planNote}>
           To reach {MODES.find((m) => m.key === goal)?.pct} of your sleep need ({formatDuration(targetMin)} asleep),
-          allowing for your typical {Math.round(expectedEff * 100)}% efficiency
+          allowing for your typical {Math.round(tonightPlan.expectedEfficiencyPercent)}% efficiency
           {planningWindowMin > 0 ? ` even if you wake at ${fmtClock(planningStartMin)}.` : '.'}
         </Text>
         <View style={styles.tonightRow}>
@@ -376,6 +360,18 @@ export function SleepCoachScreen({ nav }: { nav: Nav }) {
           The planning window changes bedtime guidance only. Pulse arms one fixed strap haptic alarm at the
           latest wake time and re-arms that local time during connected daily sync; it does not wake you early within the window.
         </Text>
+      </Card>
+
+      <SectionLabel>Tonight readiness</SectionLabel>
+      <Card style={{ paddingVertical: 2 }}>
+        {checklist.map((item, i) => (
+          <ReadinessRow
+            key={item.label}
+            item={item}
+            last={i === checklist.length - 1}
+            onPress={item.route ? () => nav.navigate(item.route!) : undefined}
+          />
+        ))}
       </Card>
 
       <SectionLabel>How sleep need is calculated</SectionLabel>
@@ -649,7 +645,7 @@ const styles = StyleSheet.create({
   blurb: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, fontFamily: fonts.text },
   alarmNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 18, marginTop: 16, fontFamily: fonts.text },
   planRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  planCell: { flex: 1, alignItems: 'center' },
+  planCell: { flex: 1, minWidth: 0, alignItems: 'center' },
   planValue: { color: colors.sleepTeal, fontSize: 28, fontFamily: fonts.black },
   planLabel: { color: colors.textTertiary, fontSize: 10, fontFamily: fonts.textBold, letterSpacing: 1, marginTop: 4, textAlign: 'center' },
   wakeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.border },

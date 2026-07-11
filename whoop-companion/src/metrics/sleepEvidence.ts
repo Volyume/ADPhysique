@@ -37,10 +37,10 @@ export function sleepStateWakeDisplay(evidence: SleepStateEvidence | null | unde
 export function sleepEvidencePct(evidence: SleepCorroborationEvidence | null | undefined): number {
   const windowMin = evidenceWindowMin(evidence);
   if (!windowMin) return 0;
-  const stillMin = Math.max(
-    evidence?.stillMin ?? 0,
-    Math.max(0, (evidence?.motionMin ?? 0) - (evidence?.movingMin ?? 0)),
-  );
+  // Only explicitly low-motion epochs count as still. `motionMin-movingMin`
+  // also includes the ambiguous 0.2-0.4 band and previously turned moderate
+  // movement into false sleep corroboration.
+  const stillMin = Math.max(0, evidence?.stillMin ?? 0);
   return Math.round((stillMin / Math.max(1, windowMin)) * 100);
 }
 

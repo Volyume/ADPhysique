@@ -53,7 +53,9 @@ export type SleepResult = {
 
 const BASE_NEED_MIN = 480; // 8h baseline sleep need
 const MAX_AUTO_SLEEP_WINDOW_MIN = 11 * 60;
-const MAX_AUTO_BRIDGE_MIN = 25;
+const MAX_AUTO_BRIDGE_MIN = 5;
+const MAX_OBSERVED_AWAKENING_MIN = 30;
+const LONG_AUTO_SLEEP_MIN = 8 * 60;
 const AUTO_SLEEP_BOUNDARY_WINDOW_MIN = 90;
 const AUTO_SLEEP_BOUNDARY_DISTANCE_MIN = 20;
 const AUTO_SLEEP_BOUNDARY_SIGNAL_MIN = 10;
@@ -168,18 +170,20 @@ function findSleepWindow(
   const sleepishThreshold = p20 + spread * 0.75;
   const bridgeThreshold = p20 + spread * 1.15;
   const asleepFlag = samples.map((s, i) => {
-    if (s.hr == null) return false;
+    // Motion is independent evidence, not a missing-value default. An HR-only
+    // epoch cannot establish low movement for automatic window detection.
+    if (s.hr == null || s.motion == null) return false;
     const smooth = smoothedHr(samples, i) ?? s.hr;
     const lowHr = smooth <= sleepishThreshold;
-    const lowMotion = s.motion != null ? s.motion < 0.2 : true;
-    return lowHr && lowMotion;
+    return lowHr && s.motion < 0.2;
   });
   const bridgeFlag = samples.map((s, i) => {
-    if (s.hr == null) return false;
+    // A bridge is valid only for an observed, sleep-compatible epoch. Missing
+    // samples therefore close the run instead of extending its duration.
+    if (s.hr == null || s.motion == null) return false;
     const smooth = smoothedHr(samples, i) ?? s.hr;
     const quietEnough = smooth <= bridgeThreshold;
-    const lowMotion = s.motion != null ? s.motion < 0.35 : true;
-    return quietEnough && lowMotion;
+    return quietEnough && s.motion < 0.35;
   });
 
   // Longest quiet HR run, tolerating normal awakenings/arousals. The previous
@@ -188,25 +192,17 @@ function findSleepWindow(
   let bestStart = 0;
   let bestEnd = 0;
   let bestElapsed = 0;
+  const runs: Array<{ start: number; end: number }> = [];
   let runStart = -1;
   let gap = 0;
   const closeRun = (endExclusive: number) => {
     if (runStart < 0 || endExclusive <= runStart) return;
-    const startTs = samples[runStart]?.ts ?? 0;
-    const endTs = (samples[endExclusive - 1]?.ts ?? startTs) + 60000;
-    if (opts.endAfterTs != null && endTs < opts.endAfterTs) return;
-    if (opts.endBeforeTs != null && endTs >= opts.endBeforeTs) return;
-    const elapsed = Math.round((endTs - startTs) / 60000);
-    if (elapsed > bestElapsed) {
-      bestElapsed = elapsed;
-      bestStart = runStart;
-      bestEnd = endExclusive;
-    }
+    runs.push({ start: runStart, end: endExclusive });
   };
   for (let i = 0; i < asleepFlag.length; i += 1) {
     const prev = samples[i - 1];
     const current = samples[i];
-    if (prev && current && current.ts - prev.ts > 45 * 60000) {
+    if (prev && current && current.ts - prev.ts > 60000) {
       closeRun(i - gap);
       runStart = -1;
       gap = 0;
@@ -218,7 +214,10 @@ function findSleepWindow(
     } else if (runStart >= 0 && bridgeFlag[i]) {
       gap += 1;
       if (gap > MAX_AUTO_BRIDGE_MIN) {
-        closeRun(i - gap);
+        // The current sample is the first bridge minute beyond the allowed
+        // five-minute gap. Close after the preceding core sample; using
+        // `i - gap` drops the final core minute as well.
+        closeRun(i - gap + 1);
         runStart = -1;
         gap = 0;
       }
@@ -231,7 +230,37 @@ function findSleepWindow(
   if (runStart >= 0) {
     closeRun(asleepFlag.length - gap);
   }
+
+  const considerRun = (start: number, end: number) => {
+    const startTs = samples[start]?.ts ?? 0;
+    const endTs = (samples[end - 1]?.ts ?? startTs) + 60000;
+    if (opts.endAfterTs != null && endTs < opts.endAfterTs) return;
+    if (opts.endBeforeTs != null && endTs >= opts.endBeforeTs) return;
+    const elapsed = Math.round((endTs - startTs) / 60000);
+    if (elapsed > bestElapsed) {
+      bestElapsed = elapsed;
+      bestStart = start;
+      bestEnd = end;
+    }
+  };
+
+  // A genuine awakening can be longer than the short quiet-arousal bridge, but
+  // only observed data may join the two sleep cores. Missing HR, missing motion,
+  // or a timestamp hole therefore keeps the cores separate.
+  for (let i = 0; i < runs.length; i += 1) {
+    const first = runs[i];
+    if (!first) continue;
+    considerRun(first.start, first.end);
+    let mergedEnd = first.end;
+    for (let j = i + 1; j < runs.length; j += 1) {
+      const next = runs[j];
+      if (!next || !observedAwakeningCanJoin(samples, mergedEnd, next.start, bridgeThreshold)) break;
+      mergedEnd = next.end;
+      considerRun(first.start, mergedEnd);
+    }
+  }
   if (bestElapsed >= opts.minWindowMin) {
+    if (bestElapsed >= LONG_AUTO_SLEEP_MIN && !longWindowHasBoundaries(samples, bestStart, bestEnd, p20)) return null;
     return trimSleepWindow(samples, bestStart, bestEnd, p20, spread, opts);
   }
 
@@ -259,6 +288,7 @@ function findSleepWindow(
     activeRatio <= 0.08 &&
     overnightRatio >= 0.65 &&
     motionProof &&
+    (spanMin < LONG_AUTO_SLEEP_MIN || longWindowHasBoundaries(samples, 0, samples.length, p20)) &&
     (opts.endAfterTs == null || lastTs + 60000 >= opts.endAfterTs) &&
     (opts.endBeforeTs == null || lastTs + 60000 < opts.endBeforeTs)
   ) {
@@ -266,6 +296,44 @@ function findSleepWindow(
   }
 
   return null;
+}
+
+function observedAwakeningCanJoin(
+  samples: SleepMinute[],
+  start: number,
+  end: number,
+  bridgeThreshold: number,
+): boolean {
+  const gapMin = end - start;
+  if (gapMin <= 0 || gapMin > MAX_OBSERVED_AWAKENING_MIN) return false;
+  let wakeEvidence = 0;
+  for (let i = start; i < end; i += 1) {
+    const sample = samples[i];
+    const previous = samples[i - 1];
+    if (
+      !sample ||
+      sample.hr == null ||
+      sample.motion == null ||
+      (previous && sample.ts - previous.ts !== 60000)
+    ) return false;
+    if (sample.motion >= 0.35 || sample.hr >= bridgeThreshold) wakeEvidence += 1;
+  }
+  return wakeEvidence >= Math.max(2, Math.ceil(gapMin * 0.1));
+}
+
+function longWindowHasBoundaries(samples: SleepMinute[], start: number, end: number, restingReference: number): boolean {
+  const before = samples
+    .slice(Math.max(0, start - AUTO_SLEEP_BOUNDARY_WINDOW_MIN), start)
+    .filter((sample) => sample.hr != null || sample.motion != null);
+  const after = samples
+    .slice(end, Math.min(samples.length, end + AUTO_SLEEP_BOUNDARY_WINDOW_MIN))
+    .filter((sample) => sample.hr != null || sample.motion != null);
+  return (
+    before.length >= AUTO_SLEEP_BOUNDARY_SIGNAL_MIN &&
+    after.length >= AUTO_SLEEP_BOUNDARY_SIGNAL_MIN &&
+    boundaryShowsWake(before, restingReference) &&
+    boundaryShowsWake(after, restingReference)
+  );
 }
 
 function trimSleepWindow(
@@ -283,8 +351,7 @@ function trimSleepWindow(
     if (!s) return false;
     const hr = smoothedHr(samples, index);
     if (hr == null) return false;
-    const still = s.motion == null || s.motion < 0.2;
-    return still && hr <= coreThreshold;
+    return s.motion != null && s.motion < 0.2 && hr <= coreThreshold;
   };
   const sustainedCore = (from: number, to: number): boolean => {
     let n = 0;
@@ -467,6 +534,7 @@ export function computeSleep(
   const sleepStateAsleepMin = window.filter((s) => s.bandSleepState === 2).length;
   const sleepStateUpMin = window.filter((s) => s.bandSleepState === 3).length;
   if (hrs.length === 0) {
+    if (opts.forceWindow && (opts.source ?? 'manual_hr') === 'manual_hr') return null;
     const start = opts.startTs ?? window[0]?.ts ?? 0;
     const end = opts.endTs ?? ((window[window.length - 1]?.ts ?? start) + 60000);
     return durationOnlySleep(start, end, neededMin);
@@ -481,31 +549,35 @@ export function computeSleep(
   const meanRmssd = rmssds.length ? rmssds.reduce((a, b) => a + b, 0) / rmssds.length : 0;
   const stages: Record<SleepStage, number> = { awake: 0, light: 0, deep: 0, rem: 0 };
   const timeline: SleepStage[] = [];
+  const observedTimeline: boolean[] = [];
   for (const s of window) {
-    const hasMotion = s.motion != null;
-    const motion = s.motion ?? 0;
-    if (s.hr == null) {
+    // Unknown HR or motion is conservatively non-sleep. It must not become a
+    // light/deep/REM minute merely because another signal is quiet.
+    if (s.hr == null || s.motion == null) {
       const stage: SleepStage = 'awake';
       stages[stage] += 1;
       timeline.push(stage);
+      observedTimeline.push(false);
       continue;
     }
     const hr = s.hr;
+    const motion = s.motion;
     const rmssd = s.rmssd ?? meanRmssd;
     let stage: SleepStage;
     // Cardiac-first staging: the overnight stream is HR/HRV (no motion channel
     // over BLE), so awake/REM are detected from heart-rate arousal relative to
     // the night's sleeping mean, with motion used as an extra signal when present.
-    if ((hasMotion && motion > 0.4) || hr >= sustainedWakeHr) stage = 'awake';
+    if (motion > 0.4 || hr >= sustainedWakeHr) stage = 'awake';
     else if (hr <= meanHr * 0.95 && (meanRmssd === 0 || rmssd >= meanRmssd)) stage = 'deep';
-    else if (hr >= meanHr * 1.0 && (meanRmssd === 0 || rmssd < meanRmssd) && (!hasMotion || motion < 0.2))
+    else if (hr >= meanHr * 1.0 && (meanRmssd === 0 || rmssd < meanRmssd) && motion < 0.2)
       stage = 'rem';
     else stage = 'light';
     stages[stage] += 1;
     timeline.push(stage);
+    observedTimeline.push(true);
   }
 
-  const smoothedTimeline = smoothStageTimeline(timeline);
+  const smoothedTimeline = smoothStageTimeline(timeline, observedTimeline);
   if (smoothedTimeline !== timeline) {
     stages.awake = 0;
     stages.light = 0;
@@ -528,6 +600,10 @@ export function computeSleep(
   const efficiency = inBedMin > 0 ? asleepMin / inBedMin : 0;
   const startTs = opts.startTs ?? window[0]?.ts ?? 0;
   const endTs = opts.endTs ?? ((window[window.length - 1]?.ts ?? startTs) + 60000);
+  const source = opts.source ?? (opts.forceWindow ? 'manual_hr' : 'auto_hr');
+  // A manual HR window with unknown motion can be useful for review, but an
+  // all-awake result must not be persisted as a trusted zero-sleep night.
+  if (opts.forceWindow && source === 'manual_hr' && asleepMin === 0 && motionMin < inBedMin) return null;
 
   // Sleep latency = leading awake before the first sustained sleep segment.
   let latencyMin = 0;
@@ -565,7 +641,7 @@ export function computeSleep(
     hypnogram,
     performance: neededMin > 0 ? Math.min(1, asleepMin / neededMin) : null,
     neededMin,
-    source: opts.source ?? (opts.forceWindow ? 'manual_hr' : 'auto_hr'),
+    source,
     signalMin: hrs.length,
     hrvMin,
     motionMin,
@@ -614,7 +690,7 @@ function boundaryShowsWake(samples: SleepMinute[], restingReference: number): bo
   return elevated >= Math.max(3, Math.ceil(hrs.length * 0.15));
 }
 
-function smoothStageTimeline(timeline: SleepStage[]): SleepStage[] {
+function smoothStageTimeline(timeline: SleepStage[], observed: boolean[]): SleepStage[] {
   if (timeline.length < 3) return timeline;
   let changed = false;
   const out = timeline.slice();
@@ -624,6 +700,7 @@ function smoothStageTimeline(timeline: SleepStage[]): SleepStage[] {
     const cur = timeline[i];
     const next = timeline[i + 1];
     if (!prev || !cur || !next) continue;
+    if (!observed[i]) continue;
     if (prev === next && cur !== prev) {
       out[i] = prev;
       changed = true;

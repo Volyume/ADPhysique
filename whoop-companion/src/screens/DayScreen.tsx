@@ -5,14 +5,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
 import type { CardioRow, DailyMetricRow } from '../db/database';
-import { Card, Dial, Empty, Screen, SectionLabel, Stat } from '../ui/components';
+import { Card, Dial, Empty, Screen, SectionLabel, SleepConfidenceStatus, Stat } from '../ui/components';
 import { colors, fonts, recoveryColor, sleepStageColors } from '../ui/theme';
 import type { Nav } from '../ui/navigation';
 import { formatClock, formatDuration } from '../util/time';
 import { clampPct } from '../util/number';
 import { activitySummary } from '../ui/activityFormat';
 import { sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
-import { sleepConfidenceColor, sleepConfidenceLabel, sleepCoverageColor } from '../ui/sleepTrust';
 import { sleepNeedsMoreSync } from '../metrics/sleepSync';
 import { sleepTrustTier } from '../metrics/sleepTrustWeight';
 
@@ -131,11 +130,12 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
                 <StageRow label="Light" minutes={metric.lightMin} total={totalStageMin} color={sleepStageColors.light} />
                 <StageRow label="REM" minutes={metric.remMin} total={totalStageMin} color={sleepStageColors.rem} />
                 <StageRow label="Deep" minutes={metric.deepMin} total={totalStageMin} color={sleepStageColors.deep} />
-                <View style={styles.qualityGrid}>
-                  <Stat label="Confidence" value={sleepConfidenceLabel(metric.sleepDetail?.confidence)} color={sleepConfidenceColor(metric.sleepDetail?.confidence)} />
-                  <Stat label="Coverage" value={`${metric.sleepDetail?.coveragePct ?? 0}%`} color={sleepCoverageColor(metric.sleepDetail?.coveragePct ?? 0)} />
-                  <Stat label="Signal" value={metric.sleepDetail?.signalMin ?? 0} unit="min" />
-                </View>
+                <SleepConfidenceStatus
+                  confidence={sleepTier === 'none' ? null : sleepTier}
+                  reason={dayConfidenceReason(metric)}
+                  onDetails={() => nav.navigate({ name: 'editSleep', day })}
+                  detailsLabel="Review"
+                />
                 {sleepReview ? (
                   <View style={[styles.reviewBanner, { borderColor: sleepReview.color, backgroundColor: sleepReview.tint }]}>
                     <View style={[styles.reviewBadge, { backgroundColor: sleepReview.color }]}>
@@ -147,7 +147,6 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
                     </View>
                   </View>
                 ) : null}
-                <Text style={styles.note}>{sleepTrustNote(metric)}</Text>
                 <TouchableOpacity style={styles.adjustRow} onPress={() => nav.navigate({ name: 'editSleep', day })}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.adjustTitle}>Adjust this sleep</Text>
@@ -162,8 +161,9 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
                   <Text style={styles.big}>Logged timing</Text>
                   <Text style={styles.sub}>{formatClock(sleepStart)}-{formatClock(sleepEnd)}</Text>
                 </View>
+                <SleepConfidenceStatus confidence={null} reason="Timing is saved, but there is no overnight record to score yet." />
                 <Text style={styles.note}>
-                  This window informs sleep timing and schedule suggestions. It has no measured HR coverage, so Pulse is not assigning sleep minutes, stages, vitals, recovery, or debt.
+                  This window informs sleep timing and schedule suggestions. Pulse needs overnight data before it can assign sleep minutes, stages, vitals, recovery, or debt.
                 </Text>
                 <TouchableOpacity style={styles.adjustRow} onPress={() => nav.navigate({ name: 'editSleep', day })}>
                   <View style={{ flex: 1 }}>
@@ -358,21 +358,13 @@ function dayForTs(ts: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function sleepTrustNote(metric: DailyMetricRow): string {
+function dayConfidenceReason(metric: DailyMetricRow): string {
   const detail = metric.sleepDetail;
-  if (!detail) return 'No capture detail is available for this sleep yet.';
-  const still = detail.stillMin ?? detail.motionMin ?? 0;
-  const moving = detail.movingMin ?? 0;
-  if (sleepStateWakeConflict(detail)) {
-    return `Low-confidence sleep: decoded strap-state evidence is mostly wake (${sleepStateWakeDisplay(detail)}). Review the window after sync finishes.`;
-  }
-  const tier = sleepTrustTier(detail);
-  if (tier === 'high') return `Strong overnight capture: ${detail.signalMin} signal minutes, ${detail.coveragePct}% coverage, ${still} still minutes.`;
-  if (tier === 'medium') return `Usable estimate: ${detail.coveragePct}% coverage with ${still} still / ${moving} moving minutes. Adjust the window if the timing looks wrong.`;
-  if (!sleepNeedsMoreSync(detail)) {
-    return `Low-confidence sleep: coverage is present, but still-worn or decoded sleep-state corroboration is weak. Review the window before trusting score/recovery.`;
-  }
-  return `Low-confidence sleep: ${detail.coveragePct}% coverage with ${detail.signalMin} signal minutes. Sync more data or adjust the window before trusting score/recovery.`;
+  if (!detail) return 'Waiting for a complete overnight record.';
+  if (sleepStateWakeConflict(detail)) return 'The sleep window may include awake time.';
+  if (sleepNeedsMoreSync(detail)) return 'Some overnight data is still syncing.';
+  if (sleepTrustTier(detail) === 'medium') return 'Usable, but more overnight detail may refine it.';
+  return 'The overnight record is strong enough to use.';
 }
 
 function daySleepReview(metric: DailyMetricRow): {
@@ -397,8 +389,6 @@ function daySleepReview(metric: DailyMetricRow): {
     };
   }
 
-  const coverage = detail.coveragePct ?? 0;
-  const signal = detail.signalMin ?? 0;
   const inBed = detail.inBedMin ?? metric.sleepMin;
   const efficiency = detail.efficiency ?? (inBed > 0 ? Math.round((metric.sleepMin / inBed) * 100) : null);
   const rawHoursVsNeeded = detail.needMin && metric.sleepMin != null
@@ -425,8 +415,8 @@ function daySleepReview(metric: DailyMetricRow): {
       title: needsSync ? 'Partial overnight capture' : 'Sleep candidate needs corroboration',
       body:
         needsSync
-          ? `Only ${coverage}% coverage and ${signal} signal minutes are available. Keep the strap connected and let auto sync backfill before trusting sleep or recovery.`
-          : 'The HR window has enough signal, but still-worn or decoded sleep-state evidence is weak. Review the window if the timing looks wrong.',
+          ? 'Some overnight data is still syncing. Keep the strap connected before trusting sleep or recovery.'
+          : 'The overnight record is present, but sleep-state evidence is weak. Review the window if the timing looks wrong.',
       color: colors.recoveryRed,
       tint: `${colors.recoveryRed}12`,
       textColor: colors.white,
@@ -470,7 +460,7 @@ function daySleepReview(metric: DailyMetricRow): {
     return {
       label: 'OK',
       title: 'Usable with caution',
-      body: `Coverage is ${coverage}%. Trends are useful, but adjust the sleep window if the bedtime or wake time looks wrong.`,
+      body: 'The result is useful, but adjust the sleep window if the bedtime or wake time looks wrong.',
       color: colors.recoveryYellow,
       tint: `${colors.recoveryYellow}14`,
       textColor: '#000',
@@ -480,7 +470,7 @@ function daySleepReview(metric: DailyMetricRow): {
   return {
     label: 'GOOD',
     title: 'Strong sleep capture',
-    body: `This day has ${coverage}% coverage, ${signal} signal minutes and the core overnight vitals needed for recovery scoring.`,
+    body: 'The overnight record and core vitals are strong enough to use for recovery scoring.',
     color: colors.recoveryGreen,
     tint: `${colors.recoveryGreen}12`,
     textColor: '#000',
@@ -504,7 +494,6 @@ function dayVitalsReview(metric: DailyMetricRow): {
   const healthMissing = [
     metric.skinTempC == null ? 'Skin temp' : null,
   ].filter(Boolean) as string[];
-  const sleepCoverage = metric.sleepDetail?.coveragePct ?? null;
   const sleepNeedsSync = sleepNeedsMoreSync(metric.sleepDetail);
   const sleepTrustBlocked = sleepTrustTier(metric.sleepDetail) === 'low' || sleepNeedsSync;
   const hasSteps = metric.steps != null;
@@ -520,10 +509,8 @@ function dayVitalsReview(metric: DailyMetricRow): {
       title: sleepTrustBlocked && !sleepNeedsSync ? 'Recovery inputs need trusted sleep' : 'Recovery inputs need more data',
       body: sleepTrustBlocked
         ? sleepNeedsSync
-          ? sleepCoverage != null
-            ? `Sleep coverage is ${sleepCoverage}%, so overnight vitals and recovery should be treated as partial until auto sync backfills more history.`
-            : 'Sleep capture detail is missing, so overnight vitals and recovery should be treated as partial until auto sync backfills more history.'
-          : 'Sleep has enough raw signal to inspect, but confidence is low. Review the sleep window before trusting recovery or overnight health metrics.'
+          ? 'Some overnight data is still syncing, so overnight vitals and recovery should be treated as partial until the record is complete.'
+          : 'Sleep is present, but confidence is low. Review the sleep window before trusting recovery or overnight health metrics.'
         : `Missing ${coreMissing.join(', ')} from the overnight window. Recovery, stress and health monitor panels will stay limited until those inputs are captured.`,
       facts,
       color: colors.recoveryRed,
@@ -536,7 +523,7 @@ function dayVitalsReview(metric: DailyMetricRow): {
     return {
       label: 'VITAL',
       title: 'One core vital is incomplete',
-      body: `${coreMissing[0]} is missing for this day. Sleep timing can still be useful, but recovery confidence is lower until the overnight signal fills in.`,
+      body: `${coreMissing[0]} is missing for this day. Sleep timing can still be useful, but recovery confidence is lower until the overnight record is complete.`,
       facts,
       color: colors.recoveryYellow,
       tint: `${colors.recoveryYellow}14`,

@@ -99,6 +99,7 @@ export function TrendsScreen({ nav }: { nav: Nav }) {
 
   const days = RANGES.find((r) => r.key === range)?.days ?? 30;
   const chartHistory = history.slice(-days);
+  const trustedSleepNights = chartHistory.filter((d) => d.sleepMin != null && isTrustedSleepNight(d)).length;
   useEffect(() => {
     void appStore.loadHistory(Math.max(days, 60)).then(setHistory);
   }, [days]);
@@ -140,6 +141,7 @@ export function TrendsScreen({ nav }: { nav: Nav }) {
               <SectionLabel
                 right={
                   <Text style={styles.avg}>
+                    {s.key === 'sleep_performance' ? `${trustedSleepNights} trusted ${trustedSleepNights === 1 ? 'night' : 'nights'} · ` : ''}
                     {average.weighted ? 'trusted ' : 'avg '}
                     {average.avg != null ? average.avg.toFixed(s.decimals ?? 0) : '-'}
                     {s.unit}
@@ -173,6 +175,11 @@ export function TrendsScreen({ nav }: { nav: Nav }) {
       <AssessmentCard title="Monthly Performance Assessment" history={history} days={30} />
     </Screen>
   );
+}
+
+function isTrustedSleepNight(day: DailyMetricRow): boolean {
+  const tier = sleepTrustTier(day.sleepDetail);
+  return tier === 'high' || tier === 'medium';
 }
 
 function AssessmentCard({ title, history, days }: { title: string; history: DailyMetricRow[]; days: number }) {

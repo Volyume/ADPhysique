@@ -4,11 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import { Card, PrimaryButton, Screen, SecondaryButton, SectionLabel } from '../ui/components';
+import { Card, PrimaryButton, Screen, SecondaryButton, SectionLabel, SleepConfidenceStatus } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { dayKey, formatDuration, startOfDayMs } from '../util/time';
-import { sleepConfidenceColor, sleepCoverageColor } from '../ui/sleepTrust';
 import { sleepNeedsMoreSync } from '../metrics/sleepSync';
 import { sleepTrustTier } from '../metrics/sleepTrustWeight';
 
@@ -114,13 +113,10 @@ export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
             {String(Math.floor(schedule.bedMin / 60)).padStart(2, '0')}:{String(schedule.bedMin % 60).padStart(2, '0')} - {String(Math.floor(schedule.wakeMin / 60)).padStart(2, '0')}:{String(schedule.wakeMin % 60).padStart(2, '0')}
           </Text>
         ) : null}
-        {metric?.sleepDetail ? (
-          <View style={styles.qualityRow}>
-            <QualityPill label="Confidence" value={currentConfidence ?? '-'} color={sleepConfidenceColor(currentConfidence)} />
-            <QualityPill label="Coverage" value={currentCoverage != null ? `${currentCoverage}%` : '-'} color={sleepCoverageColor(currentCoverage)} />
-            <QualityPill label="Signal" value={currentSignalMin != null ? `${currentSignalMin}m` : '-'} color={colors.sleepTeal} />
-          </View>
-        ) : null}
+        <SleepConfidenceStatus
+          confidence={confidenceStatusTier(metric?.sleepDetail ?? null)}
+          reason={editConfidenceReason(metric?.sleepDetail ?? null)}
+        />
       </Card>
 
       <SectionLabel>Bed time (previous evening)</SectionLabel>
@@ -153,10 +149,31 @@ export function EditSleepScreen({ nav, day }: { nav: Nav; day?: string }) {
       </Card>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <PrimaryButton title={saved ? 'Saved - re-detecting' : 'Save & re-detect'} onPress={save} />
+      <Text style={styles.applyNote}>Updates Sleep, Recovery and Readiness.</Text>
+      <PrimaryButton title={saved ? 'Applied - updating' : 'Apply sleep window'} onPress={save} />
       <SecondaryButton title="Clear manual override (auto-detect)" onPress={confirmClearManual} />
     </Screen>
   );
+}
+
+function editConfidenceReason(detail: {
+  confidence?: 'high' | 'medium' | 'low' | null;
+  coveragePct?: number | null;
+  signalMin?: number | null;
+} | null): string {
+  if (!detail) return 'No overnight record is available for this window yet.';
+  if (detail.confidence === 'high' && !sleepNeedsMoreSync(detail)) return 'The overnight record is strong enough to use.';
+  if (detail.confidence === 'medium') return 'The result is usable, but more detail may refine it.';
+  return 'Use timing with care until the overnight record is complete.';
+}
+
+function confidenceStatusTier(detail: {
+  confidence?: 'high' | 'medium' | 'low' | null;
+  coveragePct?: number | null;
+  signalMin?: number | null;
+} | null): 'high' | 'medium' | 'low' | null {
+  const tier = sleepTrustTier(detail);
+  return tier === 'none' ? null : tier;
 }
 
 function sleepWindowPreview(input: {
@@ -239,15 +256,6 @@ function TimePicker({ value, onChange }: { value: { h: number; m: number }; onCh
   );
 }
 
-function QualityPill({ label, value, color }: { label: string; value: string; color: string }) {
-  return (
-    <View style={styles.qualityPill}>
-      <Text style={[styles.qualityValue, { color }]}>{value}</Text>
-      <Text style={styles.qualityLabel}>{label}</Text>
-    </View>
-  );
-}
-
 function Stepper({ label, onMinus, onPlus }: { label: string; onMinus: () => void; onPlus: () => void }) {
   return (
     <View style={styles.stepperWrap}>
@@ -264,10 +272,7 @@ const styles = StyleSheet.create({
   date: { color: colors.text, fontSize: 18, marginBottom: 6, fontFamily: fonts.textBold },
   intro: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, fontFamily: fonts.text },
   suggestion: { color: colors.sleepTeal, fontSize: 12, lineHeight: 18, marginTop: 10, fontFamily: fonts.textSemibold },
-  qualityRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
-  qualityPill: { flex: 1, alignItems: 'center' },
-  qualityValue: { fontSize: 17, fontFamily: fonts.black },
-  qualityLabel: { color: colors.textSecondary, fontSize: 11, marginTop: 2, fontFamily: fonts.text },
+  applyNote: { color: colors.textSecondary, fontSize: 12, textAlign: 'center', marginTop: 10, fontFamily: fonts.text },
   picker: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   time: { color: colors.text, fontSize: 34, fontFamily: fonts.black },
   previewLabel: { color: colors.textSecondary, fontSize: 12, marginBottom: 4, fontFamily: fonts.textBold },

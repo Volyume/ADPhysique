@@ -307,6 +307,133 @@ export function Empty({ text }: { text: string }) {
   return <Text style={styles.empty}>{text}</Text>;
 }
 
+export function SleepConfidenceStatus({
+  confidence,
+  reason,
+  onDetails,
+  detailsLabel = 'Details',
+}: {
+  confidence: 'high' | 'medium' | 'low' | null | undefined;
+  reason?: string;
+  onDetails?: () => void;
+  detailsLabel?: string;
+}) {
+  const good = confidence === 'high';
+  const unavailable = confidence == null;
+  const color = good ? colors.recoveryGreen : unavailable ? colors.textTertiary : colors.recoveryYellow;
+  const label = good ? 'Good' : unavailable ? 'Unavailable' : 'Limited';
+  const defaultReason = good
+    ? 'The overnight record is strong enough to use.'
+    : unavailable
+      ? 'Sleep confidence is unavailable until an overnight record is synced.'
+      : confidence === 'medium'
+        ? 'The result is usable, but more detail may refine it.'
+        : 'Use timing with care until the overnight record is complete.';
+
+  return (
+    <View style={styles.confidenceStatus}>
+      <View style={[styles.confidenceDot, { backgroundColor: color }]} />
+      <View style={styles.confidenceCopy}>
+        <Text style={[styles.confidenceLabel, { color }]}>{label}</Text>
+        <Text style={styles.confidenceReason}>{reason ?? defaultReason}</Text>
+      </View>
+      {onDetails ? (
+        <Pressable onPress={onDetails} hitSlop={8} style={({ pressed }) => [styles.confidenceAction, pressed && styles.pressed]}>
+          <Text style={styles.confidenceActionText}>{detailsLabel}</Text>
+          <Ionicons name="chevron-forward" size={15} color={colors.textTertiary} />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+export type TonightPlan = {
+  targetMinutes: number;
+  timeInBedMinutes: number;
+  bedMinute: number;
+  wakeMinute: number;
+  expectedEfficiencyPercent: number;
+};
+
+/** Shared planner math for Sleep, Recovery and Sleep Coach. */
+export function calculateTonightPlan(input: {
+  neededMinutes: number;
+  goal: number;
+  wakeMinute: number;
+  planningWindowMinutes: number;
+  expectedEfficiencyPercent: number;
+}): TonightPlan {
+  const targetMinutes = Math.round(Math.max(0, input.neededMinutes) * input.goal);
+  const expectedEfficiencyPercent = Number.isFinite(input.expectedEfficiencyPercent) ? input.expectedEfficiencyPercent : 85;
+  const efficiency = Math.max(0.5, expectedEfficiencyPercent / 100);
+  const timeInBedMinutes = Math.round(targetMinutes / efficiency);
+  return {
+    targetMinutes,
+    timeInBedMinutes,
+    bedMinute: input.wakeMinute - input.planningWindowMinutes - timeInBedMinutes,
+    wakeMinute: input.wakeMinute,
+    expectedEfficiencyPercent,
+  };
+}
+
+export function tonightEfficiencyPercent(efficiencies: number[]): number {
+  const usable = efficiencies.filter((value) => Number.isFinite(value) && value > 0);
+  if (!usable.length) return 85;
+  usable.sort((a, b) => a - b);
+  return usable[Math.floor(usable.length / 2)] ?? 85;
+}
+
+export function parsePinnedWakeMinute(raw: string | null, pinnedRaw: string | null): number | null {
+  const minute = raw == null ? NaN : Number(raw);
+  if (!Number.isFinite(minute) || minute < 0 || minute >= 1440) return null;
+  return pinnedRaw === '1' || pinnedRaw == null ? minute : null;
+}
+
+export function parsePlanningWindowMinute(raw: string | null): number {
+  const minute = raw == null ? NaN : Number(raw);
+  return minute === 0 || minute === 15 || minute === 30 || minute === 45 ? minute : 30;
+}
+
+export function TonightBand({
+  targetMinutes,
+  bedMinute,
+  wakeMinute,
+  onPress,
+}: {
+  targetMinutes: number;
+  bedMinute: number;
+  wakeMinute: number;
+  onPress: () => void;
+}) {
+  return (
+    <View style={styles.tonightBand}>
+      <View style={styles.tonightCopy}>
+        <Text style={styles.tonightLabel}>Tonight</Text>
+        <Text style={styles.tonightPlan}>
+          <Text style={styles.tonightStrong}>{formatDurationMinute(targetMinutes)} target</Text>
+          {` · bed ${formatClockMinute(bedMinute)} · wake ${formatClockMinute(wakeMinute)}`}
+        </Text>
+      </View>
+      <Pressable onPress={onPress} hitSlop={8} style={({ pressed }) => [styles.tonightAction, pressed && styles.pressed]}>
+        <Text style={styles.tonightActionText}>Sleep Coach</Text>
+        <Ionicons name="chevron-forward" size={16} color={colors.sleepTeal} />
+      </Pressable>
+    </View>
+  );
+}
+
+function formatClockMinute(minute: number): string {
+  const normalized = ((Math.round(minute) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(normalized / 60)).padStart(2, '0')}:${String(normalized % 60).padStart(2, '0')}`;
+}
+
+function formatDurationMinute(minutes: number): string {
+  const rounded = Math.max(0, Math.round(minutes));
+  const hours = Math.floor(rounded / 60);
+  const remainder = rounded % 60;
+  return hours > 0 ? `${hours}h${remainder ? ` ${remainder}m` : ''}` : `${remainder}m`;
+}
+
 /** A tappable WHOOP-style metric dial for the overview — a doorway to detail. */
 export function Dial({
   label,
@@ -891,6 +1018,20 @@ const styles = StyleSheet.create({
   barFill: { height: 10, borderRadius: 5 },
   barRight: { color: colors.textSecondary, fontSize: 12, width: 60, textAlign: 'right', fontFamily: fonts.text },
   empty: { color: colors.textTertiary, fontSize: 13, marginTop: spacing.item, lineHeight: 18, fontFamily: fonts.text },
+  confidenceStatus: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: spacing.item, paddingVertical: 10, paddingHorizontal: 2 },
+  confidenceDot: { width: 9, height: 9, borderRadius: 5 },
+  confidenceCopy: { flex: 1 },
+  confidenceLabel: { fontSize: 13, fontFamily: fonts.textBold },
+  confidenceReason: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 1, fontFamily: fonts.text },
+  confidenceAction: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  confidenceActionText: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.textSemibold },
+  tonightBand: { flexDirection: 'row', alignItems: 'center', gap: 12, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.border, paddingVertical: 11, marginTop: spacing.item },
+  tonightCopy: { flex: 1 },
+  tonightLabel: { color: colors.sleepTeal, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, fontFamily: fonts.textBold },
+  tonightPlan: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 2, fontFamily: fonts.text },
+  tonightStrong: { color: colors.text, fontFamily: fonts.textBold },
+  tonightAction: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  tonightActionText: { color: colors.sleepTeal, fontSize: 12, fontFamily: fonts.textBold },
 });
 
 const dialStyles = StyleSheet.create({

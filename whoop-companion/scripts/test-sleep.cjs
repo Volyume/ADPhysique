@@ -3,7 +3,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const ts = require('typescript');
 
-function loadTypeScriptModule(relativePath) {
+function loadTypeScriptModule(relativePath, mocks = {}) {
   const sourcePath = path.join(__dirname, '..', relativePath);
   const source = fs.readFileSync(sourcePath, 'utf8');
   const compiled = ts.transpileModule(source, {
@@ -13,7 +13,16 @@ function loadTypeScriptModule(relativePath) {
   const loaded = new Module(sourcePath, module);
   loaded.filename = sourcePath;
   loaded.paths = module.paths;
-  loaded._compile(compiled, sourcePath);
+  const originalLoad = Module._load;
+  Module._load = (request, parent, isMain) => {
+    if (Object.prototype.hasOwnProperty.call(mocks, request)) return mocks[request];
+    return originalLoad.call(Module, request, parent, isMain);
+  };
+  try {
+    loaded._compile(compiled, sourcePath);
+  } finally {
+    Module._load = originalLoad;
+  }
   return loaded.exports;
 }
 
@@ -26,6 +35,12 @@ const evidence = loadTypeScriptModule(path.join('src', 'metrics', 'sleepEvidence
 const sleepStress = loadTypeScriptModule(path.join('src', 'metrics', 'sleepStress.ts'));
 const sleepConsistency = loadTypeScriptModule(path.join('src', 'metrics', 'sleepConsistency.ts'));
 const sleepRegularity = loadTypeScriptModule(path.join('src', 'metrics', 'sleepRegularity.ts'));
+const naps = loadTypeScriptModule(path.join('src', 'metrics', 'naps.ts'));
+const dataQuality = loadTypeScriptModule(path.join('src', 'metrics', 'dataQuality.ts'));
+const database = loadTypeScriptModule(path.join('src', 'db', 'database.ts'), {
+  'expo-sqlite': {},
+  '../metrics/dataQuality': dataQuality,
+});
 const minute = 60_000;
 const start = 1_800_000;
 const quiet = Array.from({ length: 180 }, (_, i) => ({
@@ -94,6 +109,185 @@ const stateOnly = {
 };
 assert(evidence.sleepEvidencePct(stateOnly) === 0, 'candidate state is not independent sleep evidence');
 assert(evidence.longAutoSleepNeedsCorroboration(stateOnly, false), 'state-only long sleep remains untrusted');
+
+const moderateMotionOnly = {
+  source: 'auto_hr',
+  inBedMin: 480,
+  motionMin: 480,
+  stillMin: 0,
+  movingMin: 0,
+};
+assert(evidence.sleepEvidencePct(moderateMotionOnly) === 0, 'moderate motion is not misclassified as stillness');
+
+const unknownMotion = Array.from({ length: 180 }, (_, i) => ({
+  ts: start + i * minute,
+  hr: 60,
+  motion: null,
+  rmssd: 50,
+}));
+assert(sleep.computeSleep(unknownMotion) === null, 'unknown motion cannot establish an automatic sleep window');
+const unknownMotionForced = sleep.computeSleep(unknownMotion, undefined, {
+  forceWindow: true,
+  startTs: start,
+  endTs: start + 180 * minute,
+});
+assert(unknownMotionForced === null, 'manual HR with wholly unknown motion cannot persist zero sleep');
+
+const oneMinuteUnknown = [
+  ...Array.from({ length: 60 }, (_, i) => ({ ts: start + i * minute, hr: 60, motion: 0, rmssd: 50 })),
+  { ts: start + 60 * minute, hr: 60, motion: null, rmssd: 50 },
+  ...Array.from({ length: 60 }, (_, i) => ({ ts: start + (61 + i) * minute, hr: 60, motion: 0, rmssd: 50 })),
+];
+const oneMinuteUnknownResult = sleep.computeSleep(oneMinuteUnknown, undefined, {
+  forceWindow: true,
+  startTs: start,
+  endTs: start + 121 * minute,
+  source: 'manual_hr',
+});
+assert(oneMinuteUnknownResult && oneMinuteUnknownResult.stages.awake >= 1, 'an unknown-motion minute remains awake');
+assert(oneMinuteUnknownResult && oneMinuteUnknownResult.asleepMin <= 120, 'unknown motion is not smoothed back into sleep');
+
+const paddedSleep = [
+  ...Array.from({ length: 20 }, (_, i) => ({ ts: start + i * minute, hr: 78, motion: 0 })),
+  ...Array.from({ length: 180 }, (_, i) => ({ ts: start + (20 + i) * minute, hr: 60, motion: 0 })),
+  ...Array.from({ length: 20 }, (_, i) => ({ ts: start + (200 + i) * minute, hr: 78, motion: 0 })),
+];
+const paddedResult = sleep.computeSleep(paddedSleep);
+assert(
+  paddedResult && paddedResult.inBedMin >= 175 && paddedResult.inBedMin <= 180,
+  `detectable quiet boundary padding is excluded (got ${paddedResult ? paddedResult.inBedMin : 'null'}m)`,
+);
+
+const fragmented = [
+  ...Array.from({ length: 100 }, (_, i) => ({ ts: start + i * minute, hr: 60, motion: 0 })),
+  ...Array.from({ length: 20 }, (_, i) => ({ ts: start + (100 + i) * minute, hr: null, motion: null })),
+  ...Array.from({ length: 100 }, (_, i) => ({ ts: start + (120 + i) * minute, hr: 60, motion: 0 })),
+];
+const fragmentedResult = sleep.computeSleep(fragmented);
+assert(fragmentedResult && fragmentedResult.inBedMin <= 100, 'fragmented evidence is not blind-gap bridged');
+
+const makeCore = (offset, count, hr = 60, motion = 0) =>
+  Array.from({ length: count }, (_, i) => ({ ts: start + (offset + i) * minute, hr, motion }));
+const fiveMinuteQuietGap = [...makeCore(0, 100), ...makeCore(100, 5, 64, 0.25), ...makeCore(105, 100)];
+const fiveMinuteResult = sleep.computeSleep(fiveMinuteQuietGap);
+assert(fiveMinuteResult && fiveMinuteResult.inBedMin >= 200, 'an exact five-minute quiet bridge remains in one window');
+const sixMinuteQuietGap = [...makeCore(0, 100), ...makeCore(100, 6, 64, 0.25), ...makeCore(106, 100)];
+const sixMinuteResult = sleep.computeSleep(sixMinuteQuietGap);
+assert(sixMinuteResult && sixMinuteResult.inBedMin <= 105, 'an exact six-minute quiet gap is not bridged');
+
+const observedAwakening = [
+  ...makeCore(0, 120),
+  ...makeCore(120, 20, 86, 0.7),
+  ...makeCore(140, 120, 58, 0),
+];
+const observedAwakeningResult = sleep.computeSleep(observedAwakening);
+assert(observedAwakeningResult && observedAwakeningResult.inBedMin >= 235, 'observed 20-minute awakening keeps one conservative TIB window');
+assert(observedAwakeningResult && observedAwakeningResult.stages.awake >= 15, 'observed awakening minutes remain awake');
+
+const quietNineHours = Array.from({ length: 9 * 60 }, (_, i) => ({
+  ts: start + i * minute,
+  hr: 60,
+  motion: 0,
+}));
+assert(sleep.computeSleep(quietNineHours) === null, 'quiet nine-hour data without wake boundaries is rejected');
+const boundedNineHours = [
+  ...Array.from({ length: 30 }, (_, i) => ({ ts: start + (i - 30) * minute, hr: 84, motion: 0.7 })),
+  ...quietNineHours.map((sample) => ({ ...sample, ts: sample.ts + 30 * minute })),
+  ...Array.from({ length: 30 }, (_, i) => ({ ts: start + (9 * 60 + i) * minute, hr: 84, motion: 0.7 })),
+];
+assert(sleep.computeSleep(boundedNineHours) != null, 'real long rest with observed wake boundaries remains eligible');
+
+const boundaryNap = {
+  source: 'nap',
+  startTs: start - 10 * minute,
+  endTs: start + 30 * minute,
+  notes: null,
+};
+assert(naps.napCreditMin(boundaryNap) === 20, 'an unverified timed nap receives conservative half-duration credit');
+assert(naps.napCreditMinWithin(boundaryNap, start, start + 60 * minute) === 15, 'nap credit is limited to window overlap');
+assert(naps.napCreditMinWithin(boundaryNap, start + 30 * minute, start + 60 * minute) === 0, 'nap credit excludes non-overlapping windows');
+assert(naps.napCreditMinWithin(boundaryNap, start - 60 * minute, start + 60 * minute) === 20, 'nap credit is capped at the full nap credit');
+assert(naps.napCreditMinWithin({ ...boundaryNap, endTs: boundaryNap.startTs }, start, start + 60 * minute) === 0, 'invalid nap intervals receive no overlap credit');
+const splitWindows = [
+  [start, start + 10 * minute],
+  [start + 10 * minute, start + 20 * minute],
+  [start + 20 * minute, start + 60 * minute],
+];
+const splitCredit = splitWindows.reduce(
+  (total, [windowStart, windowEnd]) => total + naps.napCreditMinWithin(boundaryNap, windowStart, windowEnd),
+  0,
+);
+const coveredBoundaryNapCredit = naps.napCreditMinWithin(boundaryNap, start, start + 60 * minute);
+assert(splitCredit <= coveredBoundaryNapCredit, 'split nap windows cannot over-credit their covered nap range');
+const splitRoundingLoss = coveredBoundaryNapCredit - splitCredit;
+const nonEmptySplitWindows = splitWindows.filter(
+  ([windowStart, windowEnd]) => Math.min(boundaryNap.endTs, windowEnd) > Math.max(boundaryNap.startTs, windowStart),
+).length;
+assert(
+  splitRoundingLoss >= 0 && splitRoundingLoss <= nonEmptySplitWindows,
+  'split nap floor rounding never over-credits and loses at most one minute per non-empty window',
+);
+const tinyCreditNap = { ...boundaryNap, startTs: start, endTs: start + 3 * minute };
+assert(naps.napCreditMin(tinyCreditNap) === 2, 'short unverified naps retain integer conservative credit');
+const tinySplitCredit =
+  naps.napCreditMinWithin(tinyCreditNap, start, start + minute) +
+  naps.napCreditMinWithin(tinyCreditNap, start + minute, start + 2 * minute) +
+  naps.napCreditMinWithin(tinyCreditNap, start + 2 * minute, start + 3 * minute);
+assert(tinySplitCredit <= naps.napCreditMin(tinyCreditNap), 'small split credits never exceed full credit');
+const overcreditedObservedNap = {
+  ...boundaryNap,
+  endTs: start + 30 * minute,
+  notes: naps.encodeNapDetail({
+    kind: 'nap_sleep',
+    autoDetected: false,
+    startTs: start,
+    endTs: start + 30 * minute,
+    inBedMin: 30,
+    asleepMin: 120,
+    restorativeMin: 120,
+    efficiency: 100,
+    signalMin: 30,
+    coveragePct: 100,
+    source: 'manual_hr',
+  }),
+};
+assert(naps.napCreditMinWithin(overcreditedObservedNap, start, start + minute) === 1, 'overlap credit cannot exceed actual elapsed overlap');
+const existingAutoNap = { startTs: start + 10 * minute, endTs: start + 20 * minute };
+assert(naps.napIntervalsOverlap(existingAutoNap, { startTs: start + 19 * minute, endTs: start + 30 * minute }), 'positive nap overlap is detected');
+assert(!naps.napIntervalsOverlap(existingAutoNap, { startTs: start + 20 * minute, endTs: start + 30 * minute }), 'touching nap intervals do not overlap');
+assert(!naps.canInsertAutoNap({ startTs: start + 19 * minute, endTs: start + 30 * minute }, [existingAutoNap]), 'any overlapping auto nap is rejected');
+assert(naps.canInsertAutoNap({ startTs: start + 20 * minute, endTs: start + 30 * minute }, [existingAutoNap]), 'a touching auto nap is allowed without double credit');
+
+assert(
+  database.NAP_OVERLAP_QUERY ===
+    "SELECT * FROM cardio WHERE source = 'nap' AND start_ts < ? AND end_ts > ? ORDER BY start_ts ASC",
+  'nap query keeps source filtering and strict overlap bounds',
+);
+assert(database.intervalsOverlap(start, start + 10 * minute, start + 10 * minute, start + 20 * minute) === false, 'nap query excludes touching intervals');
+assert(database.intervalsOverlap(start, start + 10 * minute, start + 9 * minute, start + 11 * minute) === true, 'nap query includes intervals with positive overlap');
+assert(database.intervalsOverlap(start, start + 10 * minute, start + 11 * minute, start + 20 * minute) === false, 'nap query excludes disjoint intervals');
+
+const timerDetail = naps.napDetailFromSleep({
+  source: 'manual_duration',
+  startTs: start,
+  endTs: start + 40 * minute,
+  inBedMin: 40,
+  asleepMin: 36,
+  restorativeMin: 12,
+  efficiency: 0.9,
+  signalMin: 0,
+}, false);
+assert(timerDetail.asleepMin === 0 && timerDetail.restorativeMin === 0, 'timer naps do not present invented sleep minutes');
+assert(naps.napCreditMin({ ...boundaryNap, startTs: start, endTs: start + 40 * minute, notes: naps.encodeNapDetail(timerDetail) }) === 20, 'timer naps retain capped conservative unverified credit');
+
+const validStages = database.cleanStageMinutes({ deepMin: 180, remMin: 120, lightMin: 180, awakeMin: 20 }, 480, 500);
+assert(validStages.deep === 180 && validStages.awake === 20, 'valid asleep and awake totals are retained');
+const impossibleAsleep = database.cleanStageMinutes({ deepMin: 181, remMin: 120, lightMin: 180, awakeMin: 20 }, 480, 500);
+assert(impossibleAsleep.deep === null && impossibleAsleep.awake === null, 'impossible asleep stage totals are rejected');
+const impossibleAwake = database.cleanStageMinutes({ deepMin: 180, remMin: 120, lightMin: 180, awakeMin: 21 }, 480, 500);
+assert(impossibleAwake.deep === null && impossibleAwake.awake === null, 'asleep plus awake cannot exceed time in bed');
+const awakeWithoutWindow = database.cleanStageMinutes({ deepMin: 180, remMin: 120, lightMin: 180, awakeMin: 1 }, 480, null);
+assert(awakeWithoutWindow.awake === null, 'awake minutes require a time-in-bed window');
 
 const stress = sleepStress.computeSleepStress(
   Array.from({ length: 8 }, (_, i) => ({ hr: 55 + i, rmssd: 70 - i * 2 })),

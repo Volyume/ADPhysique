@@ -3,47 +3,31 @@ import { Pressable, Text, View, StyleSheet } from 'react-native';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import { Card, Dial, Empty, FAB, Screen, SectionLabel, Stat, Tile } from '../ui/components';
+import { Card, Dial, Empty, FAB, Screen, SectionLabel } from '../ui/components';
 import { colors, fonts, recoveryColor } from '../ui/theme';
 import { Nav } from '../ui/navigation';
-import { illnessTint } from './IllnessScreen';
 import { formatClock, formatDuration } from '../util/time';
 import { clampPct } from '../util/number';
 import { DayRail } from './DayScreen';
 import { activitySummary } from '../ui/activityFormat';
 import type { DailyMetricRow } from '../db/database';
 import { longAutoSleepNeedsCorroboration, sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
-import { sleepConfidenceColor, sleepConfidenceLabel } from '../ui/sleepTrust';
 import { sleepNeedsMoreSync } from '../metrics/sleepSync';
 import { sleepTrustTier } from '../metrics/sleepTrustWeight';
 
 export function HomeScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
-  const liveHr = useStoreSelector(appStore, (s) => s.liveHr);
-  const liveRmssd = useStoreSelector(appStore, (s) => s.liveRmssd);
-  const liveStress = useStoreSelector(appStore, (s) => s.liveStress);
-  const storedStress = useStoreSelector(appStore, (s) => s.storedStress);
   const status = useStoreSelector(appStore, (s) => s.status);
-  const battery = useStoreSelector(appStore, (s) => s.battery);
   const draining = useStoreSelector(appStore, (s) => s.draining);
-  const lastSyncTs = useStoreSelector(appStore, (s) => s.lastSyncTs);
-  const historySync = useStoreSelector(appStore, (s) => s.historySync);
-  const lastHistorySync = useStoreSelector(appStore, (s) => s.lastHistorySync);
   const sleepCapture = useStoreSelector(appStore, (s) => s.sleepCapture);
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
   const sleep = useStoreSelector(appStore, (s) => s.lastSleep);
-  const illness = useStoreSelector(appStore, (s) => s.illness);
-  const resilience = useStoreSelector(appStore, (s) => s.resilience);
-  const cardioAge = useStoreSelector(appStore, (s) => s.cardioAge);
   const session = useStoreSelector(appStore, (s) => s.session);
-  const steps = useStoreSelector(appStore, (s) => s.steps);
-  const stepSource = useStoreSelector(appStore, (s) => s.stepSource);
 
   const recovery = today?.recovery ?? null;
   const strain = today?.strain ?? null;
   const readiness = useStoreSelector(appStore, (s) => s.trainingReadiness);
-  const energyReserve = useStoreSelector(appStore, (s) => s.energyReserve);
   const sleepPerformance = useStoreSelector(appStore, (s) => s.sleepPerformance);
   const sleepNeed = useStoreSelector(appStore, (s) => s.sleepNeed);
   // Composite Sleep Performance (WHOOP's headline) when available, else the
@@ -57,8 +41,6 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const todaySleepTier = sleepTrustTier(today?.sleepDetail);
   const sleepNeedsReview = todaySleepTier === 'low';
 
-  const hm = useMemo(() => appStore.healthMonitor(), [today, recentDays]);
-
   const dateLabel = new Date().toLocaleDateString(undefined, {
     weekday: 'long',
     day: 'numeric',
@@ -67,53 +49,17 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const days = useMemo(() => orderedDays(today, recentDays), [today, recentDays]);
 
   const todayCardio = cardio.filter((c) => c.startTs >= new Date().setHours(0, 0, 0, 0));
-  const stressLabel =
-    liveStress == null ? '—' : liveStress >= 2 ? 'High' : liveStress >= 1 ? 'Medium' : 'Low';
-
-  const stressValue = liveStress ?? storedStress;
-  const stressTileLabel =
-    stressValue == null ? '—' : stressValue >= 2 ? 'High' : stressValue >= 1 ? 'Medium' : 'Low';
-
-  const signalMin = sleepCapture?.signalMin ?? 0;
-  const coverage = sleepCapture?.coveragePct ?? 0;
-  const confidence = sleepCapture?.confidence ?? null;
-  const effectiveSync = historySync ?? lastHistorySync;
-  const syncProblem = isRetryableSyncProblem(effectiveSync);
-  const quality = homeSleepQuality({
-    capture: sleepCapture,
-    draining,
-    syncProblem,
-    hasSleep: !!sleep,
-    capped: !!sleepPerformance?.cappedByConfidence,
-  });
-  const decodedRange = formatDecodedRange(effectiveSync?.firstSampleTs, effectiveSync?.lastSampleTs);
-  const syncLabel = draining
-    ? syncProblem
-      ? 'Recovering sync'
-      : 'Syncing'
-    : syncProblem
-      ? 'Retrying sync'
-      : quality.status
-        ? quality.status
-      : lastSyncTs
-        ? `Synced ${formatSyncAge(lastSyncTs)}`
-        : status === 'connected'
-          ? 'Waiting for sync'
-          : 'Connect strap';
   const sleepDialSub =
     sleepNeedsReview
-      ? 'low trust'
+      ? 'review'
       : sleepPerformance?.cappedByConfidence && sleepPerformance.confidenceCapPct != null
-      ? `capped ${sleepPerformance.confidenceCapPct}%`
-      : confidence
-        ? `${sleepConfidenceLabel(confidence).toLowerCase()} confidence`
-        : sleep
-          ? 'needs confidence'
-          : 'awaiting sleep';
+      ? 'partial'
+      : sleep
+        ? 'last night'
+        : 'awaiting';
   const todayFocus = dailyFocus({
     status,
     draining,
-    syncProblem,
     sleepCapture,
     sleep,
     readiness,
@@ -143,26 +89,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
           </Pressable>
         ) : null}
 
-        {/* Sync/data trust */}
-        <Card onPress={() => nav.navigate({ name: 'device' })}>
-          <View style={styles.qualityHead}>
-            <View style={[styles.qualityDot, { backgroundColor: quality.color }]} />
-            <Text style={styles.qualityTitle}>Data quality</Text>
-            <Text style={styles.qualityStatus}>{syncLabel}</Text>
-          </View>
-          <View style={styles.liveRow}>
-            <Stat label="Sleep signal" value={signalMin || '-'} unit={signalMin ? 'min' : undefined} color={colors.sleepTeal} />
-            <Stat label="Coverage" value={sleepCapture ? `${coverage}%` : '-'} color={quality.color} />
-            <Stat label="Confidence" value={sleepConfidenceLabel(confidence)} color={sleepConfidenceColor(confidence)} />
-          </View>
-          <Text style={styles.qualityMeta}>
-            {decodedRange} / history {effectiveSync?.decodedRecords ?? 0} / R-R {effectiveSync?.rrSamples ?? 0} / IMU {effectiveSync?.motionSamples ?? 0}
-          </Text>
-          {effectiveSync?.status ? <Text style={styles.qualityNote}>{effectiveSync.status}</Text> : null}
-          {sleepCapture?.note ? <Text style={styles.qualityNote}>{sleepCapture.note}</Text> : null}
-        </Card>
-
-        {/* Three WHOOP dials: Sleep · Recovery · Strain */}
+        {/* Three core outcomes */}
         <Card style={styles.dialCard}>
           <View style={styles.dialRow}>
             <Dial
@@ -171,6 +98,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
               main={sleepNeedsReview ? 'Review' : sleepPerf != null ? `${Math.round(sleepPerf * 100)}%` : '—'}
               color={sleepNeedsReview ? colors.recoveryRed : colors.sleepTeal}
               fraction={sleepNeedsReview ? 0 : sleepPerf ?? 0}
+              size={88}
               onPress={() => nav.navigate({ name: 'sleep' })}
             />
             <Dial
@@ -178,6 +106,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
               main={recovery != null ? `${recovery}%` : '—'}
               color={recoveryColor(recovery)}
               fraction={recovery != null ? recovery / 100 : 0}
+              size={88}
               onPress={() => nav.navigate({ name: 'recovery' })}
             />
             <Dial
@@ -185,6 +114,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
               main={strain != null ? strain.toFixed(1) : '—'}
               color={colors.strainBlue}
               fraction={strain != null ? strain / 21 : 0}
+              size={88}
               onPress={() => nav.navigate({ name: 'strain' })}
             />
           </View>
@@ -203,137 +133,6 @@ export function HomeScreen({ nav }: { nav: Nav }) {
           <Text style={[styles.focusAction, { color: todayFocus.color }]}>{todayFocus.action}</Text>
         </Card>
 
-        {/* Illness early-warning banner */}
-        {illness && illness.level !== 'none' ? (
-          <Pressable onPress={() => nav.navigate({ name: 'illness' })} style={({ pressed }) => pressed && { opacity: 0.6 }}>
-            <Card style={{ borderColor: illnessTint(illness.level), marginTop: 12 }}>
-              <View style={styles.illnessHead}>
-                <View style={[styles.illnessDot, { backgroundColor: illnessTint(illness.level) }]} />
-                <Text style={styles.illnessTitle}>
-                  {illness.level === 'major' ? 'Signs you may be getting sick' : 'Minor signs to watch'}
-                </Text>
-              </View>
-              <Text style={styles.illnessSub}>
-                {illness.flaggedCount} overnight vital{illness.flaggedCount > 1 ? 's' : ''} outside your typical range — tap for details.
-              </Text>
-            </Card>
-          </Pressable>
-        ) : null}
-
-        {/* Health + Stress monitors — both tappable */}
-        <View style={styles.grid}>
-          <Tile
-            title="Health Monitor"
-            icon="pulse"
-            color={hm.measuredCount && hm.inRangeCount === hm.measuredCount ? colors.recoveryGreen : colors.recoveryYellow}
-            value={hm.measuredCount > 0 ? `${hm.inRangeCount}/${hm.measuredCount}` : hm.valueCount > 0 ? `${hm.valueCount}` : '—'}
-            sub={hm.measuredCount > 0 ? (hm.candidateCount > 0 ? `+${hm.candidateCount} raw` : 'within range') : hm.valueCount > 0 ? 'building ranges' : 'needs full sync'}
-            onPress={() => nav.navigate({ name: 'health' })}
-            style={styles.half}
-          />
-          <Tile
-            title="Stress Monitor"
-            icon="speedometer"
-            color={colors.strainBlue}
-            value={stressValue != null ? stressValue.toFixed(1) : '—'}
-            sub={liveStress != null ? `${stressTileLabel} · live` : storedStress != null ? `${stressTileLabel} · synced` : status === 'connected' ? 'waiting for R-R' : 'needs synced R-R'}
-            onPress={() => nav.navigate({ name: 'stress' })}
-            style={styles.half}
-          />
-        </View>
-
-        <View style={styles.grid}>
-          <Tile
-            title="Resilience"
-            icon="shield-half"
-            color={colors.recoveryGreen}
-            value={resilience ? resilience.tier : '—'}
-            sub={resilience ? `${resilience.days}-day trend` : 'needs recovery nights'}
-            onPress={() => nav.navigate({ name: 'resilience' })}
-            style={styles.half}
-          />
-          <Tile
-            title="Heart Age"
-            icon="heart"
-            color={colors.strainBlue}
-            value={cardioAge != null ? `${cardioAge}` : '—'}
-            sub="cardiovascular est."
-            onPress={() => nav.navigate({ name: 'metric', key: 'cardio_age' })}
-            style={styles.half}
-          />
-        </View>
-
-        <View style={styles.grid}>
-          <Tile
-            title="Readiness"
-            icon="speedometer"
-            color={
-              readiness == null
-                ? colors.textSecondary
-                : readiness.score >= 70
-                ? colors.recoveryGreen
-                : readiness.score >= 50
-                ? colors.recoveryYellow
-                : colors.recoveryRed
-            }
-            value={readiness ? `${readiness.score}` : '—'}
-            sub={
-              readiness
-                ? readiness.cappedByConfidence && readiness.scoreCap != null
-                  ? `capped ${readiness.scoreCap} / ${readiness.confidencePct}% conf`
-                  : `${readiness.label} / ${readiness.confidencePct}% conf`
-                : 'needs recovery'
-            }
-            onPress={() => nav.navigate({ name: 'readiness' })}
-            style={styles.half}
-          />
-          <Tile
-            title="Energy"
-            icon="battery-charging"
-            color={energyColor(energyReserve?.score)}
-            value={energyReserve ? `${energyReserve.score}` : '—'}
-            sub={energyReserve ? energyReserve.label : 'needs data'}
-            onPress={() => nav.navigate({ name: 'energyReserve' })}
-            style={styles.half}
-          />
-        </View>
-
-        <View style={styles.grid}>
-          <Tile
-            title="Steps"
-            icon="footsteps"
-            color={colors.recoveryGreen}
-            value={steps != null ? steps.toLocaleString() : '—'}
-            sub={stepSource === 'band' ? 'WHOOP band' : 'awaiting sync'}
-            onPress={() => nav.navigate({ name: 'metric', key: 'steps' })}
-            style={styles.half}
-          />
-          <Tile
-            title="Training Status"
-            icon="fitness"
-            color={colors.strainBlue}
-            value=""
-            sub="VO2max / load"
-            onPress={() => nav.navigate({ name: 'training' })}
-            style={styles.half}
-          />
-        </View>
-
-        {/* Live */}
-        <SectionLabel>Live</SectionLabel>
-        <Card onPress={() => nav.navigate({ name: 'device' })}>
-          {status === 'connected' ? (
-            <View style={styles.liveRow}>
-              <Stat label="Heart rate" value={liveHr ?? '—'} unit="bpm" color={colors.recoveryRed} />
-              <Stat label="HRV (awake)" value={liveRmssd != null ? Math.round(liveRmssd) : '—'} unit="ms" />
-              <Stat label="Battery" value={battery ?? '—'} unit="%" />
-            </View>
-          ) : (
-            <Empty text="Not connected. Tap to open the Device tab, pair your strap and start streaming." />
-          )}
-        </Card>
-
-        {/* My Day / activities */}
         <SectionLabel>Today's activities</SectionLabel>
         <Card>
           {sleep ? (
@@ -376,24 +175,13 @@ const styles = StyleSheet.create({
   dialRow: { flexDirection: 'row', justifyContent: 'space-between' },
   grid: { flexDirection: 'row', gap: 12, marginTop: 12 },
   half: { flex: 1, marginTop: 0 },
-  liveRow: { flexDirection: 'row', justifyContent: 'space-between' },
   actRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   actText: { flex: 1 },
   actName: { color: colors.text, fontSize: 15, fontWeight: '600' },
   actMeta: { color: colors.textSecondary, fontSize: 12, marginTop: 2, lineHeight: 16 },
   pressedRow: { opacity: 0.65 },
-  illnessHead: { flexDirection: 'row', alignItems: 'center' },
-  illnessDot: { width: 9, height: 9, borderRadius: 5, marginRight: 8 },
-  illnessTitle: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
-  illnessSub: { color: colors.textSecondary, fontSize: 13, marginTop: 6, lineHeight: 18, fontFamily: fonts.text },
   recDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.recoveryRed, marginRight: 10 },
   recText: { color: colors.text, fontSize: 14, fontFamily: fonts.textBold },
-  qualityHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  qualityDot: { width: 9, height: 9, borderRadius: 5, marginRight: 8 },
-  qualityTitle: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold, flex: 1 },
-  qualityStatus: { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.text },
-  qualityMeta: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
-  qualityNote: { color: colors.textTertiary, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
   focusHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   focusBadge: { width: 48, height: 48, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   focusBadgeText: { color: '#000', fontSize: 10, fontFamily: fonts.black },
@@ -409,39 +197,6 @@ function orderedDays(today: DailyMetricRow | null, recent: DailyMetricRow[]): Da
   return [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day));
 }
 
-function qualityColor(capture: ReturnType<typeof appStore.getState>['sleepCapture'], syncing: boolean, syncProblem = false): string {
-  if (syncing) return colors.strainBlue;
-  if (syncProblem) return colors.recoveryYellow;
-  const tier = sleepTrustTier(capture);
-  if (tier === 'high') return colors.recoveryGreen;
-  if (tier === 'medium') return colors.recoveryYellow;
-  if (tier === 'low') return colors.recoveryRed;
-  return colors.textTertiary;
-}
-
-function homeSleepQuality(input: {
-  capture: ReturnType<typeof appStore.getState>['sleepCapture'];
-  draining: boolean;
-  syncProblem: boolean;
-  hasSleep: boolean;
-  capped: boolean;
-}): { color: string; status: string | null; issue: 'wake' | 'hr_only' | 'partial' | 'sync' | null } {
-  const capture = input.capture;
-  const tier = sleepTrustTier(capture);
-  if (input.draining) return { color: colors.strainBlue, status: 'Syncing', issue: 'sync' };
-  if (input.syncProblem) return { color: colors.recoveryYellow, status: 'Retrying sync', issue: 'sync' };
-  if (sleepStateWakeConflict(capture)) return { color: colors.recoveryRed, status: 'Review sleep', issue: 'wake' };
-  if (capture && longHrOnlyHomeCapture(capture)) {
-    return { color: colors.strainBlue, status: 'Needs proof', issue: 'hr_only' };
-  }
-  if (tier === 'low') return { color: colors.recoveryRed, status: 'Review sleep', issue: 'partial' };
-  if (!input.hasSleep || input.capped || sleepNeedsMoreSync(capture)) {
-    return { color: qualityColor(capture, false, false), status: 'Partial sleep', issue: 'partial' };
-  }
-  if (tier === 'high') return { color: colors.recoveryGreen, status: null, issue: null };
-  return { color: colors.recoveryYellow, status: 'Usable data', issue: null };
-}
-
 function longHrOnlyHomeCapture(capture: NonNullable<ReturnType<typeof appStore.getState>['sleepCapture']>): boolean {
   return longAutoSleepNeedsCorroboration(capture, false);
 }
@@ -453,33 +208,10 @@ function energyColor(score: number | null | undefined): string {
   return colors.recoveryRed;
 }
 
-function isRetryableSyncProblem(sync: { status: string; reason?: string } | null | undefined): boolean {
-  if (!sync) return false;
-  const status = sync.status.toLowerCase();
-  return sync.reason === 'timeout' || status.includes('stalled') || status.includes('partial sync');
-}
-
-function formatSyncAge(ts: number): string {
-  const min = Math.max(0, Math.round((Date.now() - ts) / 60000));
-  if (min < 1) return 'now';
-  if (min < 60) return `${min}m ago`;
-  const hours = Math.round(min / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return new Date(ts).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-}
-
-function formatDecodedRange(firstTs?: number, lastTs?: number): string {
-  if (!firstTs || !lastTs) return 'No decoded range yet';
-  const sameDay = new Date(firstTs).toDateString() === new Date(lastTs).toDateString();
-  const first = new Date(firstTs).toLocaleString(undefined, sameDay ? { hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-  const last = new Date(lastTs).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-  return `Decoded ${first}-${last}`;
-}
 
 function dailyFocus(input: {
   status: string;
   draining: boolean;
-  syncProblem: boolean;
   sleepCapture: ReturnType<typeof appStore.getState>['sleepCapture'];
   sleep: ReturnType<typeof appStore.getState>['lastSleep'];
   readiness: ReturnType<typeof appStore.getState>['trainingReadiness'];
@@ -528,7 +260,7 @@ function dailyFocus(input: {
       route: input.sleep ? { name: 'sleep' } : { name: 'device' },
     };
   }
-  if (input.draining || input.syncProblem || !input.sleep || sleepNeedsMoreSync(input.sleepCapture) || input.sleepPerformanceCapped) {
+  if (input.draining || !input.sleep || sleepNeedsMoreSync(input.sleepCapture) || input.sleepPerformanceCapped) {
     return {
       badge: input.draining ? 'SYNC' : 'DATA',
       title: input.draining ? 'Let history finish syncing' : 'Fix sleep data confidence',

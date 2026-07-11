@@ -86,11 +86,16 @@ export function inferSleepSchedule(days: SleepDay[]): SleepSchedule {
       const duration = day.sleepStart != null && day.sleepEnd != null ? (day.sleepEnd - day.sleepStart) / 60000 : 0;
       const confidence = day.sleepDetail?.confidence;
       const coverage = day.sleepDetail?.coveragePct ?? 0;
-      const manuallyTimed = day.sleepDetail?.source === 'manual_hr' || day.sleepDetail?.source === 'manual_duration';
-      return duration >= 180 && duration <= 12 * 60 && (
-        manuallyTimed ||
-        (day.sleepMin != null && (confidence === 'high' || confidence === 'medium') && coverage >= 70)
-      );
+      const source = day.sleepDetail?.source;
+      const qualityPassed =
+        day.sleepMin != null &&
+        day.sleepMin > 0 &&
+        (confidence === 'high' || confidence === 'medium') &&
+        coverage >= 70;
+      // A duration-only manual log proves timing, not the user's automatic
+      // sleep pattern. Manual HR can contribute only when its quality is
+      // comparable to an automatic night.
+      return duration >= 180 && duration <= 12 * 60 && source !== 'manual_duration' && qualityPassed;
     })
     .sort(newestFirst);
   const seenDays = new Set<string>();

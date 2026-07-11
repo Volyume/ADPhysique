@@ -1,3 +1,6 @@
+import { baselineCalibration } from './ema';
+import type { BaselineCalibration } from './ema';
+
 /**
  * Daily recovery score (0–100), WHOOP-style, from published inputs:
  *   - HRV (RMSSD) today vs personal baseline — dominant signal
@@ -28,6 +31,18 @@ export type RecoveryInputs = {
   skinTemperatureBaseline?: number | null;
   skinTemperatureSd?: number | null;
   sleepPerformance: number | null; // 0..1 (achieved/needed), or null if unknown
+  baselineSampleCount?: number;
+  minimumBaselineSamples?: number;
+  calibrationSamples?: number;
+};
+
+export type RecoveryContributorKey = 'hrv' | 'rhr' | 'resp' | 'temp' | 'sleep';
+
+export type RecoveryContributor = {
+  key: RecoveryContributorKey;
+  score: number;
+  weight: number;
+  contribution: number;
 };
 
 export type RecoveryResult = {
@@ -38,7 +53,24 @@ export type RecoveryResult = {
   respSub: number | null;
   tempSub: number | null;
   sleepSub: number;
+  contributors: RecoveryContributor[];
+  calibration: BaselineCalibration | null;
 };
+
+/** Five nights can produce a provisional value; 28 nights are fully calibrated. */
+export function recoveryCalibration(
+  sampleCount: number,
+  minimumSamples = 5,
+  calibrationSamples = 28,
+): BaselineCalibration {
+  return baselineCalibration(sampleCount, minimumSamples, calibrationSamples);
+}
+
+/** Pull a provisional score towards neutral until its baseline is calibrated. */
+export function calibrateRecoveryScore(score: number, calibration: BaselineCalibration): number {
+  if (!Number.isFinite(score)) return 50;
+  return Math.round(50 + (clamp(score, 1, 99) - 50) * calibration.factor);
+}
 
 /** Logistic squash of a z-score to 0..100, centred at 50. */
 function zToScore(z: number, gain = 1.1): number {
@@ -63,6 +95,16 @@ export function computeRecovery(inp: RecoveryInputs): RecoveryResult | null {
   ) {
     return null;
   }
+  if (
+    inp.baselineSampleCount != null &&
+    (!Number.isFinite(inp.baselineSampleCount) || inp.baselineSampleCount < 0)
+  ) {
+    return null;
+  }
+  const calibration = inp.baselineSampleCount == null
+    ? null
+    : recoveryCalibration(inp.baselineSampleCount, inp.minimumBaselineSamples, inp.calibrationSamples);
+  if (calibration?.status === 'unavailable') return null;
   // HRV: higher than baseline -> better.
   const hrvZ = inp.rmssdSd > 0 ? (inp.rmssd - inp.rmssdBaseline) / inp.rmssdSd : 0;
   const hrvSub = zToScore(hrvZ);
@@ -101,23 +143,35 @@ export function computeRecovery(inp: RecoveryInputs): RecoveryResult | null {
       )
     : null;
 
-  const terms: Array<[number, number]> = [
-    [0.4, hrvSub],
-    [0.25, rhrSub],
-    [0.15, sleepSub],
+  // Build one term per signal, then derive both the score and attribution from
+  // this list. A contributor cannot be counted once in the score and again in
+  // the attribution payload.
+  const terms: Array<{ key: RecoveryContributorKey; weight: number; score: number }> = [
+    { key: 'hrv', weight: 0.4, score: hrvSub },
+    { key: 'rhr', weight: 0.25, score: rhrSub },
+    { key: 'sleep', weight: 0.15, score: sleepSub },
   ];
-  if (respSub != null) terms.push([0.1, respSub]);
-  if (tempSub != null) terms.push([0.1, tempSub]);
-  const weight = terms.reduce((sum, [termWeight]) => sum + termWeight, 0);
-  const score = clamp(terms.reduce((sum, [termWeight, value]) => sum + termWeight * value, 0) / weight, 1, 99);
+  if (respSub != null) terms.push({ key: 'resp', weight: 0.1, score: respSub });
+  if (tempSub != null) terms.push({ key: 'temp', weight: 0.1, score: tempSub });
+  const weight = terms.reduce((sum, term) => sum + term.weight, 0);
+  const rawScore = clamp(terms.reduce((sum, term) => sum + term.weight * term.score, 0) / weight, 1, 99);
+  // Apply provisional-baseline calibration exactly once, at the aggregate
+  // score. Component sub-scores remain useful diagnostic signal values.
+  const score = calibration ? calibrateRecoveryScore(rawScore, calibration) : Math.round(rawScore);
+  const contributors: RecoveryContributor[] = terms.map((term) => ({
+    ...term,
+    contribution: (term.weight / weight) * score,
+  }));
   return {
-    score: Math.round(score),
+    score,
     band: score >= 67 ? 'green' : score >= 34 ? 'yellow' : 'red',
     hrvSub: Math.round(hrvSub),
     rhrSub: Math.round(rhrSub),
     respSub: respSub == null ? null : Math.round(respSub),
     tempSub: tempSub == null ? null : Math.round(tempSub),
     sleepSub: Math.round(sleepSub),
+    contributors,
+    calibration,
   };
 }
 

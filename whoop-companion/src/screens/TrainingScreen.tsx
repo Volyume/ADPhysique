@@ -7,21 +7,27 @@ import { useStoreSelector } from '../state/store';
 import { Card, Empty, NavRow, Screen, SectionLabel, Stat, WeeklyBars } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
-import { formatRaceTime, racePredictions, trainingLoad, vo2maxEstimate, vo2maxLabel } from '../metrics/training';
+import {
+  formatRaceTime,
+  racePredictions,
+  trainingLoad,
+  trainingZoneTarget,
+  vo2maxEstimate,
+  vo2maxLabel,
+  workoutActivityLabel,
+} from '../metrics/training';
 import { sleepStateWakeConflict } from '../metrics/sleepEvidence';
 import { sleepNeedsMoreSync, sleepSyncActionValue } from '../metrics/sleepSync';
 import { formatDistance, formatPace } from '../sensors/location';
 import { formatDuration } from '../util/time';
 
 const STATUS_COLOR: Record<string, string> = {
-  Productive: colors.recoveryGreen,
-  Peaking: colors.recoveryGreen,
-  Maintaining: colors.sleepTeal,
-  Recovery: colors.sleepTeal,
+  'Near recent baseline': colors.recoveryGreen,
+  'Baseline building': colors.sleepTeal,
+  'Below recent baseline': colors.sleepTeal,
+  'Above recent baseline': '#FFA722',
+  'Well above recent baseline': colors.recoveryRed,
   Detraining: colors.textSecondary,
-  Unproductive: '#FFA722',
-  Overreaching: '#FFA722',
-  Strained: colors.recoveryRed,
 };
 
 export function TrainingScreen({ nav }: { nav: Nav }) {
@@ -89,7 +95,10 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
 
   // Personal records from logged activities.
   const pr = useMemo(() => {
-    const withDur = cardio.map((c) => ({ ...c, durSec: (c.endTs - c.startTs) / 1000 }));
+    const withDur = cardio.map((c) => ({
+      ...c,
+      durSec: Math.max(1, (c.activeDurationMin ?? (c.endTs - c.startTs) / 60000) * 60),
+    }));
     const longestDist = withDur.filter((c) => c.distanceM != null).sort((a, b) => (b.distanceM ?? 0) - (a.distanceM ?? 0))[0];
     const longestDur = [...withDur].sort((a, b) => b.durSec - a.durSec)[0];
     const hardest = withDur.filter((c) => c.strain != null).sort((a, b) => (b.strain ?? 0) - (a.strain ?? 0))[0];
@@ -121,7 +130,7 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
         </View>
         <View style={styles.statRow}>
           <Stat label="Target" value={plan.target} color={plan.color} />
-          <Stat label="Load ratio" value={load.acwr != null ? load.acwr.toFixed(2) : '—'} color={statusColor} />
+          <Stat label="ACWR context" value={load.acwr != null ? load.acwr.toFixed(2) : '—'} color={statusColor} />
           <Stat label="Readiness" value={readiness?.score ?? '—'} color={readinessColor(readiness?.score)} />
         </View>
         <NavRow
@@ -171,11 +180,12 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
         <View style={styles.statRow}>
           <Stat label="Acute (7d)" value={load.acute} color={colors.strainBlue} />
           <Stat label="Chronic (weekly)" value={load.chronic} />
-          <Stat label="Load ratio" value={load.acwr != null ? load.acwr.toFixed(2) : '—'} color={statusColor} />
+          <Stat label="ACWR context" value={load.acwr != null ? load.acwr.toFixed(2) : '—'} color={statusColor} />
         </View>
         <Text style={styles.note}>
-          The acute:chronic load ratio (Gabbett). 0.8–1.3 is the optimal range; above ~1.5 signals
-          overreaching. Built from each activity's heart-rate training load (TRIMP).
+          ACWR compares your recent 7-day load with your trailing weekly average. The bands are
+          descriptive context, not a universal safe/optimal range or an injury-risk prediction.
+          Built from each activity's heart-rate training load (TRIMP), with HRR-based zones.
         </Text>
       </Card>
 
@@ -192,7 +202,7 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
         </View>
         <View style={styles.statRow}>
           <Stat label="Driver" value={loadDriver.metric} color={loadDriver.color} />
-          <Stat label="ACWR" value={load.acwr != null ? load.acwr.toFixed(2) : '—'} color={statusColor} />
+          <Stat label="ACWR context" value={load.acwr != null ? load.acwr.toFixed(2) : '—'} color={statusColor} />
           <Stat label="Readiness" value={readiness?.score ?? '—'} color={readinessColor(readiness?.score)} />
         </View>
         <NavRow
@@ -223,8 +233,8 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
           </View>
         ) : null}
         <Text style={styles.note}>
-          The WHO recommends 150 intensity minutes a week — moderate (HR zones 2–3) counts once,
-          vigorous (zones 4–5) counts double. Measured from your heart rate across the last 7 days.
+          The WHO recommends 150 intensity minutes a week — moderate (Z2-Z3 HR reserve) counts once,
+          vigorous (Z4-Z5 HR reserve) counts double. Measured from your heart rate across the last 7 days.
         </Text>
       </Card>
 
@@ -234,14 +244,14 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
           <Empty text="Your bests appear here as you log activities." />
         ) : (
           <>
-            <PrRow label="Longest distance" value={pr.longestDist?.distanceM != null ? formatDistance(pr.longestDist.distanceM) : '—'} sub={pr.longestDist?.activity} />
-            <PrRow label="Longest activity" value={pr.longestDur ? formatDuration(Math.round(pr.longestDur.durSec / 60)) : '—'} sub={pr.longestDur?.activity} />
+            <PrRow label="Longest distance" value={pr.longestDist?.distanceM != null ? formatDistance(pr.longestDist.distanceM) : '—'} sub={pr.longestDist ? workoutActivityLabel({ activity: pr.longestDist.activity }) : undefined} />
+            <PrRow label="Longest activity" value={pr.longestDur ? formatDuration(Math.round(pr.longestDur.durSec / 60)) : '—'} sub={pr.longestDur ? workoutActivityLabel({ activity: pr.longestDur.activity }) : undefined} />
             <PrRow
               label="Fastest pace"
               value={pr.fastest?.distanceM != null ? formatPace(pr.fastest.distanceM, pr.fastest.durSec) : '—'}
-              sub={pr.fastest?.activity}
+              sub={pr.fastest ? workoutActivityLabel({ activity: pr.fastest.activity }) : undefined}
             />
-            <PrRow label="Highest strain" value={pr.hardest?.strain != null ? pr.hardest.strain.toFixed(1) : '—'} sub={pr.hardest?.activity} last />
+            <PrRow label="Highest strain" value={pr.hardest?.strain != null ? pr.hardest.strain.toFixed(1) : '—'} sub={pr.hardest ? workoutActivityLabel({ activity: pr.hardest.activity }) : undefined} last />
           </>
         )}
       </Card>
@@ -254,12 +264,13 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
           recent.map((c) => (
             <Pressable key={c.id} style={styles.actRow} onPress={() => nav.navigate({ name: 'activity', id: c.id })}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.actName}>{c.activity}</Text>
+                <Text style={styles.actName}>{workoutActivityLabel({ activity: c.activity })}</Text>
                 <Text style={styles.actMeta}>
                   {new Date(c.startTs).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} ·{' '}
-                  {formatDuration(Math.round((c.endTs - c.startTs) / 60000))}
+                  {formatDuration(Math.round(c.activeDurationMin ?? (c.endTs - c.startTs) / 60000))}
                   {c.distanceM != null ? ` · ${formatDistance(c.distanceM)}` : ''}
                   {c.steps != null ? ` · ${c.steps.toLocaleString()} steps` : ''}
+                  {c.cadenceSpm != null ? ` · ${c.cadenceSpm} spm` : ''}
                   {c.strain != null ? ` · strain ${c.strain.toFixed(1)}` : ''}
                 </Text>
               </View>
@@ -270,8 +281,8 @@ export function TrainingScreen({ nav }: { nav: Nav }) {
       </Card>
 
       <Text style={styles.disclaimer}>
-        Training Status, VO₂max and load are faithful approximations of Garmin/Firstbeat's models,
-        computed on-device from heart rate — estimates, not Garmin-exact numbers.
+        Training Status, VO₂max and load are on-device approximations. ACWR is a personal load
+        comparison, not a diagnosis or an injury-risk estimate.
       </Text>
     </Screen>
   );
@@ -329,10 +340,10 @@ function trainingLoadDriver(input: {
 
   if (input.acwr != null && input.acwr > 1.5) {
     return {
-      badge: 'SPIKE',
-      title: 'Acute load has spiked',
-      body: `Your 7-day load is ${input.acwr.toFixed(2)}× chronic load. The best move is absorbing work, not adding more.`,
-      metric: 'Load ratio',
+      badge: 'HIGH',
+      title: 'Relative load is high',
+      body: `Your 7-day load is ${input.acwr.toFixed(2)}× the recent weekly average. This is a context flag, not an injury prediction; consider recovery and symptoms before adding more.`,
+      metric: 'ACWR context',
       actionLabel: 'Plan recovery',
       actionValue: 'sleep',
       icon: 'moon',
@@ -344,9 +355,9 @@ function trainingLoadDriver(input: {
   if (input.acwr != null && input.acwr < 0.8) {
     return {
       badge: 'LOW',
-      title: 'Load is below your norm',
-      body: 'Fitness stimulus is light versus recent history. Build gradually with a controlled aerobic or strength session.',
-      metric: 'Load ratio',
+      title: 'Relative load is below baseline',
+      body: 'Recent load is lighter than your usual baseline. That may create room to build gradually, if recovery and goals support it.',
+      metric: 'ACWR context',
       actionLabel: 'Start workout',
       actionValue: 'build',
       icon: 'play',
@@ -369,11 +380,11 @@ function trainingLoadDriver(input: {
     };
   }
 
-  if (input.loadStatus === 'Productive' || input.loadStatus === 'Peaking') {
+  if (input.loadStatus === 'Near recent baseline') {
     return {
       badge: 'GOOD',
-      title: 'Training load is in a useful range',
-      body: 'Acute load is close enough to chronic load to create stimulus without an obvious spike.',
+      title: 'Training load is near baseline',
+      body: 'Recent load is close to your own baseline. That is useful context, but it does not determine readiness on its own.',
       metric: 'Balanced load',
       actionLabel: 'Start workout',
       actionValue: 'quality',
@@ -467,7 +478,7 @@ function trainingPlan(input: {
     };
   }
 
-  if (input.readinessConfidence === 'low') {
+  if (input.readinessConfidence == null || input.readinessConfidence === 'low') {
     return {
       badge: 'DATA',
       title: input.sleepReadinessFix.needsSync ? 'Finish overnight sync first' : 'Resolve sleep confidence first',
@@ -483,11 +494,11 @@ function trainingPlan(input: {
     };
   }
 
-  if (input.loadStatus === 'Strained' || input.loadStatus === 'Overreaching' || (input.acwr != null && input.acwr > 1.5)) {
+  if (input.loadStatus === 'Well above recent baseline' || (input.acwr != null && input.acwr > 1.5)) {
     return {
       badge: 'REST',
       title: 'Absorb the load',
-      body: 'Your acute load has climbed too far above baseline. Keep today easy and let fitness consolidate.',
+      body: 'Recent load is well above baseline. Use recovery, fatigue and symptoms to decide whether an easy day is appropriate; ACWR alone is not a risk verdict.',
       target: '0-5 strain',
       actionLabel: 'Plan recovery sleep',
       actionValue: 'recover',
@@ -511,11 +522,11 @@ function trainingPlan(input: {
     };
   }
 
-  if (input.loadStatus === 'Recovery' || (input.acwr != null && input.acwr < 0.8)) {
+  if (input.loadStatus === 'Below recent baseline' || (input.acwr != null && input.acwr < 0.8)) {
     return {
       badge: 'BUILD',
       title: 'Rebuild load carefully',
-      body: 'Load is below your recent norm. A controlled aerobic session can restart progress without a spike.',
+      body: 'Load is below your recent baseline. A controlled session may be a reasonable build if the rest of your evidence supports it.',
       target: '8-11 strain',
       actionLabel: 'Start workout',
       actionValue: 'aerobic',
@@ -530,8 +541,8 @@ function trainingPlan(input: {
     return {
       badge: 'MOVE',
       title: 'Close the weekly intensity gap',
-      body: `${intensityRemaining} intensity minutes remain this week. A zone 2-3 session gives the best return.`,
-      target: 'Z2-Z3',
+      body: `${intensityRemaining} intensity minutes remain this week. A zone 2-3 HRR session gives the best return.`,
+      target: trainingZoneTarget(2, 3),
       actionLabel: 'Start workout',
       actionValue: 'minutes',
       icon: 'play',

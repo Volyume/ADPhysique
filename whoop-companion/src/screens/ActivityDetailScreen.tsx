@@ -40,8 +40,9 @@ export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
 
   const isNap = activity.source === 'nap';
   const nap = isNap ? parseNapDetail(activity.notes) : null;
-  const durMin = Math.round((activity.endTs - activity.startTs) / 60000);
-  const elapsedSec = Math.round((activity.endTs - activity.startTs) / 1000);
+  const activeDurationMin = activity.activeDurationMin ?? (activity.endTs - activity.startTs) / 60000;
+  const durMin = Math.round(activeDurationMin);
+  const elapsedSec = Math.max(1, Math.round(activeDurationMin * 60));
   const zoneMax = Math.max(1, ...zones.map((z) => z.minutes));
   const te = !isNap && zones.some((z) => z.minutes > 0) ? trainingEffect(zones) : null;
   const recoveryHrs = te ? recoveryTimeHours(te) : null;

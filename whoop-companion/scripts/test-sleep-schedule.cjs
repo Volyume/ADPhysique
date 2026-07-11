@@ -58,6 +58,35 @@ const unreliable = [
 const trustResult = inferSleepSchedule(unreliable);
 assert(trustResult.sampleCount === 1, 'unreliable nights must remain excluded by the trust gates');
 
+const scheduleContamination = [
+  reliableNight(20),
+  {
+    ...reliableNight(21, 14, 23),
+    sleepMin: 540,
+    sleepDetail: { confidence: 'high', coveragePct: 95, source: 'manual_duration' },
+  },
+  {
+    ...reliableNight(22, 13, 22),
+    sleepMin: 540,
+    sleepDetail: { confidence: 'low', coveragePct: 95, source: 'manual_hr' },
+  },
+  {
+    ...reliableNight(23, 12, 21),
+    sleepMin: 0,
+    sleepDetail: { confidence: 'high', coveragePct: 95, source: 'manual_hr' },
+  },
+  {
+    ...reliableNight(24),
+    sleepDetail: { confidence: 'high', coveragePct: 95, source: 'manual_hr' },
+  },
+];
+const uncontaminatedResult = inferSleepSchedule(scheduleContamination);
+assert(uncontaminatedResult.sampleCount === 2, 'manual duration, zero sleep and low-quality manual HR do not teach the schedule');
+assert(
+  uncontaminatedResult.bedMin === 1320 && uncontaminatedResult.wakeMin === 360,
+  'schedule medians ignore contaminated manual timing',
+);
+
 process.env.TZ = 'Europe/London';
 const springStart = new Date(2026, 2, 29, 0, 0, 0, 0).getTime();
 const springNext = time.addDays(springStart, 1);

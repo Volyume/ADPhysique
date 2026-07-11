@@ -10,6 +10,7 @@ import {
   PRESET_WORKOUTS,
   StructuredWorkout,
   buildIntervalWorkout,
+  isValidStructuredWorkout,
   totalDurationSec,
 } from '../data/structuredWorkouts';
 
@@ -28,11 +29,28 @@ export function WorkoutsScreen({ nav }: { nav: Nav }) {
   const [repeats, setRepeats] = useState(4);
   const [cooldown, setCooldown] = useState(5);
   const [startingId, setStartingId] = useState<string | null>(null);
+  const [templateWarning, setTemplateWarning] = useState<string | null>(null);
 
-  const refresh = () => void appStore.listWorkoutTemplates().then(setSaved);
+  const refresh = () => {
+    void appStore.listWorkoutTemplates()
+      .then((templates) => {
+        const stored = Array.isArray(templates) ? templates : [];
+        const valid = stored.filter(isValidStructuredWorkout);
+        setSaved(valid);
+        setTemplateWarning(valid.length === stored.length ? null : 'Some saved workouts were invalid and were hidden.');
+      })
+      .catch(() => {
+        setSaved([]);
+        setTemplateWarning('Saved workouts could not be loaded.');
+      });
+  };
   useEffect(refresh, []);
 
   const start = async (w: StructuredWorkout) => {
+    if (!isValidStructuredWorkout(w)) {
+      setTemplateWarning('This workout template is invalid and cannot be started.');
+      return;
+    }
     if (startingId) return;
     setStartingId(w.id);
     try {
@@ -80,12 +98,13 @@ export function WorkoutsScreen({ nav }: { nav: Nav }) {
           ))}
         </>
       ) : null}
+      {templateWarning ? <Text style={styles.warning}>{templateWarning}</Text> : null}
 
       <SectionLabel>Build an interval workout</SectionLabel>
       <Card>
         <Stepper label="Warm-up (min)" value={warmup} setValue={setWarmup} step={1} min={0} max={30} />
         <Stepper label="Work (min)" value={workMin} setValue={setWorkMin} step={1} min={1} max={60} />
-        <Stepper label="Work zone" value={workZone} setValue={setWorkZone} step={1} min={1} max={5} />
+        <Stepper label="Work HRR zone" value={workZone} setValue={setWorkZone} step={1} min={1} max={5} />
         <Stepper label="Recover (min)" value={restMin} setValue={setRestMin} step={1} min={0} max={30} />
         <Stepper label="Repeats" value={repeats} setValue={setRepeats} step={1} min={1} max={20} />
         <Stepper label="Cool-down (min)" value={cooldown} setValue={setCooldown} step={1} min={0} max={30} last />
@@ -101,7 +120,7 @@ export function WorkoutsScreen({ nav }: { nav: Nav }) {
         </View>
       </Card>
 
-      <Empty text="Structured workouts guide you step-by-step in the live session, buzzing on each interval change. Target zones are by % of your max heart rate." />
+      <Empty text="Structured workouts guide you step-by-step in the live session, buzzing on each interval change. Target zones use HRR (Karvonen): Z1–Z5." />
     </Screen>
   );
 }
@@ -162,5 +181,6 @@ const styles = StyleSheet.create({
   stepValue: { color: colors.text, fontSize: 16, fontFamily: fonts.bold, minWidth: 28, textAlign: 'center' },
   saveBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingVertical: 14, alignItems: 'center', backgroundColor: colors.surface },
   saveText: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
+  warning: { color: colors.recoveryYellow, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
   disabled: { opacity: 0.55 },
 });

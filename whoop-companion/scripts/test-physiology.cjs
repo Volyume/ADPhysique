@@ -32,6 +32,7 @@ function assert(condition, message) {
 
 const ema = loadTypeScriptModule(path.join('src', 'metrics', 'ema.ts'));
 const hrv = loadTypeScriptModule(path.join('src', 'metrics', 'hrv.ts'));
+const respiratory = loadTypeScriptModule(path.join('src', 'metrics', 'respiratory.ts'));
 const trust = loadTypeScriptModule(path.join('src', 'metrics', 'sleepTrustWeight.ts'));
 const skinTemperature = loadTypeScriptModule(path.join('src', 'whoop', 'skinTemperature.ts'));
 const historical = require(path.join(__dirname, '..', 'src', 'whoop', 'historicalParse.ts'));
@@ -55,12 +56,60 @@ const reversedBaseline = ema.emaBaseline(chronological.slice().reverse());
 assert(chronologicalBaseline === reversedBaseline, 'EMA must be independent of database row order');
 assert(chronologicalBaseline > 40 && chronologicalBaseline < 70, 'EMA remains bounded by its samples');
 
+const stableNights = Array.from({ length: 30 }, (_, index) => ({
+  day: index + 1,
+  value: 49 + (index % 3),
+}));
+const cleanBaseline = ema.robustBaseline(stableNights, { halfLifeDays: 7 });
+const contaminatedBaseline = ema.robustBaseline(
+  [...stableNights.slice(0, 29), { day: 30, value: 1000 }],
+  { halfLifeDays: 7 },
+);
+assert(cleanBaseline.status === 'calibrated', '30 nights provide a calibrated baseline');
+assert(contaminatedBaseline.rejectedSamples === 1, 'MAD baseline rejects one contaminated night');
+assert(
+  contaminatedBaseline.value != null && cleanBaseline.value != null &&
+    Math.abs(contaminatedBaseline.value - cleanBaseline.value) < 2,
+  'one extreme night has a bounded effect on the baseline',
+);
+const provisionalBaseline = ema.robustBaseline(stableNights.slice(0, 5));
+assert(provisionalBaseline.value != null && provisionalBaseline.label === 'provisional', 'five nights are displayable but labelled provisional');
+const cleanStdev = ema.robustStdev(stableNights);
+const outlierStdev = ema.robustStdev([...stableNights, { day: 31, value: 1000 }]);
+assert(Math.abs(outlierStdev - cleanStdev) < 0.5, 'one extreme outlier stays close to clean robustStdev');
+
 const firstRun = Array.from({ length: 24 }, () => 1000);
 const secondRun = Array.from({ length: 24 }, () => 900);
 const contiguous = hrv.computeHrv([...firstRun, ...secondRun]);
 const segmented = hrv.computeHrvSegments([firstRun, secondRun]);
 assert((contiguous?.rmssd ?? 0) > 10, 'fixture exposes a false cross-gap successive difference');
 assert(segmented?.rmssd === 0, 'segmented RMSSD excludes the missing-packet boundary');
+
+function respiratoryFixture(rateBrpm, seconds = 600) {
+  const rr = [];
+  let elapsed = 0;
+  while (elapsed < seconds) {
+    const interval = 1000 + 80 * Math.sin(2 * Math.PI * (rateBrpm / 60) * elapsed);
+    rr.push(interval);
+    elapsed += interval / 1000;
+  }
+  return rr;
+}
+
+const knownRespiratory = respiratory.respiratoryRate(respiratoryFixture(15));
+assert(knownRespiratory != null && Math.abs(knownRespiratory - 15) <= 0.5, 'recovers a coherent 15 brpm RSA signal');
+assert(knownRespiratory != null && Number.isInteger(knownRespiratory * 2), 'respiratory output does not claim false 0.1 brpm precision');
+let noiseSeed = 123456789;
+const noiseRr = Array.from({ length: 700 }, () => {
+  noiseSeed = (1664525 * noiseSeed + 1013904223) >>> 0;
+  return 960 + (noiseSeed / 0xffffffff) * 80;
+});
+const noiseRespiratory = respiratory.respiratoryRate(noiseRr);
+assert(noiseRespiratory == null, `does not publish an arbitrary spectral peak from aperiodic R-R noise (got ${noiseRespiratory})`);
+const edgeBiasedRr = respiratoryFixture(4.8).map((value, index) => value + ((index * 37) % 17) - 8);
+assert(respiratory.respiratoryRate(edgeBiasedRr) == null, 'does not lock an out-of-band rhythm to the respiratory band edge');
+const interruptedRespiratory = respiratoryFixture(15).flatMap((value, index) => (index > 0 && index % 100 === 0 ? [2500, value] : [value]));
+assert(respiratory.respiratoryRate(interruptedRespiratory) == null, 'does not compress repeated missing-beat gaps into a respiratory estimate');
 
 assert(
   trust.sleepTrustTier({ inBedMin: 480, confidence: null, coveragePct: null, signalMin: null }) === 'low',
@@ -101,6 +150,8 @@ assert(historySyncPolicy.historyCursorAdvanced('0011', '0022'), 'a changed durab
 assert(!historySyncPolicy.historyCursorAdvanced('0011', '0011'), 'a replayed endpoint does not trigger another immediate pass');
 assert(historySyncPolicy.historyRetryDelayMs(1) === 15_000, 'first failed history retry stays responsive');
 assert(historySyncPolicy.historyRetryDelayMs(20) === 15 * 60_000, 'repeated history failures are rate-limited');
+assert(historySyncPolicy.historyReplayDelayMs(1) === 15 * 60_000, 'the first unchanged endpoint backs off for 15 minutes');
+assert(historySyncPolicy.historyReplayDelayMs(20) === 2 * 60 * 60_000, 'unchanged endpoint replay backoff is capped at two hours');
 const queuedEnds = new Set(['pending']);
 const acknowledgedEnds = new Set(['done']);
 assert(historySyncPolicy.historyEndShouldQueue('new', queuedEnds, acknowledgedEnds), 'a new history END token is admitted');
@@ -122,6 +173,47 @@ const deviatedRecovery = recovery.computeRecovery({
   skinTemperature: 34.1, skinTemperatureBaseline: 33.2, skinTemperatureSd: 0.3,
   sleepPerformance: 0.85,
 });
+const fullCalibrationRecovery = recovery.computeRecovery({
+  rmssd: 70, rmssdBaseline: 50, rmssdSd: 8,
+  restingHr: 50, rhrBaseline: 55, rhrSd: 4,
+  respiratoryRate: 14, respiratoryBaseline: 14, respiratorySd: 1,
+  skinTemperature: 33.2, skinTemperatureBaseline: 33.2, skinTemperatureSd: 0.3,
+  sleepPerformance: 0.85,
+  baselineSampleCount: 28,
+});
+const provisionalRecovery = recovery.computeRecovery({
+  rmssd: 70, rmssdBaseline: 50, rmssdSd: 8,
+  restingHr: 50, rhrBaseline: 55, rhrSd: 4,
+  respiratoryRate: 14, respiratoryBaseline: 14, respiratorySd: 1,
+  skinTemperature: 33.2, skinTemperatureBaseline: 33.2, skinTemperatureSd: 0.3,
+  sleepPerformance: 0.85,
+  baselineSampleCount: 5,
+});
+assert(fullCalibrationRecovery && provisionalRecovery, 'full and provisional recovery scores are available');
+assert(provisionalRecovery.calibration?.status === 'provisional', 'under-calibrated recovery reports provisional status');
+assert(
+  Math.abs(provisionalRecovery.score - 50) < Math.abs(fullCalibrationRecovery.score - 50),
+  'provisional recovery is pulled toward neutral versus full calibration',
+);
+const attributedRecovery = recovery.computeRecovery({
+  rmssd: 50, rmssdBaseline: contaminatedBaseline.value, rmssdSd: 8,
+  restingHr: 55, rhrBaseline: 55, rhrSd: 4,
+  respiratoryRate: 14, respiratoryBaseline: 14, respiratorySd: 1,
+  skinTemperature: 33.2, skinTemperatureBaseline: 33.2, skinTemperatureSd: 0.3,
+  sleepPerformance: 0.85,
+  baselineSampleCount: contaminatedBaseline.sampleCount,
+});
+assert(attributedRecovery?.calibration?.label === 'calibrated', 'recovery labels a 30-night baseline as calibrated');
+assert(
+  attributedRecovery && new Set(attributedRecovery.contributors.map((contributor) => contributor.key)).size === attributedRecovery.contributors.length,
+  'recovery attributes each signal exactly once',
+);
+assert(
+  attributedRecovery && Math.abs(
+    attributedRecovery.contributors.reduce((sum, contributor) => sum + contributor.contribution, 0) - attributedRecovery.score,
+  ) <= 0.5,
+  'recovery contributor attribution sums to the score',
+);
 assert(
   stableRecovery && deviatedRecovery && stableRecovery.score > deviatedRecovery.score,
   'large respiratory and skin-temperature deviations lower recovery',

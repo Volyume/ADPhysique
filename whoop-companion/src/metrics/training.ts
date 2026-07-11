@@ -13,6 +13,40 @@
 
 import { HrZone } from './strain';
 
+/**
+ * Training zones in this app are calculated from heart-rate reserve (HRR),
+ * using resting and maximum HR. Keep this contract explicit at presentation
+ * boundaries because a zone number without its basis is easy to misread as a
+ * percentage of maximum HR.
+ */
+export const TRAINING_HR_ZONE_BASIS = 'HR reserve (HRR)' as const;
+
+const TRAINING_ZONE_RANGES = ['<50%', '50-60%', '60-70%', '70-80%', '80-90%', '90-100%'] as const;
+
+export function trainingZoneRange(zone: number): string {
+  const index = Math.max(0, Math.min(TRAINING_ZONE_RANGES.length - 1, Math.round(zone)));
+  return `${TRAINING_ZONE_RANGES[index]} ${TRAINING_HR_ZONE_BASIS}`;
+}
+
+export function trainingZoneTarget(minZone: number, maxZone = minZone): string {
+  const min = Math.max(0, Math.min(5, Math.round(minZone)));
+  const max = Math.max(min, Math.min(5, Math.round(maxZone)));
+  return min === max ? `Z${min} (HRR)` : `Z${min}-Z${max} (HRR)`;
+}
+
+/** Resolve a sport from its explicit activity field; a template name is descriptive only. */
+export function workoutActivityLabel(input: { activity?: string | null; name?: string | null }): string {
+  const activity = input.activity?.trim();
+  return activity || 'Workout';
+}
+
+/** Keep the sport visible when a structured workout is shown by name. */
+export function workoutSummaryLabel(input: { activity?: string | null; name?: string | null }): string {
+  const activity = workoutActivityLabel(input);
+  const name = input.name?.trim();
+  return name && name !== activity ? `${activity} - ${name}` : activity;
+}
+
 /** VO₂max estimate (ml·kg⁻¹·min⁻¹), Uth–Sørensen–Overgaard–Pedersen (2004):
  *  VO₂max ≈ 15.3 × HRmax / HRrest. */
 export function vo2maxEstimate(maxHr: number, restingHr: number): number | null {
@@ -118,8 +152,9 @@ export type TrainingLoad = {
 };
 
 /**
- * Training load from per-activity TRIMP plus the acute:chronic workload ratio
- * (Gabbett). 0.8–1.3 is the "sweet spot"; >1.5 is overreaching/injury-risk.
+ * Training load from per-activity TRIMP plus an acute:chronic workload ratio.
+ * ACWR is a descriptive comparison with this person's recent load, not a
+ * universal safe zone and not an injury-risk estimate.
  */
 export function trainingLoad(activities: Array<{ ts: number; trimp: number }>, now: number): TrainingLoad {
   const DAY = 86400000;
@@ -135,32 +170,32 @@ export function trainingLoad(activities: Array<{ ts: number; trimp: number }>, n
   const acwr = chronic > 0 ? Math.round((acute / chronic) * 100) / 100 : null;
 
   let status = 'Detraining';
-  let statusDetail = 'Very little recent training load — fitness will fade without activity.';
+  let statusDetail = 'Very little recent training load. This is a descriptive load trend, not a fitness or injury diagnosis.';
   const daysSinceLast = activities.length
     ? (now - Math.max(...activities.map((a) => a.ts))) / DAY
     : Infinity;
 
   if (acute === 0 && daysSinceLast > 4) {
     status = 'Detraining';
-    statusDetail = 'No training in several days. A light session will restart progress.';
+    statusDetail = 'No training in several days. A light session may be a reasonable way to restart, depending on recovery and goals.';
   } else if (acwr == null) {
-    status = 'Maintaining';
-    statusDetail = 'Building a baseline — keep logging activities to unlock training status.';
+    status = 'Baseline building';
+    statusDetail = 'There is not yet enough chronic load for a stable comparison. Keep logging activities and use recovery, symptoms and goals for context.';
   } else if (acwr < 0.8) {
-    status = 'Recovery';
-    statusDetail = 'Load is below your recent norm — good for absorbing fitness gains.';
+    status = 'Below recent baseline';
+    statusDetail = `ACWR ${acwr.toFixed(2)} is below your recent weekly average. This is descriptive and does not by itself indicate readiness or lower injury risk.`;
   } else if (acwr <= 1.3) {
-    status = 'Productive';
-    statusDetail = 'Load is in the optimal range — fitness should be improving.';
+    status = 'Near recent baseline';
+    statusDetail = `ACWR ${acwr.toFixed(2)} is near your recent weekly average. There is no universal optimal band; interpret it with recovery, symptoms and training goals.`;
   } else if (acwr <= 1.5) {
-    status = 'Maintaining';
-    statusDetail = 'Load is slightly elevated — sustainable but watch fatigue.';
+    status = 'Above recent baseline';
+    statusDetail = `ACWR ${acwr.toFixed(2)} is above your recent weekly average. Consider fatigue, recovery and the type of work before adding more.`;
   } else if (acwr <= 1.8) {
-    status = 'Overreaching';
-    statusDetail = 'Load has spiked above your norm — plan recovery to avoid strain.';
+    status = 'Well above recent baseline';
+    statusDetail = `ACWR ${acwr.toFixed(2)} is well above your recent weekly average. Treat this as a context flag and adjust gradually if fatigue or symptoms are present.`;
   } else {
-    status = 'Strained';
-    statusDetail = 'Load is well above your norm — high injury/illness risk. Prioritise rest.';
+    status = 'Well above recent baseline';
+    statusDetail = `ACWR ${acwr.toFixed(2)} is far above your recent weekly average. ACWR alone cannot estimate injury or illness risk; consider a lighter session if recovery, fatigue or symptoms agree.`;
   }
   return { acute: Math.round(acute), chronic: Math.round(chronic), acwr, status, statusDetail };
 }

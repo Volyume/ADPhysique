@@ -15,7 +15,12 @@
     "test:sleep": "node scripts/test-sleep.cjs",
     "test:sleep-schedule": "node scripts/test-sleep-schedule.cjs",
     "test:weekly-plan": "node scripts/test-weekly-plan.cjs",
-    "test:physiology": "node scripts/test-physiology.cjs"
+    "test:physiology": "node scripts/test-physiology.cjs",
+    "test:history-sync": "node scripts/test-history-sync.cjs",
+    "test:readiness": "node scripts/test-readiness.cjs",
+    "test:overnight-vitals": "node scripts/test-overnight-vitals.cjs",
+    "test:training": "node scripts/test-training.cjs",
+    "test:session-durability": "node scripts/test-session-durability.cjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

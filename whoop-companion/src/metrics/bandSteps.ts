@@ -6,7 +6,11 @@ export type BandStepCounterRow = {
 
 export type BandStepEstimate = {
   steps: number;
+  /** Movement-confirmed ticks eligible for publication and calibration. */
   rawTicks: number;
+  acceptedRawTicks: number;
+  /** Plausible counter ticks rejected because neither endpoint showed movement. */
+  rejectedInactiveRawTicks: number;
   sampleCount: number;
   usedIntervals: number;
   activeIntervals: number;
@@ -15,6 +19,7 @@ export type BandStepEstimate = {
   movementLinkedPct: number;
   droppedIntervals: number;
   resetCount: number;
+  ambiguousResetCount: number;
   calibrationDivisor: number;
   confidence: 'low' | 'medium' | 'high';
   firstTs: number;
@@ -37,6 +42,8 @@ export type BandStepEstimateOptions = {
 
 const MAX_INTERVAL_MS = 15 * 60 * 1000;
 const MAX_RAW_DELTA = 512;
+const COUNTER_MODULUS = 65_536;
+const AMBIGUOUS_ROLLOVER_WINDOW = 4_096;
 // WHOOP history batches counter increments; the July capture has legitimate
 // one-second jumps of 6-7 units during a known short walk. Keep a ceiling high
 // enough for those batches while still rejecting wild counter corruption.
@@ -58,6 +65,7 @@ export function estimateBandStepsFromCounters(
   let activeRawTicks = 0;
   let inactiveRawTicks = 0;
   let resetCount = 0;
+  let ambiguousResetCount = 0;
 
   for (let i = 1; i < sorted.length; i += 1) {
     const prev = sorted[i - 1];
@@ -72,16 +80,34 @@ export function estimateBandStepsFromCounters(
       continue;
     }
 
-    let delta = cur.counter - prev.counter;
-    if (delta < 0 && prev.counter > 60_000 && cur.counter < 5_000) {
-      delta += 65_536;
-    } else if (delta < 0) {
-      resetCount += 1;
+    const dtSec = Math.max(1, dtMs / 1000);
+    const rawDelta = cur.counter - prev.counter;
+    if (!Number.isFinite(rawDelta)) {
+      droppedIntervals += 1;
       continue;
+    }
+    let delta = rawDelta;
+    if (delta < 0) {
+      const rolloverDelta = COUNTER_MODULUS - prev.counter + cur.counter;
+      const maxRawRate = MAX_STEPS_PER_SECOND * calibrationDivisor;
+      const stronglyConstrainedRollover =
+        prev.counter >= COUNTER_MODULUS - MAX_RAW_DELTA &&
+        cur.counter <= MAX_RAW_DELTA &&
+        rolloverDelta > 0 &&
+        rolloverDelta <= MAX_RAW_DELTA &&
+        rolloverDelta / dtSec <= maxRawRate;
+      if (stronglyConstrainedRollover) {
+        delta = rolloverDelta;
+      } else {
+        resetCount += 1;
+        if (prev.counter >= COUNTER_MODULUS - AMBIGUOUS_ROLLOVER_WINDOW && cur.counter <= AMBIGUOUS_ROLLOVER_WINDOW) {
+          ambiguousResetCount += 1;
+        }
+        continue;
+      }
     }
     if (delta <= 0) continue;
 
-    const dtSec = Math.max(1, dtMs / 1000);
     const maxRawRate = MAX_STEPS_PER_SECOND * calibrationDivisor;
     if (delta > MAX_RAW_DELTA || delta / dtSec > maxRawRate) {
       droppedIntervals += 1;
@@ -90,9 +116,9 @@ export function estimateBandStepsFromCounters(
 
     const movementLinked =
       prev.activityClass === 1 || prev.activityClass === 2 || cur.activityClass === 1 || cur.activityClass === 2;
-    rawTicks += delta;
     usedIntervals += 1;
     if (movementLinked) {
+      rawTicks += delta;
       activeIntervals += 1;
       activeRawTicks += delta;
     } else {
@@ -101,7 +127,7 @@ export function estimateBandStepsFromCounters(
   }
 
   if (usedIntervals <= 0) return null;
-  const movementLinkedPct = Math.round((activeRawTicks / Math.max(1, rawTicks)) * 100);
+  const movementLinkedPct = Math.round((activeRawTicks / Math.max(1, activeRawTicks + inactiveRawTicks)) * 100);
   const spanMs = Math.max(0, lastTs - firstTs);
   const confidence =
     activeIntervals >= 5 && usedIntervals >= 20 && resetCount === 0 && movementLinkedPct >= 55
@@ -112,6 +138,8 @@ export function estimateBandStepsFromCounters(
   return {
     steps: Math.max(0, Math.round(rawTicks / calibrationDivisor)),
     rawTicks,
+    acceptedRawTicks: rawTicks,
+    rejectedInactiveRawTicks: inactiveRawTicks,
     sampleCount: sorted.length,
     usedIntervals,
     activeIntervals,
@@ -120,6 +148,7 @@ export function estimateBandStepsFromCounters(
     movementLinkedPct,
     droppedIntervals,
     resetCount,
+    ambiguousResetCount,
     calibrationDivisor,
     confidence,
     firstTs,
@@ -129,7 +158,7 @@ export function estimateBandStepsFromCounters(
 
 /** Only publish counters corroborated by the WHOOP's own movement class. */
 export function bandStepEstimateIsTrusted(estimate: BandStepEstimate | null | undefined): boolean {
-  return !!estimate && estimate.steps > 0 && estimate.resetCount === 0 && estimate.confidence !== 'low';
+  return !!estimate && estimate.steps > 0 && estimate.rawTicks > 0 && estimate.resetCount === 0 && estimate.confidence !== 'low';
 }
 
 export function estimateStepsFromBandCounters(

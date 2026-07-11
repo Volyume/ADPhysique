@@ -5,6 +5,7 @@ import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
 import {
   Card,
+  calculateTonightPlan,
   Empty,
   Hypnogram,
   LineChart,
@@ -12,20 +13,25 @@ import {
   Ring,
   Screen,
   SectionLabel,
+  SleepConfidenceStatus,
+  parsePinnedWakeMinute,
+  parsePlanningWindowMinute,
   Stat,
-  WeeklyBars,
+  TonightBand,
+  tonightEfficiencyPercent,
 } from '../ui/components';
 import { colors, fonts, sleepStageColors } from '../ui/theme';
 import { Nav } from '../ui/navigation';
-import { Band, BAND_LABEL, bandColors, consistencyBand } from '../metrics/sleepBands';
-import { longAutoSleepNeedsCorroboration, sleepEvidencePct, sleepHasCorroboration, sleepStateWakeConflict, sleepStateWakeDisplay, sleepStateWakeLikeMin } from '../metrics/sleepEvidence';
+import { Band, BAND_LABEL, bandColors } from '../metrics/sleepBands';
+import { longAutoSleepNeedsCorroboration, sleepEvidencePct, sleepHasCorroboration, sleepStateWakeConflict, sleepStateWakeDisplay } from '../metrics/sleepEvidence';
 import { formatClock, formatDuration, startOfDayMs } from '../util/time';
 import { DayRail } from './DayScreen';
 import type { DailyMetricRow } from '../db/database';
 import { napCreditMin, parseNapDetail } from '../metrics/naps';
-import { sleepConfidenceColor, sleepConfidenceLabel, sleepCoverageColor } from '../ui/sleepTrust';
 import { sleepNeedsMoreSync, sleepSyncActionValue } from '../metrics/sleepSync';
+import { sleepConfidenceLabel } from '../ui/sleepTrust';
 import { sleepTrustTier } from '../metrics/sleepTrustWeight';
+import { kvGet } from '../db/database';
 
 const BASE_NEED_MIN = 480;
 
@@ -40,47 +46,39 @@ const STAGE_EDU = [
 export function SleepScreen({ nav }: { nav: Nav }) {
   const sleep = useStoreSelector(appStore, (s) => s.lastSleep);
   const perf = useStoreSelector(appStore, (s) => s.sleepPerformance);
-  const sleepScore = useStoreSelector(appStore, (s) => s.sleepScore);
   const tonightNeed = useStoreSelector(appStore, (s) => s.sleepNeed);
-  const regularity = useStoreSelector(appStore, (s) => s.sleepReg);
+  const sleepGoal = useStoreSelector(appStore, (s) => s.sleepGoal);
+  const sleepSchedule = useStoreSelector(appStore, (s) => s.sleepSchedule);
   const consistency = useStoreSelector(appStore, (s) => s.sleepConsistency);
   const stress = useStoreSelector(appStore, (s) => s.sleepStress);
   const capture = useStoreSelector(appStore, (s) => s.sleepCapture);
-  const sleepGoal = useStoreSelector(appStore, (s) => s.sleepGoal);
   const today = useStoreSelector(appStore, (s) => s.today);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
-  const historySync = useStoreSelector(appStore, (s) => s.historySync);
-  const lastHistorySync = useStoreSelector(appStore, (s) => s.lastHistorySync);
   const [nightHr, setNightHr] = useState<number[]>([]);
+  const [pinnedWakeMinute, setPinnedWakeMinute] = useState<number | null>(null);
+  const [planningWindowMin, setPlanningWindowMin] = useState(30);
 
   useEffect(() => {
     void appStore.lastNightHr().then(setNightHr);
   }, [sleep]);
+  useEffect(() => {
+    void Promise.all([kvGet('wakeTime'), kvGet('wakeTimePinned'), kvGet('smartWakeWindowMin')]).then(([wake, pinned, window]) => {
+      setPinnedWakeMinute(parsePinnedWakeMinute(wake, pinned));
+      setPlanningWindowMin(parsePlanningWindowMinute(window));
+    });
+  }, []);
 
   const tib = sleep?.inBedMin || 1;
   const lastNightNeed = useMemo(() => storedSleepNeed(today?.sleepDetail), [today?.sleepDetail]);
   const neededMin = lastNightNeed?.neededMin ?? sleep?.neededMin ?? BASE_NEED_MIN;
-  const week = recentDays.slice(0, 7).reverse();
   const days = useMemo(() => orderedDays(today, recentDays), [today, recentDays]);
   const debtExcludedNights = useMemo(() => lowTrustDebtNightCount(recentDays, today?.day), [recentDays, today?.day]);
-  const effectiveSync = historySync ?? lastHistorySync;
   const todayStart = startOfDayMs(Date.now());
   const naps = cardio.filter((c) => c.source === 'nap' && c.startTs >= todayStart).slice(0, 4);
-  const captureAction = capture ? sleepCaptureAction(capture) : null;
-  const captureSummary = capture ? sleepEvidenceSummary(capture) : null;
-  const stateCandidateObserved = (capture?.sleepStateMin ?? 0) > 0;
-  const trustStrip = capture ? sleepTrustStrip(capture, !!perf?.cappedByConfidence) : null;
   const perfScore = perf ? displayPct(perf.score) : null;
   const surplusSleepMin = sleep ? Math.max(0, sleep.asleepMin - neededMin) : 0;
-  const largeSurplusSleepMin = sleep ? Math.max(0, sleep.asleepMin - Math.round(neededMin * 1.1)) : 0;
   const stagesTrusted = today?.sleepDetail?.restorativeMin != null;
-  const scoreDrivers = useMemo(
-    () => sleepScoreDrivers({ perf, sleepScore, sleep, capture, sleepNeed: lastNightNeed, stress }),
-    [perf, sleepScore, sleep, capture, lastNightNeed, stress],
-  );
-  const stageQuality = useMemo(() => stageQualityCheck(sleep, capture, stagesTrusted), [sleep, capture, stagesTrusted]);
-  const verdict = sleepVerdict({ sleep, capture, perfCapped: !!perf?.cappedByConfidence, rmssd: today?.rmssd ?? null, rhr: today?.rhr ?? null });
   const tonightFocus = sleepFocus({
     sleep,
     capture,
@@ -88,6 +86,17 @@ export function SleepScreen({ nav }: { nav: Nav }) {
     sleepNeed: tonightNeed,
     stress,
     consistency,
+  });
+  const efficiencySamples = recentDays
+    .filter((d) => sleepTrustTier(d.sleepDetail) !== 'low')
+    .map((d) => d.sleepDetail?.efficiency)
+    .filter((v): v is number => v != null && v > 0);
+  const tonightPlan = calculateTonightPlan({
+    neededMinutes: tonightNeed?.neededMin ?? BASE_NEED_MIN,
+    goal: sleepGoal,
+    wakeMinute: pinnedWakeMinute ?? sleepSchedule.wakeMin,
+    planningWindowMinutes: planningWindowMin,
+    expectedEfficiencyPercent: tonightEfficiencyPercent(efficiencySamples),
   });
 
   // Trailing typical share per stage (% of TIB) for the "typical range" markers.
@@ -101,6 +110,13 @@ export function SleepScreen({ nav }: { nav: Nav }) {
         onSelect={(selected) => nav.navigate({ name: 'day', day: selected })}
       />
 
+      <TonightBand
+        targetMinutes={tonightPlan.targetMinutes}
+        bedMinute={tonightPlan.bedMinute}
+        wakeMinute={tonightPlan.wakeMinute}
+        onPress={() => nav.navigate({ name: 'sleepCoach' })}
+      />
+
       {/* Sleep Performance composite ring */}
       <Card style={{ alignItems: 'center', paddingVertical: 24 }} onPress={() => nav.navigate({ name: 'metric', key: 'sleep_performance' })}>
         <Ring
@@ -110,60 +126,17 @@ export function SleepScreen({ nav }: { nav: Nav }) {
           centerMain={perfScore != null ? `${perfScore}%` : '—'}
           centerSub={sleep ? formatDuration(sleep.asleepMin) : 'awaiting last night'}
         />
-        {perf ? <Text style={styles.estimate}>composite estimate · contributors shown separately</Text> : null}
-        {trustStrip ? (
-          <View style={[styles.trustStrip, { borderColor: trustStrip.color }]}>
-            <View style={styles.trustStripHead}>
-              <Text style={styles.trustStripLabel}>Score trust</Text>
-              <Text style={[styles.trustStripValue, { color: trustStrip.color }]}>{trustStrip.label}</Text>
-            </View>
-            <View style={styles.trustTrack}>
-              <View style={[styles.trustFill, { width: `${trustStrip.score}%`, backgroundColor: trustStrip.color }]} />
-            </View>
-            <Text style={styles.trustStripBody}>{trustStrip.body}</Text>
-          </View>
-        ) : null}
-        {capture ? (
-          <View style={styles.ringQuality}>
-            <Stat label="Confidence" value={sleepConfidenceLabel(capture.confidence)} color={sleepConfidenceColor(capture.confidence)} />
-            <Stat label="Coverage" value={`${capture.coveragePct}%`} color={sleepCoverageColor(capture.coveragePct)} />
-            <Stat label="Signal" value={capture.signalMin} unit="min" />
-          </View>
-        ) : null}
-        {perf?.cappedByConfidence ? (
-          <Text style={styles.capNote}>
-            Score capped at {perf.confidenceCapPct}% until overnight coverage or sleep-state corroboration improves.
-          </Text>
-        ) : null}
       </Card>
 
-      <SectionLabel>Result check</SectionLabel>
-      <Card>
-        <View style={styles.verdictHead}>
-          <View style={[styles.verdictBadge, { backgroundColor: verdict.color }]}>
-            <Text style={styles.verdictBadgeText}>{verdict.badge}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.verdictTitle}>{verdict.title}</Text>
-            <Text style={styles.verdictBody}>{verdict.body}</Text>
-          </View>
-        </View>
-        <View style={styles.verdictStats}>
-          <Stat label="Window" value={sleep ? formatDuration(sleep.inBedMin) : '-'} />
-          <Stat label="Asleep" value={sleep ? formatDuration(sleep.asleepMin) : '-'} color={colors.sleepTeal} />
-          <Stat label="Vitals" value={verdict.vitalsLabel} color={verdict.vitalsColor} />
-        </View>
-        <NavRow
-          label={verdict.actionLabel}
-          icon={verdict.icon}
-          iconColor={verdict.color}
-          value={verdict.actionValue}
-          onPress={() => nav.navigate(verdict.route)}
-          last
-        />
-      </Card>
+      <SleepConfidenceStatus
+        confidence={capture ? confidenceStatusTier(capture) : null}
+        reason={sleepConfidenceReason(capture)}
+        onDetails={capture ? () => nav.navigate(sleepNeedsMoreSync(capture) ? { name: 'device' } : { name: 'editSleep' }) : undefined}
+        detailsLabel={capture && sleepNeedsMoreSync(capture) ? 'Sync' : 'Review'}
+      />
 
       {/* The four Sleep Performance contributors with Poor / Sufficient / Optimal bands */}
+      <SectionLabel>Performance contributors</SectionLabel>
       <Card>
         {perf ? (
           <>
@@ -192,53 +165,6 @@ export function SleepScreen({ nav }: { nav: Nav }) {
         </View>
       </Card>
 
-      <SectionLabel>Quality factors</SectionLabel>
-      <Card>
-        {sleepScore ? (
-          <>
-            <View style={styles.qualityHead}>
-              <View>
-                <Text style={styles.qualityLabel}>Sleep Quality</Text>
-                <Text style={styles.qualitySub}>Oura-style blend of duration, stages, efficiency and restfulness</Text>
-              </View>
-              <Text style={[styles.qualityScore, { color: sleepQualityColor(sleepScore.score) }]}>{sleepScore.score}</Text>
-            </View>
-            {sleepScore.contributors.map((c) => (
-              <ScoreRow key={c.key} label={c.label} value={c.score} detail={c.detail} />
-            ))}
-            {sleepScore.cappedByConfidence ? (
-              <Text style={styles.surplusNote}>
-                Sleep Quality is capped by capture confidence until auto sync fills in stronger overnight coverage.
-              </Text>
-            ) : null}
-            {largeSurplusSleepMin > 0 ? (
-              <Text style={styles.surplusNote}>
-                Sleep Quality tapers very long sleep by {formatDuration(largeSurplusSleepMin)} beyond the normal surplus range, because that can mean awake time was included.
-              </Text>
-            ) : null}
-          </>
-        ) : (
-          <Empty text="Quality factors appear after a scored sleep." />
-        )}
-      </Card>
-
-      {scoreDrivers.length ? (
-        <>
-          <SectionLabel>Why it scored this way</SectionLabel>
-          <Card>
-            {scoreDrivers.map((d, i) => (
-              <DriverRow key={`${d.tone}-${d.label}`} driver={d} last={i === scoreDrivers.length - 1} />
-            ))}
-          </Card>
-        </>
-      ) : null}
-
-      {/* Quick actions */}
-      <Card style={{ paddingVertical: 2 }}>
-        <NavRow label="Sleep Planner" icon="moon" iconColor={colors.sleepTeal} value={`${Math.round(((neededMin * sleepGoal) / 60) * 10) / 10} h goal`} onPress={() => nav.navigate({ name: 'sleepCoach' })} />
-        <NavRow label="Log / adjust sleep" icon="create" onPress={() => nav.navigate({ name: 'editSleep' })} last />
-      </Card>
-
       <SectionLabel>Tonight focus</SectionLabel>
       <Card>
         <View style={styles.focusHead}>
@@ -250,96 +176,6 @@ export function SleepScreen({ nav }: { nav: Nav }) {
             <Text style={styles.focusBody}>{tonightFocus.body}</Text>
           </View>
         </View>
-        <NavRow
-          label={tonightFocus.actionLabel}
-          icon={tonightFocus.icon}
-          iconColor={tonightFocus.color}
-          value={tonightFocus.actionValue}
-          onPress={() => nav.navigate(tonightFocus.route)}
-          last
-        />
-      </Card>
-
-      <SectionLabel>Capture quality</SectionLabel>
-      <Card>
-        {capture ? (
-          <>
-            {captureSummary ? (
-              <View style={[styles.evidencePanel, { borderColor: captureSummary.color }]}>
-                <View style={styles.evidenceHeader}>
-                  <View style={[styles.evidenceBadge, { backgroundColor: captureSummary.color }]}>
-                    <Text style={styles.evidenceBadgeText}>{captureSummary.badge}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.evidenceTitle}>{captureSummary.title}</Text>
-                    <Text style={styles.evidenceBody}>{captureSummary.body}</Text>
-                  </View>
-                </View>
-                <EvidenceMeter
-                  label="HR coverage"
-                  value={capture.coveragePct}
-                  detail={`${capture.signalMin}/${capture.windowMin} min`}
-                  color={sleepCoverageColor(capture.coveragePct)}
-                />
-                <EvidenceMeter
-                  label="Still corroboration"
-                  value={Math.round((capture.stillMin / Math.max(1, capture.windowMin)) * 100)}
-                  detail={`${capture.stillMin} still min`}
-                  color={capture.stillMin >= Math.max(45, capture.windowMin * 0.2) ? colors.recoveryGreen : colors.recoveryYellow}
-                />
-                <EvidenceMeter
-                  label="State candidate"
-                  value={stateCandidateObserved ? Math.round((sleepStateWakeLikeMin(capture) / Math.max(1, capture.sleepStateMin)) * 100) : 0}
-                  detail={stateCandidateObserved ? `${sleepStateWakeDisplay(capture)} · experimental` : 'no state rows'}
-                  color={stateCandidateObserved ? colors.recoveryYellow : colors.textTertiary}
-                  inverse
-                />
-              </View>
-            ) : null}
-            <View style={styles.grid}>
-              <Stat label="HR coverage" value={`${capture.coveragePct}%`} color={sleepCoverageColor(capture.coveragePct)} />
-              <Stat label="R-R beats" value={capture.rrCount} />
-              <Stat label="HRV minutes" value={capture.hrvMin} />
-            </View>
-            <View style={[styles.grid, { marginTop: 12 }]}>
-              <Stat label="Signal minutes" value={capture.signalMin} />
-              <Stat label="Confidence" value={sleepConfidenceLabel(capture.confidence)} color={sleepConfidenceColor(capture.confidence)} />
-              <Stat label="Source" value={sourceLabel(capture.source)} />
-            </View>
-            <View style={[styles.grid, { marginTop: 12 }]}>
-              <Stat label="Still evidence" value={capture.stillMin} />
-              <Stat label="Moving minutes" value={capture.movingMin} />
-              <Stat label="State candidate rows" value={capture.sleepStateMin} />
-            </View>
-            {capture.sleepStateMin > 0 ? (
-              <View style={[styles.grid, { marginTop: 12 }]}>
-                <Stat label="Candidate 0" value={capture.sleepStateWakeMin} color={stateEvidenceColor(capture, 'wake')} />
-                <Stat label="Candidate 1" value={capture.sleepStateStillMin} color={stateEvidenceColor(capture, 'still')} />
-                <Stat label="Candidate 2" value={capture.sleepStateAsleepMin} color={stateEvidenceColor(capture, 'asleep')} />
-              </View>
-            ) : null}
-            <View style={[styles.grid, { marginTop: 12 }]}>
-              <Stat label="History rows" value={effectiveSync?.decodedRecords ?? '-'} />
-              <Stat label="WHOOP IMU" value={effectiveSync?.motionSamples ?? '-'} />
-            </View>
-            <Text style={styles.captureSource}>
-              {formatDecodedRange(effectiveSync?.firstSampleTs, effectiveSync?.lastSampleTs)}
-            </Text>
-            <Text style={styles.captureNote}>{capture.note}</Text>
-            {captureAction ? (
-              <NavRow
-                label={captureAction.label}
-                icon={captureAction.icon}
-                iconColor={captureAction.color}
-                value={captureAction.value}
-                onPress={() => nav.navigate(captureAction.route)}
-                last
-              />
-            ) : null}
-          </>
-        ) : (
-          <Empty text="Capture quality appears after the first metric refresh." />
-        )}
       </Card>
 
       {/* Last night's sleep */}
@@ -353,15 +189,6 @@ export function SleepScreen({ nav }: { nav: Nav }) {
             </View>
             <LineChart values={nightHr} color={colors.sleepTeal} leftLabel={formatClock(sleep.startTs)} rightLabel={formatClock(sleep.endTs)} />
             {stagesTrusted ? <Hypnogram segments={sleep.hypnogram} showLabels /> : null}
-            {stageQuality ? (
-              <View style={[styles.stageQuality, { borderColor: stageQuality.color }]}>
-                <View style={[styles.stageQualityDot, { backgroundColor: stageQuality.color }]} />
-                <Text style={styles.stageQualityText}>
-                  <Text style={{ color: stageQuality.color, fontFamily: fonts.textBold }}>{stageQuality.label}</Text>
-                  {` · ${stageQuality.body}`}
-                </Text>
-              </View>
-            ) : null}
             {stagesTrusted ? (
               <View style={{ marginTop: 14 }}>
                 {STAGE_EDU.map((s) => (
@@ -376,11 +203,21 @@ export function SleepScreen({ nav }: { nav: Nav }) {
                 ))}
               </View>
             ) : (
-              <Empty text="Stage detail is held back until HR coverage, clean R-R variability and band motion evidence are all strong enough." />
+              <Empty text="Stage detail is limited for this night. Use timing and duration for now." />
             )}
           </>
         ) : (
-          <Empty text="No sleep recorded last night. Wear the strap to bed, then reconnect to sync stored history; you can also log it manually above." />
+          <>
+            <Empty text="No sleep recorded last night. Wear the strap to bed, then reconnect to sync stored history, or enter your bed and wake times manually." />
+            <NavRow
+              label="Log sleep manually"
+              icon="create"
+              iconColor={colors.sleepTeal}
+              value="bed and wake times"
+              onPress={() => nav.navigate({ name: 'editSleep' })}
+              last
+            />
+          </>
         )}
       </Card>
 
@@ -444,70 +281,6 @@ export function SleepScreen({ nav }: { nav: Nav }) {
         )}
       </Card>
 
-      {/* Sleep Stress */}
-      <SectionLabel>Sleep stress</SectionLabel>
-      <Card>
-        {stress ? (
-          <>
-            <StressBar label="High" color="#FFA722" pct={stress.highPct} minutes={stress.highMin} />
-            <StressBar label="Medium" color="#00F19F" pct={stress.medPct} minutes={stress.medMin} />
-            <StressBar label="Low" color={colors.sleepTeal} pct={stress.lowPct} minutes={stress.lowMin} />
-            {stress.unscoredMin > 0 ? (
-              <StressBar label="Unscored" color={colors.textTertiary} pct={stress.unscoredPct} minutes={stress.unscoredMin} />
-            ) : null}
-          </>
-        ) : (
-          <Empty text="Overnight stress (0–3) is derived from your heart-rate variability and heart rate through the night." />
-        )}
-      </Card>
-
-      {/* Sleep Consistency */}
-      <SectionLabel>Sleep schedule</SectionLabel>
-      <Card>
-        {consistency ? (
-          <>
-            <View style={styles.headRow}>
-              <Text style={styles.bigHours}>{consistency.score}%</Text>
-              <Text style={[styles.headSub, { color: bandColors[consistencyBand(consistency.score)] }]}>{BAND_LABEL[consistencyBand(consistency.score)]}</Text>
-            </View>
-            <Text style={styles.consSub}>
-              Typical bed {fmtMin(consistency.bedMedianMin)} · wake {fmtMin(consistency.wakeMedianMin)} over {consistency.nights} nights
-            </Text>
-          </>
-        ) : (
-          <Empty text="Sleep consistency compares your bed and wake times across nights — it appears after ~3 nights." />
-        )}
-      </Card>
-
-      {/* Recent sleep → full Trend View */}
-      <SectionLabel right={<Text style={styles.trendLink}>Trends ›</Text>}>Recent sleep</SectionLabel>
-      <Card onPress={() => nav.navigate({ name: 'sleepTrends' })}>
-        {week.some((d) => d.sleepMin != null) ? (
-          <WeeklyBars
-            data={week.map((d) => ({
-              label: new Date(`${d.day}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short' }),
-              value: d.sleepMin,
-              display: d.sleepMin != null ? `${Math.round((d.sleepMin / 60) * 10) / 10}` : '',
-              color: colors.sleepTeal,
-            }))}
-          />
-        ) : (
-          <Empty text="Your last 7 nights chart here as you wear the strap overnight." />
-        )}
-      </Card>
-
-      {regularity ? (
-        <>
-          <SectionLabel>Long-term regularity</SectionLabel>
-          <Card>
-            <ScheduleRow label="14-night regularity" value={`${regularity.score}%`} detail={`${regularity.nights} nights`} />
-            <ScheduleRow label="Bedtime spread" value={formatDuration(regularity.bedSdMin)} detail="lower is better" />
-            <ScheduleRow label="Wake spread" value={formatDuration(regularity.wakeSdMin)} detail="lower is better" last />
-          </Card>
-        </>
-      ) : null}
-
-      <Empty text="Sleep stages, stress and the composite Sleep Performance are inferred on-device from overnight heart rate and HRV (approximate — WHOOP also uses motion and raw optical data, and computes the composite on its servers)." />
     </Screen>
   );
 }
@@ -547,6 +320,19 @@ function storedSleepNeed(
     napMin: minutes(detail.napMin),
     neededMin: minutes(detail.needMin, BASE_NEED_MIN),
   };
+}
+
+function sleepConfidenceReason(capture: ReturnType<typeof appStore.getState>['sleepCapture']): string {
+  if (!capture) return 'Waiting for a complete overnight record.';
+  if (sleepStateWakeConflict(capture)) return 'The sleep window may include awake time.';
+  if (sleepNeedsMoreSync(capture)) return 'Some overnight data is still syncing.';
+  if (!sleepHasCorroboration(capture)) return 'Timing is usable, but the sleep state is still provisional.';
+  return 'The overnight record is strong enough to use.';
+}
+
+function confidenceStatusTier(source: Parameters<typeof sleepTrustTier>[0]): 'high' | 'medium' | 'low' | null {
+  const tier = sleepTrustTier(source);
+  return tier === 'none' ? null : tier;
 }
 
 function sleepVerdict(input: {
@@ -597,7 +383,7 @@ function sleepVerdict(input: {
       vitalsLabel,
       vitalsColor,
       actionLabel: 'Sync stored history',
-      actionValue: `${capture.coveragePct}% coverage`,
+      actionValue: 'continue syncing',
       icon: 'sync',
       color: colors.strainBlue,
       route: { name: 'device' },
@@ -614,7 +400,7 @@ function sleepVerdict(input: {
       vitalsLabel,
       vitalsColor,
       actionLabel: 'Sync stored history',
-      actionValue: capture ? `${capture.coveragePct}% coverage` : 'device',
+      actionValue: capture ? 'continue syncing' : 'device sync',
       icon: 'sync',
       color: colors.strainBlue,
       route: { name: 'device' },
@@ -630,7 +416,7 @@ function sleepVerdict(input: {
       vitalsLabel,
       vitalsColor,
       actionLabel: needsSync ? 'Sync more data' : 'Review window',
-      actionValue: needsSync ? sleepSyncActionValue(capture) : sleepConfidenceLabel(capture.confidence),
+       actionValue: needsSync ? 'continue syncing' : 'review timing',
       icon: needsSync ? 'sync' : 'create',
       color: colors.recoveryYellow,
       route: needsSync ? { name: 'device' } : { name: 'editSleep' },
@@ -719,7 +505,7 @@ function sleepFocus(input: {
       title: 'Get a complete overnight sync',
       body: 'Sleep scoring starts with stored strap history. Reconnect after waking and let auto-sync finish before judging recovery.',
       actionLabel: 'Open device sync',
-      actionValue: capture ? `${capture.coveragePct}% coverage` : 'needs data',
+       actionValue: capture ? 'continue syncing' : 'needs data',
       icon: 'sync',
       color: colors.strainBlue,
       route: { name: 'device' },
@@ -746,7 +532,7 @@ function sleepFocus(input: {
       title: 'Improve capture confidence first',
       body: 'Tonight’s score is limited by partial overnight signal, so recovery and readiness may move once more history backfills.',
       actionLabel: needsSync ? 'Sync more data' : 'Review sleep window',
-      actionValue: needsSync ? sleepSyncActionValue(capture) : sleepConfidenceLabel(capture.confidence),
+       actionValue: needsSync ? 'continue syncing' : 'review timing',
       icon: needsSync ? 'sync' : 'create',
       color: needsSync ? colors.strainBlue : colors.sleepTeal,
       route: needsSync ? { name: 'device' } : { name: 'editSleep' },
@@ -1003,8 +789,8 @@ function stageQualityCheck(
   if (!sleep || !capture) return null;
   if (!stagesTrusted) {
     return {
-      label: 'Stages withheld',
-      body: `${capture.coveragePct}% HR coverage and ${capture.hrvMin} clean HRV minutes; timing remains available.`,
+      label: 'Stage detail is limited',
+      body: 'Use sleep timing and duration for now; stage detail will appear when the result is stronger.',
       color: colors.recoveryYellow,
     };
   }
@@ -1012,7 +798,7 @@ function stageQualityCheck(
   if (sleepStateWakeConflict(capture)) {
     return {
       label: 'Stage estimate',
-      body: 'decoded strap state is mostly wake; review timing before trusting stages.',
+      body: 'The sleep window may include awake time; review timing before relying on stages.',
       color: colors.recoveryRed,
     };
   }
@@ -1020,20 +806,20 @@ function stageQualityCheck(
   if (tier === 'low') {
     return {
       label: 'Stage estimate',
-      body: 'partial signal; use timing before REM/deep detail.',
+      body: 'The result is partial; use timing before relying on REM or deep-sleep detail.',
       color: colors.recoveryRed,
     };
   }
   if (tier === 'medium' || !sleepHasCorroboration(capture)) {
     return {
       label: 'Stage estimate',
-      body: `${capture.coveragePct}% coverage, ${evidencePct}% corroborating evidence.`,
+      body: 'Stage detail is usable but still provisional.',
       color: colors.recoveryYellow,
     };
   }
   return {
     label: 'Stage confidence',
-    body: `${capture.coveragePct}% coverage with ${evidencePct}% corroborating evidence.`,
+    body: 'Stage detail is ready to use alongside duration and timing.',
     color: colors.recoveryGreen,
   };
 }

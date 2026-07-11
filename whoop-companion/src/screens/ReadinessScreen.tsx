@@ -72,12 +72,12 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
               centerSub={readiness.label}
             />
             <Text style={styles.note}>
-              How ready your body is to take on strain today, built from recovery, sleep, HRV balance,
-              sleep debt and recent training load.
+              A cautious training prompt built from independent recovery, sleep and HRV evidence.
+              Sleep debt and recent load are context, not diagnoses.
             </Text>
           </>
         ) : (
-          <Empty text="Training readiness appears once you have a recovery or sleep score today." />
+          <Empty text="Training readiness appears once at least two trusted primary signals are available." />
         )}
       </Card>
 
@@ -193,8 +193,8 @@ export function ReadinessScreen({ nav }: { nav: Nav }) {
               </View>
             ))}
             <Text style={styles.note}>
-              Recovery remains the largest input; readiness then adjusts for sleep, HRV balance, sleep
-              debt and how hard you have been training lately.
+              Only available primary signals are blended and the score is capped when evidence is sparse.
+              ACWR is displayed as load context, not a universal optimal-range or injury-risk verdict.
             </Text>
           </Card>
         </>
