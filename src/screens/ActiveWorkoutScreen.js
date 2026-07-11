@@ -4128,7 +4128,10 @@ const styles = StyleSheet.create({
   },
   starterBannerText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
   inlineActionPill: {
-    minHeight: 44,
+    // D43 S5: was a hand-rolled 44; workoutLoggerSize.primaryActionMinHeight
+    // is the same value from the token table (touchTarget.minimum), no
+    // visual change.
+    minHeight: workoutLoggerSize.primaryActionMinHeight,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
@@ -4235,7 +4238,9 @@ const styles = StyleSheet.create({
   firstSetHint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderSubtle, padding: spacing.sm, marginBottom: spacing.xs },
   firstSetHintText: { ...type.caption, flex: 1, color: colors.textSecondary, lineHeight: 18 },
   // COMP-001 card header: three lines replace the old chip stack.
-  orientationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 2 },
+  // D43 S5: paddingVertical was a hand-rolled 2px; spacing.xxs is the exact
+  // same value from the token table (no visual change).
+  orientationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xxs },
   orientationText: { ...type.label, color: colors.textSecondary },
   // D43 S2: the target reps range folded into orientationText's own Text
   // node (was a separate targetRow/targetText line, retired).
