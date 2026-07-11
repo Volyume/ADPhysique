@@ -28,82 +28,31 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ## 1. IN FLIGHT
 
-### D42 AppAlert overflow fix (founder defect report, dispatched 2026-07-11)
-- **Source:** founder report (unilateral advice cut off at the bottom on
-  Android); read-agent diagnosis in the session log. CURRENT STATE: the
-  shared AppAlert card (src/components/AppAlert.js) has no maxHeight and
-  no ScrollView, so title + message + actions can exceed a short
-  viewport with the buttons unreachable; it is the surface behind the
-  RECURRING unilateral one-side-at-a-time confirm (and every other
-  alert). The first-timer walkthrough modal was already fixed (D36a
-  inset; founder's build predates it). END STATE: AppAlert joins the
-  proven contract - maxHeight cap, inner scroll region, Math.max bottom
-  inset - so no alert can ever clip on either platform. ELEVATES
-  BECAUSE: heals a live founder-visible defect on a shared, high-traffic
-  surface. Bounds: chrome/behaviour of actions unchanged; a11y pins
-  (AppAlert.a11y.test.js) kept; theming untouched. RECOVERY: if
-  AppAlert.js sits uncommitted, lead-review against this spec, lint +
-  full suite, commit + push; if untouched, relaunch from this entry.
+_Reconciled 2026-07-11 (D46 boundary): D42 AppAlert, logged-set row, D44
+auto-advance cues, summary footer, picker first-open, CP-10 batch F and the
+leg-day engine work (D45 + D46) all LANDED - detail rolled to
+`_HANDOVER-ARCHIVE.md` TASKBOARD HISTORY per D41._
 
-### Logged-set row regression fix (founder defect, photo; dispatched 2026-07-11)
-- **Source:** founder photo (build 2608); diagnosis in the session log.
-  CURRENT STATE: zeego 3.0.6's Android asChild Trigger clobbers the
-  cloned child's style with undefined (cloneElement({style: undefined,
-  ...})), so every logged-set row (always menu-wrapped in production
-  since f1bace6, item 14) loses flexDirection:'row' and stacks
-  vertically, overflowing with 4+ sets; same pattern exists in zeego's
-  iOS file. No test renders the wrapped path (gap). END STATE: rows
-  condensed again on both platforms - compute the row style array once
-  and pass it to BOTH the Trigger and the TouchableOpacity (lossless
-  under the clobber, correct if zeego ever fixes it); NEW rendering
-  test mounts the wrapped path (onDelete set) and pins the row layout.
-  ELEVATES BECAUSE: heals a founder-visible layout break on the app's
-  most-used surface. Bounds: menu wiring, openDeleteFromMenu ref flow
-  and pinned zero-arg handleDeleteEditedSet untouched. RECOVERY:
-  standard (lead-review vs this spec, lint+suite, commit+push, or
-  relaunch).
-
-### QUEUED NEXT - silent exercise auto-advance defect (founder, 2026-07-11)
-- Founder: "It also seems to swap exercise when there's still a set to
-  do at times without saying anything." Verify-first diagnosis next
-  free slot: trace ActiveWorkout's exercise-advance logic (set-count
-  completion checks, superset/giant-set N-aware jump from item 21,
-  currentExerciseIndex re-pointing from the reorder sheet, unilateral
-  two-phase completion) for any path that advances with sets remaining
-  and no announcement. Then fix. ED/engine untouched - this is session
-  navigation logic.
-
-### leg-day over-volume - DIAGNOSED + D45 LANDED; D46 FULL FIX QUEUED (2026-07-11)
-- Founder: builder generated 9 exercises for a leg day - "far too much
-  volume for one session." DIAGNOSED (hands-on, full trace in
-  DECISIONS D45/D46 + the build spec):
-  1. **No per-session total cap existed** - only per-muscle (8/12) +
-     time budget, and the sole-muscle-protection defeated the time
-     budget too. **FIXED: D45 `da59274`** - MAX_EXERCISES_PER_SESSION=8
-     / MAX_WORKING_SETS_PER_SESSION=25 hard caps + backstop. Shipped,
-     tested, pushed. This is the SAFETY NET.
-  2. **Root cause: no working secondary-muscle model.** Engine gives
-     every leg muscle its own exercise, not crediting that squats/RDLs
-     already hammer glutes/adductors (verified: `entry.secondary` read
-     at planEngine.js:2091 but NO POOL entry populates it; only
-     biceps<-back / triceps<-chest weekly trims function). Founder ruled
-     **"do it all fully, we do not put off jobs"** = build the FULL
-     per-exercise secondary-muscle model. **D46 BUILT (2026-07-11 fresh
-     session, commit `19907a2`, adversarially reviewed): seed-mirrored
-     secondary tags + generalised glute credit; mp leg day sheds the
-     stacked second glute exercise; bikini/wellness/figure/womens
-     untouched; full suite + lint green. Detail: DECISIONS D46 LANDED
-     block.** Original spec (now as-built record): FULL MAPPED SPEC:
-     `docs/ux-world-class-audit-2026-07-09/SECONDARY-MUSCLE-MODEL-BUILD-SPEC.md`
-     (problem, reproduction, design halves A/B, phases 0-6, invariants,
-     device checklist, code anchors). Deterministic-engine build, Fable
-     spine hands-on, full test rework + adversarial review, clean window
-     needed - do NOT start under usage pressure.
-
-### QUEUED - D43 logger redesign blueprint (after point fixes; see D43 amendment)
+### ACTIVE - D43 logger redesign blueprint (UNBLOCKED 2026-07-11)
 - Founder verdict: logger 3/10, target 10/10, complete redesign
-  cohesive with the app. Lead produces the blueprint (Opus legwork),
-  founder approves, then staged build slots.
+  cohesive with the app. Its gating point fixes (logged-set row, D44
+  cues, summary footer, picker first-open) are ALL landed, so the
+  blueprint is now the top design job. Lead authors the blueprint
+  (Opus research legwork dispatched 2026-07-11: current-state teardown
+  + best-in-class synthesis from the existing competitive corpus);
+  founder approves the blueprint before any build slot. RECOVERY: if
+  the research report exists in the session log but no blueprint doc,
+  re-author from the report; if neither, relaunch the research agent
+  from this entry.
+
+### ACTIVE - CP-10 theming batch G (recon dispatched 2026-07-11)
+- 32 static screens remain (49/82 live at batch F close;
+  paywallExcerpts exempt/HELD). Haiku recon regenerates the static
+  list (grep BOTH useTheme and useSettingsStyles signals), classifies
+  risk (ED/billing/consent-adjacent flagged), and proposes two lanes;
+  lead reviews and dispatches Sonnet lanes under the batch D/E/F
+  pattern. RECOVERY: relaunch recon from this entry; batch pattern and
+  bounds identical to F.
 
 ### QUEUED LAST - D43 full-app pristine pass (founder, second amendment)
 - CLOSING PHASE by founder order: every area polished to the
@@ -112,14 +61,6 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
   instrument. Runs AFTER the defect fixes, the engine verdict, the
   remaining theming batches and the logger redesign, so it polishes
   finished surfaces. Lead-driven; founder holds taste vetoes.
-
-### QUEUED - workout summary footer overlap (founder photo, 2026-07-11)
-- Founder photo (build 2608): on workout complete, the Close/Share
-  footer floats OVER the exercise list ("Seated Leg Curl" hidden
-  behind it) - scroll content missing bottom padding for the footer,
-  or the footer missing an opaque background. Verify-first diagnosis
-  + fix next free slot (WorkoutSummaryScreen; item 14 touched its
-  scroll). Fold the surface into the D43 blueprint regardless.
 
 ### PRODUCTION CRASH TRIAGE - Sentry TypeError (2026-07-11, gated on connector)
 - Sentry alert (email screenshot): TypeError "undefined is not a
@@ -136,52 +77,18 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
   sourcemap - queue a workflow tweak to save the Hermes map artefact
   so future crashes symbolicate exactly.
 
-### ENGINE-CHECK EVIDENCE UPDATE (2026-07-11): founder's summary photo
-- confirms 9 exercises / 21 working sets on a "Week 1 of 5 - Ease in"
-  men's physique leg day (Men's Physique - Cut - V-Taper 4x/week).
-  21 working sets is not an ease-in dose; strengthens the queued
-  leg-day over-volume / division-weighting diagnosis above.
+### OPEN - EAS (APK) build failing after native changes (founder report)
+- Founder reports the EAS build FAILING after item 14/15 native changes
+  (keyboard-controller/zeego, expo-splash-screen, monochrome icon). CI
+  Android build is GREEN (run 2611), so the break is EAS-specific.
+  BLOCKED on founder: share the EAS build logs (or grant EAS access);
+  then diagnose + fix.
 
-### LANDED - exercise picker first-open fix `2fd723b` (diagnosed 2026-07-11)
-- DIAGNOSED (full report in session log): the void is FlashList
-  committing a ~zero-height first native paint inside a freshly created
-  Android Modal window (native window + insets warm-up race);
-  ListEmpty and the create-custom footer are clipped with it. Second
-  open self-heals (Android remounts the modal; native setup now warm).
-  PRE-CAMPAIGN root: FlashList adoption 68f0462 (E8, 2026-07-02).
-  Chips clean; search pure; recents unrelated (query non-empty).
-  Jest cannot see this class (FlashList mocked to FlatList) - device
-  checklist verifies. FIX (lead-ruled, D33): gate the FlashList (and
-  browse-filter block) mount on the Modal's onShow so first layout runs
-  against a presented window; no new dependency, one file. RECOVERY:
-  if ExercisePickerModal.js sits uncommitted, lead-review vs this
-  spec, lint + targeted suites, commit + push; else relaunch.
-
-### LANDED - CP-10 screen theming batch F (both lanes, `3b182a7` + `c92a5ce`)
-- 9 screens converted + 3 verified already-live (Settings family via
-  useSettingsStyles - the recon grep missed wrapper-based theming).
-  Full suite green at the boundary: 675/676, 8,412/0, lint clean.
-  Coverage: 49/82 screens live, 32 static remain + paywallExcerpts
-  exempt (HELD module, stays dark). Next batch recon must grep BOTH
-  useTheme and useSettingsStyles signals.
-
-### CP-10 screen theming batch F (two Sonnet lanes, dispatched 2026-07-11)
-- Recon (Haiku, 2026-07-11): 37/82 screens live, 45 static.
-  `paywallExcerpts.js` is the HELD social-proof module, not a themable
-  screen (stays dark). Batch F = the 12-screen small tail, two lanes:
-- LANE F1: SettingsDietaryScreen, SettingsAccountScreen,
-  SettingsFaqScreen, SettingsScreen, PrivacyPolicyScreen,
-  SubscriptionPolicyScreen (billing-adjacent COPY untouched).
-- LANE F2: LoginScreen (auth logic untouched), ConsistencyScreen,
-  WellbeingCheckScreen (ED-SAFETY: Beat UK signposting + calm-mode
-  logic and copy byte-identical, theming only, STOP on doubt),
-  QuizScreen, DebugLogScreen, GoalLockConsentScreen (consent gate
-  logic untouched - GDPR care).
-- Same batch pattern and bounds as D/E. RECOVERY: if any of these
-  files sit uncommitted, lead-review against this spec, lint + full
-  suite, commit + push; if untouched, relaunch from this entry.
-
----
+### QUEUED - SD-11 applyRemoteSetEvent idempotency (watch-memo side-finding)
+- Await-spanning idempotency check in applyRemoteSetEvent
+  (useAppStore.js ~1215-1282); recorded must-fix-before-wrist-traffic,
+  founder-visible. Verify-first read, then fix in a free slot ahead of
+  any watch decision.
 
 ## 2. QUEUED (build slots - two agents at a time, lowest capable tier)
 

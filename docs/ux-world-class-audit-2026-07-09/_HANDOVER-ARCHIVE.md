@@ -1752,3 +1752,28 @@ in-flight agents below. If resuming after a dead session, run
    staleness-triage entry above).
 4. Standing discipline at every landing: full suite over the clean
    tree, this handover's stage log updated, push.
+
+### Rolled off 2026-07-11 (later session, D46 boundary)
+- **D42 AppAlert overflow fix — LANDED `1de9cc7`.** Shared alert card
+  capped + inner scroll + bottom inset; a11y pins kept. (Board spec in
+  history above via the dispatch entry.)
+- **Logged-set row regression — LANDED `b1403c9`.** Row style array
+  passed to both the zeego Trigger and the TouchableOpacity (lossless
+  under the Android asChild style clobber); new rendering test mounts
+  the wrapped path.
+- **Silent exercise auto-advance — RULED D44 + LANDED `8351b9c`.**
+  Every superset/giant-set focus change cued (haptic + announcement +
+  banner) and the round-return built (last member -> first member).
+- **Workout summary footer overlap — LANDED `7354127`.** Footer clears
+  the list with its measured height; flat-token inset rule kept.
+- **Exercise picker first-open void — LANDED `2fd723b`.** FlashList +
+  browse-filter mount gated on the Modal's native onShow.
+- **CP-10 batch F — LANDED `3b182a7` + `c92a5ce`.** 9 screens converted,
+  3 verified already-live via useSettingsStyles; coverage 49/82 live,
+  32 static remain (paywallExcerpts exempt). Recon note: grep BOTH
+  useTheme and useSettingsStyles.
+- **Leg-day over-volume — FIXED IN FULL: D45 `da59274` (session hard
+  caps 8ex/25sets) + D46 `19907a2`/`209c5e1` (full secondary-muscle
+  model + equipment-gated glute credit, adversarially reviewed).**
+  Detail: DECISIONS D45/D46 blocks + SECONDARY-MUSCLE-MODEL-BUILD-SPEC
+  (as-built).
