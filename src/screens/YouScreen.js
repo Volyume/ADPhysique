@@ -375,7 +375,7 @@ export default function YouScreen({ navigation }) {
                 {isPro
                   ? latestReview
                     ? `Weekly coach update${reviewDate ? `: ${reviewDate}` : ''}`
-                    : pendingCoachCopy.title
+                    : 'Getting to know you'
                   : 'Coach is available on Pro'}
               </Text>
             </View>
@@ -384,7 +384,7 @@ export default function YouScreen({ navigation }) {
             {isPro
               ? latestReview
                 ? 'Open it to see what changed, what was held, and the exact signals behind it.'
-                : pendingCoachCopy.body
+                : 'Your coach reads your logs, applies safety limits, and explains every decision. The weekly check-in below has your current status and next date.'
               : 'Your coach reads your logs, applies safety limits, and explains every decision.'}
           </Text>
         </Card>
@@ -395,7 +395,9 @@ export default function YouScreen({ navigation }) {
             <NavRow
               icon="clipboard-outline"
               label="Weekly check-in"
-              sub="Answer this week's questions so the coach has context."
+              sub={latestReview
+                ? "Answer this week's questions so the coach has context."
+                : `${pendingCoachCopy.title}. ${pendingCoachCopy.body}`}
               onPress={() => navigation.navigate('WeeklyCheckIn')}
             />
             <NavRow
@@ -485,10 +487,6 @@ export default function YouScreen({ navigation }) {
           </View>
         ) : null}
 
-        <View style={styles.about}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.aboutName, live.aboutName]}>Volyume</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.aboutVersion, live.aboutVersion]}>Private coaching based on your logs.</Text>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
