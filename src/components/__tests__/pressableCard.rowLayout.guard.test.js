@@ -56,4 +56,17 @@ describe('row-fill dependents keep flex: 1 (founder photo, build 2608)', () => {
     expect(screen).toMatch(/styles\.completeBtn,\s*live\.completeBtn,\s*\{\s*flex:\s*1\s*\}/);
     expect(screen).toMatch(/styles\.extraSetBtnPromoted,\s*live\.extraSetBtnPromoted,\s*\{\s*flex:\s*1\s*\}/);
   });
+
+  // R7 was the same class: SparkCard is a pressable <Card style={styles.
+  // sparkCard}> whose flex: 1 was discarded, so the two cards under the
+  // Training Load hero shrink-wrapped and the right half of the row
+  // rendered empty (the founder's "Progress space below training load
+  // half-empty"). The earlier "verified correct in source" claim read the
+  // JSX (two-up flex, correct) but missed that the flex never reached the
+  // element the row lays out.
+  test('Progress spark cards fill the row (founder R7, build 2608)', () => {
+    const analytics = read('screens/AnalyticsScreen.js');
+    expect(analytics).toMatch(/sparkCard:\s*\{\s*flex:\s*1\s*\}/);
+    expect(analytics).toMatch(/<Card\s*\n\s*style=\{styles\.sparkCard\}/);
+  });
 });

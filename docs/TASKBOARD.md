@@ -127,9 +127,21 @@ No item marked done on an agent's self-report. Ever._
   compact Share beside it, no dead band; (2) logger bar - Log set spans
   the bar full-width; after target completes, Log set + Next exercise
   split the bar half-and-half.
-- **R7 Progress: section below Training Load half-empty** (room for 3-4
-  cells, only 2). Previously falsely marked "verified correct in source".
-  STATUS: queued.
+- **R7 Progress: section below Training Load half-empty.** DONE - root
+  cause is the SAME class as R6/D65: SparkCard is a pressable Card whose
+  `sparkCard: { flex: 1 }` was silently discarded by the old PressableCard
+  two-view structure, so the two cards shrink-wrapped and the RIGHT HALF
+  of the row rendered empty. The earlier "verified correct in source"
+  claim read the JSX (two-up flex, genuinely correct) but missed that the
+  flex never reached the element the row lays out - source-reading vs
+  render-tracing, the exact failure mode of the first campaign. Fixed by
+  the D65 primitive collapse (4552c03); pinned as the third dependent in
+  pressableCard.rowLayout.guard.test.js. DEVICE CHECK: Sessions + New
+  bests fill the row edge to edge under Training Load. FOUNDER OPTION at
+  the device walk: if, with the row rendering properly, you still want
+  more density there, say so - candidates are two more free-safe 30-day
+  stat cells (total reps, time trained); the current two-card layout is
+  the audited A5 design, so nothing is built until you choose.
 - **R8 Coach page.** "Getting to know you" rename added no value and hogs
   space; page is a cobbled mess with duplication against Weekly check-in.
   Founder asked for a real MERGE. STATUS: queued (lead design after recon).
