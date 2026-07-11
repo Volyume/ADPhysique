@@ -28,6 +28,31 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ## 1. IN FLIGHT
 
+### D42 AppAlert overflow fix (founder defect report, dispatched 2026-07-11)
+- **Source:** founder report (unilateral advice cut off at the bottom on
+  Android); read-agent diagnosis in the session log. CURRENT STATE: the
+  shared AppAlert card (src/components/AppAlert.js) has no maxHeight and
+  no ScrollView, so title + message + actions can exceed a short
+  viewport with the buttons unreachable; it is the surface behind the
+  RECURRING unilateral one-side-at-a-time confirm (and every other
+  alert). The first-timer walkthrough modal was already fixed (D36a
+  inset; founder's build predates it). END STATE: AppAlert joins the
+  proven contract - maxHeight cap, inner scroll region, Math.max bottom
+  inset - so no alert can ever clip on either platform. ELEVATES
+  BECAUSE: heals a live founder-visible defect on a shared, high-traffic
+  surface. Bounds: chrome/behaviour of actions unchanged; a11y pins
+  (AppAlert.a11y.test.js) kept; theming untouched. RECOVERY: if
+  AppAlert.js sits uncommitted, lead-review against this spec, lint +
+  full suite, commit + push; if untouched, relaunch from this entry.
+
+### LANDED - CP-10 screen theming batch F (both lanes, `3b182a7` + `c92a5ce`)
+- 9 screens converted + 3 verified already-live (Settings family via
+  useSettingsStyles - the recon grep missed wrapper-based theming).
+  Full suite green at the boundary: 675/676, 8,412/0, lint clean.
+  Coverage: 49/82 screens live, 32 static remain + paywallExcerpts
+  exempt (HELD module, stays dark). Next batch recon must grep BOTH
+  useTheme and useSettingsStyles signals.
+
 ### CP-10 screen theming batch F (two Sonnet lanes, dispatched 2026-07-11)
 - Recon (Haiku, 2026-07-11): 37/82 screens live, 45 static.
   `paywallExcerpts.js` is the HELD social-proof module, not a themable

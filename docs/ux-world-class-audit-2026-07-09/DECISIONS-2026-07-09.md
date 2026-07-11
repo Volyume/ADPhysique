@@ -719,3 +719,18 @@ narrative padding — with detail-bearing audit evidence exempt. What was
 explicitly NOT adopted: lowering agent tiers below capability, skipping
 the fresh-eyes adversarial review, or shortening the hard-bounds
 sections of briefs — that token cost is deliberate insurance.
+
+## D42 — AppAlert gets the overflow contract (lead-ruled under D33, 2026-07-11)
+Founder reported the unilateral one-side-at-a-time advice clipped at
+the bottom on Android (possibly iOS too). Diagnosis: the first-timer
+walkthrough modal was already fixed (D36a inset; the founder's
+installed build predates it), but the RECURRING unilateral confirm
+rides the shared AppAlert card, which has never had a height cap or
+scroll — title + message + actions can exceed a short viewport with
+the buttons unreachable, on both platforms. RULING: fix AppAlert
+itself, not the unilateral call site — maxHeight cap with an inner
+scroll region and the Math.max(token, insets.bottom + token) contract
+the sup-modals are pinned to, so every alert in the app (delete,
+unpair, cancel-subscription, the unilateral confirm) becomes
+clip-proof. Best-product criterion: one shared fix over a
+surface-local patch. Action chrome, a11y roles and copy unchanged.
