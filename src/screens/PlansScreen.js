@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { planHeadingName } from '../lib/planDisplay';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -715,7 +716,10 @@ export default function PlansScreen({ navigation }) {
                   <Ionicons name="ellipsis-vertical" size={18} color={t.colors.textSecondary} />
                 </TouchableOpacity>
               </View>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.activePlanName, live.activePlanName]}>{activePlan.name}</Text>
+              {/* Must-fix 3 (2026-07-11): this is the card heading, so it drops the
+                  "N×/Week" frequency baked into activePlan.name (see planDisplay.js);
+                  the raw name is unchanged everywhere else it is read. */}
+              <Text maxFontSizeMultiplier={1.3} style={[styles.activePlanName, live.activePlanName]}>{planHeadingName(activePlan.name)}</Text>
               {planWorkoutCounts[activePlan.id] ? (
                 <Text maxFontSizeMultiplier={1.3} style={[styles.activePlanMeta, live.activePlanMeta]}>
                   {planWorkoutCounts[activePlan.id]} workout{planWorkoutCounts[activePlan.id] !== 1 ? 's' : ''}

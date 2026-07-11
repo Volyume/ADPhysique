@@ -50,7 +50,7 @@ import { buildCoachLedger } from '../lib/coachLedger';
 import CoachDailyBrief from '../components/CoachDailyBrief';
 import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
 import { buildFreeCoachLine } from '../lib/coachResponse';
-import { activePlanLine } from '../lib/planDisplay';
+import { activePlanLine, planHeadingName } from '../lib/planDisplay';
 import { resolveActivationNudge, activationBannerLine, NUDGE_STAGE, NUDGE_WINDOW_GRACE_MS } from '../lib/activationNudge';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { localWeekStartMs, localDayKey } from '../lib/dayKey';
@@ -1295,8 +1295,12 @@ export default function HomeScreen({ navigation, route }) {
   const displayWorkout = selectedWorkoutOverride || nextWorkout;
   // Canonical plan reference (issue 4): plan name + day descriptor from the
   // shared formatter, so this card can never drift from the Train tab again.
+  // Must-fix 3 (2026-07-11): the hero eyebrow is a heading, so it drops the
+  // "N×/Week" frequency baked into plan.name via planHeadingName() - the
+  // raw name (with frequency) is kept everywhere else that reads
+  // activePlan.name.
   const planProgress = displayWorkout
-    ? activePlanLine(activePlan?.name, displayWorkout?.idx ?? 0, nextWorkout?.total ?? 1)
+    ? activePlanLine(planHeadingName(activePlan?.name), displayWorkout?.idx ?? 0, nextWorkout?.total ?? 1)
     : null;
 
   // Derive how many days since last completed workout (null = no history)

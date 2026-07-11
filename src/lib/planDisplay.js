@@ -18,7 +18,27 @@
  * Mesocycle names and week-of-block figures are a different concept
  * (block progress, not plan identity) and deliberately do not route
  * through here.
+ *
+ * Founder defect pass 2026-07-11 (must-fix 3): plan.name itself bakes in a
+ * training-frequency suffix ("Beginner Full Body 3×/Week"), inherited from
+ * the seed routine library (src/lib/seedRoutines.js). That is correct for
+ * most surfaces (notifications, share cards, plan lists) where the
+ * frequency is useful context. But on the Home hero and the Plans active
+ * card the plan name is the HEADING, and cramming the frequency into it
+ * reads as amateur. planHeadingName() strips a trailing "N×/Week" (or
+ * "Nx/Week") suffix for heading display ONLY; the stored name and every
+ * other consumer of it are untouched.
  */
+
+// Matches a trailing " 3×/Week" / " 3x/Week" style suffix (with or without
+// a space before the multiplication sign/x, case-insensitive "week").
+const FREQUENCY_SUFFIX_RE = /\s*\d+\s*[x×]\s*\/\s*week\s*$/i;
+
+export function planHeadingName(planName) {
+  const name = typeof planName === 'string' ? planName.trim() : '';
+  if (!name) return name;
+  return name.replace(FREQUENCY_SUFFIX_RE, '').trim();
+}
 
 export function dayDescriptor(dayIndex, totalDays) {
   const day = (Number.isFinite(dayIndex) ? dayIndex : 0) + 1;
