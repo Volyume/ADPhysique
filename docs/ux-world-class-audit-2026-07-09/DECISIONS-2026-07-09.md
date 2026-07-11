@@ -1304,3 +1304,41 @@ only surface is strictly stronger. The firstLift pin (never the PERSONAL
 RECORD treatment) and the P9 TalkBack announcement pins pass unchanged.
 Subject to the founder's device-walk taste veto like all R-campaign
 rulings.
+
+## D64 — R4 unilateral flow design (lead ruling, 2026-07-11)
+
+Sources: plan-C-unilateral-logging.md (internal study; Option 2
+recommended), COMPETITIVE-LOGGER-BAR.md (no competitor has solved
+per-side logging; JEFIT forums show live user confusion), DEFECT-MAP.md
+R4 (current build: 3 taps - Log set, "Side one done", "Side two done" -
+plus touching buttons from a gap-less fragment), and the founder's words:
+"two taps to just confirm one side... it needs to be easy to use and self
+explanatory."
+
+THE FLOW (2 taps total, no confirm bureaucracy):
+1. User does side one, taps the permanent primary "Log set" (reps/weight
+   in the inputs as normal). Side one is captured IMMEDIATELY - pressing
+   Log set IS the confirmation.
+2. The Now card flips to a compact side-two state ("Side 2 - same reps",
+   reps prefilled, editable); a short between-sides rest runs inline
+   (half the exercise's configured rest via the existing
+   halfRestSeconds, floor 15s); the primary bar button relabels to
+   "Log other side" - same button, same position (S3 stable-identity
+   principle preserved).
+3. User does side two, taps "Log other side". The pair commits as ONE
+   workout_sets row: actual_reps = lower side (conservative, matches
+   migration 054's own maths), breakdown in notes ("L 10 / R 9") - the
+   exact D9/cluster storage shape already shipped; no schema change.
+
+SELF-EXPLANATORY: a once-per-exercise first-timer walkthrough modal in
+the exact shape of the existing superset heads-up (icon, numbered steps,
+tip, "Got it" CTA) with an inline escape ("Log both sides together"
+turns per-side off). AUTO-SUGGEST: the dead laterality field finally
+gets read - obviously-unilateral exercises auto-enable per-side, and
+because the walkthrough ALWAYS fires before the first per-side set, a
+wrong regex guess is never silent; declining is one tap. Cancel path:
+a small inline cancel in the side-two state discards the pending pair.
+
+Invariants preserved: one logged set = one working set (engine/volume/PR
+maths untouched); tier-blind; no new deps; existing crash-recovery draft
+covers the mid-pair state. Subject to founder device-walk veto.
