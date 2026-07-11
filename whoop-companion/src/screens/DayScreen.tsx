@@ -48,8 +48,9 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
     light: metric?.lightMin ?? estimatedStages.light,
     rem: metric?.remMin ?? estimatedStages.rem,
     deep: metric?.deepMin ?? estimatedStages.deep,
+    unknown: estimatedStages.unknown,
   };
-  const totalStageMin = stageMinutes.deep + stageMinutes.rem + stageMinutes.light + stageMinutes.awake;
+  const totalStageMin = stageMinutes.deep + stageMinutes.rem + stageMinutes.light + stageMinutes.awake + stageMinutes.unknown;
   const sleepReview = metric ? daySleepReview(metric) : null;
   const vitalsReview = metric ? dayVitalsReview(metric) : null;
 
@@ -144,6 +145,9 @@ export function DayScreen({ nav, day }: { nav: Nav; day: string }) {
                 <StageRow label="Light" minutes={stageMinutes.light} total={totalStageMin} color={sleepStageColors.light} />
                 <StageRow label="REM" minutes={stageMinutes.rem} total={totalStageMin} color={sleepStageColors.rem} />
                 <StageRow label="Deep" minutes={stageMinutes.deep} total={totalStageMin} color={sleepStageColors.deep} />
+                {stageMinutes.unknown > 0 ? (
+                  <StageRow label="Unscored" minutes={stageMinutes.unknown} total={totalStageMin} color={sleepStageColors.unknown} />
+                ) : null}
                 <SleepConfidenceStatus
                   confidence={sleepTier === 'none' ? null : sleepTier}
                   reason={dayConfidenceReason(metric)}
@@ -330,8 +334,8 @@ function StageRow({ label, minutes, total, color }: { label: string; minutes: nu
 
 function stageEstimateTotals(
   segments: NonNullable<DailyMetricRow['sleepDetail']>['stageEstimate'] = [],
-): Record<'awake' | 'light' | 'deep' | 'rem', number> {
-  const totals = { awake: 0, light: 0, deep: 0, rem: 0 };
+): Record<'awake' | 'light' | 'deep' | 'rem' | 'unknown', number> {
+  const totals = { awake: 0, light: 0, deep: 0, rem: 0, unknown: 0 };
   for (const segment of segments ?? []) {
     if (segment.minutes > 0) totals[segment.stage] += segment.minutes;
   }

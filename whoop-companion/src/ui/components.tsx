@@ -500,8 +500,9 @@ const STAGE_COLOR: Record<string, string> = {
   rem: sleepStageColors.rem,
   light: sleepStageColors.light,
   deep: sleepStageColors.deep,
+  unknown: sleepStageColors.unknown,
 };
-const STAGE_LANE: Record<string, number> = { awake: 0, rem: 1, light: 2, deep: 3 };
+const STAGE_LANE: Record<string, number> = { awake: 0, rem: 1, light: 2, deep: 3, unknown: 4 };
 
 /** WHOOP-style sleep hypnogram: stage segments across the night, by lane. */
 export function Hypnogram({
@@ -530,17 +531,18 @@ export function Hypnogram({
   }, [signature, reveal]);
   if (!cleanSegments.length) return null;
 
-  const rows = ['awake', 'rem', 'light', 'deep'] as const;
+  const rows = ['awake', 'rem', 'light', 'deep', 'unknown'] as const;
   const rowLabels: Record<(typeof rows)[number], string> = {
     awake: 'Awake',
     rem: 'REM',
     light: 'Light',
     deep: 'Deep',
+    unknown: 'Unscored',
   };
   const W = 1000;
   const laneH = 18;
   const gap = 5;
-  const H = 4 * laneH + 3 * gap;
+  const H = rows.length * laneH + (rows.length - 1) * gap;
   let x = 0;
   const rects = cleanSegments.map((s, i) => {
     const w = (s.minutes / total) * W;
@@ -707,25 +709,46 @@ export function LineChart({
   rightLabel,
   fill = false,
 }: {
-  values: number[];
+  values: Array<number | null>;
   color?: string;
   height?: number;
   leftLabel?: string;
   rightLabel?: string;
   fill?: boolean;
 }) {
-  if (values.length < 2) {
+  const observed = values.filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
+  if (values.length < 2 || observed.length < 2) {
     return <Empty text="No overnight signal recorded for this window." />;
   }
   const W = 1000;
   const H = 200;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  const min = Math.min(...observed);
+  const max = Math.max(...observed);
   const range = max - min || 1;
-  const pts = values
-    .map((v, i) => `${(i / (values.length - 1)) * W},${H - ((v - min) / range) * H}`)
-    .join(' ');
-  const area = `0,${H} ${pts} ${W},${H}`;
+  const segments: Array<{ points: string; area: string }> = [];
+  let current: Array<{ x: number; y: number }> = [];
+  const closeSegment = () => {
+    if (current.length >= 2) {
+      const points = current.map((point) => `${point.x},${point.y}`).join(' ');
+      segments.push({
+        points,
+        area: `${current[0]!.x},${H} ${points} ${current[current.length - 1]!.x},${H}`,
+      });
+    }
+    current = [];
+  };
+  values.forEach((value, index) => {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      closeSegment();
+      return;
+    }
+    current.push({
+      x: (index / (values.length - 1)) * W,
+      y: H - ((value - min) / range) * H,
+    });
+  });
+  closeSegment();
+  if (!segments.length) return <Empty text="The recorded signal is too fragmented to plot." />;
   return (
     <View>
       <Svg width="100%" height={height} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
@@ -735,8 +758,12 @@ export function LineChart({
             <Stop offset="1" stopColor={color} stopOpacity="0" />
           </SvgGradient>
         </Defs>
-        {fill ? <Polyline points={area} fill="url(#areaGrad)" stroke="none" /> : null}
-        <Polyline points={pts} fill="none" stroke={color} strokeWidth={4} strokeLinejoin="round" />
+        {fill ? segments.map((segment, index) => (
+          <Polyline key={`area-${index}`} points={segment.area} fill="url(#areaGrad)" stroke="none" />
+        )) : null}
+        {segments.map((segment, index) => (
+          <Polyline key={`line-${index}`} points={segment.points} fill="none" stroke={color} strokeWidth={4} strokeLinejoin="round" />
+        ))}
       </Svg>
       {leftLabel || rightLabel ? (
         <View style={contribStyles.axis}>

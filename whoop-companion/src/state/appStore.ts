@@ -105,7 +105,7 @@ import { edwardsTrimp, hrZones, strainFromLoad, totalTrimp, UserProfile } from '
 import { kcalPerMinute, totalKcal } from '../metrics/calories';
 import { computeStress } from '../metrics/stress';
 import { computeHealthMonitor, HealthMonitorResult } from '../metrics/healthMonitor';
-import { encodeNapDetail, napCreditMin, napCreditMinWithin, napDetailFromSleep, parseNapDetail, StoredNapDetail } from '../metrics/naps';
+import { autoSecondarySleepIsReliable, encodeNapDetail, MAX_AUTO_SECONDARY_SLEEP_MIN, napCreditMin, napCreditMinWithin, napDetailFromSleep, parseNapDetail, StoredNapDetail } from '../metrics/naps';
 import { decodeHeartbeatSteps } from '../whoop/strapEvents';
 import { hrvBalance, HrvBalance } from '../metrics/hrvBalance';
 import { illnessRisk, IllnessResult } from '../metrics/illness';
@@ -309,7 +309,7 @@ export function restorePersistedSession(raw: string | null, now = Date.now()): L
   }
 }
 
-function activeSessionRanges(session: Pick<LiveSession, 'startTs' | 'pauseIntervals'>, endTs: number): Array<{ startTs: number; endTs: number }> {
+export function activeSessionRanges(session: Pick<LiveSession, 'startTs' | 'pauseIntervals'>, endTs: number): Array<{ startTs: number; endTs: number }> {
   if (!Number.isFinite(session.startTs) || !Number.isFinite(endTs) || endTs <= session.startTs) return [];
   const ranges: Array<{ startTs: number; endTs: number }> = [];
   let cursor = session.startTs;
@@ -398,6 +398,7 @@ export type AppState = {
     sleepStateStillMin: number;
     sleepStateAsleepMin: number;
     sleepStateUpMin: number;
+    cappedBySafetyLimit: boolean;
     coveragePct: number;
     rrCount: number;
     confidence: SleepConfidence;
@@ -498,7 +499,7 @@ const initialState: AppState = {
 };
 
 const HR_RETENTION_DAYS = 21;
-const DERIVED_METRICS_REVISION = 'sleep-vitals-2026-07-11-v2';
+const DERIVED_METRICS_REVISION = 'sleep-vitals-2026-07-11-v3';
 const DERIVED_METRICS_REVISION_KEY = 'derivedMetricsRevision';
 const CARDIO_RECENT_LIMIT = 250;
 const ROLLING_RR_WINDOW = 120; // keep last ~120 R-R intervals for live HRV
@@ -528,6 +529,30 @@ const SLEEP_EVIDENCE_RECOMPUTE_KEY = 'sleepEvidenceRecomputeV11';
 const STRAP_ALARM_KEY = 'strapAlarm';
 const HISTORY_REPLAY_COUNT_KEY = 'whoopHistoryReplayCountV1';
 const HISTORY_NEXT_AUTO_SYNC_KEY = 'whoopHistoryNextAutoSyncV1';
+
+export type HistoryPassFollowUp = 'continue' | 'complete' | 'retry';
+
+/** Decide whether a finished history pass may immediately request another pass. */
+export function historyPassFollowUp(input: {
+  reason: 'complete' | 'timeout' | 'disconnect';
+  durablyComplete: boolean;
+  rawRecords: number;
+  decodedRecords: number;
+  acknowledgedChunks: number;
+  cursorAdvanced: boolean;
+  continuousPasses: number;
+  maxContinuousPasses?: number;
+}): HistoryPassFollowUp {
+  if (input.reason !== 'complete' || !input.durablyComplete) return 'retry';
+  if (
+    input.rawRecords > 0 &&
+    input.decodedRecords > 0 &&
+    input.acknowledgedChunks > 0 &&
+    input.cursorAdvanced &&
+    input.continuousPasses < (input.maxContinuousPasses ?? 6)
+  ) return 'continue';
+  return 'complete';
+}
 
 function historyReplayCountKey(deviceId: string): string {
   return `${HISTORY_REPLAY_COUNT_KEY}:${deviceId}`;
@@ -571,6 +596,7 @@ class AppStore extends Store<AppState> {
   private historyNudgeInFlight = false;
   private historyPersisting = false;
   private historyPpgContext: Uint8Array[] = [];
+  private historyCleanupFlight: Promise<void> | null = null;
   private rawCaptureBuffer: RawFrame[] = [];
   private rawCaptureFlushTimer: ReturnType<typeof setTimeout> | null = null;
   private commandResponseWaiters = new Map<
@@ -606,6 +632,7 @@ class AppStore extends Store<AppState> {
   private connectionIntentId = 0;
   private keepAliveRetryAfterTs = 0;
   private pendingHistoryDrainMode: 'manual' | 'auto' | null = null;
+  private pendingHistoryDrainDelayMs = 750;
   private pendingHistoryDrainTimer: ReturnType<typeof setTimeout> | null = null;
   private initInFlight: Promise<void> | null = null;
   private sessionPersistenceQueue: Promise<void> = Promise.resolve();
@@ -745,8 +772,10 @@ class AppStore extends Store<AppState> {
       }
       void this.backfillStoredK21Motion()
         .then(() => this.redecodeStoredHistoryBiometrics())
-        .then(() => this.recomputeRecentSleepEvidence())
-        .then(() => this.recomputeRecentStepTrust())
+        .then(() => this.enqueueDerivedMetrics(async () => {
+          await this.recomputeRecentSleepEvidence();
+          await this.recomputeRecentStepTrust();
+        }))
         .then(() => this.refreshDerived())
         .catch(() => this.scheduleDeferredSleepMaintenance(60 * 1000));
     }, delayMs);
@@ -882,9 +911,14 @@ class AppStore extends Store<AppState> {
     this.autoDrainedFor = deviceId;
     this.autoSyncAttempts += 1;
     await this.runHistoryDrain('auto');
-    if (!this.getState().draining && this.getState().status === 'connected' && this.getState().device?.id === deviceId) {
-      this.autoDrainedFor = '';
-      if (!this.autoSyncTimer) this.scheduleAutoHistoryDrain(deviceId, AUTO_HISTORY_SYNC_RETRY_MS);
+    if (
+      !this.getState().draining &&
+      this.getState().status === 'connected' &&
+      this.getState().device?.id === deviceId &&
+      this.autoDrainedFor !== deviceId &&
+      !this.autoSyncTimer
+    ) {
+      this.scheduleAutoHistoryDrain(deviceId, AUTO_HISTORY_SYNC_RETRY_MS);
     }
   }
 
@@ -897,7 +931,7 @@ class AppStore extends Store<AppState> {
     this.scheduleAutoHistoryDrain(deviceId, historyRetryDelayMs(this.historyRetryFailures));
   }
 
-  private schedulePendingHistoryDrain(delayMs = 750): void {
+  private schedulePendingHistoryDrain(delayMs = this.pendingHistoryDrainDelayMs): void {
     if (!this.autoConnectEnabled || !this.pendingHistoryDrainMode || this.pendingHistoryDrainTimer) return;
     this.pendingHistoryDrainTimer = setTimeout(() => {
       this.pendingHistoryDrainTimer = null;
@@ -908,11 +942,12 @@ class AppStore extends Store<AppState> {
         return;
       }
       this.pendingHistoryDrainMode = null;
+      this.pendingHistoryDrainDelayMs = 750;
       void this.runHistoryDrain(mode);
     }, delayMs);
   }
 
-  private async reconnectForHistory(mode: 'manual' | 'auto', detail: string): Promise<void> {
+  private async reconnectForHistory(mode: 'manual' | 'auto', detail: string, retryDelayMs = 750): Promise<void> {
     if (!this.autoConnectEnabled) {
       this.historyDrainActive = false;
       this.setState({ draining: false });
@@ -923,6 +958,7 @@ class AppStore extends Store<AppState> {
     this.clearHistoryTimeout();
     this.stopHistoryWatchdog();
     this.pendingHistoryDrainMode = mode;
+    this.pendingHistoryDrainDelayMs = retryDelayMs;
     this.setState((state) => ({
       draining: false,
       status: 'disconnected',
@@ -1022,15 +1058,7 @@ class AppStore extends Store<AppState> {
       if (state.status === 'idle' || state.status === 'disconnected' || state.status === 'error') {
         void this.connectAsync();
       }
-      if (
-        state.status === 'connected' &&
-        state.device &&
-        !state.draining &&
-        (!state.lastSyncTs || Date.now() - state.lastSyncTs > AUTO_HISTORY_SYNC_MIN_INTERVAL_MS)
-      ) {
-        this.autoDrainedFor = '';
-        this.scheduleAutoHistoryDrain(state.device.id, 1000);
-      }
+      if (state.status === 'connected' && state.device) void this.probeConnectedLinkOnForeground(state.device.id);
       return;
     }
 
@@ -1047,6 +1075,18 @@ class AppStore extends Store<AppState> {
         this.autoDrainedFor = '';
         this.scheduleAutoHistoryDrain(state.device.id, 1000);
       }
+    }
+  }
+
+  private async probeConnectedLinkOnForeground(deviceId: string): Promise<void> {
+    const ble = this.ble;
+    if (!ble || this.getState().device?.id !== deviceId || this.getState().status !== 'connected') return;
+    const healthy = await ble.healthProbe();
+    const state = this.getState();
+    if (!healthy || state.device?.id !== deviceId || state.status !== 'connected' || state.draining) return;
+    if (!state.lastSyncTs || Date.now() - state.lastSyncTs > AUTO_HISTORY_SYNC_MIN_INTERVAL_MS) {
+      this.autoDrainedFor = '';
+      this.scheduleAutoHistoryDrain(deviceId, 1000);
     }
   }
 
@@ -1882,13 +1922,18 @@ class AppStore extends Store<AppState> {
       await this.refreshDerived();
       if (transferId !== this.historyTransferId) return;
       const stats = this.historySessionStats;
+      const followUp = historyPassFollowUp({
+        reason: finalReason,
+        durablyComplete,
+        rawRecords: current?.rawRecords ?? 0,
+        decodedRecords: stats?.decodedRecords ?? 0,
+        acknowledgedChunks: this.historyAckedChunks,
+        cursorAdvanced,
+        continuousPasses: this.autoSyncAttempts,
+      });
       const shouldContinueAutoDrain =
         mode === 'auto' &&
-        finalReason === 'complete' &&
-        (stats?.decodedRecords ?? 0) > 0 &&
-        this.historyAckedChunks > 0 &&
-        cursorAdvanced &&
-        this.autoSyncAttempts < AUTO_HISTORY_MAX_CONTINUOUS_PASSES &&
+        followUp === 'continue' &&
         this.getState().status === 'connected' &&
         this.getState().device != null;
       if (durablyComplete) this.historyRetryFailures = 0;
@@ -1912,6 +1957,10 @@ class AppStore extends Store<AppState> {
         }
       } else if (mode === 'auto' && finalReason === 'complete') {
         this.autoSyncAttempts = 0;
+        if (followUp === 'complete') {
+          const deviceId = this.getState().device?.id;
+          if (deviceId) this.autoDrainedFor = deviceId;
+        }
       }
     });
   }
@@ -1936,8 +1985,22 @@ class AppStore extends Store<AppState> {
     this.stopHistoryWatchdog();
     this.historyStopQueued = true;
     this.historyDrainActive = false;
+    this.clearCommandResponseWaiters(new Error('History commit failed; reconnecting before retry'));
     this.setState({ draining: false, error: `History sync failed: ${this.historyCommitError.message}` });
-    if (this.historyDrainMode === 'auto') this.retryAutoHistoryDrain();
+    const mode = this.historyDrainMode;
+    const retryDelayMs = mode === 'auto'
+      ? historyRetryDelayMs(this.historyRetryFailures + 1)
+      : AUTO_HISTORY_SYNC_RETRY_MS;
+    if (mode === 'auto') this.historyRetryFailures += 1;
+    const cleanup = this.reconnectForHistory(
+      mode,
+      'History commit failed; cleaning up the transfer and reconnecting',
+      retryDelayMs,
+    );
+    this.historyCleanupFlight = cleanup;
+    void cleanup.finally(() => {
+      if (this.historyCleanupFlight === cleanup) this.historyCleanupFlight = null;
+    }).catch(() => {});
   }
 
   private async persistHistoryFrames(frames: Uint8Array[], transferId: number): Promise<HistoricalDecodeResult> {
@@ -2407,14 +2470,16 @@ class AppStore extends Store<AppState> {
    */
   runHistoryDrain = async (mode: 'manual' | 'auto' = 'manual'): Promise<void> => {
     if (this.historyDrainActive || this.getState().draining) return;
+    const cleanup = this.historyCleanupFlight;
+    if (cleanup) await cleanup.catch(() => {});
     if (mode === 'manual' && !this.autoConnectEnabled) {
       this.autoConnectEnabled = true;
       this.connectionIntentId += 1;
     }
     const intentId = this.connectionIntentId;
     this.historyTransferId += 1;
-    // Preserve ordering with a prior run that is still unwinding, but do not
-    // let its rejected promise poison this fresh transfer's commit chain.
+    // Reset the rejected chain only after the failed transfer has been cleaned
+    // up and its link has been forced through reconnect.
     this.historyCommitQueue = this.historyCommitQueue.catch(() => {});
     this.historyDrainActive = true;
     this.clearAutoSyncTimer();
@@ -2697,8 +2762,8 @@ class AppStore extends Store<AppState> {
   }
 
   private async autoDetectNapsForDay(sod: number, dayEnd: number, mainSleep: SleepResult | null): Promise<void> {
-    const scanStart = localDayHour(sod, 0, 5);
-    const scanEnd = Math.min(dayEnd, localDayHour(sod, 0, 22));
+    const scanStart = sod;
+    const scanEnd = Math.min(dayEnd, localDayStartOffset(sod, 1));
     if (scanEnd - scanStart < 20 * 60000) return;
 
     const allHr = directPhysiologyHrSamples(await getHrSamplesBetween(scanStart, scanEnd).catch(() => []));
@@ -2733,8 +2798,8 @@ class AppStore extends Store<AppState> {
         endTs,
         allHr.filter((row) => row.ts >= startTs && row.ts < endTs),
       );
-      const nap = computeSleep(sleepInput, undefined, { minWindowMin: 20, maxWindowMin: 90 });
-      if (!nap || !napIsReliable(nap)) continue;
+      const nap = computeSleep(sleepInput, undefined, { minWindowMin: 20, maxWindowMin: MAX_AUTO_SECONDARY_SLEEP_MIN });
+      if (!nap || !autoSecondarySleepIsReliable(nap, autoSleepBoundariesCovered(nap, sleepInput))) continue;
       if (blocked.some((b) => rangesOverlap(nap.startTs, nap.endTs, b.startTs, b.endTs))) continue;
       if (napRanges.some((n) => rangesOverlap(nap.startTs, nap.endTs, n.startTs, n.endTs))) continue;
 
@@ -3485,9 +3550,14 @@ class AppStore extends Store<AppState> {
   activityDetail = async (
     startTs: number,
     endTs: number,
+    pauseIntervals: SessionPause[] | null = null,
   ): Promise<{ zones: ReturnType<typeof hrZones>; hr: number[] }> => {
     const profile = this.getState().profile;
-    const rows = await getHrSamplesBetween(startTs, endTs);
+    // Match saved workout metrics by removing paused windows before bucketing HR.
+    const rows = (await Promise.all(
+      activeSessionRanges({ startTs, pauseIntervals: pauseIntervals ?? [] }, endTs)
+        .map((range) => getHrSamplesBetween(range.startTs, range.endTs)),
+    )).flat();
     const perMin = perMinuteHr(rows);
     const zones = hrZones(perMin.map((p) => ({ hr: p.hr, minutes: 1 })), profile);
     return { zones, hr: perMin.map((p) => Math.round(p.hr)) };
@@ -3519,11 +3589,14 @@ class AppStore extends Store<AppState> {
   };
 
   /** Per-minute HR across last night's detected sleep window, for the graph. */
-  lastNightHr = async (): Promise<number[]> => {
+  lastNightHr = async (): Promise<Array<number | null>> => {
     const sleep = this.getState().lastSleep;
     if (!sleep) return [];
     const rows = await getHrSamplesBetween(sleep.startTs, sleep.endTs);
-    return perMinuteHr(rows).map((p) => Math.round(p.hr));
+    const byMinute = new Map(perMinuteHr(rows).map((point) => [Math.floor(point.tsMs / 60000), Math.round(point.hr)]));
+    const startMinute = Math.floor(sleep.startTs / 60000);
+    const endMinute = Math.ceil(sleep.endTs / 60000);
+    return Array.from({ length: Math.max(0, endMinute - startMinute) }, (_, index) => byMinute.get(startMinute + index) ?? null);
   };
 }
 
@@ -3731,21 +3804,6 @@ function splitContiguousMinutes(
   return out;
 }
 
-function napIsReliable(nap: SleepResult): boolean {
-  const coveragePct = Math.round((nap.signalMin / Math.max(1, nap.inBedMin)) * 100);
-  const corroborationPct = sleepEvidencePct(nap);
-  const hasMotionProof = nap.motionMin >= 12 && corroborationPct >= 20;
-  return (
-    nap.inBedMin >= 20 &&
-    nap.inBedMin <= 90 &&
-    nap.asleepMin >= 15 &&
-    nap.signalMin >= 20 &&
-    coveragePct >= 60 &&
-    hasMotionProof &&
-    nap.efficiency >= 0.6
-  );
-}
-
 function rangesOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
   return aStart < bEnd && bStart < aEnd;
 }
@@ -3832,6 +3890,7 @@ function manualTimingOnlyDetail(startTs: number, endTs: number): SleepDetail {
     sleepStateStillMin: 0,
     sleepStateAsleepMin: 0,
     sleepStateUpMin: 0,
+    cappedBySafetyLimit: false,
     coveragePct: 0,
     confidence: 'low',
   };
@@ -4010,6 +4069,7 @@ function buildSleepDetail(input: {
       sleepStateStillMin: sleep.sleepStateStillMin,
       sleepStateAsleepMin: sleep.sleepStateAsleepMin,
       sleepStateUpMin: sleep.sleepStateUpMin,
+      cappedBySafetyLimit: sleep.cappedBySafetyLimit,
       coveragePct,
       confidence,
       stageEstimate: sleep.hypnogram,
@@ -4122,6 +4182,7 @@ type SleepEvidence = Pick<
   | 'sleepStateStillMin'
   | 'sleepStateAsleepMin'
   | 'sleepStateUpMin'
+  | 'cappedBySafetyLimit'
 >;
 
 type SleepCaptureEvidence = {
@@ -4137,6 +4198,7 @@ type SleepCaptureEvidence = {
   sleepStateStillMin: number;
   sleepStateAsleepMin: number;
   sleepStateUpMin: number;
+  cappedBySafetyLimit: boolean;
 };
 
 function sleepResultCaptureEvidence(sleep: SleepResult): SleepCaptureEvidence {
@@ -4153,6 +4215,7 @@ function sleepResultCaptureEvidence(sleep: SleepResult): SleepCaptureEvidence {
     sleepStateStillMin: sleep.sleepStateStillMin,
     sleepStateAsleepMin: sleep.sleepStateAsleepMin,
     sleepStateUpMin: sleep.sleepStateUpMin,
+    cappedBySafetyLimit: sleep.cappedBySafetyLimit,
   };
 }
 
@@ -4170,6 +4233,7 @@ function sleepInputCaptureEvidence(samples: SleepMinute[], windowMin: number): S
     sleepStateStillMin: samples.filter((s) => s.bandSleepState === 1).length,
     sleepStateAsleepMin: samples.filter((s) => s.bandSleepState === 2).length,
     sleepStateUpMin: samples.filter((s) => s.bandSleepState === 3).length,
+    cappedBySafetyLimit: false,
   };
 }
 
@@ -4185,6 +4249,7 @@ function sleepCaptureEvidenceAsSleepEvidence(evidence: SleepCaptureEvidence): Sl
     sleepStateStillMin: evidence.sleepStateStillMin,
     sleepStateAsleepMin: evidence.sleepStateAsleepMin,
     sleepStateUpMin: evidence.sleepStateUpMin,
+    cappedBySafetyLimit: evidence.cappedBySafetyLimit,
   };
 }
 

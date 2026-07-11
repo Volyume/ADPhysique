@@ -22,6 +22,7 @@ export type SleepMinute = {
 };
 
 export type SleepStage = 'awake' | 'light' | 'deep' | 'rem';
+export type SleepTimelineStage = SleepStage | 'unknown';
 export type SleepSource = 'auto_hr' | 'manual_hr' | 'manual_duration';
 
 export type SleepResult = {
@@ -35,7 +36,11 @@ export type SleepResult = {
   efficiency: number; // 0..1  (asleep / TIB)
   stages: Record<SleepStage, number>; // minutes
   /** Ordered stage segments across the night, for the hypnogram. */
-  hypnogram: Array<{ stage: SleepStage; minutes: number }>;
+  hypnogram: Array<{ stage: SleepTimelineStage; minutes: number }>;
+  /** Minutes inside the window without enough HR to classify sleep or wake. */
+  unscoredMin: number;
+  /** True only when automatic selection shortened a longer candidate. */
+  cappedBySafetyLimit: boolean;
   performance: number | null; // asleepMin / neededMin
   neededMin: number;
   source: SleepSource;
@@ -69,6 +74,12 @@ type SleepWindowOptions = {
   maxWindowMin: number;
   endAfterTs?: number;
   endBeforeTs?: number;
+};
+
+type DetectedSleepWindow = {
+  start: number;
+  end: number;
+  cappedBySafetyLimit: boolean;
 };
 
 /**
@@ -162,7 +173,7 @@ function expandToMinutes(
 function findSleepWindow(
   samples: SleepMinute[],
   opts: SleepWindowOptions = { minWindowMin: 90, maxWindowMin: MAX_AUTO_SLEEP_WINDOW_MIN },
-): { start: number; end: number } | null {
+): DetectedSleepWindow | null {
   if (samples.length < Math.min(30, opts.minWindowMin)) return null;
   const hrs = samples.map((s) => s.hr).filter((v): v is number => v != null);
   if (hrs.length === 0) return null;
@@ -323,7 +334,11 @@ function findSleepWindow(
     (opts.endAfterTs == null || lastTs + 60000 >= opts.endAfterTs) &&
     (opts.endBeforeTs == null || lastTs + 60000 < opts.endBeforeTs)
   ) {
-    return trimSleepWindow(samples, 0, samples.length, p20, spread, opts) ?? { start: 0, end: samples.length };
+    return trimSleepWindow(samples, 0, samples.length, p20, spread, opts) ?? {
+      start: 0,
+      end: samples.length,
+      cappedBySafetyLimit: false,
+    };
   }
 
   return null;
@@ -379,7 +394,7 @@ function trimSleepWindow(
   p20: number,
   spread: number,
   opts: SleepWindowOptions,
-): { start: number; end: number } | null {
+): DetectedSleepWindow | null {
   if (end - start < opts.minWindowMin) return null;
   const coreThreshold = p20 + spread * 0.65;
   const core = (index: number): boolean => {
@@ -418,12 +433,12 @@ function trimSleepWindow(
   const constrainedWindow = (
     windowStart: number,
     windowEnd: number,
-  ): { start: number; end: number } | null => {
+  ): DetectedSleepWindow | null => {
     if (windowEnd - windowStart < opts.minWindowMin) return null;
     if (windowEnd - windowStart > opts.maxWindowMin) {
       return lowestHrSubwindow(samples, windowStart, windowEnd, opts.maxWindowMin, opts);
     }
-    const window = { start: windowStart, end: windowEnd };
+    const window = { start: windowStart, end: windowEnd, cappedBySafetyLimit: false };
     return sleepWindowEndAllowed(samples, window, opts) ? window : null;
   };
 
@@ -439,7 +454,7 @@ function lowestHrSubwindow(
   end: number,
   sizeMin: number,
   opts: SleepWindowOptions,
-): { start: number; end: number } | null {
+): DetectedSleepWindow | null {
   let bestStart: number | null = null;
   let bestScore = Number.POSITIVE_INFINITY;
   const candidateStarts = new Set<number>();
@@ -467,7 +482,9 @@ function lowestHrSubwindow(
       bestStart = i;
     }
   }
-  return bestStart == null ? null : { start: bestStart, end: Math.min(end, bestStart + sizeMin) };
+  return bestStart == null
+    ? null
+    : { start: bestStart, end: Math.min(end, bestStart + sizeMin), cappedBySafetyLimit: true };
 }
 
 function sleepWindowEndAllowed(
@@ -508,6 +525,8 @@ export function durationOnlySleep(
       ...(awakeMin > 0 ? [{ stage: 'awake' as const, minutes: awakeMin }] : []),
       { stage: 'light', minutes: asleepMin },
     ],
+    unscoredMin: 0,
+    cappedBySafetyLimit: false,
     performance: neededMin > 0 ? Math.min(1, asleepMin / neededMin) : null,
     neededMin,
     source: 'manual_duration',
@@ -542,7 +561,7 @@ export function computeSleep(
   // has manually logged or adjusted the sleep period, so we score exactly those
   // bounds instead of auto-detecting within them).
   const win = opts.forceWindow
-    ? { start: 0, end: samples.length }
+    ? { start: 0, end: samples.length, cappedBySafetyLimit: false }
     : findSleepWindow(samples, {
         minWindowMin: opts.minWindowMin ?? 90,
         maxWindowMin: opts.maxWindowMin ?? MAX_AUTO_SLEEP_WINDOW_MIN,
@@ -584,17 +603,15 @@ export function computeSleep(
   const rmssds = window.map((s) => s.rmssd).filter((v): v is number => v != null);
   const meanRmssd = rmssds.length ? rmssds.reduce((a, b) => a + b, 0) / rmssds.length : null;
   const stages: Record<SleepStage, number> = { awake: 0, light: 0, deep: 0, rem: 0 };
-  const timeline: SleepStage[] = [];
+  const timeline: SleepTimelineStage[] = [];
   const observedTimeline: boolean[] = [];
   for (const s of window) {
     // HR is the required sleep signal. Missing motion means the independent
     // movement channel was not decoded for this minute, not that the wearer
     // was awake; manual windows and already-corroborated auto windows can still
-    // classify it from observed HR/RR. Missing HR remains unknown/awake.
+    // classify it from observed HR/RR. Missing HR remains explicitly unscored.
     if (s.hr == null) {
-      const stage: SleepStage = 'awake';
-      stages[stage] += 1;
-      timeline.push(stage);
+      timeline.push('unknown');
       observedTimeline.push(false);
       continue;
     }
@@ -626,11 +643,13 @@ export function computeSleep(
     stages.light = 0;
     stages.deep = 0;
     stages.rem = 0;
-    for (const stage of smoothedTimeline) stages[stage] += 1;
+    for (const stage of smoothedTimeline) {
+      if (stage !== 'unknown') stages[stage] += 1;
+    }
   }
 
   // Compress the per-minute timeline into stage segments for the hypnogram.
-  const hypnogram: Array<{ stage: SleepStage; minutes: number }> = [];
+  const hypnogram: Array<{ stage: SleepTimelineStage; minutes: number }> = [];
   for (const stage of smoothedTimeline) {
     const last = hypnogram[hypnogram.length - 1];
     if (last && last.stage === stage) last.minutes += 1;
@@ -638,7 +657,8 @@ export function computeSleep(
   }
 
   const inBedMin = window.length;
-  const asleepMin = inBedMin - stages.awake;
+  const asleepMin = stages.light + stages.deep + stages.rem;
+  const unscoredMin = smoothedTimeline.filter((stage) => stage === 'unknown').length;
   const restorativeMin = stages.deep + stages.rem;
   const efficiency = inBedMin > 0 ? asleepMin / inBedMin : 0;
   const startTs = opts.startTs ?? window[0]?.ts ?? 0;
@@ -651,15 +671,15 @@ export function computeSleep(
   // Sleep latency = leading awake before the first sustained sleep segment.
   let latencyMin = 0;
   for (const seg of hypnogram) {
+    if (isAsleepStage(seg.stage)) break;
     if (seg.stage === 'awake') latencyMin += seg.minutes;
-    else break;
   }
   // Wake events = distinct awake episodes occurring after sleep onset and before
   // the final wake (mid-sleep disturbances), each merged run counting once.
-  const firstSleep = hypnogram.findIndex((s) => s.stage !== 'awake');
+  const firstSleep = hypnogram.findIndex((s) => isAsleepStage(s.stage));
   let lastSleep = -1;
   for (let i = hypnogram.length - 1; i >= 0; i -= 1) {
-    if (hypnogram[i]!.stage !== 'awake') {
+    if (isAsleepStage(hypnogram[i]!.stage)) {
       lastSleep = i;
       break;
     }
@@ -682,6 +702,8 @@ export function computeSleep(
     efficiency: Math.round(efficiency * 100) / 100,
     stages,
     hypnogram,
+    unscoredMin,
+    cappedBySafetyLimit: win.cappedBySafetyLimit,
     performance: neededMin > 0 ? Math.min(1, asleepMin / neededMin) : null,
     neededMin,
     source,
@@ -733,7 +755,11 @@ function boundaryShowsWake(samples: SleepMinute[], restingReference: number): bo
   return elevated >= Math.max(3, Math.ceil(hrs.length * 0.15));
 }
 
-function smoothStageTimeline(timeline: SleepStage[], observed: boolean[]): SleepStage[] {
+function isAsleepStage(stage: SleepTimelineStage): stage is Exclude<SleepStage, 'awake'> {
+  return stage === 'light' || stage === 'deep' || stage === 'rem';
+}
+
+function smoothStageTimeline(timeline: SleepTimelineStage[], observed: boolean[]): SleepTimelineStage[] {
   if (timeline.length < 3) return timeline;
   let changed = false;
   const out = timeline.slice();

@@ -43,6 +43,8 @@ function assert(condition, message) {
 
 const helpers = loadStoreHelpers();
 const now = 1_700_000_000_000;
+const storeSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'state', 'appStore.ts'), 'utf8');
+const detailSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'screens', 'ActivityDetailScreen.tsx'), 'utf8');
 const session = {
   kind: 'workout',
   label: 'Running',
@@ -60,6 +62,15 @@ const session = {
 };
 
 assert(helpers.activeSessionDurationMs(session, now) === 5 * 60 * 1000, 'open pause must stop active duration');
+assert(JSON.stringify(helpers.activeSessionRanges({
+  startTs: now - 10 * 60 * 1000,
+  pauseIntervals: [{ startTs: now - 7 * 60 * 1000, endTs: now - 3 * 60 * 1000 }],
+}, now)) === JSON.stringify([
+  { startTs: now - 10 * 60 * 1000, endTs: now - 7 * 60 * 1000 },
+  { startTs: now - 3 * 60 * 1000, endTs: now },
+]), 'active ranges must omit completed pause windows');
+assert(/activityDetail[\s\S]*activeSessionRanges/.test(storeSource), 'activity detail must use active session ranges');
+assert(/appStore\.activityDetail\(activity\.startTs, activity\.endTs, activity\.pauseIntervals\)/.test(detailSource), 'activity detail screen must pass pause intervals');
 
 const saved = JSON.stringify({ version: 1, savedAt: now, session });
 const restored = helpers.restorePersistedSession(saved, now);

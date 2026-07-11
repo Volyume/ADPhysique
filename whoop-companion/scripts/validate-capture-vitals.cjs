@@ -24,6 +24,7 @@ if (!capturePath) {
 const { FrameAssembler } = require('../src/whoop/maverick.ts');
 const { decodeWhoop5HistoryFrames } = require('../src/whoop/historicalParse.ts');
 const vitals = require('../src/metrics/overnightVitals.ts');
+const { estimateBandStepsFromCounters } = require('../src/metrics/bandSteps.ts');
 
 async function main() {
 const assemblers = new Map();
@@ -105,6 +106,32 @@ for (const [day, rows] of [...rowsByDay].sort(([a], [b]) => a.localeCompare(b)))
       `rmssd=${vitals.computeRmssdFromRows(rows) ?? '-'} resp=${vitals.computeRespiratoryRateFromRows(rows) ?? '-'} ` +
       `rr_runs=${rrRuns.slice(0, 5).join(',') || '-'} qualifying_5m=${qualifyingBuckets} ` +
       `rmssd_windows=${rmssdWindows.join(',') || '-'} resp_precise=${vitals.computeRespiratoryRateFromRows(preciseRows) ?? '-'}`,
+  );
+}
+
+const stepsByDay = new Map();
+for (const row of decoded.steps) {
+  const day = new Date(row.ts).toISOString().slice(0, 10);
+  const rows = stepsByDay.get(day) ?? [];
+  rows.push(row);
+  stepsByDay.set(day, rows);
+}
+for (const [day, rows] of [...stepsByDay].sort(([a], [b]) => a.localeCompare(b))) {
+  rows.sort((a, b) => a.ts - b.ts);
+  const oneToOne = estimateBandStepsFromCounters(rows, 1);
+  const legacyEight = estimateBandStepsFromCounters(rows, 8);
+  const classes = rows.reduce((counts, row) => {
+    const key = row.activityClass == null ? 'null' : String(row.activityClass);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+    return counts;
+  }, new Map());
+  console.log(
+    `${day} step_rows=${rows.length} span=${rows.length > 1 ? Math.round(((rows.at(-1).ts - rows[0].ts) / 60000) * 10) / 10 : 0}m ` +
+      `counter=${rows[0]?.counter ?? '-'}..${rows.at(-1)?.counter ?? '-'} ` +
+      `active_ticks=${oneToOne?.rawTicks ?? 0} inactive_ticks=${oneToOne?.inactiveRawTicks ?? 0} ` +
+      `steps_div1=${oneToOne?.steps ?? '-'} confidence_div1=${oneToOne?.confidence ?? '-'} ` +
+      `steps_div8=${legacyEight?.steps ?? '-'} confidence_div8=${legacyEight?.confidence ?? '-'} ` +
+      `classes=${[...classes].map(([key, count]) => `${key}:${count}`).join(',') || '-'}`,
   );
 }
 

@@ -12,6 +12,7 @@ import { SleepScreen } from './src/screens/SleepScreen';
 import { StrainScreen } from './src/screens/StrainScreen';
 import { JournalScreen } from './src/screens/JournalScreen';
 import { DeviceScreen } from './src/screens/DeviceScreen';
+import { AdvancedDeviceScreen } from './src/screens/AdvancedDeviceScreen';
 import { HealthScreen } from './src/screens/HealthScreen';
 import { StressScreen } from './src/screens/StressScreen';
 import { TrendsScreen } from './src/screens/TrendsScreen';
@@ -32,6 +33,7 @@ import { WorkoutsScreen } from './src/screens/WorkoutsScreen';
 import { StartScreen } from './src/screens/StartScreen';
 import { LiveSessionScreen } from './src/screens/LiveSessionScreen';
 import { DayScreen } from './src/screens/DayScreen';
+import { HistoryScreen } from './src/screens/HistoryScreen';
 import { WeeklyPlanScreen } from './src/screens/WeeklyPlanScreen';
 import { colors } from './src/ui/theme';
 import { fonts, useWhoopFonts } from './src/ui/fonts';
@@ -72,7 +74,7 @@ export default function App() {
     [stack.length, tab],
   );
 
-  const current = stack[stack.length - 1] as Route;
+  const current: Route = stack[stack.length - 1] ?? { name: 'today' };
 
   return (
     <SafeAreaProvider>
@@ -145,6 +147,8 @@ function Router({ route, nav }: { route: Route; nav: Nav }) {
       return <JournalScreen nav={nav} />;
     case 'device':
       return <DeviceScreen nav={nav} />;
+    case 'advancedDevice':
+      return <AdvancedDeviceScreen nav={nav} />;
     case 'settings':
       return <SettingsScreen nav={nav} />;
     case 'sleepCoach':
@@ -175,6 +179,8 @@ function Router({ route, nav }: { route: Route; nav: Nav }) {
       return <LiveSessionScreen nav={nav} />;
     case 'day':
       return <DayScreen nav={nav} day={route.day} />;
+    case 'history':
+      return <HistoryScreen nav={nav} />;
     case 'metric':
       return <MetricDetailScreen nav={nav} metricKey={route.key} />;
     case 'activity':

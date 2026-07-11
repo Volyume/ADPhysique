@@ -36,7 +36,9 @@ const evidence = loadTypeScriptModule(path.join('src', 'metrics', 'sleepEvidence
 const sleepStress = loadTypeScriptModule(path.join('src', 'metrics', 'sleepStress.ts'));
 const sleepConsistency = loadTypeScriptModule(path.join('src', 'metrics', 'sleepConsistency.ts'));
 const sleepRegularity = loadTypeScriptModule(path.join('src', 'metrics', 'sleepRegularity.ts'));
-const naps = loadTypeScriptModule(path.join('src', 'metrics', 'naps.ts'));
+const naps = loadTypeScriptModule(path.join('src', 'metrics', 'naps.ts'), {
+  './sleepEvidence': evidence,
+});
 const dataQuality = loadTypeScriptModule(path.join('src', 'metrics', 'dataQuality.ts'));
 const database = loadTypeScriptModule(path.join('src', 'db', 'database.ts'), {
   'expo-sqlite': {},
@@ -99,6 +101,10 @@ assert(cappedWakeDayRun && cappedWakeDayRun.endTs >= nextWakeDay, 'window cappin
 assert(cappedWakeDayRun && cappedWakeDayRun.inBedMin <= 11 * 60, 'wake-day constrained window still obeys the duration cap');
 assert(evidence.autoSleepAtSafetyCeiling(cappedWakeDayRun), 'a cap-hit automatic window is flagged for review');
 assert(!evidence.autoSleepAtSafetyCeiling({ inBedMin: 10 * 60 }), 'a naturally bounded ten-hour window is not flagged');
+assert(
+  !evidence.autoSleepAtSafetyCeiling({ inBedMin: 655, cappedBySafetyLimit: false }),
+  'an explicitly uncapped 10h55 window is not mistaken for a safety truncation',
+);
 assert(!evidence.autoSleepAtSafetyCeiling(cappedWakeDayRun, true), 'manual windows are not mistaken for automatic cap hits');
 
 const stateOnly = {
@@ -154,6 +160,25 @@ assert(oneMinuteUnknownResult && oneMinuteUnknownResult.asleepMin === 121, 'miss
 assert(
   oneMinuteUnknownResult && oneMinuteUnknownResult.stages.deep === 0 && oneMinuteUnknownResult.stages.rem === 0,
   'missing beat-to-beat intervals are not imputed as observed deep or REM sleep',
+);
+
+const hrDropoutWindow = [
+  ...Array.from({ length: 60 }, (_, i) => ({ ts: start + i * minute, hr: 60, motion: 0, rmssd: 50 })),
+  ...Array.from({ length: 60 }, (_, i) => ({ ts: start + (60 + i) * minute, hr: null, motion: null, rmssd: null })),
+  ...Array.from({ length: 60 }, (_, i) => ({ ts: start + (120 + i) * minute, hr: 60, motion: 0, rmssd: 50 })),
+];
+const hrDropoutResult = sleep.computeSleep(hrDropoutWindow, undefined, {
+  forceWindow: true,
+  startTs: start,
+  endTs: start + 180 * minute,
+  source: 'manual_hr',
+});
+assert(hrDropoutResult && hrDropoutResult.unscoredMin === 60, 'an HR dropout is retained as unscored time');
+assert(hrDropoutResult && hrDropoutResult.stages.awake === 0, 'missing HR is not fabricated as observed wake');
+assert(hrDropoutResult && hrDropoutResult.asleepMin === 120, 'unscored time cannot inflate observed sleep');
+assert(
+  hrDropoutResult && hrDropoutResult.hypnogram.some((segment) => segment.stage === 'unknown' && segment.minutes === 60),
+  'the hypnogram exposes the full data gap',
 );
 
 const paddedSleep = [
@@ -336,6 +361,28 @@ assert(naps.napIntervalsOverlap(existingAutoNap, { startTs: start + 19 * minute,
 assert(!naps.napIntervalsOverlap(existingAutoNap, { startTs: start + 20 * minute, endTs: start + 30 * minute }), 'touching nap intervals do not overlap');
 assert(!naps.canInsertAutoNap({ startTs: start + 19 * minute, endTs: start + 30 * minute }, [existingAutoNap]), 'any overlapping auto nap is rejected');
 assert(naps.canInsertAutoNap({ startTs: start + 20 * minute, endTs: start + 30 * minute }, [existingAutoNap]), 'a touching auto nap is allowed without double credit');
+
+const longSecondarySleep = {
+  inBedMin: 180,
+  asleepMin: 165,
+  signalMin: 175,
+  motionMin: 170,
+  stillMin: 150,
+  movingMin: 15,
+  efficiency: 0.92,
+};
+assert(
+  !naps.autoSecondarySleepIsReliable(longSecondarySleep, false),
+  'a long secondary sleep requires independently observed wake boundaries',
+);
+assert(
+  naps.autoSecondarySleepIsReliable(longSecondarySleep, true),
+  'a well-covered three-hour secondary sleep is preserved when both wake edges are observed',
+);
+assert(
+  !naps.autoSecondarySleepIsReliable({ ...longSecondarySleep, inBedMin: 241 }, true),
+  'automatic secondary sleep remains capped at four hours',
+);
 
 assert(
   database.NAP_OVERLAP_QUERY ===

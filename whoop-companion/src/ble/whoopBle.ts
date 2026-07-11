@@ -56,6 +56,13 @@ const DEVICE_CONNECT_TIMEOUT_MS = 12000;
 const DISCOVER_TIMEOUT_MS = 15000;
 const SCAN_TIMEOUT_MS = 30000;
 const COMMAND_WRITE_TIMEOUT_MS = 6000;
+const COMMAND_REDISCOVERY_FAILURE_LIMIT = 3;
+
+export type CommandRediscoveryAction = 'retry' | 'reconnect';
+
+export function commandRediscoveryAction(failures: number, limit = 3): CommandRediscoveryAction {
+  return Math.max(0, Math.floor(failures)) >= Math.max(1, Math.floor(limit)) ? 'reconnect' : 'retry';
+}
 
 export type WhoopStatus =
   | 'idle'
@@ -110,8 +117,10 @@ export class WhoopBle {
   private commandQueue: Promise<void> = Promise.resolve();
   private commandEpoch = 0;
   private connectionFlight: Promise<void> | null = null;
+  private healthProbeFlight: Promise<boolean> | null = null;
   private lifecycleGeneration = 0;
   private connectionGeneration = 0;
+  private commandRediscoveryFailures = 0;
   private stateChangeSub: Subscription | null = null;
   private resolveStateWait: (() => void) | null = null;
   private stateWaitLifecycle: number | null = null;
@@ -434,6 +443,7 @@ export class WhoopBle {
       this.disconnectSub = null;
     }
     this.device = connected;
+    this.commandRediscoveryFailures = 0;
     this.lastDeviceId = connected.id;
     this.events.onDevice?.({ id: connected.id, name: connected.name ?? connected.localName ?? 'WHOOP' });
     this.disconnectSub = connected.onDisconnected((error) => {
@@ -523,6 +533,7 @@ export class WhoopBle {
     this.device = null;
     this.writeService = null;
     this.writeChar = null;
+    this.commandRediscoveryFailures = 0;
     void stale?.cancelConnection().catch(() => {});
     return generation;
   }
@@ -686,6 +697,7 @@ export class WhoopBle {
     }, generation);
 
     // 3) Proprietary fd4b notify characteristics -> capture raw frames.
+    let historySubscriptionInstalled = false;
     for (const dc of discovered) {
       const lc = dc.characteristic.toLowerCase();
       if (dc.notifiable && (lc.startsWith(WHOOP_CHAR_PREFIX) || lc.startsWith(WHOOP_CHAR_PREFIX_4))) {
@@ -701,6 +713,7 @@ export class WhoopBle {
           generation,
           lc.startsWith('fd4b0005'),
         );
+        if (lc.startsWith('fd4b0005')) historySubscriptionInstalled = true;
       }
       // Remember the command-write characteristic for the drain. Trust the UUID
       // even if Android's cached properties do not mark it writable.
@@ -731,15 +744,22 @@ export class WhoopBle {
         dataChar,
         (bytes) => this.events.onRawFrame?.({ ts: Date.now(), source: label, hex: bytesToHex(bytes) }),
         generation,
-        true,
+        serviceUuid === WHOOP5_SERVICE,
       );
       rawSubscriptions.add(key);
+      if (serviceUuid === WHOOP5_SERVICE) historySubscriptionInstalled = true;
+    }
+    if (services.some((service) => service.uuid.toLowerCase() === WHOOP5_SERVICE) && !historySubscriptionInstalled) {
+      throw new Error('WHOOP fd4b0005 history notification subscription was not installed');
     }
   }
 
   async refreshCommandChannel(): Promise<boolean> {
     if (!this.device) return false;
-    if (this.canSendCommands) return true;
+    if (this.canSendCommands) {
+      this.commandRediscoveryFailures = 0;
+      return true;
+    }
     const device = this.device;
     const generation = this.connectionGeneration;
     try {
@@ -749,10 +769,59 @@ export class WhoopBle {
         'WHOOP command rediscovery timed out',
       );
       await this.locateWriteChar(device, generation);
-      return this.isDeviceGenerationCurrent(device, generation) && this.canSendCommands;
+      if (this.isDeviceGenerationCurrent(device, generation) && this.canSendCommands) {
+        this.commandRediscoveryFailures = 0;
+        return true;
+      }
+      return this.recordCommandRediscoveryFailure(device, generation);
     } catch {
+      return this.recordCommandRediscoveryFailure(device, generation);
+    }
+  }
+
+  /** Verify a nominally connected link before foreground work resumes. */
+  healthProbe(): Promise<boolean> {
+    if (this.healthProbeFlight) return this.healthProbeFlight;
+    const flight = this.performHealthProbe().finally(() => {
+      if (this.healthProbeFlight === flight) this.healthProbeFlight = null;
+    });
+    this.healthProbeFlight = flight;
+    return flight;
+  }
+
+  private async performHealthProbe(): Promise<boolean> {
+    const device = this.device;
+    const generation = this.connectionGeneration;
+    if (!device) return false;
+    if (!this.canSendCommands && !(await this.refreshCommandChannel())) {
+      if (this.isDeviceGenerationCurrent(device, generation)) {
+        this.recoverStaleLink('WHOOP foreground command channel check failed - reconnecting...');
+      }
       return false;
     }
+    if (!this.isDeviceGenerationCurrent(device, generation)) return false;
+    try {
+      await withTimeout(
+        this.writeCommand(cmdLinkValid()),
+        COMMAND_WRITE_TIMEOUT_MS,
+        'WHOOP foreground health probe timed out',
+      );
+      return this.isDeviceGenerationCurrent(device, generation);
+    } catch {
+      if (this.isDeviceGenerationCurrent(device, generation)) {
+        this.recoverStaleLink('WHOOP foreground health probe failed - reconnecting...');
+      }
+      return false;
+    }
+  }
+
+  private recordCommandRediscoveryFailure(device: Device, generation: number): false {
+    if (!this.isDeviceGenerationCurrent(device, generation)) return false;
+    this.commandRediscoveryFailures += 1;
+    if (commandRediscoveryAction(this.commandRediscoveryFailures) === 'reconnect') {
+      this.recoverStaleLink('WHOOP command channel rediscovery failed - reconnecting...');
+    }
+    return false;
   }
 
   forgetKnownDevice(): void {
@@ -892,7 +961,10 @@ export class WhoopBle {
         },
       );
       this.subscriptions.push(sub);
-    } catch {
+    } catch (error) {
+      if (critical) {
+        throw new Error(`Critical WHOOP history notification subscription failed for ${charUuid}: ${String(error)}`);
+      }
       // Characteristic not available on this firmware — non-fatal.
     }
   }

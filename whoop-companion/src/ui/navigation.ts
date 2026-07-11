@@ -40,6 +40,7 @@ export type Route =
   | { name: 'trends' }
   | { name: 'journal' }
   | { name: 'device' }
+  | { name: 'advancedDevice' }
   | { name: 'settings' }
   | { name: 'sleepCoach' }
   | { name: 'logActivity' }
@@ -54,6 +55,7 @@ export type Route =
   | { name: 'resilience' }
   | { name: 'illness' }
   | { name: 'weeklyPlan' }
+  | { name: 'history' }
   | { name: 'day'; day: string }
   | { name: 'metric'; key: MetricKey }
   | { name: 'activity'; id: string };

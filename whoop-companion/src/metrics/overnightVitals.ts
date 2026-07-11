@@ -2,7 +2,7 @@ import type { HrSampleRow } from '../db/database';
 import { isDirectSleepHeartRateSample } from './dataQuality';
 import { computeHrvSegments } from './hrv';
 import { respiratoryRateFromHeartRate, respiratoryRateSegments } from './respiratory';
-import type { SleepResult, SleepStage } from './sleep';
+import type { SleepResult, SleepTimelineStage } from './sleep';
 
 export type OvernightVitals = {
   rmssd: number | null;
@@ -13,7 +13,7 @@ export type OvernightVitals = {
 export type SleepEpochMaskEntry = {
   startTs: number;
   endTs: number;
-  stage: SleepStage;
+  stage: SleepTimelineStage;
   stable: boolean;
 };
 
@@ -91,9 +91,9 @@ export function buildSleepEpochMask(
   if (!Number.isFinite(sleep.startTs) || !Number.isFinite(sleep.endTs) || sleep.endTs <= sleep.startTs) return [];
 
   const minuteCount = Math.max(1, Math.ceil((sleep.endTs - sleep.startTs) / 60000));
-  const stages: SleepStage[] = [];
+  const stages: SleepTimelineStage[] = [];
   for (const segment of sleep.hypnogram) {
-    if (!segment || !isSleepStage(segment.stage) || !Number.isFinite(segment.minutes) || segment.minutes <= 0) continue;
+    if (!segment || !isSleepTimelineStage(segment.stage) || !Number.isFinite(segment.minutes) || segment.minutes <= 0) continue;
     const minutes = Math.max(0, Math.round(segment.minutes));
     for (let i = 0; i < minutes && stages.length < minuteCount; i += 1) stages.push(segment.stage);
     if (stages.length >= minuteCount) break;
@@ -107,10 +107,10 @@ export function buildSleepEpochMask(
   // it must not cherry-pick internal HR/RR epochs for the vital calculations.
   // Keep the complete interior of that boundary stable, then apply only
   // independent motion/band-state evidence when it is available.
-  const firstSleepIndex = stages.findIndex((stage) => stage !== 'awake');
+  const firstSleepIndex = stages.findIndex(isAsleepStage);
   let lastSleepIndex = -1;
   for (let index = stages.length - 1; index >= 0; index -= 1) {
-    if (stages[index] !== 'awake') {
+    if (isAsleepStage(stages[index])) {
       lastSleepIndex = index;
       break;
     }
@@ -124,7 +124,7 @@ export function buildSleepEpochMask(
       startTs,
       endTs,
       stage,
-      stable: insideStableWindow && independentEpochIsStable(startTs, endTs, independentQuality),
+      stable: stage !== 'unknown' && insideStableWindow && independentEpochIsStable(startTs, endTs, independentQuality),
     };
   });
 }
@@ -436,8 +436,12 @@ function contiguousHrStats(rows: QualityRow[]): { durationMs: number; longestMs:
   return { durationMs, longestMs };
 }
 
-function isSleepStage(value: unknown): value is SleepStage {
-  return value === 'awake' || value === 'light' || value === 'deep' || value === 'rem';
+function isSleepTimelineStage(value: unknown): value is SleepTimelineStage {
+  return value === 'awake' || value === 'light' || value === 'deep' || value === 'rem' || value === 'unknown';
+}
+
+function isAsleepStage(value: SleepTimelineStage | undefined): boolean {
+  return value === 'light' || value === 'deep' || value === 'rem';
 }
 
 function isFiniteHeartRate(value: unknown): value is number {

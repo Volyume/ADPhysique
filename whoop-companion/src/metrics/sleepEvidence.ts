@@ -13,6 +13,7 @@ export type SleepCorroborationEvidence = SleepStateEvidence & {
   motionMin?: number | null;
   stillMin?: number | null;
   movingMin?: number | null;
+  cappedBySafetyLimit?: boolean | null;
 };
 
 const LONG_AUTO_SLEEP_MIN = 7 * 60;
@@ -23,10 +24,12 @@ const AUTO_SLEEP_SAFETY_CEILING_MIN = 11 * 60;
 
 /** A result on the automatic ceiling was truncated, not naturally bounded. */
 export function autoSleepAtSafetyCeiling(
-  evidence: Pick<SleepCorroborationEvidence, 'inBedMin' | 'windowMin'> | null | undefined,
+  evidence: Pick<SleepCorroborationEvidence, 'inBedMin' | 'windowMin' | 'cappedBySafetyLimit'> | null | undefined,
   manual = false,
 ): boolean {
   if (manual) return false;
+  if (typeof evidence?.cappedBySafetyLimit === 'boolean') return evidence.cappedBySafetyLimit;
+  // Legacy persisted nights predate the explicit truncation flag.
   return evidenceWindowMin(evidence) >= AUTO_SLEEP_SAFETY_CEILING_MIN - 5;
 }
 

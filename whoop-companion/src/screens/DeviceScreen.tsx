@@ -1,16 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Alert, Linking, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import * as FileSystem from 'expo-file-system/legacy';
-import { File, Paths } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import { Card, Empty, PrimaryButton, Screen, SecondaryButton, SectionLabel, Stat } from '../ui/components';
+import { Card, NavRow, PrimaryButton, Screen, SecondaryButton, SectionLabel, Stat } from '../ui/components';
 import { colors, radius } from '../ui/theme';
 import { Nav } from '../ui/navigation';
-import { clearRawFrames, countRawFrames, getRawFramesPage } from '../db/database';
-import { WHOOP5_STEP_TICKS_PER_STEP } from '../metrics/bandSteps';
 import type { UserProfile } from '../metrics/strain';
 
 const STATUS_TEXT: Record<string, string> = {
@@ -25,9 +20,6 @@ const STATUS_TEXT: Record<string, string> = {
   error: 'Error',
 };
 
-const RAW_FRAME_EXPORT_PAGE_SIZE = 25;
-const MAX_SHARE_BYTES = 12 * 1024 * 1024;
-
 export function DeviceScreen({ nav }: { nav: Nav }) {
   const status = useStoreSelector(appStore, (s) => s.status);
   const detail = useStoreSelector(appStore, (s) => s.statusDetail);
@@ -35,12 +27,9 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const liveHr = useStoreSelector(appStore, (s) => s.liveHr);
   const liveRr = useStoreSelector(appStore, (s) => s.liveRr);
   const battery = useStoreSelector(appStore, (s) => s.battery);
-  const frameCount = useStoreSelector(appStore, (s) => s.frameCount);
-  const capturing = useStoreSelector(appStore, (s) => s.capturing);
   const draining = useStoreSelector(appStore, (s) => s.draining);
   const error = useStoreSelector(appStore, (s) => s.error);
   const profile = useStoreSelector(appStore, (s) => s.profile);
-  const bufferedRecords = useStoreSelector(appStore, (s) => s.bufferedRecords);
   const historySync = useStoreSelector(appStore, (s) => s.historySync);
   const lastHistorySync = useStoreSelector(appStore, (s) => s.lastHistorySync);
   const lastSyncTs = useStoreSelector(appStore, (s) => s.lastSyncTs);
@@ -49,30 +38,8 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const strapAlarm = useStoreSelector(appStore, (s) => s.strapAlarm);
   const steps = useStoreSelector(appStore, (s) => s.steps);
   const stepSource = useStoreSelector(appStore, (s) => s.stepSource);
-  const bandSteps = useStoreSelector(appStore, (s) => s.bandSteps);
   const bandStepEstimate = useStoreSelector(appStore, (s) => s.bandStepEstimate);
-  const bandStepDivisor = useStoreSelector(appStore, (s) => s.bandStepDivisor);
-  const [actualSteps, setActualSteps] = useState('');
-  const [exportProgress, setExportProgress] = useState<{ exported: number; total: number } | null>(null);
   const [alarmBusy, setAlarmBusy] = useState<'disable' | 'stop' | 'test' | null>(null);
-
-  // Frames actually written to the database (what export reads), polled so we can
-  // see whether persistence is keeping up with the live (in-memory) counter.
-  const [savedFrames, setSavedFrames] = useState<number | null>(null);
-  useEffect(() => {
-    let alive = true;
-    const tick = () => {
-      void countRawFrames().then((n) => {
-        if (alive) setSavedFrames(n);
-      });
-    };
-    tick();
-    const id = setInterval(tick, 3000);
-    return () => {
-      alive = false;
-      clearInterval(id);
-    };
-  }, []);
 
   const connected = status === 'connected';
   const effectiveSync = historySync ?? lastHistorySync;
@@ -80,8 +47,6 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
   const lastSyncText = effectiveSyncTs
     ? new Date(effectiveSyncTs).toLocaleString()
     : 'Not yet - connect to sync';
-  const historyRangeText = formatHistoryRange(effectiveSync?.firstSampleTs, effectiveSync?.lastSampleTs);
-  const stepRangeText = formatStepRange(bandStepEstimate?.firstTs, bandStepEstimate?.lastTs);
   const syncVerdict = getSyncVerdict({
     connected,
     draining,
@@ -92,14 +57,11 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
     hrSamples: effectiveSync?.hrSamples ?? 0,
     lastSyncTs: effectiveSyncTs ?? null,
   });
-  const stepCalibrated = Math.abs(bandStepDivisor - WHOOP5_STEP_TICKS_PER_STEP) > 0.05;
   const stepTrust = !bandStepEstimate
     ? 'awaiting sync'
     : bandStepEstimate.confidence === 'low'
       ? 'diagnostic only'
-      : stepCalibrated
-        ? 'band calibrated'
-        : 'band corroborated';
+      : 'band corroborated';
   const strapAlarmText =
     strapAlarm.pendingWrite === 'set'
       ? `queued for ${formatAlarmDate(strapAlarm.wakeTs)}`
@@ -108,27 +70,6 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
         : strapAlarm.enabled
           ? `set for ${formatAlarmDate(strapAlarm.wakeTs)}`
           : 'off in Pulse';
-
-  const applyStepCalibration = async () => {
-    const actual = Number(actualSteps.replace(/,/g, '').trim());
-    if (!Number.isFinite(actual) || actual <= 0) {
-      Alert.alert('Calibration needs a step count', 'Enter the real step count for the synced counter range shown on this screen.');
-      return;
-    }
-    try {
-      const divisor = await appStore.calibrateBandSteps(actual);
-      setActualSteps('');
-      Alert.alert('Step calibration updated', `${divisor.toFixed(1)} counter units per step`);
-    } catch (e) {
-      Alert.alert('Calibration unavailable', String(e));
-    }
-  };
-
-  const resetStepCalibration = async () => {
-    const divisor = await appStore.setBandStepDivisor(WHOOP5_STEP_TICKS_PER_STEP);
-    setActualSteps('');
-    Alert.alert('Step calibration reset', `${divisor.toFixed(1)} counter units per step`);
-  };
 
   const disableWakeAlarm = async () => {
     if (alarmBusy) return;
@@ -172,106 +113,6 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
     } finally {
       setAlarmBusy(null);
     }
-  };
-
-  const exportFrames = async () => {
-    if (exportProgress) return;
-    try {
-      const totalFrames = await countRawFrames();
-      if (totalFrames === 0) {
-        Alert.alert(
-          'Nothing to export yet',
-          'No frames are saved in the database. The on-screen “Captured frames” counter climbs for every frame received, but frames are only written to the database while “Start capture” is ON. Make sure capture is on and the strap is connected, wear it a while, then export.',
-        );
-        return;
-      }
-      setExportProgress({ exported: 0, total: totalFrames });
-      // Plain .txt is accepted by most Android share targets. Write page by
-      // page so large captures do not allocate one enormous JS string.
-      const file = new File(Paths.cache, `pulse-frames-${totalFrames}-${Date.now()}.txt`);
-      file.create({ overwrite: true });
-      const handle = file.open();
-      let exported = 0;
-      let lastRowId = 0;
-      try {
-        writeAscii(handle, `# VOLYUME Pulse raw frames: ${totalFrames}\n# epoch_ms\tsource\thex\n`);
-        for (;;) {
-          const page = await getRawFramesPage(lastRowId, RAW_FRAME_EXPORT_PAGE_SIZE);
-          if (!page.length) break;
-          for (const frame of page) {
-            writeAscii(handle, `${frame.ts}\t${frame.source}\t${frame.hex}\n`);
-          }
-          exported += page.length;
-          lastRowId = page[page.length - 1]!.rowId;
-          setExportProgress({ exported, total: totalFrames });
-          await pauseForUi();
-          if (page.length < RAW_FRAME_EXPORT_PAGE_SIZE) break;
-        }
-      } finally {
-        handle.close();
-      }
-      const uri = file.uri;
-      // Confirm the file genuinely landed on disk before we claim success.
-      const info = await FileSystem.getInfoAsync(uri);
-      if (!info.exists) {
-        Alert.alert('Export failed', 'The frames file could not be written to disk.');
-        return;
-      }
-      const sizeKb = 'size' in info && info.size ? Math.round(info.size / 1024) : 0;
-      const sizeBytes = 'size' in info && info.size ? info.size : 0;
-
-      if (sizeBytes > MAX_SHARE_BYTES) {
-        Alert.alert(
-          'Large export saved',
-          `${exported} frames (${sizeKb} KB) were written to:\n${uri}\n\nThe file is too large to hand to Android's share sheet safely, so Pulse skipped sharing to avoid the OutOfMemory crash.`,
-        );
-        return;
-      }
-
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(uri, {
-          mimeType: 'text/plain',
-          UTI: 'public.plain-text',
-          dialogTitle: `Export ${exported} captured frames`,
-        });
-        // Always confirm afterwards so there's visible feedback even if the share
-        // sheet is dismissed or offers no target.
-        Alert.alert(
-          'Frames exported',
-          `${exported} frames (${sizeKb} KB) written to:\n${uri}\n\nIf the share sheet had no usable app, the file is still saved at that path — you can reach it via a file manager.`,
-        );
-      } else {
-        Alert.alert('Saved', `${exported} frames (${sizeKb} KB) saved to:\n${uri}`);
-      }
-    } catch (e) {
-      Alert.alert('Export failed', String(e));
-    } finally {
-      setExportProgress(null);
-    }
-  };
-
-  const confirmClearFrames = async () => {
-    const totalFrames = await countRawFrames();
-    if (totalFrames === 0) {
-      Alert.alert('No saved frames', 'There are no captured frames saved in the database.');
-      setSavedFrames(0);
-      return;
-    }
-    Alert.alert(
-      'Clear captured frames?',
-      `${totalFrames.toLocaleString()} saved frame${totalFrames === 1 ? '' : 's'} will be deleted. Export first if these are still needed for decoder work.`,
-      [
-        { text: 'Keep frames', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: () => {
-            void clearRawFrames().then(() => setSavedFrames(0));
-          },
-        },
-      ],
-    );
   };
 
   return (
@@ -350,34 +191,9 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           <Stat label="Source" value={stepSource === 'band' ? 'WHOOP counter' : '-'} />
           <Stat label="Trust" value={stepTrust} />
         </View>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
-          <Stat label="Band estimate" value={bandSteps != null ? bandSteps.toLocaleString() : '-'} />
-          <Stat label="Raw counter" value={bandStepEstimate?.rawTicks ?? '-'} />
-          <Stat label="Units/step" value={bandStepDivisor.toFixed(1)} />
-        </View>
-        <Text style={styles.diagText}>Band confidence: {bandStepEstimate?.confidence ?? '-'}</Text>
-        <Text style={styles.diagText}>Movement-linked counter: {bandStepEstimate ? `${bandStepEstimate.movementLinkedPct}%` : '-'}</Text>
-        <Text style={styles.diagText}>Band counter range: {stepRangeText}</Text>
-        <View style={styles.calibrationRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.fieldLabel}>Actual synced-range steps</Text>
-            <TextInput
-              style={styles.input}
-              value={actualSteps}
-              onChangeText={setActualSteps}
-              keyboardType="number-pad"
-              placeholder="e.g. 2400"
-              placeholderTextColor={colors.textTertiary}
-            />
-          </View>
-          <View style={styles.calibrationActions}>
-            <SecondaryButton title="Apply" onPress={() => void applyStepCalibration()} />
-            <SecondaryButton title="Reset" onPress={() => void resetStepCalibration()} />
-          </View>
-        </View>
         <Text style={styles.hint}>
-          Steps come only from the WHOOP history counter. Movement-class evidence must corroborate the counter before
-          it is shown; calibration is optional and adjusts this strap's counter-to-step ratio.
+          Steps come from the WHOOP history counter and update after auto-sync. Detailed counter evidence and calibration
+          are available in Advanced device.
         </Text>
       </Card>
 
@@ -391,31 +207,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           </View>
         </View>
         <Text style={styles.diagText}>Last sync: {lastSyncText}</Text>
-        <Text style={styles.diagText}>Raw records archived: {bufferedRecords}</Text>
-        <Text style={styles.diagText}>Sync status: {effectiveSync?.status ?? 'Waiting for reconnect'}</Text>
-        <Text style={styles.diagText}>Sync mode: {draining ? 'running' : effectiveSync?.mode ?? 'none'}</Text>
-        <Text style={styles.diagText}>
-          Background guard: {keepAlive ? (keepAliveRunning ? 'running' : 'needs permission') : 'off'}
-        </Text>
-        <Text style={styles.diagText}>Sync finish: {effectiveSync?.reason ?? 'none yet'}</Text>
-        <Text style={styles.diagText}>
-          Durable chunks: {effectiveSync?.durableChunks ?? '-'} committed / {effectiveSync?.acknowledgedChunks ?? '-'} strap-acknowledged
-        </Text>
-        <Text style={styles.diagText}>
-          Cursor progress: {effectiveSync?.cursorAdvanced == null ? '-' : effectiveSync.cursorAdvanced ? 'new endpoint' : 'replay/no new endpoint'}
-        </Text>
-        <Text style={styles.diagText}>Decoded range: {historyRangeText}</Text>
-        <Text style={styles.diagText}>Decoded records: {effectiveSync?.decodedRecords ?? 0}</Text>
-        <Text style={styles.diagText}>HR samples backfilled: {effectiveSync?.hrSamples ?? 0}</Text>
-        <Text style={styles.diagText}>R-R intervals backfilled: {effectiveSync?.rrSamples ?? 0}</Text>
-        <Text style={styles.diagText}>Band step counters: {effectiveSync?.stepSamples ?? 0}</Text>
-        <Text style={styles.diagText}>WHOOP IMU samples: {effectiveSync?.motionSamples ?? 0}</Text>
-        <Text style={styles.diagText}>Raw sensor packets: {effectiveSync?.rawSensorRecords ?? 0}</Text>
-        <Text style={styles.diagText}>Validated vital rows: {effectiveSync?.rawVitalSamples ?? 0}</Text>
-        <Text style={styles.diagText}>
-          History layouts: {effectiveSync?.versions.length ? effectiveSync.versions.join(', ') : 'none yet'}
-        </Text>
-        <Text style={styles.diagText}>Rejected records: {effectiveSync?.rejectedRecords ?? 0}</Text>
+        <Text style={styles.diagText}>Sync status: {draining ? 'Syncing now' : effectiveSync?.status ?? 'Waiting for reconnect'}</Text>
         <SecondaryButton
           title={draining ? 'Syncing…' : 'Sync now'}
           onPress={() => void appStore.runHistoryDrain()}
@@ -433,6 +225,7 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
 
       <SectionLabel>Background sync</SectionLabel>
       <Card>
+        <Text style={styles.diagText}>Auto-connect: enabled for the remembered strap</Text>
         <View style={styles.toggleRow}>
           <Text style={styles.toggleLabel}>Background auto-sync protection</Text>
           <Switch
@@ -442,10 +235,10 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
           />
         </View>
         <Text style={styles.hint}>
-          On by default for long WHOOP 5 syncs while the phone is locked. Android may ask for location and notification
-          permission so the foreground service can keep Bluetooth alive. Device sync shows whether that guard is
-          actually running.
+          Auto-connect resumes the remembered strap. The guard keeps long history syncs alive while the phone is locked;
+          Android may ask for Bluetooth and notification permission.
         </Text>
+        <Text style={styles.diagText}>Guard status: {keepAlive ? (keepAliveRunning ? 'running' : 'needs permission') : 'off'}</Text>
         {keepAlive && !keepAliveRunning ? (
           <View style={styles.keepAliveActions}>
             <SecondaryButton title="Retry guard" onPress={() => void appStore.setBackgroundKeepAlive(true)} />
@@ -454,46 +247,16 @@ export function DeviceScreen({ nav }: { nav: Nav }) {
         ) : null}
       </Card>
 
-      <SectionLabel>Diagnostics</SectionLabel>
+      <SectionLabel>Advanced</SectionLabel>
       <Card>
-        <Text style={styles.diagText}>Captured frames (this session): {frameCount}</Text>
-        <Text style={styles.diagText}>
-          Frames saved to database: {savedFrames == null ? '…' : savedFrames}
-          {savedFrames != null && capturing && savedFrames === 0 && frameCount > 0
-            ? '  ⚠ frames arriving but not saving'
-            : ''}
-        </Text>
-        <View style={{ flexDirection: 'row', gap: 12 }}>
-          <View style={{ flex: 1 }}>
-            <SecondaryButton
-              title={capturing ? 'Stop capture' : 'Start capture'}
-              onPress={appStore.toggleCapture}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <SecondaryButton
-              title={draining ? 'Draining…' : 'Pull history'}
-              onPress={() => void appStore.runHistoryDrain()}
-              disabled={!connected || draining}
-            />
-          </View>
-        </View>
-        <SecondaryButton
-          title={exportProgress ? 'Exporting...' : 'Export captured frames'}
-          onPress={() => void exportFrames()}
-          disabled={!!exportProgress}
+        <NavRow
+          label="Advanced device"
+          value="Raw frames & diagnostics"
+          icon="code-slash"
+          iconColor={colors.textSecondary}
+          onPress={() => nav.navigate({ name: 'advancedDevice' })}
+          last
         />
-        {exportProgress ? (
-          <Text style={styles.diagText}>
-            Exported {exportProgress.exported.toLocaleString()} / {exportProgress.total.toLocaleString()} frames
-          </Text>
-        ) : null}
-        <SecondaryButton title="Clear captured frames" onPress={() => void confirmClearFrames()} />
-        <Text style={styles.hint}>
-          Capturing the strap's proprietary frames lets the history / sleep decoder be finalised. Export and share them
-          to have them decoded. Very large exports are saved to the phone and not opened in Android's share sheet, which
-          avoids the memory crash from handing huge text files to another app.
-        </Text>
       </Card>
     </Screen>
   );
@@ -529,14 +292,13 @@ function ProfileEditor({ profile }: { profile: UserProfile }) {
 
   return (
     <Card>
-      <View style={{ flexDirection: 'row', gap: 12 }}>
+      <View style={styles.fieldRow}>
         <Field label="Age" value={age} onChange={setAge} />
         <Field label="Resting HR" value={rhr} onChange={setRhr} />
         <Field label="Max HR (opt)" value={maxHr} onChange={setMaxHr} />
       </View>
-      <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+      <View style={styles.fieldRow}>
         <Field label="Weight (kg)" value={weight} onChange={setWeight} />
-        <View style={{ flex: 2 }} />
       </View>
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
         {(['male', 'female'] as const).map((s) => (
@@ -556,28 +318,11 @@ function ProfileEditor({ profile }: { profile: UserProfile }) {
 
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.profileField}>
       <Text style={styles.fieldLabel}>{label}</Text>
       <TextInput style={styles.input} value={value} onChangeText={onChange} keyboardType="number-pad" placeholderTextColor={colors.textTertiary} />
     </View>
   );
-}
-
-type WritableFileHandle = {
-  writeBytes(bytes: Uint8Array): void;
-  close(): void;
-};
-
-function writeAscii(handle: WritableFileHandle, text: string): void {
-  const bytes = new Uint8Array(text.length);
-  for (let i = 0; i < text.length; i += 1) {
-    bytes[i] = text.charCodeAt(i) & 0x7f;
-  }
-  handle.writeBytes(bytes);
-}
-
-function pauseForUi(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 function formatAlarmDate(ts: number | null): string {
@@ -602,15 +347,6 @@ function formatHistoryRange(firstTs?: number, lastTs?: number): string {
   return `${first} - ${last}`;
 }
 
-function formatStepRange(firstTs?: number, lastTs?: number): string {
-  if (!firstTs || !lastTs) return 'none today';
-  const lastAgeMin = Math.max(0, Math.round((Date.now() - lastTs) / 60000));
-  const range = formatHistoryRange(firstTs, lastTs);
-  if (lastAgeMin < 1) return `${range} (fresh)`;
-  if (lastAgeMin < 60) return `${range} (${lastAgeMin}m old)`;
-  return `${range} (${Math.round(lastAgeMin / 60)}h old)`;
-}
-
 function getSyncVerdict(input: {
   connected: boolean;
   draining: boolean;
@@ -624,7 +360,7 @@ function getSyncVerdict(input: {
   if (input.draining) {
     return {
       title: 'Sync is running',
-      body: input.rawRecords > 0 ? `${input.rawRecords} raw records received so far; keep the app near the strap.` : 'Waiting for stored history from the strap.',
+      body: input.rawRecords > 0 ? `${input.rawRecords} history records received so far; keep the app near the strap.` : 'Waiting for stored history from the strap.',
       color: colors.strainBlue,
     };
   }
@@ -670,9 +406,9 @@ const styles = StyleSheet.create({
   syncBody: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 2 },
   toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   toggleLabel: { color: colors.text, fontSize: 15, fontWeight: '600', flex: 1, marginRight: 12 },
-  calibrationRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-end', marginTop: 12 },
-  calibrationActions: { width: 118, gap: 8 },
   keepAliveActions: { gap: 8, marginTop: 12 },
+  fieldRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 12 },
+  profileField: { flexGrow: 1, flexBasis: 96, minWidth: 96 },
   fieldLabel: { color: colors.textSecondary, fontSize: 12, marginBottom: 4 },
   input: {
     backgroundColor: colors.surface,

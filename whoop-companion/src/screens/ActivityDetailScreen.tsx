@@ -23,7 +23,7 @@ export function ActivityDetailScreen({ nav, id }: { nav: Nav; id: string }) {
 
   useEffect(() => {
     if (activity) {
-      void appStore.activityDetail(activity.startTs, activity.endTs).then((d) => {
+      void appStore.activityDetail(activity.startTs, activity.endTs, activity.pauseIntervals).then((d) => {
         setZones(d.zones);
         setHr(d.hr);
       });

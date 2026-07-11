@@ -3,9 +3,13 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { appStore } from '../state/appStore';
+import { useStoreSelector } from '../state/store';
 import { Card, Empty, PrimaryButton, Screen, SectionLabel } from '../ui/components';
 import { colors, fonts } from '../ui/theme';
 import { Nav } from '../ui/navigation';
+import { formatDistance } from '../sensors/location';
+import { formatDuration } from '../util/time';
+import type { CardioRow } from '../db/database';
 import {
   PRESET_WORKOUTS,
   StructuredWorkout,
@@ -20,6 +24,11 @@ function fmtDur(sec: number): string {
 }
 
 export function WorkoutsScreen({ nav }: { nav: Nav }) {
+  const cardio = useStoreSelector(appStore, (s) => s.cardio);
+  const recentWorkouts = [...cardio]
+    .filter((activity) => activity.source !== 'nap')
+    .sort((a, b) => b.startTs - a.startTs)
+    .slice(0, 8);
   const [saved, setSaved] = useState<StructuredWorkout[]>([]);
   // Builder state.
   const [warmup, setWarmup] = useState(10);
@@ -121,6 +130,24 @@ export function WorkoutsScreen({ nav }: { nav: Nav }) {
       </Card>
 
       <Empty text="Structured workouts guide you step-by-step in the live session, buzzing on each interval change. Target zones use HRR (Karvonen): Z1–Z5." />
+      <SectionLabel>Recent workouts</SectionLabel>
+      {recentWorkouts.length > 0 ? (
+        <Card>
+          {recentWorkouts.map((activity, index) => (
+            <RecentWorkoutRow
+              key={activity.id}
+              activity={activity}
+              onPress={() => nav.navigate({ name: 'activity', id: activity.id })}
+              last={index === recentWorkouts.length - 1}
+            />
+          ))}
+        </Card>
+      ) : (
+        <Card>
+          <Empty text="No non-nap workouts are available to review yet." />
+        </Card>
+      )}
+
     </Screen>
   );
 }
@@ -167,6 +194,29 @@ function Stepper({ label, value, setValue, step, min, max, last }: { label: stri
   );
 }
 
+function RecentWorkoutRow({ activity, onPress, last }: { activity: CardioRow; onPress: () => void; last: boolean }) {
+  const durationMin = Math.round(activity.activeDurationMin ?? (activity.endTs - activity.startTs) / 60000);
+  const summary = [
+    activity.strain != null ? `Strain ${activity.strain.toFixed(1)}` : null,
+    activity.stepSource === 'band' && activity.steps != null ? `${activity.steps.toLocaleString()} steps` : null,
+    activity.distanceM != null ? formatDistance(activity.distanceM) : null,
+  ].filter(Boolean).join(' | ');
+
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.recentRow, !last && styles.recentRowBorder, pressed && styles.pressed]}>
+      <View style={styles.recentMain}>
+        <Text style={styles.recentActivity} numberOfLines={1}>{activity.activity}</Text>
+        <Text style={styles.recentMeta} numberOfLines={1}>
+          {new Date(activity.startTs).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+          {' | '}{formatDuration(durationMin)}
+        </Text>
+      </View>
+      {summary ? <Text style={styles.recentSummary} numberOfLines={2}>{summary}</Text> : null}
+      <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
   name: { color: colors.text, fontSize: 16, fontFamily: fonts.textBold },
@@ -183,4 +233,11 @@ const styles = StyleSheet.create({
   saveText: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
   warning: { color: colors.recoveryYellow, fontSize: 12, lineHeight: 17, marginTop: 10, fontFamily: fonts.text },
   disabled: { opacity: 0.55 },
+  recentRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
+  recentRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  recentMain: { flex: 1, minWidth: 120 },
+  recentActivity: { color: colors.text, fontSize: 15, fontFamily: fonts.textBold },
+  recentMeta: { color: colors.textSecondary, fontSize: 12, marginTop: 3, fontFamily: fonts.text },
+  recentSummary: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, maxWidth: '48%', textAlign: 'right', fontFamily: fonts.text },
+  pressed: { opacity: 0.7 },
 });

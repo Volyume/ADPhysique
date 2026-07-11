@@ -57,6 +57,7 @@ export const stressColors = { low: '#43cb00', medium: '#ffde00', high: '#ff0026'
 /** WHOOP sleep-stage ramp, light (awake) → dark (deep), within the blue family. */
 export const sleepStageColors = {
   awake: '#c8c8c8', // whoop_gray_light
+  unknown: '#5d6469', // missing sensor coverage, not inferred wake
   rem: '#7ba1bb', // whoop_blue_light
   light: '#597483', // whoop_blue_medium
   deep: '#14384d', // whoop_blue_dark

@@ -69,6 +69,7 @@ jobs:
           npm run test:weekly-plan
           npm run test:physiology
           npm run test:history-sync
+          npm run test:sync-lifecycle
           npm run test:keepalive
           npm run test:readiness
           npm run test:overnight-vitals

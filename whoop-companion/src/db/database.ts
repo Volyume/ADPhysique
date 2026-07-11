@@ -68,7 +68,8 @@ export type SleepDetail = {
   sleepStateUpMin?: number | null; // decoded state 3
   coveragePct?: number | null; // HR sample coverage across the scored window
   confidence?: 'high' | 'medium' | 'low' | null;
-  stageEstimate?: Array<{ stage: 'awake' | 'light' | 'deep' | 'rem'; minutes: number }> | null;
+  cappedBySafetyLimit?: boolean | null;
+  stageEstimate?: Array<{ stage: 'awake' | 'light' | 'deep' | 'rem' | 'unknown'; minutes: number }> | null;
 };
 export type DailyMetricRow = {
   day: string; // YYYY-MM-DD (local)
@@ -123,6 +124,8 @@ export type JournalRow = {
   value: string;
   createdAt: number;
 };
+
+const MAX_SLEEP_WINDOW_MIN = 30 * 60;
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 let writeQueue: Promise<void> = Promise.resolve();
@@ -447,7 +450,7 @@ export async function upsertDailyMetric(m: DailyMetricRow): Promise<void> {
     const resp = cleanRespiratoryRate(m.resp);
     const sleepPerf = cleanSleepFraction(m.sleepPerf);
     const sleepDetail = cleanSleepDetail(m.sleepDetail);
-    const sleepMin = finiteRange(m.sleepMin, 0, 24 * 60, true);
+    const sleepMin = finiteRange(m.sleepMin, 0, MAX_SLEEP_WINDOW_MIN, true);
     const strain = finiteRange(m.strain, 0, 21);
     const steps = m.stepSource === 'band' ? finiteRange(m.steps, 0, 500_000, true) : null;
     const stepSource = steps != null ? 'band' : null;
@@ -498,7 +501,12 @@ function cleanSleepWindow(
 ): { start: number | null; end: number | null } {
   const cleanStart = finiteRange(start, 1, Number.MAX_SAFE_INTEGER, true);
   const cleanEnd = finiteRange(end, 1, Number.MAX_SAFE_INTEGER, true);
-  if (cleanStart == null || cleanEnd == null || cleanEnd <= cleanStart || cleanEnd - cleanStart > 24 * 60 * 60 * 1000) {
+  if (
+    cleanStart == null ||
+    cleanEnd == null ||
+    cleanEnd <= cleanStart ||
+    cleanEnd - cleanStart > MAX_SLEEP_WINDOW_MIN * 60 * 1000
+  ) {
     return { start: null, end: null };
   }
   return { start: cleanStart, end: cleanEnd };
@@ -566,6 +574,25 @@ function cleanSleepFraction(value: number | null | undefined): number | null {
   return Math.max(0, Math.min(1, value));
 }
 
+function cleanSleepStageEstimate(value: unknown): SleepDetail['stageEstimate'] {
+  if (value == null) return value as null | undefined;
+  if (!Array.isArray(value)) return null;
+  return value.flatMap((segment) => {
+    if (!segment || typeof segment !== 'object') return [];
+    const stage = (segment as { stage?: unknown }).stage;
+    const minutes = (segment as { minutes?: unknown }).minutes;
+    if (
+      (stage !== 'awake' && stage !== 'light' && stage !== 'deep' && stage !== 'rem' && stage !== 'unknown') ||
+      typeof minutes !== 'number' ||
+      !Number.isFinite(minutes) ||
+      minutes < 0
+    ) {
+      return [];
+    }
+    return [{ stage, minutes }];
+  });
+}
+
 function cleanSleepDetail(detail: SleepDetail | null | undefined): SleepDetail | null {
   if (!detail) return null;
   const confidence =
@@ -603,6 +630,8 @@ function cleanSleepDetail(detail: SleepDetail | null | undefined): SleepDetail |
     sleepStateUpMin: cleanNonNegative(detail.sleepStateUpMin),
     coveragePct: cleanPct(detail.coveragePct),
     confidence,
+    cappedBySafetyLimit: typeof detail.cappedBySafetyLimit === 'boolean' ? detail.cappedBySafetyLimit : null,
+    stageEstimate: cleanSleepStageEstimate(detail.stageEstimate),
   };
 }
 
@@ -644,7 +673,7 @@ function mapDaily(r: {
     resp: cleanRespiratoryRate(r.resp),
     spo2: cleanPct(r.spo2),
     skinTempC: cleanSkinTemp(r.skin_temp_c),
-    sleepMin: finiteRange(r.sleep_min, 0, 24 * 60, true),
+    sleepMin: finiteRange(r.sleep_min, 0, MAX_SLEEP_WINDOW_MIN, true),
     sleepPerf: cleanSleepFraction(r.sleep_perf),
     strain: finiteRange(r.strain, 0, 21),
     steps: r.step_source === 'band' ? finiteRange(r.steps, 0, 500_000, true) : null,
@@ -668,7 +697,7 @@ function mappedSleepFields(
   detail: SleepDetail | null,
 ): Pick<DailyMetricRow, 'sleepStart' | 'sleepEnd' | 'deepMin' | 'remMin' | 'lightMin' | 'awakeMin'> {
   const window = cleanSleepWindow(row.sleep_start, row.sleep_end);
-  const sleepMin = finiteRange(row.sleep_min, 0, 24 * 60, true);
+  const sleepMin = finiteRange(row.sleep_min, 0, MAX_SLEEP_WINDOW_MIN, true);
   const stages = cleanStageMinutes(
     { deepMin: row.deep_min, remMin: row.rem_min, lightMin: row.light_min, awakeMin: row.awake_min },
     sleepMin,
@@ -1060,27 +1089,46 @@ export type HistoryPersistBatch = {
   rawVitals: RawVitalSampleRow[];
 };
 
-/** Persist one decoded history chunk in a single transaction. */
-export async function persistHistoryBatch(batch: HistoryPersistBatch): Promise<void> {
-  await serializeWrite(async () => {
-    const db = await getDb();
-    for (let attempt = 0; ; attempt += 1) {
-      try {
-        await db.withTransactionAsync(async () => {
-    const historyStmt = await db.prepareAsync(
-      'INSERT OR IGNORE INTO history_records (ts, start_id, end_id, hex, decoded) VALUES (?, NULL, NULL, ?, 0)',
+type HistoryStatements = [
+  SQLite.SQLiteStatement,
+  SQLite.SQLiteStatement,
+  SQLite.SQLiteStatement,
+  SQLite.SQLiteStatement,
+  SQLite.SQLiteStatement,
+  SQLite.SQLiteStatement,
+];
+
+async function finalizeHistoryStatements(statements: SQLite.SQLiteStatement[]): Promise<void> {
+  // Attempt every finalizer so one cleanup failure cannot leave later statements open.
+  let finalizeError: unknown = null;
+  for (const statement of statements) {
+    try {
+      await statement.finalizeAsync();
+    } catch (error) {
+      finalizeError ??= error;
+    }
+  }
+  if (finalizeError) throw finalizeError;
+}
+
+async function prepareHistoryStatements(db: SQLite.SQLiteDatabase): Promise<HistoryStatements> {
+  const statements: SQLite.SQLiteStatement[] = [];
+  try {
+    statements.push(
+      await db.prepareAsync(
+        'INSERT OR IGNORE INTO history_records (ts, start_id, end_id, hex, decoded) VALUES (?, NULL, NULL, ?, 0)',
+      ),
     );
-    const hrStmt = await db.prepareAsync(
-      UPSERT_HR_SAMPLE_SQL,
+    statements.push(await db.prepareAsync(UPSERT_HR_SAMPLE_SQL));
+    statements.push(
+      await db.prepareAsync(
+        'INSERT OR REPLACE INTO step_samples (ts, counter, activity_class) VALUES (?, ?, ?)',
+      ),
     );
-    const stepStmt = await db.prepareAsync(
-      'INSERT OR REPLACE INTO step_samples (ts, counter, activity_class) VALUES (?, ?, ?)',
-    );
-    const sleepStmt = await db.prepareAsync(
-      'INSERT OR REPLACE INTO sleep_state_samples (ts, state) VALUES (?, ?)',
-    );
-    const motionStmt = await db.prepareAsync(
-      `INSERT INTO motion_samples (ts, intensity, source) VALUES (?, ?, ?)
+    statements.push(await db.prepareAsync('INSERT OR REPLACE INTO sleep_state_samples (ts, state) VALUES (?, ?)'));
+    statements.push(
+      await db.prepareAsync(
+        `INSERT INTO motion_samples (ts, intensity, source) VALUES (?, ?, ?)
        ON CONFLICT(ts) DO UPDATE SET
          intensity=CASE
            WHEN excluded.source = 'whoop5_v21_imu'
@@ -1096,48 +1144,61 @@ export async function persistHistoryBatch(batch: HistoryPersistBatch): Promise<v
            THEN excluded.source
            ELSE motion_samples.source
          END`,
+      ),
     );
-    const vitalStmt = await db.prepareAsync(
-      `INSERT INTO raw_vital_samples (ts, spo2, skin_temp_c) VALUES (?, ?, ?)
+    statements.push(
+      await db.prepareAsync(
+        `INSERT INTO raw_vital_samples (ts, spo2, skin_temp_c) VALUES (?, ?, ?)
        ON CONFLICT(ts) DO UPDATE SET
          spo2=COALESCE(excluded.spo2, raw_vital_samples.spo2),
          skin_temp_c=COALESCE(excluded.skin_temp_c, raw_vital_samples.skin_temp_c)`,
+      ),
     );
+  } catch (error) {
     try {
-      for (const hex of batch.framesHex) await historyStmt.executeAsync(batch.rawTs, hex);
-      for (const sample of batch.hr) {
-        if (!isPlausibleHeartRate(sample.bpm) || !Number.isFinite(sample.ts) || sample.ts <= 0) continue;
-        await hrStmt.executeAsync(
-          sample.ts,
-          sample.bpm,
-          JSON.stringify(cleanRrIntervals(sample.rr)),
-          sample.source ?? null,
-          finiteRange(sample.confidence, 0, 1),
-        );
-      }
-      for (const sample of batch.steps) {
-        await stepStmt.executeAsync(sample.ts, sample.counter, sample.activityClass);
-      }
-      for (const sample of batch.sleepStates) await sleepStmt.executeAsync(sample.ts, sample.state);
-      for (const sample of batch.motion) {
-        await motionStmt.executeAsync(sample.ts, sample.intensity, sample.source);
-      }
-      for (const sample of batch.rawVitals) {
-        await vitalStmt.executeAsync(sample.ts, sample.spo2, sample.skinTempC);
-      }
-    } finally {
-      // Finalize every statement even if one finalizer fails; leaked statements
-      // can keep SQLite locked for the next history chunk.
-      let finalizeError: unknown = null;
-      for (const statement of [historyStmt, hrStmt, stepStmt, sleepStmt, motionStmt, vitalStmt]) {
-        try {
-          await statement.finalizeAsync();
-        } catch (error) {
-          finalizeError ??= error;
-        }
-      }
-      if (finalizeError) throw finalizeError;
+      await finalizeHistoryStatements(statements);
+    } catch {
+      // Preserve the prepare error while still attempting every statement cleanup.
     }
+    throw error;
+  }
+  return statements as HistoryStatements;
+}
+
+/** Persist one decoded history chunk in a single transaction. */
+export async function persistHistoryBatch(batch: HistoryPersistBatch): Promise<void> {
+  await serializeWrite(async () => {
+    const db = await getDb();
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        await db.withTransactionAsync(async () => {
+          const [historyStmt, hrStmt, stepStmt, sleepStmt, motionStmt, vitalStmt] =
+            await prepareHistoryStatements(db);
+          try {
+            for (const hex of batch.framesHex) await historyStmt.executeAsync(batch.rawTs, hex);
+            for (const sample of batch.hr) {
+              if (!isPlausibleHeartRate(sample.bpm) || !Number.isFinite(sample.ts) || sample.ts <= 0) continue;
+              await hrStmt.executeAsync(
+                sample.ts,
+                sample.bpm,
+                JSON.stringify(cleanRrIntervals(sample.rr)),
+                sample.source ?? null,
+                finiteRange(sample.confidence, 0, 1),
+              );
+            }
+            for (const sample of batch.steps) {
+              await stepStmt.executeAsync(sample.ts, sample.counter, sample.activityClass);
+            }
+            for (const sample of batch.sleepStates) await sleepStmt.executeAsync(sample.ts, sample.state);
+            for (const sample of batch.motion) {
+              await motionStmt.executeAsync(sample.ts, sample.intensity, sample.source);
+            }
+            for (const sample of batch.rawVitals) {
+              await vitalStmt.executeAsync(sample.ts, sample.spo2, sample.skinTempC);
+            }
+          } finally {
+            await finalizeHistoryStatements([historyStmt, hrStmt, stepStmt, sleepStmt, motionStmt, vitalStmt]);
+          }
         });
         return;
       } catch (error) {

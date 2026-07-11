@@ -35,9 +35,10 @@ const BASE_NEED_MIN = 480;
 // WHOOP "Last Night" stage order, % is of TIME IN BED (verified against the app).
 const STAGE_EDU = [
   { key: 'awake', name: 'Awake', color: sleepStageColors.awake, desc: 'Brief wake-ups. A few are normal; many fragment recovery.' },
-  { key: 'light', name: 'Light', color: sleepStageColors.light, desc: 'The bridge between wake and deep — usually the largest share.' },
-  { key: 'deep', name: 'SWS (Deep)', color: sleepStageColors.deep, desc: 'Slow-wave sleep: physical repair, growth hormone, immunity. Restorative.' },
-  { key: 'rem', name: 'REM', color: sleepStageColors.rem, desc: 'Dreaming sleep: memory, learning and mood. Restorative.' },
+  { key: 'light', name: 'Light', color: sleepStageColors.light, desc: 'Estimated sleep outside the stronger deep or REM patterns.' },
+  { key: 'deep', name: 'Deep', color: sleepStageColors.deep, desc: 'Estimated from lower heart rate, higher HRV and low movement.' },
+  { key: 'rem', name: 'REM', color: sleepStageColors.rem, desc: 'Estimated from relative heart rate, HRV and low movement.' },
+  { key: 'unknown', name: 'Unscored', color: sleepStageColors.unknown, desc: 'No usable heart-rate sample. This time is not counted as sleep or wake.' },
 ] as const;
 
 export function SleepScreen({ nav }: { nav: Nav }) {
@@ -51,7 +52,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const today = useStoreSelector(appStore, (s) => s.today);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
-  const [nightHr, setNightHr] = useState<number[]>([]);
+  const [nightHr, setNightHr] = useState<Array<number | null>>([]);
   const [pinnedWakeMinute, setPinnedWakeMinute] = useState<number | null>(null);
   const [planningWindowMin, setPlanningWindowMin] = useState(30);
 
@@ -197,9 +198,9 @@ export function SleepScreen({ nav }: { nav: Nav }) {
                     key={s.key}
                     name={s.name}
                     color={s.color}
-                    minutes={sleep.stages[s.key]}
+                    minutes={s.key === 'unknown' ? sleep.unscoredMin : sleep.stages[s.key]}
                     total={tib}
-                    typicalPct={typical[s.key]}
+                    typicalPct={s.key === 'unknown' ? null : typical[s.key]}
                   />
                 ))}
               </View>
@@ -271,7 +272,8 @@ export function SleepScreen({ nav }: { nav: Nav }) {
           naps.map((nap, i) => {
             const detail = parseNapDetail(nap.notes);
             const credit = napCreditMin(nap);
-            const label = `${formatClock(nap.startTs)} Nap`;
+            const episodeLabel = (detail?.inBedMin ?? 0) > 90 ? 'Additional sleep' : 'Nap';
+            const label = `${formatClock(nap.startTs)} ${episodeLabel}`;
             const source = detail?.autoDetected ? 'auto' : 'timer';
             return (
               <NavRow
@@ -356,6 +358,22 @@ function sleepFocus(input: {
       icon: 'moon',
       color: colors.sleepTeal,
       route: { name: 'sleepCoach' },
+    };
+  }
+
+  if (
+    autoSleepAtSafetyCeiling(input.sleep) ||
+    input.sleep.unscoredMin >= Math.max(30, Math.ceil(input.sleep.inBedMin * 0.15))
+  ) {
+    return {
+      badge: 'CHECK',
+      title: 'Review the detected sleep window',
+      body: 'The timeline contains a detector limit or a substantial unscored gap. Confirm bed and final wake before using this night as a trend.',
+      actionLabel: 'Adjust and rescan',
+      actionValue: formatDuration(input.sleep.inBedMin),
+      icon: 'create',
+      color: colors.recoveryYellow,
+      route: { name: 'editSleep' },
     };
   }
 

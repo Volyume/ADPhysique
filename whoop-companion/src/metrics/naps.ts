@@ -1,5 +1,6 @@
 import type { CardioRow } from '../db/database';
 import type { SleepResult } from './sleep';
+import { sleepEvidencePct } from './sleepEvidence';
 
 export type StoredNapDetail = {
   kind: 'nap_sleep';
@@ -18,6 +19,7 @@ export type StoredNapDetail = {
 const MAX_NAP_CREDIT_MIN = 120;
 const MAX_UNVERIFIED_NAP_CREDIT_MIN = 60;
 const MINUTE_MS = 60_000;
+export const MAX_AUTO_SECONDARY_SLEEP_MIN = 4 * 60;
 
 export type NapInterval = Pick<CardioRow, 'startTs' | 'endTs'>;
 
@@ -32,6 +34,30 @@ export function hasOverlappingNap(candidate: NapInterval, existing: NapInterval[
 
 export function canInsertAutoNap(candidate: NapInterval, existing: NapInterval[]): boolean {
   return isValidInterval(candidate.startTs, candidate.endTs) && !hasOverlappingNap(candidate, existing);
+}
+
+/** Admit a long split-sleep episode only with stronger evidence than a nap. */
+export function autoSecondarySleepIsReliable(nap: SleepResult, boundariesCovered: boolean): boolean {
+  const coveragePct = Math.round((nap.signalMin / Math.max(1, nap.inBedMin)) * 100);
+  const corroborationPct = sleepEvidencePct(nap);
+  const baseReliable = (
+    nap.inBedMin >= 20 &&
+    nap.inBedMin <= MAX_AUTO_SECONDARY_SLEEP_MIN &&
+    nap.asleepMin >= 15 &&
+    nap.signalMin >= 20 &&
+    coveragePct >= 60 &&
+    nap.motionMin >= 12 &&
+    corroborationPct >= 20 &&
+    nap.efficiency >= 0.6
+  );
+  if (!baseReliable) return false;
+  if (nap.inBedMin <= 90) return true;
+  return (
+    boundariesCovered &&
+    coveragePct >= 70 &&
+    corroborationPct >= 45 &&
+    nap.signalMin >= Math.ceil(nap.inBedMin * 0.7)
+  );
 }
 
 export function napDetailFromSleep(sleep: SleepResult, autoDetected: boolean): StoredNapDetail {

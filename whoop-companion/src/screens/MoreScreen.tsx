@@ -9,9 +9,6 @@ import { Nav } from '../ui/navigation';
 export function MoreScreen({ nav }: { nav: Nav }) {
   const status = useStoreSelector(appStore, (s) => s.status);
   const battery = useStoreSelector(appStore, (s) => s.battery);
-  const today = useStoreSelector(appStore, (s) => s.today);
-  const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
-  const historyDay = today?.day ?? recentDays[0]?.day ?? null;
 
   return (
     <Screen title="More">
@@ -31,15 +28,13 @@ export function MoreScreen({ nav }: { nav: Nav }) {
       <Card style={{ paddingVertical: 2 }}>
         <NavRow label="Sleep Coach" icon="moon" iconColor={colors.sleepTeal} onPress={() => nav.navigate({ name: 'sleepCoach' })} />
         <NavRow label="Weekly Plan" icon="calendar" iconColor={colors.greenVibrant} onPress={() => nav.navigate({ name: 'weeklyPlan' })} />
-        {historyDay ? (
-          <NavRow
-            label="Daily history"
-            icon="calendar"
-            iconColor={colors.strainBlue}
-            value={historyDay}
-            onPress={() => nav.navigate({ name: 'day', day: historyDay })}
-          />
-        ) : null}
+        <NavRow
+          label="History"
+          icon="calendar"
+          iconColor={colors.strainBlue}
+          value="Recent days"
+          onPress={() => nav.navigate({ name: 'history' })}
+        />
         <NavRow label="Trends" icon="trending-up" iconColor={colors.recoveryGreen} onPress={() => nav.navigate({ name: 'trends' })} />
         <NavRow label="Journal" icon="book" iconColor={colors.recoveryYellow} onPress={() => nav.navigate({ name: 'journal' })} last />
       </Card>
