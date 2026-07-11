@@ -262,7 +262,10 @@ only after the R-campaign closes. Corrections locked in that message:_
   otherwise is rejected. "Log your first workout free" stays an
   acquisition CTA only._
 
-Order: **C1** trial-copy contradiction -> **C2** ProUpgrade telemetry
+Order: **C1** trial-copy contradiction (DONE bfa269e - bodies drop the
+trial sentence, converging on the NO_TRIAL shape; the badge CTA is the
+single source of truth; MOVE_4 doc carries a dated amendment; no
+billing logic touched) -> **C2** ProUpgrade telemetry
 (impression + entry source, period choice, CTA, sheet start,
 cancel/failure/completion, restore attempt/result; reuse allow-list +
 opt-out; no duplicate server-authoritative purchase events) -> **C7**
