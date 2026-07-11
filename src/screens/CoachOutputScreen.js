@@ -2942,7 +2942,9 @@ const styles = StyleSheet.create({
   adjustmentIconWrap: {
     width: 32,
     height: 32,
-    borderRadius: radius.sm,
+    // R2 (2026-07-11): icon-backing family -> radius.md (control/input/
+    // icon-backing class, FOOD-DESIGN-STANDARD.md section 4). Was radius.sm.
+    borderRadius: radius.md,
     backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',

@@ -843,7 +843,9 @@ const styles = StyleSheet.create({
   },
   toggleBtn: {
     padding: spacing.xs,
-    borderRadius: radius.sm,
+    // R2 (2026-07-11): control class -> radius.md (control/input/icon-backing,
+    // FOOD-DESIGN-STANDARD.md section 4). Was radius.sm.
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -967,9 +969,14 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   cardDate: {
+    // Theme gap: no md+bold type role exists; the raw pair stays (weight
+    // preserved) pending a role. R2 (2026-07-11): this is a date readout
+    // ("7 Jul 2026"), so it gains tabular figures like every other numeral
+    // readout on this screen (FOOD-DESIGN-STANDARD.md section 7.2 table date).
     fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
+    fontVariant: ['tabular-nums'],
   },
   cardTime: {
     ...type.caption,
@@ -1152,7 +1159,7 @@ function buildLiveStyles(t) {
     dayNumSelected: { color: t.colors.onPrimary },
     clearDayBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     clearDayText: { ...t.type.label, color: t.colors.textPrimary },
-    cardDate: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    cardDate: { fontSize: t.fontSize.md, color: t.colors.textPrimary, fontVariant: ['tabular-nums'] },
     cardTime: { ...t.type.caption, color: t.colors.textMuted },
     cardMetaText: { ...t.type.num('caption'), color: t.colors.textMuted },
     cardMetaDivider: { color: t.colors.border },

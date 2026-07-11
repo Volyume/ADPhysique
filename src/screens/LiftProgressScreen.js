@@ -544,8 +544,11 @@ const styles = StyleSheet.create({
   },
   strengthName: { ...type.label, color: colors.textPrimary },
   strengthNarrative: { ...type.num('caption'), color: colors.textMuted, marginTop: spacing.xxs },
-  levelBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.sm, flexShrink: 0 },
-  levelBadgeText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
+  // R2 (2026-07-11): badge class -> radius.full; label text -> captionStrong
+  // (exact xs+semibold role, FOOD-DESIGN-STANDARD.md sections 3-4). Was
+  // radius.sm and a raw fontSize.xs + fontWeight.semibold pair.
+  levelBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.full, flexShrink: 0 },
+  levelBadgeText: { ...type.captionStrong },
 
   bwPromptCard: {
     flexDirection: 'row',
@@ -587,7 +590,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   metricChipActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  metricChipText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  // R2 (2026-07-11): raw xs+semibold pair -> captionStrong (exact role match).
+  metricChipText: { ...type.captionStrong, color: colors.textSecondary },
   metricChipTextActive: { color: colors.primary },
 
   // ── Lift row ──
@@ -606,7 +610,9 @@ const styles = StyleSheet.create({
   name: { ...type.bodyStrong, color: colors.textPrimary, flexShrink: 1 },
   prTag: {
     backgroundColor: withAlpha(colors.primary, 0.16),
-    borderRadius: radius.sm,
+    // R2 (2026-07-11): badge class -> radius.full (FOOD-DESIGN-STANDARD.md
+    // section 4). Was radius.sm.
+    borderRadius: radius.full,
     paddingHorizontal: spacing.xs,
     paddingVertical: 1,
   },
@@ -614,7 +620,10 @@ const styles = StyleSheet.create({
   meta: { ...type.caption, color: colors.textMuted },
   lastTime: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
   statRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs, marginTop: spacing.xxs },
-  statValue: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.textPrimary },
+  // Theme gap: no lg+heavy type role exists; the raw pair stays (weight
+  // preserved). R2 (2026-07-11): headline is a weight/e1RM readout, so it
+  // gains tabular figures like the delta beside it.
+  statValue: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   statLabel: { ...type.caption, color: colors.textMuted },
   delta: { ...type.num('label'), marginLeft: spacing.xs },
   cardRight: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
@@ -645,7 +654,7 @@ function buildLiveStyles(t) {
     strengthRow: { borderTopColor: t.colors.border },
     strengthName: { ...t.type.label, color: t.colors.textPrimary },
     strengthNarrative: { ...t.type.num('caption'), color: t.colors.textMuted },
-    levelBadgeText: { fontSize: t.fontSize.xs },
+    levelBadgeText: { ...t.type.captionStrong },
     bwPromptCard: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, 0.267) },
     bwPromptTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     bwPromptText: { ...t.type.captionTight, color: t.colors.textSecondary },
@@ -655,7 +664,7 @@ function buildLiveStyles(t) {
     filterTabTextActive: { color: t.colors.primary },
     metricChip: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     metricChipActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
-    metricChipText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    metricChipText: { ...t.type.captionStrong, color: t.colors.textSecondary },
     metricChipTextActive: { color: t.colors.primary },
     card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     name: { ...t.type.bodyStrong, color: t.colors.textPrimary },
@@ -663,7 +672,7 @@ function buildLiveStyles(t) {
     prTagText: { fontSize: t.fontSize.micro, color: t.colors.primary },
     meta: { ...t.type.caption, color: t.colors.textMuted },
     lastTime: { ...t.type.caption, color: t.colors.textSecondary },
-    statValue: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
+    statValue: { fontSize: t.fontSize.lg, color: t.colors.textPrimary, fontVariant: ['tabular-nums'] },
     statLabel: { ...t.type.caption, color: t.colors.textMuted },
     delta: { ...t.type.num('label') },
     trendBuilding: { fontSize: t.fontSize.xs, color: t.colors.textMuted },

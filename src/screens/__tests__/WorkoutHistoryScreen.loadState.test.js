@@ -503,6 +503,21 @@ describe('WorkoutHistoryScreen summary polish', () => {
     expect(WORKOUT_HISTORY_SOURCE).toContain("accessibilityLabel=\"Delete workout\"");
   });
 
+  test('R2 (2026-07-11) design-cohesion census: control radius + date tabular', () => {
+    // Control class -> radius.md (FOOD-DESIGN-STANDARD.md section 4): the
+    // header list/calendar toggle joins the control/input/icon-backing family.
+    expect(WORKOUT_HISTORY_SOURCE).toMatch(/toggleBtn: \{[\s\S]*?borderRadius: radius\.md/);
+    // The card date ("7 Jul 2026") is a data readout, so it carries tabular
+    // figures like every other numeral on this screen. Both the frozen style
+    // and its live-theme twin.
+    expect(WORKOUT_HISTORY_SOURCE).toMatch(/cardDate: \{[\s\S]*?fontVariant: \['tabular-nums'\]/);
+    expect(WORKOUT_HISTORY_SOURCE).toMatch(/cardDate: \{ fontSize: t\.fontSize\.md, color: t\.colors\.textPrimary, fontVariant: \['tabular-nums'\] \}/);
+    // Theme gap held (not fixed): cardDate keeps its raw fontSize.md +
+    // fontWeight.bold pair because no md+bold type role exists; the weight is
+    // preserved rather than de-emphasised.
+    expect(WORKOUT_HISTORY_SOURCE).toMatch(/cardDate: \{[\s\S]*?fontWeight: fontWeight\.bold/);
+  });
+
   test('calendar reset uses a contained neutral control', () => {
     // old -> new: same Button icon/textStyle migration as above.
     expect(WORKOUT_HISTORY_SOURCE).toContain('icon="calendar-clear-outline"');

@@ -796,11 +796,15 @@ const styles = StyleSheet.create({
 
   // Stat layout
   statValue: {
+    // Theme gap: no display-size + black type role exists; the raw hero pair
+    // stays (96px + black weight preserved). R2 (2026-07-11): the hero value is
+    // a data readout (sessions/tonnage/sets), so it gains tabular figures.
     // eslint-disable-next-line no-restricted-syntax -- Year-of-Lifts hero number, 96px by design
     fontSize: 96,
     lineHeight: 100,
     fontWeight: fontWeight.black,
     color: colors.textPrimary,
+    fontVariant: ['tabular-nums'],
   },
   statUnit: {
     ...type.h3,
@@ -814,6 +818,9 @@ const styles = StyleSheet.create({
 
   // Intro / outro hero
   heroHeadline: {
+    // Theme gap: no 44px + black type role exists; the raw hero pair stays
+    // (weight preserved). R2 (2026-07-11): intro/outro headlines render prose
+    // ("Your year of lifts", block names), not a pure readout, so no tabular.
     // eslint-disable-next-line no-restricted-syntax -- Year-of-Lifts secondary hero number
     fontSize: 44,
     lineHeight: 48,
@@ -828,6 +835,9 @@ const styles = StyleSheet.create({
   // List layout
   listWrap: { gap: spacing.md },
   listHeadline: {
+    // Theme gap: no xxl + black type role exists; the raw pair stays (weight
+    // preserved). R2 (2026-07-11): list headlines render prose ("Your top
+    // lifts", "Personal bests"), not a pure readout, so no tabular.
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.black,
     color: colors.textPrimary,
@@ -845,10 +855,13 @@ const styles = StyleSheet.create({
   },
   listRank: {
     width: 24,
+    // Theme gap: no lg + black type role exists; the raw pair stays (weight
+    // preserved). R2 (2026-07-11): the rank (1-5) is a pure readout -> tabular.
     fontSize: fontSize.lg,
     fontWeight: fontWeight.black,
     color: colors.primary,
     textAlign: 'center',
+    fontVariant: ['tabular-nums'],
   },
   listPrimary: {
     ...type.bodyStrong,
@@ -856,8 +869,11 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   listSecondary: {
+    // R2 (2026-07-11): the secondary readout is a data numeral ("12 sets",
+    // "100.0kg"), so it gains tabular figures so the column doesn't jitter.
     fontSize: fontSize.sm,
     color: colors.textSecondary,
+    fontVariant: ['tabular-nums'],
   },
 
   // Tap-zone band, narrow strip just under the pips, so the bulk of
@@ -898,16 +914,16 @@ function buildLiveStyles(t) {
     // statValue/heroHeadline keep their raw display-size literals in the
     // frozen block (intentional hero sizes, theme-invariant) -- only the
     // ink is mirrored here.
-    statValue: { color: t.colors.textPrimary },
+    statValue: { color: t.colors.textPrimary, fontVariant: ['tabular-nums'] },
     statUnit: { ...t.type.h3, color: t.colors.textPrimary },
     statCaption: { ...t.type.body, color: t.colors.textSecondary },
     heroHeadline: { color: t.colors.textPrimary },
     heroSubline: { ...t.type.body, color: t.colors.textSecondary },
     listHeadline: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
     listSubline: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    listRank: { fontSize: t.fontSize.lg, color: t.colors.primary },
+    listRank: { fontSize: t.fontSize.lg, color: t.colors.primary, fontVariant: ['tabular-nums'] },
     listPrimary: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    listSecondary: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    listSecondary: { fontSize: t.fontSize.sm, color: t.colors.textSecondary, fontVariant: ['tabular-nums'] },
     tapPressed: { backgroundColor: withAlpha(t.colors.textPrimary, 0.08) },
   };
 }

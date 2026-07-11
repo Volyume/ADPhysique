@@ -271,3 +271,44 @@ change. Numbers and wording must be byte-identical to the previous build._
     cardio card, weight-trend card) all render with their existing card chrome
     and controls; no control looks hand-rolled or off-family; wording and numbers
     unchanged.
+
+### Deferred-screen cohesion + coach/home one-liners (R2 uniformity wave, 2026-07-11)
+
+_Chrome only: shared primitives (radius classes, tabular numerals, exact type
+roles) unified against the Food design standard. No data, engine, gating,
+telemetry or ED-suppression change. Numbers and wording byte-identical to the
+previous build. Destructive confirms KEEP their alerts._
+
+54. Progress -> Full History (workout history). Tap the list/calendar toggle
+    (top right of the header): it is a contained square button whose corners now
+    match the other controls on the screen (a touch rounder than before), not a
+    tight little square. Each session card's date ("7 Jul 2026") sits as tabular
+    figures that do not shift width as you scroll between cards. Deleting a
+    workout STILL asks first with a "cannot be undone" confirm (that one is
+    genuinely irreversible - unchanged).
+55. Progress -> Volume heatmap. The per-muscle set counts on the right of each
+    bar ("12 / 22") and the current-count column in the Volume trend read as
+    tabular figures (digits line up, no jitter). Tap "Edit volume targets": each
+    min/target/max input field has slightly rounder corners (input family) and
+    the numbers inside are tabular. The "Reset targets?" confirm STILL appears
+    (destructive - unchanged).
+56. Progress -> Lifts (a lift with history). The strength-level badge (e.g.
+    "Intermediate") and the "PR" tag are now fully rounded pills, not
+    square-cornered chips; their label text sits at the same small semibold
+    weight as the metric chips below. The headline stat (e.g. "120kg est. max")
+    reads as tabular figures aligned with the delta beside it.
+57. Progress -> Year of Lifts (or a monthly/weekly/block recap; needs enough
+    history). Swipe the story cards: the big hero numbers (sessions / kg moved /
+    sets), the 1-5 ranks on the top-lifts and personal-bests lists, and each
+    row's "N sets"/"NNkg" readout are all tabular. The giant headline weight is
+    unchanged (still the bold hero size). ED-safety spot check: with calm mode on
+    or an open ED flag, the year-over-year comparison stays suppressed exactly as
+    before (chrome-only pass, that logic untouched).
+58. Coach -> weekly coach update (Coach Output). The small round icon behind each
+    adjustment row now has slightly rounder corners (icon-backing family),
+    matching the other icon buttons. No copy, figure or Apply behaviour changed.
+59. Home (Today). The morning-weight strip's "Logged" pill (green tick, after you
+    log a weight) is now a fully rounded pill rather than a soft-cornered chip.
+    The weight input and its icon are unchanged (a recorded density decision).
+    Flip the device theme (light <-> dark) on each of the above: every changed
+    element re-themes correctly, none stuck in the previous theme's ink.

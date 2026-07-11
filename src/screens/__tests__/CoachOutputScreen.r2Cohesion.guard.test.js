@@ -48,4 +48,12 @@ describe('CoachOutputScreen R2 radius cohesion', () => {
     expect(radiusOf('edLockoutCard')).toBe('md');
     expect(radiusOf('edClearedCard')).toBe('md');
   });
+
+  // R2 lead-ruled one-liner (2026-07-11, coach/home lane): the adjustment
+  // icon-backing joins the control/input/icon-backing family at radius.md
+  // (FOOD-DESIGN-STANDARD.md section 4). Was radius.sm. Pinned so it cannot
+  // drift back to the tighter corner.
+  test('the adjustment icon-backing uses the icon-backing radius (md)', () => {
+    expect(radiusOf('adjustmentIconWrap')).toBe('md');
+  });
 });

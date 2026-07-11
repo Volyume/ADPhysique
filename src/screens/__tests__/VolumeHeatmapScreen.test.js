@@ -46,6 +46,11 @@ import {
 } from '../../lib/database';
 import VolumeHeatmapScreen from '../VolumeHeatmapScreen';
 
+const VOLUME_HEATMAP_SOURCE = require('fs').readFileSync(
+  require('path').resolve(__dirname, '../VolumeHeatmapScreen.js'),
+  'utf8',
+);
+
 const store = {
   user: { id: 'u1' },
   userProfile: { trainingGoal: 'hypertrophy' },
@@ -168,5 +173,24 @@ describe('VolumeHeatmapScreen states', () => {
     text = flattenText(tree.toJSON());
     expect(text).toContain('Chest11/22');
     expect(text).not.toContain('Chest3/22');
+  });
+});
+
+describe('R2 (2026-07-11) design-cohesion census', () => {
+  test('the target-edit input uses the input radius (md), not the tighter sm', () => {
+    // Input class -> radius.md (FOOD-DESIGN-STANDARD.md section 4).
+    expect(VOLUME_HEATMAP_SOURCE).toMatch(/editInputField: \{ borderRadius: radius\.md \}/);
+  });
+
+  test('every pure set-count/target readout carries tabular figures', () => {
+    // This numeral-dense screen had zero tabular numerals before R2. Each pure
+    // count/target readout now aligns as tabular columns (frozen style AND its
+    // live-theme twin where one exists). mrvLabel already used type.num.
+    expect(VOLUME_HEATMAP_SOURCE).toMatch(/setsCount: \{[\s\S]*?fontVariant: \['tabular-nums'\]/);
+    expect(VOLUME_HEATMAP_SOURCE).toMatch(/currentCount: \{[\s\S]*?fontVariant: \['tabular-nums'\]/);
+    expect(VOLUME_HEATMAP_SOURCE).toMatch(/editInputText: \{[\s\S]*?fontVariant: \['tabular-nums'\]/);
+    // Live-theme twins carry it too (D70 precedent: fontVariant on the twin).
+    expect(VOLUME_HEATMAP_SOURCE).toMatch(/setsCount: \{ fontSize: t\.fontSize\.sm, fontVariant: \['tabular-nums'\] \}/);
+    expect(VOLUME_HEATMAP_SOURCE).toMatch(/currentCount: \{ fontSize: t\.fontSize\.xs, fontVariant: \['tabular-nums'\] \}/);
   });
 });

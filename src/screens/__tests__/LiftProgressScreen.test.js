@@ -58,6 +58,11 @@ import {
 import { calculate1RM } from '../../lib/algorithms';
 import LiftProgressScreen from '../LiftProgressScreen';
 
+const LIFT_PROGRESS_SOURCE = require('fs').readFileSync(
+  require('path').resolve(__dirname, '../LiftProgressScreen.js'),
+  'utf8',
+);
+
 const store = { user: { id: 'user-1' }, units: 'kg' };
 const nav = { navigate: jest.fn() };
 
@@ -354,5 +359,27 @@ describe('LiftProgressScreen — last-time line (C1)', () => {
 
     const squatText = renderedText(capturedListProps.renderItem({ item: squatRow, index: 0 }));
     expect(squatText).toContain(`Last time: 100kg - est. max ${squatE1rm}kg`);
+  });
+});
+
+describe('LiftProgressScreen — R2 (2026-07-11) design-cohesion census', () => {
+  test('badges use the pill/badge radius (full)', () => {
+    // levelBadge + prTag join the pill/chip/badge class (FOOD-DESIGN-STANDARD.md
+    // section 4). Both were radius.sm.
+    expect(LIFT_PROGRESS_SOURCE).toMatch(/levelBadge: \{[\s\S]*?borderRadius: radius\.full/);
+    expect(LIFT_PROGRESS_SOURCE).toMatch(/prTag: \{[\s\S]*?borderRadius: radius\.full/);
+  });
+
+  test('badge/chip label text maps onto the exact captionStrong role', () => {
+    // xs+semibold raw pairs -> type.captionStrong (frozen + live twin).
+    expect(LIFT_PROGRESS_SOURCE).toMatch(/levelBadgeText: \{ \.\.\.type\.captionStrong \}/);
+    expect(LIFT_PROGRESS_SOURCE).toMatch(/levelBadgeText: \{ \.\.\.t\.type\.captionStrong \}/);
+    expect(LIFT_PROGRESS_SOURCE).toMatch(/metricChipText: \{ \.\.\.type\.captionStrong, color: colors\.textSecondary \}/);
+    expect(LIFT_PROGRESS_SOURCE).toMatch(/metricChipText: \{ \.\.\.t\.type\.captionStrong, color: t\.colors\.textSecondary \}/);
+  });
+
+  test('the headline stat readout carries tabular figures (frozen + live twin)', () => {
+    expect(LIFT_PROGRESS_SOURCE).toMatch(/statValue: \{[\s\S]*?fontVariant: \['tabular-nums'\]/);
+    expect(LIFT_PROGRESS_SOURCE).toMatch(/statValue: \{ fontSize: t\.fontSize\.lg, color: t\.colors\.textPrimary, fontVariant: \['tabular-nums'\] \}/);
   });
 });

@@ -296,7 +296,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xxs,
-    borderRadius: radius.sm,
+    // R2 (2026-07-11): badge/pill class -> radius.full (FOOD-DESIGN-STANDARD.md
+    // section 4). The strip's OTHER inner sm radii (metricIcon/weightField/
+    // logBtn) are a recorded density decision and stay radius.sm.
+    borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.success,
     backgroundColor: colors.surface2,

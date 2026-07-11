@@ -110,6 +110,19 @@ describe('weight cell', () => {
   });
 });
 
+describe('R2 radius cohesion (2026-07-11)', () => {
+  // Lead-ruled one-liner: the "Logged" pill joins the pill/chip/badge class at
+  // radius.full (FOOD-DESIGN-STANDARD.md section 4). The strip's OTHER inner sm
+  // radii (metricIcon/weightField/logBtn) are a recorded density decision and
+  // deliberately stay radius.sm; pinned here so neither side drifts.
+  test('loggedPill is a full-radius badge; density-exception radii stay sm', () => {
+    expect(SOURCE).toMatch(/loggedPill:\s*\{[\s\S]*?borderRadius:\s*radius\.full/);
+    expect(SOURCE).toMatch(/metricIcon:\s*\{[\s\S]*?borderRadius:\s*radius\.sm/);
+    expect(SOURCE).toMatch(/weightField:\s*\{[\s\S]*?borderRadius:\s*radius\.sm/);
+    expect(SOURCE).toMatch(/logBtn:\s*\{[\s\S]*?borderRadius:\s*radius\.sm/);
+  });
+});
+
 describe('weight-only top slot', () => {
   test('does not render cardio, meal or step shortcuts', async () => {
     const tree = await render({ todayWeight: 80 });
