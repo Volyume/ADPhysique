@@ -126,15 +126,25 @@ describe('T-C: division de-emphasised structural muscle reaches its maintenance 
   // STRUCTURAL_MUSCLES maintenance floor is 6 at >= 4 training days. Men's
   // Physique de-emphasises legs (quads/glutes overlay 0.70/0.60) but delivery
   // must still reach that floor, not the pre-fix 3.
+  //
+  // D46 (2026-07-11) revised HOW glutes meet it: the engine now counts the
+  // indirect glute work its own squats and hinges deliver (secondary-muscle
+  // model), so a de-emphasised glute owes the floor EFFECTIVELY
+  // (direct + indirect sets) while keeping at least one honest 3-set direct
+  // entry - not 6 direct sets stacked on top of compounds that already train
+  // it. Quads have no indirect source (they are only ever a driver), so
+  // their floor stays pure direct delivery.
   const exps = ['beginner', 'intermediate', 'advanced', 'competitive'];
-  test.each(exps)('Men\'s Physique / %s / 5d: quads and glutes >= maintenance floor 6', (exp) => {
+  test.each(exps)('Men\'s Physique / %s / 5d: quads direct and glutes effective >= floor 6', (exp) => {
     const plan = generatePlan({
       ...BASE, experience: exp, goal: 'mens_physique', daysPerWeek: 5,
       sessionLengthMinutes: 60, nutritionPhase: 'lean_gain',
     });
     const w = weekly(plan);
     expect(w.quads).toBeGreaterThanOrEqual(6);
-    expect(w.glutes).toBeGreaterThanOrEqual(6);
+    const glutes = plan.weeklyVolumeSummary.glutes;
+    expect(glutes.plannedSets).toBeGreaterThanOrEqual(3);
+    expect(glutes.plannedSets + glutes.indirectSets).toBeGreaterThanOrEqual(6);
     expect(noMuscleOverMRV(plan)).toEqual([]);
   });
 });

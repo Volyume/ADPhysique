@@ -353,23 +353,66 @@ function enforceWeeklyFloorsAndCaps(weeklyTargets, goal, effectiveDays, weakPoin
     t.triceps = Math.max(t.triceps ?? 0, 4);
   }
 
-  // Indirect-volume trim (spec phase 3e). A synergist that gets heavy indirect
-  // work from its driver compound does not need full DIRECT volume: the
-  // fractional sets from pulling (biceps) or pressing (triceps) already carry
-  // it. Trim the direct target by a credit proportional to the driver's volume,
-  // keeping a 2-set buffer above MEV. Effective volume (direct + indirect)
-  // stays well above MEV, which is the correct adequacy measure. Only ever
-  // trims (never raises), and skips a user-selected weak point (boosted on
-  // purpose). The phase-1 MEV-floor invariant is preserved (floor is MEV + 2).
-  const trimSynergist = (muscle, driverMuscle, rate) => {
+  // Indirect-volume trim (spec phase 3e; generalised to the lower body under
+  // D46). A synergist that gets heavy indirect work from its driver compounds
+  // does not need full DIRECT volume: the fractional sets from pulling
+  // (biceps), pressing (triceps) or squatting/hinging (glutes) already carry
+  // it. Trim the direct target by a credit proportional to each driver's
+  // volume. Only ever trims (never raises), and skips a user-selected weak
+  // point (boosted on purpose).
+  //
+  // Rates derive from the RP half-set convention (INDIRECT_SET_FRACTION 0.5):
+  // rate ~ (share of the driver's weekly volume from compounds that
+  // meaningfully load the target) x 0.5, tuned conservative. Rear delts,
+  // traps and front delts get NO transfer: their landmark overrides already
+  // set MEV 0 BECAUSE they are fed indirectly by design - a transfer would
+  // double-count that discount. Quads and hamstrings are only ever drivers,
+  // never targets (nothing else trains them).
+  //
+  // Floors: a judged or neutral muscle keeps the phase-1 guarantee - direct
+  // never trimmed below MEV + 2, so effective volume (direct + indirect)
+  // stays well above MEV. A muscle the division EXPLICITLY de-emphasises
+  // (overlay listed and < 1.0, e.g. Men's Physique glutes at 0.60, "covered
+  // in competition") only owes its MAINTENANCE volume, and owes it
+  // EFFECTIVELY: direct + credit >= the maintenance floor, so its direct
+  // floor is maint - credit, held at a minimum of ONE honest 3-set entry
+  // (the anti-fragmentation slot size). One entry is exactly how a real
+  // coach programs a de-emphasised muscle the squats and hinges already
+  // train, and it keeps the structural "maintenance, not zero" promise in
+  // DIRECT work even when the credit estimate runs ahead of what the
+  // selected exercises actually deliver (founder case D46: the leg day
+  // stacked hip thrust + step-up on top of squat + RDL; one hip thrust is
+  // the honest output).
+  const trimSynergist = (muscle, sources, opts = {}) => {
     const lm = SPEC_LANDMARKS[muscle];
     if (!lm || t[muscle] == null || weakPointKeys.includes(muscle)) return;
-    const credit = Math.round((t[driverMuscle] ?? 0) * rate);
-    const floor = lm.MEV + INDIRECT_TRIM_BUFFER;
+    const credit = sources.reduce(
+      (s, [driver, rate]) => s + Math.round((t[driver] ?? 0) * rate), 0,
+    );
+    if (credit <= 0) return;
+    const deEmphasised = overlay[muscle] != null && overlay[muscle] < 1.0;
+    let floor = lm.MEV + INDIRECT_TRIM_BUFFER;
+    if (opts.structuralMaintenance && deEmphasised) {
+      floor = Math.max(3, maint - credit);
+    }
     t[muscle] = Math.min(t[muscle], Math.max(floor, t[muscle] - credit));
   };
-  trimSynergist('biceps', 'back', 0.4);
-  trimSynergist('triceps', 'chest', 0.5);
+  trimSynergist('biceps', [['back', 0.4]]);
+  trimSynergist('triceps', [['chest', 0.5]]);
+  // Glutes: squat patterns load them strongly (~70% of quad volume is squat
+  // work -> 0.7 x 0.5 ~ 0.3) and hip hinges are the classic glute developer
+  // (~50% of ham volume is hinges at near-full glute transfer -> 0.4).
+  // Glute-EMPHASISED divisions are exempt outright: where the overlay boosts
+  // glutes by 1.2x or more (Bikini 1.55, Wellness 1.60, Figure 1.25,
+  // Women's Physique 1.20) the glute volume IS the division signature
+  // (divisionMRV 30, Contreras split-by-type) and must never be discounted
+  // against its own squat and hinge work. Balanced or de-emphasised
+  // divisions get the honest credit.
+  if ((overlay.glutes ?? 1.0) < 1.2) {
+    trimSynergist('glutes', [['quads', 0.3], ['hamstrings', 0.4]], {
+      structuralMaintenance: true,
+    });
+  }
 
   // Per-muscle MRV cap. Glutes get a higher ceiling for the lower-body
   // divisions, where the spec allows ~30 weekly sets split across glute
@@ -404,14 +447,14 @@ function enforceWeeklyFloorsAndCaps(weeklyTargets, goal, effectiveDays, weakPoin
 
 export const POOL = {
   chest: [
-    { n: 'Barbell Bench Press',            sub: 'flat',    p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Incline Barbell Bench Press',    sub: 'incline', p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Incline Dumbbell Press',         sub: 'incline', p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
-    { n: 'Dumbbell Bench Press',           sub: 'flat',    p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
-    { n: 'Machine Chest Press',            sub: 'flat',    p: 'machine',        eq: ['full_gym', 'machines_cables'] },
-    { n: 'Incline Machine Press',          sub: 'incline', p: 'machine',        eq: ['full_gym', 'machines_cables'] },
-    { n: 'Smith Machine Bench Press',      sub: 'flat',    p: 'mod_compound',   eq: ['full_gym', 'machines_cables'] },
-    { n: 'Push-Up',                        sub: 'flat',    p: 'mod_compound',   eq: ['bodyweight'] },
+    { n: 'Barbell Bench Press',            sub: 'flat',    p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['triceps', 'front_delts'] },
+    { n: 'Incline Barbell Bench Press',    sub: 'incline', p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['triceps', 'front_delts'] },
+    { n: 'Incline Dumbbell Press',         sub: 'incline', p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['triceps', 'front_delts'] },
+    { n: 'Dumbbell Bench Press',           sub: 'flat',    p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['triceps', 'front_delts'] },
+    { n: 'Machine Chest Press',            sub: 'flat',    p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['triceps', 'front_delts'] },
+    { n: 'Incline Machine Press',          sub: 'incline', p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['triceps', 'front_delts'] },
+    { n: 'Smith Machine Bench Press',      sub: 'flat',    p: 'mod_compound',   eq: ['full_gym', 'machines_cables'], secondary: ['triceps', 'front_delts'] },
+    { n: 'Push-Up',                        sub: 'flat',    p: 'mod_compound',   eq: ['bodyweight'], secondary: ['triceps', 'front_delts'] },
     { n: 'Cable Crossover (High to Low)',  sub: 'flat',    p: 'isolation',      eq: ['full_gym', 'machines_cables'] },
     { n: 'Pec Deck (Machine Fly)',         sub: 'flat',    p: 'isolation',      eq: ['full_gym', 'machines_cables'] },
     { n: 'Cable Fly (Low to High)',        sub: 'incline', p: 'isolation',      eq: ['full_gym', 'machines_cables'] },
@@ -419,23 +462,23 @@ export const POOL = {
     { n: 'Incline Dumbbell Fly',           sub: 'incline', p: 'isolation',      eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
   ],
   back: [
-    { n: 'Lat Pulldown (Wide Grip)',       sub: 'vertical_pull',   p: 'mod_compound',   eq: ['full_gym', 'machines_cables'] },
-    { n: 'Pull-Up',                        sub: 'vertical_pull',   p: 'mod_compound',   eq: ['bodyweight'] },
-    { n: 'Lat Pulldown (Close Grip)',      sub: 'vertical_pull',   p: 'mod_compound',   eq: ['full_gym', 'machines_cables'] },
-    { n: 'Single-Arm Lat Pulldown',        sub: 'vertical_pull',   p: 'machine',        eq: ['full_gym', 'machines_cables'] },
-    { n: 'Cable High Row',                 sub: 'vertical_pull',   p: 'mod_compound',   eq: ['full_gym', 'machines_cables'] },
-    { n: 'Barbell Row (Bent Over)',        sub: 'horizontal_row',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'] },
-    { n: 'T-Bar Row',                      sub: 'horizontal_row',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Seated Cable Row',               sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'machines_cables'] },
-    { n: 'Dumbbell Row',                   sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
-    { n: 'Machine Row (Chest Supported)',  sub: 'horizontal_row',  p: 'machine',        eq: ['full_gym', 'machines_cables'] },
-    { n: 'Chest-Supported Row (Dumbbell)',sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
-    { n: 'Inverted Row',                   sub: 'horizontal_row',  p: 'mod_compound',   eq: ['bodyweight'] },
-    { n: 'Pendlay Row',                    sub: 'horizontal_row',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Seal Row',                       sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Landmine Row',                   sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Seated Machine Row (Wide)',      sub: 'horizontal_row',  p: 'machine',        eq: ['full_gym', 'machines_cables'] },
-    { n: 'Single-Arm Cable Row',           sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'machines_cables'] },
+    { n: 'Lat Pulldown (Wide Grip)',       sub: 'vertical_pull',   p: 'mod_compound',   eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
+    { n: 'Pull-Up',                        sub: 'vertical_pull',   p: 'mod_compound',   eq: ['bodyweight'], secondary: ['biceps'] },
+    { n: 'Lat Pulldown (Close Grip)',      sub: 'vertical_pull',   p: 'mod_compound',   eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
+    { n: 'Single-Arm Lat Pulldown',        sub: 'vertical_pull',   p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
+    { n: 'Cable High Row',                 sub: 'vertical_pull',   p: 'mod_compound',   eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
+    { n: 'Barbell Row (Bent Over)',        sub: 'horizontal_row',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['biceps', 'rear_delts'] },
+    { n: 'T-Bar Row',                      sub: 'horizontal_row',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['biceps'] },
+    { n: 'Seated Cable Row',               sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
+    { n: 'Dumbbell Row',                   sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['biceps'] },
+    { n: 'Machine Row (Chest Supported)',  sub: 'horizontal_row',  p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
+    { n: 'Chest-Supported Row (Dumbbell)',sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['biceps'] },
+    { n: 'Inverted Row',                   sub: 'horizontal_row',  p: 'mod_compound',   eq: ['bodyweight'], secondary: ['biceps'] },
+    { n: 'Pendlay Row',                    sub: 'horizontal_row',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['biceps'] },
+    { n: 'Seal Row',                       sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'barbell_plates'], secondary: ['biceps'] },
+    { n: 'Landmine Row',                   sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'barbell_plates'], secondary: ['biceps'] },
+    { n: 'Seated Machine Row (Wide)',      sub: 'horizontal_row',  p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
+    { n: 'Single-Arm Cable Row',           sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
     { n: 'Cable Straight-Arm Pulldown',   sub: 'lower_lat',       p: 'isolation',      eq: ['full_gym', 'machines_cables'] },
     { n: 'Cable Lat Pullover',             sub: 'lower_lat',       p: 'isolation',      eq: ['full_gym', 'machines_cables'] },
   ],
@@ -446,19 +489,19 @@ export const POOL = {
     { n: 'Leaning Lateral Raise',  sub: 'side', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
   ],
   rear_delts: [
-    { n: 'Face Pull',                       sub: 'face_pull',       p: 'isolation', eq: ['full_gym', 'machines_cables', 'barbell_plates'] },
-    { n: 'Reverse Pec Deck',                sub: 'horiz_abduction', p: 'isolation', eq: ['full_gym', 'machines_cables'] },
-    { n: 'Cable Rear Delt Fly',             sub: 'horiz_abduction', p: 'isolation', eq: ['full_gym', 'machines_cables'] },
-    { n: 'Dumbbell Rear Delt Fly',          sub: 'horiz_abduction', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym', 'barbell_plates'] },
+    { n: 'Face Pull',                       sub: 'face_pull',       p: 'isolation', eq: ['full_gym', 'machines_cables', 'barbell_plates'], secondary: ['back', 'traps'] },
+    { n: 'Reverse Pec Deck',                sub: 'horiz_abduction', p: 'isolation', eq: ['full_gym', 'machines_cables'], secondary: ['back'] },
+    { n: 'Cable Rear Delt Fly',             sub: 'horiz_abduction', p: 'isolation', eq: ['full_gym', 'machines_cables'], secondary: ['back'] },
+    { n: 'Dumbbell Rear Delt Fly',          sub: 'horiz_abduction', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym', 'barbell_plates'], secondary: ['back'] },
     { n: 'Dumbbell Side-Lying Rear Delt',   sub: 'horiz_abduction', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
-    { n: 'Lying Rear Delt Row',             sub: 'horiz_abduction', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
+    { n: 'Lying Rear Delt Row',             sub: 'horiz_abduction', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['back'] },
   ],
   front_delts: [
-    { n: 'Barbell Overhead Press',    sub: 'press',        p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Dumbbell Shoulder Press',   sub: 'press',        p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
-    { n: 'Machine Shoulder Press',    sub: 'press',        p: 'machine',        eq: ['full_gym', 'machines_cables'] },
-    { n: 'Arnold Press',              sub: 'press',        p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
-    { n: 'Seated Dumbbell Press',     sub: 'press',        p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
+    { n: 'Barbell Overhead Press',    sub: 'press',        p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['triceps', 'side_delts'] },
+    { n: 'Dumbbell Shoulder Press',   sub: 'press',        p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['triceps', 'side_delts'] },
+    { n: 'Machine Shoulder Press',    sub: 'press',        p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['triceps', 'side_delts'] },
+    { n: 'Arnold Press',              sub: 'press',        p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['triceps', 'side_delts'] },
+    { n: 'Seated Dumbbell Press',     sub: 'press',        p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['triceps', 'side_delts'] },
     { n: 'Dumbbell Front Raise',      sub: 'front_raise',  p: 'isolation',      eq: ['full_gym', 'dumbbells_only', 'home_gym', 'barbell_plates'] },
   ],
   biceps: [
@@ -472,57 +515,57 @@ export const POOL = {
     { n: 'Machine Curl',                 sub: 'short_head', p: 'isolation', eq: ['full_gym', 'machines_cables'] },
     { n: 'Dumbbell Curl',                sub: 'short_head', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
     { n: 'Concentration Curl',           sub: 'short_head', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
-    { n: 'Hammer Curl',                  sub: 'brachialis', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym', 'barbell_plates'] },
-    { n: 'Cable Hammer Curl (Rope)',     sub: 'brachialis', p: 'isolation', eq: ['full_gym', 'machines_cables'] },
-    { n: 'Zottman Curl',                 sub: 'brachialis', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
-    { n: 'Cross-Body Hammer Curl',       sub: 'brachialis', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
+    { n: 'Hammer Curl',                  sub: 'brachialis', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym', 'barbell_plates'], secondary: ['forearms'] },
+    { n: 'Cable Hammer Curl (Rope)',     sub: 'brachialis', p: 'isolation', eq: ['full_gym', 'machines_cables'], secondary: ['forearms'] },
+    { n: 'Zottman Curl',                 sub: 'brachialis', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['forearms'] },
+    { n: 'Cross-Body Hammer Curl',       sub: 'brachialis', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['forearms'] },
   ],
   triceps: [
     { n: 'Overhead Cable Tricep Extension', sub: 'overhead', p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
     { n: 'EZ Bar Skull Crusher',            sub: 'overhead', p: 'isolation',    eq: ['full_gym', 'barbell_plates'] },
     { n: 'Overhead Dumbbell Extension',     sub: 'overhead', p: 'isolation',    eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
-    { n: 'JM Press',                        sub: 'overhead', p: 'mod_compound', eq: ['full_gym', 'barbell_plates'] },
+    { n: 'JM Press',                        sub: 'overhead', p: 'mod_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['chest'] },
     { n: 'Lying Tricep Extension',          sub: 'overhead', p: 'isolation',    eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
     { n: 'Decline Skull Crusher',           sub: 'overhead', p: 'isolation',    eq: ['full_gym', 'barbell_plates'] },
     { n: 'Rope Pushdown',                   sub: 'lateral',  p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
     { n: 'Cable Pushdown (Straight Bar)',   sub: 'lateral',  p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
     { n: 'Machine Tricep Extension',        sub: 'lateral',  p: 'machine',      eq: ['full_gym', 'machines_cables'] },
-    { n: 'Close-Grip Bench Press',          sub: 'lateral',  p: 'mod_compound', eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Diamond Push-Up',                 sub: 'lateral',  p: 'mod_compound', eq: ['bodyweight'] },
+    { n: 'Close-Grip Bench Press',          sub: 'lateral',  p: 'mod_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['chest', 'front_delts'] },
+    { n: 'Diamond Push-Up',                 sub: 'lateral',  p: 'mod_compound', eq: ['bodyweight'], secondary: ['chest'] },
     { n: 'Tate Press',                      sub: 'lateral',  p: 'isolation',    eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
   ],
   quads: [
-    { n: 'Barbell Back Squat',      sub: 'vasti',   p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Leg Press',               sub: 'vasti',   p: 'machine',        eq: ['full_gym', 'machines_cables'] },
-    { n: 'Hack Squat Machine',      sub: 'vasti',   p: 'machine',        eq: ['full_gym', 'machines_cables'] },
-    { n: 'Pendulum Squat',          sub: 'vasti',   p: 'machine',        eq: ['full_gym', 'machines_cables'] },
-    { n: 'Barbell Front Squat',     sub: 'sweep',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Bulgarian Split Squat',   sub: 'vasti',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym', 'barbell_plates'] },
-    { n: 'Smith Machine Squat',     sub: 'vasti',   p: 'machine',        eq: ['full_gym', 'machines_cables'] },
-    { n: 'Goblet Squat',            sub: 'vasti',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
-    { n: 'Dumbbell Lunge',          sub: 'vasti',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
-    { n: 'Walking Lunge',           sub: 'vasti',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
+    { n: 'Barbell Back Squat',      sub: 'vasti',   p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['glutes', 'hamstrings'] },
+    { n: 'Leg Press',               sub: 'vasti',   p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['glutes', 'hamstrings'] },
+    { n: 'Hack Squat Machine',      sub: 'vasti',   p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['glutes'] },
+    { n: 'Pendulum Squat',          sub: 'vasti',   p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['glutes'] },
+    { n: 'Barbell Front Squat',     sub: 'sweep',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['glutes'] },
+    { n: 'Bulgarian Split Squat',   sub: 'vasti',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym', 'barbell_plates'], secondary: ['glutes'] },
+    { n: 'Smith Machine Squat',     sub: 'vasti',   p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['glutes'] },
+    { n: 'Goblet Squat',            sub: 'vasti',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['glutes'] },
+    { n: 'Dumbbell Lunge',          sub: 'vasti',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['glutes'] },
+    { n: 'Walking Lunge',           sub: 'vasti',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['glutes', 'hamstrings'] },
     { n: 'Leg Extension',           sub: 'sweep',  p: 'isolation',      eq: ['full_gym', 'machines_cables'] },
     { n: 'Sissy Squat',             sub: 'sweep',  p: 'isolation',      eq: ['full_gym', 'bodyweight', 'home_gym'] },
   ],
   hamstrings: [
-    { n: 'Romanian Deadlift (Barbell)',    sub: 'hip_extension', p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Romanian Deadlift (Dumbbell)',   sub: 'hip_extension', p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
-    { n: 'Single-Leg Romanian Deadlift',   sub: 'hip_extension', p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
-    { n: 'Good Morning',                   sub: 'hip_extension', p: 'mod_compound',   eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Stiff-Leg Deadlift',             sub: 'hip_extension', p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'] },
+    { n: 'Romanian Deadlift (Barbell)',    sub: 'hip_extension', p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['glutes', 'back'] },
+    { n: 'Romanian Deadlift (Dumbbell)',   sub: 'hip_extension', p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['glutes'] },
+    { n: 'Single-Leg Romanian Deadlift',   sub: 'hip_extension', p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['glutes'] },
+    { n: 'Good Morning',                   sub: 'hip_extension', p: 'mod_compound',   eq: ['full_gym', 'barbell_plates'], secondary: ['back', 'glutes'] },
+    { n: 'Stiff-Leg Deadlift',             sub: 'hip_extension', p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['back', 'glutes'] },
     { n: 'Lying Leg Curl',                 sub: 'knee_flexion',  p: 'machine',        eq: ['full_gym', 'machines_cables'] },
     { n: 'Seated Leg Curl',                sub: 'knee_flexion',  p: 'machine',        eq: ['full_gym', 'machines_cables'] },
     { n: 'Nordic Hamstring Curl',          sub: 'knee_flexion',  p: 'isolation',      eq: ['full_gym', 'bodyweight', 'home_gym'] },
     { n: 'Standing Leg Curl',              sub: 'knee_flexion',  p: 'machine',        eq: ['full_gym', 'machines_cables'] },
   ],
   glutes: [
-    { n: 'Barbell Hip Thrust',        sub: 'activator', p: 'mod_compound', eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Smith Machine Hip Thrust',  sub: 'activator', p: 'machine',      eq: ['full_gym', 'machines_cables'] },
-    { n: 'Dumbbell Hip Thrust',       sub: 'activator', p: 'mod_compound', eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
-    { n: 'Cable Pull-Through',        sub: 'activator', p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
-    { n: 'Glute Bridge',              sub: 'activator', p: 'mod_compound', eq: ['bodyweight'] },
-    { n: 'Step-Up (Dumbbell)',        sub: 'stretcher', p: 'mod_compound', eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
+    { n: 'Barbell Hip Thrust',        sub: 'activator', p: 'mod_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['hamstrings', 'quads'] },
+    { n: 'Smith Machine Hip Thrust',  sub: 'activator', p: 'machine',      eq: ['full_gym', 'machines_cables'], secondary: ['hamstrings'] },
+    { n: 'Dumbbell Hip Thrust',       sub: 'activator', p: 'mod_compound', eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['hamstrings'] },
+    { n: 'Cable Pull-Through',        sub: 'activator', p: 'isolation',    eq: ['full_gym', 'machines_cables'], secondary: ['hamstrings'] },
+    { n: 'Glute Bridge',              sub: 'activator', p: 'mod_compound', eq: ['bodyweight'], secondary: ['hamstrings'] },
+    { n: 'Step-Up (Dumbbell)',        sub: 'stretcher', p: 'mod_compound', eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['quads'] },
     { n: 'Abductor Machine',          sub: 'pumper',    p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
     { n: 'Cable Hip Abduction',       sub: 'pumper',    p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
   ],
@@ -548,8 +591,8 @@ export const POOL = {
     { n: 'Barbell Shrug',                 sub: 'upper',     p: 'isolation', eq: ['full_gym', 'barbell_plates'] },
     { n: 'Dumbbell Shrug',                sub: 'upper',     p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym', 'barbell_plates'] },
     { n: 'Cable Shrug',                   sub: 'upper',     p: 'isolation', eq: ['full_gym', 'machines_cables'] },
-    { n: 'Face Pull (Rope)',              sub: 'mid_lower', p: 'isolation', eq: ['full_gym', 'machines_cables'] },
-    { n: 'Cable Y-Raise (Prone)',         sub: 'mid_lower', p: 'isolation', eq: ['full_gym', 'machines_cables'] },
+    { n: 'Face Pull (Rope)',              sub: 'mid_lower', p: 'isolation', eq: ['full_gym', 'machines_cables'], secondary: ['rear_delts', 'back'] },
+    { n: 'Cable Y-Raise (Prone)',         sub: 'mid_lower', p: 'isolation', eq: ['full_gym', 'machines_cables'], secondary: ['back', 'rear_delts'] },
   ],
 };
 
