@@ -85,7 +85,7 @@ export default function ProGate({ children, feature = 'This feature', style }) {
 
   function upgrade() {
     setModalVisible(false);
-    navigation.navigate('ProUpgrade');
+    navigation.navigate('ProUpgrade', { source: 'pro_gate' });
   }
 
   return (
@@ -220,7 +220,7 @@ export function ProLocked({ feature = 'This' }) {
         {showPlateTeaser ? (
           <TouchableOpacity
             style={styles.lockedTeaser}
-            onPress={() => navigation.navigate('ProUpgrade')}
+            onPress={() => navigation.navigate('ProUpgrade', { source: 'pro_gate_teaser' })}
             activeOpacity={0.88}
             accessibilityRole="button"
             accessibilityLabel="See the food diary in Pro"
@@ -230,7 +230,7 @@ export function ProLocked({ feature = 'This' }) {
         ) : null}
         <TouchableOpacity accessibilityRole="button"
           style={[styles.lockedBtn, live.lockedBtn]}
-          onPress={() => navigation.navigate('ProUpgrade')}
+          onPress={() => navigation.navigate('ProUpgrade', { source: 'pro_gate' })}
           activeOpacity={0.88}
         >
           <Ionicons name="barbell-outline" size={16} color={t.colors.onPrimary} />

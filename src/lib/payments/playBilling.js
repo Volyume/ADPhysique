@@ -399,10 +399,21 @@ export function _buildIosStoreKitProvider(RNIap = _loadRNIap()) {
     },
 
     async restorePurchases() {
-      _trackPurchase('restore_purchases_attempted', {});
+      // C2: one event per attempt, now carrying the RESULT (restored flag +
+      // count, or the error code) instead of an empty payload - same
+      // allow-listed event, so attempt counts are unchanged.
       await finishOutstanding();
-      const purchases = await RNIap.getAvailablePurchases();
-      return _purchasesToCustomerInfo(purchases);
+      try {
+        const purchases = await RNIap.getAvailablePurchases();
+        _trackPurchase('restore_purchases_attempted', {
+          restored: (purchases?.length ?? 0) > 0,
+          entitlement_count: purchases?.length ?? 0,
+        });
+        return _purchasesToCustomerInfo(purchases);
+      } catch (e) {
+        _trackPurchase('restore_purchases_attempted', { error_code: e?.code ?? 'unknown' });
+        throw e;
+      }
     },
 
     async logOut() {
@@ -692,11 +703,23 @@ export function _buildRealProvider(RNIap = _loadRNIap()) {
     },
 
     async restorePurchases() {
-      _trackPurchase('restore_purchases_attempted', {});
       // M-2: acknowledge before reading, so a restored-but-unacknowledged
       // purchase is finished rather than auto-refunded.
+      // C2: one event per attempt, now carrying the RESULT (restored flag +
+      // count, or the error code) - same allow-listed event, attempt counts
+      // unchanged.
       await acknowledgeOutstanding();
-      const purchases = await RNIap.getAvailablePurchases();
+      let purchases;
+      try {
+        purchases = await RNIap.getAvailablePurchases();
+      } catch (e) {
+        _trackPurchase('restore_purchases_attempted', { error_code: e?.code ?? 'unknown' });
+        throw e;
+      }
+      _trackPurchase('restore_purchases_attempted', {
+        restored: (purchases?.length ?? 0) > 0,
+        entitlement_count: purchases?.length ?? 0,
+      });
       return _purchasesToCustomerInfo(purchases);
     },
 

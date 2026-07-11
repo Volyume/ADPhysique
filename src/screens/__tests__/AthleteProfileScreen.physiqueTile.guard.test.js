@@ -89,7 +89,8 @@ describe('AthleteProfileScreen physique tile', () => {
     // duplicate of the pitch card directly above it; the card is now the
     // single, tappable upgrade path. Re-anchored to pin that path instead.
     expect(coachSource).toMatch(/Coach is available on Pro/);
-    expect(coachSource).toMatch(/navigation\.navigate\('ProUpgrade'\)/);
+    // C2 (2026-07-11): the pitch-card navigate now carries its entry source.
+    expect(coachSource).toMatch(/navigation\.navigate\('ProUpgrade', \{ source: 'coach_pitch_card' \}\)/);
     expect(coachSource).toMatch(/pro=\{!isPro\}/);
   });
 });

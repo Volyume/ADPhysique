@@ -396,7 +396,7 @@ export default function YouScreen({ navigation }) {
             tone={isPro && latestReview ? 'primary' : undefined}
             onPress={isPro
               ? () => navigation.navigate('CoachOutput', latestReview?.weekStart ? { weekStart: latestReview.weekStart } : undefined)
-              : () => navigation.navigate('ProUpgrade')}
+              : () => navigation.navigate('ProUpgrade', { source: 'coach_pitch_card' })}
             accessibilityLabel={isPro
               ? `Open your weekly coach update${reviewDate ? ` from ${reviewDate}` : ''}`
               : 'Coach is available on Pro. Opens the upgrade screen.'}

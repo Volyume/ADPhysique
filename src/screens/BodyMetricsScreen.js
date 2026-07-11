@@ -969,7 +969,7 @@ export default function BodyMetricsScreen() {
             </View>
             <TouchableOpacity
               style={[styles.readOnlyCtaButton, live.readOnlyCtaButton]}
-              onPress={() => navigation.navigate('ProUpgrade')}
+              onPress={() => navigation.navigate('ProUpgrade', { source: 'body_metrics' })}
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel="Upgrade to Pro to log weight again"

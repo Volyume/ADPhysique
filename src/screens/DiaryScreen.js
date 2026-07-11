@@ -1381,7 +1381,7 @@ export default function DiaryScreen({ navigation, route }) {
               </Text>
             </View>
             <TouchableOpacity
-              onPress={() => { haptics.selection(); navigation.navigate('ProUpgrade'); }}
+              onPress={() => { haptics.selection(); navigation.navigate('ProUpgrade', { source: 'diary' }); }}
               hitSlop={8}
               style={[styles.readOnlyCtaButton, live.readOnlyCtaButton]}
               accessibilityRole="button"

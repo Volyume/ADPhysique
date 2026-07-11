@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, shadow } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import { track as trackEvent } from '../lib/engineTelemetry';
 import Button from '../components/Button';
 import BillingPeriodSelector from '../components/BillingPeriodSelector';
 import ModalHeader from '../components/ModalHeader';
@@ -97,6 +98,37 @@ export default function ProUpgradeScreen({ navigation, route }) {
   // visible with its honest saving; anchor, don't hide.
   const [period, setPeriod] = useState('monthly'); // billing period when subscribing
 
+  // C2 (founder-accepted marketing sequence, 2026-07-11): the main upgrade
+  // destination was the one unmeasured surface in the funnel. Reuses the
+  // allow-listed paywall_shown / paywall_tapped_cta events with
+  // surface: 'pro_upgrade' (no new server allow-list needed); the opt-out
+  // is enforced centrally in telemetry transport (LB-9). Payloads carry
+  // enums and flags only, never PII. Sheet-level events
+  // (purchase_initiated/completed/failed) stay in playBilling - never
+  // duplicated here.
+  const shownRef = useRef(false);
+  useEffect(() => {
+    if (shownRef.current) return;
+    shownRef.current = true;
+    if (user?.id) {
+      trackEvent(user.id, 'paywall_shown', {
+        surface: 'pro_upgrade',
+        source: route?.params?.source ?? 'unknown',
+        can_trial: !!canTrial,
+        has_account: !!hasAccount,
+      }).catch(() => {});
+    }
+    // Once per mount, PaywallScreen's exact idiom: no deps so a re-render
+    // never re-sends it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  function trackCta(cta, extra = null) {
+    if (!user?.id) return;
+    trackEvent(user.id, 'paywall_tapped_cta', {
+      surface: 'pro_upgrade', cta, period, ...(extra || {}),
+    }).catch(() => {});
+  }
+
   async function activatePro(supabaseUserId, { isNew }) {
     // E12 step 1: profile mirrors to cloud via the registry runner (the
     // legacy per-save syncProfile dual writer is retired; its is_beta_tester
@@ -152,6 +184,11 @@ export default function ProUpgradeScreen({ navigation, route }) {
       if (!/cancel|abort/i.test(msg)) {
         logError('ProUpgrade.purchaseFailed', e, {});
         toast.show('Purchase did not complete, try again', { variant: 'error' });
+      } else {
+        // C2: a user-cancelled store sheet is funnel signal, not a failure -
+        // playBilling deliberately keeps E_USER_CANCELLED out of
+        // purchase_failed so failure metrics stay clean.
+        trackCta('sheet_cancelled');
       }
     } finally {
       setBusy(false);
@@ -367,7 +404,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-      <ModalHeader title="Upgrade" onClose={() => navigation.goBack()} />
+      <ModalHeader title="Upgrade" onClose={() => { trackCta('dismiss'); navigation.goBack(); }} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={[styles.iconWrap, live.iconWrap]}>
@@ -415,7 +452,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
               {!PRO_BETA_ACTIVE && !canTrial ? (
                 <BillingPeriodSelector
                   value={period}
-                  onChange={(p) => { haptics.selection(); setPeriod(p); }}
+                  onChange={(p) => { haptics.selection(); setPeriod(p); trackCta('select_period', { period: p }); }}
                   monthlyPrice={monthlyPrice}
                   annualPrice={annualPrice}
                   disabled={busy}
@@ -429,7 +466,10 @@ export default function ProUpgradeScreen({ navigation, route }) {
                 icon="barbell-outline"
                 size="lg"
                 loading={busy}
-                onPress={confirmExistingAccount}
+                onPress={() => {
+                  trackCta(PRO_BETA_ACTIVE ? 'activate_beta' : canTrial ? 'start_trial' : 'buy_pro');
+                  confirmExistingAccount();
+                }}
               />
             </>
           ) : (
@@ -442,8 +482,8 @@ export default function ProUpgradeScreen({ navigation, route }) {
                   OAuthButtons owns the platform policy, including hiding Google
                   on iOS until an iOS Google OAuth client is configured. */}
               <OAuthButtons
-                onApple={() => handleOAuth('apple')}
-                onGoogle={() => handleOAuth('google')}
+                onApple={() => { trackCta('create_account', { provider: 'apple' }); handleOAuth('apple'); }}
+                onGoogle={() => { trackCta('create_account', { provider: 'google' }); handleOAuth('google'); }}
                 disabled={busy}
               />
             </>
@@ -479,7 +519,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
               plan-comparison segment nor a navigation row (the campaign's
               allowed set for this screen family) -- left without an added
               haptic. */}
-          <TouchableOpacity style={styles.laterBtn} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Maybe later">
+          <TouchableOpacity style={styles.laterBtn} onPress={() => { trackCta('dismiss'); navigation.goBack(); }} accessibilityRole="button" accessibilityLabel="Maybe later">
             <Text maxFontSizeMultiplier={1.3} style={[styles.laterText, live.laterText]}>Maybe later</Text>
           </TouchableOpacity>
         </ScrollView>

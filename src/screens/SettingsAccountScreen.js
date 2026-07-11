@@ -36,7 +36,7 @@ export default function SettingsAccountScreen({ navigation }) {
             icon="barbell-outline"
             label="Go Pro"
             sub="Coach decisions and weekly check-ins"
-            onPress={() => navigation.navigate('ProUpgrade')}
+            onPress={() => navigation.navigate('ProUpgrade', { source: 'settings_account' })}
           />
         )}
         {tier === 'pro' && (

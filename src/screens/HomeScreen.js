@@ -1431,7 +1431,7 @@ export default function HomeScreen({ navigation, route }) {
 
   // Stable handler identities for the memoised (React.memo) extracted
   // components below, so passing them as props doesn't defeat the memo.
-  const goToProUpgrade = useCallback(() => navigation.navigate('ProUpgrade'), [navigation]);
+  const goToProUpgrade = useCallback(() => navigation.navigate('ProUpgrade', { source: 'home' }), [navigation]);
   const goToWorkoutHistory = useCallback(() => navigation.navigate('WorkoutHistory'), [navigation]);
   const closeBlockShape = useCallback(() => setShowBlockShape(false), []);
   const closeChangeWorkout = useCallback(() => setShowChangeWorkout(false), []);
@@ -1659,7 +1659,7 @@ export default function HomeScreen({ navigation, route }) {
             })}
             freeCoachLine={freeCoachLine}
             onFreeLineDismiss={dismissFreeCoachLine}
-            onUpgrade={() => navigation.navigate('ProUpgrade')}
+            onUpgrade={() => navigation.navigate('ProUpgrade', { source: 'home_attention_card' })}
             differential={differentialBanner}
             onDifferentialCta={(action) => {
               if (action === 'shown') {
@@ -1669,7 +1669,7 @@ export default function HomeScreen({ navigation, route }) {
                   user_pricing_window: userProfile?.lockedInPriceTier ?? 'open_beta',
                 }).catch(() => {});
               } else if (action === 'pay') {
-                navigation.navigate('ProUpgrade');
+                navigation.navigate('ProUpgrade', { source: `differential_${differentialBanner.trigger}` });
               } else if (action === 'dismiss') {
                 trackEngineEvent(user?.id, 'paywall_tapped_cta', {
                   surface: `differential_${differentialBanner.trigger}`,
