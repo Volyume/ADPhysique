@@ -1656,6 +1656,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // skips on the per-second timer tick, the previous inline `() =>
   // openEditSet(s)` closure was a fresh prop every render, defeating the memo.
   const openEditSet = React.useCallback((set) => {
+    // D43 S4: only one row edits at a time -- this state is a single
+    // editingSet/editValue pair (not a map keyed by set id), so opening a
+    // second row's editor always replaces (collapses) whichever one was
+    // open, by construction. No extra "close the other one" branch needed.
     setEditingSet(set);
     setEditValue({
       weight: set.weight,
@@ -1663,6 +1667,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       setType: set.setType,
       isGhost: false,
     });
+  }, []);
+
+  // D43 S4: Cancel on the inline editor closes the same way the modal's
+  // Cancel/backdrop-dismiss did.
+  const closeEditSet = React.useCallback(() => {
+    setEditingSet(null);
+    setEditValue(null);
   }, []);
 
   // Campaign item 14 (D25): the zeego long-press menu's "Delete set" item
@@ -3029,6 +3040,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     exerciseType={activeExerciseType}
                     onEdit={openEditSet}
                     onDelete={openDeleteFromMenu}
+                    isEditing={editingSet != null && editingSet.id === s.id}
+                    editValue={editValue}
+                    onChangeEditValue={setEditValue}
+                    onSaveEdit={handleSaveEditedSet}
+                    onCancelEdit={closeEditSet}
+                    saving={saving}
+                    weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
                   />
                 </AnimatedRow>
               ))}
@@ -4059,75 +4077,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ) : null}
         </Modal>
 
-        {/* Edit / delete logged set sheet. Mirrors the discard/stale modal
-            chrome (transparent fade overlay + centred sheet). Hosts the same
-            SetEntry component used to log the set, so every exercise type
-            (weight_reps / weighted_bodyweight / reps_only / duration /
-            distance) renders the correct inputs. */}
-        <Modal
-          visible={editingSet != null}
-          transparent
-          animationType={reduceMotion ? 'none' : 'fade'}
-          onRequestClose={() => { setEditingSet(null); setEditValue(null); }}
-        >
-          {editingSet != null ? (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.editSetKeyboard}
-          >
-            <View style={[styles.editSetOverlay, live.editSetOverlay]}>
-              <View style={[styles.editSetSheet, live.editSetSheet]}>
-                <ScrollView
-                  style={styles.editSetScroll}
-                  contentContainerStyle={styles.editSetContent}
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={false}
-                >
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.editSetTitle, live.editSetTitle]}>Edit set</Text>
-                  {editValue && (
-                    <SetEntry
-                      value={editValue}
-                      onChange={setEditValue}
-                      units={units}
-                      isWarmup={editValue.setType === 'warmup'}
-                      exerciseType={activeExerciseType}
-                      weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
-                    />
-                  )}
-                  <Button
-                    variant="primary"
-                    style={[styles.editSetSaveBtn, live.editSetSaveBtn]}
-                    onPress={handleSaveEditedSet}
-                    disabled={saving}
-                    title="Save"
-                    textStyle={[styles.editSetSaveText, live.editSetSaveText]}
-                    accessibilityLabel="Save set changes"
-                  />
-                  <TouchableOpacity
-                    style={styles.editSetCancelBtn}
-                    onPress={() => { setEditingSet(null); setEditValue(null); }}
-                    accessibilityRole="button"
-                    accessibilityLabel="Cancel editing set"
-                  >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.editSetCancelText, live.editSetCancelText]}>Cancel</Text>
-                  </TouchableOpacity>
-                  <View style={[styles.editSetDivider, live.editSetDivider]} />
-                  <TouchableOpacity
-                    style={styles.editSetDeleteBtn}
-                    onPress={handleDeleteEditedSet}
-                    accessibilityRole="button"
-                    accessibilityLabel="Delete set"
-                  >
-                    <Ionicons name="trash-outline" size={16} color={t.colors.error} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.editSetDeleteText, live.editSetDeleteText]}>Delete set</Text>
-                  </TouchableOpacity>
-                </ScrollView>
-              </View>
-            </View>
-          </KeyboardAvoidingView>
-          ) : null}
-        </Modal>
-
+        {/* D43 S4: the edit/delete logged-set MODAL is removed. Editing is
+            now in-place inside LoggedSetRow (see the "This workout" list
+            above) -- tapping a row expands it into an inline editor using
+            the same SetEntry component, Save/Cancel inline, no modal
+            round-trip. handleSaveEditedSet / handleDeleteEditedSet /
+            editingSet / editValue are unchanged (still the single source of
+            truth the row reads/writes), so the persistence + PR-reeval path
+            is byte-identical to before -- only the presentation moved. */}
 
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -4531,19 +4488,11 @@ const styles = StyleSheet.create({
   keepTrainingBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   discardConfirmBtn: { alignItems: 'center', paddingVertical: spacing.md },
   discardConfirmBtnText: { ...type.label, color: colors.error },
-  editSetKeyboard: { flex: 1 },
-  editSetOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
-  editSetSheet: { backgroundColor: colors.surface, borderRadius: radius.lg, width: '100%', maxHeight: '88%', borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
-  editSetScroll: { flexShrink: 1, minHeight: 0 },
-  editSetContent: { padding: spacing.lg, gap: spacing.md },
-  editSetTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },
-  editSetSaveBtn: { backgroundColor: colors.primaryFill, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center' },
-  editSetSaveText: { ...type.bodyStrong, color: colors.onPrimary },
-  editSetCancelBtn: { alignItems: 'center', paddingVertical: spacing.md },
-  editSetCancelText: { ...type.label, color: colors.textSecondary },
-  editSetDivider: { height: 1, backgroundColor: colors.border },
-  editSetDeleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md },
-  editSetDeleteText: { ...type.label, color: colors.error },
+  // D43 S4: the "edit set" modal's own style block (keyboard wrapper,
+  // overlay, sheet, save/cancel/delete rows) is removed -- that modal is
+  // gone, replaced by LoggedSetRow's inline editor (src/components/workout/
+  // LoggedSetRow.js, editingWrap/editingTitle/editingActions/etc.), which
+  // carries its own equivalent house-idiom styles local to the row.
   nextTimeBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     backgroundColor: colors.primaryBg,
@@ -4715,14 +4664,6 @@ function buildLiveStyles(t) {
     keepTrainingBtn: { backgroundColor: t.colors.primaryFill },
     keepTrainingBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
     discardConfirmBtnText: { ...t.type.label, color: t.colors.error },
-    editSetOverlay: { backgroundColor: t.colors.scrim },
-    editSetSheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    editSetTitle: { ...t.type.h3, color: t.colors.textPrimary },
-    editSetSaveBtn: { backgroundColor: t.colors.primaryFill },
-    editSetSaveText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
-    editSetCancelText: { ...t.type.label, color: t.colors.textSecondary },
-    editSetDivider: { backgroundColor: t.colors.border },
-    editSetDeleteText: { ...t.type.label, color: t.colors.error },
     nextTimeBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.251) },
     nextTimeBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },
     deloadBanner: { backgroundColor: t.colors.warningBg, borderColor: t.colors.warning },

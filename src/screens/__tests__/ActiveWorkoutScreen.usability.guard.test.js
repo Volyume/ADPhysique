@@ -296,22 +296,37 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('supSheetContent');
     expect(ACTIVE_WORKOUT).toMatch(/staleSheet: \{[\s\S]*maxHeight: '88%'[\s\S]*overflow: 'hidden'/);
     expect(ACTIVE_WORKOUT).toMatch(/discardSheet: \{[\s\S]*maxHeight: '88%'[\s\S]*overflow: 'hidden'/);
-    expect(ACTIVE_WORKOUT).toContain('editSetKeyboard');
-    expect(ACTIVE_WORKOUT).toContain("behavior={Platform.OS === 'ios' ? 'padding' : 'height'}");
-    expect(ACTIVE_WORKOUT).toMatch(/editSetSheet: \{[\s\S]*maxHeight: '88%'[\s\S]*overflow: 'hidden'/);
-    expect(ACTIVE_WORKOUT).toContain('editSetScroll');
-    expect(ACTIVE_WORKOUT).toContain('editSetContent');
+  });
+
+  // D43 S4 (docs/ux-world-class-audit-2026-07-09/D43-LOGGER-REDESIGN-BLUEPRINT.md
+  // section 3.6/5): the edit-set MODAL is gone -- editing is now in-place
+  // inside LoggedSetRow, so the modal-keyboard-safety and modal-button-system
+  // assertions that used to read editSetKeyboard/editSetSheet/editSetSaveBtn
+  // off ACTIVE_WORKOUT are re-pinned here to read the SAME invariants
+  // (a Save action on the compact logger button system: colors.primaryFill,
+  // workoutLoggerSize-scaled minHeight via the shared Button component,
+  // type.bodyStrong text) off LoggedSetRow's inline editor instead. The
+  // "no modal round-trip" half of the invariant is now a positive
+  // assertion that the row hosts SetEntry + Save/Cancel directly, not a
+  // "stays within the screen" keyboard-safety claim about a Modal that no
+  // longer exists.
+  test('the in-place set editor composes with SetEntry and the shared Button system, no modal', () => {
+    expect(ACTIVE_WORKOUT).not.toContain('editSetKeyboard');
+    expect(ACTIVE_WORKOUT).not.toContain('editSetSheet');
+    expect(LOGGED_SET_ROW).toContain("import SetEntry from '../SetEntry';");
+    expect(LOGGED_SET_ROW).toContain("import Button from '../Button';");
+    expect(LOGGED_SET_ROW).toContain('if (isEditing) {');
+    expect(LOGGED_SET_ROW).toMatch(/<SetEntry[\s\S]*value=\{editValue\}[\s\S]*onChange=\{onChangeEditValue\}/);
+    expect(LOGGED_SET_ROW).toMatch(/<Button[\s\S]*variant="primary"[\s\S]*onPress=\{onSaveEdit\}[\s\S]*title="Save"/);
+    expect(LOGGED_SET_ROW).toContain('accessibilityLabel="Cancel editing set"');
   });
 
   test('modal actions use the same compact logger button system', () => {
     expect(ACTIVE_WORKOUT).toMatch(/staleResume: \{[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
     expect(ACTIVE_WORKOUT).toMatch(/keepTrainingBtn: \{[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
-    expect(ACTIVE_WORKOUT).toMatch(/editSetSaveBtn: \{[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
     expect(ACTIVE_WORKOUT).toContain('staleResumeText: { ...type.bodyStrong, color: colors.onPrimary }');
     expect(ACTIVE_WORKOUT).toContain('keepTrainingBtnText: { ...type.bodyStrong, color: colors.onPrimary }');
-    expect(ACTIVE_WORKOUT).toContain('editSetSaveText: { ...type.bodyStrong, color: colors.onPrimary }');
     expect(ACTIVE_WORKOUT).not.toContain('staleResumeText: { fontSize: fontSize.md');
-    expect(ACTIVE_WORKOUT).not.toContain('editSetSaveText: { fontSize: fontSize.md');
     expect(ACTIVE_WORKOUT).toMatch(/supPrimaryBtn: \{[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
     expect(ACTIVE_WORKOUT).toContain('supPrimaryBtnText: { ...type.bodyStrong, color: colors.onPrimary }');
   });
