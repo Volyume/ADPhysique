@@ -153,8 +153,13 @@ describe('DiaryScreen diary tools', () => {
     // Batch 2 wave B (B-5 section-label consolidation): moveTitle is now a raw
     // <Text> routed through the shared SectionLabel overline role, not a plain <Text>.
     expect(SRC).toMatch(/<SectionLabel style=\{styles\.moveTitle\}>Day tools<\/SectionLabel>/);
-    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.diaryToolTitle\}>Copy from another day<\/Text>/);
-    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.diaryToolTitle\}>Trends and export<\/Text>/);
+    // CP-10 batch E (2026-07-10): DiaryScreen now reads a live theme
+    // (src/hooks/useTheme.js), so styles.diaryToolTitle gained a
+    // live.diaryToolTitle override in a style array. The pinned contract
+    // (which frozen style backs this text) is unchanged -- widened only to
+    // allow the insertion.
+    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.diaryToolTitle, live\.diaryToolTitle\]\}>Copy from another day<\/Text>/);
+    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.diaryToolTitle, live\.diaryToolTitle\]\}>Trends and export<\/Text>/);
     expect(SRC).toMatch(/Copy foods from another day, check nutrition trends, or export your diary\./);
     expect(SRC).not.toMatch(/'Diary options'/);
   });
@@ -164,16 +169,24 @@ describe('DiaryScreen meal-planning entry point', () => {
   test('meal planning stays as one plain route, not another summary block', () => {
     expect(SRC).toMatch(/navigation\.navigate\('MealPlan', \{ entryDate: selectedDate \}\)/);
     expect(SRC).toMatch(/accessibilityLabel="Open meal builder for this day or week"/);
-    expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{18\} color=\{colors\.textSecondary\} \/>/);
-    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.buildPlanLabel\}>Meal builder<\/Text>/);
+    // CP-10 batch E (2026-07-10): live-themed, so the Ionicons colour prop
+    // now reads t.colors.textSecondary instead of the frozen colors import,
+    // and buildPlanLabel/buildPlanIcon carry a live.* style-array override.
+    // Same pins, new shape; the frozen buildPlanIcon definition below (still
+    // colors.surface/colors.border) is untouched.
+    expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{18\} color=\{t\.colors\.textSecondary\} \/>/);
+    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.buildPlanLabel, live\.buildPlanLabel\]\}>Meal builder<\/Text>/);
     expect(SRC).toMatch(/Create today or the week from your targets\. You review everything before it is logged\./);
     expect(SRC).toMatch(/buildPlanIcon: \{[\s\S]*backgroundColor: colors\.surface,[\s\S]*borderColor: colors\.border/);
   });
 
   test('small diary actions use button chrome instead of loose text links', () => {
-    expect(SRC).toMatch(/style=\{\[styles\.offCardButton, styles\.offCardButtonMuted\]\}/);
-    expect(SRC).toMatch(/style=\{styles\.offCardButton\}/);
-    expect(SRC).toMatch(/style=\{styles\.plannedBtnGhostButton\}/);
+    // CP-10 batch E (2026-07-10): live-themed, so each style prop now carries
+    // the style-array form with a live.* override alongside the frozen
+    // style. Same pins, new shape; the frozen definitions below are untouched.
+    expect(SRC).toMatch(/style=\{\[styles\.offCardButton, live\.offCardButton, styles\.offCardButtonMuted, live\.offCardButtonMuted\]\}/);
+    expect(SRC).toMatch(/style=\{\[styles\.offCardButton, live\.offCardButton\]\}/);
+    expect(SRC).toMatch(/style=\{\[styles\.plannedBtnGhostButton, live\.plannedBtnGhostButton\]\}/);
     expect(SRC).toMatch(/readOnlyCtaButton: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(SRC).toMatch(/offCardButton: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(SRC).toMatch(/plannedBtnGhostButton: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
@@ -185,7 +198,8 @@ describe('DiaryScreen meal-planning entry point', () => {
     // Batch 2 wave B (B-2 Button adoption): bankRow's hand-rolled TouchableOpacity
     // + Ionicons + Text now renders as <Button icon="restaurant-outline" variant="secondary">,
     // so the icon is a prop, not a raw <Ionicons> child.
-    expect(SRC).toMatch(/icon="restaurant-outline"[\s\S]{0,80}variant="secondary"[\s\S]{0,40}style=\{styles\.bankRow\}/);
+    // CP-10 batch E: bankRow's style prop also gained a live.bankRow override.
+    expect(SRC).toMatch(/icon="restaurant-outline"[\s\S]{0,80}variant="secondary"[\s\S]{0,60}style=\{\[styles\.bankRow, live\.bankRow\]\}/);
     expect(SRC).toMatch(/bankRow: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(SRC).toContain('bankRowText: { ...type.label, color: colors.textPrimary }');
     expect(SRC).not.toMatch(/bankRowText: \{ color: colors\.primary/);
@@ -199,10 +213,14 @@ describe('DiaryScreen date navigation polish', () => {
   test('date navigation renders as one coherent rail, not separate dark chevrons around a grey box', () => {
     const dateClusterStyle = SRC.match(/dateCluster: \{[\s\S]*?\n  \},/)?.[0] || '';
     const dateButtonStyle = SRC.match(/dateButton: \{[\s\S]*?\n  \},/)?.[0] || '';
-    expect(SRC).toMatch(/<View style=\{styles\.dateCluster\}>/);
-    expect(SRC).toMatch(/Ionicons name="chevron-back" size=\{21\} color=\{colors\.textSecondary\}/);
-    expect(SRC).toMatch(/Ionicons name="calendar-outline" size=\{15\} color=\{colors\.textSecondary\}/);
-    expect(SRC).toMatch(/Ionicons name="chevron-forward" size=\{21\} color=\{colors\.textSecondary\}/);
+    // CP-10 batch E (2026-07-10): live-themed, so styles.dateCluster gained a
+    // live.dateCluster override, and the three chevron/calendar Ionicons now
+    // read t.colors.textSecondary instead of the frozen colors import. Same
+    // pins, new shape; the frozen style/colour tokens below are untouched.
+    expect(SRC).toMatch(/<View style=\{\[styles\.dateCluster, live\.dateCluster\]\}>/);
+    expect(SRC).toMatch(/Ionicons name="chevron-back" size=\{21\} color=\{t\.colors\.textSecondary\}/);
+    expect(SRC).toMatch(/Ionicons name="calendar-outline" size=\{15\} color=\{t\.colors\.textSecondary\}/);
+    expect(SRC).toMatch(/Ionicons name="chevron-forward" size=\{21\} color=\{t\.colors\.textSecondary\}/);
     expect(dateClusterStyle).toMatch(/borderWidth: 1/);
     expect(dateClusterStyle).toMatch(/backgroundColor: colors\.surface/);
     expect(dateClusterStyle).toMatch(/minHeight: 44/);
@@ -232,9 +250,11 @@ describe('DiaryScreen saved food entry points', () => {
     expect(SRC).toMatch(/const \[savedPickerSlot, setSavedPickerSlot\] = useState\(null\);/);
     expect(SRC).toMatch(/function addSavedMeal\(slot\) \{\s*setSavedPickerSlot\(slot\);\s*\}/);
     expect(SRC).toMatch(/accessibilityLabel="Saved meals and recipes"/);
-    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.savedFoodTitle\}>Saved meals and recipes<\/Text>/);
-    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.savedFoodOptionTitle\}>Saved meals<\/Text>/);
-    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.savedFoodOptionTitle\}>Recipes<\/Text>/);
+    // CP-10 batch E (2026-07-10): live-themed, so each style prop now carries
+    // the style-array form with a live.* override. Same pins, new shape.
+    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.savedFoodTitle, live\.savedFoodTitle\]\}>Saved meals and recipes<\/Text>/);
+    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.savedFoodOptionTitle, live\.savedFoodOptionTitle\]\}>Saved meals<\/Text>/);
+    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.savedFoodOptionTitle, live\.savedFoodOptionTitle\]\}>Recipes<\/Text>/);
     expect(SRC).toMatch(/is in Saved meals/);
     expect(SRC).toMatch(/navigation\.navigate\(routeName, \{ mealSlot, entryDate: selectedDate \}\)/);
     expect(SRC).toMatch(/openSavedFoodRoute\('MyMeals'\)/);

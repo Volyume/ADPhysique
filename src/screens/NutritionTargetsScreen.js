@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format } from 'date-fns/format';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { formatEnergy, energyUnitLabel } from '../lib/format';
 import BackHeader from '../components/BackHeader';
 import InfoTooltip from '../components/InfoTooltip';
@@ -88,7 +89,14 @@ const CONFIDENCE_LABELS = {
 };
 
 const CONFIDENCE_ICONS = { high: 'checkmark-circle', medium: 'information-circle', low: 'alert-circle' };
-const CONFIDENCE_COLORS = { high: colors.success, medium: colors.warning, low: colors.error };
+// CP-10 batch E (2026-07-10, lead ruling at review): the confidence valence
+// mapping goes live as a build function on the buildMarkStyle(c) precedent
+// (WorkoutHistory, item 8) — the high=success / medium=warning / low=error
+// assignment is byte-identical in meaning to the frozen table it replaces
+// and must never be reordered or swapped; only the token SOURCE moved from
+// the frozen import to the live theme so this screen carries no static
+// island under a live toggle.
+const buildConfidenceColors = (t) => ({ high: t.colors.success, medium: t.colors.warning, low: t.colors.error });
 
 // ─── Small helpers ──────────────────────────────────────────────────────────────
 
@@ -116,18 +124,32 @@ function PillGroup({ options, selected, onSelect, keyExtractor, labelExtractor }
 }
 
 function NumericField({ fieldStyle, inputStyle, ...props }) {
+  // CP-10 batch E (2026-07-10): sibling function-component scope (not
+  // prop-drilled `live`/`t` from NutritionTargetsScreen, matching
+  // AddCustomFoodScreen's Field/NumField precedent from batch D), own
+  // useTheme() call and shared buildLiveStyles(t).
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <TextField
-      surface={colors.inputBg}
+      surface={t.colors.inputBg}
       fieldStyle={[styles.numInputField, fieldStyle]}
-      inputStyle={[styles.numInput, inputStyle]}
-      placeholderTextColor={colors.textMuted}
+      inputStyle={[styles.numInput, live.numInput, inputStyle]}
+      placeholderTextColor={t.colors.textMuted}
       {...props}
     />
   );
 }
 
 function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent, barColor }) {
+  // CP-10 batch E (2026-07-10): sibling function-component scope, own
+  // useTheme() call and shared buildLiveStyles(t). `barColor` itself already
+  // arrives live from the caller (t.colors.macroProtein/macroCarb/macroFat,
+  // see the render sites below), so it is used as-is; it is theme-neutral
+  // macro-category identity, never an adherence/valence colour (D3 comment
+  // above), so it converts mechanically like any other colour token.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   const ratioText =
     basis === 'lbm' && perKgLbm != null
       ? `${perKgLbm} g/kg lean`
@@ -136,13 +158,13 @@ function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent, barColor
         : null;
   return (
     <Card radius="md" padding="md" style={styles.macroCard}>
-      <Text maxFontSizeMultiplier={1.3} style={styles.macroGrams}>{grams}g</Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.macroLabel}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.macroGrams, live.macroGrams]}>{grams}g</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.macroLabel, live.macroLabel]}>{label}</Text>
       {/* D3 (design audit 03): a thin proportional bar in the macro's
           category hue, sized by its share of the day's calories. Category
           identity only, never adherence, it does not change on hit/miss. */}
       {kcalPercent != null && barColor ? (
-        <View style={styles.macroBarTrack}>
+        <View style={[styles.macroBarTrack, live.macroBarTrack]}>
           <View
             style={[
               styles.macroBarFill,
@@ -152,12 +174,12 @@ function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent, barColor
         </View>
       ) : null}
       {ratioText ? (
-        <Text maxFontSizeMultiplier={1.3} style={styles.macroPerKg}>{ratioText}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.macroPerKg, live.macroPerKg]}>{ratioText}</Text>
       ) : null}
       {/* Descriptive %-of-calories this macro contributes (grams × its Atwater
           factor ÷ target kcal). Factual readout, not a judgement. */}
       {kcalPercent != null ? (
-        <Text maxFontSizeMultiplier={1.3} style={styles.macroPercent}>{`~${kcalPercent}% of kcal`}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.macroPercent, live.macroPercent]}>{`~${kcalPercent}% of kcal`}</Text>
       ) : null}
     </Card>
   );
@@ -167,6 +189,14 @@ function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent, barColor
 // title carries the number) with the full paragraph behind a disclosure.
 function WhySection({ icon, color, title, body }) {
   const [open, setOpen] = useState(false);
+  // CP-10 batch E (2026-07-10): sibling function-component scope, own
+  // useTheme() call and shared buildLiveStyles(t). The `color` prop itself
+  // already arrives live from the caller (t.colors.warning/primary/success,
+  // see the WhySection render sites below); this is per-topic icon identity
+  // (calories/protein/fat/carbs), not an ED-gated valence mapping, so it
+  // converts mechanically like any other colour token.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <View style={styles.whySection}>
       <TouchableOpacity
@@ -180,10 +210,10 @@ function WhySection({ icon, color, title, body }) {
         <View style={[styles.whySectionIcon, { backgroundColor: withAlpha(color, alpha.tint) }]}>
           <Ionicons name={icon} size={14} color={color} />
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={styles.whySectionTitle}>{title}</Text>
-        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textMuted} />
+        <Text maxFontSizeMultiplier={1.3} style={[styles.whySectionTitle, live.whySectionTitle]}>{title}</Text>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={14} color={t.colors.textMuted} />
       </TouchableOpacity>
-      {open ? <Text maxFontSizeMultiplier={1.3} style={styles.whySectionBody}>{body}</Text> : null}
+      {open ? <Text maxFontSizeMultiplier={1.3} style={[styles.whySectionBody, live.whySectionBody]}>{body}</Text> : null}
     </View>
   );
 }
@@ -195,6 +225,20 @@ const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
 export default function NutritionTargetsScreen({ navigation }) {
   const toast = useToast();
+  // CP-10 batch E (2026-07-10): live theme (src/hooks/useTheme.js). This
+  // screen renders its rows via plain .map() inside a ScrollView (no
+  // FlatList/FlashList/SectionList), so an unmemoised call matches
+  // AddCustomFoodScreen's/FoodInsightsScreen's own precedent (batch D/E).
+  // Every valence mapping below (which colour maps to which state: the
+  // floor banner reads success/protective, warnings read warning/caution,
+  // confidence reads success/warning/error) is preserved in meaning --
+  // colours convert 1:1 from the frozen `colors` import to the live `t.colors`
+  // equivalent at the exact same property path, never reordered or swapped.
+  // The confidence table is live too, via buildConfidenceColors(t) (module
+  // scope, above) on the buildMarkStyle(c) precedent — lead ruling at the
+  // batch E review.
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   // Use a shallow selector instead of useAppStore() with no args. The
   // bare call subscribes to the entire store object, so every store
   // mutation (rest timer ticks, sync events, etc.) re-renders this
@@ -489,7 +533,7 @@ export default function NutritionTargetsScreen({ navigation }) {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Nutrition targets" />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -516,7 +560,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               }
             />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={styles.pageSubtitle}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.pageSubtitle, live.pageSubtitle]}>
             Calculate your personalised daily calorie and protein targets.
           </Text>
 
@@ -526,17 +570,17 @@ export default function NutritionTargetsScreen({ navigation }) {
             onPress={() => { haptics.selection(); navigation.navigate('NutritionEducation'); }}
             radius="md"
             padding="md"
-            style={styles.eduCard}
+            style={[styles.eduCard, live.eduCard]}
             accessibilityLabel="New to calories and macros? Open the 5-minute guide"
           >
-            <View style={styles.eduIconWrap}>
-              <Ionicons name="book-outline" size={18} color={colors.primary} />
+            <View style={[styles.eduIconWrap, live.eduIconWrap]}>
+              <Ionicons name="book-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.eduTitle}>New to calories and macros?</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.eduBody}>5-minute guide to what these numbers mean and how to actually use them.</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.eduTitle, live.eduTitle]}>New to calories and macros?</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.eduBody, live.eduBody]}>5-minute guide to what these numbers mean and how to actually use them.</Text>
             </View>
-            <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
           </Card>
 
           {/* U-C-1: "Set it for me" fast path. Gives a usable daily target from
@@ -545,12 +589,12 @@ export default function NutritionTargetsScreen({ navigation }) {
               unchanged); the full form is one tap away via "Fine-tune". */}
           {formCollapsed && !results ? (
             <Card style={styles.fastCard}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.fastTitle}>Set it for me</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.fastSubtitle}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.fastTitle, live.fastTitle]}>Set it for me</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.fastSubtitle, live.fastSubtitle]}>
                 Answer a few quick questions and we'll set a starting daily target. You can fine-tune anything afterwards.
               </Text>
 
-              <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Your goal</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Your goal</Text>
               <View style={styles.goalGrid}>
                 {GOALS.filter(g => !(calm && g.key === 'aggressive_cut')).map(g => {
                   const active = goal === g.key;
@@ -560,15 +604,15 @@ export default function NutritionTargetsScreen({ navigation }) {
                       onPress={() => { haptics.selection(); setGoal(g.key); }}
                       radius="md"
                       padding="md"
-                      style={[styles.goalCard, active && styles.goalCardActive]}
+                      style={[styles.goalCard, active && [styles.goalCardActive, live.goalCardActive]]}
                       accessibilityState={{ selected: active }}
                       accessibilityLabel={`${g.label}, ${g.detail}`}
                     >
                       {active && (
-                        <Ionicons name="checkmark-circle" size={14} color={colors.primary} style={styles.goalCheck} />
+                        <Ionicons name="checkmark-circle" size={14} color={t.colors.primary} style={styles.goalCheck} />
                       )}
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.goalLabel, active && styles.goalLabelActive]}>{g.label}</Text>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.goalDetail, active && styles.goalDetailActive]}>{g.detail}</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.goalLabel, live.goalLabel, active && [styles.goalLabelActive, live.goalLabelActive]]}>{g.label}</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.goalDetail, live.goalDetail, active && [styles.goalDetailActive, live.goalDetailActive]]}>{g.detail}</Text>
                     </Card>
                   );
                 })}
@@ -581,7 +625,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                   protein approach and body fat % keep their defaults behind
                   "Fine-tune these numbers". */}
               <View style={styles.formGroup}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Sex</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Sex</Text>
                 <PillGroup
                   options={[{ key: 'male', label: 'Male' }, { key: 'female', label: 'Female' }]}
                   selected={sex}
@@ -589,11 +633,11 @@ export default function NutritionTargetsScreen({ navigation }) {
                 />
               </View>
               <View style={styles.formGroup}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Age</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Age</Text>
                 <AgeYearsField value={age} onChangeText={setAge} />
               </View>
               <View style={styles.formGroup}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Height</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Height</Text>
                 <HeightFeetInchesField
                   feet={heightFt}
                   onChangeFeet={setHeightFt}
@@ -602,7 +646,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 />
               </View>
               <View style={styles.formGroup}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Current weight (kg)</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Current weight (kg)</Text>
                 <NumericField
                   value={weight}
                   onChangeText={setWeight}
@@ -616,9 +660,9 @@ export default function NutritionTargetsScreen({ navigation }) {
               {/* The same GDPR consent the full form requires, bound to the same
                   state, only one of the two ever renders at a time. */}
               <Card style={styles.consentCard}>
-                <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} style={{ marginTop: spacing.xxs }} />
+                <Ionicons name="lock-closed-outline" size={18} color={t.colors.textSecondary} style={{ marginTop: spacing.xxs }} />
                 <View style={styles.consentBody}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.consentText}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.consentText, live.consentText]}>
                     Your body data is stored only on this device. It is never shared and you can delete it at any time.
                   </Text>
                   <ConsentCheckboxRow
@@ -636,8 +680,8 @@ export default function NutritionTargetsScreen({ navigation }) {
                 onPress={handleCalculate}
                 disabled={!formComplete || calculating}
                 variant="primary"
-                style={[styles.calcBtn, (!formComplete || calculating) && styles.calcBtnDisabled]}
-                textStyle={[styles.calcBtnText, !formComplete && styles.calcBtnTextDisabled]}
+                style={[styles.calcBtn, live.calcBtn, (!formComplete || calculating) && [styles.calcBtnDisabled, live.calcBtnDisabled]]}
+                textStyle={[styles.calcBtnText, live.calcBtnText, !formComplete && [styles.calcBtnTextDisabled, live.calcBtnTextDisabled]]}
                 accessibilityLabel="Set my targets"
               />
 
@@ -647,8 +691,8 @@ export default function NutritionTargetsScreen({ navigation }) {
                 accessibilityRole="button"
                 accessibilityLabel="Fine-tune these numbers"
               >
-                <Ionicons name="options-outline" size={14} color={colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={styles.fineTuneText}>Fine-tune these numbers</Text>
+                <Ionicons name="options-outline" size={14} color={t.colors.primary} />
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fineTuneText, live.fineTuneText]}>Fine-tune these numbers</Text>
               </TouchableOpacity>
             </Card>
           ) : null}
@@ -662,7 +706,7 @@ export default function NutritionTargetsScreen({ navigation }) {
 
           {/* Biological sex */}
           <View style={styles.formGroup}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Sex</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Sex</Text>
             <PillGroup
               options={[{ key: 'male', label: 'Male' }, { key: 'female', label: 'Female' }]}
               selected={sex}
@@ -672,13 +716,13 @@ export default function NutritionTargetsScreen({ navigation }) {
 
           {/* Age */}
           <View style={styles.formGroup}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Age</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Age</Text>
             <AgeYearsField value={age} onChangeText={setAge} />
           </View>
 
           {/* Height */}
           <View style={styles.formGroup}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Height</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Height</Text>
             <HeightFeetInchesField
               feet={heightFt}
               onChangeFeet={setHeightFt}
@@ -689,7 +733,7 @@ export default function NutritionTargetsScreen({ navigation }) {
 
           {/* Weight */}
           <View style={styles.formGroup}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Current weight (kg)</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Current weight (kg)</Text>
             <NumericField
               value={weight}
               onChangeText={setWeight}
@@ -702,7 +746,7 @@ export default function NutritionTargetsScreen({ navigation }) {
 
           {/* Body fat */}
           <View style={styles.formGroup}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Body fat estimate % <Text maxFontSizeMultiplier={1.3} style={styles.optional}>(optional)</Text></Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Body fat estimate % <Text maxFontSizeMultiplier={1.3} style={[styles.optional, live.optional]}>(optional)</Text></Text>
             <NumericField
               value={bodyFat}
               onChangeText={setBodyFat}
@@ -716,7 +760,7 @@ export default function NutritionTargetsScreen({ navigation }) {
           {/* BF Source, only shown when BF is entered */}
           {bodyFat.trim() ? (
             <View style={styles.formGroup}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Estimate source</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Estimate source</Text>
               <PillGroup
                 options={BF_SOURCES}
                 selected={bfSource}
@@ -730,7 +774,7 @@ export default function NutritionTargetsScreen({ navigation }) {
           <SectionHeading title="Activity & training" />
 
           <View style={styles.formGroup}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Activity level</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Activity level</Text>
             <PillGroup
               options={ACTIVITY_OPTIONS}
               selected={activity}
@@ -751,7 +795,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                   onPress={() => { haptics.selection(); setGoal(g.key); }}
                   radius="md"
                   padding="md"
-                  style={[styles.goalCard, active && styles.goalCardActive]}
+                  style={[styles.goalCard, active && [styles.goalCardActive, live.goalCardActive]]}
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={g.label}
                 >
@@ -759,14 +803,14 @@ export default function NutritionTargetsScreen({ navigation }) {
                     <Ionicons
                       name="checkmark-circle"
                       size={14}
-                      color={colors.primary}
+                      color={t.colors.primary}
                       style={styles.goalCheck}
                     />
                   )}
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.goalLabel, active && styles.goalLabelActive]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.goalLabel, live.goalLabel, active && [styles.goalLabelActive, live.goalLabelActive]]}>
                     {g.label}
                   </Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.goalDetail, active && styles.goalDetailActive]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.goalDetail, live.goalDetail, active && [styles.goalDetailActive, live.goalDetailActive]]}>
                     {g.detail}
                   </Text>
                 </Card>
@@ -787,7 +831,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               "There is no single right answer. The level you can consistently hit every day will produce better results than an aggressive target you miss half the time.\n\n" +
               "The approaches below are the specific targets Volyume uses; they sit towards the higher end of these ranges, where muscle retention is strongest."
             } />
-            <Text maxFontSizeMultiplier={1.3} style={styles.approachNoteText}>Different guidelines use different targets. Pick the level you can consistently sustain.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.approachNoteText, live.approachNoteText]}>Different guidelines use different targets. Pick the level you can consistently sustain.</Text>
           </View>
 
           {['standard', 'optimised', 'advanced', 'custom'].map(key => {
@@ -799,33 +843,33 @@ export default function NutritionTargetsScreen({ navigation }) {
                 onPress={() => { haptics.selection(); setProteinApproach(key); }}
                 radius="md"
                 padding="md"
-                style={[styles.approachCard, active && styles.approachCardActive]}
+                style={[styles.approachCard, active && [styles.approachCardActive, live.approachCardActive]]}
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={ap.label}
               >
                 <View style={styles.approachCardHeader}>
-                  {active && <Ionicons name="checkmark-circle" size={14} color={colors.primary} style={{ marginRight: spacing.xs }} />}
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.approachCardLabel, active && styles.approachCardLabelActive]}>
+                  {active && <Ionicons name="checkmark-circle" size={14} color={t.colors.primary} style={{ marginRight: spacing.xs }} />}
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.approachCardLabel, live.approachCardLabel, active && [styles.approachCardLabelActive, live.approachCardLabelActive]]}>
                     {ap.label}
                   </Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.approachCardRange, active && styles.approachCardRangeActive]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.approachCardRange, live.approachCardRange, active && [styles.approachCardRangeActive, live.approachCardRangeActive]]}>
                     {key !== 'custom' ? ap.range : ''}
                   </Text>
                   {key === 'optimised' && (
-                    <View style={styles.recommendedBadge}>
-                      <Text maxFontSizeMultiplier={1.3} style={styles.recommendedBadgeText}>Recommended</Text>
+                    <View style={[styles.recommendedBadge, live.recommendedBadge]}>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.recommendedBadgeText, live.recommendedBadgeText]}>Recommended</Text>
                     </View>
                   )}
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.approachCardDesc, active && styles.approachCardDescActive]}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.approachCardDesc, live.approachCardDesc, active && [styles.approachCardDescActive, live.approachCardDescActive]]}>
                   {ap.description}
                 </Text>
                 {active && key === 'custom' && (
                   <View style={styles.customProteinRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.customProteinLabel}>Protein target</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.customProteinLabel, live.customProteinLabel]}>Protein target</Text>
                     <NumericField
                       fieldStyle={styles.customProteinInputField}
-                      inputStyle={styles.customProteinInput}
+                      inputStyle={[styles.customProteinInput, live.customProteinInput]}
                       value={customProteinGPerKg}
                       onChangeText={setCustomProteinGPerKg}
                       placeholder="e.g. 2.0"
@@ -833,7 +877,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                       maxLength={4}
                       accessibilityLabel="Protein target, grams per kilogram"
                     />
-                    <Text maxFontSizeMultiplier={1.3} style={styles.customProteinUnit}>g / kg</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.customProteinUnit, live.customProteinUnit]}>g / kg</Text>
                   </View>
                 )}
               </Card>
@@ -843,9 +887,9 @@ export default function NutritionTargetsScreen({ navigation }) {
           {/* ── GDPR Consent ───────────────────────────────────────────────────────────────────── */}
 
           <Card style={styles.consentCard}>
-            <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} style={{ marginTop: spacing.xxs }} />
+            <Ionicons name="lock-closed-outline" size={18} color={t.colors.textSecondary} style={{ marginTop: spacing.xxs }} />
             <View style={styles.consentBody}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.consentText}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.consentText, live.consentText]}>
                 Your body data is stored only on this device. It is never shared and you can delete it at any time.
               </Text>
               <ConsentCheckboxRow
@@ -862,8 +906,8 @@ export default function NutritionTargetsScreen({ navigation }) {
           {formCollapsed && results ? (
             <Card radius="md" padding="md" style={styles.collapsedSummary}>
               <View style={styles.collapsedRow}>
-                <Ionicons name="nutrition" size={14} color={colors.textMuted} />
-                <Text maxFontSizeMultiplier={1.3} style={styles.collapsedText} numberOfLines={1}>
+                <Ionicons name="nutrition" size={14} color={t.colors.textMuted} />
+                <Text maxFontSizeMultiplier={1.3} style={[styles.collapsedText, live.collapsedText]} numberOfLines={1}>
                   {age && weight && heightFt
                     ? `${sex === 'male' ? 'Male' : 'Female'} - ${age}yrs - ${heightFt}ft${heightIn ? ` ${heightIn}in` : ''} - ${weight}kg - ${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? goal}`
                     : `${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? 'Targets set during coaching setup'}`}
@@ -876,8 +920,8 @@ export default function NutritionTargetsScreen({ navigation }) {
                 variant="outline"
                 size="sm"
                 fullWidth={false}
-                style={styles.reconfigureBtn}
-                textStyle={styles.reconfigureBtnText}
+                style={[styles.reconfigureBtn, live.reconfigureBtn]}
+                textStyle={[styles.reconfigureBtnText, live.reconfigureBtnText]}
                 accessibilityLabel="Adjust"
               />
             </Card>
@@ -892,8 +936,8 @@ export default function NutritionTargetsScreen({ navigation }) {
               onPress={handleCalculate}
               disabled={!formComplete || calculating}
               variant="primary"
-              style={[styles.calcBtn, (!formComplete || calculating) && styles.calcBtnDisabled]}
-              textStyle={[styles.calcBtnText, !formComplete && styles.calcBtnTextDisabled]}
+              style={[styles.calcBtn, live.calcBtn, (!formComplete || calculating) && [styles.calcBtnDisabled, live.calcBtnDisabled]]}
+              textStyle={[styles.calcBtnText, live.calcBtnText, !formComplete && [styles.calcBtnTextDisabled, live.calcBtnTextDisabled]]}
               accessibilityLabel="Calculate targets"
             />
           )}
@@ -911,20 +955,23 @@ export default function NutritionTargetsScreen({ navigation }) {
                 const kMax = Math.round(Number(results.kcalMax) || tk * 1.1);
                 return (
                   <Card elevated padding="xl" style={styles.heroCard}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.heroLabel}>Daily Energy Target</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.heroKcal}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.heroLabel, live.heroLabel]}>Daily Energy Target</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.heroKcal, live.heroKcal]}>
                       {formatEnergy(tk, energyUnit)} {energyUnitLabel(energyUnit)}
                     </Text>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.heroRange}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.heroRange, live.heroRange]}>
                       Estimated range: {formatEnergy(kMin, energyUnit)} – {formatEnergy(kMax, energyUnit)} {energyUnitLabel(energyUnit)}
                     </Text>
                     {/* NU-7: make the floor's action legible. floorApplied is the
                         engine's structured signal that a safety system raised
-                        this target (sex floor or the 1.5% rate gate). */}
+                        this target (sex floor or the 1.5% rate gate). Valence
+                        mapping preserved: floorApplied always reads as the
+                        success/protective colour (colors.success -> t.colors.success),
+                        never warning/error, exactly as before. */}
                     {results.floorApplied ? (
                       <View style={styles.heroFloorRow}>
-                        <Ionicons name="shield-checkmark-outline" size={14} color={colors.success} />
-                        <Text maxFontSizeMultiplier={1.3} style={styles.heroFloorText}>Held at your safe minimum</Text>
+                        <Ionicons name="shield-checkmark-outline" size={14} color={t.colors.success} />
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.heroFloorText, live.heroFloorText]}>Held at your safe minimum</Text>
                       </View>
                     ) : null}
                   </Card>
@@ -946,10 +993,10 @@ export default function NutritionTargetsScreen({ navigation }) {
                       perKgLbm={results.proteinGPerKgLbm}
                       basis={results.proteinBasis}
                       kcalPercent={pct(results.proteinG, 4)}
-                      barColor={colors.macroProtein}
+                      barColor={t.colors.macroProtein}
                     />
-                    <MacroCard label="Carbs" grams={results.carbsG} kcalPercent={pct(results.carbsG, 4)} barColor={colors.macroCarb} />
-                    <MacroCard label="Fat"   grams={results.fatG}   kcalPercent={pct(results.fatG, 9)}   barColor={colors.macroFat} />
+                    <MacroCard label="Carbs" grams={results.carbsG} kcalPercent={pct(results.carbsG, 4)} barColor={t.colors.macroCarb} />
+                    <MacroCard label="Fat"   grams={results.fatG}   kcalPercent={pct(results.fatG, 9)}   barColor={t.colors.macroFat} />
                   </View>
                 );
               })()}
@@ -988,7 +1035,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                   // changing any of its content.
                   <Card padding="md" style={styles.perMealCard}>
                     <View style={styles.perMealHeader}>
-                      <Text maxFontSizeMultiplier={1.3} style={styles.perMealHeading}>PER MEAL</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.perMealHeading, live.perMealHeading]}>PER MEAL</Text>
                       <InfoTooltip
                         size={12}
                         text={
@@ -1000,18 +1047,18 @@ export default function NutritionTargetsScreen({ navigation }) {
                     </View>
 
                     <View style={styles.perMealCenter}>
-                      <Text maxFontSizeMultiplier={1.3} style={styles.perMealValue}>{perMeal}g</Text>
-                      <Text maxFontSizeMultiplier={1.3} style={styles.perMealUnit}>protein per meal</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.perMealValue, live.perMealValue]}>{perMeal}g</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.perMealUnit, live.perMealUnit]}>protein per meal</Text>
                     </View>
 
                     <View style={styles.mealDotsRow}>
                       {Array.from({ length: effectiveMeals }).map((_, i) => (
-                        <View key={i} style={styles.mealDot} />
+                        <View key={i} style={[styles.mealDot, live.mealDot]} />
                       ))}
                     </View>
 
                     <View style={styles.mealCountRow}>
-                      <Text maxFontSizeMultiplier={1.3} style={styles.mealCountLabel}>Across</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.mealCountLabel, live.mealCountLabel]}>Across</Text>
                       <View style={styles.mealCountChips}>
                         {[3, 4, 5, 6, 7, 8].map(n => {
                           const active = effectiveMeals === n;
@@ -1019,27 +1066,27 @@ export default function NutritionTargetsScreen({ navigation }) {
                           return (
                             <TouchableOpacity
                               key={n}
-                              style={[styles.mealCountChip, active && styles.mealCountChipActive]}
+                              style={[styles.mealCountChip, live.mealCountChip, active && [styles.mealCountChipActive, live.mealCountChipActive]]}
                               onPress={() => { haptics.selection(); changeMealsPerDay(n); }}
                               accessibilityRole="button"
                               accessibilityLabel={`${n} meals per day${isRecommended ? ', recommended' : ''}`}
                               accessibilityState={{ selected: active }}
                             >
-                              <Text maxFontSizeMultiplier={1.3} style={[styles.mealCountChipText, active && styles.mealCountChipTextActive]}>
+                              <Text maxFontSizeMultiplier={1.3} style={[styles.mealCountChipText, live.mealCountChipText, active && [styles.mealCountChipTextActive, live.mealCountChipTextActive]]}>
                                 {n}
                               </Text>
                               {isRecommended && (
-                                <View style={styles.mealCountRecDot} />
+                                <View style={[styles.mealCountRecDot, live.mealCountRecDot]} />
                               )}
                             </TouchableOpacity>
                           );
                         })}
                       </View>
-                      <Text maxFontSizeMultiplier={1.3} style={styles.mealCountLabel}>meals per day</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.mealCountLabel, live.mealCountLabel]}>meals per day</Text>
                     </View>
 
-                    <Text maxFontSizeMultiplier={1.3} style={styles.mealCountRecCaption}>
-                      <Text maxFontSizeMultiplier={1.3} style={styles.mealCountRecCaptionDot}>●</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.mealCountRecCaption, live.mealCountRecCaption]}>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.mealCountRecCaptionDot, live.mealCountRecCaptionDot]}>●</Text>
                       {` Recommended: ${recommended} meals per day for this protein target`}
                     </Text>
 
@@ -1051,16 +1098,16 @@ export default function NutritionTargetsScreen({ navigation }) {
                         variant="outline"
                         size="sm"
                         fullWidth={false}
-                        style={styles.mealCountRecButton}
-                        textStyle={styles.mealCountRecButtonText}
+                        style={[styles.mealCountRecButton, live.mealCountRecButton]}
+                        textStyle={[styles.mealCountRecButtonText, live.mealCountRecButtonText]}
                         accessibilityLabel={`Use Volyume's recommended ${recommended} meals per day`}
                       />
                     )}
 
                     {windowHint && (
-                      <View style={styles.perMealHint}>
-                        <Ionicons name="information-circle-outline" size={13} color={colors.warning} />
-                        <Text maxFontSizeMultiplier={1.3} style={styles.perMealHintText}>{windowHint}</Text>
+                      <View style={[styles.perMealHint, live.perMealHint]}>
+                        <Ionicons name="information-circle-outline" size={13} color={t.colors.warning} />
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.perMealHintText, live.perMealHintText]}>{windowHint}</Text>
                       </View>
                     )}
                   </Card>
@@ -1074,15 +1121,15 @@ export default function NutritionTargetsScreen({ navigation }) {
               {/* L05-NT2: padding="md" (was Card default "lg"), same density
                   rationale as perMealCard above. */}
               <Card padding="md" style={styles.howCard}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.howCardTitle}>Why these targets</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.howCardTitle, live.howCardTitle]}>Why these targets</Text>
 
               {/* Phase, may be absent when loaded from DB */}
               {(results.goal || results.phase) ? (
                 <View style={styles.howPhaseBlock}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.phaseTitle}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.phaseTitle, live.phaseTitle]}>
                     {results.phase || GOALS.find(g => g.key === results.goal)?.label || ''}
                   </Text>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.phaseDesc}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.phaseDesc, live.phaseDesc]}>
                     {PHASE_DESCRIPTIONS[results.goal] ?? ''}
                   </Text>
                 </View>
@@ -1186,7 +1233,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                   : `Carbs fill the remaining ${carbKcal} kcal after protein and fat are set. When holding muscle while losing fat, carbs are kept moderate: enough to fuel your sessions and top up your energy stores, but not so many that they cancel the small deficit needed for fat loss. Eat most of your carbs around your training sessions. The rest of the day can be lower-carb without affecting performance.`;
 
                 return (
-                  <View style={styles.whyGroup}>
+                  <View style={[styles.whyGroup, live.whyGroup]}>
                     <TouchableOpacity
                       style={styles.whyHeader}
                       onPress={() => { haptics.selection(); setWhyExpanded(v => !v); }}
@@ -1196,17 +1243,23 @@ export default function NutritionTargetsScreen({ navigation }) {
                       accessibilityLabel="Open the full target calculation"
                     >
                       <View style={styles.whyHeaderLeft}>
-                        <Ionicons name="school-outline" size={18} color={colors.textSecondary} />
-                        <Text maxFontSizeMultiplier={1.3} style={styles.whyHeaderLabel}>Open the full calculation</Text>
+                        <Ionicons name="school-outline" size={18} color={t.colors.textSecondary} />
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.whyHeaderLabel, live.whyHeaderLabel]}>Open the full calculation</Text>
                       </View>
-                      <Ionicons name={whyExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+                      <Ionicons name={whyExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={t.colors.textMuted} />
                     </TouchableOpacity>
                     {whyExpanded && (
                       <View style={styles.whyBody}>
-                        <WhySection icon="flame-outline" color={colors.warning} title={`Calories: ${formatEnergy(results.targetKcal ?? 0, energyUnit)} ${energyUnitLabel(energyUnit)}`} body={calorieWhy} />
-                        <WhySection icon="barbell-outline" color={colors.primary} title={`Protein: ${results.proteinG}g`} body={proteinWhy} />
-                        <WhySection icon="water-outline" color={colors.success} title={`Fat: ${results.fatG}g`} body={fatWhy} />
-                        <WhySection icon="leaf-outline" color={colors.primary} title={`Carbs: ${results.carbsG}g`} body={carbWhy} />
+                        {/* CP-10 batch E: each WhySection's `color` prop is the
+                            same per-topic icon identity as before (calories =
+                            warning, protein/carbs = primary, fat = success),
+                            just resolved live via t.colors instead of the
+                            frozen import -- not an ED-gated valence mapping,
+                            see WhySection's own header comment above. */}
+                        <WhySection icon="flame-outline" color={t.colors.warning} title={`Calories: ${formatEnergy(results.targetKcal ?? 0, energyUnit)} ${energyUnitLabel(energyUnit)}`} body={calorieWhy} />
+                        <WhySection icon="barbell-outline" color={t.colors.primary} title={`Protein: ${results.proteinG}g`} body={proteinWhy} />
+                        <WhySection icon="water-outline" color={t.colors.success} title={`Fat: ${results.fatG}g`} body={fatWhy} />
+                        <WhySection icon="leaf-outline" color={t.colors.primary} title={`Carbs: ${results.carbsG}g`} body={carbWhy} />
                       </View>
                     )}
                   </View>
@@ -1217,13 +1270,13 @@ export default function NutritionTargetsScreen({ navigation }) {
                   colour; the per-confidence tinted border retired with the
                   card merge (D3). */}
               {results.confidence ? (
-                <View style={styles.confidenceRow}>
+                <View style={[styles.confidenceRow, live.confidenceRow]}>
                   <Ionicons
                     name={CONFIDENCE_ICONS[results.confidence] ?? 'information-circle'}
                     size={20}
-                    color={CONFIDENCE_COLORS[results.confidence] ?? colors.textMuted}
+                    color={buildConfidenceColors(t)[results.confidence] ?? t.colors.textMuted}
                   />
-                  <Text maxFontSizeMultiplier={1.3} style={styles.confidenceText}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.confidenceText, live.confidenceText]}>
                     {CONFIDENCE_LABELS[results.confidence]}
                   </Text>
                 </View>
@@ -1235,7 +1288,12 @@ export default function NutritionTargetsScreen({ navigation }) {
                   floor lines collapse into one plain-register explanation (the
                   phrase checks below are DISPLAY-ONLY routing; every structural
                   decision still gates on results.floorApplied, the engine's
-                  contract). Remaining warnings de-duplicate before stacking. */}
+                  contract). Remaining warnings de-duplicate before stacking.
+                  Valence mapping preserved exactly: floorApplied always reads
+                  success/protective (floorBanner/heroFloorText), every other
+                  warning always reads warning/caution (warningBanner/warningText) --
+                  only the colour SOURCE moved from the frozen `colors` import
+                  to the live `t.colors` equivalent at the same property path. */}
               {(() => {
                 const all = [...new Set(results.warnings ?? [])];
                 const isFloorLine = (w) =>
@@ -1244,9 +1302,9 @@ export default function NutritionTargetsScreen({ navigation }) {
                 return (
                   <>
                     {results.floorApplied ? (
-                      <View style={styles.floorBanner}>
-                        <Ionicons name="shield-checkmark-outline" size={16} color={colors.success} />
-                        <Text maxFontSizeMultiplier={1.3} style={styles.floorBannerText}>
+                      <View style={[styles.floorBanner, live.floorBanner]}>
+                        <Ionicons name="shield-checkmark-outline" size={16} color={t.colors.success} />
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.floorBannerText, live.floorBannerText]}>
                           Your numbers came out below the minimum we hold targets at, so we
                           raised them. The target above is your safe minimum. Eating below it
                           would work against your training, recovery and health.
@@ -1254,9 +1312,9 @@ export default function NutritionTargetsScreen({ navigation }) {
                       </View>
                     ) : null}
                     {rest.map((w, i) => (
-                      <View key={i} style={styles.warningBanner}>
-                        <Ionicons name="warning-outline" size={16} color={colors.warning} />
-                        <Text maxFontSizeMultiplier={1.3} style={styles.warningText}>{w}</Text>
+                      <View key={i} style={[styles.warningBanner, live.warningBanner]}>
+                        <Ionicons name="warning-outline" size={16} color={t.colors.warning} />
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.warningText, live.warningText]}>{w}</Text>
                       </View>
                     ))}
                   </>
@@ -1275,14 +1333,14 @@ export default function NutritionTargetsScreen({ navigation }) {
                   // ED-safety-adjacent (wellbeing.js/nutritionEngine.js
                   // territory) -- left without an added haptic.
                   <TouchableOpacity
-                    style={styles.easeNudge}
+                    style={[styles.easeNudge, live.easeNudge]}
                     onPress={() => { setGoal(easedGoal); handleCalculate(easedGoal); }}
                     accessibilityRole="button"
                     accessibilityLabel={`Ease this cut to about ${formatEnergy(results.eaCaution.suggestedKcal, energyUnit)} ${energyUnit === 'kj' ? 'kilojoules' : 'kilocalories'}`}
                     activeOpacity={0.85}
                   >
-                    <Ionicons name="trending-up-outline" size={16} color={colors.primary} />
-                    <Text maxFontSizeMultiplier={1.3} style={styles.easeNudgeText}>Ease this cut to about {formatEnergy(results.eaCaution.suggestedKcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+                    <Ionicons name="trending-up-outline" size={16} color={t.colors.primary} />
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.easeNudgeText, live.easeNudgeText]}>Ease this cut to about {formatEnergy(results.eaCaution.suggestedKcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
                   </TouchableOpacity>
                 );
               })() : null}
@@ -1296,18 +1354,18 @@ export default function NutritionTargetsScreen({ navigation }) {
                 return (
                   <Card radius="md" padding="md" style={styles.awarenessCard}>
                     <View style={styles.awarenessHeader}>
-                      <Ionicons name="nutrition-outline" size={16} color={colors.primary} />
-                      <Text maxFontSizeMultiplier={1.3} style={styles.awarenessTitle}>{awareness.title}</Text>
+                      <Ionicons name="nutrition-outline" size={16} color={t.colors.primary} />
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.awarenessTitle, live.awarenessTitle]}>{awareness.title}</Text>
                     </View>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.awarenessIntro}>{awareness.intro}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.awarenessIntro, live.awarenessIntro]}>{awareness.intro}</Text>
                     {awareness.nutrients.map(n => (
                       <View key={n.key} style={styles.awarenessNutrient}>
-                        <Text maxFontSizeMultiplier={1.3} style={styles.awarenessNutrientName}>{n.name}</Text>
-                        <Text maxFontSizeMultiplier={1.3} style={styles.awarenessNutrientBody}>{n.why}</Text>
-                        <Text maxFontSizeMultiplier={1.3} style={styles.awarenessNutrientFoods}>{n.foods}</Text>
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.awarenessNutrientName, live.awarenessNutrientName]}>{n.name}</Text>
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.awarenessNutrientBody, live.awarenessNutrientBody]}>{n.why}</Text>
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.awarenessNutrientFoods, live.awarenessNutrientFoods]}>{n.foods}</Text>
                       </View>
                     ))}
-                    <Text maxFontSizeMultiplier={1.3} style={styles.awarenessFootnote}>{awareness.footnote}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.awarenessFootnote, live.awarenessFootnote]}>{awareness.footnote}</Text>
                   </Card>
                 );
               })()}
@@ -1320,59 +1378,59 @@ export default function NutritionTargetsScreen({ navigation }) {
                 style={styles.expandHeader}
                 accessibilityLabel="How was this calculated?"
               >
-                <Text maxFontSizeMultiplier={1.3} style={styles.expandTitle}>How was this calculated?</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.expandTitle, live.expandTitle]}>How was this calculated?</Text>
                 <Ionicons
                   name={expanded ? 'chevron-up' : 'chevron-down'}
                   size={18}
-                  color={colors.textSecondary}
+                  color={t.colors.textSecondary}
                 />
               </Card>
 
               {expanded && (
                 <Card radius="md" padding="md" style={styles.expandBody}>
                   <View style={styles.calcRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.calcKey}>Formula</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.calcValue}>{results.bmrFormula}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, live.calcKey]}>Formula</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcValue, live.calcValue]}>{results.bmrFormula}</Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.calcKey}>Resting calorie burn</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.calcValue}>{formatEnergy(results.bmrKcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, live.calcKey]}>Resting calorie burn</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcValue, live.calcValue]}>{formatEnergy(results.bmrKcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.calcKey}>Maintenance calories</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.calcValue}>{formatEnergy(results.maintenanceKcal ?? results.targetKcal ?? 0, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, live.calcKey]}>Maintenance calories</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcValue, live.calcValue]}>{formatEnergy(results.maintenanceKcal ?? results.targetKcal ?? 0, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.calcKey}>Phase adjustment</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.calcValue}>{results.phase}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, live.calcKey]}>Phase adjustment</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcValue, live.calcValue]}>{results.phase}</Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.calcKey}>Projected weekly change</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.calcValue}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, live.calcKey]}>Projected weekly change</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcValue, live.calcValue]}>
                       {results.targetRateKgPerWeek > 0 ? '+' : ''}
                       {results.targetRateKgPerWeek} kg/week
                     </Text>
                   </View>
-                  <View style={[styles.calcRow, { marginTop: spacing.xs, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border }]}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, { fontWeight: fontWeight.bold }]}>Macro method</Text>
+                  <View style={[styles.calcRow, { marginTop: spacing.xs, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: t.colors.border }]}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, live.calcKey, { fontWeight: fontWeight.bold }]}>Macro method</Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.calcKey}>Protein basis</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.calcValue}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, live.calcKey]}>Protein basis</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcValue, live.calcValue]}>
                       {results.proteinBasis === 'lbm'
                         ? `${results.proteinGPerKgLbm ?? 'n/a'} g/kg muscle mass`
                         : `${results.proteinGPerKg ?? 'n/a'} g/kg bodyweight`}
                     </Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.calcKey}>Fat</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.calcValue}>Per phase (0.7 to 1.0 g/kg BW) · min 0.5 g/kg</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, live.calcKey]}>Fat</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcValue, live.calcValue]}>Per phase (0.7 to 1.0 g/kg BW) · min 0.5 g/kg</Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.calcKey}>Carbs</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.calcValue}>Remaining calories</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, live.calcKey]}>Carbs</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcValue, live.calcValue]}>Remaining calories</Text>
                   </View>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.disclaimer}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.disclaimer, live.disclaimer]}>
                     These targets are estimates, not medical advice. Consult a qualified professional before making significant dietary changes.
                   </Text>
                 </Card>
@@ -1385,8 +1443,8 @@ export default function NutritionTargetsScreen({ navigation }) {
                 onPress={handleCalculate}
                 disabled={!formComplete || calculating}
                 variant="outline"
-                style={styles.recalcBtn}
-                textStyle={styles.recalcBtnText}
+                style={[styles.recalcBtn, live.recalcBtn]}
+                textStyle={[styles.recalcBtnText, live.recalcBtnText]}
                 accessibilityLabel="Recalculate"
               />
             </View>
@@ -2101,3 +2159,116 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.xxl,
   },
 });
+
+// CP-10 batch E (2026-07-10): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, shared
+// by this file's four function-component scopes (NutritionTargetsScreen,
+// NumericField, MacroCard, WhySection) so they can never drift out of step
+// with each other or the frozen block. Pure layout keys (flex/gap/padding/
+// width, no token) are correctly omitted -- there is nothing to unfreeze for
+// them. Same pattern as AddCustomFoodScreen.js's buildLiveStyles (batch D).
+//
+// Every valence mapping here is preserved in MEANING, not just mechanically
+// converted: floorBanner/heroFloorText/floor icon always read the
+// success/protective token (never warning/error); warningBanner/warningText/
+// perMealHint always read the warning/caution token; confidence keeps its
+// existing high=success/medium=warning/low=error assignment via
+// buildConfidenceColors(t) (module scope — lead ruling at the batch E
+// review, buildMarkStyle precedent). macroBarFill's category hue (protein/carb/
+// fat) and the WhySection per-topic icon colours are theme-neutral identity,
+// not adherence or ED-gated valence (D3 comments in-file), so they convert
+// mechanically like any other colour token, same as FoodInsightsScreen's
+// colors.success target-met bar fill (batch E part 1).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    eduCard: { borderLeftColor: t.colors.border },
+    fastTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
+    fastSubtitle: { ...t.type.bodySm, color: t.colors.textSecondary },
+    fineTuneText: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    eduIconWrap: { backgroundColor: t.colors.primaryBg },
+    eduTitle: { ...t.type.label, color: t.colors.textPrimary },
+    eduBody: { ...t.type.captionTight, color: t.colors.textSecondary },
+    pageSubtitle: { ...t.type.bodySm, color: t.colors.textMuted },
+    fieldLabel: { ...t.type.label, color: t.colors.textSecondary },
+    optional: { color: t.colors.textMuted },
+    numInput: { ...t.type.body },
+    goalCardActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    goalLabel: { ...t.type.label, color: t.colors.textPrimary },
+    goalLabelActive: { color: t.colors.primary },
+    goalDetail: { ...t.type.caption, color: t.colors.textMuted },
+    goalDetailActive: { color: t.colors.primaryDim },
+    consentText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    calcBtn: { backgroundColor: t.colors.primaryFill },
+    calcBtnDisabled: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    calcBtnText: { ...t.type.title, color: t.colors.onPrimary },
+    calcBtnTextDisabled: { color: t.colors.textDisabled },
+    heroLabel: { ...t.type.label, color: t.colors.textSecondary },
+    heroKcal: { ...t.type.num('display'), color: t.colors.primary },
+    heroRange: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    macroGrams: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
+    macroLabel: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    macroPerKg: { ...t.type.caption, color: t.colors.textMuted },
+    macroPercent: { ...t.type.caption, color: t.colors.textMuted },
+    macroBarTrack: { backgroundColor: t.colors.surface3 },
+    perMealHeading: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    perMealValue: { color: t.colors.textPrimary },
+    perMealUnit: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    mealDot: { backgroundColor: t.colors.primaryFill },
+    mealCountLabel: { ...t.type.caption, color: t.colors.textMuted },
+    mealCountChip: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    mealCountChipActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    mealCountChipText: { ...t.type.num('bodyStrong'), color: t.colors.textSecondary },
+    mealCountChipTextActive: { color: t.colors.primary },
+    mealCountRecDot: { backgroundColor: t.colors.primaryFill },
+    mealCountRecCaption: { ...t.type.caption, color: t.colors.textMuted },
+    mealCountRecCaptionDot: { color: t.colors.primary },
+    mealCountRecButton: { borderColor: withAlpha(t.colors.primary, alpha.mid), backgroundColor: t.colors.surface2 },
+    mealCountRecButtonText: { ...t.type.caption, color: t.colors.primary },
+    perMealHint: { backgroundColor: t.colors.warningBg, borderColor: withAlpha(t.colors.warning, alpha.edge) },
+    perMealHintText: { ...t.type.captionTight, color: t.colors.textSecondary },
+    phaseTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    phaseDesc: { ...t.type.bodySm, color: t.colors.textSecondary },
+    confidenceRow: { borderTopColor: t.colors.borderSubtle },
+    confidenceText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    warningBanner: { backgroundColor: t.colors.warningBg, borderColor: withAlpha(t.colors.warning, alpha.edge) },
+    warningText: { ...t.type.bodySm, color: t.colors.warning },
+    floorBanner: { backgroundColor: t.colors.successBg, borderColor: withAlpha(t.colors.success, alpha.edge) },
+    floorBannerText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    heroFloorText: { ...t.type.bodySm, color: t.colors.success },
+    easeNudge: { borderColor: withAlpha(t.colors.primary, alpha.strong), backgroundColor: t.colors.primaryBg },
+    easeNudgeText: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    awarenessTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    awarenessIntro: { ...t.type.bodySm, color: t.colors.textSecondary },
+    awarenessNutrientName: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    awarenessNutrientBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+    awarenessNutrientFoods: { ...t.type.bodySm, color: t.colors.textSecondary },
+    awarenessFootnote: { ...t.type.captionTight, color: t.colors.textMuted },
+    expandTitle: { ...t.type.label, color: t.colors.textSecondary },
+    calcKey: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    calcValue: { ...t.type.label, color: t.colors.textPrimary },
+    disclaimer: { ...t.type.captionTight, color: t.colors.textMuted, borderTopColor: t.colors.border },
+    recalcBtn: { borderColor: withAlpha(t.colors.primary, alpha.mid) },
+    recalcBtnText: { ...t.type.label, color: t.colors.primary },
+    collapsedText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    reconfigureBtn: { borderColor: withAlpha(t.colors.primary, alpha.mid) },
+    reconfigureBtnText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    approachNoteText: { ...t.type.captionTight, color: t.colors.textMuted },
+    approachCardActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    approachCardLabel: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    approachCardLabelActive: { color: t.colors.primary },
+    approachCardRange: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    approachCardRangeActive: { color: t.colors.primaryDim },
+    recommendedBadge: { backgroundColor: withAlpha(t.colors.primary, alpha.tint) },
+    recommendedBadgeText: { fontSize: t.fontSize.micro, color: t.colors.primary },
+    customProteinLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    customProteinInput: { ...t.type.body },
+    customProteinUnit: { ...t.type.label, color: t.colors.textSecondary },
+    howCardTitle: { ...t.type.title, color: t.colors.textPrimary },
+    whyGroup: { borderTopColor: t.colors.borderSubtle },
+    whyHeaderLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    whySectionTitle: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    whySectionBody: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+  };
+}

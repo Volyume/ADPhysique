@@ -51,7 +51,11 @@ describe('D12 item 1: diary micronutrient panel removed', () => {
 
 describe('D12 item 2: bulk mark-as-eaten demoted to the bottom of the page', () => {
   test('the planned banner (bulk Mark as eaten + Clear) still exists with its original gating and copy', () => {
-    expect(SRC).toMatch(/\{plannedCount > 0 && !selectionMode && !readOnly \? \(\s*<View style=\{styles\.plannedBanner\}>/);
+    // CP-10 batch E (2026-07-10): DiaryScreen now reads a live theme
+    // (src/hooks/useTheme.js); styles.plannedBanner gained a live.plannedBanner
+    // override. The pinned contract (gating + which frozen style backs the
+    // banner) is unchanged -- widened only to allow the insertion.
+    expect(SRC).toMatch(/\{plannedCount > 0 && !selectionMode && !readOnly \? \(\s*<View style=\{\[styles\.plannedBanner, live\.plannedBanner\]\}>/);
     expect(SRC).toMatch(/title="Mark as eaten"/);
     expect(SRC).toMatch(/onPress=\{handleConfirmPlanned\}/);
     expect(SRC).toMatch(/title="Clear"/);
@@ -64,7 +68,7 @@ describe('D12 item 2: bulk mark-as-eaten demoted to the bottom of the page', () 
 
   test('the bulk banner now renders AFTER WaterRow (true bottom of the page), not before the meal sections', () => {
     const waterRowIdx = SRC.indexOf('<WaterRow');
-    const bannerIdx = SRC.indexOf('<View style={styles.plannedBanner}>');
+    const bannerIdx = SRC.indexOf('<View style={[styles.plannedBanner, live.plannedBanner]}>');
     const mealSectionsIdx = SRC.indexOf('visibleSlots.map(');
     expect(waterRowIdx).toBeGreaterThan(-1);
     expect(bannerIdx).toBeGreaterThan(-1);
@@ -74,7 +78,7 @@ describe('D12 item 2: bulk mark-as-eaten demoted to the bottom of the page', () 
   });
 
   test('the relocated banner sits inside the ScrollView, just before it closes', () => {
-    const bannerIdx = SRC.indexOf('<View style={styles.plannedBanner}>');
+    const bannerIdx = SRC.indexOf('<View style={[styles.plannedBanner, live.plannedBanner]}>');
     const scrollCloseIdx = SRC.indexOf('</ScrollView>');
     expect(scrollCloseIdx).toBeGreaterThan(bannerIdx);
     // Nothing but the banner's own closing tags sits between the banner and

@@ -329,7 +329,12 @@ describe('MealPlanScreen review-before-add flow', () => {
   const source = require('fs').readFileSync(require('path').join(__dirname, '..', 'MealPlanScreen.js'), 'utf8');
 
   test('puts the add-to-diary action after the meal list and day totals', () => {
-    expect(source).toContain('<Text maxFontSizeMultiplier={1.3} style={styles.emptyTitle}>Meal builder</Text>');
+    // CP-10 batch E (2026-07-10): MealPlanScreen now reads a live theme
+    // (src/hooks/useTheme.js); styles.emptyTitle/planActionPanel each gained
+    // a live.* override in a style array. The pinned contract (which frozen
+    // style backs each element, and their relative order) is unchanged --
+    // widened only to allow the insertion.
+    expect(source).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.emptyTitle, live.emptyTitle]}>Meal builder</Text>');
     expect(source).toContain("title={!plan ? 'Meal builder' : isDayPlan ? 'Review day meals' : 'Review week meals'}");
     expect(source).toContain('Build meals from your targets, review them, then add the ones you want to your diary.');
     expect(source).toContain('title="Build today"');
@@ -338,9 +343,9 @@ describe('MealPlanScreen review-before-add flow', () => {
     expect(source).not.toContain('title="Plan this day"');
     expect(source).not.toContain('title="Plan the week"');
     expect(source).toContain('Nothing is logged until you add it');
-    expect(source.indexOf('{/* Day totals')).toBeLessThan(source.indexOf('<View style={styles.planActionPanel}>'));
+    expect(source.indexOf('{/* Day totals')).toBeLessThan(source.indexOf('<View style={[styles.planActionPanel, live.planActionPanel]}>'));
     expect(source.indexOf('Meal preferences')).toBeLessThan(source.indexOf('Review meals'));
-    expect(source.indexOf('Meal preferences')).toBeLessThan(source.indexOf('<View style={styles.planActionPanel}>'));
+    expect(source.indexOf('Meal preferences')).toBeLessThan(source.indexOf('<View style={[styles.planActionPanel, live.planActionPanel]}>'));
     expect(source).toContain('const [prefsOpen, setPrefsOpen] = useState(false);');
     expect(source).toContain('Changes update the meals around the same targets.');
     expect(source).toContain('easy to repeat');
