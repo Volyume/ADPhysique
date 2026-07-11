@@ -190,7 +190,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
         label: 'Undo',
         onPress: async () => {
           try {
-            await addExerciseToRoutine(
+            const restored = await addExerciseToRoutine(
               captured.routineId ?? routineId,
               captured.exerciseId,
               captured.orderInRoutine ?? exercises.length,
@@ -202,6 +202,27 @@ export default function RoutineDetailScreen({ navigation, route }) {
               captured.restSeconds ?? null,
               captured.supersetGroupId ?? null,
             );
+            // Close-review fix (R9): a reorder inside the undo window
+            // renumbers the list densely, so the captured slot may now be
+            // occupied and ORDER BY order_in_routine has no tiebreak - the
+            // restored row's position would be implementation-defined.
+            // Renumber deterministically: sort by order with the restored
+            // row winning its captured slot, then persist only the rows
+            // whose index actually changed.
+            const rows = await getRoutineExercisesWithDetails(captured.routineId ?? routineId);
+            const sorted = [...rows].sort((a, b) => {
+              const ao = a.routineExercise.orderInRoutine ?? 0;
+              const bo = b.routineExercise.orderInRoutine ?? 0;
+              if (ao !== bo) return ao - bo;
+              if (a.routineExercise.id === restored?.id) return -1;
+              if (b.routineExercise.id === restored?.id) return 1;
+              return 0;
+            });
+            for (let i = 0; i < sorted.length; i++) {
+              if ((sorted[i].routineExercise.orderInRoutine ?? 0) !== i) {
+                await updateRoutineExerciseOrder(sorted[i].routineExercise.id, i);
+              }
+            }
             await loadRoutine();
           } catch (_) { /* best effort - the toast window may outlive the screen */ }
         },

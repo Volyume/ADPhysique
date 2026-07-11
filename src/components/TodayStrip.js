@@ -16,6 +16,7 @@ import Button from './Button';
 import TextField from './TextField';
 import { colors, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import * as haptics from '../lib/haptics';
 import {
   stoneLbsToKg,
   parseBodyWeightToKg,
@@ -199,7 +200,10 @@ export default function TodayStrip({
     return (
       <TouchableOpacity
         style={styles.metricRow}
-        onPress={startEdit}
+        // Close-review nit (R9): the nested Log Button self-ticks on press;
+        // a tap on the rest of the row must feel the same - one control,
+        // one beat.
+        onPress={() => { haptics.selection(); startEdit(); }}
         accessibilityRole="button"
         accessibilityLabel="Log morning weight"
       >

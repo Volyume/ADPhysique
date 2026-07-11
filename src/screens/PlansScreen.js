@@ -1078,7 +1078,14 @@ export default function PlansScreen({ navigation }) {
           dialog said "Rename folder" even when creating one. */}
       <BottomSheet
         visible={!!folderPrompt}
-        onClose={() => { if (!savingFolder) setFolderPrompt(null); }}
+        // Close-review fix (R9): the clear must be UNCONDITIONAL. BottomSheet
+        // adds a swipe-down gesture the old Modal never had; a swipe while a
+        // save was in flight animated the panel closed but the savingFolder
+        // guard kept `visible` true, so the next open produced no transition
+        // and the sheet went dark. An in-flight save still completes in the
+        // background (its own success path clears the prompt as a no-op; a
+        // failure shows the error toast and the user reopens to retry).
+        onClose={() => setFolderPrompt(null)}
         keyboardAvoiding
         accessibilityLabel="Folder name"
       >
