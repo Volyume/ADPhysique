@@ -67,11 +67,11 @@ git-verified, not from memory. This section is worked before anything below it._
    footer/consolidation/date-fix half remains landed at `f822a91`.
 6. **Pre/Post-workout meals.** Founder ruling: fully implement (off by default,
    populated + macro-redistributed when on) OR remove — not half-built.
-   PHASE 1 DONE (`b53a817`): off by default, fully hidden when off, no empty
-   cards / add-food prompts, back-compat kept. PHASE 2 NOT DONE (parked as a
-   reduced version, which the founder's no-parking rule forbids): when enabled,
-   auto-populate the pre/post slots with legitimate evidence-based meals and
-   redistribute the day's macros across enabled meals. BUILDING NOW.
+   PHASE 1 DONE (`b53a817`): off by default, hidden when off. PHASE 2 DONE
+   (`04f033d`): when enabled and empty, the Diary offers a curated-meal
+   suggestion scored against the day's REMAINING macros (reuses the existing
+   mealSuggest ranking), so the day stays within tolerance, not piled on top;
+   evidence-based pre/post pool already present; no engine touch. FULLY DONE.
 7. **Add a completion action to Dietary Needs** (Done/Save/Close). DONE
    (`2d17fff`, "Done" button).
 8. **Fix the Dietary Needs reopen bug** (open/close/reopen dead). DONE
@@ -80,9 +80,9 @@ git-verified, not from memory. This section is worked before anything below it._
    (`94cd1fe`): history now merges the morning_weights table too, not just
    body_metric_log.
 
-**REMAINING TO COMPLETE THE LIST: #6 phase 2 (in flight). #3 fixed; #4 and #5
-verified already-correct in source.** Only when all nine are complete does the queue pause for the founder
-review.
+**ALL NINE COMPLETE.** #1,2,3,6,7,8,9 landed; #4 and #5 verified correct in
+source (confirm on a fresh build - gated on the EAS build fix). List done;
+queue paused here for the founder review per D55.
 
 ---
 
