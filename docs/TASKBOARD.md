@@ -171,13 +171,24 @@ own information design.**
   the service with it still queued. Service now tracks lastStartId and
   self-stops with the startId form (except the mandatory onTimeout);
   JS re-anchors ride the live instance instead of stop-then-start.
-- R2-11 LANDED a84215c: "database is locked" at plan build / sign-out
-  wipe / set logging - ONE cause (lead-verified investigation, full
-  report in session log): expo-sqlite parallel IO pool + only
-  transaction blocks queued app-side + NO busy_timeout, so raw writes
-  colliding with an open BEGIN failed instantly. PRAGMA busy_timeout
-  5000 added beside the WAL pragma. NOT a second connection (native
-  ref-counting shares one; dbCrypto branches audited clean).
+- R2-11 LANDED a84215c: "database is locked" (plan build; NOW BLOCKS
+  APP ENTRY on the founder's device) - mechanism (lead-verified
+  investigation, full report in session log): expo-sqlite parallel IO
+  pool + only transaction blocks queued app-side + NO busy_timeout, so
+  raw writes colliding with an open BEGIN failed instantly. PRAGMA
+  busy_timeout 5000 added beside the WAL pragma. NOT a second
+  connection (native ref-counting shares one; dbCrypto audited clean).
+  FOUNDER CORRECTION recorded: the sign-out photo-wipe failure was a
+  SEPARATE earlier incident on a DIFFERENT account, NOT this lock.
+- **R2-12 OPEN - sign-out "photo and scan data could not be removed"
+  (own bug, distinct from R2-11 per founder).** The alert fires for ANY
+  throw in wipeAllUserData's fatal steps (FATAL tables, legacy
+  photo-meta delete, photo-dir wipe, snapshot purge - database.js:4622-
+  4662); both file wipes are already idempotent, so the thrower is
+  unidentified. NEEDS the error identity: the Sentry event for
+  clearAuthStateForSignOut.wipe.failed / database.wipeAllUserData.*
+  from that earlier attempt (founder screenshot or the Sentry
+  connector). Do not re-merge with R2-11 without that evidence.
 - QUEUED (structural, next slot, lead review required - database.js):
   route ALL writes through the write queue, not just transactions
   (raw sites: recordEngineTelemetry 7586, createWorkoutSet 2879,
