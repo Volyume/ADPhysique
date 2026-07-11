@@ -165,6 +165,7 @@ export default function HomeScreen({ navigation, route }) {
     intentTitle: { ...t.type.h3, color: t.colors.textPrimary },
     intentSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     intentOption: { backgroundColor: t.colors.surface2 ?? t.colors.background, borderColor: t.colors.border },
+    intentOptionSelected: { borderColor: t.colors.primary },
     intentOptionIcon: { backgroundColor: t.colors.primaryBg },
     intentOptionLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     intentOptionSub: { ...t.type.caption, color: t.colors.textSecondary },
@@ -315,6 +316,13 @@ export default function HomeScreen({ navigation, route }) {
   // surface can never queue a second intent-sheet open that would resolve
   // after the workout has already begun.
   const startFlowRef = useRef(false);
+  // R2-9 (founder redesign, 2026-07-11): tapping an intent now SELECTS it
+  // rather than instantly starting - the old insta-start made the readiness
+  // chips below unreachable (the engine-fed soreness/sleep/energy inputs
+  // arrived null on every session). One primary Start button commits intent
+  // + chips together; Skip and the standing opt-out keep their one-tap
+  // zero-input start.
+  const [selectedIntent, setSelectedIntent] = useState(null);
   // COMP-008: the three "walked-in-with" readiness facts, captured on the
   // pre-workout prompt where they are accurate rather than recalled after the
   // session. All optional, reset each time the prompt opens. Stored on the
@@ -1198,8 +1206,9 @@ export default function HomeScreen({ navigation, route }) {
         return;
       }
       // Clear any readiness from a previously-cancelled prompt so each session
-      // starts from blank chips.
+      // starts from blank chips and no remembered intent.
       setReadiness({ soreness24hBefore: null, sleepQuality: null, energyScore: null });
+      setSelectedIntent(null);
       setShowIntentPrompt(true);
     } catch (e) {
       setIsStartingWorkout(false);
@@ -1305,6 +1314,7 @@ export default function HomeScreen({ navigation, route }) {
       }
 
       pendingStartRef.current = { routineId, initialExercises };
+      setSelectedIntent(null);
       setShowIntentPrompt(true);
     } catch (e) {
       logError('HomeScreen.handleRepeatLastSession', e, { userId: user?.id, lastSessionId: lastSession?.id, routineId });
@@ -2082,31 +2092,51 @@ export default function HomeScreen({ navigation, route }) {
       >
         <Text maxFontSizeMultiplier={1.3} style={[styles.intentTitle, live.intentTitle]}>How are you feeling today?</Text>
         <Text maxFontSizeMultiplier={1.3} style={[styles.intentSub, live.intentSub]}>Takes a second. Helps us read your sessions better over time.</Text>
+        {/* R2-9 (founder redesign, 2026-07-11): an intent tap SELECTS - it no
+            longer starts the session instantly. The old insta-start made the
+            readiness chips below unreachable, so the engine-fed
+            soreness/sleep/energy inputs arrived null on every session. The
+            primary Start button beneath the chips commits everything. */}
         {[
           { key: 'sharp', label: 'Sharp', sub: 'Energised and ready', icon: 'flash-outline' },
           { key: 'average', label: 'Average', sub: 'Normal day, feeling fine', icon: 'remove-outline' },
           { key: 'below_par', label: 'Below par', sub: 'Tired, stressed, or off', icon: 'arrow-down-outline' },
-        ].map(opt => (
-          <PressableCard
-            key={opt.key}
-            style={[styles.intentOption, live.intentOption]}
-            onPress={() => { haptics.selection(); confirmStart(opt.key); }}
-            accessibilityLabel={`${opt.label}. ${opt.sub}`}
-          >
-            <View style={[styles.intentOptionIcon, live.intentOptionIcon]}>
-              <Ionicons name={opt.icon} size={20} color={t.colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptionLabel, live.intentOptionLabel]}>{opt.label}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptionSub, live.intentOptionSub]}>{opt.sub}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-          </PressableCard>
-        ))}
+        ].map(opt => {
+          const selected = selectedIntent === opt.key;
+          return (
+            <PressableCard
+              key={opt.key}
+              style={[styles.intentOption, live.intentOption, selected && [styles.intentOptionSelected, live.intentOptionSelected]]}
+              onPress={() => {
+                haptics.selection();
+                // Tapping the selected option again clears it, matching the
+                // readiness chips, so the answer stays genuinely optional.
+                setSelectedIntent(prev => (prev === opt.key ? null : opt.key));
+              }}
+              accessibilityRole="radio"
+              accessibilityState={{ selected }}
+              accessibilityLabel={`${opt.label}. ${opt.sub}`}
+            >
+              <View style={[styles.intentOptionIcon, live.intentOptionIcon]}>
+                <Ionicons name={opt.icon} size={20} color={t.colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptionLabel, live.intentOptionLabel]}>{opt.label}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptionSub, live.intentOptionSub]}>{opt.sub}</Text>
+              </View>
+              <Ionicons
+                name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+                size={iconSize.sm}
+                color={selected ? t.colors.primary : t.colors.textMuted}
+              />
+            </PressableCard>
+          );
+        })}
 
-        {/* COMP-008: optional readiness chips. These tune the session
-            without blocking it; tapping an intent option above (or Skip)
-            still starts immediately, carrying whatever is selected here. */}
+        {/* COMP-008: optional readiness chips. These tune the session without
+            blocking it. R2-9: they are set alongside the intent above and
+            committed together by the Start button below (Skip still starts
+            instantly with nothing). */}
         {READINESS_ROWS.map(row => (
           <View key={row.key} style={styles.readinessRow}>
             <Text maxFontSizeMultiplier={1.3} style={[styles.readinessLabel, live.readinessLabel]}>{row.label}</Text>
@@ -2135,6 +2165,18 @@ export default function HomeScreen({ navigation, route }) {
             </View>
           </View>
         ))}
+
+        {/* R2-9: the one commit point. Disabled until an intent is picked;
+            Skip below stays the zero-input instant start. The Button
+            primitive's primary variant carries its own selection() tick. */}
+        <Button
+          title="Start workout"
+          size="lg"
+          disabled={!selectedIntent}
+          onPress={() => confirmStart(selectedIntent)}
+          style={styles.intentStartBtn}
+          accessibilityLabel="Start workout with the selected answer"
+        />
 
         <TouchableOpacity
           style={styles.intentSkip}
@@ -2438,6 +2480,15 @@ const styles = StyleSheet.create({
     ...type.caption,
     color: colors.textSecondary,
     marginTop: spacing.xxs,
+  },
+  // R2-9: the picked intent carries the primary border so the selection
+  // reads at a glance before Start commits it.
+  intentOptionSelected: {
+    borderColor: colors.primary,
+  },
+  // R2-9: the one commit point for intent + readiness together.
+  intentStartBtn: {
+    marginTop: spacing.sm,
   },
   // COMP-008 readiness chips
   readinessRow: {
