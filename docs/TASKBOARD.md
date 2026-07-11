@@ -140,14 +140,29 @@ but the founder.
 - Summary TouchableOpacity census: all 8 stay pressables (toggles/
   icon-buttons/quiet pills, not CTAs). Prose numerals stay prose.
 
-**IN FLIGHT - APP-WIDE UNIFORMITY (the founder's "one package" order;
-the previously-held pristine pass is UN-HELD by tonight's order):** two
-Opus agents on disjoint lanes: (1) Progress stack (Analytics,
-Consistency, ProgressSections + ProgressStack residue) full census+fix
-to the food standard; (2) Home/Train/Coach residue census+fix
-(HomeScreen chrome-only around the fresh R2-9 sheet, Plans, You,
-CoachOutput + the six Home components; banners keep the recorded D69/70
-md class; COMP-027 outranks cohesion). Remaining screens batch next.
+**APP-WIDE UNIFORMITY (the founder's "one package" order; the held
+pristine pass is UN-HELD by it). FRAMING CORRECTION (founder): unify
+SHARED PRIMITIVES; never transplant food idioms - each screen keeps its
+own information design.**
+- LANDED 9c84adb (Progress: Analytics/Consistency/ProgressSections -
+  meters to pill family, tabular numerals, captionStrong; 3 census
+  guards) + 3c6a3a8 (coach lane: the census found ONE residue -
+  CoachOutput countdown card radius - fixed + pinned; lane otherwise
+  already unified by R9/D69/D70). Full suite 686/8547 green at both.
+- R2-10 intent sheet LANDED 8f9a96c (founder decision "Reorder":
+  readiness rows redesigned as one aligned block ABOVE the answers,
+  one-tap start unchanged; R2-9 select-then-Start superseded/removed).
+- IN FLIGHT (one Opus agent): the census-deferred batch -
+  WorkoutHistory toggleBtn md; VolumeHeatmap input md + full tabular
+  pass; LiftProgress badges full + captionStrong; YearOfLifts full
+  tabular pass (ED/calm logic byte-identical); lead-ruled one-liners
+  (CoachOutput adjustmentIconWrap md, TodayStrip loggedPill full).
+- QUEUED NEXT (lead hands-on, design-system change): add the missing
+  type roles (sm/semibold "labelStrong" class and kin) to theme.js
+  ONCE, then map the ~50 listed theme-gap font pairs across
+  logger/summary/coach/progress lanes. Recorded, not parked.
+- Remaining app screens (settings/onboarding/food-adjacent already
+  compliant by origin) get a closing census after the above.
 
 RECOVERY: any dead session -> `git status`, review uncommitted diff against
 this entry, relaunch the affected agent with the same brief + the scope
