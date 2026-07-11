@@ -1462,3 +1462,63 @@ decision" / buildPendingCoachCopy / statusCard-after-profileCard /
 Coaching-decision-inside-This-week); the physiqueTile pin on the
 removed Upgrade NavRow re-anchored to the card path. Full suite
 691 suites / 8,530 tests green. Subject to founder device-walk veto.
+
+## D69 — R9 colour grammar across the five areas (lead ruling, 2026-07-11)
+
+Sources: R9 card audit (red/green class, ~7 sites), interaction audit
+(VolumeSummaryStrip note), hands-on read of WeightTrendCard.js.
+
+RULING: Food's adherence-neutral rule is absolute for food, calorie,
+macro and weight-adherence surfaces. Training-MECHANICS caution signals
+(muscle volume over MRV, insight severity, unresolved-exercise repair
+state, high session difficulty) keep semantic warning/error colour as
+one consistent status grammar: they are recovery/safety warnings about
+training load, not judgements about the body, and stripping them would
+lose safety-bearing information.
+
+BOUNDARY CASE, reversed at lead verification: the audit provisionally
+had WeightTrendCard's onTrack/watch dot going neutral. Hands-on reading
+showed the dot is ALREADY governed by COMP-027 Class B (weight numeral
+never state-coloured, dot caps at watch so no red exists, dot is
+decorative with meaning carried by the insight sentence, and the
+view-model strips dot/rate/maintenance under an open ED flag). A prior
+safety-reviewed decision outranks cohesion styling; the dot stays.
+This is the standing precedent: pre-campaign safety rulings get D37
+triage, never cohesion bulldozing.
+
+## D70 — R9 interaction/feedback cohesion rulings (lead, 2026-07-11)
+
+Sources: R9 interaction audit (findings verified hands-on before each
+build), FOOD-DESIGN-STANDARD.md sections 4-6.
+
+RULINGS AND LANDINGS:
+1. One sheet chrome: Home intent prompt (3f2de24) and PlansScreen
+   folder prompt (80dbad5) off raw Modals onto shared BottomSheet;
+   RoutineDetail's swap surface keeps its full-screen ranked-candidates
+   Modal (deliberately richer than the plain picker; D25 exception
+   class) but its bespoke header becomes the house ModalHeader.
+2. Undo over confirm for reversible writes: RoutineDetail
+   remove-exercise (full-field re-add on undo) and swap-exercise
+   (inverse write on undo); PlansScreen archive-plan (unarchive on
+   undo). Folder and template deletes KEEP their blocking confirms -
+   neither has a restore path today, which is the doc's own exception;
+   building restore machinery is a separate feature, not a cohesion
+   fix. WorkoutHistory's workout delete keeps its confirm (genuinely
+   irreversible, cloud-deleted).
+3. One options idiom: WorkoutHistory's repeat menu moves from a native
+   alert to PeekMenu, matching PlansScreen's identical moments.
+4. Blocking informational alert -> calm info toast (Analytics locked
+   Recaps tile).
+5. BuildWorkout's hand-rolled picker STAYS: it is a rapid multi-add
+   flow (stays open across adds); the shared ExercisePickerModal
+   closes on every select, which would make building a session
+   strictly worse. Not duplication - a different flow.
+6. Sanctioned box classes app-wide: Card (radius.lg, surface,
+   borderSubtle/border) and Banner (radius.md, tinted fill, accent
+   border - Home's existing banner grammar). Wave B moves the misfiled
+   card-class surfaces onto lg; banners stay md.
+7. Haptics vocabulary joins every interactive tap on the five areas
+   except the recorded ED diary-marking exception; NavRow gains it
+   centrally.
+8. DifferentialBadge excluded from every sweep (billing surface;
+   C3 paywall audit owns it).
