@@ -164,6 +164,35 @@ own information design.**
 - Remaining app screens (settings/onboarding/food-adjacent already
   compliant by origin) get a closing census after the above.
 
+**R2-8b/R2-11 - PRODUCTION P0 PAIR (build 2692 walk, founder repro):**
+- R2-8b LANDED 306be1a: the surviving set-log crash was a queued-start
+  drop - stop-then-start churn let Android accept a START_REST
+  (obligation created) while the prior stop's bare stopSelf() killed
+  the service with it still queued. Service now tracks lastStartId and
+  self-stops with the startId form (except the mandatory onTimeout);
+  JS re-anchors ride the live instance instead of stop-then-start.
+- R2-11 LANDED a84215c: "database is locked" at plan build / sign-out
+  wipe / set logging - ONE cause (lead-verified investigation, full
+  report in session log): expo-sqlite parallel IO pool + only
+  transaction blocks queued app-side + NO busy_timeout, so raw writes
+  colliding with an open BEGIN failed instantly. PRAGMA busy_timeout
+  5000 added beside the WAL pragma. NOT a second connection (native
+  ref-counting shares one; dbCrypto branches audited clean).
+- QUEUED (structural, next slot, lead review required - database.js):
+  route ALL writes through the write queue, not just transactions
+  (raw sites: recordEngineTelemetry 7586, createWorkoutSet 2879,
+  legacy sync appliers); fix runInTransaction reentrancy (foreign-tx
+  inline-join, audit finding sync-db-findings #1); dbCrypto swallowed
+  closeAsync refcount hygiene.
+- FOUNDER DECISION OPEN - sign-out escape (the wipe_failed trap forced
+  the founder to clear storage; force:true does not escape either,
+  useAccountActions.js:113-119): (A) bounded retry with backoff, still
+  fails closed; (B) wipe-verify-then-force - after N failures count
+  remaining rows for the user and allow sign-out only if genuinely
+  zero remain (best correctness, no privacy change); (C) force-with-
+  disclosure after N failures, weakest privacy, must re-arm the
+  next-sign-in wipe net. Lead recommends A+B together.
+
 RECOVERY: any dead session -> `git status`, review uncommitted diff against
 this entry, relaunch the affected agent with the same brief + the scope
 escalation above.
