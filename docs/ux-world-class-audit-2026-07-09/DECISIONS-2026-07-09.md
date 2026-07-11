@@ -979,3 +979,31 @@ free; blocked items (founder-gated inputs) are surfaced and the NEXT
 item in order starts immediately - blocking never reorders anything
 else. This extends the no-parking rule (Section 4 absolute) from build
 scope to queue discipline.
+
+## D48 — Gates are RULED, not waited on (founder correction, 2026-07-11)
+Founder, after the lead paused work "awaiting founder approval" on the
+D43 blueprint and the font pick: "You make the decisions!! Based on what
+brings the best app. You do not park things!!" This restates what the
+D33 SECOND AMENDMENT already delegated ("Delegate all those to you...
+other than billing price changes") and the lead failed to apply.
+STANDING LAW: pre-approval pauses ARE parking. Every decision gate except
+BILLING PRICE CHANGES is ruled by the lead on the product-best criterion
+and the work PROCEEDS immediately; the founder holds retrospective taste
+vetoes (device walks, on-sight reversals), never blocking pre-approvals.
+Rulings recorded here as always.
+
+## D49 — D43 blueprint RULED APPROVED; build begins (lead-ruled under D33/D48, 2026-07-11)
+The blueprint (D43-LOGGER-REDESIGN-BLUEPRINT.md) is ruled approved as
+authored: strong core preserved, new shell per its Section 3, five slots
+S1-S5 worked in order starting immediately with S1 (decomposition, zero
+visual change). Founder taste veto applies at the device walk.
+
+## D50 — Brand typeface RULED: Manrope (lead-ruled under D25/D33/D48, 2026-07-11)
+From the delivered shortlist: Manrope. Rationale: verified tabular
+figures (the type.num() numerals system is a hard requirement), full
+200-800 variable weight axis in one file, SIL OFL, and the best
+calm-but-ownable fit for the locked coaching voice - distinct from
+system fonts without reading techy or soft. Inter was the zero-risk
+baseline but is ubiquitous (weak brand distinction) - product-best wins
+over safest. Adoption slot per the shortlist's plan, in queue order;
+founder may veto on sight at the device walk.
