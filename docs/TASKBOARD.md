@@ -73,6 +73,21 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
   and no announcement. Then fix. ED/engine untouched - this is session
   navigation logic.
 
+### QUEUED - leg-day over-volume / division weighting check (founder, 2026-07-11)
+- Founder: the builder generated 9 exercises for a leg day on a men's
+  physique programme - "surely far far too much volume for one
+  session?" Verify-first, ENGINE-ADJACENT (Opus or hands-on per tier
+  rules; read-only diagnosis first): (1) reproduce the generation path
+  (planAutoGen/poolGenerator/planEngine) for a men's physique division
+  leg day - is 9 exercises intended output or a selection bug
+  (duplication, missing per-session exercise cap, pool over-draw)?
+  (2) did the division weighting apply - men's physique is not judged
+  on legs, so leg emphasis should be reduced; (3) compare the session's
+  TOTAL SETS per muscle against the engine's own MEV/MRV landmarks.
+  ANY output-changing fix is a founder round with options first
+  (engine outputs are not silently altered); a pure selection bug fix
+  still gets hands-on lead review of every engine-adjacent hunk.
+
 ### QUEUED - D43 logger redesign blueprint (after point fixes; see D43 amendment)
 - Founder verdict: logger 3/10, target 10/10, complete redesign
   cohesive with the app. Lead produces the blueprint (Opus legwork),
