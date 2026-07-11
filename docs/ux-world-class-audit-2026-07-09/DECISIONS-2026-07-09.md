@@ -1052,3 +1052,18 @@ design changes are clearly identified and justified to the founder
 BEFORE they land, even under D48 (D48 still covers non-visual gates).
 The dead slice-2 agent's WIP snapshot was reverted unreviewed
 (`b2be386`); S1 slice 2 restarts clean when the logger queue resumes.
+
+## D54 — Unilateral logging redesigned: one set, same reps both sides (founder D9 reversal, lead-ruled ED review, 2026-07-11)
+Founder device verdict: the D9 two-phase per-side flow asked for reps
+INDEPENDENTLY on each side and stored the lower - ED-adverse, normalises
+imbalance. REVERSED. A unilateral exercise now prescribes ONE reps value
+for both sides; logging guides side one -> rest-class transition (D9
+amendment 2 rest unchanged) -> side two -> one recorded set with the
+single prescribed reps. Guided sheet moved onto the shared
+WorkoutBottomSheet idiom. No per-side rep field remains. Old rows still
+render their L/R breakdown read-only (formatPerSide in LoggedSetRow);
+engine, database and migration 054 untouched. Lead ED-safety review
+confirmed the divergent ask is gone and the record path writes one
+value. Landed `f94d156`, unilateral guard rewritten to the new contract
+23/23, full suite green. Terminology: this is the sequential/unilateral
+case (all reps one side then the other), not alternating.

@@ -438,7 +438,7 @@ populate with evidence-based pre/post meals AND redistribute daily
 macros across all enabled meals within engine tolerance - investigate
 sports-nutrition practice first). Founder usage low: lowest-sensible-tier
 agents for all of it, Fable/premium main loop reserved for judgement +
-safety-adjacent only.
+safety-adjacent only. LANDED so far this wave: font revert (D53), Body Metrics history (`94cd1fe`), Dietary Needs reopen+Done (`2d17fff`), unilateral redesign (D54, `f94d156`). IN FLIGHT: Today/Train heading + Progress card gap (Sonnet). NEXT in order: Coach cleanup, then Pre/Post workout meals.
 
 0. LANDED THIS SESSION (2026-07-11, all pushed; detail in
    `_HANDOVER-ARCHIVE.md`): CP-10 batch E COMPLETE — part 1 `c2a9b81`
