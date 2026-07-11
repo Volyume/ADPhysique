@@ -734,3 +734,22 @@ the sup-modals are pinned to, so every alert in the app (delete,
 unpair, cancel-subscription, the unilateral confirm) becomes
 clip-proof. Best-product criterion: one shared fix over a
 surface-local patch. Action chrome, a11y roles and copy unchanged.
+
+## D43 — FOUNDER ORDER: complete world-class UX pass (founder, 2026-07-11)
+Founder's words (device-walking build 2608): "The entire thing for the
+workout looks absolutely terrible it needs a complete world class
+level redesign... It's not just the workout the layout buttons
+everything... A complete ux pass and fix needed." STANDING ORDER
+recorded: a full visual/UX quality pass of the app, workout experience
+first, judged at the world-class bar, with the founder's photos as
+evidence. SEQUENCING (lead, under D33): (1) land the point fixes
+already diagnosed (set rows b1403c9, AppAlert in flight, swapper
+next); (2) systemic visual audit - zeego clobber footprint beyond set
+rows, any other window-2608 break; verified hands-on that
+resolveTheme(defaults) shares the frozen token tables, so live theming
+at default prefs is not the cause, and the founder confirmed
+all-default display settings; (3) fresh green build named for the
+founder's re-walk; (4) the redesign pass proper - lead-driven design
+judgement, Opus agents for legwork, area by area against best-in-class
+references. The pass is NOT conditional on the founder re-walk; it
+starts once the point fixes land.
