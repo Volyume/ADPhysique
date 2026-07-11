@@ -1653,3 +1653,102 @@ supabase/ for additions), App Groups + EAS build, OAuth SHA-1.
 - D35 edge auto-scroll LANDED `ed62aab` (still-finger reaction fix included;
   20 targeted suites / 152 tests + lint green; CI full suite arbitrates on
   push). Device checklist steps 1-12 in the agent reports via the handover.
+
+### LANDED - CP-10 screen theming batch E (6 food heavyweights, 2026-07-11)
+- Part 1 `c2a9b81` (recovered from the dead session's uncommitted tree,
+  lead-reviewed): FoodSearchScreen, FoodInsightsScreen,
+  RecipeBuilderScreen; two source pins widened. Adversarial review:
+  clean on all six defect categories; its one finding (stray shadowing
+  `t` in proteinTargetRule) fixed at `7c24933`.
+- Part 2 `dc40a70` (Sonnet build, lead-reviewed): DiaryScreen (MacroRings
+  call site untouched/byte-identical), MealPlanScreen (converted around
+  the dietarySheet, DietaryPreferencesEditor call unchanged),
+  NutritionTargetsScreen (every valence mapping preserved in meaning;
+  confidence table went LIVE as buildConfidenceColors on the
+  buildMarkStyle precedent - lead ruling at review). Three guard suites
+  widened mechanically, no pin weakened. Full suite at the boundary:
+  675/676 suites (1 pre-existing skip), 8,412 passed / 0 failed, lint
+  clean. Screen coverage after E: 37/85 live.
+
+===============================================================================
+## SUPERSEDED RESUME POINT (2026-07-10 late; rolled to archive 2026-07-11 —
+## everything below LANDED; the live resume point is in the live handover)
+===============================================================================
+## ⏸ RESUME POINT — current state and queue (2026-07-10 late,
+## defensive mid-flight snapshot — founder warned the token window may
+## die before the 5-hour mark; a fresh session resumes from HERE):
+
+**PUSHED THROUGH `6db4d33`. Tree dirt at snapshot time = the two
+in-flight agents below. If resuming after a dead session, run
+`git status` and apply each agent's recovery path:**
+
+0. LANDINGS SINCE THE SNAPSHOT (all pushed, tree clean at cf8ace6):
+   D35 auto-scroll `ed62aab` (still-finger reaction fix; 8,382-suite
+   base + 20 targeted suites green; CI arbitrates); staleness sweep
+   `56838f8` (43 banners + docs/TASKBOARD.md, the single task source)
+   + blueprint pass `ee3b52c` (33 more banners); inline dietary
+   preferences `af1a898` (shared DietaryPreferencesEditor in Settings
+   AND the meal builder's new sheet, stranding removed, full suite
+   8,391/0). NEXT SLOTS per TASKBOARD.md: D36b FeedbackSheet/PeekMenu;
+   D36c TalkBack sheet isolation; theming remainder; decision rounds.
+   The two IN FLIGHT entries below are HISTORICAL (both landed).
+1. IN FLIGHT (a): **D35 drag edge auto-scroll** (Sonnet). Spec = D35
+   register entry + this file's earlier queue text: extend
+   src/components/DragReorderList.js with edge auto-scroll on all four
+   consumer surfaces (PlanDetail, ManualBuilder, RoutineDetail reorder
+   mode, ActiveWorkout reorder sheet); crux = scroll-offset-aware
+   hit-testing (content-relative centre = viewport position + scroll
+   offset); pure-arithmetic worklets + runOnJS only; optional
+   backwards-compatible props; Reduce Motion = linear but functional;
+   keep every reorder-guard pin; no new dependency; agent does not
+   commit. RECOVERY: if DragReorderList/screen edits sit uncommitted,
+   lead-review against that spec, `npm run lint && npm test --
+   --runInBand` (base tree was green at 8,382), commit per-feature +
+   update this file + push. If no such edits exist, relaunch a Sonnet
+   agent from the spec above.
+2. IN FLIGHT (b): **audit staleness sweep + TASKBOARD.md** (Opus,
+   docs/** only). Spec: verdict (LIVE / SUPERSEDED / PARTIALLY LIVE,
+   evidence-based) for every dated audit folder + loose audit/backlog
+   docs; SUPERSEDED ones get a top-of-file banner ("do not build from
+   this; current work runs from this handover + docs/TASKBOARD.md;
+   D37 triage rule"); locked docs + rules/ excluded; builds
+   docs/TASKBOARD.md as THE single task list (header restates D37 +
+   D38; queued items carry CURRENT STATE / END STATE / ELEVATES
+   BECAUSE per D38, else they sit in a NEEDS-JUSTIFICATION section;
+   sections: in flight, queued, founder-side ops, held/never-
+   re-propose). RECOVERY: if docs edits/TASKBOARD.md sit uncommitted,
+   lead-review banners + board against D37/D38 and the register, fix
+   gaps, commit + push, then wire CLAUDE.md's status block and this
+   file to point at TASKBOARD.md. If absent, relaunch an Opus agent
+   from the spec above.
+3. AT BOTH LANDINGS: full suite over the settled tree, per-feature
+   commits, this handover + TASKBOARD.md updated, push (standing
+   discipline, reaffirmed by the founder 2026-07-10 late).
+2. NEXT SLOTS, in order:
+   a. **NEW FOUNDER ASK (2026-07-10, priority — direct defect report):
+      inline dietary preferences + allergies in the meal builder.**
+      Founder's words: "I asked for food preferences and allergies to
+      be in meal preferences in the meal builder. Instead a link to
+      meal preferences in settings is there. People click on it and it
+      takes you to settings with no way back. The selection needs to
+      be independent in meal preferences too. Not just a link to
+      settings. Changing it in either place changes it fully."
+      Verify-first per D38: establish the current surface (item 4
+      landed `85c5fe1` as a chip/link + once-ever hint), confirm the
+      no-way-back navigation defect, then build the selection UI
+      INLINE in the meal builder's preferences — same store/profile
+      fields as SettingsDietaryScreen (single source of truth, both
+      surfaces always agree), same ED-safe soft exclusion nudge,
+      same sync (allergen_excludes ladder), tier posture unchanged.
+      No duplicate state anywhere.
+   b. FeedbackSheet/PeekMenu migration slot (D36b); TalkBack sheet
+      isolation slot (D36c, cross-cutting, RootNavigator-adjacent);
+      then the remaining delegated decision rounds (watch-app scoping,
+      kala namak, brand font) — each verify-first.
+3. PROCESS NOTE: two consecutive campaign lines (16, 19) were stale
+   against the tree — every remaining item gets a verify-first read
+   agent before any build brief is written. The same rule applies
+   with more force to anything from pre-campaign audits (see the
+   staleness-triage entry above).
+4. Standing discipline at every landing: full suite over the clean
+   tree, this handover's stage log updated, push.

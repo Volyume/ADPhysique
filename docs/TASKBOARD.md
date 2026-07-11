@@ -28,31 +28,18 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ## 1. IN FLIGHT
 
-### CP-10 screen theming batch E (part 1 LANDED, part 2 in flight)
-- The six food heavyweights. PART 1 LANDED `c2a9b81` (recovered from the
-  dead session's uncommitted tree, lead-reviewed): FoodSearchScreen,
-  FoodInsightsScreen, RecipeBuilderScreen live-themed on the batch
-  pattern; bottomBarInset + FoodSearchScreen pins widened with dated
-  comments. Adversarial review verdict: clean on all six defect
-  categories; its one finding (stray shadowing `t` in proteinTargetRule)
-  fixed at `7c24933`. Lint + all touched-screen suites green.
-- PART 2 IN FLIGHT (Sonnet): DiaryScreen, MealPlanScreen (CARE:
-  convert around the new dietarySheet code, no behaviour change),
-  NutritionTargetsScreen (imports wellbeing - valence mappings
-  byte-identical, ED-adjacent care). Same batch pattern and bounds
-  as batch D. RECOVERY: if those three files sit uncommitted,
-  lead-review against this spec, lint + full suite, commit + push;
-  if untouched, relaunch a Sonnet agent from this entry.
-- Then further batches until 0 static, which unlocks the stage-5
-  restart-prompt retirement.
+### (nothing in flight)
+- Batch E LANDED in full (`c2a9b81` + `7c24933` + `dc40a70`; detail in
+  the archive's TASKBOARD HISTORY). Next dispatch: CP-10 batch F from
+  the queued entry below.
 
 ---
 
 ## 2. QUEUED (build slots - two agents at a time, lowest capable tier)
 
-### CP-10 screen theming - remaining batches after E
+### CP-10 screen theming - remaining batches (F onward)
 - **Source:** `CP-10-restart-free-theming-plan.md`; D16, D24, D29; handover THEMING COVERAGE TRACKER.
-- **CURRENT STATE:** components 105/110 live; screens 31/85 live at batch D close (batch E raises this); the stage-5 honesty gate (retiring the restart prompt) stays blocked until a toggle's full dependency set is live.
+- **CURRENT STATE:** components 105/110 live; screens 37/85 live at batch E close (48 static remain); the stage-5 honesty gate (retiring the restart prompt) stays blocked until a toggle's full dependency set is live.
 - **END STATE:** every screen live-themed, stage-5 cleared so restart-free theming ships fully with no stale surfaces.
 - **ELEVATES BECAUSE:** the theme toggle becomes genuinely live and complete - no static islands, no restart, honest stage-5 retirement.
 - **Bounds:** batch pattern as D/E; ProGate/tier logic untouched; frozen static stylesheets stay byte-identical unless converted.
