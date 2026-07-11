@@ -134,7 +134,7 @@ export default function WelcomeScreen({ navigation }) {
                 <Ionicons name="create-outline" size={18} color={t.colors.textSecondary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.freeTitle, live.freeTitle]}>Yours free, always</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.freeTitle, live.freeTitle]}>What stays free</Text>
                 <Text maxFontSizeMultiplier={1.3} style={[styles.freeSubtitle, live.freeSubtitle]}>If you don&apos;t subscribe after the trial, these stay.</Text>
               </View>
             </View>
@@ -158,7 +158,7 @@ export default function WelcomeScreen({ navigation }) {
           <View
             style={styles.trustRow}
             accessible
-            accessibilityLabel="Works fully offline. Your data exports anytime. No ads, ever."
+            accessibilityLabel="Works fully offline. Your data exports anytime. No ads."
           >
             <Ionicons name="cloud-offline-outline" size={13} color={t.colors.textMuted} importantForAccessibility="no" />
             <Text maxFontSizeMultiplier={1.3} style={[styles.trustText, live.trustText]}>Works fully offline</Text>
@@ -167,7 +167,7 @@ export default function WelcomeScreen({ navigation }) {
             <Text maxFontSizeMultiplier={1.3} style={[styles.trustText, live.trustText]}>Exports anytime</Text>
             <Text maxFontSizeMultiplier={1.3} style={[styles.trustDot, live.trustDot]}>-</Text>
             <Ionicons name="shield-checkmark-outline" size={13} color={t.colors.textMuted} importantForAccessibility="no" />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.trustText, live.trustText]}>No ads, ever</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.trustText, live.trustText]}>No ads</Text>
           </View>
         </Animated.View>
 

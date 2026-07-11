@@ -84,7 +84,7 @@ export default function SubscriptionPolicyScreen() {
             <Strong>Nothing you've logged disappears.</Strong> Every workout, every PR, every check-in stays on your phone exactly as you left it.
           </Body>
           <KeyPoint>
-            You keep read access to everything you built on Pro, forever.
+            You keep read access to everything you built on Pro.
           </KeyPoint>
           <Body>
             What changes on Free:

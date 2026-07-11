@@ -590,7 +590,7 @@ export default function NotificationSettingsScreen({ navigation }) {
       <BackHeader title="Notifications" />
       <View style={styles.subtitleWrap}>
         <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>
-          Volyume uses local notifications only. No marketing, ever.
+          Volyume uses local notifications only, never marketing.
         </Text>
       </View>
 

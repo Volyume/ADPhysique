@@ -88,10 +88,23 @@ No item marked done on an agent's self-report. Ever._
   D64 (21 unilateral pins green); storage/engine invariants untouched.
   DEVICE CHECK: founder walks a dumbbell curl - expect exactly two taps,
   no sheet, nothing touching.
-- **R5 Logger cohesion to the Food standard.** Header (X / Finish / elapsed
-  counter all different styles), and differing styles across the whole
-  surface. Food (Diary etc.) is the explicit standard. STATUS: queued
-  (recon -> lead spec -> specced build -> lead verify).
+- **R5 Logger cohesion to the Food standard.** DONE `75ad788` (lead,
+  hands-on; ruling D66). Header unified: X = ModalHeader's close (24,
+  textPrimary); timer = data ink (textPrimary, same num role); Finish =
+  plain secondary Button (bespoke chrome override deleted). One
+  small-surface radius (md) across beatLineCue / RestTimer skip /
+  logged-set rows / in-place editor; raw type pairs onto bodySm and
+  overline roles; scroll edge md -> lg matching header + Food. DEVICE
+  CHECK: header reads as one family (plain X, plain timer, quiet Finish
+  chip all same ink); logged sets and rest timer share the same corner
+  rounding; nothing amber in the header.
+- **R10 Clipped-AI copy sweep** (founder order mid-campaign). DONE
+  (ruling D67). 5 strings fixed ("Yours free, always" -> "What stays
+  free"; "No ads, ever" -> "No ads"; "Your data is always yours."
+  deleted; "on Pro, forever." trimmed; "No marketing, ever." ->
+  "never marketing") + a NEW LINT banning the ", always/ever/forever"
+  tail in strings/JSX text, wired in both rule blocks. DEVICE CHECK:
+  Welcome screen free card + trust row read plainly.
 - **R6 Workout summary bar dead space** between close and share when
   finishing. DONE (lead, hands-on). ROOT CAUSE: PressableCard (the shared
   press-physics primitive under Button/Card/Chip/Stepper) applied the

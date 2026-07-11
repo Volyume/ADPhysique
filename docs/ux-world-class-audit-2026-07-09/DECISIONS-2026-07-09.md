@@ -1380,3 +1380,49 @@ pressableCard.rowLayout.guard.test.js. Verified: full suite
 691 suites / 8,529 tests green; absolute-position sweep found no
 consumer relying on the old inert layer. Subject to founder device-walk
 veto.
+
+## D66 — R5: logger chrome and small-surface styling unified (lead ruling, 2026-07-11)
+
+Sources: FOOD-DESIGN-STANDARD.md (the measuring stick), DEFECT-MAP.md R5
+(header table + radius-cluster inventory), founder's words ("Finish
+differs from X, counter different colour/style... different styles for
+different things all over the shop").
+
+RULINGS:
+1. Header X matches ModalHeader's close exactly (size 24, textPrimary).
+2. The elapsed timer is data, not decoration: textPrimary, same
+   type.num('title') role. Header amber competed with the one filled
+   Log set CTA.
+3. Finish drops its bespoke chrome override; Button variant="secondary"
+   size="sm" shows through (the override duplicated it at radius.sm).
+4. ONE small-surface radius for the logger: radius.md (beatLineCue and
+   RestTimer skip sm -> md; logged-set row + in-place editor xs -> md).
+   Pills stay radius.full; cards radius.lg. This is the reconciliation
+   rule for any future logger surface.
+5. Raw type pairs onto house roles: beatLineLabel -> bodySm, RestTimer
+   label -> overline. The 26px rest countdown stays a sanctioned hero
+   numeral (existing eslint-disable).
+6. Content edge: logger scroll paddingHorizontal md -> lg, aligning with
+   header/exercise-nav/Food. The tighter vertical rhythm (sm gaps) is a
+   deliberate density property of the working surface and STAYS.
+Landed 75ad788; full suite green. Subject to founder device-walk veto.
+
+## D67 — Clipped-drama copy ban made mechanical (founder order 2026-07-11)
+
+Founder: "We need a search for clipped ai language... for example 'Yours
+free, always' that's not british english and sounds daft, they dont own
+it."
+
+Swept and fixed (5 strings): WelcomeScreen "Yours free, always" ->
+"What stays free"; WelcomeScreen trust chip "No ads, ever" -> "No ads"
+(+ its a11y label); SettingsDataScreen "Your data is always yours." ->
+deleted (the factual sentence stands alone); SubscriptionPolicyScreen
+"...on Pro, forever." -> "...on Pro."; NotificationSettingsScreen
+"No marketing, ever." -> "never marketing" (caught by the new lint, not
+the manual grep - the guard already outperforms the sweep).
+
+ENFORCEMENT: two new no-restricted-syntax selectors in eslint.config.js
+(both rule blocks, since the HomeScreen-scoped block replaces rather
+than merges) banning the ", always/ever/forever" tail at sentence or
+string end in Literals and JSXText. Same escape hatch as the other
+voice rules: scoped eslint-disable with a reason.

@@ -254,6 +254,19 @@ module.exports = [
           selector: "JSXText[value=/\\b(?:delve|leverage|utili[sz]e|facilitate|seamless(?:ly)?|streamlin(?:e|es|ed|ing)|robust|comprehensive)\\b/i]",
           message: 'Machine-tell word in copy (CLAUDE.md "No AI fingerprint"). Rewrite in plain spoken voice.',
         },
+        // Clipped-drama tails (founder rule 2026-07-11, R-campaign): copy
+        // like "Yours free, always" / "No ads, ever" reads as AI-register
+        // marketing, not plain British English. Ban the ", always/ever/
+        // forever" tail at a sentence or string end; state the fact plainly
+        // ("No ads", "What stays free") instead.
+        {
+          selector: "Literal[value=/,\\s*(?:always|ever|forever)(?:[.!]|\\s*$)/i]",
+          message: 'Clipped-drama tail (", always" / ", ever" / ", forever") in copy. State the fact plainly (founder voice rule 2026-07-11).',
+        },
+        {
+          selector: "JSXText[value=/,\\s*(?:always|ever|forever)(?:[.!]|\\s*$)/i]",
+          message: 'Clipped-drama tail (", always" / ", ever" / ", forever") in copy. State the fact plainly (founder voice rule 2026-07-11).',
+        },
       ],
     },
   },
@@ -351,6 +364,19 @@ module.exports = [
         {
           selector: "JSXText[value=/\\b(?:delve|leverage|utili[sz]e|facilitate|seamless(?:ly)?|streamlin(?:e|es|ed|ing)|robust|comprehensive)\\b/i]",
           message: 'Machine-tell word in copy (CLAUDE.md "No AI fingerprint"). Rewrite in plain spoken voice.',
+        },
+        // Clipped-drama tails (founder rule 2026-07-11, R-campaign): copy
+        // like "Yours free, always" / "No ads, ever" reads as AI-register
+        // marketing, not plain British English. Ban the ", always/ever/
+        // forever" tail at a sentence or string end; state the fact plainly
+        // ("No ads", "What stays free") instead.
+        {
+          selector: "Literal[value=/,\\s*(?:always|ever|forever)(?:[.!]|\\s*$)/i]",
+          message: 'Clipped-drama tail (", always" / ", ever" / ", forever") in copy. State the fact plainly (founder voice rule 2026-07-11).',
+        },
+        {
+          selector: "JSXText[value=/,\\s*(?:always|ever|forever)(?:[.!]|\\s*$)/i]",
+          message: 'Clipped-drama tail (", always" / ", ever" / ", forever") in copy. State the fact plainly (founder voice rule 2026-07-11).',
         },
       ],
     },
