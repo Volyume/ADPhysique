@@ -6,7 +6,14 @@ Landed-item detail rolls to
 `docs/ux-world-class-audit-2026-07-09/_HANDOVER-ARCHIVE.md` at each landing
 (D41 token hygiene): this board holds only in-flight / queued / held._
 
-## How this board works (D37 + D38 - restated)
+## How this board works (D37 + D38 + D47 - restated)
+
+- **D47 (order rule, founder 2026-07-11).** The board is worked TOP TO
+  BOTTOM, every item, in order - the lead never selects, defers or
+  re-prioritises items by preference. Blocked items are surfaced and the
+  next in order starts immediately.
+
+## (D37 + D38 detail)
 
 - **D37 (staleness rule).** Nothing from a pre-campaign audit is built from its
   old blueprint. Every pre-campaign item is triaged against today's tree + the

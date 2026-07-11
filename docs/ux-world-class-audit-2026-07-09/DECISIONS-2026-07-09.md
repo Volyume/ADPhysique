@@ -964,3 +964,18 @@ and the full direct floor stands. The review also exposed that every
 probe and test ran full_gym only — the invariant suite now sweeps all
 six equipment settings and pins the exact reproduction. Full suite after
 fix: 683 suites / 8,457 tests green, lint clean.
+
+## D47 — The queue is not curated: everything gets done, in order (founder, 2026-07-11)
+Founder correction, verbatim intent: "No — you don't rule on what to do
+and not to do. It all gets done in order." Standing law, permanent:
+D33 delegation covers PRODUCT-FORK decisions (which design/approach best
+serves users on a job already being done). It does NOT extend to scope
+selection. The lead never decides WHETHER a board item gets done, never
+re-prioritises it away, never parks it as "later" by preference - the
+board is worked TOP TO BOTTOM, every item, in the order it carries
+(founder-set sequencing like "pristine pass LAST" is part of that
+order). Items advance the moment a slot or the lead's own hands are
+free; blocked items (founder-gated inputs) are surfaced and the NEXT
+item in order starts immediately - blocking never reorders anything
+else. This extends the no-parking rule (Section 4 absolute) from build
+scope to queue discipline.
