@@ -2196,7 +2196,19 @@ let _txTail = Promise.resolve();
 export async function runInTransaction(d, task) {
   const inTx = () => typeof d.isInTransactionSync === 'function' && d.isInTransactionSync();
   if (inTx()) return task();
-  const run = _txTail.then(() => (inTx() ? task() : d.withTransactionAsync(task)));
+  // R2-13 (production, build 2694, founder repro "Cannot read property
+  // 'zeroMatch' of undefined" at plan generation): expo-sqlite's
+  // withTransactionAsync AWAITS the task but DISCARDS its return value, so
+  // this used to resolve to undefined on the normal path and any caller
+  // consuming the result (planAutoGen's writeResult since 4900099) blew up
+  // AFTER the commit. Capture the task's result in a closure so callers get
+  // it back on every path; commit/rollback semantics are unchanged.
+  const run = _txTail.then(async () => {
+    if (inTx()) return task();
+    let result;
+    await d.withTransactionAsync(async () => { result = await task(); });
+    return result;
+  });
   // Keep the queue alive whatever this transaction's outcome.
   _txTail = run.then(() => {}, () => {});
   return run;

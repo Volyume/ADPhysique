@@ -56,6 +56,28 @@ test('runs the task inline when a transaction is already open (reentrancy guard)
   open = false;
 });
 
+test('resolves to the task return value on every path (R2-13)', async () => {
+  // Production regression (build 2694, fresh-install plan generation):
+  // expo-sqlite's withTransactionAsync awaits the task but DISCARDS its
+  // return value — the strict fake above mirrors that. runInTransaction
+  // must hand the task's result back itself, or value-consuming callers
+  // (planAutoGen's writeResult) read properties off undefined AFTER the
+  // commit has already landed.
+  const d = makeStrictDb();
+  const queued = await runInTransaction(d, async () => ({ zeroMatch: false, totalWritten: 4 }));
+  expect(queued).toEqual({ zeroMatch: false, totalWritten: 4 });
+
+  // The reentrant inline path returns the value too.
+  let open = true;
+  const inline = {
+    isInTransactionSync: () => open,
+    withTransactionAsync: async () => { throw new Error('should not nest a BEGIN'); },
+  };
+  const nested = await runInTransaction(inline, async () => 'inline-value');
+  expect(nested).toBe('inline-value');
+  open = false;
+});
+
 test('a failing transaction does not wedge the queue', async () => {
   const d = makeStrictDb();
   await expect(

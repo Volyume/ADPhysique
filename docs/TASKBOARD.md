@@ -189,6 +189,20 @@ own information design.**
   clearAuthStateForSignOut.wipe.failed / database.wipeAllUserData.*
   from that earlier attempt (founder screenshot or the Sentry
   connector). Do not re-merge with R2-11 without that evidence.
+- R2-13 LANDED - fresh-install 2694 plan generation failed with
+  "Cannot read property 'zeroMatch' of undefined" (founder repro; the
+  R2-11 busy_timeout fix unmasked it - the lock used to kill plan-gen
+  first). Root cause: expo-sqlite's withTransactionAsync AWAITS the
+  task but DISCARDS its return value (build/SQLiteDatabase.js:115-125),
+  so runInTransaction resolved undefined and planAutoGen's writeResult
+  consumer (the 4900099 rollback pattern, planAutoGen.js:160-199) threw
+  AFTER the commit - the plan wrote but activation/report never ran.
+  Fixed at the primitive: runInTransaction captures the task result in
+  a closure and returns it on every path (queued, reentrant-inline,
+  inline-join). Regression pin added to runInTransaction.test.js
+  against a discard-faithful fake. Retry path for the founder's
+  orphaned attempt: Today -> "Start with a plan" (makeUniquePlanName +
+  auto-archive self-heal the unactivated programme).
 - QUEUED (structural, next slot, lead review required - database.js):
   route ALL writes through the write queue, not just transactions
   (raw sites: recordEngineTelemetry 7586, createWorkoutSet 2879,
