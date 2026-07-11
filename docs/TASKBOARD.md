@@ -93,14 +93,20 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
   cohesive with the app. Lead produces the blueprint (Opus legwork),
   founder approves, then staged build slots.
 
-### QUEUED NEXT (founder reports, same session): exercise swapper layout
-- Founder photo (build 2608): in ExercisePickerModal with query "leg",
-  a large empty void sits between the muscle-chip row and the
-  equipment-chip row and no results are visible. Diagnose verify-first
-  (could be zeego-unrelated: chip container growth, empty-results
-  layout, or search regression), then fix. Founder verdict "looks
-  cheap" also queues a wider workout-logger visual audit against the
-  pre-campaign baseline - scope after the two point fixes land.
+### IN FLIGHT - exercise picker first-open fix (diagnosed 2026-07-11)
+- DIAGNOSED (full report in session log): the void is FlashList
+  committing a ~zero-height first native paint inside a freshly created
+  Android Modal window (native window + insets warm-up race);
+  ListEmpty and the create-custom footer are clipped with it. Second
+  open self-heals (Android remounts the modal; native setup now warm).
+  PRE-CAMPAIGN root: FlashList adoption 68f0462 (E8, 2026-07-02).
+  Chips clean; search pure; recents unrelated (query non-empty).
+  Jest cannot see this class (FlashList mocked to FlatList) - device
+  checklist verifies. FIX (lead-ruled, D33): gate the FlashList (and
+  browse-filter block) mount on the Modal's onShow so first layout runs
+  against a presented window; no new dependency, one file. RECOVERY:
+  if ExercisePickerModal.js sits uncommitted, lead-review vs this
+  spec, lint + targeted suites, commit + push; else relaunch.
 
 ### LANDED - CP-10 screen theming batch F (both lanes, `3b182a7` + `c92a5ce`)
 - 9 screens converted + 3 verified already-live (Settings family via
