@@ -379,7 +379,13 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   durationBarValue: {
+    // R2 (cohesion sweep, 2026-07-11): the per-bar minutes readout is a data
+    // numeral -> tabular figures, matching every other numeral in the tab.
+    // fontSize.micro + fontWeight.semibold has no exact type.* role (theme
+    // gap logged in the R2 report); the raw pair stays rather than dropping
+    // emphasis.
     fontSize: fontSize.micro, color: colors.textSecondary, fontWeight: fontWeight.semibold,
+    fontVariant: ['tabular-nums'],
   },
   durationBarLabel: {
     fontSize: fontSize.micro, color: colors.textMuted,
@@ -407,7 +413,13 @@ const styles = StyleSheet.create({
     ...type.caption, color: colors.textSecondary,
   },
   freqCountBold: {
+    // R2 (cohesion sweep, 2026-07-11): per-muscle session counts are data
+    // numerals -> tabular figures so the "N this / M last" columns align down
+    // the table. fontSize.sm + fontWeight.bold has no exact type.* role (theme
+    // gap logged in the R2 report); the raw pair stays rather than dropping
+    // emphasis.
     fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textPrimary,
+    fontVariant: ['tabular-nums'],
   },
   freqCountUp: {
     color: colors.success,
@@ -416,7 +428,8 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   freqLastWeek: {
-    color: colors.textMuted,
+    // R2: the "M last" count is also a data numeral -> tabular figures.
+    color: colors.textMuted, fontVariant: ['tabular-nums'],
   },
   freqToggle: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
@@ -440,15 +453,18 @@ const styles = StyleSheet.create({
     ...type.label,
     color: colors.textMuted,
   },
+  // R2 (cohesion sweep, 2026-07-11): the training-load meter joins the
+  // pill/bar radius family (radius.full), matching the mesocycle progress
+  // meter above (mesoProgressTrack/Fill) instead of a one-off radius.sm.
   workloadBarBg: {
     height: 8,
     backgroundColor: colors.surface2,
-    borderRadius: radius.sm,
+    borderRadius: radius.full,
     overflow: 'hidden',
   },
   workloadBarFill: {
     height: 8,
-    borderRadius: radius.sm,
+    borderRadius: radius.full,
   },
   workloadStats: {
     flexDirection: 'row',

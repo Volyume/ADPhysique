@@ -1253,7 +1253,12 @@ const styles = StyleSheet.create({
   sessionName:  { ...type.bodyStrong, color: colors.textPrimary },
   sessionMeta:  { ...type.num('caption'), color: colors.textSecondary, marginTop: spacing.xxs },
   diffChip:     { borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: 3 },
-  diffText:     { fontSize: fontSize.xs, fontWeight: fontWeight.bold },
+  // R2 (cohesion sweep, 2026-07-11): the difficulty readout ("8/10") is a
+  // data numeral, so it joins the screen's tabular-figure discipline like
+  // every other numeral here (volSummaryCount/lifetimeValue). fontSize.xs +
+  // fontWeight.bold has no exact type.* role (theme gap logged in the R2
+  // report), so the raw weight stays rather than dropping emphasis.
+  diffText:     { fontSize: fontSize.xs, fontWeight: fontWeight.bold, fontVariant: ['tabular-nums'] },
 
   // ── Nav tiles ──
   navGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
@@ -1264,8 +1269,12 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   navTileLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  // R2 (cohesion sweep, 2026-07-11): the raw fontSize.xs + fontWeight.semibold
+  // pair maps exactly onto type.captionStrong (the named xs+semibold role for
+  // small non-uppercase data-adjacent labels), so it joins the shared type
+  // system instead of a hand-rolled pair.
   navTileLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
+    ...type.captionStrong,
     color: colors.textSecondary, textAlign: 'center',
   },
   // Not-enough-data-yet tile variant (Recaps countdown pattern, T6): dimmed
@@ -1335,7 +1344,7 @@ function buildLiveStyles(t) {
     sessionMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
     diffText: { fontSize: t.fontSize.xs },
     navTile: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    navTileLabel: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    navTileLabel: { ...t.type.captionStrong, color: t.colors.textSecondary },
     navTileLabelLocked: { color: t.colors.textMuted },
     navTileSub: { ...t.type.num('caption'), color: t.colors.textMuted },
     momentumText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
