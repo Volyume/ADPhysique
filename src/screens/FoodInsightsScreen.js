@@ -280,9 +280,9 @@ export default function FoodInsightsScreen({ navigation }) {
   }, [days, rollupByDate]);
 
   const proteinTargetRule = useMemo(() => {
-    const t = targets?.proteinG;
-    if (!t || proteinLine.length < 2) return null;
-    return proteinLine.map(() => ({ value: t }));
+    const proteinTarget = targets?.proteinG;
+    if (!proteinTarget || proteinLine.length < 2) return null;
+    return proteinLine.map(() => ({ value: proteinTarget }));
   }, [proteinLine, targets]);
 
   // Period-average summary: avg kcal/day over the selected window vs the same
