@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns/format';
@@ -26,6 +26,9 @@ import HomeProTeaserCard from '../components/HomeProTeaserCard';
 import HomeLastSessionCard from '../components/HomeLastSessionCard';
 import HomeBlockShapeSheet from '../components/HomeBlockShapeSheet';
 import HomeChangeWorkoutSheet from '../components/HomeChangeWorkoutSheet';
+import BottomSheet from '../components/BottomSheet';
+import Chip from '../components/Chip';
+import * as haptics from '../lib/haptics';
 import { buildCoachBrief } from '../lib/homeCoachBrief';
 import {
   getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
@@ -114,9 +117,10 @@ const READINESS_ROWS = [
 
 export default function HomeScreen({ navigation, route }) {
   const toast = useToast();
-  const insets = useSafeAreaInsets();
-  const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments, reduceMotion } = useAppStore(
-    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments, reduceMotion: s.accessibility?.reduceMotion }))
+  // R9 (D70): insets and reduceMotion left with the raw intent Modal -
+  // the shared BottomSheet owns both now.
+  const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments } = useAppStore(
+    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments }))
   );
 
   // CP-10 stage 3 (theming batch 2): live theme (src/hooks/useTheme.js).
@@ -158,8 +162,6 @@ export default function HomeScreen({ navigation, route }) {
     coachingNudgeBody: { ...t.type.captionTight, color: t.colors.textSecondary },
     coachingNudgeScanSubline: { ...t.type.captionTight, color: t.colors.textMuted },
     coachingNudgeBtnText: { fontSize: t.fontSize.xs, color: t.colors.primary },
-    intentOverlay: { backgroundColor: t.colors.scrim },
-    intentSheet: { backgroundColor: t.colors.surface },
     intentTitle: { ...t.type.h3, color: t.colors.textPrimary },
     intentSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     intentOption: { backgroundColor: t.colors.surface2 ?? t.colors.background, borderColor: t.colors.border },
@@ -1194,7 +1196,7 @@ export default function HomeScreen({ navigation, route }) {
   }
 
   // COMP-008: an intent tap carries whatever readiness chips were set; Skip
-  // passes intent null and no readiness (see the Modal). The values flow
+  // passes intent null and no readiness (see the intent sheet). The values flow
   // straight into createWorkout, which writes them to the workout row.
   async function confirmStart(intent, readinessOverride = readiness) {
     setShowIntentPrompt(false);
@@ -2045,102 +2047,102 @@ export default function HomeScreen({ navigation, route }) {
       />
 
       {/* ── Pre-workout intent prompt ── */}
-      <Modal
+      {/* R9 (D70): the pre-workout intent prompt moves off its hand-rolled
+          raw Modal onto the shared BottomSheet (scrim, drag handle,
+          swipe/backdrop/back dismiss, reduce-motion handling all owned
+          there), the readiness pickers onto the shared Chip, and every tap
+          gains the house selection() beat. Skip and the standing opt-out
+          stay deliberately quiet text controls: they are de-emphasised
+          escape hatches under the fold, not competing CTAs. */}
+      <BottomSheet
         visible={showIntentPrompt}
-        transparent
-        animationType={reduceMotion ? 'none' : 'slide'}
-        onRequestClose={() => { setShowIntentPrompt(false); pendingStartRef.current = null; }}
+        onClose={() => { setShowIntentPrompt(false); pendingStartRef.current = null; }}
+        accessibilityLabel="How are you feeling today"
       >
-        <View style={[styles.intentOverlay, live.intentOverlay]}>
-          <View style={[styles.intentSheet, live.intentSheet, { paddingBottom: spacing.xxxl + insets.bottom }]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.intentTitle, live.intentTitle]}>How are you feeling today?</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.intentSub, live.intentSub]}>Takes a second. Helps us read your sessions better over time.</Text>
-            {[
-              { key: 'sharp', label: 'Sharp', sub: 'Energised and ready', icon: 'flash-outline' },
-              { key: 'average', label: 'Average', sub: 'Normal day, feeling fine', icon: 'remove-outline' },
-              { key: 'below_par', label: 'Below par', sub: 'Tired, stressed, or off', icon: 'arrow-down-outline' },
-            ].map(opt => (
-              <TouchableOpacity
-                key={opt.key}
-                style={[styles.intentOption, live.intentOption]}
-                onPress={() => confirmStart(opt.key)}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel={`${opt.label}. ${opt.sub}`}
-              >
-                <View style={[styles.intentOptionIcon, live.intentOptionIcon]}>
-                  <Ionicons name={opt.icon} size={20} color={t.colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptionLabel, live.intentOptionLabel]}>{opt.label}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptionSub, live.intentOptionSub]}>{opt.sub}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-              </TouchableOpacity>
-            ))}
+        <Text maxFontSizeMultiplier={1.3} style={[styles.intentTitle, live.intentTitle]}>How are you feeling today?</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.intentSub, live.intentSub]}>Takes a second. Helps us read your sessions better over time.</Text>
+        {[
+          { key: 'sharp', label: 'Sharp', sub: 'Energised and ready', icon: 'flash-outline' },
+          { key: 'average', label: 'Average', sub: 'Normal day, feeling fine', icon: 'remove-outline' },
+          { key: 'below_par', label: 'Below par', sub: 'Tired, stressed, or off', icon: 'arrow-down-outline' },
+        ].map(opt => (
+          <PressableCard
+            key={opt.key}
+            style={[styles.intentOption, live.intentOption]}
+            onPress={() => { haptics.selection(); confirmStart(opt.key); }}
+            accessibilityLabel={`${opt.label}. ${opt.sub}`}
+          >
+            <View style={[styles.intentOptionIcon, live.intentOptionIcon]}>
+              <Ionicons name={opt.icon} size={20} color={t.colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptionLabel, live.intentOptionLabel]}>{opt.label}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptionSub, live.intentOptionSub]}>{opt.sub}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+          </PressableCard>
+        ))}
 
-            {/* COMP-008: optional readiness chips. These tune the session
-                without blocking it; tapping an intent option above (or Skip)
-                still starts immediately, carrying whatever is selected here. */}
-            {READINESS_ROWS.map(row => (
-              <View key={row.key} style={styles.readinessRow}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.readinessLabel, live.readinessLabel]}>{row.label}</Text>
-                <View style={styles.readinessChips} accessibilityRole="radiogroup" accessibilityLabel={row.label}>
-                  {row.chips.map(chip => {
-                    const selected = readiness[row.key] === chip.value;
-                    return (
-                      <TouchableOpacity
-                        key={chip.value}
-                        style={[styles.readinessChip, live.readinessChip, selected && [styles.readinessChipActive, live.readinessChipActive]]}
-                        onPress={() => setReadiness(r => ({
-                          // Tapping the selected chip again clears it, so the
-                          // row stays genuinely optional.
-                          ...r,
-                          [row.key]: selected ? null : chip.value,
-                        }))}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected }}
-                        accessibilityLabel={`${row.label}: ${chip.label}`}
-                      >
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.readinessChipText, live.readinessChipText, selected && [styles.readinessChipTextActive, live.readinessChipTextActive]]}>
-                          {chip.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            ))}
-
-            <TouchableOpacity
-              style={styles.intentSkip}
-              accessibilityRole="button"
-              accessibilityLabel="Skip and start without answering"
-              onPress={() => confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null })}
-            >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.intentSkipText, live.intentSkipText]}>Skip</Text>
-            </TouchableOpacity>
-
-            {/* D2 (Option A): the standing opt-out. Persists, then starts this
-                session exactly as Skip would, null intent, no readiness, no
-                fabricated input. Reversible in Settings, Coaching. */}
-            <TouchableOpacity
-              style={styles.intentOptOut}
-              onPress={() => {
-                AsyncStorage.setItem('@volyume_intent_prompt_off', 'true').catch(() => {});
-                confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null });
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Don't ask before each session"
-            >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptOutText, live.intentOptOutText]}>Don't ask before each session</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptOutSub, live.intentOptOutSub]}>
-                Without it, sessions are not adjusted to how you're feeling. Turn it back on any time in Settings, Coaching.
-              </Text>
-            </TouchableOpacity>
+        {/* COMP-008: optional readiness chips. These tune the session
+            without blocking it; tapping an intent option above (or Skip)
+            still starts immediately, carrying whatever is selected here. */}
+        {READINESS_ROWS.map(row => (
+          <View key={row.key} style={styles.readinessRow}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.readinessLabel, live.readinessLabel]}>{row.label}</Text>
+            <View style={styles.readinessChips} accessibilityRole="radiogroup" accessibilityLabel={row.label}>
+              {row.chips.map(chip => {
+                const selected = readiness[row.key] === chip.value;
+                return (
+                  <Chip
+                    key={chip.value}
+                    label={chip.label}
+                    selected={selected}
+                    accessibilityRole="radio"
+                    accessibilityLabel={`${row.label}: ${chip.label}`}
+                    onPress={() => {
+                      haptics.selection();
+                      setReadiness(r => ({
+                        // Tapping the selected chip again clears it, so the
+                        // row stays genuinely optional.
+                        ...r,
+                        [row.key]: selected ? null : chip.value,
+                      }));
+                    }}
+                  />
+                );
+              })}
+            </View>
           </View>
-        </View>
-      </Modal>
+        ))}
+
+        <TouchableOpacity
+          style={styles.intentSkip}
+          accessibilityRole="button"
+          accessibilityLabel="Skip and start without answering"
+          onPress={() => { haptics.selection(); confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null }); }}
+        >
+          <Text maxFontSizeMultiplier={1.3} style={[styles.intentSkipText, live.intentSkipText]}>Skip</Text>
+        </TouchableOpacity>
+
+        {/* D2 (Option A): the standing opt-out. Persists, then starts this
+            session exactly as Skip would, null intent, no readiness, no
+            fabricated input. Reversible in Settings, Coaching. */}
+        <TouchableOpacity
+          style={styles.intentOptOut}
+          onPress={() => {
+            haptics.selection();
+            AsyncStorage.setItem('@volyume_intent_prompt_off', 'true').catch(() => {});
+            confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null });
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Don't ask before each session"
+        >
+          <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptOutText, live.intentOptOutText]}>Don't ask before each session</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptOutSub, live.intentOptOutSub]}>
+            Without it, sessions are not adjusted to how you're feeling. Turn it back on any time in Settings, Coaching.
+          </Text>
+        </TouchableOpacity>
+      </BottomSheet>
       {/* Sharpener: one dismissible what's-new sheet per update. */}
       <WhatsNewSheet />
     </SafeAreaView>
@@ -2388,19 +2390,8 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary,
   },
 
-  intentOverlay: {
-    flex: 1,
-    backgroundColor: colors.scrim,
-    justifyContent: 'flex-end',
-  },
-  intentSheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    padding: spacing.xl,
-    gap: spacing.md,
-    paddingBottom: spacing.xxxl,
-  },
+  // R9 (D70): intentOverlay/intentSheet deleted - the shared BottomSheet
+  // owns the scrim, panel chrome, insets and child gap now.
   intentTitle: {
     ...type.h3,
     color: colors.textPrimary,
