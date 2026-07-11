@@ -826,3 +826,49 @@ change to the deterministic engine (correct outcome, not neglect).
    honest. Correct as is.
 Do NOT re-open either as a defect; if a future session believes there is
 a junk-volume or ease-in problem, re-read this ruling first.
+
+## D45 — Per-session hard caps: 8 exercises / 25 working sets (founder override of the D30-engine ruling, 2026-07-11)
+The engine no-change ruling above (recorded out of sequence as a second
+D30) held that "total session size is governed by the time budget, not
+an arbitrary total-set ceiling." The founder overrode point 1 of that
+ruling directly: "There has to be a maximum per session too, otherwise
+you try and jam 9 exercises into one day and absolutely kill yourself.
+No bodybuilder does that."
+
+The founder was right and the prior ruling was wrong on this point. On
+investigation the time budget did NOT actually bound a session: because
+`trimToTimeBudget` protects a muscle's sole exercise in a session, a
+low-frequency full-body day (2-3 days/week, every muscle every session)
+could hold 9-10 single-exercise muscles that neither the per-muscle cap
+(a per-muscle concept) nor the clock could shave - a probe found a real
+config (intermediate, 2 days, mens_physique) generating a 9-exercise /
+28-set session that also silently overran its own 45-minute clock. The
+per-muscle cap and the time budget were both real, but NEITHER bounded
+total session size, exactly the gap the founder named.
+
+RULING (lead, executing the founder override): add two hard,
+clock-independent per-session ceilings to the deterministic engine -
+MAX_EXERCISES_PER_SESSION = 8 and MAX_WORKING_SETS_PER_SESSION = 25 -
+enforced through the SAME lowest-priority-first trim as the time budget
+(one `overBudget()` predicate now covers clock + exercise count + set
+total), plus a final backstop that guarantees the caps are hard by
+dropping the lowest-priority exercises (never the opener, never below 3,
+non-required first) and shaving sets to the ceiling only when still over.
+In the full-body case a dropped muscle is still trained on the split's
+OTHER day, so its weekly presence is preserved while the marathon is
+trimmed; every structural and weak-point floor is protected exactly as
+before.
+
+Numbers rationale (science, per the "don't guess" standing instruction):
+real physique sessions run ~4-7 exercises / ~15-25 working sets total; 8
+and 25 are ceilings no honest session should reach, past which the added
+work is junk fatigue not more growth - the same stimulus-to-fatigue basis
+as the per-muscle 8/12 cap, applied at the session level. 8 still allows
+a legitimate full-body day its breadth.
+
+Landed: da59274 (cap + behavioural invariant test
+`planEngineSessionCap.test.js`). Determinism preserved; ED-safety surface
+untouched (training volume only, no nutrition/calorie floors). The
+ease-in point (point 2 of the D30-engine ruling) stands unchanged.
+Do NOT re-open the session-cap question against the old D30-engine text -
+this D45 supersedes its point 1.

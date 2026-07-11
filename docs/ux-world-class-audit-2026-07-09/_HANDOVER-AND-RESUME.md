@@ -396,6 +396,20 @@ failed, lint clean.**
    model is PERMANENT law in CLAUDE.md Section 4. D41 `6b388d4`: token
    hygiene — handover split (history in `_HANDOVER-ARCHIVE.md`), lean
    taskboard, slim CLAUDE.md banner, agent report caps.
+   **D45 `da59274`: per-session hard caps in the deterministic engine —
+   MAX_EXERCISES_PER_SESSION = 8 / MAX_WORKING_SETS_PER_SESSION = 25,
+   founder override of the D30-engine no-change ruling ("there has to be
+   a maximum per session... no bodybuilder jams 9 exercises into one
+   day"). Enforced through the existing trimToTimeBudget lowest-priority
+   trim + a final hard backstop; fixed the latent bug where a sole-muscle
+   full-body day defeated the time budget too. Behavioural invariant test
+   `planEngineSessionCap.test.js`; broad sweep shows 0 sessions over
+   either cap, cap binds at 8, determinism held, ED-surface untouched.
+   Full ruling in DECISIONS-2026-07-09.md D45.** CP-10 test-coverage
+   tails `32ea00d`: same-instance theme-flip tests for the Coach screens
+   (stage 3) and chart/Skia components (stage 4) — the two batches that
+   had landed without one (added when both Pair-1 verify agents found the
+   production migration already done and closed the test gap).
 1. NEXT SLOTS per docs/TASKBOARD.md: CP-10 batch F (screens 37/85
    live, 48 static remain — lead defines the next batch from the
    coverage tracker); then further batches to 0 static, which unlocks
