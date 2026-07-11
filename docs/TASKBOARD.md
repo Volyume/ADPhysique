@@ -67,9 +67,29 @@ auto-builds an APK (build-android.yml, claude/**)._
   next to one-line siblings; tighten to one line, detail moves into the
   check-in screen.
 
+**SCOPE ESCALATION (founder order, same evening): the reported defects are
+symptoms; the mandate is the logging flow rebuilt FULLY to
+docs/remediation-2026-07-11/FOOD-DESIGN-STANDARD.md, accepted against its
+own 15-point checklist, nothing less.** Lead-measured compliance baseline
+(the acceptance instrument - the landed diff must clear every line):
+- ActiveWorkoutScreen.js: 6 raw Modals (target: only ruled exceptions);
+  radius census 22 md / 7 sm / 3 lg (target: cards lg, controls md, pills
+  full, zero misfiled sm); 4 tabular-numeral sites on an all-numbers
+  screen (target: every numeral); 12 raw fontWeight pairs (target: 0);
+  21 alerts (target: destructive-only, reversible -> undo toast); 71
+  TouchableOpacity (target: CTAs on Button, rest in standard families).
+- WorkoutSummaryScreen.js: 1 raw Modal (template prompt -> BottomSheet);
+  radius 16 md / 3 sm / 1 lg; 11 raw fontWeight pairs; census targets as
+  above. Structural R2-5/6 fixes remain the priority in this lane.
+Both build agents carry these rulings (D33) with per-class dispositions
+required in their reports. Lead acceptance = scorecard re-run on the diff
++ element-by-element logger-vs-nutrition comparison; founder acceptance =
+device walk of the fresh build. NOTHING on this wave is closed by anyone
+but the founder.
+
 RECOVERY: any dead session -> `git status`, review uncommitted diff against
-this entry, relaunch the affected agent with the same brief. Lead-held
-uncommitted edit: HomeScreen.js R2-1 guard (commits with the wave).
+this entry, relaunch the affected agent with the same brief + the scope
+escalation above. R2-1 guard already landed (3903ccd).
 
 ## R. REMEDIATION CAMPAIGN (founder order 2026-07-11, second device walk) — superseded by R2 above for live defects
 
