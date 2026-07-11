@@ -73,20 +73,28 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
   and no announcement. Then fix. ED/engine untouched - this is session
   navigation logic.
 
-### QUEUED - leg-day over-volume / division weighting check (founder, 2026-07-11)
-- Founder: the builder generated 9 exercises for a leg day on a men's
-  physique programme - "surely far far too much volume for one
-  session?" Verify-first, ENGINE-ADJACENT (Opus or hands-on per tier
-  rules; read-only diagnosis first): (1) reproduce the generation path
-  (planAutoGen/poolGenerator/planEngine) for a men's physique division
-  leg day - is 9 exercises intended output or a selection bug
-  (duplication, missing per-session exercise cap, pool over-draw)?
-  (2) did the division weighting apply - men's physique is not judged
-  on legs, so leg emphasis should be reduced; (3) compare the session's
-  TOTAL SETS per muscle against the engine's own MEV/MRV landmarks.
-  ANY output-changing fix is a founder round with options first
-  (engine outputs are not silently altered); a pure selection bug fix
-  still gets hands-on lead review of every engine-adjacent hunk.
+### leg-day over-volume - DIAGNOSED + D45 LANDED; D46 FULL FIX QUEUED (2026-07-11)
+- Founder: builder generated 9 exercises for a leg day - "far too much
+  volume for one session." DIAGNOSED (hands-on, full trace in
+  DECISIONS D45/D46 + the build spec):
+  1. **No per-session total cap existed** - only per-muscle (8/12) +
+     time budget, and the sole-muscle-protection defeated the time
+     budget too. **FIXED: D45 `da59274`** - MAX_EXERCISES_PER_SESSION=8
+     / MAX_WORKING_SETS_PER_SESSION=25 hard caps + backstop. Shipped,
+     tested, pushed. This is the SAFETY NET.
+  2. **Root cause: no working secondary-muscle model.** Engine gives
+     every leg muscle its own exercise, not crediting that squats/RDLs
+     already hammer glutes/adductors (verified: `entry.secondary` read
+     at planEngine.js:2091 but NO POOL entry populates it; only
+     biceps<-back / triceps<-chest weekly trims function). Founder ruled
+     **"do it all fully, we do not put off jobs"** = build the FULL
+     per-exercise secondary-muscle model. **QUEUED as D46, TOP job for
+     the next fresh session.** FULL MAPPED SPEC:
+     `docs/ux-world-class-audit-2026-07-09/SECONDARY-MUSCLE-MODEL-BUILD-SPEC.md`
+     (problem, reproduction, design halves A/B, phases 0-6, invariants,
+     device checklist, code anchors). Deterministic-engine build, Fable
+     spine hands-on, full test rework + adversarial review, clean window
+     needed - do NOT start under usage pressure.
 
 ### QUEUED - D43 logger redesign blueprint (after point fixes; see D43 amendment)
 - Founder verdict: logger 3/10, target 10/10, complete redesign

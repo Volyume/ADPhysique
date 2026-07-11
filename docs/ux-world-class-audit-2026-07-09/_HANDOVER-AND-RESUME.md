@@ -410,6 +410,22 @@ failed, lint clean.**
    (stage 3) and chart/Skia components (stage 4) — the two batches that
    had landed without one (added when both Pair-1 verify agents found the
    production migration already done and closed the test gap).
+   **★ D46 — FULL SECONDARY-MUSCLE MODEL is the TOP queued job for the
+   next fresh session (founder: "do it all fully, we do not put off
+   jobs", 2026-07-11).** Founder diagnosed a leg+abs day over-stuffing
+   (engine gives every leg muscle its own exercise, not crediting that
+   squats/RDLs already hammer glutes/adductors). Verified: the engine has
+   NO working secondary-muscle model (`entry.secondary` read at
+   planEngine.js:2091 but NO POOL entry populates it; only biceps<-back /
+   triceps<-chest weekly trims function). Build = (A) populate `secondary`
+   tags across POOL + poolGenerator, (B) generalise the weekly synergist
+   trim to the full relationship set. Deterministic-engine build, Fable
+   spine hands-on, needs full test rework + adversarial review + a clean
+   window — do NOT start under usage pressure. **FULL MAPPED-OUT SPEC:
+   `docs/ux-world-class-audit-2026-07-09/SECONDARY-MUSCLE-MODEL-BUILD-SPEC.md`**
+   (problem, exact reproduction, design halves, phases 0-6, invariants,
+   device checklist, code anchors). Decision: D46. Safety net already in:
+   D45 (`da59274`) session caps contain the acute symptom.
 1. NEXT SLOTS per docs/TASKBOARD.md: CP-10 batch F (screens 37/85
    live, 48 static remain — lead defines the next batch from the
    coverage tracker); then further batches to 0 static, which unlocks

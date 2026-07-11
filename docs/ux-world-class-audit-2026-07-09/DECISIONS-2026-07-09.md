@@ -872,3 +872,38 @@ untouched (training volume only, no nutrition/calorie floors). The
 ease-in point (point 2 of the D30-engine ruling) stands unchanged.
 Do NOT re-open the session-cap question against the old D30-engine text -
 this D45 supersedes its point 1.
+
+## D46 — Full per-exercise secondary-muscle model (founder, 2026-07-11)
+Founder, shown the leg-day over-stuffing diagnosis (a leg+abs day trying to
+give every individual leg muscle its own dedicated exercise), correctly named
+the cause: "maybe it's not counting secondary muscles or something." Verified
+against code: the engine has NO working secondary-muscle model. Every POOL
+exercise credits exactly one muscle; the `entry.secondary` field is read at
+planEngine.js:2091 but NO POOL entry populates it, so indirect-volume
+reporting is dead and, more importantly, a leg day double-counts — squats and
+RDLs already hammer glutes/adductors, but the engine can't see that, so it
+piles dedicated glute isolation (hip thrust + step-up) on top. The only
+functioning synergist credit is two hardcoded weekly trims (biceps<-back 0.4,
+triceps<-chest 0.5, planEngine.js:371-372); nothing on the lower body.
+
+Offered four scoped options (surgical-now-then-full; full-only; surgical-only;
+cap-is-enough), the founder ruled: **"Do it all fully, we do not put off
+jobs."** RULING (D46): build the FULL per-exercise secondary-muscle model —
+(A) populate `secondary` tags across POOL + poolGenerator (wires the dead
+indirect-volume reporting), and (B) generalise the weekly synergist trim from
+the two hardcoded pairs to the full biomechanically-real relationship set with
+science-calibrated rates (glutes<-quads, glutes<-hamstrings, adductors<-quads,
+plus upper-body completeness), so a muscle already fed heavily by compounds
+gets appropriately less DIRECT volume and the leg day stops stacking redundant
+isolation. All Section-2 inviolables bind: determinism, MEV floors held via
+the existing MEV+2 trim buffer, structural muscles never zero, weak points
+exempt, glute-priority divisions (bikini/wellness) exempt from the glute trim,
+no new deps, engine stays pure/no-AI.
+
+QUEUED for the next fresh Fable session (founder deferred the build under usage
+pressure 2026-07-11). Full mapped-out build spec:
+`docs/ux-world-class-audit-2026-07-09/SECONDARY-MUSCLE-MODEL-BUILD-SPEC.md`
+(problem + reproduction + design halves A/B + phases 0-6 + invariants +
+device checklist + code anchors). The acute symptom is already contained by
+D45 (`da59274`, per-session hard caps), which is the safety net that lets D46
+be built properly rather than rushed.
