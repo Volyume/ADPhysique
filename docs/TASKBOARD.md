@@ -45,14 +45,27 @@ leg-day engine work (D45 + D46) all LANDED - detail rolled to
   re-author from the report; if neither, relaunch the research agent
   from this entry.
 
-### ACTIVE - CP-10 theming batch G (recon dispatched 2026-07-11)
-- 32 static screens remain (49/82 live at batch F close;
-  paywallExcerpts exempt/HELD). Haiku recon regenerates the static
-  list (grep BOTH useTheme and useSettingsStyles signals), classifies
-  risk (ED/billing/consent-adjacent flagged), and proposes two lanes;
-  lead reviews and dispatches Sonnet lanes under the batch D/E/F
-  pattern. RECOVERY: relaunch recon from this entry; batch pattern and
-  bounds identical to F.
+### ACTIVE - CP-10 theming batch G (recon done; lane 2 dispatched 2026-07-11)
+- Recon (Haiku): 48 live / 36 static of 84 screens (2 new files since
+  F close; drift within tolerance). Two lanes defined:
+- **LANE 2 (plain, 20 files) - DISPATCHED (Sonnet):** Analytics,
+  AthleteProfile, BuildWorkout, ExerciseDetail, GoalChangeSummary,
+  Import, LiftProgress, ManualBuilder, MesocycleBuilder, Partner,
+  PlanDetail, PlanLibrary, PlanUpdate, Plans, RoutineDetail, ShareCard
+  (GDPR card-content rules untouched - chrome only), VolumeHeatmap,
+  YearOfLifts, You, Welcome (auth logic untouched). Pattern per
+  c92a5ce; one batch flip-test file. RECOVERY: if these files sit
+  uncommitted, lead-review vs this entry + c92a5ce pattern, lint +
+  suite, commit + push; else relaunch.
+- **LANE 1 (high-risk, 16 files) - QUEUED next slot:** billing 8
+  (CascadeGate, FreeStarter, Paywall, ProGoalSetup, ProOnboarding,
+  ProSetupComplete, ProUpgrade, Subscription - IAP logic/copy
+  untouched, no billing-flow changes), consent/GDPR 3 (Article9Consent
+  STOP-on-doubt locked copy, NotificationSettings, SettingsDietary),
+  ED-safety 5 (BodyMetrics, CoachHeldHistory, CoachingReminders,
+  NutritionEducation, ProgressPhotos - copy + logic byte-identical,
+  STOP on doubt). Dispatch only with the risk-bounded brief; theming
+  only.
 
 ### QUEUED LAST - D43 full-app pristine pass (founder, second amendment)
 - CLOSING PHASE by founder order: every area polished to the
@@ -84,11 +97,11 @@ leg-day engine work (D45 + D46) all LANDED - detail rolled to
   BLOCKED on founder: share the EAS build logs (or grant EAS access);
   then diagnose + fix.
 
-### QUEUED - SD-11 applyRemoteSetEvent idempotency (watch-memo side-finding)
-- Await-spanning idempotency check in applyRemoteSetEvent
-  (useAppStore.js ~1215-1282); recorded must-fix-before-wrist-traffic,
-  founder-visible. Verify-first read, then fix in a free slot ahead of
-  any watch decision.
+### LANDED - SD-11 applyRemoteSetEvent idempotency `7e0dabe` (2026-07-11)
+- The await-spanning race fixed hands-on: eventId reserved
+  synchronously before the DB await, released on failure so retries
+  stay possible. Two new tests pin the mid-await race and the
+  failure-release path. Store suites + lint green.
 
 ## 2. QUEUED (build slots - two agents at a time, lowest capable tier)
 
