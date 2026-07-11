@@ -28,10 +28,21 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ## 1. IN FLIGHT
 
-### (nothing in flight)
-- Batch E LANDED in full (`c2a9b81` + `7c24933` + `dc40a70`; detail in
-  the archive's TASKBOARD HISTORY). Next dispatch: CP-10 batch F from
-  the queued entry below.
+### CP-10 screen theming batch F (two Sonnet lanes, dispatched 2026-07-11)
+- Recon (Haiku, 2026-07-11): 37/82 screens live, 45 static.
+  `paywallExcerpts.js` is the HELD social-proof module, not a themable
+  screen (stays dark). Batch F = the 12-screen small tail, two lanes:
+- LANE F1: SettingsDietaryScreen, SettingsAccountScreen,
+  SettingsFaqScreen, SettingsScreen, PrivacyPolicyScreen,
+  SubscriptionPolicyScreen (billing-adjacent COPY untouched).
+- LANE F2: LoginScreen (auth logic untouched), ConsistencyScreen,
+  WellbeingCheckScreen (ED-SAFETY: Beat UK signposting + calm-mode
+  logic and copy byte-identical, theming only, STOP on doubt),
+  QuizScreen, DebugLogScreen, GoalLockConsentScreen (consent gate
+  logic untouched - GDPR care).
+- Same batch pattern and bounds as D/E. RECOVERY: if any of these
+  files sit uncommitted, lead-review against this spec, lint + full
+  suite, commit + push; if untouched, relaunch from this entry.
 
 ---
 
