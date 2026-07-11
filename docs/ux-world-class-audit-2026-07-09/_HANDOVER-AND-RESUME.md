@@ -383,6 +383,31 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
 ## ⏸ RESUME POINT — current state and queue (2026-07-11; a fresh
 ## session resumes from HERE per CLAUDE.md's D40 block):
 
+**★ SESSION-END SNAPSHOT (2026-07-11, usage exhausted — read this first):**
+Everything is COMMITTED AND PUSHED through `788b1e5` except one thing:
+a Sonnet agent was MID-FLIGHT on D43 S1 slice 2 (extracting the 2-3
+most self-contained sheets from ActiveWorkoutScreen.js into
+src/components/workout/, presentational-only, template = `git show
+31b14a7`). If the tree holds uncommitted changes to
+ActiveWorkoutScreen.js / src/components/workout/ / logger guard tests:
+lead-review them against the slice-1 template and the blueprint S1
+rules (byte-identical moves, state stays in the screen, guards
+re-pinned invariants-unchanged), run lint + full suite, commit with
+handover+board lines in the same push. If half-done or broken: revert
+the working tree and relaunch slice 2 from the board entry. NEXT IN
+ORDER after slice 2: remaining S1 slices (ExerciseNav, StatusStrip
+precursor, LoggedSetsList), then S2-S5 per
+D43-LOGGER-REDESIGN-BLUEPRINT.md; then the D43 pristine pass LAST.
+FOUNDER-GATED (surface, do not wait): Sentry connector (crash triage),
+EAS Gradle-stage logs, migrate_117 "run against production", watch
+round 5 questions. Founder DEVICE WALKS owed: Manrope typeface
+(`9148a6f`), CP-10 complete + instant theme apply (`3d3eae8`), D45/D46
+engine leg-day fix, batch G billing/consent/ED screens. Standing law
+this session added: D47 (work the board top to bottom, never curate),
+D48 (rule gates, never wait, except billing prices), D51 (lowest-tier
+agents; lead coordinates, judges, rules only), plus the per-landing
+handover+board discipline (founder correction — never batch it).
+
 **PUSHED THROUGH `dc40a70`. Tree clean at this landing. Full suite at
 the boundary: 675/676 suites (1 pre-existing skip), 8,412 passed / 0
 failed, lint clean.**
