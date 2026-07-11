@@ -32,17 +32,23 @@ describe('ActiveWorkout bottom bar vs the hidden tab band', () => {
   // The inverse rule: on screens where the tab band IS visible it absorbs
   // the system inset, so a sticky footer there must use a flat token —
   // adding insets.bottom again doubled the gap under WorkoutSummary's
-  // Close (founder screenshot 2026-07-03).
+  // Close (founder screenshot 2026-07-03). Re-affirmed at the 2026-07-11
+  // review (founder defect, build 2608): the flat-token +
+  // edges=['top','bottom'] design is frame-relative and context-adaptive,
+  // so it stays; the photo's real defect was scroll clearance, pinned
+  // below via the measured footerHeight.
   test('WorkoutSummary sticky footer uses a flat token, never the inset again', () => {
     const summary = read('screens/WorkoutSummaryScreen.js');
-    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): WorkoutSummaryScreen
-    // now reads a live theme (src/hooks/useTheme.js); stickyFooter gained a
-    // live.stickyFooter override ahead of the inline paddingBottom object.
-    // The pinned contract (a flat spacing.lg token, never Math.max/inset
-    // maths) is unchanged -- widened only to allow the live.stickyFooter
-    // insertion.
     expect(summary).toMatch(/styles\.stickyFooter,\s*live\.stickyFooter,\s*\{\s*paddingBottom:\s*spacing\.lg\s*\}/);
     expect(summary).not.toMatch(/stickyFooter,\s*live\.stickyFooter,\s*\{\s*paddingBottom:\s*Math\.max/);
+    expect(summary).toMatch(/<SafeAreaView style=\{\[styles\.safe, live\.safe\]\} edges=\{\['top', 'bottom'\]\}>/);
+    // 2026-07-11 (founder defect, build 2608): the scroll content's bottom
+    // padding must clear the footer's real rendered height (measured via
+    // onLayout, since it varies with the save-error card and dynamic
+    // type), not just a static token — the founder's photo showed the
+    // exercise breakdown crowding the footer.
+    expect(summary).toMatch(/paddingBottom:\s*Math\.max\(spacing\.xxxl,\s*footerHeight\s*\+\s*spacing\.lg\)/);
+    expect(summary).toMatch(/onLayout=\{\(e\) => setFooterHeight\(e\.nativeEvent\.layout\.height\)\}/);
   });
 
   // Bottom-anchored Modals overlay the tab band and touch the physical

@@ -28,7 +28,12 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     // live.stickyFooter override ahead of the inline paddingBottom object.
     // The frozen `styles.stickyFooter` definition (asserted above) is
     // byte-identical -- mechanical only.
-    expect(SOURCE).toContain('<View style={[styles.stickyFooter, live.stickyFooter, { paddingBottom: spacing.lg }]}>');
+    // 2026-07-11 (founder defect, build 2608; LEAD RULING at review): the
+    // flat spacing.lg token STAYS (the 2026-07-03 founder-evidenced rule --
+    // the tab band below absorbs the system inset; bottomBarInset.guard
+    // pins that contract), and the View gained an onLayout to measure its
+    // own real height for the scroll content's clearance.
+    expect(SOURCE).toMatch(/<View\s*\n\s*style=\{\[styles\.stickyFooter, live\.stickyFooter, \{ paddingBottom: spacing\.lg \}\]\}\s*\n\s*onLayout=\{\(e\) => setFooterHeight\(e\.nativeEvent\.layout\.height\)\}\s*\n\s*>/);
     expect(SOURCE).toContain('<TouchableOpacity');
     expect(SOURCE).toContain("title={saving ? 'Saving' : 'Close'}");
     expect(SOURCE).toMatch(/title="Share"[\s\S]*?icon="share-social-outline"[\s\S]*?variant="tertiary"[\s\S]*?size="sm"/);

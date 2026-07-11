@@ -233,6 +233,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [readOnlyExerciseData, setReadOnlyExerciseData] = useState([]);
   const [templateModalVisible, setTemplateModalVisible] = useState(false);
   const [templateName, setTemplateName] = useState('');
+  // 2026-07-11 (founder defect, build 2608): the footer's real rendered
+  // height (it varies with the save-error card and dynamic type), measured
+  // via onLayout so the scroll content's bottom padding can actually clear
+  // it rather than guessing a static token. Same onLayout-into-state pattern
+  // VolyumeTabBar already uses for its own width measurement.
+  const [footerHeight, setFooterHeight] = useState(0);
 
   // 4-week comparison: how does this session stack up against the same
   // routine over the last 4 weeks? null while loading or when there's no
@@ -969,7 +975,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       {readOnly ? <BackHeader title="Workout summary" /> : null}
       <KeyboardGestureArea interpolator="ios" style={{ flex: 1 }}>
-      <KeyboardAwareScrollView contentContainerStyle={styles.content} bottomOffset={24} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(spacing.xxxl, footerHeight + spacing.lg) }]}
+        bottomOffset={24}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.completionHeader}>
           <View style={styles.checkRow}>
             <Ionicons name="checkmark-circle" size={28} color={t.colors.success} />
@@ -1492,8 +1502,19 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           screen and already absorbs the system inset, so adding it here
           doubled the gap under Close (founder screenshot 2026-07-03). The
           inverse case, ActiveWorkout, where the band hides, is the one
-          that needs the inset; bottomBarInset.guard.test.js pins both. */}
-      <View style={[styles.stickyFooter, live.stickyFooter, { paddingBottom: spacing.lg }]}>
+          that needs the inset; bottomBarInset.guard.test.js pins both.
+          2026-07-11 (founder defect, build 2608) LEAD RULING at review:
+          this flat-token + edges=['top','bottom'] design is frame-relative
+          (SafeAreaView pads only where the view actually intersects the
+          unsafe area) and therefore context-adaptive, so it stays. The
+          founder's photo defect was the SCROLL CLEARANCE, fixed below via
+          the measured footerHeight; the bottom-strip observation goes to
+          the device checklist with both hypotheses rather than reversing
+          founder-evidenced inset behaviour blind. */}
+      <View
+        style={[styles.stickyFooter, live.stickyFooter, { paddingBottom: spacing.lg }]}
+        onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}
+      >
         {saveError ? (
           <View style={[styles.saveErrorCard, live.saveErrorCard]}>
             <Ionicons name="warning-outline" size={16} color={t.colors.error} />
