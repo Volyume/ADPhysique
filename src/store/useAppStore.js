@@ -438,7 +438,8 @@ const useAppStore = create((set, get) => ({
           // eslint-disable-next-line global-require
           require('../lib/sync/signOutGuard').setSignOutWiping(false);
         } catch (_) { /* tolerate */ }
-        return { ok: false, reason: 'wipe_failed' };
+        // R2-12: carry the failing step so the alert names it honestly.
+        return { ok: false, reason: 'wipe_failed', step: e?.wipeStep ?? null };
       }
     }
 

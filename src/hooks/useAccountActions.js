@@ -22,6 +22,24 @@ import { audit } from '../lib/observability';
 // These paths are runtime-critical (identity + data ownership). The logic
 // below is moved verbatim from the old single-file SettingsScreen; behaviour
 // is unchanged.
+
+// R2-12: the sign-out wipe failure alert must say WHAT failed. The old copy
+// blamed "photo and scan data" for every failure class, which sent the
+// founder's own debugging down the wrong path; the wipe now tags the failing
+// step and this maps it to plain words.
+function wipeFailedBody(step) {
+  const names = {
+    photo_files: 'your photo files',
+    photo_meta_legacy: 'photo records',
+    snapshots: 'local backup copies',
+    progress_photo_meta: 'photo records',
+    progress_scan_sessions: 'scan records',
+    progress_scan_assets: 'scan records',
+  };
+  const what = step ? (names[step] ?? `local data (${step})`) : 'local data';
+  return `Removing ${what} from this device failed, so sign-out stopped to protect your privacy. Try again in a moment.`;
+}
+
 export default function useAccountActions() {
   const { user, clearAuthStateForSignOut, setHealthConsent } = useAppStore(
     useShallow(s => ({
@@ -88,10 +106,7 @@ export default function useAccountActions() {
               const result = await clearAuthStateForSignOut();
               if (result?.ok === false) {
                 if (result.reason === 'wipe_failed') {
-                  appAlert(
-                    "Couldn't sign out safely",
-                    'Local photo and scan data could not be removed from this device. Try again before signing out.',
-                  );
+                  appAlert("Couldn't sign out safely", wipeFailedBody(result.step));
                   return;
                 }
                 // AUTH-5 escape hatch: rather than a dead-end "couldn't sign
@@ -111,10 +126,7 @@ export default function useAccountActions() {
                         try {
                           const forced = await clearAuthStateForSignOut({ force: true });
                           if (forced?.ok === false && forced.reason === 'wipe_failed') {
-                            appAlert(
-                              "Couldn't sign out safely",
-                              'Local photo and scan data could not be removed from this device. Try again before signing out.',
-                            );
+                            appAlert("Couldn't sign out safely", wipeFailedBody(forced.step));
                             return;
                           }
                           await finishCloudSignOut();

@@ -4637,7 +4637,10 @@ export async function wipeAllUserData(userId) {
         // Continue with other tables. A missing table on an older schema
         // shouldn't abort the whole wipe.
         logError(`database.wipeAllUserData.${table}`, e, { userId });
-        if (FATAL_LOCAL_WIPE_TABLES.has(table)) throw e;
+        // R2-12: name the failing step on the error so the sign-out alert
+        // (and the Sentry event) says WHAT failed instead of a generic
+        // photo-and-scan line for every failure class.
+        if (FATAL_LOCAL_WIPE_TABLES.has(table)) { e.wipeStep = table; throw e; }
       }
     }
 
@@ -4645,6 +4648,7 @@ export async function wipeAllUserData(userId) {
       await d.runAsync('DELETE FROM progress_photo_meta WHERE user_id IS NULL');
     } catch (e) {
       logError('database.wipeAllUserData.progress_photo_meta_legacy', e, { userId });
+      e.wipeStep = 'photo_meta_legacy';
       throw e;
     }
 
@@ -4658,6 +4662,7 @@ export async function wipeAllUserData(userId) {
       await require('./progressPhotos').wipeProgressPhotoDirectoryForUser(userId);
     } catch (e) {
       logError('database.wipeAllUserData.progress_photo_files', e, { userId });
+      e.wipeStep = 'photo_files';
       throw e;
     }
 
@@ -4669,6 +4674,7 @@ export async function wipeAllUserData(userId) {
       await require('./dbSnapshot').purgeSnapshots();
     } catch (e) {
       logError('database.wipeAllUserData.snapshots', e, { userId });
+      e.wipeStep = 'snapshots';
       throw e;
     }
 
