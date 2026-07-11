@@ -1029,3 +1029,14 @@ toggles, ED surfaces layout-stable.
 CP-10 is COMPLETE: batch G closed the last static screens (3adf551,
 4947509) and stage 5 retired the restart prompt (`3d3eae8`) - 83/83
 screens live-themed, settings apply straight away.
+
+## D52 — Kala namak tip KEPT with a sourcing note (lead-ruled under D33/D48, 2026-07-11)
+The open micro-call on the vegan tofu scramble's kala namak addition
+(real vegan bodybuilding practice, but not mainstream-UK-stocked) is
+ruled KEEP: the app's coaching credibility rests on teaching authentic
+technique, the tip is one optional free addition among four (the other
+three are mainstream), the sulphite allergen tagging already protects
+sensitive users, and it is next-day-deliverable online in the UK. The
+copy gains a sourcing note ("Find it in Asian grocers or online") so
+the tip never frustrates. This closes the last NEEDS JUSTIFICATION
+board item.

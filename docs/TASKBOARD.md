@@ -150,9 +150,9 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 5. NEEDS JUSTIFICATION - do not dispatch (D38: missing a verifiable field)
 
-### Kala namak micro-call
-- **Source:** handover resume point (2, NEXT SLOTS) names it as a remaining delegated micro-decision, "verify-first"; it relates to the dietary Phase B curated-meal work (D8/dietary rulings).
-- **WHY PARKED:** the CURRENT STATE of this micro-decision cannot be honestly verified from the docs reviewed in this sweep (no kala-namak detail found in the ux-world-class-audit folder). Its end state and elevation therefore cannot be articulated. Needs the lead's dietary Phase B context to state current -> end -> elevation before it can enter the queue or be dispatched.
+### Kala namak micro-call - RESOLVED (D52, 2026-07-11)
+- Ruled KEEP with a sourcing note on the tip copy; detail in the
+  decisions register. No open items remain in this section.
 
 ---
 
