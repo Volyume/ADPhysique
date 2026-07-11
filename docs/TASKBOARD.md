@@ -33,6 +33,55 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
+## 0. FOUNDER MUST-FIX LIST (device-testing session, 2026-07-11) — TOP PRIORITY
+
+_The founder's numbered hands-on list, given at session start. Do ALL of them
+to completion, THEN pause with the detailed remaining task list. Status is
+git-verified, not from memory. This section is worked before anything below it._
+
+1. **Revert the new font.** DONE — Manrope backed out (`52e65dd`, `a6083f7`,
+   `b2be386`), font is Inter again; D53 recorded (`36fc5d2`).
+2. **Fix the unilateral workout flow** (no divergent per-side reps; one set,
+   same reps both sides, guided side 1 -> transition -> side 2). DONE
+   (`f94d156`, D54).
+3. **Simplify routine headings on Today and Train** (name only; drop the
+   days-per-week + date cram). NOT DONE — was deferred to "need a screenshot".
+   Real live cause found: training frequency ("N x/Week") is baked into the
+   plan NAME via `src/lib/planDisplay.js`, so it reads as name+frequency
+   crammed. FIX = strip the frequency from the displayed heading (keep in data),
+   same on Today (HomeScreen) and Train (PlansScreen). IN PROGRESS.
+4. **Fix the empty third card on Progress** (Sessions + New Bests in a 3-slot
+   layout, blank third). NEEDS VERIFY — a read found AnalyticsScreen's spark row
+   already two-up flex (flex:1, no third slot); confirm there is no OTHER
+   progress surface with the gap, else it is already fixed and shows on a fresh
+   build. IN PROGRESS.
+5. **Clean up the Coach screen.** PARTIAL. DONE (`f822a91`): removed the
+   "private coaching based on your logs" footer, consolidated the check-in
+   info onto the check-in row, fixed the "come back Sunday" vs dated-button
+   mismatch (weekday-anchor bug). OUTSTANDING: the card/heading showing only
+   "Your" (should be "Your week") and a final confirm the "This week" heading
+   fits its content. IN PROGRESS.
+6. **Pre/Post-workout meals.** Founder ruling: fully implement (off by default,
+   populated + macro-redistributed when on) OR remove — not half-built.
+   PHASE 1 DONE (`b53a817`): off by default, fully hidden when off, no empty
+   cards / add-food prompts, back-compat kept. PHASE 2 NOT DONE (parked as a
+   reduced version, which the founder's no-parking rule forbids): when enabled,
+   auto-populate the pre/post slots with legitimate evidence-based meals and
+   redistribute the day's macros across enabled meals. BUILDING NOW.
+7. **Add a completion action to Dietary Needs** (Done/Save/Close). DONE
+   (`2d17fff`, "Done" button).
+8. **Fix the Dietary Needs reopen bug** (open/close/reopen dead). DONE
+   (`2d17fff`, shared BottomSheet re-present race fix).
+9. **Fix Body Metrics weight history** (only current shown, no history). DONE
+   (`94cd1fe`): history now merges the morning_weights table too, not just
+   body_metric_log.
+
+**REMAINING TO COMPLETE THE LIST: #3, #4 (verify), #5 (the "Your" heading), #6
+phase 2.** Only when all nine are complete does the queue pause for the founder
+review.
+
+---
+
 ## 1. IN FLIGHT
 
 _Reconciled 2026-07-11 (D46 boundary): D42 AppAlert, logged-set row, D44
