@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import {
@@ -39,6 +40,9 @@ export default function FreeStarterScreen({ navigation, route }) {
   const [plans, setPlans] = useState([]);
   const [workoutCounts, setWorkoutCounts] = useState({});
   const [busy, setBusy] = useState(false);
+  // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -130,7 +134,7 @@ export default function FreeStarterScreen({ navigation, route }) {
   const recDays = recommendation ? getPlanDays(recommendation) : null;
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, live.safe]}>
       <View style={styles.topBar}>
         <TouchableOpacity
           onPress={handleBack}
@@ -138,7 +142,7 @@ export default function FreeStarterScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel={step > 0 ? 'Back to the previous question' : 'Back'}
         >
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+          <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
         </TouchableOpacity>
         <View
           style={styles.progressDots}
@@ -146,7 +150,7 @@ export default function FreeStarterScreen({ navigation, route }) {
           importantForAccessibility="no-hide-descendants"
         >
           {FREE_STARTER_STEPS.map((_, i) => (
-            <View key={i} style={[styles.dot, i <= step && styles.dotActive]} />
+            <View key={i} style={[styles.dot, live.dot, i <= step && [styles.dotActive, live.dotActive]]} />
           ))}
         </View>
         {/* Spacer balances the back chevron so the dots sit centred */}
@@ -156,8 +160,8 @@ export default function FreeStarterScreen({ navigation, route }) {
       <ScrollView contentContainerStyle={styles.content}>
         {!onResultStep ? (
           <>
-            <Text maxFontSizeMultiplier={1.3} style={styles.question}>{FREE_STARTER_STEPS[step].question}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.questionSub}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.question, live.question]}>{FREE_STARTER_STEPS[step].question}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.questionSub, live.questionSub]}>
               {step === 0
                 ? "There's no wrong answer. You can change direction any time."
                 : step === 1
@@ -168,17 +172,17 @@ export default function FreeStarterScreen({ navigation, route }) {
               {FREE_STARTER_STEPS[step].options.map(opt => (
                 <TouchableOpacity
                   key={String(opt.key)}
-                  style={styles.optionBtn}
+                  style={[styles.optionBtn, live.optionBtn]}
                   onPress={() => handleOption(FREE_STARTER_STEPS[step].key, opt.key)}
                   activeOpacity={0.82}
                   accessibilityRole="button"
                   accessibilityLabel={opt.label}
                 >
                   {opt.icon ? (
-                    <Ionicons name={opt.icon} size={20} color={colors.primary} style={{ marginRight: spacing.md }} />
+                    <Ionicons name={opt.icon} size={20} color={t.colors.primary} style={{ marginRight: spacing.md }} />
                   ) : null}
-                  <Text maxFontSizeMultiplier={1.3} style={styles.optionText}>{opt.label}</Text>
-                  <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.optionText, live.optionText]}>{opt.label}</Text>
+                  <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
                 </TouchableOpacity>
               ))}
             </View>
@@ -186,22 +190,22 @@ export default function FreeStarterScreen({ navigation, route }) {
         ) : recommendation ? (
           <>
             <View style={styles.resultIcon}>
-              <Ionicons name="checkmark-circle" size={32} color={colors.primary} />
+              <Ionicons name="checkmark-circle" size={32} color={t.colors.primary} />
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={styles.resultTitle}>Your starter plan</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.resultIntro}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.resultTitle, live.resultTitle]}>Your starter plan</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.resultIntro, live.resultIntro]}>
               Built for people starting out. Every session tells you exactly what to do:
               the exercises, the sets, and the reps.
             </Text>
-            <Card style={styles.resultCard}>
-              <View style={styles.resultBadge}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.resultBadgeText}>Beginner friendly</Text>
+            <Card style={[styles.resultCard, live.resultCard]}>
+              <View style={[styles.resultBadge, live.resultBadge]}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.resultBadgeText, live.resultBadgeText]}>Beginner friendly</Text>
               </View>
-              <Text maxFontSizeMultiplier={1.3} style={styles.resultName}>{recommendation.name}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.resultName, live.resultName]}>{recommendation.name}</Text>
               {recommendation.description ? (
-                <Text maxFontSizeMultiplier={1.3} style={styles.resultDesc} numberOfLines={4}>{recommendation.description}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.resultDesc, live.resultDesc]} numberOfLines={4}>{recommendation.description}</Text>
               ) : null}
-              <Text maxFontSizeMultiplier={1.3} style={styles.resultMeta}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.resultMeta, live.resultMeta]}>
                 {[
                   recDays ? `${recDays} days a week` : null,
                   wc ? `${wc} workout${wc !== 1 ? 's' : ''}` : null,
@@ -215,14 +219,14 @@ export default function FreeStarterScreen({ navigation, route }) {
               onPress={handleStartPlan}
               accessibilityLabel={`Start with ${recommendation.name}`}
             />
-            <Text maxFontSizeMultiplier={1.3} style={styles.resultFootnote}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.resultFootnote, live.resultFootnote]}>
               The first couple of weeks are for learning the movements. That counts as progress.
             </Text>
           </>
         ) : (
           <>
-            <Text maxFontSizeMultiplier={1.3} style={styles.resultTitle}>We couldn't pick a plan</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.resultIntro}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.resultTitle, live.resultTitle]}>We couldn't pick a plan</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.resultIntro, live.resultIntro]}>
               The plan library hasn't loaded yet. You can browse it yourself, or try again in a moment.
             </Text>
             <Button
@@ -237,25 +241,25 @@ export default function FreeStarterScreen({ navigation, route }) {
 
         {onResultStep && recommendation && !fromFirstRun ? (
           <TouchableOpacity
-            style={styles.skipLink}
+            style={[styles.skipLink, live.skipLink]}
             onPress={handleBrowse}
             accessibilityRole="button"
             accessibilityLabel="Browse all plans instead"
           >
-            <Ionicons name="library-outline" size={14} color={colors.textSecondary} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.skipLinkText}>Browse all plans instead</Text>
+            <Ionicons name="library-outline" size={14} color={t.colors.textSecondary} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.skipLinkText, live.skipLinkText]}>Browse all plans instead</Text>
           </TouchableOpacity>
         ) : null}
 
         <TouchableOpacity
-          style={styles.skipLink}
+          style={[styles.skipLink, live.skipLink]}
           onPress={handleSkip}
           disabled={busy}
           accessibilityRole="button"
           accessibilityLabel="Skip, I'll choose a plan myself"
         >
-          <Ionicons name="arrow-forward" size={14} color={colors.textSecondary} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.skipLinkText}>Skip, I'll choose myself</Text>
+          <Ionicons name="arrow-forward" size={14} color={t.colors.textSecondary} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.skipLinkText, live.skipLinkText]}>Skip, I'll choose myself</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -333,3 +337,32 @@ const styles = StyleSheet.create({
   },
   skipLinkText: { ...type.label, color: colors.textPrimary },
 });
+
+// CP-10 batch G lane 1 (2026-07-11): the frozen `styles` block above stays
+// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/padding/gap/width/height/alignItems, no token) are correctly
+// omitted -- there is nothing to unfreeze for them.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    dot: { backgroundColor: t.colors.border },
+    dotActive: { backgroundColor: t.colors.primary },
+    question: { ...t.type.h2, color: t.colors.textPrimary },
+    questionSub: { ...t.type.bodySm, color: t.colors.textSecondary },
+    optionBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    optionText: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    resultTitle: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
+    resultIntro: { ...t.type.bodySm, color: t.colors.textSecondary },
+    resultCard: { borderColor: withAlpha(t.colors.primary, 0.251) },
+    resultBadge: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.376) },
+    resultBadgeText: { fontSize: t.fontSize.micro, color: t.colors.primary },
+    resultName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    resultDesc: { ...t.type.bodySm, color: t.colors.textSecondary },
+    resultMeta: { ...t.type.caption, color: t.colors.textMuted },
+    resultFootnote: { ...t.type.caption, color: t.colors.textMuted },
+    skipLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    skipLinkText: { ...t.type.label, color: t.colors.textPrimary },
+  };
+}

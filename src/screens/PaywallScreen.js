@@ -16,13 +16,14 @@
  * then calls cascade.payAt to write tier_history. On dismiss we just
  * close. Either decision is logged via paywall_tapped_cta telemetry.
  */
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking } from 'react-native';
 import { storeName } from '../lib/storeName';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, fontSize, fontWeight, radius, hitSlop, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import ModalHeader from '../components/ModalHeader';
 import { LINKS } from '../lib/links';
 import TierComparisonStrip from '../components/TierComparisonStrip';
@@ -56,6 +57,9 @@ export default function PaywallScreen({ navigation, route }) {
   const userId = user?.id;
 
   const [busy, setBusy] = useState(false);
+  // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   // Fire the paywall_shown impression once per mount (mirrors HomeScreen's
   // call signature). The ref guards a re-render / strict-mode double-invoke
@@ -196,12 +200,12 @@ export default function PaywallScreen({ navigation, route }) {
         : `Renews ${renewCadence} until you cancel. Manage or cancel anytime in ${storeManage}.`);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <ModalHeader title="Upgrade" onClose={dismiss} />
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.title}>Start Precision Coaching</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Start Precision Coaching</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>
           Volyume reads your training, weight, food and check-ins together, then updates your plan and targets with a written reason for every change.
         </Text>
 
@@ -209,14 +213,14 @@ export default function PaywallScreen({ navigation, route }) {
             price. Renders only when a curated excerpt exists (ships dark until
             the honesty bar in paywallExcerpts.js is met). */}
         {excerpt ? (
-          <View style={styles.reviewCard} accessible accessibilityLabel={`${excerpt.stars} star review. ${excerpt.quote}. ${excerpt.name}, ${excerpt.source}, ${excerpt.date}.`}>
+          <View style={[styles.reviewCard, live.reviewCard]} accessible accessibilityLabel={`${excerpt.stars} star review. ${excerpt.quote}. ${excerpt.name}, ${excerpt.source}, ${excerpt.date}.`}>
             <View style={styles.reviewStars} accessibilityElementsHidden importantForAccessibility="no">
               {Array.from({ length: Math.max(0, Math.min(5, excerpt.stars)) }).map((_, i) => (
-                <Ionicons key={i} name="star" size={13} color={colors.primary} />
+                <Ionicons key={i} name="star" size={13} color={t.colors.primary} />
               ))}
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={styles.reviewQuote} numberOfLines={3}>{`"${excerpt.quote}"`}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.reviewMeta}>{`${excerpt.name} - ${excerpt.source} - ${excerpt.date}`}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.reviewQuote, live.reviewQuote]} numberOfLines={3}>{`"${excerpt.quote}"`}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.reviewMeta, live.reviewMeta]}>{`${excerpt.name} - ${excerpt.source} - ${excerpt.date}`}</Text>
           </View>
         ) : null}
 
@@ -241,7 +245,7 @@ export default function PaywallScreen({ navigation, route }) {
           <Button title="Not now" variant="tertiary" disabled={busy} onPress={dismiss} />
         </View>
 
-        <Text maxFontSizeMultiplier={1.3} style={styles.terms}>{termsText}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.terms, live.terms]}>{termsText}</Text>
 
         <View style={styles.legalRow}>
           {/* Haptics completion pass (2026-07-10): billing-consequential
@@ -251,32 +255,32 @@ export default function PaywallScreen({ navigation, route }) {
             onPress={handleRestore}
             disabled={busy}
             hitSlop={hitSlop}
-            style={[styles.legalButton, busy && styles.legalButtonDisabled]}
+            style={[styles.legalButton, live.legalButton, busy && styles.legalButtonDisabled]}
             accessibilityRole="button"
             accessibilityLabel="Restore purchases"
           >
-            <Ionicons name="refresh-outline" size={14} color={colors.textSecondary} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.legalLink}>Restore purchases</Text>
+            <Ionicons name="refresh-outline" size={14} color={t.colors.textSecondary} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.legalLink, live.legalLink]}>Restore purchases</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => { haptics.selection(); navigation.navigate('SubscriptionPolicy'); }}
             hitSlop={hitSlop}
-            style={styles.legalButton}
+            style={[styles.legalButton, live.legalButton]}
             accessibilityRole="button"
             accessibilityLabel="Subscription terms"
           >
-            <Ionicons name="document-text-outline" size={14} color={colors.textSecondary} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.legalLink}>Subscription terms</Text>
+            <Ionicons name="document-text-outline" size={14} color={t.colors.textSecondary} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.legalLink, live.legalLink]}>Subscription terms</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => { haptics.selection(); Linking.openURL(LINKS.privacyPolicy).catch(() => {}); }}
             hitSlop={hitSlop}
-            style={styles.legalButton}
+            style={[styles.legalButton, live.legalButton]}
             accessibilityRole="button"
             accessibilityLabel="Privacy policy"
           >
-            <Ionicons name="shield-checkmark-outline" size={14} color={colors.textSecondary} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.legalLink}>Privacy</Text>
+            <Ionicons name="shield-checkmark-outline" size={14} color={t.colors.textSecondary} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.legalLink, live.legalLink]}>Privacy</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -345,3 +349,24 @@ const styles = StyleSheet.create({
   },
   legalButtonDisabled: { opacity: 0.5 },
 });
+
+// CP-10 batch G lane 1 (2026-07-11): the frozen `styles` block above stays
+// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/padding/gap/marginBottom/opacity, no token) are correctly
+// omitted -- there is nothing to unfreeze for them. No billing/purchase
+// logic or product ID touched -- colours only.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    title: { color: t.colors.textPrimary, fontSize: t.fontSize.xxl },
+    subtitle: { color: t.colors.textSecondary, fontSize: t.fontSize.md },
+    reviewCard: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    reviewQuote: { ...t.type.bodySm, color: t.colors.textPrimary },
+    reviewMeta: { ...t.type.caption, color: t.colors.textMuted },
+    terms: { ...t.type.captionTight, color: t.colors.textMuted },
+    legalLink: { ...t.type.caption, color: t.colors.textSecondary },
+    legalButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+  };
+}

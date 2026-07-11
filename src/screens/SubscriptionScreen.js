@@ -11,10 +11,11 @@
  * Reads the locally-synced users_profile mirror (trial_state,
  * locked_in_price_tier, complete_trial_ends_at, pro_trial_ends_at).
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Card from '../components/Card';
@@ -48,6 +49,9 @@ export default function SubscriptionScreen({ navigation, route }) {
     userId: s.user?.id,
   })));
 
+  // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   // M-1 (audit): resolve the Pro/Free value from store.tier, the same source
   // every feature gate uses, so this screen can't disagree with the gates.
   // stage / daysRemaining stay derived from trial_state (trial-progress display,
@@ -133,18 +137,18 @@ export default function SubscriptionScreen({ navigation, route }) {
   }, [navigation, period, stage, route]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <BackHeader title="Subscription" />
 
       <ScrollView contentContainerStyle={styles.scroll}>
 
         {/* Current state card */}
         <Card borderless style={styles.card}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.cardLabel}>Your plan</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.cardValue}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.cardLabel, live.cardLabel]}>Your plan</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.cardValue, live.cardValue]}>
             {tier === 'pro' ? 'Pro' : 'Free'}
           </Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.cardSub}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.cardSub, live.cardSub]}>
             {STAGE_LABEL[stage] ?? '-'}
             {daysLeft != null ? ` - ${daysLeft} day${daysLeft === 1 ? '' : 's'} remaining` : ''}
           </Text>
@@ -164,11 +168,11 @@ export default function SubscriptionScreen({ navigation, route }) {
 
         {currentSku ? (
           <Card borderless style={styles.card}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.cardLabel}>Price</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.cardLabel, live.cardLabel]}>Price</Text>
             {/* PLAY-002: the store's localised price, or a short placeholder
                 until the active store responds. Never a hardcoded fallback. */}
-            <Text maxFontSizeMultiplier={1.3} style={styles.cardValue}>{priceFor('pro', period) ?? '...'}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.cardSub}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.cardValue, live.cardValue]}>{priceFor('pro', period) ?? '...'}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.cardSub, live.cardSub]}>
               {period === 'annual' ? 'Billed yearly' : 'Billed monthly'}
             </Text>
           </Card>
@@ -195,13 +199,13 @@ export default function SubscriptionScreen({ navigation, route }) {
             <Button
               title="Cancel subscription"
               variant="tertiary"
-              textStyle={{ color: colors.error }}
+              textStyle={{ color: t.colors.error }}
               onPress={handleCancel}
             />
           ) : null}
         </View>
 
-        <Text maxFontSizeMultiplier={1.3} style={styles.footnote}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.footnote, live.footnote]}>
           Billing is handled by {platformStore}.
           To change your payment method or cancel, open subscription settings in
           {` ${platformStore}`}.
@@ -258,3 +262,20 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
 });
+
+// CP-10 batch G lane 1 (2026-07-11): the frozen `styles` block above stays
+// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (padding/margin/gap, no token) and fontWeight (not part of
+// useTheme()'s shape) are correctly omitted. Cancel-subscription flow,
+// restore flow and every price/product read are untouched -- colours only.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    cardLabel: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
+    cardValue: { color: t.colors.textPrimary, fontSize: t.fontSize.xxl },
+    cardSub: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
+    footnote: { ...t.type.bodySm, color: t.colors.textMuted },
+  };
+}

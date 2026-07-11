@@ -17,6 +17,7 @@ import { SkeletonCard } from '../components/Skeleton';
 import {
   colors, spacing, radius, fontWeight, type, iconSize, motion,
 } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { useToast } from '../components/Toast';
 import useAppStore from '../store/useAppStore';
 import { logError } from '../lib/errorLog';
@@ -141,6 +142,15 @@ export default function ProgressPhotosScreen({ navigation }) {
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
+  // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
+  // Memoised: this screen renders a FlashList timeline. renderCheckInCard/
+  // renderStudioHeader/renderTimelineEmpty are nested closures (not sibling
+  // components), so this single hook call covers every render path below --
+  // no per-closure useTheme() needed. Colours only: every ED-safety
+  // suppression gate (photoSuppressed, calm, the fail-closed reads below)
+  // and every scan/photo write path are untouched.
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   // E10 read-only lapse views (founder decision 2026-07-02, "view yes, log
   // no"): a non-Pro user reaches this screen only through withReadOnlyProGuard
   // (they have photos), and it renders view-only: the timeline and Compare
@@ -1274,9 +1284,9 @@ export default function ProgressPhotosScreen({ navigation }) {
         accessibilityLabel={readOnly
           ? `Photos from ${dateLabel}.`
           : `Photos from ${dateLabel}. Tap to open.`}
-        style={styles.checkInCard}
+        style={[styles.checkInCard, live.checkInCard]}
       >
-        <View ref={(n) => { coverNode = n; }} style={styles.checkInCover}>
+        <View ref={(n) => { coverNode = n; }} style={[styles.checkInCover, live.checkInCover]}>
           <Image
             source={{ uri: cover.uri }}
             style={styles.checkInCoverImage}
@@ -1291,20 +1301,20 @@ export default function ProgressPhotosScreen({ navigation }) {
             recyclingKey={cover.name}
             transition={reduceMotion ? 0 : motion.state}
           />
-          <View pointerEvents="none" style={styles.checkInCoverBadge}>
-            <Ionicons name="images-outline" size={13} color={colors.textPrimary} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.checkInCoverBadgeText}>{item.photos.length}</Text>
+          <View pointerEvents="none" style={[styles.checkInCoverBadge, live.checkInCoverBadge]}>
+            <Ionicons name="images-outline" size={13} color={t.colors.textPrimary} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.checkInCoverBadgeText, live.checkInCoverBadgeText]}>{item.photos.length}</Text>
           </View>
         </View>
         <View style={styles.checkInBody}>
           <View style={styles.checkInTopRow}>
             <View style={styles.checkInTitleBlock}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.checkInDate} numberOfLines={1}>{dateLabel}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.checkInMeta} numberOfLines={1}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.checkInDate, live.checkInDate]} numberOfLines={1}>{dateLabel}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.checkInMeta, live.checkInMeta]} numberOfLines={1}>
                 {metaText}
               </Text>
             </View>
-            {!readOnly ? <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} /> : null}
+            {!readOnly ? <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} /> : null}
           </View>
           {scanSummary ? (
             <View style={styles.libraryScoreRow}>
@@ -1312,33 +1322,33 @@ export default function ProgressPhotosScreen({ navigation }) {
                 part.interactive ? (
                   <TouchableOpacity
                     key={part.label}
-                    style={styles.libraryScoreCell}
+                    style={[styles.libraryScoreCell, live.libraryScoreCell]}
                     onPress={() => toggleRevealLowScore(scanForDay.id)}
                     accessibilityRole="button"
                     accessibilityLabel={part.accessibilityLabel}
                   >
-                    <Text maxFontSizeMultiplier={1.3} style={styles.libraryScoreLabel}>{part.label}</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.libraryScoreValue} numberOfLines={2}>{part.value}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.libraryScoreLabel, live.libraryScoreLabel]}>{part.label}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.libraryScoreValue, live.libraryScoreValue]} numberOfLines={2}>{part.value}</Text>
                   </TouchableOpacity>
                 ) : (
                   <View
                     key={part.label}
-                    style={styles.libraryScoreCell}
+                    style={[styles.libraryScoreCell, live.libraryScoreCell]}
                     accessible={!!part.accessibilityLabel}
                     accessibilityLabel={part.accessibilityLabel}
                   >
-                    <Text maxFontSizeMultiplier={1.3} style={styles.libraryScoreLabel}>{part.label}</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.libraryScoreValue} numberOfLines={2}>{part.value}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.libraryScoreLabel, live.libraryScoreLabel]}>{part.label}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.libraryScoreValue, live.libraryScoreValue]} numberOfLines={2}>{part.value}</Text>
                   </View>
                 )
               ))}
             </View>
           ) : null}
           {receipt ? (
-            <View style={styles.scanReceiptBlock}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.scanReceiptSentence}>{receipt.sentence}</Text>
+            <View style={[styles.scanReceiptBlock, live.scanReceiptBlock]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.scanReceiptSentence, live.scanReceiptSentence]}>{receipt.sentence}</Text>
               {showRecalibrationNote ? (
-                <Text maxFontSizeMultiplier={1.3} style={styles.scanRecalibrationNote}>{RECALIBRATION_NOTE_TEXT}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.scanRecalibrationNote, live.scanRecalibrationNote]}>{RECALIBRATION_NOTE_TEXT}</Text>
               ) : null}
               {receipt.whyLines.length > 0 ? (
                 <CollapsibleSection
@@ -1347,12 +1357,12 @@ export default function ProgressPhotosScreen({ navigation }) {
                   onToggle={() => toggleWhyOpen(scanForDay.id)}
                 >
                   {receipt.whyLines.map((line) => (
-                    <Text maxFontSizeMultiplier={1.3} key={line} style={styles.scanReceiptWhyLine}>{line}</Text>
+                    <Text maxFontSizeMultiplier={1.3} key={line} style={[styles.scanReceiptWhyLine, live.scanReceiptWhyLine]}>{line}</Text>
                   ))}
                 </CollapsibleSection>
               ) : null}
               {showCheckInValueLine ? (
-                <Text maxFontSizeMultiplier={1.3} style={styles.scanCheckInValueLine}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.scanCheckInValueLine, live.scanCheckInValueLine]}>
                   If you check in this week, the coach can use this as context.
                 </Text>
               ) : null}
@@ -1362,37 +1372,37 @@ export default function ProgressPhotosScreen({ navigation }) {
             {PHOTO_LIBRARY_POSES.map((pose) => {
               const complete = item.poses.includes(pose);
               return (
-                <View key={pose} style={[styles.checkInPoseChip, complete && styles.checkInPoseChipDone]}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.checkInPoseText, complete && styles.checkInPoseTextDone]}>
+                <View key={pose} style={[styles.checkInPoseChip, live.checkInPoseChip, complete && [styles.checkInPoseChipDone, live.checkInPoseChipDone]]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.checkInPoseText, live.checkInPoseText, complete && [styles.checkInPoseTextDone, live.checkInPoseTextDone]]}>
                     {POSE_LABEL[pose]}
                   </Text>
                 </View>
               );
             })}
           </View>
-          {item.note ? <Text maxFontSizeMultiplier={1.3} style={styles.checkInNote} numberOfLines={2}>{item.note}</Text> : null}
+          {item.note ? <Text maxFontSizeMultiplier={1.3} style={[styles.checkInNote, live.checkInNote]} numberOfLines={2}>{item.note}</Text> : null}
           {missingPoses.length > 0 ? (
-            <Text maxFontSizeMultiplier={1.3} style={styles.checkInHint} numberOfLines={2}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.checkInHint, live.checkInHint]} numberOfLines={2}>
               Add {missingPoses.map((pose) => `${POSE_LABEL[pose].toLowerCase()} photo`).join(', ')} for this date to score it.
             </Text>
           ) : !hasSide ? (
-            <Text maxFontSizeMultiplier={1.3} style={styles.checkInHint} numberOfLines={2}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.checkInHint, live.checkInHint]} numberOfLines={2}>
               Front and back are saved. Add side next time for a complete set.
             </Text>
           ) : (
-            <Text maxFontSizeMultiplier={1.3} style={styles.checkInHint} numberOfLines={2}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.checkInHint, live.checkInHint]} numberOfLines={2}>
               Front, back and side photos are saved together.
             </Text>
           )}
           {!readOnly && nextMissingPose ? (
             <TouchableOpacity
               onPress={() => openCheckInPoseCapture(item, nextMissingPose)}
-              style={styles.completeCheckInButton}
+              style={[styles.completeCheckInButton, live.completeCheckInButton]}
               accessibilityRole="button"
               accessibilityLabel={`Add a ${POSE_LABEL[nextMissingPose]} photo for this date`}
             >
-              <Ionicons name="camera-outline" size={iconSize.sm} color={colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.completeCheckInText}>
+              <Ionicons name="camera-outline" size={iconSize.sm} color={t.colors.textSecondary} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.completeCheckInText, live.completeCheckInText]}>
                 Add {POSE_LABEL[nextMissingPose]} photo
               </Text>
             </TouchableOpacity>
@@ -1406,29 +1416,29 @@ export default function ProgressPhotosScreen({ navigation }) {
     return (
       <>
         <Card padding="none" style={styles.studioHero}>
-          <View style={styles.heroTextHeader}>
+          <View style={[styles.heroTextHeader, live.heroTextHeader]}>
             <View style={styles.heroTitleRow}>
-              <View style={styles.heroIcon}>
-                <Ionicons name="images-outline" size={iconSize.md} color={colors.primary} />
+              <View style={[styles.heroIcon, live.heroIcon]}>
+                <Ionicons name="images-outline" size={iconSize.md} color={t.colors.primary} />
               </View>
               <View style={styles.heroTitleCopy}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.heroTextEyebrow}>Progress Photos</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.heroTextTitle}>Physique progress</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.heroTextEyebrow, live.heroTextEyebrow]}>Progress Photos</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.heroTextTitle, live.heroTextTitle]}>Physique progress</Text>
               </View>
             </View>
             <TouchableOpacity
-              style={styles.heroPrivacyPill}
+              style={[styles.heroPrivacyPill, live.heroPrivacyPill]}
               onLongPress={canExportCalibration ? exportLatestScanCalibration : undefined}
               delayLongPress={700}
               activeOpacity={canExportCalibration ? 0.75 : 1}
               accessibilityLabel="Progress photos privacy note"
             >
-              <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.heroPrivacyText} numberOfLines={1}>
+              <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={t.colors.textSecondary} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.heroPrivacyText, live.heroPrivacyText]} numberOfLines={1}>
                 Private on this device
               </Text>
             </TouchableOpacity>
-            <Text maxFontSizeMultiplier={1.3} style={styles.heroTextSubtitle}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.heroTextSubtitle, live.heroTextSubtitle]}>
               Take clear front, back and side photos once a week. Volyume scores the set and saves it to your library.
             </Text>
 
@@ -1472,18 +1482,18 @@ export default function ProgressPhotosScreen({ navigation }) {
             </View>
 
             {readOnly ? (
-              <Text maxFontSizeMultiplier={1.3} style={styles.readOnlyNote}>View-only on the free plan. Your photos stay yours.</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.readOnlyNote, live.readOnlyNote]}>View-only on the free plan. Your photos stay yours.</Text>
             ) : null}
           </View>
         </Card>
 
         {loadError && photos.length > 0 ? (
-          <Card style={styles.loadErrorCard}>
+          <Card style={[styles.loadErrorCard, live.loadErrorCard]}>
             <View style={styles.loadErrorTop}>
-              <Ionicons name="warning-outline" size={iconSize.sm} color={colors.warning} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.loadErrorTitle}>Couldn't refresh photos</Text>
+              <Ionicons name="warning-outline" size={iconSize.sm} color={t.colors.warning} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.loadErrorTitle, live.loadErrorTitle]}>Couldn't refresh photos</Text>
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={styles.loadErrorBody}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.loadErrorBody, live.loadErrorBody]}>
               Your saved photos are still here. Try again to refresh the library and latest score.
             </Text>
             <Button
@@ -1499,12 +1509,12 @@ export default function ProgressPhotosScreen({ navigation }) {
         ) : null}
 
         {!loading && photos.length > 0 ? (
-          <View style={styles.libraryControls}>
+          <View style={[styles.libraryControls, live.libraryControls]}>
             <View style={styles.libraryHeader}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.libraryTitle}>Photo library</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.libraryTitle, live.libraryTitle]}>Photo library</Text>
             </View>
             <View
-              style={styles.segmentTrack}
+              style={[styles.segmentTrack, live.segmentTrack]}
               accessibilityRole="radiogroup"
               accessibilityLabel="Photo library view"
             >
@@ -1513,14 +1523,14 @@ export default function ProgressPhotosScreen({ navigation }) {
                 return (
                   <TouchableOpacity
                     key={p.key}
-                    style={[styles.segment, active && styles.segmentActive]}
+                    style={[styles.segment, active && [styles.segmentActive, live.segmentActive]]}
                     onPress={() => setPoseFilter(p.key)}
                     hitSlop={8}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: active }}
                     accessibilityLabel={p.a11y}
                   >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.segmentText, active && styles.segmentTextActive]}>{p.label}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{p.label}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -1528,7 +1538,7 @@ export default function ProgressPhotosScreen({ navigation }) {
 
             <View style={styles.libraryToolsRow}>
               <View
-                style={[styles.segmentTrack, styles.sortTrack]}
+                style={[styles.segmentTrack, live.segmentTrack, styles.sortTrack]}
                 accessibilityRole="radiogroup"
                 accessibilityLabel="Photo library sort order"
               >
@@ -1537,14 +1547,14 @@ export default function ProgressPhotosScreen({ navigation }) {
                   return (
                     <TouchableOpacity
                       key={s.key}
-                      style={[styles.segment, styles.sortSegment, active && styles.segmentActive]}
+                      style={[styles.segment, styles.sortSegment, active && [styles.segmentActive, live.segmentActive]]}
                       onPress={() => setSortOrder(s.key)}
                       hitSlop={8}
                       accessibilityRole="radio"
                       accessibilityState={{ checked: active }}
                       accessibilityLabel={s.a11y}
                     >
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.segmentText, active && styles.segmentTextActive]}>{s.label}</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{s.label}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -1552,24 +1562,24 @@ export default function ProgressPhotosScreen({ navigation }) {
 
               <View style={styles.dateGroup}>
                 <TouchableOpacity
-                  style={[styles.dateButton, hasRange && styles.dateButtonActive]}
+                  style={[styles.dateButton, live.dateButton, hasRange && [styles.dateButtonActive, live.dateButtonActive]]}
                   onPress={() => setRangeOpen(true)}
                   accessibilityRole="button"
                   accessibilityLabel={hasRange ? `Filter by date, currently ${rangeLabel}. Tap to change.` : 'Filter by date'}
                 >
-                  <Ionicons name="calendar-outline" size={iconSize.sm} color={hasRange ? colors.textPrimary : colors.textMuted} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.dateButtonText, hasRange && styles.dateButtonTextActive]} numberOfLines={1}>{rangeLabel}</Text>
+                  <Ionicons name="calendar-outline" size={iconSize.sm} color={hasRange ? t.colors.textPrimary : t.colors.textMuted} />
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.dateButtonText, live.dateButtonText, hasRange && [styles.dateButtonTextActive, live.dateButtonTextActive]]} numberOfLines={1}>{rangeLabel}</Text>
                 </TouchableOpacity>
 
                 {hasRange ? (
                   <TouchableOpacity
-                    style={styles.dateClearButton}
+                    style={[styles.dateClearButton, live.dateClearButton]}
                     onPress={() => { setRangeFrom(null); setRangeTo(null); }}
                     hitSlop={8}
                     accessibilityRole="button"
                     accessibilityLabel="Clear the date filter"
                   >
-                    <Ionicons name="close-circle" size={iconSize.sm} color={colors.textSecondary} />
+                    <Ionicons name="close-circle" size={iconSize.sm} color={t.colors.textSecondary} />
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -1642,7 +1652,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       {/* Standard pushed-screen scaffold (BackHeader), matching Partners and the
           rest of the app. The write actions live in the hero so capture and
           scoring are not duplicated in the header. */}
@@ -1673,7 +1683,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => {
           if (item.type === 'header') {
-            return <Text maxFontSizeMultiplier={1.3} style={styles.monthHeader}>{item.label}</Text>;
+            return <Text maxFontSizeMultiplier={1.3} style={[styles.monthHeader, live.monthHeader]}>{item.label}</Text>;
           }
           return renderCheckInCard(item);
         }}
@@ -1758,31 +1768,31 @@ export default function ProgressPhotosScreen({ navigation }) {
         onRequestClose={closeScanImportDateStep}
       >
         <TouchableOpacity
-          style={styles.scanDateBackdrop}
+          style={[styles.scanDateBackdrop, live.scanDateBackdrop]}
           activeOpacity={1}
           onPress={closeScanImportDateStep}
           accessibilityRole="button"
           accessibilityLabel="Close photo set date"
         >
-          <View style={styles.scanDateSheet} onStartShouldSetResponder={() => true}>
+          <View style={[styles.scanDateSheet, live.scanDateSheet]} onStartShouldSetResponder={() => true}>
             <ScrollView
               contentContainerStyle={styles.scanDateContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              <Text maxFontSizeMultiplier={1.3} style={styles.scanDateTitle}>Date for this photo set</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.scanDateIntro}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.scanDateTitle, live.scanDateTitle]}>Date for this photo set</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.scanDateIntro, live.scanDateIntro]}>
                 Pick the day these photos were taken. Volyume uses that date for the library entry and the weight shown with the set.
               </Text>
               <TouchableOpacity
-                style={styles.scanDateField}
+                style={[styles.scanDateField, live.scanDateField]}
                 onPress={() => setScanDatePickerOpen(true)}
                 accessibilityRole="button"
                 accessibilityLabel={`Change photo set date, currently ${formatProgressPhotoDay(scanDateMs)}`}
               >
-                <Ionicons name="calendar-outline" size={iconSize.md} color={colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={styles.scanDateValue} numberOfLines={1} ellipsizeMode="tail">{formatProgressPhotoDay(scanDateMs)}</Text>
-                <Ionicons name="chevron-down" size={iconSize.sm} color={colors.textMuted} />
+                <Ionicons name="calendar-outline" size={iconSize.md} color={t.colors.primary} />
+                <Text maxFontSizeMultiplier={1.3} style={[styles.scanDateValue, live.scanDateValue]} numberOfLines={1} ellipsizeMode="tail">{formatProgressPhotoDay(scanDateMs)}</Text>
+                <Ionicons name="chevron-down" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
               <View style={styles.scanDateActions}>
                 <Button
@@ -1820,7 +1830,7 @@ export default function ProgressPhotosScreen({ navigation }) {
         onRequestClose={() => setCaptureRouteOpen(false)}
       >
         {captureRouteOpen ? (
-          <View style={styles.captureRouteOverlay}>
+          <View style={[styles.captureRouteOverlay, live.captureRouteOverlay]}>
             <TouchableOpacity
               style={styles.captureRouteBackdrop}
               activeOpacity={1}
@@ -1829,10 +1839,10 @@ export default function ProgressPhotosScreen({ navigation }) {
               accessibilityLabel="Close photo set options"
             />
             <SafeAreaView edges={['bottom']} style={styles.captureRouteSafe}>
-              <View style={styles.captureRouteSheet}>
-                <View style={styles.captureRouteHandle} />
+              <View style={[styles.captureRouteSheet, live.captureRouteSheet]}>
+                <View style={[styles.captureRouteHandle, live.captureRouteHandle]} />
                 <View style={styles.captureRouteHeader}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.captureRouteTitle}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.captureRouteTitle, live.captureRouteTitle]}>
                     {latestPartialCapture ? 'Add missing angle' : 'Add photos'}
                   </Text>
                   <TouchableOpacity
@@ -1841,10 +1851,10 @@ export default function ProgressPhotosScreen({ navigation }) {
                     accessibilityRole="button"
                     accessibilityLabel="Close photo set options"
                   >
-                    <Ionicons name="close" size={24} color={colors.textPrimary} />
+                    <Ionicons name="close" size={24} color={t.colors.textPrimary} />
                   </TouchableOpacity>
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={styles.captureRouteIntro}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.captureRouteIntro, live.captureRouteIntro]}>
                   {latestPartialCapture
                     ? `Your latest set is missing the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo. Add it there, or start a separate set if these photos are from another day.`
                     : 'Add a new set from the camera or your photo library. Use front, back and side photos.'}
@@ -1861,39 +1871,39 @@ export default function ProgressPhotosScreen({ navigation }) {
                   {captureRoutes.map((route) => (
                     <TouchableOpacity
                       key={route.key}
-                      style={[styles.captureRouteCard, route.disabled && styles.captureRouteCardDisabled]}
+                      style={[styles.captureRouteCard, live.captureRouteCard, route.disabled && styles.captureRouteCardDisabled]}
                       onPress={() => onCaptureRoutePress(route)}
                       disabled={route.disabled}
                       accessibilityRole="button"
                       accessibilityState={{ disabled: !!route.disabled }}
                       accessibilityLabel={route.actionLabel}
                     >
-                      <View style={styles.captureRouteIcon}>
-                        <Ionicons name={route.icon} size={20} color={route.disabled ? colors.textMuted : colors.primary} />
+                      <View style={[styles.captureRouteIcon, live.captureRouteIcon]}>
+                        <Ionicons name={route.icon} size={20} color={route.disabled ? t.colors.textMuted : t.colors.primary} />
                       </View>
                       <View style={styles.captureRouteCopy}>
                         <View style={styles.captureRouteTopLine}>
-                          <Text maxFontSizeMultiplier={1.3} style={styles.captureRouteEyebrow}>{route.eyebrow}</Text>
+                          <Text maxFontSizeMultiplier={1.3} style={[styles.captureRouteEyebrow, live.captureRouteEyebrow]}>{route.eyebrow}</Text>
                           {route.recommended ? (
-                            <View style={styles.captureRoutePill}>
-                              <Text maxFontSizeMultiplier={1.3} style={styles.captureRoutePillText}>{route.recommendationLabel || 'Recommended'}</Text>
+                            <View style={[styles.captureRoutePill, live.captureRoutePill]}>
+                              <Text maxFontSizeMultiplier={1.3} style={[styles.captureRoutePillText, live.captureRoutePillText]}>{route.recommendationLabel || 'Recommended'}</Text>
                             </View>
                           ) : null}
                         </View>
-                        <Text maxFontSizeMultiplier={1.3} style={styles.captureRouteName}>{route.title}</Text>
-                        <Text maxFontSizeMultiplier={1.3} style={styles.captureRouteBody}>{route.disabled ? route.disabledReason : route.body}</Text>
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.captureRouteName, live.captureRouteName]}>{route.title}</Text>
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.captureRouteBody, live.captureRouteBody]}>{route.disabled ? route.disabledReason : route.body}</Text>
                         {route.steps?.length ? (
-                          <View style={styles.captureRouteSteps}>
+                          <View style={[styles.captureRouteSteps, live.captureRouteSteps]}>
                             {route.steps.map((step) => (
                               <View key={step} style={styles.captureRouteStep}>
-                                <View style={styles.captureRouteStepDot} />
-                                <Text maxFontSizeMultiplier={1.3} style={styles.captureRouteStepText}>{step}</Text>
+                                <View style={[styles.captureRouteStepDot, live.captureRouteStepDot]} />
+                                <Text maxFontSizeMultiplier={1.3} style={[styles.captureRouteStepText, live.captureRouteStepText]}>{step}</Text>
                               </View>
                             ))}
                           </View>
                         ) : null}
                       </View>
-                      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+                      <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -1947,11 +1957,11 @@ export default function ProgressPhotosScreen({ navigation }) {
         animationType={reduceMotion ? 'none' : 'slide'}
         onRequestClose={retakeScanReview}
       >
-        <SafeAreaView style={styles.scanReviewSafe}>
-          <View style={styles.scanReviewHeader}>
+        <SafeAreaView style={[styles.scanReviewSafe, live.scanReviewSafe]}>
+          <View style={[styles.scanReviewHeader, live.scanReviewHeader]}>
             <View style={styles.scanReviewTitleBlock}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.scanReviewEyebrow}>Photo review</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.scanReviewTitle}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.scanReviewEyebrow, live.scanReviewEyebrow]}>Photo review</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.scanReviewTitle, live.scanReviewTitle]}>
                 Check {POSE_LABEL[scanReview?.pose]?.toLowerCase() || 'this'} photo
               </Text>
             </View>
@@ -1965,7 +1975,7 @@ export default function ProgressPhotosScreen({ navigation }) {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            <View style={styles.scanReviewImageWrap}>
+            <View style={[styles.scanReviewImageWrap, live.scanReviewImageWrap]}>
               {scanReview?.saved?.uri ? (
                 <Image
                   source={{ uri: scanReview.saved.uri }}
@@ -1978,8 +1988,8 @@ export default function ProgressPhotosScreen({ navigation }) {
               ) : null}
             </View>
           </ScrollView>
-          <View style={[styles.scanReviewFooter, { paddingBottom: Math.max(spacing.lg, insets.bottom + spacing.md) }]}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.scanReviewCopy}>
+          <View style={[styles.scanReviewFooter, live.scanReviewFooter, { paddingBottom: Math.max(spacing.lg, insets.bottom + spacing.md) }]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.scanReviewCopy, live.scanReviewCopy]}>
               Use it if your whole body is visible, the photo is sharp, and the picture is upright.
             </Text>
             <View style={styles.scanReviewActions}>
@@ -2484,3 +2494,92 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
 });
+
+// CP-10 batch G lane 1 (2026-07-11): the frozen `styles` block above stays
+// byte-identical. This mirrors ONLY the colour/type-bearing sub-properties
+// of the matching frozen style, at identical rest values, so the screen
+// carries no static island under a live theme toggle. Pure layout keys
+// (flex/padding/gap/margin/borderRadius/borderWidth/width/height, no token)
+// and fontWeight (not part of useTheme()'s shape) are correctly omitted.
+// Every ED-safety suppression gate (photoSuppressed/calm, fail-closed on a
+// read error), the scan-scoring pipeline and every write path are
+// untouched -- colours only.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    scanReviewSafe: { backgroundColor: t.colors.background },
+    scanReviewHeader: { borderBottomColor: t.colors.border },
+    scanReviewEyebrow: { ...t.type.caption, color: t.colors.primary },
+    scanReviewTitle: { ...t.type.title, color: t.colors.textPrimary },
+    scanReviewImageWrap: { backgroundColor: t.colors.camera },
+    scanReviewFooter: { borderTopColor: t.colors.border, backgroundColor: t.colors.background },
+    scanReviewCopy: { ...t.type.bodySm, color: t.colors.textSecondary },
+    heroTextHeader: { backgroundColor: t.colors.surface },
+    heroIcon: { backgroundColor: t.colors.surface2, borderColor: t.colors.borderSubtle },
+    heroTextEyebrow: { ...t.type.caption, color: t.colors.primary },
+    heroTextTitle: { ...t.type.title, color: t.colors.textPrimary },
+    heroPrivacyPill: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    heroPrivacyText: { ...t.type.caption, color: t.colors.textSecondary },
+    heroTextSubtitle: { ...t.type.bodySm, color: t.colors.textSecondary },
+    loadErrorCard: { borderColor: t.colors.warning },
+    loadErrorTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    loadErrorBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+    readOnlyNote: { ...t.type.caption, color: t.colors.textMuted },
+    libraryTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    libraryControls: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
+    segmentTrack: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.background },
+    segmentActive: { backgroundColor: t.colors.surfaceElevated },
+    segmentText: { ...t.type.label, color: t.colors.textMuted },
+    segmentTextActive: { color: t.colors.textPrimary },
+    dateButton: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.background },
+    dateButtonActive: { backgroundColor: t.colors.surfaceElevated },
+    dateButtonText: { ...t.type.label, color: t.colors.textMuted },
+    dateButtonTextActive: { color: t.colors.textPrimary },
+    dateClearButton: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.background },
+    monthHeader: { ...t.type.label, color: t.colors.textMuted },
+    checkInCard: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    checkInCover: { backgroundColor: t.colors.surface2 },
+    checkInCoverBadge: { backgroundColor: t.colors.scrim },
+    checkInCoverBadgeText: { ...t.type.caption, color: t.colors.textPrimary },
+    checkInDate: { ...t.type.label, color: t.colors.textPrimary },
+    checkInMeta: { ...t.type.caption, color: t.colors.textMuted },
+    libraryScoreCell: { backgroundColor: t.colors.surface2 },
+    libraryScoreLabel: { ...t.type.caption, color: t.colors.textMuted },
+    libraryScoreValue: { ...t.type.label, color: t.colors.textPrimary },
+    scanReceiptBlock: { borderLeftColor: t.colors.primary, backgroundColor: t.colors.surface2 },
+    scanReceiptSentence: { ...t.type.bodySm, color: t.colors.textSecondary },
+    scanRecalibrationNote: { ...t.type.caption, color: t.colors.textMuted },
+    scanReceiptWhyLine: { ...t.type.bodySm, color: t.colors.textSecondary },
+    scanCheckInValueLine: { ...t.type.caption, color: t.colors.textMuted },
+    checkInPoseChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    checkInPoseChipDone: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
+    checkInPoseText: { ...t.type.caption, color: t.colors.textMuted },
+    checkInPoseTextDone: { color: t.colors.primary },
+    checkInNote: { ...t.type.bodySm, color: t.colors.textSecondary },
+    checkInHint: { ...t.type.caption, color: t.colors.textMuted },
+    completeCheckInButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    completeCheckInText: { ...t.type.label, color: t.colors.textPrimary },
+    captureRouteOverlay: { backgroundColor: t.colors.scrim },
+    captureRouteSheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    captureRouteHandle: { backgroundColor: t.colors.border },
+    captureRouteTitle: { ...t.type.title, color: t.colors.textPrimary },
+    captureRouteIntro: { ...t.type.bodySm, color: t.colors.textMuted },
+    captureRouteCard: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
+    captureRouteIcon: { backgroundColor: t.colors.primaryBg },
+    captureRouteEyebrow: { ...t.type.caption, color: t.colors.primary },
+    captureRoutePill: { backgroundColor: t.colors.primaryBg },
+    captureRoutePillText: { ...t.type.caption, color: t.colors.primary },
+    captureRouteName: { ...t.type.label, color: t.colors.textPrimary },
+    captureRouteBody: { ...t.type.captionTight, color: t.colors.textSecondary },
+    captureRouteSteps: { borderTopColor: t.colors.border },
+    captureRouteStepDot: { backgroundColor: t.colors.primaryFill },
+    captureRouteStepText: { ...t.type.caption, color: t.colors.textSecondary },
+    scanDateBackdrop: { backgroundColor: t.colors.scrim },
+    scanDateSheet: { backgroundColor: t.colors.surfaceElevated ?? t.colors.surface, borderColor: t.colors.border },
+    scanDateTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    scanDateIntro: { ...t.type.bodySm, color: t.colors.textSecondary },
+    scanDateField: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    scanDateValue: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+  };
+}
+

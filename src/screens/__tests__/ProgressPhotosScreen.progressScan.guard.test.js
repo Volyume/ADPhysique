@@ -72,7 +72,9 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/import \{ SafeAreaView, useSafeAreaInsets \} from 'react-native-safe-area-context';/);
     expect(SCREEN).toMatch(/const insets = useSafeAreaInsets\(\);/);
     expect(SCREEN).toMatch(/contentContainerStyle=\{\[\s*styles\.captureRouteList,[\s\S]*insets\.bottom \+ spacing\.lg/);
-    expect(SCREEN).toMatch(/<\/ScrollView>\s*<View style=\{\[styles\.scanReviewFooter, \{ paddingBottom: Math\.max\(spacing\.lg, insets\.bottom \+ spacing\.md\) \}\]\}>/);
+    // CP-10 batch G lane 1: scanReviewFooter gained its live-theme override;
+    // the inline paddingBottom-from-insets contract is unchanged.
+    expect(SCREEN).toMatch(/<\/ScrollView>\s*<View style=\{\[styles\.scanReviewFooter, live\.scanReviewFooter, \{ paddingBottom: Math\.max\(spacing\.lg, insets\.bottom \+ spacing\.md\) \}\]\}>/);
     expect(SCREEN).toMatch(/scanReviewImageWrap: \{[\s\S]*minHeight: 220,[\s\S]*maxHeight: 460/);
     expect(SCREEN).toMatch(/setScanReview\(\{\s*name,\s*saved,\s*flow,\s*pose,\s*\}\);/);
     expect(SCREEN).toMatch(/previewApproved/);
@@ -148,9 +150,11 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   });
 
   test('photo-count badge stays legible over the dark thumbnail scrim', () => {
-    expect(SCREEN).toContain('Ionicons name="images-outline" size={13} color={colors.textPrimary}');
+    // CP-10 batch G lane 1: the badge icon's ink now resolves from the live
+    // theme; the pinned token (textPrimary, never onPrimary) is unchanged.
+    expect(SCREEN).toContain('Ionicons name="images-outline" size={13} color={t.colors.textPrimary}');
     expect(SCREEN).toContain('checkInCoverBadgeText: { ...type.caption, color: colors.textPrimary }');
-    expect(SCREEN).not.toContain('Ionicons name="images-outline" size={13} color={colors.onPrimary}');
+    expect(SCREEN).not.toContain('Ionicons name="images-outline" size={13} color={t.colors.onPrimary}');
     expect(SCREEN).not.toContain('checkInCoverBadgeText: { ...type.caption, color: colors.onPrimary }');
   });
 
@@ -166,7 +170,9 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     // immediately after the tag name, before existing props. The narrow-screen
     // guarantee this test pins (single line, tail-ellipsised) is unchanged; the
     // literal is extended to the exact attribute, never weakened to a wildcard.
-    expect(SCREEN).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.scanDateValue\} numberOfLines=\{1\} ellipsizeMode="tail">/);
+    // CP-10 batch G lane 1: scanDateValue gained its live-theme override;
+    // the pinned single-line, tail-ellipsised contract is unchanged.
+    expect(SCREEN).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.scanDateValue, live\.scanDateValue\]\} numberOfLines=\{1\} ellipsizeMode="tail">/);
     expect(SCREEN).toMatch(/captureRouteTitle: \{ \.\.\.type\.title/);
     expect(SCREEN).toMatch(/scanDateTitle: \{ \.\.\.type\.bodyStrong/);
   });
@@ -195,7 +201,8 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   });
 
   test('missing-pose and route recommendation controls avoid loose amber links', () => {
-    expect(SCREEN).toContain('Ionicons name="camera-outline" size={iconSize.sm} color={colors.textSecondary}');
+    // CP-10 batch G lane 1: the icon's ink now resolves from the live theme.
+    expect(SCREEN).toContain('Ionicons name="camera-outline" size={iconSize.sm} color={t.colors.textSecondary}');
     expect(SCREEN).toMatch(/completeCheckInButton: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(SCREEN).toContain('completeCheckInText: { ...type.label, color: colors.textPrimary }');
     expect(SCREEN).toContain("route.recommendationLabel || 'Recommended'");

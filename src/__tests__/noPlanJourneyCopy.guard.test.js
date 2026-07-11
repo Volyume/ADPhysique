@@ -75,8 +75,9 @@ describe('no-plan / start-plan copy', () => {
   });
 
   test('FreeStarter fallback choices are quiet contained controls, not footnote links', () => {
-    expect(FREE_STARTER).toContain('Ionicons name="library-outline" size={14} color={colors.textSecondary}');
-    expect(FREE_STARTER).toContain('Ionicons name="arrow-forward" size={14} color={colors.textSecondary}');
+    // CP-10 batch G lane 1: both icons' ink now resolves from the live theme.
+    expect(FREE_STARTER).toContain('Ionicons name="library-outline" size={14} color={t.colors.textSecondary}');
+    expect(FREE_STARTER).toContain('Ionicons name="arrow-forward" size={14} color={t.colors.textSecondary}');
     expect(FREE_STARTER).toMatch(/skipLink: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(FREE_STARTER).toContain('skipLinkText: { ...type.label, color: colors.textPrimary }');
     expect(FREE_STARTER).not.toContain('skipLinkText: { fontSize: fontSize.sm, color: colors.textMuted }');

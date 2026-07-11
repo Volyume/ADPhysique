@@ -22,13 +22,14 @@
  * via the X surfaces a "Decide later" no-op (user remains in their
  * current trial state; the next gate fires the same screen again).
  */
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   View, Text, StyleSheet,
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import Button from '../components/Button';
 import BillingPeriodSelector from '../components/BillingPeriodSelector';
 import ModalHeader from '../components/ModalHeader';
@@ -106,6 +107,9 @@ export default function CascadeGateScreen({ navigation, route }) {
   const content = _variantContent(variant);
   const [busy, setBusy] = useState(null);  // which CTA is in-flight
   const userId = useAppStore((s) => s.user?.id);
+  // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   // Fire the paywall_shown impression once per mount (mirrors HomeScreen's
   // call signature), tagging the cascade gate as the surface and its variant as
@@ -235,21 +239,21 @@ export default function CascadeGateScreen({ navigation, route }) {
 
   if (!content) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={[styles.safe, live.safe]}>
         <View style={styles.center}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.errorText}>Unknown cascade variant: {variant}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.errorText, live.errorText]}>Unknown cascade variant: {variant}</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <ModalHeader title="Subscription" onClose={dismiss} />
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.title}>{content.title}</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>{content.subtitle}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>{content.title}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>{content.subtitle}</Text>
 
         {/* TierComparisonStrip was a 3-tier Pro-vs-Complete strip;
             in the 2-tier model the gate is a single Pro / Free
@@ -337,3 +341,19 @@ const styles = StyleSheet.create({
   },
   errorText: { color: colors.error },
 });
+
+// CP-10 batch G lane 1 (2026-07-11): the frozen `styles` block above stays
+// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/padding/gap/alignItems/justifyContent, no token) are correctly
+// omitted -- there is nothing to unfreeze for them. No billing/purchase
+// logic touched -- colours only.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    title: { color: t.colors.textPrimary, fontSize: t.fontSize.xxl },
+    subtitle: { color: t.colors.textSecondary, fontSize: t.fontSize.md },
+    errorText: { color: t.colors.error },
+  };
+}

@@ -31,6 +31,7 @@ import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { useToast } from '../components/Toast';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logBodyMetric, updateBodyMetric, deleteBodyMetric, getBodyMetricLog, getOpenEdPatternFlag, getWorkoutSetsSince, getAllExercises } from '../lib/database';
 import { appAlert } from '../components/AppAlert';
@@ -123,7 +124,11 @@ const NUTRITION_KEY = '@volyume_nutrition_targets';
 
 // ─── Phase detection ──────────────────────────────────────────────────────────
 
-function detectPhase(entries) {
+// CP-10 batch G lane 1 (2026-07-11): accepts the live theme's colour map
+// (t.colors) on the buildVolumeStatusColor(t.colors) precedent -- the
+// weight-trend -> label + tone mapping is byte-identical in meaning, only
+// the token SOURCE moved from the frozen import to the live theme.
+function detectPhase(entries, c = colors) {
   // DATA-001: require a real positive weight, not just non-null. A stray 0 kg
   // or negative row (legacy import artefact) must not skew the slope.
   const withWeight = entries.filter(e => Number(e.body_weight) > 0);
@@ -145,9 +150,9 @@ function detectPhase(entries) {
   });
   const slope = den === 0 ? 0 : num / den; // kg per entry
 
-  if (slope > 0.15)       return { label: 'Gaining',     color: colors.success,  icon: 'trending-up' };
-  if (slope < -0.15)      return { label: 'Losing weight', color: colors.warning,  icon: 'trending-down' };
-  return { label: 'Maintaining', color: colors.primary, icon: 'remove-outline' };
+  if (slope > 0.15)       return { label: 'Gaining',     color: c.success,  icon: 'trending-up' };
+  if (slope < -0.15)      return { label: 'Losing weight', color: c.warning,  icon: 'trending-down' };
+  return { label: 'Maintaining', color: c.primary, icon: 'remove-outline' };
 }
 
 // ─── Weight Trend Chart ───────────────────────────────────────────────────────
@@ -156,7 +161,15 @@ function detectPhase(entries) {
 const WEIGHT_WINDOW_STORE_KEY = '@volyume_chart_window_weight';
 const weightDateOf = (e) => new Date(e.metric_date).getTime();
 
+// CP-10 batch G lane 1 (2026-07-11): WeightTrendChart is a sibling
+// function-component scope (not prop-drilled `live`/`t` from
+// BodyMetricsScreen), so its own useTheme() call is cleaner than threading
+// two extra props through. Same rationale for BodyFatTrendChart and
+// MeasurementTrendChart below; all three share buildChartLiveStyles(t) for
+// the separate chartStyles StyleSheet.
 function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
+  const t = useTheme();
+  const chartLive = useMemo(() => buildChartLiveStyles(t), [t]);
   // Live-subscribing so a resize (e.g. Android split-screen/freeform) picks
   // up the correct chart width, matching RestTimer.js's useWindowDimensions
   // pattern rather than a frozen module-scope Dimensions.get().
@@ -194,7 +207,7 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
   if (allWeights.length < 2) {
     return (
       <View style={chartStyles.emptyHint}>
-        <Text maxFontSizeMultiplier={1.3} style={chartStyles.emptyHintText}>
+        <Text maxFontSizeMultiplier={1.3} style={[chartStyles.emptyHintText, chartLive.emptyHintText]}>
           Log weight at least twice to see your trend chart.
         </Text>
       </View>
@@ -221,10 +234,10 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
     <View>
       <WindowChips windows={TREND_WINDOWS} selectedKey={windowKey} onSelect={selectWindow}
         accessibilityPrefix="weight trend window" />
-      {!!takeaway && <Text maxFontSizeMultiplier={1.3} style={chartStyles.takeaway}>{takeaway}</Text>}
+      {!!takeaway && <Text maxFontSizeMultiplier={1.3} style={[chartStyles.takeaway, chartLive.takeaway]}>{takeaway}</Text>}
       {sparse ? (
         <View style={chartStyles.emptyHint}>
-          <Text maxFontSizeMultiplier={1.3} style={chartStyles.emptyHintText}>Not enough data in this window yet.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[chartStyles.emptyHintText, chartLive.emptyHintText]}>Not enough data in this window yet.</Text>
         </View>
       ) : (
         <View style={chartStyles.wrap}>
@@ -235,7 +248,7 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
             }))}
             width={chartWidth}
             height={120}
-            color={colors.primary}
+            color={t.colors.primary}
             thickness={2}
             area
             curved
@@ -245,7 +258,7 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
             sections={3}
             min={Math.floor(Math.min(...weights) - 1)}
             max={Math.ceil(Math.max(...weights) + 1)}
-            backgroundColor={colors.surface}
+            backgroundColor={t.colors.surface}
             interactive
             accessibilityLabel="Weight trend chart"
             formatTooltip={(i) => {
@@ -268,6 +281,8 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
 // ─── Body Fat Trend Chart ─────────────────────────────────────────────────────
 
 function BodyFatTrendChart({ entries }) {
+  const t = useTheme();
+  const chartLive = useMemo(() => buildChartLiveStyles(t), [t]);
   const { width: windowWidth } = useWindowDimensions();
   const withData = useMemo(() => {
     return entries
@@ -280,7 +295,7 @@ function BodyFatTrendChart({ entries }) {
   if (withData.length < 2) {
     return (
       <View style={chartStyles.emptyHint}>
-        <Text maxFontSizeMultiplier={1.3} style={chartStyles.emptyHintText}>
+        <Text maxFontSizeMultiplier={1.3} style={[chartStyles.emptyHintText, chartLive.emptyHintText]}>
           Log body fat at least twice to see the trend.
         </Text>
       </View>
@@ -313,8 +328,8 @@ function BodyFatTrendChart({ entries }) {
         data2={rawData}
         width={chartWidth}
         height={100}
-        color={colors.primary}
-        color2={withAlpha(colors.textMuted, alpha.strong)}
+        color={t.colors.primary}
+        color2={withAlpha(t.colors.textMuted, alpha.strong)}
         thickness={2}
         thickness2={1}
         area
@@ -325,9 +340,9 @@ function BodyFatTrendChart({ entries }) {
         sections={3}
         min={minV}
         max={maxV}
-        backgroundColor={colors.surface}
+        backgroundColor={t.colors.surface}
       />
-      <Text maxFontSizeMultiplier={1.3} style={chartStyles.smoothedHint}>Smoothed trend, faint line is each reading</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[chartStyles.smoothedHint, chartLive.smoothedHint]}>Smoothed trend, faint line is each reading</Text>
     </View>
   );
 }
@@ -335,6 +350,8 @@ function BodyFatTrendChart({ entries }) {
 // ─── Measurement Trend Chart ──────────────────────────────────────────────────
 
 function MeasurementTrendChart({ entries, measureKey, label }) {
+  const t = useTheme();
+  const chartLive = useMemo(() => buildChartLiveStyles(t), [t]);
   const { width: windowWidth } = useWindowDimensions();
   const withData = useMemo(() => {
     return entries
@@ -347,7 +364,7 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
   if (withData.length < 2) {
     return (
       <View style={chartStyles.emptyHint}>
-        <Text maxFontSizeMultiplier={1.3} style={chartStyles.emptyHintText}>
+        <Text maxFontSizeMultiplier={1.3} style={[chartStyles.emptyHintText, chartLive.emptyHintText]}>
           Log {label.toLowerCase()} at least twice to see the trend.
         </Text>
       </View>
@@ -373,7 +390,7 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
         data={data}
         width={chartWidth}
         height={100}
-        color={colors.primary}
+        color={t.colors.primary}
         thickness={2}
         area
         curved
@@ -383,7 +400,7 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
         sections={3}
         min={minV}
         max={maxV}
-        backgroundColor={colors.surface}
+        backgroundColor={t.colors.surface}
       />
     </View>
   );
@@ -396,6 +413,19 @@ const chartStyles = StyleSheet.create({
   emptyHintText: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
   smoothedHint: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs, textAlign: 'center' },
 });
+
+// CP-10 batch G lane 1 (2026-07-11): the frozen `chartStyles` block above
+// stays byte-identical. This mirrors ONLY the colour/type-bearing sub-
+// properties of the matching frozen style, so the chart sub-components
+// carry no static island under a live theme toggle. emptyHint/wrap (pure
+// layout, no token) are correctly omitted.
+function buildChartLiveStyles(t) {
+  return {
+    takeaway: { ...t.type.bodySm, color: t.colors.textSecondary },
+    emptyHintText: { ...t.type.caption, color: t.colors.textMuted },
+    smoothedHint: { ...t.type.caption, color: t.colors.textMuted },
+  };
+}
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
@@ -418,6 +448,10 @@ export default function BodyMetricsScreen() {
   const onboardingWeightKg = userProfile?.weightKg ?? userProfile?.bodyWeightKg ?? null;
   const bwu = bodyWeightUnits || 'st';
   const toast = useToast();
+  // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
+  // Memoised: this screen renders a mapped measurement/history list.
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   // E10 read-only lapse views (founder decision 2026-07-02, "view yes, log
   // no"): a non-Pro user reaches this screen only through withReadOnlyProGuard
   // (they have logged body metrics), and it renders view-only: history, trends
@@ -839,7 +873,7 @@ export default function BodyMetricsScreen() {
   // Loading state, return the dark background, not null, to avoid a white flash
   if (physiqueEnabled === null) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Body metrics" />
       </SafeAreaView>
     );
@@ -857,13 +891,13 @@ export default function BodyMetricsScreen() {
   // Calmer experience: gentle re-confirmation once per app session.
   if (calm && !sessionConfirmed) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Body metrics" />
         <ScrollView contentContainerStyle={styles.optInContent}>
-          <View style={styles.confirmCard}>
-            <Ionicons name="leaf-outline" size={32} color={colors.primary} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.confirmTitle}>A gentle check-in</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.confirmBody}>
+          <View style={[styles.confirmCard, live.confirmCard]}>
+            <Ionicons name="leaf-outline" size={32} color={t.colors.primary} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.confirmTitle, live.confirmTitle]}>A gentle check-in</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.confirmBody, live.confirmBody]}>
               You asked for a calmer experience. Body measurements can be a
               sensitive space. Open it only if it feels right for you today.
             </Text>
@@ -878,7 +912,7 @@ export default function BodyMetricsScreen() {
               style={styles.confirmBtn}
               textStyle={styles.confirmBtnText}
             />
-            <Text maxFontSizeMultiplier={1.3} style={styles.confirmHelpline}>{WELLBEING_HELPLINE}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.confirmHelpline, live.confirmHelpline]}>{WELLBEING_HELPLINE}</Text>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -887,7 +921,7 @@ export default function BodyMetricsScreen() {
 
   const latest = history[0];
   const prev = history[1];
-  const phase = detectPhase(history);
+  const phase = detectPhase(history, t.colors);
 
   function getDelta(key) {
     if (!latest?.[key] || !prev?.[key]) return null;
@@ -895,7 +929,7 @@ export default function BodyMetricsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Body metrics" />
       {/* L03-C5 (2026-07-09 design audit): standardise on the app's
           KeyboardAvoidingView pattern (same behavior prop as PlansScreen /
@@ -908,36 +942,36 @@ export default function BodyMetricsScreen() {
         {/* E10 read-only lapse views: say plainly what this state is, and keep
             the one honest way out. Calm voice, no shame. */}
         {readOnly ? (
-          <View style={styles.readOnlyCard}>
+          <View style={[styles.readOnlyCard, live.readOnlyCard]}>
             <View style={styles.readOnlyRow}>
-              <Ionicons name="eye-outline" size={16} color={colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.readOnlyText}>
+              <Ionicons name="eye-outline" size={16} color={t.colors.textSecondary} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.readOnlyText, live.readOnlyText]}>
                 Your history is view-only on the free plan. Everything you logged is safe and stays yours.
               </Text>
             </View>
             <TouchableOpacity
-              style={styles.readOnlyCtaButton}
+              style={[styles.readOnlyCtaButton, live.readOnlyCtaButton]}
               onPress={() => navigation.navigate('ProUpgrade')}
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel="Upgrade to Pro to log weight again"
             >
-              <Ionicons name="lock-open-outline" size={16} color={colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.readOnlyCta}>Log weight again with Pro</Text>
+              <Ionicons name="lock-open-outline" size={16} color={t.colors.textSecondary} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.readOnlyCta, live.readOnlyCta]}>Log weight again with Pro</Text>
             </TouchableOpacity>
           </View>
         ) : null}
 
         {/* Progress photos (gap #9): private, device-local only. */}
         <TouchableOpacity
-          style={styles.photosRow}
+          style={[styles.photosRow, live.photosRow]}
           onPress={() => navigation.navigate('ProgressPhotos')}
           accessibilityRole="button"
           accessibilityLabel="Progress photos, private to this device"
         >
-          <Ionicons name="camera-outline" size={20} color={colors.primary} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.photosRowText}>Progress photos</Text>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
+          <Ionicons name="camera-outline" size={20} color={t.colors.primary} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.photosRowText, live.photosRowText]}>Progress photos</Text>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} style={{ marginLeft: 'auto' }} />
         </TouchableOpacity>
 
         {/* Body Metrics is for body weight + measurements only. Nutrition
@@ -955,14 +989,14 @@ export default function BodyMetricsScreen() {
               {phase && (
                 <View style={[styles.phaseChip, { borderColor: phase.color }]}>
                   <Ionicons name={phase.icon} size={12} color={phase.color} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.phaseLabel, { color: phase.color }]}>{phase.label}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.phaseLabel, live.phaseLabel, { color: phase.color }]}>{phase.label}</Text>
                 </View>
               )}
             </View>
 
             {latest.body_weight && (
               <View style={styles.weightRow}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.weightValue}>{formatBodyWeight(latest.body_weight, bwu)}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.weightValue, live.weightValue]}>{formatBodyWeight(latest.body_weight, bwu)}</Text>
                 {getDelta('body_weight') && (
                   <DeltaBadge delta={parseFloat(getDelta('body_weight'))} units={bwu === 'st' ? 'kg' : bwu} />
                 )}
@@ -973,7 +1007,7 @@ export default function BodyMetricsScreen() {
             <WeightTrendChart entries={history} units={units} bodyWeightUnits={bwu} edFlagOpen={calm || edFlagOpen} userId={user?.id} />
 
             {history.length < 3 && (
-              <Text maxFontSizeMultiplier={1.3} style={styles.trendHint}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.trendHint, live.trendHint]}>
                 Log weight 3 or more times to reveal a clearer trend.
               </Text>
             )}
@@ -983,11 +1017,11 @@ export default function BodyMetricsScreen() {
               {ewmaData.length >= 7 ? (
                 <>
                   <View style={styles.labelTipRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.ewmaLabel}>Weight trend</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.ewmaLabel, live.ewmaLabel]}>Weight trend</Text>
                     {/* U-D-3: one-tap gloss for the smoothed-weight (EWMA) concept. */}
                     <InfoTooltip text={GLOSSARY.ewma} size={13} />
                   </View>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.ewmaValue}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.ewmaValue, live.ewmaValue]}>
                     {ewmaData[ewmaData.length - 1]?.ewma?.toFixed(1)} kg
                   </Text>
                   {(() => {
@@ -995,22 +1029,22 @@ export default function BodyMetricsScreen() {
                     if (weeklyChange == null) return null;
                     const sign = weeklyChange >= 0 ? '+' : '';
                     return (
-                      <Text maxFontSizeMultiplier={1.3} style={styles.ewmaWeekly}>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.ewmaWeekly, live.ewmaWeekly]}>
                         Weekly change: {sign}{weeklyChange.toFixed(1)} kg
                       </Text>
                     );
                   })()}
-                  <Text maxFontSizeMultiplier={1.3} style={styles.ewmaMuted}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.ewmaMuted, live.ewmaMuted]}>
                     Smoothed out across day-to-day ups and downs, so it's more reliable than a single weigh-in.
                   </Text>
                   {recentIntake?.daysLogged > 0 && (
-                    <Text maxFontSizeMultiplier={1.3} style={styles.ewmaIntake}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.ewmaIntake, live.ewmaIntake]}>
                       Average intake {toEnergy(recentIntake.avgKcal, energyUnit)} {energyUnitLabel(energyUnit)} over the last {recentIntake.daysLogged} {recentIntake.daysLogged === 1 ? 'day' : 'days'}.
                     </Text>
                   )}
                 </>
               ) : (
-                <Text maxFontSizeMultiplier={1.3} style={styles.ewmaMuted}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.ewmaMuted, live.ewmaMuted]}>
                   Log your weight for 7 days to see your smoothed trend.
                 </Text>
               )}
@@ -1019,25 +1053,25 @@ export default function BodyMetricsScreen() {
             {ewmaData.length >= 7 ? (
               <Card radius="md" padding="md" style={styles.burnCard}>
                 <View style={styles.labelTipRow}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.burnLabel}>Estimated daily burn</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.burnLabel, live.burnLabel]}>Estimated daily burn</Text>
                   {/* U-D-3: one-tap gloss for the adaptive-TDEE concept. */}
                   <InfoTooltip text={GLOSSARY.adaptiveTdee} size={13} />
                 </View>
                 {adaptiveBurn.confidence === 'insufficient_data' ? (
-                  <Text maxFontSizeMultiplier={1.3} style={styles.burnMuted}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.burnMuted, live.burnMuted]}>
                     Your coach estimates your daily burn from your weight trend and what you log. Keep logging your morning weight and meals for about two weeks and it appears here.
                   </Text>
                 ) : (
                   <>
                     <View style={styles.burnRow}>
-                      <Text maxFontSizeMultiplier={1.3} style={styles.burnValue}>{adaptiveBurn.adjustedTDEE}</Text>
-                      <Text maxFontSizeMultiplier={1.3} style={styles.burnUnit}>kcal/day</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.burnValue, live.burnValue]}>{adaptiveBurn.adjustedTDEE}</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.burnUnit, live.burnUnit]}>kcal/day</Text>
                     </View>
                     {adaptiveBurn.insight ? (
-                      <Text maxFontSizeMultiplier={1.3} style={styles.burnMuted}>{adaptiveBurn.insight}</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.burnMuted, live.burnMuted]}>{adaptiveBurn.insight}</Text>
                     ) : null}
                     <View style={styles.burnConfidenceRow}>
-                      <Text maxFontSizeMultiplier={1.3} style={styles.burnConfidence}>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.burnConfidence, live.burnConfidence]}>
                         {adaptiveBurn.confidence === 'high'
                           ? 'High confidence'
                           : adaptiveBurn.confidence === 'medium'
@@ -1064,11 +1098,11 @@ export default function BodyMetricsScreen() {
                 the user has logged it. The delta is rendered neutrally
                 (no good/bad colour) given the sensitivity of this screen. */}
             {latest?.body_fat != null && (
-              <View style={styles.bodyFatBlock}>
+              <View style={[styles.bodyFatBlock, live.bodyFatBlock]}>
                 <View style={styles.bodyFatRow}>
                   <SectionLabel>Body fat</SectionLabel>
                   <View style={styles.bodyFatValueRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.bodyFatValue}>{latest.body_fat}%</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.bodyFatValue, live.bodyFatValue]}>{latest.body_fat}%</Text>
                     {getDelta('body_fat') && (
                       <DeltaBadge delta={parseFloat(getDelta('body_fat'))} units="%" small />
                     )}
@@ -1112,10 +1146,10 @@ export default function BodyMetricsScreen() {
 
         {/* Log / Edit Form */}
         {!readOnly && showForm && (
-          <View style={styles.formCard}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.formTitle}>{editingId ? 'Edit entry' : 'New entry'}</Text>
+          <View style={[styles.formCard, live.formCard]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.formTitle, live.formTitle]}>{editingId ? 'Edit entry' : 'New entry'}</Text>
             <View style={styles.formRow}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.formLabel}>Date</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.formLabel, live.formLabel]}>Date</Text>
               <TextField
                 containerStyle={styles.formFieldContainer}
                 fieldStyle={styles.formField}
@@ -1123,13 +1157,13 @@ export default function BodyMetricsScreen() {
                 value={form.metric_date}
                 onChangeText={v => setForm(f => ({ ...f, metric_date: v }))}
                 placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={t.colors.textMuted}
                 accessibilityLabel="Date, year month day"
               />
             </View>
             {bwu === 'st' ? (
               <View style={styles.formRow}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.formLabel}>Body weight</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.formLabel, live.formLabel]}>Body weight</Text>
                 <View style={{ flex: 1, flexDirection: 'row', gap: spacing.sm }}>
                   <TextField
                     containerStyle={styles.formSplitFieldContainer}
@@ -1139,7 +1173,7 @@ export default function BodyMetricsScreen() {
                     onChangeText={v => setForm(f => ({ ...f, body_weight_st: v }))}
                     keyboardType="number-pad"
                     placeholder="12 st"
-                    placeholderTextColor={colors.textMuted}
+                    placeholderTextColor={t.colors.textMuted}
                     maxLength={3}
                     accessibilityLabel="Body weight, stone"
                   />
@@ -1151,7 +1185,7 @@ export default function BodyMetricsScreen() {
                     onChangeText={v => setForm(f => ({ ...f, body_weight_st_lbs: v }))}
                     keyboardType="decimal-pad"
                     placeholder="0 lbs"
-                    placeholderTextColor={colors.textMuted}
+                    placeholderTextColor={t.colors.textMuted}
                     maxLength={4}
                     accessibilityLabel="Body weight, pounds"
                   />
@@ -1159,7 +1193,7 @@ export default function BodyMetricsScreen() {
               </View>
             ) : (
               <View style={styles.formRow}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.formLabel}>Body weight ({bwu})</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.formLabel, live.formLabel]}>Body weight ({bwu})</Text>
                 <TextField
                   containerStyle={styles.formFieldContainer}
                   fieldStyle={styles.formField}
@@ -1168,14 +1202,14 @@ export default function BodyMetricsScreen() {
                   onChangeText={v => setForm(f => ({ ...f, body_weight: v }))}
                   keyboardType="decimal-pad"
                   placeholder={bwu === 'lbs' ? '176' : '82.5'}
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor={t.colors.textMuted}
                   accessibilityLabel={`Body weight in ${bwu}`}
                 />
               </View>
             )}
 
             <View style={styles.formRow}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.formLabel}>Body fat (%)</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.formLabel, live.formLabel]}>Body fat (%)</Text>
               <TextField
                 containerStyle={styles.formFieldContainer}
                 fieldStyle={styles.formField}
@@ -1184,7 +1218,7 @@ export default function BodyMetricsScreen() {
                 onChangeText={v => setForm(f => ({ ...f, body_fat: v }))}
                 keyboardType="decimal-pad"
                 placeholder="optional"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={t.colors.textMuted}
                 maxLength={4}
                 accessibilityLabel="Body fat percentage"
               />
@@ -1192,25 +1226,25 @@ export default function BodyMetricsScreen() {
 
             {/* Measurements section, collapsed by default */}
             <TouchableOpacity
-              style={styles.measureToggle}
+              style={[styles.measureToggle, live.measureToggle]}
               onPress={() => setShowMeasurements(v => !v)}
               accessibilityRole="button"
               accessibilityState={{ expanded: showMeasurements }}
               accessibilityLabel={showMeasurements ? 'Hide measurements' : 'Add measurements'}
             >
-              <Text maxFontSizeMultiplier={1.3} style={styles.measureToggleText}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.measureToggleText, live.measureToggleText]}>
                 {showMeasurements ? 'Hide measurements' : 'Add measurements (optional)'}
               </Text>
               <Ionicons
                 name={showMeasurements ? 'chevron-up' : 'chevron-down'}
                 size={16}
-                color={colors.textMuted}
+                color={t.colors.textMuted}
               />
             </TouchableOpacity>
 
             {showMeasurements && MEASUREMENTS.map(m => (
               <View key={m.key} style={styles.formRow}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.formLabel}>{m.label} (cm)</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.formLabel, live.formLabel]}>{m.label} (cm)</Text>
                 <TextField
                   containerStyle={styles.formFieldContainer}
                   fieldStyle={styles.formField}
@@ -1219,7 +1253,7 @@ export default function BodyMetricsScreen() {
                   onChangeText={v => setForm(f => ({ ...f, [m.key]: v }))}
                   keyboardType="decimal-pad"
                   placeholder=""
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor={t.colors.textMuted}
                   accessibilityLabel={`${m.label} in centimetres`}
                 />
               </View>
@@ -1232,7 +1266,7 @@ export default function BodyMetricsScreen() {
               value={form.notes}
               onChangeText={v => setForm(f => ({ ...f, notes: v }))}
               placeholder="Notes (optional)"
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={t.colors.textMuted}
               multiline
               accessibilityLabel="Notes"
             />
@@ -1256,17 +1290,17 @@ export default function BodyMetricsScreen() {
               {MEASUREMENTS.map(m => latest[m.key] ? (
                 <TouchableOpacity
                   key={m.key}
-                  style={[styles.measureCell, selectedMeasurement === m.key && styles.measureCellActive]}
+                  style={[styles.measureCell, live.measureCell, selectedMeasurement === m.key && [styles.measureCellActive, live.measureCellActive]]}
                   onPress={() => setSelectedMeasurement(m.key === selectedMeasurement ? null : m.key)}
                   activeOpacity={0.7}
                   accessibilityRole="button"
                   accessibilityState={{ selected: selectedMeasurement === m.key }}
                   accessibilityLabel={`${m.label} ${latest[m.key]} centimetres`}
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.measureValue, selectedMeasurement === m.key && styles.measureValueActive]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.measureValue, live.measureValue, selectedMeasurement === m.key && [styles.measureValueActive, live.measureValueActive]]}>
                     {latest[m.key]} cm
                   </Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.measureLabel, selectedMeasurement === m.key && styles.measureLabelActive]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.measureLabel, live.measureLabel, selectedMeasurement === m.key && [styles.measureLabelActive, live.measureLabelActive]]}>
                     {m.label}
                   </Text>
                   {getDelta(m.key) && (
@@ -1287,13 +1321,13 @@ export default function BodyMetricsScreen() {
                   {measurementsWithData.map(m => (
                     <TouchableOpacity
                       key={m.key}
-                      style={[styles.measureTab, selectedMeasurement === m.key && styles.measureTabActive]}
+                      style={[styles.measureTab, live.measureTab, selectedMeasurement === m.key && [styles.measureTabActive, live.measureTabActive]]}
                       onPress={() => setSelectedMeasurement(m.key === selectedMeasurement ? null : m.key)}
                       accessibilityRole="button"
                       accessibilityState={{ selected: selectedMeasurement === m.key }}
                       accessibilityLabel={m.label}
                     >
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.measureTabText, selectedMeasurement === m.key && styles.measureTabTextActive]}>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.measureTabText, live.measureTabText, selectedMeasurement === m.key && [styles.measureTabTextActive, live.measureTabTextActive]]}>
                         {m.label}
                       </Text>
                     </TouchableOpacity>
@@ -1326,13 +1360,13 @@ export default function BodyMetricsScreen() {
               return (
                 <Card key={entry.id} radius="md" padding="md" style={styles.historyRow}>
                   <View style={styles.historyMain}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.historyDate}>{safeFormatDate(entry.metric_date, 'd MMM yyyy') || '-'}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.historyDate, live.historyDate]}>{safeFormatDate(entry.metric_date, 'd MMM yyyy') || '-'}</Text>
                     <View style={styles.historyValues}>
                       {entry.body_weight ? (
-                        <Text maxFontSizeMultiplier={1.3} style={styles.historyWeight}>{formatBodyWeightShort(entry.body_weight, bwu)}</Text>
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.historyWeight, live.historyWeight]}>{formatBodyWeightShort(entry.body_weight, bwu)}</Text>
                       ) : null}
                       {measuredKeys.slice(0, 2).map(m => (
-                        <Text maxFontSizeMultiplier={1.3} key={m.key} style={styles.historyMeasure}>
+                        <Text maxFontSizeMultiplier={1.3} key={m.key} style={[styles.historyMeasure, live.historyMeasure]}>
                           {m.label.split(' ')[0]} {entry[m.key]}cm
                         </Text>
                       ))}
@@ -1341,22 +1375,22 @@ export default function BodyMetricsScreen() {
                   {!readOnly && (
                     <View style={styles.historyActions}>
                       <TouchableOpacity
-                        style={styles.historyActionBtn}
+                        style={[styles.historyActionBtn, live.historyActionBtn]}
                         onPress={() => startEditEntry(entry)}
                         accessibilityRole="button"
                         accessibilityLabel={`Edit entry from ${entryLabel}`}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
-                        <Ionicons name="pencil-outline" size={16} color={colors.textSecondary} />
+                        <Ionicons name="pencil-outline" size={16} color={t.colors.textSecondary} />
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={styles.historyActionBtn}
+                        style={[styles.historyActionBtn, live.historyActionBtn]}
                         onPress={() => confirmDeleteEntry(entry)}
                         accessibilityRole="button"
                         accessibilityLabel={`Delete entry from ${entryLabel}`}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
-                        <Ionicons name="trash-outline" size={16} color={colors.textSecondary} />
+                        <Ionicons name="trash-outline" size={16} color={t.colors.textSecondary} />
                       </TouchableOpacity>
                     </View>
                   )}
@@ -1375,7 +1409,11 @@ export default function BodyMetricsScreen() {
 // is pre-derived by deriveRecomp; this renders the numbers-first read plus one
 // plain sentence. Class-B body data, no valence colour (COMP-027). Returns null
 // when the reframe is not warranted, exactly like WeightTrendCard on !vm.render.
+// CP-10 batch G lane 1 (2026-07-11): own useTheme() call, same rationale
+// as the chart components above.
 function RecompCard({ vm, weightUnits = 'kg', onMakeCard }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   if (!vm || !vm.render) return null;
 
   const parts = ['Weight steady.'];
@@ -1405,24 +1443,24 @@ function RecompCard({ vm, weightUnits = 'kg', onMakeCard }) {
   const shareParams = onMakeCard ? buildRecompShareParams(vm, weightUnits) : null;
 
   return (
-    <View style={styles.recompBlock}>
+    <View style={[styles.recompBlock, live.recompBlock]}>
       <View style={styles.recompHeaderRow}>
-        <Ionicons name="sync-outline" size={14} color={colors.textMuted} />
+        <Ionicons name="sync-outline" size={14} color={t.colors.textMuted} />
         <SectionLabel>Recomposition</SectionLabel>
         <InfoTooltip text={GLOSSARY.recomposition} />
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={styles.recompRead}>{parts.join(' ')}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.recompNote}>{sentence}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.recompRead, live.recompRead]}>{parts.join(' ')}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.recompNote, live.recompNote]}>{sentence}</Text>
       {shareParams ? (
         <TouchableOpacity
-          style={styles.recompCtaRow}
+          style={[styles.recompCtaRow, live.recompCtaRow]}
           onPress={() => onMakeCard(shareParams)}
           accessibilityRole="button"
           accessibilityLabel="Create share image"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="image-outline" size={16} color={colors.textSecondary} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.recompCta}>Create share image</Text>
+          <Ionicons name="image-outline" size={16} color={t.colors.textSecondary} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.recompCta, live.recompCta]}>Create share image</Text>
         </TouchableOpacity>
       ) : null}
     </View>
@@ -1435,12 +1473,15 @@ function RecompCard({ vm, weightUnits = 'kg', onMakeCard }) {
 // and sign show direction, the figure stays textPrimary, the arrow textMuted.
 // (The `neutral` prop is retained for call-site compatibility; every delta is
 // neutral now.)
+// CP-10 batch G lane 1 (2026-07-11): own useTheme() call, same rationale
+// as the chart components above.
 function DeltaBadge({ delta, units, small }) {
+  const t = useTheme();
   const isUp = delta > 0;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
-      <Ionicons name={isUp ? 'trending-up' : 'trending-down'} size={small ? 11 : 14} color={colors.textMuted} />
-      <Text maxFontSizeMultiplier={1.3} style={{ fontSize: small ? 10 : fontSize.xs, color: colors.textPrimary, fontWeight: fontWeight.semibold }}>
+      <Ionicons name={isUp ? 'trending-up' : 'trending-down'} size={small ? 11 : 14} color={t.colors.textMuted} />
+      <Text maxFontSizeMultiplier={1.3} style={{ fontSize: small ? 10 : t.fontSize.xs, color: t.colors.textPrimary, fontWeight: fontWeight.semibold }}>
         {isUp ? '+' : ''}{delta} {units}
       </Text>
     </View>
@@ -1638,3 +1679,72 @@ const styles = StyleSheet.create({
   burnConfidence: { ...type.caption, color: colors.textSecondary },
   burnConfidenceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
 });
+
+// CP-10 batch G lane 1 (2026-07-11): the frozen `styles` block above stays
+// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/padding/gap/margin/borderRadius/borderWidth/minWidth, no
+// token) and fontWeight (not part of useTheme()'s shape) are correctly
+// omitted. measureCell's `transparent` borderColor and phaseChip's fully
+// inline borderColor (phase.color, already resolved from the live theme by
+// detectPhase(history, t.colors)) need no live entry -- there is nothing
+// frozen to unfreeze for them. The weight-logging form, ED-safety calm-mode
+// gate and every safety threshold are untouched -- colours only.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    photosRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    photosRowText: { color: t.colors.textPrimary, fontSize: t.fontSize.md },
+    readOnlyCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    readOnlyText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    readOnlyCtaButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    readOnlyCta: { ...t.type.label, color: t.colors.textPrimary },
+    confirmCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    confirmTitle: { ...t.type.h3, color: t.colors.textPrimary },
+    confirmBody: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    confirmHelpline: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    phaseLabel: { ...t.type.captionStrong },
+    weightValue: { fontSize: t.fontSize.xxxl, color: t.colors.textPrimary },
+    trendHint: { ...t.type.caption, color: t.colors.textMuted },
+    bodyFatBlock: { borderTopColor: t.colors.border },
+    recompBlock: { borderTopColor: t.colors.border },
+    recompRead: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    recompNote: { ...t.type.bodySm, color: t.colors.textMuted },
+    recompCtaRow: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    recompCta: { ...t.type.label, color: t.colors.textPrimary },
+    bodyFatValue: { ...t.type.num('h3'), color: t.colors.textPrimary },
+    measureCell: { backgroundColor: t.colors.surface2 },
+    measureCellActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
+    measureValue: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
+    measureValueActive: { color: t.colors.primary },
+    measureLabel: { ...t.type.caption, color: t.colors.textMuted },
+    measureLabelActive: { color: t.colors.primaryDim },
+    measureTab: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    measureTabActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    measureTabText: { ...t.type.captionStrong, color: t.colors.textSecondary },
+    measureTabTextActive: { color: t.colors.primary },
+    logBtnText: { ...t.type.title, color: t.colors.onPrimary },
+    formCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    formTitle: { ...t.type.title, color: t.colors.textPrimary },
+    formLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    measureToggle: { borderTopColor: t.colors.border },
+    measureToggleText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    saveBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    historyDate: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    historyWeight: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
+    historyMeasure: { ...t.type.num('caption'), color: t.colors.textMuted },
+    historyActionBtn: { borderColor: t.colors.border },
+    ewmaLabel: { ...t.type.caption, color: t.colors.textSecondary },
+    ewmaValue: { ...t.type.num('h3'), color: t.colors.textPrimary },
+    ewmaWeekly: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    ewmaMuted: { ...t.type.caption, color: t.colors.textMuted },
+    ewmaIntake: { ...t.type.num('caption'), color: t.colors.textSecondary },
+    burnLabel: { ...t.type.caption, color: t.colors.textSecondary },
+    burnValue: { ...t.type.num('h2'), color: t.colors.textPrimary },
+    burnUnit: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    burnMuted: { ...t.type.caption, color: t.colors.textMuted },
+    burnConfidence: { ...t.type.caption, color: t.colors.textSecondary },
+  };
+}
+

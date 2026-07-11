@@ -19,8 +19,11 @@ describe('shared consent checkbox rows', () => {
   });
 
   test('Article 9 secondary actions are contained rows, not underlined text links', () => {
-    expect(article9).toMatch(/<Ionicons name="document-text-outline" size=\{16\} color=\{colors\.textSecondary\} \/>/);
-    expect(article9).toMatch(/<Ionicons name="help-circle-outline" size=\{16\} color=\{colors\.textSecondary\} \/>/);
+    // CP-10 batch G lane 1: both icons' ink now resolves from the live
+    // theme (t.colors.textSecondary); colours only, the consent gate and
+    // its copy are unchanged.
+    expect(article9).toMatch(/<Ionicons name="document-text-outline" size=\{16\} color=\{t\.colors\.textSecondary\} \/>/);
+    expect(article9).toMatch(/<Ionicons name="help-circle-outline" size=\{16\} color=\{t\.colors\.textSecondary\} \/>/);
     expect(article9).toMatch(/ctaGhost: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface/);
     expect(article9).toMatch(/declineLink: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface/);
     expect(article9).toMatch(/declineAction: \{[\s\S]*minHeight: 44,[\s\S]*backgroundColor: colors\.surface2/);

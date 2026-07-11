@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, motion, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { VolyumeIcon } from '../components/BrandMark';
 import Button from '../components/Button';
 import Card from '../components/Card';
@@ -40,6 +41,10 @@ export default function ProSetupCompleteScreen({ navigation }) {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const energyUnit = useAppStore(s => s.accessibility?.energyUnit ?? 'kcal');
   const firstName = userProfile?.firstName || 'there';
+  // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
+  // Memoised: this screen renders a mapped macroTargets list.
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   const [nutritionSummary, setNutritionSummary] = useState(null);
   const [planRoutines, setPlanRoutines] = useState([]);
@@ -206,7 +211,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
   const maxMacroKcal = Math.max(1, ...macroTargets.map(m => m.kcal));
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, live.safe]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.mainBlock}>
           {/* Same header furniture as the wizard steps, so this reads as the
@@ -218,47 +223,47 @@ export default function ProSetupCompleteScreen({ navigation }) {
           <Animated.View entering={stage(0, motion.hero)}>
           <View style={styles.brandRow}>
             <VolyumeIcon size={22} />
-            <View style={styles.proBadge}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.proBadgeText}>PRO</Text>
+            <View style={[styles.proBadge, live.proBadge]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.proBadgeText, live.proBadgeText]}>PRO</Text>
             </View>
           </View>
 
-          <View style={styles.progressTrack}>
-            <View style={styles.progressFill} />
+          <View style={[styles.progressTrack, live.progressTrack]}>
+            <View style={[styles.progressFill, live.progressFill]} />
           </View>
           <View style={styles.doneRow}>
-            <Ionicons name="checkmark-circle" size={14} color={colors.primary} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.doneEyebrow}>Setup complete</Text>
+            <Ionicons name="checkmark-circle" size={14} color={t.colors.primary} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.doneEyebrow, live.doneEyebrow]}>Setup complete</Text>
           </View>
 
-          <Text maxFontSizeMultiplier={1.3} style={styles.headline}>You're all set, {firstName}.</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.sub}>{receiptLine || "Here's your daily routine."}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.headline, live.headline]}>You're all set, {firstName}.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.sub, live.sub]}>{receiptLine || "Here's your daily routine."}</Text>
           <View style={styles.readyGrid} accessibilityLabel="Setup summary">
-            <View style={styles.readyItem}>
-              <Ionicons name="flame-outline" size={15} color={colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.readyText}>Targets saved</Text>
+            <View style={[styles.readyItem, live.readyItem]}>
+              <Ionicons name="flame-outline" size={15} color={t.colors.primary} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.readyText, live.readyText]}>Targets saved</Text>
             </View>
-            <View style={styles.readyItem}>
-              <Ionicons name="barbell-outline" size={15} color={colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.readyText}>{hasPlan ? 'Plan ready' : 'Plan pending'}</Text>
+            <View style={[styles.readyItem, live.readyItem]}>
+              <Ionicons name="barbell-outline" size={15} color={t.colors.primary} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.readyText, live.readyText]}>{hasPlan ? 'Plan ready' : 'Plan pending'}</Text>
             </View>
-            <View style={styles.readyItem}>
-              <Ionicons name="calendar-outline" size={15} color={colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.readyText}>Coach reminders set</Text>
+            <View style={[styles.readyItem, live.readyItem]}>
+              <Ionicons name="calendar-outline" size={15} color={t.colors.primary} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.readyText, live.readyText]}>Coach reminders set</Text>
             </View>
           </View>
           </Animated.View>
 
           {/* 1. Log your weight, first thing each morning */}
           <Animated.View entering={stage(1)}>
-          <Card style={styles.routineCardChrome}>
+          <Card style={[styles.routineCardChrome, live.routineCardChrome]}>
             <View style={styles.routineHeader}>
-              <View style={styles.routineIconWrap}>
-                <Ionicons name="scale-outline" size={18} color={colors.primary} />
+              <View style={[styles.routineIconWrap, live.routineIconWrap]}>
+                <Ionicons name="scale-outline" size={18} color={t.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.routineTitle}>1. Log your weight</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.routineBody}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.routineTitle, live.routineTitle]}>1. Log your weight</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.routineBody, live.routineBody]}>
                   Every morning before food, after the bathroom. Three seconds. Feeds your weight trend so Coach can make calmer weekly decisions.
                 </Text>
               </View>
@@ -269,13 +274,13 @@ export default function ProSetupCompleteScreen({ navigation }) {
           {/* 2. Hit your calorie + macro targets */}
           {nutritionSummary?.targetKcal ? (
             <Animated.View entering={stage(2)}>
-            <Card style={styles.routineCardChrome}>
+            <Card style={[styles.routineCardChrome, live.routineCardChrome]}>
               <View style={styles.routineHeader}>
-                <View style={styles.routineIconWrap}>
-                  <Ionicons name="flame-outline" size={18} color={colors.primary} />
+                <View style={[styles.routineIconWrap, live.routineIconWrap]}>
+                  <Ionicons name="flame-outline" size={18} color={t.colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.routineTitle}>2. Hit your daily targets</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.routineTitle, live.routineTitle]}>2. Hit your daily targets</Text>
                 </View>
               </View>
               {/* Wave A B5: the primer is offered BEFORE the numbers. Most
@@ -283,17 +288,17 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   tracked, so the escape hatch comes ahead of the possibly
                   confusing content, not after it. */}
               <TouchableOpacity
-                style={[styles.eduLearnRow, styles.eduLearnRowTop]}
+                style={[styles.eduLearnRow, live.eduLearnRow, styles.eduLearnRowTop, live.eduLearnRowTop]}
                 onPress={() => navigation.navigate('NutritionEducation')}
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel="New to calories and macros? Open the five-minute guide"
               >
-                <Ionicons name="book-outline" size={14} color={colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={styles.eduLearnText}>
+                <Ionicons name="book-outline" size={14} color={t.colors.primary} />
+                <Text maxFontSizeMultiplier={1.3} style={[styles.eduLearnText, live.eduLearnText]}>
                   New to calories and macros? 5-minute guide
                 </Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
               {/* The kcal ring is the Nutrition tab's signature, so the reveal
                   shows the same shape the first time these numbers appear.
@@ -301,67 +306,67 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   the whole ring is the day's allowance and nothing is logged
                   yet. No "remaining" readout, that belongs in the diary. */}
               <View style={styles.ringWrap}>
-                <View style={styles.ring}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.ringValue}>{toEnergy(nutritionSummary.targetKcal, energyUnit)}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.ringSub}>{energyUnitLabel(energyUnit)} per day</Text>
+                <View style={[styles.ring, live.ring]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.ringValue, live.ringValue]}>{toEnergy(nutritionSummary.targetKcal, energyUnit)}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.ringSub, live.ringSub]}>{energyUnitLabel(energyUnit)} per day</Text>
                 </View>
               </View>
               {/* Same horizontal macro bars the Nutrition tab uses. */}
-              <View style={styles.macroBars}>
+              <View style={[styles.macroBars, live.macroBars]}>
                 {macroTargets.map(m => (
                   <View key={m.label} style={styles.macroBar}>
                     <View style={styles.macroBarTop}>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.macroBarLabel, m.primary && styles.macroBarLabelPrimary]}>{m.label}</Text>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.macroBarValue, m.primary && styles.macroBarValuePrimary]}>{m.g}g</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.macroBarLabel, live.macroBarLabel, m.primary && [styles.macroBarLabelPrimary, live.macroBarLabelPrimary]]}>{m.label}</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.macroBarValue, live.macroBarValue, m.primary && [styles.macroBarValuePrimary, live.macroBarValuePrimary]]}>{m.g}g</Text>
                     </View>
-                    <View style={styles.macroTrack}>
+                    <View style={[styles.macroTrack, live.macroTrack]}>
                       <View style={[styles.macroFill, { width: `${Math.round((m.kcal / maxMacroKcal) * 100)}%` }]} />
                     </View>
                   </View>
                 ))}
               </View>
               <View style={styles.goalRow}>
-                <View style={styles.goalChip}>
+                <View style={[styles.goalChip, live.goalChip]}>
                   <Ionicons
                     name={isCompetitionGoal(userProfile?.trainingGoal) ? 'trophy-outline' : 'body-outline'}
                     size={11}
-                    color={colors.primary}
+                    color={t.colors.primary}
                   />
-                  <Text maxFontSizeMultiplier={1.3} style={styles.goalChipText}>{goalLabel}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.goalChipText, live.goalChipText]}>{goalLabel}</Text>
                 </View>
                 {phaseLabel ? (
-                  <View style={styles.goalChip}>
-                    <Ionicons name="layers-outline" size={11} color={colors.textMuted} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.goalChipText, { color: colors.textMuted }]}>{phaseLabel}</Text>
+                  <View style={[styles.goalChip, live.goalChip]}>
+                    <Ionicons name="layers-outline" size={11} color={t.colors.textMuted} />
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.goalChipText, live.goalChipText, { color: t.colors.textMuted }]}>{phaseLabel}</Text>
                   </View>
                 ) : null}
               </View>
-              <Text maxFontSizeMultiplier={1.3} style={styles.targetsNote}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.targetsNote, live.targetsNote]}>
                 Hit these most days. Logging your meals sharpens your coaching, and your weight trend carries the rest.
               </Text>
               {/* Optional head start: a full week of meals built to these
                   targets, with a shopping list, waiting in Meal planning. */}
               {mealsBuilt ? (
-                <View style={styles.eduLearnRow}>
-                  <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.eduLearnText, { color: colors.textSecondary }]}>
+                <View style={[styles.eduLearnRow, live.eduLearnRow]}>
+                  <Ionicons name="checkmark-circle" size={14} color={t.colors.success} />
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.eduLearnText, live.eduLearnText, { color: t.colors.textSecondary }]}>
                     Your first week of meals is ready in Meal planning.
                   </Text>
                 </View>
               ) : (
                 <TouchableOpacity
-                  style={styles.eduLearnRow}
+                  style={[styles.eduLearnRow, live.eduLearnRow]}
                   onPress={handleBuildMeals}
                   disabled={buildingMeals}
                   activeOpacity={0.7}
                   accessibilityRole="button"
                   accessibilityLabel="Create my first week of meals to these targets"
                 >
-                  <Ionicons name="restaurant-outline" size={14} color={colors.primary} />
-                  <Text maxFontSizeMultiplier={1.3} style={styles.eduLearnText}>
+                  <Ionicons name="restaurant-outline" size={14} color={t.colors.primary} />
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.eduLearnText, live.eduLearnText]}>
                     {buildingMeals ? 'Creating your week' : 'Create my first week of meals'}
                   </Text>
-                  {!buildingMeals ? <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} /> : null}
+                  {!buildingMeals ? <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} /> : null}
                 </TouchableOpacity>
               )}
             </Card>
@@ -371,7 +376,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
           {/* 3. Training split, collapsible */}
           <Animated.View entering={stage(3)}>
           <TouchableOpacity
-            style={[styles.routineCard, planOpen && styles.routineCardOpen]}
+            style={[styles.routineCard, live.routineCard, planOpen && [styles.routineCardOpen, live.routineCardOpen]]}
             onPress={() => setPlanOpen(v => !v)}
             activeOpacity={0.85}
             accessibilityRole="button"
@@ -379,17 +384,17 @@ export default function ProSetupCompleteScreen({ navigation }) {
             accessibilityLabel="Train your split"
           >
             <View style={styles.routineHeader}>
-              <View style={styles.routineIconWrap}>
-                <Ionicons name="barbell-outline" size={18} color={colors.primary} />
+              <View style={[styles.routineIconWrap, live.routineIconWrap]}>
+                <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.routineTitle}>3. Train your split</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.routineTitle, live.routineTitle]}>3. Train your split</Text>
                 {hasPlan ? (
-                  <Text maxFontSizeMultiplier={1.3} style={styles.routineBody}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.routineBody, live.routineBody]}>
                     {planName ?? 'Your plan'} - {planRoutines.length} workout{planRoutines.length !== 1 ? 's' : ''} per week
                   </Text>
                 ) : (
-                  <Text maxFontSizeMultiplier={1.3} style={styles.routineBody}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.routineBody, live.routineBody]}>
                     Create or choose a routine before your first session.
                   </Text>
                 )}
@@ -398,32 +403,32 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 <Ionicons
                   name={planOpen ? 'chevron-up' : 'chevron-down'}
                   size={18}
-                  color={colors.textMuted}
+                  color={t.colors.textMuted}
                 />
               )}
             </View>
             {hasPlan && planOpen && (
-              <View style={styles.splitList}>
+              <View style={[styles.splitList, live.splitList]}>
                 {/* The richer engine rationale supersedes the one-line split
                     note when it's available. */}
                 {!whyThis && planRoutines[0]?.split_type ? (
-                  <Text maxFontSizeMultiplier={1.3} style={styles.splitWhy}>{getSplitRationale(planRoutines[0].split_type)}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.splitWhy, live.splitWhy]}>{getSplitRationale(planRoutines[0].split_type)}</Text>
                 ) : null}
                 {planRoutines.map((r, i) => (
-                  <View key={r.id} style={[styles.splitRow, i < planRoutines.length - 1 && styles.splitRowBorder]}>
-                    <View style={styles.splitBadge}>
-                      <Text maxFontSizeMultiplier={1.3} style={styles.splitBadgeText}>{i + 1}</Text>
+                  <View key={r.id} style={[styles.splitRow, i < planRoutines.length - 1 && [styles.splitRowBorder, live.splitRowBorder]]}>
+                    <View style={[styles.splitBadge, live.splitBadge]}>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.splitBadgeText, live.splitBadgeText]}>{i + 1}</Text>
                     </View>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.splitName}>{r.name}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.splitName, live.splitName]}>{r.name}</Text>
                   </View>
                 ))}
                 {whyThis && WHY_ORDER.some(k => whyThis[k]) ? (
-                  <View style={styles.whyPlanWrap}>
+                  <View style={[styles.whyPlanWrap, live.whyPlanWrap]}>
                     <SectionLabel>Why this plan, for you</SectionLabel>
                     {WHY_ORDER.filter(k => whyThis[k]).map(k => (
                       <View key={k} style={styles.whyPlanItem}>
-                        <View style={styles.whyPlanBullet} />
-                        <Text maxFontSizeMultiplier={1.3} style={styles.whyPlanText}>{whyThis[k]}</Text>
+                        <View style={[styles.whyPlanBullet, live.whyPlanBullet]} />
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.whyPlanText, live.whyPlanText]}>{whyThis[k]}</Text>
                       </View>
                     ))}
                   </View>
@@ -435,14 +440,14 @@ export default function ProSetupCompleteScreen({ navigation }) {
 
           {/* 4. Check in once a week */}
           <Animated.View entering={stage(4)}>
-          <Card style={styles.routineCardChrome}>
+          <Card style={[styles.routineCardChrome, live.routineCardChrome]}>
             <View style={styles.routineHeader}>
-              <View style={styles.routineIconWrap}>
-                <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+              <View style={[styles.routineIconWrap, live.routineIconWrap]}>
+                <Ionicons name="calendar-outline" size={18} color={t.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.routineTitle}>4. Check in once a week</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.routineBody}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.routineTitle, live.routineTitle]}>4. Check in once a week</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.routineBody, live.routineBody]}>
                   {firstReviewLabel
                     ? `Keep logging your morning weight. Your first weekly check-in opens on ${firstReviewLabel} and takes about two minutes. Your coach then explains any calorie or training change before you apply it.`
                     : 'At the end of your training week, review how it went. Your coach then explains any calorie or training change before you apply it.'}
@@ -462,12 +467,12 @@ export default function ProSetupCompleteScreen({ navigation }) {
                     logging only means it never needs that same gate). The
                     other placement is CoachOutputScreen's first real weekly
                     output. */}
-                <Text maxFontSizeMultiplier={1.3} style={styles.routineBody}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.routineBody, live.routineBody]}>
                   The more sessions you log, the better your coach understands how your body responds, so it can get your weights and your lighter weeks right.
                 </Text>
                 {/* Wave A B3: the trial arc, stated once, calmly, so day 14
                     is never a surprise. Facts mirror the subscription FAQ. */}
-                <Text maxFontSizeMultiplier={1.3} style={styles.routineBody}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.routineBody, live.routineBody]}>
                   Your full access runs for 14 days. If you decide not to
                   continue after that, your training log, plans and personal
                   bests stay free forever.
@@ -477,15 +482,15 @@ export default function ProSetupCompleteScreen({ navigation }) {
             {/* Wave A B3: Precision Coaching is named twice on this screen;
                 this link means it is explained BEFORE it ever acts. */}
             <TouchableOpacity
-              style={styles.eduLearnRow}
+              style={[styles.eduLearnRow, live.eduLearnRow]}
               onPress={() => navigation.navigate('Methodology', { source: 'setup_complete' })}
               activeOpacity={0.7}
               accessibilityRole="button"
                 accessibilityLabel="How Precision Coaching works"
             >
-              <Ionicons name="bulb-outline" size={14} color={colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.eduLearnText}>How Precision Coaching works</Text>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+              <Ionicons name="bulb-outline" size={14} color={t.colors.primary} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.eduLearnText, live.eduLearnText]}>How Precision Coaching works</Text>
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
           </Card>
           </Animated.View>
@@ -658,3 +663,58 @@ const styles = StyleSheet.create({
 
   startBtn: { marginTop: spacing.md },
 });
+
+// CP-10 batch G lane 1 (2026-07-11): the frozen `styles` block above stays
+// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/padding/gap/margin/width/height/borderRadius/borderWidth, no
+// token) and fontWeight (not part of useTheme()'s shape) are correctly
+// omitted. The 34px hero numeral (ringValue) keeps its explicit magic-number
+// fontSize (already lint-exempted on the frozen style); only its colour
+// unfreezes. No plan-generation or ED-safety logic touched -- colours only.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    proBadge: { backgroundColor: t.colors.primaryFill },
+    proBadgeText: { fontSize: t.fontSize.micro, color: t.colors.onPrimary },
+    progressTrack: { backgroundColor: t.colors.border },
+    progressFill: { backgroundColor: t.colors.primary },
+    doneEyebrow: { ...t.type.num('caption'), color: t.colors.primary },
+    headline: { ...t.type.h2, color: t.colors.textPrimary },
+    sub: { ...t.type.bodySm, color: t.colors.textSecondary },
+    readyItem: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    readyText: { ...t.type.label, color: t.colors.textPrimary },
+    routineCardChrome: { borderColor: t.colors.border },
+    routineCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    routineCardOpen: { borderColor: withAlpha(t.colors.primary, 0.314) },
+    routineIconWrap: { backgroundColor: t.colors.primaryBg },
+    routineTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    routineBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+    ring: { borderColor: t.colors.primary, backgroundColor: t.colors.surface2 },
+    ringValue: { color: t.colors.textPrimary },
+    ringSub: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    macroBars: { borderTopColor: t.colors.border },
+    macroTrack: { backgroundColor: t.colors.surface2 },
+    macroFill: { backgroundColor: t.colors.primary },
+    macroBarLabel: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
+    macroBarLabelPrimary: { color: t.colors.textSecondary },
+    macroBarValue: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
+    macroBarValuePrimary: { color: t.colors.textPrimary },
+    goalChip: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.188) },
+    goalChipText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    eduLearnRow: { borderTopColor: t.colors.border },
+    eduLearnRowTop: { backgroundColor: t.colors.surface2 },
+    eduLearnText: { color: t.colors.textPrimary, ...t.type.label },
+    targetsNote: { ...t.type.captionTight, color: t.colors.textMuted },
+    splitList: { borderTopColor: t.colors.border },
+    splitWhy: { ...t.type.bodySm, color: t.colors.textMuted },
+    splitRowBorder: { borderBottomColor: t.colors.border },
+    splitBadge: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    splitBadgeText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    splitName: { ...t.type.label, color: t.colors.textPrimary },
+    whyPlanWrap: { borderTopColor: t.colors.border },
+    whyPlanBullet: { backgroundColor: t.colors.primary },
+    whyPlanText: { ...t.type.bodySm, color: t.colors.textSecondary },
+  };
+}

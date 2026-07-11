@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   KeyboardAvoidingView, Platform,
@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import Dropdown from '../components/Dropdown';
 import SegmentedControl from '../components/SegmentedControl';
 import BackHeader from '../components/BackHeader';
@@ -85,6 +86,9 @@ export default function ProGoalSetupScreen({ navigation }) {
     saveLocalProfile: s.saveLocalProfile,
   })));
 
+  // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const [selectedGoal, setSelectedGoal] = useState(userProfile?.trainingGoal ?? null);
   // Wave A B4: the footer names the next check-in day. Same flat prefs blob
   // the check-in screen reads (checkinDay 0=Sunday, default 0); best-effort.
@@ -388,7 +392,7 @@ export default function ProGoalSetupScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Update goal and phase" />
 
       {/* L03-C5 (2026-07-09 design audit): standardise on the app's
@@ -405,7 +409,7 @@ export default function ProGoalSetupScreen({ navigation }) {
             lifters pick their division so volume gets biased towards the
             muscles their category is judged on. */}
         <SectionLabel style={styles.sectionLabel}>Competing in a category? (optional)</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
           Only matters if you're chasing a competitive physique. It biases your plan towards the muscles that category is judged on.
         </Text>
 
@@ -420,9 +424,9 @@ export default function ProGoalSetupScreen({ navigation }) {
         {weakPointsApplicable && (
           <>
             <SectionLabel style={styles.sectionLabelSpaced}>
-              Weak points <Text maxFontSizeMultiplier={1.3} style={styles.optionalTag}>(optional, max 3)</Text>
+              Weak points <Text maxFontSizeMultiplier={1.3} style={[styles.optionalTag, live.optionalTag]}>(optional, max 3)</Text>
             </SectionLabel>
-            <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
               Muscles you want to bring up. Your plan puts extra work into them.
             </Text>
             <View style={styles.weakPointGrid}>
@@ -444,19 +448,19 @@ export default function ProGoalSetupScreen({ navigation }) {
         {showDateApplicable && (
           <>
             <SectionLabel style={styles.sectionLabelSpaced}>
-              Show date <Text maxFontSizeMultiplier={1.3} style={styles.optionalTag}>(optional)</Text>
+              Show date <Text maxFontSizeMultiplier={1.3} style={[styles.optionalTag, live.optionalTag]}>(optional)</Text>
             </SectionLabel>
-            <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
               Adds a quiet weeks-out line and a prep checklist to your weekly coaching. You can clear it any time.
             </Text>
             <TextField
               fieldStyle={styles.showDateField}
-              inputStyle={styles.showDateInput}
+              inputStyle={[styles.showDateInput, live.showDateInput]}
               surface="surface"
               value={showDateInput}
               onChangeText={setShowDateInput}
               placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={t.colors.textMuted}
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="numbers-and-punctuation"
@@ -470,7 +474,7 @@ export default function ProGoalSetupScreen({ navigation }) {
             Drives nutrition, plan structure, and emphasis overlays
             (weak_point spec, strength_size's isolation reduction). */}
         <SectionLabel style={styles.sectionLabelSpaced}>What are you focused on right now?</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
           Drives your calorie target and how the plan is built.
         </Text>
 
@@ -483,7 +487,7 @@ export default function ProGoalSetupScreen({ navigation }) {
 
         {/* ── Training experience ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Experience</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
           This sets your starting volume and exercise selection. Change it as you get more experience.
         </Text>
         <Dropdown
@@ -495,7 +499,7 @@ export default function ProGoalSetupScreen({ navigation }) {
 
         {/* ── Training schedule ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Training days per week</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
           Changing how many days you train changes the exercise mix. Your plan rebuilds around it.
         </Text>
         <SegmentedControl
@@ -515,7 +519,7 @@ export default function ProGoalSetupScreen({ navigation }) {
 
         {/* ── Equipment ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Equipment</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
           What you have access to. The exercises adapt to your equipment.
         </Text>
         <Dropdown
@@ -527,7 +531,7 @@ export default function ProGoalSetupScreen({ navigation }) {
 
         {/* ── Recovery ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Recovery</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
           How well you're recovering between sessions. This sets how hard the coach pushes your progress.
         </Text>
         <Dropdown
@@ -539,7 +543,7 @@ export default function ProGoalSetupScreen({ navigation }) {
 
         {/* ── Protein target ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Protein target</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
           How much protein your daily targets include. Optimised works for most people.
         </Text>
 
@@ -550,49 +554,49 @@ export default function ProGoalSetupScreen({ navigation }) {
           return (
             <TouchableOpacity
               key={key}
-              style={[styles.phaseCard, active && styles.phaseCardActive]}
+              style={[styles.phaseCard, live.phaseCard, active && [styles.phaseCardActive, live.phaseCardActive]]}
               onPress={() => setProteinApproach(key)}
               activeOpacity={0.75}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
               accessibilityLabel={ap.label}
             >
-              <View style={styles.phaseIconWrap}>
+              <View style={[styles.phaseIconWrap, live.phaseIconWrap]}>
                 <Ionicons
                   name="barbell-outline"
                   size={18}
-                  color={active ? colors.primary : colors.textSecondary}
+                  color={active ? t.colors.primary : t.colors.textSecondary}
                 />
               </View>
               <View style={styles.phaseBody}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxs }}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.phaseLabel, active && styles.phaseLabelActive]}>{ap.label}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.approachRange, active && styles.approachRangeActive]}>{ap.range}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.phaseLabel, live.phaseLabel, active && [styles.phaseLabelActive, live.phaseLabelActive]]}>{ap.label}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.approachRange, live.approachRange, active && [styles.approachRangeActive, live.approachRangeActive]]}>{ap.range}</Text>
                   {isSuggested && (
-                    <View style={styles.suggestedBadge}>
-                      <Text maxFontSizeMultiplier={1.3} style={styles.suggestedBadgeText}>Suggested</Text>
+                    <View style={[styles.suggestedBadge, live.suggestedBadge]}>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.suggestedBadgeText, live.suggestedBadgeText]}>Suggested</Text>
                     </View>
                   )}
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={styles.phaseDetail}>{APPROACH_SHORT[key]}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.phaseDetail, live.phaseDetail]}>{APPROACH_SHORT[key]}</Text>
               </View>
-              {active && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
+              {active && <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} />}
             </TouchableOpacity>
           );
         })}
 
         {displayWeightKg ? (
           <View style={styles.footerNote}>
-            <Ionicons name="scale-outline" size={15} color={colors.textMuted} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.footerNoteText}>
+            <Ionicons name="scale-outline" size={15} color={t.colors.textMuted} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.footerNoteText, live.footerNoteText]}>
               Targets use your latest weight, {formatBodyWeightShort(displayWeightKg, userProfile?.bodyWeightUnits ?? 'st')}. Log a new one on Today.
             </Text>
           </View>
         ) : null}
 
         <View style={styles.footerNote}>
-          <Ionicons name="information-circle-outline" size={15} color={colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.footerNoteText}>
+          <Ionicons name="information-circle-outline" size={15} color={t.colors.textMuted} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.footerNoteText, live.footerNoteText]}>
             {/* Wave A B4: the next check-in is a date, not an abstract
                 future event. Same prefs source the check-in screen reads. */}
             Changing your goals updates your plan targets immediately.
@@ -679,3 +683,30 @@ const styles = StyleSheet.create({
   suggestedBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.bold, color: colors.primary },
 
 });
+
+// CP-10 batch G lane 1 (2026-07-11): the frozen `styles` block above stays
+// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/padding/gap/margin/borderRadius/borderWidth, no token) and
+// fontWeight (not part of useTheme()'s shape) are correctly omitted. No
+// coaching-engine or nutrition-calc logic touched -- colours only.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    sectionSub: { ...t.type.captionTight, color: t.colors.textMuted },
+    optionalTag: { ...t.type.caption, color: t.colors.textMuted },
+    showDateInput: { fontSize: t.fontSize.md },
+    phaseCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    phaseCardActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    phaseIconWrap: { backgroundColor: t.colors.surface2 },
+    phaseLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    phaseLabelActive: { color: t.colors.primary },
+    phaseDetail: { ...t.type.bodySm, color: t.colors.textSecondary },
+    footerNoteText: { ...t.type.captionTight, color: t.colors.textMuted },
+    approachRange: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    approachRangeActive: { color: t.colors.primaryDim },
+    suggestedBadge: { backgroundColor: withAlpha(t.colors.primary, alpha.tint) },
+    suggestedBadgeText: { fontSize: t.fontSize.micro, color: t.colors.primary },
+  };
+}

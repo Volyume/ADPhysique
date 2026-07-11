@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView, Animated, AccessibilityInfo } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion, hitSlop, shadow } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { VolyumeIcon } from '../components/BrandMark';
 import SegmentedControl from '../components/SegmentedControl';
 import Chip from '../components/Chip';
@@ -195,20 +196,29 @@ function fmt12(h) {
   return `${h - 12} pm`;
 }
 
+// CP-10 batch G lane 1 (2026-07-11): each of these three helpers is a
+// sibling function-component scope (not prop-drilled `live`/`t` from
+// ProOnboardingScreen), so its own useTheme() call is cleaner than
+// threading two extra props through every call site. Same shared
+// buildLiveStyles(t) as the wizard screen itself.
 function ProOnboardingProgressBar({ step }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   // Endowed Progress Effect: the bar opens with a small amount already filled
   // rather than empty, so step 1 doesn't read as "0% done, long way to go".
   const BASE = 0.12;
   const advanced = TOTAL_STEPS > 1 ? (step - 1) / (TOTAL_STEPS - 1) : 1;
   const filled = Math.round((BASE + (1 - BASE) * advanced) * 100);
   return (
-    <View style={styles.progressTrack}>
-      <View style={[styles.progressFill, { width: `${filled}%` }]} />
+    <View style={[styles.progressTrack, live.progressTrack]}>
+      <View style={[styles.progressFill, live.progressFill, { width: `${filled}%` }]} />
     </View>
   );
 }
 
 function ProOnboardingHeader({ step, title, sub, onBack }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const stepLabel = STEP_LABELS[step - 1] || 'Setup';
   const outcomes = STEP_OUTCOMES[step] || [];
   return (
@@ -222,26 +232,26 @@ function ProOnboardingHeader({ step, title, sub, onBack }) {
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
-            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+            <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
           </TouchableOpacity>
         ) : null}
         <VolyumeIcon size={22} />
-        <View style={styles.proBadge}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.proBadgeText}>PRO</Text>
+        <View style={[styles.proBadge, live.proBadge]}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.proBadgeText, live.proBadgeText]}>PRO</Text>
         </View>
       </View>
       <ProOnboardingProgressBar step={step} />
-      <Text maxFontSizeMultiplier={1.3} style={styles.stepCount}>Step {step} of {TOTAL_STEPS} - {stepLabel}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.stepTitle}>{title}</Text>
-      {sub ? <Text maxFontSizeMultiplier={1.3} style={styles.stepSub}>{sub}</Text> : null}
+      <Text maxFontSizeMultiplier={1.3} style={[styles.stepCount, live.stepCount]}>Step {step} of {TOTAL_STEPS} - {stepLabel}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.stepTitle, live.stepTitle]}>{title}</Text>
+      {sub ? <Text maxFontSizeMultiplier={1.3} style={[styles.stepSub, live.stepSub]}>{sub}</Text> : null}
       {outcomes.length ? (
         <View style={styles.outcomeCard}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.outcomeEyebrow}>This step sets</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.outcomeEyebrow, live.outcomeEyebrow]}>This step sets</Text>
           <View style={styles.outcomeGrid}>
             {outcomes.map((item) => (
-              <View key={item.label} style={styles.outcomeChip}>
-                <Ionicons name={item.icon} size={14} color={colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={styles.outcomeChipText} numberOfLines={1}>{item.label}</Text>
+              <View key={item.label} style={[styles.outcomeChip, live.outcomeChip]}>
+                <Ionicons name={item.icon} size={14} color={t.colors.primary} />
+                <Text maxFontSizeMultiplier={1.3} style={[styles.outcomeChipText, live.outcomeChipText]} numberOfLines={1}>{item.label}</Text>
               </View>
             ))}
           </View>
@@ -252,15 +262,17 @@ function ProOnboardingHeader({ step, title, sub, onBack }) {
 }
 
 function QuestionGroup({ icon, title, sub, children }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
-    <View style={styles.questionGroup}>
+    <View style={[styles.questionGroup, live.questionGroup]}>
       <View style={styles.questionGroupHead}>
-        <View style={styles.questionGroupIcon}>
-          <Ionicons name={icon} size={18} color={colors.primary} />
+        <View style={[styles.questionGroupIcon, live.questionGroupIcon]}>
+          <Ionicons name={icon} size={18} color={t.colors.primary} />
         </View>
         <View style={styles.questionGroupCopy}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.questionGroupTitle}>{title}</Text>
-          {sub ? <Text maxFontSizeMultiplier={1.3} style={styles.questionGroupSub}>{sub}</Text> : null}
+          <Text maxFontSizeMultiplier={1.3} style={[styles.questionGroupTitle, live.questionGroupTitle]}>{title}</Text>
+          {sub ? <Text maxFontSizeMultiplier={1.3} style={[styles.questionGroupSub, live.questionGroupSub]}>{sub}</Text> : null}
         </View>
       </View>
       {children}
@@ -282,6 +294,14 @@ export default function ProOnboardingScreen({ navigation }) {
     proOnboardingAccountCreated: s.proOnboardingAccountCreated,
     setProOnboardingAccountCreated: s.setProOnboardingAccountCreated,
   })));
+
+  // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
+  // Memoised: this wizard renders several mapped option/chip lists per
+  // step. Every wizard step gate (advanceFromN, canContinue, the sex/
+  // height/weight/age validation), the plan-generation sequence and every
+  // saved value are untouched -- colours only.
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   const [step, setStep] = useState(1);
 
@@ -1023,7 +1043,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
   if (step === 1) {
     return (
-      <SafeAreaView key="step-1" style={styles.safe}>
+      <SafeAreaView key="step-1" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <ProOnboardingHeader
@@ -1050,7 +1070,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
               {busy ? (
                 <View style={styles.oauthBusy}>
-                  <ActivityIndicator color={colors.primary} />
+                  <ActivityIndicator color={t.colors.primary} />
                 </View>
               ) : null}
             </QuestionGroup>
@@ -1083,7 +1103,7 @@ export default function ProOnboardingScreen({ navigation }) {
       && !Number.isNaN(step2Age) && step2Age >= 13 && step2Age <= 100
       && isValidHeightCm(step2HeightCm);
     return (
-      <SafeAreaView key="step-2" style={styles.safe}>
+      <SafeAreaView key="step-2" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <ProOnboardingHeader
@@ -1098,7 +1118,7 @@ export default function ProOnboardingScreen({ navigation }) {
               sub="Name, sex, age, height and body weight are the minimum safe inputs for your first targets."
             >
               <View style={styles.section}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>First name</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>First name</Text>
                 <TextField accessibilityLabel="First name"
                   ref={nameRef}
                   fieldStyle={styles.inputField}
@@ -1106,7 +1126,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   value={firstName}
                   onChangeText={setFirstName}
                   placeholder="Your name"
-                  placeholderTextColor={colors.textDisabled}
+                  placeholderTextColor={t.colors.textDisabled}
                   autoCapitalize="words"
                   autoCorrect={false}
                   autoComplete="off"
@@ -1116,8 +1136,8 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
 
               <View style={styles.section}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Biological sex</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>Used by the calorie formula and safety floors. This stays private.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Biological sex</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldHint, live.fieldHint]}>Used by the calorie formula and safety floors. This stays private.</Text>
                 <SegmentedControl
                   options={SEX_OPTIONS}
                   value={sex}
@@ -1127,15 +1147,15 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
 
               <View style={styles.section}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Age</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>Used with your height and weight to set your calorie targets.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Age</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldHint, live.fieldHint]}>Used with your height and weight to set your calorie targets.</Text>
                 <TextField accessibilityLabel="Age"
                   fieldStyle={styles.inputField}
                   inputStyle={styles.input}
                   value={age}
                   onChangeText={setAge}
                   placeholder="e.g. 28"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor={t.colors.textMuted}
                   keyboardType="number-pad"
                   maxLength={3}
                   autoComplete="off"
@@ -1145,27 +1165,27 @@ export default function ProOnboardingScreen({ navigation }) {
 
               <View style={styles.section}>
                 <View style={styles.fieldLabelRow}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, { marginBottom: 0 }]}>Height</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel, { marginBottom: 0 }]}>Height</Text>
                   {/* UI-3: single-select controls carry radio semantics, matching
                       the shared SegmentedControl. */}
-                  <View style={styles.segmentRowSmall} accessibilityRole="radiogroup" accessibilityLabel="Height units">
+                  <View style={[styles.segmentRowSmall, live.segmentRowSmall]} accessibilityRole="radiogroup" accessibilityLabel="Height units">
                     {[{ key: 'imperial', label: 'ft + in' }, { key: 'metric', label: 'cm' }].map(u => (
                       <TouchableOpacity
                         key={u.key}
-                        style={[styles.segmentSmall, localHeightUnits === u.key && styles.segmentActive]}
+                        style={[styles.segmentSmall, localHeightUnits === u.key && [styles.segmentActive, live.segmentActive]]}
                         onPress={() => setLocalHeightUnits(u.key)}
                         accessibilityRole="radio"
                         accessibilityState={{ selected: localHeightUnits === u.key }}
                         accessibilityLabel={u.label}
                       >
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.segmentTextSmall, localHeightUnits === u.key && styles.segmentTextActive]}>
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.segmentTextSmall, live.segmentTextSmall, localHeightUnits === u.key && [styles.segmentTextActive, live.segmentTextActive]]}>
                           {u.label}
                         </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>Used with your weight and age to set your calorie targets.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldHint, live.fieldHint]}>Used with your weight and age to set your calorie targets.</Text>
                 {localHeightUnits === 'imperial' ? (
                   <View style={styles.heightImperialRow}>
                     <View style={styles.inputHalf}>
@@ -1175,7 +1195,7 @@ export default function ProOnboardingScreen({ navigation }) {
                         value={heightFt}
                         onChangeText={setHeightFt}
                         placeholder="5 ft"
-                        placeholderTextColor={colors.textDisabled}
+                        placeholderTextColor={t.colors.textDisabled}
                         keyboardType="number-pad"
                         maxLength={1}
                         autoComplete="off"
@@ -1189,7 +1209,7 @@ export default function ProOnboardingScreen({ navigation }) {
                         value={heightIn}
                         onChangeText={setHeightIn}
                         placeholder="9 in"
-                        placeholderTextColor={colors.textDisabled}
+                        placeholderTextColor={t.colors.textDisabled}
                         keyboardType="number-pad"
                         maxLength={2}
                         autoComplete="off"
@@ -1204,7 +1224,7 @@ export default function ProOnboardingScreen({ navigation }) {
                     value={heightCm}
                     onChangeText={setHeightCm}
                     placeholder="e.g. 178 cm"
-                    placeholderTextColor={colors.textDisabled}
+                    placeholderTextColor={t.colors.textDisabled}
                     keyboardType="decimal-pad"
                     autoComplete="off"
                     textContentType="none"
@@ -1213,7 +1233,7 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
 
               <View style={styles.section}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Body weight units</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Body weight units</Text>
                 <SegmentedControl
                   options={[
                     { label: 'Stone+lbs', value: 'st' },
@@ -1227,8 +1247,8 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
 
               <View style={styles.sectionLast}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Current body weight</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Current body weight</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldHint, live.fieldHint]}>
                   This sets your starting trend and first calorie target. Update it from Today once setup is complete.
                 </Text>
                 {localBWUnits === 'st' ? (
@@ -1240,7 +1260,7 @@ export default function ProOnboardingScreen({ navigation }) {
                         value={bodyWeightSt}
                         onChangeText={setBodyWeightSt}
                         placeholder="e.g. 12 st"
-                        placeholderTextColor={colors.textMuted}
+                        placeholderTextColor={t.colors.textMuted}
                         keyboardType="number-pad"
                         maxLength={3}
                         autoComplete="off"
@@ -1254,7 +1274,7 @@ export default function ProOnboardingScreen({ navigation }) {
                         value={bodyWeightStLbs}
                         onChangeText={setBodyWeightStLbs}
                         placeholder="e.g. 0 lbs"
-                        placeholderTextColor={colors.textMuted}
+                        placeholderTextColor={t.colors.textMuted}
                         keyboardType="decimal-pad"
                         maxLength={4}
                         autoComplete="off"
@@ -1269,7 +1289,7 @@ export default function ProOnboardingScreen({ navigation }) {
                     value={bodyWeight}
                     onChangeText={setBodyWeight}
                     placeholder={localBWUnits === 'kg' ? 'e.g. 80 kg' : 'e.g. 176 lbs'}
-                    placeholderTextColor={colors.textMuted}
+                    placeholderTextColor={t.colors.textMuted}
                     keyboardType="decimal-pad"
                     autoComplete="off"
                     textContentType="none"
@@ -1279,7 +1299,7 @@ export default function ProOnboardingScreen({ navigation }) {
             </QuestionGroup>
 
             {!canContinue ? (
-              <Text maxFontSizeMultiplier={1.3} style={styles.continueHint}>Complete your name, sex, age, height and body weight to continue.</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.continueHint, live.continueHint]}>Complete your name, sex, age, height and body weight to continue.</Text>
             ) : null}
 
             <Button
@@ -1288,7 +1308,7 @@ export default function ProOnboardingScreen({ navigation }) {
               style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
               onPress={canContinue ? advanceFrom2 : undefined}
               disabled={!canContinue}
-              textStyle={styles.primaryBtnText}
+              textStyle={[styles.primaryBtnText, live.primaryBtnText]}
               accessibilityLabel="Continue"
             />
           </ScrollView>
@@ -1305,7 +1325,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
   if (step === 3) {
     return (
-      <SafeAreaView key="step-3" style={styles.safe}>
+      <SafeAreaView key="step-3" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <ProOnboardingHeader
@@ -1321,8 +1341,8 @@ export default function ProOnboardingScreen({ navigation }) {
               sub="Your best current estimate helps the first plan. Progress Photos can refine physique change later with your Volyume Score."
             >
               <View style={styles.sectionLast}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Body fat estimate % (optional)</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Body fat estimate % (optional)</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldHint, live.fieldHint]}>
                   Enter your best current estimate or a measured value. Leave it blank only if you genuinely do not know.
                 </Text>
                 <TextField
@@ -1331,7 +1351,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   value={bodyFat}
                   onChangeText={setBodyFat}
                   placeholder="e.g. 15"
-                  placeholderTextColor={colors.textDisabled}
+                  placeholderTextColor={t.colors.textDisabled}
                   keyboardType="decimal-pad"
                   maxLength={4}
                   autoComplete="off"
@@ -1341,8 +1361,8 @@ export default function ProOnboardingScreen({ navigation }) {
                 {bodyFat.trim() ? (
                   <View style={{ marginTop: spacing.sm }}>
                     {/* U-E-1: gloss the body fat method abbreviations (BIA/Caliper/DEXA). */}
-                    <View style={styles.measuredRow}>
-                      <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>Estimate source</Text>
+                    <View style={[styles.measuredRow, live.measuredRow]}>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.fieldHint, live.fieldHint]}>Estimate source</Text>
                       <InfoTooltip text={GLOSSARY.bodyFatMethod} size={13} />
                     </View>
                     <SegmentedControl
@@ -1361,7 +1381,7 @@ export default function ProOnboardingScreen({ navigation }) {
               trailingIcon="arrow-forward"
               style={styles.primaryBtn}
               onPress={advanceFrom3}
-              textStyle={styles.primaryBtnText}
+              textStyle={[styles.primaryBtnText, live.primaryBtnText]}
               accessibilityLabel="Continue"
             />
           </ScrollView>
@@ -1376,7 +1396,7 @@ export default function ProOnboardingScreen({ navigation }) {
     const canContinue = !!experience && !!sessionLengthMinutes && !!equipment;
 
     return (
-      <SafeAreaView key="step-4" style={styles.safe}>
+      <SafeAreaView key="step-4" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <ProOnboardingHeader
@@ -1404,8 +1424,8 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
 
               <View style={styles.section}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Session length</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>Pick the time you can usually finish, including warm-ups.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Session length</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldHint, live.fieldHint]}>Pick the time you can usually finish, including warm-ups.</Text>
                 <SegmentedControl
                   options={SESSION_LENGTH_OPTIONS}
                   value={sessionLengthMinutes}
@@ -1415,8 +1435,8 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
 
               <View style={styles.section}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Training days per week</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>Choose the number of days you can repeat most weeks.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Training days per week</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldHint, live.fieldHint]}>Choose the number of days you can repeat most weeks.</Text>
                 <SegmentedControl
                   options={DAYS_PER_WEEK_OPTIONS.map(d => ({ label: String(d), value: d }))}
                   value={daysPerWeek}
@@ -1438,7 +1458,7 @@ export default function ProOnboardingScreen({ navigation }) {
             </QuestionGroup>
 
             {!canContinue ? (
-              <Text maxFontSizeMultiplier={1.3} style={styles.continueHint}>Choose your experience and equipment to continue.</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.continueHint, live.continueHint]}>Choose your experience and equipment to continue.</Text>
             ) : null}
 
             <Button
@@ -1447,7 +1467,7 @@ export default function ProOnboardingScreen({ navigation }) {
               style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
               onPress={canContinue ? advanceFrom4 : undefined}
               disabled={!canContinue}
-              textStyle={styles.primaryBtnText}
+              textStyle={[styles.primaryBtnText, live.primaryBtnText]}
               accessibilityLabel="Continue"
             />
           </ScrollView>
@@ -1498,7 +1518,7 @@ export default function ProOnboardingScreen({ navigation }) {
     }
 
     return (
-      <SafeAreaView key="step-5-goal" style={styles.safe}>
+      <SafeAreaView key="step-5-goal" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <ProOnboardingHeader
@@ -1527,7 +1547,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   placeholder="Choose your focus"
                 />
                 {provisionalKcal ? (
-                  <Text maxFontSizeMultiplier={1.3} style={styles.provisionalKcal}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.provisionalKcal, live.provisionalKcal]}>
                     Provisionally about {provisionalKcal.toLocaleString('en-GB')} kcal a day for this focus. Your exact targets are set when your plan is built.
                   </Text>
                 ) : null}
@@ -1552,11 +1572,11 @@ export default function ProOnboardingScreen({ navigation }) {
                   this division is judged on (or commonly brings up). Picking none
                   is fine, it just means a balanced plan. */}
               {GOALS_WITH_WEAK_POINTS.includes(trainingGoal) && (
-                <View style={styles.wpSection}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.wpLabel}>
-                    Anything to bring up? <Text maxFontSizeMultiplier={1.3} style={styles.wpOptional}>(optional, up to 3)</Text>
+                <View style={[styles.wpSection, live.wpSection]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.wpLabel, live.wpLabel]}>
+                    Anything to bring up? <Text maxFontSizeMultiplier={1.3} style={[styles.wpOptional, live.wpOptional]}>(optional, up to 3)</Text>
                   </Text>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.wpHint}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.wpHint, live.wpHint]}>
                     Pick one to three muscles you want to bring up. Not sure? Leave it blank for a balanced plan.
                   </Text>
                   <View style={styles.wpGrid}>
@@ -1574,24 +1594,24 @@ export default function ProOnboardingScreen({ navigation }) {
 
               <View style={styles.sectionLast}>
               <TouchableOpacity
-                style={styles.proteinHead}
+                style={[styles.proteinHead, live.proteinHead]}
                 onPress={() => setProteinOpen(v => !v)}
                 activeOpacity={0.8}
                 accessibilityRole="button"
                 accessibilityState={{ expanded: proteinOpen }}
                 accessibilityLabel={`Protein target, ${PROTEIN_APPROACHES[proteinApproach]?.label}. Tap to change.`}
               >
-                <View style={styles.proteinCopy}>
-                  <View style={styles.measuredRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Protein target</Text>
+                <View style={[styles.proteinCopy, live.proteinCopy]}>
+                  <View style={[styles.measuredRow, live.measuredRow]}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Protein target</Text>
                     {/* U-E-1: gloss the Standard/Optimised/Advanced protein tiers. */}
                     <InfoTooltip text={GLOSSARY.proteinTier} size={13} />
                   </View>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.fieldHint, live.fieldHint]}>
                     {PROTEIN_APPROACHES[proteinApproach]?.label} - {PROTEIN_APPROACHES[proteinApproach]?.range}. Set for you, tap to change.
                   </Text>
                 </View>
-                <Ionicons name={proteinOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
+                <Ionicons name={proteinOpen ? 'chevron-up' : 'chevron-down'} size={18} color={t.colors.textMuted} />
               </TouchableOpacity>
 
               {proteinOpen && (
@@ -1603,26 +1623,26 @@ export default function ProOnboardingScreen({ navigation }) {
                     return (
                       <TouchableOpacity
                         key={key}
-                        style={[styles.proteinOpt, active && styles.proteinOptActive]}
+                        style={[styles.proteinOpt, live.proteinOpt, active && [styles.proteinOptActive, live.proteinOptActive]]}
                         onPress={() => setProteinOverride(key)}
                         activeOpacity={0.85}
                         accessibilityRole="radio"
                         accessibilityState={{ selected: active }}
                         accessibilityLabel={`${opt.label}, ${opt.range}${recommended ? ', recommended' : ''}`}
                       >
-                        <View style={styles.proteinOptionCopy}>
+                        <View style={[styles.proteinOptionCopy, live.proteinOptionCopy]}>
                           <View style={styles.proteinOptTop}>
-                            <Text maxFontSizeMultiplier={1.3} style={styles.proteinOptLabel}>{opt.label}</Text>
-                            <Text maxFontSizeMultiplier={1.3} style={styles.proteinOptRange}>{opt.range}</Text>
+                            <Text maxFontSizeMultiplier={1.3} style={[styles.proteinOptLabel, live.proteinOptLabel]}>{opt.label}</Text>
+                            <Text maxFontSizeMultiplier={1.3} style={[styles.proteinOptRange, live.proteinOptRange]}>{opt.range}</Text>
                             {recommended ? (
-                              <View style={styles.recBadge}>
-                                <Text maxFontSizeMultiplier={1.3} style={styles.recBadgeText}>Recommended</Text>
+                              <View style={[styles.recBadge, live.recBadge]}>
+                                <Text maxFontSizeMultiplier={1.3} style={[styles.recBadgeText, live.recBadgeText]}>Recommended</Text>
                               </View>
                             ) : null}
                           </View>
-                          <Text maxFontSizeMultiplier={1.3} style={styles.proteinOptDesc}>{PROTEIN_SHORT[key]}</Text>
+                          <Text maxFontSizeMultiplier={1.3} style={[styles.proteinOptDesc, live.proteinOptDesc]}>{PROTEIN_SHORT[key]}</Text>
                         </View>
-                        {active ? <Ionicons name="checkmark-circle" size={20} color={colors.primary} /> : null}
+                        {active ? <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} /> : null}
                       </TouchableOpacity>
                     );
                   })}
@@ -1637,7 +1657,7 @@ export default function ProOnboardingScreen({ navigation }) {
               style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
               onPress={canContinue ? advanceFrom5 : undefined}
               disabled={!canContinue}
-              textStyle={styles.primaryBtnText}
+              textStyle={[styles.primaryBtnText, live.primaryBtnText]}
               accessibilityLabel="Continue"
             />
           </ScrollView>
@@ -1657,26 +1677,26 @@ export default function ProOnboardingScreen({ navigation }) {
     if (sequenceActive) {
       const lines = sequenceStages();
       return (
-        <SafeAreaView key="step-6-building" style={styles.safe}>
+        <SafeAreaView key="step-6-building" style={[styles.safe, live.safe]}>
           <ScrollView contentContainerStyle={styles.seqScroll} keyboardShouldPersistTaps="handled">
             <Animated.View style={[styles.seqWrap, { opacity: sequenceFade }]}>
               <View style={styles.brandRow}>
                 <VolyumeIcon size={22} />
-                <View style={styles.proBadge}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.proBadgeText}>PRO</Text>
+                <View style={[styles.proBadge, live.proBadge]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.proBadgeText, live.proBadgeText]}>PRO</Text>
                 </View>
               </View>
-              <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: '100%' }]} />
+              <View style={[styles.progressTrack, live.progressTrack]}>
+                <View style={[styles.progressFill, live.progressFill, { width: '100%' }]} />
               </View>
-              <View style={styles.seqPanel}>
+              <View style={[styles.seqPanel, live.seqPanel]}>
                 <View style={styles.seqHeroRow}>
-                  <View style={styles.seqHeroIcon}>
-                    <Ionicons name="clipboard-outline" size={20} color={colors.primary} />
+                  <View style={[styles.seqHeroIcon, live.seqHeroIcon]}>
+                    <Ionicons name="clipboard-outline" size={20} color={t.colors.primary} />
                   </View>
                   <View style={styles.seqHeroCopy}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.seqHeading}>Building your first plan</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.seqSub}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.seqHeading, live.seqHeading]}>Building your first plan</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.seqSub, live.seqSub]}>
                       Using your body data, goal, training week and recovery to set a sensible starting point.
                     </Text>
                   </View>
@@ -1687,11 +1707,11 @@ export default function ProOnboardingScreen({ navigation }) {
                     return (
                       <View key={i} style={styles.seqRow}>
                         {isCurrent ? (
-                          <ActivityIndicator size="small" color={colors.primary} style={styles.seqIcon} />
+                          <ActivityIndicator size="small" color={t.colors.primary} style={styles.seqIcon} />
                         ) : (
-                          <Ionicons name="checkmark-circle" size={20} color={colors.primary} style={styles.seqIcon} />
+                          <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} style={styles.seqIcon} />
                         )}
-                        <Text maxFontSizeMultiplier={1.3} style={styles.seqLine}>{line}</Text>
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.seqLine, live.seqLine]}>{line}</Text>
                       </View>
                     );
                   })}
@@ -1704,7 +1724,7 @@ export default function ProOnboardingScreen({ navigation }) {
     }
 
     return (
-      <SafeAreaView key="step-6" style={styles.safe}>
+      <SafeAreaView key="step-6" style={[styles.safe, live.safe]}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <ProOnboardingHeader
             step={step}
@@ -1713,14 +1733,14 @@ export default function ProOnboardingScreen({ navigation }) {
             onBack={goBack}
           />
 
-          <View style={styles.coachCard}>
+          <View style={[styles.coachCard, live.coachCard]}>
             <View style={styles.coachCardHead}>
-              <View style={styles.notifIconWrap}>
-                <Ionicons name="git-branch-outline" size={18} color={colors.primary} />
+              <View style={[styles.notifIconWrap, live.notifIconWrap]}>
+                <Ionicons name="git-branch-outline" size={18} color={t.colors.primary} />
               </View>
-              <Text maxFontSizeMultiplier={1.3} style={styles.coachCardTitle}>How your coaching works</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.coachCardTitle, live.coachCardTitle]}>How your coaching works</Text>
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={styles.coachCardBody}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.coachCardBody, live.coachCardBody]}>
               Volyume uses your morning weigh-ins and weekly check-in to shape coaching. Food logging helps refine it, and the app stays cautious when data is missing.
             </Text>
           </View>
@@ -1744,30 +1764,30 @@ export default function ProOnboardingScreen({ navigation }) {
           </View>
 
           <View style={styles.section}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Coaching reminders</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>Pick a morning time and weekly check-in day. Change them any time in your coaching reminder settings.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Coaching reminders</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.fieldHint, live.fieldHint]}>Pick a morning time and weekly check-in day. Change them any time in your coaching reminder settings.</Text>
 
-            <View style={styles.notifSection}>
+            <View style={[styles.notifSection, live.notifSection]}>
               <View style={styles.notifHeader}>
-                <View style={styles.notifIconWrap}>
-                  <Ionicons name="scale-outline" size={18} color={colors.primary} />
+                <View style={[styles.notifIconWrap, live.notifIconWrap]}>
+                  <Ionicons name="scale-outline" size={18} color={t.colors.primary} />
                 </View>
                 <View style={styles.notifCopy}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.notifTitle}>Morning weight reminder</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.notifSub}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.notifTitle, live.notifTitle]}>Morning weight reminder</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.notifSub, live.notifSub]}>
                     A quick morning weigh-in gives a cleaner trend than occasional scale checks.
                   </Text>
                 </View>
                 {/* FR-4/D7: "Required" softened to "Part of your coaching" -
                     tone only, this reminder is still non-optional; see
                     coverage-05-first-run.md FR-4. */}
-                <View style={styles.requiredPill} accessibilityLabel="Part of your coaching">
-                  <Text maxFontSizeMultiplier={1.3} style={styles.requiredPillText}>Part of your coaching</Text>
+                <View style={[styles.requiredPill, live.requiredPill]} accessibilityLabel="Part of your coaching">
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.requiredPillText, live.requiredPillText]}>Part of your coaching</Text>
                 </View>
               </View>
 
               <View style={styles.timeRow}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.timeLabel}>Remind me at</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.timeLabel, live.timeLabel]}>Remind me at</Text>
                 <View accessibilityRole="radiogroup" accessibilityLabel="Morning weight reminder time">
                 <ScrollView
                   horizontal
@@ -1778,13 +1798,13 @@ export default function ProOnboardingScreen({ navigation }) {
                   {HOURS.map(h => (
                     <TouchableOpacity
                       key={h}
-                      style={[styles.hourChip, morningHour === h && styles.hourChipActive]}
+                      style={[styles.hourChip, live.hourChip, morningHour === h && [styles.hourChipActive, live.hourChipActive]]}
                       onPress={() => setMorningHour(h)}
                       accessibilityRole="radio"
                       accessibilityState={{ checked: morningHour === h }}
                       accessibilityLabel={`Remind me at ${fmt12(h)}`}
                     >
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.hourChipText, morningHour === h && styles.hourChipTextActive]}>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.hourChipText, live.hourChipText, morningHour === h && [styles.hourChipTextActive, live.hourChipTextActive]]}>
                         {fmt12(h)}
                       </Text>
                     </TouchableOpacity>
@@ -1794,27 +1814,27 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
             </View>
 
-            <View style={styles.notifSection}>
+            <View style={[styles.notifSection, live.notifSection]}>
               <View style={styles.notifHeader}>
-                <View style={styles.notifIconWrap}>
-                  <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+                <View style={[styles.notifIconWrap, live.notifIconWrap]}>
+                  <Ionicons name="calendar-outline" size={18} color={t.colors.primary} />
                 </View>
                 <View style={styles.notifCopy}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.notifTitle}>Weekly check-in reminder</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.notifSub}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.notifTitle, live.notifTitle]}>Weekly check-in reminder</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.notifSub, live.notifSub]}>
                     Pick the day you are most likely to review training, food and recovery honestly.
                   </Text>
                 </View>
                 {/* FR-4/D7: "Required" softened to "Part of your coaching" -
                     tone only, this reminder is still non-optional; see
                     coverage-05-first-run.md FR-4. */}
-                <View style={styles.requiredPill} accessibilityLabel="Part of your coaching">
-                  <Text maxFontSizeMultiplier={1.3} style={styles.requiredPillText}>Part of your coaching</Text>
+                <View style={[styles.requiredPill, live.requiredPill]} accessibilityLabel="Part of your coaching">
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.requiredPillText, live.requiredPillText]}>Part of your coaching</Text>
                 </View>
               </View>
 
               <View style={styles.timeRow}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.timeLabel}>Check in on</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.timeLabel, live.timeLabel]}>Check in on</Text>
                 <View accessibilityRole="radiogroup" accessibilityLabel="Weekly check-in day">
                 <ScrollView
                   horizontal
@@ -1825,13 +1845,13 @@ export default function ProOnboardingScreen({ navigation }) {
                   {DAYS.map((d, i) => (
                     <TouchableOpacity
                       key={d}
-                      style={[styles.hourChip, checkinDay === i && styles.hourChipActive]}
+                      style={[styles.hourChip, live.hourChip, checkinDay === i && [styles.hourChipActive, live.hourChipActive]]}
                       onPress={() => setCheckinDay(i)}
                       accessibilityRole="radio"
                       accessibilityState={{ checked: checkinDay === i }}
                       accessibilityLabel={`Check in on ${d}`}
                     >
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.hourChipText, checkinDay === i && styles.hourChipTextActive]}>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.hourChipText, live.hourChipText, checkinDay === i && [styles.hourChipTextActive, live.hourChipTextActive]]}>
                         {d.slice(0, 3)}
                       </Text>
                     </TouchableOpacity>
@@ -1843,38 +1863,38 @@ export default function ProOnboardingScreen({ navigation }) {
           </View>
 
           <View style={styles.section}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.fieldLabel}>Cardio</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.fieldHint}>Make cardio available as a logging option. It is not added to your plan by default.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Cardio</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.fieldHint, live.fieldHint]}>Make cardio available as a logging option. It is not added to your plan by default.</Text>
 
-            <View style={styles.notifSection}>
+            <View style={[styles.notifSection, live.notifSection]}>
               <View style={styles.notifHeader}>
-                <View style={styles.notifIconWrap}>
-                  <Ionicons name="heart-outline" size={18} color={colors.primary} />
+                <View style={[styles.notifIconWrap, live.notifIconWrap]}>
+                  <Ionicons name="heart-outline" size={18} color={t.colors.primary} />
                 </View>
                 <View style={styles.notifCopy}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.notifTitle}>Cardio</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.notifSub}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.notifTitle, live.notifTitle]}>Cardio</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.notifSub, live.notifSub]}>
                     {cardioOn
                       ? 'On. You can log cardio if you do it. The plan only uses it when it is genuinely needed.'
                       : 'Off. No cardio logging or library. Turn it on any time in Settings.'}
                   </Text>
                 </View>
                 <TouchableOpacity
-                  style={[styles.toggle, cardioOn && styles.toggleOn]}
+                  style={[styles.toggle, live.toggle, cardioOn && [styles.toggleOn, live.toggleOn]]}
                   onPress={() => setCardioOn(v => !v)}
                   hitSlop={hitSlop}
                   accessibilityRole="switch"
                   accessibilityState={{ checked: cardioOn }}
                   accessibilityLabel="Make cardio available"
                 >
-                  <View style={[styles.toggleThumb, cardioOn && styles.toggleThumbOn]} />
+                  <View style={[styles.toggleThumb, live.toggleThumb, cardioOn && [styles.toggleThumbOn, live.toggleThumbOn]]} />
                 </TouchableOpacity>
               </View>
             </View>
           </View>
 
           {!canContinue ? (
-            <Text maxFontSizeMultiplier={1.3} style={styles.continueHint}>Choose your recovery rating to finish setup.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.continueHint, live.continueHint]}>Choose your recovery rating to finish setup.</Text>
           ) : null}
 
           <Button
@@ -1884,7 +1904,7 @@ export default function ProOnboardingScreen({ navigation }) {
             onPress={canContinue && !busy ? advanceFrom6 : undefined}
             disabled={!canContinue || busy}
             loading={busy}
-            textStyle={styles.primaryBtnText}
+            textStyle={[styles.primaryBtnText, live.primaryBtnText]}
             accessibilityLabel="Continue"
           />
         </ScrollView>
@@ -2217,3 +2237,78 @@ const styles = StyleSheet.create({
     color: colors.textDisabled, lineHeight: 18, marginTop: spacing.xs,
   },
 });
+
+// CP-10 batch G lane 1 (2026-07-11): the frozen `styles` block above stays
+// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/padding/gap/margin/borderRadius/borderWidth/width/height, no
+// token) and fontWeight (not part of useTheme()'s shape) are correctly
+// omitted. The dead offerCard/offerBadge*/offerHeadline/offerBody/
+// offerPerk*/skipBtn*/fieldWrap*/fieldInput/eyeBtn styles (unreferenced in
+// this screen's JSX) are left out of scope, matching "touch only what the
+// task requires". Every wizard step gate, the sex/height/weight/age
+// validation and the plan-generation sequence are untouched -- colours
+// only.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    proBadge: { backgroundColor: t.colors.primaryFill },
+    proBadgeText: { fontSize: t.fontSize.micro, color: t.colors.onPrimary },
+    progressTrack: { backgroundColor: t.colors.border },
+    progressFill: { backgroundColor: t.colors.primary },
+    stepCount: { ...t.type.num('caption'), color: t.colors.textMuted },
+    stepTitle: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
+    stepSub: { ...t.type.bodySm, color: t.colors.textSecondary },
+    outcomeEyebrow: { ...t.type.caption, color: t.colors.textMuted },
+    outcomeChip: { backgroundColor: t.colors.primaryBg },
+    outcomeChipText: { ...t.type.caption, color: t.colors.textPrimary },
+    seqPanel: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    seqHeroIcon: { backgroundColor: t.colors.primaryBg },
+    seqHeading: { ...t.type.h3, color: t.colors.textPrimary },
+    seqSub: { ...t.type.bodySm, color: t.colors.textSecondary },
+    seqLine: { ...t.type.bodySm, color: t.colors.textPrimary },
+    questionGroup: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    questionGroupIcon: { backgroundColor: t.colors.primaryBg },
+    questionGroupTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    questionGroupSub: { ...t.type.captionTight, color: t.colors.textSecondary },
+    continueHint: { ...t.type.caption, color: t.colors.textSecondary },
+    fieldLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    fieldHint: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    provisionalKcal: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    proteinOpt: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    proteinOptActive: { borderColor: t.colors.primary },
+    proteinOptLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    proteinOptRange: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    proteinOptDesc: { ...t.type.captionTight, color: t.colors.textSecondary },
+    recBadge: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.188) },
+    recBadgeText: { fontSize: t.fontSize.micro, color: t.colors.primary },
+    wpLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    wpOptional: { color: t.colors.textMuted },
+    wpHint: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    segmentRowSmall: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    segmentTextSmall: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    segmentActive: { backgroundColor: t.colors.primaryFill },
+    segmentTextActive: { color: t.colors.onPrimary },
+    notifSection: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    notifIconWrap: { backgroundColor: t.colors.primaryBg },
+    notifTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    notifSub: { ...t.type.captionTight, color: t.colors.textMuted },
+    requiredPill: { borderColor: withAlpha(t.colors.primary, 0.188), backgroundColor: t.colors.primaryBg },
+    requiredPillText: { ...t.type.caption, color: t.colors.primary },
+    coachCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    coachCardTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    coachCardBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+    toggle: { backgroundColor: t.colors.surface3 },
+    toggleOn: { backgroundColor: t.colors.primaryFill },
+    toggleThumb: { backgroundColor: t.colors.textMuted },
+    toggleThumbOn: { backgroundColor: t.colors.background },
+    timeLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    hourChip: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    hourChipActive: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.primary },
+    hourChipText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    hourChipTextActive: { color: t.colors.onPrimary },
+    primaryBtnText: { fontSize: t.fontSize.lg, color: t.colors.onPrimary },
+  };
+}
+

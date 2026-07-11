@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import {
   scheduleMorningWeightNotification,
@@ -136,6 +137,10 @@ export default function NotificationSettingsScreen({ navigation }) {
   // stay visible to Free users too.
   const tier = useAppStore(s => s.tier);
   const isPro = tier === 'pro';
+  // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
+  // Memoised: this screen renders mapped meal-reminder rows.
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const [morningEnabled, setMorningEnabled] = useState(false);
   const [morningHour, setMorningHour] = useState(7);
   const [morningMinute, setMorningMinute] = useState(0);
@@ -581,10 +586,10 @@ export default function NotificationSettingsScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Notifications" />
       <View style={styles.subtitleWrap}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>
           Volyume uses local notifications only. No marketing, ever.
         </Text>
       </View>
@@ -595,9 +600,9 @@ export default function NotificationSettingsScreen({ navigation }) {
       >
         {/* Permission banner */}
         {permissionStatus === 'denied' && (
-          <View style={styles.permissionBanner}>
-            <Ionicons name="alert-circle-outline" size={20} color={colors.warning} style={styles.bannerIcon} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.bannerText}>
+          <View style={[styles.permissionBanner, live.permissionBanner]}>
+            <Ionicons name="alert-circle-outline" size={20} color={t.colors.warning} style={styles.bannerIcon} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.bannerText, live.bannerText]}>
               Notifications are currently disabled. Enable them in your device settings to use these features.
             </Text>
           </View>
@@ -612,22 +617,22 @@ export default function NotificationSettingsScreen({ navigation }) {
             users. This screen now only handles training reminders. */}
         {isPro && (
           <TouchableOpacity
-            style={styles.crossLink}
+            style={[styles.crossLink, live.crossLink]}
             onPress={() => navigation.navigate('CoachingReminders')}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel="Coaching reminders"
           >
-            <View style={styles.toggleIconWrap}>
-              <Ionicons name="pulse-outline" size={18} color={colors.primary} />
+            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
+              <Ionicons name="pulse-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.crossLinkTitle}>Coaching reminders</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.crossLinkSub}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.crossLinkTitle, live.crossLinkTitle]}>Coaching reminders</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.crossLinkSub, live.crossLinkSub]}>
                 Morning weight and weekly check-in schedule. Always on for Pro.
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
           </TouchableOpacity>
         )}
 
@@ -637,16 +642,16 @@ export default function NotificationSettingsScreen({ navigation }) {
         <Card style={styles.card}>
           {/* Toggle row */}
           <View style={styles.toggleRow}>
-            <View style={styles.toggleIconWrap}>
-              <Ionicons name="barbell-outline" size={18} color={colors.primary} />
+            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
+              <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={styles.toggleLabel}>Remind me to train</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.toggleLabel, live.toggleLabel]}>Remind me to train</Text>
             <Switch
               value={trainingEnabled}
               onValueChange={handleTrainingToggle}
-              trackColor={{ false: colors.surface2, true: colors.primaryDim }}
-              thumbColor={colors.primary}
-              ios_backgroundColor={colors.surface2}
+              trackColor={{ false: t.colors.surface2, true: t.colors.primaryDim }}
+              thumbColor={t.colors.primary}
+              ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Training reminder toggle"
             />
           </View>
@@ -654,25 +659,25 @@ export default function NotificationSettingsScreen({ navigation }) {
           {/* Time picker row */}
           {trainingEnabled && (
             <View style={styles.expandedSection}>
-              <View style={styles.divider} />
+              <View style={[styles.divider, live.divider]} />
               <TouchableOpacity
                 style={styles.timePickerRow}
                 onPress={handleTrainingTimePick}
                 accessibilityRole="button"
                 accessibilityLabel="Set reminder time"
               >
-                <Text maxFontSizeMultiplier={1.3} style={styles.timePickerLabel}>Reminder time</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.timePickerValue}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.timePickerLabel, live.timePickerLabel]}>Reminder time</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.timePickerValue, live.timePickerValue]}>
                   {`${String(trainingHour).padStart(2, '0')}:${String(trainingMinute).padStart(2, '0')}`}
                 </Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
             </View>
           )}
 
           {/* Helper text */}
-          <View style={styles.helperRow}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.helperText}>
+          <View style={[styles.helperRow, live.helperRow]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.helperText, live.helperText]}>
               Pick the time. Volyume learns the days you usually train from your recent workouts, and reminds you then.
             </Text>
           </View>
@@ -682,21 +687,21 @@ export default function NotificationSettingsScreen({ navigation }) {
         <SectionLabel style={styles.sectionLabel}>Getting started</SectionLabel>
         <Card style={styles.card}>
           <View style={styles.toggleRow}>
-            <View style={styles.toggleIconWrap}>
-              <Ionicons name="rocket-outline" size={18} color={colors.primary} />
+            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
+              <Ionicons name="rocket-outline" size={18} color={t.colors.primary} />
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={styles.toggleLabel}>Getting-started nudges</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.toggleLabel, live.toggleLabel]}>Getting-started nudges</Text>
             <Switch
               value={activationNudgeEnabled}
               onValueChange={handleActivationNudgeToggle}
-              trackColor={{ false: colors.surface2, true: colors.primaryDim }}
-              thumbColor={colors.primary}
-              ios_backgroundColor={colors.surface2}
+              trackColor={{ false: t.colors.surface2, true: t.colors.primaryDim }}
+              thumbColor={t.colors.primary}
+              ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Getting-started nudge toggle"
             />
           </View>
-          <View style={styles.helperRow}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.helperText}>
+          <View style={[styles.helperRow, live.helperRow]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.helperText, live.helperText]}>
               A gentle reminder in your first couple of weeks if you have not logged a session yet. It stops on its own once you are into a routine.
             </Text>
           </View>
@@ -707,18 +712,18 @@ export default function NotificationSettingsScreen({ navigation }) {
         <Card style={styles.card}>
           {mealReminders.map((r, i) => (
             <View key={r.id}>
-              {i > 0 ? <View style={styles.divider} /> : null}
+              {i > 0 ? <View style={[styles.divider, live.divider]} /> : null}
               <View style={styles.toggleRow}>
-                <View style={styles.toggleIconWrap}>
-                  <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
+                <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
+                  <Ionicons name="restaurant-outline" size={18} color={t.colors.primary} />
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={styles.toggleLabel}>{r.label}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.toggleLabel, live.toggleLabel]}>{r.label}</Text>
                 <Switch
                   value={r.enabled}
                   onValueChange={(v) => toggleMealReminder(r.id, v)}
-                  trackColor={{ false: colors.surface2, true: colors.primaryDim }}
-                  thumbColor={colors.primary}
-                  ios_backgroundColor={colors.surface2}
+                  trackColor={{ false: t.colors.surface2, true: t.colors.primaryDim }}
+                  thumbColor={t.colors.primary}
+                  ios_backgroundColor={t.colors.surface2}
                   accessibilityLabel={`${r.label} reminder toggle`}
                 />
               </View>
@@ -729,17 +734,17 @@ export default function NotificationSettingsScreen({ navigation }) {
                   accessibilityRole="button"
                   accessibilityLabel={`Set ${r.label} reminder time`}
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={styles.timePickerLabel}>Reminder time</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.timePickerValue}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.timePickerLabel, live.timePickerLabel]}>Reminder time</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.timePickerValue, live.timePickerValue]}>
                     {`${String(r.hour).padStart(2, '0')}:${String(r.minute).padStart(2, '0')}`}
                   </Text>
-                  <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+                  <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
                 </TouchableOpacity>
               )}
             </View>
           ))}
-          <View style={styles.helperRow}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.helperText}>
+          <View style={[styles.helperRow, live.helperRow]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.helperText, live.helperText]}>
               Optional reminders to log meals. No streaks and no pressure. Turn any of them off whenever you like.
             </Text>
           </View>
@@ -749,16 +754,16 @@ export default function NotificationSettingsScreen({ navigation }) {
         <SectionLabel style={styles.sectionLabel}>Quiet hours</SectionLabel>
         <Card style={styles.card}>
           <View style={styles.toggleRow}>
-            <View style={styles.toggleIconWrap}>
-              <Ionicons name="moon-outline" size={18} color={colors.primary} />
+            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
+              <Ionicons name="moon-outline" size={18} color={t.colors.primary} />
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={styles.toggleLabel}>Quiet hours</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.toggleLabel, live.toggleLabel]}>Quiet hours</Text>
             <Switch
               value={quietHours.enabled !== false}
               onValueChange={(v) => persistQuietHours({ enabled: v })}
-              trackColor={{ false: colors.surface2, true: colors.primaryDim }}
-              thumbColor={colors.primary}
-              ios_backgroundColor={colors.surface2}
+              trackColor={{ false: t.colors.surface2, true: t.colors.primaryDim }}
+              thumbColor={t.colors.primary}
+              ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Quiet hours toggle"
             />
           </View>
@@ -770,11 +775,11 @@ export default function NotificationSettingsScreen({ navigation }) {
                 accessibilityRole="button"
                 accessibilityLabel="Set quiet hours start time"
               >
-                <Text maxFontSizeMultiplier={1.3} style={styles.timePickerLabel}>Starts</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.timePickerValue}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.timePickerLabel, live.timePickerLabel]}>Starts</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.timePickerValue, live.timePickerValue]}>
                   {`${String(quietHours.startHour).padStart(2, '0')}:${String(quietHours.startMinute).padStart(2, '0')}`}
                 </Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.timePickerRow}
@@ -782,16 +787,16 @@ export default function NotificationSettingsScreen({ navigation }) {
                 accessibilityRole="button"
                 accessibilityLabel="Set quiet hours end time"
               >
-                <Text maxFontSizeMultiplier={1.3} style={styles.timePickerLabel}>Ends</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.timePickerValue}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.timePickerLabel, live.timePickerLabel]}>Ends</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.timePickerValue, live.timePickerValue]}>
                   {`${String(quietHours.endHour).padStart(2, '0')}:${String(quietHours.endMinute).padStart(2, '0')}`}
                 </Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
             </>
           )}
-          <View style={styles.helperRow}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.helperText}>
+          <View style={[styles.helperRow, live.helperRow]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.helperText, live.helperText]}>
               A reminder that would land inside this window waits until it ends. Applies to every reminder Volyume schedules.
             </Text>
           </View>
@@ -799,14 +804,14 @@ export default function NotificationSettingsScreen({ navigation }) {
 
         {/* Bottom note */}
         <View style={styles.bottomNote}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.bottomNoteText}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.bottomNoteText, live.bottomNoteText]}>
             Volyume never sends marketing notifications. These are local reminders with no server involved. You can disable them any time from your device settings.
           </Text>
         </View>
 
         {/* Save status */}
-        {saving && <Text maxFontSizeMultiplier={1.3} style={styles.savingText}>Saving...</Text>}
-        {!saving && saved && <Text maxFontSizeMultiplier={1.3} style={styles.savedText}>Saved</Text>}
+        {saving && <Text maxFontSizeMultiplier={1.3} style={[styles.savingText, live.savingText]}>Saving...</Text>}
+        {!saving && saved && <Text maxFontSizeMultiplier={1.3} style={[styles.savedText, live.savedText]}>Saved</Text>}
       </ScrollView>
     </SafeAreaView>
   );
@@ -985,3 +990,32 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
 });
+
+// CP-10 batch G lane 1 (2026-07-11): the frozen `styles` block above stays
+// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/padding/gap/margin/borderRadius/borderWidth, no token) and
+// fontWeight (not part of useTheme()'s shape) are correctly omitted. No
+// notification-scheduling logic touched -- colours only.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    subtitle: { ...t.type.bodySm, color: t.colors.textSecondary },
+    permissionBanner: { backgroundColor: withAlpha(t.colors.warning, alpha.tint), borderColor: withAlpha(t.colors.warning, 0.35) },
+    bannerText: { ...t.type.bodySm, color: t.colors.warning },
+    toggleIconWrap: { backgroundColor: t.colors.primaryBg },
+    toggleLabel: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    divider: { backgroundColor: t.colors.border },
+    helperRow: { borderTopColor: t.colors.border },
+    helperText: { ...t.type.bodySm, color: t.colors.textMuted },
+    timePickerLabel: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    timePickerValue: { ...t.type.num('bodyStrong'), color: t.colors.primary },
+    bottomNoteText: { ...t.type.bodySm, color: t.colors.textMuted },
+    savingText: { ...t.type.caption, color: t.colors.textMuted },
+    crossLink: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    crossLinkTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    crossLinkSub: { ...t.type.captionTight, color: t.colors.textMuted },
+    savedText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+  };
+}

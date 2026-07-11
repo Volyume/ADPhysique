@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import EngineLog from '../components/EngineLog';
 import EmptyState from '../components/EmptyState';
@@ -103,6 +104,10 @@ export default function CoachHeldHistoryScreen({ navigation }) {
   const [historyFull, setHistoryFull] = useState([]);
   const [suppress, setSuppress] = useState(false);
   const [loading, setLoading] = useState(true);
+  // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
+  // Memoised: this screen renders a mapped week/decision-row list.
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -162,18 +167,18 @@ export default function CoachHeldHistoryScreen({ navigation }) {
   const totalDecisions = weeks.reduce((n, w) => n + buildDecisionRows(w).length, 0);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom', 'left', 'right']}>
       <BackHeader title="Coaching history" />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.intro}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.intro, live.intro]}>
           Every weekly coaching decision, what changed, what stayed the same, and why.
         </Text>
 
         {/* S1 the coach's scorecard (the track record). Hidden under ED/calm
             suppression and below the minimum sample; counts only, no body data. */}
         {scorecard != null && (
-          <Text maxFontSizeMultiplier={1.3} style={styles.scorecard}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.scorecard, live.scorecard]}>
             Weeks you applied the call and the next trend landed on target: {scorecard.onTarget} of {scorecard.of}.
           </Text>
         )}
@@ -204,8 +209,8 @@ export default function CoachHeldHistoryScreen({ navigation }) {
         {weeks.map((week, wi) => {
           const rows = buildDecisionRows(week, pairs);
           return (
-            <View key={week.weekStart ?? wi} style={styles.weekBlock}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.weekLabel} accessibilityRole="header">
+            <View key={week.weekStart ?? wi} style={[styles.weekBlock, live.weekBlock]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.weekLabel, live.weekLabel]} accessibilityRole="header">
                 Week of {formatWeekStart(week.weekStart)}
               </Text>
               {rows.map((row, ri) => (
@@ -221,25 +226,25 @@ export default function CoachHeldHistoryScreen({ navigation }) {
                   <Ionicons
                     name={row.icon}
                     size={15}
-                    color={row.type === 'changed' ? colors.success : colors.textMuted}
+                    color={row.type === 'changed' ? t.colors.success : t.colors.textMuted}
                     style={styles.decisionIcon}
                   />
                   <View style={{ flex: 1 }}>
                     {row.label && (
                       <Text maxFontSizeMultiplier={1.3} style={[
-                        styles.decisionLabel,
-                        row.type === 'changed' && styles.decisionLabelChanged,
+                        styles.decisionLabel, live.decisionLabel,
+                        row.type === 'changed' && [styles.decisionLabelChanged, live.decisionLabelChanged],
                       ]}>
                         {row.label}
                       </Text>
                     )}
-                    <Text maxFontSizeMultiplier={1.3} style={styles.decisionDetail}>{row.detail}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.decisionDetail, live.decisionDetail]}>{row.detail}</Text>
                     {row.applied && (
                       <View style={styles.appliedRow}>
-                        <View style={styles.appliedPill}>
-                          <Text maxFontSizeMultiplier={1.3} style={styles.appliedPillText}>Applied</Text>
+                        <View style={[styles.appliedPill, live.appliedPill]}>
+                          <Text maxFontSizeMultiplier={1.3} style={[styles.appliedPillText, live.appliedPillText]}>Applied</Text>
                         </View>
-                        <Text maxFontSizeMultiplier={1.3} style={styles.verdictText}>{row.verdictText}</Text>
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.verdictText, live.verdictText]}>{row.verdictText}</Text>
                       </View>
                     )}
                   </View>
@@ -250,7 +255,7 @@ export default function CoachHeldHistoryScreen({ navigation }) {
         })}
 
         {totalDecisions > 0 && (
-          <Text maxFontSizeMultiplier={1.3} style={styles.footer}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.footer, live.footer]}>
             {totalDecisions} decision{totalDecisions !== 1 ? 's' : ''} across {weeks.length} week{weeks.length !== 1 ? 's' : ''}
           </Text>
         )}
@@ -343,3 +348,28 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xs,
   },
 });
+
+// CP-10 batch G lane 1 (2026-07-11): the frozen `styles` block above stays
+// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/padding/gap/margin/borderRadius/borderWidth, no token) and
+// fontWeight (not part of useTheme()'s shape) are correctly omitted. The
+// ED-safety suppression gate (fail-closed on a read error) and every word
+// of copy/logic above are untouched -- colours only.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    intro: { ...t.type.bodySm, color: t.colors.textMuted },
+    scorecard: { ...t.type.bodySm, color: t.colors.textPrimary },
+    weekBlock: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    weekLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    decisionLabel: { ...t.type.label, color: t.colors.textMuted },
+    decisionLabelChanged: { color: t.colors.success },
+    decisionDetail: { ...t.type.bodySm, color: t.colors.textSecondary },
+    appliedPill: { backgroundColor: withAlpha(t.colors.success, 0.15) },
+    appliedPillText: { ...t.type.label, color: t.colors.success },
+    verdictText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    footer: { ...t.type.num('caption'), color: t.colors.textMuted },
+  };
+}

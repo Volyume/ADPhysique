@@ -75,8 +75,12 @@ describe('share copy polish', () => {
     expect(credits).toContain('link: {\n    ...type.label,\n    color: colors.textPrimary,');
     expect(credits).not.toMatch(/link: \{[\s\S]*color: colors\.primary/);
 
-    expect(paywall.match(/style=\{styles\.legalButton\}/g)?.length).toBeGreaterThanOrEqual(2);
-    expect(paywall).toContain('style={[styles.legalButton, busy && styles.legalButtonDisabled]}');
+    // CP-10 batch G lane 1: legalButton gained its live-theme override
+    // (style={[styles.legalButton, live.legalButton, ...]}); the contract --
+    // at least three legal links render through the contained legalButton
+    // chrome -- is unchanged, so the pattern accepts the live-array spelling.
+    expect(paywall.match(/style=\{\[styles\.legalButton, live\.legalButton/g)?.length).toBeGreaterThanOrEqual(3);
+    expect(paywall).toContain('style={[styles.legalButton, live.legalButton, busy && styles.legalButtonDisabled]}');
     expect(paywall).toMatch(/legalButton: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(paywall).not.toContain("textDecorationLine: 'underline'");
     expect(paywall).not.toContain('legalDot');

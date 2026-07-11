@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,6 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Application from 'expo-application';
 import { colors, fontSize, spacing, radius, type, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import ConsentCheckboxRow from '../components/ConsentCheckboxRow';
 import useAppStore from '../store/useAppStore';
 import useAccountActions from '../hooks/useAccountActions';
@@ -40,6 +41,13 @@ export default function Article9ConsentScreen({ navigation }) {
     user: s.user,
     healthConsentGranted: s.healthConsentGranted,
   }));
+  // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
+  // Colours only -- the consent gate logic, ordering and every word of the
+  // locked copy below (docs/PRIVACY_CONSENT_LOCKED.md) are untouched, and no
+  // style change here affects a touch target or the visibility of any
+  // consent control.
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   // OB-6 (audit 02): the quiet "What if I don't agree?" affordance below the
@@ -171,15 +179,15 @@ export default function Article9ConsentScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.title}>Health and nutrition data consent</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Health and nutrition data consent</Text>
 
-        <Text maxFontSizeMultiplier={1.3} style={styles.body}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
           Volyume uses your health and food logs to help guide training, nutrition, and recovery. Under UK and EU data law, we need your explicit consent to use this data.
         </Text>
 
-        <Text maxFontSizeMultiplier={1.3} style={styles.subhead}>What Volyume looks at:</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.subhead, live.subhead]}>What Volyume looks at:</Text>
         <BulletList items={[
           'Your weight and how it changes over time',
           'Your body fat percentage and lean mass when you enter them',
@@ -189,23 +197,23 @@ export default function Article9ConsentScreen({ navigation }) {
           'Progress photos you choose to take, plus photo quality, result confidence, leanness band, Volyume Score and progress change when you use photo analysis',
         ]} />
 
-        <Text maxFontSizeMultiplier={1.3} style={styles.body}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
           Volyume Score is a simple progress read, not a medical measure, DEXA scan, diagnosis, or medical advice. It may abstain or ask for a retake when photo quality is poor.
         </Text>
 
-        <Text maxFontSizeMultiplier={1.3} style={styles.subhead}>A safety check that runs in the background:</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.body}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.subhead, live.subhead]}>A safety check that runs in the background:</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
           Volyume checks your weight trend, energy, and food logs together for signs of under-fuelling or disordered eating. If a concerning pattern shows up, it pauses your calorie changes and points you to support.
         </Text>
 
-        <Text maxFontSizeMultiplier={1.3} style={styles.subhead}>What we never do with it:</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.subhead, live.subhead]}>What we never do with it:</Text>
         <BulletList items={[
           'Never sell it',
           'Never share it with advertisers',
           'Never use your photos or health data for advertising or third-party model training',
         ]} />
 
-        <Text maxFontSizeMultiplier={1.3} style={styles.subhead}>Where it lives:</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.subhead, live.subhead]}>Where it lives:</Text>
         <BulletList items={[
           'On your phone, in encrypted local storage. Progress photo image files stay on this device unless you choose to share or export them',
           'In Supabase in the EU region for cloud-backed account data, with row-level security so only you and the team supporting your account can see it',
@@ -224,24 +232,24 @@ export default function Article9ConsentScreen({ navigation }) {
 
         {/* Art 7(3): the user must be informed of the right to withdraw BEFORE
             giving consent, and withdrawal must be as easy as giving it. */}
-        <Text maxFontSizeMultiplier={1.3} style={styles.withdrawNote}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.withdrawNote, live.withdrawNote]}>
           You can withdraw this consent at any time in Settings {'>'} Privacy & legal.
         </Text>
 
         <TouchableOpacity
           onPress={handleContinue}
           disabled={!agreed || busy}
-          style={[styles.ctaPrimary, (!agreed || busy) && styles.ctaDisabled]}
+          style={[styles.ctaPrimary, live.ctaPrimary, (!agreed || busy) && styles.ctaDisabled]}
           accessibilityRole="button"
           accessibilityState={{ disabled: !agreed || busy }}
         >
-          <Text maxFontSizeMultiplier={1.3} style={styles.ctaPrimaryText}>{busy ? 'Saving...' : 'Continue'}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.ctaPrimaryText, live.ctaPrimaryText]}>{busy ? 'Saving...' : 'Continue'}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={openPrivacyPolicy} style={styles.ctaGhost} accessibilityRole="link">
-          <Ionicons name="document-text-outline" size={16} color={colors.textSecondary} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.ctaGhostText}>Read the full privacy policy</Text>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+        <TouchableOpacity onPress={openPrivacyPolicy} style={[styles.ctaGhost, live.ctaGhost]} accessibilityRole="link">
+          <Ionicons name="document-text-outline" size={16} color={t.colors.textSecondary} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.ctaGhostText, live.ctaGhostText]}>Read the full privacy policy</Text>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
 
         {/* OB-6: a factual exit affordance for a hesitant user, whose only
@@ -254,38 +262,38 @@ export default function Article9ConsentScreen({ navigation }) {
             if (!declineInfoOpen) audit('consent.article9.declineInfo.open');
             setDeclineInfoOpen(v => !v);
           }}
-          style={styles.declineLink}
+          style={[styles.declineLink, live.declineLink]}
           accessibilityRole="button"
           accessibilityState={{ expanded: declineInfoOpen }}
           accessibilityLabel="What if I don't agree?"
         >
-          <Ionicons name="help-circle-outline" size={16} color={colors.textSecondary} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.declineLinkText}>What if I don't agree?</Text>
-          <Ionicons name={declineInfoOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+          <Ionicons name="help-circle-outline" size={16} color={t.colors.textSecondary} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.declineLinkText, live.declineLinkText]}>What if I don't agree?</Text>
+          <Ionicons name={declineInfoOpen ? 'chevron-up' : 'chevron-down'} size={16} color={t.colors.textMuted} />
         </TouchableOpacity>
 
         {declineInfoOpen ? (
-          <View style={styles.declineBox}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.declineBody}>
+          <View style={[styles.declineBox, live.declineBox]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.declineBody, live.declineBody]}>
               Without this consent, Volyume cannot process your health data, so the app cannot be used. Nothing is processed until you agree. Your options are to agree above, sign out and decide later, or delete your account and any data already stored.
             </Text>
             <TouchableOpacity
               onPress={signingOut ? undefined : handleSignOut}
-              style={styles.declineAction}
+              style={[styles.declineAction, live.declineAction]}
               accessibilityRole="button"
               accessibilityState={{ disabled: signingOut }}
             >
-              <Ionicons name="log-out-outline" size={16} color={colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.declineActionText}>{signingOut ? 'Signing out...' : 'Sign out'}</Text>
+              <Ionicons name="log-out-outline" size={16} color={t.colors.textSecondary} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.declineActionText, live.declineActionText]}>{signingOut ? 'Signing out...' : 'Sign out'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={deletingAccount ? undefined : handleDeleteAccount}
-              style={styles.declineAction}
+              style={[styles.declineAction, live.declineAction]}
               accessibilityRole="button"
               accessibilityState={{ disabled: deletingAccount }}
             >
-              <Ionicons name="trash-outline" size={16} color={colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.declineActionText}>{deletingAccount ? 'Deleting account...' : 'Delete my account'}</Text>
+              <Ionicons name="trash-outline" size={16} color={t.colors.textSecondary} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.declineActionText, live.declineActionText]}>{deletingAccount ? 'Deleting account...' : 'Delete my account'}</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -294,13 +302,19 @@ export default function Article9ConsentScreen({ navigation }) {
   );
 }
 
+// CP-10 batch G lane 1 (2026-07-11): BulletList is a sibling function-
+// component scope (not prop-drilled `live`/`t` from Article9ConsentScreen),
+// so its own useTheme() call is cleaner than threading two extra props
+// through every call site. Same shared buildLiveStyles(t) as the screen.
 function BulletList({ items }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={styles.bullets}>
       {items.map((text, i) => (
         <View key={i} style={styles.bulletRow}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.bulletDot}>-</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.bulletText}>{text}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.bulletDot, live.bulletDot]}>-</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.bulletText, live.bulletText]}>{text}</Text>
         </View>
       ))}
     </View>
@@ -421,3 +435,34 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 });
+
+// CP-10 batch G lane 1 (2026-07-11): the frozen `styles` block above stays
+// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/padding/gap/margin/borderRadius/borderWidth/minHeight/opacity,
+// no token) are correctly omitted. The consent gate logic, ordering and
+// every word of the locked copy (docs/PRIVACY_CONSENT_LOCKED.md) are
+// untouched -- colours only. ConsentCheckboxRow (consentRow's child) owns
+// its own colours and is out of this batch's scope.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    title: { ...t.type.h2, color: t.colors.textPrimary },
+    body: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
+    subhead: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    bulletDot: { color: t.colors.primary, fontSize: t.fontSize.md },
+    bulletText: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
+    withdrawNote: { ...t.type.bodySm, color: t.colors.textMuted },
+    ctaPrimary: { backgroundColor: t.colors.primaryFill },
+    ctaPrimaryText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    ctaGhost: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    ctaGhostText: { ...t.type.label, color: t.colors.textPrimary },
+    declineLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    declineLinkText: { ...t.type.label, color: t.colors.textSecondary },
+    declineBox: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    declineBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+    declineAction: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    declineActionText: { ...t.type.label, color: t.colors.textSecondary },
+  };
+}

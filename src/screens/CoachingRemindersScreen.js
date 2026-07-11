@@ -12,7 +12,7 @@
 // always scheduled. Toggle removed. Lives in Settings > Coaching
 // reminders (Pro-only row).
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Switch,
 } from 'react-native';
@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import {
   scheduleMorningWeightNotification,
   scheduleEveningWeightReminder,
@@ -151,6 +152,10 @@ function ChipRow({ items, selected, onSelect, formatter = (v) => String(v), acce
 
 export default function CoachingRemindersScreen() {
   const toast = useToast();
+  // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
+  // Memoised: this screen renders mapped ChipRow options.
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const [morningHour, setMorningHour] = useState(7);
   const [morningMinute, setMorningMinute] = useState(0);
   const [checkinDay, setCheckinDay] = useState(1); // Mon
@@ -299,17 +304,17 @@ export default function CoachingRemindersScreen() {
   const bumped = lastCheckinMs > 0 && gapDays > 7;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Coaching reminders" />
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.intro}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.intro, live.intro]}>
           These reminders keep the weekly coaching loop accurate. Pick times that fit your normal routine.
         </Text>
 
         {permissionStatus === 'denied' && (
-          <View style={styles.warningBox}>
-            <Ionicons name="warning" size={18} color={colors.warning} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.warningText}>
+          <View style={[styles.warningBox, live.warningBox]}>
+            <Ionicons name="warning" size={18} color={t.colors.warning} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.warningText, live.warningText]}>
               Notifications are disabled at the system level. Enable them in your device settings for these reminders to fire.
             </Text>
           </View>
@@ -317,14 +322,14 @@ export default function CoachingRemindersScreen() {
 
         {/* Morning weight */}
         <SectionLabel style={styles.sectionLabelSpacing}>Morning weight</SectionLabel>
-        <Card style={styles.card} padding="md">
+        <Card style={[styles.card, live.card]} padding="md">
           <View style={styles.cardHeader}>
-            <View style={styles.iconWrap}>
-              <Ionicons name="scale-outline" size={18} color={colors.primary} />
+            <View style={[styles.iconWrap, live.iconWrap]}>
+              <Ionicons name="scale-outline" size={18} color={t.colors.primary} />
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={styles.cardTitle}>Morning weight reminder</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.cardTitle, live.cardTitle]}>Morning weight reminder</Text>
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={styles.pickerLabel}>Hour</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.pickerLabel, live.pickerLabel]}>Hour</Text>
           <ChipRow
             items={HOURS_MORNING}
             selected={morningHour}
@@ -332,9 +337,9 @@ export default function CoachingRemindersScreen() {
             formatter={formatHour}
             accessibilityName="Morning weight hour"
           />
-          <Text maxFontSizeMultiplier={1.3} style={styles.scheduleText}>Notification at {formatHour(morningHour)}</Text>
-          <View style={styles.helperBlock}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.helperText}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.scheduleText, live.scheduleText]}>Notification at {formatHour(morningHour)}</Text>
+          <View style={[styles.helperBlock, live.helperBlock]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.helperText, live.helperText]}>
               Body weight shifts naturally each day with fluid, food, and hormones. Logging every other day at minimum gives Volyume enough readings to see the trend. Three or more readings per week opens up the weekly check-in.
             </Text>
           </View>
@@ -342,21 +347,21 @@ export default function CoachingRemindersScreen() {
 
         {/* Weekly check-in */}
         <SectionLabel style={styles.sectionLabelSpacing}>Weekly check-in</SectionLabel>
-        <Card style={styles.card} padding="md">
+        <Card style={[styles.card, live.card]} padding="md">
           <View style={styles.cardHeader}>
-            <View style={styles.iconWrap}>
-              <Ionicons name="pulse-outline" size={18} color={colors.primary} />
+            <View style={[styles.iconWrap, live.iconWrap]}>
+              <Ionicons name="pulse-outline" size={18} color={t.colors.primary} />
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={styles.cardTitle}>Weekly check-in reminder</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.cardTitle, live.cardTitle]}>Weekly check-in reminder</Text>
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={styles.pickerLabel}>Day</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.pickerLabel, live.pickerLabel]}>Day</Text>
           <ChipRow
             items={DAYS.map((d, i) => ({ value: i, label: d }))}
             selected={checkinDay}
             onSelect={(d) => { setCheckinDay(d); scheduleApply({ checkinDay: d }); }}
             accessibilityName="Check-in day"
           />
-          <Text maxFontSizeMultiplier={1.3} style={styles.pickerLabel}>Hour</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.pickerLabel, live.pickerLabel]}>Hour</Text>
           <ChipRow
             items={HOURS_EVENING}
             selected={checkinHour}
@@ -364,14 +369,14 @@ export default function CoachingRemindersScreen() {
             formatter={formatHour}
             accessibilityName="Check-in hour"
           />
-          <Text maxFontSizeMultiplier={1.3} style={styles.scheduleText}>Reminder every {formatDayHour(checkinDay, checkinHour)}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.scheduleText, live.scheduleText]}>Reminder every {formatDayHour(checkinDay, checkinHour)}</Text>
           {lastCheckinMs > 0 && (
-            <Text maxFontSizeMultiplier={1.3} style={styles.scheduleSubText}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.scheduleSubText, live.scheduleSubText]}>
               Your next check-in will be {formatNextFire(nextFire)}{bumped ? ', so the coach has a full week of fresh data to act on' : ''}.
             </Text>
           )}
-          <View style={styles.helperBlock}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.helperText}>
+          <View style={[styles.helperBlock, live.helperBlock]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.helperText, live.helperText]}>
               You can change the day any time. The next reminder will be at least 7 days after your last check-in so the trend has enough data to be useful.
             </Text>
           </View>
@@ -379,23 +384,23 @@ export default function CoachingRemindersScreen() {
 
         {/* Missed check-in follow-up (OPP-C03). Optional, default on. */}
         <SectionLabel style={styles.sectionLabelSpacing}>Check-in follow-up</SectionLabel>
-        <Card style={styles.card} padding="md">
+        <Card style={[styles.card, live.card]} padding="md">
           <View style={styles.cardHeader}>
-            <View style={styles.iconWrap}>
-              <Ionicons name="hand-left-outline" size={18} color={colors.primary} />
+            <View style={[styles.iconWrap, live.iconWrap]}>
+              <Ionicons name="hand-left-outline" size={18} color={t.colors.primary} />
             </View>
             <Text maxFontSizeMultiplier={1.3} style={[styles.cardTitle, styles.toggleTitle]}>Follow up if a check-in slips by</Text>
             <Switch
               value={missedEnabled}
               onValueChange={handleMissedToggle}
-              trackColor={{ false: colors.surface3, true: colors.primaryBg }}
-              thumbColor={colors.primary}
-              ios_backgroundColor={colors.surface3}
+              trackColor={{ false: t.colors.surface3, true: t.colors.primaryBg }}
+              thumbColor={t.colors.primary}
+              ios_backgroundColor={t.colors.surface3}
               accessibilityLabel="Check-in follow-up toggle"
             />
           </View>
-          <View style={styles.helperBlock}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.helperText}>
+          <View style={[styles.helperBlock, live.helperBlock]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.helperText, live.helperText]}>
               If a check-in day passes without one, you'll get a gentle nudge that evening and a look at your weekly trend two days later. Never more than that, and never a guilt trip.
             </Text>
           </View>
@@ -403,29 +408,29 @@ export default function CoachingRemindersScreen() {
 
         {/* F3: planned-meal confirm reminder. Optional, default on, Pro. */}
         <SectionLabel style={styles.sectionLabelSpacing}>Meal-plan reminder</SectionLabel>
-        <Card style={styles.card} padding="md">
+        <Card style={[styles.card, live.card]} padding="md">
           <View style={styles.cardHeader}>
-            <View style={styles.iconWrap}>
-              <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
+            <View style={[styles.iconWrap, live.iconWrap]}>
+              <Ionicons name="restaurant-outline" size={18} color={t.colors.primary} />
             </View>
             <Text maxFontSizeMultiplier={1.3} style={[styles.cardTitle, styles.toggleTitle]}>Remind me to confirm planned meals</Text>
             <Switch
               value={plannedConfirmEnabled}
               onValueChange={handlePlannedConfirmToggle}
-              trackColor={{ false: colors.surface3, true: colors.primaryBg }}
-              thumbColor={colors.primary}
-              ios_backgroundColor={colors.surface3}
+              trackColor={{ false: t.colors.surface3, true: t.colors.primaryBg }}
+              thumbColor={t.colors.primary}
+              ios_backgroundColor={t.colors.surface3}
               accessibilityLabel="Meal-plan reminder toggle"
             />
           </View>
-          <View style={styles.helperBlock}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.helperText}>
+          <View style={[styles.helperBlock, live.helperBlock]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.helperText, live.helperText]}>
               If you have planned meals you've not marked as eaten, we'll send one gentle nudge in the evening so you can confirm them and keep your coach accurate.
             </Text>
           </View>
         </Card>
 
-        {saved && <Text maxFontSizeMultiplier={1.3} style={styles.savedText}>Saved</Text>}
+        {saved && <Text maxFontSizeMultiplier={1.3} style={[styles.savedText, live.savedText]}>Saved</Text>}
       </ScrollView>
     </SafeAreaView>
   );
@@ -489,3 +494,28 @@ const styles = StyleSheet.create({
     textAlign: 'center', marginTop: spacing.sm,
   },
 });
+
+// CP-10 batch G lane 1 (2026-07-11): the frozen `styles` block above stays
+// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/padding/gap/margin/borderRadius/minWidth, no token) and
+// fontWeight (not part of useTheme()'s shape) are correctly omitted. Both
+// coaching reminders stay always-scheduled (no toggle) -- colours only.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    intro: { ...t.type.bodySm, color: t.colors.textSecondary },
+    warningBox: { backgroundColor: t.colors.warningBg, borderColor: t.colors.warning },
+    warningText: { ...t.type.captionTight, color: t.colors.warning },
+    card: { backgroundColor: t.colors.surface2 },
+    iconWrap: { backgroundColor: t.colors.primaryBg },
+    cardTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    pickerLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    scheduleText: { ...t.type.label, color: t.colors.primary },
+    scheduleSubText: { ...t.type.captionTight, color: t.colors.textSecondary },
+    helperBlock: { borderTopColor: t.colors.border },
+    helperText: { ...t.type.bodySm, color: t.colors.textMuted },
+    savedText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+  };
+}

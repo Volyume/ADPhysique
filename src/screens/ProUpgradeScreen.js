@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, shadow } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import Button from '../components/Button';
 import BillingPeriodSelector from '../components/BillingPeriodSelector';
 import ModalHeader from '../components/ModalHeader';
@@ -71,6 +72,10 @@ export default function ProUpgradeScreen({ navigation, route }) {
     firstRunComplete: s.firstRunComplete,
   })));
 
+  // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
+  // Memoised: this screen renders a mapped PRO_PERKS/FAQ_ITEMS list.
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const hasAccount = Boolean(session?.user?.id) && !user?.isLocal;
   const canTrial = cascade.canStillTrial(userProfile);
 
@@ -326,13 +331,13 @@ export default function ProUpgradeScreen({ navigation, route }) {
     // through resetFirstRun back into full onboarding. They just get "Done".
     const needsSetup = !firstRunComplete;
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={[styles.safe, live.safe]}>
         <View style={styles.successWrap}>
-          <View style={styles.successCircle}>
-            <Ionicons name="checkmark" size={40} color={colors.onPrimary} />
+          <View style={[styles.successCircle, live.successCircle]}>
+            <Ionicons name="checkmark" size={40} color={t.colors.onPrimary} />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={styles.successTitle}>You're Pro.</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.successBody}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.successTitle, live.successTitle]}>You're Pro.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.successBody, live.successBody]}>
             {needsSetup
               ? 'Everything is ready and your data is backed up. Set up your training plan and nutrition targets and the coach can start.'
               : 'Everything is ready and your data is backed up.'}
@@ -361,30 +366,30 @@ export default function ProUpgradeScreen({ navigation, route }) {
   // Pitch + action.
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <ModalHeader title="Upgrade" onClose={() => navigation.goBack()} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <View style={styles.iconWrap}>
-            <Ionicons name="barbell-outline" size={30} color={colors.primary} />
+          <View style={[styles.iconWrap, live.iconWrap]}>
+            <Ionicons name="barbell-outline" size={30} color={t.colors.primary} />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={styles.title}>Go Pro</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Go Pro</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>
             Free keeps your training log. Pro reads it like a coach and adjusts your plan as you go.
           </Text>
 
           <View style={styles.perks}>
             {PRO_PERKS.map(p => (
               <View key={p.text} style={styles.perkRow}>
-                <View style={styles.perkIcon}>
-                  <Ionicons name={p.icon} size={16} color={colors.primary} />
+                <View style={[styles.perkIcon, live.perkIcon]}>
+                  <Ionicons name={p.icon} size={16} color={t.colors.primary} />
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={styles.perkText}>{p.text}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.perkText, live.perkText]}>{p.text}</Text>
               </View>
             ))}
           </View>
 
-          <Text maxFontSizeMultiplier={1.3} style={styles.credentialNote}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.credentialNote, live.credentialNote]}>
             Precision Coaching follows clear training rules and explains every change. It uses your recovery, food and progress.
           </Text>
 
@@ -398,7 +403,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
 
           {hasAccount ? (
             <>
-              <Text maxFontSizeMultiplier={1.3} style={styles.accountNote}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.accountNote, live.accountNote]}>
                 {PRO_BETA_ACTIVE
                   ? 'Your account is ready. Activate Pro to switch on the coaching features.'
                   : canTrial
@@ -429,7 +434,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
             </>
           ) : (
             <>
-              <Text maxFontSizeMultiplier={1.3} style={styles.accountNote}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.accountNote, live.accountNote]}>
                 Pro needs a free account so your plan and progress are backed up and your access carries over across devices.
               </Text>
 
@@ -448,24 +453,24 @@ export default function ProUpgradeScreen({ navigation, route }) {
               legal links. Plain headings (this screen has no collapse
               pattern); each answer is one or two calm, honest sentences. */}
           <View style={styles.faqWrap}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.faqTitle}>Common questions</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.faqTitle, live.faqTitle]}>Common questions</Text>
             {FAQ_ITEMS.map(item => (
               <View key={item.q} style={styles.faqItem}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.faqQ}>{item.q}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.faqA}>{item.a}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.faqQ, live.faqQ]}>{item.q}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.faqA, live.faqA]}>{item.a}</Text>
               </View>
             ))}
           </View>
 
           <TouchableOpacity
-            style={styles.policyLink}
+            style={[styles.policyLink, live.policyLink]}
             onPress={() => { haptics.selection(); navigation.navigate('SubscriptionPolicy'); }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityRole="button"
             accessibilityLabel="Subscription terms"
           >
-            <Ionicons name="information-circle-outline" size={14} color={colors.textSecondary} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.policyLinkText}>
+            <Ionicons name="information-circle-outline" size={14} color={t.colors.textSecondary} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.policyLinkText, live.policyLinkText]}>
               What stays if you switch back to Free later
             </Text>
           </TouchableOpacity>
@@ -475,7 +480,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
               allowed set for this screen family) -- left without an added
               haptic. */}
           <TouchableOpacity style={styles.laterBtn} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Maybe later">
-            <Text maxFontSizeMultiplier={1.3} style={styles.laterText}>Maybe later</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.laterText, live.laterText]}>Maybe later</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -598,3 +603,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
 });
+
+// CP-10 batch G lane 1 (2026-07-11): the frozen `styles` block above stays
+// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/padding/gap/margin/width/height/borderRadius, no token) and
+// fontWeight (not part of useTheme()'s shape) are correctly omitted. The
+// dead section/fieldLabel/fieldWrap/fieldInput/eyeBtn/switchBtn/switchText/
+// switchAction styles (unreferenced in this screen's JSX) are left out of
+// scope, matching "touch only what the task requires". No billing/IAP flow
+// or product ID touched -- colours only.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    iconWrap: { backgroundColor: t.colors.primaryBg },
+    title: { fontSize: t.fontSize.xxxl, color: t.colors.textPrimary },
+    subtitle: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
+    policyLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    policyLinkText: { ...t.type.caption, color: t.colors.textSecondary },
+    perkIcon: { backgroundColor: t.colors.primaryBg },
+    perkText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    credentialNote: { ...t.type.captionTight, color: t.colors.textMuted },
+    faqTitle: { ...t.type.label, color: t.colors.textSecondary },
+    faqQ: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    faqA: { ...t.type.bodySm, color: t.colors.textSecondary },
+    accountNote: { ...t.type.bodySm, color: t.colors.textMuted },
+    laterText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    successCircle: { backgroundColor: t.colors.primary },
+    successTitle: { fontSize: t.fontSize.xxxl, color: t.colors.textPrimary },
+    successBody: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
+  };
+}
