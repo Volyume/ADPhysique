@@ -16,7 +16,10 @@ describe('PlanLibraryScreen shared empty states', () => {
   });
 
   test('keeps search and category chips in one compact filter band', () => {
-    expect(source).toMatch(/<View style=\{styles\.filterPanel\}>[\s\S]*<SearchBar[\s\S]*<FlatList/);
+    // CP-10 batch G: filterPanel gained its live-theme override; the
+    // pinned structure (filter band wraps SearchBar then the chip FlatList)
+    // is unchanged, so the pattern accepts either spelling.
+    expect(source).toMatch(/<View style=\{(?:styles\.filterPanel|\[styles\.filterPanel, live\.filterPanel\])\}>[\s\S]*<SearchBar[\s\S]*<FlatList/);
     expect(source).toMatch(/filterPanel: \{[\s\S]*backgroundColor: colors\.surface[\s\S]*borderBottomColor: colors\.borderSubtle/);
     expect(source).toMatch(/paddingTop: spacing\.xxs/);
     expect(source).toMatch(/paddingBottom: spacing\.xs/);
@@ -25,7 +28,9 @@ describe('PlanLibraryScreen shared empty states', () => {
   });
 
   test('the plan list keeps empty states centred without leaving a heavy surface void', () => {
-    expect(source).toMatch(/<View style=\{styles\.listBand\}>[\s\S]*<FlashList/);
+    // CP-10 batch G: listBand gained its live-theme override; the pinned
+    // structure (the band wraps the FlashList) is unchanged.
+    expect(source).toMatch(/<View style=\{(?:styles\.listBand|\[styles\.listBand, live\.listBand\])\}>[\s\S]*<FlashList/);
     expect(source).toMatch(/listBand: \{ flex: 1, backgroundColor: colors\.background \}/);
     expect(source).toMatch(/<View style=\{styles\.listEmptyWrap\}>[\s\S]*<EmptyState/);
     expect(source).toMatch(/listEmptyWrap: \{[\s\S]*minHeight: 340/);

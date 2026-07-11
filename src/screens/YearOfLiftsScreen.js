@@ -23,6 +23,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, circle, withAlpha } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 // M4 (audit 03b §2.2 item 1): the story tap zones were the flagship dead
 // tap, no pressed state, no haptic. The tick goes through the self-gating
 // vocabulary (selection = story advance, same class as a scrub tick).
@@ -413,6 +414,13 @@ export function buildBlockCards(data, units) {
  * intro/outro = headline + subline only).
  */
 function StoryCard({ card, width }) {
+  // CP-10 batch G (2026-07-11): StoryCard is rendered as FlatList's
+  // renderItem (a sibling function-component scope, not prop-drilled
+  // `live`/`t` from YearOfLiftsScreen), so its own useTheme() call is
+  // cleaner than threading two extra props through every card. Same shared
+  // buildLiveStyles(t) as the parent screen (CardioHistoryScreen precedent).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={[styles.cardWrap, { width }]}>
       <GradientCard
@@ -420,37 +428,37 @@ function StoryCard({ card, width }) {
         intensity={0.28}
         style={styles.card}
       >
-        <View style={styles.iconWrap}>
-          <Ionicons name={card.icon} size={32} color={colors.textPrimary} />
+        <View style={[styles.iconWrap, live.iconWrap]}>
+          <Ionicons name={card.icon} size={32} color={t.colors.textPrimary} />
         </View>
 
         {card.type === 'stat' && (
           <>
-            <Text maxFontSizeMultiplier={1.3} style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.statValue, live.statValue]} numberOfLines={1} adjustsFontSizeToFit>
               {card.value}
             </Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.statUnit}>{card.unit}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.statCaption}>{card.caption}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.statUnit, live.statUnit]}>{card.unit}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.statCaption, live.statCaption]}>{card.caption}</Text>
           </>
         )}
 
         {(card.type === 'intro' || card.type === 'outro') && (
           <>
-            <Text maxFontSizeMultiplier={1.3} style={styles.heroHeadline}>{card.headline}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.heroSubline}>{card.subline}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.heroHeadline, live.heroHeadline]}>{card.headline}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.heroSubline, live.heroSubline]}>{card.subline}</Text>
           </>
         )}
 
         {card.type === 'list' && (
           <View style={styles.listWrap}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.listHeadline}>{card.headline}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.listSubline}>{card.subline}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.listHeadline, live.listHeadline]}>{card.headline}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.listSubline, live.listSubline]}>{card.subline}</Text>
             <View style={styles.listRows}>
               {card.rows.map((row, i) => (
                 <View key={i} style={styles.listRow}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.listRank}>{i + 1}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.listPrimary} numberOfLines={1}>{row.primary}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.listSecondary}>{row.secondary}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.listRank, live.listRank]}>{i + 1}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.listPrimary, live.listPrimary]} numberOfLines={1}>{row.primary}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.listSecondary, live.listSecondary]}>{row.secondary}</Text>
                 </View>
               ))}
             </View>
@@ -477,6 +485,10 @@ export default function YearOfLiftsScreen({ navigation, route }) {
   })));
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const { width: SCREEN_W } = useWindowDimensions();
+  // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js). Memoised
+  // because this screen renders a FlatList (renderItem runs once per card).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const [data, setData] = useState(null);
   const [neutral, setNeutral] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -600,7 +612,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'left', 'right', 'bottom']}>
       {/* barStyle is intentionally static (not theme-derived): this screen
           is a fixed dark "story" surface regardless of the app's light/dark
           theme setting, so light-content icons are always correct here.
@@ -620,12 +632,13 @@ export default function YearOfLiftsScreen({ navigation, route }) {
           over its on-screen time (Instagram-story timer). */}
       <View style={styles.pipsRow}>
         {cards.map((_, i) => (
-          <View key={i} style={styles.pip}>
-            {i < index ? <View style={styles.pipFillFull} /> : null}
+          <View key={i} style={[styles.pip, live.pip]}>
+            {i < index ? <View style={[styles.pipFillFull, live.pipFillFull]} /> : null}
             {i === index ? (
               <Animated.View
                 style={[
                   styles.pipFill,
+                  live.pipFill,
                   { width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) },
                 ]}
               />
@@ -640,7 +653,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel={variant === 'month' ? 'Share your month' : variant === 'week' ? 'Share your week' : variant === 'block' ? 'Share your block' : 'Share your year'}
           >
-            <Ionicons name="share-outline" size={18} color={colors.textPrimary} />
+            <Ionicons name="share-outline" size={18} color={t.colors.textPrimary} />
           </TouchableOpacity>
         )}
         <TouchableOpacity
@@ -650,13 +663,13 @@ export default function YearOfLiftsScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Close"
         >
-          <Ionicons name="close" size={20} color={colors.textPrimary} />
+          <Ionicons name="close" size={20} color={t.colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
       {loading && (
         <View style={styles.loadingWrap}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.loadingText}>{variant === 'month' ? 'Building your recap...' : variant === 'week' ? 'Building your week...' : variant === 'block' ? 'Building your block story...' : 'Building your year...'}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.loadingText, live.loadingText]}>{variant === 'month' ? 'Building your recap...' : variant === 'week' ? 'Building your week...' : variant === 'block' ? 'Building your block story...' : 'Building your year...'}</Text>
         </View>
       )}
 
@@ -705,13 +718,13 @@ export default function YearOfLiftsScreen({ navigation, route }) {
                 visual acknowledgment a tap gets; the selection tick fires on
                 the TAP handlers only, never on the auto-advance timer. */}
             <Pressable
-              style={({ pressed }) => [styles.tapLeft, pressed && styles.tapPressed]}
+              style={({ pressed }) => [styles.tapLeft, pressed && [styles.tapPressed, live.tapPressed]]}
               onPress={() => { haptics.selection(); rewind(); }}
               accessibilityRole="button"
               accessibilityLabel="Previous slide"
             />
             <Pressable
-              style={({ pressed }) => [styles.tapRight, pressed && styles.tapPressed]}
+              style={({ pressed }) => [styles.tapRight, pressed && [styles.tapPressed, live.tapPressed]]}
               onPress={() => { haptics.selection(); advance(); }}
               accessibilityRole="button"
               accessibilityLabel="Next slide"
@@ -864,3 +877,37 @@ const styles = StyleSheet.create({
   // otherwise invisible zone without competing with the card artwork.
   tapPressed: { backgroundColor: withAlpha(colors.textPrimary, 0.08), borderRadius: radius.md },
 });
+
+// CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, shared
+// by this screen's two function-component scopes (YearOfLiftsScreen and
+// StoryCard) so they can never drift out of step with each other or the
+// frozen block. Pure layout keys (flex/gap/padding/width/position, no
+// colour/fontSize/type token) are correctly omitted -- there is nothing to
+// unfreeze for them. Same pattern as CardioHistoryScreen.js's
+// buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    pip: { backgroundColor: t.colors.border },
+    pipFill: { backgroundColor: t.colors.primary },
+    pipFillFull: { backgroundColor: t.colors.textSecondary },
+    loadingText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    iconWrap: { backgroundColor: t.colors.borderSubtle },
+    // statValue/heroHeadline keep their raw display-size literals in the
+    // frozen block (intentional hero sizes, theme-invariant) -- only the
+    // ink is mirrored here.
+    statValue: { color: t.colors.textPrimary },
+    statUnit: { ...t.type.h3, color: t.colors.textPrimary },
+    statCaption: { ...t.type.body, color: t.colors.textSecondary },
+    heroHeadline: { color: t.colors.textPrimary },
+    heroSubline: { ...t.type.body, color: t.colors.textSecondary },
+    listHeadline: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
+    listSubline: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    listRank: { fontSize: t.fontSize.lg, color: t.colors.primary },
+    listPrimary: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    listSecondary: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    tapPressed: { backgroundColor: withAlpha(t.colors.textPrimary, 0.08) },
+  };
+}

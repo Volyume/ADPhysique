@@ -38,7 +38,11 @@ describe('no-plan / start-plan copy', () => {
   });
 
   test('PlansScreen free no-plan copy matches the shared verb', () => {
-    const block = PLANS.slice(PLANS.indexOf('<Card style={styles.noPlanCard}>'), PLANS.indexOf('<Card style={styles.noActivePlanRow}>'));
+    // CP-10 batch G: the noPlanCard anchor gained its live-theme override
+    // (style={[styles.noPlanCard, live.noPlanCard]}); the slice anchor
+    // tracks that spelling (noActivePlanRow carries no colour token, so it
+    // stays single-style). The pinned copy inside the block is unchanged.
+    const block = PLANS.slice(PLANS.indexOf('<Card style={[styles.noPlanCard, live.noPlanCard]}>'), PLANS.indexOf('<Card style={styles.noActivePlanRow}>'));
     expect(block).toContain('No active plan yet');
     expect(block).toContain('Start with a plan');
     expect(block).toContain('Browse plans');

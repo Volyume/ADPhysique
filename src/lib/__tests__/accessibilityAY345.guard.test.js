@@ -51,8 +51,12 @@ describe('AY-3: modal backdrops label themselves "Close"', () => {
 
   test('PlansScreen.js folder-rename prompt backdrop', () => {
     const source = read('screens/PlansScreen.js');
+    // CP-10 batch G: the backdrop gained its live-theme override
+    // (style={[styles.backdrop, live.backdrop]}); the pinned a11y contract
+    // (role button, label "Close") is unchanged, so the pattern accepts
+    // either spelling.
     expect(source).toMatch(
-      /<Pressable accessibilityRole="button" accessibilityLabel="Close" style=\{styles\.backdrop\}/,
+      /<Pressable accessibilityRole="button" accessibilityLabel="Close" style=\{(?:styles\.backdrop|\[styles\.backdrop, live\.backdrop\])\}/,
     );
   });
 
@@ -95,8 +99,11 @@ describe('AY-4: RoutineDetailScreen modal isolation', () => {
   });
 
   test('the remaining raw Modal (swap sheet) marks its content accessibilityViewIsModal', () => {
+    // CP-10 batch G: swapSafe gained its live-theme override; the pinned
+    // a11y contract (accessibilityViewIsModal on the sheet content) is
+    // unchanged, so the pattern accepts either spelling.
     expect(source).toMatch(
-      /<SafeAreaView style=\{styles\.swapSafe\} edges=\{\['top', 'bottom'\]\} accessibilityViewIsModal>/,
+      /<SafeAreaView style=\{(?:styles\.swapSafe|\[styles\.swapSafe, live\.swapSafe\])\} edges=\{\['top', 'bottom'\]\} accessibilityViewIsModal>/,
     );
   });
 });

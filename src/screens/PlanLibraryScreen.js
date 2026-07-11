@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 // E8 perf: the vertical plans list recycles via FlashList; the small
@@ -11,6 +11,7 @@ import Button from '../components/Button';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock } from '../lib/database';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
@@ -177,21 +178,32 @@ const DIFFICULTY_LABELS = ['Beginner', 'Intermediate', 'Advanced'];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+// CP-10 batch G (2026-07-11): sibling function-component scope (not
+// prop-drilled `live`/`t` from PlanLibraryScreen), so its own useTheme() call
+// is cleaner than threading two extra props through. Same shared
+// buildLiveStyles(t) as the parent screen (CardioTrend precedent).
 function PlanBadge({ label, amber }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
-    <View style={[styles.badge, amber && styles.badgeAmber]}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.badgeText, amber && styles.badgeTextAmber]}>{label}</Text>
+    <View style={[styles.badge, live.badge, amber && [styles.badgeAmber, live.badgeAmber]]}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.badgeText, live.badgeText, amber && [styles.badgeTextAmber, live.badgeTextAmber]]}>{label}</Text>
     </View>
   );
 }
 
+// CP-10 batch G (2026-07-11): sibling function-component scope, own
+// useTheme() call (same reasoning as PlanBadge above), same shared
+// buildLiveStyles(t).
 function DivisionGrid({ selectedDivision, onSelectDivision }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
-    <View style={styles.divisionSection}>
-      <Text maxFontSizeMultiplier={1.3} style={styles.divisionIntroDesc}>
+    <View style={[styles.divisionSection, live.divisionSection]}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.divisionIntroDesc, live.divisionIntroDesc]}>
         Plans for stage categories, or anyone training for that shape. Pick a division to narrow the library.
       </Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.divisionGroupLabel}>Men's divisions</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.divisionGroupLabel, live.divisionGroupLabel]}>Men's divisions</Text>
       <View style={styles.divisionChips}>
         {DIVISIONS_MEN.map(d => (
           <Chip
@@ -200,14 +212,14 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
             selected={selectedDivision === d.key}
             onPress={() => onSelectDivision(selectedDivision === d.key ? null : d.key)}
             style={styles.divisionChip}
-            labelStyle={styles.divisionChipText}
-            selectedLabelStyle={styles.divisionChipTextActive}
+            labelStyle={[styles.divisionChipText, live.divisionChipText]}
+            selectedLabelStyle={[styles.divisionChipTextActive, live.divisionChipTextActive]}
             accessibilityLabel={d.label}
           />
         ))}
       </View>
 
-      <Text maxFontSizeMultiplier={1.3} style={[styles.divisionGroupLabel, { marginTop: spacing.md }]}>Women's divisions</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.divisionGroupLabel, live.divisionGroupLabel, { marginTop: spacing.md }]}>Women's divisions</Text>
       <View style={styles.divisionChips}>
         {DIVISIONS_WOMEN.map(d => (
           <Chip
@@ -216,8 +228,8 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
             selected={selectedDivision === d.key}
             onPress={() => onSelectDivision(selectedDivision === d.key ? null : d.key)}
             style={styles.divisionChip}
-            labelStyle={styles.divisionChipText}
-            selectedLabelStyle={styles.divisionChipTextActive}
+            labelStyle={[styles.divisionChipText, live.divisionChipText]}
+            selectedLabelStyle={[styles.divisionChipTextActive, live.divisionChipTextActive]}
             accessibilityLabel={d.label}
           />
         ))}
@@ -227,7 +239,7 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
         const d = ALL_DIVISIONS.find(x => x.key === selectedDivision);
         return d ? (
           <Card surface="surface2" radius="md" padding="md" style={styles.divisionDesc}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.divisionDescText}>{d.desc}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.divisionDescText, live.divisionDescText]}>{d.desc}</Text>
           </Card>
         ) : null;
       })()}
@@ -244,6 +256,11 @@ export default function PlanLibraryScreen({ navigation, route }) {
     user: s.user,
   })));
   const fromFirstRun = route?.params?.fromFirstRun ?? false;
+  // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js). Memoised
+  // because this screen renders a plan list (FlashList) and a chip list
+  // (FlatList).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   const [plans, setPlans] = useState([]);
   const [workoutCounts, setWorkoutCounts] = useState({});
@@ -427,10 +444,10 @@ export default function PlanLibraryScreen({ navigation, route }) {
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Plan library" />
 
-      <View style={styles.filterPanel}>
+      <View style={[styles.filterPanel, live.filterPanel]}>
         <SearchBar
           value={query}
           onChangeText={setQuery}
@@ -460,8 +477,8 @@ export default function PlanLibraryScreen({ navigation, route }) {
                 accessibilityRole="radio"
                 accessibilityLabel={item.label}
                 style={styles.collectionChip}
-                labelStyle={styles.collectionChipText}
-                selectedLabelStyle={styles.collectionChipTextActive}
+                labelStyle={[styles.collectionChipText, live.collectionChipText]}
+                selectedLabelStyle={[styles.collectionChipTextActive, live.collectionChipTextActive]}
               />
             );
           }}
@@ -476,13 +493,13 @@ export default function PlanLibraryScreen({ navigation, route }) {
         />
       )}
 
-      <View style={styles.listBand}>
+      <View style={[styles.listBand, live.listBand]}>
         {/* Plans list */}
         <FlashList
         ref={listRef}
         data={filtered}
         keyExtractor={p => p.id}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={t.colors.primary} />}
         contentContainerStyle={styles.listContent}
         ItemSeparatorComponent={() => <View style={styles.planSeparator} />}
         ListHeaderComponent={
@@ -492,14 +509,14 @@ export default function PlanLibraryScreen({ navigation, route }) {
               onPress={openQuiz}
               accessibilityLabel="Not sure where to start? Answer two quick questions for a plan suggestion"
             >
-              <View style={styles.quizBannerIcon}>
-                <Ionicons name="help-circle-outline" size={20} color={colors.primary} />
+              <View style={[styles.quizBannerIcon, live.quizBannerIcon]}>
+                <Ionicons name="help-circle-outline" size={20} color={t.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.quizBannerTitle}>Not sure where to start?</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.quizBannerBody}>Answer two quick questions and we'll point you to the right plan.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.quizBannerTitle, live.quizBannerTitle]}>Not sure where to start?</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.quizBannerBody, live.quizBannerBody]}>Answer two quick questions and we'll point you to the right plan.</Text>
               </View>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </Card>
           ) : null
         }
@@ -567,27 +584,27 @@ export default function PlanLibraryScreen({ navigation, route }) {
                     )}
                   </View>
                   {wc ? (
-                    <Text maxFontSizeMultiplier={1.3} style={styles.workoutCount}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.workoutCount, live.workoutCount]}>
                       {wc} workout{wc !== 1 ? 's' : ''}
                     </Text>
                   ) : null}
                 </View>
 
-                <Text maxFontSizeMultiplier={1.3} style={styles.planName}>{plan.name}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.planName, live.planName]}>{plan.name}</Text>
 
                 {plan.description ? (
-                  <Text maxFontSizeMultiplier={1.3} style={styles.planDesc} numberOfLines={2}>{plan.description}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.planDesc, live.planDesc]} numberOfLines={2}>{plan.description}</Text>
                 ) : null}
               </TouchableOpacity>
 
-              <View style={styles.planCardFooter}>
+              <View style={[styles.planCardFooter, live.planCardFooter]}>
                 <Button
                   title="Preview plan"
                   variant="secondary"
                   size="sm"
                   onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: true })}
-                  style={styles.previewBtn}
-                  textStyle={styles.previewText}
+                  style={[styles.previewBtn, live.previewBtn]}
+                  textStyle={[styles.previewText, live.previewText]}
                   accessibilityLabel={`Preview ${plan.name}`}
                 />
                 <Button
@@ -595,8 +612,8 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   title="Add to my plans"
                   size="sm"
                   onPress={() => handleAddToMyPlans(plan)}
-                  style={styles.addBtn}
-                  textStyle={styles.addBtnText}
+                  style={[styles.addBtn, live.addBtn]}
+                  textStyle={[styles.addBtnText, live.addBtnText]}
                   accessibilityLabel={`Add ${plan.name} to my plans`}
                 />
               </View>
@@ -624,11 +641,11 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   {QUIZ_STEPS.map((_, i) => (
                     <View
                       key={i}
-                      style={[styles.quizDot, i <= quizStep && styles.quizDotActive]}
+                      style={[styles.quizDot, live.quizDot, i <= quizStep && [styles.quizDotActive, live.quizDotActive]]}
                     />
                   ))}
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={styles.quizQuestion}>{QUIZ_STEPS[quizStep].question}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.quizQuestion, live.quizQuestion]}>{QUIZ_STEPS[quizStep].question}</Text>
                 <View style={styles.quizOptions}>
                   {QUIZ_STEPS[quizStep].options.map(opt => (
                     <Card
@@ -641,31 +658,31 @@ export default function PlanLibraryScreen({ navigation, route }) {
                       accessibilityLabel={opt.label}
                     >
                       {opt.icon && (
-                        <Ionicons name={opt.icon} size={20} color={colors.primary} style={{ marginRight: spacing.md }} />
+                        <Ionicons name={opt.icon} size={20} color={t.colors.primary} style={{ marginRight: spacing.md }} />
                       )}
-                      <Text maxFontSizeMultiplier={1.3} style={styles.quizOptionText}>{opt.label}</Text>
-                      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.quizOptionText, live.quizOptionText]}>{opt.label}</Text>
+                      <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
                     </Card>
                   ))}
                 </View>
                 <TouchableOpacity style={styles.quizSkip} onPress={dismissQuiz} accessibilityRole="button">
-                  <Text maxFontSizeMultiplier={1.3} style={styles.quizSkipText}>Skip and browse all plans</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.quizSkipText, live.quizSkipText]}>Skip and browse all plans</Text>
                 </TouchableOpacity>
               </>
             ) : quizResult ? (
               // Result step
               <>
                 <View style={styles.quizResultIcon}>
-                  <Ionicons name="checkmark-circle" size={32} color={colors.primary} />
+                  <Ionicons name="checkmark-circle" size={32} color={t.colors.primary} />
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={styles.quizResultTitle}>Here's our suggestion</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.quizResultTitle, live.quizResultTitle]}>Here's our suggestion</Text>
                 <Card surface="surface2" style={styles.quizResultCard}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.quizResultName}>{quizResult.name}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.quizResultName, live.quizResultName]}>{quizResult.name}</Text>
                   {quizResult.description ? (
-                    <Text maxFontSizeMultiplier={1.3} style={styles.quizResultDesc} numberOfLines={3}>{quizResult.description}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.quizResultDesc, live.quizResultDesc]} numberOfLines={3}>{quizResult.description}</Text>
                   ) : null}
                   {quizResult.difficulty != null && (
-                    <Text maxFontSizeMultiplier={1.3} style={styles.quizResultMeta}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.quizResultMeta, live.quizResultMeta]}>
                       {DIFFICULTY_LABELS[quizResult.difficulty] ?? 'Intermediate'}
                       {workoutCounts[quizResult.id] ? ` - ${workoutCounts[quizResult.id]} workouts` : ''}
                     </Text>
@@ -674,32 +691,32 @@ export default function PlanLibraryScreen({ navigation, route }) {
                 <Button
                   title="Add this plan"
                   onPress={handleQuizStartPlan}
-                  style={styles.quizStartBtn}
-                  textStyle={styles.quizStartText}
+                  style={[styles.quizStartBtn, live.quizStartBtn]}
+                  textStyle={[styles.quizStartText, live.quizStartText]}
                   accessibilityLabel={`Add ${quizResult.name}`}
                 />
                 <Button
                   title="Preview first"
                   variant="secondary"
                   onPress={() => { dismissQuiz(); navigation.navigate('PlanDetail', { planId: quizResult.id, isLibrary: true }); }}
-                  style={styles.quizBrowseBtn}
-                  textStyle={styles.quizBrowseText}
+                  style={[styles.quizBrowseBtn, live.quizBrowseBtn]}
+                  textStyle={[styles.quizBrowseText, live.quizBrowseText]}
                   accessibilityLabel={`Preview ${quizResult.name}`}
                 />
                 <TouchableOpacity style={styles.quizSkip} onPress={handleQuizBrowse} accessibilityRole="button">
-                  <Text maxFontSizeMultiplier={1.3} style={styles.quizSkipText}>Browse all plans instead</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.quizSkipText, live.quizSkipText]}>Browse all plans instead</Text>
                 </TouchableOpacity>
               </>
             ) : (
               // No result
               <>
-                <Text maxFontSizeMultiplier={1.3} style={styles.quizResultTitle}>No exact match found</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.quizResultDesc}>Browse all the plans below to find one that suits you.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.quizResultTitle, live.quizResultTitle]}>No exact match found</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.quizResultDesc, live.quizResultDesc]}>Browse all the plans below to find one that suits you.</Text>
                 <Button
                   title="Browse all plans"
                   onPress={handleQuizBrowse}
-                  style={styles.quizStartBtn}
-                  textStyle={styles.quizStartText}
+                  style={[styles.quizStartBtn, live.quizStartBtn]}
+                  textStyle={[styles.quizStartText, live.quizStartText]}
                 />
               </>
             )}
@@ -885,3 +902,55 @@ const styles = StyleSheet.create({
   },
   quizBrowseText: { fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textPrimary },
 });
+
+// CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen (and its sibling PlanBadge/DivisionGrid components) carries no
+// static island under a live theme toggle. Pure layout keys (flex/gap/
+// padding/width/borderWidth, no token) are correctly omitted -- there is
+// nothing to unfreeze for them. Same pattern as WorkoutSummaryScreen.js's
+// buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    filterPanel: { backgroundColor: t.colors.surface, borderBottomColor: t.colors.borderSubtle },
+    collectionChipText: { ...t.type.label, color: t.colors.textSecondary },
+    collectionChipTextActive: { color: t.colors.primary },
+    divisionSection: { backgroundColor: t.colors.surface, borderBottomColor: t.colors.borderSubtle },
+    divisionGroupLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    divisionIntroDesc: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    divisionChipText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    divisionChipTextActive: { color: t.colors.primary },
+    divisionDescText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    listBand: { backgroundColor: t.colors.background },
+    quizBannerIcon: { backgroundColor: t.colors.primaryBg },
+    quizBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    quizBannerBody: { ...t.type.caption, color: t.colors.textMuted },
+    badge: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    badgeAmber: { backgroundColor: t.colors.surface2, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    badgeText: { fontSize: t.fontSize.micro, color: t.colors.textMuted },
+    badgeTextAmber: { color: t.colors.primary },
+    workoutCount: { ...t.type.caption, color: t.colors.textMuted },
+    planName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    planDesc: { ...t.type.bodySm, color: t.colors.textSecondary },
+    planCardFooter: { borderTopColor: t.colors.border },
+    previewText: { ...t.type.label, color: t.colors.textSecondary },
+    previewBtn: { backgroundColor: t.colors.surface2 },
+    addBtn: { backgroundColor: t.colors.primaryFill },
+    addBtnText: { ...t.type.label, color: t.colors.onPrimary },
+    quizDot: { backgroundColor: t.colors.border },
+    quizDotActive: { backgroundColor: t.colors.primary },
+    quizQuestion: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
+    quizOptionText: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    quizSkipText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    quizResultTitle: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
+    quizResultName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    quizResultDesc: { ...t.type.bodySm, color: t.colors.textSecondary },
+    quizResultMeta: { ...t.type.caption, color: t.colors.textMuted },
+    quizStartBtn: { backgroundColor: t.colors.primaryFill },
+    quizStartText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    quizBrowseBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    quizBrowseText: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+  };
+}

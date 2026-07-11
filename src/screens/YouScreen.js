@@ -5,13 +5,14 @@
  * but the visible tab is now Coach. This is the coaching hub: every
  * destination is a clear Volyume flow with its own guardrails.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import ScreenHeader from '../components/ScreenHeader';
 import Card from '../components/Card';
 import { ProBadge } from '../components/ProGate';
@@ -59,24 +60,30 @@ function formatShortDate(ms) {
   }
 }
 
+// CP-10 batch G (2026-07-11): sibling function-component scope (not
+// prop-drilled `live`/`t` from YouScreen, matching NutritionTargetsScreen's
+// MacroCard/WhySection precedent from batch E), own useTheme() call and the
+// shared buildLiveStyles(t) (same `styles` block this component reads).
 function NavRow({ icon, label, sub, onPress, pro }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <Card
       style={styles.navRow}
       onPress={onPress}
       accessibilityLabel={pro ? `${label}. Part of Pro.` : label}
     >
-      <View style={styles.navRowIcon}>
-        <Ionicons name={icon} size={18} color={colors.primary} />
+      <View style={[styles.navRowIcon, live.navRowIcon]}>
+        <Ionicons name={icon} size={18} color={t.colors.primary} />
       </View>
       <View style={styles.navRowText}>
         <View style={styles.navRowLabelRow}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.navRowLabel}>{label}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.navRowLabel, live.navRowLabel]}>{label}</Text>
           {pro ? <ProBadge size="sm" /> : null}
         </View>
-        {sub ? <Text maxFontSizeMultiplier={1.3} style={styles.navRowSub}>{sub}</Text> : null}
+        {sub ? <Text maxFontSizeMultiplier={1.3} style={[styles.navRowSub, live.navRowSub]}>{sub}</Text> : null}
       </View>
-      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+      <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
     </Card>
   );
 }
@@ -171,6 +178,9 @@ export default function YouScreen({ navigation }) {
   const [coachReadiness, setCoachReadiness] = useState(null);
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   useFocusEffect(useCallback(() => {
     let alive = true;
@@ -286,7 +296,7 @@ export default function YouScreen({ navigation }) {
   }, [navigation]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
         <ScreenHeader
           title="Coach"
@@ -295,29 +305,29 @@ export default function YouScreen({ navigation }) {
             <Pressable
               onPress={() => navigation.navigate('Settings')}
               hitSlop={10}
-              style={styles.settingsGear}
+              style={[styles.settingsGear, live.settingsGear]}
               accessibilityRole="button"
               accessibilityLabel="Settings"
             >
-              <Ionicons name="settings-outline" size={20} color={colors.textPrimary} />
+              <Ionicons name="settings-outline" size={20} color={t.colors.textPrimary} />
             </Pressable>
           )}
         />
 
         {loadError ? (
           <Card
-            style={styles.loadErrorCard}
+            style={[styles.loadErrorCard, live.loadErrorCard]}
             onPress={() => setReloadKey((n) => n + 1)}
             accessibilityLabel="Try loading coach data again"
           >
-            <View style={styles.loadErrorIcon}>
-              <Ionicons name="warning-outline" size={18} color={colors.warning} />
+            <View style={[styles.loadErrorIcon, live.loadErrorIcon]}>
+              <Ionicons name="warning-outline" size={18} color={t.colors.warning} />
             </View>
             <View style={styles.loadErrorCopy}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.loadErrorTitle}>Couldn't refresh Coach</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.loadErrorBody}>Your saved profile stays unchanged. Tap to try again.</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.loadErrorTitle, live.loadErrorTitle]}>Couldn't refresh Coach</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.loadErrorBody, live.loadErrorBody]}>Your saved profile stays unchanged. Tap to try again.</Text>
             </View>
-            <Ionicons name="refresh-outline" size={18} color={colors.textMuted} />
+            <Ionicons name="refresh-outline" size={18} color={t.colors.textMuted} />
           </Card>
         ) : null}
 
@@ -341,27 +351,27 @@ export default function YouScreen({ navigation }) {
           />
           <View style={styles.profileInfo}>
             <View style={styles.profileNameRow}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.profileName} numberOfLines={1}>{displayName}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.profileName, live.profileName]} numberOfLines={1}>{displayName}</Text>
               {isPro ? <ProBadge size="sm" /> : null}
             </View>
             {sessions != null ? (
-              <Text maxFontSizeMultiplier={1.3} style={styles.profileStat}>{sessions} completed session{sessions === 1 ? '' : 's'}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.profileStat, live.profileStat]}>{sessions} completed session{sessions === 1 ? '' : 's'}</Text>
             ) : user?.id ? (
               <Skeleton width={110} height={12} />
             ) : null}
-            {profileFocus ? <Text maxFontSizeMultiplier={1.3} style={styles.profileFocus} numberOfLines={2}>{profileFocus}</Text> : null}
+            {profileFocus ? <Text maxFontSizeMultiplier={1.3} style={[styles.profileFocus, live.profileFocus]} numberOfLines={2}>{profileFocus}</Text> : null}
           </View>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </Card>
 
         <Card style={styles.statusCard} tone={isPro && latestReview ? 'primary' : undefined}>
           <View style={styles.statusTop}>
-            <View style={styles.statusIcon}>
-              <Ionicons name="git-branch-outline" size={20} color={colors.primary} />
+            <View style={[styles.statusIcon, live.statusIcon]}>
+              <Ionicons name="git-branch-outline" size={20} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <SectionLabel tone="primary">Coach</SectionLabel>
-              <Text maxFontSizeMultiplier={1.3} style={styles.statusTitle}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.statusTitle, live.statusTitle]}>
                 {isPro
                   ? latestReview
                     ? `Weekly coach update${reviewDate ? `: ${reviewDate}` : ''}`
@@ -370,7 +380,7 @@ export default function YouScreen({ navigation }) {
               </Text>
             </View>
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={styles.statusBody}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.statusBody, live.statusBody]}>
             {isPro
               ? latestReview
                 ? 'Open it to see what changed, what was held, and the exact signals behind it.'
@@ -476,8 +486,8 @@ export default function YouScreen({ navigation }) {
         ) : null}
 
         <View style={styles.about}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.aboutName}>Volyume</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.aboutVersion}>Private coaching based on your logs.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.aboutName, live.aboutName]}>Volyume</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.aboutVersion, live.aboutVersion]}>Private coaching based on your logs.</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -563,3 +573,32 @@ const styles = StyleSheet.create({
   aboutName: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textMuted },
   aboutVersion: { ...type.caption, color: colors.textMuted },
 });
+
+// CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/gap/padding/width/height, no token) are correctly omitted --
+// there is nothing to unfreeze for them. Same pattern as
+// AddCustomFoodScreen.js's buildLiveStyles (batch D).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    settingsGear: { backgroundColor: t.colors.surface2 },
+    profileName: { ...t.type.title, color: t.colors.textPrimary },
+    profileStat: { ...t.type.num('caption'), color: t.colors.textSecondary },
+    profileFocus: { ...t.type.captionTight, color: t.colors.textMuted },
+    loadErrorCard: { borderColor: t.colors.warning },
+    loadErrorIcon: { backgroundColor: t.colors.warningBg },
+    loadErrorTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    loadErrorBody: { ...t.type.caption, color: t.colors.textSecondary },
+    statusIcon: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    statusTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    statusBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+    navRowIcon: { backgroundColor: t.colors.primaryBg },
+    navRowLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    navRowSub: { ...t.type.caption, color: t.colors.textSecondary },
+    aboutName: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    aboutVersion: { ...t.type.caption, color: t.colors.textMuted },
+  };
+}

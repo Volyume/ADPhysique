@@ -21,7 +21,11 @@ describe('BuildWorkoutScreen travel equipment sheet guard', () => {
   });
 
   test('keeps travel and empty-search actions neutral rather than amber text links', () => {
-    expect(source).toMatch(/<Ionicons name="airplane-outline" size=\{15\} color=\{colors\.textSecondary\} \/>/);
+    // CP-10 batch G: the icon colour now resolves from the live theme
+    // (t.colors.textSecondary). The guard's contract is the TOKEN -- the
+    // icon stays neutral textSecondary, never amber -- so the pattern
+    // accepts either the static or the live spelling.
+    expect(source).toMatch(/<Ionicons name="airplane-outline" size=\{15\} color=\{(?:t\.)?colors\.textSecondary\} \/>/);
     expect(source).toMatch(/travelChip: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface/);
     expect(source).toContain('travelChipText: { ...type.label, color: colors.textPrimary, flex: 1 }');
     expect(source).toContain('pickerEmptyBtnText: { ...type.label, color: colors.textPrimary }');

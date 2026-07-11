@@ -27,8 +27,13 @@ describe('share copy polish', () => {
 
   test('Analytics share CTAs are contained controls, not loose amber text links', () => {
     const analytics = read('AnalyticsScreen.js');
-    expect(analytics.match(/style=\{styles\.milestoneCtaButton\}/g)?.length).toBeGreaterThanOrEqual(4);
-    expect(analytics).toContain('style={[styles.trainingLoadCtaRow, styles.milestoneCtaButton]}');
+    // CP-10 batch G: the CTA chrome gained its live-theme override
+    // (style={[styles.milestoneCtaButton, live.milestoneCtaButton]}). The
+    // contract -- at least four CTAs render through the contained
+    // milestoneCtaButton chrome -- is unchanged; the patterns accept the
+    // live-array spelling.
+    expect(analytics.match(/style=\{\[styles\.milestoneCtaButton, live\.milestoneCtaButton\]\}/g)?.length).toBeGreaterThanOrEqual(4);
+    expect(analytics).toContain('style={[styles.trainingLoadCtaRow, styles.milestoneCtaButton, live.milestoneCtaButton]}');
     expect(analytics).toMatch(/milestoneCtaButton: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(analytics).toContain('milestoneCta: { ...type.label, color: colors.textPrimary }');
     expect(analytics).not.toMatch(/milestoneCta: \{ fontSize: fontSize\.sm,[\s\S]*color: colors\.primary/);
@@ -36,8 +41,10 @@ describe('share copy polish', () => {
 
   test('Analytics recent sessions link uses contained neutral chrome', () => {
     const analytics = read('AnalyticsScreen.js');
-    expect(analytics).toContain('style={styles.seeAllButton}');
-    expect(analytics).toContain('Ionicons name="list-outline" size={14} color={colors.textSecondary}');
+    // CP-10 batch G: seeAllButton and the icon ink now resolve from the
+    // live theme; the contained-neutral-chrome contract is unchanged.
+    expect(analytics).toContain('style={[styles.seeAllButton, live.seeAllButton]}');
+    expect(analytics).toContain('Ionicons name="list-outline" size={14} color={t.colors.textSecondary}');
     expect(analytics).toMatch(/seeAllButton: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(analytics).toContain('seeAll:      { ...type.label, color: colors.textPrimary }');
     expect(analytics).not.toContain('seeAll:      { ...type.label, color: colors.primary }');

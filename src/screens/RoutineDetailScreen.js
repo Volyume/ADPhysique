@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Card from '../components/Card';
@@ -52,7 +53,15 @@ function computeMuscleCoverage(exercises) {
 // criticising the app's own plans with week-level logic applied to one
 // day. Balance is the generator's job across the WEEK; authoring-time
 // feedback lives in the manual builder.
+// CP-10 batch G (2026-07-11): sibling function-component scope (not
+// prop-drilled `live`/`t` from RoutineDetailScreen, matching
+// NutritionTargetsScreen's MacroCard/WhySection precedent from batch E), own
+// useTheme() call. Uses its own separate `tagStyles` block (not the main
+// screen's `styles`), so it gets its own buildTagLiveStyles(t) below rather
+// than sharing the main buildLiveStyles(t).
 function MuscleTagRow({ exercises }) {
+  const t = useTheme();
+  const tagLive = useMemo(() => buildTagLiveStyles(t), [t]);
   const coverage = computeMuscleCoverage(exercises);
 
   if (coverage.length === 0) return null;
@@ -70,18 +79,18 @@ function MuscleTagRow({ exercises }) {
             MUSCLE_DISPLAY_NAMES[muscle] ||
             muscle.charAt(0).toUpperCase() + muscle.slice(1).replace(/_/g, ' ');
           const chipStyle = count >= 3
-            ? tagStyles.chipHigh
+            ? [tagStyles.chipHigh, tagLive.chipHigh]
             : count === 2
-            ? tagStyles.chipMid
-            : tagStyles.chipLow;
+            ? [tagStyles.chipMid, tagLive.chipMid]
+            : [tagStyles.chipLow, tagLive.chipLow];
           const textStyle = count >= 3
-            ? tagStyles.chipTextHigh
+            ? [tagStyles.chipTextHigh, tagLive.chipTextHigh]
             : count === 2
-            ? tagStyles.chipTextMid
-            : tagStyles.chipTextLow;
+            ? [tagStyles.chipTextMid, tagLive.chipTextMid]
+            : [tagStyles.chipTextLow, tagLive.chipTextLow];
           return (
             <View key={muscle} style={[tagStyles.chip, chipStyle]}>
-              <Text maxFontSizeMultiplier={1.3} style={[tagStyles.chipText, textStyle]}>
+              <Text maxFontSizeMultiplier={1.3} style={[tagStyles.chipText, tagLive.chipText, textStyle]}>
                 {displayName} ×{count}
               </Text>
             </View>
@@ -121,6 +130,9 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // A4: division fingerprint line ("Built for Bikini: ..."), set only when
   // this routine belongs to the user's ACTIVE generated division plan.
   const [divisionLine, setDivisionLine] = useState(null);
+  // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   useEffect(() => {
     if (routineId) loadRoutine();
@@ -344,7 +356,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       accessibilityRole="button"
       accessibilityLabel={isReordering ? 'Done reordering' : 'Reorder exercises'}
     >
-      <Text maxFontSizeMultiplier={1.3} style={{ fontSize: fontSize.md, color: isReordering ? colors.primary : colors.textSecondary, fontWeight: isReordering ? fontWeight.bold : fontWeight.regular }}>
+      <Text maxFontSizeMultiplier={1.3} style={{ fontSize: t.fontSize.md, color: isReordering ? t.colors.primary : t.colors.textSecondary, fontWeight: isReordering ? fontWeight.bold : fontWeight.regular }}>
         {isReordering ? 'Done' : 'Reorder'}
       </Text>
     </TouchableOpacity>
@@ -365,10 +377,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
       />
       <MuscleTagRow exercises={exercises} />
       {divisionLine ? (
-        <Text maxFontSizeMultiplier={1.3} style={styles.divisionLine}>{divisionLine}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.divisionLine, live.divisionLine]}>{divisionLine}</Text>
       ) : null}
       {routine.split_type ? (
-        <Text maxFontSizeMultiplier={1.3} style={styles.splitRationale}>{getSplitRationale(routine.split_type)}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.splitRationale, live.splitRationale]}>{getSplitRationale(routine.split_type)}</Text>
       ) : null}
     </>
   );
@@ -379,7 +391,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // nothing here needs to change between the two containers below.
   const renderExerciseRow = ({ item: { routineExercise, exercise }, index }) => (
           <TouchableOpacity
-            style={[styles.exerciseCard, exercise.unresolved && styles.exerciseCardUnresolved]}
+            style={[styles.exerciseCard, live.exerciseCard, exercise.unresolved && [styles.exerciseCardUnresolved, live.exerciseCardUnresolved]]}
             onPress={() => {
               if (isReordering) return;
               if (exercise.unresolved) {
@@ -402,18 +414,18 @@ export default function RoutineDetailScreen({ navigation, route }) {
             accessibilityRole={isReordering ? undefined : 'button'}
             accessibilityLabel={isReordering ? undefined : (exercise.unresolved ? `Re-link ${exercise.name}` : `Edit ${exercise.name}`)}
           >
-            <View style={[styles.orderBadge, exercise.unresolved && styles.orderBadgeUnresolved]}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.orderNum}>{index + 1}</Text>
+            <View style={[styles.orderBadge, live.orderBadge, exercise.unresolved && [styles.orderBadgeUnresolved, live.orderBadgeUnresolved]]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.orderNum, live.orderNum]}>{index + 1}</Text>
             </View>
             <View style={styles.exerciseInfo}>
               <View style={styles.exerciseTitleRow}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseName, exercise.unresolved && styles.exerciseNameUnresolved]}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseName, live.exerciseName, exercise.unresolved && [styles.exerciseNameUnresolved, live.exerciseNameUnresolved]]}>
                   {exercise.name || 'Exercise (couldn’t restore)'}
                 </Text>
                 {exercise.unresolved && (
-                  <View style={styles.relinkChip}>
-                    <Ionicons name="link-outline" size={12} color={colors.warning} />
-                    <Text maxFontSizeMultiplier={1.3} style={styles.relinkChipText}>Tap to re-link</Text>
+                  <View style={[styles.relinkChip, live.relinkChip]}>
+                    <Ionicons name="link-outline" size={12} color={t.colors.warning} />
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.relinkChipText, live.relinkChipText]}>Tap to re-link</Text>
                   </View>
                 )}
                 {(() => {
@@ -421,40 +433,40 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   const gIdx = gid ? supersetGroupOrder.indexOf(gid) : -1;
                   if (gIdx < 0) return null;
                   return (
-                    <View style={styles.supersetChip}>
-                      <Ionicons name="link" size={11} color={colors.primary} />
-                      <Text maxFontSizeMultiplier={1.3} style={styles.supersetChipText}>
+                    <View style={[styles.supersetChip, live.supersetChip]}>
+                      <Ionicons name="link" size={11} color={t.colors.primary} />
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.supersetChipText, live.supersetChipText]}>
                         Superset {String.fromCharCode(65 + gIdx)}
                       </Text>
                     </View>
                   );
                 })()}
               </View>
-              <Text maxFontSizeMultiplier={1.3} style={styles.exerciseMeta}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseMeta, live.exerciseMeta]}>
                 {routineExercise.recommendedSets} sets ·{' '}
                 {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
                 {routineExercise.restSeconds ? ` · ${routineExercise.restSeconds}s rest` : ''}
               </Text>
               {routineExercise.startingWeight > 0 ? (
-                <Text maxFontSizeMultiplier={1.3} style={styles.exerciseStartWeight}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseStartWeight, live.exerciseStartWeight]}>
                   Start: {routineExercise.startingWeight} kg
                 </Text>
               ) : null}
-              <Text maxFontSizeMultiplier={1.3} style={styles.exerciseMuscle}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseMuscle, live.exerciseMuscle]}>
                 {MUSCLE_DISPLAY_NAMES[exercise.primaryMuscle] ||
                   (exercise.primaryMuscle || '').charAt(0).toUpperCase() +
                   (exercise.primaryMuscle || '').slice(1).replace(/_/g, ' ')}
               </Text>
               {(() => {
                 const why = getExerciseWhyThis(exercise.name, exercise.subregion);
-                return why ? <Text maxFontSizeMultiplier={1.3} style={styles.exerciseWhy}>{why}</Text> : null;
+                return why ? <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseWhy, live.exerciseWhy]}>{why}</Text> : null;
               })()}
             </View>
             {isReordering ? (
               <View style={styles.reorderActions}>
                 <TouchableOpacity
                   onPress={() => handleMoveExercise(routineExercise.id, 'up')}
-                  style={[styles.reorderBtn, index === 0 && styles.reorderBtnDisabled]}
+                  style={[styles.reorderBtn, live.reorderBtn, index === 0 && styles.reorderBtnDisabled]}
                   disabled={index === 0}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   accessibilityRole="button"
@@ -464,12 +476,12 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   <Ionicons
                     name="chevron-up"
                     size={16}
-                    color={index === 0 ? colors.border : colors.textMuted}
+                    color={index === 0 ? t.colors.border : t.colors.textMuted}
                   />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => handleMoveExercise(routineExercise.id, 'down')}
-                  style={[styles.reorderBtn, index === exercises.length - 1 && styles.reorderBtnDisabled]}
+                  style={[styles.reorderBtn, live.reorderBtn, index === exercises.length - 1 && styles.reorderBtnDisabled]}
                   disabled={index === exercises.length - 1}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   accessibilityRole="button"
@@ -479,7 +491,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   <Ionicons
                     name="chevron-down"
                     size={16}
-                    color={index === exercises.length - 1 ? colors.border : colors.textMuted}
+                    color={index === exercises.length - 1 ? t.colors.border : t.colors.textMuted}
                   />
                 </TouchableOpacity>
               </View>
@@ -491,7 +503,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   accessibilityRole="button"
                   accessibilityLabel={`Edit ${exercise.name}`}
                 >
-                  <Ionicons name="create-outline" size={20} color={colors.textMuted} />
+                  <Ionicons name="create-outline" size={20} color={t.colors.textMuted} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => handleOpenSwap(routineExercise, exercise)}
@@ -499,7 +511,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   accessibilityRole="button"
                   accessibilityLabel={`Swap ${exercise.name}`}
                 >
-                  <Ionicons name="swap-horizontal" size={20} color={colors.textMuted} />
+                  <Ionicons name="swap-horizontal" size={20} color={t.colors.textMuted} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => appAlert(
@@ -514,7 +526,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   accessibilityRole="button"
                   accessibilityLabel={`Remove ${exercise.name}`}
                 >
-                  <Ionicons name="trash-outline" size={20} color={colors.error} />
+                  <Ionicons name="trash-outline" size={20} color={t.colors.error} />
                 </TouchableOpacity>
               </View>
             )}
@@ -527,14 +539,14 @@ export default function RoutineDetailScreen({ navigation, route }) {
       icon="add"
       variant="tertiary"
       onPress={() => setShowAddExercise(true)}
-      style={[styles.addBtn, { backgroundColor: 'transparent' }]}
-      textStyle={styles.addBtnText}
+      style={[styles.addBtn, live.addBtn, { backgroundColor: 'transparent' }]}
+      textStyle={[styles.addBtnText, live.addBtnText]}
       accessibilityLabel="Add exercise"
     />
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Edit workout" right={reorderToggle} />
       {isReordering ? (
         // D32 (2026-07-10): true long-press drag, block-aware (see
@@ -567,7 +579,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
             />
           ) : (
             <View style={styles.empty}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>No exercises yet. Add some below.</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.emptyText, live.emptyText]}>No exercises yet. Add some below.</Text>
             </View>
           )}
           {/* Same footer FlashList renders below -- reorder mode showed it
@@ -585,7 +597,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
           ListEmptyComponent={
             !exercises.length ? (
               <View style={styles.empty}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>No exercises yet. Add some below.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.emptyText, live.emptyText]}>No exercises yet. Add some below.</Text>
               </View>
             ) : null
           }
@@ -609,43 +621,43 @@ export default function RoutineDetailScreen({ navigation, route }) {
         keyboardAvoiding
         accessibilityLabel={editingExercise?.exercise?.name ? `Edit ${editingExercise.exercise.name}` : 'Edit exercise'}
       >
-            <Text maxFontSizeMultiplier={1.3} style={styles.editTitle}>{editingExercise?.exercise?.name}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.editTitle, live.editTitle]}>{editingExercise?.exercise?.name}</Text>
             <View style={styles.editRow}>
               <TextField
                 label="Sets"
                 containerStyle={styles.editField}
                 fieldStyle={styles.editInputField}
-                inputStyle={styles.editInput}
+                inputStyle={[styles.editInput, live.editInput]}
                 accessibilityLabel={`Sets for ${editingExercise?.exercise?.name || 'exercise'}`}
                 value={editSets}
                 onChangeText={setEditSets}
                 keyboardType="number-pad"
                 maxLength={2}
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={t.colors.textMuted}
               />
               <TextField
                 label="Reps min"
                 containerStyle={styles.editField}
                 fieldStyle={styles.editInputField}
-                inputStyle={styles.editInput}
+                inputStyle={[styles.editInput, live.editInput]}
                 accessibilityLabel={`Minimum reps for ${editingExercise?.exercise?.name || 'exercise'}`}
                 value={editRepsMin}
                 onChangeText={setEditRepsMin}
                 keyboardType="number-pad"
                 maxLength={3}
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={t.colors.textMuted}
               />
               <TextField
                 label="Reps max"
                 containerStyle={styles.editField}
                 fieldStyle={styles.editInputField}
-                inputStyle={styles.editInput}
+                inputStyle={[styles.editInput, live.editInput]}
                 accessibilityLabel={`Maximum reps for ${editingExercise?.exercise?.name || 'exercise'}`}
                 value={editRepsMax}
                 onChangeText={setEditRepsMax}
                 keyboardType="number-pad"
                 maxLength={3}
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={t.colors.textMuted}
               />
             </View>
             <View style={styles.editRow}>
@@ -653,33 +665,33 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 label="Rest (s)"
                 containerStyle={styles.editField}
                 fieldStyle={styles.editInputField}
-                inputStyle={styles.editInput}
+                inputStyle={[styles.editInput, live.editInput]}
                 accessibilityLabel={`Rest seconds for ${editingExercise?.exercise?.name || 'exercise'}`}
                 value={editRest}
                 onChangeText={setEditRest}
                 keyboardType="number-pad"
                 placeholder="90"
                 maxLength={4}
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={t.colors.textMuted}
               />
               <TextField
                 label="Start weight"
                 containerStyle={styles.editField}
                 fieldStyle={styles.editInputField}
-                inputStyle={styles.editInput}
+                inputStyle={[styles.editInput, live.editInput]}
                 accessibilityLabel={`Starting weight for ${editingExercise?.exercise?.name || 'exercise'}`}
                 value={editStartWeight}
                 onChangeText={setEditStartWeight}
                 keyboardType="decimal-pad"
                 placeholder="kg"
                 maxLength={6}
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={t.colors.textMuted}
               />
             </View>
             <Button
               title="Save"
               style={styles.editSaveBtn}
-              textStyle={styles.editSaveBtnText}
+              textStyle={[styles.editSaveBtnText, live.editSaveBtnText]}
               onPress={saveEdit}
               accessibilityLabel="Save exercise targets"
             />
@@ -694,17 +706,17 @@ export default function RoutineDetailScreen({ navigation, route }) {
         {/* AY-4 (2026-07-09 design audit): traps screen-reader navigation to
             this sheet while it's the modal's own content (matches
             BottomSheet.js/AppAlert.js/FeedbackSheet.js/PeekMenu.js). */}
-        <SafeAreaView style={styles.swapSafe} edges={['top', 'bottom']} accessibilityViewIsModal>
-          <View style={styles.swapHeader}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.swapTitle}>Swap exercise</Text>
+        <SafeAreaView style={[styles.swapSafe, live.swapSafe]} edges={['top', 'bottom']} accessibilityViewIsModal>
+          <View style={[styles.swapHeader, live.swapHeader]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.swapTitle, live.swapTitle]}>Swap exercise</Text>
             <TouchableOpacity onPress={() => { setSwapState(null); setSwapCandidates([]); }} accessibilityRole="button" accessibilityLabel="Close swap">
-              <Ionicons name="close" size={24} color={colors.textPrimary} />
+              <Ionicons name="close" size={24} color={t.colors.textPrimary} />
             </TouchableOpacity>
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={styles.swapSubtitle}>
-            Replacing: <Text maxFontSizeMultiplier={1.3} style={{ color: colors.primary }}>{swapState?.exercise?.name}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.swapSubtitle, live.swapSubtitle]}>
+            Replacing: <Text maxFontSizeMultiplier={1.3} style={{ color: t.colors.primary }}>{swapState?.exercise?.name}</Text>
           </Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.swapNote}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.swapNote, live.swapNote]}>
             Choose a substitute. Your routine will be updated. Your set, rep and rest targets stay the same.
           </Text>
           <FlashList
@@ -720,14 +732,14 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 accessibilityLabel={`Swap in ${item.exercise.name}`}
               >
                 <View style={{ flex: 1 }}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.swapItemName}>{item.exercise.name}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.swapItemReason}>{item.reason}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.swapItemName, live.swapItemName]}>{item.exercise.name}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.swapItemReason, live.swapItemReason]}>{item.reason}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </Card>
             )}
             ListEmptyComponent={
-              <Text maxFontSizeMultiplier={1.3} style={{ color: colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
+              <Text maxFontSizeMultiplier={1.3} style={{ color: t.colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
                 No close matches yet.
               </Text>
             }
@@ -738,7 +750,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 variant="tertiary"
                 onPress={() => setShowSwapPicker(true)}
                 style={[styles.swapSearchAll, { backgroundColor: 'transparent' }]}
-                textStyle={styles.swapSearchAllText}
+                textStyle={[styles.swapSearchAllText, live.swapSearchAllText]}
                 accessibilityLabel="Search all exercises or create your own"
               />
             }
@@ -969,3 +981,63 @@ const tagStyles = StyleSheet.create({
     color: colors.primary,
   },
 });
+
+// CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/gap/padding/width/height/borderWidth/borderStyle/opacity, no
+// token) are correctly omitted -- there is nothing to unfreeze for them.
+// Same pattern as AddCustomFoodScreen.js's buildLiveStyles (batch D).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    exerciseCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    exerciseCardUnresolved: { borderColor: t.colors.warning, backgroundColor: t.colors.warningBg },
+    orderBadge: { backgroundColor: t.colors.surface2 },
+    orderBadgeUnresolved: { backgroundColor: withAlpha(t.colors.warning, 0.251) },
+    orderNum: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    exerciseName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    exerciseNameUnresolved: { color: t.colors.warning },
+    relinkChip: { backgroundColor: t.colors.warningBg, borderColor: withAlpha(t.colors.warning, 0.376) },
+    relinkChipText: { fontSize: t.fontSize.xs, color: t.colors.warning },
+    supersetChip: { backgroundColor: t.colors.primaryBg },
+    supersetChipText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    exerciseMeta: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    exerciseMuscle: { ...t.type.caption, color: t.colors.textMuted },
+    exerciseWhy: { ...t.type.captionTight, color: t.colors.textMuted },
+    splitRationale: { ...t.type.bodySm, color: t.colors.textMuted },
+    divisionLine: { ...t.type.bodySm, color: t.colors.textMuted },
+    exerciseStartWeight: { ...t.type.num('caption'), color: t.colors.primary },
+    reorderBtn: { backgroundColor: t.colors.surface2 },
+    editTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
+    editInput: { fontSize: t.fontSize.md },
+    editSaveBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    addBtn: { borderColor: t.colors.primary },
+    addBtnText: { fontSize: t.fontSize.md, color: t.colors.primary },
+    emptyText: { ...t.type.body, color: t.colors.textMuted },
+    swapSafe: { backgroundColor: t.colors.background },
+    swapHeader: { borderBottomColor: t.colors.border },
+    swapTitle: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
+    swapSubtitle: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    swapNote: { ...t.type.caption, color: t.colors.textMuted },
+    swapItemName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    swapItemReason: { ...t.type.captionTight, color: t.colors.textMuted },
+    swapSearchAllText: { ...t.type.label, color: t.colors.primary },
+  };
+}
+
+// CP-10 batch G (2026-07-11): separate live-styles builder for the `tagStyles`
+// block above (MuscleTagRow's own StyleSheet, not the screen's main
+// `styles`), same byte-identical-frozen-block rule.
+function buildTagLiveStyles(t) {
+  return {
+    chipLow: { backgroundColor: t.colors.surface2 },
+    chipMid: { backgroundColor: withAlpha(t.colors.success, 0.188) },
+    chipHigh: { backgroundColor: withAlpha(t.colors.primary, 0.188) },
+    chipText: { fontSize: t.fontSize.xs },
+    chipTextLow: { color: t.colors.textMuted },
+    chipTextMid: { color: t.colors.success },
+    chipTextHigh: { color: t.colors.primary },
+  };
+}

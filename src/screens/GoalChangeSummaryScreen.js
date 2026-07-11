@@ -2,11 +2,12 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import SectionLabel from '../components/SectionLabel';
 import ModalHeader from '../components/ModalHeader';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { PROTEIN_APPROACHES } from '../lib/nutritionEngine';
 import { getOpenEdPatternFlag } from '../lib/database';
@@ -78,49 +79,60 @@ function buildProteinApproachReason(prevApproach, nextApproach) {
 
 // ─── Row components ───────────────────────────────────────────────────────────
 
+// CP-10 batch G (2026-07-11): ChangeCard is a sibling function-component
+// scope (rendered directly in JSX, not prop-drilled `live`/`t` from
+// GoalChangeSummaryScreen), so its own useTheme() call is cleaner than
+// threading two extra props through. Same shared buildLiveStyles(t) as the
+// parent screen. Zero copy/logic change: style plumbing only.
 function ChangeCard({ icon, title, prev, next, reason, unchanged }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <Card style={[styles.card, unchanged && styles.cardUnchanged]}>
       <View style={styles.cardHeader}>
-        <Ionicons name={icon} size={16} color={unchanged ? colors.textMuted : colors.primary} />
-        <Text maxFontSizeMultiplier={1.3} style={styles.cardTitle}>{title}</Text>
-        {unchanged && <Text maxFontSizeMultiplier={1.3} style={styles.unchangedTag}>unchanged</Text>}
+        <Ionicons name={icon} size={16} color={unchanged ? t.colors.textMuted : t.colors.primary} />
+        <Text maxFontSizeMultiplier={1.3} style={[styles.cardTitle, live.cardTitle]}>{title}</Text>
+        {unchanged && <Text maxFontSizeMultiplier={1.3} style={[styles.unchangedTag, live.unchangedTag]}>unchanged</Text>}
       </View>
       {unchanged ? (
-        <Text maxFontSizeMultiplier={1.3} style={styles.cardValue}>{next}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.cardValue, live.cardValue]}>{next}</Text>
       ) : (
         <View style={styles.diffRow}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.diffPrev}>{prev}</Text>
-          <Ionicons name="arrow-forward" size={14} color={colors.textMuted} style={styles.diffArrow} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.diffNext}>{next}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.diffPrev, live.diffPrev]}>{prev}</Text>
+          <Ionicons name="arrow-forward" size={14} color={t.colors.textMuted} style={styles.diffArrow} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.diffNext, live.diffNext]}>{next}</Text>
         </View>
       )}
       {!!reason && !unchanged && (
-        <Text maxFontSizeMultiplier={1.3} style={styles.cardReason}>{reason}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.cardReason, live.cardReason]}>{reason}</Text>
       )}
     </Card>
   );
 }
 
+// CP-10 batch G (2026-07-11): same rationale as ChangeCard above -- its own
+// useTheme() call rather than prop-drilling, same shared buildLiveStyles(t).
 function MacroRow({ label, prev, next, unit = 'g' }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const delta = (next ?? 0) - (prev ?? 0);
   const changed = Math.abs(delta) >= 1;
   const sign = delta > 0 ? '+' : '';
   return (
     <View style={styles.macroRow}>
-      <Text maxFontSizeMultiplier={1.3} style={styles.macroLabel}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.macroLabel, live.macroLabel]}>{label}</Text>
       <View style={styles.macroValues}>
         {changed ? (
           <>
-            <Text maxFontSizeMultiplier={1.3} style={styles.macroPrev}>{prev ?? '-'}{unit}</Text>
-            <Ionicons name="arrow-forward" size={11} color={colors.textMuted} style={{ marginHorizontal: spacing.xs }} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.macroNext}>{next ?? '-'}{unit}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.macroDelta, delta > 0 ? styles.macroDeltaUp : styles.macroDeltaDown]}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.macroPrev, live.macroPrev]}>{prev ?? '-'}{unit}</Text>
+            <Ionicons name="arrow-forward" size={11} color={t.colors.textMuted} style={{ marginHorizontal: spacing.xs }} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.macroNext, live.macroNext]}>{next ?? '-'}{unit}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.macroDelta, live.macroDelta, delta > 0 ? [styles.macroDeltaUp, live.macroDeltaUp] : [styles.macroDeltaDown, live.macroDeltaDown]]}>
               {' '}({sign}{delta}{unit})
             </Text>
           </>
         ) : (
-          <Text maxFontSizeMultiplier={1.3} style={styles.macroUnchanged}>{next ?? '-'}{unit}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.macroUnchanged, live.macroUnchanged]}>{next ?? '-'}{unit}</Text>
         )}
       </View>
     </View>
@@ -131,6 +143,9 @@ function MacroRow({ label, prev, next, unit = 'g' }) {
 
 export default function GoalChangeSummaryScreen({ navigation, route }) {
   const { previous = {}, next = {}, planRerolled = false } = route.params || {};
+  // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   // D7 (founder decision, 2026-07-03): the same ED-flag check
   // ProSetupCompleteScreen performs. Under an open flag (or an unknown flag
@@ -192,15 +207,15 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <ModalHeader title="Here's what changed" onClose={handleDone} />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Card tone="success" style={styles.heroCard}>
-          <Ionicons name="checkmark-circle" size={28} color={colors.success} />
+          <Ionicons name="checkmark-circle" size={28} color={t.colors.success} />
           <View style={{ flex: 1 }}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.heroTitle}>Goals updated</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.heroBody}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.heroTitle, live.heroTitle]}>Goals updated</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.heroBody, live.heroBody]}>
               {anyChanged
                 ? `Your plan and nutrition targets have been updated to match. Here's a breakdown of what shifted and why.`
                 : `Nothing meaningful changed. Your plan and nutrition stay as they were.`}
@@ -249,14 +264,14 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
             {(macrosChanged || (!kcalChanged && nextP != null)) && (
               <Card style={styles.card}>
                 <View style={styles.cardHeader}>
-                  <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
-                  <Text maxFontSizeMultiplier={1.3} style={styles.cardTitle}>Daily macros</Text>
+                  <Ionicons name="restaurant-outline" size={16} color={t.colors.primary} />
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.cardTitle, live.cardTitle]}>Daily macros</Text>
                 </View>
                 <MacroRow label="Protein" prev={prevP} next={nextP} />
                 <MacroRow label="Carbs"   prev={prevC} next={nextC} />
                 <MacroRow label="Fat"     prev={prevF} next={nextF} />
                 {!macrosChanged && (
-                  <Text maxFontSizeMultiplier={1.3} style={styles.cardReason}>Your macros stay where they are. The change you made does not shift them meaningfully.</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.cardReason, live.cardReason]}>Your macros stay where they are. The change you made does not shift them meaningfully.</Text>
                 )}
               </Card>
             )}
@@ -274,25 +289,25 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
         )}
 
         <SectionLabel style={styles.sectionLabelSpacing}>What happens next</SectionLabel>
-        <Card style={styles.nextCard}>
+        <Card style={[styles.nextCard, live.nextCard]}>
           <View style={styles.nextRow}>
-            <Ionicons name="ellipse" size={6} color={colors.primary} style={styles.bullet} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.nextText}>
+            <Ionicons name="ellipse" size={6} color={t.colors.primary} style={styles.bullet} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.nextText, live.nextText]}>
               {planRerolled
                 ? 'A fresh plan has been built for your new goal and is now your active plan. Your next session comes from it. Review the full plan from Train.'
                 : 'Your goal is saved, but the training plan didn\'t rebuild this time. Open Train and choose "Start with a plan" to retry.'}
             </Text>
           </View>
           <View style={styles.nextRow}>
-            <Ionicons name="ellipse" size={6} color={colors.primary} style={styles.bullet} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.nextText}>
+            <Ionicons name="ellipse" size={6} color={t.colors.primary} style={styles.bullet} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.nextText, live.nextText]}>
               Nutrition targets in the Coach tab now reflect the updated numbers. Open Nutrition Targets to see the full breakdown.
             </Text>
           </View>
           {next.phase === 'cut' && !edFlagOpen && (
             <View style={styles.nextRow}>
-              <Ionicons name="ellipse" size={6} color={colors.primary} style={styles.bullet} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.nextText}>
+              <Ionicons name="ellipse" size={6} color={t.colors.primary} style={styles.bullet} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.nextText, live.nextText]}>
                 If you stay in a deficit for more than eight weeks, Volyume will suggest a short diet break to support recovery and metabolic rate.
               </Text>
             </View>
@@ -356,3 +371,35 @@ const styles = StyleSheet.create({
 
   doneBtn: { marginTop: spacing.md },
 });
+
+// CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, shared
+// by this screen's three function-component scopes (the main screen,
+// ChangeCard and MacroRow) so they can never drift out of step with each
+// other or the frozen block. Pure layout keys (flex/gap/padding/opacity/
+// fontWeight, no colour/fontSize/type token) are correctly omitted -- there
+// is nothing to unfreeze for them. Same pattern as CardioHistoryScreen.js's
+// buildLiveStyles (batch preceding this one).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    heroTitle: { ...t.type.title, color: t.colors.textPrimary },
+    heroBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+    cardTitle: { ...t.type.label, color: t.colors.textPrimary },
+    unchangedTag: { fontSize: t.fontSize.micro, color: t.colors.textMuted },
+    diffPrev: { ...t.type.body, color: t.colors.textMuted },
+    diffNext: { ...t.type.bodyStrong, color: t.colors.primary },
+    cardValue: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    cardReason: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    macroLabel: { ...t.type.label, color: t.colors.textSecondary },
+    macroPrev: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    macroNext: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    macroUnchanged: { ...t.type.label, color: t.colors.textPrimary },
+    macroDelta: { fontSize: t.fontSize.xs },
+    macroDeltaUp: { color: t.colors.primary },
+    macroDeltaDown: { color: t.colors.warning },
+    nextCard: { backgroundColor: t.colors.surface2 },
+    nextText: { ...t.type.bodySm, color: t.colors.textSecondary },
+  };
+}

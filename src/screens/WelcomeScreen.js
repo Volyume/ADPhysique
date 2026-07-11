@@ -1,10 +1,11 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Easing, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, motion, shadow } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import InfoTooltip from '../components/InfoTooltip';
 import Card from '../components/Card';
 import { GLOSSARY } from '../lib/coachGlossary';
@@ -42,6 +43,9 @@ export default function WelcomeScreen({ navigation }) {
   // until it loads. Never a hardcoded fallback.
   const priceFor = usePlayPrices();
   const monthlyPrice = priceFor('pro', 'monthly');
+  // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   const fadeIn   = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
   const slideUp  = useRef(new Animated.Value(reduceMotion ? 0 : 24)).current;
@@ -70,37 +74,37 @@ export default function WelcomeScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, live.safe]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Animated.View style={[styles.hero, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
           <Image source={HERO} style={styles.logoImg} resizeMode="contain" />
-          <Text maxFontSizeMultiplier={1.3} style={styles.tagline}>Less thinking. More lifting.</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.tagline, live.tagline]}>Less thinking. More lifting.</Text>
         </Animated.View>
 
         <Animated.View style={[styles.cards, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
 
           {/* OB-1: the one trial card. Everyone starts with the full app for
               14 days; the CTA says exactly that. */}
-          <Card radius="xl" padding="none" style={styles.proCard} onPress={startTrial}>
+          <Card radius="xl" padding="none" style={[styles.proCard, live.proCard]} onPress={startTrial}>
             <View style={styles.proCardHeader}>
-              <View style={styles.proIconWrap}>
-                <Ionicons name="barbell-outline" size={20} color={colors.primary} />
+              <View style={[styles.proIconWrap, live.proIconWrap]}>
+                <Ionicons name="barbell-outline" size={20} color={t.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <View style={styles.proTitleRow}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.proTitle}>The full app, free for 14 days</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.proTitle, live.proTitle]}>The full app, free for 14 days</Text>
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={styles.proSubtitle}>Clear coaching that adjusts from your logged training.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.proSubtitle, live.proSubtitle]}>Clear coaching that adjusts from your logged training.</Text>
               </View>
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, live.divider]} />
 
             <View style={styles.bullets}>
               {TRIAL_BULLETS.map(b => (
                 <View key={b} style={styles.bulletRow}>
-                  <Ionicons name="checkmark-circle" size={15} color={colors.primary} />
-                  <Text maxFontSizeMultiplier={1.3} style={styles.bulletText}>{b}</Text>
+                  <Ionicons name="checkmark-circle" size={15} color={t.colors.primary} />
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.bulletText, live.bulletText]}>{b}</Text>
                   {/* U-E-1: inline gloss for the coach term on first appearance. */}
                   {b.includes('Coach') && (
                     <InfoTooltip text={GLOSSARY.precisionCoaching} size={13} />
@@ -109,15 +113,15 @@ export default function WelcomeScreen({ navigation }) {
               ))}
             </View>
 
-            <Text maxFontSizeMultiplier={1.3} style={styles.trialNote}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.trialNote, live.trialNote]}>
               {monthlyPrice
                 ? `No payment card needed. Afterwards it's ${monthlyPrice} a month on ${storeName()}, or carry on free.`
                 : `No payment card needed. Afterwards it's a monthly subscription on ${storeName()}, or carry on free.`}
             </Text>
 
-            <View style={styles.proCtaRow}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.proCtaText}>Start your 14 days</Text>
-              <Ionicons name="arrow-forward" size={16} color={colors.onPrimary} />
+            <View style={[styles.proCtaRow, live.proCtaRow]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.proCtaText, live.proCtaText]}>Start your 14 days</Text>
+              <Ionicons name="arrow-forward" size={16} color={t.colors.onPrimary} />
             </View>
           </Card>
 
@@ -126,20 +130,20 @@ export default function WelcomeScreen({ navigation }) {
               was a dead control: it routed to the identical sign-up). */}
           <Card radius="xl" style={styles.freeCard}>
             <View style={styles.freeCardHeader}>
-              <View style={styles.freeIconWrap}>
-                <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
+              <View style={[styles.freeIconWrap, live.freeIconWrap]}>
+                <Ionicons name="create-outline" size={18} color={t.colors.textSecondary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.freeTitle}>Yours free, always</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.freeSubtitle}>If you don&apos;t subscribe after the trial, these stay.</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.freeTitle, live.freeTitle]}>Yours free, always</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.freeSubtitle, live.freeSubtitle]}>If you don&apos;t subscribe after the trial, these stay.</Text>
               </View>
             </View>
 
             <View style={styles.freeBullets}>
               {AFTER_TRIAL_BULLETS.map(b => (
                 <View key={b} style={styles.bulletRow}>
-                  <Ionicons name="checkmark" size={14} color={colors.textSecondary} />
-                  <Text maxFontSizeMultiplier={1.3} style={styles.freeBulletText}>{b}</Text>
+                  <Ionicons name="checkmark" size={14} color={t.colors.textSecondary} />
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.freeBulletText, live.freeBulletText]}>{b}</Text>
                 </View>
               ))}
             </View>
@@ -156,14 +160,14 @@ export default function WelcomeScreen({ navigation }) {
             accessible
             accessibilityLabel="Works fully offline. Your data exports anytime. No ads, ever."
           >
-            <Ionicons name="cloud-offline-outline" size={13} color={colors.textMuted} importantForAccessibility="no" />
-            <Text maxFontSizeMultiplier={1.3} style={styles.trustText}>Works fully offline</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.trustDot}>-</Text>
-            <Ionicons name="download-outline" size={13} color={colors.textMuted} importantForAccessibility="no" />
-            <Text maxFontSizeMultiplier={1.3} style={styles.trustText}>Exports anytime</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.trustDot}>-</Text>
-            <Ionicons name="shield-checkmark-outline" size={13} color={colors.textMuted} importantForAccessibility="no" />
-            <Text maxFontSizeMultiplier={1.3} style={styles.trustText}>No ads, ever</Text>
+            <Ionicons name="cloud-offline-outline" size={13} color={t.colors.textMuted} importantForAccessibility="no" />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.trustText, live.trustText]}>Works fully offline</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.trustDot, live.trustDot]}>-</Text>
+            <Ionicons name="download-outline" size={13} color={t.colors.textMuted} importantForAccessibility="no" />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.trustText, live.trustText]}>Exports anytime</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.trustDot, live.trustDot]}>-</Text>
+            <Ionicons name="shield-checkmark-outline" size={13} color={t.colors.textMuted} importantForAccessibility="no" />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.trustText, live.trustText]}>No ads, ever</Text>
           </View>
         </Animated.View>
 
@@ -171,12 +175,12 @@ export default function WelcomeScreen({ navigation }) {
           <TouchableOpacity
             accessibilityRole="button"
             accessibilityLabel="Already have an account? Sign in"
-            style={styles.signInLink}
+            style={[styles.signInLink, live.signInLink]}
             onPress={() => navigation.navigate('Login')}
             hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}
           >
-            <Text maxFontSizeMultiplier={1.3} style={styles.signInText}>Already have an account?</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.signInAction}> Sign in</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.signInText, live.signInText]}>Already have an account?</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.signInAction, live.signInAction]}> Sign in</Text>
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
@@ -284,3 +288,38 @@ const styles = StyleSheet.create({
 
 
 });
+
+// CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/gap/padding/width/borderRadius/borderWidth, no token) are
+// correctly omitted -- there is nothing to unfreeze for them. Same pattern
+// as ConsistencyScreen.js's buildLiveStyles (batch F).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    // wordmark's fontSize is a raw display literal in the frozen block
+    // (intentional hero size, theme-invariant) -- only its ink is mirrored.
+    wordmark: { color: t.colors.textPrimary },
+    tagline: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    proCard: { borderColor: t.colors.primary },
+    proIconWrap: { backgroundColor: t.colors.primaryBg },
+    proTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
+    proSubtitle: { ...t.type.caption, color: t.colors.textSecondary },
+    divider: { backgroundColor: t.colors.border },
+    bulletText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    trialNote: { ...t.type.captionTight, color: t.colors.textMuted },
+    trustText: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    trustDot: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    proCtaRow: { backgroundColor: t.colors.primaryFill },
+    proCtaText: { fontSize: t.fontSize.sm, color: t.colors.onPrimary },
+    freeIconWrap: { backgroundColor: t.colors.surface2 },
+    freeTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    freeSubtitle: { ...t.type.caption, color: t.colors.textMuted },
+    freeBulletText: { ...t.type.caption, color: t.colors.textMuted },
+    signInLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    signInText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    signInAction: { ...t.type.label, color: t.colors.textPrimary },
+  };
+}

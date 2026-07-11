@@ -823,7 +823,11 @@ describe('pending state', () => {
   });
 
   test('pending invite actions are styled as buttons, not plain text links', () => {
-    expect(PARTNER_SCREEN_SOURCE).toMatch(/style=\{styles\.pendingDanger\}/);
+    // CP-10 batch G: pendingDanger gained its live-theme override
+    // (style={[styles.pendingDanger, live.pendingDanger]}); the contract --
+    // the action renders through the contained pendingDanger chrome -- is
+    // unchanged, so the pattern accepts either spelling.
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/style=\{(?:styles\.pendingDanger|\[styles\.pendingDanger, live\.pendingDanger\])\}/);
     expect(PARTNER_SCREEN_SOURCE).toMatch(/name="close-circle-outline"/);
     expect(PARTNER_SCREEN_SOURCE).not.toMatch(/style=\{styles\.textRow\}/);
     expect(PARTNER_SCREEN_SOURCE).not.toMatch(/textRow:/);
@@ -977,14 +981,18 @@ describe('manage sheet: block confirm', () => {
   });
 
   test('shared phase status uses a contained neutral action instead of a text link', () => {
-    expect(PARTNER_SCREEN_SOURCE).toContain('<Text maxFontSizeMultiplier={1.3} style={styles.blockStatusActionText}>Sharing settings</Text>');
+    // CP-10 batch G: blockStatusActionText gained its live-theme override;
+    // contract (contained neutral action, exact copy) unchanged.
+    expect(PARTNER_SCREEN_SOURCE).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.blockStatusActionText, live.blockStatusActionText]}>Sharing settings</Text>');
     expect(PARTNER_SCREEN_SOURCE).not.toContain('<Text style={styles.blockStatusActionText}>Manage label</Text>');
     expect(PARTNER_SCREEN_SOURCE).toMatch(/blockStatusAction: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface/);
     expect(PARTNER_SCREEN_SOURCE).toContain('blockStatusActionText: { ...type.label, color: colors.textPrimary }');
   });
 
   test('shared-win delete action is destructive, not amber-positive', () => {
-    expect(PARTNER_SCREEN_SOURCE).toContain('Ionicons name="trash-outline" size={iconSize.sm} color={colors.error}');
+    // CP-10 batch G: the icon ink now resolves from the live theme; the
+    // pinned token (error red, never amber) is unchanged.
+    expect(PARTNER_SCREEN_SOURCE).toContain('Ionicons name="trash-outline" size={iconSize.sm} color={t.colors.error}');
     expect(PARTNER_SCREEN_SOURCE).toMatch(/partnerWinDeleteButton: \{[\s\S]*borderColor: withAlpha\(colors\.error, alpha\.edge\),[\s\S]*backgroundColor: colors\.surface2/);
     expect(PARTNER_SCREEN_SOURCE).toContain('partnerWinDelete: { ...type.label, color: colors.error }');
     expect(PARTNER_SCREEN_SOURCE).not.toContain('partnerWinDelete: { ...type.label, color: colors.primary }');

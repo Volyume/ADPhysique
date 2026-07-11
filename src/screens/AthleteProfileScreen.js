@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
@@ -7,6 +7,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import { colors, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 import { ProBadge } from '../components/ProGate';
@@ -55,12 +56,20 @@ function formatDate(ms) {
   }
 }
 
+// CP-10 batch G (2026-07-11): rendered directly by the parent (not a list
+// row), but its own useTheme() call rather than a `live` prop, so the
+// pinned `<StatTile label=... value=... sub=... />` call-site guard
+// (AthleteProfileScreen.physiqueTile.guard.test.js) stays untouched -- same
+// "sibling scope, own useTheme()" pattern as CardioHistoryScreen.js's
+// CardioTrend.
 function StatTile({ label, value, sub }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <Card style={styles.statTile}>
       <SectionLabel tone="muted">{label}</SectionLabel>
-      <Text maxFontSizeMultiplier={1.3} style={styles.statValue} numberOfLines={2}>{value}</Text>
-      {sub ? <Text maxFontSizeMultiplier={1.3} style={styles.statSub}>{sub}</Text> : null}
+      <Text maxFontSizeMultiplier={1.3} style={[styles.statValue, live.statValue]} numberOfLines={2}>{value}</Text>
+      {sub ? <Text maxFontSizeMultiplier={1.3} style={[styles.statSub, live.statSub]}>{sub}</Text> : null}
     </Card>
   );
 }
@@ -191,7 +200,10 @@ function profileStatusTile(freshness) {
   };
 }
 
-function Row({ icon, label, sub, onPress, pro, status = null }) {
+// CP-10 batch G (2026-07-11): rendered directly by the parent (not a list
+// row), so `t`/`live` are passed as plain props from the one screen-level
+// useTheme() call rather than a second useTheme() call here.
+function Row({ icon, label, sub, onPress, pro, status = null, t, live }) {
   const statusLabel = profileRowStatusLabel(status);
   const accessibility = buildProfileRowAccessibility({ label, sub, status, pro });
   return (
@@ -201,22 +213,22 @@ function Row({ icon, label, sub, onPress, pro, status = null }) {
       accessibilityLabel={accessibility.accessibilityLabel}
       accessibilityHint={accessibility.accessibilityHint}
     >
-      <View style={styles.rowIcon}>
-        <Ionicons name={icon} size={18} color={colors.primary} />
+      <View style={[styles.rowIcon, live.rowIcon]}>
+        <Ionicons name={icon} size={18} color={t.colors.primary} />
       </View>
       <View style={{ flex: 1 }}>
         <View style={styles.rowLabelLine}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.rowLabel}>{label}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.rowLabel, live.rowLabel]}>{label}</Text>
           {pro ? <ProBadge size="sm" /> : null}
         </View>
-        {sub ? <Text maxFontSizeMultiplier={1.3} style={styles.rowSub}>{sub}</Text> : null}
+        {sub ? <Text maxFontSizeMultiplier={1.3} style={[styles.rowSub, live.rowSub]}>{sub}</Text> : null}
       </View>
       {statusLabel ? (
-        <View style={[styles.statusPill, styles[`statusPill_${status}`]]}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.statusPillText, styles[`statusPillText_${status}`]]}>{statusLabel}</Text>
+        <View style={[styles.statusPill, styles[`statusPill_${status}`], live[`statusPill_${status}`]]}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.statusPillText, live.statusPillText, styles[`statusPillText_${status}`], live[`statusPillText_${status}`]]}>{statusLabel}</Text>
         </View>
       ) : null}
-      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+      <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
     </Card>
   );
 }
@@ -252,6 +264,9 @@ export default function AthleteProfileScreen({ navigation }) {
   // screen's card and the other high-risk photo surfaces (calm mode or an
   // open ED-pattern flag). Before this the tile had no suppression at all.
   const photoSuppressed = usePhotoSuppression(user?.id);
+  // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   const displayName = userProfile?.firstName
     || user?.email?.split('@')[0]?.replace(/[^a-zA-Z]/g, ' ').trim()
@@ -408,7 +423,7 @@ export default function AthleteProfileScreen({ navigation }) {
   const statusTile = profileStatusTile(freshness);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Athlete profile" />
       <ScrollView contentContainerStyle={styles.content}>
         <Card style={styles.hero}>
@@ -433,34 +448,34 @@ export default function AthleteProfileScreen({ navigation }) {
           </TouchableOpacity>
           <View style={styles.heroInfo}>
             <View style={styles.nameLine}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.name} numberOfLines={1}>{displayName}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.name, live.name]} numberOfLines={1}>{displayName}</Text>
               {isPro ? <ProBadge size="sm" /> : null}
             </View>
             {loading ? (
               <Skeleton width={120} height={12} />
             ) : (
-            <Text maxFontSizeMultiplier={1.3} style={styles.heroSub}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.heroSub, live.heroSub]}>
                 {summary.sessions ?? 0} session{summary.sessions === 1 ? '' : 's'} logged
               </Text>
             )}
-            <Text maxFontSizeMultiplier={1.3} style={styles.heroFocus} numberOfLines={2}>{focusTile.value}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.heroFocus, live.heroFocus]} numberOfLines={2}>{focusTile.value}</Text>
           </View>
         </Card>
 
         {loadError ? (
           <Card
-            style={styles.loadErrorCard}
+            style={[styles.loadErrorCard, live.loadErrorCard]}
             onPress={() => setReloadKey((n) => n + 1)}
             accessibilityLabel="Try loading profile data again"
           >
-            <View style={styles.loadErrorIcon}>
-              <Ionicons name="warning-outline" size={18} color={colors.warning} />
+            <View style={[styles.loadErrorIcon, live.loadErrorIcon]}>
+              <Ionicons name="warning-outline" size={18} color={t.colors.warning} />
             </View>
             <View style={styles.loadErrorCopy}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.loadErrorTitle}>Couldn't refresh profile data</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.loadErrorBody}>Some numbers may be out of date. Tap to try again.</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.loadErrorTitle, live.loadErrorTitle]}>Couldn't refresh profile data</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.loadErrorBody, live.loadErrorBody]}>Some numbers may be out of date. Tap to try again.</Text>
             </View>
-            <Ionicons name="refresh-outline" size={18} color={colors.textMuted} />
+            <Ionicons name="refresh-outline" size={18} color={t.colors.textMuted} />
           </Card>
         ) : null}
 
@@ -481,14 +496,14 @@ export default function AthleteProfileScreen({ navigation }) {
               accessibilityLabel={`Open ${row.name}`}
             >
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.liftName} numberOfLines={1}>{row.name}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.liftSub}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.liftName, live.liftName]} numberOfLines={1}>{row.name}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.liftSub, live.liftSub]}>
                   {level.ratio >= 1 ? `${level.ratio.toFixed(2)}x bodyweight` : `${Math.round(level.ratio * 100)}% bodyweight`}
                   {level.nextLabel && level.nextTarget ? ` - ${Math.max(0, level.nextTarget - row.bestE1rm).toFixed(1)} ${units} to ${level.nextLabel}` : ''}
                 </Text>
               </View>
-              <View style={styles.levelPill}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.levelPillText}>{level.label}</Text>
+              <View style={[styles.levelPill, live.levelPill]}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.levelPillText, live.levelPillText]}>{level.label}</Text>
               </View>
             </Card>
           )) : (
@@ -504,6 +519,8 @@ export default function AthleteProfileScreen({ navigation }) {
         <View style={styles.section}>
           <SectionLabel>Keep profile current</SectionLabel>
           <Row
+            t={t}
+            live={live}
             icon="scale-outline"
             label={freshness.bodyMetrics.label}
             sub={freshness.bodyMetrics.sub}
@@ -512,6 +529,8 @@ export default function AthleteProfileScreen({ navigation }) {
             onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'BodyMetrics')}
           />
           <Row
+            t={t}
+            live={live}
             icon="camera-outline"
             label={freshness.progressScan.label}
             sub={freshness.progressScan.sub}
@@ -520,6 +539,8 @@ export default function AthleteProfileScreen({ navigation }) {
             onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'ProgressPhotos')}
           />
           <Row
+            t={t}
+            live={live}
             icon="analytics-outline"
             label={freshness.lifts.label}
             sub={freshness.lifts.sub}
@@ -531,18 +552,24 @@ export default function AthleteProfileScreen({ navigation }) {
         <View style={styles.section}>
           <SectionLabel>Details and data</SectionLabel>
           <Row
+            t={t}
+            live={live}
             icon="person-outline"
             label="Edit profile details"
             sub="Name, sex, height, date of birth and diet preference."
             onPress={() => navigation.navigate('SettingsProfile')}
           />
           <Row
+            t={t}
+            live={live}
             icon="cloud-download-outline"
             label="Your data"
             sub="Workout CSV export and app-data JSON backup."
             onPress={() => navigation.navigate('SettingsData')}
           />
           <Row
+            t={t}
+            live={live}
             icon="settings-outline"
             label="Account settings"
             sub="Account, subscription, privacy and app preferences."
@@ -557,43 +584,43 @@ export default function AthleteProfileScreen({ navigation }) {
       >
         <View style={styles.avatarSheetHeader}>
           <View style={styles.avatarSheetCopy}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.avatarSheetTitle}>Profile picture</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.avatarSheetIntro}>Choose a photo from your phone or pick a Volyume avatar.</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.avatarSheetTitle, live.avatarSheetTitle]}>Profile picture</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.avatarSheetIntro, live.avatarSheetIntro]}>Choose a photo from your phone or pick a Volyume avatar.</Text>
           </View>
           {avatarUri || avatarPreset ? (
             <TouchableOpacity
-              style={styles.avatarClearButton}
+              style={[styles.avatarClearButton, live.avatarClearButton]}
               onPress={removeAvatar}
               accessibilityRole="button"
               accessibilityLabel="Clear current avatar"
             >
-              <Text maxFontSizeMultiplier={1.3} style={styles.avatarClearText}>Clear</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.avatarClearText, live.avatarClearText]}>Clear</Text>
             </TouchableOpacity>
           ) : null}
         </View>
         <TouchableOpacity
-          style={styles.photoOption}
+          style={[styles.photoOption, live.photoOption]}
           onPress={pickAvatar}
           accessibilityRole="button"
           accessibilityLabel={avatarUri ? 'Change profile photo' : 'Choose profile photo'}
         >
-          <View style={styles.photoOptionIcon}>
-            <Ionicons name="image-outline" size={20} color={colors.primary} />
+          <View style={[styles.photoOptionIcon, live.photoOptionIcon]}>
+            <Ionicons name="image-outline" size={20} color={t.colors.primary} />
           </View>
           <View style={styles.photoOptionCopy}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.photoOptionTitle}>Photo from phone</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.photoOptionSub}>{avatarUri ? 'Replace your current photo.' : 'Use your own profile picture.'}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.photoOptionTitle, live.photoOptionTitle]}>Photo from phone</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.photoOptionSub, live.photoOptionSub]}>{avatarUri ? 'Replace your current photo.' : 'Use your own profile picture.'}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
-        <Text maxFontSizeMultiplier={1.3} style={styles.avatarGalleryLabel}>Choose an avatar</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.avatarGalleryLabel, live.avatarGalleryLabel]}>Choose an avatar</Text>
         <View style={styles.avatarPresetGrid}>
           {AVATAR_PRESETS.map((preset) => {
             const selected = avatarPreset === preset.key && !avatarUri;
             return (
               <TouchableOpacity
                 key={preset.key}
-                style={[styles.avatarPresetOption, selected && styles.avatarPresetOptionSelected]}
+                style={[styles.avatarPresetOption, live.avatarPresetOption, selected && [styles.avatarPresetOptionSelected, live.avatarPresetOptionSelected]]}
                 onPress={() => applyAvatarPreset(preset.key)}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
@@ -605,7 +632,7 @@ export default function AthleteProfileScreen({ navigation }) {
                   size={62}
                   selected={selected}
                 />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.avatarPresetOptionText, selected && styles.avatarPresetOptionTextSelected]} numberOfLines={1}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.avatarPresetOptionText, live.avatarPresetOptionText, selected && [styles.avatarPresetOptionTextSelected, live.avatarPresetOptionTextSelected]]} numberOfLines={1}>
                   {preset.label}
                 </Text>
               </TouchableOpacity>
@@ -773,3 +800,53 @@ const styles = StyleSheet.create({
   avatarPresetOptionText: { ...type.captionTight, color: colors.textSecondary },
   avatarPresetOptionTextSelected: { color: colors.textPrimary },
 });
+
+// CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/gap/padding/borderWidth/borderRadius, no token) and fontWeight
+// (not part of the live theme table) are correctly omitted -- there is
+// nothing to unfreeze for them. Same pattern as DebugLogScreen.js's
+// buildLiveStyles (batch F).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    name: { ...t.type.h3, color: t.colors.textPrimary },
+    heroSub: { ...t.type.num('caption'), color: t.colors.textSecondary },
+    heroFocus: { ...t.type.captionTight, color: t.colors.textMuted },
+    loadErrorCard: { borderColor: t.colors.warning },
+    loadErrorIcon: { backgroundColor: t.colors.warningBg },
+    loadErrorTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    loadErrorBody: { ...t.type.caption, color: t.colors.textSecondary },
+    statValue: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    statSub: { ...t.type.captionTight, color: t.colors.textSecondary },
+    liftName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    liftSub: { ...t.type.caption, color: t.colors.textSecondary },
+    levelPill: { borderColor: withAlpha(t.colors.primary, alpha.edge), backgroundColor: t.colors.primaryBg },
+    levelPillText: { ...t.type.caption, color: t.colors.primary },
+    rowIcon: { backgroundColor: t.colors.primaryBg },
+    rowLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    rowSub: { ...t.type.caption, color: t.colors.textSecondary },
+    statusPill_fresh: { backgroundColor: t.colors.successBg, borderColor: withAlpha(t.colors.success, alpha.edge) },
+    statusPill_soon: { backgroundColor: t.colors.warningBg, borderColor: withAlpha(t.colors.warning, alpha.edge) },
+    statusPill_attention: { backgroundColor: t.colors.errorBg, borderColor: withAlpha(t.colors.error, alpha.edge) },
+    statusPillText: { ...t.type.caption },
+    statusPillText_fresh: { color: t.colors.onSuccessBg },
+    statusPillText_soon: { color: t.colors.warning },
+    statusPillText_attention: { color: t.colors.onErrorBg },
+    avatarSheetTitle: { ...t.type.h3, color: t.colors.textPrimary },
+    avatarSheetIntro: { ...t.type.bodySm, color: t.colors.textSecondary },
+    avatarClearButton: { borderColor: withAlpha(t.colors.error, alpha.edge), backgroundColor: t.colors.errorBg },
+    avatarClearText: { ...t.type.label, color: t.colors.error },
+    avatarGalleryLabel: { ...t.type.label, color: t.colors.textSecondary },
+    photoOption: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    photoOptionIcon: { backgroundColor: t.colors.primaryBg },
+    photoOptionTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    photoOptionSub: { ...t.type.caption, color: t.colors.textSecondary },
+    avatarPresetOption: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
+    avatarPresetOptionSelected: { borderColor: t.colors.primary, backgroundColor: t.colors.surfaceElevated },
+    avatarPresetOptionText: { ...t.type.captionTight, color: t.colors.textSecondary },
+    avatarPresetOptionTextSelected: { color: t.colors.textPrimary },
+  };
+}

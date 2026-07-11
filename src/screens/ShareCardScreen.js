@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import SectionLabel from '../components/SectionLabel';
@@ -51,6 +52,11 @@ const PREVIEW_DISPLAY_W = 300;
 
 export default function ShareCardScreen({ route }) {
   const toast = useToast();
+  // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js). Chrome
+  // only (segmented controls, toggles, preview placeholder) -- the card
+  // CONTENT (drawShareCard/buildParams) is GDPR-locked and untouched.
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const {
     sessionData = null,
     prData = null,
@@ -335,12 +341,12 @@ export default function ShareCardScreen({ route }) {
   const previewH = cardHeight(PREVIEW_DISPLAY_W, isSquare);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Share image" />
       <ScrollView contentContainerStyle={styles.content}>
 
         {/* Card type: shown per the data the screen was opened with. */}
-        <View style={styles.segmentRow}>
+        <View style={[styles.segmentRow, live.segmentRow]}>
           {sessionData && (
             <SegmentBtn label="Session" active={cardType === 'session'} onPress={() => setCardType('session')} />
           )}
@@ -359,18 +365,18 @@ export default function ShareCardScreen({ route }) {
         {!isWeekly && (
         <View style={styles.section}>
           <SectionLabel>Format</SectionLabel>
-          <View style={styles.segmentRow}>
+          <View style={[styles.segmentRow, live.segmentRow]}>
             <SegmentBtn
               label="Story 9:16"
               active={!isSquare}
               onPress={() => setFormat('story')}
-              icon={<Ionicons name="phone-portrait-outline" size={15} color={!isSquare ? colors.primary : colors.textMuted} />}
+              icon={<Ionicons name="phone-portrait-outline" size={15} color={!isSquare ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
               label="Square 1:1"
               active={isSquare}
               onPress={() => setFormat('square')}
-              icon={<Ionicons name="square-outline" size={15} color={isSquare ? colors.primary : colors.textMuted} />}
+              icon={<Ionicons name="square-outline" size={15} color={isSquare ? t.colors.primary : t.colors.textMuted} />}
             />
           </View>
         </View>
@@ -382,19 +388,19 @@ export default function ShareCardScreen({ route }) {
         {ImagePicker ? (
         <View style={styles.section}>
           <SectionLabel>Background</SectionLabel>
-          <View style={styles.segmentRow}>
+          <View style={[styles.segmentRow, live.segmentRow]}>
             <SegmentBtn
               label={bgPhoto ? 'Retake photo' : 'Take gym photo'}
               active={!!bgPhoto}
               onPress={takeGymPhoto}
-              icon={<Ionicons name="camera-outline" size={15} color={bgPhoto ? colors.primary : colors.textMuted} />}
+              icon={<Ionicons name="camera-outline" size={15} color={bgPhoto ? t.colors.primary : t.colors.textMuted} />}
             />
             {bgPhoto ? (
               <SegmentBtn
                 label="Remove"
                 active={false}
                 onPress={() => setBgPhoto(null)}
-                icon={<Ionicons name="close-outline" size={15} color={colors.textMuted} />}
+                icon={<Ionicons name="close-outline" size={15} color={t.colors.textMuted} />}
               />
             ) : null}
           </View>
@@ -412,8 +418,8 @@ export default function ShareCardScreen({ route }) {
                 resizeMode="contain"
               />
             ) : (
-              <View style={[styles.previewPlaceholder, { width: PREVIEW_DISPLAY_W, height: previewH }]}>
-                <ActivityIndicator color={colors.primary} />
+              <View style={[styles.previewPlaceholder, live.previewPlaceholder, { width: PREVIEW_DISPLAY_W, height: previewH }]}>
+                <ActivityIndicator color={t.colors.primary} />
               </View>
             )}
           </View>
@@ -438,14 +444,14 @@ export default function ShareCardScreen({ route }) {
                   return (
                     <TouchableOpacity
                       key={`${name}-${i}`}
-                      style={[styles.prChip, active && styles.prChipActive]}
+                      style={[styles.prChip, live.prChip, active && [styles.prChipActive, live.prChipActive]]}
                       onPress={() => setSelectedPrIndex(i)}
                       accessibilityRole="button"
                       accessibilityState={{ selected: active }}
                       accessibilityLabel={`Feature ${name}`}
                     >
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.prChipText, active && styles.prChipTextActive]} numberOfLines={1}>{name}</Text>
-                      {detail ? <Text maxFontSizeMultiplier={1.3} style={[styles.prChipSub, active && styles.prChipSubActive]}>{detail}</Text> : null}
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.prChipText, live.prChipText, active && [styles.prChipTextActive, live.prChipTextActive]]} numberOfLines={1}>{name}</Text>
+                      {detail ? <Text maxFontSizeMultiplier={1.3} style={[styles.prChipSub, live.prChipSub, active && [styles.prChipSubActive, live.prChipSubActive]]}>{detail}</Text> : null}
                     </TouchableOpacity>
                   );
                 })}
@@ -453,7 +459,7 @@ export default function ShareCardScreen({ route }) {
             </>
           ) : null}
           <SectionLabel>What to include</SectionLabel>
-          <View style={styles.togglesCard}>
+          <View style={[styles.togglesCard, live.togglesCard]}>
             <ToggleRow label="Date" value={showDate} onChange={setShowDate} />
             {isSession && (
               <>
@@ -477,7 +483,7 @@ export default function ShareCardScreen({ route }) {
               </>
             )}
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={styles.privacyNote}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.privacyNote, live.privacyNote]}>
             {isWeekly
               ? 'Only this week’s progress, lifts and sessions are shown. Your measurements and private notes are never included.'
               : 'Name, bodyweight, measurements and private notes are never included.'}
@@ -523,10 +529,16 @@ export default function ShareCardScreen({ route }) {
   );
 }
 
+// CP-10 batch G (2026-07-11): sibling function-component scope (not
+// prop-drilled `live`/`t` from ShareCardScreen, matching NutritionTargetsScreen's
+// MacroCard/WhySection precedent from batch E), own useTheme() call and the
+// shared buildLiveStyles(t) (same `styles` block this component reads).
 function SegmentBtn({ label, active, onPress, icon }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <TouchableOpacity accessibilityRole="button"
-      style={[styles.segment, active && styles.segmentActive]}
+      style={[styles.segment, active && [styles.segmentActive, live.segmentActive]]}
       onPress={onPress}
       // AY-6: the segmented control (card type / format / background) never
       // announced which segment was selected to a screen reader. Mirrors the
@@ -536,20 +548,22 @@ function SegmentBtn({ label, active, onPress, icon }) {
       accessibilityState={{ selected: active }}
     >
       {icon}
-      <Text maxFontSizeMultiplier={1.3} style={[styles.segmentText, active && styles.segmentTextActive]}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
 function ToggleRow({ label, value, onChange, last }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
-    <View style={[styles.toggleRow, last && styles.toggleRowLast]}>
-      <Text maxFontSizeMultiplier={1.3} style={styles.toggleLabel}>{label}</Text>
+    <View style={[styles.toggleRow, live.toggleRow, last && styles.toggleRowLast]}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.toggleLabel, live.toggleLabel]}>{label}</Text>
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ false: colors.surface2, true: withAlpha(colors.primary, alpha.strong) }}
-        thumbColor={value ? colors.primary : colors.textMuted}
+        trackColor={{ false: t.colors.surface2, true: withAlpha(t.colors.primary, alpha.strong) }}
+        thumbColor={value ? t.colors.primary : t.colors.textMuted}
       />
     </View>
   );
@@ -605,3 +619,33 @@ const styles = StyleSheet.create({
   prChipSubActive: { color: colors.primary },
   secondaryAction: { marginTop: spacing.md },
 });
+
+// CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/gap/padding/width/overflow, no token) are correctly omitted --
+// there is nothing to unfreeze for them. Screen chrome only (this file
+// never composes share-card CONTENT, which stays untouched in
+// src/lib/shareCard/drawShareCard.js). Same pattern as
+// AddCustomFoodScreen.js's buildLiveStyles (batch D).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    segmentRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    segmentActive: { backgroundColor: t.colors.surface3 },
+    segmentText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    segmentTextActive: { color: t.colors.textPrimary },
+    previewPlaceholder: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    togglesCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    toggleRow: { borderBottomColor: t.colors.border },
+    toggleLabel: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    privacyNote: { ...t.type.captionTight, color: t.colors.textMuted },
+    prChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    prChipActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
+    prChipText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    prChipTextActive: { color: t.colors.primary },
+    prChipSub: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    prChipSubActive: { color: t.colors.primary },
+  };
+}

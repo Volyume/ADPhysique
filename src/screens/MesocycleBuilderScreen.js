@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet,
 } from 'react-native';
@@ -11,6 +11,7 @@ import SvgBarSparkline from '../components/SvgBarSparkline';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import InfoTooltip from '../components/InfoTooltip';
 import { SkeletonCard } from '../components/Skeleton';
 import BackHeader from '../components/BackHeader';
@@ -34,6 +35,10 @@ export default function MesocycleBuilderScreen({ navigation }) {
   const { user } = useAppStore(useShallow(s => ({
     user: s.user,
   })));
+  // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js). Memoised
+  // because this screen renders a FlashList (renderItem runs once per row).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const [mesocycles, setMesocycles] = useState([]);
   const [activePlan, setActivePlanData] = useState(null);  // coach/manual-built plan
   const [activeStats, setActiveStats] = useState(null);   // { tonnageBars, recovery, deload }
@@ -139,7 +144,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Training blocks" />
       <FlashList
         // The active block is already shown via ActiveMesoDashboard
@@ -151,10 +156,10 @@ export default function MesocycleBuilderScreen({ navigation }) {
           <>
             {/* ── Active plan (coach / manual built) ───── */}
             {activePlan && (
-              <View style={styles.planCard}>
+              <View style={[styles.planCard, live.planCard]}>
                 <View style={styles.planCardHead}>
-                  <Ionicons name="barbell" size={18} color={colors.primary} />
-                  <Text maxFontSizeMultiplier={1.3} style={styles.planCardTag}>Your active plan</Text>
+                  <Ionicons name="barbell" size={18} color={t.colors.primary} />
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.planCardTag, live.planCardTag]}>Your active plan</Text>
                   <InfoTooltip
                     size={14}
                     text={
@@ -169,8 +174,8 @@ export default function MesocycleBuilderScreen({ navigation }) {
                     }
                   />
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={styles.planCardName}>{activePlan.name}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.planCardMeta}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.planCardName, live.planCardName]}>{activePlan.name}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.planCardMeta, live.planCardMeta]}>
                   {activePlan.splitType ? `${activePlan.splitType} · ` : ''}
                   {activePlan.workoutCount} workout{activePlan.workoutCount !== 1 ? 's' : ''}
                 </Text>
@@ -181,7 +186,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                   const isDeload = activeMeso.deloadWeek != null && currentWeek === activeMeso.deloadWeek;
                   return (
                     <View style={styles.planWeekRow}>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.planWeekLabel, isDeload && styles.planWeekLabelDeload]}>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.planWeekLabel, live.planWeekLabel, isDeload && [styles.planWeekLabelDeload, live.planWeekLabelDeload]]}>
                         Week {currentWeek} of {totalWeeks}{isDeload ? ' · recovery week' : ''}
                       </Text>
                       <View style={styles.planWeekBar}>
@@ -190,8 +195,9 @@ export default function MesocycleBuilderScreen({ navigation }) {
                             key={i}
                             style={[
                               styles.planWeekDot,
-                              i < currentWeek && styles.planWeekDotActive,
-                              i + 1 === activeMeso.deloadWeek && styles.planWeekDotDeload,
+                              live.planWeekDot,
+                              i < currentWeek && [styles.planWeekDotActive, live.planWeekDotActive],
+                              i + 1 === activeMeso.deloadWeek && [styles.planWeekDotDeload, live.planWeekDotDeload],
                             ]}
                           />
                         ))}
@@ -200,7 +206,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                   );
                 })()}
                 {!activeStats?.active && (
-                  <Text maxFontSizeMultiplier={1.3} style={styles.planCardNote}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.planCardNote, live.planCardNote]}>
                     This is the training your coach built. A training block is an
                     optional multi-week layer on top of it. Set a start date,
                     duration and recovery week to track periodised progress.
@@ -218,7 +224,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
             )}
 
             {mesocycles.some(m => !(m.isActive === 1 || m.isActive === true)) && (
-              <Text maxFontSizeMultiplier={1.3} style={styles.historyLabel}>Past blocks</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.historyLabel, live.historyLabel]}>Past blocks</Text>
             )}
           </>
         }
@@ -227,21 +233,21 @@ export default function MesocycleBuilderScreen({ navigation }) {
           const currentWeek = getCurrentWeek(meso);
           const totalWeeks = meso.durationWeeks || 4;
           return (
-            <View style={[styles.mesoCard, isActive && styles.mesoCardActive]}>
+            <View style={[styles.mesoCard, live.mesoCard, isActive && [styles.mesoCardActive, live.mesoCardActive]]}>
               {isActive && (
-                <View style={styles.activeBadge}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.activeBadgeText}>Active</Text>
+                <View style={[styles.activeBadge, live.activeBadge]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.activeBadgeText, live.activeBadgeText]}>Active</Text>
                 </View>
               )}
-              <Text maxFontSizeMultiplier={1.3} style={styles.mesoName}>{meso.name}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.mesoName, live.mesoName]}>{meso.name}</Text>
               <View style={styles.mesoMeta}>
                 {meso.startDate && (
-                  <Text maxFontSizeMultiplier={1.3} style={styles.metaItem}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.metaItem, live.metaItem]}>
                     {format(new Date(meso.startDate), 'MMM d')}
                     {meso.endDate ? ` · ${format(new Date(meso.endDate), 'MMM d')}` : ''}
                   </Text>
                 )}
-                {meso.focus ? <Text maxFontSizeMultiplier={1.3} style={styles.metaItem}>{meso.focus}</Text> : null}
+                {meso.focus ? <Text maxFontSizeMultiplier={1.3} style={[styles.metaItem, live.metaItem]}>{meso.focus}</Text> : null}
               </View>
               {!isActive && (
                 <Button
@@ -251,15 +257,15 @@ export default function MesocycleBuilderScreen({ navigation }) {
                   size="sm"
                   fullWidth={false}
                   onPress={() => navigation.navigate('BlockReflection', { mesocycleId: meso.id })}
-                  style={styles.summaryBtn}
-                  textStyle={styles.summaryBtnText}
+                  style={[styles.summaryBtn, live.summaryBtn]}
+                  textStyle={[styles.summaryBtnText, live.summaryBtnText]}
                   accessibilityLabel={`View summary of ${meso.name}`}
                 />
               )}
               {isActive && (
                 <View style={styles.weekProgress}>
                   <View style={styles.weekProgressHeader}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.weekLabel}>Week {currentWeek} of {totalWeeks}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.weekLabel, live.weekLabel]}>Week {currentWeek} of {totalWeeks}</Text>
                     <InfoTooltip
                       size={13}
                       text={
@@ -277,14 +283,15 @@ export default function MesocycleBuilderScreen({ navigation }) {
                         key={i}
                         style={[
                           styles.weekDot,
-                          i < currentWeek && styles.weekDotActive,
-                          i + 1 === meso.deloadWeek && styles.weekDotDeload,
+                          live.weekDot,
+                          i < currentWeek && [styles.weekDotActive, live.weekDotActive],
+                          i + 1 === meso.deloadWeek && [styles.weekDotDeload, live.weekDotDeload],
                         ]}
                       />
                     ))}
                   </View>
                   {meso.deloadWeek && (
-                    <Text maxFontSizeMultiplier={1.3} style={styles.deloadLabel}>Week {meso.deloadWeek} = recovery week · {currentWeek < meso.deloadWeek ? `${meso.deloadWeek - currentWeek} week${meso.deloadWeek - currentWeek !== 1 ? 's' : ''} away` : currentWeek === meso.deloadWeek ? 'this week' : 'done'}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.deloadLabel, live.deloadLabel]}>Week {meso.deloadWeek} = recovery week · {currentWeek < meso.deloadWeek ? `${meso.deloadWeek - currentWeek} week${meso.deloadWeek - currentWeek !== 1 ? 's' : ''} away` : currentWeek === meso.deloadWeek ? 'this week' : 'done'}</Text>
                   )}
                 </View>
               )}
@@ -316,7 +323,15 @@ export default function MesocycleBuilderScreen({ navigation }) {
 
 // ─── Active meso dashboard card ──────────────────────────────────────────────
 
+// CP-10 batch G (2026-07-11): ActiveMesoDashboard is a sibling function-
+// component scope (rendered via ListHeaderComponent, not prop-drilled
+// `live`/`t` from MesocycleBuilderScreen), so its own useTheme() call is
+// cleaner than threading two extra props through. Same shared
+// buildLiveStyles(t) as the parent screen (CardioHistoryScreen/CardioTrend
+// precedent, batch preceding this one).
 function ActiveMesoDashboard({ stats, currentWeek }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const { tonnageBars, recovery, autoReg, deloadPrediction, active } = stats;
   const totalWeeks = active.durationWeeks || 4;
   const progress = Math.min(1, (currentWeek - 1) / Math.max(totalWeeks - 1, 1));
@@ -333,37 +348,52 @@ function ActiveMesoDashboard({ stats, currentWeek }) {
   }
 
   return (
-    <View style={styles.dashCard}>
+    <View style={[styles.dashCard, live.dashCard]}>
       {/* Header */}
       <View style={styles.dashHeader}>
-        <View style={styles.activeBadge}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.activeBadgeText}>Active</Text>
+        <View style={[styles.activeBadge, live.activeBadge]}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.activeBadgeText, live.activeBadgeText]}>Active</Text>
         </View>
-        <Ionicons name="layers" size={16} color={colors.primary} />
+        <Ionicons name="layers" size={16} color={t.colors.primary} />
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={styles.dashName} numberOfLines={1}>{active.name}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.dashWeek}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.dashName, live.dashName]} numberOfLines={1}>{active.name}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.dashWeek, live.dashWeek]}>
         Week {currentWeek} of {totalWeeks}
         {active.focus ? `  ·  ${active.focus}` : ''}
       </Text>
 
       {/* Progress track */}
-      <View style={styles.progTrack}>
-        <View style={[styles.progFill, { width: progressPct }]} />
+      <View style={[styles.progTrack, live.progTrack]}>
+        <View style={[styles.progFill, live.progFill, { width: progressPct }]} />
       </View>
 
       {/* Weekly tonnage BarChart */}
       {hasTonnage && (
         <View style={styles.tonnageWrap}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.tonnageLabel}>Weekly load (kg moved)</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.tonnageLabel, live.tonnageLabel]}>Weekly load (kg moved)</Text>
+          {/* CP-10 batch G: the bar colour ternary resolves HERE, at render
+              time, from the live theme -- the same deload/current/rest
+              mapping loadActiveStats() bakes into frontColor (left in place
+              but unused), the same wk+1 indexing, and the same
+              getCurrentWeek(active) value (the parent passes it from the
+              identical stats.active object). buildMarkStyle precedent
+              (CardioHistoryScreen): the mapping is byte-identical, only
+              WHERE the colour resolves changes, so a theme flip recolours
+              the chart without waiting for a data reload. */}
           <SvgBarSparkline
-            data={tonnageBars.map(b => ({ value: b.value, label: b.label, color: b.frontColor }))}
+            data={tonnageBars.map((b, i) => ({
+              value: b.value,
+              label: b.label,
+              color: i + 1 === active.deloadWeek ? t.colors.warning
+                : i + 1 === currentWeek ? t.colors.primary
+                : t.colors.primaryDim,
+            }))}
             width={tonnageBars.length * 30}
             height={60}
             barWidth={24}
             barGap={6}
             showLabels
-            labelColor={colors.textMuted}
+            labelColor={t.colors.textMuted}
           />
         </View>
       )}
@@ -373,20 +403,20 @@ function ActiveMesoDashboard({ stats, currentWeek }) {
         <View style={styles.recovRow}>
           {recovery.soreness != null && (
             <View style={styles.recovItem}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.recovValue}>{recovery.soreness.toFixed(1)}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.recovLabel}>Soreness</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.recovValue, live.recovValue]}>{recovery.soreness.toFixed(1)}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.recovLabel, live.recovLabel]}>Soreness</Text>
             </View>
           )}
           {recovery.fatigue != null && (
             <View style={styles.recovItem}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.recovValue}>{recovery.fatigue.toFixed(1)}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.recovLabel}>Fatigue</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.recovValue, live.recovValue]}>{recovery.fatigue.toFixed(1)}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.recovLabel, live.recovLabel]}>Fatigue</Text>
             </View>
           )}
           {recovery.joint != null && (
             <View style={styles.recovItem}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.recovValue}>{recovery.joint.toFixed(1)}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.recovLabel}>Joints</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.recovValue, live.recovValue]}>{recovery.joint.toFixed(1)}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.recovLabel, live.recovLabel]}>Joints</Text>
             </View>
           )}
         </View>
@@ -394,13 +424,13 @@ function ActiveMesoDashboard({ stats, currentWeek }) {
 
       {/* Deload advice banner */}
       {deloadCopy && (
-        <View style={[styles.deloadBanner, deloadCopy.urgent && styles.deloadBannerUrgent]}>
+        <View style={[styles.deloadBanner, live.deloadBanner, deloadCopy.urgent && [styles.deloadBannerUrgent, live.deloadBannerUrgent]]}>
           <Ionicons
             name={deloadCopy.urgent ? 'warning-outline' : 'information-circle-outline'}
             size={14}
-            color={deloadCopy.urgent ? colors.error : colors.warning}
+            color={deloadCopy.urgent ? t.colors.error : t.colors.warning}
           />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.deloadBannerText, deloadCopy.urgent && { color: colors.onErrorBg }]}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.deloadBannerText, live.deloadBannerText, deloadCopy.urgent && { color: t.colors.onErrorBg }]}>
             {deloadCopy.text}
           </Text>
         </View>
@@ -506,3 +536,62 @@ const styles = StyleSheet.create({
   planWeekDotActive: { backgroundColor: colors.primary },
   planWeekDotDeload: { backgroundColor: withAlpha(colors.warning, 0.502) },
 });
+
+// CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, shared
+// by this screen's two function-component scopes (MesocycleBuilderScreen
+// and ActiveMesoDashboard) so they can never drift out of step with each
+// other or the frozen block. Pure layout keys (flex/gap/padding/height/
+// borderRadius/borderWidth/fontWeight, no colour/fontSize/type token) are
+// correctly omitted -- there is nothing to unfreeze for them. Same pattern
+// as CardioHistoryScreen.js's buildLiveStyles.
+//
+// NOTE (flag resolved at lead review, batch G): loadActiveStats() above
+// bakes colors.warning/colors.primary/colors.primaryDim into each
+// tonnageBars[].frontColor at DATA-LOAD time. Converting those literals in
+// place would have left the chart on stale colours until the next screen
+// focus, so instead the SvgBarSparkline call site in ActiveMesoDashboard
+// resolves the identical ternary at RENDER time from t.colors (the
+// buildMarkStyle precedent, CardioHistoryScreen); frontColor stays baked
+// (byte-identical loader) but is no longer read.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    historyLabel: { ...t.type.label, color: t.colors.textSecondary },
+    dashCard: { backgroundColor: t.colors.surface, borderColor: t.colors.primary },
+    dashName: { ...t.type.title, color: t.colors.textPrimary },
+    dashWeek: { ...t.type.num('caption'), color: t.colors.textSecondary },
+    progTrack: { backgroundColor: t.colors.surface2 },
+    progFill: { backgroundColor: t.colors.primary },
+    tonnageLabel: { ...t.type.caption, color: t.colors.textMuted },
+    recovValue: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
+    recovLabel: { fontSize: t.fontSize.micro, color: t.colors.textMuted },
+    deloadBanner: { backgroundColor: t.colors.warningBg, borderColor: t.colors.warning },
+    deloadBannerUrgent: { backgroundColor: t.colors.errorBg, borderColor: t.colors.error },
+    deloadBannerText: { ...t.type.captionTight, color: t.colors.warning },
+    mesoCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    mesoCardActive: { borderColor: t.colors.primary },
+    activeBadge: { backgroundColor: t.colors.primaryBg },
+    activeBadgeText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    mesoName: { ...t.type.title, color: t.colors.textPrimary },
+    metaItem: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    planCard: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, 0.251) },
+    planCardTag: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    planCardName: { ...t.type.h3, color: t.colors.textPrimary },
+    planCardMeta: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    planCardNote: { ...t.type.bodySm, color: t.colors.textMuted },
+    weekLabel: { ...t.type.num('label'), color: t.colors.textSecondary },
+    weekDot: { backgroundColor: t.colors.surface2 },
+    weekDotActive: { backgroundColor: t.colors.primary },
+    weekDotDeload: { backgroundColor: withAlpha(t.colors.warning, 0.502) },
+    deloadLabel: { ...t.type.num('caption'), color: t.colors.warning },
+    summaryBtn: { borderColor: withAlpha(t.colors.primary, 0.314), backgroundColor: t.colors.primaryBg },
+    summaryBtnText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    planWeekLabel: { ...t.type.num('label'), color: t.colors.primary },
+    planWeekLabelDeload: { color: t.colors.warning },
+    planWeekDot: { backgroundColor: t.colors.surface2 },
+    planWeekDotActive: { backgroundColor: t.colors.primary },
+    planWeekDotDeload: { backgroundColor: withAlpha(t.colors.warning, 0.502) },
+  };
+}

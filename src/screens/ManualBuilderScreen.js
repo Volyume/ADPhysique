@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform,
@@ -19,6 +19,7 @@ import DragReorderList from '../components/DragReorderList';
 import { useDragAutoScrollBridge } from '../components/DragReorderList';
 
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import {
   createProgramme, createRoutine, addExerciseToRoutine,
   activatePlanWithBlock, uid, getProgrammeById, getRoutinesForPlan,
@@ -96,14 +97,19 @@ function muscleStatus(muscle, totalSets) {
   return 'over';
 }
 
-// Theme tokens (not raw hex) so these recolour with the colour-blind palette.
-const STATUS_COLOR = {
-  none: colors.textMuted,
-  low:  colors.warning,
-  good: colors.success,
-  high: colors.success,
-  over: colors.error,
-};
+// CP-10 batch G (2026-07-11): converted to accept the live colour table `c`
+// on the buildMarkStyle(c) precedent (CardioHistoryScreen) -- the status ->
+// colour mapping is byte-identical in meaning, only the token SOURCE moved
+// from the frozen import to the live theme.
+function buildStatusColor(c) {
+  return {
+    none: c.textMuted,
+    low:  c.warning,
+    good: c.success,
+    high: c.success,
+    over: c.error,
+  };
+}
 const STATUS_DOT = {
   none: '○',
   low:  '◐',
@@ -112,7 +118,14 @@ const STATUS_DOT = {
   over: '●',
 };
 
+// CP-10 batch G (2026-07-11): rendered once per screen render (not a list
+// row), but with its own separate `balanceStyles` block, so it takes its own
+// useTheme() call rather than prop-drilling `t`/`live` from the parent, same
+// pattern as CardioHistoryScreen.js's CardioTrend sibling component.
 function PlanBalanceCard({ days }) {
+  const t = useTheme();
+  const live = useMemo(() => buildBalanceLiveStyles(t), [t]);
+  const statusColor = useMemo(() => buildStatusColor(t.colors), [t]);
   const volume = computePlanVolume(days);
   const hasAnyExercise = days.some(d => d.exercises.length > 0);
   if (!hasAnyExercise) return null;
@@ -129,8 +142,8 @@ function PlanBalanceCard({ days }) {
   return (
     <Card style={balanceStyles.card}>
       <View style={balanceStyles.header}>
-        <Ionicons name="pie-chart-outline" size={16} color={colors.textSecondary} />
-        <Text maxFontSizeMultiplier={1.3} style={balanceStyles.title}>Plan balance</Text>
+        <Ionicons name="pie-chart-outline" size={16} color={t.colors.textSecondary} />
+        <Text maxFontSizeMultiplier={1.3} style={[balanceStyles.title, live.title]}>Plan balance</Text>
         {/* NV-1: the dot legend (full/half/hollow, green/amber/red) has no key
             anywhere else on this card, so a first-time builder can only learn
             it by triggering a warning. Reuses the volume-bands gloss already
@@ -141,12 +154,12 @@ function PlanBalanceCard({ days }) {
       <View style={balanceStyles.grid}>
         {rows.map(({ muscle, sets, status }) => (
           <View key={muscle} style={balanceStyles.cell}>
-            <Text maxFontSizeMultiplier={1.3} style={[balanceStyles.dot, { color: STATUS_COLOR[status] }]}>
+            <Text maxFontSizeMultiplier={1.3} style={[balanceStyles.dot, live.dot, { color: statusColor[status] }]}>
               {STATUS_DOT[status]}
             </Text>
-            <Text maxFontSizeMultiplier={1.3} style={balanceStyles.muscleName}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[balanceStyles.muscleName, live.muscleName]}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
             {sets > 0 && (
-              <Text maxFontSizeMultiplier={1.3} style={balanceStyles.setCount}>{sets}×</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[balanceStyles.setCount, live.setCount]}>{sets}×</Text>
             )}
           </View>
         ))}
@@ -159,9 +172,9 @@ function PlanBalanceCard({ days }) {
               <Ionicons
                 name={status === 'none' ? 'alert-circle-outline' : 'information-circle-outline'}
                 size={14}
-                color={status === 'none' ? colors.warning : colors.textMuted}
+                color={status === 'none' ? t.colors.warning : t.colors.textMuted}
               />
-              <Text maxFontSizeMultiplier={1.3} style={[balanceStyles.warningText, status === 'none' && { color: colors.warning }]}>
+              <Text maxFontSizeMultiplier={1.3} style={[balanceStyles.warningText, live.warningText, status === 'none' && { color: t.colors.warning }]}>
                 {status === 'none'
                   ? `No ${MUSCLE_DISPLAY_NAMES[muscle]} work in this plan`
                   : `${MUSCLE_DISPLAY_NAMES[muscle]} work is low. Consider adding a set or two.`}
@@ -175,8 +188,8 @@ function PlanBalanceCard({ days }) {
         <Card surface="surface2" radius="md" padding="md" style={balanceStyles.warningBox}>
           {overloaded.map(({ muscle }) => (
             <View key={muscle} style={balanceStyles.warningRow}>
-              <Ionicons name="warning-outline" size={14} color={colors.error} />
-              <Text maxFontSizeMultiplier={1.3} style={[balanceStyles.warningText, { color: colors.error }]}>
+              <Ionicons name="warning-outline" size={14} color={t.colors.error} />
+              <Text maxFontSizeMultiplier={1.3} style={[balanceStyles.warningText, live.warningText, { color: t.colors.error }]}>
                 {`${MUSCLE_DISPLAY_NAMES[muscle]} volume is very high. This may affect recovery.`}
               </Text>
             </View>
@@ -191,6 +204,11 @@ function PlanBalanceCard({ days }) {
 // S5: compact wrapper around the shared +/- Stepper so sets, rep ranges and
 // rest use the app's one numeric-control primitive while the screen keeps the
 // training-specific clamp/coherence rules.
+// CP-10 batch G (2026-07-11): called many times per row (once per target),
+// so its own useTheme() call rather than prop-drilling `t`/`live` through
+// every TargetStepper call site, same "sibling scope, own useTheme()"
+// pattern as CardioHistoryScreen.js's CardioTrend. Shares the parent's
+// `buildLiveStyles(t)` since both read the same `styles` block.
 function TargetStepper({
   label,
   value,
@@ -203,9 +221,11 @@ function TargetStepper({
   max,
   step = 1,
 }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={styles.controlGroup}>
-      <Text maxFontSizeMultiplier={1.3} style={styles.controlLabel}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.controlLabel, live.controlLabel]}>{label}</Text>
       <Stepper
         value={value}
         min={min}
@@ -265,6 +285,9 @@ export default function ManualBuilderScreen({ navigation, route }) {
   // writes until Save (matching the rest of this screen's model), so the
   // actual soft-delete happens in persistDays; Undo simply un-marks it.
   const [removedRoutineIds, setRemovedRoutineIds] = useState([]);
+  // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   useEffect(() => {
     if (!planId) return undefined;
@@ -814,7 +837,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
 
   if (loadingExisting) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Edit plan" />
         <View style={styles.page2Content}>
           <Skeleton width="55%" height={24} />
@@ -829,14 +852,14 @@ export default function ManualBuilderScreen({ navigation, route }) {
 
   if (page === 1) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Create a plan" />
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView
             contentContainerStyle={styles.page1Content}
             keyboardShouldPersistTaps="handled"
           >
-            <Text maxFontSizeMultiplier={1.3} style={styles.subtitle}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>
               Set up the basics, then add your workouts day by day.
             </Text>
 
@@ -845,12 +868,12 @@ export default function ManualBuilderScreen({ navigation, route }) {
               <TextField
                 label="Plan name"
                 accessibilityLabel="Plan name"
-                fieldStyle={styles.textField}
-                inputStyle={styles.textInput}
+                fieldStyle={[styles.textField, live.textField]}
+                inputStyle={[styles.textInput, live.textInput]}
                 value={planName}
                 onChangeText={setPlanName}
                 placeholder="e.g. My Push Pull Legs"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={t.colors.textMuted}
                 autoCapitalize="words"
                 returnKeyType="done"
               />
@@ -858,7 +881,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
 
             {/* Goal */}
             <View style={styles.section}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.label}>Goal</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.label, live.label]}>Goal</Text>
               <View style={styles.pillWrap}>
                 {GOALS.map(g => (
                   <Chip
@@ -868,7 +891,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
                     onPress={() => { haptics.selection(); setGoal(g.key); }}
                     accessibilityLabel={g.label}
                     style={styles.pill}
-                    labelStyle={styles.pillText}
+                    labelStyle={[styles.pillText, live.pillText]}
                   />
                 ))}
               </View>
@@ -876,7 +899,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
 
             {/* Days per week */}
             <View style={styles.section}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.label}>Training days per week</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.label, live.label]}>Training days per week</Text>
               <View style={styles.pillWrap}>
                 {DAY_COUNT_OPTIONS.map(n => (
                   <Chip
@@ -886,11 +909,11 @@ export default function ManualBuilderScreen({ navigation, route }) {
                     onPress={() => { haptics.selection(); setDaysPerWeek(n); }}
                     accessibilityLabel={`${n} training days per week`}
                     style={styles.dayCountPill}
-                    labelStyle={styles.pillText}
+                    labelStyle={[styles.pillText, live.pillText]}
                   />
                 ))}
               </View>
-              <Text maxFontSizeMultiplier={1.3} style={styles.hintText}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.hintText, live.hintText]}>
                 We&apos;ll create {daysPerWeek} empty days. You can add or remove days later.
               </Text>
             </View>
@@ -900,7 +923,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
               icon="add-circle"
               size="lg"
               style={[styles.primaryBtn, creating && styles.btnDisabled]}
-              textStyle={styles.primaryBtnText}
+              textStyle={[styles.primaryBtnText, live.primaryBtnText]}
               onPress={handleCreatePlan}
               disabled={creating}
               loading={creating}
@@ -916,7 +939,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
   // ── Page 2 render ─────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title={isEditMode ? 'Edit plan' : 'Create a plan'} />
       <ExercisePickerModal
         visible={showPicker}
@@ -937,12 +960,12 @@ export default function ManualBuilderScreen({ navigation, route }) {
         <TextField
           accessibilityLabel="Plan name"
           containerStyle={styles.planNameFieldContainer}
-          fieldStyle={styles.planNameField}
-          inputStyle={styles.planNameInput}
+          fieldStyle={[styles.planNameField, live.planNameField]}
+          inputStyle={[styles.planNameInput, live.planNameInput]}
           value={editablePlanName}
           onChangeText={setEditableName}
           placeholder="Plan name"
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={t.colors.textMuted}
           autoCapitalize="words"
           returnKeyType="done"
         />
@@ -951,17 +974,17 @@ export default function ManualBuilderScreen({ navigation, route }) {
         {days.map((day, dayIdx) => (
           <Card key={day.localId} style={styles.dayCard}>
             {/* Day header */}
-            <View style={styles.dayHeader}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.dayNumber}>Day {dayIdx + 1}</Text>
+            <View style={[styles.dayHeader, live.dayHeader]}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.dayNumber, live.dayNumber]}>Day {dayIdx + 1}</Text>
               <TextField
                 accessibilityLabel={`Name for day ${dayIdx + 1}`}
                 containerStyle={styles.dayNameFieldContainer}
                 fieldStyle={styles.dayNameField}
-                inputStyle={styles.dayNameInput}
+                inputStyle={[styles.dayNameInput, live.dayNameInput]}
                 value={day.name}
                 onChangeText={v => updateDayName(dayIdx, v)}
                 placeholder="Day name"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={t.colors.textMuted}
               />
               <TouchableOpacity
                 onPress={() => handleDuplicateDay(dayIdx)}
@@ -969,7 +992,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel={`Duplicate ${day.name}`}
               >
-                <Ionicons name="copy-outline" size={18} color={colors.textSecondary} />
+                <Ionicons name="copy-outline" size={18} color={t.colors.textSecondary} />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => handleRemoveDay(dayIdx)}
@@ -977,7 +1000,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel={`Remove ${day.name}`}
               >
-                <Ionicons name="trash-outline" size={18} color={colors.error} />
+                <Ionicons name="trash-outline" size={18} color={t.colors.error} />
               </TouchableOpacity>
             </View>
 
@@ -1018,7 +1041,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
                     const isLast = exIdx === day.exercises.length - 1;
                     return (
                       <TouchableOpacity
-                        style={[styles.exRow, isSelected && styles.exRowSelected]}
+                        style={[styles.exRow, live.exRow, isSelected && [styles.exRowSelected, live.exRowSelected]]}
                         onPress={() => toggleSupersetSelect(dayIdx, ex.localId)}
                         onLongPress={() => handleLongPressExercise(dayIdx, ex.localId, ex.name)}
                         delayLongPress={400}
@@ -1031,15 +1054,15 @@ export default function ManualBuilderScreen({ navigation, route }) {
                         <Ionicons
                           name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
                           size={18}
-                          color={isSelected ? colors.primary : colors.textMuted}
+                          color={isSelected ? t.colors.primary : t.colors.textMuted}
                         />
                         <View style={styles.exRowLeft}>
                           <View style={styles.exNameRow}>
-                            <Text maxFontSizeMultiplier={1.3} style={styles.exName}>{ex.name}</Text>
+                            <Text maxFontSizeMultiplier={1.3} style={[styles.exName, live.exName]}>{ex.name}</Text>
                             {groupIdx >= 0 && (
-                              <View style={styles.ssChip}>
-                                <Ionicons name="link" size={11} color={colors.primary} />
-                                <Text maxFontSizeMultiplier={1.3} style={styles.ssChipText}>
+                              <View style={[styles.ssChip, live.ssChip]}>
+                                <Ionicons name="link" size={11} color={t.colors.primary} />
+                                <Text maxFontSizeMultiplier={1.3} style={[styles.ssChipText, live.ssChipText]}>
                                   Superset {String.fromCharCode(65 + groupIdx)}
                                 </Text>
                               </View>
@@ -1097,24 +1120,24 @@ export default function ManualBuilderScreen({ navigation, route }) {
                           <TouchableOpacity
                             onPress={() => moveExercise(dayIdx, ex.localId, 'up')}
                             disabled={isFirst}
-                            style={[styles.reorderBtn, isFirst && styles.reorderBtnDisabled]}
+                            style={[styles.reorderBtn, live.reorderBtn, isFirst && styles.reorderBtnDisabled]}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                             accessibilityRole="button"
                             accessibilityLabel={`Move ${ex.name} up`}
                             accessibilityState={{ disabled: isFirst }}
                           >
-                            <Ionicons name="chevron-up" size={14} color={isFirst ? colors.border : colors.textMuted} />
+                            <Ionicons name="chevron-up" size={14} color={isFirst ? t.colors.border : t.colors.textMuted} />
                           </TouchableOpacity>
                           <TouchableOpacity
                             onPress={() => moveExercise(dayIdx, ex.localId, 'down')}
                             disabled={isLast}
-                            style={[styles.reorderBtn, isLast && styles.reorderBtnDisabled]}
+                            style={[styles.reorderBtn, live.reorderBtn, isLast && styles.reorderBtnDisabled]}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                             accessibilityRole="button"
                             accessibilityLabel={`Move ${ex.name} down`}
                             accessibilityState={{ disabled: isLast }}
                           >
-                            <Ionicons name="chevron-down" size={14} color={isLast ? colors.border : colors.textMuted} />
+                            <Ionicons name="chevron-down" size={14} color={isLast ? t.colors.border : t.colors.textMuted} />
                           </TouchableOpacity>
                         </View>
                         {groupIdx >= 0 && (
@@ -1124,7 +1147,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
                             accessibilityRole="button"
                             accessibilityLabel={`Ungroup superset ${String.fromCharCode(65 + groupIdx)}`}
                           >
-                            <Ionicons name="close-circle-outline" size={16} color={colors.textMuted} />
+                            <Ionicons name="close-circle-outline" size={16} color={t.colors.textMuted} />
                           </TouchableOpacity>
                         )}
                       </TouchableOpacity>
@@ -1141,7 +1164,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
                         size="sm"
                         onPress={() => handleGroupSuperset(dayIdx)}
                         style={styles.groupBtn}
-                        textStyle={styles.groupBtnText}
+                        textStyle={[styles.groupBtnText, live.groupBtnText]}
                         accessibilityLabel={`Group ${selected.size} exercises into a superset`}
                       />
                       {/* NV-2: "superset" is unexplained jargon for a novice
@@ -1163,7 +1186,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
               fullWidth={false}
               onPress={() => openPicker(dayIdx)}
               style={styles.addExBtn}
-              textStyle={styles.addExText}
+              textStyle={[styles.addExText, live.addExText]}
               accessibilityLabel="Add exercise"
             />
           </Card>
@@ -1175,8 +1198,8 @@ export default function ManualBuilderScreen({ navigation, route }) {
           icon="add-circle-outline"
           variant="outline"
           onPress={handleAddDay}
-          style={styles.addDayBtn}
-          textStyle={styles.addDayText}
+          style={[styles.addDayBtn, live.addDayBtn]}
+          textStyle={[styles.addDayText, live.addDayText]}
           accessibilityLabel="Add day"
         />
 
@@ -1192,7 +1215,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
               title="Save changes"
               icon="checkmark-circle"
               style={[styles.activateBtn, saving && styles.btnDisabled]}
-              textStyle={styles.activateBtnText}
+              textStyle={[styles.activateBtnText, live.activateBtnText]}
               onPress={handleSaveEdit}
               disabled={saving}
               loading={saving}
@@ -1206,7 +1229,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
               title="Save draft"
               variant="secondary"
               style={[styles.draftBtn, saving && styles.btnDisabled]}
-              textStyle={styles.draftBtnText}
+              textStyle={[styles.draftBtnText, live.draftBtnText]}
               onPress={handleSaveDraft}
               disabled={saving}
               loading={saving}
@@ -1217,7 +1240,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
               title="Save and activate"
               icon="flash"
               style={[styles.activateBtn, saving && styles.btnDisabled]}
-              textStyle={styles.activateBtnText}
+              textStyle={[styles.activateBtnText, live.activateBtnText]}
               onPress={handleSaveAndActivate}
               disabled={saving}
               loading={saving}
@@ -1236,18 +1259,18 @@ export default function ManualBuilderScreen({ navigation, route }) {
         sheetStyle={styles.successSheet}
       >
         <View style={styles.successIconWrap}>
-          <Ionicons name="checkmark-circle" size={48} color={colors.success} />
+          <Ionicons name="checkmark-circle" size={48} color={t.colors.success} />
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={styles.successTitle}>Plan activated</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.successName}>{savedPlanName}</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.successSub}>Your plan is set as active and ready to use.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.successTitle, live.successTitle]}>Plan activated</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.successName, live.successName]}>{savedPlanName}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.successSub, live.successSub]}>Your plan is set as active and ready to use.</Text>
         <View style={styles.successActions}>
           <Button
             title="Stay here"
             variant="secondary"
             fullWidth={false}
             style={styles.successSecondary}
-            textStyle={styles.successSecondaryText}
+            textStyle={[styles.successSecondaryText, live.successSecondaryText]}
             onPress={() => setSuccessModal(false)}
             accessibilityLabel="Stay here"
           />
@@ -1256,7 +1279,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
             icon="home"
             fullWidth={false}
             style={styles.successPrimary}
-            textStyle={styles.successPrimaryText}
+            textStyle={[styles.successPrimaryText, live.successPrimaryText]}
             onPress={() => { setSuccessModal(false); navigation.navigate('HomeTab'); }}
             accessibilityLabel="Go to Train"
           />
@@ -1594,6 +1617,50 @@ const styles = StyleSheet.create({
   },
 });
 
+// CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/gap/padding/borderWidth/borderRadius/borderStyle, no token) and
+// fontWeight/opacity (not part of the live theme table) are correctly
+// omitted -- there is nothing to unfreeze for them. Same pattern as
+// DebugLogScreen.js's buildLiveStyles (batch F).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    subtitle: { ...t.type.bodySm, color: t.colors.textMuted },
+    label: { ...t.type.label, color: t.colors.textSecondary },
+    textField: { backgroundColor: t.colors.inputBg },
+    textInput: { ...t.type.body },
+    pillText: { ...t.type.label },
+    hintText: { ...t.type.captionTight, color: t.colors.textMuted },
+    primaryBtnText: { ...t.type.title, color: t.colors.onPrimary },
+    planNameField: { borderBottomColor: t.colors.borderLight },
+    planNameInput: { ...t.type.h2 },
+    dayHeader: { borderBottomColor: t.colors.border },
+    dayNumber: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    dayNameInput: { ...t.type.bodyStrong },
+    exRow: { borderBottomColor: t.colors.surface3 },
+    exRowSelected: { backgroundColor: t.colors.primaryBg },
+    reorderBtn: { backgroundColor: t.colors.surface2 },
+    ssChip: { backgroundColor: t.colors.primaryBg },
+    ssChipText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    groupBtnText: { ...t.type.label, color: t.colors.primary },
+    exName: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    controlLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    addExText: { ...t.type.label, color: t.colors.primary },
+    addDayBtn: { backgroundColor: t.colors.surface, borderColor: t.colors.borderLight },
+    addDayText: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
+    draftBtnText: { ...t.type.bodyStrong, color: t.colors.textSecondary },
+    activateBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    successTitle: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
+    successName: { ...t.type.title, color: t.colors.primary },
+    successSub: { ...t.type.bodySm, color: t.colors.textSecondary },
+    successSecondaryText: { ...t.type.bodyStrong, color: t.colors.textSecondary },
+    successPrimaryText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+  };
+}
+
 const balanceStyles = StyleSheet.create({
   card: {
     gap: spacing.md,
@@ -1651,3 +1718,21 @@ const balanceStyles = StyleSheet.create({
     color: colors.textMuted,
   },
 });
+
+// CP-10 batch G (2026-07-11): the frozen `balanceStyles` block above stays
+// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing
+// sub-properties of the matching frozen style, at identical rest values, so
+// PlanBalanceCard carries no static island under a live theme toggle. Pure
+// layout keys (flex/gap, no token) and fontWeight/lineHeight (not part of
+// the live theme table) are correctly omitted -- there is nothing to
+// unfreeze for them. Own function (not `buildLiveStyles`) because this is a
+// separate StyleSheet.create block for PlanBalanceCard's own scope.
+function buildBalanceLiveStyles(t) {
+  return {
+    title: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    dot: { fontSize: t.fontSize.sm },
+    muscleName: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    setCount: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    warningText: { ...t.type.captionTight, color: t.colors.textMuted },
+  };
+}

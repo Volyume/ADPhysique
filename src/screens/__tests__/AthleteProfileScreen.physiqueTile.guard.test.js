@@ -36,7 +36,11 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).not.toMatch(/Add body weight and main lifts/);
     expect(source).not.toMatch(/Add in Progress/);
     expect(source).toMatch(/const focusTile = currentFocusTile\(userProfile\);/);
-    expect(source).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.heroFocus\} numberOfLines=\{2\}>\{focusTile\.value\}<\/Text>/);
+    // CP-10 batch G: heroFocus gained its live-theme override
+    // (style={[styles.heroFocus, live.heroFocus]}). The pinned contract is
+    // unchanged -- the focus line still renders through styles.heroFocus at
+    // two lines max -- so the pattern accepts either spelling.
+    expect(source).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{(?:styles\.heroFocus|\[styles\.heroFocus, live\.heroFocus\])\} numberOfLines=\{2\}>\{focusTile\.value\}<\/Text>/);
     expect(source).toMatch(/const statusTile = profileStatusTile\(freshness\);/);
     expect(source).toMatch(/<StatTile label=\{statusTile\.label\} value=\{statusTile\.value\} sub=\{statusTile\.sub\} \/>/);
     expect(source).not.toMatch(/<StatTile label="Physique Scan"/);
@@ -78,7 +82,9 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(settingsProfileSource).toContain('next weekly check-in');
     expect(settingsProfileSource).not.toMatch(/weekly coach run/);
     expect(coachSource).toMatch(/function profileFocusLine\(profile = \{\}\)/);
-    expect(coachSource).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{styles\.profileFocus\} numberOfLines=\{2\}>\{profileFocus\}<\/Text>/);
+    // CP-10 batch G: profileFocus gained its live-theme override, same
+    // contract-preserving widening as heroFocus above.
+    expect(coachSource).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{(?:styles\.profileFocus|\[styles\.profileFocus, live\.profileFocus\])\} numberOfLines=\{2\}>\{profileFocus\}<\/Text>/);
     expect(coachSource).toMatch(/label="Upgrade to Pro"/);
     expect(coachSource).toMatch(/pro=\{!isPro\}/);
   });

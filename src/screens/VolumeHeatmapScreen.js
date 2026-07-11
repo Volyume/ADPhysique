@@ -3,7 +3,8 @@ import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, volumeStatusColor, stateColors, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, buildVolumeStatusColor, circle } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BackHeader from '../components/BackHeader';
 import InfoTooltip from '../components/InfoTooltip';
@@ -41,11 +42,19 @@ import { freshnessBand } from '../lib/muscleRecovery';
 // 'act'/error: training a muscle today is normal and expected, so a red dot
 // there wrongly read as a warning and collided with red = "too much volume" on
 // the volume bar. Muted reads as "worked, now resting", with no false alarm.
-const FRESHNESS_META = {
-  fresh: { get color() { return stateColors.onTrack; }, label: 'Fresh' },
-  recovering: { get color() { return stateColors.watch; }, label: 'Recovering' },
-  fatigued: { get color() { return stateColors.neutral; }, label: 'Recently trained' },
-};
+//
+// CP-10 batch G (2026-07-11): converted to accept the live theme's colour
+// table on the buildVolumeStatusColor(t.colors) precedent (WorkoutSummaryScreen,
+// stage 3) -- the band -> tone mapping is byte-identical in meaning and
+// rationale (see comment above), only the token SOURCE moved from the frozen
+// stateColors singleton to the live theme.
+function buildFreshnessMeta(c) {
+  return {
+    fresh: { color: c.success, label: 'Fresh' },
+    recovering: { color: c.warning, label: 'Recovering' },
+    fatigued: { color: c.textMuted, label: 'Recently trained' },
+  };
+}
 
 const WINDOW_OPTIONS = [
   { weeks: 1, label: '1 week' },
@@ -60,6 +69,11 @@ export default function VolumeHeatmapScreen() {
     userProfile: s.userProfile,
   })));
   const toast = useToast();
+  // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js). Memoised
+  // because this screen renders a muscle-row list and a trend list.
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
+  const freshnessMeta = useMemo(() => buildFreshnessMeta(t.colors), [t]);
   const [weeklyVolume, setWeeklyVolume] = useState({});
   // NAV-8: first paint showed an empty diagram while sets loaded; skeleton
   // cards cover the read instead. Only the FIRST load gates the render;
@@ -273,14 +287,15 @@ export default function VolumeHeatmapScreen() {
   // status + colour from getVolumeStatus. Muscles with no data fall through
   // to the neutral fill inside BodyDiagramHeatmap.
   const volumeByMuscle = useMemo(() => {
+    const resolveVolumeStatusColor = buildVolumeStatusColor(t.colors);
     const map = {};
     for (const muscle of muscles) {
       const sets = Math.round(weeklyVolume[muscle]?.workingSets || 0);
       const { status, label } = getVolumeStatus(sets, muscle, effectiveLandmarks);
-      map[muscle] = { workingSets: sets, status, color: volumeStatusColor(status), label };
+      map[muscle] = { workingSets: sets, status, color: resolveVolumeStatusColor(status), label };
     }
     return map;
-  }, [weeklyVolume, effectiveLandmarks, muscles]);
+  }, [weeklyVolume, effectiveLandmarks, muscles, t]);
 
   // Muscles trained at least once in the 4-week trend window, in heatmap order.
   const trainedMuscles = useMemo(() => {
@@ -335,7 +350,7 @@ export default function VolumeHeatmapScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Volume heatmap" />
         <View style={styles.loadingStack} accessibilityLabel="Loading volume heatmap">
           <SkeletonCard height={220} />
@@ -348,7 +363,7 @@ export default function VolumeHeatmapScreen() {
 
   if (loadError) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title="Volume heatmap" />
         <View style={styles.content}>
           <EmptyState
@@ -364,7 +379,7 @@ export default function VolumeHeatmapScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Volume heatmap" />
       {/* L03-C5 (2026-07-09 design audit): standardise on the app's
           KeyboardAvoidingView pattern so the "Edit volume targets" number
@@ -390,8 +405,8 @@ export default function VolumeHeatmapScreen() {
                 style={[
                   styles.windowBtn,
                   active
-                    ? { backgroundColor: colors.primaryBg, borderColor: colors.primary }
-                    : { backgroundColor: colors.surface, borderColor: colors.border },
+                    ? { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary }
+                    : { backgroundColor: t.colors.surface, borderColor: t.colors.border },
                 ]}
                 onPress={() => setWindowWeeks(opt.weeks)}
                 activeOpacity={0.75}
@@ -401,8 +416,8 @@ export default function VolumeHeatmapScreen() {
               >
                 <Text maxFontSizeMultiplier={1.3}
                   style={[
-                    styles.windowBtnText,
-                    { color: active ? colors.primary : colors.textSecondary },
+                    styles.windowBtnText, live.windowBtnText,
+                    { color: active ? t.colors.primary : t.colors.textSecondary },
                   ]}
                 >
                   {opt.label}
@@ -414,8 +429,8 @@ export default function VolumeHeatmapScreen() {
 
         {/* Rolling window note */}
         <View style={styles.windowNote}>
-          <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={styles.windowNoteText}>{windowNoteText}</Text>
+          <Ionicons name="time-outline" size={14} color={t.colors.textMuted} />
+          <Text maxFontSizeMultiplier={1.3} style={[styles.windowNoteText, live.windowNoteText]}>{windowNoteText}</Text>
         </View>
 
         {showNoVolumeGuidance && (
@@ -429,10 +444,10 @@ export default function VolumeHeatmapScreen() {
 
         {/* Legend */}
         <Card padding="md" radius="md" style={styles.legendRow}>
-          <LegendItem color={colors.textMuted} label="Below minimum" />
-          <LegendItem color={colors.success} label="Optimal" />
-          <LegendItem color={colors.warning} label="Getting close" />
-          <LegendItem color={colors.error} label="Too much" />
+          <LegendItem color={t.colors.textMuted} label="Below minimum" />
+          <LegendItem color={t.colors.success} label="Optimal" />
+          <LegendItem color={t.colors.warning} label="Getting close" />
+          <LegendItem color={t.colors.error} label="Too much" />
           <InfoTooltip size={11} text={
             'Each bar shows weekly sets for a muscle group.\n\n' +
             'The two tick marks on each bar are:\n' +
@@ -447,9 +462,9 @@ export default function VolumeHeatmapScreen() {
             above: this reads "how recently was each muscle trained", not "is it
             at target". Numbers/labels first, calm, a small dot per band. */}
         <Card padding="md" radius="md" style={styles.legendRow}>
-          <LegendItem color={FRESHNESS_META.fresh.color} label="Fresh" />
-          <LegendItem color={FRESHNESS_META.recovering.color} label="Recovering" />
-          <LegendItem color={FRESHNESS_META.fatigued.color} label="Recently trained" />
+          <LegendItem color={freshnessMeta.fresh.color} label="Fresh" />
+          <LegendItem color={freshnessMeta.recovering.color} label="Recovering" />
+          <LegendItem color={freshnessMeta.fatigued.color} label="Recently trained" />
           <InfoTooltip size={11} text={
             'A second, separate view: how recently each muscle was trained.\n\n' +
             '  Fresh: recovered and ready\n' +
@@ -462,7 +477,7 @@ export default function VolumeHeatmapScreen() {
         {/* Muscle Rows */}
         <View
           ref={heatmapCardRef}
-          style={styles.heatmapCard}
+          style={[styles.heatmapCard, live.heatmapCard]}
           onLayout={(e) => {
             // Remember the card's y so per-row offsets can be added to it.
             rowOffsets.current.__cardY = e.nativeEvent.layout.y;
@@ -475,7 +490,7 @@ export default function VolumeHeatmapScreen() {
             const prevSets = Math.round(prevData.workingSets || 0);
             const landmarks = effectiveLandmarks?.[muscle] || VOLUME_LANDMARKS[muscle];
             const { status } = getVolumeStatus(sets, muscle, effectiveLandmarks);
-            const color = volumeStatusColor(status);
+            const color = buildVolumeStatusColor(t.colors)(status);
             const mrv = landmarks.mrv || 20;
             const fillPct = Math.min(sets / mrv, 1);
             const ghostFillPct = Math.min(prevSets / mrv, 1);
@@ -491,32 +506,32 @@ export default function VolumeHeatmapScreen() {
                   rowOffsets.current[muscle] = (rowOffsets.current.__cardY || 0) + rowY;
                 }}
               >
-                <Text maxFontSizeMultiplier={1.3} style={styles.muscleName}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
-                <View style={styles.barTrack}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.muscleName, live.muscleName]}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
+                <View style={[styles.barTrack, live.barTrack]}>
                   <View
                     style={[
                       styles.barFill,
                       {
                         width: `${ghostFillPct * 100}%`,
-                        backgroundColor: colors.textMuted,
+                        backgroundColor: t.colors.textMuted,
                         opacity: 0.25,
                         position: 'absolute',
                       },
                     ]}
                   />
                   <View style={[styles.barFill, { width: `${fillPct * 100}%`, backgroundColor: color }]} />
-                  <View style={[styles.landmark, { left: `${(landmarks.mev / mrv) * 100}%` }]} />
-                  <View style={[styles.landmark, { left: `${(landmarks.mav / mrv) * 100}%` }]} />
+                  <View style={[styles.landmark, live.landmark, { left: `${(landmarks.mev / mrv) * 100}%` }]} />
+                  <View style={[styles.landmark, live.landmark, { left: `${(landmarks.mav / mrv) * 100}%` }]} />
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.setsCount, { color }]}>{sets}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.mrvLabel}>/{mrv}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.setsCount, live.setsCount, { color }]}>{sets}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.mrvLabel, live.mrvLabel]}>/{mrv}</Text>
                 {lastTrainedMap[muscle] != null && (() => {
                   // Reuse the already-computed days-since-trained as the
                   // freshness input. The dot is the recovery layer; the text is
                   // the existing "last trained" recency. Null band (no data)
                   // renders no dot, matching the chip's null-safety.
                   const band = freshnessBand(lastTrainedMap[muscle].daysAgo, muscle);
-                  const meta = band && FRESHNESS_META[band];
+                  const meta = band && freshnessMeta[band];
                   return (
                     <View style={styles.freshnessGroup}>
                       {meta && (
@@ -527,8 +542,8 @@ export default function VolumeHeatmapScreen() {
                         />
                       )}
                       <Text maxFontSizeMultiplier={1.3} style={[
-                        styles.lastTrainedChip,
-                        lastTrainedMap[muscle].daysAgo <= 1 && styles.lastTrainedRecent,
+                        styles.lastTrainedChip, live.lastTrainedChip,
+                        lastTrainedMap[muscle].daysAgo <= 1 && [styles.lastTrainedRecent, live.lastTrainedRecent],
                       ]}>
                         {formatLastTrained(lastTrainedMap[muscle].daysAgo)}
                       </Text>
@@ -546,7 +561,7 @@ export default function VolumeHeatmapScreen() {
             <SectionLabel>Volume trend</SectionLabel>
             <WindowChips windows={VOLUME_WINDOWS} selectedKey={trendWindowKey} onSelect={selectTrendWindow}
               accessibilityPrefix="volume trend window" />
-            {!!volTakeaway && <Text maxFontSizeMultiplier={1.3} style={styles.trendTakeaway}>{volTakeaway}</Text>}
+            {!!volTakeaway && <Text maxFontSizeMultiplier={1.3} style={[styles.trendTakeaway, live.trendTakeaway]}>{volTakeaway}</Text>}
             {trainedMuscles.map(muscle => (
               <MuscleTrendRow
                 key={muscle}
@@ -561,11 +576,11 @@ export default function VolumeHeatmapScreen() {
         {/* Edit volume targets */}
         {editing ? (
           <Card style={styles.editSection}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.editTitle}>Edit volume targets</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.editSubtitle}>Weekly sets per muscle - minimum / target / ceiling</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.editTitle, live.editTitle]}>Edit volume targets</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.editSubtitle, live.editSubtitle]}>Weekly sets per muscle - minimum / target / ceiling</Text>
             {muscles.map(muscle => (
-              <View key={muscle} style={styles.editRow}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.editMuscleName}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
+              <View key={muscle} style={[styles.editRow, live.editRow]}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.editMuscleName, live.editMuscleName]}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
                 <View style={styles.editInputs}>
                   {[['mev', 'Min'], ['mav', 'Target'], ['mrv', 'Max']].map(([key, label]) => (
                     <TextField
@@ -580,7 +595,7 @@ export default function VolumeHeatmapScreen() {
                       selectTextOnFocus
                       accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]} ${label}`}
                       containerStyle={styles.editInputGroup}
-                      labelStyle={styles.editInputLabel}
+                      labelStyle={[styles.editInputLabel, live.editInputLabel]}
                       fieldStyle={styles.editInputField}
                       inputStyle={styles.editInputText}
                     />
@@ -622,8 +637,8 @@ export default function VolumeHeatmapScreen() {
               size="sm"
               onPress={resetToDefaults}
               accessibilityLabel="Reset volume targets to defaults"
-              style={[styles.actionButton, styles.resetButton]}
-              textStyle={styles.resetButtonText}
+              style={[styles.actionButton, styles.resetButton, live.resetButton]}
+              textStyle={[styles.resetButtonText, live.resetButtonText]}
             />
           </View>
         )}
@@ -633,11 +648,15 @@ export default function VolumeHeatmapScreen() {
   );
 }
 
+// CP-10 batch G (2026-07-11): sibling function-component scope, own
+// useTheme() call (no shared style block to memoise, so no buildLiveStyles
+// needed here -- both style objects are inline and resolved directly).
 function LegendItem({ color, label }) {
+  const t = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
       <View style={{ width: 10, height: 10, borderRadius: circle(10), backgroundColor: color }} />
-      <Text maxFontSizeMultiplier={1.3} style={{ fontSize: fontSize.micro, color: colors.textMuted }}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={{ fontSize: t.fontSize.micro, color: t.colors.textMuted }}>{label}</Text>
     </View>
   );
 }
@@ -646,17 +665,25 @@ const SPARK_BAR_WIDTH = 8;
 const SPARK_BAR_GAP = 2;
 const SPARK_MAX_HEIGHT = 24;
 
+// CP-10 batch G (2026-07-11): sibling function-component scope (rendered
+// once per trained muscle inside the ScrollView, not prop-drilled `live`/`t`
+// from VolumeHeatmapScreen), so its own useTheme() call is cleaner than
+// threading two extra props through. Own buildTrendLiveStyles(t) below since
+// this component already has its own separate `trendStyles` block.
 function MuscleTrendRow({ muscle, trendData, customLandmarks }) {
   // trendData is the window's weekly array (oldest → newest), each entry has
   // volumeByMuscle. COMP-019 Stage 1b: bars render through VolyumeChart's bar
   // variant with tap-and-hold scrub; since a 24px row has no room for a tooltip
   // card, the scrubbed week's count surfaces in the trailing label instead.
+  const t = useTheme();
+  const trendLive = useMemo(() => buildTrendLiveStyles(t), [t]);
+  const resolveVolumeStatusColor = buildVolumeStatusColor(t.colors);
   const counts = trendData.map(w => w.volumeByMuscle[muscle] || 0);
   const [scrubIdx, setScrubIdx] = useState(null);
 
   const barColorFor = (count) => (count === 0
-    ? colors.surface3
-    : volumeStatusColor(getVolumeStatus(count, muscle, customLandmarks).status));
+    ? t.colors.surface3
+    : resolveVolumeStatusColor(getVolumeStatus(count, muscle, customLandmarks).status));
 
   const barData = counts.map(c => ({ value: c, color: barColorFor(c) }));
   const chartWidth = counts.length * SPARK_BAR_WIDTH + Math.max(0, counts.length - 1) * SPARK_BAR_GAP;
@@ -668,7 +695,7 @@ function MuscleTrendRow({ muscle, trendData, customLandmarks }) {
 
   return (
     <View style={trendStyles.row}>
-      <Text maxFontSizeMultiplier={1.3} style={trendStyles.muscleName} numberOfLines={1}>
+      <Text maxFontSizeMultiplier={1.3} style={[trendStyles.muscleName, trendLive.muscleName]} numberOfLines={1}>
         {MUSCLE_DISPLAY_NAMES[muscle]}
       </Text>
       <View style={trendStyles.sparkContainer}>
@@ -679,7 +706,7 @@ function MuscleTrendRow({ muscle, trendData, customLandmarks }) {
           height={SPARK_MAX_HEIGHT}
           barWidth={SPARK_BAR_WIDTH}
           barGap={SPARK_BAR_GAP}
-          color={colors.primary}
+          color={t.colors.primary}
           interactive
           onScrubIndex={setScrubIdx}
           accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]} weekly volume trend`}
@@ -691,8 +718,8 @@ function MuscleTrendRow({ muscle, trendData, customLandmarks }) {
       </View>
       <Text maxFontSizeMultiplier={1.3}
         style={[
-          trendStyles.currentCount,
-          { color: volumeStatusColor(getVolumeStatus(showCount, muscle, customLandmarks).status) },
+          trendStyles.currentCount, trendLive.currentCount,
+          { color: resolveVolumeStatusColor(getVolumeStatus(showCount, muscle, customLandmarks).status) },
         ]}
       >
         {showCount}
@@ -726,6 +753,21 @@ const trendStyles = StyleSheet.create({
     textAlign: 'right',
   },
 });
+
+// CP-10 batch G (2026-07-11): the frozen `trendStyles` block above stays
+// byte-identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so
+// MuscleTrendRow carries no static island under a live theme toggle. Pure
+// layout keys (flex/gap/padding/width, no token) are correctly omitted --
+// there is nothing to unfreeze for them. Own function since MuscleTrendRow
+// has its own separate style block (CardioHistoryScreen precedent shares one
+// buildLiveStyles because its sub-component reuses the SAME style block).
+function buildTrendLiveStyles(t) {
+  return {
+    muscleName: { ...t.type.caption, color: t.colors.textMuted },
+    currentCount: { fontSize: t.fontSize.xs },
+  };
+}
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
@@ -865,3 +907,34 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+
+// CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/gap/padding/width/borderWidth, no token) are correctly omitted
+// -- there is nothing to unfreeze for them. Same pattern as
+// WorkoutSummaryScreen.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    windowBtnText: { ...t.type.label },
+    windowNoteText: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    heatmapCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    muscleName: { ...t.type.label, color: t.colors.textSecondary },
+    barTrack: { backgroundColor: t.colors.surface3 },
+    landmark: { backgroundColor: t.colors.border },
+    setsCount: { fontSize: t.fontSize.sm },
+    mrvLabel: { ...t.type.num('caption'), color: t.colors.textMuted },
+    lastTrainedChip: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    lastTrainedRecent: { color: t.colors.warning },
+    trendTakeaway: { ...t.type.bodySm, color: t.colors.textSecondary },
+    resetButton: { borderColor: t.colors.error },
+    resetButtonText: { color: t.colors.error },
+    editTitle: { ...t.type.title, color: t.colors.textPrimary },
+    editSubtitle: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    editRow: { borderBottomColor: t.colors.border },
+    editMuscleName: { ...t.type.label, color: t.colors.textSecondary },
+    editInputLabel: { ...t.type.caption, color: t.colors.textMuted },
+  };
+}

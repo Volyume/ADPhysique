@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
   getProgrammeById, getRoutinesForPlan, getAllRoutineExerciseCounts,
@@ -56,6 +57,9 @@ export default function PlanDetailScreen({ navigation, route }) {
   // reordering: the bridge only does anything once a DragReorderList drag
   // actually picks up, and that list only mounts in reorder mode.
   const { scrollRef, scrollOffset, onScroll, onContentSizeChange } = useDragAutoScrollBridge();
+  // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   useFocusEffect(
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -275,7 +279,7 @@ export default function PlanDetailScreen({ navigation, route }) {
     // Mirror the loaded layout (header block, primary button, workout rows)
     // so the swap to real content is seamless, rather than a blank flash.
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <BackHeader title={plan?.name || 'Plan'} />
         <View style={styles.content}>
           <Skeleton width={'55%'} height={28} />
@@ -292,7 +296,7 @@ export default function PlanDetailScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title={plan?.name || 'Plan'} />
       <ScrollView
         ref={scrollRef}
@@ -300,50 +304,50 @@ export default function PlanDetailScreen({ navigation, route }) {
         onContentSizeChange={onContentSizeChange}
         scrollEventThrottle={16}
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={t.colors.primary} />}
       >
         {/* Plan header */}
         <AnimatedEntrance index={0}>
         <View style={styles.planHeader}>
           <View style={styles.planHeaderBadgeRow}>
             {isLibrary && (
-              <View style={styles.libraryBadge}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.libraryBadgeText}>Library</Text>
+              <View style={[styles.libraryBadge, live.libraryBadge]}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.libraryBadgeText, live.libraryBadgeText]}>Library</Text>
               </View>
             )}
             {isActive && (
-              <View style={styles.activeBadge}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.activeBadgeText}>Active plan</Text>
+              <View style={[styles.activeBadge, live.activeBadge]}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.activeBadgeText, live.activeBadgeText]}>Active plan</Text>
               </View>
             )}
             {plan.tags && plan.tags.includes('featured') && (
-              <View style={styles.featuredBadge}>
-                <Ionicons name="star" size={9} color={colors.onPrimary} />
-                <Text maxFontSizeMultiplier={1.3} style={styles.featuredBadgeText}>Featured</Text>
+              <View style={[styles.featuredBadge, live.featuredBadge]}>
+                <Ionicons name="star" size={9} color={t.colors.onPrimary} />
+                <Text maxFontSizeMultiplier={1.3} style={[styles.featuredBadgeText, live.featuredBadgeText]}>Featured</Text>
               </View>
             )}
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={styles.planName}>{plan.name}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.planName, live.planName]}>{plan.name}</Text>
           {plan.description ? (
-            <Text maxFontSizeMultiplier={1.3} style={styles.planDesc}>{plan.description}</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.planDesc, live.planDesc]}>{plan.description}</Text>
           ) : null}
           <View style={styles.planStats}>
             <View style={styles.planStat}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.planStatValue}>{workouts.length}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.planStatLabel}>Workouts</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.planStatValue, live.planStatValue]}>{workouts.length}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.planStatLabel, live.planStatLabel]}>Workouts</Text>
             </View>
             {totalWorkingSets > 0 && (
               <View style={styles.planStat}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.planStatValue}>~{totalWorkingSets}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.planStatLabel}>Est. sets/week</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.planStatValue, live.planStatValue]}>~{totalWorkingSets}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.planStatLabel, live.planStatLabel]}>Est. sets/week</Text>
               </View>
             )}
             {plan.difficulty != null && (
               <View style={styles.planStat}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.planStatValue}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.planStatValue, live.planStatValue]}>
                   {['Beginner', 'Intermediate', 'Advanced'][plan.difficulty] ?? 'Intermediate'}
                 </Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.planStatLabel}>Level</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.planStatLabel, live.planStatLabel]}>Level</Text>
               </View>
             )}
           </View>
@@ -368,7 +372,7 @@ export default function PlanDetailScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel={isReordering ? 'Done reordering workouts' : 'Reorder workouts'}
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.reorderToggleText, isReordering && styles.reorderToggleTextActive]}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.reorderToggleText, live.reorderToggleText, isReordering && [styles.reorderToggleTextActive, live.reorderToggleTextActive]]}>
                   {isReordering ? 'Done' : 'Reorder'}
                 </Text>
               </TouchableOpacity>
@@ -376,7 +380,7 @@ export default function PlanDetailScreen({ navigation, route }) {
           </View>
           {workouts.length === 0 ? (
             <Card padding="xl" style={styles.emptyCard}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.emptyCardText}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.emptyCardText, live.emptyCardText]}>
                 {isLibrary ? 'No workouts in this plan.' : 'No workouts yet. Edit the plan to add workouts.'}
               </Text>
             </Card>
@@ -396,41 +400,41 @@ export default function PlanDetailScreen({ navigation, route }) {
               scrollOffset={scrollOffset}
               renderRow={({ item: routine, index: i }) => (
                 <Card style={styles.workoutCard}>
-                  <View style={styles.workoutIndex}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.workoutIndexText}>{i + 1}</Text>
+                  <View style={[styles.workoutIndex, live.workoutIndex]}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.workoutIndexText, live.workoutIndexText]}>{i + 1}</Text>
                   </View>
                   <View style={styles.workoutInfo}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.workoutName}>{routine.name}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.workoutName, live.workoutName]}>{routine.name}</Text>
                     {exerciseCounts[routine.id] ? (
-                      <Text maxFontSizeMultiplier={1.3} style={styles.workoutMeta}>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.workoutMeta, live.workoutMeta]}>
                         {exerciseCounts[routine.id]} exercise{exerciseCounts[routine.id] !== 1 ? 's' : ''}
                       </Text>
                     ) : (
-                      <Text maxFontSizeMultiplier={1.3} style={styles.workoutMeta}>No exercises yet</Text>
+                      <Text maxFontSizeMultiplier={1.3} style={[styles.workoutMeta, live.workoutMeta]}>No exercises yet</Text>
                     )}
                   </View>
                   <View style={styles.reorderActions}>
                     <TouchableOpacity
                       onPress={() => handleMoveDay(routine.id, 'up')}
-                      style={[styles.reorderBtn, i === 0 && styles.reorderBtnDisabled]}
+                      style={[styles.reorderBtn, live.reorderBtn, i === 0 && styles.reorderBtnDisabled]}
                       disabled={i === 0}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       accessibilityRole="button"
                       accessibilityState={{ disabled: i === 0 }}
                       accessibilityLabel={`Move ${routine.name} up`}
                     >
-                      <Ionicons name="chevron-up" size={16} color={i === 0 ? colors.border : colors.textMuted} />
+                      <Ionicons name="chevron-up" size={16} color={i === 0 ? t.colors.border : t.colors.textMuted} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => handleMoveDay(routine.id, 'down')}
-                      style={[styles.reorderBtn, i === workouts.length - 1 && styles.reorderBtnDisabled]}
+                      style={[styles.reorderBtn, live.reorderBtn, i === workouts.length - 1 && styles.reorderBtnDisabled]}
                       disabled={i === workouts.length - 1}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       accessibilityRole="button"
                       accessibilityState={{ disabled: i === workouts.length - 1 }}
                       accessibilityLabel={`Move ${routine.name} down`}
                     >
-                      <Ionicons name="chevron-down" size={16} color={i === workouts.length - 1 ? colors.border : colors.textMuted} />
+                      <Ionicons name="chevron-down" size={16} color={i === workouts.length - 1 ? t.colors.border : t.colors.textMuted} />
                     </TouchableOpacity>
                   </View>
                 </Card>
@@ -439,38 +443,38 @@ export default function PlanDetailScreen({ navigation, route }) {
           ) : (
             workouts.map((routine, i) => (
               <Card key={routine.id} style={styles.workoutCard}>
-                <View style={styles.workoutIndex}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.workoutIndexText}>{i + 1}</Text>
+                <View style={[styles.workoutIndex, live.workoutIndex]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.workoutIndexText, live.workoutIndexText]}>{i + 1}</Text>
                 </View>
                 <View style={styles.workoutInfo}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.workoutName}>{routine.name}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.workoutName, live.workoutName]}>{routine.name}</Text>
                   {exerciseCounts[routine.id] ? (
-                    <Text maxFontSizeMultiplier={1.3} style={styles.workoutMeta}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.workoutMeta, live.workoutMeta]}>
                       {exerciseCounts[routine.id]} exercise{exerciseCounts[routine.id] !== 1 ? 's' : ''}
                     </Text>
                   ) : (
-                    <Text maxFontSizeMultiplier={1.3} style={styles.workoutMeta}>No exercises yet</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.workoutMeta, live.workoutMeta]}>No exercises yet</Text>
                   )}
                 </View>
                 {!isLibrary && (
                   <View style={styles.workoutActions}>
                     <TouchableOpacity
-                      style={styles.editWorkoutBtn}
+                      style={[styles.editWorkoutBtn, live.editWorkoutBtn]}
                       onPress={() => navigation.navigate('RoutineDetail', { routineId: routine.id })}
                       hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                       accessibilityRole="button"
                       accessibilityLabel={`Edit ${routine.name}`}
                     >
-                      <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
+                      <Ionicons name="create-outline" size={18} color={t.colors.textSecondary} />
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={styles.startWorkoutBtn}
+                      style={[styles.startWorkoutBtn, live.startWorkoutBtn]}
                       onPress={() => handleStartWorkout(routine)}
                       hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                       accessibilityRole="button"
                       accessibilityLabel={`Start ${routine.name}`}
                     >
-                      <Ionicons name="play" size={13} color={colors.onPrimary} />
+                      <Ionicons name="play" size={13} color={t.colors.onPrimary} />
                     </TouchableOpacity>
                   </View>
                 )}
@@ -488,8 +492,8 @@ export default function PlanDetailScreen({ navigation, route }) {
             <Card style={styles.whyCard}>
               {WHY_ORDER.filter(k => whyThis[k]).map((k, i, arr) => (
                 <View key={k} style={[styles.whyItem, i < arr.length - 1 && styles.whyItemGap]}>
-                  <View style={styles.whyBullet} />
-                  <Text maxFontSizeMultiplier={1.3} style={styles.whyText}>{whyThis[k]}</Text>
+                  <View style={[styles.whyBullet, live.whyBullet]} />
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.whyText, live.whyText]}>{whyThis[k]}</Text>
                 </View>
               ))}
             </Card>
@@ -502,21 +506,21 @@ export default function PlanDetailScreen({ navigation, route }) {
           <View style={styles.section}>
             <SectionLabel>Manage</SectionLabel>
             <Card padding="none" style={styles.manageCard}>
-              <TouchableOpacity style={styles.manageRow} onPress={handleEditPlan} accessibilityRole="button" accessibilityLabel="Edit plan">
-                <Ionicons name="create-outline" size={18} color={colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={styles.manageRowText}>Edit plan</Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+              <TouchableOpacity style={[styles.manageRow, live.manageRow]} onPress={handleEditPlan} accessibilityRole="button" accessibilityLabel="Edit plan">
+                <Ionicons name="create-outline" size={18} color={t.colors.primary} />
+                <Text maxFontSizeMultiplier={1.3} style={[styles.manageRowText, live.manageRowText]}>Edit plan</Text>
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.manageRow} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate plan">
-                <Ionicons name="copy-outline" size={18} color={colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={styles.manageRowText}>Duplicate plan</Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+              <TouchableOpacity style={[styles.manageRow, live.manageRow]} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate plan">
+                <Ionicons name="copy-outline" size={18} color={t.colors.primary} />
+                <Text maxFontSizeMultiplier={1.3} style={[styles.manageRowText, live.manageRowText]}>Duplicate plan</Text>
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
               {!isActive && (
-                <TouchableOpacity style={[styles.manageRow, styles.manageRowLast]} onPress={handleArchive} accessibilityRole="button" accessibilityLabel="Archive plan">
-                  <Ionicons name="archive-outline" size={18} color={colors.error} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.manageRowText, { color: colors.error }]}>Archive plan</Text>
-                  <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+                <TouchableOpacity style={[styles.manageRow, live.manageRow, styles.manageRowLast]} onPress={handleArchive} accessibilityRole="button" accessibilityLabel="Archive plan">
+                  <Ionicons name="archive-outline" size={18} color={t.colors.error} />
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.manageRowText, live.manageRowText, { color: t.colors.error }]}>Archive plan</Text>
+                  <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
                 </TouchableOpacity>
               )}
             </Card>
@@ -613,3 +617,40 @@ const styles = StyleSheet.create({
   whyBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.primary, marginTop: 7 },
   whyText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 });
+
+// CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/gap/padding/width/height/overflow, no token) are correctly
+// omitted -- there is nothing to unfreeze for them. Same pattern as
+// AddCustomFoodScreen.js's buildLiveStyles (batch D).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    libraryBadge: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    libraryBadgeText: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    activeBadge: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.376) },
+    activeBadgeText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    featuredBadge: { backgroundColor: t.colors.primaryFill },
+    featuredBadgeText: { fontSize: t.fontSize.xs, color: t.colors.onPrimary },
+    planName: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
+    planDesc: { ...t.type.bodySm, color: t.colors.textSecondary },
+    planStatValue: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
+    planStatLabel: { ...t.type.caption, color: t.colors.textMuted },
+    reorderToggleText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    reorderToggleTextActive: { color: t.colors.primary },
+    reorderBtn: { backgroundColor: t.colors.surface2 },
+    emptyCardText: { ...t.type.bodySm, color: t.colors.textMuted },
+    workoutIndex: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    workoutIndexText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    workoutName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    workoutMeta: { ...t.type.caption, color: t.colors.textSecondary },
+    editWorkoutBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    startWorkoutBtn: { backgroundColor: t.colors.primaryFill },
+    manageRow: { borderBottomColor: t.colors.border },
+    manageRowText: { ...t.type.body, color: t.colors.textPrimary },
+    whyBullet: { backgroundColor: t.colors.primary },
+    whyText: { ...t.type.bodySm, color: t.colors.textSecondary },
+  };
+}

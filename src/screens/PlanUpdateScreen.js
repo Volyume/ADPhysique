@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
 } from 'react-native';
@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { colors, fontSize, fontWeight, spacing, radius, type, letterSpacing } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import Dropdown from '../components/Dropdown';
 import SegmentedControl from '../components/SegmentedControl';
 import BackHeader from '../components/BackHeader';
@@ -82,6 +83,9 @@ export default function PlanUpdateScreen({ navigation }) {
   const [previewing, setPreviewing] = useState(false);
   const [diff, setDiff] = useState(null);     // Now/After view-model for the sheet
   const [staged, setStaged] = useState(null); // { profile, partial, missedCount }
+  // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   const weakPointsApplicable = GOALS_WITH_WEAK_POINTS.includes(selectedGoal);
 
@@ -201,7 +205,7 @@ export default function PlanUpdateScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Adjust training" />
 
       <ScrollView
@@ -209,13 +213,13 @@ export default function PlanUpdateScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
           Adjust your training setup and rebuild the plan around it. Your calorie and macro targets stay as they are. Update those from the Coach tab.
         </Text>
 
         {/* ── Physique category (optional) ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Competing in a category? (optional)</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
           Only matters if you're chasing a competitive physique. It biases your plan towards the muscles that category is judged on.
         </Text>
 
@@ -230,9 +234,9 @@ export default function PlanUpdateScreen({ navigation }) {
         {weakPointsApplicable && (
           <>
             <SectionLabel style={styles.sectionLabelSpaced}>
-              Weak points <Text maxFontSizeMultiplier={1.3} style={styles.optionalTag}>(optional, max 3)</Text>
+              Weak points <Text maxFontSizeMultiplier={1.3} style={[styles.optionalTag, live.optionalTag]}>(optional, max 3)</Text>
             </SectionLabel>
-            <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
               Muscles you want to bring up. Your plan puts extra work into them.
             </Text>
             <View style={styles.weakPointGrid}>
@@ -250,7 +254,7 @@ export default function PlanUpdateScreen({ navigation }) {
 
         {/* ── Training experience ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Experience</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
           This sets your starting volume and exercise selection. Change it as you get more experience.
         </Text>
         <Dropdown
@@ -262,7 +266,7 @@ export default function PlanUpdateScreen({ navigation }) {
 
         {/* ── Training schedule ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Training days per week</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
           Changing how many days you train changes the exercise mix. Your plan rebuilds around it.
         </Text>
         <SegmentedControl
@@ -282,7 +286,7 @@ export default function PlanUpdateScreen({ navigation }) {
 
         {/* ── Equipment ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Equipment</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
           What you have access to. The exercises adapt to your equipment.
         </Text>
         <Dropdown
@@ -294,7 +298,7 @@ export default function PlanUpdateScreen({ navigation }) {
 
         {/* ── Recovery ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Recovery</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={styles.sectionSub}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
           How well you're recovering between sessions. This sets how cautious Volyume should be with training volume.
         </Text>
         <Dropdown
@@ -326,25 +330,26 @@ export default function PlanUpdateScreen({ navigation }) {
       >
         {diff ? (
           <>
-            <Text maxFontSizeMultiplier={1.3} style={styles.diffTitle}>Before you rebuild</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.diffTitle, live.diffTitle]}>Before you rebuild</Text>
             {diff.identical ? (
-              <Text maxFontSizeMultiplier={1.3} style={styles.diffSub}>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.diffSub, live.diffSub]}>
                 Your training days, split and moves already match this setup. Rebuilding refreshes your sets and volume.
               </Text>
             ) : (
               <>
-                <Text maxFontSizeMultiplier={1.3} style={styles.diffSub}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.diffSub, live.diffSub]}>
                   Here's what changes. Your current plan stays until you confirm.
                 </Text>
-                <View style={styles.diffTable}>
-                  <View style={styles.diffHeadRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, styles.diffCellLabel]} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, styles.diffHeadText]}>Now</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, styles.diffHeadText]}>After</Text>
+                <View style={[styles.diffTable, live.diffTable]}>
+                  <View style={[styles.diffHeadRow, live.diffHeadRow]}>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, live.diffCell, styles.diffCellLabel, live.diffCellLabel]} />
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, live.diffCell, styles.diffHeadText, live.diffHeadText]}>Now</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, live.diffCell, styles.diffHeadText, live.diffHeadText]}>After</Text>
                   </View>
-                  <DiffRow label="Training days" now={diff.days.now} after={diff.days.after} changed={diff.days.changed} />
-                  <DiffRow label="Split" now={diff.split.now ?? '-'} after={diff.split.after ?? '-'} changed={diff.split.changed} />
+                  <DiffRow live={live} label="Training days" now={diff.days.now} after={diff.days.after} changed={diff.days.changed} />
+                  <DiffRow live={live} label="Split" now={diff.split.now ?? '-'} after={diff.split.after ?? '-'} changed={diff.split.changed} />
                   <DiffRow
+                    live={live}
                     label="Session length"
                     now={diff.sessionLength.now != null ? `${diff.sessionLength.now} min` : '-'}
                     after={diff.sessionLength.after != null ? `${diff.sessionLength.after} min` : '-'}
@@ -353,17 +358,17 @@ export default function PlanUpdateScreen({ navigation }) {
                 </View>
                 {(diff.movesAdded.length > 0 || diff.movesDropped.length > 0) ? (
                   <View style={styles.diffMoves}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.diffMovesLabel}>Moves changed</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.diffMovesLabel, live.diffMovesLabel]}>Moves changed</Text>
                     {diff.movesAdded.map(m => (
-                      <Text maxFontSizeMultiplier={1.3} key={`add-${m}`} style={styles.diffMoveText}>Added: {m}</Text>
+                      <Text maxFontSizeMultiplier={1.3} key={`add-${m}`} style={[styles.diffMoveText, live.diffMoveText]}>Added: {m}</Text>
                     ))}
                     {diff.movesDropped.map(m => (
-                      <Text maxFontSizeMultiplier={1.3} key={`drop-${m}`} style={styles.diffMoveText}>Dropped: {m}</Text>
+                      <Text maxFontSizeMultiplier={1.3} key={`drop-${m}`} style={[styles.diffMoveText, live.diffMoveText]}>Dropped: {m}</Text>
                     ))}
                   </View>
                 ) : null}
                 {staged?.partial ? (
-                  <Text maxFontSizeMultiplier={1.3} style={styles.diffShortfall}>{planShortfallNote(staged.missedCount)}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.diffShortfall, live.diffShortfall]}>{planShortfallNote(staged.missedCount)}</Text>
                 ) : null}
               </>
             )}
@@ -380,7 +385,7 @@ export default function PlanUpdateScreen({ navigation }) {
               title="Back"
               variant="tertiary"
               style={styles.diffBackBtn}
-              textStyle={styles.diffBackText}
+              textStyle={[styles.diffBackText, live.diffBackText]}
               onPress={() => { if (!saving) { setDiff(null); setStaged(null); } }}
               disabled={saving}
               accessibilityLabel="Back"
@@ -394,13 +399,16 @@ export default function PlanUpdateScreen({ navigation }) {
 
 // One Now/After row in the diff table. Class-neutral: a changed row is emphasised
 // by weight, not a valence colour (a plan change is neither good nor bad).
-function DiffRow({ label, now, after, changed }) {
+// CP-10 batch G (2026-07-11): rendered directly by the parent (not a list
+// row), so `live` is passed as a plain prop from the one screen-level
+// useTheme() call rather than a second useTheme() call here.
+function DiffRow({ label, now, after, changed, live }) {
   const fmt = (v) => (v == null ? '-' : String(v));
   return (
-    <View style={styles.diffRow}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, styles.diffCellLabel]}>{label}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, styles.diffNow]}>{fmt(now)}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, styles.diffAfter, changed && styles.diffAfterChanged]}>{fmt(after)}</Text>
+    <View style={[styles.diffRow, live.diffRow]}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, live.diffCell, styles.diffCellLabel, live.diffCellLabel]}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, live.diffCell, styles.diffNow, live.diffNow]}>{fmt(now)}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, live.diffCell, styles.diffAfter, live.diffAfter, changed && styles.diffAfterChanged]}>{fmt(after)}</Text>
     </View>
   );
 }
@@ -447,3 +455,33 @@ const styles = StyleSheet.create({
   diffBackText: { color: colors.textSecondary, ...type.bodyStrong },
   diffSheetContent: { gap: spacing.md },
 });
+
+// CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/gap/padding/borderWidth/borderRadius, no token) and fontWeight/
+// textTransform/letterSpacing (not part of the live theme table) are
+// correctly omitted -- there is nothing to unfreeze for them. Same pattern
+// as DebugLogScreen.js's buildLiveStyles (batch F).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    sectionSub: { ...t.type.captionTight, color: t.colors.textMuted },
+    optionalTag: { ...t.type.caption, color: t.colors.textMuted },
+    diffTitle: { color: t.colors.textPrimary, fontSize: t.fontSize.lg },
+    diffSub: { ...t.type.bodySm, color: t.colors.textSecondary },
+    diffTable: { borderColor: t.colors.border },
+    diffHeadRow: { backgroundColor: t.colors.surface2 },
+    diffRow: { borderTopColor: t.colors.border },
+    diffCell: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    diffCellLabel: { color: t.colors.textSecondary },
+    diffHeadText: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    diffNow: { color: t.colors.textMuted },
+    diffAfter: { color: t.colors.textPrimary },
+    diffMovesLabel: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
+    diffMoveText: { color: t.colors.textPrimary, fontSize: t.fontSize.sm },
+    diffShortfall: { ...t.type.bodySm, color: t.colors.textSecondary },
+    diffBackText: { color: t.colors.textSecondary, ...t.type.bodyStrong },
+  };
+}

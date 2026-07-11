@@ -7,7 +7,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns/format';
 
-import { colors, fontSize, fontWeight, spacing, radius, volumeColors, volumeStatusColor, type, circle, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, buildVolumeStatusColor, type, circle, iconSize } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import Card from '../components/Card';
 import SectionLabel from '../components/SectionLabel';
 import RollingNumber from '../components/RollingNumber';
@@ -44,11 +45,18 @@ const STREAK_MILESTONE_COPY = {
 };
 
 // Severity → icon + color mapping (jargon-free UI)
-const SEVERITY_STYLE = {
-  0: { icon: 'information-circle-outline', color: colors.primary },
-  1: { icon: 'alert-circle-outline',       color: colors.warning },
-  2: { icon: 'warning-outline',            color: colors.error },
-};
+//
+// CP-10 batch G (2026-07-11): converted to accept the live theme `t.colors`
+// on the buildVolumeStatusColor(t.colors) precedent -- the severity -> icon
+// + tone mapping is byte-identical in meaning, only the token SOURCE moved
+// from the frozen import to the live theme.
+function buildSeverityStyle(c) {
+  return {
+    0: { icon: 'information-circle-outline', color: c.primary },
+    1: { icon: 'alert-circle-outline',       color: c.warning },
+    2: { icon: 'warning-outline',            color: c.error },
+  };
+}
 
 // COMP-005: which monthly recap the Recaps tile / ephemeral card opens. The last
 // completed calendar month when the user was training before this month began;
@@ -82,6 +90,10 @@ export default function AnalyticsScreen({ navigation, route }) {
   const tier = useAppStore(s => s.tier);
   const bodyWeightUnits = useAppStore(s => s.bodyWeightUnits);
   const units = useAppStore(s => s.units);
+  // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js). Memoised
+  // because this screen renders an insight list and recent-sessions list.
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   // COMP-004 "Your trend": Pro-only weight-trend read (morning weighing is a
   // Pro feature, so the card never appears for free users). The hook always
@@ -287,14 +299,14 @@ export default function AnalyticsScreen({ navigation, route }) {
       total,
       bars: bins.map((v, i) => ({
         value: v,
-        color: v > 0 ? (i === bins.length - 1 ? colors.primary : colors.primaryDim) : colors.surface3,
+        color: v > 0 ? (i === bins.length - 1 ? t.colors.primary : t.colors.primaryDim) : t.colors.surface3,
       })),
     };
-  }, [allSets]);
+  }, [allSets, t]);
   const prSpark = useMemo(() => ({
     total: prBars.reduce((s, b) => s + b.value, 0),
-    bars: prBars.map(b => ({ value: b.value, color: b.value > 0 ? colors.gold : colors.surface3 })),
-  }), [prBars]);
+    bars: prBars.map(b => ({ value: b.value, color: b.value > 0 ? t.colors.gold : t.colors.surface3 })),
+  }), [prBars, t]);
 
   // R3 lifetime-stats panel: total reps performed across every working set
   // ever logged. Derived from the already-loaded set list (no new query),
@@ -365,7 +377,7 @@ export default function AnalyticsScreen({ navigation, route }) {
   }, [user?.id, completedWorkoutCount]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={styles.content}
@@ -373,7 +385,7 @@ export default function AnalyticsScreen({ navigation, route }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={colors.primary}
+            tintColor={t.colors.primary}
           />
         }
       >
@@ -431,50 +443,50 @@ export default function AnalyticsScreen({ navigation, route }) {
             <WeeklyStreakStrip vm={weeklyStreak} />
             {pendingMilestone ? (
               <View style={styles.milestoneRow}>
-                <Ionicons name="ribbon-outline" size={16} color={colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={styles.milestoneText}>{STREAK_MILESTONE_COPY[pendingMilestone]}</Text>
+                <Ionicons name="ribbon-outline" size={16} color={t.colors.primary} />
+                <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneText, live.milestoneText]}>{STREAK_MILESTONE_COPY[pendingMilestone]}</Text>
                 {pendingMilestone >= 12 ? (
                   <TouchableOpacity
-                    style={styles.milestoneCtaButton}
+                    style={[styles.milestoneCtaButton, live.milestoneCtaButton]}
                     onPress={() => makeStreakCard(pendingMilestone)}
                     accessibilityRole="button"
                     accessibilityLabel="Create share image"
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Text maxFontSizeMultiplier={1.3} style={styles.milestoneCta}>Create share image</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneCta, live.milestoneCta]}>Create share image</Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
             ) : null}
             {perfectMonth ? (
               <View style={styles.milestoneRow}>
-                <Ionicons name="ribbon-outline" size={16} color={colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={styles.milestoneText}>A perfect month. Four weeks, every target met.</Text>
+                <Ionicons name="ribbon-outline" size={16} color={t.colors.primary} />
+                <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneText, live.milestoneText]}>A perfect month. Four weeks, every target met.</Text>
                 <TouchableOpacity
-                  style={styles.milestoneCtaButton}
+                  style={[styles.milestoneCtaButton, live.milestoneCtaButton]}
                   onPress={makePerfectMonthCard}
                   accessibilityRole="button"
                   accessibilityLabel="Create share image"
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={styles.milestoneCta}>Create share image</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneCta, live.milestoneCta]}>Create share image</Text>
                 </TouchableOpacity>
               </View>
             ) : null}
             {longestRunPb ? (
               <View style={styles.milestoneRow}>
-                <Ionicons name="ribbon-outline" size={16} color={colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={styles.milestoneText}>
+                <Ionicons name="ribbon-outline" size={16} color={t.colors.primary} />
+                <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneText, live.milestoneText]}>
                   {`A new personal best. ${longestRunPb} ${longestRunPb === 1 ? 'week' : 'weeks'} running, your longest yet.`}
                 </Text>
                 <TouchableOpacity
-                  style={styles.milestoneCtaButton}
+                  style={[styles.milestoneCtaButton, live.milestoneCtaButton]}
                   onPress={makeLongestRunPbCard}
                   accessibilityRole="button"
                   accessibilityLabel="Create share image"
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={styles.milestoneCta}>Create share image</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneCta, live.milestoneCta]}>Create share image</Text>
                 </TouchableOpacity>
               </View>
             ) : null}
@@ -488,18 +500,18 @@ export default function AnalyticsScreen({ navigation, route }) {
         {tonnageLandmark ? (
           <View style={styles.section}>
             <View style={styles.milestoneRow}>
-              <Ionicons name="barbell-outline" size={16} color={colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.milestoneText}>
+              <Ionicons name="barbell-outline" size={16} color={t.colors.primary} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneText, live.milestoneText]}>
                 {formatTonnage(tonnageLandmark)} {units === 'lbs' ? 'lbs' : 'kg'} lifted all-time. That's what showing up adds up to.
               </Text>
               <TouchableOpacity
-                style={styles.milestoneCtaButton}
+                style={[styles.milestoneCtaButton, live.milestoneCtaButton]}
                 onPress={makeTonnageCard}
                 accessibilityRole="button"
                 accessibilityLabel="Create share image"
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text maxFontSizeMultiplier={1.3} style={styles.milestoneCta}>Create share image</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneCta, live.milestoneCta]}>Create share image</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -533,7 +545,7 @@ export default function AnalyticsScreen({ navigation, route }) {
             blank area before the charts arrive. ── */}
         {!loading && !trendsStartHidden && allSets.length > 0 && completedWorkoutCount > 0 && completedWorkoutCount < 3 && (
           <View style={styles.momentumRow}>
-            <Text maxFontSizeMultiplier={1.3} style={styles.momentumText}>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.momentumText, live.momentumText]}>
               Good start. A couple more sessions and your trends really take shape.
             </Text>
             <TouchableOpacity
@@ -542,7 +554,7 @@ export default function AnalyticsScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Dismiss"
             >
-              <Ionicons name="close" size={16} color={colors.textMuted} />
+              <Ionicons name="close" size={16} color={t.colors.textMuted} />
             </TouchableOpacity>
           </View>
         )}
@@ -550,14 +562,14 @@ export default function AnalyticsScreen({ navigation, route }) {
         {/* COMP-005: ephemeral recap nudge */}
         {!recapCardHidden && (
           <TouchableOpacity
-            style={styles.recapCard}
+            style={[styles.recapCard, live.recapCard]}
             activeOpacity={0.85}
             onPress={() => { dismissRecapCard(); navigation.navigate('RecapStory', recentMonthRecapParams(earliestWorkoutAt)); }}
             accessibilityRole="button"
             accessibilityLabel="Open your monthly recap, about 45 seconds"
           >
-            <Ionicons name="newspaper-outline" size={18} color={colors.primary} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.recapCardText}>
+            <Ionicons name="newspaper-outline" size={18} color={t.colors.primary} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.recapCardText, live.recapCardText]}>
               Your {recentMonthRecapParams(earliestWorkoutAt).monthLabel.replace(' so far', '')} recap is ready - 45 seconds
             </Text>
             <TouchableOpacity
@@ -566,7 +578,7 @@ export default function AnalyticsScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Dismiss"
             >
-              <Ionicons name="close" size={16} color={colors.textMuted} />
+              <Ionicons name="close" size={16} color={t.colors.textMuted} />
             </TouchableOpacity>
           </TouchableOpacity>
         )}
@@ -590,7 +602,7 @@ export default function AnalyticsScreen({ navigation, route }) {
           <View style={styles.navGrid}>
             <NavTile
               icon="people"
-              color={colors.primary}
+              color={t.colors.primary}
               label="Partners"
               pro={tier !== 'pro'}
               onPress={() => {
@@ -605,7 +617,7 @@ export default function AnalyticsScreen({ navigation, route }) {
                 withReadOnlyProGuard still governs view-only lapse access. */}
             <NavTile
               icon="camera"
-              color={colors.primary}
+              color={t.colors.primary}
               label="Progress photos"
               pro={tier !== 'pro'}
               onPress={() => navigation.navigate('ProgressPhotos')}
@@ -632,13 +644,13 @@ export default function AnalyticsScreen({ navigation, route }) {
             <View style={styles.rowBetween}>
               <SectionLabel>Recent sessions</SectionLabel>
               <TouchableOpacity
-                style={styles.seeAllButton}
+                style={[styles.seeAllButton, live.seeAllButton]}
                 onPress={() => navigation.navigate('WorkoutHistory')}
                 accessibilityRole="button"
                 accessibilityLabel="See all sessions"
               >
-                <Ionicons name="list-outline" size={14} color={colors.textSecondary} />
-                <Text maxFontSizeMultiplier={1.3} style={styles.seeAll}>All sessions</Text>
+                <Ionicons name="list-outline" size={14} color={t.colors.textSecondary} />
+                <Text maxFontSizeMultiplier={1.3} style={[styles.seeAll, live.seeAll]}>All sessions</Text>
               </TouchableOpacity>
             </View>
             {recentSessions.map(w => {
@@ -721,22 +733,22 @@ export default function AnalyticsScreen({ navigation, route }) {
             <SectionLabel>Lifetime totals</SectionLabel>
             <Card radius="md" padding="none" style={styles.lifetimePanel}>
               <View style={styles.lifetimeCell}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.lifetimeValue}>{formatNumber(completedWorkoutCount)}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.lifetimeLabel}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.lifetimeValue, live.lifetimeValue]}>{formatNumber(completedWorkoutCount)}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.lifetimeLabel, live.lifetimeLabel]}>
                   {completedWorkoutCount === 1 ? 'session' : 'sessions'}
                 </Text>
               </View>
-              <View style={styles.lifetimeDivider} />
+              <View style={[styles.lifetimeDivider, live.lifetimeDivider]} />
               <View style={styles.lifetimeCell}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.lifetimeValue}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.lifetimeValue, live.lifetimeValue]}>
                   {formatNumber(lifetimeTonnage)}
                 </Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.lifetimeLabel}>{units === 'lbs' ? 'lbs lifted' : 'kg lifted'}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.lifetimeLabel, live.lifetimeLabel]}>{units === 'lbs' ? 'lbs lifted' : 'kg lifted'}</Text>
               </View>
-              <View style={styles.lifetimeDivider} />
+              <View style={[styles.lifetimeDivider, live.lifetimeDivider]} />
               <View style={styles.lifetimeCell}>
-                <Text maxFontSizeMultiplier={1.3} style={styles.lifetimeValue}>{formatNumber(lifetimeReps)}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={styles.lifetimeLabel}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.lifetimeValue, live.lifetimeValue]}>{formatNumber(lifetimeReps)}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.lifetimeLabel, live.lifetimeLabel]}>
                   {lifetimeReps === 1 ? 'rep' : 'reps'}
                 </Text>
               </View>
@@ -752,18 +764,18 @@ export default function AnalyticsScreen({ navigation, route }) {
         <View style={styles.section}>
           <SectionLabel>More stats</SectionLabel>
           <View style={styles.navGrid}>
-            <NavTile icon="pulse" color={colors.success} label="Consistency" onPress={() => navigation.navigate('Consistency')} />
-            <NavTile icon="barbell" color={colors.primary} label="Lifts" onPress={() => navigation.navigate('LiftProgress')} />
+            <NavTile icon="pulse" color={t.colors.success} label="Consistency" onPress={() => navigation.navigate('Consistency')} />
+            <NavTile icon="barbell" color={t.colors.primary} label="Lifts" onPress={() => navigation.navigate('LiftProgress')} />
             {/* Body Metrics carries the weight EWMA trend once 2+ logs exist,
                 but it is a metrics screen, so the tile says what it opens
                 (founder device-walk 2026-06-12: a "Weight" tile promised a
                 progress chart and landed on a logging form). The IA pass will
                 lead that screen with the trend; the label stops over-promising
                 now. */}
-            <NavTile icon="body" color={colors.warning} label="Body Metrics" pro={tier !== 'pro'} onPress={() => navigation.navigate('BodyMetrics')} />
+            <NavTile icon="body" color={t.colors.warning} label="Body Metrics" pro={tier !== 'pro'} onPress={() => navigation.navigate('BodyMetrics')} />
             {/* Partners moved out of the grid to a promoted slot directly under
                 the insight stack (spec B8). */}
-            <NavTile icon="time" color={colors.textSecondary} label="Full History" onPress={() => navigation.navigate('WorkoutHistory')} />
+            <NavTile icon="time" color={t.colors.textSecondary} label="Full History" onPress={() => navigation.navigate('WorkoutHistory')} />
             {(() => {
               // COMP-005: Recaps replaces the year-long locked Year-of-Lifts
               // tile. It unlocks after 10 logged sessions (~a fortnight, not a
@@ -776,7 +788,7 @@ export default function AnalyticsScreen({ navigation, route }) {
               return (
                 <NavTile
                   icon="newspaper-outline"
-                  color={colors.textSecondary}
+                  color={t.colors.textSecondary}
                   label="Recaps"
                   locked={!recapUnlocked}
                   lockedSub={`${toGo} session${toGo === 1 ? '' : 's'} to go`}
@@ -801,7 +813,7 @@ export default function AnalyticsScreen({ navigation, route }) {
               return (
                 <NavTile
                   icon="calendar-outline"
-                  color={colors.textSecondary}
+                  color={t.colors.textSecondary}
                   label="Year of Lifts"
                   onPress={() => navigation.navigate('YearOfLifts')}
                 />
@@ -816,12 +828,19 @@ export default function AnalyticsScreen({ navigation, route }) {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
+// CP-10 batch G (2026-07-11): sibling function-component scope (not
+// prop-drilled `live`/`t` from AnalyticsScreen), so its own useTheme() call
+// is cleaner than threading two extra props through. Same shared
+// buildLiveStyles(t) as the parent screen (CardioTrend precedent).
 function InsightRow({ insight, onDismiss }) {
-  const sev = SEVERITY_STYLE[insight.severity ?? 0] ?? SEVERITY_STYLE[0];
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
+  const severityStyle = useMemo(() => buildSeverityStyle(t.colors), [t]);
+  const sev = severityStyle[insight.severity ?? 0] ?? severityStyle[0];
   return (
     <Card padding="md" radius="md" style={[styles.insightRow, { borderLeftColor: sev.color }]}>
       <Ionicons name={sev.icon} size={18} color={sev.color} style={{ marginTop: spacing.hair }} />
-      <Text maxFontSizeMultiplier={1.3} style={styles.insightCopy} numberOfLines={5}>{insight.copy}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.insightCopy, live.insightCopy]} numberOfLines={5}>{insight.copy}</Text>
       <TouchableOpacity
         onPress={onDismiss}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -829,7 +848,7 @@ function InsightRow({ insight, onDismiss }) {
         accessibilityRole="button"
         accessibilityLabel="Dismiss insight"
       >
-        <Ionicons name="close" size={14} color={colors.textMuted} />
+        <Ionicons name="close" size={14} color={t.colors.textMuted} />
       </TouchableOpacity>
     </Card>
   );
@@ -843,7 +862,12 @@ const MUSCLES = Object.keys(VOLUME_LANDMARKS);
 // (A5) an inline stacked bar, one segment per trained muscle, sized by its
 // working sets and coloured through the volumeStatusColor grammar, so the
 // week's volume shape is visible without leaving the dashboard.
+// CP-10 batch G (2026-07-11): sibling function-component scope, own
+// useTheme() call (same reasoning as InsightRow above), same shared
+// buildLiveStyles(t).
 function VolumeSummaryStrip({ volume, loading, onPress }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const trained = MUSCLES.filter(m => (volume[m]?.workingSets ?? 0) > 0);
   if (trained.length === 0) {
     // Don't flash "Nothing logged" while the underlying data is still
@@ -855,7 +879,7 @@ function VolumeSummaryStrip({ volume, loading, onPress }) {
         accessibilityRole="button"
         accessibilityLabel="This week's volume. Open the heatmap."
       >
-        <Text maxFontSizeMultiplier={1.3} style={styles.volEmptyText}>Nothing logged this week yet.</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.volEmptyText, live.volEmptyText]}>Nothing logged this week yet.</Text>
       </Card>
     );
   }
@@ -869,14 +893,15 @@ function VolumeSummaryStrip({ volume, loading, onPress }) {
     else if (ws > lm.mrv) over += 1;
   }
   const flags = [];
-  if (below > 0) flags.push({ key: 'below', n: below, label: 'below target', color: volumeColors.below });
-  if (over > 0) flags.push({ key: 'over', n: over, label: 'over max', color: volumeColors.overMrv });
+  if (below > 0) flags.push({ key: 'below', n: below, label: 'below target', color: t.colors.textMuted });
+  if (over > 0) flags.push({ key: 'over', n: over, label: 'over max', color: t.colors.error });
   // A5 inline stacked bar: one segment per trained muscle, widest first,
   // width proportional to its working sets, coloured by its volume status.
+  const resolveVolumeStatusColor = buildVolumeStatusColor(t.colors);
   const segments = trained
     .map(m => {
       const ws = volume[m]?.workingSets ?? 0;
-      return { muscle: m, sets: ws, color: volumeStatusColor(getVolumeStatus(ws, m).status) };
+      return { muscle: m, sets: ws, color: resolveVolumeStatusColor(getVolumeStatus(ws, m).status) };
     })
     .sort((a, b) => b.sets - a.sets);
   return (
@@ -888,22 +913,22 @@ function VolumeSummaryStrip({ volume, loading, onPress }) {
     >
       <View style={styles.volSummaryTop}>
         <View style={styles.volSummaryMain}>
-          <Text maxFontSizeMultiplier={1.3} style={styles.volSummaryCount}>{trained.length}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={styles.volSummaryLabel}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.volSummaryCount, live.volSummaryCount]}>{trained.length}</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.volSummaryLabel, live.volSummaryLabel]}>
             {trained.length === 1 ? 'muscle trained' : 'muscles trained'}
           </Text>
         </View>
         <View style={styles.volSummaryFlags}>
           {flags.length === 0 ? (
-            <Text maxFontSizeMultiplier={1.3} style={styles.volSummaryClear}>All in range</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.volSummaryClear, live.volSummaryClear]}>All in range</Text>
           ) : flags.map(f => (
             <View key={f.key} style={styles.volLegendItem}>
               <View style={[styles.volLegendDot, { backgroundColor: f.color }]} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.volSummaryFlagText}>{f.n} {f.label}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.volSummaryFlagText, live.volSummaryFlagText]}>{f.n} {f.label}</Text>
             </View>
           ))}
         </View>
-        <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
       </View>
       <View style={styles.volStackBar}>
         {segments.map(seg => (
@@ -923,16 +948,21 @@ function VolumeSummaryStrip({ volume, loading, onPress }) {
 // display-size numeral reads the week under the finger while scrubbing and
 // the current week otherwise. Scrub state lives here so a scrub re-renders
 // this card only, never the whole screen (F7).
+// CP-10 batch G (2026-07-11): sibling function-component scope, own
+// useTheme() call (same reasoning as InsightRow above), same shared
+// buildLiveStyles(t).
 function TrainingLoadHero({ series, units, onMakeCard }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const [chartW, setChartW] = useState(0);
   const [scrubIdx, setScrubIdx] = useState(null);
   const lastIdx = series.length - 1;
   const bars = useMemo(
     () => series.map((pt, i) => ({
       value: pt.value,
-      color: i === lastIdx ? colors.primary : colors.primaryDim,
+      color: i === lastIdx ? t.colors.primary : t.colors.primaryDim,
     })),
-    [series, lastIdx],
+    [series, lastIdx, t],
   );
   if (series.length < 2) return null;
   const activeIdx = scrubIdx != null && scrubIdx >= 0 && scrubIdx < series.length ? scrubIdx : lastIdx;
@@ -943,16 +973,16 @@ function TrainingLoadHero({ series, units, onMakeCard }) {
   const unit = units === 'lbs' ? 'lbs' : 'kg';
   return (
     <Card accessibilityLabel={`Training load. ${weekLabel}: ${formatNumber(active.value)} ${unit} lifted.`}>
-      <Text maxFontSizeMultiplier={1.3} style={styles.heroEyebrow}>Training load</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.heroEyebrow, live.heroEyebrow]}>Training load</Text>
       <View style={styles.heroValueRow}>
         <RollingNumber
           value={active.value}
-          style={styles.heroValue}
+          style={[styles.heroValue, live.heroValue]}
           accessibilityLabel={`${formatNumber(active.value)} ${unit}`}
         />
-        <Text maxFontSizeMultiplier={1.3} style={styles.heroUnit}>{unit}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.heroUnit, live.heroUnit]}>{unit}</Text>
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={styles.heroSub}>{weekLabel} - weight lifted</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.heroSub, live.heroSub]}>{weekLabel} - weight lifted</Text>
       <View
         style={styles.heroChartSlot}
         onLayout={e => setChartW(Math.round(e.nativeEvent.layout.width))}
@@ -971,19 +1001,19 @@ function TrainingLoadHero({ series, units, onMakeCard }) {
         )}
       </View>
       <View style={styles.rowBetween}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.heroAxisLabel}>{series.length - 1} weeks ago</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.heroAxisLabel}>this week</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.heroAxisLabel, live.heroAxisLabel]}>{series.length - 1} weeks ago</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.heroAxisLabel, live.heroAxisLabel]}>this week</Text>
       </View>
       {/* S4: share image extended to training load, reflective and factual,
           never a comparison to anyone else. */}
       <TouchableOpacity
-        style={[styles.trainingLoadCtaRow, styles.milestoneCtaButton]}
+        style={[styles.trainingLoadCtaRow, styles.milestoneCtaButton, live.milestoneCtaButton]}
         onPress={onMakeCard}
         accessibilityRole="button"
         accessibilityLabel="Create share image"
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Text maxFontSizeMultiplier={1.3} style={styles.milestoneCta}>Create share image</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneCta, live.milestoneCta]}>Create share image</Text>
       </TouchableOpacity>
     </Card>
   );
@@ -992,7 +1022,12 @@ function TrainingLoadHero({ series, units, onMakeCard }) {
 // A5 half-width sparkline card: a headline numeral over a compact 30-day
 // weekly series, doubling as the door to its detail screen. Free-safe
 // training data only (sessions, PRs), never weight or calories.
+// CP-10 batch G (2026-07-11): sibling function-component scope, own
+// useTheme() call (same reasoning as InsightRow above), same shared
+// buildLiveStyles(t).
 function SparkCard({ label, value, sub, bars, onPress, accessibilityLabel }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const [chartW, setChartW] = useState(0);
   return (
     <Card
@@ -1001,8 +1036,8 @@ function SparkCard({ label, value, sub, bars, onPress, accessibilityLabel }) {
       onPress={onPress}
       accessibilityLabel={accessibilityLabel}
     >
-      <Text maxFontSizeMultiplier={1.3} style={styles.sparkLabel}>{label}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.sparkValue}>{formatNumber(value)}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.sparkLabel, live.sparkLabel]}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.sparkValue, live.sparkValue]}>{formatNumber(value)}</Text>
       <View
         style={styles.sparkChartSlot}
         onLayout={e => setChartW(Math.round(e.nativeEvent.layout.width))}
@@ -1017,12 +1052,17 @@ function SparkCard({ label, value, sub, bars, onPress, accessibilityLabel }) {
           />
         )}
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={styles.sparkSub}>{sub}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.sparkSub, live.sparkSub]}>{sub}</Text>
     </Card>
   );
 }
 
+// CP-10 batch G (2026-07-11): sibling function-component scope, own
+// useTheme() call (same reasoning as InsightRow above), same shared
+// buildLiveStyles(t).
 function SessionCard({ workout, onPress }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   const name = workout.name || 'Session';
   const at = workout.startedAt ?? workout.createdAt ?? workout.created_at ?? 0;
   const diff = workout.sessionDifficulty ?? null;
@@ -1034,20 +1074,20 @@ function SessionCard({ workout, onPress }) {
       accessibilityLabel={`View summary for ${name}`}
     >
       <View style={styles.sessionLeft}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.sessionName} numberOfLines={1}>{name}</Text>
-        <Text maxFontSizeMultiplier={1.3} style={styles.sessionMeta}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sessionName, live.sessionName]} numberOfLines={1}>{name}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.sessionMeta, live.sessionMeta]}>
           {at ? format(new Date(at), 'EEE d MMM') : ''}
           {workout.durationMinutes ? ` - ${workout.durationMinutes}m` : ''}
         </Text>
       </View>
       {diff != null && (
-        <View style={[styles.diffChip, { backgroundColor: diffChipBg(diff) }]}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.diffText, { color: diffChipColor(diff) }]}>
+        <View style={[styles.diffChip, { backgroundColor: buildDiffChipBg(t, diff) }]}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.diffText, live.diffText, { color: buildDiffChipColor(t, diff) }]}>
             {diff}/10
           </Text>
         </View>
       )}
-      <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textMuted} />
+      <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
     </Card>
   );
 }
@@ -1063,9 +1103,16 @@ function NavTile({ icon, color, label, onPress, locked, lockedSub, pro }) {
   // world-class-audit-2026-07-03/01-newbie-journey.md #11: both used to
   // read as the same dimmed padlock; time-outline replaces the padlock
   // here so a not-enough-data tile can never be misread as a paywall).
+  // CP-10 batch G (2026-07-11): sibling function-component scope, own
+  // useTheme() call (same reasoning as InsightRow above), same shared
+  // buildLiveStyles(t). `color` arrives pre-resolved from the caller
+  // (t.colors.* at each call site); only the locked/label-muted tokens
+  // owned by this component need their own `t`.
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <TouchableOpacity
-      style={[styles.navTile, locked && styles.navTileLocked]}
+      style={[styles.navTile, live.navTile, locked && styles.navTileLocked]}
       onPress={onPress}
       activeOpacity={0.75}
       accessibilityRole="button"
@@ -1075,14 +1122,14 @@ function NavTile({ icon, color, label, onPress, locked, lockedSub, pro }) {
       <Ionicons
         name={locked ? 'time-outline' : icon}
         size={22}
-        color={locked ? colors.textMuted : color}
+        color={locked ? t.colors.textMuted : color}
       />
       <View style={styles.navTileLabelRow}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.navTileLabel, locked && styles.navTileLabelLocked]}>{label}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.navTileLabel, live.navTileLabel, locked && [styles.navTileLabelLocked, live.navTileLabelLocked]]}>{label}</Text>
         {pro ? <ProBadge size="sm" /> : null}
       </View>
       {locked && lockedSub ? (
-        <Text maxFontSizeMultiplier={1.3} style={styles.navTileSub} numberOfLines={1}>{lockedSub}</Text>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.navTileSub, live.navTileSub]} numberOfLines={1}>{lockedSub}</Text>
       ) : null}
     </TouchableOpacity>
   );
@@ -1090,15 +1137,19 @@ function NavTile({ icon, color, label, onPress, locked, lockedSub, pro }) {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function diffChipBg(d) {
-  if (d >= 8) return colors.errorBg;
-  if (d >= 6) return colors.warningBg;
-  return colors.surface2;
+// CP-10 batch G (2026-07-11): converted to accept the live theme `t` on the
+// buildLevelStyle(t, level) precedent (DebugLogScreen, batch F) -- the
+// difficulty -> tone mapping is byte-identical in meaning, only the token
+// SOURCE moved from the frozen import to the live theme.
+function buildDiffChipBg(t, d) {
+  if (d >= 8) return t.colors.errorBg;
+  if (d >= 6) return t.colors.warningBg;
+  return t.colors.surface2;
 }
-function diffChipColor(d) {
-  if (d >= 8) return colors.error;
-  if (d >= 6) return colors.warning;
-  return colors.textSecondary;
+function buildDiffChipColor(t, d) {
+  if (d >= 8) return t.colors.error;
+  if (d >= 6) return t.colors.warning;
+  return t.colors.textSecondary;
 }
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
@@ -1248,3 +1299,50 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 });
+
+// CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, shared
+// by this screen's several function-component scopes (AnalyticsScreen and
+// its sibling InsightRow/VolumeSummaryStrip/TrainingLoadHero/SparkCard/
+// SessionCard/NavTile) so they can never drift out of step with each other
+// or the frozen block. Pure layout keys (flex/gap/padding/width/borderWidth,
+// no token) are correctly omitted -- there is nothing to unfreeze for them.
+// Same pattern as CardioHistoryScreen.js's buildLiveStyles.
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    milestoneText: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    milestoneCtaButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    milestoneCta: { ...t.type.label, color: t.colors.textPrimary },
+    seeAllButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    seeAll: { ...t.type.label, color: t.colors.textPrimary },
+    recapCard: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    recapCardText: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    insightCopy: { ...t.type.bodySm, color: t.colors.textSecondary },
+    heroEyebrow: { ...t.type.label, color: t.colors.textSecondary },
+    heroValue: { ...t.type.num('display'), color: t.colors.textPrimary },
+    heroUnit: { ...t.type.title, color: t.colors.textSecondary },
+    heroSub: { ...t.type.num('caption'), color: t.colors.textMuted },
+    heroAxisLabel: { ...t.type.captionTight, color: t.colors.textMuted },
+    sparkLabel: { ...t.type.label, color: t.colors.textSecondary },
+    sparkValue: { ...t.type.num('h2'), color: t.colors.textPrimary },
+    sparkSub: { ...t.type.captionTight, color: t.colors.textMuted },
+    volEmptyText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    volSummaryCount: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
+    volSummaryLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    volSummaryFlagText: { fontSize: t.fontSize.micro, color: t.colors.textSecondary },
+    volSummaryClear: { fontSize: t.fontSize.micro, color: t.colors.textMuted },
+    lifetimeValue: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
+    lifetimeLabel: { fontSize: t.fontSize.micro, color: t.colors.textSecondary },
+    lifetimeDivider: { backgroundColor: t.colors.border },
+    sessionName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    sessionMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
+    diffText: { fontSize: t.fontSize.xs },
+    navTile: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    navTileLabel: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    navTileLabelLocked: { color: t.colors.textMuted },
+    navTileSub: { ...t.type.num('caption'), color: t.colors.textMuted },
+    momentumText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+  };
+}

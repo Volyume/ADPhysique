@@ -10,7 +10,7 @@
  * pure presentation.
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 
 import { colors, fontSize, fontWeight, spacing, type, circle, letterSpacing } from '../styles/theme';
+import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
 import Button from '../components/Button';
@@ -48,6 +49,9 @@ const SOURCES = [
 export default function ImportScreen({ navigation }) {
   const user = useAppStore(s => s.user);
   const toast = useToast();
+  // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
 
   const [stage, setStage] = useState('idle');
   // 'idle' → user hasn't picked a file yet
@@ -150,12 +154,12 @@ export default function ImportScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Import history" />
       <ScrollView contentContainerStyle={styles.content}>
         {/* The BackHeader title already reads "Import history"; the body copy
             below explains the flow rather than repeating a second heading. */}
-        <Text maxFontSizeMultiplier={1.3} style={styles.body}>
+        <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
           Import a workout-history CSV from Hevy or Strong. Sessions, sets, weights and reps all
           come across; unmatched exercises are created in your library so nothing is lost.
         </Text>
@@ -166,10 +170,10 @@ export default function ImportScreen({ navigation }) {
               {SOURCES.map(src => (
                 <Card key={src.key}>
                   <View style={styles.sourceHead}>
-                    <Ionicons name="cloud-download-outline" size={18} color={colors.primary} />
-                    <Text maxFontSizeMultiplier={1.3} style={styles.sourceName}>{src.name}</Text>
+                    <Ionicons name="cloud-download-outline" size={18} color={t.colors.primary} />
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.sourceName, live.sourceName]}>{src.name}</Text>
                   </View>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.sourceText}>{src.instructions}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.sourceText, live.sourceText]}>{src.instructions}</Text>
                 </Card>
               ))}
             </View>
@@ -181,21 +185,21 @@ export default function ImportScreen({ navigation }) {
               style={styles.primaryButton}
             />
 
-            {error ? <Text maxFontSizeMultiplier={1.3} style={styles.errorText}>{error}</Text> : null}
+            {error ? <Text maxFontSizeMultiplier={1.3} style={[styles.errorText, live.errorText]}>{error}</Text> : null}
           </>
         )}
 
         {stage === 'parsing' && (
           <View style={styles.workingBlock}>
-            <ActivityIndicator color={colors.primary} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.workingText}>Reading your file…</Text>
+            <ActivityIndicator color={t.colors.primary} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.workingText, live.workingText]}>Reading your file…</Text>
           </View>
         )}
 
         {stage === 'preview' && analysis && (
           <>
             <Card style={styles.previewCard}>
-              <Text maxFontSizeMultiplier={1.3} style={styles.previewSource}>{format === 'hevy' ? 'Hevy' : 'Strong'} export</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.previewSource, live.previewSource]}>{format === 'hevy' ? 'Hevy' : 'Strong'} export</Text>
               <View style={styles.statRow}>
                 <Stat label="Sessions" value={analysis.workoutCount} />
                 <Stat label="Sets" value={analysis.setCount} />
@@ -204,14 +208,14 @@ export default function ImportScreen({ navigation }) {
 
               <View style={styles.breakdownRow}>
                 <BreakdownDot tone="success" />
-                <Text maxFontSizeMultiplier={1.3} style={styles.breakdownText}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.breakdownText, live.breakdownText]}>
                   {analysis.mappedCount} matched to existing exercises
                 </Text>
               </View>
               {analysis.unmappedCount > 0 && (
                 <View style={styles.breakdownRow}>
                   <BreakdownDot tone="warning" />
-                  <Text maxFontSizeMultiplier={1.3} style={styles.breakdownText}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.breakdownText, live.breakdownText]}>
                     {analysis.unmappedCount} will be created as custom exercises
                   </Text>
                 </View>
@@ -219,22 +223,22 @@ export default function ImportScreen({ navigation }) {
               {analysis.alreadyImported > 0 && (
                 <View style={styles.breakdownRow}>
                   <BreakdownDot tone="muted" />
-                  <Text maxFontSizeMultiplier={1.3} style={styles.breakdownText}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.breakdownText, live.breakdownText]}>
                     {analysis.alreadyImported} already in Volyume, will skip
                   </Text>
                 </View>
               )}
 
               {analysis.unmappedCount > 0 && (
-                <View style={styles.unmappedBlock}>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.unmappedHead}>New custom exercises</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.unmappedText}>
+                <View style={[styles.unmappedBlock, live.unmappedBlock]}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.unmappedHead, live.unmappedHead]}>New custom exercises</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.unmappedText, live.unmappedText]}>
                     {analysis.unmappedNames.join(', ')}
                     {analysis.unmappedCount > analysis.unmappedNames.length
                       ? ` +${analysis.unmappedCount - analysis.unmappedNames.length} more`
                       : ''}
                   </Text>
-                  <Text maxFontSizeMultiplier={1.3} style={styles.unmappedHint}>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.unmappedHint, live.unmappedHint]}>
                     You can edit muscle, equipment and notes later in Exercise Library.
                   </Text>
                 </View>
@@ -259,18 +263,18 @@ export default function ImportScreen({ navigation }) {
 
         {stage === 'importing' && (
           <View style={styles.workingBlock}>
-            <ActivityIndicator color={colors.primary} />
-            <Text maxFontSizeMultiplier={1.3} style={styles.workingText}>Bringing your history in…</Text>
-            <Text maxFontSizeMultiplier={1.3} style={styles.workingSub}>This usually takes a few seconds.</Text>
+            <ActivityIndicator color={t.colors.primary} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.workingText, live.workingText]}>Bringing your history in…</Text>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.workingSub, live.workingSub]}>This usually takes a few seconds.</Text>
           </View>
         )}
 
         {stage === 'done' && result && (
           <>
-            <Card padding="xl" style={styles.doneCard}>
-              <Ionicons name="checkmark-circle" size={32} color={colors.success} />
-              <Text maxFontSizeMultiplier={1.3} style={styles.doneTitle}>Welcome to Volyume</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.doneBody}>
+            <Card padding="xl" style={[styles.doneCard, live.doneCard]}>
+              <Ionicons name="checkmark-circle" size={32} color={t.colors.success} />
+              <Text maxFontSizeMultiplier={1.3} style={[styles.doneTitle, live.doneTitle]}>Welcome to Volyume</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.doneBody, live.doneBody]}>
                 {result.workouts} sessions, {result.sets} sets and {result.exercisesCreated} new exercises
                 are now in your library.{result.skipped > 0
                   ? ` Skipped ${result.skipped} that were already imported.`
@@ -295,22 +299,34 @@ export default function ImportScreen({ navigation }) {
   );
 }
 
+// CP-10 batch G (2026-07-11): sibling function-component scope (not
+// prop-drilled `live`/`t` from ImportScreen), so its own useTheme() call is
+// cleaner than threading two extra props through. Same shared
+// buildLiveStyles(t) as the parent screen (CardioTrend precedent).
 function Stat({ label, value }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={styles.stat}>
-      <Text maxFontSizeMultiplier={1.3} style={styles.statValue}>{Number(value || 0).toLocaleString()}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={styles.statLabel}>{label}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.statValue, live.statValue]}>{Number(value || 0).toLocaleString()}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.statLabel, live.statLabel]}>{label}</Text>
     </View>
   );
 }
 
+// CP-10 batch G (2026-07-11): sibling function-component scope, own
+// useTheme() call (same reasoning as Stat above). The tone -> colour map is
+// a plain UI indicator (success/warning/muted dot), not a valence mapping
+// under founder review, so it converts on the buildLevelStyle(t, level)
+// plumbing precedent (DebugLogScreen, batch F): wording/logic byte-identical.
 function BreakdownDot({ tone }) {
+  const t = useTheme();
   const map = {
-    success: colors.success,
-    warning: colors.warning,
-    muted: colors.textMuted,
+    success: t.colors.success,
+    warning: t.colors.warning,
+    muted: t.colors.textMuted,
   };
-  return <View style={[styles.dot, { backgroundColor: map[tone] || colors.textMuted }]} />;
+  return <View style={[styles.dot, { backgroundColor: map[tone] || t.colors.textMuted }]} />;
 }
 
 const styles = StyleSheet.create({
@@ -457,3 +473,34 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+// CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
+// identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
+// properties of the matching frozen style, at identical rest values, so the
+// screen carries no static island under a live theme toggle. Pure layout
+// keys (flex/gap/padding/width/borderWidth, no token) are correctly
+// omitted -- there is nothing to unfreeze for them. Same pattern as
+// ConsistencyScreen.js's buildLiveStyles (batch F).
+function buildLiveStyles(t) {
+  return {
+    safe: { backgroundColor: t.colors.background },
+    h1: { ...t.type.h2, color: t.colors.textPrimary },
+    body: { ...t.type.bodySm, color: t.colors.textSecondary },
+    sourceName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    sourceText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    errorText: { ...t.type.bodySm, color: t.colors.error },
+    workingText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    workingSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    previewSource: { ...t.type.overline, color: t.colors.textMuted },
+    statValue: { ...t.type.num('h2'), color: t.colors.textPrimary },
+    statLabel: { ...t.type.caption, color: t.colors.textMuted },
+    breakdownText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    unmappedBlock: { borderTopColor: t.colors.border },
+    unmappedHead: { fontSize: t.fontSize.xs, color: t.colors.textPrimary },
+    unmappedText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    unmappedHint: { ...t.type.caption, color: t.colors.textMuted },
+    doneCard: { borderColor: t.colors.success },
+    doneTitle: { ...t.type.title, color: t.colors.textPrimary },
+    doneBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+  };
+}
