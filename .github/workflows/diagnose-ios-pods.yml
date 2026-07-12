@@ -1,14 +1,12 @@
 name: Diagnose iOS pod install
 
 # TEMPORARY DIAGNOSTIC (2026-07-12): every EAS iOS build since 8 July dies in
-# the "Install pods" phase with "Unknown error", and the detailed log lives
-# behind the expo.dev login. This job reproduces that exact phase on a GitHub
-# macOS runner (free for this public repo, no EAS build credits) with the full
-# pod output readable in the Actions log. Delete this file once the iOS build
-# is green again.
-#
-# Fires on pushes to the launch branch that touch this file only, so it never
-# runs on unrelated work.
+# the "Install pods" phase. Pod install for the same commit SUCCEEDS on a
+# GitHub macos-14 runner, and un-pinning the Xcode 26.2 image did not help, so
+# the failure detail must come from the EAS-side phase log -- which sits
+# behind the expo.dev login. This job uses the repo's EXPO_TOKEN to pull the
+# failed build's metadata and phase logs and print them into the Actions log.
+# Delete this file once the iOS build is green again.
 
 on:
   push:
@@ -17,32 +15,57 @@ on:
   workflow_dispatch:
 
 jobs:
-  pods:
-    runs-on: macos-14
-    timeout-minutes: 45
+  fetch-eas-log:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      BUILD_ID: e78730d8-19fe-4706-af62-c387fb0f7e9d
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install JS dependencies
-        run: npm ci --legacy-peer-deps --ignore-scripts
-
-      - name: Tool versions
+      - name: Build metadata (error + any log URLs)
         run: |
-          xcodebuild -version
-          pod --version
-          ruby --version
-          node --version
+          npx -y eas-cli@latest build:view "$BUILD_ID" --json > build.json || true
+          echo "===== build:view JSON ====="
+          cat build.json
+          echo "===== extracted error ====="
+          python3 - <<'PY'
+          import json
+          try:
+              d = json.load(open('build.json'))
+          except Exception as e:
+              print('could not parse build.json:', e); raise SystemExit(0)
+          err = d.get('error') or {}
+          print('errorCode:', err.get('errorCode'))
+          print('message:', err.get('message'))
+          for key in ('logFiles', 'logsUrl', 'logs'):
+              if key in d:
+                  print(key, '=>', d[key])
+          PY
 
-      - name: Expo prebuild (generate ios/)
-        run: npx expo prebuild --platform ios --no-install
-
-      - name: Pod install (the failing EAS phase, verbose)
-        working-directory: ios
-        run: pod install --verbose 2>&1 | tail -400
+      - name: Fetch phase logs if URLs are present
+        run: |
+          python3 - <<'PY'
+          import json, urllib.request, sys
+          try:
+              d = json.load(open('build.json'))
+          except Exception:
+              sys.exit(0)
+          urls = d.get('logFiles') or []
+          if isinstance(urls, str):
+              urls = [urls]
+          if not urls:
+              print('No logFiles URLs in build:view output.')
+              sys.exit(0)
+          for u in urls:
+              print('=====', u[:120], '=====')
+              try:
+                  body = urllib.request.urlopen(u, timeout=60).read().decode('utf-8', 'replace')
+                  lines = body.splitlines()
+                  # print the pods phase and any error context
+                  for i, l in enumerate(lines):
+                      low = l.lower()
+                      if 'pod' in low or 'error' in low or 'fail' in low:
+                          print(l[:300])
+              except Exception as e:
+                  print('fetch failed:', e)
+          PY
