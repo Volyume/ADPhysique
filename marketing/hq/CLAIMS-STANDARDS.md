@@ -154,7 +154,13 @@ not negotiable on the strength of a clever exception.
   timeline promise). — We cannot guarantee a person's result and it is unlawful
   and dishonest to imply we can.
 - **Before/after transformation advertising.** — It sells an outcome we do not
-  guarantee and it fuels body-image harm.
+  guarantee and it fuels body-image harm. This explicitly includes Progress
+  Photos before/after imagery: the in-app before/after sharing is a
+  user-initiated feature, NOT a marketing format. **Progress Photos may be
+  marketed as a FEATURE** (founder decision 2026-07-12) — the physique score,
+  private photo progress tracking, comparing your own progress over time, that
+  it feeds the coaching — but ads must never show before/after body
+  transformations. Feature and value, never transformation imagery.
 - **Body-shaming, guilt, or negative self-image messaging.** — Against the
   product's entire ethic and a regulatory red flag in this category.
 - **Invented testimonials, reviews, ratings, user counts or results.** — They
@@ -173,6 +179,15 @@ not negotiable on the strength of a clever exception.
   substantiation we do not have.
 - **Mass unsolicited messaging or automated community posting.** — It is spam,
   it breaks platform rules, and it will destroy trust and reputation.
+- **Foregrounding the scale / bodyweight as a core feature or hook** (founder
+  rule, 2026-07-12, ED-safety). — The app's ED-safety system is built to keep
+  users off scale fixation; marketing must not undo that. Bodyweight is ONE of
+  several signals the coaching weighs, never the headline. Banned: "weigh in
+  every morning" as a hook, scale-centric framing, weight as the thing that
+  makes the app work, a weigh-in count as the hero proof beat. The decision is
+  about training and nutrition informed by many signals; weight may appear only
+  in passing as one of those signals, never as the point. When in doubt, leave
+  weight out of the marketing entirely.
 
 ---
 

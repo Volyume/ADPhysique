@@ -39,10 +39,21 @@ re-verified before reuse if the app has been updated since this date.
   Progress Scan baseline.
 - The app deliberately holds decisions when data is insufficient — it needs
   enough observations before acting and never guesses.
-- Progress Scan: produces a progress score from the user's own photos with a
-  stated confidence level; it may abstain from scoring. It is NOT a
-  body-fat measurement, NOT a medical assessment, and never compares one
-  person to another.
+- Progress Scan / Progress Photos (KEY Pro feature, founder-stated
+  2026-07-12): a physique-scoring algorithm produces a progress score from the
+  user's own photos with a stated confidence level; it may abstain from
+  scoring. It is NOT a body-fat measurement, NOT a medical assessment, and
+  never compares one person to another. Beyond the score it offers standalone
+  value: monitoring and comparing your own progress in photo form over time
+  (your own before/after), and it feeds into the coaching decision as one
+  input. It includes user-initiated social sharing of a before/after progress
+  card (the founder-approved Pro card, 2026-07-03) which may show the user's
+  own bodyweight beside each photo, and is withheld entirely under calm mode or
+  an open ED flag; name/measurements/private notes stay banned on it.
+  NOTE: how Progress Photos may be used in MARKETING (esp. before/after
+  transformation imagery) is an open founder decision, not settled — see
+  CLAIMS-STANDARDS §5 (before/after transformation advertising is currently
+  banned) and the ED-safety scale-framing rule.
 - Positioning:
   - Primary: "the connected system for self-coached lifters."
   - Secondary: "explainable decisions."

@@ -31,17 +31,18 @@ cold-viewer clarity PASS are on record. Founder-tap lane.
 |---|---|---|
 | 1 | Volyume reads what you logged and makes the weekly call, change or hold, and shows the reason | A |
 | 3 | It holds the decision when there is not enough data, and does not guess | A |
-| 4 | It reads your weekly bodyweight trend across your mornings, not a single reading | A, D |
-| 5 | It needs at least 3 morning weigh-ins in a week before it acts on a weight trend; with fewer it holds and says why | D (MIN_WEIGH_INS = 3) |
 | 9 | The weekly coaching is a Pro feature | B |
 | 10 | Live on Google Play | A |
 | 11 | Free to start; the free tier (logging, plans, plan building, history, progress) is a real product | B |
 
 No trial-length or price numbers appear, so §3 (trial) and §4 (pricing) are not
-engaged. The one decision card shown is always the verified in-app HOLD output
-with the reason "Need at least 3 morning weights for a reliable trend." No
-invented card content. No claim about what other apps do (Claim 6 from Week 1 is
-not used here). Every "Free to start" is paired with "The weekly coaching is Pro."
+engaged. **Weight is deliberately not foregrounded** (ED-safety rule,
+CLAIMS-STANDARDS §5): the scale is not a hook, no weigh-in count is used as a
+proof beat, and the weight-trend card was pulled. The decision card shown is
+the HOLD verdict only, with no specific reason string (avoids both inventing
+content and centring weight). Only training logging is shown as a free action;
+food and the weekly decision are attributed to the Pro coaching. No claim about
+what other apps do. Every "Free to start" names what is Pro.
 
 ---
 
@@ -56,17 +57,17 @@ nutrition, and guesses. Volyume makes that weekly call and shows why.*
 training or your food for the week. And really, you are guessing.
 **Scene 2 (~2.5s, name and explain).** Volyume is a workout and food-tracking app
 that makes that weekly call for you. [Claim 1]
-**Scene 3 (~2.5s, mechanism).** The weekly coaching reads your training, your food and your weight, and each
-week it says change something, or hold. [Claim 1]
+**Scene 3 (~2.5s, mechanism).** The weekly coaching reads your training and your food, and each week it says
+change something, or hold. [Claim 1]
 **Scene 4 (~2.5s, reason).** Then it shows you the reason behind the call, in
 plain English. [Claim 1]
 **Scene 5 (~3s, real app).** appShot `02_know_what_to_do_today.jpg`. Label:
 "This is the app. The Today screen."
 **Scene 6 (~3s, proof).** Some weeks the honest answer is hold, and it tells you
-why instead of inventing a change. [Claim 3] miniCard: HOLD, "Need at least 3
-morning weights for a reliable trend." [Claim 5]
+why instead of inventing a change. [Claim 3] miniCard: WEEKLY DECISION, HOLD
+(verdict only, no specific reason string shown).
 **Scene 7 (~2.5s, CTA).** Volyume. / The weekly call, with the reason shown. /
-Free to start on Google Play. [Claim 11, Claim 10] / The weekly coaching, with its food and weight tracking, is Pro. [Claim 9]
+Free to start on Google Play. [Claim 11, Claim 10] / The weekly coaching, with its food diary, is Pro. [Claim 9]
 
 ### Carousel adaptation (seven slides, 4:5, same copy)
 
@@ -74,16 +75,15 @@ Free to start on Google Play. [Claim 11, Claim 10] / The weekly coaching, with i
   food for the week. And really, you are guessing.
 - **Slide 2:** Volyume is a workout and food-tracking app that makes that weekly
   call for you. [Claim 1]
-- **Slide 3:** The weekly coaching reads your training, your food and your
-  weight, and each week it says change something, or hold. [Claim 1]
+- **Slide 3:** The weekly coaching reads your training and your food, and each
+  week it says change something, or hold. [Claim 1]
 - **Slide 4:** Then it shows you the reason behind the call, in plain English.
   [Claim 1]
 - **Slide 5:** appShot `02_know_what_to_do_today.jpg`. Caption strip: "This is
   the app. The Today screen."
 - **Slide 6:** Some weeks the honest answer is hold, and it tells you why.
-  [Claim 3] HOLD card: "Need at least 3 morning weights for a reliable trend."
-  [Claim 5]
-- **Slide 7:** Volyume. Free to start on Google Play. [Claim 11, Claim 10] The weekly coaching, with its food and weight tracking, is Pro. [Claim 9]
+  [Claim 3] HOLD card: WEEKLY DECISION, HOLD (verdict only, no reason string).
+- **Slide 7:** Volyume. Free to start on Google Play. [Claim 11, Claim 10] The weekly coaching, with its food diary, is Pro. [Claim 9]
 
 ### Caption
 
@@ -91,7 +91,7 @@ Every Sunday you decide whether to change your training or your food, and most o
 the time you are guessing. Volyume is a workout and food-tracking app that reads
 what you logged and makes that weekly call for you, change or hold, with the
 reason shown. Some weeks the honest answer is hold, and it tells you why instead
-of inventing a change. The weekly coaching, with its food and weight tracking, is part of Pro. Free to start, on
+of inventing a change. The weekly coaching, with its food diary, is part of Pro. Free to start, on
 Google Play.
 
 ### Hashtags
@@ -103,52 +103,51 @@ Google Play.
 ## Piece 2 — The over-adjuster
 
 *The lifter who changes something every week and can no longer tell what worked.
-Volyume checks the trend first and often says hold, with the reason.*
+Volyume checks whether there is enough to act on first, and often says hold, with the reason.*
 
 ### Reel script (~18s, seven scenes)
 
 **Scene 1 (~2.5s, problem).** You change something most weeks. A new split, then
 a calorie cut. Now you cannot tell what actually worked.
 **Scene 2 (~2.5s, name and explain).** Volyume is a workout and food-tracking app
-that checks your trend before it changes anything. [Claim 1, Claim 4]
-**Scene 3 (~2.5s, mechanism).** You log your training. The weekly coaching reads that, your food and your
-weight, and each week it says change, or hold. [Claim 1, Claim 4]
-**Scene 4 (~2.5s, reason).** And plenty of weeks it says hold, because there are not enough mornings
-logged yet to call it. [Claim 3]
+that checks whether there is really enough to act on before it changes
+anything. [Claim 1]
+**Scene 3 (~2.5s, mechanism).** You log your training. The weekly coaching reads that and your food, and each
+week it says change, or hold. [Claim 1]
+**Scene 4 (~2.5s, reason).** And plenty of weeks it says hold, because there is not enough in your data
+yet to justify a change. [Claim 3]
 **Scene 5 (~3s, real app).** appShot `03_plan_that_moves_with_you.jpg`. Label:
 "This is the app. Your plan, changed only with a reason." [Claim 1]
-**Scene 6 (~3s, proof).** With fewer than three morning weigh-ins it holds and
-tells you why, rather than guessing. [Claim 5, Claim 3] miniCard: HOLD, "Need at
-least 3 morning weights for a reliable trend." [Claim 5]
+**Scene 6 (~3s, proof).** When there is not enough to go on, it holds and
+tells you why, rather than guessing. [Claim 3] miniCard: WEEKLY DECISION, HOLD
+(verdict only, no specific reason string shown).
 **Scene 7 (~2.5s, CTA).** Volyume. / It checks the trend before it changes
 anything. / Free to start on Google Play. [Claim 11, Claim 10] / The weekly
-coaching is Pro. [Claim 9]
+coaching, with its food diary, is Pro. [Claim 9]
 
 ### Carousel adaptation (seven slides, 4:5, same copy)
 
 - **Slide 1:** You change something most weeks. A new split, then a calorie cut.
   Now you cannot tell what actually worked.
-- **Slide 2:** Volyume is a workout and food-tracking app that checks your trend
-  before it changes anything. [Claim 1, Claim 4]
-- **Slide 3:** You log your training. The weekly coaching reads that, your food
-  and your weight, and each week it says change, or hold. [Claim 1, Claim 4]
-- **Slide 4:** Plenty of weeks it says hold, because there are not enough
-  mornings logged yet to call it. [Claim 3]
+- **Slide 2:** Volyume is a workout and food-tracking app that checks whether
+  there is really enough to act on before it changes anything. [Claim 1]
+- **Slide 3:** You log your training. The weekly coaching reads that and your
+  food, and each week it says change, or hold. [Claim 1]
+- **Slide 4:** Plenty of weeks it says hold, because there is not enough in your
+  data yet to justify a change. [Claim 3]
 - **Slide 5:** appShot `03_plan_that_moves_with_you.jpg`. Caption strip: "This is
   the app. Your plan, changed only with a reason." [Claim 1]
-- **Slide 6:** With fewer than three morning weigh-ins it holds and tells you
-  why. [Claim 5, Claim 3] HOLD card: "Need at least 3 morning weights for a
-  reliable trend." [Claim 5]
-- **Slide 7:** Volyume. Free to start on Google Play. [Claim 11, Claim 10] The weekly coaching, with its food and weight tracking, is Pro. [Claim 9]
+- **Slide 6:** When there is not enough to go on, it holds and tells you why.
+  [Claim 3] HOLD card: WEEKLY DECISION, HOLD (verdict only, no reason string).
+- **Slide 7:** Volyume. Free to start on Google Play. [Claim 11, Claim 10] The weekly coaching, with its food diary, is Pro. [Claim 9]
 
 ### Caption
 
 Change something most weeks, a new split then a calorie cut, and you lose the
 thread of what actually worked. Volyume is a workout and food-tracking app that
-checks your weekly trend before it changes anything, and plenty of weeks it tells
-you to hold. It reads the trend across your mornings, not one reading, and it
-needs at least three morning weigh-ins before it acts, so with fewer it holds and
-says why. The weekly coaching, with its food and weight tracking, is part of Pro. Free to start, on Google Play.
+checks whether there is really enough to act on before it changes anything, and
+plenty of weeks it tells you to hold. It waits until there is enough in your
+data to make an honest call rather than changing for the sake of it. The weekly coaching, with its food diary, is part of Pro. Free to start, on Google Play.
 
 ### Hashtags
 
