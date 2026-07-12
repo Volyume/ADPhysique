@@ -164,6 +164,25 @@ own information design.**
 - Remaining app screens (settings/onboarding/food-adjacent already
   compliant by origin) get a closing census after the above.
 
+**R3 - LOGGER FULL REBUILD (founder order 2026-07-12, live): "Rebuild
+the entire workout page. Do not patch it. Strip it down to nothing and
+start again."** Fourth-attempt verdict: every prior pass restyled
+instead of rebuilding. SOURCE SPEC:
+docs/logger-rebuild-2026-07-12/BEHAVIOURAL-CONTRACT.md (line-anchored
+inventory of every behaviour the new page must honour, extracted from
+the old screen at ece5dd8) + D43 blueprint section 3 for the shell +
+founder rulings 2026-07-12 (pencil dies -> collapsed note row; coach
+line = closable info, never opens the form guide; education paragraph
+out of the card -> overflow "How logging works"; one set-position line).
+PLAN: new src/components/workout/ WorkoutHeader + ExerciseNav + NowCard
++ WorkoutBottomBar (StatusStrip/RestTimer/LoggedSetRow/EmptyExerciseView
+kept); ActiveWorkoutScreen.js rewritten as the orchestrator; pinned
+tests mapped per contract section 8 (behavioural survive/re-anchor,
+layout-source retire with dated rationale). Lead hands-on build.
+RECOVERY: any dead session resumes FROM THE CONTRACT DOC + this entry;
+uncommitted rebuild work is lead-reviewed against the contract, never
+discarded. Old screen behaviour reference = git show ece5dd8.
+
 **R2-8b/R2-11 - PRODUCTION P0 PAIR (build 2692 walk, founder repro):**
 - R2-8b LANDED 306be1a: the surviving set-log crash was a queued-start
   drop - stop-then-start churn let Android accept a START_REST
