@@ -16,7 +16,7 @@
  * proved that the swipe-story is the format people actually read.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Pressable, TouchableOpacity, useWindowDimensions, StatusBar, Animated,
 } from 'react-native';
@@ -38,6 +38,7 @@ import { buildRecapMilestoneData } from '../lib/shareCard/recapPayload';
 import GradientCard from '../components/GradientCard';
 import { VolyumeMark } from '../components/BrandMark';
 import EmptyState from '../components/EmptyState';
+import { logError } from '../lib/errorLog';
 
 // How long each story card holds before auto-advancing (Instagram-story feel).
 const STORY_MS = 5000;
@@ -492,53 +493,72 @@ export default function YearOfLiftsScreen({ navigation, route }) {
   const [data, setData] = useState(null);
   const [neutral, setNeutral] = useState(false);
   const [loading, setLoading] = useState(true);
+  // EP-09/P-06 (Codex end-user-polish audit): whether the most recent load
+  // attempt failed. Previously the catch here was `catch (_e) { /* leave
+  // data null -> graceful empty */ }`, so a genuine read failure and a
+  // brand-new user with no sessions logged were indistinguishable -- both
+  // rendered "No sessions yet" with no way to retry. `load` is now a stable
+  // callback (not an effect-local closure) so a Retry action can re-run the
+  // exact same read.
+  const [loadError, setLoadError] = useState(false);
   const [index, setIndex] = useState(0);
   const listRef = useRef(null);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!user?.id) { setLoading(false); return; }
-    const load = async () => {
-      try {
-        if (variant === 'month' || variant === 'week') {
-          // Neutral framing under calm mode or an open ED flag: factual deltas,
-          // evaluated at render time so no celebratory state survives a flag.
-          // S4: the weekly mini-story reuses this EXACT path (getRecapData
-          // over an arbitrary [startMs, endMs) window); a 7-day window
-          // instead of a calendar month is the only difference.
-          // Fail CLOSED: read the raw wellbeing flag rather than getWellbeingMode()
-          // (which swallows a storage read error down to 'unspecified'). A genuine
-          // read failure on either flag must suppress the celebratory framing.
-          const [mode, edFlag, recap] = await Promise.all([
-            AsyncStorage.getItem(WELLBEING_KEY).then(v => v || 'unspecified').catch(() => 'read_failed'),
-            getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
-            getRecapData(user.id, { startMs, endMs, compare: true }),
-          ]);
-          setNeutral(isCalm(mode) || mode === 'read_failed' || !!edFlag);
-          setData(recap);
-        } else if (variant === 'block') {
-          setData(await getBlockReflectionData(user.id, mesocycleId));
-        } else {
-          // Year of Lifts: raw tonnage hero + a factual year-over-year anchor
-          // (ULTIMATE-WR-5, NA-wr-10). The previous-window tonnage comes from
-          // getRecapData over the SAME [yearStart, yearEnd] window, so it shares
-          // getYearOfLiftsData's set-filter basis and the % agrees with the
-          // displayed number. Calm mode / open ED flag suppresses the comparison.
-          const yd = await getYearOfLiftsData(user.id, yearMs);
-          // Fail CLOSED: same raw wellbeing read as above; a genuine read
-          // failure on either flag must suppress the year-over-year comparison.
-          const [mode, edFlag, recap] = await Promise.all([
-            AsyncStorage.getItem(WELLBEING_KEY).then(v => v || 'unspecified').catch(() => 'read_failed'),
-            getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
-            (yd && yd.tonnage > 0 && yd.yearStart != null)
-              ? getRecapData(user.id, { startMs: yd.yearStart, endMs: yd.yearEnd, compare: true }).catch(() => null)
-              : Promise.resolve(null),
-          ]);
-          setNeutral(isCalm(mode) || mode === 'read_failed' || !!edFlag);
-          setData(recap?.previous ? { ...yd, previous: recap.previous } : yd);
-        }
-      } catch (_e) { /* leave data null → graceful empty */ }
+    setLoading(true);
+    try {
+      if (variant === 'month' || variant === 'week') {
+        // Neutral framing under calm mode or an open ED flag: factual deltas,
+        // evaluated at render time so no celebratory state survives a flag.
+        // S4: the weekly mini-story reuses this EXACT path (getRecapData
+        // over an arbitrary [startMs, endMs) window); a 7-day window
+        // instead of a calendar month is the only difference.
+        // Fail CLOSED: read the raw wellbeing flag rather than getWellbeingMode()
+        // (which swallows a storage read error down to 'unspecified'). A genuine
+        // read failure on either flag must suppress the celebratory framing.
+        const [mode, edFlag, recap] = await Promise.all([
+          AsyncStorage.getItem(WELLBEING_KEY).then(v => v || 'unspecified').catch(() => 'read_failed'),
+          getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
+          getRecapData(user.id, { startMs, endMs, compare: true }),
+        ]);
+        setNeutral(isCalm(mode) || mode === 'read_failed' || !!edFlag);
+        setData(recap);
+      } else if (variant === 'block') {
+        setData(await getBlockReflectionData(user.id, mesocycleId));
+      } else {
+        // Year of Lifts: raw tonnage hero + a factual year-over-year anchor
+        // (ULTIMATE-WR-5, NA-wr-10). The previous-window tonnage comes from
+        // getRecapData over the SAME [yearStart, yearEnd] window, so it shares
+        // getYearOfLiftsData's set-filter basis and the % agrees with the
+        // displayed number. Calm mode / open ED flag suppresses the comparison.
+        const yd = await getYearOfLiftsData(user.id, yearMs);
+        // Fail CLOSED: same raw wellbeing read as above; a genuine read
+        // failure on either flag must suppress the year-over-year comparison.
+        const [mode, edFlag, recap] = await Promise.all([
+          AsyncStorage.getItem(WELLBEING_KEY).then(v => v || 'unspecified').catch(() => 'read_failed'),
+          getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
+          (yd && yd.tonnage > 0 && yd.yearStart != null)
+            ? getRecapData(user.id, { startMs: yd.yearStart, endMs: yd.yearEnd, compare: true }).catch(() => null)
+            : Promise.resolve(null),
+        ]);
+        setNeutral(isCalm(mode) || mode === 'read_failed' || !!edFlag);
+        setData(recap?.previous ? { ...yd, previous: recap.previous } : yd);
+      }
+      setLoadError(false);
+    } catch (e) {
+      // EP-09/P-06: flag the failure rather than silently leaving `data`
+      // null; `data` itself is untouched here, so a Retry after a prior
+      // successful load never blanks it.
+      logError('YearOfLiftsScreen.load', e, { userId: user?.id, variant });
+      setLoadError(true);
+    } finally {
       setLoading(false);
-    };
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, variant, startMs, endMs, mesocycleId, yearMs]);
+
+  useEffect(() => {
     load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -673,7 +693,27 @@ export default function YearOfLiftsScreen({ navigation, route }) {
         </View>
       )}
 
-      {!loading && cards.length === 0 && (
+      {/* EP-09/P-06: a FAILED load must never read as "no sessions yet" --
+          that used to happen because the catch above left `data` null and
+          the render treated it as a genuinely empty history. Shown ahead of
+          and mutually exclusive with the real empty state below. */}
+      {!loading && loadError && cards.length === 0 && (
+        <View style={styles.loadingWrap}>
+          <EmptyState
+            icon="cloud-offline-outline"
+            title="Couldn't load this"
+            text="Check your connection and try again."
+            actionLabel="Retry"
+            onAction={load}
+            actionAccessibilityLabel="Retry loading"
+            secondaryLabel="Done"
+            onSecondary={() => navigation.goBack()}
+            secondaryAccessibilityLabel="Done"
+          />
+        </View>
+      )}
+
+      {!loading && !loadError && cards.length === 0 && (
         <View style={styles.loadingWrap}>
           <EmptyState
             icon="barbell-outline"

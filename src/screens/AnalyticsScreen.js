@@ -252,7 +252,7 @@ export default function AnalyticsScreen({ navigation, route }) {
   }, [route?.params?.focusWeightTrend, weightTrend.render, navigation]);
 
   const {
-    loading, refreshing,
+    loading, refreshing, loadError,
     insights, weeklyVolume, prBars,
     recentSessions, allSets, exerciseMap, earliestWorkoutAt, completedWorkoutCount,
     hasData, enoughForTrends,
@@ -533,8 +533,27 @@ export default function AnalyticsScreen({ navigation, route }) {
           </View>
         )}
 
+        {/* EP-09/P-06 (Codex end-user-polish audit): a load that FAILED must
+            never read as "no training trends yet" -- that used to happen
+            because useProgressData's loadError was ignored here entirely.
+            Shown ahead of the real empty state and gated on it (loadError can
+            stay true briefly after data existed from a prior successful
+            load; hasData / allSets still reflect whatever was last
+            committed, so this only replaces the messaging when there is
+            nothing to fall back on). */}
+        {!loading && loadError && allSets.length === 0 && (
+          <EmptyState
+            icon="cloud-offline-outline"
+            title="Couldn't load your training trends"
+            text="Check your connection and try again. Your data is safe on this device."
+            actionLabel="Retry"
+            onAction={handleRefresh}
+            actionAccessibilityLabel="Retry loading training trends"
+          />
+        )}
+
         {/* ── Empty state (U-D-4: encouragement-framed, matching BodyMetrics) ── */}
-        {!loading && allSets.length === 0 && (
+        {!loading && !loadError && allSets.length === 0 && (
           <EmptyState
             icon="analytics-outline"
             title="No training trends yet"

@@ -478,6 +478,12 @@ export default function BodyMetricsScreen() {
   const [wellbeingLoaded, setWellbeingLoaded] = useState(false);
   const [sessionConfirmed, setSessionConfirmed] = useState(bodyMetricsSessionConfirmed);
   const [history, setHistory] = useState([]);
+  // EP-09/P-06 (Codex end-user-polish audit): whether the most recent
+  // loadHistory() attempt failed. A failure preserves whatever `history` was
+  // already on screen (see the catch branch below, which no longer blanks it
+  // to []); this flag lets the render layer show a distinct, retryable error
+  // instead of misreporting a read failure as "No body metrics yet".
+  const [historyLoadError, setHistoryLoadError] = useState(false);
   // Lift data for the recomposition reframe's strength delta (ULTIMATE-RECOMP-01).
   const [liftSets, setLiftSets] = useState([]);
   const [exercises, setExercises] = useState([]);
@@ -671,6 +677,7 @@ export default function BodyMetricsScreen() {
       try { morningRows = await getMorningWeights(user.id, 90); } catch (_e) { morningRows = []; }
       const entries = mergeMorningWeightsIntoHistory(bodyMetricEntries, morningRows, 50);
       setHistory(entries);
+      setHistoryLoadError(false);
       const sorted = [...entries].sort((a, b) => a.metric_date.localeCompare(b.metric_date));
       const weightPoints = sorted
         // DATA-001: require a positive weight, not just a truthy value, so a
@@ -683,7 +690,16 @@ export default function BodyMetricsScreen() {
       } else {
         setEwmaData([]);
       }
-    } catch (_e) { setHistory([]); setEwmaData([]); }
+    } catch (_e) {
+      // EP-09/P-06: a rejected history read must never masquerade as a
+      // genuinely empty day. Preserve whatever `history`/`ewmaData` were
+      // already on screen (no reset to []) and flag the failure instead, so
+      // the render layer can show a retryable error rather than "No body
+      // metrics yet".
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('BodyMetricsScreen.loadHistory', _e, { userId: user?.id }); } catch (_) {}
+      setHistoryLoadError(true);
+    }
 
     // Lift data for the recomposition reframe's strength delta (read-only;
     // a failure just hides the strength line, never the body history above).
@@ -1130,6 +1146,18 @@ export default function BodyMetricsScreen() {
               </View>
             )}
           </Card>
+        ) : historyLoadError ? (
+          // EP-09/P-06: a FAILED history read renders its own retryable
+          // error, never the "No body metrics yet" copy (which implies a
+          // genuinely empty history, not a read that never completed).
+          <EmptyState
+            icon="cloud-offline-outline"
+            title="Couldn't load body metrics"
+            text="Check your connection and try again. Nothing you've logged has been lost."
+            actionLabel="Retry"
+            onAction={loadHistory}
+            actionAccessibilityLabel="Retry loading body metrics"
+          />
         ) : (
           <EmptyState
             icon="body-outline"

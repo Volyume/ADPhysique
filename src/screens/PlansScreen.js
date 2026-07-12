@@ -133,6 +133,15 @@ export default function PlansScreen({ navigation }) {
   const [blockAdvice, setBlockAdvice] = useState(null);
   const [blockSnoozed, setBlockSnoozed] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  // EP-09/P-06 (Codex end-user-polish audit): whether the most recent
+  // loadData() attempt failed. Previously the catch block swallowed the
+  // exception entirely (`catch (_e) {}`), so a rejected read still landed on
+  // `loaded = true` with every plan/folder state left at its initial empty
+  // value, and the render below could only ever show "No active plan" -- a
+  // load FAILURE painted as a real, confirmed empty account. A failure never
+  // resets the plan/folder state that's already on screen (see loadData's
+  // catch branch), so a refresh failure preserves whatever was showing.
+  const [loadError, setLoadError] = useState(false);
 
   const scrollRef = useRef(null);
   const peekRef = useRef(null);
@@ -204,7 +213,15 @@ export default function PlansScreen({ navigation }) {
         setBlockAdvice(null);
         setBlockSnoozed(false);
       }
+      setLoadError(false);
     } catch (_e) {
+      // EP-09/P-06: a rejected read here must never read as a genuine "no
+      // active plan, no plans, no folders" account state. Nothing above this
+      // catch has been reassigned (the whole read is one Promise.all), so
+      // whatever plan/folder state was already on screen is untouched;
+      // loadError alone flags the failure for the render layer.
+      logError('PlansScreen.loadData', _e, { userId: user?.id });
+      setLoadError(true);
     } finally {
       setLoaded(true);
     }
@@ -750,7 +767,31 @@ export default function PlansScreen({ navigation }) {
         )}
 
         {/* Active Plan */}
-        {activePlan ? (
+        {loadError && !activePlan ? (
+          // EP-09/P-06: only shown when there is genuinely nothing to fall
+          // back on (a refresh failure with an already-loaded active plan
+          // keeps showing that plan card instead, per loadError being gated
+          // on !activePlan here). A load failure must never be mistaken for
+          // a confirmed "no active plan" account state.
+          <Card style={[styles.noPlanCard, live.noPlanCard]}>
+            <View style={styles.noPlanCardHeader}>
+              <View style={[styles.noPlanCardIcon, live.noPlanCardIcon]}>
+                <Ionicons name="cloud-offline-outline" size={20} color={t.colors.primary} />
+              </View>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.noPlanCardTitle, live.noPlanCardTitle]}>Couldn't load your plans</Text>
+            </View>
+            <Text maxFontSizeMultiplier={1.3} style={[styles.noPlanCardBody, live.noPlanCardBody]}>
+              Check your connection and try again. Nothing has been lost.
+            </Text>
+            <View style={styles.noPlanCardActions}>
+              <Button
+                title="Retry"
+                onPress={loadData}
+                accessibilityLabel="Retry loading your plans"
+              />
+            </View>
+          </Card>
+        ) : activePlan ? (
           <View style={styles.section}>
             <Card style={[styles.activePlanCard, live.activePlanCard]}>
               <View style={styles.activePlanHeader}>
