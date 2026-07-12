@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "source": "marketing/hq/copy-library/social/week-1-reels-v2.md — Concept D",
+    "title": "An app that sometimes tells you to change nothing.",
+    "status": "DRAFT — not publish-ready until compliance-reviewer PASS is on record"
+  },
+  "slides": [
+    {
+      "heading": "Another week, another change to your plan.",
+      "supporting": "Even when nothing in your data actually moved.",
+      "headingAmber": true
+    },
+    {
+      "heading": "Change your plan on a quiet week and you lose the thread.",
+      "supporting": "You can no longer tell which change did what."
+    },
+    {
+      "heading": "Volyume works differently.",
+      "supporting": "It reads your logged training and food and makes one weekly call, change or hold."
+    },
+    {
+      "diagram": "fillingDots",
+      "miniCard": {
+        "verdict": "Hold",
+        "pillOutline": true,
+        "reason": "Need at least 3 morning weights for a reliable trend."
+      }
+    },
+    {
+      "heading": "When the signal is not there yet, it holds and tells you why.",
+      "supporting": "It holds because the data does not justify a change yet."
+    },
+    {
+      "heading": "It tells you when to hold and why, not only when to push.",
+      "supporting": "The weekly coaching is part of Pro.",
+      "monoStat": { "value": "", "caption": "Free to start, on Google Play." }
+    }
+  ]
+}

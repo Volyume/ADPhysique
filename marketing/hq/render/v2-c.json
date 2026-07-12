@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "source": "marketing/hq/copy-library/social/week-1-reels-v2.md — Concept C",
+    "title": "Three tools, and none of them answers the one question.",
+    "status": "DRAFT — not publish-ready until compliance-reviewer PASS is on record"
+  },
+  "slides": [
+    {
+      "heading": "Your training log, your food app and your notes all remember what you did.",
+      "supporting": "Not one of them tells you what to change this week.",
+      "headingAmber": true
+    },
+    {
+      "heading": "So the answer lives in your head, or in a note you keep rewriting."
+    },
+    {
+      "heading": "Volyume is the connected system that reads both sides and makes the weekly call.",
+      "supporting": "Your training and your food, in one decision."
+    },
+    {
+      "diagram": "fork"
+    },
+    {
+      "heading": "The weekly coaching does the deciding your apps leave to you.",
+      "supporting": "That part is Pro. Logging, plans and progress are free."
+    },
+    {
+      "heading": "One system that reads your training and your food and makes the weekly call.",
+      "monoStat": { "value": "", "caption": "Free to start, on Google Play." }
+    }
+  ]
+}

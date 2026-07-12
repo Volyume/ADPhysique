@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "source": "marketing/hq/copy-library/social/week-1-reels-v2.md — Concept A",
+    "title": "You log everything. The decision is still a guess.",
+    "status": "DRAFT — not publish-ready until compliance-reviewer PASS is on record"
+  },
+  "slides": [
+    {
+      "heading": "You log every set. You weigh in most mornings.",
+      "supporting": "The spreadsheet is full.",
+      "headingAmber": true
+    },
+    {
+      "heading": "But the call on what to change each week is still a guess."
+    },
+    {
+      "heading": "This is what Volyume does.",
+      "supporting": "It reads what you already logged and makes the weekly call, change or hold, and shows you why."
+    },
+    {
+      "miniCard": {
+        "verdict": "Hold",
+        "pillOutline": true,
+        "reason": "Need at least 3 morning weights for a reliable trend."
+      }
+    },
+    {
+      "heading": "Same data in, same answer out, and the reason is written down.",
+      "supporting": "Explainable, not a black box."
+    },
+    {
+      "heading": "The weekly decision on your training and food, change or hold, with the reason shown.",
+      "supporting": "The weekly coaching is part of Pro.",
+      "monoStat": { "value": "", "caption": "Free to start, on Google Play." }
+    }
+  ]
+}

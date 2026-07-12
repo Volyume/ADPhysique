@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "source": "marketing/hq/copy-library/social/week-1-reels-v2.md — Concept B",
+    "title": "Three weeks in and the scale has not moved.",
+    "status": "DRAFT — not publish-ready until compliance-reviewer PASS is on record"
+  },
+  "slides": [
+    {
+      "heading": "Three weeks of training hard, and the scale has not moved.",
+      "supporting": "The obvious move is to cut calories.",
+      "headingAmber": true
+    },
+    {
+      "heading": "One flat number can be water, sleep or a heavy meal the night before.",
+      "diagram": "loneDot"
+    },
+    {
+      "heading": "Volyume reads the weekly trend across your mornings, not one reading.",
+      "supporting": "And it only acts when the data is real.",
+      "diagram": "weeklyTrend"
+    },
+    {
+      "diagram": "weeklyTrend",
+      "monoStat": { "value": "3", "caption": "morning weigh-ins" }
+    },
+    {
+      "heading": "With fewer than that it holds the call and tells you why.",
+      "supporting": "It does not guess.",
+      "miniCard": {
+        "verdict": "Hold",
+        "pillOutline": true,
+        "reason": "Need at least 3 morning weights for a reliable trend."
+      }
+    },
+    {
+      "heading": "It reads the weekly trend, not one bad morning, and acts only when the data is real.",
+      "supporting": "The weekly coaching is part of Pro.",
+      "monoStat": { "value": "", "caption": "Free to start, on Google Play." }
+    }
+  ]
+}
