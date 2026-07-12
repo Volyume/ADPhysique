@@ -1,11 +1,18 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+# Hoisted (flat) node_modules so Vercel's file tracer can resolve Next's
+# compiled server runtime; pnpm's default symlinked store hides it and the
+# deploy fails packaging with a missing server.runtime.prod.js module.
+nodeLinker: hoisted
 overrides:
   postcss: ^8.5.16
-# pnpm 10+ blocks dependency build scripts unless approved. Approve the
-# three that need them so non-interactive CI (Vercel) can install.
-onlyBuiltDependencies:
-  - esbuild
-  - sharp
-  - unrs-resolver
+# pnpm blocks dependency build scripts unless approved. Approve the three
+# that need them so non-interactive CI (Vercel) can install.
+allowBuilds:
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
+# pnpm 11's pre-run dependency verification can hard-fail in CI after a
+# clean install; skip it so the build command runs.
+verifyDepsBeforeRun: false
