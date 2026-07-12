@@ -47,7 +47,11 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // with a ghost slot inside WorkoutHeader.
     expect(ACTIVE_WORKOUT).toContain('showFinish={!(targetComplete && !extraSetArmed && isLastExercise)}');
     expect(ACTIVE_WORKOUT).toContain("testID: 'volyume-btn-finish-primary'");
-    expect(WORKOUT_HEADER).toContain('finishGhost');
+    // Founder device note on 2705: equal flexible side slots keep the
+    // elapsed block SCREEN-centred whatever each side holds (including a
+    // hidden Finish), replacing the fixed-width ghost.
+    expect(WORKOUT_HEADER).toMatch(/side: \{ flex: 1, alignItems: 'flex-start' \}/);
+    expect(WORKOUT_HEADER).toMatch(/sideRight: \{ alignItems: 'flex-end' \}/);
   });
 
   test('finish-workout confirmation and retry copy use the same action name', () => {

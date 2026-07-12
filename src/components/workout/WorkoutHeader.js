@@ -28,18 +28,23 @@ export default function WorkoutHeader({
   showFinish = true,
 }) {
   const t = useTheme();
+  // Three-slot layout (founder device note, build 2705): the side slots
+  // flex equally, so the elapsed block centres on the SCREEN, not between
+  // two differently-sized buttons.
   return (
     <View style={[styles.row, { borderBottomColor: t.colors.borderSubtle }]}>
-      <TouchableOpacity
-        testID="volyume-workout-close"
-        style={[styles.iconBtn, { backgroundColor: t.colors.surface2, borderColor: t.colors.border }]}
-        onPress={onCancel}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        accessibilityRole="button"
-        accessibilityLabel="Cancel workout"
-      >
-        <Ionicons name="close" size={iconSize.md} color={t.colors.textPrimary} />
-      </TouchableOpacity>
+      <View style={styles.side}>
+        <TouchableOpacity
+          testID="volyume-workout-close"
+          style={[styles.iconBtn, { backgroundColor: t.colors.surface2, borderColor: t.colors.border }]}
+          onPress={onCancel}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel workout"
+        >
+          <Ionicons name="close" size={iconSize.md} color={t.colors.textPrimary} />
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.elapsedWrap} accessible accessibilityLabel={`Elapsed ${elapsedStr}${timeCrunchActive ? ', time crunch active' : ''}`}>
         <Text maxFontSizeMultiplier={1.3} style={[styles.elapsedLabel, { ...t.type.overline, color: t.colors.textMuted }]}>
@@ -55,23 +60,23 @@ export default function WorkoutHeader({
         </View>
       </View>
 
-      {showFinish ? (
-        <TouchableOpacity
-          testID="volyume-workout-finish"
-          style={[styles.finishBtn, { backgroundColor: t.colors.surface2, borderColor: t.colors.border }]}
-          onPress={onFinish}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityRole="button"
-          accessibilityLabel="Finish workout"
-        >
-          <Ionicons name="checkmark-done" size={iconSize.sm} color={t.colors.textPrimary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.finishText, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
-            Finish
-          </Text>
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.finishGhost} />
-      )}
+      <View style={[styles.side, styles.sideRight]}>
+        {showFinish ? (
+          <TouchableOpacity
+            testID="volyume-workout-finish"
+            style={[styles.finishBtn, { backgroundColor: t.colors.surface2, borderColor: t.colors.border }]}
+            onPress={onFinish}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="Finish workout"
+          >
+            <Ionicons name="checkmark-done" size={iconSize.sm} color={t.colors.textPrimary} />
+            <Text maxFontSizeMultiplier={1.3} style={[styles.finishText, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
+              Finish
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -93,13 +98,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Equal flexible sides keep the centre block screen-centred whatever
+  // width each side's control has (or when Finish hides entirely).
+  side: { flex: 1, alignItems: 'flex-start' },
+  sideRight: { alignItems: 'flex-end' },
   elapsedWrap: { alignItems: 'center', gap: 2 },
   elapsedLabel: {},
   elapsedValueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   elapsedValue: { fontVariant: ['tabular-nums'] },
-  // Keeps the elapsed block centred when Finish hides (the bottom bar owns
-  // the finish action on the last exercise once the target is met).
-  finishGhost: { width: 88, minHeight: workoutLoggerSize.primaryActionMinHeight },
   finishBtn: {
     flexDirection: 'row',
     alignItems: 'center',
