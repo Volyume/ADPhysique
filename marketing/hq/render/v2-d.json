@@ -11,8 +11,8 @@
       "headingAmber": true
     },
     {
-      "heading": "Change your plan on a quiet week and you lose the thread.",
-      "supporting": "You can no longer tell which change did what."
+      "heading": "Change things too often and you cannot tell what actually worked.",
+      "supporting": "Every extra tweak muddies the picture."
     },
     {
       "heading": "Volyume works differently.",
@@ -27,13 +27,23 @@
       }
     },
     {
-      "heading": "When the signal is not there yet, it holds and tells you why.",
-      "supporting": "It holds because the data does not justify a change yet."
+      "heading": "When there is not enough to go on, it holds and tells you why.",
+      "supporting": "No change gets made without a reason you can read."
+    },
+    {
+      "heading": "This is Volyume.",
+      "appShot": {
+        "src": "03_plan_that_moves_with_you.jpg",
+        "label": "Your plan, changed only with a reason."
+      }
     },
     {
       "heading": "It tells you when to hold and why, not only when to push.",
       "supporting": "The weekly coaching is part of Pro.",
-      "monoStat": { "value": "", "caption": "Free to start, on Google Play." }
+      "monoStat": {
+        "value": "",
+        "caption": "Free to start, on Google Play."
+      }
     }
   ]
 }

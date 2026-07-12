@@ -25,13 +25,23 @@
       }
     },
     {
-      "heading": "Same data in, same answer out, and the reason is written down.",
-      "supporting": "Explainable, not a black box."
+      "heading": "And it shows its working.",
+      "supporting": "Every decision comes with the reason, written in plain words."
+    },
+    {
+      "heading": "This is Volyume.",
+      "appShot": {
+        "src": "02_know_what_to_do_today.jpg",
+        "label": "The Today screen."
+      }
     },
     {
       "heading": "The weekly decision on your training and food, change or hold, with the reason shown.",
       "supporting": "The weekly coaching is part of Pro.",
-      "monoStat": { "value": "", "caption": "Free to start, on Google Play." }
+      "monoStat": {
+        "value": "",
+        "caption": "Free to start, on Google Play."
+      }
     }
   ]
 }

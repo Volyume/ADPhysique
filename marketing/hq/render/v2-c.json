@@ -14,19 +14,29 @@
       "heading": "So the answer lives in your head, or in a note you keep rewriting."
     },
     {
-      "heading": "Volyume is the connected system that reads both sides and makes the weekly call.",
+      "heading": "Volyume reads both sides and makes the weekly call.",
       "supporting": "Your training and your food, in one decision."
     },
     {
       "diagram": "fork"
     },
     {
-      "heading": "The weekly coaching does the deciding your apps leave to you.",
+      "heading": "The weekly coaching makes the call your other apps leave to you.",
       "supporting": "That part is Pro. Logging, plans and progress are free."
     },
     {
+      "heading": "This is Volyume.",
+      "appShot": {
+        "src": "06_meals_planned_to_your_targets.jpg",
+        "label": "The food diary, read by the weekly coach."
+      }
+    },
+    {
       "heading": "One system that reads your training and your food and makes the weekly call.",
-      "monoStat": { "value": "", "caption": "Free to start, on Google Play." }
+      "monoStat": {
+        "value": "",
+        "caption": "Free to start, on Google Play."
+      }
     }
   ]
 }

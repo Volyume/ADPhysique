@@ -11,17 +11,21 @@
       "headingAmber": true
     },
     {
-      "heading": "One flat number can be water, sleep or a heavy meal the night before.",
-      "diagram": "loneDot"
+      "heading": "The scale jumps around with late meals, bad sleep and water.",
+      "diagram": "loneDot",
+      "supporting": "One morning tells you almost nothing."
     },
     {
-      "heading": "Volyume reads the weekly trend across your mornings, not one reading.",
+      "heading": "Volyume reads your weekly trend, not one morning.",
       "supporting": "And it only acts when the data is real.",
       "diagram": "weeklyTrend"
     },
     {
       "diagram": "weeklyTrend",
-      "monoStat": { "value": "3", "caption": "morning weigh-ins" }
+      "monoStat": {
+        "value": "3",
+        "caption": "morning weigh-ins"
+      }
     },
     {
       "heading": "With fewer than that it holds the call and tells you why.",
@@ -33,9 +37,19 @@
       }
     },
     {
+      "heading": "This is Volyume.",
+      "appShot": {
+        "src": "02_know_what_to_do_today.jpg",
+        "label": "Morning weight, on the Today screen."
+      }
+    },
+    {
       "heading": "It reads the weekly trend, not one bad morning, and acts only when the data is real.",
       "supporting": "The weekly coaching is part of Pro.",
-      "monoStat": { "value": "", "caption": "Free to start, on Google Play." }
+      "monoStat": {
+        "value": "",
+        "caption": "Free to start, on Google Play."
+      }
     }
   ]
 }
