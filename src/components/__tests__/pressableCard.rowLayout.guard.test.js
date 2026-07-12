@@ -90,9 +90,13 @@ describe('row-fill dependents keep flex: 1 (founder photo, build 2608)', () => {
   });
 
   test('ActiveWorkout bottom bar: the primary and advance actions fill the row', () => {
-    const screen = read('screens/ActiveWorkoutScreen.js');
-    expect(screen).toMatch(/styles\.completeBtn,\s*live\.completeBtn,\s*\{\s*flex:\s*1\s*\}/);
-    expect(screen).toMatch(/styles\.extraSetBtnPromoted,\s*live\.extraSetBtnPromoted,\s*\{\s*flex:\s*1\s*\}/);
+    // RE-ANCHORED 2026-07-12 (R3 logger rebuild): the bar is the
+    // WorkoutBottomBar component; the fill contract moved to its two flexed
+    // slots (the primary keeps the larger share so it never shrinks into a
+    // mis-tap).
+    const bar = read('components/workout/WorkoutBottomBar.js');
+    expect(bar).toMatch(/primarySlot:\s*\{\s*flex:\s*3\s*\}/);
+    expect(bar).toMatch(/advanceSlot:\s*\{\s*flex:\s*2\s*\}/);
   });
 
   // R7 was the same class: SparkCard is a pressable <Card style={styles.

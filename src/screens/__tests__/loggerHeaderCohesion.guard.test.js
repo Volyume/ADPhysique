@@ -46,13 +46,16 @@ function styleBlock(src, name) {
 
 describe('R2-2 header: X + Finish share one chrome family', () => {
   test('the header X sits in the contained icon-button chrome (headerIconBtn)', () => {
-    const b = styleBlock(ACTIVE, 'headerIconBtn');
-    expect(b).toBeTruthy();
-    expect(b).toContain('backgroundColor: colors.surface2');
-    expect(b).toContain('borderRadius: radius.md');
-    expect(b).toContain('borderColor: colors.border');
-    // and the X actually renders in that chrome
-    expect(ACTIVE).toContain('styles.headerIconBtn, live.headerIconBtn');
+    // RE-ANCHORED 2026-07-12 (R3 logger rebuild): the header is the
+    // WorkoutHeader component; the SAME chrome contract (surface2 fill,
+    // border, radius.md, 44dp square) is pinned there.
+    const fsMod = require('fs');
+    const pathMod = require('path');
+    const HEADER = fsMod.readFileSync(pathMod.resolve(__dirname, '../../components/workout/WorkoutHeader.js'), 'utf8');
+    expect(HEADER).toContain('backgroundColor: t.colors.surface2, borderColor: t.colors.border');
+    expect(HEADER).toMatch(/iconBtn: \{[\s\S]*borderRadius: radius\.md/);
+    expect(HEADER).toMatch(/iconBtn: \{[\s\S]*width: workoutLoggerSize\.primaryActionMinHeight/);
+    expect(ACTIVE).toContain('<WorkoutHeader');
   });
 
   test('Finish matches the X chrome: small-surface radius.md and 44dp height', () => {
@@ -77,10 +80,15 @@ describe('R2-2 header: elapsed timer is a designed element', () => {
   });
 
   test('timer carries the standard overline micro-label', () => {
-    const b = styleBlock(ACTIVE, 'headerTimerLabel');
-    expect(b).toBeTruthy();
-    expect(b).toContain('...type.overline');
-    expect(ACTIVE).toContain('>Elapsed</Text>');
+    // RE-ANCHORED 2026-07-12 (R3): the overline + tabular pair lives in
+    // WorkoutHeader now, same grammar as RestTimer's REST label.
+    const fsMod = require('fs');
+    const pathMod = require('path');
+    const HEADER = fsMod.readFileSync(pathMod.resolve(__dirname, '../../components/workout/WorkoutHeader.js'), 'utf8');
+    expect(HEADER).toContain('...t.type.overline');
+    expect(HEADER).toContain('Elapsed');
+    expect(HEADER).toContain("...t.type.num('title')");
+    expect(HEADER).toContain("fontVariant: ['tabular-nums']");
   });
 });
 
