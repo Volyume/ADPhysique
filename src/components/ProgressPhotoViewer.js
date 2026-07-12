@@ -46,7 +46,6 @@ import {
   View, Text, StyleSheet, TouchableOpacity, Modal,
   ScrollView, useWindowDimensions,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -65,6 +64,7 @@ import { getPhotoMetaMap, upsertPhotoMeta } from '../lib/progressPhotoMeta';
 import { formatBodyWeight } from '../lib/units';
 import { logError } from '../lib/errorLog';
 import PhotoDatePicker from './PhotoDatePicker';
+import ProgressPhotoImage from './ProgressPhotoImage';
 import { colors, spacing, radius, type, motion, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
@@ -86,8 +86,10 @@ const MORPH_HANDOFF = 0.85;
 
 // Reanimated-driven expo-image for the hero-morph overlay (grid -> viewer).
 // createAnimatedComponent keeps expo-image's contentFit/recycling behaviour
-// while letting the transform run on the UI thread.
-const AnimatedImage = Animated.createAnimatedComponent(Image);
+// while letting the transform run on the UI thread. Wraps the shared
+// ProgressPhotoImage (AX-13) rather than expo-image's Image directly, so this
+// real photo stays true-colour under iOS Smart Invert during the morph too.
+const AnimatedImage = Animated.createAnimatedComponent(ProgressPhotoImage);
 
 function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
 
@@ -569,7 +571,7 @@ export default function ProgressPhotoViewer({
                 onLayout={onStageLayout}
                 style={[styles.stageInner, imgAnimStyle, stageImageStyle]}
               >
-                <Image
+                <ProgressPhotoImage
                   source={{ uri: current.uri }}
                   style={{ width: imgW, height: imgH }}
                   contentFit="contain"

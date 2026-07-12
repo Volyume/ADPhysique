@@ -31,7 +31,6 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, useWindowDimensions,
 } from 'react-native';
-import { Image } from 'expo-image';
 import Reanimated, {
   useSharedValue, useAnimatedStyle, withTiming, runOnJS,
 } from 'react-native-reanimated';
@@ -43,6 +42,7 @@ import {
   colors, spacing, radius, type, iconSize, motion, withAlpha,
 } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import ProgressPhotoImage from './ProgressPhotoImage';
 import { logError } from '../lib/errorLog';
 import { getPhotoMetaMap } from '../lib/progressPhotoMeta';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
@@ -114,7 +114,7 @@ function Pane({ item, role, w, h, failed, onError, reduceMotion }) {
           <Text style={[styles.fallbackText, live.fallbackText]}>Could not load this photo.</Text>
         </View>
       ) : (
-        <Image
+        <ProgressPhotoImage
           source={{ uri: item.uri }}
           style={[styles.paneImage, live.paneImage, { width: w, height: h }]}
           contentFit="contain"
@@ -175,7 +175,7 @@ function CompareSlider({
             <Text style={[styles.fallbackText, live.fallbackText]}>Could not load this photo.</Text>
           </View>
         ) : (
-          <Image
+          <ProgressPhotoImage
             source={{ uri: later.uri }}
             style={{ width: w, height: h }}
             contentFit="contain"
@@ -192,7 +192,7 @@ function CompareSlider({
               <Text style={[styles.fallbackText, live.fallbackText]}>Could not load this photo.</Text>
             </View>
           ) : (
-            <Image
+            <ProgressPhotoImage
               source={{ uri: earlier.uri }}
               style={{ width: w, height: h }}
               contentFit="contain"
@@ -267,7 +267,12 @@ function CompareOverlay({
   return (
     <View style={styles.stage}>
       <View style={[styles.frame, live.frame, { width: w, height: h }]}>
-        <Canvas style={{ width: w, height: h }}>
+        {/* Not an Image element, but a real photograph render (AX-13): the
+            Skia canvas blends the two real photos, so it carries the same
+            invert-ignore flag as a plain base-View accessibility prop
+            (BaseViewConfig.ios.js), forwarded straight through by Canvas's
+            ...viewProps spread. */}
+        <Canvas style={{ width: w, height: h }} accessibilityIgnoresInvertColors>
           {earlierImg ? (
             <SkiaImage image={earlierImg} x={0} y={0} width={w} height={h} fit="contain" />
           ) : null}
@@ -630,7 +635,7 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
                 accessibilityState={{ selected: isChosen }}
                 accessibilityLabel={`Photo from ${formatProgressPhotoDay(item.takenAt)}`}
               >
-                <Image
+                <ProgressPhotoImage
                   source={{ uri: item.uri }}
                   style={[styles.thumb, live.thumb, isChosen && [styles.thumbChosen, live.thumbChosen]]}
                   contentFit="cover"
