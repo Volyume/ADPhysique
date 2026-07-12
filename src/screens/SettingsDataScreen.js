@@ -152,7 +152,8 @@ export default function SettingsDataScreen({ navigation }) {
         toast.show(`Exported ${rowCount} sets`, { variant: 'success' });
       }
     } catch (e) {
-      toast.show(e?.message ?? 'Could not export your data', { variant: 'error' });
+      logError('SettingsScreen.exportData', e, { userId: user?.id });
+      toast.show('Could not export your data, try again', { variant: 'error' });
     }
   }
 
@@ -195,7 +196,8 @@ export default function SettingsDataScreen({ navigation }) {
         `Your Volyume app-data backup (${(bytes / 1024).toFixed(0)} KB) was exported. It includes database records such as workouts, nutrition logs, body metrics, progress photo metadata and progress photo analysis metadata. Private photo image files are not bundled. Save it to Files, email it to yourself, or move it to your new device. Then use "Restore from backup" there.`,
       );
     } catch (e) {
-      appAlert('Backup failed', e?.message ?? 'Could not create a backup. Please try again.');
+      logError('SettingsScreen.handleFullBackup', e);
+      appAlert('Backup failed', 'Could not create a backup. Please try again.');
     }
   }
 
@@ -218,7 +220,8 @@ export default function SettingsDataScreen({ navigation }) {
                 `${total} records restored. Please fully close and reopen Volyume so every screen reloads from the restored data.`,
               );
             } catch (e) {
-              appAlert('Restore failed', e?.message ?? 'Could not read that backup file.');
+              logError('SettingsScreen.handleRestoreBackup', e);
+              appAlert('Restore failed', 'Could not read that backup file.');
             }
           },
         },
@@ -242,7 +245,7 @@ export default function SettingsDataScreen({ navigation }) {
               toast.show('Workout history cleared', { variant: 'success' });
             } catch (e) {
               logError('SettingsScreen.handleClearHistory', e, { userId: user.id });
-              appAlert('Couldn\'t clear history', e?.message ?? 'Try again.');
+              appAlert('Couldn\'t clear history', 'Try again.');
             }
           },
         },

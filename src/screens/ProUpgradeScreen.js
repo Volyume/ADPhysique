@@ -339,7 +339,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
       const result = await fn();
       if (result?.error) {
         logError('ProUpgrade.oauth.providerError', result.error, { provider });
-        toast.show(result.error.message || 'Sign-in failed', { variant: 'error' });
+        toast.show('Sign-in did not complete, try again', { variant: 'error' });
         setBusy(false);
         return;
       }

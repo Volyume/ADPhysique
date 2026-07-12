@@ -10,6 +10,7 @@ import Card from '../components/Card';
 import TextField from '../components/TextField';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { logError } from '../lib/errorLog';
 
 // First-run for Free users only. Pro signups go through ProOnboardingStack
 // (profile > training > recovery > plan + nutrition generation). Free gets
@@ -53,7 +54,8 @@ export default function FirstRunScreen({ navigation }) {
       navigation.navigate('FreeStarter', { fromFirstRun: true });
       setBusy(false);
     } catch (e) {
-      appAlert('Something went wrong', e?.message ?? 'Try again.');
+      logError('FirstRunScreen.finish', e, { userId: user?.id });
+      appAlert('Something went wrong', 'Try again.');
       setBusy(false);
     }
   }

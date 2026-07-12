@@ -371,7 +371,8 @@ export default function ManualBuilderScreen({ navigation, route }) {
       );
       setPage(2);
     } catch (e) {
-      toast.show(e.message || "Couldn't create plan", { variant: 'error' });
+      logError('ManualBuilderScreen.handleCreatePlan', e);
+      toast.show("Couldn't create your plan, try again", { variant: 'error' });
     } finally {
       setCreating(false);
     }
@@ -790,7 +791,8 @@ export default function ManualBuilderScreen({ navigation, route }) {
       setSavedPlanName(finalName);
       setSuccessModal(true);
     } catch (e) {
-      toast.show(e.message || "Couldn't save plan", { variant: 'error' });
+      logError('ManualBuilderScreen.handleSaveAndActivate', e);
+      toast.show("Couldn't save your plan, try again", { variant: 'error' });
     } finally {
       setSaving(false);
     }
@@ -806,7 +808,8 @@ export default function ManualBuilderScreen({ navigation, route }) {
       await persistDays();
       navigation.navigate('PlansTab');
     } catch (e) {
-      toast.show(e.message || "Couldn't save draft", { variant: 'error' });
+      logError('ManualBuilderScreen.handleSaveDraft', e);
+      toast.show("Couldn't save your draft, try again", { variant: 'error' });
     } finally {
       setSaving(false);
     }
@@ -829,7 +832,8 @@ export default function ManualBuilderScreen({ navigation, route }) {
       toast.show('Plan updated', { variant: 'success' });
       navigation.goBack();
     } catch (e) {
-      toast.show(e.message || "Couldn't save changes", { variant: 'error' });
+      logError('ManualBuilderScreen.handleSaveEdit', e);
+      toast.show("Couldn't save your changes, try again", { variant: 'error' });
     } finally {
       setSaving(false);
     }

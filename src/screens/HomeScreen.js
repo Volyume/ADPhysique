@@ -1879,7 +1879,8 @@ export default function HomeScreen({ navigation, route }) {
                     if (result.ok) {
                       await loadData();
                     } else {
-                      toast.show(`Couldn't start plan: ${result.error}`, { variant: 'error', duration: 5000 });
+                      logError('HomeScreen.startWithPlan', new Error(result.error ?? 'plan_generation_failed'), { userId: user?.id });
+                      toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
                     }
                   }}
                   style={styles.proRecoverBtn}

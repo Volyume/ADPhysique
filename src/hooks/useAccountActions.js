@@ -460,7 +460,7 @@ export default function useAccountActions() {
                       await performDeleteAccount('consent_withdrawal');
                     } catch (e) {
                       logError('SettingsScreen.withdrawConsent', e, { uid: user?.id });
-                      appAlert("Couldn't withdraw", e?.message ?? 'Unknown error.');
+                      appAlert("Couldn't withdraw", 'Try again in a moment.');
                     } finally {
                       setWithdrawing(false);
                     }

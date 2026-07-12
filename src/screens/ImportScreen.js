@@ -110,7 +110,7 @@ export default function ImportScreen({ navigation }) {
     } catch (e) {
       setStage('idle');
       logError('ImportScreen.handlePickFile', e);
-      setError(e?.message ?? 'Could not read that file.');
+      setError('Could not read that file. Try again.');
     }
   }
 
@@ -139,7 +139,7 @@ export default function ImportScreen({ navigation }) {
       setStage('preview');
       appAlert(
         'Import failed',
-        e?.message ?? 'Something went wrong writing the data. Nothing was saved.',
+        'Something went wrong writing the data. Nothing was saved.',
       );
     }
   }

@@ -540,7 +540,9 @@ export default function NutritionTargetsScreen({ navigation }) {
       // Collapse form to show results prominently
       setFormCollapsed(true);
     } catch (e) {
-      toast.show(e.message || 'Could not calculate targets', { variant: 'error' });
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('NutritionTargets.calculate', e, { userId: user?.id }); } catch (_) {}
+      toast.show('Could not calculate your targets, try again', { variant: 'error' });
     } finally {
       setCalculating(false);
     }
