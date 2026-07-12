@@ -490,7 +490,14 @@ export function scheduleSync() {
       const supabaseUserId = state.session?.user?.id;
       const localUserId = state.user?.id;
       if (!supabaseUserId || !localUserId) return;
-      bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
+      // AC-02 (Codex audit, 2026-07-12): route the debounced-on-write trigger
+      // through syncAll, not bulkUploadLocalData directly, so it passes the
+      // runner's Article 9 health-consent + sign-out-wipe gate. Per
+      // SYNC_ARCHITECTURE_LOCKED.md all four triggers go through syncAll; a
+      // direct bulk push here uploaded health data with no consent check.
+      // eslint-disable-next-line global-require
+      const { syncAll } = require('./sync/runner');
+      syncAll({ userId: supabaseUserId, localUserId, triggeredBy: 'write' }).catch(() => {});
     } catch (_) { /* store not available, tolerate */ }
   }, _SYNC_DEBOUNCE_MS);
 }

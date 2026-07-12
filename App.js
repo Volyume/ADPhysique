@@ -103,15 +103,21 @@ TaskManager.defineTask(VOLYUME_DAILY_SYNC, async () => {
   try {
     // eslint-disable-next-line global-require
     const { getSupabaseClient: getSb } = require('./src/lib/supabase');
+    // AC-02 (Codex audit, 2026-07-12): route the periodic background trigger
+    // through syncAll, not bulkUploadLocalData directly. SYNC_ARCHITECTURE_
+    // LOCKED.md requires all four triggers to go through the runner so the
+    // Article 9 health-consent + sign-out-wipe gate applies; a direct
+    // bulkUploadLocalData call in this headless task uploaded health data with
+    // no consent check. syncAll fails closed when consent can't be proven.
     // eslint-disable-next-line global-require
-    const { bulkUploadLocalData } = require('./src/lib/sync');
+    const { syncAll } = require('./src/lib/sync');
     const sb = getSb();
     if (!sb) return 'noData';
     const { data: { session } } = await sb.auth.getSession();
     const supabaseUserId = session?.user?.id;
     if (!supabaseUserId) return 'noData';
     // Local user id is whatever Supabase gave us once they signed in.
-    await bulkUploadLocalData(supabaseUserId, supabaseUserId);
+    await syncAll({ userId: supabaseUserId, localUserId: supabaseUserId, triggeredBy: 'periodic' });
     return 'newData';
   } catch (e) {
     try { logError('VOLYUME_DAILY_SYNC', e); } catch (_) {}
