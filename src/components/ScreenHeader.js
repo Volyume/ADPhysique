@@ -14,6 +14,11 @@
  *     bold title without dominating the row.
  *   - paddingBottom keeps the same airy gap below the header that
  *     the previous design used.
+ *
+ * AX-07 (launch accessibility audit, 2026-07-12): the title always carries
+ * accessibilityRole="header" -- it is the screen's primary heading on every
+ * tab screen that uses this chrome, so VoiceOver/TalkBack heading
+ * navigation can land on it directly.
  */
 
 import { View, Text, StyleSheet } from 'react-native';
@@ -39,7 +44,11 @@ export default function ScreenHeader({ title, subtitle, right }) {
   return (
     <View style={styles.wrap}>
       <View style={styles.titleRow}>
-        <Text style={[styles.title, { ...t.type.h3, color: t.colors.textPrimary }]} numberOfLines={1}>
+        <Text
+          style={[styles.title, { ...t.type.h3, color: t.colors.textPrimary }]}
+          numberOfLines={1}
+          accessibilityRole="header"
+        >
           {title}
         </Text>
         <View style={styles.right}>

@@ -2,7 +2,19 @@ import { Text, StyleSheet } from 'react-native';
 import { colors, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
-export default function SectionLabel({ children, style, tone = 'default', variant = 'overline', ...textProps }) {
+// AX-07 (launch accessibility audit, 2026-07-12): SectionLabel covers both
+// real section titles and overline/metadata labels across 133 call sites, so
+// it cannot default to accessibilityRole="header" without flooding the
+// VoiceOver/TalkBack rotor. `heading` is an explicit opt-in a call site sets
+// only when it renders a genuine section title; the default stays non-heading.
+export default function SectionLabel({
+  children,
+  style,
+  tone = 'default',
+  variant = 'overline',
+  heading = false,
+  ...textProps
+}) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
   // (defined further down this file, after the frozen `styles` block).
@@ -11,6 +23,7 @@ export default function SectionLabel({ children, style, tone = 'default', varian
   return (
     <Text
       {...textProps}
+      accessibilityRole={heading ? 'header' : textProps.accessibilityRole}
       style={[
         variant === 'title' ? [styles.title, live.title] : [styles.label, live.label],
         tone === 'muted' && [styles.muted, live.muted],
