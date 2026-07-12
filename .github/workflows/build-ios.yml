@@ -34,8 +34,16 @@ name: Build iOS (EAS)
 # skip the TestFlight submit. The concurrency guard cancels an in-flight build
 # when a newer push lands, so a superseded commit doesn't sit on a paid runner.
 on:
-  # Manual only: each EAS iOS build costs build credits, so this never auto-runs
-  # on a push. Run it from the Actions tab -> "Build iOS (EAS)" -> Run workflow.
+  # TEMPORARY (2026-07-12, launch night): fire from the launch branch to verify
+  # the pod-install fix (eas.json Xcode-26.2 image un-pin) end-to-end -- the
+  # session's API token cannot dispatch workflows. Remove this push block once
+  # the build is green; builds then return to manual-only.
+  push:
+    branches: ['claude/codebase-audit-docs-pv6mjd']
+    paths: ['eas.json', '.github/workflows/build-ios.yml']
+  # Manual: each EAS iOS build costs build credits, so this normally never
+  # auto-runs on a push. Run it from the Actions tab -> "Build iOS (EAS)" ->
+  # Run workflow.
   workflow_dispatch:
     inputs:
       submit:
@@ -175,11 +183,11 @@ jobs:
       # Fails loudly with the one-time action if the app record does not yet exist
       # in App Store Connect.
       - name: Self-test app-id resolver
-        if: ${{ github.event_name == 'push' || inputs.submit }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.submit }}
         run: node scripts/ci/resolve-asc-app-id.test.mjs
 
       - name: Resolve App Store Connect app id
-        if: ${{ github.event_name == 'push' || inputs.submit }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.submit }}
         env:
           ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -187,12 +195,13 @@ jobs:
           IOS_BUNDLE_ID: app.volyume
         run: node scripts/ci/resolve-asc-app-id.mjs
 
-      # Submit on every push (inputs.submit is empty for a push event, so the
-      # bare `inputs.submit` used before would skip it). A manual run still
-      # respects the toggle: untick it to build without submitting. With skip_build
-      # ticked, this submits the latest existing EAS build, no new build credit.
+      # Submit ONLY on a manual run with the toggle ticked. A push-triggered
+      # run (the temporary launch-branch verification) builds without
+      # submitting, so nothing reaches TestFlight except by explicit choice.
+      # With skip_build ticked, a manual run submits the latest existing EAS
+      # build, no new build credit.
       - name: Submit to TestFlight
-        if: ${{ github.event_name == 'push' || inputs.submit }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.submit }}
         env:
           EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
           EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
