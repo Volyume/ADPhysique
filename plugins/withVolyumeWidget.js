@@ -149,16 +149,23 @@ function addWidgetTarget(proj, appVersion) {
   proj.addBuildPhase([], 'PBXFrameworksBuildPhase', 'Frameworks', target.uuid);
   proj.addBuildPhase([], 'PBXResourcesBuildPhase', 'Resources', target.uuid);
 
-  // Embed the .appex into the app and make the app build depend on it.
-  const appTarget = proj.getFirstTarget();
-  proj.addBuildPhase(
-    [`${WIDGET_NAME}.appex`],
-    'PBXCopyFilesBuildPhase',
-    'Embed Foundation Extensions',
-    appTarget.uuid,
-    'app_extension'
-  );
-  proj.addTargetDependency(appTarget.uuid, [target.uuid]);
+  // Embedding the .appex into the app and the app->widget target dependency
+  // are BOTH done by addTarget() above: for an 'app_extension' target,
+  // xcode's addTarget creates a "Copy Files" copy-files phase on the app
+  // target with dstSubfolderSpec 13 (PlugIns), pushes the widget's product
+  // build file into it, and calls addTargetDependency (verified in
+  // node_modules/xcode/lib/pbxProject.js, xcode@3.0.1).
+  //
+  // Do NOT add a second embed phase here. Passing '<name>.appex' as a file
+  // PATH to addBuildPhase mints an extra, group-less PBXFileReference for the
+  // product; the JS writer tolerates the orphan, but CocoaPods' Ruby
+  // xcodeproj raises "[Xcodeproj] Consistency issue: no parent for object
+  // `VolyumeWidget.appex`" when react_native_post_install re-saves the
+  // project on the EAS builder, failing every iOS build in the Install pods
+  // phase. Re-pointing a manual phase at the existing product build file
+  // instead double-embeds the .appex (two copy phases producing the same
+  // PlugIns output). addTarget's built-in embed is complete on its own
+  // (root cause fixed 2026-07-12).
 
   // Build settings for the extension's configurations only (matched by the
   // product name addTarget stamped on them).
