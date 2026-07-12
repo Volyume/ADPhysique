@@ -1370,6 +1370,7 @@ export default function ProOnboardingScreen({ navigation }) {
                       value={bfSource}
                       onChange={setBfSource}
                       accessibilityLabel="Body fat estimate source"
+                      equalWidth={false}
                     />
                   </View>
                 ) : null}
