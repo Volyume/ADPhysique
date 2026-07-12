@@ -5,6 +5,10 @@
 and the user is active (see `playbooks/retention-email-loop.md`).
 **Subject:** Your Pro trial and what happens next
 **Preheader:** A quick service note, plus one small question.
+**Trustpilot line:** omitted at send time until the Trustpilot business
+profile is claimed and verified (see `FOUNDER-SETUP-PACK.md`); once live,
+`{{trustpilot_link}}` resolves and the line below is included for every
+recipient, never selectively.
 
 ---
 
@@ -34,6 +38,9 @@ Thanks for giving Volyume a proper try,
 
 Allan
 Founder of Volyume
+
+If you would like to share your experience publicly, you can do so on our
+Trustpilot page: {{trustpilot_link}}
 
 ---
 

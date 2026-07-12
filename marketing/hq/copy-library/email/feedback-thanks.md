@@ -4,6 +4,10 @@
 **Trigger:** a new `user_feedback` row (see `playbooks/retention-email-loop.md`).
 **Subject:** Thank you for the feedback
 **Preheader:** It gets read, and it shapes what gets built next.
+**Trustpilot line:** omitted at send time until the Trustpilot business
+profile is claimed and verified (see `FOUNDER-SETUP-PACK.md`); once live,
+`{{trustpilot_link}}` resolves and the line below is included for every
+recipient, never selectively.
 
 ---
 
@@ -29,6 +33,9 @@ Thanks again,
 
 Allan
 Founder of Volyume
+
+If you would like to share your experience publicly, our Trustpilot page is
+here: {{trustpilot_link}}
 
 ---
 

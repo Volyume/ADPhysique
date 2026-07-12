@@ -17,6 +17,9 @@ tells you exactly where it goes instead.
    outreach immediately.
 3. **r/Volyume** (Section 3) — unlocks the whole Reddit lane, the
    cheapest channel we have.
+4. **Trustpilot business profile** (Section 3a) — free, a few minutes,
+   unlocks the Trustpilot invitation line in the retention email loop and
+   the review-poll watch on the page.
 
 Everything else can wait a day or two; the platform approvals (Section 6)
 are the exception — start those early because they take weeks to clear,
@@ -70,6 +73,15 @@ even though nothing depends on them today.
    those in once they land rather than writing your own.
 5. **What to send back:** confirm the subreddit exists and paste its
    URL (e.g. `reddit.com/r/Volyume`) into the marketing session.
+
+---
+
+## 3a. Trustpilot business profile (free)
+
+1. Go to business.trustpilot.com and claim the profile for `volyume.app`.
+2. Verify using the volyume.app email.
+3. No paid plan is needed for this; skip any upsell offered during signup.
+4. **What to send back:** the public Trustpilot page URL.
 
 ---
 

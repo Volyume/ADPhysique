@@ -5,6 +5,10 @@
 and the user has gone quiet (see `playbooks/retention-email-loop.md`).
 **Subject:** It looks like Volyume did not stick
 **Preheader:** No pressure. We would just like to understand why.
+**Trustpilot line:** omitted at send time until the Trustpilot business
+profile is claimed and verified (see `FOUNDER-SETUP-PACK.md`); once live,
+`{{trustpilot_link}}` resolves and the line below is included for every
+recipient, never selectively.
 
 ---
 
@@ -29,6 +33,9 @@ Either way, thank you for giving Volyume a try,
 
 Allan
 Founder of Volyume
+
+Whatever you decide, if you would like to share your experience publicly, our
+Trustpilot page is here: {{trustpilot_link}}
 
 ---
 
