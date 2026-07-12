@@ -107,7 +107,8 @@ decision card (Scene 4). Slide 5 = Scene 5. Slide 6 = the CTA end-card.
 You already track your sets and step on the scale most mornings, so the raw data
 is there. The part that stays hard is deciding what to actually change each week.
 Volyume reads what you logged and makes that weekly call, change or hold, and
-writes down the reason. Free to start, on Google Play.
+writes down the reason. The weekly coaching is part of Pro. Free to start, on
+Google Play.
 
 **Hashtags:** #selfcoached #hypertrophy #gymuk #traininglog #weeklycheckin
 
@@ -168,7 +169,8 @@ A flat scale after a few hard weeks is the moment most people reach for the
 calorie calculator. A single morning reading moves for reasons that have nothing
 to do with fat, though. Volyume looks at the weekly trend across your mornings
 and needs at least three weigh-ins before it acts on it, and when the data is
-thin it holds and says so. Free to start, on Google Play.
+thin it holds and says so. The weekly coaching is part of Pro. Free to start,
+on Google Play.
 
 **Hashtags:** #selfcoached #cuttingphase #macrotracking #gymuk #naturalbodybuilding
 
@@ -309,8 +311,9 @@ change. The weekly coaching is part of Pro. Free to start, on Google Play.
   shown.
 - **One proof beat each, distinct renderer components:** A = decision card;
   B = weekly trend line plus the "3 morning weigh-ins" mono stat; C = fork
-  diagram; D = filling dots (data meter) into a HOLD card. All are components
-  listed in the visual identity doc §8 / §5.
+  diagram; D = filling dots (data meter) into a HOLD card. The decision card
+  is §5 of the visual identity doc; the four diagrams are founder-approved
+  per Addendum A1.
 - **CTA end-card wording is identical in shape across all four:** "Volyume." +
   one-line promise + "Free to start, on Google Play." No trial length is stated
   anywhere; §3 is not engaged.
