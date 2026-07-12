@@ -1,9 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@volyume/supabase/client';
 import { Button } from '@volyume/ui';
+
+// Public Google OAuth Web client ID — the same one the mobile app ships in
+// its binary (src/lib/supabase.js) and the audience Supabase's Google
+// provider verifies. Not a secret.
+const GOOGLE_WEB_CLIENT_ID =
+  '520741631478-apaethkp3g55o06lott116jag73l0ves.apps.googleusercontent.com';
+
+// Google Identity Services global, loaded from accounts.google.com/gsi/client.
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: {
+            client_id: string;
+            callback: (response: { credential: string }) => void;
+            ux_mode?: string;
+          }) => void;
+          renderButton: (parent: HTMLElement, options: Record<string, unknown>) => void;
+        };
+      };
+    };
+  }
+}
 
 type Mode = 'signin' | 'signup';
 
@@ -46,7 +70,62 @@ export function SignInForm({ initialMode = 'signin' }: { initialMode?: Mode }) {
     }
   }
 
-  async function oauth(provider: 'google' | 'apple') {
+  // Google sign-in replicates the mobile app's proven approach: Google
+  // Identity Services returns an ID token in a popup (no redirects, no
+  // Supabase URL on screen, no redirect allowlist involved) and Supabase
+  // verifies it via signInWithIdToken — the exact server-side path the app
+  // already uses with this same client ID. Requires the page's origin to be
+  // listed under Authorised JavaScript origins on the Google web client.
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const [googleReady, setGoogleReady] = useState(false);
+
+  useEffect(() => {
+    const supabaseClient = supabase;
+
+    function init() {
+      if (!window.google || !googleButtonRef.current) return;
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_WEB_CLIENT_ID,
+        ux_mode: 'popup',
+        callback: async (response) => {
+          setError(null);
+          const { error } = await supabaseClient.auth.signInWithIdToken({
+            provider: 'google',
+            token: response.credential,
+          });
+          if (error) {
+            setError('Could not sign in with Google.');
+            return;
+          }
+          router.push('/dashboard');
+          router.refresh();
+        },
+      });
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: 'filled_black',
+        size: 'large',
+        text: 'continue_with',
+        shape: 'rectangular',
+        width: 384,
+      });
+      setGoogleReady(true);
+    }
+
+    if (window.google) {
+      init();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = init;
+    document.head.appendChild(script);
+    // The script is a shared global; leave it in place on unmount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function oauth(provider: 'apple') {
     setError(null);
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
@@ -93,9 +172,10 @@ export function SignInForm({ initialMode = 'signin' }: { initialMode?: Mode }) {
       </form>
 
       <div className="mt-lg flex flex-col gap-sm">
-        <Button variant="secondary" className="w-full" onClick={() => oauth('google')}>
-          Continue with Google
-        </Button>
+        <div ref={googleButtonRef} className="flex w-full justify-center" />
+        {!googleReady ? (
+          <p className="type-label text-textSecondary">Loading Google sign-in…</p>
+        ) : null}
         <Button variant="secondary" className="w-full" onClick={() => oauth('apple')}>
           Continue with Apple
         </Button>
