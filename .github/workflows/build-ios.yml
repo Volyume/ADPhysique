@@ -34,16 +34,10 @@ name: Build iOS (EAS)
 # skip the TestFlight submit. The concurrency guard cancels an in-flight build
 # when a newer push lands, so a superseded commit doesn't sit on a paid runner.
 on:
-  # TEMPORARY (2026-07-12, launch night): fire from the launch branch to verify
-  # the pod-install fix (eas.json Xcode-26.2 image un-pin) end-to-end -- the
-  # session's API token cannot dispatch workflows. Remove this push block once
-  # the build is green; builds then return to manual-only.
-  push:
-    branches: ['claude/codebase-audit-docs-pv6mjd']
-    paths: ['eas.json', '.github/workflows/build-ios.yml']
-  # Manual: each EAS iOS build costs build credits, so this normally never
-  # auto-runs on a push. Run it from the Actions tab -> "Build iOS (EAS)" ->
-  # Run workflow.
+  # Manual only: each EAS iOS build costs build credits, so this never auto-runs
+  # on a push. Run it from the Actions tab -> "Build iOS (EAS)" -> Run workflow.
+  # Note: a push-triggered run can no longer submit to TestFlight even if the
+  # trigger returns -- the submit steps require a manual run with the toggle.
   workflow_dispatch:
     inputs:
       submit:
