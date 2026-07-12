@@ -471,7 +471,14 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
     ? prevWorking.find(s => (s.weight || 0) === bestPrevW) ?? null
     : null;
 
-  if (bestPrevSet) {
+  // Skip the whole anchor pass when returning from a layoff. The first pass
+  // deliberately reduced every load by layoffMultiplier, and the reason copy
+  // promises "loads reduced ... for your first session back". Anchoring a
+  // lower set up to the pre-break session maximum would overwrite that
+  // reduction with an INCREASED load while the copy still claims a cut - the
+  // opposite of the recovery the layoff feature exists to provide
+  // (Codex audit LS-04/H-13, 2026-07-12). Non-layoff anchoring is unchanged.
+  if (bestPrevSet && layoffMultiplier >= 1.0) {
     const bw = bestPrevW;
     const br = bestPrevSet.actualReps ?? bestPrevSet.actual_reps ?? 0;
     const bRIR = bestPrevSet.rir ?? null;
@@ -483,8 +490,12 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
           const hadHeadroom = bRIR !== null && bRIR >= 1;
           if (hadHeadroom) {
             const inc = getIncrement(bw);
-            const cap = bw * 0.05;
-            const capped = Math.min(inc, cap > 0.5 ? cap : inc);
+            // Same 5% session-over-session cap as the main pass. The old form
+            // (cap > 0.5 ? cap : inc) disabled the cap for loads <= 10 units,
+            // letting a light set jump the full increment (~25%) when anchored
+            // (Codex audit LS-05, 2026-07-12).
+            const maxJump = bw * 0.05;
+            const capped = Math.min(inc, maxJump);
             newWeight = bw + Math.max(0.25, Math.round(capped * 4) / 4);
             newAction = 'increase';
           } else {
