@@ -158,3 +158,9 @@ memory.
 Update this section whenever a capability flips state (account granted,
 API connected, first batch approved) — it is the single source of truth
 for "what can run today."
+
+## Live trigger record (2026-07-12)
+
+- volyume-marketing-weekly-cycle: trig_01R1K8Hf8tYr72nvrsdnwwF7, cron 0 7 * * 1
+- volyume-marketing-executor: trig_01RVz4iXoUeDN7PShJ9Dkdc5, cron 0 */6 * * * (6-hourly, not hourly, for token frugality per founder instruction 2026-07-12; tighten to hourly when pipeline volume justifies)
+- volyume-marketing-review-poll: trig_01EkuHZmtLwKiqFFzhGT1W96, cron 0 8 * * 2,5 (site health mode until Play Console API access granted)
