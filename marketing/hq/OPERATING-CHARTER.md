@@ -132,6 +132,18 @@ second founder tap.
      MRR** (the founder may revise this figure).
   Until both hold, every channel is organic. Unlocking paid is a founder
   decision.
+- **Token spend is budget (founder rule, 2026-07-12, after a ~3.8M-token
+  research run inherited the premium session tier).** Rules, all binding:
+  1. Every agent and workflow dispatch carries an explicit cheap tier
+     (sonnet/haiku; opus only where output quality is the deliverable) —
+     mechanically enforced by `.claude/hooks/agent-tier-guard.py`, which now
+     also refuses workflows whose scripts cannot be inspected.
+  2. Any single dispatch or workflow expected to spawn more than ~10 agents
+     or exceed ~200k tokens is a FOUNDER-TAP action: state the estimate and
+     wait for the go. No exceptions for "research" or "one-off" work.
+  3. Scheduled sessions stay frugal: the executor runs twice daily (06:00,
+     18:00 UTC) while the user base is near zero; cadence increases only on
+     founder word when pipeline volume justifies it.
 
 ---
 
