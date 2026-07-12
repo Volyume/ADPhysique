@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8" />
+<title>Volyume carousel slide</title>
+<link rel="stylesheet" href="carousel.css" />
+</head>
+<body>
+<!--
+  Volyume carousel slide renderer.
+
+  render-carousel.cjs injects one slide object (from a carousel JSON file)
+  into window.__SLIDE__ before load, then this script builds the DOM for
+  that slide using only the components defined in carousel.css:
+  heading block, mono stat, decision card, dot/trend/fork diagrams.
+
+  Every slide "kind" below maps directly to a component in
+  MARKETING-VISUAL-IDENTITY-LOCKED.md §3-§5. No new visual language is
+  invented here — see that document before adding a kind.
+-->
+<script>
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function svgDot(cx, cy, r, fill, opts) {
+  opts = opts || {};
+  const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  c.setAttribute('cx', cx);
+  c.setAttribute('cy', cy);
+  c.setAttribute('r', r);
+  c.setAttribute('fill', opts.outline ? 'none' : fill);
+  if (opts.outline) {
+    c.setAttribute('stroke', fill);
+    c.setAttribute('stroke-width', 2.5);
+  }
+  return c;
+}
+
+function buildFooter(slide) {
+  const footer = el('div', 'slide__footer');
+  const img = document.createElement('img');
+  img.src = 'assets/volyume-wordmark.png';
+  footer.appendChild(img);
+  return footer;
+}
+
+function buildIndex(slide) {
+  const idx = el('div', 'slide__index', `${slide.index} / ${slide.total}`);
+  return idx;
+}
+
+/* ---- diagrams ---- */
+
+// A single flat dot on a baseline, small and lonely.
+function diagramLoneDot() {
+  const wrap = el('div', 'diagram');
+  wrap.style.height = '220px';
+  const baseline = el('div', 'diagram__baseline');
+  baseline.style.top = '50%';
+  wrap.appendChild(baseline);
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '780');
+  svg.setAttribute('height', '220');
+  svg.style.position = 'absolute';
+  svg.style.left = '0';
+  svg.style.top = '0';
+  svg.appendChild(svgDot(110, 110, 12, '#F5A623'));
+  wrap.appendChild(svg);
+  return wrap;
+}
+
+// Seven dots across a week with a smooth amber trend line through them.
+function diagramWeeklyTrend() {
+  const wrap = el('div', 'diagram');
+  wrap.style.height = '260px';
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '780');
+  svg.setAttribute('height', '260');
+  svg.style.position = 'absolute';
+  svg.style.left = '0';
+  svg.style.top = '0';
+
+  const baseline = el('div', 'diagram__baseline');
+  baseline.style.top = '220px';
+  wrap.appendChild(baseline);
+
+  // Gentle downward-drifting trend across 7 points, small noise per point.
+  const ys = [90, 110, 78, 130, 100, 150, 128];
+  const xs = [40, 155, 270, 385, 500, 615, 730];
+
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  let d = `M ${xs[0]} ${ys[0]}`;
+  for (let i = 1; i < xs.length; i++) {
+    const mx = (xs[i - 1] + xs[i]) / 2;
+    d += ` Q ${mx} ${ys[i - 1]} ${xs[i]} ${ys[i]}`;
+  }
+  path.setAttribute('d', d);
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', '#F5A623');
+  path.setAttribute('stroke-width', '4');
+  path.setAttribute('stroke-linecap', 'round');
+  svg.appendChild(path);
+
+  xs.forEach((x, i) => svg.appendChild(svgDot(x, ys[i], 9, '#F5A623')));
+  wrap.appendChild(svg);
+  return wrap;
+}
+
+// Three dots filling in on a baseline while the rest wait, trend firming up.
+function diagramFillingDots() {
+  const wrap = el('div', 'diagram');
+  wrap.style.height = '260px';
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '780');
+  svg.setAttribute('height', '260');
+  svg.style.position = 'absolute';
+  svg.style.left = '0';
+  svg.style.top = '0';
+
+  const baseline = el('div', 'diagram__baseline');
+  baseline.style.top = '220px';
+  wrap.appendChild(baseline);
+
+  const xs = [40, 155, 270, 385, 500, 615, 730];
+  const filledYs = [128, 108, 122];
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  let d = `M ${xs[0]} ${filledYs[0]}`;
+  for (let i = 1; i < filledYs.length; i++) {
+    const mx = (xs[i - 1] + xs[i]) / 2;
+    d += ` Q ${mx} ${filledYs[i - 1]} ${xs[i]} ${filledYs[i]}`;
+  }
+  path.setAttribute('d', d);
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', '#F5A623');
+  path.setAttribute('stroke-width', '4');
+  path.setAttribute('stroke-linecap', 'round');
+  svg.appendChild(path);
+
+  filledYs.forEach((y, i) => svg.appendChild(svgDot(xs[i], y, 9, '#F5A623')));
+  for (let i = filledYs.length; i < xs.length; i++) {
+    svg.appendChild(svgDot(xs[i], 220, 9, '#6E6E6E', { outline: true }));
+  }
+  wrap.appendChild(svg);
+  return wrap;
+}
+
+// Two-way fork: one amber-filled path (change), one amber-outline path (hold).
+function diagramFork() {
+  const wrap = el('div', 'diagram');
+  wrap.style.height = '280px';
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '780');
+  svg.setAttribute('height', '280');
+  svg.style.position = 'absolute';
+  svg.style.left = '0';
+  svg.style.top = '0';
+
+  const originX = 60, originY = 40;
+
+  const changePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  changePath.setAttribute('d', `M ${originX} ${originY} L 560 130`);
+  changePath.setAttribute('stroke', '#F5A623');
+  changePath.setAttribute('stroke-width', '5');
+  changePath.setAttribute('stroke-linecap', 'round');
+  svg.appendChild(changePath);
+
+  const holdPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  holdPath.setAttribute('d', `M ${originX} ${originY} L 560 240`);
+  holdPath.setAttribute('stroke', '#F5A623');
+  holdPath.setAttribute('stroke-width', '5');
+  holdPath.setAttribute('stroke-dasharray', '2 10');
+  holdPath.setAttribute('stroke-linecap', 'round');
+  svg.appendChild(holdPath);
+
+  svg.appendChild(svgDot(originX, originY, 10, '#FFFFFF'));
+  svg.appendChild(svgDot(560, 130, 12, '#F5A623'));
+  svg.appendChild(svgDot(560, 240, 12, '#F5A623', { outline: true }));
+
+  wrap.appendChild(svg);
+
+  const changeLabel = el('div', 'mono-caption', 'CHANGE');
+  changeLabel.style.position = 'absolute';
+  changeLabel.style.left = '590px';
+  changeLabel.style.top = '112px';
+  changeLabel.style.color = '#F5A623';
+  wrap.appendChild(changeLabel);
+
+  const holdLabel = el('div', 'mono-caption', 'HOLD');
+  holdLabel.style.position = 'absolute';
+  holdLabel.style.left = '590px';
+  holdLabel.style.top = '222px';
+  wrap.appendChild(holdLabel);
+
+  return wrap;
+}
+
+const DIAGRAMS = {
+  loneDot: diagramLoneDot,
+  weeklyTrend: diagramWeeklyTrend,
+  fillingDots: diagramFillingDots,
+  fork: diagramFork,
+};
+
+function buildSlide(slide) {
+  const root = el('div', 'slide');
+  const content = el('div', 'slide__content');
+
+  if (slide.eyebrow) content.appendChild(el('div', 'eyebrow', slide.eyebrow));
+
+  const headingCls = slide.headingAmber ? 'heading heading--amber' : 'heading';
+  content.appendChild(el('div', headingCls, slide.heading));
+
+  if (slide.supporting) content.appendChild(el('div', 'supporting', slide.supporting));
+
+  if (slide.monoStat) {
+    const statWrap = el('div');
+    statWrap.style.marginTop = '48px';
+    statWrap.appendChild(el('div', 'mono-stat mono-stat--amber', slide.monoStat.value));
+    if (slide.monoStat.caption) {
+      statWrap.appendChild(el('div', 'mono-caption', slide.monoStat.caption));
+    }
+    content.appendChild(statWrap);
+  }
+
+  if (slide.diagram) {
+    const diagramWrap = el('div');
+    diagramWrap.style.marginTop = '56px';
+    const build = DIAGRAMS[slide.diagram];
+    if (build) diagramWrap.appendChild(build());
+    content.appendChild(diagramWrap);
+  }
+
+  if (slide.decisionCard) {
+    const cardWrap = el('div');
+    cardWrap.style.marginTop = '52px';
+    const card = el('div', 'decision-card');
+    card.appendChild(el('div', 'decision-card__number', slide.decisionCard.number));
+    const pillCls = slide.decisionCard.pillOutline
+      ? 'decision-card__pill pill--outline'
+      : 'decision-card__pill';
+    card.appendChild(el('div', pillCls, slide.decisionCard.verdict));
+    card.appendChild(el('div', 'decision-card__reason', slide.decisionCard.reason));
+    cardWrap.appendChild(card);
+    content.appendChild(cardWrap);
+  }
+
+  if (slide.miniCard) {
+    const wrap = el('div');
+    wrap.style.marginTop = '56px';
+    const card = el('div', 'mini-card');
+    card.appendChild(el('div', 'mini-card__label', slide.miniCard.label));
+    const pillCls = slide.miniCard.pillOutline
+      ? 'mini-card__pill pill--outline'
+      : 'mini-card__pill';
+    card.appendChild(el('div', pillCls, slide.miniCard.verdict));
+    card.appendChild(el('div', 'mini-card__reason', slide.miniCard.reason));
+    wrap.appendChild(card);
+    content.appendChild(wrap);
+  }
+
+  root.appendChild(content);
+  root.appendChild(buildFooter(slide));
+  root.appendChild(buildIndex(slide));
+  return root;
+}
+
+window.__renderSlide = function (slide) {
+  document.body.innerHTML = '';
+  document.body.appendChild(buildSlide(slide));
+};
+</script>
+</body>
+</html>

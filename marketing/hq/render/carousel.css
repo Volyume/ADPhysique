@@ -1,0 +1,348 @@
+/**
+ * Volyume Marketing HQ — carousel design system, as code.
+ *
+ * Implements marketing/hq/MARKETING-VISUAL-IDENTITY-LOCKED.md exactly:
+ * colour tokens (§2), typography (§3), layout (§4), the decision-card
+ * format (§5). Do not add colours, fonts, or layout patterns not present
+ * in that document without a founder decision.
+ *
+ * Fonts are loaded locally from ./fonts (downloaded from Google Fonts) so
+ * rendering is deterministic and works fully offline.
+ */
+
+@font-face {
+  font-family: 'Schibsted Grotesk';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: block;
+  src: url('fonts/SchibstedGrotesk-Variable.woff2') format('woff2-variations'),
+       url('fonts/SchibstedGrotesk-Variable.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('fonts/IBMPlexMono-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url('fonts/IBMPlexMono-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url('fonts/IBMPlexMono-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url('fonts/IBMPlexMono-700.woff2') format('woff2');
+}
+
+:root {
+  /* Colour tokens — restated from src/styles/theme.js, locked per §2. */
+  --canvas: #0D0D0D;
+  --surface: #191917;
+  --surface-elevated: #222220;
+  --border: #6E6E6E;
+  --border-subtle: #2E2E2C;
+  --amber: #F5A623;
+  --amber-fill: #E08C0B;
+  --text-primary: #FFFFFF;
+  --text-secondary: #9E9E9E;
+  --text-muted: #9B9B9B;
+
+  --font-display: 'Schibsted Grotesk', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 1080px;
+  height: 1350px;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* ---------- Slide frame ---------- */
+
+.slide {
+  position: relative;
+  width: 1080px;
+  height: 1350px;
+  background: var(--canvas);
+  padding: 96px 88px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* Left-aligned, content-led, asymmetric — never centre a slide. */
+.slide__content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  max-width: 820px;
+}
+
+/* ---------- Heading block ---------- */
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 26px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 28px;
+}
+
+.heading {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 68px;
+  line-height: 1.12;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.heading--amber {
+  color: var(--amber);
+}
+
+.supporting {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 34px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  margin-top: 28px;
+  max-width: 720px;
+}
+
+/* ---------- Mono stat ---------- */
+
+.mono-stat {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 96px;
+  line-height: 1;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.mono-stat--amber {
+  color: var(--amber);
+}
+
+.mono-caption {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 24px;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  margin-top: 10px;
+}
+
+/* ---------- Decision card (§5) ---------- */
+
+.decision-card {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 24px;
+  padding: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 780px;
+}
+
+.decision-card__number {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 88px;
+  line-height: 1;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.decision-card__pill {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 32px;
+  padding: 14px 32px;
+  border-radius: 999px;
+  background: var(--amber-fill);
+  color: var(--canvas);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 28px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.decision-card__reason {
+  margin-top: 28px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+/* ---------- Diagrams: dots, trend lines, forks ---------- */
+
+.diagram {
+  position: relative;
+  width: 100%;
+  max-width: 780px;
+}
+
+.diagram__baseline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+.dot {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--amber);
+  transform: translate(-50%, -50%);
+}
+
+.dot--dim {
+  background: var(--border);
+  opacity: 0.5;
+}
+
+.dot--outline {
+  background: transparent;
+  border: 2px solid var(--border);
+  opacity: 0.6;
+}
+
+.trend-line {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.fork {
+  position: relative;
+  width: 100%;
+  max-width: 780px;
+}
+
+/* ---------- Weekly decision mini-card (slide 6 close treatment) ---------- */
+
+.mini-card {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: 40px 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 620px;
+}
+
+.mini-card__label {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 20px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.mini-card__pill {
+  display: inline-flex;
+  margin-top: 18px;
+  padding: 10px 24px;
+  border-radius: 999px;
+  background: var(--amber-fill);
+  color: var(--canvas);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mini-card__reason {
+  margin-top: 20px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+/* Outline pill modifier — kept last in the cascade so it always wins over
+   the earlier filled-pill rules it is combined with (decision-card__pill,
+   mini-card__pill), regardless of class order in the markup. */
+.pill--outline {
+  background: transparent !important;
+  border: 2px solid var(--amber);
+  color: var(--amber) !important;
+}
+
+/* ---------- Footer / wordmark ---------- */
+
+.slide__footer {
+  position: absolute;
+  left: 88px;
+  bottom: 72px;
+  display: flex;
+  align-items: center;
+}
+
+.slide__footer img {
+  height: 40px;
+  width: auto;
+  display: block;
+  /* Real wordmark asset (amber + chrome mark), used as-is per §6 — no
+     recolouring, no recreated logotype. */
+}
+
+.slide__index {
+  position: absolute;
+  right: 88px;
+  bottom: 76px;
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 22px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}

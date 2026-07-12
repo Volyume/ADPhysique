@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8" />
+<title>Volyume reel</title>
+<link rel="stylesheet" href="reel.css" />
+</head>
+<body>
+<!--
+  Volyume Reels (9:16 motion) renderer.
+
+  render-reel.cjs injects the six slide objects from a carousel content JSON
+  file, then this script builds all six scenes stacked full-bleed in a
+  .reel-stage. Motion is DETERMINISTIC: window.__seek(tMs) sets every
+  animated element's state purely as a function of time t, so the renderer
+  can screenshot frame-by-frame at a fixed frame rate and get identical
+  output every run. There are no CSS transitions or keyframes (those run on
+  the wall clock and are not reproducible).
+
+  Every scene maps 1:1 to the still carousel: the same headings, the same
+  dot / trend / fork / decision-card components from carousel.css, animated
+  per MARKETING-VISUAL-IDENTITY-LOCKED.md §8 (kinetic typography over
+  near-black, calm build, no morphing, same palette and fonts). No new
+  visual language is introduced here.
+-->
+<div class="reel-stage" id="stage"></div>
+<script>
+/* ---------- timeline constants ---------- */
+var SCENE_MS = 3500;          // each scene ~3.5s — calm pacing
+var FADE_MS = 480;            // gentle scene fade in/out (calm cut)
+var FPS = 30;
+window.__FPS = FPS;
+
+/* ---------- easing / segment helpers ---------- */
+function clamp01(x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
+function easeOut(x) { x = clamp01(x); return 1 - Math.pow(1 - x, 3); }
+function easeInOut(x) { x = clamp01(x); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
+// normalised progress of localT across [a,b]
+function seg(t, a, b) { return clamp01((t - a) / (b - a)); }
+
+/* ---------- small DOM helpers ---------- */
+function el(tag, cls, text) {
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function svgNS(tag) { return document.createElementNS('http://www.w3.org/2000/svg', tag); }
+
+function circle(cx, cy, r, fill, opts) {
+  opts = opts || {};
+  var c = svgNS('circle');
+  c.setAttribute('cx', cx);
+  c.setAttribute('cy', cy);
+  c.setAttribute('r', r);
+  c.setAttribute('fill', opts.outline ? 'none' : fill);
+  if (opts.outline) {
+    c.setAttribute('stroke', fill);
+    c.setAttribute('stroke-width', 2.5);
+  }
+  c.dataset.baseR = r;       // remembered so the pop can scale r from 0
+  return c;
+}
+// pop a circle in by scaling its radius from 0 with an ease-out curve
+function popCircle(c, p) {
+  var e = easeOut(p);
+  c.setAttribute('r', Number(c.dataset.baseR) * e);
+  c.style.opacity = p <= 0 ? 0 : 1;
+}
+// draw an SVG path from 0 to full using stroke-dashoffset
+function drawPath(pathEl, p) {
+  var len = Number(pathEl.dataset.len);
+  pathEl.style.opacity = p <= 0 ? 0 : 1;
+  pathEl.setAttribute('stroke-dasharray', pathEl.dataset.dash || len);
+  pathEl.setAttribute('stroke-dashoffset', len * (1 - easeOut(p)));
+}
+function measure(pathEl) {
+  var len = pathEl.getTotalLength();
+  pathEl.dataset.len = len;
+  return len;
+}
+// heading/supporting reveal: opacity + gentle upward translate
+function reveal(node, p) {
+  var e = easeOut(p);
+  node.style.opacity = e;
+  node.style.transform = 'translateY(' + (26 * (1 - e)) + 'px)';
+}
+
+/* ---------- shared heading block ---------- */
+function headingBlock(slide) {
+  var content = el('div', 'reel-scene__content');
+  var nodes = { heading: null, supporting: null };
+  if (slide.eyebrow) content.appendChild(el('div', 'eyebrow', slide.eyebrow));
+  var headingCls = slide.headingAmber ? 'heading heading--amber' : 'heading';
+  nodes.heading = el('div', headingCls, slide.heading);
+  content.appendChild(nodes.heading);
+  if (slide.supporting) {
+    nodes.supporting = el('div', 'supporting', slide.supporting);
+    content.appendChild(nodes.supporting);
+  }
+  if (slide.monoStat) {
+    var statWrap = el('div');
+    statWrap.style.marginTop = '40px';
+    statWrap.appendChild(el('div', 'mono-stat mono-stat--amber', slide.monoStat.value));
+    if (slide.monoStat.caption) statWrap.appendChild(el('div', 'mono-caption', slide.monoStat.caption));
+    nodes.stat = statWrap;
+    content.appendChild(statWrap);
+  }
+  return { content: content, nodes: nodes };
+}
+
+/* ---------- diagrams (animated) ---------- */
+
+// Scene 2: a baseline drawing left-to-right, then the lone dot appearing.
+function diagLoneDot() {
+  var wrap = el('div', 'reel-diagram');
+  wrap.style.height = '300px';
+  var base = el('div', 'diagram__baseline');
+  base.style.top = '150px';
+  base.style.transformOrigin = 'left center';
+  wrap.appendChild(base);
+  var svg = svgNS('svg');
+  svg.setAttribute('width', '888'); svg.setAttribute('height', '300');
+  svg.style.position = 'absolute'; svg.style.left = '0'; svg.style.top = '0';
+  var dot = circle(150, 150, 16, 'var(--amber)');
+  svg.appendChild(dot);
+  wrap.appendChild(svg);
+  wrap.__anim = function (t) {
+    base.style.transform = 'scaleX(' + easeOut(seg(t, 300, 1000)) + ')';
+    popCircle(dot, seg(t, 900, 1500));
+  };
+  return wrap;
+}
+
+var XS = [44, 184, 324, 464, 604, 744, 844];
+var TREND_YS = [120, 150, 105, 175, 135, 205, 172];
+var BASE_Y = 300;
+
+// Scene 3: seven dots landing one by one while the trend line draws through.
+function diagWeeklyTrend() {
+  var wrap = el('div', 'reel-diagram');
+  wrap.style.height = '340px';
+  var base = el('div', 'diagram__baseline');
+  base.style.top = BASE_Y + 'px';
+  wrap.appendChild(base);
+  var svg = svgNS('svg');
+  svg.setAttribute('width', '888'); svg.setAttribute('height', '340');
+  svg.style.position = 'absolute'; svg.style.left = '0'; svg.style.top = '0';
+
+  var path = svgNS('path');
+  var d = 'M ' + XS[0] + ' ' + TREND_YS[0];
+  for (var i = 1; i < XS.length; i++) {
+    var mx = (XS[i - 1] + XS[i]) / 2;
+    d += ' Q ' + mx + ' ' + TREND_YS[i - 1] + ' ' + XS[i] + ' ' + TREND_YS[i];
+  }
+  path.setAttribute('d', d);
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', 'var(--amber)');
+  path.setAttribute('stroke-width', '5');
+  path.setAttribute('stroke-linecap', 'round');
+  svg.appendChild(path);
+
+  var dots = XS.map(function (x, i) { var c = circle(x, TREND_YS[i], 12, 'var(--amber)'); svg.appendChild(c); return c; });
+  wrap.appendChild(svg);
+  measure(path);
+
+  wrap.__anim = function (t) {
+    drawPath(path, seg(t, 300, 2700));
+    for (var i = 0; i < dots.length; i++) {
+      var s = 300 + i * 330;
+      popCircle(dots[i], seg(t, s, s + 320));
+    }
+  };
+  return wrap;
+}
+
+// Scene 4: three dots filling in on the baseline, the rest waiting as outlines.
+function diagFillingDots() {
+  var wrap = el('div', 'reel-diagram');
+  wrap.style.height = '340px';
+  var base = el('div', 'diagram__baseline');
+  base.style.top = BASE_Y + 'px';
+  wrap.appendChild(base);
+  var svg = svgNS('svg');
+  svg.setAttribute('width', '888'); svg.setAttribute('height', '340');
+  svg.style.position = 'absolute'; svg.style.left = '0'; svg.style.top = '0';
+
+  var filledYs = [172, 140, 158];
+  var path = svgNS('path');
+  var d = 'M ' + XS[0] + ' ' + filledYs[0];
+  for (var i = 1; i < filledYs.length; i++) {
+    var mx = (XS[i - 1] + XS[i]) / 2;
+    d += ' Q ' + mx + ' ' + filledYs[i - 1] + ' ' + XS[i] + ' ' + filledYs[i];
+  }
+  path.setAttribute('d', d);
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', 'var(--amber)');
+  path.setAttribute('stroke-width', '5');
+  path.setAttribute('stroke-linecap', 'round');
+  svg.appendChild(path);
+
+  var outlines = [];
+  for (var j = filledYs.length; j < XS.length; j++) {
+    var o = circle(XS[j], BASE_Y, 12, 'var(--border)', { outline: true });
+    svg.appendChild(o); outlines.push(o);
+  }
+  var filled = filledYs.map(function (y, i) { var c = circle(XS[i], y, 12, 'var(--amber)'); svg.appendChild(c); return c; });
+  wrap.appendChild(svg);
+  measure(path);
+
+  wrap.__anim = function (t) {
+    for (var k = 0; k < outlines.length; k++) {
+      outlines[k].style.opacity = 0.6 * easeOut(seg(t, 200, 800));
+    }
+    drawPath(path, seg(t, 700, 2400));
+    for (var i = 0; i < filled.length; i++) {
+      var s = 500 + i * 420;
+      popCircle(filled[i], seg(t, s, s + 360));
+    }
+  };
+  return wrap;
+}
+
+// Scene 5: the fork splitting into a solid amber CHANGE and a dotted HOLD.
+function diagFork() {
+  var wrap = el('div', 'reel-diagram');
+  wrap.style.height = '380px';
+  var svg = svgNS('svg');
+  svg.setAttribute('width', '888'); svg.setAttribute('height', '380');
+  svg.style.position = 'absolute'; svg.style.left = '0'; svg.style.top = '0';
+
+  var ox = 70, oy = 70;
+  var changeEnd = [620, 170], holdEnd = [620, 330];
+
+  var changePath = svgNS('path');
+  changePath.setAttribute('d', 'M ' + ox + ' ' + oy + ' L ' + changeEnd[0] + ' ' + changeEnd[1]);
+  changePath.setAttribute('stroke', 'var(--amber)');
+  changePath.setAttribute('stroke-width', '6');
+  changePath.setAttribute('fill', 'none');
+  changePath.setAttribute('stroke-linecap', 'round');
+  svg.appendChild(changePath);
+
+  var holdPath = svgNS('path');
+  holdPath.setAttribute('d', 'M ' + ox + ' ' + oy + ' L ' + holdEnd[0] + ' ' + holdEnd[1]);
+  holdPath.setAttribute('stroke', 'var(--amber)');
+  holdPath.setAttribute('stroke-width', '6');
+  holdPath.setAttribute('fill', 'none');
+  holdPath.setAttribute('stroke-linecap', 'round');
+  svg.appendChild(holdPath);
+
+  var origin = circle(ox, oy, 13, 'var(--text-primary)');
+  var changeDot = circle(changeEnd[0], changeEnd[1], 15, 'var(--amber)');
+  var holdDot = circle(holdEnd[0], holdEnd[1], 15, 'var(--amber)', { outline: true });
+  svg.appendChild(origin); svg.appendChild(changeDot); svg.appendChild(holdDot);
+  wrap.appendChild(svg);
+
+  var changeLabel = el('div', 'mono-caption', 'CHANGE');
+  changeLabel.style.position = 'absolute';
+  changeLabel.style.left = '660px'; changeLabel.style.top = '150px';
+  changeLabel.style.color = 'var(--amber)';
+  wrap.appendChild(changeLabel);
+  var holdLabel = el('div', 'mono-caption', 'HOLD');
+  holdLabel.style.position = 'absolute';
+  holdLabel.style.left = '660px'; holdLabel.style.top = '310px';
+  wrap.appendChild(holdLabel);
+
+  // The change line is solid and drawn with a dashoffset sweep. The hold line
+  // stays dotted throughout and grows by recomputing its endpoint each frame
+  // (a clean, deterministic reveal that keeps the dotted pattern intact).
+  measure(changePath);
+  holdPath.setAttribute('stroke-dasharray', '2 12');
+
+  wrap.__anim = function (t) {
+    origin.style.opacity = 1;
+    popCircle(origin, seg(t, 200, 600));
+    drawPath(changePath, seg(t, 500, 1600));
+    var hp = easeOut(seg(t, 800, 1900));
+    holdPath.style.opacity = hp <= 0 ? 0 : 1;
+    var hx = ox + (holdEnd[0] - ox) * hp;
+    var hy = oy + (holdEnd[1] - oy) * hp;
+    holdPath.setAttribute('d', 'M ' + ox + ' ' + oy + ' L ' + hx + ' ' + hy);
+    popCircle(changeDot, seg(t, 1500, 1850));
+    popCircle(holdDot, seg(t, 1800, 2150));
+    changeLabel.style.opacity = easeOut(seg(t, 1650, 2150));
+    holdLabel.style.opacity = easeOut(seg(t, 1950, 2450));
+  };
+  return wrap;
+}
+
+var DIAGRAMS = { loneDot: diagLoneDot, weeklyTrend: diagWeeklyTrend, fillingDots: diagFillingDots, fork: diagFork };
+
+/* ---------- scene assembly ---------- */
+function buildScene(slide, index, total) {
+  var scene = el('div', 'reel-scene');
+  var hb = headingBlock(slide);
+  var content = hb.content;
+
+  var diagram = null;
+  if (slide.diagram && DIAGRAMS[slide.diagram]) {
+    diagram = DIAGRAMS[slide.diagram]();
+    content.appendChild(diagram);
+  }
+
+  // Closing mini decision-card (scene 6).
+  var mini = null;
+  if (slide.miniCard) {
+    var wrap = el('div');
+    wrap.style.marginTop = '48px';
+    var card = el('div', 'mini-card');
+    card.appendChild(el('div', 'mini-card__label', slide.miniCard.label));
+    var pillCls = slide.miniCard.pillOutline ? 'mini-card__pill pill--outline' : 'mini-card__pill';
+    card.appendChild(el('div', pillCls, slide.miniCard.verdict));
+    card.appendChild(el('div', 'mini-card__reason', slide.miniCard.reason));
+    wrap.appendChild(card);
+    mini = wrap;
+    content.appendChild(wrap);
+  }
+
+  scene.appendChild(content);
+
+  // Wordmark on the closing scene only (kept inside the bottom safe margin).
+  var footer = null;
+  if (index === total) {
+    footer = el('div', 'reel-scene__footer');
+    var img = document.createElement('img');
+    img.src = 'assets/volyume-wordmark.png';
+    footer.appendChild(img);
+    scene.appendChild(footer);
+  }
+
+  // Per-scene animator: heading reveal + optional diagram anim + card/footer.
+  scene.__anim = function (t) {
+    reveal(hb.nodes.heading, seg(t, 0, 750));
+    if (hb.nodes.supporting) reveal(hb.nodes.supporting, seg(t, 380, 1150));
+    if (hb.nodes.stat) reveal(hb.nodes.stat, seg(t, 560, 1300));
+    if (diagram && diagram.__anim) diagram.__anim(t);
+    if (mini) reveal(mini, seg(t, 900, 1650));
+    if (footer) reveal(footer, seg(t, 1200, 1950));
+  };
+  return scene;
+}
+
+/* ---------- public API ---------- */
+var SCENES = [];
+window.__loadReel = function (slides) {
+  var stage = document.getElementById('stage');
+  stage.innerHTML = '';
+  SCENES = [];
+  for (var i = 0; i < slides.length; i++) {
+    var scene = buildScene(slides[i], i + 1, slides.length);
+    stage.appendChild(scene);
+    SCENES.push(scene);
+  }
+  window.__DURATION_MS = slides.length * SCENE_MS;
+  return window.__DURATION_MS;
+};
+
+// Deterministic: set the whole stage to exactly the state at time t.
+window.__seek = function (t) {
+  var total = SCENES.length;
+  for (var i = 0; i < total; i++) {
+    var scene = SCENES[i];
+    var start = i * SCENE_MS;
+    var localT = t - start;
+    var env;
+    if (localT < 0 || localT > SCENE_MS) {
+      env = 0;
+    } else {
+      var fin = easeInOut(seg(localT, 0, FADE_MS));
+      var fout = 1 - easeInOut(seg(localT, SCENE_MS - FADE_MS, SCENE_MS));
+      env = fin * fout;
+    }
+    scene.style.opacity = env;
+    if (env > 0) scene.__anim(Math.max(0, Math.min(SCENE_MS, localT)));
+  }
+};
+</script>
+</body>
+</html>

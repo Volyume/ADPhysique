@@ -3,13 +3,383 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex">
-<title>Volyume</title>
+<title>Volyume: the connected system for self-coached lifters</title>
+<meta name="description" content="Volyume brings training, nutrition, progress and a weekly check-in into one connected system, then makes the weekly change-or-hold decision and shows you the reason. For serious self-coached lifters.">
 <link rel="icon" type="image/png" href="/favicon.png">
-<meta http-equiv="refresh" content="0; url=/privacy/">
-<link rel="canonical" href="/privacy/">
+<meta name="theme-color" content="#0D0D0D">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://volyume.app/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Volyume: the connected system for self-coached lifters">
+<meta property="og:description" content="Training, nutrition, progress and a weekly check-in in one connected system. Volyume makes the weekly change-or-hold decision and shows you why.">
+<meta property="og:url" content="https://volyume.app/">
+<style>
+  :root{
+    --bg:#0D0D0D; --surface:#191917; --surface2:#2A2A27;
+    --border:#6E6E6E; --borderSubtle:#2E2E2C;
+    --amber:#F5A623; --amberFill:#E08C0B; --amberBg:rgba(245,166,35,0.12);
+    --silver:#C0C0C0;
+    --text:#FFFFFF; --textSecondary:#9E9E9E; --textMuted:#9B9B9B;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --nav-h:78px;
+  }
+  *{box-sizing:border-box;}
+  html{color-scheme:dark;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font);
+    -webkit-font-smoothing:antialiased; line-height:1.5; overflow-x:hidden;}
+  a{color:inherit; text-decoration:none;}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
+
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:10px; white-space:nowrap;
+    font-weight:700; font-size:14px; border-radius:12px; padding:10px 16px; cursor:pointer; border:1px solid transparent;
+    transition:background-color .2s cubic-bezier(.2,0,0,1);}
+  .btn-primary{background:var(--amberFill); color:var(--bg);}
+  .btn-primary:hover{background:var(--amber);}
+
+  nav{position:fixed; top:0; left:0; right:0; height:var(--nav-h); z-index:50;
+    display:flex; align-items:center; background:rgba(13,13,13,0.88); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--borderSubtle);}
+  nav .wrap{display:flex; align-items:center; justify-content:space-between; width:100%;}
+  .brand{display:flex; align-items:center; gap:10px;}
+  .logo-word{height:clamp(34px,9vw,44px); width:auto; flex:0 0 auto; display:block;}
+  nav .navlinks{display:flex; gap:26px; align-items:center;}
+  nav .navlinks a{color:var(--textSecondary); font-size:15px; font-weight:600;}
+  nav .navlinks a:hover{color:var(--amber);}
+
+  section{max-width:1080px; margin:0 auto;}
+  .section-pad{padding:64px 0; border-top:1px solid var(--borderSubtle);}
+  h2.title{font-weight:800; letter-spacing:-0.4px; font-size:clamp(26px,4vw,34px); line-height:1.15; margin:0 0 10px;}
+  p.lead{color:var(--textSecondary); font-size:17px; line-height:1.6; margin:0 0 32px; max-width:66ch;}
+
+  /* Hero */
+  .hero{padding:calc(var(--nav-h) + 72px) 0 72px;}
+  .hero .hero-row{display:flex; align-items:center; gap:56px;}
+  .hero .hero-copy{flex:1 1 480px; min-width:0;}
+  .hero .hero-phone-col{flex:0 0 auto; display:flex; justify-content:center;}
+  .hero h1{font-weight:900; letter-spacing:-0.8px; font-size:clamp(38px,6.4vw,60px); line-height:1.06; margin:0; max-width:18ch;}
+  .hero .sub{color:var(--textSecondary); font-size:clamp(18px,2.4vw,21px); line-height:1.6; margin:26px 0 0; max-width:60ch;}
+  .hero .cta-row{display:flex; align-items:center; gap:20px; flex-wrap:wrap; margin:38px 0 0;}
+  .play-badge{height:60px; width:auto; display:block;}
+  .ios-note{color:var(--textMuted); font-size:14px;}
+
+  /* Device frame */
+  .device{background:var(--surface); border:1px solid var(--border); border-radius:36px; padding:12px;
+    box-shadow:0 0 0 1px var(--borderSubtle), 0 24px 60px rgba(0,0,0,0.5); width:280px; flex:0 0 auto;}
+  .device .notch{width:70px; height:6px; border-radius:4px; background:var(--surface2); margin:0 auto 10px;}
+  .device .screen{border-radius:22px; overflow:hidden; border:1px solid var(--borderSubtle); background:var(--bg); line-height:0;}
+  .device .screen img{display:block; width:100%; height:auto;}
+  .device.device-sm{width:220px;}
+
+  /* What it looks like */
+  .showcase{display:flex; gap:28px; overflow-x:auto; padding:6px 2px 14px; scrollbar-width:thin;}
+  .showcase-item{flex:0 0 auto; text-align:center; width:220px;}
+  .showcase-item p{color:var(--textSecondary); font-size:14px; line-height:1.5; margin:14px 0 0;}
+
+  @media(max-width:900px){
+    .hero .hero-row{flex-direction:column;}
+    .hero .hero-phone-col{width:100%;}
+  }
+
+  /* Steps */
+  .steps{display:grid; grid-template-columns:repeat(4,1fr); gap:20px;}
+  .step{background:var(--surface); border:1px solid var(--borderSubtle); border-radius:16px; padding:24px;}
+  .step .n{color:var(--amber); font-weight:900; font-size:15px; letter-spacing:1px;}
+  .step h3{font-weight:700; font-size:18px; margin:12px 0 8px; letter-spacing:-0.2px;}
+  .step p{color:var(--textSecondary); font-size:15px; line-height:1.55; margin:0;}
+
+  /* Plans */
+  .plans{display:grid; grid-template-columns:1fr 1fr; gap:24px;}
+  .plan{background:var(--surface); border:1px solid var(--borderSubtle); border-radius:18px; padding:30px;}
+  .plan.pro{border-color:var(--amber);}
+  .plan .kicker{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;}
+  .plan h3{font-weight:800; font-size:22px; margin:0; letter-spacing:-0.3px;}
+  .plan .price{color:var(--amber); font-weight:700; font-size:16px;}
+  .plan .desc{color:var(--textMuted); font-size:14px; margin:8px 0 18px;}
+  .plan ul{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:11px;}
+  .plan li{display:flex; gap:11px; align-items:flex-start; color:var(--textSecondary); font-size:15px; line-height:1.5;}
+  .plan li::before{content:""; flex:0 0 auto; width:6px; height:6px; border-radius:50%; background:var(--amber); margin-top:8px;}
+
+  /* Trial */
+  .trial-box{background:var(--amberBg); border:1px solid var(--amber); border-radius:18px; padding:30px; max-width:760px;}
+  .trial-box p{color:var(--text); font-size:16px; line-height:1.65; margin:0 0 14px; max-width:70ch;}
+  .trial-box p:last-child{margin-bottom:0;}
+  .trial-box .concise{font-weight:600;}
+  .trial-box .fine{color:var(--textMuted); font-size:14px;}
+
+  /* Generic feature grid */
+  .fgrid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px;}
+  .fcard{background:var(--surface); border:1px solid var(--borderSubtle); border-radius:16px; padding:24px;}
+  .fcard h3{font-weight:700; font-size:17px; margin:0 0 8px; letter-spacing:-0.2px;}
+  .fcard p{color:var(--textSecondary); font-size:15px; line-height:1.55; margin:0;}
+
+  /* Privacy strip */
+  .privacy-strip{display:grid; grid-template-columns:repeat(4,1fr); gap:16px;}
+  .pchip{background:var(--surface); border:1px solid var(--borderSubtle); border-radius:14px; padding:18px 20px;}
+  .pchip h3{font-weight:700; font-size:15px; margin:0 0 6px;}
+  .pchip p{color:var(--textMuted); font-size:14px; line-height:1.5; margin:0;}
+
+  footer{border-top:1px solid var(--borderSubtle); padding:46px 0; margin-top:24px;}
+  footer .wrap{display:flex; flex-wrap:wrap; gap:20px 32px; align-items:center; justify-content:space-between;}
+  footer .links{display:flex; gap:24px; flex-wrap:wrap;}
+  footer a{color:var(--textMuted); font-size:14px;}
+  footer a:hover{color:var(--amber);}
+  footer .copy{color:var(--textMuted); font-size:13px; width:100%;}
+
+  @media(max-width:900px){
+    .steps{grid-template-columns:1fr 1fr;}
+    .fgrid{grid-template-columns:1fr 1fr;}
+    .privacy-strip{grid-template-columns:1fr 1fr;}
+  }
+  @media(max-width:600px){
+    :root{--nav-h:60px;}
+    .wrap{padding:0 16px;}
+    nav .navlinks{gap:16px;}
+    nav .navlinks a{font-size:14px;}
+    .steps,.plans,.fgrid,.privacy-strip{grid-template-columns:1fr;}
+    .section-pad{padding:48px 0;}
+    footer .wrap{gap:14px;}
+  }
+</style>
 </head>
-<body style="margin:0;background:#0D0D0D;color:#9E9E9E;font-family:-apple-system,Segoe UI,Roboto,sans-serif">
-<p style="padding:24px"><a href="/privacy/" style="color:#F5A623">Volyume privacy policy</a></p>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Volyume">
+      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+    </a>
+    <div class="navlinks">
+      <a href="/articles/">Articles</a>
+      <a href="/privacy/">Privacy</a>
+      <a href="https://play.google.com/store/apps/details?id=app.volyume" class="btn btn-primary">Get it on Google Play</a>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap hero-row">
+      <div class="hero-copy">
+        <h1>You have the data. Volyume makes the weekly decision, and shows you why.</h1>
+        <p class="sub">Training, nutrition, progress and a weekly check-in in one connected system for serious self-coached lifters. Each week it decides whether to change or hold, and writes down the reason.</p>
+        <div class="cta-row">
+          <a href="https://play.google.com/store/apps/details?id=app.volyume" aria-label="Get Volyume on Google Play">
+            <img class="play-badge" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play">
+          </a>
+          <span class="ios-note">iOS coming soon</span>
+        </div>
+      </div>
+      <div class="hero-phone-col">
+        <div class="device">
+          <div class="notch"></div>
+          <div class="screen">
+            <img src="/screenshots/02_know_what_to_do_today.jpg" alt="Volyume Today screen showing morning weight, the next workout and check-in readiness, on a demo account" width="709" height="1388" loading="eager">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section-pad">
+    <div class="wrap">
+      <h2 class="title">How it works</h2>
+      <p class="lead">Volyume delivers something useful before your first workout, then keeps the loop tight from there.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="n">STEP 1</div>
+          <h3>Tell it about you</h3>
+          <p>Your goal, your history, your numbers. No defaults filled in for you, and nothing assumed.</p>
+        </div>
+        <div class="step">
+          <div class="n">STEP 2</div>
+          <h3>It builds your plan and targets</h3>
+          <p>A training plan and calorie and macro targets, with the rationale for each target shown, plus your first check-in date.</p>
+        </div>
+        <div class="step">
+          <div class="n">STEP 3</div>
+          <h3>You train and log</h3>
+          <p>Log your sessions and, on Pro, your food. The local database on your device is the source of truth.</p>
+        </div>
+        <div class="step">
+          <div class="n">STEP 4</div>
+          <h3>The weekly check-in decides</h3>
+          <p>Change or hold, with the reasons written down. When the data is not enough yet, it holds rather than guesses.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT IT LOOKS LIKE -->
+  <section class="section-pad">
+    <div class="wrap">
+      <h2 class="title">What it looks like</h2>
+      <p class="lead">A few screens from the app, on a demo account.</p>
+      <div class="showcase">
+        <div class="showcase-item">
+          <div class="device device-sm">
+            <div class="notch"></div>
+            <div class="screen">
+              <img src="/screenshots/05_log_every_set.jpg" alt="Active workout screen with rest timer, set target and logging control" width="709" height="1388" loading="lazy">
+            </div>
+          </div>
+          <p>Log every set</p>
+        </div>
+        <div class="showcase-item">
+          <div class="device device-sm">
+            <div class="notch"></div>
+            <div class="screen">
+              <img src="/screenshots/06_meals_planned_to_your_targets.jpg" alt="Nutrition diary screen showing calories and macros against planned meals" width="709" height="1388" loading="lazy">
+            </div>
+          </div>
+          <p>Meals planned to your targets</p>
+        </div>
+        <div class="showcase-item">
+          <div class="device device-sm">
+            <div class="notch"></div>
+            <div class="screen">
+              <img src="/screenshots/03_plan_that_moves_with_you.jpg" alt="Training plan screen showing the active block, next workout and adjustable setup" width="709" height="1388" loading="lazy">
+            </div>
+          </div>
+          <p>A plan that moves with you</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT'S IN IT -->
+  <section class="section-pad">
+    <div class="wrap">
+      <h2 class="title">What is in it</h2>
+      <p class="lead">The training core is free and permanent, a real product on its own. Nutrition and the weekly coaching decision are Pro.</p>
+      <div class="plans">
+        <div class="plan">
+          <div class="kicker"><h3>Free</h3><span class="price">Always free</span></div>
+          <p class="desc">The training core, permanent.</p>
+          <ul>
+            <li>Full workout logging</li>
+            <li>Plan library, 31 built-in training plans</li>
+            <li>Custom plan building</li>
+            <li>Exercise library, 551 exercises plus your own</li>
+            <li>Training history</li>
+            <li>Personal bests and progress tracking</li>
+          </ul>
+        </div>
+        <div class="plan pro">
+          <div class="kicker"><h3>Pro</h3><span class="price">£2.99/month or £19.99/year</span></div>
+          <p class="desc">Everything nutrition and coaching.</p>
+          <ul>
+            <li>Nutrition, macros and food diary</li>
+            <li>Barcode scanning</li>
+            <li>Over 29,000 UK foods, searchable offline</li>
+            <li>Meal planning</li>
+            <li>Progress Scan, a progress score from your own photos</li>
+            <li>Weekly Precision Coaching, the change-or-hold decision</li>
+            <li>Advanced progression</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRIAL -->
+  <section class="section-pad">
+    <div class="wrap">
+      <h2 class="title">Trying Pro</h2>
+      <p class="lead">Two separate steps, described plainly, so there are no surprises.</p>
+      <div class="trial-box">
+        <p class="concise">Start with 14 days of full Pro, no card needed. Continue through Google Play and its intro offer adds 7 more free days before your first payment.</p>
+        <p>Volyume Pro begins with 14 days of full access and no card required, so you can see the whole system before deciding. If you choose to continue, you opt into the subscription through Google Play, and Google Play's introductory offer adds a further 7 free days before your first payment is taken. That is up to 21 days of access before you are charged anything. You can cancel in Google Play at any time before the charge.</p>
+        <p class="fine">The price Google Play shows at the point of purchase is the one that applies.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY DETERMINISTIC -->
+  <section class="section-pad">
+    <div class="wrap">
+      <h2 class="title">Deterministic coaching, not generative coaching</h2>
+      <p class="lead">Volyume's weekly decision is rule-based and explainable. The same inputs give the same decision, every time, and the reason is written down so you can check it. It is not a chat assistant and it does not build a private model of you. It applies clear rules to your own numbers and tells you what it did.</p>
+    </div>
+  </section>
+
+  <!-- PRIVACY STRIP -->
+  <section class="section-pad">
+    <div class="wrap">
+      <h2 class="title">Private by design</h2>
+      <p class="lead">The specific posture, not a vague slogan.</p>
+      <div class="privacy-strip">
+        <div class="pchip"><h3>Encrypted on your device</h3><p>Your data is encrypted in local storage on your phone, which is the source of truth.</p></div>
+        <div class="pchip"><h3>EU data residency</h3><p>Cloud-backed account data is stored in the EU, in Dublin.</p></div>
+        <div class="pchip"><h3>No adverts</h3><p>There are no adverts anywhere in the app.</p></div>
+        <div class="pchip"><h3>Nothing sold</h3><p>Your data is never sold, and no personal identifiers go to analytics.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- iOS NOTE -->
+  <section class="section-pad">
+    <div class="wrap">
+      <h2 class="title">On iPhone?</h2>
+      <p class="lead">Volyume for iOS is coming to the App Store very soon.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Volyume">
+      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+    </a>
+    <div class="links">
+      <a href="/privacy/">Privacy</a>
+      <a href="/support/">Support</a>
+      <a href="/articles/">Articles</a>
+      <a href="https://play.google.com/store/apps/details?id=app.volyume">Get it on Google Play</a>
+    </div>
+    <p class="copy">© 2026 Volyume</p>
+  </div>
+</footer>
+
+<!--
+  CLAIMS TABLE — every factual claim traced to PRODUCT-FACTS.md (dated 2026-07-12).
+  ------------------------------------------------------------------------------
+  Screenshots (hero + "What it looks like") show a demo account
+     ("Alex"), not a real user ............................. Manifest usage rules, 2026-07-12
+  "connected system for self-coached lifters" .............. §A (positioning, primary)
+  "makes the weekly decision (change or hold) ... why" ...... §A
+  "delivers value before the first workout / builds plan,
+     targets, rationale, first check-in date" .............. §A
+  "holds decisions when data is insufficient / never guesses" §A, §F
+  "live on Google Play, package app.volyume" ............... §A
+  "iOS coming soon" (never App Store availability) ......... §A, §E, §F
+  Free: logging, plan library, custom plans, history,
+     progress tracking ..................................... §B (Free)
+  "31 built-in training plans" ............................. §D
+  "551 exercises plus custom" .............................. §D
+  Pro: nutrition/macros/food diary, barcode, meal planning,
+     Progress Scan, weekly Precision Coaching, adv progression §B (Pro)
+  "barcode scanning is Pro" (never free) ................... §D
+  "over 29,000 UK foods, searchable offline" ............... §D, §E
+  "Progress Scan, a progress score from your own photos"
+     (not body-fat, not medical) ........................... §A, §F
+  Pricing "£2.99/month or £19.99/year" ..................... §C
+  "Google Play price at purchase is authoritative" ......... §C
+  Trial wording (14-day cardless in-app + 7-day store offer,
+     up to 21 days, cancel any time) ....................... §C, CLAIMS-STANDARDS §3
+  "deterministic coaching, not generative coaching /
+     same inputs same decision / reason written down /
+     not a chat assistant / no model of you" ............... §A, CLAIMS-STANDARDS §6
+  Privacy: encrypted on device .............................. §E
+  Privacy: EU (Dublin) data residency ...................... §E
+  Privacy: no adverts ...................................... §E
+  Privacy: nothing sold / no PII to analytics .............. §E
+-->
+
+
+
 </body>
 </html>
+
+<!-- deploy: restored from main 2026-07-12 after a branch deploy overwrote the live site -->

@@ -1,0 +1,395 @@
+# DATA SCHEMA — Volyume Marketing HQ
+
+**Status:** Governing spec for the Supabase marketing schema.
+**Companions:** `marketing/hq/OPERATING-CHARTER.md` (department mandate),
+`marketing/hq/CLAIMS-STANDARDS.md`, `marketing/hq/PRODUCT-FACTS.md`.
+**Scope:** Cloud schema only, `public` schema, EU-Dublin project, all tables
+prefixed `marketing_`. Additive to the existing app schema — no existing
+table, column, policy or function is touched. Migrations live in
+`supabase/migrate_120_marketing_waitlist.sql` and
+`supabase/migrate_121_marketing_hq_tables.sql`, applied manually by the
+founder per the standing Supabase rule (never automatic, never CI-triggered).
+
+---
+
+## 0. RLS posture, overall
+
+The marketing department has exactly one public-facing surface: the
+volyume.app waitlist signup form, which writes with the Supabase **anon**
+key. Every other marketing table is internal — read/managed by the
+founder's dashboard session under the **authenticated** role, or written by
+the marketing agents running under the **service_role** key (bypasses RLS
+by design; agents are trusted backend processes, never exposed
+client-side).
+
+**Correction (this section previously claimed "any authenticated user is
+fine because this project has no public signups against marketing tables" —
+that was wrong and has been fixed by this migration).** This Supabase
+project's `authenticated` role is not founder-only: the Volyume mobile app
+and its web companion share the same Supabase auth, so `authenticated`
+means "any logged-in end user of the product." A bare
+`TO authenticated USING (true)` policy on the marketing tables would let
+any paying customer read the content pipeline, growth metrics and audit
+ledger, and (on `marketing_content`/`marketing_channels`) write to them.
+That is not acceptable, so every authenticated policy on the four internal
+marketing tables is gated through a new allow-list table,
+`marketing_admins` (section 1a), keyed on the caller's JWT email claim.
+Only emails present in `marketing_admins` pass RLS on those tables under
+the `authenticated` role; every other logged-in app user gets zero rows
+and zero write access, identically to anon.
+
+So the posture is deliberately asymmetric per table:
+
+- `marketing_admins` — no anon or authenticated access at all, at any
+  operation. Only service_role manages membership. This is the allow-list
+  every other internal table's authenticated policies consult.
+- `marketing_waitlist` — anon may **insert only**. No anon select/update/
+  delete (a stranger must never be able to read or edit the list, even their
+  own row, once submitted — RLS-level protection for GDPR-consented personal
+  data, not just app-level). Authenticated has no default access here either;
+  founder dashboard reads for the waitlist total go through service_role or
+  a purpose-built count. Service_role: full access implicit (RLS does not
+  apply to service_role).
+- `marketing_content`, `marketing_metrics`, `marketing_ledger`,
+  `marketing_channels` — no anon access at all, at any operation.
+  Authenticated gets read access to all four, plus update on
+  `marketing_content` (approving/rejecting status transitions from the
+  dashboard) and `marketing_channels` (marking a channel live/paused) —
+  but only when the caller's JWT email is present in `marketing_admins`;
+  every other authenticated (i.e. ordinary app user) request is denied by
+  RLS exactly like anon. Agents write everything via service_role, which
+  bypasses RLS.
+
+Dashboards therefore always read as an authenticated *admin* session
+(gated by `marketing_admins` membership, not merely by being logged in);
+agents always write as service_role. No table is ever writable by anon
+except the single insert-only waitlist path, no table is ever readable by
+anon, and no marketing table beyond the waitlist insert path is reachable
+by an ordinary logged-in app user who is not a marketing admin.
+
+---
+
+## 1. `marketing_waitlist`
+
+**Purpose:** Captures GDPR-consented "notify me about product updates"
+signups from the volyume.app marketing site. This is a public collection
+point, so it is deliberately the most restricted table in the schema: a
+visitor can add themselves but can never read, edit or remove any row,
+including their own, through the public API.
+
+| Column         | Type          | Notes                                    |
+|----------------|---------------|-------------------------------------------|
+| `id`           | uuid          | PK, default `gen_random_uuid()`.          |
+| `email`        | text          | not null.                                  |
+| `consented_at` | timestamptz   | not null, default `now()`.                 |
+| `source`       | text          | e.g. `'landing-page'`.                     |
+| `created_at`   | timestamptz   | default `now()`.                           |
+
+**Constraints:** unique index on `lower(email)` — case-insensitive dedupe,
+so `Jo@Example.com` and `jo@example.com` collide as one signup.
+
+**RLS:** enabled.
+- `anon` — INSERT only. No SELECT, UPDATE or DELETE for anon under any
+  circumstance.
+- `authenticated` — no default access (no policy grants it anything on this
+  table).
+- `service_role` — full access (implicit; RLS is bypassed for service_role).
+
+---
+
+## 1a. `marketing_admins`
+
+**Purpose:** The allow-list of emails permitted to read/manage the four
+internal marketing tables (`marketing_content`, `marketing_metrics`,
+`marketing_ledger`, `marketing_channels`) from the dashboard. Exists
+because this project's `authenticated` role is shared with ordinary app
+end users — see section 0. Membership is checked via
+`auth.jwt() ->> 'email'` in every authenticated policy on those four
+tables.
+
+| Column      | Type        | Notes                              |
+|-------------|-------------|--------------------------------------|
+| `email`     | text        | PK.                                    |
+| `added_at`  | timestamptz | default `now()`.                       |
+
+**RLS:** enabled.
+- `anon` — no access.
+- `authenticated` — **no access, including to ordinary app users**. There
+  is no policy granting `authenticated` anything on this table, so even
+  reading who the admins are is impossible from a normal client session.
+- `service_role` — full access (implicit; agents/the founder tooling
+  manage membership via service_role, never via the client).
+
+**Seed:** `allansdouglas1983@gmail.com`, inserted idempotently
+(`ON CONFLICT DO NOTHING`) by migrate_121.
+
+---
+
+## 2. `marketing_content`
+
+**Purpose:** The single content record for every outward artefact the
+department produces — articles, pages, store listing copy, social posts,
+community replies, email copy — from draft through the compliance gate to
+publication. `compliance_verdict`/`compliance_record`/`claims_citations`
+hold the compliance-reviewer's PASS/FAIL and the evidence behind it, per the
+Operating Charter's rule that nothing publishes without a recorded PASS.
+
+| Column                | Type        | Notes                                                   |
+|------------------------|-------------|----------------------------------------------------------|
+| `id`                   | uuid        | PK.                                                        |
+| `channel`              | text        | not null, check in `('web','social_instagram','social_tiktok','social_youtube','community','store','email')`. |
+| `title`                | text        | not null.                                                  |
+| `body_ref`             | text        | path or storage ref of the artefact.                       |
+| `status`               | text        | not null, check in `('draft','pending_review','failed_review','approved','scheduled','published','retired')`, default `'draft'`. |
+| `lane`                 | text        | not null, check in `('autonomous','founder_tap','founder_only')` (mirrors the Operating Charter's autonomy lanes). |
+| `compliance_verdict`   | text        | PASS/FAIL/etc. from compliance-reviewer.                    |
+| `compliance_record`    | jsonb       | full compliance review detail.                              |
+| `claims_citations`     | jsonb       | citations backing any factual claim, per CLAIMS-STANDARDS.  |
+| `scheduled_for`        | timestamptz | when queued for autonomous/approved publishing.             |
+| `published_at`         | timestamptz | set on publish.                                             |
+| `published_url`        | text        | live URL once published.                                    |
+| `created_at`           | timestamptz | default `now()`.                                            |
+| `updated_at`           | timestamptz | default `now()`.                                            |
+
+**RLS:** enabled.
+- `anon` — no access at all.
+- `authenticated` — SELECT (read the pipeline in the dashboard) and UPDATE
+  (approve/reject status transitions from the dashboard), **gated**: both
+  policies require the caller's JWT email to exist in `marketing_admins`.
+  An ordinary logged-in app user gets neither.
+- `service_role` — full access (agents draft, review-stamp, schedule and
+  publish).
+
+---
+
+## 3. `marketing_metrics`
+
+**Purpose:** The honest-measurement ledger the mission statement calls for —
+daily numbers per metric per source (installs, trial starts, conversions,
+cancellations, rating, review count, waitlist total, article views, etc.),
+so growth-analyst can build cohorts and the weekly digest without guessing.
+
+| Column        | Type        | Notes                                                        |
+|----------------|-------------|----------------------------------------------------------------|
+| `id`           | uuid        | PK.                                                              |
+| `metric_date`  | date        | not null.                                                        |
+| `metric`       | text        | not null, e.g. `'installs'`, `'trial_starts'`, `'conversions'`, `'cancellations'`, `'rating'`, `'review_count'`, `'waitlist_total'`, `'article_views'`. |
+| `value`        | numeric     | not null.                                                        |
+| `source`       | text        | not null, e.g. `'play_billing_rtdn_derived'`, `'play_console'`, `'manual'`. |
+| `created_at`   | timestamptz | default `now()`.                                                 |
+
+**Constraints:** unique `(metric_date, metric, source)` — one figure per
+metric per day per source, re-writable but never duplicated.
+
+**RLS:** enabled.
+- `anon` — no access.
+- `authenticated` — SELECT, **gated** on `marketing_admins` membership (an
+  ordinary logged-in app user gets no rows).
+- `service_role` — full access (growth-analyst and the hourly/weekly jobs
+  write here).
+
+---
+
+## 4. `marketing_ledger`
+
+**Purpose:** The append-mostly audit trail of everything the department
+does — actions taken, publishes, incidents, decisions, notes — the record
+behind the weekly digest and the "what happened and why" the founder can
+check in under 15 minutes.
+
+| Column        | Type        | Notes                                                        |
+|----------------|-------------|------------------------------------------------------------------|
+| `id`           | uuid        | PK.                                                                |
+| `occurred_at`  | timestamptz | not null, default `now()`.                                        |
+| `action`       | text        | not null, short description.                                      |
+| `channel`      | text        | which channel this concerns, if any.                              |
+| `cost_pence`   | integer     | default `0`.                                                       |
+| `result`       | text        | outcome (success/failure/free text).                               |
+| `kind`         | text        | check in `('action','publish','incident','decision','note')`, default `'action'`. |
+| `detail`       | jsonb       | structured extra detail.                                          |
+| `created_at`   | timestamptz | default `now()`.                                                   |
+
+**RLS:** enabled.
+- `anon` — no access.
+- `authenticated` — SELECT (dashboard and digest read history here),
+  **gated** on `marketing_admins` membership.
+- `service_role` — full access (every agent writes its own ledger rows).
+
+---
+
+## 5. `marketing_channels`
+
+**Purpose:** One row per marketing channel, tracking whether it exists,
+whether it is approved, and what autonomy level it currently holds — the
+live state behind the Operating Charter's autonomy-lane rules (a channel is
+only ever autonomous once its API is connected *and* its first batch is
+founder-approved).
+
+| Column        | Type        | Notes                                                          |
+|----------------|-------------|--------------------------------------------------------------------|
+| `id`           | uuid        | PK.                                                                  |
+| `channel`      | text        | unique, not null.                                                    |
+| `account_ref`  | text        | handle/account identifier for the channel.                           |
+| `status`       | text        | check in `('not_created','pending_approval','live','paused')`, default `'not_created'`. |
+| `capability`   | text        | check in `('manual','founder_tap','autonomous')`, default `'manual'`. |
+| `notes`        | text        | free text.                                                            |
+| `updated_at`   | timestamptz | default `now()`.                                                       |
+
+**RLS:** enabled.
+- `anon` — no access.
+- `authenticated` — SELECT and UPDATE (founder can flip a channel's status
+  or capability from the dashboard), both **gated** on `marketing_admins`
+  membership.
+- `service_role` — full access.
+
+---
+
+## 6. Access summary
+
+| Table                 | anon                | authenticated (ordinary app user) | authenticated (marketing_admins member) | service_role (agents) |
+|-------------------------|---------------------|---------------------------------------|-----------------------------------------------|--------------------------|
+| `marketing_admins`      | none                | none                                    | none (service_role only)                        | full                      |
+| `marketing_waitlist`    | INSERT only         | none                                    | none                                             | full                      |
+| `marketing_content`     | none                | none                                    | SELECT, UPDATE                                   | full                      |
+| `marketing_metrics`     | none                | none                                    | SELECT                                           | full                      |
+| `marketing_ledger`      | none                | none                                    | SELECT                                           | full                      |
+| `marketing_channels`    | none                | none                                    | SELECT, UPDATE                                   | full                      |
+
+Dashboards always read as an authenticated session whose JWT email is a
+member of `marketing_admins`; being merely logged in as any app user is
+not sufficient for any internal marketing table. Agents always write as
+service_role. This keeps the one genuinely public surface (the waitlist
+form) locked to a single narrow capability, and keeps every internal
+pipeline table invisible both to the public internet and to the app's own
+ordinary logged-in users.
+
+---
+
+## 7. Retention email loop (migrate_123)
+
+**Purpose:** The automated retention email programme -- a feedback
+thank-you email, and a trial-day-12 check-in split by activity
+(`day12_active` / `day12_quiet`) -- plus the survey it links to and the
+Play promo code pool used to reward responses. Migration:
+`supabase/migrate_123_retention_email_loop.sql`.
+
+### 7a. `marketing_email_log`
+
+**Purpose:** Records every automated retention email sent or suppressed,
+and is the permanent dedupe guard: a user receives each `email_kind` at
+most once, ever.
+
+| Column       | Type        | Notes                                                                       |
+|--------------|-------------|-------------------------------------------------------------------------------|
+| `id`         | uuid        | PK.                                                                             |
+| `user_id`    | uuid        | not null.                                                                       |
+| `email_kind` | text        | not null, check in `('feedback_thanks','day12_active','day12_quiet')`.        |
+| `status`     | text        | not null, check in `('sent','suppressed_wellbeing','suppressed_optout','failed')`. |
+| `sent_at`    | timestamptz | default `now()`.                                                                |
+| `detail`     | jsonb       | free-form context (template version, provider message id, etc.).              |
+
+**Constraints:** UNIQUE `(user_id, email_kind)` -- the one-per-kind-per-user
+dedupe guard, enforced by the database, not just the sending job.
+
+**RLS:** enabled.
+- `anon` -- no access.
+- `authenticated` -- SELECT, gated on `marketing_admins` membership.
+- `service_role` -- full access (the sending job writes every row).
+
+### 7b. `marketing_email_optout`
+
+**Purpose:** Permanent unsubscribe list for the retention email loop.
+
+| Column         | Type        | Notes                                    |
+|----------------|-------------|---------------------------------------------|
+| `user_id`      | uuid        | PK.                                            |
+| `email`        | text        |                                                 |
+| `opted_out_at` | timestamptz | default `now()`.                               |
+| `source`       | text        | e.g. which email's unsubscribe link.           |
+
+**RLS:** enabled.
+- `anon` -- no access, **including no INSERT**. Unlike `marketing_waitlist`,
+  the unsubscribe flow does not write directly from the browser: it runs
+  through a signed-link edge function (planned, not part of migrate_123)
+  that verifies the link signature server-side and writes with
+  service_role. This keeps the opt-out table as unwritable by anon as
+  `marketing_admins`, while still giving a real one-click unsubscribe.
+- `authenticated` -- SELECT, gated on `marketing_admins` membership.
+- `service_role` -- full access.
+
+### 7c. `marketing_survey_responses`
+
+**Purpose:** Answers from the public post-email survey page.
+
+| Column        | Type        | Notes                                                    |
+|---------------|-------------|--------------------------------------------------------------|
+| `id`          | uuid        | PK.                                                              |
+| `user_id`     | uuid        | nullable -- present when the survey link carried a token, null for an anonymous response. |
+| `email_kind`  | text        | which email brought the respondent to the survey.               |
+| `q_overall`   | text        |                                                                    |
+| `q_keeper`    | text        |                                                                    |
+| `q_confusing` | text        |                                                                    |
+| `q_missing`   | text        |                                                                    |
+| `q_more`      | text        |                                                                    |
+| `created_at`  | timestamptz | default `now()`.                                                  |
+
+**RLS:** enabled.
+- `anon` -- **INSERT only** (`WITH CHECK (true)`), the same pattern as
+  `marketing_waitlist`: the public survey page passes user context via a
+  token when available, else the response is submitted anonymously. No
+  anon SELECT/UPDATE/DELETE.
+- `authenticated` -- SELECT, gated on `marketing_admins` membership.
+- `service_role` -- full access.
+
+### 7d. `marketing_promo_codes`
+
+**Purpose:** The Google Play promo code pool issued as a reward for
+completing the survey.
+
+| Column           | Type        | Notes                                                       |
+|------------------|-------------|------------------------------------------------------------------|
+| `id`             | uuid        | PK.                                                                |
+| `code`           | text        | unique, not null.                                                  |
+| `batch`          | text        | which Play Console batch the code came from.                       |
+| `status`         | text        | not null, check in `('available','issued','expired')`, default `'available'`. |
+| `issued_to_user` | uuid        | set when a code is handed out.                                     |
+| `issued_at`      | timestamptz | set when a code is handed out.                                     |
+| `created_at`     | timestamptz | default `now()`.                                                    |
+
+**RLS:** enabled.
+- `anon` -- no access at all.
+- `authenticated` -- **no access at all, admin-gated or otherwise.** Promo
+  codes are secrets until issued; even the founder dashboard reads this
+  table only via a service_role backend call, never direct PostgREST
+  access under a JWT.
+- `service_role` -- full access (the sending job issues codes here).
+
+### 7e. Sending contract (enforced in the sending job, recorded here as the data contract it depends on)
+
+Before sending any of the three email kinds, the job MUST, in order:
+
+1. Check `ed_pattern_flags` for an open flag on the user
+   (`cleared_at IS NULL`). If found: do not send, write a
+   `marketing_email_log` row with `status = 'suppressed_wellbeing'`.
+2. Check `marketing_email_optout` for the user. If present: do not send,
+   write a `marketing_email_log` row with `status = 'suppressed_optout'`.
+3. Check `marketing_email_log` for an existing `(user_id, email_kind)` row
+   (any status). If one exists: do not send again -- this is the
+   database-enforced dedupe guard (the UNIQUE constraint), not merely a
+   job-side check.
+
+Steps 1 and 2 are policy checks the sending job is responsible for --
+RLS/schema cannot constrain "is there an open ED flag" or "has this user
+opted out" at write time, only steps 1/2's *tables* can be read to decide.
+Step 3 is enforced at the database layer regardless of job behaviour.
+`marketing_promo_codes` issuance follows the survey response, is
+service_role-only end to end, and is never exposed to any client role.
+
+### 7f. Access summary addendum
+
+| Table                         | anon         | authenticated (ordinary app user) | authenticated (marketing_admins member) | service_role (agents/job) |
+|--------------------------------|--------------|---------------------------------------|-----------------------------------------------|------------------------------|
+| `marketing_email_log`          | none         | none                                    | SELECT                                          | full                          |
+| `marketing_email_optout`       | none         | none                                    | SELECT                                          | full                          |
+| `marketing_survey_responses`   | INSERT only  | none                                    | SELECT                                          | full                          |
+| `marketing_promo_codes`        | none         | none                                    | none (service_role only)                        | full                          |
