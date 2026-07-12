@@ -14,9 +14,10 @@ explained in plain words by scene 3 at the latest.
 Amber `#F5A623` accent on near-black `#0D0D0D`, one accent only. Two typefaces:
 display grotesk for headings and sentences, monospace (IBM Plex Mono) for every
 number and stat. Left-aligned, asymmetric, one idea per scene. Every proof beat
-uses an existing renderer component named in section 8 of the visual identity
-doc: the decision card (verdict pill plus reason line), the weekly trend line,
-the fork diagram, the lone dot, the filling dots, the mono stat. No bodies, no
+uses a component from the approved renderer set: the decision card (§5 of the
+visual identity doc) plus the four diagram components (weekly trend line, fork,
+lone dot, filling dots) founder-approved as production standard with carousel 1
+on 2026-07-12 (ruling recorded in the identity doc addendum). No bodies, no
 stock, no before/after, no gradients (§7 of the visual identity doc, hard stop).
 
 **Voice check:** British English, no em dashes, no exclamation marks, no hype
@@ -63,7 +64,7 @@ Visual: two lines of amber-on-black display type, top-left, wide negative space.
 No product name, no logo.
 
 **Scene 2 (~3s).**
-On screen: So why is the call on what to change still a guess?
+On screen: But the call on what to change each week is still a guess.
 Visual: the word "guess" left standing alone on the next beat, everything else
 dimmed to muted grey. Blinking monospace cursor after it.
 
@@ -74,17 +75,17 @@ and shows you why. [Claim 1: PRODUCT-FACTS A]
 Visual: wordmark appears top-left for the first time, calm, no animation flourish.
 
 **Scene 4 (proof beat, decision card, ~4s).**
-On screen: the signature decision card. Monospace figure at the top, an amber
-CHANGE pill, one plain reason line beneath it in the display face, for example
-"Weight trend flat for two weeks, sets completed as planned." [Claim 1:
+On screen: the signature decision card, using the one verified in-app output:
+"WEEKLY DECISION", an amber HOLD pill, reason line "Need at least 3 morning
+weights for a reliable trend." [Claim 5: PRODUCT-FACTS D; Claim 3:
 PRODUCT-FACTS A]
 Visual: near-black canvas, single surface-toned card, hairline border,
-left-aligned. Number, pill, reason. Nothing else.
+left-aligned. Pill and reason, the number 3 in monospace within the reason.
+Nothing else. No invented card content anywhere in this batch.
 
 **Scene 5 (~3s).**
-On screen: Same inputs, same decision, and the reason is written down.
-Sub: Deterministic and explainable, not a black box. [Claim 2: PRODUCT-FACTS A,
-qualified per §6]
+On screen: Same data in, same answer out, and the reason is written down.
+Sub: Explainable, not a black box. [Claim 2: PRODUCT-FACTS A, qualified per §6]
 Visual: the reason line from the card holds on screen, the rest recedes.
 
 **Scene 6 (CTA end-card, ~3s).**
@@ -92,9 +93,11 @@ On screen:
 Volyume.
 The weekly decision on your training and food, change or hold, with the reason
 shown. [Claim 1: PRODUCT-FACTS A]
+The weekly coaching is part of Pro. [Claim 9: PRODUCT-FACTS B]
 Free to start, on Google Play. [Claim 11: PRODUCT-FACTS B; Claim 10:
 PRODUCT-FACTS A]
-Visual: wordmark, one line of promise, the Play line in monospace. Left-aligned.
+Visual: wordmark, one line of promise, the Pro line small, the Play line in
+monospace. Left-aligned.
 
 **Carousel adaptation (6 slides, 4:5):** Slide 1 = Scene 1 hook. Slide 2 =
 Scene 2. Slide 3 = Scene 3 (name and one-sentence answer). Slide 4 = the static
@@ -106,7 +109,7 @@ is there. The part that stays hard is deciding what to actually change each week
 Volyume reads what you logged and makes that weekly call, change or hold, and
 writes down the reason. Free to start, on Google Play.
 
-**Hashtags:** #selfcoached #hypertrophy #gymuk #liftingcoach #traininglog
+**Hashtags:** #selfcoached #hypertrophy #gymuk #traininglog #weeklycheckin
 
 ---
 
@@ -150,9 +153,10 @@ On screen:
 Volyume.
 It reads the weekly trend, not one bad morning, and acts only when the data is
 real. [Claim 4: PRODUCT-FACTS A, D]
+The weekly coaching is part of Pro. [Claim 9: PRODUCT-FACTS B]
 Free to start, on Google Play. [Claim 11: PRODUCT-FACTS B; Claim 10:
 PRODUCT-FACTS A]
-Visual: wordmark, promise line, Play line in monospace.
+Visual: wordmark, promise line, the Pro line small, Play line in monospace.
 
 **Carousel adaptation (6 slides, 4:5):** Slide 1 = the flat three-week readout
 (hook). Slide 2 = lone dot. Slide 3 = name and one-sentence answer, dots forming
@@ -201,9 +205,10 @@ Visual: a two-way amber fork diagram on near-black, the taken path solid amber,
 the other path amber outline. Left-aligned.
 
 **Scene 5 (~3s).**
-On screen: Weekly Precision Coaching does the deciding your loggers leave to you.
-Sub: Part of Pro. [Claim 8: PRODUCT-FACTS A, B; Claim 6: PRODUCT-FACTS A;
-Claim 9: PRODUCT-FACTS B]
+On screen: The weekly coaching does the deciding your apps leave to you.
+Sub: That part is Pro. Logging, plans and progress are free. [Claim 8:
+PRODUCT-FACTS A, B; Claim 6: PRODUCT-FACTS A; Claim 9: PRODUCT-FACTS B;
+Claim 11: PRODUCT-FACTS B]
 Visual: the filled "recorded" boxes beside the now-filled "decided" node.
 
 **Scene 6 (CTA end-card, ~3s).**
@@ -228,7 +233,7 @@ reads both your logged training and your nutrition and makes that weekly call,
 change or hold, with the reason shown. Weekly Precision Coaching is part of Pro.
 Free to start, on Google Play.
 
-**Hashtags:** #selfcoached #hypertrophy #progressiveoverload #gymtok #liftingcoach
+**Hashtags:** #selfcoached #hypertrophy #progressiveoverload #gymtok #macrotracking
 
 ---
 
@@ -240,8 +245,8 @@ Proof beat: the filling dots (data meter) and a HOLD decision card.
 **Runtime:** ~21s, six scenes.
 
 **Scene 1 (hook, ~4s).**
-On screen: Most coaching apps hand you a new change to make every single week.
-Sub: Even in the weeks when nothing in your data actually moved.
+On screen: Another week, another change to your plan.
+Sub: Even when nothing in your data actually moved.
 Visual: a stack of identical "change this" instructions repeating down the
 frame, uniform and a little relentless, muted grey.
 
@@ -257,14 +262,16 @@ Visual: the cluttered line replaced by one clean baseline. Wordmark top-left.
 
 **Scene 4 (proof beat, filling dots then HOLD card, ~4s).**
 On screen: a data meter filling with the week's observations, paused below an
-"act" threshold, then a HOLD decision card with the reason
-"Not enough in the data to justify a change this week." [Claim 3: PRODUCT-FACTS A]
-Visual: filling dots on near-black, then the surface-toned card with an amber
-HOLD pill and one reason line. Left-aligned.
+"act" threshold, then the verified HOLD decision card: an amber HOLD pill with
+the reason "Need at least 3 morning weights for a reliable trend." [Claim 5:
+PRODUCT-FACTS D; Claim 3: PRODUCT-FACTS A]
+Visual: filling dots on near-black, then the surface-toned card with the amber
+HOLD pill and the verified reason line. Left-aligned.
 
 **Scene 5 (~3s).**
 On screen: When the signal is not there yet, it holds and tells you why.
-Sub: Not busywork, a decision. [Claim 3: PRODUCT-FACTS A]
+Sub: It holds because the data does not justify a change yet. [Claim 3:
+PRODUCT-FACTS A]
 Visual: a steady, unhurried amber baseline holding flat, calm negative space.
 
 **Scene 6 (CTA end-card, ~3s).**
@@ -272,9 +279,10 @@ On screen:
 Volyume.
 It tells you when to hold and why, not only when to push. [Claim 1:
 PRODUCT-FACTS A]
+The weekly coaching is part of Pro. [Claim 9: PRODUCT-FACTS B]
 Free to start, on Google Play. [Claim 11: PRODUCT-FACTS B; Claim 10:
 PRODUCT-FACTS A]
-Visual: wordmark, promise line, Play line in monospace.
+Visual: wordmark, promise line, the Pro line small, Play line in monospace.
 
 **Carousel adaptation (6 slides, 4:5):** Slide 1 = the repeating "change this"
 stack (hook). Slide 2 = jittery line with premature change markers. Slide 3 =
@@ -282,12 +290,12 @@ name and one-sentence answer, clean baseline. Slide 4 = filling data meter and
 the HOLD card. Slide 5 = the flat, held baseline. Slide 6 = CTA end-card.
 
 **Post caption:**
-An app that gives you a new instruction every week is not reading your data, it
-is keeping you occupied. Plenty of weeks are mostly noise, and acting on noise
-makes real progress harder to read later. When there is not enough to go on,
-Volyume holds the call and tells you why. Free to start, on Google Play.
+Plenty of training weeks are mostly noise, and acting on noise makes real
+progress harder to read later. When there is not enough to go on, Volyume holds
+the weekly call and tells you why, and when the data does move it says what to
+change. The weekly coaching is part of Pro. Free to start, on Google Play.
 
-**Hashtags:** #selfcoached #naturalbodybuilding #gymuk #trainingscience #liftingcoach
+**Hashtags:** #selfcoached #naturalbodybuilding #gymuk #trainingscience #progressiveoverload
 
 ---
 
@@ -325,3 +333,29 @@ Volyume holds the call and tells you why. Free to start, on Google Play.
   coach", barcode never called free.** Precision Coaching is stated as Pro in
   Concept C (claim 9). "Free to start" refers only to the real free tier
   (claim 11), and no concept implies coaching itself is free.
+
+---
+
+## Revision note (v2.1, 2026-07-12, lead)
+
+Applied after the blocking compliance review (FAIL, findings F1 to F7) and the
+blind cold-viewer test, in one pass:
+
+- F1: Concept D hook moved off competitors and onto the viewer's own pattern
+  ("Another week, another change to your plan."); caption softened to the
+  noise principle with no rival-product assertion.
+- F2/F5: every decision card in the batch now shows the one verified in-app
+  output (HOLD, "Need at least 3 morning weights for a reliable trend", the
+  traceable number 3). No invented card content remains.
+- F3: Concepts A, B and D CTA end-cards and Concept D caption now carry the
+  Pro disclosure ("The weekly coaching is part of Pro."); Concept C's scene 5
+  states plainly what is free and what is Pro.
+- F4: the preamble citation corrected; the four diagram components are
+  recorded as founder-approved (carousel 1 production-standard approval,
+  2026-07-12) in the identity doc addendum.
+- F6: Concept A scene 2 made declarative.
+- F7: Concept D scene 5 sub restated plainly.
+- Cold-viewer fixes: "deterministic" removed from on-screen copy (plain
+  "same data in, same answer out"); "Weekly Precision Coaching" and "loggers"
+  replaced with plain words in Concept C's on-screen copy; #liftingcoach
+  dropped from all hashtag sets (compliance advisory).
