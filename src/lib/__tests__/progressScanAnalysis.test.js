@@ -57,11 +57,34 @@ const modelBackedAssets = [
 ];
 
 const DAY_MS = 86400000;
+const BASE_CAPTURED_AT = Date.parse('2026-06-01T08:00:00Z');
 
-function comparableScan({ id = 'scan', score = 66, confidence = 'moderate', side = false, lighting = 0.9, framing = 0.88, segmentation = 0.9, tilt = 0, centerX = 0.5, centerY = 0.5, height = 0.78, width = 0.36 } = {}) {
+// Realistic persisted pose assets: every scan that reaches comparability was
+// measured, and measured scans always persist per-pose quality metrics and a
+// bodyBox -- so fixtures carry them too, clearing the fail-closed
+// minimum-setup-signals floor (audit D-F3) the way real records do.
+function measuredPoseAssets() {
+  return ['front', 'back'].map((pose) => ({
+    pose,
+    quality: {
+      lightingScore: 0.9,
+      framingScore: 0.88,
+      segmentationConfidence: 0.9,
+      cameraTiltDegrees: 0,
+    },
+    bodyBox: { centerX: 0.5, centerY: 0.5, height: 0.78, width: 0.36 },
+  }));
+}
+
+// `day` spaces fixtures on real capture dates (captured_at is NOT NULL in the
+// schema, and scanComparability now fails closed without one -- audit D-F3).
+// 'old' sits at day 0 and everything else 8 days later, clearing the 7-day gate.
+function comparableScan({ id = 'scan', score = 66, confidence = 'moderate', side = false, lighting = 0.9, framing = 0.88, segmentation = 0.9, tilt = 0, centerX = 0.5, centerY = 0.5, height = 0.78, width = 0.36, day = null } = {}) {
   const poses = side ? ['front', 'back', 'side'] : ['front', 'back'];
+  const dayIndex = day ?? (id === 'old' ? 0 : 8);
   return {
     id,
+    capturedAt: Date.parse('2026-06-01T08:00:00Z') + dayIndex * DAY_MS,
     analysisStatus: 'complete',
     qualityLabel: 'good',
     signals: {
@@ -871,9 +894,10 @@ describe('Progress Scan uncertainty and abstention', () => {
     const current = {
       analysisStatus: 'measured',
       qualityLabel: 'good',
+      capturedAt: BASE_CAPTURED_AT + 8 * DAY_MS,
       stats: { weightKg: 80 },
       signals: {
-        assets: [{ pose: 'front' }, { pose: 'back' }],
+        assets: measuredPoseAssets(),
         estimatorInputs: {
           waistToHeight: 0.18,
           waistToShoulder: 0.61,
@@ -883,9 +907,10 @@ describe('Progress Scan uncertainty and abstention', () => {
     const previous = {
       analysisStatus: 'measured',
       qualityLabel: 'good',
+      capturedAt: BASE_CAPTURED_AT,
       signals: {
         stats: { weightKg: 82 },
-        assets: [{ pose: 'front' }, { pose: 'back' }],
+        assets: measuredPoseAssets(),
         estimatorInputs: {
           waistToHeight: 0.21,
           waistToShoulder: 0.66,
@@ -906,12 +931,14 @@ describe('Progress Scan uncertainty and abstention', () => {
     const current = {
       analysisStatus: 'measured',
       qualityLabel: 'good',
-      signals: { assets: [{ pose: 'front' }, { pose: 'back' }] },
+      capturedAt: BASE_CAPTURED_AT + 8 * DAY_MS,
+      signals: { assets: measuredPoseAssets() },
     };
     const previous = {
       analysisStatus: 'measured',
       qualityLabel: 'good',
-      signals: { assets: [{ pose: 'front' }, { pose: 'back' }] },
+      capturedAt: BASE_CAPTURED_AT,
+      signals: { assets: measuredPoseAssets() },
     };
 
     const out = explainMeasuredScanDelta({ currentScan: current, previousScan: previous });
@@ -924,6 +951,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     const current = {
       analysisStatus: 'complete',
       qualityLabel: 'good',
+      capturedAt: BASE_CAPTURED_AT + 8 * DAY_MS,
       estimateBodyFatPercent: 16,
       estimateRangeLow: 12,
       estimateRangeHigh: 20,
@@ -933,7 +961,7 @@ describe('Progress Scan uncertainty and abstention', () => {
           visualLeannessScore: 66,
           scanConfidenceTier: 'moderate',
         },
-        assets: [{ pose: 'front' }, { pose: 'back' }],
+        assets: measuredPoseAssets(),
         estimatorInputs: {
           waistToHeight: 0.18,
           waistToShoulder: 0.61,
@@ -943,6 +971,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     const previous = {
       analysisStatus: 'complete',
       qualityLabel: 'good',
+      capturedAt: BASE_CAPTURED_AT,
       estimateBodyFatPercent: 25,
       estimateRangeLow: 21,
       estimateRangeHigh: 29,
@@ -952,7 +981,7 @@ describe('Progress Scan uncertainty and abstention', () => {
           scanConfidenceTier: 'moderate',
         },
         stats: { weightKg: 82 },
-        assets: [{ pose: 'front' }, { pose: 'back' }],
+        assets: measuredPoseAssets(),
         estimatorInputs: {
           waistToHeight: 0.21,
           waistToShoulder: 0.66,
@@ -1032,6 +1061,10 @@ describe('Progress Scan uncertainty and abstention', () => {
   });
 
   test('scan comparability supports weekly photo sets and refuses shorter intervals', () => {
+    // The interval gate is CIVIL days, not elapsed ms (audit D-F4): a weekly
+    // retake is fair on the 7th calendar day even if taken a little earlier in
+    // the day, and a retake across the UK spring-forward (167 elapsed hours)
+    // must not be blocked by the missing hour.
     const previous = comparableScan({ id: 'old', score: 60 });
     const current = comparableScan({ id: 'new', score: 72 });
     previous.capturedAt = Date.parse('2026-07-01T08:00:00Z');
@@ -1042,8 +1075,8 @@ describe('Progress Scan uncertainty and abstention', () => {
       status: 'comparable',
     });
 
-    current.capturedAt = previous.capturedAt + (7 * DAY_MS);
-    current.capturedAt -= 1;
+    // Six civil days apart is a short interval, refused.
+    current.capturedAt = previous.capturedAt + (6 * DAY_MS);
 
     const comparability = scanComparability(current, previous);
     expect(comparability).toMatchObject({
@@ -1056,6 +1089,22 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.comparisonStatus).toBe('not_comparable');
     expect(out.summary).toMatch(/too close together/i);
     expect(out.progressSignal).toBeUndefined();
+
+    // UK spring-forward 2026: 08:00 Sun 22 Mar -> 08:00 Sun 29 Mar is 167
+    // elapsed hours but exactly 7 civil days. The old raw-ms gate refused it.
+    previous.capturedAt = Date.parse('2026-03-22T08:00:00Z');
+    current.capturedAt = Date.parse('2026-03-29T07:00:00Z'); // 08:00 BST
+    expect(scanComparability(current, previous)).toMatchObject({
+      comparable: true,
+      status: 'comparable',
+    });
+
+    // A scan with no capture time cannot prove the interval: fail closed.
+    current.capturedAt = null;
+    expect(scanComparability(current, previous)).toMatchObject({
+      comparable: false,
+      status: 'not_comparable',
+    });
   });
 
   test('comparison progress signal is withheld when the weaker scan confidence is low', () => {

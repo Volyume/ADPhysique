@@ -1,4 +1,5 @@
 import bfEstimatorAsset from '../../assets/ml/progress_scan_bf_estimator_v1.json';
+import { localDayKey, parseLocalDay } from './dayKey';
 
 export const REQUIRED_SCAN_POSES = ['front', 'back'];
 export const OPTIONAL_SCAN_POSES = ['side'];
@@ -132,7 +133,7 @@ function requiredPoseAssets(assets = []) {
 }
 
 export function requiredPosesComplete(assets = []) {
-  const poses = new Set((assets || []).map((a) => normalisePose(a.pose)).filter(Boolean));
+  const poses = new Set((assets || []).map((a) => normalisePose(a?.pose)).filter(Boolean));
   return REQUIRED_SCAN_POSES.every((pose) => poses.has(pose));
 }
 
@@ -142,7 +143,9 @@ function canonicalReason(reason) {
 }
 
 function assetSignals(asset = {}) {
-  return parseMaybeJson(asset.signals ?? asset.signalsJson, null);
+  // `?.` (not the default param) carries the null case: a null element inside
+  // an assets array must abstain, never throw (audit E-F1).
+  return parseMaybeJson(asset?.signals ?? asset?.signalsJson, null);
 }
 
 function hasRequiredScoreRatios(asset = {}) {
@@ -166,7 +169,7 @@ export function requiredModelBackedPosesComplete(assets = []) {
 
 export function qualityScoreForAsset(asset = {}) {
   const values = QUALITY_KEYS
-    .map((key) => finiteNumber(asset[key]))
+    .map((key) => finiteNumber(asset?.[key]))
     .filter((v) => v != null)
     .map((v) => clamp(v, 0, 1));
   if (values.length === 0) return null;
@@ -174,7 +177,7 @@ export function qualityScoreForAsset(asset = {}) {
 }
 
 export function aggregateQuality(assets = []) {
-  const scores = (assets || []).map((a) => finiteNumber(a.qualityScore) ?? qualityScoreForAsset(a)).filter((v) => v != null);
+  const scores = (assets || []).map((a) => finiteNumber(a?.qualityScore) ?? qualityScoreForAsset(a)).filter((v) => v != null);
   if (scores.length === 0) return { score: null, label: 'unknown' };
   const rawScore = scores.reduce((sum, v) => sum + v, 0) / scores.length;
   const label = rawScore >= 0.82 ? 'good' : rawScore >= 0.64 ? 'usable' : 'poor';
@@ -465,7 +468,7 @@ export function computeScanConfidenceScore({ assets = [], quality = {}, biasFlag
 
 function inverseRatioScore(value, leanAt, softAt) {
   const n = finiteNumber(value);
-  if (n == null) return null;
+  if (n == null || softAt === leanAt) return null;
   return clamp01((softAt - n) / (softAt - leanAt));
 }
 
@@ -529,6 +532,7 @@ function interpolateBodyFatIndex(value, points = []) {
   for (let i = 1; i < points.length; i += 1) {
     const [x, y] = points[i];
     const [prevX, prevY] = points[i - 1];
+    if (x === prevX) continue; // zero-width segment would divide by zero
     if (n <= x) {
       const progress = (n - prevX) / (x - prevX);
       return prevY + (y - prevY) * progress;
@@ -635,15 +639,35 @@ function boundedEstimatorAnchorScore(silhouetteScore, estimateScore, inputs = {}
   return rounded0(clamp(estimate, lower, upper));
 }
 
-function blendedVisualLeannessScore(inputs = {}, modelEstimate = null, biasFlags = []) {
+// Returns the blended score plus the ACTUAL clamp applied to it, so persisted
+// telemetry describes the visible number (audit A-F4: the old
+// estimatorAnchorAdjustment described the non-provisional clamp path even
+// while the provisional ±8 clamp governed the score).
+function blendedVisualLeannessDetails(inputs = {}, modelEstimate = null, biasFlags = []) {
   const rawSilhouetteScore = computeVisualLeannessScore(inputs);
   const silhouetteScore = calibrateVolyumeScore(rawSilhouetteScore);
   const estimateScore = visualIndexFromEstimatedBodyFat(
     modelEstimateValue(modelEstimate),
     modelEstimate?.inputs?.sex,
   );
-  if (silhouetteScore == null) return estimateScore;
-  if (estimateScore == null) return silhouetteScore;
+  if (silhouetteScore == null) {
+    return {
+      score: estimateScore,
+      pureEstimate: estimateScore != null,
+      appliedDownwardLimit: null,
+      appliedUpwardLimit: null,
+      appliedClampAdjustment: null,
+    };
+  }
+  if (estimateScore == null) {
+    return {
+      score: silhouetteScore,
+      pureEstimate: false,
+      appliedDownwardLimit: null,
+      appliedUpwardLimit: null,
+      appliedClampAdjustment: null,
+    };
+  }
   const gap = Math.abs(silhouetteScore - estimateScore);
   const anchorBiasFlags = [
     ...biasFlags,
@@ -677,17 +701,31 @@ function blendedVisualLeannessScore(inputs = {}, modelEstimate = null, biasFlags
   const upwardLimit = provisional
     ? PROVISIONAL_ANCHOR_MAX_POINTS
     : ESTIMATOR_ANCHOR_MAX_UPWARD_POINTS;
-  return rounded0(clamp(
-    weighted,
-    silhouetteScore - downwardLimit,
-    silhouetteScore + upwardLimit,
+  // Explicit final bound (audit A-F7): safe by construction today, pinned so a
+  // future clamp edit can never let an out-of-range number reach a user.
+  const preClampScore = rounded0(weighted);
+  const score = rounded0(clamp(
+    clamp(weighted, silhouetteScore - downwardLimit, silhouetteScore + upwardLimit),
+    0,
+    100,
   ));
+  return {
+    score,
+    pureEstimate: false,
+    appliedDownwardLimit: downwardLimit,
+    appliedUpwardLimit: upwardLimit,
+    appliedClampAdjustment: score - preClampScore,
+  };
 }
 
 export function leannessBandForScore(score) {
   const n = finiteNumber(score);
   if (n == null) return null;
-  return PROGRESS_SCAN_LEANNESS_BANDS.find((band) => n >= band.min && n <= band.max) || null;
+  // Bands are integer-keyed with a (96, 97) boundary; a fractional caller value
+  // (e.g. 96.5) fell into no band. Scores are integers everywhere internally,
+  // so rounding here is a no-op for real scores and closes the gap (audit A-F6).
+  const r = clamp(rounded0(n), 0, 100);
+  return PROGRESS_SCAN_LEANNESS_BANDS.find((band) => r >= band.min && r <= band.max) || null;
 }
 
 export function normaliseStoredPhysiqueAssessment(assessment = null) {
@@ -806,16 +844,22 @@ export function buildPhysiqueAssessment({
     biasFlags,
     previousScan,
   });
-  const measuredScore = blendedVisualLeannessScore(inputs, modelEstimate, biasFlags);
+  const blendDetails = blendedVisualLeannessDetails(inputs, modelEstimate, biasFlags);
+  const measuredScore = blendDetails.score;
   const measuredScoreReady = measuredScore != null;
   let scanConfidenceTier = confidenceTier(scanConfidenceScore, { measuredScoreReady });
   // F1(a): the clamped anchor still shifted the calibrated silhouette score by more than the
   // confidence-cap threshold, so confidence is capped at Moderate and the shift is surfaced as a
   // machine-readable flag (persisted via the existing signals_json pathway; no new table).
+  // Audit C-F3: a score that is a PURE provisional estimate (no silhouette to
+  // anchor against) is the least-corroborated case of all, so it always
+  // engages the cap while the estimator's validation is pending.
   const anchorEngaged = estimatorIsProvisional()
     && measuredScore != null
-    && calibratedSilhouetteScore != null
-    && Math.abs(measuredScore - calibratedSilhouetteScore) > PROVISIONAL_ANCHOR_CONFIDENCE_CAP_THRESHOLD_POINTS;
+    && (
+      calibratedSilhouetteScore == null
+      || Math.abs(measuredScore - calibratedSilhouetteScore) > PROVISIONAL_ANCHOR_CONFIDENCE_CAP_THRESHOLD_POINTS
+    );
   if (anchorEngaged) scanConfidenceTier = lowerConfidenceTier(scanConfidenceTier, 'moderate');
   const score = measuredScoreReady ? measuredScore : null;
   const band = leannessBandForScore(score);
@@ -850,12 +894,19 @@ export function buildPhysiqueAssessment({
       estimatorAnchorScore,
       boundedEstimatorAnchorScore: boundedEstimatorAnchor,
       estimatorAnchorMaxDownwardPoints,
+      // Describes the standalone (non-provisional) anchor clamp path only --
+      // NOT necessarily the visible score. The applied* fields below are the
+      // clamp that actually produced visualLeannessScore (audit A-F4).
       estimatorAnchorAdjustment: (
         finiteNumber(estimatorAnchorScore) != null
         && finiteNumber(boundedEstimatorAnchor) != null
       )
         ? rounded0(boundedEstimatorAnchor - estimatorAnchorScore)
         : null,
+      appliedAnchorDownwardLimitPoints: blendDetails.appliedDownwardLimit,
+      appliedAnchorUpwardLimitPoints: blendDetails.appliedUpwardLimit,
+      appliedBlendClampAdjustment: blendDetails.appliedClampAdjustment,
+      pureEstimateScore: blendDetails.pureEstimate === true,
     },
     biasFlags,
     anchorEngaged,
@@ -967,6 +1018,8 @@ function scanCameraFacing(scan = {}) {
   return facing === 'front' || facing === 'back' ? facing : null;
 }
 
+const MIN_COMPARED_SETUP_SIGNALS = 3;
+
 export function scanSetupStability(currentScan = null, previousScan = null) {
   if (!currentScan || !previousScan) {
     return { stable: false, issues: ['missing_scan'], comparedSignalCount: 0 };
@@ -1026,6 +1079,14 @@ export function scanSetupStability(currentScan = null, previousScan = null) {
     }
   }
 
+  // Fail closed on an empty comparison (audit D-F3): zero or near-zero compared
+  // signals means the two scans shared almost no measurable setup data, so
+  // "no issues found" would be vacuous. Any real pair of measured scans carries
+  // 8+ per-pose metrics, so this floor only trips genuinely bare records.
+  if (comparedSignalCount < MIN_COMPARED_SETUP_SIGNALS) {
+    issues.push('insufficient_setup_signals');
+  }
+
   return {
     stable: issues.length === 0,
     issues: [...new Set(issues)],
@@ -1040,6 +1101,15 @@ function hasRequiredPoseSet(scan = {}) {
 
 function scanCapturedAtMs(scan = {}) {
   return finiteNumber(scan?.capturedAt ?? scan?.captured_at);
+}
+
+// Calendar-day difference on the device's local clock (DST-correct): the pair
+// of local midnights differs by n*24h ± 1h across a DST change, so rounding
+// recovers the exact civil-day count.
+function localCivilDayDifference(aMs, bMs) {
+  const a = parseLocalDay(localDayKey(aMs)).getTime();
+  const b = parseLocalDay(localDayKey(bMs)).getTime();
+  return Math.abs(Math.round((a - b) / 86400000));
 }
 
 export function scanComparability(currentScan = null, previousScan = null) {
@@ -1059,11 +1129,20 @@ export function scanComparability(currentScan = null, previousScan = null) {
   }
   const currentCapturedAt = scanCapturedAtMs(currentScan);
   const previousCapturedAt = scanCapturedAtMs(previousScan);
-  if (
-    currentCapturedAt != null
-    && previousCapturedAt != null
-    && Math.abs(currentCapturedAt - previousCapturedAt) < PROGRESS_SCAN_MIN_COMPARISON_INTERVAL_MS
-  ) {
+  // A scan with no capture time cannot prove the fair-comparison interval, so
+  // it fails closed (audit D-F3) -- capturedAt is stamped at capture, so this
+  // only trips corrupt records.
+  if (currentCapturedAt == null || previousCapturedAt == null) {
+    return {
+      comparable: false,
+      status: 'not_comparable',
+      reason: 'One scan is missing its capture time, so a fair comparison window cannot be confirmed.',
+      comparableCount: 0,
+    };
+  }
+  // Civil-day gate, not raw elapsed ms (audit D-F4): a legitimate weekly retake
+  // across the UK spring-forward is 167 elapsed hours and was falsely blocked.
+  if (localCivilDayDifference(currentCapturedAt, previousCapturedAt) < 7) {
     return {
       comparable: false,
       status: 'not_comparable',
@@ -1440,13 +1519,13 @@ export function measuredSignalsSummaryFromAssets(assets = [], estimate = null, e
     assets: (assets || []).map((a) => {
       const signals = signalForAsset(a);
       return {
-        pose: a.pose,
-        qualityScore: a.qualityScore ?? null,
-        segmentationConfidence: a.segmentationConfidence ?? signals?.quality?.segmentationConfidence ?? null,
-        framingScore: a.framingScore ?? signals?.quality?.framingScore ?? null,
-        blurScore: a.blurScore ?? signals?.quality?.blurScore ?? null,
-        lightingScore: a.lightingScore ?? signals?.quality?.lightingScore ?? null,
-        cameraTiltDegrees: a.cameraTiltDegrees ?? signals?.quality?.cameraTiltDegrees ?? null,
+        pose: a?.pose ?? null,
+        qualityScore: a?.qualityScore ?? null,
+        segmentationConfidence: a?.segmentationConfidence ?? signals?.quality?.segmentationConfidence ?? null,
+        framingScore: a?.framingScore ?? signals?.quality?.framingScore ?? null,
+        blurScore: a?.blurScore ?? signals?.quality?.blurScore ?? null,
+        lightingScore: a?.lightingScore ?? signals?.quality?.lightingScore ?? null,
+        cameraTiltDegrees: a?.cameraTiltDegrees ?? signals?.quality?.cameraTiltDegrees ?? null,
         bodyBox: signals?.bodyBox ?? null,
         engine: signals?.engine ?? null,
         modelVersion: signals?.modelVersion ?? null,

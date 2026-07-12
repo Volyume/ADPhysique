@@ -33,7 +33,18 @@ function scan(id, day, score = 66, poses = ['front', 'back']) {
         waistToShoulder: score >= 65 ? 0.61 : 0.66,
       },
     },
-    assets: poses.map((pose) => ({ id: `${id}-${pose}`, pose, uri: `file:///${id}-${pose}.jpg` })),
+    // Real measured scans always persist per-pose quality metrics; the
+    // comparability gate now fails closed below a minimum compared-signal
+    // count (audit D-F3), so the fixtures carry them like real records.
+    assets: poses.map((pose) => ({
+      id: `${id}-${pose}`,
+      pose,
+      uri: `file:///${id}-${pose}.jpg`,
+      lightingScore: 0.9,
+      framingScore: 0.88,
+      segmentationConfidence: 0.9,
+      cameraTiltDegrees: 0,
+    })),
   };
 }
 

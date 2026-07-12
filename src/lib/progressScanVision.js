@@ -347,18 +347,32 @@ export function resetProgressScanModelCacheForTests() {
   modelUnavailableReason = null;
 }
 
-export function blurScoreFromRgb(rgb, width, height) {
+export function blurScoreFromRgb(rgb, width, height, contentRect = null) {
   if (!rgb || width < 3 || height < 3) return null;
   const lum = new Float32Array(width * height);
   for (let i = 0; i < width * height; i += 1) {
     const j = i * 3;
     lum[i] = 0.2126 * rgb[j] + 0.7152 * rgb[j + 1] + 0.0722 * rgb[j + 2];
   }
+  // Restrict the Laplacian to the real photo content when a contentRect is
+  // known (audit B-F7, mirroring lightingScore): the uniform letterbox padding
+  // on tall photos has near-zero response, which dragged the variance down and
+  // produced false `too_blurry` withholds on perfectly sharp captures.
+  const rect = contentRect
+    && Number.isFinite(contentRect.x) && Number.isFinite(contentRect.y)
+    && Number.isFinite(contentRect.width) && Number.isFinite(contentRect.height)
+    && contentRect.width >= 3 && contentRect.height >= 3
+    ? contentRect
+    : { x: 0, y: 0, width, height };
+  const yStart = Math.max(1, Math.floor(rect.y) + 1);
+  const yEnd = Math.min(height - 1, Math.floor(rect.y + rect.height) - 1);
+  const xStart = Math.max(1, Math.floor(rect.x) + 1);
+  const xEnd = Math.min(width - 1, Math.floor(rect.x + rect.width) - 1);
   let sum = 0;
   let sumSq = 0;
   let count = 0;
-  for (let y = 1; y < height - 1; y += 1) {
-    for (let x = 1; x < width - 1; x += 1) {
+  for (let y = yStart; y < yEnd; y += 1) {
+    for (let x = xStart; x < xEnd; x += 1) {
       const i = y * width + x;
       const lap = (lum[i - 1] + lum[i + 1] + lum[i - width] + lum[i + width]) - (4 * lum[i]);
       sum += lap;
@@ -754,7 +768,7 @@ export async function analyseProgressScanPhoto({ uri, pose } = {}) {
       width: PROGRESS_SCAN_MODEL_INPUT_SIZE,
       height: PROGRESS_SCAN_MODEL_INPUT_SIZE,
       rgb,
-      blurScore: blurScoreFromRgb(rgb, PROGRESS_SCAN_MODEL_INPUT_SIZE, PROGRESS_SCAN_MODEL_INPUT_SIZE),
+      blurScore: blurScoreFromRgb(rgb, PROGRESS_SCAN_MODEL_INPUT_SIZE, PROGRESS_SCAN_MODEL_INPUT_SIZE, extracted.contentRect),
       lightingScore: extracted.lightingScore,
       contentRect: extracted.contentRect,
       pose,

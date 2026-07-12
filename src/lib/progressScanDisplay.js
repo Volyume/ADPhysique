@@ -8,16 +8,22 @@ export function progressScanAssessmentForDisplay(scanOrAssessment = null) {
   return normaliseStoredPhysiqueAssessment(assessment);
 }
 
+// Display re-clamps to [0, 100] (audit E-F2): the engine can only produce
+// in-range scores, but a corrupt STORED value (e.g. 900 from a bad write)
+// previously rendered as "900/100". The display layer never trusts storage.
+function clampedDisplayScore(value) {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
+
 export function progressScanScoreForDisplay(scanOrAssessment = null) {
   const assessment = progressScanAssessmentForDisplay(scanOrAssessment);
-  const score = assessment?.visualLeannessScore;
-  if (score == null || score === '') return null;
-  const n = Number(score);
-  return Number.isFinite(n) ? Math.round(n) : null;
+  return clampedDisplayScore(assessment?.visualLeannessScore);
 }
 
 export function formatVolyumeScore(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return null;
-  return `${Math.round(n)}/100`;
+  const n = clampedDisplayScore(value);
+  return n == null ? null : `${n}/100`;
 }

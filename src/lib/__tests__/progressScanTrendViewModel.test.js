@@ -29,9 +29,13 @@ function scan(id, day, {
         progressSignalLabel: 'Slight positive trend',
       },
     },
+    // Full quality metrics like a real measured scan (only lighting drifts in
+    // the fixtures): scanSetupStability now fails closed below a minimum
+    // compared-signal count (audit D-F3), matching real records that always
+    // persist these fields.
     assets: [
-      { pose: 'front', lightingScore },
-      { pose: 'back', lightingScore },
+      { pose: 'front', lightingScore, framingScore: 0.88, segmentationConfidence: 0.9, cameraTiltDegrees: 0 },
+      { pose: 'back', lightingScore, framingScore: 0.88, segmentationConfidence: 0.9, cameraTiltDegrees: 0 },
     ],
   };
 }
