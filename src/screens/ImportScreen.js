@@ -10,9 +10,11 @@
  * pure presentation.
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import {
+  View, Text, StyleSheet, ScrollView, ActivityIndicator, AccessibilityInfo, findNodeHandle,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
@@ -66,6 +68,26 @@ export default function ImportScreen({ navigation }) {
   const [format, setFormat] = useState(null);     // 'hevy' | 'strong'
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);     // counts from runImport
+
+  // AX-08 (launch accessibility audit): the dynamic error below was plain
+  // Text with no alert/live-region role, so a screen-reader user who tapped
+  // Pick CSV and hit a parse error was left on the button with no idea why
+  // nothing happened. errorRef backs a best-effort focus move onto the
+  // error once it appears, same guarded findNodeHandle pattern as
+  // InfoTooltip's AX-01 fix; the live region below is the announcement
+  // itself and works even where the focus move no-ops.
+  const errorRef = useRef(null);
+
+  useEffect(() => {
+    if (!error) return undefined;
+    const id = setTimeout(() => {
+      try {
+        const node = findNodeHandle(errorRef.current);
+        if (node != null) AccessibilityInfo.setAccessibilityFocus(node);
+      } catch (_) { /* best-effort, never throw into render */ }
+    }, 50);
+    return () => clearTimeout(id);
+  }, [error]);
 
   async function handlePickFile() {
     setError(null);
@@ -186,7 +208,16 @@ export default function ImportScreen({ navigation }) {
               style={styles.primaryButton}
             />
 
-            {error ? <Text style={[styles.errorText, live.errorText]}>{error}</Text> : null}
+            {error ? (
+              <Text
+                ref={errorRef}
+                accessibilityRole="alert"
+                accessibilityLiveRegion="assertive"
+                style={[styles.errorText, live.errorText]}
+              >
+                {error}
+              </Text>
+            ) : null}
           </>
         )}
 

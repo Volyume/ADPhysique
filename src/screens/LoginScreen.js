@@ -101,9 +101,20 @@ export default function LoginScreen() {
           />
           {/* A7: the only affordance while waiting was dimmed buttons, no
               indication anything is actually happening. A calm caption names
-              what's in progress. */}
+              what's in progress.
+              AX-08 (launch accessibility audit): the caption wasn't marked
+              busy/live, so a screen reader never heard that sign-in was in
+              progress. accessibilityLiveRegion announces it on appearance
+              (polite, mirroring Toast's non-error pattern); accessibilityState
+              busy reinforces the in-progress state for the duration. */}
           {loading ? (
-            <Text style={[styles.oauthWaiting, live.oauthWaiting]}>Waiting for Google or Apple…</Text>
+            <Text
+              style={[styles.oauthWaiting, live.oauthWaiting]}
+              accessibilityLiveRegion="polite"
+              accessibilityState={{ busy: true }}
+            >
+              Waiting for Google or Apple…
+            </Text>
           ) : null}
 
           {/* "Continue without an account" removed per
