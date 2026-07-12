@@ -68,13 +68,13 @@ export default function MealNamesScreen() {
       <KeyboardAvoidingView style={local.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={[styles.section, live.section]}>
-          <Text maxFontSizeMultiplier={1.3} style={[local.intro, liveText.intro]}>
+          <Text style={[local.intro, liveText.intro]}>
             Rename your meals to whatever you call them. Leave a box blank to use the default. This changes the
             label only. Your logged food and plan stay the same.
           </Text>
           {slots.map((key) => (
             <View key={key} style={local.row}>
-              <Text maxFontSizeMultiplier={1.3} style={[local.default, liveText.default]} numberOfLines={1}>{defaultMealSlotLabel(key)}</Text>
+              <Text style={[local.default, liveText.default]} numberOfLines={1}>{defaultMealSlotLabel(key)}</Text>
               <TextField
                 containerStyle={local.input}
                 value={values[key] ?? ''}

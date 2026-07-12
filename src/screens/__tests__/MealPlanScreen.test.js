@@ -340,7 +340,7 @@ describe('MealPlanScreen review-before-add flow', () => {
     // a live.* override in a style array. The pinned contract (which frozen
     // style backs each element, and their relative order) is unchanged --
     // widened only to allow the insertion.
-    expect(source).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.emptyTitle, live.emptyTitle]}>Meal builder</Text>');
+    expect(source).toContain('<Text style={[styles.emptyTitle, live.emptyTitle]}>Meal builder</Text>');
     expect(source).toContain("title={!plan ? 'Meal builder' : isDayPlan ? 'Review day meals' : 'Review week meals'}");
     expect(source).toContain('Build meals from your targets, review them, then add the ones you want to your diary.');
     expect(source).toContain('title="Build today"');

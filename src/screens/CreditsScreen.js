@@ -42,59 +42,59 @@ export default function CreditsScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll}>
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.intro, live.intro]}>
+        <Text style={[styles.intro, live.intro]}>
           The food data Volyume uses comes from open datasets and APIs published by the people and organisations below. Where their licence calls for it, the required attribution is shown verbatim.
         </Text>
 
         {/* OpenFoodFacts */}
         <Card borderless style={styles.card}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.cardTitle, live.cardTitle]}>Open Food Facts</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
+          <Text style={[styles.cardTitle, live.cardTitle]}>Open Food Facts</Text>
+          <Text style={[styles.body, live.body]}>
             Branded UK food data, both bundled (weekly snapshot) and live (barcode misses fall through to OFF's API).
           </Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.attribution, live.attribution]}>
+          <Text style={[styles.attribution, live.attribution]}>
             Data licensed under the Open Database License (ODbL) 1.0. Derivative works are licensed under the same terms.
           </Text>
           <TouchableOpacity style={[styles.linkButton, live.linkButton]} onPress={() => openUrl('https://world.openfoodfacts.org/')} accessibilityRole="link" accessibilityLabel="Open Food Facts website">
             <Ionicons name="open-outline" size={iconSize.sm} color={t.colors.textSecondary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.link, live.link]}>world.openfoodfacts.org</Text>
+            <Text style={[styles.link, live.link]}>world.openfoodfacts.org</Text>
             <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
           </TouchableOpacity>
         </Card>
 
         {/* CoFID */}
         <Card borderless style={styles.card}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.cardTitle, live.cardTitle]}>McCance and Widdowson's Composition of Foods (CoFID)</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
+          <Text style={[styles.cardTitle, live.cardTitle]}>McCance and Widdowson's Composition of Foods (CoFID)</Text>
+          <Text style={[styles.body, live.body]}>
             Generic UK foods (raw chicken breast, plain oats, etc.) bundled into Volyume from the 7th edition (2021) dataset published by Public Health England / OHID.
           </Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.attribution, live.attribution]}>
+          <Text style={[styles.attribution, live.attribution]}>
             Contains public sector information licensed under the Open Government Licence v3.0.
           </Text>
           <TouchableOpacity style={[styles.linkButton, live.linkButton]} onPress={() => openUrl('https://www.gov.uk/government/publications/composition-of-foods-integrated-dataset-cofid')} accessibilityRole="link" accessibilityLabel="CoFID dataset on gov.uk">
             <Ionicons name="open-outline" size={iconSize.sm} color={t.colors.textSecondary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.link, live.link]}>gov.uk - CoFID</Text>
+            <Text style={[styles.link, live.link]}>gov.uk - CoFID</Text>
             <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
           </TouchableOpacity>
         </Card>
 
         {/* USDA */}
         <Card borderless style={styles.card}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.cardTitle, live.cardTitle]}>USDA FoodData Central</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
+          <Text style={[styles.cardTitle, live.cardTitle]}>USDA FoodData Central</Text>
+          <Text style={[styles.body, live.body]}>
             North-American food data, hit only when both the bundled snapshot and Open Food Facts miss. Used for imported items and occasional UK gaps.
           </Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.attribution, live.attribution]}>
+          <Text style={[styles.attribution, live.attribution]}>
             Public domain data published by the U.S. Department of Agriculture, Agricultural Research Service.
           </Text>
           <TouchableOpacity style={[styles.linkButton, live.linkButton]} onPress={() => openUrl('https://fdc.nal.usda.gov/')} accessibilityRole="link" accessibilityLabel="USDA FoodData Central website">
             <Ionicons name="open-outline" size={iconSize.sm} color={t.colors.textSecondary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.link, live.link]}>fdc.nal.usda.gov</Text>
+            <Text style={[styles.link, live.link]}>fdc.nal.usda.gov</Text>
             <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
           </TouchableOpacity>
         </Card>
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.footnote, live.footnote]}>
+        <Text style={[styles.footnote, live.footnote]}>
           Research, design, and code by the Volyume team. Bug reports and missing-product reports are welcome at support@volyume.app.
         </Text>
       </ScrollView>

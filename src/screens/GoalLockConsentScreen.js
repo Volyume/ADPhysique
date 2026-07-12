@@ -90,18 +90,18 @@ export default function GoalLockConsentScreen({ navigation, route }) {
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Goal lock" />
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>A note on aggressive cuts</Text>
+        <Text style={[styles.title, live.title]}>A note on aggressive cuts</Text>
         {/* Voice: Surface 4 register (COACHING_VOICE_SYNTHESIS_LOCKED §5):
             Precision Coaching named as the decider, signals named plainly,
             no vague personification. */}
-        <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
+        <Text style={[styles.body, live.body]}>
           You picked a goal that involves an aggressive cut. Precision Coaching can support that, with one tradeoff you should know about. Volyume has safety checks: if signs of under-eating and rapid weight loss show up together, Precision Coaching holds the calorie target so the cut doesn't get sharper.
         </Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
+        <Text style={[styles.body, live.body]}>
           These checks are there for the at-risk users that calorie-tracking apps have historically harmed. For an aggressive cut, Precision Coaching can raise the bar before those checks fire, so a competition prep doesn't get held up at the standard threshold.
         </Text>
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Confirm one of these</Text>
+        <Text style={[styles.fieldLabel, live.fieldLabel]}>Confirm one of these</Text>
 
         <View accessibilityRole="radiogroup" accessibilityLabel="Confirm your experience with aggressive cuts">
         <Pressable
@@ -113,7 +113,7 @@ export default function GoalLockConsentScreen({ navigation, route }) {
           <View style={[styles.radio, live.radio, choice === 'advanced' && [styles.radioActive, live.radioActive]]}>
             {choice === 'advanced' ? <View style={[styles.radioDot, live.radioDot]} /> : null}
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.optionText, live.optionText]}>
+          <Text style={[styles.optionText, live.optionText]}>
             I have prior experience managing aggressive cuts safely, or I'm working with a coach. Raise the safety threshold from 2 signals to 3.
           </Text>
         </Pressable>
@@ -127,19 +127,19 @@ export default function GoalLockConsentScreen({ navigation, route }) {
           <View style={[styles.radio, live.radio, choice === 'standard' && [styles.radioActive, live.radioActive]]}>
             {choice === 'standard' ? <View style={[styles.radioDot, live.radioDot]} /> : null}
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.optionText, live.optionText]}>
+          <Text style={[styles.optionText, live.optionText]}>
             I'm new to this and want Volyume's standard safety checks to apply.
           </Text>
         </Pressable>
         </View>
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
+        <Text style={[styles.body, live.body]}>
           Either choice keeps the absolute safety floor (eating below the minimum lean-mass energy threshold) in place.
         </Text>
 
         <View style={styles.note}>
           <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.noteText, live.noteText]}>
+          <Text style={[styles.noteText, live.noteText]}>
             You can change this any time from You → Goal lock.
           </Text>
         </View>
@@ -152,7 +152,7 @@ export default function GoalLockConsentScreen({ navigation, route }) {
           accessibilityState={{ disabled: !choice || busy }}
           accessibilityLabel={editMode ? 'Save' : 'Continue'}
         >
-          <Text maxFontSizeMultiplier={1.3} style={[styles.ctaText, live.ctaText]}>{editMode ? 'Save' : 'Continue'}</Text>
+          <Text style={[styles.ctaText, live.ctaText]}>{editMode ? 'Save' : 'Continue'}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

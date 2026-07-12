@@ -195,12 +195,12 @@ function PrefRow({
               accessibilityState={{ checked: selected, disabled: busy }}
               accessibilityLabel={`${label}: ${opt.label}`}
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.prefOptText, live.prefOptText, selected && [styles.prefOptTextOn, live.prefOptTextOn]]}>{opt.label}</Text>
+              <Text style={[styles.prefOptText, live.prefOptText, selected && [styles.prefOptTextOn, live.prefOptTextOn]]}>{opt.label}</Text>
             </TouchableOpacity>
           );
         })}
       </View>
-      {help ? <Text maxFontSizeMultiplier={1.3} style={[styles.prefHelp, live.prefHelp]}>{help}</Text> : null}
+      {help ? <Text style={[styles.prefHelp, live.prefHelp]}>{help}</Text> : null}
     </View>
   );
 }
@@ -859,22 +859,22 @@ export default function MealPlanScreen({ navigation, route }) {
           <View style={[styles.emptyIcon, live.emptyIcon]}>
             <Ionicons name="restaurant-outline" size={30} color={t.colors.primary} />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.emptyTitle, live.emptyTitle]}>Meal builder</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.emptyBody, live.emptyBody]}>
+          <Text style={[styles.emptyTitle, live.emptyTitle]}>Meal builder</Text>
+          <Text style={[styles.emptyBody, live.emptyBody]}>
             Build meals from your targets, review them, then add the ones you want to your diary.
           </Text>
           <View style={styles.emptySteps} accessibilityLabel="Meal planning steps">
             <View style={[styles.emptyStep, live.emptyStep]}>
               <Ionicons name="analytics-outline" size={16} color={t.colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.emptyStepText, live.emptyStepText]}>Uses your calories and macros</Text>
+              <Text style={[styles.emptyStepText, live.emptyStepText]}>Uses your calories and macros</Text>
             </View>
             <View style={[styles.emptyStep, live.emptyStep]}>
               <Ionicons name="options-outline" size={16} color={t.colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.emptyStepText, live.emptyStepText]}>Follows your meal preferences</Text>
+              <Text style={[styles.emptyStepText, live.emptyStepText]}>Follows your meal preferences</Text>
             </View>
             <View style={[styles.emptyStep, live.emptyStep]}>
               <Ionicons name="checkmark-circle-outline" size={16} color={t.colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.emptyStepText, live.emptyStepText]}>Nothing is logged until you add it</Text>
+              <Text style={[styles.emptyStepText, live.emptyStepText]}>Nothing is logged until you add it</Text>
             </View>
           </View>
 
@@ -884,11 +884,11 @@ export default function MealPlanScreen({ navigation, route }) {
                 <Ionicons name="options-outline" size={18} color={t.colors.primary} />
               </View>
               <View style={styles.prefsToggleCopy}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.prefsToggleText, live.prefsToggleText]}>Meal preferences</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.prefsToggleSub, live.prefsToggleSub]}>{prefSummary}</Text>
+                <Text style={[styles.prefsToggleText, live.prefsToggleText]}>Meal preferences</Text>
+                <Text style={[styles.prefsToggleSub, live.prefsToggleSub]}>{prefSummary}</Text>
               </View>
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.preferencesHint, live.preferencesHint]}>Set these first. The plan uses them for today or the week.</Text>
+            <Text style={[styles.preferencesHint, live.preferencesHint]}>Set these first. The plan uses them for today or the week.</Text>
           </View>
           <View style={[styles.prefsPanel, live.prefsPanel]}>
             <MealPreferencesControls prefs={prefs} busy={busy} onSetPref={handleSetPref} dietSummary={dietSummary} onOpenDietary={handleOpenDietary} />
@@ -897,9 +897,9 @@ export default function MealPlanScreen({ navigation, route }) {
           <Card style={styles.planOption}>
             <View style={styles.planOptionHead}>
               <Ionicons name="today-outline" size={18} color={t.colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.planOptionTitle, live.planOptionTitle]}>{planStartDate === todayLocalKey() ? 'Today' : planStartLabel}</Text>
+              <Text style={[styles.planOptionTitle, live.planOptionTitle]}>{planStartDate === todayLocalKey() ? 'Today' : planStartLabel}</Text>
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.planOptionDesc, live.planOptionDesc]}>
+            <Text style={[styles.planOptionDesc, live.planOptionDesc]}>
               Build meals for today only. Good when you want it organised quickly.
             </Text>
             <Button title="Build today" onPress={handleGenerateDay} loading={busy} fullWidth />
@@ -908,9 +908,9 @@ export default function MealPlanScreen({ navigation, route }) {
           <Card style={styles.planOption}>
             <View style={styles.planOptionHead}>
               <Ionicons name="calendar-outline" size={18} color={t.colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.planOptionTitle, live.planOptionTitle]}>Week ahead</Text>
+              <Text style={[styles.planOptionTitle, live.planOptionTitle]}>Week ahead</Text>
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.planOptionDesc, live.planOptionDesc]}>
+            <Text style={[styles.planOptionDesc, live.planOptionDesc]}>
               Build seven dated days and a shopping list. Existing logged food is left alone.
             </Text>
             <Button title="Build week" variant="secondary" onPress={handleGenerateWeek} loading={busy} fullWidth />
@@ -939,7 +939,7 @@ export default function MealPlanScreen({ navigation, route }) {
                     accessibilityState={{ selected }}
                     accessibilityLabel={cycleOn ? `${dayLabels[i]?.accessibility}, ${variant === 'training' ? 'training day' : 'rest day'}` : dayLabels[i]?.accessibility}
                   >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.dayLetter, live.dayLetter, selected && [styles.dayLetterOn, live.dayLetterOn]]}>{dayLabels[i]?.tab || `Day ${i + 1}`}</Text>
+                    <Text style={[styles.dayLetter, live.dayLetter, selected && [styles.dayLetterOn, live.dayLetterOn]]}>{dayLabels[i]?.tab || `Day ${i + 1}`}</Text>
                     <View style={[styles.dayDot, live.dayDot, variant === 'training' && cycleOn && [styles.dayDotTrain, live.dayDotTrain]]} />
                   </TouchableOpacity>
                 );
@@ -953,17 +953,17 @@ export default function MealPlanScreen({ navigation, route }) {
               "the whole number, the same every day". */}
           <View style={styles.dayHeader}>
             <View style={styles.dayTitleGroup}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.dayLabel, live.dayLabel]}>{activeDayLabel}</Text>
+              <Text style={[styles.dayLabel, live.dayLabel]}>{activeDayLabel}</Text>
               {cycleOn ? (
                 <View style={[styles.typeChip, live.typeChip]}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.typeChipText, live.typeChipText]}>{dayTypeLabel}</Text>
+                  <Text style={[styles.typeChipText, live.typeChipText]}>{dayTypeLabel}</Text>
                 </View>
               ) : null}
             </View>
             {day ? (
-              <Text style={[styles.dayKcal, live.dayKcal]} maxFontSizeMultiplier={1.3}>
+              <Text style={[styles.dayKcal, live.dayKcal]}>
                 {formatEnergy(day.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)}
-                {target ? <Text maxFontSizeMultiplier={1.3} style={[styles.dayKcalTarget, live.dayKcalTarget]}>{`  of ${formatEnergy(day.target?.kcal ?? plan.variants?.[day.variant]?.kcal ?? target.targetKcal, energyUnit)}`}</Text> : null}
+                {target ? <Text style={[styles.dayKcalTarget, live.dayKcalTarget]}>{`  of ${formatEnergy(day.target?.kcal ?? plan.variants?.[day.variant]?.kcal ?? target.targetKcal, energyUnit)}`}</Text> : null}
               </Text>
             ) : null}
           </View>
@@ -984,11 +984,11 @@ export default function MealPlanScreen({ navigation, route }) {
             />
           ) : null}
           {cycleOn ? (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.cycleNote, live.cycleNote]}>
+            <Text style={[styles.cycleNote, live.cycleNote]}>
               Training days carry more carbs; rest days fewer. Protein never moves.
             </Text>
           ) : null}
-          {honestyLine ? <Text maxFontSizeMultiplier={1.3} style={[styles.honesty, live.honesty]}>{honestyLine}</Text> : null}
+          {honestyLine ? <Text style={[styles.honesty, live.honesty]}>{honestyLine}</Text> : null}
 
           {/* Campaign item 4 (dietary-needs discoverability), inline per the
               founder ask 2026-07-10: a quiet chip on this primary surface,
@@ -1028,12 +1028,12 @@ export default function MealPlanScreen({ navigation, route }) {
                 <Ionicons name="options-outline" size={18} color={t.colors.primary} />
               </View>
               <View style={styles.prefsToggleCopy}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.prefsToggleText, live.prefsToggleText]}>Meal preferences</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.prefsToggleSub, live.prefsToggleSub]}>{prefSummary}</Text>
+                <Text style={[styles.prefsToggleText, live.prefsToggleText]}>Meal preferences</Text>
+                <Text style={[styles.prefsToggleSub, live.prefsToggleSub]}>{prefSummary}</Text>
               </View>
               <Ionicons name={prefsOpen ? 'chevron-up' : 'chevron-down'} size={18} color={t.colors.textSecondary} />
             </TouchableOpacity>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.preferencesHint, live.preferencesHint]}>Set these before you add the plan. Changes update the meals around the same targets.</Text>
+            <Text style={[styles.preferencesHint, live.preferencesHint]}>Set these before you add the plan. Changes update the meals around the same targets.</Text>
           </View>
           {prefsOpen ? (
             <View style={[styles.prefsPanel, live.prefsPanel]}>
@@ -1042,8 +1042,8 @@ export default function MealPlanScreen({ navigation, route }) {
           ) : null}
 
           <View style={styles.reviewHeader}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.reviewTitle, live.reviewTitle]}>Review meals</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.reviewSub, live.reviewSub]}>
+            <Text style={[styles.reviewTitle, live.reviewTitle]}>Review meals</Text>
+            <Text style={[styles.reviewSub, live.reviewSub]}>
               {hasSwappableFoods
                 ? 'Tap a food to swap it. Hold a swappable food to leave it out of future plans.'
                 : 'Review the meals and add the plan when it looks right.'}
@@ -1053,7 +1053,7 @@ export default function MealPlanScreen({ navigation, route }) {
           {/* Season-to-taste intro, shown once above the meals (founder 2026-07-01:
               novices don't realise a suggested meal is a base they can season and
               build on). British English and flavour-first. */}
-          <Text maxFontSizeMultiplier={1.3} style={[styles.seasonIntro, live.seasonIntro]}>{ADDITIONS_INTRO}</Text>
+          <Text style={[styles.seasonIntro, live.seasonIntro]}>{ADDITIONS_INTRO}</Text>
 
           {/* Meals */}
           {(day?.slots || []).map((slot) => {
@@ -1068,9 +1068,9 @@ export default function MealPlanScreen({ navigation, route }) {
                 >
                   <View style={styles.mealHead}>
                     <SectionLabel style={styles.mealSlot} numberOfLines={1} ellipsizeMode="tail">{planSlotLabel(slot.slot)}</SectionLabel>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.mealKcal, live.mealKcal]}>{formatEnergy(slot.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+                    <Text style={[styles.mealKcal, live.mealKcal]}>{formatEnergy(slot.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
                   </View>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.mealName, live.mealName]} numberOfLines={2} ellipsizeMode="tail">{slot.name}</Text>
+                  <Text style={[styles.mealName, live.mealName]} numberOfLines={2} ellipsizeMode="tail">{slot.name}</Text>
                 </TouchableOpacity>
                 {open ? (
                   <View style={styles.mealDetail}>
@@ -1095,12 +1095,12 @@ export default function MealPlanScreen({ navigation, route }) {
                             accessibilityRole={canSwap ? 'button' : 'text'}
                             accessibilityLabel={canSwap ? `${it.quantityG} grams ${it.name}. Tap to swap, long press to leave it out for good.` : `${it.quantityG} grams ${it.name}`}
                           >
-                            <Text style={[styles.itemLine, live.itemLine]} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={1.3}>{`${formatNumber(it.quantityG)} g ${it.name}`}</Text>
+                            <Text style={[styles.itemLine, live.itemLine]} numberOfLines={1} ellipsizeMode="tail">{`${formatNumber(it.quantityG)} g ${it.name}`}</Text>
                             {canSwap ? <Ionicons name="swap-horizontal-outline" size={13} color={t.colors.textSecondary} /> : null}
                           </TouchableOpacity>
                           {nativeWeightState ? (
                             <View style={styles.weightChoiceRow}>
-                              <Text maxFontSizeMultiplier={1.3} style={[styles.weightChoiceLabel, live.weightChoiceLabel]}>Weighed</Text>
+                              <Text style={[styles.weightChoiceLabel, live.weightChoiceLabel]}>Weighed</Text>
                               <Chip
                                 label="Raw"
                                 selected={weightState === 'raw'}
@@ -1128,7 +1128,7 @@ export default function MealPlanScreen({ navigation, route }) {
                         </View>
                       );
                     })}
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.macroLine, live.macroLine]} numberOfLines={1} ellipsizeMode="tail">
+                    <Text style={[styles.macroLine, live.macroLine]} numberOfLines={1} ellipsizeMode="tail">
                       {`P ${formatNumber(slot.totals.protein)} g - C ${formatNumber(slot.totals.carbs)} g - F ${formatNumber(slot.totals.fat)} g`}
                     </Text>
                     {/* Season to taste: the free additions that suit this meal
@@ -1145,10 +1145,10 @@ export default function MealPlanScreen({ navigation, route }) {
                       if (!adds || !adds.length) return null;
                       return (
                         <View style={[styles.seasonWrap, live.seasonWrap]}>
-                          <Text maxFontSizeMultiplier={1.3} style={[styles.seasonLabel, live.seasonLabel]}>Season to taste</Text>
+                          <Text style={[styles.seasonLabel, live.seasonLabel]}>Season to taste</Text>
                           {adds.map((a) => (
-                            <Text maxFontSizeMultiplier={1.3} key={a.name} style={[styles.seasonLine, live.seasonLine]}>
-                              <Text maxFontSizeMultiplier={1.3} style={[styles.seasonName, live.seasonName]}>{a.name}. </Text>
+                            <Text key={a.name} style={[styles.seasonLine, live.seasonLine]}>
+                              <Text style={[styles.seasonName, live.seasonName]}>{a.name}. </Text>
                               {a.why}
                             </Text>
                           ))}
@@ -1176,8 +1176,8 @@ export default function MealPlanScreen({ navigation, route }) {
           {/* Day totals */}
           {day ? (
             <View style={styles.totalsRow}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.totalsLabel, live.totalsLabel]}>Day total</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.totalsText, live.totalsText]}>
+              <Text style={[styles.totalsLabel, live.totalsLabel]}>Day total</Text>
+              <Text style={[styles.totalsText, live.totalsText]}>
                 {`${formatEnergy(day.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${formatNumber(day.totals.protein)} g - C ${formatNumber(day.totals.carbs)} g - F ${formatNumber(day.totals.fat)} g`}
               </Text>
             </View>
@@ -1189,8 +1189,8 @@ export default function MealPlanScreen({ navigation, route }) {
                 <Ionicons name={isDayPlan ? 'today-outline' : 'calendar-outline'} size={18} color={t.colors.primary} />
               </View>
               <View style={styles.planActionCopy}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.planActionTitle, live.planActionTitle]}>{isDayPlan ? `Ready to add ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}` : `Ready to add ${planStartLabel} onwards`}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.planActionSub, live.planActionSub]}>
+                <Text style={[styles.planActionTitle, live.planActionTitle]}>{isDayPlan ? `Ready to add ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}` : `Ready to add ${planStartLabel} onwards`}</Text>
+                <Text style={[styles.planActionSub, live.planActionSub]}>
                   {isDayPlan
                     ? 'Adds these meals to today. Existing logged food is left alone.'
                     : 'Adds the week from the date shown. Any day that already has food logged is left alone.'}
@@ -1268,8 +1268,8 @@ export default function MealPlanScreen({ navigation, route }) {
       >
         {swapSheet ? (
           <>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.swapSheetTitle, live.swapSheetTitle]}>Swap this meal</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.swapSheetSub, live.swapSheetSub]}>
+            <Text style={[styles.swapSheetTitle, live.swapSheetTitle]}>Swap this meal</Text>
+            <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
               Pick any one. Each keeps the day close to your target; the first is the closest match.
             </Text>
             <ScrollView
@@ -1290,10 +1290,10 @@ export default function MealPlanScreen({ navigation, route }) {
                   accessibilityLabel={`${meal.name}, ${formatEnergy(meal.totals.kcal, energyUnit)} ${energyWord}, ${meal.totals.protein} grams protein${recommended ? '. Closest match.' : ''}`}
                 >
                   <View style={styles.swapOptionMain}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.swapOptionName, live.swapOptionName]}>{meal.name}</Text>
-                    {recommended ? <Text maxFontSizeMultiplier={1.3} style={[styles.swapOptionTag, live.swapOptionTag]}>Closest match</Text> : null}
+                    <Text style={[styles.swapOptionName, live.swapOptionName]}>{meal.name}</Text>
+                    {recommended ? <Text style={[styles.swapOptionTag, live.swapOptionTag]}>Closest match</Text> : null}
                   </View>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.swapOptionMacros, live.swapOptionMacros]}>
+                  <Text style={[styles.swapOptionMacros, live.swapOptionMacros]}>
                     {`${formatEnergy(meal.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${meal.totals.protein} g`}
                   </Text>
                 </TouchableOpacity>
@@ -1313,8 +1313,8 @@ export default function MealPlanScreen({ navigation, route }) {
       >
         {foodSwapSheet ? (
           <>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.swapSheetTitle, live.swapSheetTitle]}>Swap this food</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.swapSheetSub, live.swapSheetSub]}>
+            <Text style={[styles.swapSheetTitle, live.swapSheetTitle]}>Swap this food</Text>
+            <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
               Pick any one. Grams are solved to match, so the meal stays close to target; the first is the closest match.
             </Text>
             <ScrollView
@@ -1332,10 +1332,10 @@ export default function MealPlanScreen({ navigation, route }) {
                   accessibilityLabel={`${name}, ${formatEnergy(totals.kcal, energyUnit)} ${energyWord}, ${totals.protein} grams protein${i === 0 ? '. Closest match.' : ''}`}
                 >
                   <View style={styles.swapOptionMain}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.swapOptionName, live.swapOptionName]}>{name}</Text>
-                    {i === 0 ? <Text maxFontSizeMultiplier={1.3} style={[styles.swapOptionTag, live.swapOptionTag]}>Closest match</Text> : null}
+                    <Text style={[styles.swapOptionName, live.swapOptionName]}>{name}</Text>
+                    {i === 0 ? <Text style={[styles.swapOptionTag, live.swapOptionTag]}>Closest match</Text> : null}
                   </View>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.swapOptionMacros, live.swapOptionMacros]}>
+                  <Text style={[styles.swapOptionMacros, live.swapOptionMacros]}>
                     {`${formatEnergy(totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${totals.protein} g`}
                   </Text>
                 </TouchableOpacity>
@@ -1356,7 +1356,7 @@ export default function MealPlanScreen({ navigation, route }) {
         {grocerySheet ? (
           <>
             <View style={styles.grocerySheetHead}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.swapSheetTitle, live.swapSheetTitle]}>Shopping list</Text>
+              <Text style={[styles.swapSheetTitle, live.swapSheetTitle]}>Shopping list</Text>
               {!grocerySheet.isEmpty ? (
                 <Button
                   title="Share"
@@ -1372,12 +1372,12 @@ export default function MealPlanScreen({ navigation, route }) {
               ) : null}
             </View>
             {grocerySheet.isEmpty ? (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.swapSheetSub, live.swapSheetSub]}>
+              <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
                 Nothing to shop for yet. Create a plan and your list fills in.
               </Text>
             ) : (
               <>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.swapSheetSub, live.swapSheetSub]}>
+                <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
                   {grocerySheet.dayCount === 1
                     ? "Everything in today's plan."
                     : `Totals for the whole week across ${grocerySheet.dayCount} days.`}
@@ -1392,11 +1392,11 @@ export default function MealPlanScreen({ navigation, route }) {
                       <SectionLabel style={styles.grocerySectionLabel}>{section.label}</SectionLabel>
                       {section.items.map((item, i) => (
                         <View key={`${section.label}-${item.name}-${i}`} style={[styles.groceryRow, live.groceryRow]}>
-                          <Text maxFontSizeMultiplier={1.3} style={[styles.groceryName, live.groceryName]}>
+                          <Text style={[styles.groceryName, live.groceryName]}>
                             {item.name}{item.count ? ` x${item.count}` : ''}
                           </Text>
                           {item.grams != null ? (
-                            <Text maxFontSizeMultiplier={1.3} style={[styles.groceryQty, live.groceryQty]}>{formatNumber(item.grams)} g</Text>
+                            <Text style={[styles.groceryQty, live.groceryQty]}>{formatNumber(item.grams)} g</Text>
                           ) : null}
                         </View>
                       ))}
@@ -1417,8 +1417,8 @@ export default function MealPlanScreen({ navigation, route }) {
         onClose={() => setRepeatSheet(false)}
         accessibilityLabel="Repeat this day"
       >
-        <Text maxFontSizeMultiplier={1.3} style={[styles.swapSheetTitle, live.swapSheetTitle]}>Repeat this day</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.swapSheetSub, live.swapSheetSub]}>
+        <Text style={[styles.swapSheetTitle, live.swapSheetTitle]}>Repeat this day</Text>
+        <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
           {`Copy ${activeDayLabel}'s meals onto another day. That day's current meals are replaced.`}
         </Text>
         <ScrollView
@@ -1435,7 +1435,7 @@ export default function MealPlanScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel={`Copy meals onto ${label.accessibility}`}
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.swapOptionName, live.swapOptionName]}>{label.date}</Text>
+              <Text style={[styles.swapOptionName, live.swapOptionName]}>{label.date}</Text>
             </TouchableOpacity>
           )))}
         </ScrollView>
@@ -1468,8 +1468,8 @@ export default function MealPlanScreen({ navigation, route }) {
         accessibilityLabel="Dietary needs"
         scroll
       >
-        <Text maxFontSizeMultiplier={1.3} style={[styles.swapSheetTitle, live.swapSheetTitle]}>Dietary needs</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.swapSheetSub, live.swapSheetSub]}>
+        <Text style={[styles.swapSheetTitle, live.swapSheetTitle]}>Dietary needs</Text>
+        <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
           This is the same selection as Settings. A change here updates everywhere.
         </Text>
         <DietaryPreferencesEditor />

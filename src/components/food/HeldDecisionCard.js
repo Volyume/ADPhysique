@@ -38,10 +38,10 @@ export default function HeldDecisionCard({ type, body, onWhy }) {
     <View style={[styles.card, live.card]} accessibilityRole="text">
       <View style={styles.badgeRow}>
         <View style={[styles.badge, live.badge]}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.badgeText, live.badgeText]}>Held this week</Text>
+          <Text style={[styles.badgeText, live.badgeText]}>Held this week</Text>
         </View>
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>{body}</Text>
+      <Text style={[styles.body, live.body]}>{body}</Text>
       {onWhy ? (
         <Pressable
           onPress={onWhy}
@@ -50,7 +50,7 @@ export default function HeldDecisionCard({ type, body, onWhy }) {
           hitSlop={8}
           style={({ pressed }) => [pressed && { opacity: 0.7 }]}
         >
-          <Text maxFontSizeMultiplier={1.3} style={[styles.why, live.why]}>Why?</Text>
+          <Text style={[styles.why, live.why]}>Why?</Text>
         </Pressable>
       ) : null}
       {type === 'ed_pattern' ? (
@@ -60,7 +60,7 @@ export default function HeldDecisionCard({ type, body, onWhy }) {
           accessibilityLabel="Open Beat support"
           style={({ pressed }) => [styles.supportButton, live.supportButton, pressed && { opacity: 0.7 }]}
         >
-          <Text maxFontSizeMultiplier={1.3} style={[styles.supportText, live.supportText]}>Get support</Text>
+          <Text style={[styles.supportText, live.supportText]}>Get support</Text>
         </Pressable>
       ) : null}
     </View>

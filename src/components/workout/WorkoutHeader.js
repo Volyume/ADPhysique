@@ -47,11 +47,11 @@ export default function WorkoutHeader({
       </View>
 
       <View style={styles.elapsedWrap} accessible accessibilityLabel={`Elapsed ${elapsedStr}${timeCrunchActive ? ', time crunch active' : ''}`}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.elapsedLabel, { ...t.type.overline, color: t.colors.textMuted }]}>
+        <Text style={[styles.elapsedLabel, { ...t.type.overline, color: t.colors.textMuted }]}>
           Elapsed
         </Text>
         <View style={styles.elapsedValueRow}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.elapsedValue, { ...t.type.num('title'), color: t.colors.textPrimary }]}>
+          <Text style={[styles.elapsedValue, { ...t.type.num('title'), color: t.colors.textPrimary }]}>
             {elapsedStr}
           </Text>
           {timeCrunchActive ? (
@@ -71,7 +71,7 @@ export default function WorkoutHeader({
             accessibilityLabel="Finish workout"
           >
             <Ionicons name="checkmark-done" size={iconSize.sm} color={t.colors.textPrimary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.finishText, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
+            <Text style={[styles.finishText, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
               Finish
             </Text>
           </TouchableOpacity>

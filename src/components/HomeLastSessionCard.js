@@ -42,10 +42,10 @@ function HomeLastSessionCard({ lastSession, lastSessionTonnage, relativeDay, onO
       accessibilityLabel="Open workout history"
     >
       <View style={{ flex: 1, gap: spacing.xxs }}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.lastSessionLabel, live.lastSessionLabel]}>
+        <Text style={[styles.lastSessionLabel, live.lastSessionLabel]}>
           Last session - {relativeDay}
         </Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.lastSessionName, live.lastSessionName]} numberOfLines={1}>
+        <Text style={[styles.lastSessionName, live.lastSessionName]} numberOfLines={1}>
           {/* Prefer the plan-day name (routineName, e.g. "Day 2: Back Width
               & Thickness"). The workout's own `name` is overwritten at
               finish with an exercise-derived summary ("Cable & Iso-Lateral"),
@@ -54,7 +54,7 @@ function HomeLastSessionCard({ lastSession, lastSessionTonnage, relativeDay, onO
           {lastSession.routineName || lastSession.name || 'Session'}
         </Text>
         {meta ? (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.lastSessionMeta, live.lastSessionMeta]} numberOfLines={1}>{meta}</Text>
+          <Text style={[styles.lastSessionMeta, live.lastSessionMeta]} numberOfLines={1}>{meta}</Text>
         ) : null}
       </View>
       {/* R9 (D70, lead correction): the original chip's colours (primaryBg

@@ -82,7 +82,7 @@ function CardioTrend({ weeks, goal }) {
   const resolveMarkStyle = buildMarkStyle(t.colors);
   return (
     <View style={[styles.trend, live.trend]}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.trendLabel, live.trendLabel]}>How often you did your cardio</Text>
+      <Text style={[styles.trendLabel, live.trendLabel]}>How often you did your cardio</Text>
       {weeks.map((w, idx) => {
         const when = cardioTrendWhenLabel(w, idx);
         const mark = goal > 0 ? cardioVerdictLabel(w.verdict) : null;
@@ -93,13 +93,13 @@ function CardioTrend({ weeks, goal }) {
             accessible
             accessibilityLabel={cardioTrendAccessibilityLabel({ when, sessions: w.sessions, goal, mark })}
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.trendWhen, live.trendWhen]}>{when}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.trendCount, live.trendCount]}>{goal > 0 ? `${w.sessions} of ${goal}` : `${w.sessions}`}</Text>
-            {mark ? <Text maxFontSizeMultiplier={1.3} style={[styles.trendMark, live.trendMark, resolveMarkStyle(w.verdict)]}>{mark}</Text> : null}
+            <Text style={[styles.trendWhen, live.trendWhen]}>{when}</Text>
+            <Text style={[styles.trendCount, live.trendCount]}>{goal > 0 ? `${w.sessions} of ${goal}` : `${w.sessions}`}</Text>
+            {mark ? <Text style={[styles.trendMark, live.trendMark, resolveMarkStyle(w.verdict)]}>{mark}</Text> : null}
           </View>
         );
       })}
-      <Text maxFontSizeMultiplier={1.3} style={[styles.trendFootnote, live.trendFootnote]}>
+      <Text style={[styles.trendFootnote, live.trendFootnote]}>
         {goal > 0
           ? 'Sessions you logged each week, compared with your current cardio target.'
           : 'Sessions you logged each week. The coach sets a target only if a cut stalls.'}
@@ -237,13 +237,13 @@ export default function CardioHistoryScreen() {
           ) : (
             <View style={[styles.row, live.row]}>
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.activity, live.activity]}>{item.activityName}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.meta, live.meta]}>
+                <Text style={[styles.activity, live.activity]}>{item.activityName}</Text>
+                <Text style={[styles.meta, live.meta]}>
                   {item.durationMin} min · {INTENSITY_LABEL[item.intensity] || item.intensity}
                   {item.estKcal != null ? ` · ~${toEnergy(item.estKcal, energyUnit)} ${energyUnitLabel(energyUnit)}` : ''}
                 </Text>
                 {cardioSourceLabel(item.source) ? (
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.sourceTag, live.sourceTag]}>from {cardioSourceLabel(item.source)}</Text>
+                  <Text style={[styles.sourceTag, live.sourceTag]}>from {cardioSourceLabel(item.source)}</Text>
                 ) : null}
               </View>
               <TouchableOpacity onPress={() => confirmDelete(item)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${item.activityName} session`}>

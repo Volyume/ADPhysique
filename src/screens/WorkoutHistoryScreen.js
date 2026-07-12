@@ -391,16 +391,16 @@ export default function WorkoutHistoryScreen({ navigation }) {
         >
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.cardDate, live.cardDate]}>{format(date, 'd MMM yyyy')}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.cardTime, live.cardTime]}>{calendarRelativeLabel(workoutDayMs(workout))}</Text>
+              <Text style={[styles.cardDate, live.cardDate]}>{format(date, 'd MMM yyyy')}</Text>
+              <Text style={[styles.cardTime, live.cardTime]}>{calendarRelativeLabel(workoutDayMs(workout))}</Text>
             </View>
             <View style={styles.cardHeaderRight}>
               <View style={styles.cardMeta}>
                 <Ionicons name="time-outline" size={14} color={t.colors.textMuted} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.cardMetaText, live.cardMetaText]}>{workout.durationMinutes || 0}m</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.cardMetaDivider, live.cardMetaDivider]}>-</Text>
+                <Text style={[styles.cardMetaText, live.cardMetaText]}>{workout.durationMinutes || 0}m</Text>
+                <Text style={[styles.cardMetaDivider, live.cardMetaDivider]}>-</Text>
                 <Ionicons name="layers-outline" size={14} color={t.colors.textMuted} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.cardMetaText, live.cardMetaText]}>{workingSetCount} sets</Text>
+                <Text style={[styles.cardMetaText, live.cardMetaText]}>{workingSetCount} sets</Text>
               </View>
               <Ionicons
                 name={isExpanded ? 'chevron-up' : 'chevron-down'}
@@ -410,7 +410,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
               />
             </View>
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseList, live.exerciseList]} numberOfLines={isExpanded ? undefined : 2}>
+          <Text style={[styles.exerciseList, live.exerciseList]} numberOfLines={isExpanded ? undefined : 2}>
             {exerciseNames.join(', ') || 'No exercises logged'}
           </Text>
         </PressableCard>
@@ -422,15 +422,15 @@ export default function WorkoutHistoryScreen({ navigation }) {
             <View style={styles.statChipRow}>
               {!!workout.durationMinutes && (
                 <View style={[styles.statChip, live.statChip]}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.statChipText, live.statChipText]}>{workout.durationMinutes} min</Text>
+                  <Text style={[styles.statChipText, live.statChipText]}>{workout.durationMinutes} min</Text>
                 </View>
               )}
               <View style={[styles.statChip, live.statChip]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.statChipText, live.statChipText]}>{workingSetCount} working set{workingSetCount !== 1 ? 's' : ''}</Text>
+                <Text style={[styles.statChipText, live.statChipText]}>{workingSetCount} working set{workingSetCount !== 1 ? 's' : ''}</Text>
               </View>
               {tonnage > 0 && (
                 <View style={[styles.statChip, live.statChip]}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.statChipText, live.statChipText]}>{formatWithUnit(formatNumber(Math.round(tonnage)), 'kg')} lifted</Text>
+                  <Text style={[styles.statChipText, live.statChipText]}>{formatWithUnit(formatNumber(Math.round(tonnage)), 'kg')} lifted</Text>
                 </View>
               )}
             </View>
@@ -446,10 +446,10 @@ export default function WorkoutHistoryScreen({ navigation }) {
                     accessibilityRole="button"
                     accessibilityLabel={`See progress for ${ex.name}`}
                   >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseBreakdownName, live.exerciseBreakdownName]} numberOfLines={1}>
+                    <Text style={[styles.exerciseBreakdownName, live.exerciseBreakdownName]} numberOfLines={1}>
                       {ex.name}
                     </Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseBreakdownSummary, live.exerciseBreakdownSummary]} numberOfLines={1}>
+                    <Text style={[styles.exerciseBreakdownSummary, live.exerciseBreakdownSummary]} numberOfLines={1}>
                       {ex.summary}
                     </Text>
                     <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
@@ -458,7 +458,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
               </View>
             ) : (
               <View style={styles.exerciseBreakdown}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.loadingText, live.loadingText]}>Loading exercises…</Text>
+                <Text style={[styles.loadingText, live.loadingText]}>Loading exercises…</Text>
               </View>
             )}
 
@@ -466,7 +466,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
             {!!workout.notes && (
               <View style={[styles.notesRow, live.notesRow]}>
                 <Ionicons name="document-text-outline" size={13} color={t.colors.textMuted} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.notesText, live.notesText]}>{workout.notes}</Text>
+                <Text style={[styles.notesText, live.notesText]}>{workout.notes}</Text>
               </View>
             )}
 
@@ -598,7 +598,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
         >
           <Ionicons name="chevron-back" size={20} color={t.colors.textSecondary} />
         </TouchableOpacity>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.calendarMonthTitle, live.calendarMonthTitle]}>{format(calendarDate, 'MMMM yyyy')}</Text>
+        <Text style={[styles.calendarMonthTitle, live.calendarMonthTitle]}>{format(calendarDate, 'MMMM yyyy')}</Text>
         <TouchableOpacity
           onPress={() => {
             setCalendarDate(prev => addMonths(prev, 1));
@@ -665,7 +665,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
                   live.dayNum,
                   trained && [styles.dayNumTrained, live.dayNumTrained],
                   isSelected && [styles.dayNumSelected, live.dayNumSelected],
-                ]} maxFontSizeMultiplier={1.3}>
+                ]}>
                   {dayNum}
                 </Text>
               </View>
@@ -680,7 +680,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
     <View style={styles.listHeaderWrap}>
       {/* Top bar: title + toggle */}
       <View style={styles.topBar}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.topBarTitle, live.topBarTitle]}>
+        <Text style={[styles.topBarTitle, live.topBarTitle]}>
           {workouts.length} session{workouts.length !== 1 ? 's' : ''}
         </Text>
         <TouchableOpacity
@@ -740,7 +740,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
           <View style={styles.calendarRow}>
             {DAY_HEADERS.map((h, i) => (
               <View key={i} style={styles.calendarCell}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.dayHeader, live.dayHeader]}>{h}</Text>
+                <Text style={[styles.dayHeader, live.dayHeader]}>{h}</Text>
               </View>
             ))}
           </View>

@@ -75,7 +75,7 @@ export default function AttentionCard({
       >
         <View style={styles.trialBannerTopRow}>
           <Ionicons name="checkmark-done-outline" size={18} color={t.colors.primary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.trialBannerText, live.trialBannerText]} numberOfLines={2}>{trialBanner.line}</Text>
+          <Text style={[styles.trialBannerText, live.trialBannerText]} numberOfLines={2}>{trialBanner.line}</Text>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
           <TouchableOpacity
             onPress={onTrialDismiss}
@@ -88,7 +88,7 @@ export default function AttentionCard({
         </View>
         {trialBanner.ledger?.rows?.length ? (
           <View style={styles.trialLedger}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.trialLedgerTitle, live.trialLedgerTitle]}>{trialBanner.ledger.title}</Text>
+            <Text style={[styles.trialLedgerTitle, live.trialLedgerTitle]}>{trialBanner.ledger.title}</Text>
             {trialBanner.ledger.rows.map((row) => (
               <View key={row.key} style={styles.trialLedgerRow}>
                 <Ionicons
@@ -96,7 +96,7 @@ export default function AttentionCard({
                   size={14}
                   color={row.done ? t.colors.success : t.colors.textMuted}
                 />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.trialLedgerRowText, live.trialLedgerRowText, row.done && [styles.trialLedgerRowTextDone, live.trialLedgerRowTextDone]]}>
+                <Text style={[styles.trialLedgerRowText, live.trialLedgerRowText, row.done && [styles.trialLedgerRowTextDone, live.trialLedgerRowTextDone]]}>
                   {row.label}
                 </Text>
               </View>
@@ -125,7 +125,7 @@ export default function AttentionCard({
       <View style={[styles.freeCoachCard, live.freeCoachCard]}>
         <View style={styles.freeCoachTopRow}>
           <Ionicons name="pulse-outline" size={16} color={t.colors.primary} style={{ marginTop: spacing.hair }} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.freeCoachLineText, live.freeCoachLineText]}>{freeCoachLine}</Text>
+          <Text style={[styles.freeCoachLineText, live.freeCoachLineText]}>{freeCoachLine}</Text>
           <TouchableOpacity
             onPress={onFreeLineDismiss}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

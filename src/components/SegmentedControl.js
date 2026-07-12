@@ -36,7 +36,6 @@ export default function SegmentedControl({ options, value, onChange, accessibili
             <Text
               style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}
               numberOfLines={1}
-              maxFontSizeMultiplier={1.3}
             >{opt.label}</Text>
           </TouchableOpacity>
         );

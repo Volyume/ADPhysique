@@ -43,7 +43,7 @@ test('date range fields are narrow-screen safe', () => {
   // `[styles.dateText, live.dateText]`), so the pin matches that form
   // instead of the bare `styles.dateText`. Same two call sites, same frozen
   // style object underneath, still asserted below.
-  expect(SOURCE.match(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.dateText, live\.dateText\]\} numberOfLines=\{1\} ellipsizeMode="tail">/g)).toHaveLength(2);
+  expect(SOURCE.match(/<Text style=\{\[styles\.dateText, live\.dateText\]\} numberOfLines=\{1\} ellipsizeMode="tail">/g)).toHaveLength(2);
   expect(SOURCE).toMatch(/sheetTitle: \{ \.\.\.type\.bodyStrong/);
 });
 

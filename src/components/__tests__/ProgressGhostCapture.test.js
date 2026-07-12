@@ -132,7 +132,7 @@ test('camera overlay has a compact short-screen layout path', () => {
   // theme (src/hooks/useTheme.js), so this Text's style prop moved from the
   // frozen `styles.countdownHint` alone to `[styles.countdownHint,
   // live.countdownHint]` -- the pinned layout/copy is unchanged.
-  expect(SOURCE).toMatch(/!\s*compactOverlay \? <Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.countdownHint, live\.countdownHint\]\}>Step into the frame<\/Text> : null/);
+  expect(SOURCE).toMatch(/!\s*compactOverlay \? <Text style=\{\[styles\.countdownHint, live\.countdownHint\]\}>Step into the frame<\/Text> : null/);
   expect(SOURCE).toMatch(/key: 'strong'/);
   expect(SOURCE).toMatch(/\$\{preset\.label\} overlay strength/);
   expect(SOURCE).toMatch(/useSafeAreaInsets/);

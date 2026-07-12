@@ -371,7 +371,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
               style={styles.importButton}
             />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.importHint, live.importHint]}>
+          <Text style={[styles.importHint, live.importHint]}>
             We match each ingredient to a food and add a rough amount. Check the amounts after importing.
           </Text>
         </View>
@@ -423,7 +423,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
 
         <View style={styles.section}>
           <View style={styles.ingHeader}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.label, live.label]}>Ingredients</Text>
+            <Text style={[styles.label, live.label]}>Ingredients</Text>
             <Button
               title="Add ingredient"
               icon="add"
@@ -438,15 +438,15 @@ export default function RecipeBuilderScreen({ navigation, route }) {
           </View>
 
           {ingredients.length === 0 ? (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.ingEmpty, live.ingEmpty]}>No ingredients yet. Add foods and the recipe macros will appear here.</Text>
+            <Text style={[styles.ingEmpty, live.ingEmpty]}>No ingredients yet. Add foods and the recipe macros will appear here.</Text>
           ) : ingredients.map((ing, i) => (
             <View key={`${ing.food_ref}-${i}`} style={[styles.ingRow, live.ingRow]}>
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.ingName, live.ingName]} numberOfLines={1}>
+                <Text style={[styles.ingName, live.ingName]} numberOfLines={1}>
                   {ing.food?.name ?? ing.food_ref}
                 </Text>
                 {ing.food?.brand ? (
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.ingBrand, live.ingBrand]} numberOfLines={1}>{ing.food.brand}</Text>
+                  <Text style={[styles.ingBrand, live.ingBrand]} numberOfLines={1}>{ing.food.brand}</Text>
                 ) : null}
               </View>
               <TextField
@@ -460,7 +460,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
                 fieldStyle={styles.qtyField}
                 inputStyle={[styles.qtyInput, live.qtyInput]}
               />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.qtyUnit, live.qtyUnit]}>g</Text>
+              <Text style={[styles.qtyUnit, live.qtyUnit]}>g</Text>
               <TouchableOpacity onPress={() => onRemove(i)} hitSlop={8} style={{ marginLeft: spacing.sm }} accessibilityRole="button" accessibilityLabel={`Remove ${ing.food?.name ?? ing.food_ref}`}>
                 <Ionicons name="close-circle" size={22} color={t.colors.textMuted} />
               </TouchableOpacity>
@@ -476,7 +476,7 @@ export default function RecipeBuilderScreen({ navigation, route }) {
             <MacroPill label="C" value={`${macros.perServing.carbs}g`} />
             <MacroPill label="F" value={`${macros.perServing.fat}g`} />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.macrosSub, live.macrosSub]}>
+          <Text style={[styles.macrosSub, live.macrosSub]}>
             Whole recipe: {toEnergy(macros.total.kcal, energyUnit)} {energyUnitLabel(energyUnit)} - P {macros.total.protein}g - C {macros.total.carbs}g - F {macros.total.fat}g
           </Text>
         </View>
@@ -496,8 +496,8 @@ function MacroPill({ label, value }) {
   const live = buildLiveStyles(t);
   return (
     <View style={[styles.pill, live.pill]}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.pillVal, live.pillVal]}>{value}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.pillLabel, live.pillLabel]}>{label}</Text>
+      <Text style={[styles.pillVal, live.pillVal]}>{value}</Text>
+      <Text style={[styles.pillLabel, live.pillLabel]}>{label}</Text>
     </View>
   );
 }

@@ -1342,8 +1342,8 @@ export default function DiaryScreen({ navigation, route }) {
             >
               <Ionicons name="calendar-outline" size={15} color={t.colors.textSecondary} />
               <View style={styles.dateCopy}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.dateLabel, live.dateLabel]}>{dateHeading}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.dateSubLabel, live.dateSubLabel]}>{dateSubCopy}</Text>
+                <Text style={[styles.dateLabel, live.dateLabel]}>{dateHeading}</Text>
+                <Text style={[styles.dateSubLabel, live.dateSubLabel]}>{dateSubCopy}</Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity
@@ -1358,7 +1358,7 @@ export default function DiaryScreen({ navigation, route }) {
           </View>
           {!isViewingToday ? (
             <TouchableOpacity onPress={() => { haptics.selection(); gotoToday(); }} hitSlop={10} style={[styles.todayPill, live.todayPill]} accessibilityRole="button" accessibilityLabel="Jump to today">
-              <Text maxFontSizeMultiplier={1.3} style={[styles.todayPillText, live.todayPillText]}>Today</Text>
+              <Text style={[styles.todayPillText, live.todayPillText]}>Today</Text>
             </TouchableOpacity>
           ) : null}
           {!readOnly ? (
@@ -1380,7 +1380,7 @@ export default function DiaryScreen({ navigation, route }) {
           <View style={[styles.readOnlyCard, live.readOnlyCard]}>
             <View style={styles.readOnlyRow}>
               <Ionicons name="eye-outline" size={16} color={t.colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.readOnlyText, live.readOnlyText]}>
+              <Text style={[styles.readOnlyText, live.readOnlyText]}>
                 Your diary is view-only on the free plan. Everything you logged is safe and stays yours.
               </Text>
             </View>
@@ -1391,7 +1391,7 @@ export default function DiaryScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Upgrade to Pro to log food again"
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.readOnlyCta, live.readOnlyCta]}>Upgrade to keep logging</Text>
+              <Text style={[styles.readOnlyCta, live.readOnlyCta]}>Upgrade to keep logging</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -1409,7 +1409,7 @@ export default function DiaryScreen({ navigation, route }) {
               accessibilityLabel="Targets updated. See why."
             >
               <Ionicons name="information-circle-outline" size={13} color={t.colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.targetsChangedText, live.targetsChangedText]}>Targets updated. See why</Text>
+              <Text style={[styles.targetsChangedText, live.targetsChangedText]}>Targets updated. See why</Text>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
           ) : null}
@@ -1439,7 +1439,7 @@ export default function DiaryScreen({ navigation, route }) {
               accessibilityLabel="Stop the training/rest-day split"
             >
               <Ionicons name="swap-horizontal-outline" size={13} color={t.colors.textMuted} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.targetModeText, live.targetModeText]}>Training and rest targets active. Tap to use one target.</Text>
+              <Text style={[styles.targetModeText, live.targetModeText]}>Training and rest targets active. Tap to use one target.</Text>
             </TouchableOpacity>
           ) : null}
           {!readOnly && refeed ? (
@@ -1450,7 +1450,7 @@ export default function DiaryScreen({ navigation, route }) {
               accessibilityLabel="Clear the scheduled refeed"
             >
               <Ionicons name="restaurant-outline" size={13} color={t.colors.textMuted} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.targetModeText, live.targetModeText]}>
+              <Text style={[styles.targetModeText, live.targetModeText]}>
                 {isRefeedDay ? 'Refeed day today. Tap to remove it.' : 'Refeed scheduled. Tap to remove it.'}
               </Text>
             </TouchableOpacity>
@@ -1459,7 +1459,7 @@ export default function DiaryScreen({ navigation, route }) {
 
         {showOffCard && !readOnly && selectedDate === isoDate(new Date()) ? (
           <View style={[styles.offCard, live.offCard]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.offCardText, live.offCardText]}>
+            <Text style={[styles.offCardText, live.offCardText]}>
               Share barcode fixes? This helps food searches improve for everyone. It is off by default and you choose.
             </Text>
             <View style={styles.offCardRow}>
@@ -1520,7 +1520,7 @@ export default function DiaryScreen({ navigation, route }) {
             // Read-only empty day: a plain fact, not a call to action (the
             // standard empty state's three CTAs are all writes).
             <View style={styles.readOnlyEmpty}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.readOnlyEmptyText, live.readOnlyEmptyText]}>Nothing logged this day.</Text>
+              <Text style={[styles.readOnlyEmptyText, live.readOnlyEmptyText]}>Nothing logged this day.</Text>
             </View>
           ) : (
             <EmptyDiary
@@ -1650,8 +1650,8 @@ export default function DiaryScreen({ navigation, route }) {
                     <Ionicons name="restaurant-outline" size={18} color={t.colors.textSecondary} />
                   </View>
                   <View style={styles.buildPlanCopy}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.buildPlanLabel, live.buildPlanLabel]}>Meal builder</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.buildPlanSub, live.buildPlanSub]}>Create today or the week from your targets. You review everything before it is logged.</Text>
+                    <Text style={[styles.buildPlanLabel, live.buildPlanLabel]}>Meal builder</Text>
+                    <Text style={[styles.buildPlanSub, live.buildPlanSub]}>Create today or the week from your targets. You review everything before it is logged.</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
                 </TouchableOpacity>
@@ -1682,7 +1682,7 @@ export default function DiaryScreen({ navigation, route }) {
             ED flag stays deliberately unnamed here. */}
         {!bankingAvailable && !selectionMode && !readOnly && !!targets
           && (macroCycle || refeed) && !edFlagOpen && !targetWasFloored(targets) ? (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.bankOffNote, live.bankOffNote]}>
+            <Text style={[styles.bankOffNote, live.bankOffNote]}>
               {macroCycle
                 ? 'Higher-calorie day planning is paused while the training/rest-day split is on.'
                 : 'Higher-calorie day planning is paused while a refeed is scheduled.'}
@@ -1708,7 +1708,7 @@ export default function DiaryScreen({ navigation, route }) {
             the meal sections, unchanged in behaviour, just relocated. */}
         {plannedCount > 0 && !selectionMode && !readOnly ? (
           <View style={[styles.plannedBanner, live.plannedBanner]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.plannedBannerText, live.plannedBannerText]}>
+            <Text style={[styles.plannedBannerText, live.plannedBannerText]}>
               {plannedCount} planned {plannedCount === 1 ? 'meal' : 'meals'} for this day.
               {isFutureDay ? ' Confirm them on the day once eaten.' : ' Mark them as eaten when you have them so they count in your day.'}
             </Text>
@@ -1767,8 +1767,8 @@ export default function DiaryScreen({ navigation, route }) {
         onClose={() => setSavedPickerSlot(null)}
         accessibilityLabel="Saved meals and recipes"
       >
-        <Text maxFontSizeMultiplier={1.3} style={[styles.savedFoodTitle, live.savedFoodTitle]}>Saved meals and recipes</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.savedFoodIntro, live.savedFoodIntro]}>Use a saved meal from your diary, or a recipe you built.</Text>
+        <Text style={[styles.savedFoodTitle, live.savedFoodTitle]}>Saved meals and recipes</Text>
+        <Text style={[styles.savedFoodIntro, live.savedFoodIntro]}>Use a saved meal from your diary, or a recipe you built.</Text>
         <TouchableOpacity
           style={styles.savedFoodOption}
           onPress={() => { haptics.selection(); openSavedFoodRoute('MyMeals'); }}
@@ -1779,8 +1779,8 @@ export default function DiaryScreen({ navigation, route }) {
             <Ionicons name="bookmark-outline" size={20} color={t.colors.primary} />
           </View>
           <View style={styles.savedFoodText}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.savedFoodOptionTitle, live.savedFoodOptionTitle]}>Saved meals</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.savedFoodOptionSub, live.savedFoodOptionSub]}>Foods you saved together from the diary.</Text>
+            <Text style={[styles.savedFoodOptionTitle, live.savedFoodOptionTitle]}>Saved meals</Text>
+            <Text style={[styles.savedFoodOptionSub, live.savedFoodOptionSub]}>Foods you saved together from the diary.</Text>
           </View>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
@@ -1794,8 +1794,8 @@ export default function DiaryScreen({ navigation, route }) {
             <Ionicons name="restaurant-outline" size={20} color={t.colors.primary} />
           </View>
           <View style={styles.savedFoodText}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.savedFoodOptionTitle, live.savedFoodOptionTitle]}>Recipes</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.savedFoodOptionSub, live.savedFoodOptionSub]}>Recipes with ingredients and servings.</Text>
+            <Text style={[styles.savedFoodOptionTitle, live.savedFoodOptionTitle]}>Recipes</Text>
+            <Text style={[styles.savedFoodOptionSub, live.savedFoodOptionSub]}>Recipes with ingredients and servings.</Text>
           </View>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
@@ -1835,12 +1835,12 @@ export default function DiaryScreen({ navigation, route }) {
             <TouchableOpacity onPress={() => { haptics.selection(); exitSelection(); }} hitSlop={10} style={styles.selCancel} accessibilityRole="button" accessibilityLabel="Cancel selection">
               <Ionicons name="close" size={22} color={t.colors.textPrimary} />
             </TouchableOpacity>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.selCount, live.selCount]}>{selectedIds.size} selected</Text>
+            <Text style={[styles.selCount, live.selCount]}>{selectedIds.size} selected</Text>
           </View>
           <View style={styles.selActions}>
             <TouchableOpacity onPress={() => { haptics.selection(); setMovePickerVisible(true); }} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Move to another meal">
               <Ionicons name="swap-vertical" size={20} color={t.colors.textPrimary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.selActionLabel, live.selActionLabel]}>Move</Text>
+              <Text style={[styles.selActionLabel, live.selActionLabel]}>Move</Text>
             </TouchableOpacity>
             {/* Haptics completion pass (2026-07-10): copying to today is a
                 bulk food-log write (diary-marking), excluded per the
@@ -1848,15 +1848,15 @@ export default function DiaryScreen({ navigation, route }) {
                 added haptic. */}
             <TouchableOpacity onPress={doCopySelectedToToday} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Copy to today">
               <Ionicons name="copy-outline" size={20} color={t.colors.textPrimary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.selActionLabel, live.selActionLabel]}>To today</Text>
+              <Text style={[styles.selActionLabel, live.selActionLabel]}>To today</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => { haptics.selection(); openSaveMeal(); }} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Save selected as a meal">
               <Ionicons name="bookmark-outline" size={20} color={t.colors.textPrimary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.selActionLabel, live.selActionLabel]}>Save meal</Text>
+              <Text style={[styles.selActionLabel, live.selActionLabel]}>Save meal</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={doDeleteSelected} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Delete selected">
               <Ionicons name="trash-outline" size={20} color={t.colors.error} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.selActionLabel, live.selActionLabel, { color: t.colors.error }]}>Delete</Text>
+              <Text style={[styles.selActionLabel, live.selActionLabel, { color: t.colors.error }]}>Delete</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1876,7 +1876,7 @@ export default function DiaryScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel={`Move to ${s.label}`}
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.moveOptionText, live.moveOptionText]}>{s.label}</Text>
+            <Text style={[styles.moveOptionText, live.moveOptionText]}>{s.label}</Text>
           </TouchableOpacity>
         ))}
       </BottomSheet>
@@ -1888,7 +1888,7 @@ export default function DiaryScreen({ navigation, route }) {
         accessibilityLabel="Save as meal"
       >
         <SectionLabel style={styles.moveTitle}>Save as meal</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.saveMealHint, live.saveMealHint]}>
+        <Text style={[styles.saveMealHint, live.saveMealHint]}>
           {saveMealItems?.length ?? 0} {(saveMealItems?.length ?? 0) === 1 ? 'food' : 'foods'} saved together. Name it.
         </Text>
         <TextField
@@ -1935,7 +1935,7 @@ export default function DiaryScreen({ navigation, route }) {
         accessibilityLabel="Diary tools"
       >
         <SectionLabel style={styles.moveTitle}>Day tools</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.saveMealHint, live.saveMealHint]}>
+        <Text style={[styles.saveMealHint, live.saveMealHint]}>
           Copy foods from another day, check nutrition trends, or export your diary.
         </Text>
         <TouchableOpacity
@@ -1948,8 +1948,8 @@ export default function DiaryScreen({ navigation, route }) {
             <Ionicons name="copy-outline" size={18} color={t.colors.primary} />
           </View>
           <View style={styles.diaryToolCopy}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.diaryToolTitle, live.diaryToolTitle]}>Copy from another day</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.diaryToolText, live.diaryToolText]}>Choose a recent logged day and copy its foods into this one.</Text>
+            <Text style={[styles.diaryToolTitle, live.diaryToolTitle]}>Copy from another day</Text>
+            <Text style={[styles.diaryToolText, live.diaryToolText]}>Choose a recent logged day and copy its foods into this one.</Text>
           </View>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
@@ -1963,8 +1963,8 @@ export default function DiaryScreen({ navigation, route }) {
             <Ionicons name="analytics-outline" size={18} color={t.colors.primary} />
           </View>
           <View style={styles.diaryToolCopy}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.diaryToolTitle, live.diaryToolTitle]}>Trends and export</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.diaryToolText, live.diaryToolText]}>See calorie, macro and consistency trends, or export your diary.</Text>
+            <Text style={[styles.diaryToolTitle, live.diaryToolTitle]}>Trends and export</Text>
+            <Text style={[styles.diaryToolText, live.diaryToolText]}>See calorie, macro and consistency trends, or export your diary.</Text>
           </View>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
@@ -1977,7 +1977,7 @@ export default function DiaryScreen({ navigation, route }) {
       >
         <SectionLabel style={styles.moveTitle}>Copy from another day</SectionLabel>
         {copyDays && copyDays.length === 0 ? (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.saveMealHint, live.saveMealHint]}>No earlier days with food logged yet.</Text>
+          <Text style={[styles.saveMealHint, live.saveMealHint]}>No earlier days with food logged yet.</Text>
         ) : (
           (copyDays || []).map((d) => (
             // Haptics completion pass (2026-07-10): copying a day's foods is
@@ -1991,8 +1991,8 @@ export default function DiaryScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel={`Copy ${friendlyDate(d.entry_date)}, ${d.count} ${d.count === 1 ? 'item' : 'items'}`}
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.moveOptionText, live.moveOptionText]}>{friendlyDate(d.entry_date)}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.copyRowMeta, live.copyRowMeta]}>
+              <Text style={[styles.moveOptionText, live.moveOptionText]}>{friendlyDate(d.entry_date)}</Text>
+              <Text style={[styles.copyRowMeta, live.copyRowMeta]}>
                 {d.count} {d.count === 1 ? 'item' : 'items'} - {toEnergy(Math.round(d.kcal ?? 0), energyUnit)} {energyUnitLabel(energyUnit)}
               </Text>
             </TouchableOpacity>
@@ -2060,7 +2060,7 @@ function WaterRow({
       <View style={styles.waterHeader}>
         <View style={styles.waterLeft}>
           <Ionicons name="water-outline" size={18} color={t.colors.primary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.waterLabel, live.waterLabel]}>Water</Text>
+          <Text style={[styles.waterLabel, live.waterLabel]}>Water</Text>
         </View>
         <View style={styles.waterButtons}>
           {/* NU-9: the value doubles as the target editor. E10 read-only: the
@@ -2074,7 +2074,7 @@ function WaterRow({
               ? `Water ${litres} of ${targetL} litres.`
               : `Water ${litres} of ${targetL} litres. Tap to change your daily target.`}
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.waterValue, live.waterValue]}>{litres} / {targetL} L</Text>
+            <Text style={[styles.waterValue, live.waterValue]}>{litres} / {targetL} L</Text>
           </TouchableOpacity>
           {/* NU-9: long-press moves a bottle (500 ml) at a time, so a full day
               of water no longer needs 12 taps. */}

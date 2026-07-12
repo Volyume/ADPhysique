@@ -117,8 +117,8 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
   return (
     <View style={[styles.section, live.section]}>
       <View style={styles.headerRow}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Your weeks</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.runLine, live.runLine]} numberOfLines={2}>{runLine}</Text>
+        <Text style={[styles.title, live.title]}>Your weeks</Text>
+        <Text style={[styles.runLine, live.runLine]} numberOfLines={2}>{runLine}</Text>
       </View>
 
       {/* 12-week glyph strip */}
@@ -147,7 +147,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
         ].map(({ state, label }) => (
           <View key={state} style={styles.glyphKeyItem}>
             <Ionicons name={GLYPH[state].icon} size={12} color={GLYPH[state].color} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.glyphKeyLabel, live.glyphKeyLabel]}>{label}</Text>
+            <Text style={[styles.glyphKeyLabel, live.glyphKeyLabel]}>{label}</Text>
           </View>
         ))}
       </View>
@@ -155,12 +155,12 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
       {justRepaired ? (
         <View style={styles.repairRow}>
           <Ionicons name="git-compare" size={14} color={t.colors.primary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.repairLine, live.repairLine]}>A lighter week, and you came back. Your run carried on.</Text>
+          <Text style={[styles.repairLine, live.repairLine]}>A lighter week, and you came back. Your run carried on.</Text>
         </View>
       ) : null}
 
       {longestRun > 0 ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.longest, live.longest]}>Longest run: {longestRun} {longestRun === 1 ? 'week' : 'weeks'}.</Text>
+        <Text style={[styles.longest, live.longest]}>Longest run: {longestRun} {longestRun === 1 ? 'week' : 'weeks'}.</Text>
       ) : null}
 
       {/* Manual-goal editor, plan-less users only */}
@@ -174,7 +174,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
           without hitSlop. Selection semantics are unchanged. */}
       {!hasTarget ? (
         <View style={styles.goalBlock}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.goalLabel, live.goalLabel]}>How many sessions a week are you aiming for?</Text>
+          <Text style={[styles.goalLabel, live.goalLabel]}>How many sessions a week are you aiming for?</Text>
           <View style={styles.goalChipsGrid}>
             {[[1, 2, 3], [4, 5, 6]].map((row, i) => (
               <View key={i} style={styles.goalChipsRow}>
@@ -189,7 +189,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
                       accessibilityState={{ selected: sel }}
                       accessibilityLabel={`${n} sessions a week`}
                     >
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.goalChipText, live.goalChipText, sel && [styles.goalChipTextOn, live.goalChipTextOn]]}>{n}</Text>
+                      <Text style={[styles.goalChipText, live.goalChipText, sel && [styles.goalChipTextOn, live.goalChipTextOn]]}>{n}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -206,7 +206,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
         accessibilityLabel="Pause your run"
       >
         <Ionicons name="pause-outline" size={16} color={t.colors.textSecondary} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.pauseBtnText, live.pauseBtnText]}>Pause</Text>
+        <Text style={[styles.pauseBtnText, live.pauseBtnText]}>Pause</Text>
       </TouchableOpacity>
 
       <BottomSheet
@@ -214,7 +214,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
         onClose={() => setPauseOpen(false)}
         accessibilityLabel="Pause your run options"
       >
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Life happens. Pause your run and nothing is lost.</Text>
+        <Text style={[styles.sheetTitle, live.sheetTitle]}>Life happens. Pause your run and nothing is lost.</Text>
         {PAUSE_OPTIONS.map(opt => (
           <TouchableOpacity
             key={opt.weeks}
@@ -223,7 +223,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
             accessibilityRole="button"
             accessibilityLabel={`Pause for ${opt.label}`}
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionText, live.sheetOptionText]}>{opt.label}</Text>
+            <Text style={[styles.sheetOptionText, live.sheetOptionText]}>{opt.label}</Text>
           </TouchableOpacity>
         ))}
       </BottomSheet>

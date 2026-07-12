@@ -28,7 +28,7 @@ export default function NutritionEducationScreen() {
       <BackHeader title="Nutrition basics" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.intro, live.intro]}>
+        <Text style={[styles.intro, live.intro]}>
           If you've never tracked calories or macros, this is the 5-minute
           version of why they matter and how to use them without it taking
           over your life.
@@ -185,7 +185,7 @@ export default function NutritionEducationScreen() {
             Ship what's there or hide it." The teaser was promising a diet
             builder that doesn't exist. */}
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.footer, live.footer]}>
+        <Text style={[styles.footer, live.footer]}>
           Volyume's starting numbers are estimates. The 2 to 4 week trend is what
           counts. That's exactly what the coach watches for you.
         </Text>
@@ -209,7 +209,7 @@ function Section({ icon, tint, title, children }) {
         <View style={[styles.sectionIconWrap, { backgroundColor: withAlpha(tint, 0.125) }]}>
           <Ionicons name={icon} size={18} color={tint} />
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionTitle, live.sectionTitle]} accessibilityRole="header">{title}</Text>
+        <Text style={[styles.sectionTitle, live.sectionTitle]} accessibilityRole="header">{title}</Text>
       </View>
       <View style={styles.sectionBody}>{children}</View>
     </Card>
@@ -219,13 +219,13 @@ function Section({ icon, tint, title, children }) {
 function Body({ children }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
-  return <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>{children}</Text>;
+  return <Text style={[styles.body, live.body]}>{children}</Text>;
 }
 
 function Strong({ children }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
-  return <Text maxFontSizeMultiplier={1.3} style={[styles.strong, live.strong]}>{children}</Text>;
+  return <Text style={[styles.strong, live.strong]}>{children}</Text>;
 }
 
 function KeyPoint({ children }) {
@@ -234,7 +234,7 @@ function KeyPoint({ children }) {
   return (
     <View style={[styles.keypoint, live.keypoint]}>
       <Ionicons name="bookmark" size={14} color={t.colors.primary} />
-      <Text maxFontSizeMultiplier={1.3} style={[styles.keypointText, live.keypointText]}>{children}</Text>
+      <Text style={[styles.keypointText, live.keypointText]}>{children}</Text>
     </View>
   );
 }
@@ -247,10 +247,10 @@ function MacroLine({ color, name, kcalPerG, role }) {
       <View style={[styles.macroDot, { backgroundColor: color }]} />
       <View style={{ flex: 1 }}>
         <View style={styles.macroHead}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.macroName, live.macroName]}>{name}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.macroKcal, live.macroKcal]}>{kcalPerG}</Text>
+          <Text style={[styles.macroName, live.macroName]}>{name}</Text>
+          <Text style={[styles.macroKcal, live.macroKcal]}>{kcalPerG}</Text>
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.macroRole, live.macroRole]}>{role}</Text>
+        <Text style={[styles.macroRole, live.macroRole]}>{role}</Text>
       </View>
     </View>
   );
@@ -262,10 +262,10 @@ function PhaseLine({ name, rate, gist }) {
   return (
     <View style={[styles.phaseLine, live.phaseLine]}>
       <View style={styles.phaseHead}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.phaseName, live.phaseName]}>{name}</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.phaseRate, live.phaseRate]}>{rate}</Text>
+        <Text style={[styles.phaseName, live.phaseName]}>{name}</Text>
+        <Text style={[styles.phaseRate, live.phaseRate]}>{rate}</Text>
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.phaseGist, live.phaseGist]}>{gist}</Text>
+      <Text style={[styles.phaseGist, live.phaseGist]}>{gist}</Text>
     </View>
   );
 }
@@ -275,7 +275,7 @@ function BulletRow({ num, children }) {
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={styles.bulletRow}>
-      <View style={[styles.bulletChip, live.bulletChip]}><Text maxFontSizeMultiplier={1.3} style={[styles.bulletChipText, live.bulletChipText]}>{num}</Text></View>
+      <View style={[styles.bulletChip, live.bulletChip]}><Text style={[styles.bulletChipText, live.bulletChipText]}>{num}</Text></View>
       <View style={{ flex: 1 }}>{children}</View>
     </View>
   );

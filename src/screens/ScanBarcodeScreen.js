@@ -271,8 +271,8 @@ export default function ScanBarcodeScreen({ navigation, route }) {
         <ModalHeader title="Scan" closePosition="left" onClose={() => navigation.goBack()} />
         <View style={styles.permissionWrap}>
           <Ionicons name="camera-outline" size={48} color={t.colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.permissionTitle, live.permissionTitle]}>Camera access needed</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.permissionBody, live.permissionBody]}>
+          <Text style={[styles.permissionTitle, live.permissionTitle]}>Camera access needed</Text>
+          <Text style={[styles.permissionBody, live.permissionBody]}>
             Volyume uses the camera to scan barcodes. Turn it on in Settings.
           </Text>
           {permission === 'denied' ? (
@@ -305,7 +305,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
         <ModalHeader title="Scan" closePosition="left" onClose={() => navigation.goBack()} />
         <View style={styles.permissionWrap}>
           <Ionicons name="alert-circle-outline" size={48} color={t.colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.permissionTitle, live.permissionTitle]}>No camera available</Text>
+          <Text style={[styles.permissionTitle, live.permissionTitle]}>No camera available</Text>
           <Button
             title="Type it in instead"
             variant="tertiary"
@@ -353,7 +353,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
         />
         <View style={styles.overlay} pointerEvents="none">
           <View style={[styles.reticle, live.reticle]} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.hint, live.hint]}>
+          <Text style={[styles.hint, live.hint]}>
             {resolving ? 'Looking it up' : 'Point at a barcode'}
           </Text>
         </View>
@@ -374,7 +374,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Enter barcode number"
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.manualLinkText, live.manualLinkText]}>Enter barcode number</Text>
+              <Text style={[styles.manualLinkText, live.manualLinkText]}>Enter barcode number</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -386,8 +386,8 @@ export default function ScanBarcodeScreen({ navigation, route }) {
         keyboardAvoiding
         accessibilityLabel="Enter barcode number"
       >
-        <Text maxFontSizeMultiplier={1.3} style={[styles.manualTitle, live.manualTitle]}>Enter barcode number</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.manualBody, live.manualBody]}>
+        <Text style={[styles.manualTitle, live.manualTitle]}>Enter barcode number</Text>
+        <Text style={[styles.manualBody, live.manualBody]}>
           Type the number printed under the barcode, 8 to 14 digits.
         </Text>
         <TextField
@@ -401,7 +401,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
           accessibilityLabel="Barcode number"
           onSubmitEditing={submitManual}
         />
-        {manualError ? <Text maxFontSizeMultiplier={1.3} style={[styles.manualErrorText, live.manualErrorText]}>{manualError}</Text> : null}
+        {manualError ? <Text style={[styles.manualErrorText, live.manualErrorText]}>{manualError}</Text> : null}
         <Button
           title="Look up"
           onPress={submitManual}

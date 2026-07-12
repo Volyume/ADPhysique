@@ -198,8 +198,8 @@ export default function MyMealsScreen({ navigation, route }) {
         accessibilityHint="Use the info button to view what's inside, or the more actions button to rename or delete"
       >
         <View style={{ flex: 1 }}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.name, live.name]} numberOfLines={1}>{item.name}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.meta, live.meta]}>
+          <Text style={[styles.name, live.name]} numberOfLines={1}>{item.name}</Text>
+          <Text style={[styles.meta, live.meta]}>
             {item.itemCount} {item.itemCount === 1 ? 'food' : 'foods'} | {toEnergy(item.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)} | {item.totals.protein}g protein
           </Text>
         </View>
@@ -271,7 +271,7 @@ export default function MyMealsScreen({ navigation, route }) {
         keyboardAvoiding
         accessibilityLabel="Rename meal"
       >
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Rename meal</Text>
+        <Text style={[styles.sheetTitle, live.sheetTitle]}>Rename meal</Text>
         <TextField
           value={renameText}
           onChangeText={setRenameText}

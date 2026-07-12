@@ -68,8 +68,8 @@ function StatTile({ label, value, sub }) {
   return (
     <Card style={styles.statTile}>
       <SectionLabel tone="muted">{label}</SectionLabel>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.statValue, live.statValue]} numberOfLines={2}>{value}</Text>
-      {sub ? <Text maxFontSizeMultiplier={1.3} style={[styles.statSub, live.statSub]}>{sub}</Text> : null}
+      <Text style={[styles.statValue, live.statValue]} numberOfLines={2}>{value}</Text>
+      {sub ? <Text style={[styles.statSub, live.statSub]}>{sub}</Text> : null}
     </Card>
   );
 }
@@ -218,14 +218,14 @@ function Row({ icon, label, sub, onPress, pro, status = null, t, live }) {
       </View>
       <View style={{ flex: 1 }}>
         <View style={styles.rowLabelLine}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.rowLabel, live.rowLabel]}>{label}</Text>
+          <Text style={[styles.rowLabel, live.rowLabel]}>{label}</Text>
           {pro ? <ProBadge size="sm" /> : null}
         </View>
-        {sub ? <Text maxFontSizeMultiplier={1.3} style={[styles.rowSub, live.rowSub]}>{sub}</Text> : null}
+        {sub ? <Text style={[styles.rowSub, live.rowSub]}>{sub}</Text> : null}
       </View>
       {statusLabel ? (
         <View style={[styles.statusPill, styles[`statusPill_${status}`], live[`statusPill_${status}`]]}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.statusPillText, live.statusPillText, styles[`statusPillText_${status}`], live[`statusPillText_${status}`]]}>{statusLabel}</Text>
+          <Text style={[styles.statusPillText, live.statusPillText, styles[`statusPillText_${status}`], live[`statusPillText_${status}`]]}>{statusLabel}</Text>
         </View>
       ) : null}
       <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
@@ -450,17 +450,17 @@ export default function AthleteProfileScreen({ navigation }) {
           </TouchableOpacity>
           <View style={styles.heroInfo}>
             <View style={styles.nameLine}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.name, live.name]} numberOfLines={1}>{displayName}</Text>
+              <Text style={[styles.name, live.name]} numberOfLines={1}>{displayName}</Text>
               {isPro ? <ProBadge size="sm" /> : null}
             </View>
             {loading ? (
               <Skeleton width={120} height={12} />
             ) : (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.heroSub, live.heroSub]}>
+            <Text style={[styles.heroSub, live.heroSub]}>
                 {summary.sessions ?? 0} session{summary.sessions === 1 ? '' : 's'} logged
               </Text>
             )}
-            <Text maxFontSizeMultiplier={1.3} style={[styles.heroFocus, live.heroFocus]} numberOfLines={2}>{focusTile.value}</Text>
+            <Text style={[styles.heroFocus, live.heroFocus]} numberOfLines={2}>{focusTile.value}</Text>
           </View>
         </Card>
 
@@ -474,8 +474,8 @@ export default function AthleteProfileScreen({ navigation }) {
               <Ionicons name="warning-outline" size={18} color={t.colors.warning} />
             </View>
             <View style={styles.loadErrorCopy}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.loadErrorTitle, live.loadErrorTitle]}>Couldn't refresh profile data</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.loadErrorBody, live.loadErrorBody]}>Some numbers may be out of date. Tap to try again.</Text>
+              <Text style={[styles.loadErrorTitle, live.loadErrorTitle]}>Couldn't refresh profile data</Text>
+              <Text style={[styles.loadErrorBody, live.loadErrorBody]}>Some numbers may be out of date. Tap to try again.</Text>
             </View>
             <Ionicons name="refresh-outline" size={18} color={t.colors.textMuted} />
           </Card>
@@ -498,14 +498,14 @@ export default function AthleteProfileScreen({ navigation }) {
               accessibilityLabel={`Open ${row.name}`}
             >
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.liftName, live.liftName]} numberOfLines={1}>{row.name}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.liftSub, live.liftSub]}>
+                <Text style={[styles.liftName, live.liftName]} numberOfLines={1}>{row.name}</Text>
+                <Text style={[styles.liftSub, live.liftSub]}>
                   {level.ratio >= 1 ? `${level.ratio.toFixed(2)}x body weight` : `${Math.round(level.ratio * 100)}% body weight`}
                   {level.nextLabel && level.nextTarget ? ` - ${Math.max(0, level.nextTarget - row.bestE1rm).toFixed(1)} ${units} to ${level.nextLabel}` : ''}
                 </Text>
               </View>
               <View style={[styles.levelPill, live.levelPill]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.levelPillText, live.levelPillText]}>{level.label}</Text>
+                <Text style={[styles.levelPillText, live.levelPillText]}>{level.label}</Text>
               </View>
             </Card>
           )) : (
@@ -586,8 +586,8 @@ export default function AthleteProfileScreen({ navigation }) {
       >
         <View style={styles.avatarSheetHeader}>
           <View style={styles.avatarSheetCopy}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.avatarSheetTitle, live.avatarSheetTitle]}>Profile picture</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.avatarSheetIntro, live.avatarSheetIntro]}>Choose a photo from your phone or pick a Volyume avatar.</Text>
+            <Text style={[styles.avatarSheetTitle, live.avatarSheetTitle]}>Profile picture</Text>
+            <Text style={[styles.avatarSheetIntro, live.avatarSheetIntro]}>Choose a photo from your phone or pick a Volyume avatar.</Text>
           </View>
           {avatarUri || avatarPreset ? (
             <TouchableOpacity
@@ -596,7 +596,7 @@ export default function AthleteProfileScreen({ navigation }) {
               accessibilityRole="button"
               accessibilityLabel="Clear current avatar"
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.avatarClearText, live.avatarClearText]}>Clear</Text>
+              <Text style={[styles.avatarClearText, live.avatarClearText]}>Clear</Text>
             </TouchableOpacity>
           ) : null}
         </View>
@@ -610,12 +610,12 @@ export default function AthleteProfileScreen({ navigation }) {
             <Ionicons name="image-outline" size={20} color={t.colors.primary} />
           </View>
           <View style={styles.photoOptionCopy}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.photoOptionTitle, live.photoOptionTitle]}>Photo from phone</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.photoOptionSub, live.photoOptionSub]}>{avatarUri ? 'Replace your current photo.' : 'Use your own profile picture.'}</Text>
+            <Text style={[styles.photoOptionTitle, live.photoOptionTitle]}>Photo from phone</Text>
+            <Text style={[styles.photoOptionSub, live.photoOptionSub]}>{avatarUri ? 'Replace your current photo.' : 'Use your own profile picture.'}</Text>
           </View>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.avatarGalleryLabel, live.avatarGalleryLabel]}>Choose an avatar</Text>
+        <Text style={[styles.avatarGalleryLabel, live.avatarGalleryLabel]}>Choose an avatar</Text>
         <View style={styles.avatarPresetGrid}>
           {AVATAR_PRESETS.map((preset) => {
             const selected = avatarPreset === preset.key && !avatarUri;
@@ -634,7 +634,7 @@ export default function AthleteProfileScreen({ navigation }) {
                   size={62}
                   selected={selected}
                 />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.avatarPresetOptionText, live.avatarPresetOptionText, selected && [styles.avatarPresetOptionTextSelected, live.avatarPresetOptionTextSelected]]} numberOfLines={1}>
+                <Text style={[styles.avatarPresetOptionText, live.avatarPresetOptionText, selected && [styles.avatarPresetOptionTextSelected, live.avatarPresetOptionTextSelected]]} numberOfLines={1}>
                   {preset.label}
                 </Text>
               </TouchableOpacity>

@@ -95,8 +95,8 @@ export default function PhotoDetailsSheet({
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Photo details</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.sheetIntro, live.sheetIntro]}>
+            <Text style={[styles.sheetTitle, live.sheetTitle]}>Photo details</Text>
+            <Text style={[styles.sheetIntro, live.sheetIntro]}>
               Add the date and pose so Progress Photos can keep this image in the right place.
             </Text>
             {previewUri ? (
@@ -113,12 +113,12 @@ export default function PhotoDetailsSheet({
             ) : null}
             <View style={[styles.contextBox, live.contextBox]}>
               <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={t.colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.contextText, live.contextText]}>
+              <Text style={[styles.contextText, live.contextText]}>
                 Date and pose make future reviews fairer by grouping photos from the same day together.
               </Text>
             </View>
 
-            <Text maxFontSizeMultiplier={1.3} style={[styles.helper, live.helper]}>When was this photo taken?</Text>
+            <Text style={[styles.helper, live.helper]}>When was this photo taken?</Text>
             <TouchableOpacity
               style={[styles.dateField, live.dateField]}
               onPress={() => setPickerOpen(true)}
@@ -126,11 +126,11 @@ export default function PhotoDetailsSheet({
               accessibilityLabel={`Change the date, currently ${formatProgressPhotoDay(dateMs)}`}
             >
               <Ionicons name="calendar-outline" size={iconSize.md} color={t.colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.dateText, live.dateText]} numberOfLines={1} ellipsizeMode="tail">{formatProgressPhotoDay(dateMs)}</Text>
+              <Text style={[styles.dateText, live.dateText]} numberOfLines={1} ellipsizeMode="tail">{formatProgressPhotoDay(dateMs)}</Text>
               <Ionicons name="chevron-down" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
 
-            <Text maxFontSizeMultiplier={1.3} style={[styles.sectionLabel, live.sectionLabel]}>Pose</Text>
+            <Text style={[styles.sectionLabel, live.sectionLabel]}>Pose</Text>
             <View style={styles.poseSelector}>
               {POSES.map((p) => {
                 const active = pose === p.key;
@@ -148,7 +148,7 @@ export default function PhotoDetailsSheet({
                       size={iconSize.sm}
                       color={active ? t.colors.primary : t.colors.textMuted}
                     />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.poseOptionText, live.poseOptionText, active && [styles.poseOptionTextActive, live.poseOptionTextActive]]}>
+                    <Text style={[styles.poseOptionText, live.poseOptionText, active && [styles.poseOptionTextActive, live.poseOptionTextActive]]}>
                       {p.label}
                     </Text>
                   </TouchableOpacity>

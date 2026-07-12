@@ -439,8 +439,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             <View style={[styles.loadErrorIcon, live.loadErrorIcon]}>
               <Ionicons name="alert-circle-outline" size={22} color={t.colors.warning} />
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.loadErrorTitle, live.loadErrorTitle]}>Couldn't load exercise details</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.loadErrorText, live.loadErrorText]}>
+            <Text style={[styles.loadErrorTitle, live.loadErrorTitle]}>Couldn't load exercise details</Text>
+            <Text style={[styles.loadErrorText, live.loadErrorText]}>
               Couldn't load this on your device. Try again. Your workout history has not been changed.
             </Text>
             <Button
@@ -551,40 +551,40 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         <AnimatedEntrance index={0}>
         <Card style={styles.overviewCard}>
           <View style={styles.tags}>
-            <View style={[styles.tag, live.tag]}><Text maxFontSizeMultiplier={1.3} style={[styles.tagText, live.tagText]}>{primaryMuscle}</Text></View>
+            <View style={[styles.tag, live.tag]}><Text style={[styles.tagText, live.tagText]}>{primaryMuscle}</Text></View>
             {subregionLabel && (
               <View style={[styles.tag, live.tag, styles.tagSecondary, live.tagSecondary]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.tagText, live.tagText, styles.tagTextSecondary, live.tagTextSecondary]}>{subregionLabel}</Text>
+                <Text style={[styles.tagText, live.tagText, styles.tagTextSecondary, live.tagTextSecondary]}>{subregionLabel}</Text>
               </View>
             )}
             {equipmentLabel && (
               <View style={[styles.tag, live.tag, styles.tagSecondary, live.tagSecondary]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.tagText, live.tagText, styles.tagTextSecondary, live.tagTextSecondary]}>{equipmentLabel}</Text>
+                <Text style={[styles.tagText, live.tagText, styles.tagTextSecondary, live.tagTextSecondary]}>{equipmentLabel}</Text>
               </View>
             )}
             {exercise.compoundIsolation && (
               <View style={[styles.tag, live.tag, styles.tagSecondary, live.tagSecondary]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.tagText, live.tagText, styles.tagTextSecondary, live.tagTextSecondary]}>
+                <Text style={[styles.tagText, live.tagText, styles.tagTextSecondary, live.tagTextSecondary]}>
                   {exercise.compoundIsolation.charAt(0).toUpperCase() + exercise.compoundIsolation.slice(1)}
                 </Text>
               </View>
             )}
             {difficultyLabel && (
               <View style={[styles.tag, live.tag, styles.tagSecondary, live.tagSecondary]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.tagText, live.tagText, styles.tagTextSecondary, live.tagTextSecondary]}>{difficultyLabel}</Text>
+                <Text style={[styles.tagText, live.tagText, styles.tagTextSecondary, live.tagTextSecondary]}>{difficultyLabel}</Text>
               </View>
             )}
           </View>
 
           {secondaryMuscles.length > 0 && (
             <View style={styles.secMuscles}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.secMuscleLabel, live.secMuscleLabel]}>Also works</Text>
+              <Text style={[styles.secMuscleLabel, live.secMuscleLabel]}>Also works</Text>
               {secondaryMuscles.map((m, i) => {
                 const key = m.muscle || m;
                 const label = MUSCLE_DISPLAY_NAMES[key] || key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
                 return (
                   <View key={i} style={[styles.tag, live.tag, styles.tagSecondary, live.tagSecondary]}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.tagText, live.tagText, styles.tagTextSecondary, live.tagTextSecondary]}>{label}</Text>
+                    <Text style={[styles.tagText, live.tagText, styles.tagTextSecondary, live.tagTextSecondary]}>{label}</Text>
                   </View>
                 );
               })}
@@ -594,31 +594,31 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           {best1RM > 0 && (
             <View style={[styles.est1RM, live.est1RM]}>
               <Ionicons name="trophy-outline" size={16} color={t.colors.gold} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.est1RMText, live.est1RMText]}>Estimated max: {best1RM.toFixed(1)} {units}</Text>
+              <Text style={[styles.est1RMText, live.est1RMText]}>Estimated max: {best1RM.toFixed(1)} {units}</Text>
               <InfoTooltip text="Your estimated max lift: the most weight you could lift for a single rep, calculated from the sets you've logged. It updates automatically as you get stronger." size={12} />
             </View>
           )}
 
           <View style={[styles.sfrRow, live.sfrRow]}>
             <View style={styles.sfrItem}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.sfrValue, live.sfrValue]}>{exercise.stimulusToFatigueRatio || 3}/5</Text>
+              <Text style={[styles.sfrValue, live.sfrValue]}>{exercise.stimulusToFatigueRatio || 3}/5</Text>
               <View style={styles.sfrLabelRow}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.sfrLabel, live.sfrLabel]}>Quality</Text>
+                <Text style={[styles.sfrLabel, live.sfrLabel]}>Quality</Text>
                 <InfoTooltip text="Effort rating: how much growth this exercise produces relative to how tiring it is overall. 5/5 = great return for the fatigue cost. 3/5 = moderate. 1/5 = very demanding for what you get back." size={11} />
               </View>
             </View>
             <View style={[styles.sfrDivider, live.sfrDivider]} />
             <View style={styles.sfrItem}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.sfrValue, live.sfrValue]}>{exercise.fatigueCost || 3}/5</Text>
+              <Text style={[styles.sfrValue, live.sfrValue]}>{exercise.fatigueCost || 3}/5</Text>
               <View style={styles.sfrLabelRow}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.sfrLabel, live.sfrLabel]}>Fatigue</Text>
+                <Text style={[styles.sfrLabel, live.sfrLabel]}>Fatigue</Text>
                 <InfoTooltip text="How much systemic fatigue this exercise creates. 5/5 = very demanding (deadlift). 1/5 = minimal fatigue. High-fatigue exercises need more recovery between sessions." size={11} />
               </View>
             </View>
             <View style={[styles.sfrDivider, live.sfrDivider]} />
             <View style={styles.sfrItem}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.sfrValue, live.sfrValue]}>{exercise.defaultRepMin || 6}-{exercise.defaultRepMax || 12}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.sfrLabel, live.sfrLabel]}>Rep range</Text>
+              <Text style={[styles.sfrValue, live.sfrValue]}>{exercise.defaultRepMin || 6}-{exercise.defaultRepMax || 12}</Text>
+              <Text style={[styles.sfrLabel, live.sfrLabel]}>Rep range</Text>
             </View>
           </View>
         </Card>
@@ -640,32 +640,32 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               <View style={styles.prHighlightRow}>
                 {displayPR && (
                   <View style={styles.prHighlightStat}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.prHighlightStatValue, live.prHighlightStatValue]}>
+                    <Text style={[styles.prHighlightStatValue, live.prHighlightStatValue]}>
                       {safeToFixed(displayPR.value, 1)}{units}
                     </Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>
+                    <Text style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>
                       {displayPR.record_type === '1rm_estimate' ? 'Est. max' : 'Heaviest set'}
                     </Text>
                   </View>
                 )}
                 {prHeavy && displayPR !== prHeavy && (
                   <View style={[styles.prHighlightStat, styles.prHighlightStatBordered, live.prHighlightStatBordered]}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.prHighlightStatValue, live.prHighlightStatValue]}>
+                    <Text style={[styles.prHighlightStatValue, live.prHighlightStatValue]}>
                       {finiteOr(prHeavy.value, '-')}{units} x {finiteOr(prHeavy.reps, '-')}
                     </Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>Best set</Text>
+                    <Text style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>Best set</Text>
                   </View>
                 )}
                 {prReps && (
                   <View style={[styles.prHighlightStat, styles.prHighlightStatBordered, live.prHighlightStatBordered]}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.prHighlightStatValue, live.prHighlightStatValue]}>
+                    <Text style={[styles.prHighlightStatValue, live.prHighlightStatValue]}>
                       {finiteOr(prReps.value, '-')}{units} x {finiteOr(prReps.reps, '-')}
                     </Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>Most reps</Text>
+                    <Text style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>Most reps</Text>
                   </View>
                 )}
               </View>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.prHighlightDate, live.prHighlightDate]}>
+              <Text style={[styles.prHighlightDate, live.prHighlightDate]}>
                 Achieved {safeFormatDate(displayPR.achieved_date, 'MMM d yyyy')}
               </Text>
             </Card>
@@ -676,7 +676,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {congratsBanner && (
           <Animated.View style={[styles.congratsBanner, live.congratsBanner, { opacity: congratsOpacity }]}>
             <Ionicons name="checkmark-circle" size={18} color={t.colors.primary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.congratsText, live.congratsText]}>You've hit your target. Set a new one.</Text>
+            <Text style={[styles.congratsText, live.congratsText]}>You've hit your target. Set a new one.</Text>
           </Animated.View>
         )}
 
@@ -708,15 +708,15 @@ export default function ExerciseDetailScreen({ navigation, route }) {
 
             <View style={styles.goalWeightRow}>
               <View style={styles.goalWeightItem}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.goalWeightValue, live.goalWeightValue]}>{best1RM > 0 ? best1RM.toFixed(1) : '-'}{best1RM > 0 ? units : ''}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.goalWeightLabel, live.goalWeightLabel]}>Current est. max</Text>
+                <Text style={[styles.goalWeightValue, live.goalWeightValue]}>{best1RM > 0 ? best1RM.toFixed(1) : '-'}{best1RM > 0 ? units : ''}</Text>
+                <Text style={[styles.goalWeightLabel, live.goalWeightLabel]}>Current est. max</Text>
               </View>
               <Ionicons name="arrow-forward" size={14} color={t.colors.textMuted} />
               <View style={styles.goalWeightItem}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.goalWeightValue, live.goalWeightValue, { color: t.colors.primary }]}>
+                <Text style={[styles.goalWeightValue, live.goalWeightValue, { color: t.colors.primary }]}>
                   {finiteOr(goal.targetWeight, '-')}{units}
                 </Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.goalWeightLabel, live.goalWeightLabel]}>
+                <Text style={[styles.goalWeightLabel, live.goalWeightLabel]}>
                   Target{goal.targetDate && safeDate(goal.targetDate) ? ` - by ${safeFormatDate(goal.targetDate, 'MMM yyyy')}` : ''}
                 </Text>
               </View>
@@ -726,7 +726,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               <View style={[styles.goalBarFill, live.goalBarFill, { width: `${Math.round(goalProgress * 100)}%` }]} />
             </View>
 
-            <Text maxFontSizeMultiplier={1.3} style={[
+            <Text style={[
               styles.goalBarCaption,
               live.goalBarCaption,
               goalProgress >= 1 && { color: t.colors.primary },
@@ -742,8 +742,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           <View style={[styles.plateauBanner, live.plateauBanner]}>
             <Ionicons name="analytics-outline" size={18} color={t.colors.warning} />
             <View style={{ flex: 1 }}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.plateauTitle, live.plateauTitle]}>Progress has stalled</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.plateauBody, live.plateauBody]}>{plateau.message}</Text>
+              <Text style={[styles.plateauTitle, live.plateauTitle]}>Progress has stalled</Text>
+              <Text style={[styles.plateauBody, live.plateauBody]}>{plateau.message}</Text>
             </View>
           </View>
         )}
@@ -751,10 +751,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {/* Strength trend chart */}
         {allChartPoints.length >= 2 && (
           <View style={styles.chartSection}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.chartLabel, live.chartLabel]}>Strength trend</Text>
+            <Text style={[styles.chartLabel, live.chartLabel]}>Strength trend</Text>
             <WindowChips windows={TREND_WINDOWS} selectedKey={chartWindowKey} onSelect={selectChartWindow}
               accessibilityPrefix="strength trend window" />
-            {!!chartTakeaway && <Text maxFontSizeMultiplier={1.3} style={[styles.chartTakeaway, live.chartTakeaway]}>{chartTakeaway}</Text>}
+            {!!chartTakeaway && <Text style={[styles.chartTakeaway, live.chartTakeaway]}>{chartTakeaway}</Text>}
             <View style={styles.chartToggle}>
               {CHART_METRICS.map(m => (
                 <TouchableOpacity
@@ -765,7 +765,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                   accessibilityLabel={m.label}
                   accessibilityState={{ selected: chartMetric === m.key }}
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.chartToggleBtnText, live.chartToggleBtnText, chartMetric === m.key && [styles.chartToggleBtnTextActive, live.chartToggleBtnTextActive]]}>
+                  <Text style={[styles.chartToggleBtnText, live.chartToggleBtnText, chartMetric === m.key && [styles.chartToggleBtnTextActive, live.chartToggleBtnTextActive]]}>
                     {m.label}
                   </Text>
                 </TouchableOpacity>
@@ -799,10 +799,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 />
               </View>
             ) : (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.chartEmptyHint, live.chartEmptyHint]}>Not enough data in this window yet.</Text>
+              <Text style={[styles.chartEmptyHint, live.chartEmptyHint]}>Not enough data in this window yet.</Text>
             )}
             {chartMetric === 'e1rm' && (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.e1rmNote, live.e1rmNote]}>
+              <Text style={[styles.e1rmNote, live.e1rmNote]}>
                 Estimated from top set using the Epley formula. Best for rep ranges 2 to 10.
               </Text>
             )}
@@ -818,10 +818,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               const sessionEst1RM = Math.max(...sessionSets.map(s => calculate1RM(s.weight || 0, s.actualReps || 0)));
               return (
                 <Card radius="md" style={styles.historyCard} key={i}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.historyDate, live.historyDate]}>{safeFormatDate(firstSet.createdAt, 'MMM d')}</Text>
+                  <Text style={[styles.historyDate, live.historyDate]}>{safeFormatDate(firstSet.createdAt, 'MMM d')}</Text>
                   <View style={styles.historySets}>
                     {sessionSets.map((s, j) => (
-                      <Text maxFontSizeMultiplier={1.3} key={j} style={[styles.historySetText, live.historySetText]}>
+                      <Text key={j} style={[styles.historySetText, live.historySetText]}>
                         {s.weight}{units} x {s.actualReps}
                         {s.set_type === 'warmup' || s.setType === 'warmup' ? ' - Warm-up' : ''}
                         {s.set_type === 'dropset' || s.setType === 'dropset' ? ' - Drop Set' : ''}
@@ -829,7 +829,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                     ))}
                   </View>
                   {sessionEst1RM > 0 && (
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.historyEst, live.historyEst]}>Est. max: ~{sessionEst1RM.toFixed(0)}{units}</Text>
+                    <Text style={[styles.historyEst, live.historyEst]}>Est. max: ~{sessionEst1RM.toFixed(0)}{units}</Text>
                   )}
                 </Card>
               );
@@ -841,7 +841,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {history.length === 0 && exercise && (
           <Card radius="md" style={styles.historyEmpty}>
             <Ionicons name="time-outline" size={20} color={t.colors.textMuted} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.historyEmptyText, live.historyEmptyText]}>
+            <Text style={[styles.historyEmptyText, live.historyEmptyText]}>
               You haven't logged this exercise yet. Add it to a session to start tracking your progress.
             </Text>
             <Button
@@ -868,16 +868,16 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                   color={t.colors.gold}
                 />
                 <View style={styles.prInfo}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.prLabel, live.prLabel]}>
+                  <Text style={[styles.prLabel, live.prLabel]}>
                     {pr.record_type === '1rm_estimate' ? 'Estimated max' :
                      pr.record_type === 'heaviest_weight' ? 'Heaviest weight' : 'Most reps'}
                   </Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.prValue, live.prValue]}>
+                  <Text style={[styles.prValue, live.prValue]}>
                     {pr.record_type === '1rm_estimate' ? `${safeToFixed(pr.value, 1)}${units}` :
                      `${finiteOr(pr.value, '-')}${units} x ${finiteOr(pr.reps, '-')} reps`}
                   </Text>
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.prDate, live.prDate]}>{safeFormatDate(pr.achieved_date, 'MMM d yyyy')}</Text>
+                <Text style={[styles.prDate, live.prDate]}>{safeFormatDate(pr.achieved_date, 'MMM d yyyy')}</Text>
               </Card>
             ))}
           </View>
@@ -907,12 +907,12 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                     style={styles.subCard}
                     accessibilityLabel={`View ${sub.name}`}
                   >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.subCardName, live.subCardName]} numberOfLines={2}>{sub.name}</Text>
+                    <Text style={[styles.subCardName, live.subCardName]} numberOfLines={2}>{sub.name}</Text>
                     <View style={styles.subCardFooter}>
                       {sub.equipment ? (
                         <Ionicons name="barbell-outline" size={11} color={t.colors.textMuted} />
                       ) : null}
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.subCardEquipment, live.subCardEquipment]} numberOfLines={1}>
+                      <Text style={[styles.subCardEquipment, live.subCardEquipment]} numberOfLines={1}>
                         {sub.equipment || subPrimary || ''}
                       </Text>
                     </View>
@@ -927,7 +927,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           <View style={styles.section}>
             <View style={[styles.cueCard, live.cueCard]}>
               <Ionicons name="bulb-outline" size={16} color={t.colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.cueText, live.cueText]}>{coachingCue}</Text>
+              <Text style={[styles.cueText, live.cueText]}>{coachingCue}</Text>
             </View>
           </View>
         )}
@@ -943,13 +943,13 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                   steps.map((step, i) => (
                     <View key={i} style={[styles.stepRow, i > 0 && styles.stepRowSpaced]}>
                       <View style={[styles.stepNumber, live.stepNumber]}>
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.stepNumberText, live.stepNumberText]}>{i + 1}</Text>
+                        <Text style={[styles.stepNumberText, live.stepNumberText]}>{i + 1}</Text>
                       </View>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.stepText, live.stepText]}>{step}</Text>
+                      <Text style={[styles.stepText, live.stepText]}>{step}</Text>
                     </View>
                   ))
                 ) : (
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.notesText, live.notesText]}>{instructionText}</Text>
+                  <Text style={[styles.notesText, live.notesText]}>{instructionText}</Text>
                 )}
               </Card>
             </View>
@@ -974,8 +974,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         keyboardAvoiding
         accessibilityLabel={goal ? 'Edit target' : 'Set a target weight'}
       >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.modalTitle, live.modalTitle]}>{goal ? 'Edit target' : 'Set a target weight'}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.modalSubtitle, live.modalSubtitle]}>
+            <Text style={[styles.modalTitle, live.modalTitle]}>{goal ? 'Edit target' : 'Set a target weight'}</Text>
+            <Text style={[styles.modalSubtitle, live.modalSubtitle]}>
               Based on your estimated max. Progress will be shown each time you open this exercise.
             </Text>
 

@@ -62,7 +62,7 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
   if (isEditing) {
     return (
       <View style={[styles.editingWrap, live.editingWrap]}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.editingTitle, live.editingTitle]}>
+        <Text style={[styles.editingTitle, live.editingTitle]}>
           {isWarmup ? 'Edit warm-up set' : `Edit set ${progressNum}`}
         </Text>
         {editValue && (
@@ -82,7 +82,7 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
             accessibilityRole="button"
             accessibilityLabel="Cancel editing set"
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.editingCancelText, live.editingCancelText]}>Cancel</Text>
+            <Text style={[styles.editingCancelText, live.editingCancelText]}>Cancel</Text>
           </TouchableOpacity>
           <Button
             variant="primary"
@@ -135,16 +135,16 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
         <Ionicons name="flame-outline" size={14} color={t.colors.warning} style={{ width: 22, textAlign: 'center' }} />
       ) : (
         <View style={[styles.setNumBadge, live.setNumBadge]}>
-          <Text style={[styles.setNumText, live.setNumText]} maxFontSizeMultiplier={1.3}>{progressNum}</Text>
+          <Text style={[styles.setNumText, live.setNumText]}>{progressNum}</Text>
         </View>
       )}
-      <Text maxFontSizeMultiplier={1.3} style={[styles.loggedSetText, live.loggedSetText, isWarmup && [styles.loggedSetTextWarmup, live.loggedSetTextWarmup]]} numberOfLines={1}>
+      <Text style={[styles.loggedSetText, live.loggedSetText, isWarmup && [styles.loggedSetTextWarmup, live.loggedSetTextWarmup]]} numberOfLines={1}>
         {fmt.text}
         {perSide ? ` - ${perSide}` : ''}
         {isWarmup ? ' - Warm-up' : ''}
       </Text>
       {!isWarmup && est1RM > 0 && (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.loggedEst1RM, live.loggedEst1RM]}>Est. max ~{est1RM.toFixed(0)}{units}</Text>
+        <Text style={[styles.loggedEst1RM, live.loggedEst1RM]}>Est. max ~{est1RM.toFixed(0)}{units}</Text>
       )}
       <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
     </TouchableOpacity>

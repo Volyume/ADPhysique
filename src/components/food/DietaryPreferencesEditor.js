@@ -91,8 +91,8 @@ export default function DietaryPreferencesEditor() {
             <Ionicons name="nutrition-outline" size={18} color={t.colors.primary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingLabel, live.settingLabel]}>Diet</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingSub, live.settingSub]}>Filters the meals Volyume suggests and the plans it builds.</Text>
+            <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Diet</Text>
+            <Text style={[settingsStyles.settingSub, live.settingSub]}>Filters the meals Volyume suggests and the plans it builds.</Text>
           </View>
         </View>
         <View style={styles.chipGrid}>
@@ -120,8 +120,8 @@ export default function DietaryPreferencesEditor() {
             <Ionicons name="warning-outline" size={18} color={t.colors.primary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingLabel, live.settingLabel]}>Allergens to avoid</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingSub, live.settingSub]}>Meals and plan suggestions leave these out.</Text>
+            <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Allergens to avoid</Text>
+            <Text style={[settingsStyles.settingSub, live.settingSub]}>Meals and plan suggestions leave these out.</Text>
           </View>
         </View>
         <View style={styles.chipGrid}>
@@ -142,7 +142,7 @@ export default function DietaryPreferencesEditor() {
             );
           })}
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.caption, liveText.caption]}>
+        <Text style={[styles.caption, liveText.caption]}>
           Volyume filters the foods and meals it knows about. Packaged food data can be incomplete, so always check the label.
         </Text>
       </View>
@@ -153,23 +153,23 @@ export default function DietaryPreferencesEditor() {
             <Ionicons name="close-circle-outline" size={18} color={t.colors.primary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingLabel, live.settingLabel]}>Foods you avoid</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingSub, live.settingSub]}>Individual foods you have flagged from a meal plan.</Text>
+            <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Foods you avoid</Text>
+            <Text style={[settingsStyles.settingSub, live.settingSub]}>Individual foods you have flagged from a meal plan.</Text>
           </View>
         </View>
         {excludedFoods.length > AVOID_LIST_NUDGE_THRESHOLD ? (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.caption, liveText.caption]}>
+          <Text style={[styles.caption, liveText.caption]}>
             A longer avoid list narrows what Volyume can suggest. Keep it to foods you really won't eat.
           </Text>
         ) : null}
         {excludedFoods.length === 0 ? (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.emptyRow, liveText.emptyRow]}>Nothing on your avoid list. You can flag a food from any meal plan.</Text>
+          <Text style={[styles.emptyRow, liveText.emptyRow]}>Nothing on your avoid list. You can flag a food from any meal plan.</Text>
         ) : (
           excludedFoods.map((foodKey) => {
             const name = CURATED_FOODS[foodKey]?.name ?? foodKey;
             return (
               <View key={foodKey} style={styles.foodRow}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.foodName, liveText.foodName]}>{name}</Text>
+                <Text style={[styles.foodName, liveText.foodName]}>{name}</Text>
                 <Chip
                   label="Remove"
                   onPress={() => removeFood(foodKey)}

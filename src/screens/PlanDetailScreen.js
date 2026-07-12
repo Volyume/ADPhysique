@@ -313,42 +313,42 @@ export default function PlanDetailScreen({ navigation, route }) {
           <View style={styles.planHeaderBadgeRow}>
             {isLibrary && (
               <View style={[styles.libraryBadge, live.libraryBadge]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.libraryBadgeText, live.libraryBadgeText]}>Library</Text>
+                <Text style={[styles.libraryBadgeText, live.libraryBadgeText]}>Library</Text>
               </View>
             )}
             {isActive && (
               <View style={[styles.activeBadge, live.activeBadge]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.activeBadgeText, live.activeBadgeText]}>Active plan</Text>
+                <Text style={[styles.activeBadgeText, live.activeBadgeText]}>Active plan</Text>
               </View>
             )}
             {plan.tags && plan.tags.includes('featured') && (
               <View style={[styles.featuredBadge, live.featuredBadge]}>
                 <Ionicons name="star" size={9} color={t.colors.onPrimary} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.featuredBadgeText, live.featuredBadgeText]}>Featured</Text>
+                <Text style={[styles.featuredBadgeText, live.featuredBadgeText]}>Featured</Text>
               </View>
             )}
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.planName, live.planName]}>{planHeadingName(plan.name)}</Text>
+          <Text style={[styles.planName, live.planName]}>{planHeadingName(plan.name)}</Text>
           {plan.description ? (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.planDesc, live.planDesc]}>{plan.description}</Text>
+            <Text style={[styles.planDesc, live.planDesc]}>{plan.description}</Text>
           ) : null}
           <View style={styles.planStats}>
             <View style={styles.planStat}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.planStatValue, live.planStatValue]}>{workouts.length}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.planStatLabel, live.planStatLabel]}>Workouts</Text>
+              <Text style={[styles.planStatValue, live.planStatValue]}>{workouts.length}</Text>
+              <Text style={[styles.planStatLabel, live.planStatLabel]}>Workouts</Text>
             </View>
             {totalWorkingSets > 0 && (
               <View style={styles.planStat}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.planStatValue, live.planStatValue]}>~{totalWorkingSets}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.planStatLabel, live.planStatLabel]}>Est. sets/week</Text>
+                <Text style={[styles.planStatValue, live.planStatValue]}>~{totalWorkingSets}</Text>
+                <Text style={[styles.planStatLabel, live.planStatLabel]}>Est. sets/week</Text>
               </View>
             )}
             {plan.difficulty != null && (
               <View style={styles.planStat}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.planStatValue, live.planStatValue]}>
+                <Text style={[styles.planStatValue, live.planStatValue]}>
                   {['Beginner', 'Intermediate', 'Advanced'][plan.difficulty] ?? 'Intermediate'}
                 </Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.planStatLabel, live.planStatLabel]}>Level</Text>
+                <Text style={[styles.planStatLabel, live.planStatLabel]}>Level</Text>
               </View>
             )}
           </View>
@@ -373,7 +373,7 @@ export default function PlanDetailScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel={isReordering ? 'Done reordering workouts' : 'Reorder workouts'}
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.reorderToggleText, live.reorderToggleText, isReordering && [styles.reorderToggleTextActive, live.reorderToggleTextActive]]}>
+                <Text style={[styles.reorderToggleText, live.reorderToggleText, isReordering && [styles.reorderToggleTextActive, live.reorderToggleTextActive]]}>
                   {isReordering ? 'Done' : 'Reorder'}
                 </Text>
               </TouchableOpacity>
@@ -381,7 +381,7 @@ export default function PlanDetailScreen({ navigation, route }) {
           </View>
           {workouts.length === 0 ? (
             <Card padding="xl" style={styles.emptyCard}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.emptyCardText, live.emptyCardText]}>
+              <Text style={[styles.emptyCardText, live.emptyCardText]}>
                 {isLibrary ? 'No workouts in this plan.' : 'No workouts yet. Edit the plan to add workouts.'}
               </Text>
             </Card>
@@ -402,16 +402,16 @@ export default function PlanDetailScreen({ navigation, route }) {
               renderRow={({ item: routine, index: i }) => (
                 <Card style={styles.workoutCard}>
                   <View style={[styles.workoutIndex, live.workoutIndex]}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.workoutIndexText, live.workoutIndexText]}>{i + 1}</Text>
+                    <Text style={[styles.workoutIndexText, live.workoutIndexText]}>{i + 1}</Text>
                   </View>
                   <View style={styles.workoutInfo}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.workoutName, live.workoutName]}>{routine.name}</Text>
+                    <Text style={[styles.workoutName, live.workoutName]}>{routine.name}</Text>
                     {exerciseCounts[routine.id] ? (
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.workoutMeta, live.workoutMeta]}>
+                      <Text style={[styles.workoutMeta, live.workoutMeta]}>
                         {exerciseCounts[routine.id]} exercise{exerciseCounts[routine.id] !== 1 ? 's' : ''}
                       </Text>
                     ) : (
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.workoutMeta, live.workoutMeta]}>No exercises yet</Text>
+                      <Text style={[styles.workoutMeta, live.workoutMeta]}>No exercises yet</Text>
                     )}
                   </View>
                   <View style={styles.reorderActions}>
@@ -445,16 +445,16 @@ export default function PlanDetailScreen({ navigation, route }) {
             workouts.map((routine, i) => (
               <Card key={routine.id} style={styles.workoutCard}>
                 <View style={[styles.workoutIndex, live.workoutIndex]}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.workoutIndexText, live.workoutIndexText]}>{i + 1}</Text>
+                  <Text style={[styles.workoutIndexText, live.workoutIndexText]}>{i + 1}</Text>
                 </View>
                 <View style={styles.workoutInfo}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.workoutName, live.workoutName]}>{routine.name}</Text>
+                  <Text style={[styles.workoutName, live.workoutName]}>{routine.name}</Text>
                   {exerciseCounts[routine.id] ? (
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.workoutMeta, live.workoutMeta]}>
+                    <Text style={[styles.workoutMeta, live.workoutMeta]}>
                       {exerciseCounts[routine.id]} exercise{exerciseCounts[routine.id] !== 1 ? 's' : ''}
                     </Text>
                   ) : (
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.workoutMeta, live.workoutMeta]}>No exercises yet</Text>
+                    <Text style={[styles.workoutMeta, live.workoutMeta]}>No exercises yet</Text>
                   )}
                 </View>
                 {!isLibrary && (
@@ -494,7 +494,7 @@ export default function PlanDetailScreen({ navigation, route }) {
               {WHY_ORDER.filter(k => whyThis[k]).map((k, i, arr) => (
                 <View key={k} style={[styles.whyItem, i < arr.length - 1 && styles.whyItemGap]}>
                   <View style={[styles.whyBullet, live.whyBullet]} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.whyText, live.whyText]}>{whyThis[k]}</Text>
+                  <Text style={[styles.whyText, live.whyText]}>{whyThis[k]}</Text>
                 </View>
               ))}
             </Card>
@@ -509,18 +509,18 @@ export default function PlanDetailScreen({ navigation, route }) {
             <Card padding="none" style={styles.manageCard}>
               <TouchableOpacity style={[styles.manageRow, live.manageRow]} onPress={handleEditPlan} accessibilityRole="button" accessibilityLabel="Edit plan">
                 <Ionicons name="create-outline" size={18} color={t.colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.manageRowText, live.manageRowText]}>Edit plan</Text>
+                <Text style={[styles.manageRowText, live.manageRowText]}>Edit plan</Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
               <TouchableOpacity style={[styles.manageRow, live.manageRow]} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate plan">
                 <Ionicons name="copy-outline" size={18} color={t.colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.manageRowText, live.manageRowText]}>Duplicate plan</Text>
+                <Text style={[styles.manageRowText, live.manageRowText]}>Duplicate plan</Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
               {!isActive && (
                 <TouchableOpacity style={[styles.manageRow, live.manageRow, styles.manageRowLast]} onPress={handleArchive} accessibilityRole="button" accessibilityLabel="Archive plan">
                   <Ionicons name="archive-outline" size={18} color={t.colors.error} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.manageRowText, live.manageRowText, { color: t.colors.error }]}>Archive plan</Text>
+                  <Text style={[styles.manageRowText, live.manageRowText, { color: t.colors.error }]}>Archive plan</Text>
                   <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
                 </TouchableOpacity>
               )}

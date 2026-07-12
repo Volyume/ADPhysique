@@ -38,7 +38,7 @@ export default function HeightFeetInchesField({
           maxLength={1}
           accessibilityLabel="Height, feet"
         />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.unitLabel, live.unitLabel]}>ft</Text>
+        <Text style={[styles.unitLabel, live.unitLabel]}>ft</Text>
       </View>
       <View style={styles.heightUnit}>
         <TextField
@@ -54,7 +54,7 @@ export default function HeightFeetInchesField({
           maxLength={4}
           accessibilityLabel="Height, inches"
         />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.unitLabel, live.unitLabel]}>in</Text>
+        <Text style={[styles.unitLabel, live.unitLabel]}>in</Text>
       </View>
     </View>
   );

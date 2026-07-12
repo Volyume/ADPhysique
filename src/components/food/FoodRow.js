@@ -68,14 +68,14 @@ export default function FoodRow({
       accessibilityHint={onLongPress ? (longPressHint ?? 'Long-press to cycle favourite, exclude, neutral') : undefined}
     >
       <View style={styles.rowMain}>
-        <Text maxFontSizeMultiplier={1.3}
+        <Text
           style={[styles.rowName, live.rowName, isDislike && [styles.rowNameMuted, live.rowNameMuted]]}
           numberOfLines={1}
         >
           {food.name}
           {pref === 'fav' ? '  Starred' : ''}
         </Text>
-        <Text maxFontSizeMultiplier={1.3}
+        <Text
           style={[styles.rowMeta, live.rowMeta, isDislike && [styles.rowMetaMuted, live.rowMetaMuted]]}
           numberOfLines={1}
         >
@@ -97,7 +97,7 @@ export default function FoodRow({
           accessibilityLabel={addAccessibilityLabel || `Add ${food.name} to plate`}
         >
           <Ionicons name="add" size={16} color={t.colors.primary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.addBtnText, live.addBtnText]}>{addLabel}</Text>
+          <Text style={[styles.addBtnText, live.addBtnText]}>{addLabel}</Text>
         </TouchableOpacity>
       ) : (
         <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} style={styles.rowChevron} importantForAccessibility="no" accessibilityElementsHidden />

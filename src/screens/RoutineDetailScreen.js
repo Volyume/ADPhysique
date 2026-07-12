@@ -91,7 +91,7 @@ function MuscleTagRow({ exercises }) {
             : [tagStyles.chipTextLow, tagLive.chipTextLow];
           return (
             <View key={muscle} style={[tagStyles.chip, chipStyle]}>
-              <Text maxFontSizeMultiplier={1.3} style={[tagStyles.chipText, tagLive.chipText, textStyle]}>
+              <Text style={[tagStyles.chipText, tagLive.chipText, textStyle]}>
                 {displayName} ×{count}
               </Text>
             </View>
@@ -415,7 +415,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       accessibilityRole="button"
       accessibilityLabel={isReordering ? 'Done reordering' : 'Reorder exercises'}
     >
-      <Text maxFontSizeMultiplier={1.3} style={{ fontSize: t.fontSize.md, color: isReordering ? t.colors.primary : t.colors.textSecondary, fontWeight: isReordering ? fontWeight.bold : fontWeight.regular }}>
+      <Text style={{ fontSize: t.fontSize.md, color: isReordering ? t.colors.primary : t.colors.textSecondary, fontWeight: isReordering ? fontWeight.bold : fontWeight.regular }}>
         {isReordering ? 'Done' : 'Reorder'}
       </Text>
     </TouchableOpacity>
@@ -436,10 +436,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
       />
       <MuscleTagRow exercises={exercises} />
       {divisionLine ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.divisionLine, live.divisionLine]}>{divisionLine}</Text>
+        <Text style={[styles.divisionLine, live.divisionLine]}>{divisionLine}</Text>
       ) : null}
       {routine.split_type ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.splitRationale, live.splitRationale]}>{getSplitRationale(routine.split_type)}</Text>
+        <Text style={[styles.splitRationale, live.splitRationale]}>{getSplitRationale(routine.split_type)}</Text>
       ) : null}
     </>
   );
@@ -474,17 +474,17 @@ export default function RoutineDetailScreen({ navigation, route }) {
             accessibilityLabel={isReordering ? undefined : (exercise.unresolved ? `Re-link ${exercise.name}` : `Edit ${exercise.name}`)}
           >
             <View style={[styles.orderBadge, live.orderBadge, exercise.unresolved && [styles.orderBadgeUnresolved, live.orderBadgeUnresolved]]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.orderNum, live.orderNum]}>{index + 1}</Text>
+              <Text style={[styles.orderNum, live.orderNum]}>{index + 1}</Text>
             </View>
             <View style={styles.exerciseInfo}>
               <View style={styles.exerciseTitleRow}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseName, live.exerciseName, exercise.unresolved && [styles.exerciseNameUnresolved, live.exerciseNameUnresolved]]}>
+                <Text style={[styles.exerciseName, live.exerciseName, exercise.unresolved && [styles.exerciseNameUnresolved, live.exerciseNameUnresolved]]}>
                   {exercise.name || 'Exercise (couldn’t restore)'}
                 </Text>
                 {exercise.unresolved && (
                   <View style={[styles.relinkChip, live.relinkChip]}>
                     <Ionicons name="link-outline" size={12} color={t.colors.warning} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.relinkChipText, live.relinkChipText]}>Tap to re-link</Text>
+                    <Text style={[styles.relinkChipText, live.relinkChipText]}>Tap to re-link</Text>
                   </View>
                 )}
                 {(() => {
@@ -494,31 +494,31 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   return (
                     <View style={[styles.supersetChip, live.supersetChip]}>
                       <Ionicons name="link" size={11} color={t.colors.primary} />
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.supersetChipText, live.supersetChipText]}>
+                      <Text style={[styles.supersetChipText, live.supersetChipText]}>
                         Superset {String.fromCharCode(65 + gIdx)}
                       </Text>
                     </View>
                   );
                 })()}
               </View>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseMeta, live.exerciseMeta]}>
+              <Text style={[styles.exerciseMeta, live.exerciseMeta]}>
                 {routineExercise.recommendedSets} sets ·{' '}
                 {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
                 {routineExercise.restSeconds ? ` · ${routineExercise.restSeconds}s rest` : ''}
               </Text>
               {routineExercise.startingWeight > 0 ? (
-                <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseStartWeight, live.exerciseStartWeight]}>
+                <Text style={[styles.exerciseStartWeight, live.exerciseStartWeight]}>
                   Start: {routineExercise.startingWeight} kg
                 </Text>
               ) : null}
-              <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseMuscle, live.exerciseMuscle]}>
+              <Text style={[styles.exerciseMuscle, live.exerciseMuscle]}>
                 {MUSCLE_DISPLAY_NAMES[exercise.primaryMuscle] ||
                   (exercise.primaryMuscle || '').charAt(0).toUpperCase() +
                   (exercise.primaryMuscle || '').slice(1).replace(/_/g, ' ')}
               </Text>
               {(() => {
                 const why = getExerciseWhyThis(exercise.name, exercise.subregion);
-                return why ? <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseWhy, live.exerciseWhy]}>{why}</Text> : null;
+                return why ? <Text style={[styles.exerciseWhy, live.exerciseWhy]}>{why}</Text> : null;
               })()}
             </View>
             {isReordering ? (
@@ -631,7 +631,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
             />
           ) : (
             <View style={styles.empty}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.emptyText, live.emptyText]}>No exercises yet. Add some below.</Text>
+              <Text style={[styles.emptyText, live.emptyText]}>No exercises yet. Add some below.</Text>
             </View>
           )}
           {/* Same footer FlashList renders below -- reorder mode showed it
@@ -649,7 +649,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
           ListEmptyComponent={
             !exercises.length ? (
               <View style={styles.empty}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.emptyText, live.emptyText]}>No exercises yet. Add some below.</Text>
+                <Text style={[styles.emptyText, live.emptyText]}>No exercises yet. Add some below.</Text>
               </View>
             ) : null
           }
@@ -673,7 +673,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
         keyboardAvoiding
         accessibilityLabel={editingExercise?.exercise?.name ? `Edit ${editingExercise.exercise.name}` : 'Edit exercise'}
       >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.editTitle, live.editTitle]}>{editingExercise?.exercise?.name}</Text>
+            <Text style={[styles.editTitle, live.editTitle]}>{editingExercise?.exercise?.name}</Text>
             <View style={styles.editRow}>
               <TextField
                 label="Sets"
@@ -764,10 +764,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
               surface itself stays, it is deliberately richer than the plain
               library picker. */}
           <ModalHeader title="Swap exercise" onClose={() => { setSwapState(null); setSwapCandidates([]); }} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.swapSubtitle, live.swapSubtitle]}>
-            Replacing: <Text maxFontSizeMultiplier={1.3} style={{ color: t.colors.primary }}>{swapState?.exercise?.name}</Text>
+          <Text style={[styles.swapSubtitle, live.swapSubtitle]}>
+            Replacing: <Text style={{ color: t.colors.primary }}>{swapState?.exercise?.name}</Text>
           </Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.swapNote, live.swapNote]}>
+          <Text style={[styles.swapNote, live.swapNote]}>
             Choose a substitute. Your routine will be updated. Your set, rep and rest targets stay the same.
           </Text>
           <FlashList
@@ -783,14 +783,14 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 accessibilityLabel={`Swap in ${item.exercise.name}`}
               >
                 <View style={{ flex: 1 }}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.swapItemName, live.swapItemName]}>{item.exercise.name}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.swapItemReason, live.swapItemReason]}>{item.reason}</Text>
+                  <Text style={[styles.swapItemName, live.swapItemName]}>{item.exercise.name}</Text>
+                  <Text style={[styles.swapItemReason, live.swapItemReason]}>{item.reason}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </Card>
             )}
             ListEmptyComponent={
-              <Text maxFontSizeMultiplier={1.3} style={{ color: t.colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
+              <Text style={{ color: t.colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
                 No close matches yet.
               </Text>
             }

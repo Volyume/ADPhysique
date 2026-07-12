@@ -237,15 +237,15 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
       {!config ? null : done ? (
         <View style={styles.doneBlock}>
           <Ionicons name="checkmark-circle" size={36} color={t.colors.success} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.doneTitle, live.doneTitle]}>Thanks</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.doneSub, live.doneSub]}>Your feedback's on its way.</Text>
+          <Text style={[styles.doneTitle, live.doneTitle]}>Thanks</Text>
+          <Text style={[styles.doneSub, live.doneSub]}>Your feedback's on its way.</Text>
         </View>
       ) : (
         <>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>
+          <Text style={[styles.title, live.title]}>
             {config.trigger === 'shake' ? "What's wrong?" : 'How was that?'}
           </Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.sub, live.sub]}>
+          <Text style={[styles.sub, live.sub]}>
             {config.trigger === 'shake'
               ? "Tell us what just happened. We attach the rest automatically."
               : "Pick the closest match. One tap is plenty."}
@@ -313,7 +313,7 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
             />
           </View>
 
-          <Text maxFontSizeMultiplier={1.3} style={[styles.privacy, live.privacy]}>
+          <Text style={[styles.privacy, live.privacy]}>
             Sent with build info, your last few actions, and a recent error if any.
             Body measurements and names are stripped before sending.
           </Text>

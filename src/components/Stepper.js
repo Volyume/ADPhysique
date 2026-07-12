@@ -75,7 +75,6 @@ export default function Stepper({
         ]}
         accessibilityLabel={valueLabel || `${label} ${display}`}
         numberOfLines={1}
-        maxFontSizeMultiplier={1.3}
       >
         {display}
       </Text>

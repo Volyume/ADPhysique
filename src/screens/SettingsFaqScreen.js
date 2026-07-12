@@ -116,7 +116,7 @@ export default function SettingsFaqScreen() {
 
   return (
     <SettingsPage title="Help & FAQ">
-      <Text maxFontSizeMultiplier={1.3} style={[styles.intro, live.intro]}>
+      <Text style={[styles.intro, live.intro]}>
         Answers to what people ask most. Nothing here needs a connection, and it works the same whether you are on Free or Pro.
       </Text>
       <View style={styles.list}>

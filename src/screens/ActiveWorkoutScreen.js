@@ -2499,7 +2499,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 style={styles.exerciseNameTap}
                 hitSlop={{ top: 8, bottom: 8, left: 0, right: 8 }}
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>
+                <Text style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.overflowBtn, live.overflowBtn]}
@@ -2544,7 +2544,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 content: (
                   <View key="starter" style={[styles.starterBanner, live.starterBanner]}>
                     <Ionicons name="flash-outline" size={16} color={t.colors.primary} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.starterBannerText, live.starterBannerText]}>{timeCrunchMsg}</Text>
+                    <Text style={[styles.starterBannerText, live.starterBannerText]}>{timeCrunchMsg}</Text>
                     <TouchableOpacity
                       style={[styles.inlineActionPill, live.inlineActionPill]}
                       onPress={handleRevertTimeCrunch}
@@ -2552,7 +2552,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       accessibilityRole="button"
                       accessibilityLabel="Do the full session instead"
                     >
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.inlineActionPillText, live.inlineActionPillText]}>Full session</Text>
+                      <Text style={[styles.inlineActionPillText, live.inlineActionPillText]}>Full session</Text>
                     </TouchableOpacity>
                   </View>
                 ),
@@ -2567,7 +2567,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 content: (
                   <View key="superset" style={[styles.supersetChip, live.supersetChip]}>
                     <Ionicons name="link" size={11} color={t.colors.primary} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supersetChipText, live.supersetChipText]}>
+                    <Text style={[styles.supersetChipText, live.supersetChipText]}>
                       Superset - alternates with {partnerNamesText}
                     </Text>
                   </View>
@@ -2589,7 +2589,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     <Ionicons name="bulb-outline" size={16} color={t.colors.primary} style={{ marginTop: spacing.hair }} />
                     <View style={styles.nextTimeBannerBody}>
                       <Text
-                        maxFontSizeMultiplier={1.3}
                         style={[styles.nextTimeBannerText, live.nextTimeBannerText]}
                         numberOfLines={isNoteExpanded ? undefined : 4}
                       >
@@ -2606,7 +2605,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                         accessibilityState={{ expanded: isNoteExpanded }}
                         accessibilityLabel={isNoteExpanded ? 'Show less of this note' : 'Show more of this note'}
                       >
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.nextTimeMoreToggleText, live.nextTimeMoreToggleText]}>
+                        <Text style={[styles.nextTimeMoreToggleText, live.nextTimeMoreToggleText]}>
                           {isNoteExpanded ? 'Less' : 'More'}
                         </Text>
                       </TouchableOpacity>
@@ -2621,7 +2620,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       accessibilityRole="button"
                       accessibilityLabel="Dismiss note"
                     >
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.inlineActionPillText, live.inlineActionPillText]}>Got it</Text>
+                      <Text style={[styles.inlineActionPillText, live.inlineActionPillText]}>Got it</Text>
                     </TouchableOpacity>
                   </View>
                 ),
@@ -2638,8 +2637,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     <View style={styles.deloadBannerLeft}>
                       <Ionicons name="battery-charging-outline" size={18} color={t.colors.warning} />
                       <View>
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.deloadBannerTitle, live.deloadBannerTitle]}>Recovery week</Text>
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.deloadBannerSub, live.deloadBannerSub]}>Light loads - full recovery - no PRs</Text>
+                        <Text style={[styles.deloadBannerTitle, live.deloadBannerTitle]}>Recovery week</Text>
+                        <Text style={[styles.deloadBannerSub, live.deloadBannerSub]}>Light loads - full recovery - no PRs</Text>
                       </View>
                     </View>
                     <TouchableOpacity
@@ -2648,7 +2647,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       accessibilityRole="button"
                       accessibilityLabel="Dismiss deload banner"
                     >
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.inlineActionPillText, live.inlineActionPillText]}>Skip</Text>
+                      <Text style={[styles.inlineActionPillText, live.inlineActionPillText]}>Skip</Text>
                     </TouchableOpacity>
                   </View>
                 ),
@@ -2663,7 +2662,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 content: (
                   <View key="target-reached" style={[styles.targetBanner, live.targetBanner]}>
                     <Ionicons name="checkmark-circle" size={16} color={t.colors.success} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.targetBannerText, live.targetBannerText]}>
+                    <Text style={[styles.targetBannerText, live.targetBannerText]}>
                       Target reached: {targetSets} working set{targetSets !== 1 ? 's' : ''} done
                     </Text>
                   </View>
@@ -2795,13 +2794,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               isolation gets the plain switch-sides prompt here instead. */}
           {perSide ? (
             <View style={[styles.clusterBanner, live.clusterBanner]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.clusterTitle, live.clusterTitle]}>
+              <Text style={[styles.clusterTitle, live.clusterTitle]}>
                 Side one logged
               </Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.clusterReps, live.clusterReps]}>
+              <Text style={[styles.clusterReps, live.clusterReps]}>
                 {`${perSide.reps} reps${perSide.weight ? ` @ ${perSide.weight}${units}` : ''} - same on your other side`}
               </Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>
+              <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>
                 {exercise?.compoundIsolation === 'compound'
                   ? 'Rest, switch sides, then tap Log other side.'
                   : "Switch sides when you're ready, then tap Log other side."}
@@ -2813,7 +2812,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Cancel this per-side set, nothing is logged"
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.clusterCancelText, live.clusterCancelText]}>Cancel set</Text>
+                <Text style={[styles.clusterCancelText, live.clusterCancelText]}>Cancel set</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -2821,15 +2820,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {/* Cluster banner: drives myo-rep / rest-pause mini-sets. */}
           {cluster ? (
             <View style={[styles.clusterBanner, live.clusterBanner]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.clusterTitle, live.clusterTitle]}>
+              <Text style={[styles.clusterTitle, live.clusterTitle]}>
                 {clusterLabel(cluster.setType)} cluster
               </Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.clusterReps, live.clusterReps]}>
+              <Text style={[styles.clusterReps, live.clusterReps]}>
                 {cluster.reps.join(' + ')} = {cluster.reps.reduce((a, n) => a + n, 0)} reps
                 {cluster.weight ? ` @ ${cluster.weight}${units}` : ''}
               </Text>
               <View style={styles.clusterInputRow}>
-                <TextInput maxFontSizeMultiplier={1.3}
+                <TextInput
                   style={[styles.clusterInput, live.clusterInput]}
                   value={clusterReps}
                   onChangeText={setClusterReps}
@@ -2848,7 +2847,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   accessibilityLabel="Add mini-set"
                 >
                   <Ionicons name="add" size={20} color={t.colors.primary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.clusterAddBtnText, live.clusterAddBtnText]}>Mini-set</Text>
+                  <Text style={[styles.clusterAddBtnText, live.clusterAddBtnText]}>Mini-set</Text>
                 </Button>
               </View>
               <Button
@@ -2859,10 +2858,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 accessibilityLabel="Finish cluster and log the set"
               >
                 <Ionicons name="checkmark-circle" size={20} color={t.colors.onPrimary} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.completeBtnText, live.completeBtnText]}>Finish cluster</Text>
+                <Text style={[styles.completeBtnText, live.completeBtnText]}>Finish cluster</Text>
               </Button>
               <TouchableOpacity onPress={cancelCluster} style={[styles.clusterCancel, live.clusterCancel]} accessibilityLabel="Cancel cluster">
-                <Text maxFontSizeMultiplier={1.3} style={[styles.clusterCancelText, live.clusterCancelText]}>Cancel</Text>
+                <Text style={[styles.clusterCancelText, live.clusterCancelText]}>Cancel</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -2892,8 +2891,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               permanent primary is the only tap needed. */}
           {autoAdvanceArmed && targetComplete && !extraSetArmed ? (
             <View style={styles.autoAdvanceRow}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.autoAdvanceRowText, live.autoAdvanceRowText]}>Next exercise in a moment</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.autoAdvanceRowDot, live.autoAdvanceRowDot]}> - </Text>
+              <Text style={[styles.autoAdvanceRowText, live.autoAdvanceRowText]}>Next exercise in a moment</Text>
+              <Text style={[styles.autoAdvanceRowDot, live.autoAdvanceRowDot]}> - </Text>
               <TouchableOpacity
                 style={[styles.autoAdvanceRowActionBtn, live.autoAdvanceRowActionBtn]}
                 onPress={cancelAutoAdvance}
@@ -2901,7 +2900,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Stay on this exercise"
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.autoAdvanceRowAction, live.autoAdvanceRowAction]}>Stay here</Text>
+                <Text style={[styles.autoAdvanceRowAction, live.autoAdvanceRowAction]}>Stay here</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -2911,7 +2910,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               without scrolling past secondary actions. */}
           {loggedSets.length > 0 && (
             <View style={styles.loggedSection}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.loggedTitle, live.loggedTitle]}>This workout</Text>
+              <Text style={[styles.loggedTitle, live.loggedTitle]}>This workout</Text>
               {/* D2: rows keyed by the set's stable id (was the array index,
                   which made every delete re-key the rows below it) and wrapped
                   so a logged set arrives, an unlogged one leaves, and siblings
@@ -3016,11 +3015,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               >
                 <View style={styles.supIconRow}>
                   <Ionicons name="link" size={24} color={t.colors.primary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.supTitle, live.supTitle]}>
+                  <Text style={[styles.supTitle, live.supTitle]}>
                     {(supersetHeadsUp?.memberNames?.length ?? 0) > 2 ? 'Giant set coming up' : 'Superset coming up'}
                   </Text>
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.supSubtitle, live.supSubtitle]}>
+                <Text style={[styles.supSubtitle, live.supSubtitle]}>
                   {(supersetHeadsUp?.memberNames?.length ?? 0) > 2
                     ? `${supersetHeadsUp.memberNames.length} exercises done back-to-back with no rest between them.`
                     : 'Two exercises done back-to-back with no rest between them.'}
@@ -3031,8 +3030,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     <React.Fragment key={`${memberIdx}-${memberName}`}>
                       {memberIdx > 0 && <View style={[styles.supPairConnector, live.supPairConnector]} />}
                       <View style={styles.supPairRow}>
-                        <View style={[styles.supPairChip, live.supPairChip]}><Text maxFontSizeMultiplier={1.3} style={[styles.supPairChipText, live.supPairChipText]}>{memberIdx + 1}</Text></View>
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.supPairName, live.supPairName]} numberOfLines={2}>
+                        <View style={[styles.supPairChip, live.supPairChip]}><Text style={[styles.supPairChipText, live.supPairChipText]}>{memberIdx + 1}</Text></View>
+                        <Text style={[styles.supPairName, live.supPairName]} numberOfLines={2}>
                           {memberName}
                         </Text>
                       </View>
@@ -3042,24 +3041,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
                 <View style={styles.supSteps}>
                   <View style={styles.supStep}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>1</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>Set up every station now if you can.</Text>
+                    <Text style={[styles.supStepNum, live.supStepNum]}>1</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>Set up every station now if you can.</Text>
                   </View>
                   <View style={styles.supStep}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>2</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>Do all reps of the first exercise.</Text>
+                    <Text style={[styles.supStepNum, live.supStepNum]}>2</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>Do all reps of the first exercise.</Text>
                   </View>
                   <View style={styles.supStep}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>3</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>Move straight to the next. No rest between.</Text>
+                    <Text style={[styles.supStepNum, live.supStepNum]}>3</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>Move straight to the next. No rest between.</Text>
                   </View>
                   <View style={styles.supStep}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>4</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>After the last one, rest the full rest period, then repeat.</Text>
+                    <Text style={[styles.supStepNum, live.supStepNum]}>4</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>After the last one, rest the full rest period, then repeat.</Text>
                   </View>
                 </View>
 
-                <Text maxFontSizeMultiplier={1.3} style={[styles.supTip, live.supTip]}>
+                <Text style={[styles.supTip, live.supTip]}>
                   Tip: if you can't grab every station right now, unlink and do them as normal sets.
                 </Text>
 
@@ -3082,7 +3081,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     accessibilityLabel="Unlink the superset"
                   >
                     <Ionicons name="unlink" size={14} color={t.colors.textSecondary} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supSecondaryBtnText, live.supSecondaryBtnText]}>Unlink</Text>
+                    <Text style={[styles.supSecondaryBtnText, live.supSecondaryBtnText]}>Unlink</Text>
                   </Button>
                   <Button
                     variant="outline"
@@ -3094,7 +3093,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     accessibilityLabel="Swap exercise"
                   >
                     <Ionicons name="swap-horizontal" size={14} color={t.colors.textSecondary} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supSecondaryBtnText, live.supSecondaryBtnText]}>Swap exercise</Text>
+                    <Text style={[styles.supSecondaryBtnText, live.supSecondaryBtnText]}>Swap exercise</Text>
                   </Button>
                 </View>
               </ScrollView>
@@ -3139,45 +3138,45 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               >
                 <View style={styles.supIconRow}>
                   <Ionicons name="repeat" size={24} color={t.colors.primary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.supTitle, live.supTitle]}>Log this one side at a time?</Text>
+                  <Text style={[styles.supTitle, live.supTitle]}>Log this one side at a time?</Text>
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.supSubtitle, live.supSubtitle]}>
+                <Text style={[styles.supSubtitle, live.supSubtitle]}>
                   {unilateralSuggest.exerciseName} is usually trained one side at a time.
                 </Text>
 
                 <Card surface="surface2" radius="md" padding="md" style={[styles.supPairCard, live.supPairCard]}>
                   <View style={styles.supPairRow}>
-                    <View style={[styles.supPairChip, live.supPairChip]}><Text maxFontSizeMultiplier={1.3} style={[styles.supPairChipText, live.supPairChipText]}>1</Text></View>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supPairName, live.supPairName]} numberOfLines={2}>First side</Text>
+                    <View style={[styles.supPairChip, live.supPairChip]}><Text style={[styles.supPairChipText, live.supPairChipText]}>1</Text></View>
+                    <Text style={[styles.supPairName, live.supPairName]} numberOfLines={2}>First side</Text>
                   </View>
                   <View style={[styles.supPairConnector, live.supPairConnector]} />
                   <View style={styles.supPairRow}>
-                    <View style={[styles.supPairChip, live.supPairChip]}><Text maxFontSizeMultiplier={1.3} style={[styles.supPairChipText, live.supPairChipText]}>2</Text></View>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supPairName, live.supPairName]} numberOfLines={2}>Other side</Text>
+                    <View style={[styles.supPairChip, live.supPairChip]}><Text style={[styles.supPairChipText, live.supPairChipText]}>2</Text></View>
+                    <Text style={[styles.supPairName, live.supPairName]} numberOfLines={2}>Other side</Text>
                   </View>
                 </Card>
 
                 <View style={styles.supSteps}>
                   <View style={styles.supStep}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>1</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>Do your first side, then tap Log set.</Text>
+                    <Text style={[styles.supStepNum, live.supStepNum]}>1</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>Do your first side, then tap Log set.</Text>
                   </View>
                   <View style={styles.supStep}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>2</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>
+                    <Text style={[styles.supStepNum, live.supStepNum]}>2</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>
                       {isCompound
                         ? 'Half your normal rest, then do the same reps on your other side.'
                         : 'Switch sides when you\'re ready, no forced timer, then do the same reps.'}
                     </Text>
                   </View>
                   <View style={styles.supStep}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>3</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>
+                    <Text style={[styles.supStepNum, live.supStepNum]}>3</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>
                       Tap Log other side - the same button, one more tap.</Text>
                   </View>
                   <View style={styles.supStep}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepNum, live.supStepNum]}>4</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supStepText, live.supStepText]}>
+                    <Text style={[styles.supStepNum, live.supStepNum]}>4</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>
                       {isCompound
                         ? 'It logs as one set. Rest as normal, then your next set.'
                         : 'It logs as one set. Rest as normal once both sides are done.'}
@@ -3185,7 +3184,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   </View>
                 </View>
 
-                <Text maxFontSizeMultiplier={1.3} style={[styles.supTip, live.supTip]}>
+                <Text style={[styles.supTip, live.supTip]}>
                   Tip: change your mind any time from this exercise's options menu.
                 </Text>
 
@@ -3204,7 +3203,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     onPress={() => answerAndClose(false)}
                     accessibilityLabel="No, log as normal"
                   >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.supSecondaryBtnText, live.supSecondaryBtnText]}>No, log as normal</Text>
+                    <Text style={[styles.supSecondaryBtnText, live.supSecondaryBtnText]}>No, log as normal</Text>
                   </Button>
                 </View>
               </ScrollView>
@@ -3220,8 +3219,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <View style={[styles.staleOverlay, live.staleOverlay]}>
             <View style={[styles.staleSheet, live.staleSheet]}>
               <Ionicons name="time-outline" size={32} color={t.colors.warning} style={{ marginBottom: spacing.md }} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.staleTitle, live.staleTitle]}>Resume workout?</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.staleBody, live.staleBody]}>
+              <Text style={[styles.staleTitle, live.staleTitle]}>Resume workout?</Text>
+              <Text style={[styles.staleBody, live.staleBody]}>
                 This workout has been inactive for a while. What would you like to do?
               </Text>
               <Button
@@ -3257,7 +3256,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   },
                 ]);
               }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.staleDiscardText, live.staleDiscardText]}>Discard</Text>
+                <Text style={[styles.staleDiscardText, live.staleDiscardText]}>Discard</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -3285,8 +3284,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         >
           {showSetTypePicker ? (
             <>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Set type</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.sheetExplainer, live.sheetExplainer]}>
+              <Text style={[styles.sheetTitle, live.sheetTitle]}>Set type</Text>
+              <Text style={[styles.sheetExplainer, live.sheetExplainer]}>
                 Pick how this set was done. Working sets and intensity techniques count towards your training; warm-ups do not. This helps Volyume read the session correctly.
               </Text>
               {/* P9: the radios group so TalkBack announces position context
@@ -3306,10 +3305,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   accessibilityLabel={`${opt.label}. ${opt.description}`}
                 >
                   <View style={styles.sheetOptionText}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel, currentSet.setType === opt.value && [styles.sheetOptionLabelActive, live.sheetOptionLabelActive]]}>
+                    <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel, currentSet.setType === opt.value && [styles.sheetOptionLabelActive, live.sheetOptionLabelActive]]}>
                       {opt.label}
                     </Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>{opt.description}</Text>
+                    <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>{opt.description}</Text>
                   </View>
                   {currentSet.setType === opt.value && (
                     <Ionicons name="checkmark" size={18} color={t.colors.primary} />
@@ -3333,7 +3332,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         >
           {showWarmupRamp ? (
             <>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Warm-up sets</Text>
+              <Text style={[styles.sheetTitle, live.sheetTitle]}>Warm-up sets</Text>
               {(() => {
                 // Working weight: the entry while it holds a working set;
                 // the anchor while the entry holds a ramp row (so reopening
@@ -3346,7 +3345,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   : rampAnchorRef.current;
                 if (!Number.isFinite(working) || working <= 0) {
                   return (
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.sheetExplainer, live.sheetExplainer]}>
+                    <Text style={[styles.sheetExplainer, live.sheetExplainer]}>
                       Enter your working weight first, then come back for warm-up sets.
                     </Text>
                   );
@@ -3357,14 +3356,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 });
                 if (rows.length === 0) {
                   return (
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.sheetExplainer, live.sheetExplainer]}>
+                    <Text style={[styles.sheetExplainer, live.sheetExplainer]}>
                       {`This is light enough to start at ${working} ${units}. You can begin with your working set today.`}
                     </Text>
                   );
                 }
                 return (
                   <>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.sheetExplainer, live.sheetExplainer]}>
+                    <Text style={[styles.sheetExplainer, live.sheetExplainer]}>
                       {`Working up to ${working} ${units}. Choose a warm-up set to load it, then tap Log warm-up. Warm-ups are saved but not counted in your working-set target.`}
                     </Text>
                     {rows.map((row) => (
@@ -3382,9 +3381,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       >
                         <View style={styles.overflowOptionRow}>
                           <Ionicons name="flame-outline" size={16} color={t.colors.warning} />
-                          <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{`${row.weight} ${units} x ${row.reps}`}</Text>
+                          <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{`${row.weight} ${units} x ${row.reps}`}</Text>
                         </View>
-                        {row.isBar ? <Text maxFontSizeMultiplier={1.3} style={[styles.rampBarTag, live.rampBarTag]}>Empty bar</Text> : null}
+                        {row.isBar ? <Text style={[styles.rampBarTag, live.rampBarTag]}>Empty bar</Text> : null}
                       </TouchableOpacity>
                     ))}
                   </>
@@ -3404,7 +3403,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         >
           {showOverflow ? (
             <>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>{exercise?.name}</Text>
+              <Text style={[styles.sheetTitle, live.sheetTitle]}>{exercise?.name}</Text>
               <TouchableOpacity
                 style={[styles.sheetOption, live.sheetOption]}
                 onPress={() => { setShowOverflow(false); handleOpenSwap(); }}
@@ -3413,7 +3412,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               >
                 <View style={styles.overflowOptionRow}>
                   <Ionicons name="swap-horizontal" size={18} color={t.colors.textSecondary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Swap exercise</Text>
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Swap exercise</Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity
@@ -3427,7 +3426,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               >
                 <View style={styles.overflowOptionRow}>
                   <Ionicons name="add-circle-outline" size={18} color={t.colors.textSecondary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Add exercise</Text>
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Add exercise</Text>
                 </View>
               </TouchableOpacity>
               {/* R3 rebuild (founder ruling 2026-07-12): beginner education
@@ -3447,7 +3446,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               >
                 <View style={styles.overflowOptionRow}>
                   <Ionicons name="help-circle-outline" size={18} color={t.colors.textSecondary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>How logging works</Text>
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>How logging works</Text>
                 </View>
               </TouchableOpacity>
               {/* D43 S3 (blueprint 3.8, overflow diet): Move exercise
@@ -3466,7 +3465,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               >
                 <View style={styles.overflowOptionRow}>
                   <Ionicons name="reorder-three-outline" size={18} color={t.colors.textSecondary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Reorder exercises</Text>
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Reorder exercises</Text>
                 </View>
               </TouchableOpacity>
               )}
@@ -3500,8 +3499,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     color={unilateralExercises.has(exercise.id) ? t.colors.primary : t.colors.textSecondary}
                   />
                   <View style={styles.sheetOptionText}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{unilateralExercises.has(exercise.id) ? 'Logging per side' : 'Log per side'}</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>One side, then the other. Still counts as one set.</Text>
+                    <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{unilateralExercises.has(exercise.id) ? 'Logging per side' : 'Log per side'}</Text>
+                    <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>One side, then the other. Still counts as one set.</Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -3531,8 +3530,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <View style={styles.overflowOptionRow}>
                   <Ionicons name="flame-outline" size={18} color={t.colors.textSecondary} />
                   <View style={styles.sheetOptionText}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Warm-up sets</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>Suggested light sets up to today's working weight.</Text>
+                    <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Warm-up sets</Text>
+                    <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>Suggested light sets up to today's working weight.</Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -3546,7 +3545,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               >
                 <View style={styles.overflowOptionRow}>
                   <Ionicons name={isPairedWithNext ? 'link' : 'link-outline'} size={18} color={isPairedWithNext ? t.colors.primary : t.colors.textSecondary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{isPairedWithNext ? 'Unpair superset' : 'Pair as superset'}</Text>
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{isPairedWithNext ? 'Unpair superset' : 'Pair as superset'}</Text>
                 </View>
               </TouchableOpacity>
               )}
@@ -3560,8 +3559,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <View style={styles.overflowOptionRow}>
                   <Ionicons name="timer-outline" size={18} color={t.colors.textSecondary} />
                   <View style={styles.sheetOptionText}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Shorten session</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>Shortens the rest of today's session to fit the time you have left. Undo any time.</Text>
+                    <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Shorten session</Text>
+                    <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>Shortens the rest of today's session to fit the time you have left. Undo any time.</Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -3576,8 +3575,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <View style={styles.overflowOptionRow}>
                   <Ionicons name="refresh-outline" size={18} color={t.colors.textSecondary} />
                   <View style={styles.sheetOptionText}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Undo shortening</Text>
-                    {!!timeCrunchMsg && <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>{timeCrunchMsg}</Text>}
+                    <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Undo shortening</Text>
+                    {!!timeCrunchMsg && <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>{timeCrunchMsg}</Text>}
                   </View>
                 </View>
               </TouchableOpacity>
@@ -3590,7 +3589,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               >
                 <View style={styles.overflowOptionRow}>
                   <Ionicons name="trash-outline" size={18} color={t.colors.error} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel, { color: t.colors.error }]}>Remove exercise</Text>
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel, { color: t.colors.error }]}>Remove exercise</Text>
                 </View>
               </TouchableOpacity>
             </>
@@ -3624,8 +3623,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         >
           {showReorderSheet ? (
             <>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Reorder exercises</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.sheetExplainer, live.sheetExplainer]}>
+              <Text style={[styles.sheetTitle, live.sheetTitle]}>Reorder exercises</Text>
+              <Text style={[styles.sheetExplainer, live.sheetExplainer]}>
                 Hold and drag the handle, or use the arrows. Exercises in a superset or giant set move together.
               </Text>
               <DragReorderList
@@ -3650,16 +3649,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   return (
                     <View style={[styles.reorderSheetRow, live.reorderSheetRow]}>
                       <View style={styles.reorderSheetRowInfo}>
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.reorderSheetRowName, live.reorderSheetRowName]} numberOfLines={1}>
+                        <Text style={[styles.reorderSheetRowName, live.reorderSheetRowName]} numberOfLines={1}>
                           {item.exercise?.name ?? 'Exercise'}
                         </Text>
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.reorderSheetRowMeta, live.reorderSheetRowMeta]}>
+                        <Text style={[styles.reorderSheetRowMeta, live.reorderSheetRowMeta]}>
                           {setsLogged} set{setsLogged !== 1 ? 's' : ''} logged
                         </Text>
                         {gid != null && (
                           <View style={[styles.reorderSheetSupersetChip, live.reorderSheetSupersetChip]}>
                             <Ionicons name="link" size={11} color={t.colors.primary} />
-                            <Text maxFontSizeMultiplier={1.3} style={[styles.reorderSheetSupersetChipText, live.reorderSheetSupersetChipText]}>{groupSize > 2 ? 'Giant set' : 'Superset'}</Text>
+                            <Text style={[styles.reorderSheetSupersetChipText, live.reorderSheetSupersetChipText]}>{groupSize > 2 ? 'Giant set' : 'Superset'}</Text>
                           </View>
                         )}
                       </View>
@@ -3703,9 +3702,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         >
           {showExecution ? (
             <>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>{exercise?.name}</Text>
+              <Text style={[styles.sheetTitle, live.sheetTitle]}>{exercise?.name}</Text>
               {exercise?.primaryMuscle ? (
-                <Text maxFontSizeMultiplier={1.3} style={[styles.infoMuscle, live.infoMuscle]}>
+                <Text style={[styles.infoMuscle, live.infoMuscle]}>
                   {MUSCLE_DISPLAY_NAMES[exercise.primaryMuscle] ?? ((exercise.primaryMuscle || '').charAt(0).toUpperCase() + (exercise.primaryMuscle || '').slice(1).replace('_', ' '))}
                   {exercise.equipment ? ` - ${exercise.equipment}` : ''}
                 </Text>
@@ -3713,7 +3712,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               {routineExercise?.recommendedSets ? (
                 <View style={styles.infoTargetRow}>
                   <Ionicons name="checkmark-circle-outline" size={14} color={t.colors.primary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.infoTarget, live.infoTarget]}>
+                  <Text style={[styles.infoTarget, live.infoTarget]}>
                     {adjustedSetCount || routineExercise.recommendedSets} sets of {routineExercise.recommendedRepsMin}-{routineExercise.recommendedRepsMax} reps
                   </Text>
                 </View>
@@ -3726,11 +3725,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <View style={[styles.adjustedSection, live.adjustedSection]}>
                   <View style={styles.adjustedHeader}>
                     <Ionicons name="pulse-outline" size={14} color={t.colors.primary} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.adjustedTitle, live.adjustedTitle]}>Adjusted today</Text>
+                    <Text style={[styles.adjustedTitle, live.adjustedTitle]}>Adjusted today</Text>
                   </View>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.adjustedReason, live.adjustedReason]}>{sessionAdjustment.reasonText}</Text>
+                  <Text style={[styles.adjustedReason, live.adjustedReason]}>{sessionAdjustment.reasonText}</Text>
                   {sessionAdjustment.signals?.lastTrainedAt ? (
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.adjustedSignal, live.adjustedSignal]}>
+                    <Text style={[styles.adjustedSignal, live.adjustedSignal]}>
                       Last trained {new Date(sessionAdjustment.signals.lastTrainedAt).toLocaleDateString(undefined, { weekday: 'long' })}.
                     </Text>
                   ) : null}
@@ -3742,7 +3741,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       accessibilityLabel={`Use planned sets instead. ${routineExercise?.recommendedSets ?? ''} sets as written.`}
                     >
                       <Ionicons name="arrow-undo-outline" size={15} color={t.colors.primary} />
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.adjustedRevertText, live.adjustedRevertText]}>Use planned sets instead</Text>
+                      <Text style={[styles.adjustedRevertText, live.adjustedRevertText]}>Use planned sets instead</Text>
                     </TouchableOpacity>
                   ) : null}
                 </View>
@@ -3756,11 +3755,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <View style={[styles.adjustedSection, live.adjustedSection]}>
                   <View style={styles.adjustedHeader}>
                     <Ionicons name="pulse-outline" size={14} color={t.colors.primary} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.adjustedTitle, live.adjustedTitle]}>Eased for today</Text>
+                    <Text style={[styles.adjustedTitle, live.adjustedTitle]}>Eased for today</Text>
                   </View>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.adjustedReason, live.adjustedReason]}>{readinessTweak.whySets}</Text>
+                  <Text style={[styles.adjustedReason, live.adjustedReason]}>{readinessTweak.whySets}</Text>
                   {readinessTweak.whyLoad ? (
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.adjustedSignal, live.adjustedSignal]}>{readinessTweak.whyLoad}</Text>
+                    <Text style={[styles.adjustedSignal, live.adjustedSignal]}>{readinessTweak.whyLoad}</Text>
                   ) : null}
                   <TouchableOpacity
                     style={styles.adjustedRevertBtn}
@@ -3769,13 +3768,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     accessibilityLabel={`${readinessRestoreLabel}. Applies to the whole session.`}
                   >
                     <Ionicons name="arrow-undo-outline" size={15} color={t.colors.primary} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.adjustedRevertText, live.adjustedRevertText]}>{readinessRestoreLabel}</Text>
+                    <Text style={[styles.adjustedRevertText, live.adjustedRevertText]}>{readinessRestoreLabel}</Text>
                   </TouchableOpacity>
                 </View>
               ) : null}
 
-              <Text maxFontSizeMultiplier={1.3} style={[styles.infoNotesLabel, live.infoNotesLabel]}>How to do it</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.infoNotes, live.infoNotes]}>
+              <Text style={[styles.infoNotesLabel, live.infoNotesLabel]}>How to do it</Text>
+              <Text style={[styles.infoNotes, live.infoNotes]}>
                 {routineExercise?.notes || FORM_TIPS[exercise?.name] || exercise?.notes || 'No coaching notes yet for this exercise.\n\nIf you\'re not sure how much weight to use, start light. Pick something you could comfortably lift 15 to 20 times. Getting comfortable with the movement matters more than the weight, especially early on.\n\nFocus on controlled movement, feel the target muscle working, and stop a couple of reps before you truly cannot do any more.'}
               </Text>
             </>
@@ -3793,8 +3792,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           <SafeAreaView style={[styles.swapSafe, live.swapSafe]} edges={['top', 'bottom']}>
             <View style={[styles.swapHeader, live.swapHeader]}>
               <View style={styles.swapHeaderCopy}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.swapTitle, live.swapTitle]}>Swap exercise</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.swapSubtitle, live.swapSubtitle]} numberOfLines={1}>
+                <Text style={[styles.swapTitle, live.swapTitle]}>Swap exercise</Text>
+                <Text style={[styles.swapSubtitle, live.swapSubtitle]} numberOfLines={1}>
                   {exercise?.name}
                 </Text>
               </View>
@@ -3802,7 +3801,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Ionicons name="close" size={20} color={t.colors.textPrimary} />
               </TouchableOpacity>
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.swapNote, live.swapNote]}>Choose a close match for today. Your plan is not changed, and sets you log count towards the new exercise's own muscle in your weekly volume.</Text>
+            <Text style={[styles.swapNote, live.swapNote]}>Choose a close match for today. Your plan is not changed, and sets you log count towards the new exercise's own muscle in your weekly volume.</Text>
             <FlashList
               data={swapCandidates}
               keyExtractor={item => item.exercise.id}
@@ -3814,16 +3813,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     <Ionicons name="swap-horizontal" size={16} color={t.colors.textSecondary} />
                   </View>
                   <View style={styles.swapItemCopy}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.swapItemName, live.swapItemName]}>{item.exercise.name}</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.swapItemReason, live.swapItemReason]}>{item.reason}</Text>
+                    <Text style={[styles.swapItemName, live.swapItemName]}>{item.exercise.name}</Text>
+                    <Text style={[styles.swapItemReason, live.swapItemReason]}>{item.reason}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
                 </TouchableOpacity>
               )}
               ListEmptyComponent={
                 <View style={styles.swapEmpty}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.swapEmptyTitle, live.swapEmptyTitle]}>No close matches yet</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.swapEmptyText, live.swapEmptyText]}>Search the full library instead.</Text>
+                  <Text style={[styles.swapEmptyTitle, live.swapEmptyTitle]}>No close matches yet</Text>
+                  <Text style={[styles.swapEmptyText, live.swapEmptyText]}>Search the full library instead.</Text>
                 </View>
               }
               ListFooterComponent={
@@ -3841,7 +3840,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   accessibilityLabel="Search exercise library"
                 >
                   <Ionicons name="search" size={16} color={t.colors.textSecondary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.swapBrowseText, live.swapBrowseText]}>Search exercise library</Text>
+                  <Text style={[styles.swapBrowseText, live.swapBrowseText]}>Search exercise library</Text>
                 </TouchableOpacity>
               }
             />
@@ -3855,8 +3854,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {showDiscardModal ? (
           <View style={[styles.discardOverlay, live.discardOverlay]}>
             <View style={[styles.discardSheet, live.discardSheet]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.discardTitle, live.discardTitle]}>Discard workout?</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.discardBody, live.discardBody]}>
+              <Text style={[styles.discardTitle, live.discardTitle]}>Discard workout?</Text>
+              <Text style={[styles.discardBody, live.discardBody]}>
                 This will delete the current workout session. Your plan will not advance.
               </Text>
               <Button
@@ -3865,7 +3864,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 onPress={() => setShowDiscardModal(false)}
                 accessibilityLabel="Keep training"
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.keepTrainingBtnText, live.keepTrainingBtnText]}>Keep training</Text>
+                <Text style={[styles.keepTrainingBtnText, live.keepTrainingBtnText]}>Keep training</Text>
               </Button>
               <TouchableOpacity
                 style={styles.discardConfirmBtn}
@@ -3881,7 +3880,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   }
                 }}
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.discardConfirmBtnText, live.discardConfirmBtnText]}>Discard workout</Text>
+                <Text style={[styles.discardConfirmBtnText, live.discardConfirmBtnText]}>Discard workout</Text>
               </TouchableOpacity>
             </View>
           </View>

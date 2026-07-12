@@ -18,7 +18,7 @@ export default function PrivacyPolicyScreen() {
       <BackHeader title="Privacy Policy" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.updated, live.updated]}>Last updated {LAST_UPDATED}</Text>
+        <Text style={[styles.updated, live.updated]}>Last updated {LAST_UPDATED}</Text>
 
         <Section title="What Volyume collects">
           <Body>
@@ -139,7 +139,7 @@ function Section({ title, children }) {
   const live = buildLiveStyles(t);
   return (
     <View style={styles.section}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.sectionTitle, live.sectionTitle]} accessibilityRole="header">{title}</Text>
+      <Text style={[styles.sectionTitle, live.sectionTitle]} accessibilityRole="header">{title}</Text>
       {children}
     </View>
   );
@@ -150,7 +150,7 @@ function Body({ children }) {
   // useTheme() call, same reasoning as Section above.
   const t = useTheme();
   const live = buildLiveStyles(t);
-  return <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>{children}</Text>;
+  return <Text style={[styles.body, live.body]}>{children}</Text>;
 }
 
 const styles = StyleSheet.create({

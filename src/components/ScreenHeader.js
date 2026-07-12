@@ -39,7 +39,7 @@ export default function ScreenHeader({ title, subtitle, right }) {
   return (
     <View style={styles.wrap}>
       <View style={styles.titleRow}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.title, { ...t.type.h3, color: t.colors.textPrimary }]} numberOfLines={1}>
+        <Text style={[styles.title, { ...t.type.h3, color: t.colors.textPrimary }]} numberOfLines={1}>
           {title}
         </Text>
         <View style={styles.right}>
@@ -47,7 +47,7 @@ export default function ScreenHeader({ title, subtitle, right }) {
         </View>
       </View>
       {subtitle ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, { ...t.type.bodySm, color: t.colors.textMuted }]} numberOfLines={1}>
+        <Text style={[styles.subtitle, { ...t.type.bodySm, color: t.colors.textMuted }]} numberOfLines={1}>
           {subtitle}
         </Text>
       ) : null}

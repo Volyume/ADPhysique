@@ -59,8 +59,8 @@ export default function CoachDailyBrief({ ledger = null }) {
   return (
     <View style={[styles.wrap, live.wrap]}>
       <View style={styles.runway}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.runwayTitle, live.runwayTitle]}>Since your check-in</Text>
-        {countdown ? <Text maxFontSizeMultiplier={1.3} style={[styles.countdown, live.countdown]}>{countdown}</Text> : null}
+        <Text style={[styles.runwayTitle, live.runwayTitle]}>Since your check-in</Text>
+        {countdown ? <Text style={[styles.countdown, live.countdown]}>{countdown}</Text> : null}
         {runwayRows.map((row) => (
           <View key={row.key} style={styles.row}>
             <Ionicons
@@ -68,7 +68,7 @@ export default function CoachDailyBrief({ ledger = null }) {
               size={14}
               color={row.done ? t.colors.success : t.colors.textMuted}
             />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.rowText, live.rowText, row.done && [styles.rowTextDone, live.rowTextDone]]}>{row.label}</Text>
+            <Text style={[styles.rowText, live.rowText, row.done && [styles.rowTextDone, live.rowTextDone]]}>{row.label}</Text>
           </View>
         ))}
       </View>

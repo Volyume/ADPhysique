@@ -187,7 +187,7 @@ function CheerPill({ enabled, onPress, style }) {
         accessibilityLabel={enabled ? 'Send a cheer' : 'Cheer sent today'}
       >
         <Ionicons name="hand-left" size={iconSize.sm} color={enabled ? t.colors.onPrimary : t.colors.textSecondary} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.cheerPillText, live.cheerPillText, !enabled && [styles.cheerPillTextDone, live.cheerPillTextDone]]}>
+        <Text style={[styles.cheerPillText, live.cheerPillText, !enabled && [styles.cheerPillTextDone, live.cheerPillTextDone]]}>
           {enabled ? 'Send a cheer' : 'Sent today'}
         </Text>
       </TouchableOpacity>
@@ -202,7 +202,7 @@ function PersonRow({ phrase, resting }) {
   return (
     <View style={styles.personRow}>
       <View style={[styles.dot, resting ? [styles.dotResting, live.dotResting] : [styles.dotActive, live.dotActive]]} />
-      <Text maxFontSizeMultiplier={1.3} style={[styles.personText, live.personText]}>{phrase}</Text>
+      <Text style={[styles.personText, live.personText]}>{phrase}</Text>
     </View>
   );
 }
@@ -213,7 +213,7 @@ function MomentCard({ line, cheerEnabled, onCheer }) {
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <EntranceView duration={motion.state} style={[styles.momentCard, live.momentCard]}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.momentLine, live.momentLine]}>{line}</Text>
+      <Text style={[styles.momentLine, live.momentLine]}>{line}</Text>
       <CheerPill enabled={cheerEnabled} onPress={onCheer} />
     </EntranceView>
   );
@@ -264,9 +264,9 @@ function PartnerGuidedWeekCard({
       <View style={styles.supportPlanHead}>
         <View style={styles.supportPlanTitleRow}>
           <Ionicons name="eye-outline" size={iconSize.sm} color={t.colors.textSecondary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.supportPlanTitle, live.supportPlanTitle]}>{supportPlan.title}</Text>
+          <Text style={[styles.supportPlanTitle, live.supportPlanTitle]}>{supportPlan.title}</Text>
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.supportPlanHeadline, live.supportPlanHeadline]}>{supportPlan.headline}</Text>
+        <Text style={[styles.supportPlanHeadline, live.supportPlanHeadline]}>{supportPlan.headline}</Text>
       </View>
       {showAction ? (
         <TouchableOpacity
@@ -277,10 +277,10 @@ function PartnerGuidedWeekCard({
           accessibilityLabel={action.accessibilityLabel || action.label}
         >
           <Ionicons name={actionIcon} size={iconSize.sm} color={t.colors.onPrimary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.supportPlanActionText, live.supportPlanActionText]}>{action.label}</Text>
+          <Text style={[styles.supportPlanActionText, live.supportPlanActionText]}>{action.label}</Text>
         </TouchableOpacity>
       ) : null}
-      <Text maxFontSizeMultiplier={1.3} style={[styles.supportPlanPrivacy, live.supportPlanPrivacy]}>{supportPlan.privacyLine}</Text>
+      <Text style={[styles.supportPlanPrivacy, live.supportPlanPrivacy]}>{supportPlan.privacyLine}</Text>
     </Card>
   );
 }
@@ -303,8 +303,8 @@ function PartnerShareWinsCard({ onOpen, partnerName }) {
         <Ionicons name="trophy-outline" size={iconSize.sm} color={t.colors.primary} />
       </View>
       <View style={styles.shareWinsRowCopy}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.shareWinsTitle, live.shareWinsTitle]}>Share an update</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.shareWinsText, live.shareWinsText]}>
+        <Text style={[styles.shareWinsTitle, live.shareWinsTitle]}>Share an update</Text>
+        <Text style={[styles.shareWinsText, live.shareWinsText]}>
           Send a workout, PR, or progress update. You approve the preview before {name} sees it.
         </Text>
       </View>
@@ -330,14 +330,14 @@ function PartnerWinCards({ cards = [], userId, onRevoke }) {
   if (!visible.length) return null;
   return (
     <View style={styles.partnerWins}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.partnerWinsTitle, live.partnerWinsTitle]}>Shared updates</Text>
+      <Text style={[styles.partnerWinsTitle, live.partnerWinsTitle]}>Shared updates</Text>
       {visible.map((card) => {
         const mine = card.senderId === userId;
         const date = formatWinCardDate(card.createdAt);
         return (
           <Card key={card.id} surface="surface2" radius="md" padding="md" style={[styles.partnerWinCard, styles.partnerWinCardBorder, live.partnerWinCardBorder]}>
             <View style={styles.partnerWinTop}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.partnerWinMeta, live.partnerWinMeta]}>{mine ? 'You shared' : 'Partner shared'}{date ? ` - ${date}` : ''}</Text>
+              <Text style={[styles.partnerWinMeta, live.partnerWinMeta]}>{mine ? 'You shared' : 'Partner shared'}{date ? ` - ${date}` : ''}</Text>
               {mine ? (
                 <TouchableOpacity
                   onPress={() => onRevoke(card)}
@@ -347,13 +347,13 @@ function PartnerWinCards({ cards = [], userId, onRevoke }) {
                   accessibilityLabel={`Delete shared update ${card.title}`}
                 >
                   <Ionicons name="trash-outline" size={iconSize.sm} color={t.colors.error} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.partnerWinDelete, live.partnerWinDelete]}>Delete</Text>
+                  <Text style={[styles.partnerWinDelete, live.partnerWinDelete]}>Delete</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.partnerWinTitle, live.partnerWinTitle]}>{card.title}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.partnerWinSummary, live.partnerWinSummary]}>{card.summary}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.partnerWinDetail, live.partnerWinDetail]}>{card.detail}</Text>
+            <Text style={[styles.partnerWinTitle, live.partnerWinTitle]}>{card.title}</Text>
+            <Text style={[styles.partnerWinSummary, live.partnerWinSummary]}>{card.summary}</Text>
+            <Text style={[styles.partnerWinDetail, live.partnerWinDetail]}>{card.detail}</Text>
           </Card>
         );
       })}
@@ -377,7 +377,7 @@ function ReconnectCard({ onReconnect, onDismiss }) {
         accessibilityLabel="Start a new run together"
       >
         <Ionicons name="refresh-outline" size={iconSize.sm} color={t.colors.textSecondary} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.reconnectText, live.reconnectText]}>{sharedStreakLabel({ run: 0, status: 'archived' })}</Text>
+        <Text style={[styles.reconnectText, live.reconnectText]}>{sharedStreakLabel({ run: 0, status: 'archived' })}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         onPress={onDismiss}
@@ -386,7 +386,7 @@ function ReconnectCard({ onReconnect, onDismiss }) {
         accessibilityRole="button"
         accessibilityLabel="Not now"
       >
-        <Text maxFontSizeMultiplier={1.3} style={[styles.reconnectDismissText, live.reconnectDismissText]}>Not now</Text>
+        <Text style={[styles.reconnectDismissText, live.reconnectDismissText]}>Not now</Text>
       </TouchableOpacity>
     </View>
   );
@@ -409,12 +409,12 @@ function BlockStatusCard({ block, partnerName, userId, onOpen }) {
     >
       <View style={styles.blockStatusHead}>
         <Ionicons name="barbell-outline" size={iconSize.sm} color={t.colors.primary} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.blockStatusTitle, live.blockStatusTitle]}>{status.title}</Text>
+        <Text style={[styles.blockStatusTitle, live.blockStatusTitle]}>{status.title}</Text>
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.blockStatusName, live.blockStatusName]} numberOfLines={1}>{block.blockName}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.blockStatusCopy, live.blockStatusCopy]}>{status.copy}</Text>
+      <Text style={[styles.blockStatusName, live.blockStatusName]} numberOfLines={1}>{block.blockName}</Text>
+      <Text style={[styles.blockStatusCopy, live.blockStatusCopy]}>{status.copy}</Text>
       <View style={[styles.blockStatusAction, live.blockStatusAction]}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.blockStatusActionText, live.blockStatusActionText]}>Sharing settings</Text>
+        <Text style={[styles.blockStatusActionText, live.blockStatusActionText]}>Sharing settings</Text>
         <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
       </View>
     </Card>
@@ -434,8 +434,8 @@ function LocalReadNotice({ onRefresh }) {
     >
       <Ionicons name="refresh-outline" size={iconSize.sm} color={t.colors.primary} />
       <View style={styles.localReadNoticeCopy}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.localReadNoticeTitle, live.localReadNoticeTitle]}>Refresh partner data</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.localReadNoticeText, live.localReadNoticeText]}>Your partner space is safe. Tap to refresh.</Text>
+        <Text style={[styles.localReadNoticeTitle, live.localReadNoticeTitle]}>Refresh partner data</Text>
+        <Text style={[styles.localReadNoticeText, live.localReadNoticeText]}>Your partner space is safe. Tap to refresh.</Text>
       </View>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
     </TouchableOpacity>
@@ -465,11 +465,11 @@ function PairCard({
       <View style={styles.pairHead}>
         <View style={styles.partnerIdentity}>
           <View style={[styles.partnerAvatar, live.partnerAvatar]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.partnerAvatarText, live.partnerAvatarText]}>{initialForName(name)}</Text>
+            <Text style={[styles.partnerAvatarText, live.partnerAvatarText]}>{initialForName(name)}</Text>
           </View>
           <View style={styles.partnerNameBlock}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.pairName, live.pairName]} numberOfLines={1}>{name}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.pairKicker, live.pairKicker]}>Private partner area</Text>
+            <Text style={[styles.pairName, live.pairName]} numberOfLines={1}>{name}</Text>
+            <Text style={[styles.pairKicker, live.pairKicker]}>Private partner area</Text>
           </View>
         </View>
         <TouchableOpacity
@@ -494,12 +494,12 @@ function PairCard({
                 style={[styles.heroNum, live.heroNum]}
                 accessibilityLabel={`${run} weeks running together`}
               />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.heroWord, live.heroWord]}>weeks running together</Text>
+              <Text style={[styles.heroWord, live.heroWord]}>weeks running together</Text>
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.heroSub, live.heroSub]}>Counts towards each person's current plan. Rest weeks never break it.</Text>
+            <Text style={[styles.heroSub, live.heroSub]}>Counts towards each person's current plan. Rest weeks never break it.</Text>
           </View>
         ) : (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.heroFirst, live.heroFirst]}>Your first shared week is under way</Text>
+          <Text style={[styles.heroFirst, live.heroFirst]}>Your first shared week is under way</Text>
         )}
 
         <View style={[styles.people, live.people]}>
@@ -526,7 +526,7 @@ function PairCard({
         <PartnerWinCards cards={pair.winCards || []} userId={userId} onRevoke={onRevokeWin} />
       </View>
 
-      {pair.weekKept ? <Text maxFontSizeMultiplier={1.3} style={[styles.keptLine, live.keptLine]}>{KEPT_LINE}</Text> : null}
+      {pair.weekKept ? <Text style={[styles.keptLine, live.keptLine]}>{KEPT_LINE}</Text> : null}
 
       {hasChip ? (
         <BlockStatusCard
@@ -563,7 +563,7 @@ function SheetRow({ icon, label, danger, onPress }) {
       accessibilityLabel={label}
     >
       <Ionicons name={icon} size={iconSize.md} color={danger ? t.colors.error : t.colors.textPrimary} />
-      <Text maxFontSizeMultiplier={1.3} style={[styles.sheetRowText, live.sheetRowText, danger && [styles.sheetRowDanger, live.sheetRowDanger]]}>{label}</Text>
+      <Text style={[styles.sheetRowText, live.sheetRowText, danger && [styles.sheetRowDanger, live.sheetRowDanger]]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -1075,9 +1075,9 @@ export default function PartnerScreen({ route }) {
               <Card style={styles.incomingShareNotice}>
                 <View style={styles.incomingShareNoticeHead}>
                   <Ionicons name="lock-closed-outline" size={iconSize.sm} color={t.colors.primary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.incomingShareNoticeTitle, live.incomingShareNoticeTitle]}>Choose who receives it</Text>
+                  <Text style={[styles.incomingShareNoticeTitle, live.incomingShareNoticeTitle]}>Choose who receives it</Text>
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.incomingShareNoticeText, live.incomingShareNoticeText]}>
+                <Text style={[styles.incomingShareNoticeText, live.incomingShareNoticeText]}>
                   Nothing has been sent. Pick Share an update under the right partner and approve the preview first.
                 </Text>
               </Card>
@@ -1109,7 +1109,7 @@ export default function PartnerScreen({ route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Invite another partner"
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.inviteAnotherText, live.inviteAnotherText]}>Invite another partner</Text>
+                <Text style={[styles.inviteAnotherText, live.inviteAnotherText]}>Invite another partner</Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
             ) : null}
@@ -1125,8 +1125,8 @@ export default function PartnerScreen({ route }) {
             <View style={[styles.emptyIconCircle, live.emptyIconCircle]}>
               <Ionicons name="people-outline" size={iconSize.xl} color={t.colors.primary} />
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.emptyTitle, live.emptyTitle]}>{hasIncomingShareIntent ? 'Add a partner to share this update' : 'Train with a partner'}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.emptyBody, live.emptyBody]}>
+            <Text style={[styles.emptyTitle, live.emptyTitle]}>{hasIncomingShareIntent ? 'Add a partner to share this update' : 'Train with a partner'}</Text>
+            <Text style={[styles.emptyBody, live.emptyBody]}>
               {hasIncomingShareIntent
                 ? 'Nothing has been sent yet. Pair with someone you know and trust to start sharing.'
                 : 'Pair with one person you already train with. They see whether you trained this week, one daily cheer and only the updates you choose to send. Food, photos, body metrics and notes stay private.'}
@@ -1136,9 +1136,9 @@ export default function PartnerScreen({ route }) {
               <Card style={styles.incomingShareNotice}>
                 <View style={styles.incomingShareNoticeHead}>
                   <Ionicons name="lock-closed-outline" size={iconSize.sm} color={t.colors.primary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.incomingShareNoticeTitle, live.incomingShareNoticeTitle]}>Your update stays private</Text>
+                  <Text style={[styles.incomingShareNoticeTitle, live.incomingShareNoticeTitle]}>Your update stays private</Text>
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.incomingShareNoticeText, live.incomingShareNoticeText]}>
+                <Text style={[styles.incomingShareNoticeText, live.incomingShareNoticeText]}>
                   Invite your partner first. Once they accept, you can choose exactly which update to send.
                 </Text>
               </Card>
@@ -1195,8 +1195,8 @@ export default function PartnerScreen({ route }) {
               <View style={[styles.redeemSyncCard, live.redeemSyncCard]}>
                 <ActivityIndicator size="small" color={t.colors.primary} />
                 <View style={styles.redeemSyncCopy}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.redeemSyncTitle, live.redeemSyncTitle]}>Partner invite accepted</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.redeemSyncText, live.redeemSyncText]}>We are finishing the private link on this device.</Text>
+                  <Text style={[styles.redeemSyncTitle, live.redeemSyncTitle]}>Partner invite accepted</Text>
+                  <Text style={[styles.redeemSyncText, live.redeemSyncText]}>We are finishing the private link on this device.</Text>
                 </View>
               </View>
             ) : null}
@@ -1304,8 +1304,8 @@ function AckSheetBody({ pair, onSend, sendingKey = null }) {
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={styles.sheetBody}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.sheetHeading, live.sheetHeading]}>Send a cheer</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.blockPitch, live.blockPitch]}>Choose one fixed line for today. One tap, no free text, no pressure.</Text>
+      <Text style={[styles.sheetHeading, live.sheetHeading]}>Send a cheer</Text>
+      <Text style={[styles.blockPitch, live.blockPitch]}>Choose one fixed line for today. One tap, no free text, no pressure.</Text>
       {ACKNOWLEDGEMENTS.map((ack) => {
         const sending = sendingKey === ack.key;
         const disabled = !!sendingKey;
@@ -1324,7 +1324,7 @@ function AckSheetBody({ pair, onSend, sendingKey = null }) {
             ) : (
               <Ionicons name="heart-outline" size={iconSize.sm} color={t.colors.primary} />
             )}
-            <Text maxFontSizeMultiplier={1.3} style={[styles.ackRowText, live.ackRowText]}>{sending ? 'Sending...' : ack.line}</Text>
+            <Text style={[styles.ackRowText, live.ackRowText]}>{sending ? 'Sending...' : ack.line}</Text>
           </TouchableOpacity>
         );
       })}
@@ -1359,10 +1359,10 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
   }
   return (
     <View style={styles.sheetBody}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.sheetHeading, live.sheetHeading]}>Share an update</Text>
+      <Text style={[styles.sheetHeading, live.sheetHeading]}>Share an update</Text>
       <View style={[styles.shareWinPreviewIntro, live.shareWinPreviewIntro]}>
         <Ionicons name="eye-outline" size={iconSize.sm} color={t.colors.primary} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.shareWinPreviewIntroText, live.shareWinPreviewIntroText]}>
+        <Text style={[styles.shareWinPreviewIntroText, live.shareWinPreviewIntroText]}>
           Pick one update, check exactly what {partnerName} will see, then send it.
         </Text>
       </View>
@@ -1378,7 +1378,7 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
               accessibilityState={{ selected: active }}
               accessibilityLabel={`Preview ${preview.draft.title.toLowerCase()}`}
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.shareWinChoiceTitle, live.shareWinChoiceTitle, active && [styles.shareWinChoiceTitleActive, live.shareWinChoiceTitleActive]]}>
+              <Text style={[styles.shareWinChoiceTitle, live.shareWinChoiceTitle, active && [styles.shareWinChoiceTitleActive, live.shareWinChoiceTitleActive]]}>
                 {preview.draft.title}
               </Text>
             </TouchableOpacity>
@@ -1388,18 +1388,18 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
       {selectedPreview ? (
         <Card surface="surface2" radius="md" padding="md" style={[styles.shareWinPreviewCard, styles.shareWinPreviewCardBorder, live.shareWinPreviewCardBorder]}>
           <View style={styles.shareWinPreviewTop}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.shareWinPreviewStatus, live.shareWinPreviewStatus]}>{selectedPreview.status}</Text>
+            <Text style={[styles.shareWinPreviewStatus, live.shareWinPreviewStatus]}>{selectedPreview.status}</Text>
             <Ionicons name="lock-closed-outline" size={iconSize.sm} color={t.colors.primary} />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.shareWinExampleTitle, live.shareWinExampleTitle]}>{selectedPreview.draft.title}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.shareWinExampleSummary, live.shareWinExampleSummary]}>{selectedPreview.draft.summary}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.shareWinExampleDetail, live.shareWinExampleDetail]}>{selectedPreview.draft.detail}</Text>
+          <Text style={[styles.shareWinExampleTitle, live.shareWinExampleTitle]}>{selectedPreview.draft.title}</Text>
+          <Text style={[styles.shareWinExampleSummary, live.shareWinExampleSummary]}>{selectedPreview.draft.summary}</Text>
+          <Text style={[styles.shareWinExampleDetail, live.shareWinExampleDetail]}>{selectedPreview.draft.detail}</Text>
           <View style={[styles.shareWinReceipt, live.shareWinReceipt]}>
             <View style={styles.shareWinReceiptHead}>
               <Ionicons name="eye-outline" size={iconSize.sm} color={t.colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.shareWinReceiptTitle, live.shareWinReceiptTitle]}>{partnerName} will see</Text>
+              <Text style={[styles.shareWinReceiptTitle, live.shareWinReceiptTitle]}>{partnerName} will see</Text>
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.shareWinReceiptBody, live.shareWinReceiptBody]}>{receipt?.visibleToPartner || selectedPreview.shared}</Text>
+            <Text style={[styles.shareWinReceiptBody, live.shareWinReceiptBody]}>{receipt?.visibleToPartner || selectedPreview.shared}</Text>
           </View>
           <TouchableOpacity
             style={[styles.shareWinPrivacyToggle, live.shareWinPrivacyToggle]}
@@ -1408,19 +1408,19 @@ function ShareWinsSheetBody({ pair, initialType, shareWinPayload, progressCardPa
             accessibilityLabel={privacyOpen ? 'Hide what stays private' : 'Show what stays private'}
           >
             <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={t.colors.textSecondary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.shareWinPrivacyToggleText, live.shareWinPrivacyToggleText]}>
+            <Text style={[styles.shareWinPrivacyToggleText, live.shareWinPrivacyToggleText]}>
               {privacyOpen ? 'Hide what stays private' : 'Show what stays private'}
             </Text>
             <Ionicons name={privacyOpen ? 'chevron-up' : 'chevron-down'} size={iconSize.sm} color={t.colors.textSecondary} />
           </TouchableOpacity>
           {privacyOpen ? (
             <View style={[styles.shareWinPrivacyPanel, live.shareWinPrivacyPanel]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.shareWinPrivacyTitle, live.shareWinPrivacyTitle]}>Stays private</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.shareWinPrivacyText, live.shareWinPrivacyText]}>{receipt?.remainsPrivate || selectedPreview.private}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.shareWinPrivacyText, live.shareWinPrivacyText]}>{SHARE_WIN_POLICY.excluded}</Text>
+              <Text style={[styles.shareWinPrivacyTitle, live.shareWinPrivacyTitle]}>Stays private</Text>
+              <Text style={[styles.shareWinPrivacyText, live.shareWinPrivacyText]}>{receipt?.remainsPrivate || selectedPreview.private}</Text>
+              <Text style={[styles.shareWinPrivacyText, live.shareWinPrivacyText]}>{SHARE_WIN_POLICY.excluded}</Text>
             </View>
           ) : null}
-          <Text maxFontSizeMultiplier={1.3} style={[styles.shareWinExampleConsent, live.shareWinExampleConsent]}>{receipt?.consentLine || selectedPreview.confirmation}</Text>
+          <Text style={[styles.shareWinExampleConsent, live.shareWinExampleConsent]}>{receipt?.consentLine || selectedPreview.confirmation}</Text>
           <Button
             title={sentType === selectedPreview.type ? 'Sent' : `Send to ${partnerName}`}
             onPress={sendSelected}
@@ -1471,11 +1471,11 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
     <Card style={[styles.pendingCard, live.pendingCard]} radius="lg" padding="lg">
       <View style={styles.pendingRow}>
         <Ionicons name="hourglass-outline" size={iconSize.md} color={t.colors.textSecondary} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.pendingText, live.pendingText]}>Invitation sent. Waiting for your partner.</Text>
+        <Text style={[styles.pendingText, live.pendingText]}>Invitation sent. Waiting for your partner.</Text>
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.pendingExpiry, live.pendingExpiry]}>It expires {spellNumber(INVITE_EXPIRY_DAYS)} days after you send it.</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.pendingHint, live.pendingHint]}>This checks automatically while the screen is open. Share the same invite again if they missed it; it still only pairs one person.</Text>
-      {checkLine ? <Text maxFontSizeMultiplier={1.3} style={[styles.pendingCheckLine, live.pendingCheckLine]}>{checkLine}</Text> : null}
+      <Text style={[styles.pendingExpiry, live.pendingExpiry]}>It expires {spellNumber(INVITE_EXPIRY_DAYS)} days after you send it.</Text>
+      <Text style={[styles.pendingHint, live.pendingHint]}>This checks automatically while the screen is open. Share the same invite again if they missed it; it still only pairs one person.</Text>
+      {checkLine ? <Text style={[styles.pendingCheckLine, live.pendingCheckLine]}>{checkLine}</Text> : null}
       <Button
         title="Share invite again"
         icon="share-outline"
@@ -1505,7 +1505,7 @@ function PendingCard({ pending, onShareAgain, onRefresh, onCancel }) {
         accessibilityLabel="Cancel invitation"
       >
         <Ionicons name="close-circle-outline" size={iconSize.sm} color={t.colors.error} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.cancelText, live.cancelText]}>Cancel invitation</Text>
+        <Text style={[styles.cancelText, live.cancelText]}>Cancel invitation</Text>
       </TouchableOpacity>
     </Card>
   );
@@ -1540,10 +1540,10 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
         >
           {beat === 1 ? (
             <EntranceView key="beat1" duration={motion.enter} style={styles.beat}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.beatTitle, live.beatTitle]}>A partner, not an audience</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.beatLine, live.beatLine]}>One person you already know and trust.</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.beatLine, live.beatLine]}>No feed, no followers, no public numbers.</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.beatLine, live.beatLine]}>Just whether you each trained against your current plan.</Text>
+              <Text style={[styles.beatTitle, live.beatTitle]}>A partner, not an audience</Text>
+              <Text style={[styles.beatLine, live.beatLine]}>One person you already know and trust.</Text>
+              <Text style={[styles.beatLine, live.beatLine]}>No feed, no followers, no public numbers.</Text>
+              <Text style={[styles.beatLine, live.beatLine]}>Just whether you each trained against your current plan.</Text>
               <Button
                 title="Continue"
                 style={styles.primaryBtn}
@@ -1557,7 +1557,7 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
           {beat === 2 ? (
             <EntranceView key="beat2" duration={motion.enter} style={styles.beat}>
               <PartnerPrivacyReceipt />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.beatConsent, live.beatConsent]}>
+              <Text style={[styles.beatConsent, live.beatConsent]}>
                 Pairing means you both agree to share this, and only this. Notice v{PARTNER_PRIVACY_NOTICE_VERSION}.
               </Text>
               <Button
@@ -1574,8 +1574,8 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
 
           {beat === 3 ? (
             <EntranceView key="beat3" duration={motion.enter} style={styles.beat}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.codeDisplay, live.codeDisplay]}>{minted?.code || ''}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.codeSub, live.codeSub]}>
+              <Text style={[styles.codeDisplay, live.codeDisplay]}>{minted?.code || ''}</Text>
+              <Text style={[styles.codeSub, live.codeSub]}>
                 One person can use this code. It expires in {spellNumber(INVITE_EXPIRY_DAYS)} days.
               </Text>
               <View style={styles.channelRow}>
@@ -1590,7 +1590,7 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
                 accessibilityLabel="More options"
               >
                 <Ionicons name="share-outline" size={iconSize.sm} color={t.colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.moreOptionsText, live.moreOptionsText]}>More options</Text>
+                <Text style={[styles.moreOptionsText, live.moreOptionsText]}>More options</Text>
               </TouchableOpacity>
             </EntranceView>
           ) : null}
@@ -1612,7 +1612,7 @@ function ChannelButton({ icon, label, onPress, primary = false }) {
       accessibilityLabel={`Send by ${label}`}
     >
       <Ionicons name={icon} size={iconSize.md} color={primary ? t.colors.onPrimary : t.colors.textSecondary} />
-      <Text maxFontSizeMultiplier={1.3} style={[styles.channelBtnText, live.channelBtnText, primary && [styles.channelBtnTextPrimary, live.channelBtnTextPrimary]]}>{label}</Text>
+      <Text style={[styles.channelBtnText, live.channelBtnText, primary && [styles.channelBtnTextPrimary, live.channelBtnTextPrimary]]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -1627,8 +1627,8 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'active') {
     return (
       <View style={styles.sheetBody}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sheetHeading, live.sheetHeading]}>Shared training phase</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.blockPitch, live.blockPitch]}>Your partner can see the phase name only. Your workouts, exercises, weights and notes stay private.</Text>
+        <Text style={[styles.sheetHeading, live.sheetHeading]}>Shared training phase</Text>
+        <Text style={[styles.blockPitch, live.blockPitch]}>Your partner can see the phase name only. Your workouts, exercises, weights and notes stay private.</Text>
         <SheetRow icon="exit-outline" label="Stop sharing this phase name" onPress={() => onLeave(pair)} />
       </View>
     );
@@ -1637,8 +1637,8 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'proposed' && block.proposedBy === userId) {
     return (
       <View style={styles.sheetBody}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sheetHeading, live.sheetHeading]}>Phase name sent</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.blockPitch, live.blockPitch]}>You sent {block.blockName} as a phase name only. Waiting for {name}.</Text>
+        <Text style={[styles.sheetHeading, live.sheetHeading]}>Phase name sent</Text>
+        <Text style={[styles.blockPitch, live.blockPitch]}>You sent {block.blockName} as a phase name only. Waiting for {name}.</Text>
         <SheetRow icon="close-circle-outline" label="Withdraw phase name" onPress={() => onLeave(pair)} />
       </View>
     );
@@ -1647,8 +1647,8 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'proposed' && block.proposedBy !== userId) {
     return (
       <View style={styles.sheetBody}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sheetHeading, live.sheetHeading]}>Phase name suggested</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.blockPitch, live.blockPitch]}>{name} suggested {block.blockName} as a shared phase name only. Accepting will not change either plan.</Text>
+        <Text style={[styles.sheetHeading, live.sheetHeading]}>Phase name suggested</Text>
+        <Text style={[styles.blockPitch, live.blockPitch]}>{name} suggested {block.blockName} as a shared phase name only. Accepting will not change either plan.</Text>
         <SheetRow icon="checkmark-circle-outline" label="Share this phase name" onPress={() => onAdopt(pair)} />
         <SheetRow icon="close-circle-outline" label="Decline" onPress={() => onLeave(pair)} />
       </View>
@@ -1658,14 +1658,14 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   // No block yet: suggest one from the user's programmes.
   return (
     <View style={styles.sheetBody}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.sheetHeading, live.sheetHeading]}>Share phase name</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.blockPitch, live.blockPitch]}>
+      <Text style={[styles.sheetHeading, live.sheetHeading]}>Share phase name</Text>
+      <Text style={[styles.blockPitch, live.blockPitch]}>
         Choose the phase name to show {name}. This does not share workouts, weights or notes.
       </Text>
       {programmes === null ? (
         <ActivityIndicator color={t.colors.primary} />
       ) : programmes.length === 0 ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.blockEmpty, live.blockEmpty]}>Create or choose a training block in Plans first.</Text>
+        <Text style={[styles.blockEmpty, live.blockEmpty]}>Create or choose a training block in Plans first.</Text>
       ) : (
         programmes.map((prog) => (
           <SheetRow
@@ -1676,7 +1676,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
           />
         ))
       )}
-      <Text maxFontSizeMultiplier={1.3} style={[styles.blockFooter, live.blockFooter]}>You can stop sharing the phase name at any time.</Text>
+      <Text style={[styles.blockFooter, live.blockFooter]}>You can stop sharing the phase name at any time.</Text>
     </View>
   );
 }

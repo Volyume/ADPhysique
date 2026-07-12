@@ -59,7 +59,7 @@ export default function FatigueTrendCard({ sessions }) {
 
   return (
     <View style={[styles.card, live.card]}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Training trend</Text>
+      <Text style={[styles.title, live.title]}>Training trend</Text>
       <View style={styles.chartWrap}>
         <SvgBarSparkline
           data={data}
@@ -74,7 +74,7 @@ export default function FatigueTrendCard({ sessions }) {
             .join(', ')}`}
         />
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.coachLine, live.coachLine]}>{coachingLine(sessions)}</Text>
+      <Text style={[styles.coachLine, live.coachLine]}>{coachingLine(sessions)}</Text>
     </View>
   );
 }

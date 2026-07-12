@@ -171,7 +171,7 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(NOW_CARD).toContain('padding="lg"');
     expect(NOW_CARD).toContain('positionLabel');
     expect(ACTIVE_WORKOUT).toContain('positionLabel={orientationLabel}');
-    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>');
+    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>');
     expect(ACTIVE_WORKOUT).toContain('exerciseName: { flex: 1, ...type.title, color: colors.textPrimary }');
     expect(ACTIVE_WORKOUT).not.toContain('targetRow:');
     expect(ACTIVE_WORKOUT).not.toContain('targetText:');
@@ -244,7 +244,7 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): sheetOptionLabel
     // gained a live.sheetOptionLabel override in its style array (source:
     // useTheme.js); the frozen `styles.sheetOptionLabel` is byte-identical.
-    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Add exercise</Text>');
+    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Add exercise</Text>');
     // R3 rebuild (founder ruling 2026-07-12): the corner pencil was a
     // one-way latch (open only, dead after its first tap) and is DELETED.
     // NowCard's note row is the one entry point and toggles honestly both
@@ -271,7 +271,7 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).not.toContain('actionBtnText');
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live.keepTrainingBtnText
     // override appended (source: useTheme.js); frozen style byte-identical.
-    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.keepTrainingBtnText, live.keepTrainingBtnText]}>Keep training</Text>');
+    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.keepTrainingBtnText, live.keepTrainingBtnText]}>Keep training</Text>');
     expect(ACTIVE_WORKOUT).not.toContain('>Keep Training<');
     expect(ACTIVE_WORKOUT).toContain("const retryAction = currentSet.setType === 'warmup'");
     expect(ACTIVE_WORKOUT).toContain("? 'Log warm-up'");
@@ -294,7 +294,7 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('accessibilityLabel="Warm-up sets"');
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live.sheetTitle
     // override appended (source: useTheme.js); frozen style byte-identical.
-    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Warm-up sets</Text>');
+    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.sheetTitle, live.sheetTitle]}>Warm-up sets</Text>');
     expect(ACTIVE_WORKOUT).toContain('Choose a warm-up set to load it, then tap Log warm-up.');
     expect(ACTIVE_WORKOUT).toContain('Load as a warm-up set.');
     expect(ACTIVE_WORKOUT).not.toContain('Tap a row to load it as a warm-up');

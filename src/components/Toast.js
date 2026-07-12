@@ -239,7 +239,7 @@ export function ToastProvider({ children }) {
               style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 }}
             >
               <Ionicons name={current.icon} size={18} color={current.tint} />
-              <Text maxFontSizeMultiplier={1.3}
+              <Text
                 style={[styles.text, { ...t.type.bodySm, color: t.colors.textPrimary, fontWeight: fontWeight.medium }]}
                 numberOfLines={3}
               >
@@ -261,7 +261,7 @@ export function ToastProvider({ children }) {
                   ? 'Restores the change and closes this notification.'
                   : 'Runs this action and closes this notification.'}
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.actionText, { fontSize: t.fontSize.sm, color: current.tint }]}>
+                <Text style={[styles.actionText, { fontSize: t.fontSize.sm, color: current.tint }]}>
                   {current.action.label}
                 </Text>
               </TouchableOpacity>

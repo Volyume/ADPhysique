@@ -26,7 +26,7 @@ describe('Eat meal-card polish', () => {
     // of the bare `styles.X`/`colors.X` references. Same call sites, same
     // frozen style objects underneath, still asserted below.
     expect(MEAL_SECTION).toContain('style={[styles.addFoodButton, live.addFoodButton]}');
-    expect(MEAL_SECTION).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.addFoodText, live.addFoodText]}>Add food</Text>');
+    expect(MEAL_SECTION).toContain('<Text style={[styles.addFoodText, live.addFoodText]}>Add food</Text>');
     expect(MEAL_SECTION).toContain('<Ionicons name="search-outline" size={16} color={t.colors.textSecondary} />');
     expect(MEAL_SECTION).toMatch(/addFoodButton: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(MEAL_SECTION).toContain('addFoodText: { ...type.label, color: colors.textPrimary }');

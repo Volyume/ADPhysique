@@ -449,7 +449,7 @@ export default function ShareCardScreen({ route }) {
             ) : previewStatus === 'error' ? (
               <View style={[styles.previewPlaceholder, live.previewPlaceholder, styles.previewErrorBox, { width: previewW, height: previewH }]}>
                 <Ionicons name="alert-circle-outline" size={24} color={t.colors.textMuted} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.previewErrorText, live.previewErrorText]}>Couldn't build the preview.</Text>
+                <Text style={[styles.previewErrorText, live.previewErrorText]}>Couldn't build the preview.</Text>
                 <Button
                   title="Retry"
                   onPress={renderPreview}
@@ -492,8 +492,8 @@ export default function ShareCardScreen({ route }) {
                       accessibilityState={{ selected: active }}
                       accessibilityLabel={`Feature ${name}`}
                     >
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.prChipText, live.prChipText, active && [styles.prChipTextActive, live.prChipTextActive]]} numberOfLines={1}>{name}</Text>
-                      {detail ? <Text maxFontSizeMultiplier={1.3} style={[styles.prChipSub, live.prChipSub, active && [styles.prChipSubActive, live.prChipSubActive]]}>{detail}</Text> : null}
+                      <Text style={[styles.prChipText, live.prChipText, active && [styles.prChipTextActive, live.prChipTextActive]]} numberOfLines={1}>{name}</Text>
+                      {detail ? <Text style={[styles.prChipSub, live.prChipSub, active && [styles.prChipSubActive, live.prChipSubActive]]}>{detail}</Text> : null}
                     </TouchableOpacity>
                   );
                 })}
@@ -525,7 +525,7 @@ export default function ShareCardScreen({ route }) {
               </>
             )}
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.privacyNote, live.privacyNote]}>
+          <Text style={[styles.privacyNote, live.privacyNote]}>
             {isWeekly
               ? 'Only this week’s progress, lifts and sessions are shown. Your measurements and private notes are never included.'
               : 'Name, bodyweight, measurements and private notes are never included.'}
@@ -590,7 +590,7 @@ function SegmentBtn({ label, active, onPress, icon }) {
       accessibilityState={{ selected: active }}
     >
       {icon}
-      <Text maxFontSizeMultiplier={1.3} style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{label}</Text>
+      <Text style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -600,7 +600,7 @@ function ToggleRow({ label, value, onChange, last }) {
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={[styles.toggleRow, live.toggleRow, last && styles.toggleRowLast]}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.toggleLabel, live.toggleLabel]}>{label}</Text>
+      <Text style={[styles.toggleLabel, live.toggleLabel]}>{label}</Text>
       <Switch
         value={value}
         onValueChange={onChange}

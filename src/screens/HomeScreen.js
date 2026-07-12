@@ -1483,7 +1483,7 @@ export default function HomeScreen({ navigation, route }) {
 
         {/* ── Training schedule context line ── */}
         {scheduleContext && (
-          <Text maxFontSizeMultiplier={1.3} style={[
+          <Text style={[
             styles.scheduleContextLine,
             live.scheduleContextLine,
             scheduleContext.daysUntil === 0 && [styles.scheduleContextLineToday, live.scheduleContextLineToday],
@@ -1523,8 +1523,8 @@ export default function HomeScreen({ navigation, route }) {
             <View style={styles.coachBannerLeft}>
               <Ionicons name="pulse-outline" size={18} color={t.colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.coachBannerTitle, live.coachBannerTitle]}>Coach - this week's decision</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.coachBannerBody, live.coachBannerBody]}>
+                <Text style={[styles.coachBannerTitle, live.coachBannerTitle]}>Coach - this week's decision</Text>
+                <Text style={[styles.coachBannerBody, live.coachBannerBody]}>
                   {latestCoachOutput.adjustments?.calories?.applied
                     ? `Calories adjusted to ${latestCoachOutput.adjustments.calories.newKcal} kcal. Tap to see why.`
                     : 'Tap to see what changed and why.'}
@@ -1578,8 +1578,8 @@ export default function HomeScreen({ navigation, route }) {
                   working for you, not a hazard. Primary amber, not warning. */}
               <Ionicons name="battery-charging-outline" size={20} color={t.colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.deloadBannerTitle, live.deloadBannerTitle]}>Recovery week suggested</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.deloadBannerBody, live.deloadBannerBody]}>
+                <Text style={[styles.deloadBannerTitle, live.deloadBannerTitle]}>Recovery week suggested</Text>
+                <Text style={[styles.deloadBannerBody, live.deloadBannerBody]}>
                   {deloadSuggestion.reasons?.[0] ?? 'Your recent training signals it is time for a lighter week.'}
                 </Text>
               </View>
@@ -1599,7 +1599,7 @@ export default function HomeScreen({ navigation, route }) {
         {showPhaseBanner && (
           <View style={[styles.phaseBanner, live.phaseBanner]}>
             <Ionicons name="information-circle-outline" size={18} color={t.colors.primary} style={{ marginTop: spacing.hair }} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.phaseBannerText, live.phaseBannerText]} numberOfLines={3}>
+            <Text style={[styles.phaseBannerText, live.phaseBannerText]} numberOfLines={3}>
               Your nutrition targets are set for {phaseMismatch.savedPhaseLabel}. Update them in Coach to reflect your current plan.
             </Text>
             <TouchableOpacity
@@ -1635,7 +1635,7 @@ export default function HomeScreen({ navigation, route }) {
           >
             <View style={styles.plateauBannerLeft}>
               <Ionicons name="analytics-outline" size={18} color={t.colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.plateauBannerText, live.plateauBannerText]} numberOfLines={2}>{plateauBanner.line}</Text>
+              <Text style={[styles.plateauBannerText, live.plateauBannerText]} numberOfLines={2}>{plateauBanner.line}</Text>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
             </View>
             <TouchableOpacity
@@ -1662,10 +1662,10 @@ export default function HomeScreen({ navigation, route }) {
             <View style={styles.activationBannerLeft}>
               <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.activationBannerTitle, live.activationBannerTitle]} numberOfLines={1}>
+                <Text style={[styles.activationBannerTitle, live.activationBannerTitle]} numberOfLines={1}>
                   {activationBannerLine(activationNudge.stage)?.title}
                 </Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.activationBannerBody, live.activationBannerBody]} numberOfLines={2}>
+                <Text style={[styles.activationBannerBody, live.activationBannerBody]} numberOfLines={2}>
                   {activationBannerLine(activationNudge.stage)?.body}
                 </Text>
               </View>
@@ -1779,8 +1779,8 @@ export default function HomeScreen({ navigation, route }) {
                 <Ionicons name="play" size={20} color={t.colors.onPrimary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.continueTitle, live.continueTitle]}>Workout in progress</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.continueSub, live.continueSub]}>Tap to return to your workout</Text>
+                <Text style={[styles.continueTitle, live.continueTitle]}>Workout in progress</Text>
+                <Text style={[styles.continueSub, live.continueSub]}>Tap to return to your workout</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={withAlpha(t.colors.onPrimary, 0.8)} />
             </View>
@@ -1790,11 +1790,11 @@ export default function HomeScreen({ navigation, route }) {
             <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={1}>
               {planProgress}
             </SectionLabel>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.workoutName, live.workoutName]} numberOfLines={2}>
+            <Text style={[styles.workoutName, live.workoutName]} numberOfLines={2}>
               {displayWorkout?.routine?.name}
             </Text>
             {exerciseCounts[displayWorkout?.routine?.id] ? (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.workoutMeta, live.workoutMeta]}>
+              <Text style={[styles.workoutMeta, live.workoutMeta]}>
                 {exerciseCounts[displayWorkout.routine.id]} exercises
               </Text>
             ) : null}
@@ -1818,7 +1818,7 @@ export default function HomeScreen({ navigation, route }) {
                   size={12}
                   color={BRIEF_ICON_COLOR[readinessSummary.tone] ?? BRIEF_ICON_COLOR.go}
                 />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.mesoBriefText, live.mesoBriefText]}>{readinessSummary.line}</Text>
+                <Text style={[styles.mesoBriefText, live.mesoBriefText]}>{readinessSummary.line}</Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
             )}
@@ -1864,8 +1864,8 @@ export default function HomeScreen({ navigation, route }) {
                   <View style={[styles.noPlanIconWrap, live.noPlanIconWrap]}>
                     <Ionicons name="barbell-outline" size={28} color={t.colors.primary} />
                   </View>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.noPlanTitle, live.noPlanTitle]}>No active plan yet</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.noPlanSub, live.noPlanSub]}>
+                  <Text style={[styles.noPlanTitle, live.noPlanTitle]}>No active plan yet</Text>
+                  <Text style={[styles.noPlanSub, live.noPlanSub]}>
                     If you just signed in, we may still be pulling your data from the cloud. If nothing arrives, start with a plan and we'll rebuild it from your profile.
                   </Text>
                 </View>
@@ -1894,8 +1894,8 @@ export default function HomeScreen({ navigation, route }) {
                 <View style={[styles.noPlanIconWrap, live.noPlanIconWrap]}>
                   <Ionicons name="compass-outline" size={28} color={t.colors.primary} />
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.noPlanTitle, live.noPlanTitle]}>No active plan yet</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.noPlanSub, live.noPlanSub]}>
+                <Text style={[styles.noPlanTitle, live.noPlanTitle]}>No active plan yet</Text>
+                <Text style={[styles.noPlanSub, live.noPlanSub]}>
                   {lastSession == null
                     ? "Answer three quick questions and we'll suggest a starter plan. You can also browse the library."
                     : "You've been training without a set plan. Answer three quick questions and we'll suggest a starter plan, or browse the library."}
@@ -1919,18 +1919,18 @@ export default function HomeScreen({ navigation, route }) {
             {/* Progress at a glance, shown when there's history but no plan */}
             {lastSession != null && (
               <Card style={styles.glanceCard}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.glanceTitle, live.glanceTitle]}>Your progress at a glance</Text>
+                <Text style={[styles.glanceTitle, live.glanceTitle]}>Your progress at a glance</Text>
                 <View style={styles.glanceRow}>
                   <View style={styles.glanceStat}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.glanceStatValue, live.glanceStatValue]}>{weekStats.sessions}</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.glanceStatLabel, live.glanceStatLabel]}>Sessions this week</Text>
+                    <Text style={[styles.glanceStatValue, live.glanceStatValue]}>{weekStats.sessions}</Text>
+                    <Text style={[styles.glanceStatLabel, live.glanceStatLabel]}>Sessions this week</Text>
                   </View>
                   <View style={[styles.glanceDivider, live.glanceDivider]} />
                   <View style={styles.glanceStat}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.glanceStatValue, live.glanceStatValue]}>
+                    <Text style={[styles.glanceStatValue, live.glanceStatValue]}>
                       {getRelativeDay(lastSession.startedAt)}
                     </Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.glanceStatLabel, live.glanceStatLabel]}>Last session</Text>
+                    <Text style={[styles.glanceStatLabel, live.glanceStatLabel]}>Last session</Text>
                   </View>
                 </View>
               </Card>
@@ -1949,8 +1949,8 @@ export default function HomeScreen({ navigation, route }) {
                   <Ionicons name="barbell-outline" size={28} color={t.colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.quickStartTitle, live.quickStartTitle]}>Start your first workout</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.quickStartSub, live.quickStartSub]}>Log sets as you go. No plan needed to start. Your profile builds as you train.</Text>
+                  <Text style={[styles.quickStartTitle, live.quickStartTitle]}>Start your first workout</Text>
+                  <Text style={[styles.quickStartSub, live.quickStartSub]}>Log sets as you go. No plan needed to start. Your profile builds as you train.</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </PressableCard>
@@ -2015,12 +2015,12 @@ export default function HomeScreen({ navigation, route }) {
               <Ionicons name="pulse-outline" size={20} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1, gap: spacing.xs }}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.coachingNudgeTitle, live.coachingNudgeTitle]}>Your weekly check-in is ready</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.coachingNudgeBody, live.coachingNudgeBody]}>
+              <Text style={[styles.coachingNudgeTitle, live.coachingNudgeTitle]}>Your weekly check-in is ready</Text>
+              <Text style={[styles.coachingNudgeBody, live.coachingNudgeBody]}>
                 It's your check-in day. See how your week went and what to adjust.
               </Text>
               {!photoScanSuppressed && (
-                <Text maxFontSizeMultiplier={1.3} style={[styles.coachingNudgeScanSubline, live.coachingNudgeScanSubline]}>
+                <Text style={[styles.coachingNudgeScanSubline, live.coachingNudgeScanSubline]}>
                   If you like, add a progress scan first for extra visual context. Skipping it is fine.
                 </Text>
               )}
@@ -2100,8 +2100,8 @@ export default function HomeScreen({ navigation, route }) {
         accessibilityLabel="How are you feeling today"
         scroll
       >
-        <Text maxFontSizeMultiplier={1.3} style={[styles.intentTitle, live.intentTitle]}>How are you feeling today?</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.intentSub, live.intentSub]}>Takes a second. Helps us read your sessions better over time.</Text>
+        <Text style={[styles.intentTitle, live.intentTitle]}>How are you feeling today?</Text>
+        <Text style={[styles.intentSub, live.intentSub]}>Takes a second. Helps us read your sessions better over time.</Text>
         {/* R2-10 (founder decision "Reorder", 2026-07-11): the optional
             readiness rows sit ABOVE the intent options, compacted to one
             aligned line each, because the intent tap below starts the
@@ -2109,12 +2109,12 @@ export default function HomeScreen({ navigation, route }) {
             (the original flaw). Zero added taps: ignoring the rows costs
             nothing, setting one is a single tap on the way down, and the
             intent tap carries whatever is set. */}
-        <Text maxFontSizeMultiplier={1.3} style={[styles.readinessGroupLabel, live.readinessGroupLabel]}>
+        <Text style={[styles.readinessGroupLabel, live.readinessGroupLabel]}>
           Readiness (optional)
         </Text>
         {READINESS_ROWS.map(row => (
           <View key={row.key} style={styles.readinessRow}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.readinessLabel, live.readinessLabel]}>{row.short}</Text>
+            <Text style={[styles.readinessLabel, live.readinessLabel]}>{row.short}</Text>
             <View style={styles.readinessChips} accessibilityRole="radiogroup" accessibilityLabel={row.label}>
               {row.chips.map(chip => {
                 const selected = readiness[row.key] === chip.value;
@@ -2159,8 +2159,8 @@ export default function HomeScreen({ navigation, route }) {
               <Ionicons name={opt.icon} size={20} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptionLabel, live.intentOptionLabel]}>{opt.label}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptionSub, live.intentOptionSub]}>{opt.sub}</Text>
+              <Text style={[styles.intentOptionLabel, live.intentOptionLabel]}>{opt.label}</Text>
+              <Text style={[styles.intentOptionSub, live.intentOptionSub]}>{opt.sub}</Text>
             </View>
             <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
           </PressableCard>
@@ -2172,7 +2172,7 @@ export default function HomeScreen({ navigation, route }) {
           accessibilityLabel="Skip and start without answering"
           onPress={() => { haptics.selection(); confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null }); }}
         >
-          <Text maxFontSizeMultiplier={1.3} style={[styles.intentSkipText, live.intentSkipText]}>Skip</Text>
+          <Text style={[styles.intentSkipText, live.intentSkipText]}>Skip</Text>
         </TouchableOpacity>
 
         {/* D2 (Option A): the standing opt-out. Persists, then starts this
@@ -2188,8 +2188,8 @@ export default function HomeScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Don't ask before each session"
         >
-          <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptOutText, live.intentOptOutText]}>Don't ask before each session</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptOutSub, live.intentOptOutSub]}>
+          <Text style={[styles.intentOptOutText, live.intentOptOutText]}>Don't ask before each session</Text>
+          <Text style={[styles.intentOptOutSub, live.intentOptOutSub]}>
             Without it, sessions are not adjusted to how you're feeling. Turn it back on any time in Settings, Coaching.
           </Text>
         </TouchableOpacity>

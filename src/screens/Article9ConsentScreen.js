@@ -181,13 +181,13 @@ export default function Article9ConsentScreen({ navigation }) {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Health and nutrition data consent</Text>
+        <Text style={[styles.title, live.title]}>Health and nutrition data consent</Text>
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
+        <Text style={[styles.body, live.body]}>
           Volyume uses your health and food logs to help guide training, nutrition, and recovery. Under UK and EU data law, we need your explicit consent to use this data.
         </Text>
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.subhead, live.subhead]}>What Volyume looks at:</Text>
+        <Text style={[styles.subhead, live.subhead]}>What Volyume looks at:</Text>
         <BulletList items={[
           'Your weight and how it changes over time',
           'Your body fat percentage and lean mass when you enter them',
@@ -197,23 +197,23 @@ export default function Article9ConsentScreen({ navigation }) {
           'Progress photos you choose to take, plus photo quality, result confidence, leanness band, Volyume Score and progress change when you use photo analysis',
         ]} />
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
+        <Text style={[styles.body, live.body]}>
           Volyume Score is a simple progress read, not a medical measure, DEXA scan, diagnosis, or medical advice. It may abstain or ask for a retake when photo quality is poor.
         </Text>
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.subhead, live.subhead]}>A safety check that runs in the background:</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
+        <Text style={[styles.subhead, live.subhead]}>A safety check that runs in the background:</Text>
+        <Text style={[styles.body, live.body]}>
           Volyume checks your weight trend, energy, and food logs together for signs of under-fuelling or disordered eating. If a concerning pattern shows up, it pauses your calorie changes and points you to support.
         </Text>
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.subhead, live.subhead]}>What we never do with it:</Text>
+        <Text style={[styles.subhead, live.subhead]}>What we never do with it:</Text>
         <BulletList items={[
           'Never sell it',
           'Never share it with advertisers',
           'Never use your photos or health data for advertising or third-party model training',
         ]} />
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.subhead, live.subhead]}>Where it lives:</Text>
+        <Text style={[styles.subhead, live.subhead]}>Where it lives:</Text>
         <BulletList items={[
           'On your phone, in encrypted local storage. Progress photo image files stay on this device unless you choose to share or export them',
           'In Supabase in the EU region for cloud-backed account data, with row-level security so only you and the team supporting your account can see it',
@@ -232,7 +232,7 @@ export default function Article9ConsentScreen({ navigation }) {
 
         {/* Art 7(3): the user must be informed of the right to withdraw BEFORE
             giving consent, and withdrawal must be as easy as giving it. */}
-        <Text maxFontSizeMultiplier={1.3} style={[styles.withdrawNote, live.withdrawNote]}>
+        <Text style={[styles.withdrawNote, live.withdrawNote]}>
           You can withdraw this consent at any time in Settings {'>'} Privacy & legal.
         </Text>
 
@@ -243,12 +243,12 @@ export default function Article9ConsentScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityState={{ disabled: !agreed || busy }}
         >
-          <Text maxFontSizeMultiplier={1.3} style={[styles.ctaPrimaryText, live.ctaPrimaryText]}>{busy ? 'Saving...' : 'Continue'}</Text>
+          <Text style={[styles.ctaPrimaryText, live.ctaPrimaryText]}>{busy ? 'Saving...' : 'Continue'}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={openPrivacyPolicy} style={[styles.ctaGhost, live.ctaGhost]} accessibilityRole="link">
           <Ionicons name="document-text-outline" size={16} color={t.colors.textSecondary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.ctaGhostText, live.ctaGhostText]}>Read the full privacy policy</Text>
+          <Text style={[styles.ctaGhostText, live.ctaGhostText]}>Read the full privacy policy</Text>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
 
@@ -268,13 +268,13 @@ export default function Article9ConsentScreen({ navigation }) {
           accessibilityLabel="What if I don't agree?"
         >
           <Ionicons name="help-circle-outline" size={16} color={t.colors.textSecondary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.declineLinkText, live.declineLinkText]}>What if I don't agree?</Text>
+          <Text style={[styles.declineLinkText, live.declineLinkText]}>What if I don't agree?</Text>
           <Ionicons name={declineInfoOpen ? 'chevron-up' : 'chevron-down'} size={16} color={t.colors.textMuted} />
         </TouchableOpacity>
 
         {declineInfoOpen ? (
           <View style={[styles.declineBox, live.declineBox]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.declineBody, live.declineBody]}>
+            <Text style={[styles.declineBody, live.declineBody]}>
               Without this consent, Volyume cannot process your health data, so the app cannot be used. Nothing is processed until you agree. Your options are to agree above, sign out and decide later, or delete your account and any data already stored.
             </Text>
             <TouchableOpacity
@@ -284,7 +284,7 @@ export default function Article9ConsentScreen({ navigation }) {
               accessibilityState={{ disabled: signingOut }}
             >
               <Ionicons name="log-out-outline" size={16} color={t.colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.declineActionText, live.declineActionText]}>{signingOut ? 'Signing out...' : 'Sign out'}</Text>
+              <Text style={[styles.declineActionText, live.declineActionText]}>{signingOut ? 'Signing out...' : 'Sign out'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={deletingAccount ? undefined : handleDeleteAccount}
@@ -293,7 +293,7 @@ export default function Article9ConsentScreen({ navigation }) {
               accessibilityState={{ disabled: deletingAccount }}
             >
               <Ionicons name="trash-outline" size={16} color={t.colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.declineActionText, live.declineActionText]}>{deletingAccount ? 'Deleting account...' : 'Delete my account'}</Text>
+              <Text style={[styles.declineActionText, live.declineActionText]}>{deletingAccount ? 'Deleting account...' : 'Delete my account'}</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -313,8 +313,8 @@ function BulletList({ items }) {
     <View style={styles.bullets}>
       {items.map((text, i) => (
         <View key={i} style={styles.bulletRow}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.bulletDot, live.bulletDot]}>-</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.bulletText, live.bulletText]}>{text}</Text>
+          <Text style={[styles.bulletDot, live.bulletDot]}>-</Text>
+          <Text style={[styles.bulletText, live.bulletText]}>{text}</Text>
         </View>
       ))}
     </View>

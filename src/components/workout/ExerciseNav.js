@@ -49,7 +49,6 @@ export default function ExerciseNav({ items, selectedIndex, onSelect }) {
             accessibilityLabel={`${item.name}, ${item.done} of ${item.total} sets done${item.skipped ? ', skipped for time' : ''}`}
           >
             <Text
-              maxFontSizeMultiplier={1.3}
               numberOfLines={1}
               style={[styles.pillText, { ...t.type.label, color: selected ? t.colors.primary : t.colors.textSecondary }]}
             >

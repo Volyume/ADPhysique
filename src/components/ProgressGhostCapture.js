@@ -158,7 +158,7 @@ function OpacitySlider({ value, onChange }) {
         <View style={[styles.sliderFill, live.sliderFill, { width: `${Math.round(fillRatio * 100)}%` }]} />
         <View style={[styles.sliderThumb, live.sliderThumb, { left: `${Math.round(fillRatio * 100)}%` }]} />
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.sliderPct, live.sliderPct]} accessibilityElementsHidden>{pct}%</Text>
+      <Text style={[styles.sliderPct, live.sliderPct]} accessibilityElementsHidden>{pct}%</Text>
     </View>
   );
 }
@@ -340,10 +340,10 @@ export default function ProgressGhostCapture({
     return (
       <View style={[styles.fallback, live.fallback]} accessibilityRole="summary">
         <Ionicons name="camera-outline" size={iconSize.xl} color={t.colors.textSecondary} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackTitle, live.fallbackTitle]}>
+        <Text style={[styles.fallbackTitle, live.fallbackTitle]}>
           {noModule ? 'Camera not ready on this device' : 'Camera access is off'}
         </Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackBody, live.fallbackBody]}>
+        <Text style={[styles.fallbackBody, live.fallbackBody]}>
           {noModule
             ? 'The camera is not available on this device right now. You can still add a photo from your library.'
             : 'You can turn camera access on in Settings whenever you like, or add a photo from your library instead.'}
@@ -355,7 +355,7 @@ export default function ProgressGhostCapture({
             accessibilityRole="button"
             accessibilityLabel="Add a photo from your library"
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackBtnLabel, live.fallbackBtnLabel]}>Use your photo library</Text>
+            <Text style={[styles.fallbackBtnLabel, live.fallbackBtnLabel]}>Use your photo library</Text>
           </Pressable>
         ) : null}
         <Pressable
@@ -365,7 +365,7 @@ export default function ProgressGhostCapture({
           accessibilityRole="button"
           accessibilityLabel="Close"
         >
-          <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackCloseLabel, live.fallbackCloseLabel]}>Not now</Text>
+          <Text style={[styles.fallbackCloseLabel, live.fallbackCloseLabel]}>Not now</Text>
         </Pressable>
       </View>
     );
@@ -377,8 +377,8 @@ export default function ProgressGhostCapture({
     return (
       <View style={[styles.loading, live.loading]} accessibilityRole="summary">
         <Ionicons name="camera-outline" size={iconSize.xl} color={t.colors.textSecondary} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackTitle, live.fallbackTitle]}>Waiting for camera permission</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackBody, live.fallbackBody]}>
+        <Text style={[styles.fallbackTitle, live.fallbackTitle]}>Waiting for camera permission</Text>
+        <Text style={[styles.fallbackBody, live.fallbackBody]}>
           If the permission prompt does not appear, you can still add a photo from your library.
         </Text>
         {onFallback ? (
@@ -388,7 +388,7 @@ export default function ProgressGhostCapture({
             accessibilityRole="button"
             accessibilityLabel="Add a photo from your library"
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackBtnLabel, live.fallbackBtnLabel]}>Use your photo library</Text>
+            <Text style={[styles.fallbackBtnLabel, live.fallbackBtnLabel]}>Use your photo library</Text>
           </Pressable>
         ) : null}
         <Pressable
@@ -398,7 +398,7 @@ export default function ProgressGhostCapture({
           accessibilityRole="button"
           accessibilityLabel="Close"
         >
-          <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackCloseLabel, live.fallbackCloseLabel]}>Not now</Text>
+          <Text style={[styles.fallbackCloseLabel, live.fallbackCloseLabel]}>Not now</Text>
         </Pressable>
       </View>
     );
@@ -442,9 +442,9 @@ export default function ProgressGhostCapture({
         />
         <View style={[styles.previewTopBar, live.previewTopBar, { paddingTop: Math.max(spacing.lg, (Number(insets?.top) || 0) + spacing.sm) }]}>
           <View style={[styles.previewCopy, live.previewCopy]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.modeChip, live.modeChip]}>Photo preview</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Check this photo</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>
+            <Text style={[styles.modeChip, live.modeChip]}>Photo preview</Text>
+            <Text style={[styles.title, live.title]}>Check this photo</Text>
+            <Text style={[styles.subtitle, live.subtitle]}>
               Use it if your whole body is visible, the photo is sharp, and the camera looks upright.
             </Text>
           </View>
@@ -458,7 +458,7 @@ export default function ProgressGhostCapture({
             accessibilityLabel="Retake photo"
             accessibilityState={{ disabled: savingCapture }}
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.previewSecondaryText, live.previewSecondaryText]}>Retake</Text>
+            <Text style={[styles.previewSecondaryText, live.previewSecondaryText]}>Retake</Text>
           </Pressable>
           <Pressable
             style={[styles.previewButton, styles.previewPrimary, live.previewPrimary]}
@@ -468,7 +468,7 @@ export default function ProgressGhostCapture({
             accessibilityLabel="Use photo"
             accessibilityState={{ disabled: savingCapture }}
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.previewPrimaryText, live.previewPrimaryText]}>{savingCapture ? 'Saving' : 'Use photo'}</Text>
+            <Text style={[styles.previewPrimaryText, live.previewPrimaryText]}>{savingCapture ? 'Saving' : 'Use photo'}</Text>
           </Pressable>
         </View>
       </View>
@@ -521,8 +521,8 @@ export default function ProgressGhostCapture({
 
         {countdown != null ? (
           <View style={[styles.countdownWrap, compactOverlay && styles.countdownWrapCompact]} pointerEvents="none" accessible={false}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.countdownText, live.countdownText]}>{countdown}</Text>
-            {!compactOverlay ? <Text maxFontSizeMultiplier={1.3} style={[styles.countdownHint, live.countdownHint]}>Step into the frame</Text> : null}
+            <Text style={[styles.countdownText, live.countdownText]}>{countdown}</Text>
+            {!compactOverlay ? <Text style={[styles.countdownHint, live.countdownHint]}>Step into the frame</Text> : null}
           </View>
         ) : null}
       </CameraView>
@@ -530,11 +530,11 @@ export default function ProgressGhostCapture({
       {/* Top bar: framing copy + close. */}
       <View style={[styles.topBar, compactOverlay && styles.topBarCompact, topInsetStyle]} pointerEvents="box-none">
         <View style={[styles.topCopy, live.topCopy, compactOverlay && styles.topCopyCompact]} pointerEvents="none">
-          <Text maxFontSizeMultiplier={1.3} style={[styles.modeChip, live.modeChip]}>{modeLabel}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]} numberOfLines={1}>
+          <Text style={[styles.modeChip, live.modeChip]}>{modeLabel}</Text>
+          <Text style={[styles.title, live.title]} numberOfLines={1}>
             {title || guidance.title}
           </Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle, compactOverlay && styles.subtitleCompact]} numberOfLines={compactOverlay ? 1 : 2}>
+          <Text style={[styles.subtitle, live.subtitle, compactOverlay && styles.subtitleCompact]} numberOfLines={compactOverlay ? 1 : 2}>
             {captureInstruction}
           </Text>
         </View>
@@ -569,7 +569,7 @@ export default function ProgressGhostCapture({
                     accessibilityLabel={`${preset.label} overlay strength`}
                     accessibilityHint="Changes how strongly the previous photo appears over the camera preview"
                   >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.opacityPresetText, live.opacityPresetText, active && [styles.opacityPresetTextActive, live.opacityPresetTextActive]]}>
+                    <Text style={[styles.opacityPresetText, live.opacityPresetText, active && [styles.opacityPresetTextActive, live.opacityPresetTextActive]]}>
                       {preset.label}
                     </Text>
                   </Pressable>
@@ -592,7 +592,7 @@ export default function ProgressGhostCapture({
               accessibilityLabel={seconds === 0 ? 'Timer off' : `${seconds} second timer`}
               accessibilityHint="Sets a delay before the photo is taken"
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.timerChipText, live.timerChipText, timerSeconds === seconds && [styles.timerChipTextActive, live.timerChipTextActive]]}>
+              <Text style={[styles.timerChipText, live.timerChipText, timerSeconds === seconds && [styles.timerChipTextActive, live.timerChipTextActive]]}>
                 {seconds === 0 ? 'Off' : `${seconds}s`}
               </Text>
             </Pressable>

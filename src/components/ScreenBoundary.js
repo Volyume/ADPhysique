@@ -110,8 +110,8 @@ export class ScreenBoundaryClass extends React.Component {
     return (
       <View style={[styles.container, live.container]}>
         <Ionicons name="alert-circle-outline" size={40} color={live.iconColor} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>This screen hit a problem.</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>Your data is safe. Try again, or come back in a moment.</Text>
+        <Text style={[styles.title, live.title]}>This screen hit a problem.</Text>
+        <Text style={[styles.body, live.body]}>Your data is safe. Try again, or come back in a moment.</Text>
         <Button
           title="Try again"
           onPress={this.handleRetry}

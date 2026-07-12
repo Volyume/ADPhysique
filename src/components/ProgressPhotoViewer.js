@@ -542,10 +542,10 @@ export default function ProgressPhotoViewer({
           <TouchableOpacity onPress={handleClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="chevron-back" size={26} color={t.colors.textPrimary} />
           </TouchableOpacity>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.headerDate, live.headerDate]} numberOfLines={1}>
+          <Text style={[styles.headerDate, live.headerDate]} numberOfLines={1}>
             {current ? formatProgressPhotoDay(currentMeta.takenAt) : ''}
           </Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.counter, live.counter]}>
+          <Text style={[styles.counter, live.counter]}>
             {photos.length > 1 ? `${safeIndex + 1} / ${photos.length}` : ''}
           </Text>
         </View>
@@ -585,7 +585,7 @@ export default function ProgressPhotoViewer({
               </Animated.View>
             </GestureDetector>
           ) : (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.emptyText, live.emptyText]}>No photo to show.</Text>
+            <Text style={[styles.emptyText, live.emptyText]}>No photo to show.</Text>
           )}
         </View>
 
@@ -595,23 +595,23 @@ export default function ProgressPhotoViewer({
               <View style={styles.metaRow}>
                 {currentMeta.pose ? (
                   <View style={[styles.poseTag, live.poseTag]}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.poseTagText, live.poseTagText]}>{POSE_LABEL[currentMeta.pose]}</Text>
+                    <Text style={[styles.poseTagText, live.poseTagText]}>{POSE_LABEL[currentMeta.pose]}</Text>
                   </View>
                 ) : null}
-                <Text maxFontSizeMultiplier={1.3} style={[styles.metaDate, live.metaDate]}>{formatProgressPhotoDay(currentMeta.takenAt)}</Text>
+                <Text style={[styles.metaDate, live.metaDate]}>{formatProgressPhotoDay(currentMeta.takenAt)}</Text>
               </View>
 
-              {showWeight ? <Text maxFontSizeMultiplier={1.3} style={[styles.metaWeight, live.metaWeight]}>{weightLine}</Text> : null}
-              {currentMeta.note ? <Text maxFontSizeMultiplier={1.3} style={[styles.metaNote, live.metaNote]}>{currentMeta.note}</Text> : null}
+              {showWeight ? <Text style={[styles.metaWeight, live.metaWeight]}>{weightLine}</Text> : null}
+              {currentMeta.note ? <Text style={[styles.metaNote, live.metaNote]}>{currentMeta.note}</Text> : null}
 
               <View style={[styles.storageNote, live.storageNote]}>
                 <Ionicons name="phone-portrait-outline" size={iconSize.sm} color={t.colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.storageNoteText, live.storageNoteText]}>
+                <Text style={[styles.storageNoteText, live.storageNoteText]}>
                   Stored on this device. Export anything you want to keep before uninstalling, clearing app data or changing phones.
                 </Text>
               </View>
 
-              <Text maxFontSizeMultiplier={1.3} style={[styles.sectionLabel, live.sectionLabel]}>Pose</Text>
+              <Text style={[styles.sectionLabel, live.sectionLabel]}>Pose</Text>
               <View style={styles.poseSelector}>
                 {POSES.map((p) => {
                   const active = currentMeta.pose === p.key;
@@ -695,7 +695,7 @@ export default function ProgressPhotoViewer({
       >
         <View style={[styles.sheetBackdrop, live.sheetBackdrop]}>
           <View style={[styles.sheet, live.sheet]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Note</Text>
+            <Text style={[styles.sheetTitle, live.sheetTitle]}>Note</Text>
             <TextField
               containerStyle={styles.noteFieldContainer}
               fieldStyle={[styles.noteField, live.noteField]}

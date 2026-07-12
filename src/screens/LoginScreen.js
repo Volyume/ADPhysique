@@ -85,7 +85,7 @@ export default function LoginScreen() {
           {/* ── Brand block ── */}
           <View style={styles.brand}>
             <VolyumeMark size={56} style={styles.brandMark} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.brandTagline, live.brandTagline]}>Less thinking. More lifting.</Text>
+            <Text style={[styles.brandTagline, live.brandTagline]}>Less thinking. More lifting.</Text>
           </View>
 
           {/* Thin divider below brand */}
@@ -103,7 +103,7 @@ export default function LoginScreen() {
               indication anything is actually happening. A calm caption names
               what's in progress. */}
           {loading ? (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.oauthWaiting, live.oauthWaiting]}>Waiting for Google or Apple…</Text>
+            <Text style={[styles.oauthWaiting, live.oauthWaiting]}>Waiting for Google or Apple…</Text>
           ) : null}
 
           {/* "Continue without an account" removed per

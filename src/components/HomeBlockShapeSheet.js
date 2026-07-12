@@ -31,8 +31,8 @@ function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek }) {
   };
   return (
     <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Your block">
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Your block</Text>
-        {currentMesoWeek?.mesoName ? <Text maxFontSizeMultiplier={1.3} style={[styles.sheetSub, live.sheetSub]}>{currentMesoWeek.mesoName}</Text> : null}
+        <Text style={[styles.sheetTitle, live.sheetTitle]}>Your block</Text>
+        {currentMesoWeek?.mesoName ? <Text style={[styles.sheetSub, live.sheetSub]}>{currentMesoWeek.mesoName}</Text> : null}
         <BlockShapeCard
           weekIndex={currentMesoWeek?.weekIndex}
           plannedWeeks={currentMesoWeek?.plannedWeeks}
@@ -40,10 +40,10 @@ function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek }) {
         />
         {/* U-E-1/U-D-3: the chip is whole-tappable, so the plain-English
             definitions of its terms live here, in the sheet it opens. */}
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.deload}</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.rir}</Text>
+        <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.deload}</Text>
+        <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.rir}</Text>
         <TouchableOpacity style={styles.sheetCancel} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close">
-          <Text maxFontSizeMultiplier={1.3} style={[styles.sheetCancelText, live.sheetCancelText]}>Close</Text>
+          <Text style={[styles.sheetCancelText, live.sheetCancelText]}>Close</Text>
         </TouchableOpacity>
     </BottomSheet>
   );

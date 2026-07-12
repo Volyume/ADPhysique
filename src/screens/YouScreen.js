@@ -90,10 +90,10 @@ function NavRow({ icon, label, sub, onPress, pro }) {
       </View>
       <View style={styles.navRowText}>
         <View style={styles.navRowLabelRow}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.navRowLabel, live.navRowLabel]}>{label}</Text>
+          <Text style={[styles.navRowLabel, live.navRowLabel]}>{label}</Text>
           {pro ? <ProBadge size="sm" /> : null}
         </View>
-        {sub ? <Text maxFontSizeMultiplier={1.3} style={[styles.navRowSub, live.navRowSub]}>{sub}</Text> : null}
+        {sub ? <Text style={[styles.navRowSub, live.navRowSub]}>{sub}</Text> : null}
       </View>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
     </Card>
@@ -340,8 +340,8 @@ export default function YouScreen({ navigation }) {
               <Ionicons name="warning-outline" size={18} color={t.colors.warning} />
             </View>
             <View style={styles.loadErrorCopy}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.loadErrorTitle, live.loadErrorTitle]}>Couldn't refresh Coach</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.loadErrorBody, live.loadErrorBody]}>Your saved profile stays unchanged. Tap to try again.</Text>
+              <Text style={[styles.loadErrorTitle, live.loadErrorTitle]}>Couldn't refresh Coach</Text>
+              <Text style={[styles.loadErrorBody, live.loadErrorBody]}>Your saved profile stays unchanged. Tap to try again.</Text>
             </View>
             <Ionicons name="refresh-outline" size={18} color={t.colors.textMuted} />
           </Card>
@@ -367,15 +367,15 @@ export default function YouScreen({ navigation }) {
           />
           <View style={styles.profileInfo}>
             <View style={styles.profileNameRow}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.profileName, live.profileName]} numberOfLines={1}>{displayName}</Text>
+              <Text style={[styles.profileName, live.profileName]} numberOfLines={1}>{displayName}</Text>
               {isPro ? <ProBadge size="sm" /> : null}
             </View>
             {sessions != null ? (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.profileStat, live.profileStat]}>{sessions} completed session{sessions === 1 ? '' : 's'}</Text>
+              <Text style={[styles.profileStat, live.profileStat]}>{sessions} completed session{sessions === 1 ? '' : 's'}</Text>
             ) : user?.id ? (
               <Skeleton width={110} height={12} />
             ) : null}
-            {profileFocus ? <Text maxFontSizeMultiplier={1.3} style={[styles.profileFocus, live.profileFocus]} numberOfLines={2}>{profileFocus}</Text> : null}
+            {profileFocus ? <Text style={[styles.profileFocus, live.profileFocus]} numberOfLines={2}>{profileFocus}</Text> : null}
           </View>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </Card>
@@ -412,7 +412,7 @@ export default function YouScreen({ navigation }) {
               </View>
               <View style={{ flex: 1 }}>
                 <SectionLabel tone="primary">Coach</SectionLabel>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.statusTitle, live.statusTitle]}>
+                <Text style={[styles.statusTitle, live.statusTitle]}>
                   {isPro
                     ? `Weekly coach update${reviewDate ? `: ${reviewDate}` : ''}`
                     : 'Coach is available on Pro'}
@@ -420,7 +420,7 @@ export default function YouScreen({ navigation }) {
               </View>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.statusBody, live.statusBody]}>
+            <Text style={[styles.statusBody, live.statusBody]}>
               {isPro
                 ? 'What changed, what was held, and the exact signals behind it.'
                 : 'Your coach reads your logs, applies safety limits, and explains every decision.'}

@@ -97,8 +97,8 @@ export default function SettingsWorkoutScreen() {
             <Ionicons name="body-outline" size={18} color={t.colors.primary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.settingLabel, live.settingLabel]}>Body weight unit</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.settingSub, live.settingSub]}>
+            <Text style={[styles.settingLabel, live.settingLabel]}>Body weight unit</Text>
+            <Text style={[styles.settingSub, live.settingSub]}>
               How your own body weight is shown. Gym weights stay in kg.
             </Text>
             <View style={[local.segment, liveLocal.segment]} accessibilityRole="radiogroup">
@@ -113,7 +113,7 @@ export default function SettingsWorkoutScreen() {
                     accessibilityState={{ selected: active }}
                     accessibilityLabel={opt.label}
                   >
-                    <Text maxFontSizeMultiplier={1.3} style={[local.segText, liveLocal.segText, active && [local.segTextActive, liveLocal.segTextActive]]}>{opt.label}</Text>
+                    <Text style={[local.segText, liveLocal.segText, active && [local.segTextActive, liveLocal.segTextActive]]}>{opt.label}</Text>
                   </TouchableOpacity>
                 );
               })}

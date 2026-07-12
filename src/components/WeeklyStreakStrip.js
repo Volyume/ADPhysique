@@ -64,10 +64,10 @@ export default function WeeklyStreakStrip({ vm }) {
   return (
     <View style={[styles.card, live.card]} accessible accessibilityLabel={a11y}>
       <View style={styles.left}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.count, live.count]}>{left}</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.countSub, live.countSub]}>{leftSub}</Text>
+        <Text style={[styles.count, live.count]}>{left}</Text>
+        <Text style={[styles.countSub, live.countSub]}>{leftSub}</Text>
       </View>
-      {right ? <Text maxFontSizeMultiplier={1.3} style={[styles.run, live.run]}>{right}</Text> : null}
+      {right ? <Text style={[styles.run, live.run]}>{right}</Text> : null}
     </View>
   );
 }

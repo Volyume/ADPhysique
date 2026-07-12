@@ -65,7 +65,7 @@ export default function BlockShapeCard({ weekIndex, plannedWeeks, isDeload = fal
                 ]}
               />
               {!compact && (
-                <Text maxFontSizeMultiplier={1.3} style={[styles.dotLabel, live.dotLabel, isCurrent && [styles.dotLabelCurrent, live.dotLabelCurrent]]} numberOfLines={1}>
+                <Text style={[styles.dotLabel, live.dotLabel, isCurrent && [styles.dotLabelCurrent, live.dotLabelCurrent]]} numberOfLines={1}>
                   {PHASE_WORD(i, n)}
                 </Text>
               )}
@@ -73,7 +73,7 @@ export default function BlockShapeCard({ weekIndex, plannedWeeks, isDeload = fal
           );
         })}
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.line, live.line]}>{line}</Text>
+      <Text style={[styles.line, live.line]}>{line}</Text>
     </View>
   );
 }

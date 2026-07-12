@@ -88,8 +88,8 @@ export default function CancelReasonSheet({
       keyboardAvoiding
       accessibilityLabel="Before you go"
     >
-      <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Before you go: what's the main reason?</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.sub, live.sub]}>Optional. It helps us decide what to build.</Text>
+      <Text style={[styles.title, live.title]}>Before you go: what's the main reason?</Text>
+      <Text style={[styles.sub, live.sub]}>Optional. It helps us decide what to build.</Text>
 
       <ReasonPicker
         reason={reason}
@@ -100,7 +100,7 @@ export default function CancelReasonSheet({
 
       {reason === 'temporary_break' ? (
         <View style={styles.breakBlock}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.breakPrompt, live.breakPrompt]}>When do you think you'll be back?</Text>
+          <Text style={[styles.breakPrompt, live.breakPrompt]}>When do you think you'll be back?</Text>
           <View style={styles.chipRow}>
             {BREAK_WINDOWS.map((w) => {
               const selected = breakWindow === w.key;
@@ -116,14 +116,14 @@ export default function CancelReasonSheet({
             })}
           </View>
           {Platform.OS === 'android' ? (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.pauseHint, live.pauseHint]}>
+            <Text style={[styles.pauseHint, live.pauseHint]}>
               Your subscription settings may also let you pause instead of cancel.
             </Text>
           ) : null}
         </View>
       ) : null}
 
-      <Text maxFontSizeMultiplier={1.3} style={[styles.disclosure, live.disclosure]}>
+      <Text style={[styles.disclosure, live.disclosure]}>
         You'll keep your features until the current billing period ends. Your
         training history, food log and check-ins all stay.
       </Text>

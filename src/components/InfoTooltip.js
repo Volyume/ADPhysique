@@ -35,7 +35,7 @@ export default function InfoTooltip({ text, size = 14 }) {
           accessibilityLabel="Close"
         >
           <View style={[styles.box, live.box]} pointerEvents="box-none" accessible accessibilityRole="text">
-            <Text maxFontSizeMultiplier={1.3} style={[styles.text, live.text]}>{text}</Text>
+            <Text style={[styles.text, live.text]}>{text}</Text>
           </View>
         </TouchableOpacity>
       </Modal>

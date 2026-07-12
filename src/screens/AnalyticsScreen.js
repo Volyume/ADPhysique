@@ -448,7 +448,7 @@ export default function AnalyticsScreen({ navigation, route }) {
             {pendingMilestone ? (
               <View style={styles.milestoneRow}>
                 <Ionicons name="ribbon-outline" size={16} color={t.colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneText, live.milestoneText]}>{STREAK_MILESTONE_COPY[pendingMilestone]}</Text>
+                <Text style={[styles.milestoneText, live.milestoneText]}>{STREAK_MILESTONE_COPY[pendingMilestone]}</Text>
                 {pendingMilestone >= 12 ? (
                   // R9 (D70): milestoneCtaButton -> shared Button outline sm.
                   <Button
@@ -465,7 +465,7 @@ export default function AnalyticsScreen({ navigation, route }) {
             {perfectMonth ? (
               <View style={styles.milestoneRow}>
                 <Ionicons name="ribbon-outline" size={16} color={t.colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneText, live.milestoneText]}>A perfect month. Four weeks, every target met.</Text>
+                <Text style={[styles.milestoneText, live.milestoneText]}>A perfect month. Four weeks, every target met.</Text>
                 {/* R9 (D70): milestoneCtaButton -> shared Button outline sm. */}
                 <Button
                   variant="outline"
@@ -480,7 +480,7 @@ export default function AnalyticsScreen({ navigation, route }) {
             {longestRunPb ? (
               <View style={styles.milestoneRow}>
                 <Ionicons name="ribbon-outline" size={16} color={t.colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneText, live.milestoneText]}>
+                <Text style={[styles.milestoneText, live.milestoneText]}>
                   {`A new personal best. ${longestRunPb} ${longestRunPb === 1 ? 'week' : 'weeks'} running, your longest yet.`}
                 </Text>
                 {/* R9 (D70): milestoneCtaButton -> shared Button outline sm. */}
@@ -505,7 +505,7 @@ export default function AnalyticsScreen({ navigation, route }) {
           <View style={styles.section}>
             <View style={styles.milestoneRow}>
               <Ionicons name="barbell-outline" size={16} color={t.colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneText, live.milestoneText]}>
+              <Text style={[styles.milestoneText, live.milestoneText]}>
                 {formatTonnage(tonnageLandmark)} {units === 'lbs' ? 'lbs' : 'kg'} lifted all-time. That's what showing up adds up to.
               </Text>
               {/* R9 (D70): milestoneCtaButton -> shared Button outline sm. */}
@@ -568,7 +568,7 @@ export default function AnalyticsScreen({ navigation, route }) {
             blank area before the charts arrive. ── */}
         {!loading && !trendsStartHidden && allSets.length > 0 && completedWorkoutCount > 0 && completedWorkoutCount < 3 && (
           <View style={styles.momentumRow}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.momentumText, live.momentumText]}>
+            <Text style={[styles.momentumText, live.momentumText]}>
               Good start. A couple more sessions and your trends really take shape.
             </Text>
             <TouchableOpacity
@@ -592,7 +592,7 @@ export default function AnalyticsScreen({ navigation, route }) {
             accessibilityLabel="Open your monthly recap, about 45 seconds"
           >
             <Ionicons name="newspaper-outline" size={18} color={t.colors.primary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.recapCardText, live.recapCardText]}>
+            <Text style={[styles.recapCardText, live.recapCardText]}>
               Your {recentMonthRecapParams(earliestWorkoutAt).monthLabel.replace(' so far', '')} recap is ready - 45 seconds
             </Text>
             <TouchableOpacity
@@ -759,22 +759,22 @@ export default function AnalyticsScreen({ navigation, route }) {
                 the app-wide card radius. */}
             <Card padding="none" style={styles.lifetimePanel}>
               <View style={styles.lifetimeCell}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.lifetimeValue, live.lifetimeValue]}>{formatNumber(completedWorkoutCount)}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.lifetimeLabel, live.lifetimeLabel]}>
+                <Text style={[styles.lifetimeValue, live.lifetimeValue]}>{formatNumber(completedWorkoutCount)}</Text>
+                <Text style={[styles.lifetimeLabel, live.lifetimeLabel]}>
                   {completedWorkoutCount === 1 ? 'session' : 'sessions'}
                 </Text>
               </View>
               <View style={[styles.lifetimeDivider, live.lifetimeDivider]} />
               <View style={styles.lifetimeCell}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.lifetimeValue, live.lifetimeValue]}>
+                <Text style={[styles.lifetimeValue, live.lifetimeValue]}>
                   {formatNumber(lifetimeTonnage)}
                 </Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.lifetimeLabel, live.lifetimeLabel]}>{units === 'lbs' ? 'lbs lifted' : 'kg lifted'}</Text>
+                <Text style={[styles.lifetimeLabel, live.lifetimeLabel]}>{units === 'lbs' ? 'lbs lifted' : 'kg lifted'}</Text>
               </View>
               <View style={[styles.lifetimeDivider, live.lifetimeDivider]} />
               <View style={styles.lifetimeCell}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.lifetimeValue, live.lifetimeValue]}>{formatNumber(lifetimeReps)}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.lifetimeLabel, live.lifetimeLabel]}>
+                <Text style={[styles.lifetimeValue, live.lifetimeValue]}>{formatNumber(lifetimeReps)}</Text>
+                <Text style={[styles.lifetimeLabel, live.lifetimeLabel]}>
                   {lifetimeReps === 1 ? 'rep' : 'reps'}
                 </Text>
               </View>
@@ -868,7 +868,7 @@ function InsightRow({ insight, onDismiss }) {
   return (
     <Card padding="md" style={[styles.insightRow, { borderLeftColor: sev.color }]}>
       <Ionicons name={sev.icon} size={18} color={sev.color} style={{ marginTop: spacing.hair }} />
-      <Text maxFontSizeMultiplier={1.3} style={[styles.insightCopy, live.insightCopy]} numberOfLines={5}>{insight.copy}</Text>
+      <Text style={[styles.insightCopy, live.insightCopy]} numberOfLines={5}>{insight.copy}</Text>
       <TouchableOpacity
         // R9 (D70): InsightRow dismiss joins the app's haptic vocabulary.
         onPress={() => { haptics.selection(); onDismiss(); }}
@@ -908,7 +908,7 @@ function VolumeSummaryStrip({ volume, loading, onPress }) {
         accessibilityRole="button"
         accessibilityLabel="This week's volume. Open the heatmap."
       >
-        <Text maxFontSizeMultiplier={1.3} style={[styles.volEmptyText, live.volEmptyText]}>Nothing logged this week yet.</Text>
+        <Text style={[styles.volEmptyText, live.volEmptyText]}>Nothing logged this week yet.</Text>
       </Card>
     );
   }
@@ -942,18 +942,18 @@ function VolumeSummaryStrip({ volume, loading, onPress }) {
     >
       <View style={styles.volSummaryTop}>
         <View style={styles.volSummaryMain}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.volSummaryCount, live.volSummaryCount]}>{trained.length}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.volSummaryLabel, live.volSummaryLabel]}>
+          <Text style={[styles.volSummaryCount, live.volSummaryCount]}>{trained.length}</Text>
+          <Text style={[styles.volSummaryLabel, live.volSummaryLabel]}>
             {trained.length === 1 ? 'muscle trained' : 'muscles trained'}
           </Text>
         </View>
         <View style={styles.volSummaryFlags}>
           {flags.length === 0 ? (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.volSummaryClear, live.volSummaryClear]}>All in range</Text>
+            <Text style={[styles.volSummaryClear, live.volSummaryClear]}>All in range</Text>
           ) : flags.map(f => (
             <View key={f.key} style={styles.volLegendItem}>
               <View style={[styles.volLegendDot, { backgroundColor: f.color }]} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.volSummaryFlagText, live.volSummaryFlagText]}>{f.n} {f.label}</Text>
+              <Text style={[styles.volSummaryFlagText, live.volSummaryFlagText]}>{f.n} {f.label}</Text>
             </View>
           ))}
         </View>
@@ -1002,16 +1002,16 @@ function TrainingLoadHero({ series, units, onMakeCard }) {
   const unit = units === 'lbs' ? 'lbs' : 'kg';
   return (
     <Card accessibilityLabel={`Training load. ${weekLabel}: ${formatNumber(active.value)} ${unit} lifted.`}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.heroEyebrow, live.heroEyebrow]}>Training load</Text>
+      <Text style={[styles.heroEyebrow, live.heroEyebrow]}>Training load</Text>
       <View style={styles.heroValueRow}>
         <RollingNumber
           value={active.value}
           style={[styles.heroValue, live.heroValue]}
           accessibilityLabel={`${formatNumber(active.value)} ${unit}`}
         />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.heroUnit, live.heroUnit]}>{unit}</Text>
+        <Text style={[styles.heroUnit, live.heroUnit]}>{unit}</Text>
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.heroSub, live.heroSub]}>{weekLabel} - weight lifted</Text>
+      <Text style={[styles.heroSub, live.heroSub]}>{weekLabel} - weight lifted</Text>
       <View
         style={styles.heroChartSlot}
         onLayout={e => setChartW(Math.round(e.nativeEvent.layout.width))}
@@ -1030,8 +1030,8 @@ function TrainingLoadHero({ series, units, onMakeCard }) {
         )}
       </View>
       <View style={styles.rowBetween}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.heroAxisLabel, live.heroAxisLabel]}>{series.length - 1} weeks ago</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.heroAxisLabel, live.heroAxisLabel]}>this week</Text>
+        <Text style={[styles.heroAxisLabel, live.heroAxisLabel]}>{series.length - 1} weeks ago</Text>
+        <Text style={[styles.heroAxisLabel, live.heroAxisLabel]}>this week</Text>
       </View>
       {/* S4: share image extended to training load, reflective and factual,
           never a comparison to anyone else. R9 (D70): milestoneCtaButton ->
@@ -1068,8 +1068,8 @@ function SparkCard({ label, value, sub, bars, onPress, accessibilityLabel }) {
       onPress={onPress}
       accessibilityLabel={accessibilityLabel}
     >
-      <Text maxFontSizeMultiplier={1.3} style={[styles.sparkLabel, live.sparkLabel]}>{label}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.sparkValue, live.sparkValue]}>{formatNumber(value)}</Text>
+      <Text style={[styles.sparkLabel, live.sparkLabel]}>{label}</Text>
+      <Text style={[styles.sparkValue, live.sparkValue]}>{formatNumber(value)}</Text>
       <View
         style={styles.sparkChartSlot}
         onLayout={e => setChartW(Math.round(e.nativeEvent.layout.width))}
@@ -1084,7 +1084,7 @@ function SparkCard({ label, value, sub, bars, onPress, accessibilityLabel }) {
           />
         )}
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.sparkSub, live.sparkSub]}>{sub}</Text>
+      <Text style={[styles.sparkSub, live.sparkSub]}>{sub}</Text>
     </Card>
   );
 }
@@ -1106,15 +1106,15 @@ function SessionCard({ workout, onPress }) {
       accessibilityLabel={`View summary for ${name}`}
     >
       <View style={styles.sessionLeft}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sessionName, live.sessionName]} numberOfLines={1}>{name}</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sessionMeta, live.sessionMeta]}>
+        <Text style={[styles.sessionName, live.sessionName]} numberOfLines={1}>{name}</Text>
+        <Text style={[styles.sessionMeta, live.sessionMeta]}>
           {at && safeDate(at) ? safeFormatDate(at, 'EEE d MMM') : ''}
           {workout.durationMinutes ? ` - ${workout.durationMinutes}m` : ''}
         </Text>
       </View>
       {diff != null && (
         <View style={[styles.diffChip, { backgroundColor: buildDiffChipBg(t, diff) }]}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.diffText, live.diffText, { color: buildDiffChipColor(t, diff) }]}>
+          <Text style={[styles.diffText, live.diffText, { color: buildDiffChipColor(t, diff) }]}>
             {diff}/10
           </Text>
         </View>
@@ -1158,11 +1158,11 @@ function NavTile({ icon, color, label, onPress, locked, lockedSub, pro }) {
         color={locked ? t.colors.textMuted : color}
       />
       <View style={styles.navTileLabelRow}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.navTileLabel, live.navTileLabel, locked && [styles.navTileLabelLocked, live.navTileLabelLocked]]}>{label}</Text>
+        <Text style={[styles.navTileLabel, live.navTileLabel, locked && [styles.navTileLabelLocked, live.navTileLabelLocked]]}>{label}</Text>
         {pro ? <ProBadge size="sm" /> : null}
       </View>
       {locked && lockedSub ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.navTileSub, live.navTileSub]} numberOfLines={1}>{lockedSub}</Text>
+        <Text style={[styles.navTileSub, live.navTileSub]} numberOfLines={1}>{lockedSub}</Text>
       ) : null}
     </TouchableOpacity>
   );

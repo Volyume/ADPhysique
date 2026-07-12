@@ -403,7 +403,7 @@ export default function RestTimer() {
     return (
       <View style={[styles.doneContainer, live.doneContainer]}>
         <Ionicons name="checkmark-circle" size={18} color={t.colors.success} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.doneText, live.doneText]}>Start next set</Text>
+        <Text style={[styles.doneText, live.doneText]}>Start next set</Text>
       </View>
     );
   }
@@ -432,7 +432,7 @@ export default function RestTimer() {
           ) : (
             <Text style={[styles.timeText, live.timeText, compact && styles.timeTextCompact, isAlmostDone && [styles.almostDone, live.almostDone]]} maxFontSizeMultiplier={1.15}>{timeStr}</Text>
           )}
-          <Text maxFontSizeMultiplier={1.3} style={[styles.label, live.label]} numberOfLines={1}>{isCountdown ? 'seconds' : 'rest'}</Text>
+          <Text style={[styles.label, live.label]} numberOfLines={1}>{isCountdown ? 'seconds' : 'rest'}</Text>
         </View>
         {TIME_ADJUSTMENTS.map(({ delta, label }) => {
           const isNeg = delta < 0;
@@ -448,7 +448,7 @@ export default function RestTimer() {
               accessibilityRole="button"
               accessibilityLabel={isNeg ? 'Remove 15 seconds' : 'Add 15 seconds'}
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.adjBtnText, live.adjBtnText, isNeg && [styles.adjBtnTextNeg, live.adjBtnTextNeg]]}>{label}</Text>
+              <Text style={[styles.adjBtnText, live.adjBtnText, isNeg && [styles.adjBtnTextNeg, live.adjBtnTextNeg]]}>{label}</Text>
             </TouchableOpacity>
           );
         })}
@@ -459,7 +459,7 @@ export default function RestTimer() {
           accessibilityLabel="Skip rest timer"
           accessibilityRole="button"
         >
-          <Text maxFontSizeMultiplier={1.3} style={[styles.skipText, live.skipText]}>Skip</Text>
+          <Text style={[styles.skipText, live.skipText]}>Skip</Text>
         </TouchableOpacity>
       </View>
       {/* D2: the draining remaining-rest fill. Decorative (the live region

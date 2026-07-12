@@ -36,7 +36,7 @@ function HomeWelcomeCard({ onDismiss }) {
   return (
     <Card style={styles.welcomeCard}>
       <View style={styles.welcomeHead}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.welcomeTitle, live.welcomeTitle]}>Welcome to Volyume</Text>
+        <Text style={[styles.welcomeTitle, live.welcomeTitle]}>Welcome to Volyume</Text>
         <TouchableOpacity
           onPress={onDismiss}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -47,17 +47,17 @@ function HomeWelcomeCard({ onDismiss }) {
         </TouchableOpacity>
       </View>
       <View style={styles.welcomeStep}>
-        <View style={[styles.welcomeStepNum, live.welcomeStepNum]}><Text maxFontSizeMultiplier={1.3} style={[styles.welcomeStepNumText, live.welcomeStepNumText]}>1</Text></View>
+        <View style={[styles.welcomeStepNum, live.welcomeStepNum]}><Text style={[styles.welcomeStepNumText, live.welcomeStepNumText]}>1</Text></View>
         <View style={{ flex: 1 }}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.welcomeStepTitle, live.welcomeStepTitle]}>Start a session below</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.welcomeStepBody, live.welcomeStepBody]}>Begin from your plan, or just log freely. Tap Start workout and log each set as you go.</Text>
+          <Text style={[styles.welcomeStepTitle, live.welcomeStepTitle]}>Start a session below</Text>
+          <Text style={[styles.welcomeStepBody, live.welcomeStepBody]}>Begin from your plan, or just log freely. Tap Start workout and log each set as you go.</Text>
         </View>
       </View>
       <View style={styles.welcomeStep}>
-        <View style={[styles.welcomeStepNum, live.welcomeStepNum]}><Text maxFontSizeMultiplier={1.3} style={[styles.welcomeStepNumText, live.welcomeStepNumText]}>2</Text></View>
+        <View style={[styles.welcomeStepNum, live.welcomeStepNum]}><Text style={[styles.welcomeStepNumText, live.welcomeStepNumText]}>2</Text></View>
         <View style={{ flex: 1 }}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.welcomeStepTitle, live.welcomeStepTitle]}>Your coach learns as you train</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.welcomeStepBody, live.welcomeStepBody]}>Every session you log sharpens your plan. There is nothing to set up.</Text>
+          <Text style={[styles.welcomeStepTitle, live.welcomeStepTitle]}>Your coach learns as you train</Text>
+          <Text style={[styles.welcomeStepBody, live.welcomeStepBody]}>Every session you log sharpens your plan. There is nothing to set up.</Text>
         </View>
       </View>
     </Card>

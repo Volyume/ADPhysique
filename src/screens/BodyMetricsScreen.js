@@ -218,7 +218,7 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
   if (allWeights.length < 2) {
     return (
       <View style={chartStyles.emptyHint}>
-        <Text maxFontSizeMultiplier={1.3} style={[chartStyles.emptyHintText, chartLive.emptyHintText]}>
+        <Text style={[chartStyles.emptyHintText, chartLive.emptyHintText]}>
           Log weight at least twice to see your trend chart.
         </Text>
       </View>
@@ -245,10 +245,10 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
     <View>
       <WindowChips windows={TREND_WINDOWS} selectedKey={windowKey} onSelect={selectWindow}
         accessibilityPrefix="weight trend window" />
-      {!!takeaway && <Text maxFontSizeMultiplier={1.3} style={[chartStyles.takeaway, chartLive.takeaway]}>{takeaway}</Text>}
+      {!!takeaway && <Text style={[chartStyles.takeaway, chartLive.takeaway]}>{takeaway}</Text>}
       {sparse ? (
         <View style={chartStyles.emptyHint}>
-          <Text maxFontSizeMultiplier={1.3} style={[chartStyles.emptyHintText, chartLive.emptyHintText]}>Not enough data in this window yet.</Text>
+          <Text style={[chartStyles.emptyHintText, chartLive.emptyHintText]}>Not enough data in this window yet.</Text>
         </View>
       ) : (
         <View style={chartStyles.wrap}>
@@ -306,7 +306,7 @@ function BodyFatTrendChart({ entries }) {
   if (withData.length < 2) {
     return (
       <View style={chartStyles.emptyHint}>
-        <Text maxFontSizeMultiplier={1.3} style={[chartStyles.emptyHintText, chartLive.emptyHintText]}>
+        <Text style={[chartStyles.emptyHintText, chartLive.emptyHintText]}>
           Log body fat at least twice to see the trend.
         </Text>
       </View>
@@ -353,7 +353,7 @@ function BodyFatTrendChart({ entries }) {
         max={maxV}
         backgroundColor={t.colors.surface}
       />
-      <Text maxFontSizeMultiplier={1.3} style={[chartStyles.smoothedHint, chartLive.smoothedHint]}>Smoothed trend, faint line is each reading</Text>
+      <Text style={[chartStyles.smoothedHint, chartLive.smoothedHint]}>Smoothed trend, faint line is each reading</Text>
     </View>
   );
 }
@@ -375,7 +375,7 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
   if (withData.length < 2) {
     return (
       <View style={chartStyles.emptyHint}>
-        <Text maxFontSizeMultiplier={1.3} style={[chartStyles.emptyHintText, chartLive.emptyHintText]}>
+        <Text style={[chartStyles.emptyHintText, chartLive.emptyHintText]}>
           Log {label.toLowerCase()} at least twice to see the trend.
         </Text>
       </View>
@@ -930,8 +930,8 @@ export default function BodyMetricsScreen() {
         <ScrollView contentContainerStyle={styles.optInContent}>
           <View style={[styles.confirmCard, live.confirmCard]}>
             <Ionicons name="leaf-outline" size={32} color={t.colors.primary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.confirmTitle, live.confirmTitle]}>A gentle check-in</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.confirmBody, live.confirmBody]}>
+            <Text style={[styles.confirmTitle, live.confirmTitle]}>A gentle check-in</Text>
+            <Text style={[styles.confirmBody, live.confirmBody]}>
               You asked for a calmer experience. Body measurements can be a
               sensitive space. Open it only if it feels right for you today.
             </Text>
@@ -946,7 +946,7 @@ export default function BodyMetricsScreen() {
               style={styles.confirmBtn}
               textStyle={styles.confirmBtnText}
             />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.confirmHelpline, live.confirmHelpline]}>{WELLBEING_HELPLINE}</Text>
+            <Text style={[styles.confirmHelpline, live.confirmHelpline]}>{WELLBEING_HELPLINE}</Text>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -979,7 +979,7 @@ export default function BodyMetricsScreen() {
           <View style={[styles.readOnlyCard, live.readOnlyCard]}>
             <View style={styles.readOnlyRow}>
               <Ionicons name="eye-outline" size={16} color={t.colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.readOnlyText, live.readOnlyText]}>
+              <Text style={[styles.readOnlyText, live.readOnlyText]}>
                 Your history is view-only on the free plan. Everything you logged is safe and stays yours.
               </Text>
             </View>
@@ -991,7 +991,7 @@ export default function BodyMetricsScreen() {
               accessibilityLabel="Upgrade to Pro to log weight again"
             >
               <Ionicons name="lock-open-outline" size={16} color={t.colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.readOnlyCta, live.readOnlyCta]}>Log weight again with Pro</Text>
+              <Text style={[styles.readOnlyCta, live.readOnlyCta]}>Log weight again with Pro</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -1004,7 +1004,7 @@ export default function BodyMetricsScreen() {
           accessibilityLabel="Progress photos, private to this device"
         >
           <Ionicons name="camera-outline" size={20} color={t.colors.primary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.photosRowText, live.photosRowText]}>Progress photos</Text>
+          <Text style={[styles.photosRowText, live.photosRowText]}>Progress photos</Text>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} style={{ marginLeft: 'auto' }} />
         </TouchableOpacity>
 
@@ -1023,14 +1023,14 @@ export default function BodyMetricsScreen() {
               {phase && (
                 <View style={[styles.phaseChip, { borderColor: phase.color }]}>
                   <Ionicons name={phase.icon} size={12} color={phase.color} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.phaseLabel, live.phaseLabel, { color: phase.color }]}>{phase.label}</Text>
+                  <Text style={[styles.phaseLabel, live.phaseLabel, { color: phase.color }]}>{phase.label}</Text>
                 </View>
               )}
             </View>
 
             {latest.body_weight && (
               <View style={styles.weightRow}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.weightValue, live.weightValue]}>{formatBodyWeight(latest.body_weight, bwu)}</Text>
+                <Text style={[styles.weightValue, live.weightValue]}>{formatBodyWeight(latest.body_weight, bwu)}</Text>
                 {getDelta('body_weight') && (
                   <DeltaBadge delta={parseFloat(getDelta('body_weight'))} units={bwu === 'st' ? 'kg' : bwu} />
                 )}
@@ -1041,7 +1041,7 @@ export default function BodyMetricsScreen() {
             <WeightTrendChart entries={history} units={units} bodyWeightUnits={bwu} edFlagOpen={calm || edFlagOpen} userId={user?.id} />
 
             {history.length < 3 && (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.trendHint, live.trendHint]}>
+              <Text style={[styles.trendHint, live.trendHint]}>
                 Log weight 3 or more times to reveal a clearer trend.
               </Text>
             )}
@@ -1051,11 +1051,11 @@ export default function BodyMetricsScreen() {
               {ewmaData.length >= 7 ? (
                 <>
                   <View style={styles.labelTipRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.ewmaLabel, live.ewmaLabel]}>Weight trend</Text>
+                    <Text style={[styles.ewmaLabel, live.ewmaLabel]}>Weight trend</Text>
                     {/* U-D-3: one-tap gloss for the smoothed-weight (EWMA) concept. */}
                     <InfoTooltip text={GLOSSARY.ewma} size={13} />
                   </View>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.ewmaValue, live.ewmaValue]}>
+                  <Text style={[styles.ewmaValue, live.ewmaValue]}>
                     {ewmaData[ewmaData.length - 1]?.ewma?.toFixed(1)} kg
                   </Text>
                   {(() => {
@@ -1063,22 +1063,22 @@ export default function BodyMetricsScreen() {
                     if (weeklyChange == null) return null;
                     const sign = weeklyChange >= 0 ? '+' : '';
                     return (
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.ewmaWeekly, live.ewmaWeekly]}>
+                      <Text style={[styles.ewmaWeekly, live.ewmaWeekly]}>
                         Weekly change: {sign}{weeklyChange.toFixed(1)} kg
                       </Text>
                     );
                   })()}
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.ewmaMuted, live.ewmaMuted]}>
+                  <Text style={[styles.ewmaMuted, live.ewmaMuted]}>
                     Smoothed out across day-to-day ups and downs, so it's more reliable than a single weigh-in.
                   </Text>
                   {recentIntake?.daysLogged > 0 && (
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.ewmaIntake, live.ewmaIntake]}>
+                    <Text style={[styles.ewmaIntake, live.ewmaIntake]}>
                       Average intake {toEnergy(recentIntake.avgKcal, energyUnit)} {energyUnitLabel(energyUnit)} over the last {recentIntake.daysLogged} {recentIntake.daysLogged === 1 ? 'day' : 'days'}.
                     </Text>
                   )}
                 </>
               ) : (
-                <Text maxFontSizeMultiplier={1.3} style={[styles.ewmaMuted, live.ewmaMuted]}>
+                <Text style={[styles.ewmaMuted, live.ewmaMuted]}>
                   Log your weight for 7 days to see your smoothed trend.
                 </Text>
               )}
@@ -1087,25 +1087,25 @@ export default function BodyMetricsScreen() {
             {ewmaData.length >= 7 ? (
               <Card radius="md" padding="md" style={styles.burnCard}>
                 <View style={styles.labelTipRow}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.burnLabel, live.burnLabel]}>Estimated daily burn</Text>
+                  <Text style={[styles.burnLabel, live.burnLabel]}>Estimated daily burn</Text>
                   {/* U-D-3: one-tap gloss for the adaptive-TDEE concept. */}
                   <InfoTooltip text={GLOSSARY.adaptiveTdee} size={13} />
                 </View>
                 {adaptiveBurn.confidence === 'insufficient_data' ? (
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.burnMuted, live.burnMuted]}>
+                  <Text style={[styles.burnMuted, live.burnMuted]}>
                     Your coach estimates your daily burn from your weight trend and what you log. Keep logging your morning weight and meals for about two weeks and it appears here.
                   </Text>
                 ) : (
                   <>
                     <View style={styles.burnRow}>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.burnValue, live.burnValue]}>{adaptiveBurn.adjustedTDEE}</Text>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.burnUnit, live.burnUnit]}>kcal/day</Text>
+                      <Text style={[styles.burnValue, live.burnValue]}>{adaptiveBurn.adjustedTDEE}</Text>
+                      <Text style={[styles.burnUnit, live.burnUnit]}>kcal/day</Text>
                     </View>
                     {adaptiveBurn.insight ? (
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.burnMuted, live.burnMuted]}>{adaptiveBurn.insight}</Text>
+                      <Text style={[styles.burnMuted, live.burnMuted]}>{adaptiveBurn.insight}</Text>
                     ) : null}
                     <View style={styles.burnConfidenceRow}>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.burnConfidence, live.burnConfidence]}>
+                      <Text style={[styles.burnConfidence, live.burnConfidence]}>
                         {adaptiveBurn.confidence === 'high'
                           ? 'High confidence'
                           : adaptiveBurn.confidence === 'medium'
@@ -1136,7 +1136,7 @@ export default function BodyMetricsScreen() {
                 <View style={styles.bodyFatRow}>
                   <SectionLabel>Body fat</SectionLabel>
                   <View style={styles.bodyFatValueRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.bodyFatValue, live.bodyFatValue]}>{latest.body_fat}%</Text>
+                    <Text style={[styles.bodyFatValue, live.bodyFatValue]}>{latest.body_fat}%</Text>
                     {getDelta('body_fat') && (
                       <DeltaBadge delta={parseFloat(getDelta('body_fat'))} units="%" small />
                     )}
@@ -1193,9 +1193,9 @@ export default function BodyMetricsScreen() {
         {/* Log / Edit Form */}
         {!readOnly && showForm && (
           <View style={[styles.formCard, live.formCard]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.formTitle, live.formTitle]}>{editingId ? 'Edit entry' : 'New entry'}</Text>
+            <Text style={[styles.formTitle, live.formTitle]}>{editingId ? 'Edit entry' : 'New entry'}</Text>
             <View style={styles.formRow}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.formLabel, live.formLabel]}>Date</Text>
+              <Text style={[styles.formLabel, live.formLabel]}>Date</Text>
               <TextField
                 containerStyle={styles.formFieldContainer}
                 fieldStyle={styles.formField}
@@ -1209,7 +1209,7 @@ export default function BodyMetricsScreen() {
             </View>
             {bwu === 'st' ? (
               <View style={styles.formRow}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.formLabel, live.formLabel]}>Body weight</Text>
+                <Text style={[styles.formLabel, live.formLabel]}>Body weight</Text>
                 <View style={{ flex: 1, flexDirection: 'row', gap: spacing.sm }}>
                   <TextField
                     containerStyle={styles.formSplitFieldContainer}
@@ -1239,7 +1239,7 @@ export default function BodyMetricsScreen() {
               </View>
             ) : (
               <View style={styles.formRow}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.formLabel, live.formLabel]}>Body weight ({bwu})</Text>
+                <Text style={[styles.formLabel, live.formLabel]}>Body weight ({bwu})</Text>
                 <TextField
                   containerStyle={styles.formFieldContainer}
                   fieldStyle={styles.formField}
@@ -1255,7 +1255,7 @@ export default function BodyMetricsScreen() {
             )}
 
             <View style={styles.formRow}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.formLabel, live.formLabel]}>Body fat (%)</Text>
+              <Text style={[styles.formLabel, live.formLabel]}>Body fat (%)</Text>
               <TextField
                 containerStyle={styles.formFieldContainer}
                 fieldStyle={styles.formField}
@@ -1278,7 +1278,7 @@ export default function BodyMetricsScreen() {
               accessibilityState={{ expanded: showMeasurements }}
               accessibilityLabel={showMeasurements ? 'Hide measurements' : 'Add measurements'}
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.measureToggleText, live.measureToggleText]}>
+              <Text style={[styles.measureToggleText, live.measureToggleText]}>
                 {showMeasurements ? 'Hide measurements' : 'Add measurements (optional)'}
               </Text>
               <Ionicons
@@ -1290,7 +1290,7 @@ export default function BodyMetricsScreen() {
 
             {showMeasurements && MEASUREMENTS.map(m => (
               <View key={m.key} style={styles.formRow}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.formLabel, live.formLabel]}>{m.label} (cm)</Text>
+                <Text style={[styles.formLabel, live.formLabel]}>{m.label} (cm)</Text>
                 <TextField
                   containerStyle={styles.formFieldContainer}
                   fieldStyle={styles.formField}
@@ -1343,10 +1343,10 @@ export default function BodyMetricsScreen() {
                   accessibilityState={{ selected: selectedMeasurement === m.key }}
                   accessibilityLabel={`${m.label} ${latest[m.key]} centimetres`}
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.measureValue, live.measureValue, selectedMeasurement === m.key && [styles.measureValueActive, live.measureValueActive]]}>
+                  <Text style={[styles.measureValue, live.measureValue, selectedMeasurement === m.key && [styles.measureValueActive, live.measureValueActive]]}>
                     {latest[m.key]} cm
                   </Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.measureLabel, live.measureLabel, selectedMeasurement === m.key && [styles.measureLabelActive, live.measureLabelActive]]}>
+                  <Text style={[styles.measureLabel, live.measureLabel, selectedMeasurement === m.key && [styles.measureLabelActive, live.measureLabelActive]]}>
                     {m.label}
                   </Text>
                   {getDelta(m.key) && (
@@ -1373,7 +1373,7 @@ export default function BodyMetricsScreen() {
                       accessibilityState={{ selected: selectedMeasurement === m.key }}
                       accessibilityLabel={m.label}
                     >
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.measureTabText, live.measureTabText, selectedMeasurement === m.key && [styles.measureTabTextActive, live.measureTabTextActive]]}>
+                      <Text style={[styles.measureTabText, live.measureTabText, selectedMeasurement === m.key && [styles.measureTabTextActive, live.measureTabTextActive]]}>
                         {m.label}
                       </Text>
                     </TouchableOpacity>
@@ -1406,13 +1406,13 @@ export default function BodyMetricsScreen() {
               return (
                 <Card key={entry.id} radius="md" padding="md" style={styles.historyRow}>
                   <View style={styles.historyMain}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.historyDate, live.historyDate]}>{safeFormatDate(entry.metric_date, 'd MMM yyyy') || '-'}</Text>
+                    <Text style={[styles.historyDate, live.historyDate]}>{safeFormatDate(entry.metric_date, 'd MMM yyyy') || '-'}</Text>
                     <View style={styles.historyValues}>
                       {entry.body_weight ? (
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.historyWeight, live.historyWeight]}>{formatBodyWeightShort(entry.body_weight, bwu)}</Text>
+                        <Text style={[styles.historyWeight, live.historyWeight]}>{formatBodyWeightShort(entry.body_weight, bwu)}</Text>
                       ) : null}
                       {measuredKeys.slice(0, 2).map(m => (
-                        <Text maxFontSizeMultiplier={1.3} key={m.key} style={[styles.historyMeasure, live.historyMeasure]}>
+                        <Text key={m.key} style={[styles.historyMeasure, live.historyMeasure]}>
                           {m.label.split(' ')[0]} {entry[m.key]}cm
                         </Text>
                       ))}
@@ -1501,8 +1501,8 @@ function RecompCard({ vm, weightUnits = 'kg', onMakeCard }) {
         <SectionLabel>Recomposition</SectionLabel>
         <InfoTooltip text={GLOSSARY.recomposition} />
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.recompRead, live.recompRead]}>{parts.join(' ')}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.recompNote, live.recompNote]}>{sentence}</Text>
+      <Text style={[styles.recompRead, live.recompRead]}>{parts.join(' ')}</Text>
+      <Text style={[styles.recompNote, live.recompNote]}>{sentence}</Text>
       {shareParams ? (
         <TouchableOpacity
           style={[styles.recompCtaRow, live.recompCtaRow]}
@@ -1512,7 +1512,7 @@ function RecompCard({ vm, weightUnits = 'kg', onMakeCard }) {
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="image-outline" size={16} color={t.colors.textSecondary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.recompCta, live.recompCta]}>Create share image</Text>
+          <Text style={[styles.recompCta, live.recompCta]}>Create share image</Text>
         </TouchableOpacity>
       ) : null}
     </View>
@@ -1533,7 +1533,7 @@ function DeltaBadge({ delta, units, small }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
       <Ionicons name={isUp ? 'trending-up' : 'trending-down'} size={small ? 11 : 14} color={t.colors.textMuted} />
-      <Text maxFontSizeMultiplier={1.3} style={{ fontSize: small ? 10 : t.fontSize.xs, color: t.colors.textPrimary, fontWeight: fontWeight.semibold }}>
+      <Text style={{ fontSize: small ? 10 : t.fontSize.xs, color: t.colors.textPrimary, fontWeight: fontWeight.semibold }}>
         {isUp ? '+' : ''}{delta} {units}
       </Text>
     </View>

@@ -97,11 +97,11 @@ export default function QuizScreen({ navigation }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.h1, live.h1]}>A few quick questions.</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.lede, live.lede]}>Your plan takes shape as you answer.</Text>
+        <Text style={[styles.h1, live.h1]}>A few quick questions.</Text>
+        <Text style={[styles.lede, live.lede]}>Your plan takes shape as you answer.</Text>
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.section, live.section]}>How do you train?</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.q, live.q]}>Experience</Text>
+        <Text style={[styles.section, live.section]}>How do you train?</Text>
+        <Text style={[styles.q, live.q]}>Experience</Text>
         <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Experience">
           {EXPERIENCE.map((o) => (
             <Chip key={o.value} label={o.label} selected={quiz.experience === o.value}
@@ -112,7 +112,7 @@ export default function QuizScreen({ navigation }) {
             />
           ))}
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.q, live.q]}>Days a week</Text>
+        <Text style={[styles.q, live.q]}>Days a week</Text>
         <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Days a week">
           {DAYS.map((d) => (
             <Chip key={d} label={String(d)} selected={quiz.daysPerWeek === d}
@@ -123,7 +123,7 @@ export default function QuizScreen({ navigation }) {
             />
           ))}
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.q, live.q]}>Session length</Text>
+        <Text style={[styles.q, live.q]}>Session length</Text>
         <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Session length">
           {LENGTHS.map((m) => (
             <Chip key={m} label={`${m} min`} selected={quiz.sessionLengthMinutes === m}
@@ -134,7 +134,7 @@ export default function QuizScreen({ navigation }) {
             />
           ))}
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.q, live.q]}>Equipment</Text>
+        <Text style={[styles.q, live.q]}>Equipment</Text>
         <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Equipment">
           {EQUIPMENT.map((o) => (
             <Chip key={o.value} label={o.label} selected={quiz.equipment === o.value}
@@ -146,7 +146,7 @@ export default function QuizScreen({ navigation }) {
           ))}
         </View>
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.section, live.section]}>What are you training for?</Text>
+        <Text style={[styles.section, live.section]}>What are you training for?</Text>
         <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Training goal">
           {PHYSIQUE_GOALS.map((g) => (
             <Chip key={g.value} label={GOAL_LABELS[g.value] || g.label} selected={quiz.trainingGoal === g.value}
@@ -159,7 +159,7 @@ export default function QuizScreen({ navigation }) {
         </View>
         {PHASE_PRE_ACCOUNT && (
           <>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.q, live.q]}>Right now you want to…</Text>
+            <Text style={[styles.q, live.q]}>Right now you want to…</Text>
             <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel="Training phase">
               {TRAINING_PHASES.map((p) => (
                 <Chip key={p.value} label={PHASE_LABELS[p.value] || p.label} selected={quiz.trainingPhase === p.value}
@@ -179,7 +179,7 @@ export default function QuizScreen({ navigation }) {
           style={[styles.cta, live.cta, !ready && styles.ctaOff]} onPress={go} disabled={!ready}
           accessibilityRole="button" accessibilityLabel="See your plan"
         >
-          <Text maxFontSizeMultiplier={1.3} style={[styles.ctaText, live.ctaText]}>See your plan</Text>
+          <Text style={[styles.ctaText, live.ctaText]}>See your plan</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

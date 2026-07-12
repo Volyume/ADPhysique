@@ -188,7 +188,7 @@ function PlanBadge({ label, amber }) {
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={[styles.badge, live.badge, amber && [styles.badgeAmber, live.badgeAmber]]}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.badgeText, live.badgeText, amber && [styles.badgeTextAmber, live.badgeTextAmber]]}>{label}</Text>
+      <Text style={[styles.badgeText, live.badgeText, amber && [styles.badgeTextAmber, live.badgeTextAmber]]}>{label}</Text>
     </View>
   );
 }
@@ -201,10 +201,10 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={[styles.divisionSection, live.divisionSection]}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.divisionIntroDesc, live.divisionIntroDesc]}>
+      <Text style={[styles.divisionIntroDesc, live.divisionIntroDesc]}>
         Plans for stage categories, or anyone training for that shape. Pick a division to narrow the library.
       </Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.divisionGroupLabel, live.divisionGroupLabel]}>Men's divisions</Text>
+      <Text style={[styles.divisionGroupLabel, live.divisionGroupLabel]}>Men's divisions</Text>
       <View style={styles.divisionChips}>
         {DIVISIONS_MEN.map(d => (
           <Chip
@@ -220,7 +220,7 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
         ))}
       </View>
 
-      <Text maxFontSizeMultiplier={1.3} style={[styles.divisionGroupLabel, live.divisionGroupLabel, { marginTop: spacing.md }]}>Women's divisions</Text>
+      <Text style={[styles.divisionGroupLabel, live.divisionGroupLabel, { marginTop: spacing.md }]}>Women's divisions</Text>
       <View style={styles.divisionChips}>
         {DIVISIONS_WOMEN.map(d => (
           <Chip
@@ -240,7 +240,7 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
         const d = ALL_DIVISIONS.find(x => x.key === selectedDivision);
         return d ? (
           <Card surface="surface2" radius="md" padding="md" style={styles.divisionDesc}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.divisionDescText, live.divisionDescText]}>{d.desc}</Text>
+            <Text style={[styles.divisionDescText, live.divisionDescText]}>{d.desc}</Text>
           </Card>
         ) : null;
       })()}
@@ -514,8 +514,8 @@ export default function PlanLibraryScreen({ navigation, route }) {
                 <Ionicons name="help-circle-outline" size={20} color={t.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.quizBannerTitle, live.quizBannerTitle]}>Not sure where to start?</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.quizBannerBody, live.quizBannerBody]}>Answer two quick questions and we'll point you to the right plan.</Text>
+                <Text style={[styles.quizBannerTitle, live.quizBannerTitle]}>Not sure where to start?</Text>
+                <Text style={[styles.quizBannerBody, live.quizBannerBody]}>Answer two quick questions and we'll point you to the right plan.</Text>
               </View>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </Card>
@@ -585,16 +585,16 @@ export default function PlanLibraryScreen({ navigation, route }) {
                     )}
                   </View>
                   {wc ? (
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.workoutCount, live.workoutCount]}>
+                    <Text style={[styles.workoutCount, live.workoutCount]}>
                       {wc} workout{wc !== 1 ? 's' : ''}
                     </Text>
                   ) : null}
                 </View>
 
-                <Text maxFontSizeMultiplier={1.3} style={[styles.planName, live.planName]}>{planHeadingName(plan.name)}</Text>
+                <Text style={[styles.planName, live.planName]}>{planHeadingName(plan.name)}</Text>
 
                 {plan.description ? (
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.planDesc, live.planDesc]} numberOfLines={2}>{plan.description}</Text>
+                  <Text style={[styles.planDesc, live.planDesc]} numberOfLines={2}>{plan.description}</Text>
                 ) : null}
               </TouchableOpacity>
 
@@ -646,7 +646,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                     />
                   ))}
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.quizQuestion, live.quizQuestion]}>{QUIZ_STEPS[quizStep].question}</Text>
+                <Text style={[styles.quizQuestion, live.quizQuestion]}>{QUIZ_STEPS[quizStep].question}</Text>
                 <View style={styles.quizOptions}>
                   {QUIZ_STEPS[quizStep].options.map(opt => (
                     <Card
@@ -661,13 +661,13 @@ export default function PlanLibraryScreen({ navigation, route }) {
                       {opt.icon && (
                         <Ionicons name={opt.icon} size={20} color={t.colors.primary} style={{ marginRight: spacing.md }} />
                       )}
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.quizOptionText, live.quizOptionText]}>{opt.label}</Text>
+                      <Text style={[styles.quizOptionText, live.quizOptionText]}>{opt.label}</Text>
                       <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
                     </Card>
                   ))}
                 </View>
                 <TouchableOpacity style={styles.quizSkip} onPress={dismissQuiz} accessibilityRole="button">
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.quizSkipText, live.quizSkipText]}>Skip and browse all plans</Text>
+                  <Text style={[styles.quizSkipText, live.quizSkipText]}>Skip and browse all plans</Text>
                 </TouchableOpacity>
               </>
             ) : quizResult ? (
@@ -676,14 +676,14 @@ export default function PlanLibraryScreen({ navigation, route }) {
                 <View style={styles.quizResultIcon}>
                   <Ionicons name="checkmark-circle" size={32} color={t.colors.primary} />
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.quizResultTitle, live.quizResultTitle]}>Here's our suggestion</Text>
+                <Text style={[styles.quizResultTitle, live.quizResultTitle]}>Here's our suggestion</Text>
                 <Card surface="surface2" style={styles.quizResultCard}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.quizResultName, live.quizResultName]}>{quizResult.name}</Text>
+                  <Text style={[styles.quizResultName, live.quizResultName]}>{quizResult.name}</Text>
                   {quizResult.description ? (
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.quizResultDesc, live.quizResultDesc]} numberOfLines={3}>{quizResult.description}</Text>
+                    <Text style={[styles.quizResultDesc, live.quizResultDesc]} numberOfLines={3}>{quizResult.description}</Text>
                   ) : null}
                   {quizResult.difficulty != null && (
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.quizResultMeta, live.quizResultMeta]}>
+                    <Text style={[styles.quizResultMeta, live.quizResultMeta]}>
                       {DIFFICULTY_LABELS[quizResult.difficulty] ?? 'Intermediate'}
                       {workoutCounts[quizResult.id] ? ` - ${workoutCounts[quizResult.id]} workouts` : ''}
                     </Text>
@@ -705,14 +705,14 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   accessibilityLabel={`Preview ${quizResult.name}`}
                 />
                 <TouchableOpacity style={styles.quizSkip} onPress={handleQuizBrowse} accessibilityRole="button">
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.quizSkipText, live.quizSkipText]}>Browse all plans instead</Text>
+                  <Text style={[styles.quizSkipText, live.quizSkipText]}>Browse all plans instead</Text>
                 </TouchableOpacity>
               </>
             ) : (
               // No result
               <>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.quizResultTitle, live.quizResultTitle]}>No exact match found</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.quizResultDesc, live.quizResultDesc]}>Browse all the plans below to find one that suits you.</Text>
+                <Text style={[styles.quizResultTitle, live.quizResultTitle]}>No exact match found</Text>
+                <Text style={[styles.quizResultDesc, live.quizResultDesc]}>Browse all the plans below to find one that suits you.</Text>
                 <Button
                   title="Browse all plans"
                   onPress={handleQuizBrowse}

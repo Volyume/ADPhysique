@@ -148,7 +148,7 @@ export default function TodayStrip({
               returnKeyType="done"
               onSubmitEditing={submitWeight}
             />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.unit, live.unit]}>{bwu}</Text>
+            <Text style={[styles.unit, live.unit]}>{bwu}</Text>
           </View>
         )}
         <Button
@@ -184,13 +184,13 @@ export default function TodayStrip({
             <Ionicons name="scale-outline" size={16} color={t.colors.textPrimary} />
           </View>
           <View style={styles.metricCopy}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.cellLabel, live.cellLabel]}>Morning weight</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.cellValue, live.cellValue]} numberOfLines={1}>{formatBodyWeightShort(todayWeight, bwu)}</Text>
+            <Text style={[styles.cellLabel, live.cellLabel]}>Morning weight</Text>
+            <Text style={[styles.cellValue, live.cellValue]} numberOfLines={1}>{formatBodyWeightShort(todayWeight, bwu)}</Text>
           </View>
         </View>
         <View style={[styles.loggedPill, live.loggedPill]}>
           <Ionicons name="checkmark-circle" size={14} color={t.colors.success} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.loggedPillText, live.loggedPillText]}>Logged</Text>
+          <Text style={[styles.loggedPillText, live.loggedPillText]}>Logged</Text>
         </View>
       </TouchableOpacity>
     );
@@ -212,8 +212,8 @@ export default function TodayStrip({
             <Ionicons name="scale-outline" size={16} color={t.colors.textPrimary} />
           </View>
           <View style={styles.metricCopy}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.cellLabel, live.cellLabel]}>Morning weight</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.logPrompt, live.logPrompt]} numberOfLines={1}>Not logged yet</Text>
+            <Text style={[styles.cellLabel, live.cellLabel]}>Morning weight</Text>
+            <Text style={[styles.logPrompt, live.logPrompt]} numberOfLines={1}>Not logged yet</Text>
           </View>
         </View>
         <Button
@@ -236,7 +236,7 @@ export default function TodayStrip({
           <View style={[styles.metricIcon, live.metricIcon]}>
             <Ionicons name="scale-outline" size={16} color={t.colors.textPrimary} />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.cellLabel, live.cellLabel]}>Morning weight</Text>
+          <Text style={[styles.cellLabel, live.cellLabel]}>Morning weight</Text>
         </View>
         <WeightInputRow />
       </View>

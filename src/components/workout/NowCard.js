@@ -97,13 +97,12 @@ export default function NowCard({
         accessibilityLabel={`${positionLabel}${targetRangeLabel ? `, target ${targetRangeLabel}` : ''}, tap to change set type`}
       >
         <Text
-          maxFontSizeMultiplier={1.3}
           numberOfLines={1}
           style={[styles.positionText, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}
         >
           {positionLabel}
           {targetRangeLabel ? (
-            <Text maxFontSizeMultiplier={1.3} style={{ ...t.type.body, color: t.colors.textSecondary }}>
+            <Text style={{ ...t.type.body, color: t.colors.textSecondary }}>
               {' · '}{targetRangeLabel}
             </Text>
           ) : null}
@@ -120,7 +119,6 @@ export default function NowCard({
         >
           <Ionicons name={contextIcon} size={14} color={contextColor} style={styles.contextIcon} />
           <Text
-            maxFontSizeMultiplier={1.3}
             style={[styles.contextText, { ...t.type.caption, color: context.kind === 'warmup' ? t.colors.warning : t.colors.textSecondary }]}
             numberOfLines={3}
           >
@@ -150,22 +148,22 @@ export default function NowCard({
             accessibilityRole="button"
             accessibilityLabel={`${prefill.label} ${prefill.valueLabel}. Tap to apply.`}
           >
-            <Text maxFontSizeMultiplier={1.3} numberOfLines={1} style={[styles.prefillLabel, { ...t.type.caption, color: t.colors.textSecondary }]}>
+            <Text numberOfLines={1} style={[styles.prefillLabel, { ...t.type.caption, color: t.colors.textSecondary }]}>
               {prefill.label}{' '}
-              <Text maxFontSizeMultiplier={1.3} style={{ ...t.type.num('caption'), color: t.colors.textPrimary }}>
+              <Text style={{ ...t.type.num('caption'), color: t.colors.textPrimary }}>
                 {prefill.valueLabel}
               </Text>
             </Text>
             <View style={styles.prefillCue}>
               <Ionicons name="arrow-down-circle-outline" size={13} color={t.colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={{ ...t.type.caption, color: t.colors.textSecondary }}>Use</Text>
+              <Text style={{ ...t.type.caption, color: t.colors.textSecondary }}>Use</Text>
             </View>
           </TouchableOpacity>
         ) : (
           <View style={styles.prefillQuiet} accessible accessibilityLabel={`${prefill.label} ${prefill.valueLabel}`}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.prefillLabel, { ...t.type.caption, color: t.colors.textMuted }]}>
+            <Text style={[styles.prefillLabel, { ...t.type.caption, color: t.colors.textMuted }]}>
               {prefill.label}{' '}
-              <Text maxFontSizeMultiplier={1.3} style={{ ...t.type.num('caption'), color: t.colors.textSecondary }}>
+              <Text style={{ ...t.type.num('caption'), color: t.colors.textSecondary }}>
                 {prefill.valueLabel}
               </Text>
             </Text>
@@ -187,7 +185,6 @@ export default function NowCard({
       {noteVisible ? (
         <View style={styles.noteWrap}>
           <TextInput
-            maxFontSizeMultiplier={1.3}
             style={[styles.noteInput, { backgroundColor: t.colors.surface2, borderColor: t.colors.border, ...t.type.caption, color: t.colors.textPrimary }]}
             value={noteText}
             onChangeText={onNoteChange}
@@ -208,7 +205,7 @@ export default function NowCard({
             accessibilityLabel="Remove this note"
           >
             <Ionicons name="close-circle-outline" size={iconSize.sm} color={t.colors.textMuted} />
-            <Text maxFontSizeMultiplier={1.3} style={{ ...t.type.caption, color: t.colors.textMuted }}>Remove note</Text>
+            <Text style={{ ...t.type.caption, color: t.colors.textMuted }}>Remove note</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -221,7 +218,7 @@ export default function NowCard({
           accessibilityLabel="Add a note for this set"
         >
           <Ionicons name="create-outline" size={iconSize.sm} color={t.colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={{ ...t.type.caption, color: t.colors.textMuted }}>Add a note</Text>
+          <Text style={{ ...t.type.caption, color: t.colors.textMuted }}>Add a note</Text>
         </TouchableOpacity>
       )}
     </Card>

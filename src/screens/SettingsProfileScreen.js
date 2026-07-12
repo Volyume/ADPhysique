@@ -220,8 +220,8 @@ export default function SettingsProfileScreen() {
               <Ionicons name="male-female-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingLabel, live.settingLabel]}>Biological sex</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingSub, live.settingSub]}>Used for calorie floors and nutrition targets. Changes apply on your next weekly check-in.</Text>
+              <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Biological sex</Text>
+              <Text style={[settingsStyles.settingSub, live.settingSub]}>Used for calorie floors and nutrition targets. Changes apply on your next weekly check-in.</Text>
             </View>
           </View>
           <View style={styles.dietChips}>
@@ -248,8 +248,8 @@ export default function SettingsProfileScreen() {
               <Ionicons name="resize-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingLabel, live.settingLabel]}>Height</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingSub, live.settingSub]}>Used for calorie floors and nutrition targets.</Text>
+              <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Height</Text>
+              <Text style={[settingsStyles.settingSub, live.settingSub]}>Used for calorie floors and nutrition targets.</Text>
             </View>
           </View>
           <HeightFeetInchesField
@@ -267,8 +267,8 @@ export default function SettingsProfileScreen() {
               <Ionicons name="calendar-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingLabel, live.settingLabel]}>Date of birth</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingSub, live.settingSub]}>Enter your age. Used for calorie floors and nutrition targets.</Text>
+              <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Date of birth</Text>
+              <Text style={[settingsStyles.settingSub, live.settingSub]}>Enter your age. Used for calorie floors and nutrition targets.</Text>
             </View>
           </View>
           <AgeYearsField value={age} onChangeText={setAge} onBlur={() => saveAge(age)} />
@@ -279,8 +279,8 @@ export default function SettingsProfileScreen() {
               <Ionicons name="nutrition-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingLabel, live.settingLabel]}>Diet preference</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingSub, live.settingSub]}>Filters the meals Volyume suggests.</Text>
+              <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Diet preference</Text>
+              <Text style={[settingsStyles.settingSub, live.settingSub]}>Filters the meals Volyume suggests.</Text>
             </View>
           </View>
           <View style={styles.dietChips}>

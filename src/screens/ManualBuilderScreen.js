@@ -143,7 +143,7 @@ function PlanBalanceCard({ days }) {
     <Card style={balanceStyles.card}>
       <View style={balanceStyles.header}>
         <Ionicons name="pie-chart-outline" size={16} color={t.colors.textSecondary} />
-        <Text maxFontSizeMultiplier={1.3} style={[balanceStyles.title, live.title]}>Plan balance</Text>
+        <Text style={[balanceStyles.title, live.title]}>Plan balance</Text>
         {/* NV-1: the dot legend (full/half/hollow, green/amber/red) has no key
             anywhere else on this card, so a first-time builder can only learn
             it by triggering a warning. Reuses the volume-bands gloss already
@@ -154,12 +154,12 @@ function PlanBalanceCard({ days }) {
       <View style={balanceStyles.grid}>
         {rows.map(({ muscle, sets, status }) => (
           <View key={muscle} style={balanceStyles.cell}>
-            <Text maxFontSizeMultiplier={1.3} style={[balanceStyles.dot, live.dot, { color: statusColor[status] }]}>
+            <Text style={[balanceStyles.dot, live.dot, { color: statusColor[status] }]}>
               {STATUS_DOT[status]}
             </Text>
-            <Text maxFontSizeMultiplier={1.3} style={[balanceStyles.muscleName, live.muscleName]}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
+            <Text style={[balanceStyles.muscleName, live.muscleName]}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
             {sets > 0 && (
-              <Text maxFontSizeMultiplier={1.3} style={[balanceStyles.setCount, live.setCount]}>{sets}×</Text>
+              <Text style={[balanceStyles.setCount, live.setCount]}>{sets}×</Text>
             )}
           </View>
         ))}
@@ -174,7 +174,7 @@ function PlanBalanceCard({ days }) {
                 size={14}
                 color={status === 'none' ? t.colors.warning : t.colors.textMuted}
               />
-              <Text maxFontSizeMultiplier={1.3} style={[balanceStyles.warningText, live.warningText, status === 'none' && { color: t.colors.warning }]}>
+              <Text style={[balanceStyles.warningText, live.warningText, status === 'none' && { color: t.colors.warning }]}>
                 {status === 'none'
                   ? `No ${MUSCLE_DISPLAY_NAMES[muscle]} work in this plan`
                   : `${MUSCLE_DISPLAY_NAMES[muscle]} work is low. Consider adding a set or two.`}
@@ -189,7 +189,7 @@ function PlanBalanceCard({ days }) {
           {overloaded.map(({ muscle }) => (
             <View key={muscle} style={balanceStyles.warningRow}>
               <Ionicons name="warning-outline" size={14} color={t.colors.error} />
-              <Text maxFontSizeMultiplier={1.3} style={[balanceStyles.warningText, live.warningText, { color: t.colors.error }]}>
+              <Text style={[balanceStyles.warningText, live.warningText, { color: t.colors.error }]}>
                 {`${MUSCLE_DISPLAY_NAMES[muscle]} volume is very high. This may affect recovery.`}
               </Text>
             </View>
@@ -225,7 +225,7 @@ function TargetStepper({
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={styles.controlGroup}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.controlLabel, live.controlLabel]}>{label}</Text>
+      <Text style={[styles.controlLabel, live.controlLabel]}>{label}</Text>
       <Stepper
         value={value}
         min={min}
@@ -865,7 +865,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
             contentContainerStyle={styles.page1Content}
             keyboardShouldPersistTaps="handled"
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>
+            <Text style={[styles.subtitle, live.subtitle]}>
               Set up the basics, then add your workouts day by day.
             </Text>
 
@@ -887,7 +887,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
 
             {/* Goal */}
             <View style={styles.section}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.label, live.label]}>Goal</Text>
+              <Text style={[styles.label, live.label]}>Goal</Text>
               <View style={styles.pillWrap}>
                 {GOALS.map(g => (
                   <Chip
@@ -905,7 +905,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
 
             {/* Days per week */}
             <View style={styles.section}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.label, live.label]}>Training days per week</Text>
+              <Text style={[styles.label, live.label]}>Training days per week</Text>
               <View style={styles.pillWrap}>
                 {DAY_COUNT_OPTIONS.map(n => (
                   <Chip
@@ -919,7 +919,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
                   />
                 ))}
               </View>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.hintText, live.hintText]}>
+              <Text style={[styles.hintText, live.hintText]}>
                 We&apos;ll create {daysPerWeek} empty days. You can add or remove days later.
               </Text>
             </View>
@@ -981,7 +981,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
           <Card key={day.localId} style={styles.dayCard}>
             {/* Day header */}
             <View style={[styles.dayHeader, live.dayHeader]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.dayNumber, live.dayNumber]}>Day {dayIdx + 1}</Text>
+              <Text style={[styles.dayNumber, live.dayNumber]}>Day {dayIdx + 1}</Text>
               <TextField
                 accessibilityLabel={`Name for day ${dayIdx + 1}`}
                 containerStyle={styles.dayNameFieldContainer}
@@ -1064,11 +1064,11 @@ export default function ManualBuilderScreen({ navigation, route }) {
                         />
                         <View style={styles.exRowLeft}>
                           <View style={styles.exNameRow}>
-                            <Text maxFontSizeMultiplier={1.3} style={[styles.exName, live.exName]}>{ex.name}</Text>
+                            <Text style={[styles.exName, live.exName]}>{ex.name}</Text>
                             {groupIdx >= 0 && (
                               <View style={[styles.ssChip, live.ssChip]}>
                                 <Ionicons name="link" size={11} color={t.colors.primary} />
-                                <Text maxFontSizeMultiplier={1.3} style={[styles.ssChipText, live.ssChipText]}>
+                                <Text style={[styles.ssChipText, live.ssChipText]}>
                                   Superset {String.fromCharCode(65 + groupIdx)}
                                 </Text>
                               </View>
@@ -1267,9 +1267,9 @@ export default function ManualBuilderScreen({ navigation, route }) {
         <View style={styles.successIconWrap}>
           <Ionicons name="checkmark-circle" size={48} color={t.colors.success} />
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.successTitle, live.successTitle]}>Plan activated</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.successName, live.successName]}>{savedPlanName}</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.successSub, live.successSub]}>Your plan is set as active and ready to use.</Text>
+        <Text style={[styles.successTitle, live.successTitle]}>Plan activated</Text>
+        <Text style={[styles.successName, live.successName]}>{savedPlanName}</Text>
+        <Text style={[styles.successSub, live.successSub]}>Your plan is set as active and ready to use.</Text>
         <View style={styles.successActions}>
           <Button
             title="Stay here"

@@ -198,8 +198,8 @@ export default function LogCardioScreen({ navigation, route }) {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Card onPress={() => setActivity(null)} surface="surface2" radius="md" padding="md" style={styles.chosenRow} accessibilityLabel="Change activity">
             <View style={styles.chosenCopy}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.chosenName, live.chosenName]} numberOfLines={1} ellipsizeMode="tail">{activity.displayName}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.chosenMeta, live.chosenMeta]}>{CATEGORY_LABELS[activity.category]} · tap to change</Text>
+              <Text style={[styles.chosenName, live.chosenName]} numberOfLines={1} ellipsizeMode="tail">{activity.displayName}</Text>
+              <Text style={[styles.chosenMeta, live.chosenMeta]}>{CATEGORY_LABELS[activity.category]} · tap to change</Text>
             </View>
             <TouchableOpacity onPress={toggleFavourite} hitSlop={10} accessibilityRole="button" accessibilityState={{ selected: isFavourite }} accessibilityLabel={isFavourite ? 'Remove from your cardio' : 'Add to your cardio'}>
               <Ionicons name={isFavourite ? 'star' : 'star-outline'} size={22} color={t.colors.primary} />
@@ -228,9 +228,9 @@ export default function LogCardioScreen({ navigation, route }) {
             <>
               <View style={styles.kcalRow}>
                 <Ionicons name="flame-outline" size={16} color={t.colors.textMuted} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.kcalText, live.kcalText]}>Burned about {estKcal} kcal</Text>
+                <Text style={[styles.kcalText, live.kcalText]}>Burned about {estKcal} kcal</Text>
               </View>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.footnote, live.footnote]}>
+              <Text style={[styles.footnote, live.footnote]}>
                 Already counted. This isn't added to your calorie target, your weight trend includes everything you burn.
               </Text>
             </>
@@ -265,7 +265,7 @@ function ActivityList({ items, onPick }) {
       {items.map((a) => (
         <TouchableOpacity key={a.id} style={[styles.activityRow, live.activityRow]} onPress={() => onPick(a)} accessibilityRole="button" accessibilityLabel={`Log ${a.displayName}`}>
           <Ionicons name={CATEGORY_ICON[a.category] || 'heart-outline'} size={18} color={t.colors.primary} style={styles.activityIcon} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.activityName, live.activityName]} numberOfLines={1} ellipsizeMode="tail">{a.displayName}</Text>
+          <Text style={[styles.activityName, live.activityName]} numberOfLines={1} ellipsizeMode="tail">{a.displayName}</Text>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
       ))}

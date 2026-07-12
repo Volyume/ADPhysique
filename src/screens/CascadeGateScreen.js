@@ -321,7 +321,7 @@ export default function CascadeGateScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]}>
         <View style={styles.center}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.errorText, live.errorText]}>Unknown cascade variant: {variant}</Text>
+          <Text style={[styles.errorText, live.errorText]}>Unknown cascade variant: {variant}</Text>
         </View>
       </SafeAreaView>
     );
@@ -332,16 +332,16 @@ export default function CascadeGateScreen({ navigation, route }) {
       <ModalHeader title="Subscription" onClose={dismiss} />
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>{content.title}</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>{content.subtitle}</Text>
+        <Text style={[styles.title, live.title]}>{content.title}</Text>
+        <Text style={[styles.subtitle, live.subtitle]}>{content.subtitle}</Text>
 
         {/* C5 / D72: factual training recap, trial-end variant only. Render-only,
             not tappable, no accent. Training facts only, so it is identical for
             every user; absent below the floor or on any load failure. */}
         {recapLine && content.surface === 'cascade_trial_end_gate' ? (
           <View style={[styles.recapCard, live.recapCard]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.recapTitle, live.recapTitle]}>During your trial</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.recapLine, live.recapLine]}>{recapLine}</Text>
+            <Text style={[styles.recapTitle, live.recapTitle]}>During your trial</Text>
+            <Text style={[styles.recapLine, live.recapLine]}>{recapLine}</Text>
           </View>
         ) : null}
 

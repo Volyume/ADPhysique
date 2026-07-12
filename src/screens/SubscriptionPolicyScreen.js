@@ -32,7 +32,7 @@ export default function SubscriptionPolicyScreen() {
       <BackHeader title="Free, Pro, and your data" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.intro, live.intro]}>
+        <Text style={[styles.intro, live.intro]}>
           Here's what you get on Free, what Pro adds, and what happens to
           your data if you ever switch back.
         </Text>
@@ -129,7 +129,7 @@ export default function SubscriptionPolicyScreen() {
           </Body>
         </Section>
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.footer, live.footer]}>
+        <Text style={[styles.footer, live.footer]}>
           We won't quietly raise prices, change what's free, or hold your data behind a paywall. If something changes, you'll hear about it first.
         </Text>
       </ScrollView>
@@ -152,7 +152,7 @@ function Section({ icon, tint, title, children }) {
         <View style={[styles.sectionIconWrap, { backgroundColor: withAlpha(tint, 0.125) }]}>
           <Ionicons name={icon} size={18} color={tint} />
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionTitle, live.sectionTitle]} accessibilityRole="header">{title}</Text>
+        <Text style={[styles.sectionTitle, live.sectionTitle]} accessibilityRole="header">{title}</Text>
       </View>
       <View style={styles.sectionBody}>{children}</View>
     </View>
@@ -164,7 +164,7 @@ function Body({ children }) {
   // useTheme() call, same reasoning as Section above.
   const t = useTheme();
   const live = buildLiveStyles(t);
-  return <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>{children}</Text>;
+  return <Text style={[styles.body, live.body]}>{children}</Text>;
 }
 
 function Strong({ children }) {
@@ -173,7 +173,7 @@ function Strong({ children }) {
   // part of useTheme()'s returned shape, so it stays frozen in styles.strong.
   const t = useTheme();
   const live = buildLiveStyles(t);
-  return <Text maxFontSizeMultiplier={1.3} style={[styles.strong, live.strong]}>{children}</Text>;
+  return <Text style={[styles.strong, live.strong]}>{children}</Text>;
 }
 
 function Bullet({ children }) {
@@ -184,7 +184,7 @@ function Bullet({ children }) {
   return (
     <View style={styles.bulletRow}>
       <View style={[styles.bulletDot, live.bulletDot]} />
-      <Text maxFontSizeMultiplier={1.3} style={[styles.bulletText, live.bulletText]}>{children}</Text>
+      <Text style={[styles.bulletText, live.bulletText]}>{children}</Text>
     </View>
   );
 }
@@ -197,7 +197,7 @@ function KeyPoint({ children }) {
   return (
     <View style={[styles.keypoint, live.keypoint]}>
       <Ionicons name="bookmark" size={14} color={t.colors.primary} />
-      <Text maxFontSizeMultiplier={1.3} style={[styles.keypointText, live.keypointText]}>{children}</Text>
+      <Text style={[styles.keypointText, live.keypointText]}>{children}</Text>
     </View>
   );
 }

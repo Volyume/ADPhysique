@@ -66,7 +66,7 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): sectionTitle gained a
     // live.sectionTitle override (source: useTheme.js); frozen style
     // byte-identical.
-    expect(SOURCE).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sectionTitle, live.sectionTitle]}>Workout feedback</Text>');
+    expect(SOURCE).toContain('<Text style={[styles.sectionTitle, live.sectionTitle]}>Workout feedback</Text>');
     expect(SOURCE).toContain('Rate this workout');
     expect(SOURCE).toContain('placeholder="Anything notable from this session"');
     expect(SOURCE).toContain('placeholder="Anything to remember for next session? e.g. try 85kg, wider grip, reduce volume"');

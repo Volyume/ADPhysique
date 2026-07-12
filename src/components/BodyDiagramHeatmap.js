@@ -330,8 +330,8 @@ export default function BodyDiagramHeatmap({
 
       {/* Figure labels */}
       <View style={styles.labelRow}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.figureLabel, live.figureLabel]}>Front</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.figureLabel, live.figureLabel]}>Back</Text>
+        <Text style={[styles.figureLabel, live.figureLabel]}>Front</Text>
+        <Text style={[styles.figureLabel, live.figureLabel]}>Back</Text>
       </View>
 
       {/* Legend */}
@@ -349,13 +349,13 @@ export default function BodyDiagramHeatmap({
           triangles re-present the volume overlay the plan generator already
           applied for this division; nothing here is computed fresh. */}
       {divisionMarkers && divisionLabel ? (
-        <Text maxFontSizeMultiplier={1.3}
+        <Text
           style={[styles.divisionLegendText, live.divisionLegendText]}
           accessibilityLabel={`Triangle up means elevated for ${divisionLabel}, triangle down means capped`}
         >
-          <Text maxFontSizeMultiplier={1.3} style={{ color: t.colors.primary }}>▲</Text>
+          <Text style={{ color: t.colors.primary }}>▲</Text>
           {` Elevated for ${divisionLabel} · `}
-          <Text maxFontSizeMultiplier={1.3} style={{ color: t.colors.textMuted }}>▼</Text>
+          <Text style={{ color: t.colors.textMuted }}>▼</Text>
           {' Capped'}
         </Text>
       ) : null}
@@ -373,7 +373,7 @@ function LegendSwatch({ color, label, bordered, borderColor, textStyle }) {
           bordered && { borderWidth: 1, borderColor },
         ]}
       />
-      <Text maxFontSizeMultiplier={1.3} style={[styles.legendText, textStyle]}>{label}</Text>
+      <Text style={[styles.legendText, textStyle]}>{label}</Text>
     </View>
   );
 }

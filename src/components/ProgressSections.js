@@ -24,14 +24,14 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
     return (
       <TouchableOpacity style={[styles.card, live.card, styles.mesoEmpty]} onPress={onBuild} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Browse plans">
         <Ionicons name="layers-outline" size={32} color={t.colors.primaryDim} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.mesoEmptyTitle, live.mesoEmptyTitle]}>No plan running yet</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.mesoEmptySub, live.mesoEmptySub]}>Browse the plan library or build your own. Your progress will appear right here once you start.</Text>
+        <Text style={[styles.mesoEmptyTitle, live.mesoEmptyTitle]}>No plan running yet</Text>
+        <Text style={[styles.mesoEmptySub, live.mesoEmptySub]}>Browse the plan library or build your own. Your progress will appear right here once you start.</Text>
         <View style={[styles.mesoEmptyBtn, live.mesoEmptyBtn]}>
           {/* 2026-07-10 (CP-10 stage 4 batch C, theming): live-theme colour
               prop (t.colors.textSecondary); see noPlanJourneyCopy.guard.test.js
               for the mechanically-updated pin. */}
           <Ionicons name="compass-outline" size={14} color={t.colors.textSecondary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.mesoEmptyBtnText, live.mesoEmptyBtnText]}>Browse plans</Text>
+          <Text style={[styles.mesoEmptyBtnText, live.mesoEmptyBtnText]}>Browse plans</Text>
         </View>
       </TouchableOpacity>
     );
@@ -54,8 +54,8 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
     >
       <View style={styles.mesoTop}>
         <View style={{ flex: 1 }}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.mesoName, live.mesoName]} numberOfLines={1}>{meso.name ?? 'Training Block'}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.mesoWeek, live.mesoWeek]}>
+          <Text style={[styles.mesoName, live.mesoName]} numberOfLines={1}>{meso.name ?? 'Training Block'}</Text>
+          <Text style={[styles.mesoWeek, live.mesoWeek]}>
             {isPlan
               ? (meso.splitType ? meso.splitType : 'Active plan')
               : `Week ${currentWeek}${meso.durationWeeks ? ` of ${meso.durationWeeks}` : ''}${meso.focus ? `  ·  ${meso.focus}` : ''}`
@@ -71,7 +71,7 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
           <View style={[styles.mesoProgressTrack, live.mesoProgressTrack]}>
             <View style={[styles.mesoProgressFill, live.mesoProgressFill, { width: progWidth }]} />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.mesoProgressLabel, live.mesoProgressLabel]}>{Math.round(progress * 100)}% complete</Text>
+          <Text style={[styles.mesoProgressLabel, live.mesoProgressLabel]}>{Math.round(progress * 100)}% complete</Text>
         </>
       )}
 
@@ -79,8 +79,8 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
       {tonnageBars.some(b => b.value > 0) && (
         <View style={styles.sparkWrap}>
           <View style={styles.sparkLabelRow}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.sparkLabel, live.sparkLabel]}>Weekly load</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.sparkValue, live.sparkValue]}>
+            <Text style={[styles.sparkLabel, live.sparkLabel]}>Weekly load</Text>
+            <Text style={[styles.sparkValue, live.sparkValue]}>
               {(tonnageBars[tonnageBars.length - 1]?.value ?? 0).toLocaleString('en-GB')} kg
             </Text>
           </View>
@@ -141,10 +141,10 @@ export function TrainingCalendar({ values }) {
       </View>
       <View style={styles.calLegend}>
         <View style={[styles.calDot, { backgroundColor: t.colors.surface2, borderWidth: 1, borderColor: t.colors.border }]} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.calLegendText, live.calLegendText]}>Rest</Text>
+        <Text style={[styles.calLegendText, live.calLegendText]}>Rest</Text>
         <View style={[styles.calDot, { backgroundColor: t.colors.primary }]} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.calLegendText, live.calLegendText]}>Trained</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.calLegendText, live.calLegendText, { marginLeft: 'auto' }]}>{trainedCount} days trained</Text>
+        <Text style={[styles.calLegendText, live.calLegendText]}>Trained</Text>
+        <Text style={[styles.calLegendText, live.calLegendText, { marginLeft: 'auto' }]}>{trainedCount} days trained</Text>
       </View>
     </View>
   );
@@ -197,14 +197,14 @@ export function SessionDurationChart({ bars }) {
                 { height: barH, width: BAR_W, backgroundColor: barColor(bar.avgMin) },
               ]} />
               {bar.avgMin > 0 && (
-                <Text maxFontSizeMultiplier={1.3} style={[styles.durationBarValue, live.durationBarValue]}>{bar.avgMin}m</Text>
+                <Text style={[styles.durationBarValue, live.durationBarValue]}>{bar.avgMin}m</Text>
               )}
-              <Text maxFontSizeMultiplier={1.3} style={[styles.durationBarLabel, live.durationBarLabel]}>{bar.weekLabel}</Text>
+              <Text style={[styles.durationBarLabel, live.durationBarLabel]}>{bar.weekLabel}</Text>
             </View>
           );
         })}
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.durationCoach, live.durationCoach]}>{coachingLine}</Text>
+      <Text style={[styles.durationCoach, live.durationCoach]}>{coachingLine}</Text>
     </View>
   );
 }
@@ -220,15 +220,15 @@ export function MuscleFrequencyTable({ rows, showAll, onToggle }) {
     <View style={[styles.freqWrap, live.freqWrap]}>
       {visible.map(({ muscle, thisWeek, lastWeek }) => (
         <View key={muscle} style={[styles.freqRow, live.freqRow]}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.freqMuscle, live.freqMuscle]} numberOfLines={1}>
+          <Text style={[styles.freqMuscle, live.freqMuscle]} numberOfLines={1}>
             {MUSCLE_DISPLAY_NAMES[muscle] ?? muscle}
           </Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.freqCounts, live.freqCounts]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.freqCountBold, live.freqCountBold, thisWeek > lastWeek && [styles.freqCountUp, live.freqCountUp]]}>
+          <Text style={[styles.freqCounts, live.freqCounts]}>
+            <Text style={[styles.freqCountBold, live.freqCountBold, thisWeek > lastWeek && [styles.freqCountUp, live.freqCountUp]]}>
               {thisWeek}
             </Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.freqDivider, live.freqDivider]}> this · </Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.freqLastWeek, live.freqLastWeek]}>{lastWeek} last</Text>
+            <Text style={[styles.freqDivider, live.freqDivider]}> this · </Text>
+            <Text style={[styles.freqLastWeek, live.freqLastWeek]}>{lastWeek} last</Text>
           </Text>
         </View>
       ))}
@@ -241,7 +241,7 @@ export function MuscleFrequencyTable({ rows, showAll, onToggle }) {
           accessibilityState={{ expanded: showAll }}
           accessibilityLabel={showAll ? 'Show less' : `Show all ${rows.length}`}
         >
-          <Text maxFontSizeMultiplier={1.3} style={[styles.freqToggleText, live.freqToggleText]}>
+          <Text style={[styles.freqToggleText, live.freqToggleText]}>
             {showAll ? 'Show less' : `Show all (${rows.length})`}
           </Text>
           <Ionicons
@@ -284,7 +284,7 @@ export function WorkloadCard({ data }) {
   return (
     <View style={[styles.workloadCard, live.workloadCard]}>
       <View style={styles.rowBetween}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.workloadTitle, live.workloadTitle]}>Training load</Text>
+        <Text style={[styles.workloadTitle, live.workloadTitle]}>Training load</Text>
         <InfoTooltip text="Compares this week's tonnage to your recent average. 0.8 to 1.3 is the optimal range. Above 1.5 signals high fatigue risk." />
       </View>
 
@@ -294,21 +294,21 @@ export function WorkloadCard({ data }) {
 
       <View style={styles.workloadStats}>
         <View style={styles.workloadStat}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.workloadStatValue, live.workloadStatValue]}>{(ratio).toFixed(2)}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.workloadStatLabel, live.workloadStatLabel]}>vs recent average</Text>
+          <Text style={[styles.workloadStatValue, live.workloadStatValue]}>{(ratio).toFixed(2)}</Text>
+          <Text style={[styles.workloadStatLabel, live.workloadStatLabel]}>vs recent average</Text>
         </View>
         <View style={styles.workloadStat}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.workloadStatValue, live.workloadStatValue]}>{acute.toLocaleString('en-GB')}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.workloadStatLabel, live.workloadStatLabel]}>This week (kg)</Text>
+          <Text style={[styles.workloadStatValue, live.workloadStatValue]}>{acute.toLocaleString('en-GB')}</Text>
+          <Text style={[styles.workloadStatLabel, live.workloadStatLabel]}>This week (kg)</Text>
         </View>
         <View style={styles.workloadStat}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.workloadStatValue, live.workloadStatValue]}>{chronic.toLocaleString('en-GB')}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.workloadStatLabel, live.workloadStatLabel]}>4-wk avg (kg)</Text>
+          <Text style={[styles.workloadStatValue, live.workloadStatValue]}>{chronic.toLocaleString('en-GB')}</Text>
+          <Text style={[styles.workloadStatLabel, live.workloadStatLabel]}>4-wk avg (kg)</Text>
         </View>
       </View>
 
-      <Text maxFontSizeMultiplier={1.3} style={[styles.workloadStatus, { color: statusColor }]}>{statusText}</Text>
-      {!!takeaway && <Text maxFontSizeMultiplier={1.3} style={[styles.workloadTakeaway, live.workloadTakeaway]}>{takeaway}</Text>}
+      <Text style={[styles.workloadStatus, { color: statusColor }]}>{statusText}</Text>
+      {!!takeaway && <Text style={[styles.workloadTakeaway, live.workloadTakeaway]}>{takeaway}</Text>}
     </View>
   );
 }

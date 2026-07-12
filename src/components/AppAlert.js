@@ -121,8 +121,8 @@ export function AppAlertHost() {
               the same "footer stays put, body scrolls" shape as the
               sup-modal/BottomSheet convention. */}
           <ScrollView style={styles.cardScroll} showsVerticalScrollIndicator={false}>
-            {!!title && <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]} accessibilityRole="header">{title}</Text>}
-            {!!message && <Text maxFontSizeMultiplier={1.3} style={[styles.message, live.message]}>{message}</Text>}
+            {!!title && <Text style={[styles.title, live.title]} accessibilityRole="header">{title}</Text>}
+            {!!message && <Text style={[styles.message, live.message]}>{message}</Text>}
           </ScrollView>
           <View style={[styles.actions, stacked ? styles.actionsStacked : styles.actionsRow]}>
             {buttons.map((b, i) => {
@@ -143,7 +143,7 @@ export function AppAlertHost() {
                     isCancel && styles.btnCancel,
                   ]}
                 >
-                  <Text maxFontSizeMultiplier={1.3}
+                  <Text
                     style={[
                       styles.btnText,
                       isPrimary && [styles.btnTextPrimary, live.btnTextPrimary],

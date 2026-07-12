@@ -98,14 +98,14 @@ export default function WellbeingCheckScreen({ navigation }) {
       <BackHeader title="Wellbeing check" onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.intro, live.intro]}>
+        <Text style={[styles.intro, live.intro]}>
           Five questions about your relationship with food and eating. Your answers are private, stored only on this device, and help shape how your coaching is approached.
         </Text>
 
         <View style={styles.list}>
           {SCOFF_QUESTIONS.map((q, i) => (
             <View key={i} style={[styles.item, live.item]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.question, live.question]}>{q}</Text>
+              <Text style={[styles.question, live.question]}>{q}</Text>
               <View style={styles.btnRow}>
                 <TouchableOpacity
                   style={[styles.btn, live.btn, answers[i] === true && [styles.btnSelected, live.btnSelected]]}
@@ -115,7 +115,7 @@ export default function WellbeingCheckScreen({ navigation }) {
                   accessibilityState={{ selected: answers[i] === true }}
                   accessibilityLabel="Yes"
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.btnText, live.btnText, answers[i] === true && [styles.btnTextSelected, live.btnTextSelected]]}>Yes</Text>
+                  <Text style={[styles.btnText, live.btnText, answers[i] === true && [styles.btnTextSelected, live.btnTextSelected]]}>Yes</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.btn, live.btn, answers[i] === false && [styles.btnSelected, live.btnSelected]]}
@@ -125,7 +125,7 @@ export default function WellbeingCheckScreen({ navigation }) {
                   accessibilityState={{ selected: answers[i] === false }}
                   accessibilityLabel="No"
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.btnText, live.btnText, answers[i] === false && [styles.btnTextSelected, live.btnTextSelected]]}>No</Text>
+                  <Text style={[styles.btnText, live.btnText, answers[i] === false && [styles.btnTextSelected, live.btnTextSelected]]}>No</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -140,7 +140,7 @@ export default function WellbeingCheckScreen({ navigation }) {
           onPress={handleSave}
         />
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.privacy, live.privacy]}>
+        <Text style={[styles.privacy, live.privacy]}>
           Your answers are stored on this device and never shared without your permission.
         </Text>
       </ScrollView>

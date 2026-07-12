@@ -162,7 +162,7 @@ export default function VolyumeTabBar({ state, descriptors, navigation }) {
                 </TabIcon>
                 {showCoachBadge ? <View style={[styles.badgeDot, live.badgeDot]} pointerEvents="none" /> : null}
               </View>
-              <Text style={[styles.label, live.label, { color }]} numberOfLines={1} maxFontSizeMultiplier={1.3}>{label}</Text>
+              <Text style={[styles.label, live.label, { color }]} numberOfLines={1}>{label}</Text>
             </Pressable>
           );
         })}

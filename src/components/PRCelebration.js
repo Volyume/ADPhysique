@@ -213,8 +213,8 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
       <Animated.View style={[styles.toast, live.toast, { opacity: toastOpacity }]}>
         <Ionicons name={prIcon} size={20} color={isFirstLift ? t.colors.primary : t.colors.gold} />
         <View style={{ flex: 1 }}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.toastTitle, live.toastTitle]}>{prLabel}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.toastValue, live.toastValue]}>{pr.label}</Text>
+          <Text style={[styles.toastTitle, live.toastTitle]}>{prLabel}</Text>
+          <Text style={[styles.toastValue, live.toastValue]}>{pr.label}</Text>
         </View>
       </Animated.View>
     </TouchableOpacity>

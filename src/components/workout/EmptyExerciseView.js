@@ -36,9 +36,9 @@ export default function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, 
         </View>
         <View style={styles.headerCenter}>
           <View style={styles.headerTimerBlock}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.headerTimerLabel, live.headerTimerLabel]}>Elapsed</Text>
+            <Text style={[styles.headerTimerLabel, live.headerTimerLabel]}>Elapsed</Text>
             <View style={styles.headerTimerValueRow}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.timerText, live.timerText]}>{elapsed}</Text>
+              <Text style={[styles.timerText, live.timerText]}>{elapsed}</Text>
             </View>
           </View>
         </View>
@@ -60,10 +60,10 @@ export default function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.exerciseNav, live.exerciseNav]} contentContainerStyle={styles.exerciseNavContent}>
           {workoutExercises.map((entry, i) => (
             <TouchableOpacity key={i} style={[styles.navTab, live.navTab, i === currentExerciseIndex && [styles.navTabActive, live.navTabActive]]} onPress={() => setCurrentExerciseIndex(i)} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }} accessibilityRole="button" accessibilityState={{ selected: i === currentExerciseIndex }} accessibilityLabel={entry.exercise?.name || `Exercise ${i + 1}`}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.navTabText, live.navTabText, i === currentExerciseIndex && [styles.navTabTextActive, live.navTabTextActive]]} numberOfLines={1} ellipsizeMode="tail">
+              <Text style={[styles.navTabText, live.navTabText, i === currentExerciseIndex && [styles.navTabTextActive, live.navTabTextActive]]} numberOfLines={1} ellipsizeMode="tail">
                 {entry.exercise?.name}
               </Text>
-              {entry.sets?.length > 0 && <View style={[styles.navTabBadge, live.navTabBadge]}><Text style={[styles.navTabBadgeText, live.navTabBadgeText]} maxFontSizeMultiplier={1.3}>{entry.sets.length}</Text></View>}
+              {entry.sets?.length > 0 && <View style={[styles.navTabBadge, live.navTabBadge]}><Text style={[styles.navTabBadgeText, live.navTabBadgeText]}>{entry.sets.length}</Text></View>}
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -71,8 +71,8 @@ export default function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, 
 
       <View style={styles.emptyContent}>
         <Ionicons name="barbell-outline" size={64} color={t.colors.surface3} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.emptyTitle, live.emptyTitle]}>Add your first exercise</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.emptySubtitle, live.emptySubtitle]}>Search the exercise library to get started</Text>
+        <Text style={[styles.emptyTitle, live.emptyTitle]}>Add your first exercise</Text>
+        <Text style={[styles.emptySubtitle, live.emptySubtitle]}>Search the exercise library to get started</Text>
         <Button
           variant="primary"
           fullWidth={false}
@@ -81,7 +81,7 @@ export default function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, 
           accessibilityLabel="Add exercise"
         >
           <Ionicons name="add" size={22} color={t.colors.onPrimary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.addFirstBtnText, live.addFirstBtnText]}>Add exercise</Text>
+          <Text style={[styles.addFirstBtnText, live.addFirstBtnText]}>Add exercise</Text>
         </Button>
       </View>
     </View>

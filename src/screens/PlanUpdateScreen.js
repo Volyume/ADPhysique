@@ -213,13 +213,13 @@ export default function PlanUpdateScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
+        <Text style={[styles.sectionSub, live.sectionSub]}>
           Adjust your training setup and rebuild the plan around it. Your calorie and macro targets stay as they are. Update those from the Coach tab.
         </Text>
 
         {/* ── Physique category (optional) ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Competing in a category? (optional)</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
+        <Text style={[styles.sectionSub, live.sectionSub]}>
           Only matters if you're chasing a competitive physique. It biases your plan towards the muscles that category is judged on.
         </Text>
 
@@ -234,9 +234,9 @@ export default function PlanUpdateScreen({ navigation }) {
         {weakPointsApplicable && (
           <>
             <SectionLabel style={styles.sectionLabelSpaced}>
-              Weak points <Text maxFontSizeMultiplier={1.3} style={[styles.optionalTag, live.optionalTag]}>(optional, max 3)</Text>
+              Weak points <Text style={[styles.optionalTag, live.optionalTag]}>(optional, max 3)</Text>
             </SectionLabel>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
+            <Text style={[styles.sectionSub, live.sectionSub]}>
               Muscles you want to bring up. Your plan puts extra work into them.
             </Text>
             <View style={styles.weakPointGrid}>
@@ -254,7 +254,7 @@ export default function PlanUpdateScreen({ navigation }) {
 
         {/* ── Training experience ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Experience</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
+        <Text style={[styles.sectionSub, live.sectionSub]}>
           This sets your starting volume and exercise selection. Change it as you get more experience.
         </Text>
         <Dropdown
@@ -266,7 +266,7 @@ export default function PlanUpdateScreen({ navigation }) {
 
         {/* ── Training schedule ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Training days per week</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
+        <Text style={[styles.sectionSub, live.sectionSub]}>
           Changing how many days you train changes the exercise mix. Your plan rebuilds around it.
         </Text>
         <SegmentedControl
@@ -286,7 +286,7 @@ export default function PlanUpdateScreen({ navigation }) {
 
         {/* ── Equipment ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Equipment</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
+        <Text style={[styles.sectionSub, live.sectionSub]}>
           What you have access to. The exercises adapt to your equipment.
         </Text>
         <Dropdown
@@ -298,7 +298,7 @@ export default function PlanUpdateScreen({ navigation }) {
 
         {/* ── Recovery ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Recovery</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
+        <Text style={[styles.sectionSub, live.sectionSub]}>
           How well you're recovering between sessions. This sets how cautious Volyume should be with training volume.
         </Text>
         <Dropdown
@@ -330,21 +330,21 @@ export default function PlanUpdateScreen({ navigation }) {
       >
         {diff ? (
           <>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.diffTitle, live.diffTitle]}>Before you rebuild</Text>
+            <Text style={[styles.diffTitle, live.diffTitle]}>Before you rebuild</Text>
             {diff.identical ? (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.diffSub, live.diffSub]}>
+              <Text style={[styles.diffSub, live.diffSub]}>
                 Your training days, split and moves already match this setup. Rebuilding refreshes your sets and volume.
               </Text>
             ) : (
               <>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.diffSub, live.diffSub]}>
+                <Text style={[styles.diffSub, live.diffSub]}>
                   Here's what changes. Your current plan stays until you confirm.
                 </Text>
                 <View style={[styles.diffTable, live.diffTable]}>
                   <View style={[styles.diffHeadRow, live.diffHeadRow]}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, live.diffCell, styles.diffCellLabel, live.diffCellLabel]} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, live.diffCell, styles.diffHeadText, live.diffHeadText]}>Now</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, live.diffCell, styles.diffHeadText, live.diffHeadText]}>After</Text>
+                    <Text style={[styles.diffCell, live.diffCell, styles.diffCellLabel, live.diffCellLabel]} />
+                    <Text style={[styles.diffCell, live.diffCell, styles.diffHeadText, live.diffHeadText]}>Now</Text>
+                    <Text style={[styles.diffCell, live.diffCell, styles.diffHeadText, live.diffHeadText]}>After</Text>
                   </View>
                   <DiffRow live={live} label="Training days" now={diff.days.now} after={diff.days.after} changed={diff.days.changed} />
                   <DiffRow live={live} label="Split" now={diff.split.now ?? '-'} after={diff.split.after ?? '-'} changed={diff.split.changed} />
@@ -358,17 +358,17 @@ export default function PlanUpdateScreen({ navigation }) {
                 </View>
                 {(diff.movesAdded.length > 0 || diff.movesDropped.length > 0) ? (
                   <View style={styles.diffMoves}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.diffMovesLabel, live.diffMovesLabel]}>Moves changed</Text>
+                    <Text style={[styles.diffMovesLabel, live.diffMovesLabel]}>Moves changed</Text>
                     {diff.movesAdded.map(m => (
-                      <Text maxFontSizeMultiplier={1.3} key={`add-${m}`} style={[styles.diffMoveText, live.diffMoveText]}>Added: {m}</Text>
+                      <Text key={`add-${m}`} style={[styles.diffMoveText, live.diffMoveText]}>Added: {m}</Text>
                     ))}
                     {diff.movesDropped.map(m => (
-                      <Text maxFontSizeMultiplier={1.3} key={`drop-${m}`} style={[styles.diffMoveText, live.diffMoveText]}>Dropped: {m}</Text>
+                      <Text key={`drop-${m}`} style={[styles.diffMoveText, live.diffMoveText]}>Dropped: {m}</Text>
                     ))}
                   </View>
                 ) : null}
                 {staged?.partial ? (
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.diffShortfall, live.diffShortfall]}>{planShortfallNote(staged.missedCount)}</Text>
+                  <Text style={[styles.diffShortfall, live.diffShortfall]}>{planShortfallNote(staged.missedCount)}</Text>
                 ) : null}
               </>
             )}
@@ -406,9 +406,9 @@ function DiffRow({ label, now, after, changed, live }) {
   const fmt = (v) => (v == null ? '-' : String(v));
   return (
     <View style={[styles.diffRow, live.diffRow]}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, live.diffCell, styles.diffCellLabel, live.diffCellLabel]}>{label}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, live.diffCell, styles.diffNow, live.diffNow]}>{fmt(now)}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.diffCell, live.diffCell, styles.diffAfter, live.diffAfter, changed && styles.diffAfterChanged]}>{fmt(after)}</Text>
+      <Text style={[styles.diffCell, live.diffCell, styles.diffCellLabel, live.diffCellLabel]}>{label}</Text>
+      <Text style={[styles.diffCell, live.diffCell, styles.diffNow, live.diffNow]}>{fmt(now)}</Text>
+      <Text style={[styles.diffCell, live.diffCell, styles.diffAfter, live.diffAfter, changed && styles.diffAfterChanged]}>{fmt(after)}</Text>
     </View>
   );
 }

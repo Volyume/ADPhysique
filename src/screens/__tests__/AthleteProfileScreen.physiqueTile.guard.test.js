@@ -40,7 +40,7 @@ describe('AthleteProfileScreen physique tile', () => {
     // (style={[styles.heroFocus, live.heroFocus]}). The pinned contract is
     // unchanged -- the focus line still renders through styles.heroFocus at
     // two lines max -- so the pattern accepts either spelling.
-    expect(source).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{(?:styles\.heroFocus|\[styles\.heroFocus, live\.heroFocus\])\} numberOfLines=\{2\}>\{focusTile\.value\}<\/Text>/);
+    expect(source).toMatch(/<Text style=\{(?:styles\.heroFocus|\[styles\.heroFocus, live\.heroFocus\])\} numberOfLines=\{2\}>\{focusTile\.value\}<\/Text>/);
     expect(source).toMatch(/const statusTile = profileStatusTile\(freshness\);/);
     expect(source).toMatch(/<StatTile label=\{statusTile\.label\} value=\{statusTile\.value\} sub=\{statusTile\.sub\} \/>/);
     expect(source).not.toMatch(/<StatTile label="Physique Scan"/);
@@ -84,7 +84,7 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(coachSource).toMatch(/function profileFocusLine\(profile = \{\}\)/);
     // CP-10 batch G: profileFocus gained its live-theme override, same
     // contract-preserving widening as heroFocus above.
-    expect(coachSource).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{(?:styles\.profileFocus|\[styles\.profileFocus, live\.profileFocus\])\} numberOfLines=\{2\}>\{profileFocus\}<\/Text>/);
+    expect(coachSource).toMatch(/<Text style=\{(?:styles\.profileFocus|\[styles\.profileFocus, live\.profileFocus\])\} numberOfLines=\{2\}>\{profileFocus\}<\/Text>/);
     // R8 (D68, 2026-07-11): the free tier's "Upgrade to Pro" NavRow was a
     // duplicate of the pitch card directly above it; the card is now the
     // single, tappable upgrade path. Re-anchored to pin that path instead.

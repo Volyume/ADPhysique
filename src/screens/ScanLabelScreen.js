@@ -269,8 +269,8 @@ export default function ScanLabelScreen({ navigation, route }) {
         <ModalHeader title="Snap label" closePosition="left" onClose={() => navigation.goBack()} />
         <View style={styles.fallbackWrap}>
           <Ionicons name="camera-outline" size={48} color={t.colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackTitle, live.fallbackTitle]}>Camera access needed</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackBody, live.fallbackBody]}>
+          <Text style={[styles.fallbackTitle, live.fallbackTitle]}>Camera access needed</Text>
+          <Text style={[styles.fallbackBody, live.fallbackBody]}>
             Volyume uses the camera to read nutrition labels.
           </Text>
           {permission === 'denied' ? (
@@ -290,7 +290,7 @@ export default function ScanLabelScreen({ navigation, route }) {
         <ModalHeader title="Snap label" closePosition="left" onClose={() => navigation.goBack()} />
         <View style={styles.fallbackWrap}>
           <Ionicons name="alert-circle-outline" size={48} color={t.colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackTitle, live.fallbackTitle]}>No camera available</Text>
+          <Text style={[styles.fallbackTitle, live.fallbackTitle]}>No camera available</Text>
           <Button title="Type it in instead" variant="tertiary" onPress={gotoManual} />
         </View>
       </SafeAreaView>
@@ -338,12 +338,12 @@ export default function ScanLabelScreen({ navigation, route }) {
         />
         {prefillBarcode ? (
           <View style={[styles.missBanner, live.missBanner]} pointerEvents="none">
-            <Text maxFontSizeMultiplier={1.3} style={[styles.missTitle, live.missTitle]}>
+            <Text style={[styles.missTitle, live.missTitle]}>
               {offline
                 ? `Barcode ${prefillBarcode}`
                 : `Barcode ${prefillBarcode} not in our database`}
             </Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.missBody, live.missBody]}>
+            <Text style={[styles.missBody, live.missBody]}>
               {!ocrAvailable
                 ? 'Enter the nutrition facts. The barcode is saved with them, so next time it scans straight away.'
                 : onFront
@@ -355,7 +355,7 @@ export default function ScanLabelScreen({ navigation, route }) {
         {ocrAvailable ? (
           <View style={styles.overlay} pointerEvents="none">
             <View style={[styles.frame, live.frame, { width: frameW, height: frameH }]} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.hint, live.hint]}>{hintText}</Text>
+            <Text style={[styles.hint, live.hint]}>{hintText}</Text>
           </View>
         ) : null}
         <View style={styles.captureRow}>
@@ -372,7 +372,7 @@ export default function ScanLabelScreen({ navigation, route }) {
               </TouchableOpacity>
               {onFront && !busy ? (
                 <TouchableOpacity onPress={skipName} hitSlop={12} style={styles.skipBtn} accessibilityRole="button" accessibilityLabel="Skip name">
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.skipText, live.skipText]}>Skip name</Text>
+                  <Text style={[styles.skipText, live.skipText]}>Skip name</Text>
                 </TouchableOpacity>
               ) : null}
               {/* C8: quiet, discoverable way back to the name step for this
@@ -380,14 +380,14 @@ export default function ScanLabelScreen({ navigation, route }) {
                   remembered flag). Never clears the flag. */}
               {shouldOfferAddNameLink({ step, skipRemembered, busy }) ? (
                 <TouchableOpacity onPress={addNameBack} hitSlop={12} style={styles.skipBtn} accessibilityRole="button" accessibilityLabel="Add a name">
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.skipText, live.skipText]}>Add a name</Text>
+                  <Text style={[styles.skipText, live.skipText]}>Add a name</Text>
                 </TouchableOpacity>
               ) : null}
               {/* COMP-022: a barcode heal must never dead-end mid-capture, a
                   persistent escape that keeps the barcode (✕ would discard it). */}
               {prefillBarcode && !busy ? (
                 <TouchableOpacity onPress={gotoManual} hitSlop={12} style={styles.skipBtn} accessibilityRole="button" accessibilityLabel="Type it in">
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.skipText, live.skipText]}>Type it in</Text>
+                  <Text style={[styles.skipText, live.skipText]}>Type it in</Text>
                 </TouchableOpacity>
               ) : null}
             </>
@@ -402,10 +402,10 @@ export default function ScanLabelScreen({ navigation, route }) {
         <View style={styles.choiceOverlay}>
           <View style={[styles.choiceScrim, live.choiceScrim]} />
           <View style={[styles.choiceCard, live.choiceCard]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.choiceTitle, live.choiceTitle]}>
+            <Text style={[styles.choiceTitle, live.choiceTitle]}>
               {offline ? 'Couldn’t check the full database' : 'Not in the database yet'}
             </Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.choiceBody, live.choiceBody]}>
+            <Text style={[styles.choiceBody, live.choiceBody]}>
               {offline
                 ? 'You’re offline, so only the on-device list was checked. Label scanning still works offline. Whatever you save is kept on this phone.'
                 : 'Fix it once and it’s yours. Scan the label, about 30 seconds, or type it in. The barcode is saved either way, so next time it scans instantly.'}

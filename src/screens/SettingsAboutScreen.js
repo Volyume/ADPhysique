@@ -87,7 +87,7 @@ export default function SettingsAboutScreen({ navigation }) {
 
       <View style={styles.about}>
         <View style={styles.appNameRow}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.appName, { fontSize: t.fontSize.xl, color: t.colors.textPrimary }]}>Volyume</Text>
+          <Text style={[styles.appName, { fontSize: t.fontSize.xl, color: t.colors.textPrimary }]}>Volyume</Text>
         </View>
         <TouchableOpacity
           onPress={() => {
@@ -133,7 +133,7 @@ export default function SettingsAboutScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="App version. Tap to share the build identifier."
         >
-          <Text maxFontSizeMultiplier={1.3} style={[styles.appVersion, { fontSize: t.fontSize.sm, color: t.colors.textMuted }]}>
+          <Text style={[styles.appVersion, { fontSize: t.fontSize.sm, color: t.colors.textMuted }]}>
             v{Constants.expoConfig?.version ?? '1.2.0'}
             {' '}
             ({Platform.OS === 'ios'
@@ -141,7 +141,7 @@ export default function SettingsAboutScreen({ navigation }) {
               : Constants.expoConfig?.android?.versionCode})
           </Text>
         </TouchableOpacity>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.tagline, { ...t.type.caption, color: t.colors.textMuted }]}>Less thinking. More lifting.</Text>
+        <Text style={[styles.tagline, { ...t.type.caption, color: t.colors.textMuted }]}>Less thinking. More lifting.</Text>
       </View>
     </SettingsPage>
   );
