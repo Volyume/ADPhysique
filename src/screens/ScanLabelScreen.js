@@ -29,7 +29,7 @@ import { todayLocalKey } from '../lib/dayKey';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
-  Linking, AppState,
+  Linking, AppState, useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -55,6 +55,12 @@ import { pickProductName } from '../lib/food/labelName';
 // the next scan asks for a name again.
 export const SKIP_NAME_KEY = '@volyume_scan_skip_name';
 
+// UI-15: the alignment guide's design size (was the fixed styles.frame
+// width/height). Kept as the max/cap so typical and wide devices look
+// exactly as before; ScanLabelScreen derives a responsive width off these.
+export const FRAME_DESIGN_W = 280;
+export const FRAME_ASPECT = 280 / 360; // width:height, unchanged
+
 // Pure: the step to open on given the persisted flag's raw AsyncStorage
 // value ('true' / null / anything else). Exported for the colocated test.
 export function getInitialStep(flagValue) {
@@ -78,6 +84,16 @@ export default function ScanLabelScreen({ navigation, route }) {
   // matches ScanBarcodeScreen's own precedent as a plain camera screen.
   const t = useTheme();
   const live = buildLiveStyles(t);
+
+  // UI-15: the alignment guide was a fixed 280x360 box, which left only
+  // 20dp of margin per side on a 320dp-wide screen. Same responsive shape
+  // as ShareCardScreen's preview (EP-11/UI-03): cap at the current design
+  // size, shrink to fit the available width first so it never crowds a
+  // narrow device, same aspect ratio throughout. Guide overlay sizing only,
+  // no scanning/camera-logic change.
+  const { width: windowWidth } = useWindowDimensions();
+  const frameW = Math.min(FRAME_DESIGN_W, windowWidth - 2 * spacing.xl);
+  const frameH = frameW / FRAME_ASPECT;
 
   const [permission, setPermission] = useState(Camera.getCameraPermissionStatus());
   const [busy, setBusy] = useState(false);
@@ -338,7 +354,7 @@ export default function ScanLabelScreen({ navigation, route }) {
         ) : null}
         {ocrAvailable ? (
           <View style={styles.overlay} pointerEvents="none">
-            <View style={[styles.frame, live.frame]} />
+            <View style={[styles.frame, live.frame, { width: frameW, height: frameH }]} />
             <Text maxFontSizeMultiplier={1.3} style={[styles.hint, live.hint]}>{hintText}</Text>
           </View>
         ) : null}
