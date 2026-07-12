@@ -134,6 +134,37 @@ Everything else I can rule under D33 and build; these need you:
   device walk before it's called done).
 - **AC-13**: fix the enum return; **remove** the never-registered keepalive `defineTask` (dead code).
 
+## 5b. Landed this session (branch claude/codebase-audit-docs-pv6mjd)
+
+All with lint + targeted tests green, per-feature commits, pushed. Every code
+fix still needs the founder's device-walk from a green EAS build.
+
+**Tier 1 (Article 9 / ED / engine):**
+- AC-01 `c966050` — SCOFF + cycle + diagnostic/draft keys named out of prefs sync (interim; fail-closed allowlist still queued).
+- AC-02 `c2b227e` — periodic + write sync triggers routed through the guarded `syncAll`.
+- LS-04 + LS-05 `3c42622` — anchor pass skipped under layoff; 5% cap restored at low load.
+- BSEC-01/06/10/11 `migrate_119` (`dfba329`) — direct-write lockdown; **founder-run**, gated on "run against production".
+
+**Tier 2 (data-loss / integrity / inputs):**
+- LS-02 `3316716` — failed workout_sets push throws so the watermark holds.
+- LS-03 `76b3daf` — partial paginated pulls throw; cursor never skips unseen rows.
+- LS-03b `07860de` — daily-steps/body-metrics/cardio pulls paginated.
+- LS-06 `3e4e4a9` — weekly window boundaries DST-correct (`localWeekEndMs`).
+- LS-07 `eaa3407` — body-composition dates stamped/restored on the local day.
+- AC-04 `acf1736` — delete tombstones drained before the sign-out wipe.
+- AC-08 + AC-15 `2a69ac6` — impossible body/profile/sleep inputs rejected at the boundary.
+- AC-12 + AC-14 `5665bf8` — USDA key reaches prod bundle; recipe fetch bounded.
+- Behavioural test coverage `ed1bc19`.
+- Onboarding crop fix `11eaa3b` (founder device note).
+
+**Still open in Tier 2 (need founder input / device-file verification):**
+- AC-05 legacy progress photos — migrate legacy → scoped dir + erase both layouts. Article 9 body images + Article 17; per-account scope was founder-ruled 2026-07-09 but legacy-orphan handling was not, and it is file-system code that must be device-walked. Recommend: build the idempotent hash-verified migration + dual-layout erasure; founder confirms the ambiguous-ownership behaviour.
+- AC-06 backup re-key — versioned manifest of all owned tables + re-key rows to the current user on restore. Scope decision (which tables) + can't verify without a fresh-install restore. Recommend: version + re-key + drop the "full backup" claim for local accounts until done.
+- BSEC-12 deletion completeness — `CREATE OR REPLACE delete_user_data()` adding `perday_target_offsets` (bounded today by ON DELETE CASCADE); founder-run migration, careful transcription of the migrate_096 body.
+- BSEC-11 second half — `users_profile` consent-column trigger; needs the profile-sync path checked first.
+
+Tiers 3–6 (billing, auth PKCE cluster, remaining backend/web/CI hardening) not started — separate scheduled passes.
+
 ## 6. Verification limits
 Source review only — no live Supabase schema, deployed function versions, secret values, or signed
 device binaries were exercised. The production RLS/grants, `RTDN_SERVICE_ACCOUNT_EMAIL` presence, and
