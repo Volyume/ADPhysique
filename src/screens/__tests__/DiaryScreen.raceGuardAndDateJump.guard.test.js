@@ -65,7 +65,12 @@ describe('DiaryScreen BUG-1 day-load race guard wiring', () => {
   });
 
   test('the redundant focus/plain-effect double trigger is collapsed to one', () => {
-    expect(SRC).toMatch(/useFocusEffect\(useCallback\(\(\) => \{ load\(\); \}, \[load\]\)\);/);
+    // EP-07/UI-02 (Codex end-user-polish audit): load() is now fully
+    // try/catch/finally-wrapped internally and never rejects, but the focus
+    // caller still `.catch`es defensively so a future throw here can never
+    // surface as an unhandled rejection instead of the screen's own error
+    // state.
+    expect(SRC).toMatch(/useFocusEffect\(useCallback\(\(\) => \{ load\(\)\.catch\(\(\) => \{\}\); \}, \[load\]\)\);/);
     // The old bare `useEffect(() => { load(); }, [load]);` sibling trigger
     // must be gone; useFocusEffect alone already re-fires on every load()
     // dependency change while the screen is focused.

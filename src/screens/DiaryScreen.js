@@ -46,6 +46,7 @@ import { buildPlanEditNarration } from '../lib/food/planExplain';
 import CalorieBankSheet from '../components/food/CalorieBankSheet';
 import DiaryDatePicker from '../components/food/DiaryDatePicker';
 import { audit } from '../lib/observability';
+import { logError } from '../lib/errorLog';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import MacroRings from '../components/food/MacroRings';
@@ -54,6 +55,7 @@ import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
 import BottomSheet from '../components/BottomSheet';
 import EmptyDiary from '../components/food/EmptyDiary';
+import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/Skeleton';
 import MealSection from '../components/food/MealSection';
 import HintCaption from '../components/HintCaption';
@@ -163,6 +165,13 @@ export default function DiaryScreen({ navigation, route }) {
   // a skeleton instead of the empty state, so a day that DOES have food never
   // flashes "Nothing logged yet" before it paints (food review U-M7).
   const [loaded, setLoaded] = useState(false);
+  // EP-07/UI-02 (Codex end-user-polish audit): whether the MOST RECENT load()
+  // attempt for the day in view failed. A failed load never wipes whatever
+  // was already on screen (see the catch branch in load() below); it only
+  // flips this flag so the render layer can show a retryable error state
+  // instead of either a permanent skeleton or a false "nothing logged" empty
+  // state. Reset to false on the next successful load.
+  const [loadError, setLoadError] = useState(false);
   const [rollup, setRollup] = useState(null);
   const [waterMl, setWaterMl] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -204,74 +213,92 @@ export default function DiaryScreen({ navigation, route }) {
   const load = useCallback(async () => {
     if (!userId) return;
     const loadToken = loadGuardRef.current.next();
-    const [es, r, w, targetsRow, trainingDay, resolvedRefeedDate, edFlag, bodyWeight, bodyComp, yEntries, coachOut] = await Promise.all([
-      getFoodEntriesForDay(userId, selectedDate),
-      getRollupForDay(userId, selectedDate),
-      getWater(userId, selectedDate),
-      getNutritionTargets(userId),
-      macroCycle ? hasWorkoutOnDate(userId, selectedDate) : Promise.resolve(false),
-      refeed?.appliedAt ? getFirstWorkoutDateOnOrAfter(userId, refeed.appliedAt) : Promise.resolve(null),
-      // ED-safety, fail CLOSED: a transient flag read maps to the truthy
-      // 'read_failed' sentinel (setEdFlagOpen(!!edFlag) below), so the banking
-      // carve-out stays DISABLED at a possibly-flagged user rather than opening
-      // on a read error.
-      getOpenEdPatternFlag(userId).catch(() => 'read_failed'),
-      getLatestBodyWeight(userId).catch(() => null),
-      getLatestBodyComposition(userId).catch(() => null),
-      getFoodEntriesForDay(userId, shiftDate(selectedDate, -1)).catch(() => []),
-      // Audit item 6: Pro-only, best-effort. A read failure just hides the
-      // "Targets updated" chip, it never blocks the rest of the diary load.
-      !readOnly ? getLatestCoachOutput(userId).catch(() => null) : Promise.resolve(null),
-    ]);
-    // A newer load has started since this one began; drop this stale result
-    // before doing any more work with it (never mind committing it).
-    if (!loadGuardRef.current.isCurrent(loadToken)) return;
-    // Safe banking floor = max(sex floor, FFM floor). FFM floor needs a body
-    // weight; when present we use the engine's own computeFFMFloor (with body
-    // fat if logged, else its sex-based fallback), matching the coach's RED-S
-    // floor. No weight -> sex floor alone.
-    let floor = safeDayFloorKcal({ sex });
-    if (bodyWeight?.weightKg > 0) {
-      try {
-        const ffm = computeFFMFloor(bodyWeight.weightKg, {
-          bodyFatPercent: bodyComp?.bodyFatPercent ?? null,
-          bodyFatSource: bodyComp?.bodyFatSource ?? null,
-          sex,
-        });
-        floor = safeDayFloorKcal({ sex, ffmFloorKcal: ffm?.floorKcal });
-      } catch (_) { /* keep sex floor */ }
-    }
-    // Resolve each entry's actual food name + brand from the foods /
-    // custom_foods tables. food_entries denormalises macros at log
-    // time but NOT the name, so without this enrichment the row
-    // falls through to a generic "Food" label. SQLite local reads,
-    // fast even for 10-20 entries.
-    const enriched = await Promise.all((es ?? []).map(async (entry) => {
-      try {
-        const food = await resolveFoodRef(userId, entry.food_ref);
-        return {
-          ...entry,
-          _name: food?.name ?? null,
-          _brand: food?.brand ?? null,
-        };
-      } catch (_) {
-        return { ...entry, _name: null, _brand: null };
+    // EP-07/UI-02: the whole body is now wrapped so a core read's rejection
+    // can never leave `loaded` stuck at false (the old endless-skeleton bug)
+    // nor pass silently while the day still shows stale/no data. A caught
+    // failure never wipes entries/rollup/etc already on screen (see catch
+    // below); only the try's own success path commits fresh values.
+    try {
+      const [es, r, w, targetsRow, trainingDay, resolvedRefeedDate, edFlag, bodyWeight, bodyComp, yEntries, coachOut] = await Promise.all([
+        getFoodEntriesForDay(userId, selectedDate),
+        getRollupForDay(userId, selectedDate),
+        getWater(userId, selectedDate),
+        getNutritionTargets(userId),
+        macroCycle ? hasWorkoutOnDate(userId, selectedDate) : Promise.resolve(false),
+        refeed?.appliedAt ? getFirstWorkoutDateOnOrAfter(userId, refeed.appliedAt) : Promise.resolve(null),
+        // ED-safety, fail CLOSED: a transient flag read maps to the truthy
+        // 'read_failed' sentinel (setEdFlagOpen(!!edFlag) below), so the banking
+        // carve-out stays DISABLED at a possibly-flagged user rather than opening
+        // on a read error.
+        getOpenEdPatternFlag(userId).catch(() => 'read_failed'),
+        getLatestBodyWeight(userId).catch(() => null),
+        getLatestBodyComposition(userId).catch(() => null),
+        getFoodEntriesForDay(userId, shiftDate(selectedDate, -1)).catch(() => []),
+        // Audit item 6: Pro-only, best-effort. A read failure just hides the
+        // "Targets updated" chip, it never blocks the rest of the diary load.
+        !readOnly ? getLatestCoachOutput(userId).catch(() => null) : Promise.resolve(null),
+      ]);
+      // A newer load has started since this one began; drop this stale result
+      // before doing any more work with it (never mind committing it).
+      if (!loadGuardRef.current.isCurrent(loadToken)) return;
+      // Safe banking floor = max(sex floor, FFM floor). FFM floor needs a body
+      // weight; when present we use the engine's own computeFFMFloor (with body
+      // fat if logged, else its sex-based fallback), matching the coach's RED-S
+      // floor. No weight -> sex floor alone.
+      let floor = safeDayFloorKcal({ sex });
+      if (bodyWeight?.weightKg > 0) {
+        try {
+          const ffm = computeFFMFloor(bodyWeight.weightKg, {
+            bodyFatPercent: bodyComp?.bodyFatPercent ?? null,
+            bodyFatSource: bodyComp?.bodyFatSource ?? null,
+            sex,
+          });
+          floor = safeDayFloorKcal({ sex, ffmFloorKcal: ffm?.floorKcal });
+        } catch (_) { /* keep sex floor */ }
       }
-    }));
-    // Check again: the enrichment await above is itself a second point where
-    // a newer load could have started and already committed its own result.
-    if (!loadGuardRef.current.isCurrent(loadToken)) return;
-    setEntries(enriched);
-    setRollup(r);
-    setWaterMl(w);
-    setTargets(targetsRow);
-    setIsTrainingDay(trainingDay);
-    setRefeedDate(resolvedRefeedDate);
-    setEdFlagOpen(!!edFlag);
-    setFloorKcal(floor);
-    setYesterdayHasFood((yEntries?.length ?? 0) > 0);
-    setLatestCoachOutput(coachOut ?? null);
-    setLoaded(true);
+      // Resolve each entry's actual food name + brand from the foods /
+      // custom_foods tables. food_entries denormalises macros at log
+      // time but NOT the name, so without this enrichment the row
+      // falls through to a generic "Food" label. SQLite local reads,
+      // fast even for 10-20 entries.
+      const enriched = await Promise.all((es ?? []).map(async (entry) => {
+        try {
+          const food = await resolveFoodRef(userId, entry.food_ref);
+          return {
+            ...entry,
+            _name: food?.name ?? null,
+            _brand: food?.brand ?? null,
+          };
+        } catch (_) {
+          return { ...entry, _name: null, _brand: null };
+        }
+      }));
+      // Check again: the enrichment await above is itself a second point where
+      // a newer load could have started and already committed its own result.
+      if (!loadGuardRef.current.isCurrent(loadToken)) return;
+      setEntries(enriched);
+      setRollup(r);
+      setWaterMl(w);
+      setTargets(targetsRow);
+      setIsTrainingDay(trainingDay);
+      setRefeedDate(resolvedRefeedDate);
+      setEdFlagOpen(!!edFlag);
+      setFloorKcal(floor);
+      setYesterdayHasFood((yEntries?.length ?? 0) > 0);
+      setLatestCoachOutput(coachOut ?? null);
+      setLoadError(false);
+    } catch (e) {
+      // A stale (superseded) load failing is not news; only report/commit the
+      // error for the load that is still the current one for this screen.
+      if (loadGuardRef.current.isCurrent(loadToken)) {
+        logError('DiaryScreen.load', e, { userId, selectedDate });
+        setLoadError(true);
+      }
+    } finally {
+      // Always settle `loaded`, success or failure, so a rejected read can
+      // never leave the skeleton spinning forever (EP-07/UI-02).
+      if (loadGuardRef.current.isCurrent(loadToken)) setLoaded(true);
+    }
   }, [userId, selectedDate, macroCycle, refeed, sex, readOnly]);
 
   // Planned scaffolding from a meal plan (adherence model): shown with a
@@ -508,12 +535,15 @@ export default function DiaryScreen({ navigation, route }) {
   // triggers doubled every load's concurrency for no benefit and made the
   // stale-result race easier to hit. One trigger is enough: mount, refocus,
   // and every dependency change while this tab is the one in view.
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => { load().catch(() => {}); }, [load]));
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await load();
-    setRefreshing(false);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
   }, [load]);
 
   // Bucket every entry by its slot, whatever the slot key (numbered, legacy or
@@ -1469,6 +1499,21 @@ export default function DiaryScreen({ navigation, route }) {
             <SkeletonRow />
             <SkeletonRow />
             <SkeletonRow />
+          </View>
+        ) : loadError && viewEntries.length === 0 ? (
+          // EP-09/P-06: a load that FAILED must never read as "nothing logged
+          // this day". Only shown when there is nothing already on screen to
+          // preserve (a refresh failure with existing entries keeps showing
+          // them, per the loadError branch not gating that case).
+          <View style={{ paddingHorizontal: spacing.lg }}>
+            <EmptyState
+              icon="cloud-offline-outline"
+              title="Couldn't load this day"
+              text="Check your connection and try again. Nothing has been lost."
+              actionLabel="Retry"
+              onAction={load}
+              actionAccessibilityLabel="Retry loading this day"
+            />
           </View>
         ) : viewEntries.length === 0 ? (
           readOnly ? (
