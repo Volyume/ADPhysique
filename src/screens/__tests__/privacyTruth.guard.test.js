@@ -32,6 +32,17 @@ describe('privacy, consent, export and store-copy truth', () => {
     expect(data).toContain('Workout sets only');
   });
 
+  // P-08 (Codex end-user-polish audit): the in-app privacy policy exposed the
+  // founder's personal Gmail address rather than the branded support address
+  // the public policy and src/lib/links.js already use.
+  test('in-app privacy policy uses the branded support address, not a personal Gmail', () => {
+    const privacy = readRepoFile('src', 'screens', 'PrivacyPolicyScreen.js');
+
+    expect(privacy).not.toMatch(/allansdouglas1983@gmail\.com/);
+    const supportMentions = privacy.match(/support@volyume\.app/g) || [];
+    expect(supportMentions.length).toBeGreaterThanOrEqual(2);
+  });
+
   test('public privacy/support copy has no stale export, food or billing claims', () => {
     const publicFiles = [
       readRepoFile('public', 'privacy.html'),

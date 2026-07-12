@@ -101,7 +101,7 @@ export default function PrivacyPolicyScreen() {
           <Body>
             If you are in the European Economic Area or United Kingdom, you have additional rights under GDPR,
             including the right to access, rectify, port, or erase your personal data. Contact us at
-            allansdouglas1983@gmail.com to exercise these rights.
+            support@volyume.app to exercise these rights.
           </Body>
         </Section>
 
@@ -120,7 +120,7 @@ export default function PrivacyPolicyScreen() {
 
         <Section title="Contact">
           <Body>
-            Questions or requests: allansdouglas1983@gmail.com
+            Questions or requests: support@volyume.app
           </Body>
         </Section>
 
