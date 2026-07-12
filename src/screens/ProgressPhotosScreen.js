@@ -2293,7 +2293,15 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   libraryScoreCell: {
-    flex: 1,
+    // Two-column wrapping grid. The `flex` shorthand here would set flexBasis:0,
+    // which inside a flexWrap row makes Yoga measure the row's height as a SINGLE
+    // line, so the wrapped second row (Change/Confidence) overflowed the row's
+    // reported height and the callout below it rendered overlapping the cells. An
+    // explicit non-zero flexBasis makes the row measure both lines correctly;
+    // flexGrow still lets the two cells on a line fill the width.
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: '47%',
     minWidth: 96,
     minHeight: 54,
     borderRadius: radius.sm,
