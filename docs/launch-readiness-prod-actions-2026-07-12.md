@@ -41,7 +41,17 @@ references `partnerships` and `status = 'active'` (not just `auth.uid() = user_i
 
 ---
 
-## 2. AC-01 — purge the health data that already leaked to the cloud
+## 2. AC-01 — purge the health data that already leaked to the cloud ✅ RUN 2026-07-12
+
+> **OUTCOME (founder-run 2026-07-12):** the count query found **no
+> `@volyume_scoff_answers` and no `@volyume_cycle_tracking` rows** in
+> production — the Article 9 special-category keys never reached the cloud.
+> What existed and was purged: `@volyume_error_log_v1` (4 rows),
+> `@volyume_feedback_prompt_history_v1` (3 rows), one
+> `@volyume_pro_onboarding_draft_*` row. The DELETE ran clean; re-run the
+> count query to confirm 0 rows. This materially reduces the §4.1 DPA
+> question: no special-category breach occurred, only minor
+> diagnostic/draft data, now deleted.
 
 The old prefix-sync uploaded raw SCOFF (ED-screening) answers and menstrual-cycle
 tracking — plus some diagnostic/draft keys — into `public.user_prefs`, against the
@@ -95,12 +105,18 @@ workouts, etc. goes to zero and `auth.users` no longer lists them).
 
 ---
 
-## 4. Apple — needs the Team ID
+## 4. Apple — Team ID wired ✅ 2026-07-12
 
-`public/.well-known/apple-app-site-association` ships `REPLACE_WITH_APPLE_TEAM_ID`,
-so iOS universal links are dead. Provide the Apple Team ID and Claude wires the
-deploy-time injection + a fail-closed guard (the Pages deploy fails if a
-placeholder ever survives). Until then, iOS deep links do not verify.
+Founder supplied Team ID `K79JA5JUF8`. Wired three ways:
+- `apple-app-site-association` now serves `K79JA5JUF8.app.volyume` (real appID).
+- `app.json` iOS gains `"associatedDomains": ["applinks:volyume.app"]` — without
+  this entitlement iOS never fetches the association file. **A fresh iOS build
+  is required** (entitlements are baked at build time); buildNumber bumped to 10.
+- The Pages deploy fails closed if a `REPLACE_WITH` placeholder ever survives in
+  either served association file, and the site now deploys from `main` only.
+
+Remaining Apple submission steps are console-side (App Store Connect listing,
+screenshots, privacy labels, review submission) — founder-run.
 
 ---
 
