@@ -151,18 +151,30 @@ memory.
 - **Metrics:** derived events only, until the Play Console grant lands.
   Installs and Play-sourced figures are reported as unavailable, never
   estimated (OPERATING-CHARTER §6).
-- **Email sending:** the retention loop activates once `RESEND_API_KEY` is
-  set in the environment (provider: Resend, sending from the verified
-  `volyume.app` domain — see `playbooks/retention-email-loop.md` §5).
-  Digest drafts are created in Gmail, not auto-sent, until the founder
-  authorises send.
+- **Email sending: LIVE (2026-07-12).** `RESEND_API_KEY` is set in the
+  environment and the test send from `allan@volyume.app` succeeded
+  (Resend id a9f2b2ab-f924-47e7-867e-1f11d8c492cf). The retention loop
+  is armed (see `playbooks/retention-email-loop.md`); reply-to is
+  allansdouglas1983@gmail.com by lead ruling, changeable on founder word.
+  The weekly digest also sends via Resend to the founder inbox.
 
 Update this section whenever a capability flips state (account granted,
 API connected, first batch approved) — it is the single source of truth
 for "what can run today."
 
-## Live trigger record (2026-07-12)
+## Live trigger record (2026-07-12, rewired same day)
 
-- volyume-marketing-weekly-cycle: trig_01R1K8Hf8tYr72nvrsdnwwF7, cron 0 7 * * 1
-- volyume-marketing-executor: trig_01RVz4iXoUeDN7PShJ9Dkdc5, cron 0 */6 * * * (6-hourly, not hourly, for token frugality per founder instruction 2026-07-12; tighten to hourly when pipeline volume justifies)
-- volyume-marketing-review-poll: trig_01EkuHZmtLwKiqFFzhGT1W96, cron 0 8 * * 2,5 (site health mode until Play Console API access granted)
+ARCHITECTURE NOTE (incident, 2026-07-12 ~17:00): the original three Routines
+spawned a FRESH session per firing. Fresh headless sessions do not inherit
+the repo clone or the authenticated Supabase/Gmail connections, so every
+firing landed in an empty environment and no-opped (the 12:02 executor run
+refused to act, correctly). All three were deleted and recreated bound to
+the Marketing HQ session itself, which has the repo, the tools and the
+context. If that session is ever retired, the Routines must be re-bound to
+its successor (list_triggers, delete, recreate with the same prompts). Do
+NOT revert to fresh-session mode unless the environment is first provisioned
+with the repo and headless Supabase access.
+
+- volyume-marketing-weekly-cycle: trig_01XRe8SaCWKNHCY656vHiFWK, cron 0 7 * * 1
+- volyume-marketing-executor: trig_01QuLqhPb2JzEn4FEGkXbc8n, cron 0 */6 * * * (6-hourly for token frugality per founder instruction 2026-07-12; also owns the daily marketing_metrics snapshot; tighten to hourly when pipeline volume justifies)
+- volyume-marketing-review-poll: trig_01QXSjVdMeQKZp9ThsqWiZcE, cron 0 8 * * 2,5 (site health mode until Play Console API access granted)

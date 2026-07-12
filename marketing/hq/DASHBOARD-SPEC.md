@@ -32,9 +32,21 @@ wraps its pages in the authenticated app shell/nav):
 - `src/app/(app)/marketing/ledger/page.tsx` — ledger, route
   `/marketing/ledger`.
 
-**Immediate follow-ups, not in this v1 build** (list only, do not build):
+**Follow-ups — BUILT 2026-07-12** under an explicit founder order ("Build
+EVERYTHING") superseding this spec's original v1 boundary (which listed
+these as "not in this v1 build / do not build"):
 - `src/app/(app)/marketing/channels/page.tsx` — `/marketing/channels`.
+  Read-only view of `marketing_channels` (channel, status, capability,
+  account_ref, notes, updated time). Channel mutation from the dashboard
+  remains unbuilt.
 - `src/app/(app)/marketing/reports/page.tsx` — `/marketing/reports`.
+  **Data-source ruling (lead, 2026-07-12):** NO new `marketing_reports`
+  table — cloud schema changes are founder-gated, so reports are derived
+  weekly rollups computed server-side at read time from `marketing_ledger`
+  and `marketing_metrics`: ledger rows grouped by week (Europe/London,
+  Monday start) with counts per `kind`, plus the latest metric value per
+  metric within each week, one card per week, newest first, capped at the
+  last 8 weeks (`getWeeklyReports` in `src/lib/marketing/queries.ts`).
 
 ### Auth layering
 
@@ -216,7 +228,11 @@ outside `@volyume/ui`'s palette).
 - No metrics backfill UI (metrics are agent-written; this dashboard is
   read-only for metrics).
 - No channel mutation beyond notes/status (full channel management is the
-  `/marketing/channels` follow-up, not this build).
+  `/marketing/channels` follow-up). **Note 2026-07-12:** the read-only
+  `/marketing/channels` and `/marketing/reports` views were built under the
+  founder order superseding the v1 boundary (see section 1); channel
+  mutation from the dashboard remains unbuilt, and reports are derived
+  rollups with no new table (data-source ruling in section 1).
 - No service-role usage anywhere in the web app, for any of this. Every
   read and write here goes through the caller's authenticated (admin)
   session and is bound by RLS.

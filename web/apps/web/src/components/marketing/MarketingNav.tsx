@@ -8,6 +8,8 @@ const tabs = [
   { href: '/marketing', label: 'Overview' },
   { href: '/marketing/content', label: 'Pipeline' },
   { href: '/marketing/ledger', label: 'Ledger' },
+  { href: '/marketing/channels', label: 'Channels' },
+  { href: '/marketing/reports', label: 'Reports' },
 ];
 
 export function MarketingNav() {
