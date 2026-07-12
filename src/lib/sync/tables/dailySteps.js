@@ -25,6 +25,7 @@
 
 import { logSyncError } from '../telemetry';
 import { isMissingTableError } from './_missingTable';
+import { fetchAllUserRows } from './_paginate';
 
 const PUSH_BATCH_SIZE = 200;
 const PUSH_WINDOW_DAYS = 400;
@@ -92,10 +93,10 @@ export async function pushDailySteps(sb, { userId, localUserId } = {}) {
 export async function pullDailySteps(sb, { userId } = {}) {
   if (!sb || !userId) return { count: 0, errors: 0 };
   try {
-    const { data, error } = await sb
-      .from('daily_steps')
-      .select('*')
-      .eq('user_id', userId);
+    // LS-03b: page past PostgREST's 1000-row cap (daily_steps reaches it after ~3 years).
+    const { data, error } = await fetchAllUserRows(
+      () => sb.from('daily_steps').select('*').eq('user_id', userId),
+    );
     if (error) {
       if (isMissingTableError(error, 'daily_steps')) {
         // Cloud table not migrated yet (056 pending). Benign skip, keeps

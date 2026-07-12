@@ -34,6 +34,7 @@
 
 import { logSyncError } from '../telemetry';
 import { localDayKey } from '../../dayKey';
+import { fetchAllUserRows } from './_paginate';
 
 const PUSH_BATCH_SIZE = 200;
 const PUSH_WINDOW_DAYS = 365;
@@ -123,10 +124,10 @@ export async function pushBodyComposition(sb, { userId, localUserId } = {}) {
 export async function pullBodyComposition(sb, { userId } = {}) {
   if (!sb || !userId) return { count: 0, errors: 0 };
   try {
-    const { data, error } = await sb
-      .from('body_metrics')
-      .select('*')
-      .eq('user_id', userId);
+    // LS-03b: page past PostgREST's 1000-row cap so a long history restores in full.
+    const { data, error } = await fetchAllUserRows(
+      () => sb.from('body_metrics').select('*').eq('user_id', userId),
+    );
     if (error) {
       logSyncError('sync.tables.bodyComposition.pull', error);
       return { count: 0, errors: 1 };

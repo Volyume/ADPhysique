@@ -169,7 +169,12 @@ describe('body_composition_log pull (LWW)', () => {
     return {
       from: jest.fn(() => ({
         select: jest.fn(() => ({
-          eq: jest.fn(async () => ({ data, error })),
+          // LS-03b: pull pages via .range() now.
+          eq: jest.fn(() => ({
+            range: jest.fn(async (from, to) => (
+              error ? { data: null, error } : { data: (data || []).slice(from, to + 1), error: null }
+            )),
+          })),
         })),
       })),
     };
