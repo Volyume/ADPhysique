@@ -132,7 +132,15 @@ async function fetchAllRows(scope, queryBuilder) {
   const out = [];
   for (;;) {
     const { data, error } = await queryBuilder().range(from, from + PAGE - 1);
-    if (error) { logWarn(scope, error.message); return out; }
+    // LS-03/H-12 (Codex audit, 2026-07-12): a transport error mid-pagination
+    // means this is an INCOMPLETE view. Returning the partial rows let the
+    // caller treat the pull as clean and advance its cursor past the rows that
+    // never arrived - permanently skipped until a manual cursor reset or
+    // sign-out. Throw so the caller holds its cursor and retries next pull.
+    if (error) {
+      logWarn(scope, error.message);
+      throw new Error(`${scope}: paginated fetch failed at offset ${from}: ${error.message}`);
+    }
     if (!data?.length) return out;
     out.push(...data);
     if (data.length < PAGE) return out;
@@ -165,7 +173,14 @@ export async function fetchByIdsChunked(scope, table, column, ids, queryFactory)
         // pulls. No tombstone exists yet, so this is a no-op today.
         : getClient().from(table).select('*').in(column, slice).is('deleted_at', null);
       const { data, error } = await base.range(from, from + PAGE - 1);
-      if (error) { logWarn(scope, error.message); break; }
+      // LS-03/H-12: a chunk/page error is an incomplete result. Breaking here
+      // returned the partial aggregate as if complete, so the caller advanced
+      // its cursor past child rows (e.g. workout_sets) that never arrived.
+      // Throw instead so no caller advances a cursor over unseen rows.
+      if (error) {
+        logWarn(scope, error.message);
+        throw new Error(`${scope}: chunked fetch failed: ${error.message}`);
+      }
       if (!data?.length) break;
       out.push(...data);
       if (data.length < PAGE) break;
