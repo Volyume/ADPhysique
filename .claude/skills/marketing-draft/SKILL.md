@@ -39,26 +39,48 @@ If either is missing, ask before dispatching.
    CLAIMS-STANDARDS.md, require a PASS/FAIL verdict record with cited
    reasons).
 
-4. **On PASS:**
+4. **Cold-viewer clarity gate (BLOCKING, for social / reels / store / any
+   cold-audience creative — skip only for internal or reply drafts).**
+   Write the on-screen text (and caption) to a scratch file with NO product
+   context, then dispatch a blind reviewer:
+   Agent(description: "Blind cold-viewer clarity test", subagent_type:
+   "general-purpose", model: "opus", prompt: "You are a UK gym-goer scrolling
+   who has NEVER heard of the product. Read ONLY this file, no repo, no outside
+   knowledge: <scratch path>. For each asset answer from the on-screen text
+   alone: would line 1 stop you; what is the product; what does it do for you;
+   where do you get it and what does it cost to try; any word or line you did
+   not understand or that assumed knowledge (quote it); verdict CLEAR / PARTIAL
+   / UNCLEAR. The bar: a stranger must finish knowing (a) it reads your logged
+   training and food and makes a weekly change-or-hold call, (b) it shows the
+   reason, (c) it is on Google Play, free to start. State per asset whether all
+   three landed. Be harsh.").
+   PASS only if every asset is CLEAR and all three facts land. Any PARTIAL or
+   UNCLEAR is a FAIL: return the reviewer's exact confusions to content-writer
+   for one revision (step 5 pattern), then re-run this gate AND compliance. Do
+   not stage cold-audience creative that has not passed this gate. This gate
+   exists because a compliance PASS does not mean a stranger understands the
+   ad (founder rule, 2026-07-12).
+
+5. **On PASS (both gates):**
    Stage per lane rules — Supabase `marketing_content` if the pipeline is
    live, otherwise `marketing/hq/copy-library/` (+ `CONTENT-CALENDAR.md` if
    it's calendar-scheduled content). Report to the user exactly where it was
-   staged and its lane (AUTONOMOUS / FOUNDER-TAP / FOUNDER-ONLY), and the
-   PASS record.
+   staged and its lane (AUTONOMOUS / FOUNDER-TAP / FOUNDER-ONLY), and both the
+   compliance PASS and the clarity PASS records.
 
-5. **On FAIL:**
+6. **On FAIL (either gate):**
    Return the cited reasons to content-writer (opus) for one revision cycle
    only (same Agent call pattern as step 2, briefed with the FAIL reasons).
-   Re-run compliance-reviewer (opus) on the revision.
-   - If it PASSes on revision: proceed as step 4.
-   - If it FAILs again: move it to `marketing/hq/needs-fix/` with both FAIL
+   Re-run the failed gate AND compliance on the revision.
+   - If it PASSes on revision: proceed as step 5.
+   - If it FAILs again: move it to `marketing/hq/needs-fix/` with the FAIL
      records attached, and report this to the user plainly, including the
      cited reasons — do not attempt a third round.
 
 ## Non-negotiables
-- Never skip the compliance gate.
+- Never skip the compliance gate or, for cold-audience creative, the clarity gate.
 - Never publish directly from this skill — staging only; publishing web
   content is the `marketing-ship-web` skill's job, and other channels follow
   OPERATING-CHARTER §4 lanes.
 - Explicit model on every dispatch: content-writer=opus,
-  compliance-reviewer=opus.
+  compliance-reviewer=opus, cold-viewer clarity test=opus (general-purpose).

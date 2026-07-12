@@ -52,6 +52,43 @@ talking to another adult: vary sentence length, concrete over abstract, specific
 numbers over vague claims, plain over clever. A single banned pattern FAILS the
 gate.
 
+## Advertising register — social, reels, store, any cold-audience creative (binding)
+Learned the hard way, 2026-07-12. A cold viewer has never heard of Volyume and
+is scrolling. Every ad or social piece obeys all of this or it fails:
+- **Say what Volyume is in the first line or two, never later.** No mood opens,
+  no withholding the product for effect. Line one is the plain sentence a
+  stranger gets: "Volyume is a workout and food-tracking app that tells you
+  what to change each week." A hook that opens on the viewer's own problem is
+  allowed only if the product is named and explained by the second beat.
+- **Say-it-out-loud test (CLAIMS-STANDARDS §9.10).** Every on-screen line and
+  caption sentence must be something a person would say to a mate out loud
+  without sounding odd. Compressed shorthand that only parses if you already
+  know the product fails, however technically accurate. Real failures that must
+  never recur: "same data in, same answer out", "one flat number can be water",
+  "and it shows its working". If a line needs a beat of decoding, rewrite it as
+  the sentence a person would actually say.
+- **No insider compression (§9.11).** No feature names or engine terms before
+  the plain explanation. "Weekly coaching", not "Precision Coaching", until the
+  plain meaning is on screen.
+- **Show the real app.** Every cold-audience social asset carries at least one
+  real branded screenshot (identity Addendum A2, demo-account data, manifest
+  usage rules). Abstract diagrams alone are not evidence.
+- **Proof is the one verified decision card only.** The in-app HOLD output
+  "Need at least 3 morning weights for a reliable trend" with the traceable
+  figure 3. Never invent card content, a verdict, a number, or a reason line.
+- **Every "Free to start" carries "The weekly coaching is Pro" beside it.** The
+  weekly coaching is Pro (PRODUCT-FACTS B); never let free-to-start imply the
+  coaching is free.
+- **No claim about what other apps do** beyond the one verified fact: loggers
+  and food apps record what you did and leave the weekly decision to you
+  (PRODUCT-FACTS A). "Most apps push a weekly change" is false and banned.
+- **The reason is the selling point.** What no tracker gives you is the reason
+  behind the weekly call. Lead with it.
+- A cold-audience asset is not done until it passes a blind cold-viewer
+  clarity check: a stranger reading only the on-screen words must come away
+  knowing what the app is, what it does, and where to get it. The gate runs
+  this; write to pass it first time.
+
 ## Hard bounds (all apply, always)
 - Never commit or push git.
 - Never touch the app's `src/` or `supabase/` directories.

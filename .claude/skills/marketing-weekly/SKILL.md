@@ -60,11 +60,35 @@ the ledger and the digest, never swallowed.
      attached, and record the incident in the ledger (step 9). Do not send it
      for a third round inside this cycle.
 
+5b. **Cold-viewer clarity gate (BLOCKING) on every cold-audience artefact
+   (social, reels, store copy) that passed compliance in step 5.**
+   A compliance PASS proves the copy is true and on-brand; it does NOT prove a
+   stranger understands the ad. This gate proves that (founder rule,
+   2026-07-12, after a batch that passed compliance but read as nonsense to a
+   cold viewer). Write each artefact's on-screen text and caption to a scratch
+   file with NO product context, then dispatch:
+   Agent(description: "Blind cold-viewer clarity test", subagent_type:
+   "general-purpose", model: "opus", prompt: "You are a UK gym-goer scrolling
+   who has NEVER heard of the product. Read ONLY <scratch path>, no repo, no
+   outside knowledge. Per asset, from the on-screen text alone: would line 1
+   stop you; what is the product; what does it do for you; where to get it and
+   what it costs to try; any line you did not understand or that assumed
+   knowledge (quote it); verdict CLEAR / PARTIAL / UNCLEAR. Bar: a stranger
+   must finish knowing (a) it reads your logged training and food and makes a
+   weekly change-or-hold call, (b) it shows the reason, (c) it is on Google
+   Play, free to start. Say per asset whether all three landed. Be harsh.").
+   Only CLEAR-on-all-three passes. Any PARTIAL/UNCLEAR returns to
+   content-writer (opus) once with the exact confusions, then re-runs this gate
+   AND compliance. A second failure goes to `needs-fix/` and the ledger. Do not
+   design or stage cold-audience creative that has not passed this gate.
+
 6. **Dispatch creative-designer (sonnet)** for visuals of PASSed items only.
    Agent(description: "Visuals for passed content", subagent_type:
    "creative-designer", model: "sonnet", prompt: list only the artefacts that
-   carry a compliance PASS from step 5, with their PASS record reference,
-   and require Canva assets within brand and claims rules).
+   carry BOTH a compliance PASS (step 5) and, for cold-audience creative, a
+   clarity PASS (step 5b), with the record references, and require assets
+   within brand and claims rules, real app screenshot included per identity
+   Addendum A2).
 
 7. **Stage PASSed items.**
    If the Supabase `marketing_content` pipeline is live, stage there with the
@@ -93,7 +117,8 @@ the ledger and the digest, never swallowed.
     founder has explicitly authorised auto-send in this conversation.
 
 ## Non-negotiables
-- Never skip the compliance-reviewer step for any artefact.
+- Never skip the compliance-reviewer step for any artefact, or the cold-viewer
+  clarity gate (step 5b) for any cold-audience creative.
 - Never let marketing-director, content-writer, or any sonnet-tier agent
   override or wave through a compliance FAIL.
 - A system failure at any step (agent error, missing doc, tool failure) is
@@ -101,5 +126,6 @@ the ledger and the digest, never swallowed.
   reported as if it succeeded.
 - Every Agent dispatch in this skill must carry an explicit `model` field per
   the mapping above: marketing-director=opus, content-writer=opus,
-  compliance-reviewer=opus, aso-analyst=sonnet, creative-designer=sonnet,
-  community-manager=sonnet, growth-analyst=sonnet.
+  compliance-reviewer=opus, cold-viewer clarity test=opus (general-purpose),
+  aso-analyst=sonnet, creative-designer=sonnet, community-manager=sonnet,
+  growth-analyst=sonnet.

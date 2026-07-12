@@ -119,3 +119,35 @@ quality/compliance review time is the real constraint, not ideas.
   "learns you" / AI-coach framing (CLAIMS-STANDARDS §6).
 - Follower growth is never reported as the primary success metric in any
   digest or ledger entry.
+
+---
+
+## The proven cold-audience ad template (2026-07-12)
+
+Distilled from a full day of rejected drafts. A cold viewer has never heard of
+Volyume and is scrolling. Every reel and carousel follows this six-beat spine,
+and passes the blind cold-viewer clarity gate (a stranger reading only the
+on-screen words must learn what it is, what it does, and where to get it):
+
+1. **Say what it is, plainly, in the first line.** "Volyume is a workout and
+   food-tracking app that tells you what to change each week." A problem-first
+   hook is allowed only if the product is named and explained by beat 2.
+2. **What it does, in one plain sentence.** "You log your training and your
+   meals. Every week it reads them and makes one call: change something, or
+   hold."
+3. **The reason is the selling point.** "And it shows you the reason behind
+   the call, in plain English." No tracker gives you this.
+4. **Show the real app.** A branded screenshot (Addendum A2), demo data.
+5. **Proof: the one verified HOLD card.** "Need at least 3 morning weights for
+   a reliable trend." Never invent card content.
+6. **CTA.** "Volyume. Free to start on Google Play. The weekly coaching is
+   Pro." Free and Pro always named together.
+
+Worked reference batch: `copy-library/social/week-1-reels-v3.md` (compliance
+PASS on record; concepts A and C cleared a blind cold viewer first time).
+
+**Banned, learned the hard way:** mood opens that hide the product; lines that
+only parse if you already know the app ("same data in, same answer out", "one
+flat number can be water", "and it shows its working"); any claim that other
+apps push weekly changes (false); a "Free to start" with no "the weekly
+coaching is Pro" beside it.
