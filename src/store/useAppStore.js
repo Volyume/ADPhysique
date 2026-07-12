@@ -378,6 +378,37 @@ const useAppStore = create((set, get) => ({
             { prevUid, status: res?.status, erroredCount: res?.errored_count ?? null });
           return { ok: false, reason: 'unsynced' };
         }
+        // AC-04 (Codex audit, 2026-07-12): the push-first syncAll re-pushes
+        // every table by UPSERT, which CANNOT express a DELETE. The only cloud
+        // delete path is the workout_delete / workout_set_delete tombstones in
+        // pending_sync_ops (src/lib/syncQueue.js), and the wipe below destroys
+        // that queue - so a workout the user deleted offline would resurrect on
+        // the next sign-in. Ship the tombstones first (drain the queue), then
+        // refuse to wipe while any delete op remains un-shipped, unless the user
+        // forced sign-out through the "sign out anyway" escape hatch. This is
+        // the delete-shaped hole the 'we deliberately do NOT block on pending'
+        // note above is blind to (that reasoning holds only for upserts).
+        try {
+          // eslint-disable-next-line global-require
+          const sq = require('../lib/syncQueue');
+          // eslint-disable-next-line global-require
+          const sbClient = require('../lib/supabase').getSupabaseClient?.();
+          if (sbClient) await sq.drainSyncQueue(sbClient, prevUid);
+          const remainingDeletes = await sq.getPendingDeleteOpCount(prevUid);
+          if (!force && remainingDeletes > 0) {
+            log.logWarn('clearAuthStateForSignOut.pendingDeletes',
+              'sign-out aborted: delete tombstones not yet shipped, keeping user signed in',
+              { prevUid, remainingDeletes });
+            return { ok: false, reason: 'unsynced' };
+          }
+        } catch (e) {
+          if (!force) {
+            log.logWarn('clearAuthStateForSignOut.deleteDrainFailed',
+              'sign-out aborted: could not confirm delete tombstones shipped',
+              { prevUid, error: e?.message });
+            return { ok: false, reason: 'unsynced' };
+          }
+        }
         try { await flushPendingTelemetry(); } catch (_) {}
       } catch (e) {
         if (!force) {
