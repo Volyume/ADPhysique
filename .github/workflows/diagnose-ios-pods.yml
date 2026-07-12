@@ -25,6 +25,15 @@ jobs:
       - name: Checkout (eas-cli must run inside the project)
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies (config evaluation needs node_modules)
+        run: npm ci --legacy-peer-deps --ignore-scripts
+
       - name: Build metadata (error + any log URLs)
         run: |
           npx -y eas-cli@latest build:view "$BUILD_ID" --json > build.json || true
