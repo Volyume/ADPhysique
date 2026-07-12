@@ -121,6 +121,128 @@ export async function getContentByStatus(
   return grouped;
 }
 
+export interface MarketingChannelRow {
+  id: string;
+  channel: string;
+  account_ref: string | null;
+  status: string;
+  capability: string;
+  notes: string | null;
+  updated_at: string;
+}
+
+// All marketing_channels rows, alphabetical by channel. SELECT (and UPDATE,
+// unused here) on this table is RLS-gated on marketing_admins membership,
+// same as every other internal marketing table; a non-admin session gets
+// zero rows.
+export async function getChannels(supabase: SupabaseClient): Promise<MarketingChannelRow[]> {
+  const { data, error } = await supabase
+    .from('marketing_channels')
+    .select('id, channel, account_ref, status, capability, notes, updated_at')
+    .order('channel', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as MarketingChannelRow[];
+}
+
+export interface MarketingWeeklyReport {
+  // Monday of the week, as a YYYY-MM-DD day key in Europe/London.
+  weekStart: string;
+  kindCounts: Record<string, number>;
+  rows: MarketingLedgerRow[];
+  // Latest marketing_metrics value per metric within the week.
+  metrics: MarketingMetricRow[];
+}
+
+const REPORT_WEEKS = 8;
+
+// Formats an instant as its calendar day in Europe/London; the en-CA locale
+// yields YYYY-MM-DD directly.
+const LONDON_DAY = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Europe/London',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+// Monday of the week containing the given YYYY-MM-DD day key. UK-local weeks
+// start Monday, matching the app's dayKey convention.
+function mondayOfWeek(dayKey: string): string {
+  const d = new Date(`${dayKey}T00:00:00Z`);
+  const sinceMonday = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - sinceMonday);
+  return d.toISOString().slice(0, 10);
+}
+
+// Weekly report rollups derived server-side from marketing_ledger and
+// marketing_metrics. There is deliberately NO marketing_reports table (cloud
+// schema changes are founder-gated; ruling recorded in DASHBOARD-SPEC.md
+// section 1). Weeks are Europe/London, Monday-start. Returns the weeks with
+// any activity among the last REPORT_WEEKS, newest first; each carries its
+// ledger rows (newest first), counts per ledger kind, and the latest metric
+// value per metric within that week. Both reads are RLS-gated on
+// marketing_admins membership, as everywhere else in this file.
+export async function getWeeklyReports(
+  supabase: SupabaseClient,
+): Promise<MarketingWeeklyReport[]> {
+  const currentWeekStart = mondayOfWeek(LONDON_DAY.format(new Date()));
+  const cutoff = new Date(`${currentWeekStart}T00:00:00Z`);
+  cutoff.setUTCDate(cutoff.getUTCDate() - 7 * (REPORT_WEEKS - 1));
+  const cutoffKey = cutoff.toISOString().slice(0, 10);
+  // Query the ledger from one day before the cutoff Monday so rows late on
+  // the previous UTC day that fall inside the London week (BST offset) are
+  // not missed; the week-key filter below trims any genuine overshoot.
+  const queryFloor = new Date(cutoff);
+  queryFloor.setUTCDate(queryFloor.getUTCDate() - 1);
+
+  const [ledgerRes, metricsRes] = await Promise.all([
+    supabase
+      .from('marketing_ledger')
+      .select('id, occurred_at, action, channel, cost_pence, result, kind, detail')
+      .gte('occurred_at', queryFloor.toISOString())
+      .order('occurred_at', { ascending: false }),
+    supabase
+      .from('marketing_metrics')
+      .select('metric, value, metric_date, source')
+      .gte('metric_date', cutoffKey)
+      .order('metric_date', { ascending: false }),
+  ]);
+  if (ledgerRes.error) throw ledgerRes.error;
+  if (metricsRes.error) throw metricsRes.error;
+
+  const weeks = new Map<string, MarketingWeeklyReport>();
+  const weekFor = (key: string): MarketingWeeklyReport => {
+    let week = weeks.get(key);
+    if (!week) {
+      week = { weekStart: key, kindCounts: {}, rows: [], metrics: [] };
+      weeks.set(key, week);
+    }
+    return week;
+  };
+
+  for (const row of (ledgerRes.data ?? []) as MarketingLedgerRow[]) {
+    const key = mondayOfWeek(LONDON_DAY.format(new Date(row.occurred_at)));
+    if (key < cutoffKey) continue;
+    const week = weekFor(key);
+    week.rows.push(row);
+    week.kindCounts[row.kind] = (week.kindCounts[row.kind] ?? 0) + 1;
+  }
+
+  // Metric rows arrive newest-first, so the first row seen per (week,
+  // metric) pair is the latest value for that metric within the week.
+  for (const row of (metricsRes.data ?? []) as MarketingMetricRow[]) {
+    const key = mondayOfWeek(row.metric_date);
+    if (key < cutoffKey) continue;
+    const week = weekFor(key);
+    if (!week.metrics.some((m) => m.metric === row.metric)) {
+      week.metrics.push(row);
+    }
+  }
+
+  return Array.from(weeks.values())
+    .sort((a, b) => (a.weekStart < b.weekStart ? 1 : -1))
+    .slice(0, REPORT_WEEKS);
+}
+
 const LEDGER_PAGE_SIZE = 50;
 
 // marketing_ledger, newest first by occurred_at, paged 50 rows at a time.
