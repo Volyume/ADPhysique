@@ -61,6 +61,14 @@ If either is missing, ask before dispatching.
    exists because a compliance PASS does not mean a stranger understands the
    ad (founder rule, 2026-07-12).
 
+4b. **Principles scoring (BLOCKING, cold-audience creative only).** Dispatch
+   Agent(description: "Principles rubric scoring", subagent_type:
+   "general-purpose", model: "opus") to grade the artefact against the HOOK
+   and AD-STRUCTURE rubrics in `marketing/hq/ADVERTISING-PRINCIPLES.md` (the
+   reviewer reads that doc first; its DO-NOT-USE list is an automatic FAIL if
+   anything from it appears). Bar: hook 4+, every [required] structure line
+   passing. Failures follow the step 6 one-revision path.
+
 5. **On PASS (both gates):**
    Stage per lane rules — Supabase `marketing_content` if the pipeline is
    live, otherwise `marketing/hq/copy-library/` (+ `CONTENT-CALENDAR.md` if

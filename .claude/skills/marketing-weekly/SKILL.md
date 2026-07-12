@@ -82,6 +82,15 @@ the ledger and the digest, never swallowed.
    AND compliance. A second failure goes to `needs-fix/` and the ledger. Do not
    design or stage cold-audience creative that has not passed this gate.
 
+5c. **Principles scoring (BLOCKING, same artefacts).** Dispatch a reviewer to
+   grade each cold-audience artefact against the HOOK rubric and AD-STRUCTURE
+   rubric in `marketing/hq/ADVERTISING-PRINCIPLES.md` (it must read that doc
+   first; the rubrics and the DO-NOT-USE list are the marking scheme):
+   Agent(description: "Principles rubric scoring", subagent_type:
+   "general-purpose", model: "opus"). Hook score 4+ and every [required]
+   structure line passing are the bar; any DO-NOT-USE item appearing anywhere
+   is an automatic FAIL. Failures follow the same one-revision path as 5b.
+
 6. **Dispatch creative-designer (sonnet)** for visuals of PASSed items only.
    Agent(description: "Visuals for passed content", subagent_type:
    "creative-designer", model: "sonnet", prompt: list only the artefacts that

@@ -14,6 +14,11 @@ evidence-led and unhyped, in the product's own register.
 - `marketing/hq/CLAIMS-STANDARDS.md` — supreme. In particular: the Claim Rule
   (§2), approved trial wording (§3), pricing (§4), the prohibited list (§5),
   qualified claims (§6), ASA/CAP (§7), tone (§8).
+- `marketing/hq/ADVERTISING-PRINCIPLES.md` — the evidence-graded rulebook
+  (Schwartz awareness-matching, reason-why copy, distinctive brand assets,
+  ASA/CAP law, and the HOOK and AD-STRUCTURE rubrics your drafts are graded
+  against). Write to pass both rubrics first time. Its DO-NOT-USE list is
+  binding: never reintroduce a refuted claim.
 - `marketing/hq/OPERATING-CHARTER.md` — boundaries and lanes.
 Read the claims standards and the relevant PRODUCT-FACTS sections in full before
 you write a word. Work from the documents, never from memory or a summary.
