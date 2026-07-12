@@ -1,16 +1,32 @@
 -- migrate_120_marketing_hq_tables.sql
 --
--- Purpose:          Create the four internal Volyume Marketing HQ tables:
---                   marketing_content (the content pipeline, draft through
---                   compliance gate to publish), marketing_metrics (daily
---                   growth numbers), marketing_ledger (action/publish/
---                   incident/decision audit trail) and marketing_channels
---                   (per-channel status and autonomy capability). None of
---                   these are ever public-facing -- unlike
---                   marketing_waitlist (migrate_119), they carry no anon
---                   access at all. Additive only -- no existing table,
---                   column, policy or function is touched. Spec:
---                   marketing/hq/DATA-SCHEMA.md sections 2-5.
+-- Purpose:          Create marketing_admins plus the four internal Volyume
+--                   Marketing HQ tables: marketing_content (the content
+--                   pipeline, draft through compliance gate to publish),
+--                   marketing_metrics (daily growth numbers),
+--                   marketing_ledger (action/publish/incident/decision
+--                   audit trail) and marketing_channels (per-channel status
+--                   and autonomy capability). None of these are ever
+--                   public-facing -- unlike marketing_waitlist
+--                   (migrate_119), they carry no anon access at all.
+--                   Additive only -- no existing table, column, policy or
+--                   function is touched. Spec:
+--                   marketing/hq/DATA-SCHEMA.md sections 1a-5.
+--
+--                   Admin gating rationale: this Supabase project's
+--                   `authenticated` role is shared with the Volyume mobile
+--                   and web companion app's END USERS -- it is NOT a
+--                   founder-only role. A bare `TO authenticated USING
+--                   (true)` policy would let any logged-in app user read
+--                   (and on content/channels, write) the marketing
+--                   pipeline, metrics and ledger. Every authenticated
+--                   policy on the four marketing tables is therefore
+--                   gated through a `marketing_admins` allow-list keyed on
+--                   the JWT email claim, so only rows for admins in that
+--                   table pass RLS. marketing_admins itself has no anon or
+--                   authenticated policies at all -- it is managed
+--                   exclusively by service_role, so an app user cannot add
+--                   themselves to it even indirectly.
 --
 -- Applied locally:  NO -- cloud-only marketing tables, no local SQLite
 --                   equivalent exists or is planned.
@@ -19,12 +35,45 @@
 -- Safe to re-run:   YES (idempotent). CREATE TABLE IF NOT EXISTS
 --                   throughout, ALTER TABLE ... ENABLE ROW LEVEL SECURITY
 --                   (idempotent by nature), DROP POLICY IF EXISTS before
---                   each CREATE POLICY, GRANT (idempotent by nature).
+--                   each CREATE POLICY (including the old non-admin-gated
+--                   policy names, so a re-run after this edit stays
+--                   clean), GRANT (idempotent by nature), INSERT ...
+--                   ON CONFLICT DO NOTHING for the seed row.
 -- Rollback:         DROP TABLE marketing_content; DROP TABLE
 --                   marketing_metrics; DROP TABLE marketing_ledger; DROP
---                   TABLE marketing_channels; -- no app data depends on
---                   any of them, all four are entirely separate from the
---                   product schema.
+--                   TABLE marketing_channels; DROP TABLE
+--                   marketing_admins; -- no app data depends on any of
+--                   them, all five are entirely separate from the product
+--                   schema.
+
+-- ---------------------------------------------------------------------
+-- marketing_admins: allow-list of emails permitted to read/manage the
+-- marketing tables from the dashboard. The project's `authenticated` role
+-- is shared with app end users, so every authenticated policy on the
+-- marketing tables below is gated through this table rather than granted
+-- to `authenticated` at large.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.marketing_admins (
+  email       text PRIMARY KEY,
+  added_at    timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.marketing_admins ENABLE ROW LEVEL SECURITY;
+
+-- No anon or authenticated policies at all -- service_role only manages
+-- this table. An app end user (authenticated) has zero access, including
+-- to read who the admins are.
+DROP POLICY IF EXISTS marketing_admins_service_role_all ON public.marketing_admins;
+CREATE POLICY marketing_admins_service_role_all
+  ON public.marketing_admins
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+INSERT INTO public.marketing_admins (email)
+VALUES ('allansdouglas1983@gmail.com')
+ON CONFLICT DO NOTHING;
 
 -- ---------------------------------------------------------------------
 -- marketing_content: the content pipeline record.
@@ -59,22 +108,34 @@ ALTER TABLE public.marketing_content ENABLE ROW LEVEL SECURITY;
 -- No anon access at all -- this table never faces the public internet.
 -- (No policy is created for anon, so it has zero access by default.)
 
--- authenticated (founder dashboard): read the pipeline, and update status
--- transitions (approve/reject).
+-- authenticated (founder dashboard, admin-gated): read the pipeline, and
+-- update status transitions (approve/reject). Gated through
+-- marketing_admins because `authenticated` is shared with app end users.
 DROP POLICY IF EXISTS marketing_content_authenticated_select ON public.marketing_content;
-CREATE POLICY marketing_content_authenticated_select
+DROP POLICY IF EXISTS marketing_content_admin_select ON public.marketing_content;
+CREATE POLICY marketing_content_admin_select
   ON public.marketing_content
   FOR SELECT
   TO authenticated
-  USING (true);
+  USING (EXISTS (
+    SELECT 1 FROM public.marketing_admins ma
+    WHERE ma.email = (auth.jwt() ->> 'email')
+  ));
 
 DROP POLICY IF EXISTS marketing_content_authenticated_update ON public.marketing_content;
-CREATE POLICY marketing_content_authenticated_update
+DROP POLICY IF EXISTS marketing_content_admin_update ON public.marketing_content;
+CREATE POLICY marketing_content_admin_update
   ON public.marketing_content
   FOR UPDATE
   TO authenticated
-  USING (true)
-  WITH CHECK (true);
+  USING (EXISTS (
+    SELECT 1 FROM public.marketing_admins ma
+    WHERE ma.email = (auth.jwt() ->> 'email')
+  ))
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM public.marketing_admins ma
+    WHERE ma.email = (auth.jwt() ->> 'email')
+  ));
 
 DROP POLICY IF EXISTS marketing_content_service_role_all ON public.marketing_content;
 CREATE POLICY marketing_content_service_role_all
@@ -106,11 +167,15 @@ ALTER TABLE public.marketing_metrics ENABLE ROW LEVEL SECURITY;
 -- No anon access at all.
 
 DROP POLICY IF EXISTS marketing_metrics_authenticated_select ON public.marketing_metrics;
-CREATE POLICY marketing_metrics_authenticated_select
+DROP POLICY IF EXISTS marketing_metrics_admin_select ON public.marketing_metrics;
+CREATE POLICY marketing_metrics_admin_select
   ON public.marketing_metrics
   FOR SELECT
   TO authenticated
-  USING (true);
+  USING (EXISTS (
+    SELECT 1 FROM public.marketing_admins ma
+    WHERE ma.email = (auth.jwt() ->> 'email')
+  ));
 
 DROP POLICY IF EXISTS marketing_metrics_service_role_all ON public.marketing_metrics;
 CREATE POLICY marketing_metrics_service_role_all
@@ -144,11 +209,15 @@ ALTER TABLE public.marketing_ledger ENABLE ROW LEVEL SECURITY;
 -- No anon access at all.
 
 DROP POLICY IF EXISTS marketing_ledger_authenticated_select ON public.marketing_ledger;
-CREATE POLICY marketing_ledger_authenticated_select
+DROP POLICY IF EXISTS marketing_ledger_admin_select ON public.marketing_ledger;
+CREATE POLICY marketing_ledger_admin_select
   ON public.marketing_ledger
   FOR SELECT
   TO authenticated
-  USING (true);
+  USING (EXISTS (
+    SELECT 1 FROM public.marketing_admins ma
+    WHERE ma.email = (auth.jwt() ->> 'email')
+  ));
 
 DROP POLICY IF EXISTS marketing_ledger_service_role_all ON public.marketing_ledger;
 CREATE POLICY marketing_ledger_service_role_all
@@ -182,19 +251,30 @@ ALTER TABLE public.marketing_channels ENABLE ROW LEVEL SECURITY;
 -- No anon access at all.
 
 DROP POLICY IF EXISTS marketing_channels_authenticated_select ON public.marketing_channels;
-CREATE POLICY marketing_channels_authenticated_select
+DROP POLICY IF EXISTS marketing_channels_admin_select ON public.marketing_channels;
+CREATE POLICY marketing_channels_admin_select
   ON public.marketing_channels
   FOR SELECT
   TO authenticated
-  USING (true);
+  USING (EXISTS (
+    SELECT 1 FROM public.marketing_admins ma
+    WHERE ma.email = (auth.jwt() ->> 'email')
+  ));
 
 DROP POLICY IF EXISTS marketing_channels_authenticated_update ON public.marketing_channels;
-CREATE POLICY marketing_channels_authenticated_update
+DROP POLICY IF EXISTS marketing_channels_admin_update ON public.marketing_channels;
+CREATE POLICY marketing_channels_admin_update
   ON public.marketing_channels
   FOR UPDATE
   TO authenticated
-  USING (true)
-  WITH CHECK (true);
+  USING (EXISTS (
+    SELECT 1 FROM public.marketing_admins ma
+    WHERE ma.email = (auth.jwt() ->> 'email')
+  ))
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM public.marketing_admins ma
+    WHERE ma.email = (auth.jwt() ->> 'email')
+  ));
 
 DROP POLICY IF EXISTS marketing_channels_service_role_all ON public.marketing_channels;
 CREATE POLICY marketing_channels_service_role_all
@@ -209,13 +289,17 @@ GRANT SELECT, UPDATE ON public.marketing_channels TO authenticated;
 -- Verification:
 --   SELECT table_name FROM information_schema.tables
 --   WHERE table_schema = 'public' AND table_name IN (
---     'marketing_content', 'marketing_metrics', 'marketing_ledger',
---     'marketing_channels'
+--     'marketing_admins', 'marketing_content', 'marketing_metrics',
+--     'marketing_ledger', 'marketing_channels'
 --   );
---   -- expect 4 rows
+--   -- expect 5 rows
 --   SELECT tablename, policyname, cmd, roles FROM pg_policies
 --   WHERE tablename IN (
---     'marketing_content', 'marketing_metrics', 'marketing_ledger',
---     'marketing_channels'
+--     'marketing_admins', 'marketing_content', 'marketing_metrics',
+--     'marketing_ledger', 'marketing_channels'
 --   );
---   -- expect no policy naming anon on any of the four tables
+--   -- expect no policy naming anon on any of the five tables, no policy
+--   -- naming authenticated on marketing_admins, and every authenticated
+--   -- policy on the other four using the marketing_admins EXISTS check
+--   SELECT email FROM public.marketing_admins;
+--   -- expect allansdouglas1983@gmail.com
