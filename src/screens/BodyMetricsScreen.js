@@ -324,6 +324,11 @@ function BodyFatTrendChart({ entries }) {
 
   const data = withData.map((e, i) => ({
     value: smoothed[i],
+    // AX-02 (launch accessibility audit): every point's real date, for the
+    // adjustable accessibilityValue and the "View data" list. Kept separate
+    // from `label` below (still sparse, first/last only) so the visual
+    // x-axis is unchanged.
+    date: safeFormatDate(e.metric_date, 'd MMM'),
     label: i === 0 || i === withData.length - 1
       ? safeFormatDate(e.metric_date, 'd MMM')
       : '',
@@ -352,6 +357,7 @@ function BodyFatTrendChart({ entries }) {
         min={minV}
         max={maxV}
         backgroundColor={t.colors.surface}
+        accessibilitySummary="Body fat trend chart"
       />
       <Text style={[chartStyles.smoothedHint, chartLive.smoothedHint]}>Smoothed trend, faint line is each reading</Text>
     </View>
@@ -388,6 +394,10 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
 
   const data = withData.map((e, i) => ({
     value: e[measureKey],
+    // AX-02 (launch accessibility audit): every point's real date, for the
+    // adjustable accessibilityValue and the "View data" list; `label` below
+    // stays sparse (first/last only) so the visual x-axis is unchanged.
+    date: safeFormatDate(e.metric_date, 'd MMM'),
     label: i === 0 || i === withData.length - 1
       ? safeFormatDate(e.metric_date, 'd MMM')
       : '',
@@ -412,6 +422,7 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
         min={minV}
         max={maxV}
         backgroundColor={t.colors.surface}
+        accessibilitySummary={`${label} trend chart`}
       />
     </View>
   );

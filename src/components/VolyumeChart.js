@@ -40,11 +40,21 @@ import {
   plotPoints, linePath, smoothPath, areaPath, ticks, paddedDomain, nearestPointIndex,
 } from '../lib/chartGeometry';
 import * as haptics from '../lib/haptics';
+import Button from './Button';
 
 function formatTick(value, span) {
   if (span <= 4) return (Math.round(value * 10) / 10).toString();
   return Math.round(value).toString();
 }
+
+// AX-02 (launch accessibility audit): the adjustable increment/decrement
+// pair a screen-reader user drives with a swipe up/down once the chart is
+// focused, same idiom as ProgressPhotoViewer.js's stage accessibilityActions.
+// Module-scope so it's a stable reference across renders.
+const CHART_A11Y_ACTIONS = [
+  { name: 'increment', label: 'Next point' },
+  { name: 'decrement', label: 'Previous point' },
+];
 
 export default function VolyumeChart({
   data = [],
@@ -79,6 +89,10 @@ export default function VolyumeChart({
   interactive = false,
   formatTooltip = null,
   accessibilityLabel,
+  // AX-02 (launch accessibility audit): a chart-level summary used as the
+  // container's accessible name when a host doesn't already pass its own
+  // `accessibilityLabel` (that always wins, so existing hosts are unchanged).
+  accessibilitySummary,
   // COMP-019 Stage 1b bar variant. variant='bar' renders compact bars (no axes)
   // with per-bar colour from data[i].color; scrub dims the non-active bars and
   // reports the active index via onScrubIndex so a host with no tooltip room
@@ -110,6 +124,12 @@ export default function VolyumeChart({
   const gradId = useRef(`volyumeFill${Math.random().toString(36).slice(2, 9)}`).current;
   const [activeIndex, setActiveIndex] = useState(-1);
   const activeRef = useRef(-1);
+  // AX-02: an explicit accessibilityLabel always wins (unchanged behaviour
+  // for existing hosts); accessibilitySummary is the new fallback name.
+  const resolvedA11yLabel = accessibilityLabel || accessibilitySummary;
+  // AX-02 "View data" text alternative: collapsed by default, revealed on
+  // request. Line variant only (see the render below).
+  const [showTable, setShowTable] = useState(false);
 
   const values = useMemo(() => data.map(d => d.value).filter(Number.isFinite), [data]);
   const values2 = useMemo(
@@ -183,6 +203,58 @@ export default function VolyumeChart({
     if (onScrubIndex) onScrubIndex(null);
   }
 
+  // AX-02 (launch accessibility audit): "date + value, Personal best" for one
+  // point, index into `data` (line variant; `data`/`points` stay index-aligned
+  // the same way the existing x-axis label render above already assumes).
+  // Prefers the host's own `formatTooltip` (already dated/unit-formatted by
+  // the host) and only falls back to the raw point when a host doesn't pass
+  // one; `d.date` lets a host supply a full per-point date for this and the
+  // "View data" list without changing the sparse `d.label` used for the
+  // visual x-axis (unaffected either way).
+  function pointCore(idx) {
+    if (idx < 0 || idx >= data.length) return '';
+    const isPR = Array.isArray(highlightIndices) && highlightIndices.includes(idx);
+    if (formatTooltip) {
+      const tt = formatTooltip(idx);
+      if (tt) return `${tt.title}${tt.sub ? `, ${tt.sub}` : ''}${isPR ? ', Personal best' : ''}`;
+    }
+    const d = data[idx] || {};
+    const dateText = d.date || d.label || '';
+    const valueText = Number.isFinite(d.value) ? `${formatTick(d.value, span)}${yAxisSuffix}` : '';
+    const parts = [dateText, valueText].filter(Boolean);
+    return `${parts.join(', ')}${isPR ? ', Personal best' : ''}`;
+  }
+  // The series name is folded into the value text itself (not just the
+  // container's accessibilityLabel) because TalkBack/VoiceOver commonly only
+  // re-speak accessibilityValue, not the label, after an increment/decrement
+  // action on an already-focused adjustable control.
+  function describePoint(idx) {
+    const core = pointCore(idx);
+    if (!core) return resolvedA11yLabel || '';
+    return resolvedA11yLabel ? `${resolvedA11yLabel}. ${core}` : core;
+  }
+
+  // Line-variant adjustable control: current selection defaults to the most
+  // recent point until the user (or the pan scrub) moves it, without
+  // changing the sighted default (the crosshair only renders once
+  // `activeIndex >= 0`, unchanged below).
+  const selectedIndex = activeIndex >= 0 && activeIndex < data.length ? activeIndex : data.length - 1;
+  const canAdjust = !isBar && data.length > 1;
+
+  function onChartAccessibilityAction(e) {
+    const name = e?.nativeEvent?.actionName;
+    if (name !== 'increment' && name !== 'decrement') return;
+    if (!points.length) return;
+    const current = activeRef.current >= 0 && activeRef.current < points.length
+      ? activeRef.current
+      : points.length - 1;
+    const next = Math.max(0, Math.min(points.length - 1, current + (name === 'increment' ? 1 : -1)));
+    activeRef.current = next;
+    setActiveIndex(next);
+    haptics.selection();
+    if (onScrubIndex) onScrubIndex(next);
+  }
+
   // Keep the latest scrub handlers in a ref so the (stable) gesture always calls
   // the CURRENT closure, never a stale `points`/`formatTooltip` captured when
   // the gesture was first built. Assigning in render is the standard latest-ref
@@ -216,18 +288,24 @@ export default function VolyumeChart({
         accessibilityLabel={accessibilityLabel}
         accessibilityHint={interactive ? 'Touch and hold, then drag to read each bar.' : undefined}
       >
-        <Svg width={width} height={height}>
-          {bars.map((b, i) => (
-            <Rect
-              key={`bar-${i}`}
-              x={b.x} y={b.y} width={b.w} height={b.h} rx={2}
-              fill={b.color}
-              // Bound by bars.length so a stale index (e.g. after the window
-              // narrows) dims nothing rather than every bar.
-              opacity={activeIndex >= 0 && activeIndex < bars.length && activeIndex !== i ? 0.4 : 1}
-            />
-          ))}
-        </Svg>
+        {/* AX-02: the container above already carries the accessible name/hint;
+            the raw SVG shapes underneath must not also surface as unlabelled
+            nodes (bar variant follow-on: adjustable/View data not yet wired
+            here, see VolyumeChart.js module doc). */}
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <Svg width={width} height={height}>
+            {bars.map((b, i) => (
+              <Rect
+                key={`bar-${i}`}
+                x={b.x} y={b.y} width={b.w} height={b.h} rx={2}
+                fill={b.color}
+                // Bound by bars.length so a stale index (e.g. after the window
+                // narrows) dims nothing rather than every bar.
+                opacity={activeIndex >= 0 && activeIndex < bars.length && activeIndex !== i ? 0.4 : 1}
+              />
+            ))}
+          </Svg>
+        </View>
       </View>
     );
     if (!interactive) return barChart;
@@ -250,82 +328,97 @@ export default function VolyumeChart({
     <View
       style={{ width, height, backgroundColor, overflow: 'hidden' }}
       pointerEvents={interactive ? 'auto' : 'none'}
-      accessibilityLabel={accessibilityLabel}
+      // AX-02 (launch accessibility audit): the chart is a single adjustable
+      // control once it carries two or more points, same idiom as
+      // ProgressPhotoViewer.js's stage. `accessibilityValue.text` (not just
+      // min/max/now) so the spoken announcement carries the actual date,
+      // value, series name and Personal-best state, not a bare number.
+      accessible
+      accessibilityLabel={resolvedA11yLabel}
+      accessibilityRole={canAdjust ? 'adjustable' : undefined}
+      accessibilityActions={canAdjust ? CHART_A11Y_ACTIONS : undefined}
+      onAccessibilityAction={canAdjust ? onChartAccessibilityAction : undefined}
+      accessibilityValue={canAdjust ? { text: describePoint(selectedIndex) } : undefined}
       accessibilityHint={interactive ? 'Touch and hold the chart, then drag to read each point.' : undefined}
     >
-      <Svg width={width} height={height}>
-        {area && (
-          <Defs>
-            <LinearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={topFill} />
-              <Stop offset="1" stopColor={botFill} />
-            </LinearGradient>
-          </Defs>
-        )}
+      {/* AX-02: the point data is now represented via accessibilityValue above
+          plus the "View data" list below, so the raw SVG shapes must not
+          also surface as unlabelled nodes to a screen reader. */}
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <Svg width={width} height={height}>
+          {area && (
+            <Defs>
+              <LinearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={topFill} />
+                <Stop offset="1" stopColor={botFill} />
+              </LinearGradient>
+            </Defs>
+          )}
 
-        {tickVals.map((tv, i) => {
-          const y = baselineY - (box.height * i) / sections;
-          return (
-            <React.Fragment key={`rule-${i}`}>
-              <Line x1={box.left} y1={y} x2={box.left + box.width} y2={y}
-                stroke={resolvedRulesColor} strokeWidth={1} strokeDasharray="3 4" />
-              <SvgText x={box.left - 6} y={y + 3} fontSize={9} fill={resolvedLabelColor} textAnchor="end">
-                {`${formatTick(tv, span)}${yAxisSuffix}`}
+          {tickVals.map((tv, i) => {
+            const y = baselineY - (box.height * i) / sections;
+            return (
+              <React.Fragment key={`rule-${i}`}>
+                <Line x1={box.left} y1={y} x2={box.left + box.width} y2={y}
+                  stroke={resolvedRulesColor} strokeWidth={1} strokeDasharray="3 4" />
+                <SvgText x={box.left - 6} y={y + 3} fontSize={9} fill={resolvedLabelColor} textAnchor="end">
+                  {`${formatTick(tv, span)}${yAxisSuffix}`}
+                </SvgText>
+              </React.Fragment>
+            );
+          })}
+
+          <Line x1={box.left} y1={baselineY} x2={box.left + box.width} y2={baselineY}
+            stroke={resolvedAxisColor} strokeWidth={1} />
+
+          {area && fillPath ? <Path d={fillPath} fill={`url(#${gradId})`} /> : null}
+
+          {points2 ? (
+            <Path d={curved ? smoothPath(points2) : linePath(points2)}
+              stroke={resolvedColor2} strokeWidth={thickness2} fill="none" />
+          ) : null}
+
+          <Path d={mainPath} stroke={resolvedColor} strokeWidth={thickness} fill="none" />
+
+          {showDots && points.map((p, i) => (
+            <Circle key={`dot-${i}`} cx={p.x} cy={p.y} r={dotRadius} fill={resolvedColor} />
+          ))}
+
+          {/* CP-5 personal-best markers: a ring-and-dot in the gold trophy token,
+              bounded by points.length so a stale index (e.g. a narrower window)
+              marks nothing rather than the wrong point. */}
+          {Array.isArray(highlightIndices) && highlightIndices.map((idx) => {
+            const p = idx >= 0 && idx < points.length ? points[idx] : null;
+            if (!p) return null;
+            return (
+              <React.Fragment key={`pr-${idx}`}>
+                <Circle cx={p.x} cy={p.y} r={5} fill="none" stroke={t.colors.gold} strokeWidth={1.5} />
+                <Circle cx={p.x} cy={p.y} r={1.5} fill={t.colors.gold} />
+              </React.Fragment>
+            );
+          })}
+
+          {/* Scrub crosshair + active point */}
+          {active ? (
+            <>
+              <Line x1={active.x} y1={box.top} x2={active.x} y2={baselineY}
+                stroke={resolvedColor} strokeWidth={1} strokeDasharray="2 3" opacity={0.7} />
+              <Circle cx={active.x} cy={active.y} r={4} fill={resolvedColor} stroke={t.colors.surface} strokeWidth={1.5} />
+            </>
+          ) : null}
+
+          {hasXLabels && data.map((d, i) => {
+            if (!d.label || !points[i]) return null;
+            const anchor = i === 0 ? 'start' : i === data.length - 1 ? 'end' : 'middle';
+            return (
+              <SvgText key={`xl-${i}`} x={points[i].x} y={height - 4} fontSize={9}
+                fill={resolvedLabelColor} textAnchor={anchor}>
+                {d.label}
               </SvgText>
-            </React.Fragment>
-          );
-        })}
-
-        <Line x1={box.left} y1={baselineY} x2={box.left + box.width} y2={baselineY}
-          stroke={resolvedAxisColor} strokeWidth={1} />
-
-        {area && fillPath ? <Path d={fillPath} fill={`url(#${gradId})`} /> : null}
-
-        {points2 ? (
-          <Path d={curved ? smoothPath(points2) : linePath(points2)}
-            stroke={resolvedColor2} strokeWidth={thickness2} fill="none" />
-        ) : null}
-
-        <Path d={mainPath} stroke={resolvedColor} strokeWidth={thickness} fill="none" />
-
-        {showDots && points.map((p, i) => (
-          <Circle key={`dot-${i}`} cx={p.x} cy={p.y} r={dotRadius} fill={resolvedColor} />
-        ))}
-
-        {/* CP-5 personal-best markers: a ring-and-dot in the gold trophy token,
-            bounded by points.length so a stale index (e.g. a narrower window)
-            marks nothing rather than the wrong point. */}
-        {Array.isArray(highlightIndices) && highlightIndices.map((idx) => {
-          const p = idx >= 0 && idx < points.length ? points[idx] : null;
-          if (!p) return null;
-          return (
-            <React.Fragment key={`pr-${idx}`}>
-              <Circle cx={p.x} cy={p.y} r={5} fill="none" stroke={t.colors.gold} strokeWidth={1.5} />
-              <Circle cx={p.x} cy={p.y} r={1.5} fill={t.colors.gold} />
-            </React.Fragment>
-          );
-        })}
-
-        {/* Scrub crosshair + active point */}
-        {active ? (
-          <>
-            <Line x1={active.x} y1={box.top} x2={active.x} y2={baselineY}
-              stroke={resolvedColor} strokeWidth={1} strokeDasharray="2 3" opacity={0.7} />
-            <Circle cx={active.x} cy={active.y} r={4} fill={resolvedColor} stroke={t.colors.surface} strokeWidth={1.5} />
-          </>
-        ) : null}
-
-        {hasXLabels && data.map((d, i) => {
-          if (!d.label || !points[i]) return null;
-          const anchor = i === 0 ? 'start' : i === data.length - 1 ? 'end' : 'middle';
-          return (
-            <SvgText key={`xl-${i}`} x={points[i].x} y={height - 4} fontSize={9}
-              fill={resolvedLabelColor} textAnchor={anchor}>
-              {d.label}
-            </SvgText>
-          );
-        })}
-      </Svg>
+            );
+          })}
+        </Svg>
+      </View>
 
       {/* Tooltip card (RN overlay, easier to style than SVG text) */}
       {tip ? (
@@ -337,8 +430,41 @@ export default function VolyumeChart({
     </View>
   );
 
-  if (!interactive) return chart;
-  return <GestureDetector gesture={pan}>{chart}</GestureDetector>;
+  const gestureWrapped = interactive ? <GestureDetector gesture={pan}>{chart}</GestureDetector> : chart;
+
+  // AX-02: the required text alternative for every line chart, collapsed by
+  // default so it stays visually unobtrusive. Rows read the same
+  // date/value/Personal-best text as the adjustable accessibilityValue above,
+  // so a screen-reader user gets an identical account either way.
+  return (
+    <View>
+      {gestureWrapped}
+      <View style={[styles.viewDataWrap, live.viewDataWrap]}>
+        <Button
+          title={showTable ? 'Hide data' : 'View data'}
+          onPress={() => setShowTable(v => !v)}
+          variant="tertiary"
+          size="sm"
+          fullWidth={false}
+          icon={showTable ? 'chevron-up' : 'chevron-down'}
+          accessibilityLabel={showTable ? 'Hide chart data' : 'View chart data as a list'}
+        />
+        {showTable ? (
+          <View accessibilityRole="list" style={[styles.dataTable, live.dataTable]}>
+            {data.map((d, i) => (
+              <Text
+                key={i}
+                accessibilityRole="text"
+                style={[styles.dataRow, live.dataRow]}
+              >
+                {pointCore(i)}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -354,6 +480,15 @@ const styles = StyleSheet.create({
   },
   tooltipTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: theme.textPrimary },
   tooltipSub: { ...type.caption, color: theme.textSecondary },
+  // AX-02 "View data" text alternative.
+  viewDataWrap: { marginTop: spacing.xs },
+  dataTable: {
+    marginTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+    paddingTop: spacing.xs,
+  },
+  dataRow: { ...type.caption, color: theme.textSecondary, paddingVertical: 2 },
 });
 
 // CP-10 stage 4 (theming, Skia/chart consumers, 2026-07-10): live override
@@ -370,5 +505,7 @@ function buildLiveStyles(t) {
     tooltip: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     tooltipTitle: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     tooltipSub: { ...t.type.caption, color: t.colors.textSecondary },
+    dataTable: { borderTopColor: t.colors.border },
+    dataRow: { ...t.type.caption, color: t.colors.textSecondary },
   };
 }

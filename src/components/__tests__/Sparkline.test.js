@@ -98,3 +98,39 @@ describe('Sparkline -- highlightIndices PR markers (item 10)', () => {
     expect(tree.root.findAllByType('Path')).toHaveLength(1);
   });
 });
+
+// AX-02 (launch accessibility audit): Sparkline renders visual trend/PR
+// markers with no semantics at all. It stays decorative by default (a host
+// that already speaks the trend in its own text needs no change); passing
+// `accessibilitySummary` exposes it as one labelled node instead.
+describe('Sparkline -- AX-02 accessibility summary', () => {
+  test('with a summary: exposes one labelled, accessible node', () => {
+    const tree = create(
+      <Sparkline data={DATA} width={WIDTH} height={HEIGHT} accessibilitySummary="Weight trend, falling" />,
+    );
+    const labelled = tree.root.findAllByProps({ accessibilityLabel: 'Weight trend, falling' });
+    expect(labelled.length).toBeGreaterThan(0);
+    expect(labelled[0].props.accessible).toBe(true);
+  });
+
+  test('without a summary: stays decorative, no accessible node and the SVG is hidden', () => {
+    const tree = create(<Sparkline data={DATA} width={WIDTH} height={HEIGHT} />);
+    expect(tree.root.findAllByProps({ accessible: true })).toHaveLength(0);
+    const hidden = tree.root.findAll((n) => n.props.accessibilityElementsHidden === true);
+    expect(hidden.length).toBeGreaterThan(0);
+    hidden.forEach((n) => expect(n.props.importantForAccessibility).toBe('no-hide-descendants'));
+  });
+
+  test('the not-enough-data placeholder follows the same summary contract', () => {
+    const withSummary = create(
+      <Sparkline data={[10]} width={WIDTH} height={HEIGHT} accessibilitySummary="Body fat trend" />,
+    );
+    const labelled = withSummary.root.findAllByProps({ accessibilityLabel: 'Body fat trend' });
+    expect(labelled.length).toBeGreaterThan(0);
+    expect(labelled[0].props.accessible).toBe(true);
+
+    const without = create(<Sparkline data={[10]} width={WIDTH} height={HEIGHT} />);
+    expect(without.root.findAllByProps({ accessible: true })).toHaveLength(0);
+    expect(without.root.findAllByProps({ accessibilityElementsHidden: true }).length).toBeGreaterThan(0);
+  });
+});
