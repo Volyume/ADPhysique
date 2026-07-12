@@ -1631,3 +1631,28 @@ logged and classification-critical paths abort recoverably on a stuck
 close (shared ref-counted native connection means a leaked probe
 poisons every later probe). Remaining enumerated lane on the board:
 migrate the four manual BEGIN/COMMIT blocks onto the queue.
+
+## D75 — L05-D2 first-food prompt REVERTED (founder device verdict, 2026-07-12)
+
+Sources: founder device walk on the fresh install (screenshots 05:14 and
+05:19, 2026-07-12), commit b7cd2ab (L05-D2, design-usability audit
+2026-07-09), DiaryScreen.js.
+
+VERDICT: REVERTED, never re-propose. L05-D2 swapped MacroRings for a
+"calm first-day prompt" while an account had never logged food. On the
+founder's own fresh-install walk that meant NO ring, NO macro targets
+and NO visibility of what to eat, on the exact day a new user plans
+their first food - while the meal builder invited them to "build a day
+or week from your targets". The audit optimised for less noise; the
+device verdict is that the numbers ARE the product on that surface.
+
+FACT CHECK recorded with it: the onboarding->nutrition-targets pipeline
+was NOT broken. The 05:19 screenshot shows the engine's own numbers
+(3497 kcal, 227g P, 440g C, 92g F) rendering in full once a food was
+logged; the empty-state card also displayed the calorie target. The
+regression was purely the display swap.
+
+Change: MacroRings renders unconditionally (first day included);
+FirstFoodPrompt component, its test, and the firstFoodPrompt guard test
+deleted; the account-wide everLoggedFood read removed from the diary
+load. A never-re-propose comment sits at the MacroRings call site.

@@ -225,6 +225,14 @@ own information design.**
   connection and acting on wrong evidence (worst prior chain: post-swap
   writes landing on a deleted inode). Behavioural pins in
   dbCrypto.closeHygiene.test.js via the injectable SQLite param.
+- R2-14 LANDED (D75, founder device verdict 2026-07-12): L05-D2
+  first-food prompt REVERTED - it hid MacroRings (ring + macro targets)
+  on never-logged accounts, so a fresh install saw no targets at all
+  while the meal builder said "build from your targets". MacroRings now
+  renders unconditionally; FirstFoodPrompt + its tests deleted; never
+  re-propose. Fact-check recorded: onboarding->targets pipeline was
+  NEVER broken (founder's 05:19 screenshot shows the exact engine
+  numbers rendering once food was logged).
 - QUEUED (enumerated, next slot): migrate the four manual BEGIN/COMMIT
   blocks onto runInTransaction so no transaction bypasses the queue -
   database.js:3155 deleteOrphanedRoutines, importExternal.js:346/404,

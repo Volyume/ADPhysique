@@ -27,7 +27,7 @@ import {
   getFoodEntriesForDay, getRecentLoggedDays, deleteFoodEntry, restoreFoodEntry, updateFoodEntry, getRollupForDay,
   applyCuratedMealToDiary,
   setWater, getWater, createSavedMeal, confirmPlannedDay, clearPlannedDay,
-  getSlotRecents, logFoodEntry, upsertSlotRecent, hasAnyFoodEntries,
+  getSlotRecents, logFoodEntry, upsertSlotRecent,
 } from '../lib/food/db';
 import { isoDate, shiftDate, weekDatesMon, weekdayShort, friendlyDate } from '../lib/food/diaryDates';
 import { createRaceGuard } from '../lib/food/loadRaceGuard';
@@ -49,7 +49,6 @@ import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import MacroRings from '../components/food/MacroRings';
-import FirstFoodPrompt from '../components/food/FirstFoodPrompt';
 import MacroBreakdownSheet from '../components/food/MacroBreakdownSheet';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
@@ -184,16 +183,6 @@ export default function DiaryScreen({ navigation, route }) {
   // EmptyDiary's optional "Copy yesterday" action; the premium meal builder
   // now owns planning for a day with no history.
   const [yesterdayHasFood, setYesterdayHasFood] = useState(false);
-  // L05-D2 (design-usability audit 2026-07-09, progressive disclosure for new
-  // accounts): whether the account has EVER logged a real (non-planned) food
-  // entry, not just whether today has one -- reuses hasAnyFoodEntries, the
-  // same account-wide existence check the E10 read-only route guard already
-  // relies on. Defaults true (assume an established account) so a slow first
-  // load, or a transient read failure (`.catch(() => true)` below), never
-  // downgrades an existing user's full MacroRings to the simple prompt; the
-  // simple prompt only ever appears once we have POSITIVELY confirmed there
-  // is no food logged anywhere for this account yet.
-  const [everLoggedFood, setEverLoggedFood] = useState(true);
   // Audit item 6 (coach receipt chip): the latest coach output, read only for
   // Pro (free never reaches CoachOutputScreen so never has an applied
   // adjustment to point at). Used solely to detect a recent coach-applied
@@ -215,7 +204,7 @@ export default function DiaryScreen({ navigation, route }) {
   const load = useCallback(async () => {
     if (!userId) return;
     const loadToken = loadGuardRef.current.next();
-    const [es, r, w, targetsRow, trainingDay, resolvedRefeedDate, edFlag, bodyWeight, bodyComp, yEntries, coachOut, everLogged] = await Promise.all([
+    const [es, r, w, targetsRow, trainingDay, resolvedRefeedDate, edFlag, bodyWeight, bodyComp, yEntries, coachOut] = await Promise.all([
       getFoodEntriesForDay(userId, selectedDate),
       getRollupForDay(userId, selectedDate),
       getWater(userId, selectedDate),
@@ -233,12 +222,6 @@ export default function DiaryScreen({ navigation, route }) {
       // Audit item 6: Pro-only, best-effort. A read failure just hides the
       // "Targets updated" chip, it never blocks the rest of the diary load.
       !readOnly ? getLatestCoachOutput(userId).catch(() => null) : Promise.resolve(null),
-      // L05-D2: account-wide "ever logged food" check for the simple/full
-      // top-of-day choice. Fails open to `true` (assume there IS history), so
-      // a transient read failure keeps showing the full MacroRings exactly as
-      // it always has, rather than ever hiding a returning user's real data
-      // behind the new-account prompt.
-      hasAnyFoodEntries(userId).catch(() => true),
     ]);
     // A newer load has started since this one began; drop this stale result
     // before doing any more work with it (never mind committing it).
@@ -288,7 +271,6 @@ export default function DiaryScreen({ navigation, route }) {
     setFloorKcal(floor);
     setYesterdayHasFood((yEntries?.length ?? 0) > 0);
     setLatestCoachOutput(coachOut ?? null);
-    setEverLoggedFood(!!everLogged);
     setLoaded(true);
   }, [userId, selectedDate, macroCycle, refeed, sex, readOnly]);
 
@@ -448,14 +430,6 @@ export default function DiaryScreen({ navigation, route }) {
   );
 
   const dayTypeChip = dayTypeLabel({ isRefeedDay, macroCycle, isTrainingDay, bankedDelta });
-
-  // L05-D2: the calmer top-of-day only ever replaces MacroRings once we have
-  // POSITIVELY confirmed (via the account-wide `everLoggedFood`, resolved in
-  // `load()`) that this account has never logged a real food entry, and only
-  // once that first load has resolved (`loaded`) so nothing flashes before it
-  // paints. A read-only lapse view is reached only by an account that HAS
-  // logged food (E10 route guard), so this never applies there regardless.
-  const showFirstFoodPrompt = loaded && !readOnly && !everLoggedFood;
 
   // Audit item 6 (coach receipt chip, size S): a quiet "Targets updated" link
   // shown ONLY when the COACH itself changed the calorie target recently, so
@@ -1409,23 +1383,18 @@ export default function DiaryScreen({ navigation, route }) {
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
           ) : null}
-          {showFirstFoodPrompt ? (
-            <FirstFoodPrompt targetKcal={effectiveTargets?.targetKcal} energyUnit={energyUnit} />
-          ) : (
-            // Haptics completion pass (2026-07-10): the MacroRings call site
-            // below (rollup/targets/planned/dayTypeLabel/onPress) is left
-            // byte-identical -- DiaryScreen.raceGuardAndDateJump.guard.test.js
-            // and DiaryScreen.firstFoodPrompt.guard.test.js both pin it
-            // "unchanged" (a concurrent-agent stability guard), a genuine
-            // pinned-test conflict, reported rather than forced through.
-            <MacroRings
-              rollup={rollup}
-              targets={effectiveTargets}
-              planned={plannedTotals}
-              dayTypeLabel={dayTypeChip}
-              onPress={viewEntries.length ? () => setBreakdownVisible(true) : undefined}
-            />
-          )}
+          {/* MacroRings renders unconditionally, first day included (founder
+              device verdict 2026-07-12, D75: L05-D2's first-food swap
+              REVERTED - a new user must SEE the ring, targets and macros to
+              plan their first day; the meal builder tells them to build from
+              targets they could not see). Never re-propose hiding it. */}
+          <MacroRings
+            rollup={rollup}
+            targets={effectiveTargets}
+            planned={plannedTotals}
+            dayTypeLabel={dayTypeChip}
+            onPress={viewEntries.length ? () => setBreakdownVisible(true) : undefined}
+          />
           {/* NU-2: the applied split/refeed always shows its exit. One quiet
               row each; the confirm dialogs own the consequence copy.
               Haptics completion pass (2026-07-10): both rows write straight
