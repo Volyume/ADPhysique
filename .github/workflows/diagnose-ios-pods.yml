@@ -1,0 +1,48 @@
+name: Diagnose iOS pod install
+
+# TEMPORARY DIAGNOSTIC (2026-07-12): every EAS iOS build since 8 July dies in
+# the "Install pods" phase with "Unknown error", and the detailed log lives
+# behind the expo.dev login. This job reproduces that exact phase on a GitHub
+# macOS runner (free for this public repo, no EAS build credits) with the full
+# pod output readable in the Actions log. Delete this file once the iOS build
+# is green again.
+#
+# Fires on pushes to the launch branch that touch this file only, so it never
+# runs on unrelated work.
+
+on:
+  push:
+    branches: ['claude/codebase-audit-docs-pv6mjd']
+    paths: ['.github/workflows/diagnose-ios-pods.yml']
+  workflow_dispatch:
+
+jobs:
+  pods:
+    runs-on: macos-14
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install JS dependencies
+        run: npm ci --legacy-peer-deps --ignore-scripts
+
+      - name: Tool versions
+        run: |
+          xcodebuild -version
+          pod --version
+          ruby --version
+          node --version
+
+      - name: Expo prebuild (generate ios/)
+        run: npx expo prebuild --platform ios --no-install
+
+      - name: Pod install (the failing EAS phase, verbose)
+        working-directory: ios
+        run: pod install --verbose 2>&1 | tail -400

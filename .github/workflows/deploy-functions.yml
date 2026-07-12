@@ -21,15 +21,12 @@ on:
   # anything"). Redeploying a function is stateless and idempotent. A function
   # missing its runtime env vars (e.g. play-billing-rtdn before its Google keys
   # are set) deploys safely and logs rather than acting, by design.
-  # TEMPORARY (2026-07-12, launch night, explicit founder order): the launch
-  # branch is included so the newly-wired delete-account + partner-cheer
-  # functions deploy without a console button-press (the API token available
-  # to the session cannot dispatch workflows). Remove the claude/** line once
-  # the deploy run is green; the trigger returns to main-only.
   push:
-    branches: [main, 'claude/codebase-audit-docs-pv6mjd']
+    branches: [main]
     paths:
       - 'supabase/functions/**'
+      # The deploy list lives in this file, so a change to it (e.g. wiring a
+      # new function) redeploys on merge, same as a function-code change.
       - '.github/workflows/deploy-functions.yml'
   workflow_dispatch:
     inputs:
