@@ -23,7 +23,7 @@
  * dependency.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { db, uid as makeUid } from '../database';
+import { db, uid as makeUid, runInTransaction } from '../database';
 import { getSupabaseClient } from '../supabase';
 import { logInfo, logWarn, logError } from '../errorLog';
 import { microSqlColumns, microSqlPlaceholders, microSqlUpsertExcluded, microValuesFromRow } from './micronutrients';
@@ -126,9 +126,13 @@ async function _run({ force }) {
     // transaction. INSERT OR REPLACE keyed on (source, source_id)
     // via the unique index; for rows without source_id we fall back
     // to (id) replace, but cloud foods always have source_id.
+    // Rides the app-wide runInTransaction queue (2026-07-12, same fix
+    // class as VOLYUME-1N in food/seed.js): a raw BEGIN here could
+    // interleave with a queued transaction on the shared connection and
+    // die with "cannot commit - no transaction is active".
     const now = Date.now();
     try {
-      await d.execAsync('BEGIN');
+      await runInTransaction(d, async () => {
       for (const row of rows) {
         try {
           const sourceId = row.source_id ?? row.id;
@@ -184,9 +188,9 @@ async function _run({ force }) {
           // entry that hits every pull cycle.
         }
       }
-      await d.execAsync('COMMIT');
+      });
     } catch (chunkErr) {
-      try { await d.execAsync('ROLLBACK'); } catch (_) { /* tolerate */ }
+      // runInTransaction has already rolled the page back.
       logError('food.libraryDelta.chunk', chunkErr, {
         page, chunkSize: rows.length, message: chunkErr?.message,
       });

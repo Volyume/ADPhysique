@@ -39,6 +39,15 @@ async function getDb() {
   return require('./database').db();
 }
 
+// Same lazy pattern for the app-wide transaction queue (2026-07-12, same
+// fix class as VOLYUME-1N in food/seed.js): a raw BEGIN on the shared
+// connection could interleave with a queued transaction and die with
+// "cannot commit - no transaction is active" mid-import.
+function getRunInTransaction() {
+  // eslint-disable-next-line global-require
+  return require('./database').runInTransaction;
+}
+
 // ─── CSV parsing ──────────────────────────────────────────────────────────
 
 /**
@@ -343,8 +352,10 @@ export async function runImport(userId, parsed, analysis) {
   let sets = 0;
   let skipped = 0;
 
-  await d.execAsync('BEGIN');
-  try {
+  // Rides the app-wide runInTransaction queue; a thrown error inside the
+  // task rolls the whole import back exactly as the old manual
+  // BEGIN/ROLLBACK did, and still propagates to the caller.
+  await getRunInTransaction()(d, async () => {
     for (const w of parsed.workouts) {
       // Duplicate skip, match on user + started_at.
       const hit = await d.getFirstAsync(
@@ -401,11 +412,7 @@ export async function runImport(userId, parsed, analysis) {
         sets++;
       }
     }
-    await d.execAsync('COMMIT');
-  } catch (e) {
-    try { await d.execAsync('ROLLBACK'); } catch (_) {}
-    throw e;
-  }
+  });
 
   return { workouts, sets, exercisesCreated: newExerciseIds.size, skipped };
 }

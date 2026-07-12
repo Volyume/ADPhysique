@@ -383,6 +383,23 @@ taste-gated). Sequence + per-item spec are in that campaign doc.
 ## ⏸ RESUME POINT — current state and queue (2026-07-11; a fresh
 ## session resumes from HERE per CLAUDE.md's D40 block):
 
+**★ 2026-07-12 NIGHT OVERLAY (read before the 07-11 snapshot below):** the
+founder went live on TestFlight iOS build 40 and the session's Sentry
+sweep became an emergency fix-everything order, all LANDED TO MAIN the
+same night (commits `deded3e`, `852cd17`, `44dc987` + the raw-BEGIN
+sweep). Root causes and rulings are in the decisions register **D77**
+(one consolidated entry); the board's IN FLIGHT header carries the
+summary and its section 3 carries the two new founder actions (App Store
+Connect IAP check; fresh EAS build + crash-fix device walk). What a fresh
+session must know: the iOS long-press set menu is REMOVED on iOS
+(startup crash-loop, D77.1 — zeego stays Android-only; never re-add the
+two iOS packages to autolinking without reading D77.1); the progress-scan
+TFLite model is `selfie_segmentation_v2.tflite` (builtin-ops conversion —
+the old asset could never load anywhere; WATCH the first real
+fast_tflite traffic, D77.2); the tab bar is stock 49pt centred geometry
+(D77.3); expected-offline sync warnings demote to breadcrumbs (D77.4);
+no raw BEGIN/COMMIT remains outside database.js (D77.8).
+
 **★ SESSION SNAPSHOT (2026-07-11, D43 logger S2 landed — read this first):**
 Everything is COMMITTED AND PUSHED. The logger redesign (D57 GO,
 cohesion-first, min cost) is progressing through its staged slots:

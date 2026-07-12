@@ -1688,3 +1688,78 @@ LANDED tonight (no score change, corpus 26/26): hardening batch
 (33109fc), confidence honesty C-F1/C-F3/C-F4/C-F5 (1a35682), invariant
 property suite (3f46160), plus earlier D-F1 facing guard (8cd7d79) and
 capture defaults (aaf656c).
+
+## D77 — iOS TestFlight emergency session rulings (lead, D33, 2026-07-12 night)
+
+Sources: founder's live TestFlight session (build 40) Sentry sweep
+(VOLYUME-S/12/17/18/1A/1B/1C/1D/1E/1F/1N/1W/1X/1Y, all pulled by time and
+date of the session window); founder orders "fix ALL errors", "we don't
+focus on fallbacks we fix the core", "merge to main". All landed to main
+same night: crashes/tab bar `deded3e`, TFLite model `852cd17`, Apple
+sign-in + Sentry noise `44dc987`.
+
+RULINGS:
+1. **iOS long-press set menu REMOVED (D25 amendment).**
+   react-native-ios-utilities (zeego -> react-native-ios-context-menu)
+   throws a fatal NSUnknownKeyException ('reactPropHandler' KVC on a plain
+   RCTView) during Fabric descriptor registration at app START on RN 0.81
+   — the string exists nowhere else in the dependency tree, and 5.2.0 does
+   not change the crash path, so an upgrade is not a fix. Platform fork:
+   SetRowMenu.js (Android keeps the zeego menu) / SetRowMenu.ios.js (bare
+   row; both actions remain reachable via tap-to-edit). Both packages
+   excluded from iOS autolinking (react-native.config.js + expo exclude,
+   the Google Sign-In pattern). Packages stay in package.json because
+   zeego's shared TS sources value-import from them (Metro must resolve
+   them for the Android bundle). Sentry: VOLYUME-1X (1W presumed same
+   event JS-side; verify on next build).
+2. **Progress-scan TFLite model v2 (VOLYUME-1F root cause).** The bundled
+   MediaPipe asset carries the MediaPipe-proprietary custom op
+   Convolution2DTransposeBias; stock TFLite cannot resolve it, so
+   createModel threw on EVERY device on BOTH platforms — the primary
+   engine never ran once in production, all scans rode ML Kit / Apple
+   Vision. Replaced with the SAME network converted to builtin ops (PINTO
+   zoo #109 fp16, identical IO contract incl. the activation_10 output
+   tensor). Validated end-to-end before shipping: flatbuffer op parse, a
+   real interpreter run on a real person photo through the app's exact
+   preprocessing, and the OLD asset reproducing the exact production error
+   under the same interpreter. Renamed *_v2.tflite to bust the per-name
+   native model cache. Guard test pins the v2 hash + bans the custom op
+   string. WATCH ITEM: quality gates get their first real fast_tflite
+   traffic on the next build — monitor scan diagnostics; recalibrate
+   thresholds if confidence shifts.
+3. **Tab bar restored to stock geometry (E15 §2 amendment).** The custom
+   bar hard-coded a 60pt top-aligned content box; the slack pooled under
+   the labels and read as a dead band over the iPhone home indicator
+   (founder: "not launch worthy"). Now stock BottomTabBar geometry: 49pt
+   content zone via minHeight (grows with system text), items centred,
+   inset as padding below, fill edge-to-edge.
+4. **Expected-offline sync warnings demote to breadcrumbs.**
+   captureWarning demotes on the 'Network request failed' signature
+   (message or context) or a sync.*/supabase.* scope while
+   observability.isKnownOffline() is positively true (fails open on
+   unknown). captureError never gated; local errorLog buffer unaffected.
+   Kills the ~5,500-event offline flood (VOLYUME-S family).
+5. **Apple sign-in error 1000 = device state, surfaced honestly
+   (VOLYUME-18).** Entitlement verified present (the
+   expo-apple-authentication plugin injects it; ios.usesAppleSignIn added
+   belt-and-braces). ASAuthorizationError.unknown is thrown by Apple's
+   sheet pre-code; LoginScreen now shows the iCloud remedy for the
+   apple_device_state flag instead of a dead-end retry.
+6. **VOLYUME-17 (StoreKit fetchProducts) = App Store Connect side, not
+   code.** Init ordering verified correct, failure handled, paywall
+   re-fetches, purchases unaffected. Founder checks the Paid Applications
+   agreement + subscription states (section 3 of the board). Billing code
+   untouched per the billing gate.
+7. **VOLYUME-12 = working as designed.** It is the deliberate
+   useAppStore.setTier tier-transition audit log (caller
+   cascade.startCascade); not a defect, left alone.
+8. **Raw-BEGIN sweep completed (VOLYUME-1N class).** food/seed.js (the
+   Sentry hit), then the two remaining raw BEGIN/COMMIT sites
+   (importExternal.runImport, food/libraryDelta page upsert) all ride the
+   app-wide runInTransaction queue per D74's contract; no manual
+   transaction remains outside database.js.
+9. **Check-in trust defect (founder Android report).** The Today nudge
+   gated on day-of-week only; it now mirrors the WeeklyCheckIn gate
+   (FIRST_CHECKIN_MIN_DAYS + MIN_WEIGH_INS from the same query) and the
+   checkinDay pref parse is unified (string-stored day can no longer split
+   the surfaces).

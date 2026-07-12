@@ -634,6 +634,17 @@ auto-advance cues, summary footer, picker first-open, CP-10 batch F and the
 leg-day engine work (D45 + D46) all LANDED - detail rolled to
 `_HANDOVER-ARCHIVE.md` TASKBOARD HISTORY per D41._
 
+_2026-07-12 night: iOS TestFlight emergency session (founder live on build
+40) LANDED TO MAIN same night on founder order - startup crash-loop (iOS
+long-press menu removed, D77.1), food-seed + importer + libraryDelta
+transactions onto the app-wide queue (D77.8), check-in nudge trust fix
+(D77.9), tab bar restored to stock geometry (D77.3), progress-scan TFLite
+model v2 (D77.2, WATCH first fast_tflite traffic), Apple sign-in error-1000
+remedy copy (D77.5), expected-offline Sentry demotion (D77.4). Main
+commits `deded3e`, `852cd17`, `44dc987`, plus the raw-BEGIN sweep landing
+after. Full rulings: DECISIONS register D77. Requires a fresh EAS build on
+BOTH platforms - nothing here is OTA-carryable._
+
 ### D43 logger redesign blueprint - APPROVED + IN BUILD (D49/D57) (2026-07-11)
 - Research complete (Opus teardown: full ActiveWorkoutScreen read, all
   pinned tests mapped, Hevy corpus synthesised - report in session
@@ -774,6 +785,22 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
+- **App Store Connect IAP check (VOLYUME-17, founder said "tomorrow" on
+  2026-07-12).** Two things: (1) Business/Agreements shows the Paid
+  Applications agreement ACTIVE with banking + tax complete; (2) the app's
+  Subscriptions show `pro_monthly` + `pro_annual` in "Ready to Submit"
+  with prices set. IAP works in TestFlight sandbox once these are green -
+  "only TestFlight" is not the cause, and it will not self-fix at release.
+  If both are already green, report the subscription states back and the
+  lead digs into the code path (billing gate applies). Source: D77.6.
+- **Fresh EAS iOS build + crash-fix device walk (2026-07-12 session).**
+  Bump the build number; nothing from the session is OTA-carryable. Walk:
+  cold-launch x4 (no crash-loop), tab bar flush on BOTH devices, progress
+  scan (Sentry diagnostic should read engine: fast_tflite, no new
+  VOLYUME-1F), tap a logged set -> edit sheet with delete on iOS
+  (long-press menu is now Android-only - amend walk item 14 accordingly),
+  fresh-profile check-in nudge stays quiet inside the 5-day baseline,
+  Apple sign-in on the founder device. Source: D77.
 - **iOS Live Activity provisioning.** App Groups provisioning on BOTH App IDs (`app.volyume` + `app.volyume.widget`, then EAS credentials re-sync) + fresh EAS build. The Live Activity is ALREADY fully wired in code (item 19, `60190a7` docs-only fix). Source: D27; handover item 19.
 - **Fresh EAS build (device-walk gate).** Required before device-walking this branch: native modules/code landed this campaign (keyboard-controller + zeego + peers, expo-splash-screen, themed monochrome icon, D34 Kotlin rest-timer bridge, react-native-haptic-feedback). CI Android build is GREEN (run 2611, `3daa3ae`) but a signed EAS build must still be produced. Source: handover FOUNDER-SIDE ACTIONS.
 - **Play OAuth SHA-1 confirm.** Source: CLAUDE.md status banner; handover.
