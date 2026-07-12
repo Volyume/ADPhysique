@@ -29,7 +29,7 @@ comes before spend. UK first.
 All agents carry an explicit model tier. The premium session model runs only in
 the main loop and never as a subagent.
 
-- **marketing-director (opus)** — orchestrator. Runs the weekly cycle, assigns
+- **marketing-director (sonnet)** — orchestrator. Runs the weekly cycle, assigns
   work, holds the plan, keeps every other agent inside its lane, and owns the
   digest to the founder.
 - **content-writer (opus)** — writes articles, pages, listings, social and

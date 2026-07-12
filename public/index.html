@@ -53,11 +53,32 @@
 
   /* Hero */
   .hero{padding:calc(var(--nav-h) + 72px) 0 72px;}
+  .hero .hero-row{display:flex; align-items:center; gap:56px;}
+  .hero .hero-copy{flex:1 1 480px; min-width:0;}
+  .hero .hero-phone-col{flex:0 0 auto; display:flex; justify-content:center;}
   .hero h1{font-weight:900; letter-spacing:-0.8px; font-size:clamp(38px,6.4vw,60px); line-height:1.06; margin:0; max-width:18ch;}
   .hero .sub{color:var(--textSecondary); font-size:clamp(18px,2.4vw,21px); line-height:1.6; margin:26px 0 0; max-width:60ch;}
   .hero .cta-row{display:flex; align-items:center; gap:20px; flex-wrap:wrap; margin:38px 0 0;}
   .play-badge{height:60px; width:auto; display:block;}
   .ios-note{color:var(--textMuted); font-size:14px;}
+
+  /* Device frame */
+  .device{background:var(--surface); border:1px solid var(--border); border-radius:36px; padding:12px;
+    box-shadow:0 0 0 1px var(--borderSubtle), 0 24px 60px rgba(0,0,0,0.5); width:280px; flex:0 0 auto;}
+  .device .notch{width:70px; height:6px; border-radius:4px; background:var(--surface2); margin:0 auto 10px;}
+  .device .screen{border-radius:22px; overflow:hidden; border:1px solid var(--borderSubtle); background:var(--bg); line-height:0;}
+  .device .screen img{display:block; width:100%; height:auto;}
+  .device.device-sm{width:220px;}
+
+  /* What it looks like */
+  .showcase{display:flex; gap:28px; overflow-x:auto; padding:6px 2px 14px; scrollbar-width:thin;}
+  .showcase-item{flex:0 0 auto; text-align:center; width:220px;}
+  .showcase-item p{color:var(--textSecondary); font-size:14px; line-height:1.5; margin:14px 0 0;}
+
+  @media(max-width:900px){
+    .hero .hero-row{flex-direction:column;}
+    .hero .hero-phone-col{width:100%;}
+  }
 
   /* Steps */
   .steps{display:grid; grid-template-columns:repeat(4,1fr); gap:20px;}
@@ -138,14 +159,24 @@
 <main>
   <!-- HERO -->
   <section class="hero">
-    <div class="wrap">
-      <h1>You have the data. Volyume makes the weekly decision, and shows you why.</h1>
-      <p class="sub">Training, nutrition, progress and a weekly check-in in one connected system for serious self-coached lifters. Each week it decides whether to change or hold, and writes down the reason.</p>
-      <div class="cta-row">
-        <a href="https://play.google.com/store/apps/details?id=app.volyume" aria-label="Get Volyume on Google Play">
-          <img class="play-badge" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play">
-        </a>
-        <span class="ios-note">iOS coming soon</span>
+    <div class="wrap hero-row">
+      <div class="hero-copy">
+        <h1>You have the data. Volyume makes the weekly decision, and shows you why.</h1>
+        <p class="sub">Training, nutrition, progress and a weekly check-in in one connected system for serious self-coached lifters. Each week it decides whether to change or hold, and writes down the reason.</p>
+        <div class="cta-row">
+          <a href="https://play.google.com/store/apps/details?id=app.volyume" aria-label="Get Volyume on Google Play">
+            <img class="play-badge" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play">
+          </a>
+          <span class="ios-note">iOS coming soon</span>
+        </div>
+      </div>
+      <div class="hero-phone-col">
+        <div class="device">
+          <div class="notch"></div>
+          <div class="screen">
+            <img src="/screenshots/02_know_what_to_do_today.jpg" alt="Volyume Today screen showing morning weight, the next workout and check-in readiness, on a demo account" width="709" height="1388" loading="eager">
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -175,6 +206,43 @@
           <div class="n">STEP 4</div>
           <h3>The weekly check-in decides</h3>
           <p>Change or hold, with the reasons written down. When the data is not enough yet, it holds rather than guesses.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT IT LOOKS LIKE -->
+  <section class="section-pad">
+    <div class="wrap">
+      <h2 class="title">What it looks like</h2>
+      <p class="lead">A few screens from the app, on a demo account.</p>
+      <div class="showcase">
+        <div class="showcase-item">
+          <div class="device device-sm">
+            <div class="notch"></div>
+            <div class="screen">
+              <img src="/screenshots/05_log_every_set.jpg" alt="Active workout screen with rest timer, set target and logging control" width="709" height="1388" loading="lazy">
+            </div>
+          </div>
+          <p>Log every set</p>
+        </div>
+        <div class="showcase-item">
+          <div class="device device-sm">
+            <div class="notch"></div>
+            <div class="screen">
+              <img src="/screenshots/06_meals_planned_to_your_targets.jpg" alt="Nutrition diary screen showing calories and macros against planned meals" width="709" height="1388" loading="lazy">
+            </div>
+          </div>
+          <p>Meals planned to your targets</p>
+        </div>
+        <div class="showcase-item">
+          <div class="device device-sm">
+            <div class="notch"></div>
+            <div class="screen">
+              <img src="/screenshots/03_plan_that_moves_with_you.jpg" alt="Training plan screen showing the active block, next workout and adjustable setup" width="709" height="1388" loading="lazy">
+            </div>
+          </div>
+          <p>A plan that moves with you</p>
         </div>
       </div>
     </div>
@@ -277,6 +345,8 @@
 <!--
   CLAIMS TABLE — every factual claim traced to PRODUCT-FACTS.md (dated 2026-07-12).
   ------------------------------------------------------------------------------
+  Screenshots (hero + "What it looks like") show a demo account
+     ("Alex"), not a real user ............................. Manifest usage rules, 2026-07-12
   "connected system for self-coached lifters" .............. §A (positioning, primary)
   "makes the weekly decision (change or hold) ... why" ...... §A
   "delivers value before the first workout / builds plan,
