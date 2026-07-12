@@ -262,3 +262,134 @@ service_role. This keeps the one genuinely public surface (the waitlist
 form) locked to a single narrow capability, and keeps every internal
 pipeline table invisible both to the public internet and to the app's own
 ordinary logged-in users.
+
+---
+
+## 7. Retention email loop (migrate_122)
+
+**Purpose:** The automated retention email programme -- a feedback
+thank-you email, and a trial-day-12 check-in split by activity
+(`day12_active` / `day12_quiet`) -- plus the survey it links to and the
+Play promo code pool used to reward responses. Migration:
+`supabase/migrate_122_retention_email_loop.sql`.
+
+### 7a. `marketing_email_log`
+
+**Purpose:** Records every automated retention email sent or suppressed,
+and is the permanent dedupe guard: a user receives each `email_kind` at
+most once, ever.
+
+| Column       | Type        | Notes                                                                       |
+|--------------|-------------|-------------------------------------------------------------------------------|
+| `id`         | uuid        | PK.                                                                             |
+| `user_id`    | uuid        | not null.                                                                       |
+| `email_kind` | text        | not null, check in `('feedback_thanks','day12_active','day12_quiet')`.        |
+| `status`     | text        | not null, check in `('sent','suppressed_wellbeing','suppressed_optout','failed')`. |
+| `sent_at`    | timestamptz | default `now()`.                                                                |
+| `detail`     | jsonb       | free-form context (template version, provider message id, etc.).              |
+
+**Constraints:** UNIQUE `(user_id, email_kind)` -- the one-per-kind-per-user
+dedupe guard, enforced by the database, not just the sending job.
+
+**RLS:** enabled.
+- `anon` -- no access.
+- `authenticated` -- SELECT, gated on `marketing_admins` membership.
+- `service_role` -- full access (the sending job writes every row).
+
+### 7b. `marketing_email_optout`
+
+**Purpose:** Permanent unsubscribe list for the retention email loop.
+
+| Column         | Type        | Notes                                    |
+|----------------|-------------|---------------------------------------------|
+| `user_id`      | uuid        | PK.                                            |
+| `email`        | text        |                                                 |
+| `opted_out_at` | timestamptz | default `now()`.                               |
+| `source`       | text        | e.g. which email's unsubscribe link.           |
+
+**RLS:** enabled.
+- `anon` -- no access, **including no INSERT**. Unlike `marketing_waitlist`,
+  the unsubscribe flow does not write directly from the browser: it runs
+  through a signed-link edge function (planned, not part of migrate_122)
+  that verifies the link signature server-side and writes with
+  service_role. This keeps the opt-out table as unwritable by anon as
+  `marketing_admins`, while still giving a real one-click unsubscribe.
+- `authenticated` -- SELECT, gated on `marketing_admins` membership.
+- `service_role` -- full access.
+
+### 7c. `marketing_survey_responses`
+
+**Purpose:** Answers from the public post-email survey page.
+
+| Column        | Type        | Notes                                                    |
+|---------------|-------------|--------------------------------------------------------------|
+| `id`          | uuid        | PK.                                                              |
+| `user_id`     | uuid        | nullable -- present when the survey link carried a token, null for an anonymous response. |
+| `email_kind`  | text        | which email brought the respondent to the survey.               |
+| `q_overall`   | text        |                                                                    |
+| `q_keeper`    | text        |                                                                    |
+| `q_confusing` | text        |                                                                    |
+| `q_missing`   | text        |                                                                    |
+| `q_more`      | text        |                                                                    |
+| `created_at`  | timestamptz | default `now()`.                                                  |
+
+**RLS:** enabled.
+- `anon` -- **INSERT only** (`WITH CHECK (true)`), the same pattern as
+  `marketing_waitlist`: the public survey page passes user context via a
+  token when available, else the response is submitted anonymously. No
+  anon SELECT/UPDATE/DELETE.
+- `authenticated` -- SELECT, gated on `marketing_admins` membership.
+- `service_role` -- full access.
+
+### 7d. `marketing_promo_codes`
+
+**Purpose:** The Google Play promo code pool issued as a reward for
+completing the survey.
+
+| Column           | Type        | Notes                                                       |
+|------------------|-------------|------------------------------------------------------------------|
+| `id`             | uuid        | PK.                                                                |
+| `code`           | text        | unique, not null.                                                  |
+| `batch`          | text        | which Play Console batch the code came from.                       |
+| `status`         | text        | not null, check in `('available','issued','expired')`, default `'available'`. |
+| `issued_to_user` | uuid        | set when a code is handed out.                                     |
+| `issued_at`      | timestamptz | set when a code is handed out.                                     |
+| `created_at`     | timestamptz | default `now()`.                                                    |
+
+**RLS:** enabled.
+- `anon` -- no access at all.
+- `authenticated` -- **no access at all, admin-gated or otherwise.** Promo
+  codes are secrets until issued; even the founder dashboard reads this
+  table only via a service_role backend call, never direct PostgREST
+  access under a JWT.
+- `service_role` -- full access (the sending job issues codes here).
+
+### 7e. Sending contract (enforced in the sending job, recorded here as the data contract it depends on)
+
+Before sending any of the three email kinds, the job MUST, in order:
+
+1. Check `ed_pattern_flags` for an open flag on the user
+   (`cleared_at IS NULL`). If found: do not send, write a
+   `marketing_email_log` row with `status = 'suppressed_wellbeing'`.
+2. Check `marketing_email_optout` for the user. If present: do not send,
+   write a `marketing_email_log` row with `status = 'suppressed_optout'`.
+3. Check `marketing_email_log` for an existing `(user_id, email_kind)` row
+   (any status). If one exists: do not send again -- this is the
+   database-enforced dedupe guard (the UNIQUE constraint), not merely a
+   job-side check.
+
+Steps 1 and 2 are policy checks the sending job is responsible for --
+RLS/schema cannot constrain "is there an open ED flag" or "has this user
+opted out" at write time, only steps 1/2's *tables* can be read to decide.
+Step 3 is enforced at the database layer regardless of job behaviour.
+`marketing_promo_codes` issuance follows the survey response, is
+service_role-only end to end, and is never exposed to any client role.
+
+### 7f. Access summary addendum
+
+| Table                         | anon         | authenticated (ordinary app user) | authenticated (marketing_admins member) | service_role (agents/job) |
+|--------------------------------|--------------|---------------------------------------|-----------------------------------------------|------------------------------|
+| `marketing_email_log`          | none         | none                                    | SELECT                                          | full                          |
+| `marketing_email_optout`       | none         | none                                    | SELECT                                          | full                          |
+| `marketing_survey_responses`   | INSERT only  | none                                    | SELECT                                          | full                          |
+| `marketing_promo_codes`        | none         | none                                    | none (service_role only)                        | full                          |
