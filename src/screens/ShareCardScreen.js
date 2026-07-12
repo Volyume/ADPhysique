@@ -13,6 +13,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Image, Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -239,7 +240,9 @@ export default function ShareCardScreen({ route }) {
   // so no photo-library permission is needed.
   const takeGymPhoto = useCallback(async () => {
     if (!ImagePicker || !Skia || !FileSystem) {
-      toast.show("Photo backgrounds aren't available in this version.", { variant: 'error', duration: 5000 });
+      // P-16: a missing native module reads as "this device can't do this",
+      // never as "you're on an incomplete build".
+      toast.show("Photo backgrounds aren't available on your device.", { variant: 'error', duration: 5000 });
       return;
     }
     try {
@@ -258,9 +261,26 @@ export default function ShareCardScreen({ route }) {
 
   // Live preview: re-render whenever anything that changes the card changes.
   const [previewB64, setPreviewB64] = useState(null);
-  useEffect(() => {
-    setPreviewB64(renderCardBase64(PREVIEW_RENDER_W));
+  // EP-17/UI-05 (Codex end-user-polish audit): `previewB64 === null` used to
+  // mean BOTH "still rendering" and "permanently failed" (missing Skia/
+  // typeface, or the offscreen surface/encode failing), so a real render
+  // failure left the ActivityIndicator spinning forever with no way out.
+  // Explicit states let the render layer tell the two apart and offer Retry.
+  const [previewStatus, setPreviewStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
+  const renderPreview = useCallback(() => {
+    setPreviewStatus('loading');
+    const b64 = renderCardBase64(PREVIEW_RENDER_W);
+    if (b64) {
+      setPreviewB64(b64);
+      setPreviewStatus('ready');
+    } else {
+      setPreviewB64(null);
+      setPreviewStatus('error');
+    }
   }, [renderCardBase64]);
+  useEffect(() => {
+    renderPreview();
+  }, [renderPreview]);
 
   // Render the export-resolution PNG and write it to a cache file, returning the
   // file URI. Shared by the OS share sheet, Save to gallery and Instagram
@@ -280,7 +300,8 @@ export default function ShareCardScreen({ route }) {
   // never a crash.
   async function handleSaveToGallery() {
     if (!Skia || !FileSystem || !MediaLibrary) {
-      toast.show("Saving to your gallery isn't available in this version.", { variant: 'error', duration: 5000 });
+      // P-16: device-specific, not "incomplete build".
+      toast.show("Saving to your gallery isn't available on your device.", { variant: 'error', duration: 5000 });
       return;
     }
     if (!typefaces) {
@@ -315,7 +336,8 @@ export default function ShareCardScreen({ route }) {
   // as a Story share with both app icons.
   async function handleShareToStories() {
     if (!Skia || !FileSystem || !Sharing) {
-      toast.show("Story sharing isn't available in this version.", { variant: 'error', duration: 5000 });
+      // P-16: device-specific, not "incomplete build".
+      toast.show("Story sharing isn't available on your device.", { variant: 'error', duration: 5000 });
       return;
     }
     if (!typefaces) {
@@ -338,7 +360,14 @@ export default function ShareCardScreen({ route }) {
     }
   }
 
-  const previewH = cardHeight(PREVIEW_DISPLAY_W, isSquare);
+  // EP-11/UI-03: the preview used to hard-code a 300dp width inside the
+  // screen's 16dp horizontal padding, overflowing a 320dp phone (300 + 2*16
+  // > 320). Cap at the design width but never exceed what this screen's own
+  // padding leaves available; height is derived from that so the card's
+  // aspect ratio is preserved.
+  const { width: windowWidth } = useWindowDimensions();
+  const previewW = Math.min(PREVIEW_DISPLAY_W, windowWidth - 2 * spacing.lg);
+  const previewH = cardHeight(previewW, isSquare);
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
@@ -411,14 +440,27 @@ export default function ShareCardScreen({ route }) {
         <View style={styles.section}>
           <SectionLabel>Preview</SectionLabel>
           <View style={styles.previewOuter}>
-            {previewB64 ? (
+            {previewStatus === 'ready' && previewB64 ? (
               <Image
                 source={{ uri: `data:image/png;base64,${previewB64}` }}
-                style={{ width: PREVIEW_DISPLAY_W, height: previewH, borderRadius: radius.lg }}
+                style={{ width: previewW, height: previewH, borderRadius: radius.lg }}
                 resizeMode="contain"
               />
+            ) : previewStatus === 'error' ? (
+              <View style={[styles.previewPlaceholder, live.previewPlaceholder, styles.previewErrorBox, { width: previewW, height: previewH }]}>
+                <Ionicons name="alert-circle-outline" size={24} color={t.colors.textMuted} />
+                <Text maxFontSizeMultiplier={1.3} style={[styles.previewErrorText, live.previewErrorText]}>Couldn't build the preview.</Text>
+                <Button
+                  title="Retry"
+                  onPress={renderPreview}
+                  variant="secondary"
+                  size="sm"
+                  fullWidth={false}
+                  accessibilityLabel="Retry building the preview"
+                />
+              </View>
             ) : (
-              <View style={[styles.previewPlaceholder, live.previewPlaceholder, { width: PREVIEW_DISPLAY_W, height: previewH }]}>
+              <View style={[styles.previewPlaceholder, live.previewPlaceholder, { width: previewW, height: previewH }]}>
                 <ActivityIndicator color={t.colors.primary} />
               </View>
             )}
@@ -593,6 +635,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border,
   },
+  // EP-17/UI-05: the compact error card shown in place of an endlessly
+  // spinning preview when the card can't be rendered.
+  previewErrorBox: { gap: spacing.sm, padding: spacing.md },
+  previewErrorText: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
   togglesCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
@@ -637,6 +683,7 @@ function buildLiveStyles(t) {
     segmentText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     segmentTextActive: { color: t.colors.textPrimary },
     previewPlaceholder: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    previewErrorText: { ...t.type.bodySm, color: t.colors.textSecondary },
     togglesCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     toggleRow: { borderBottomColor: t.colors.border },
     toggleLabel: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },

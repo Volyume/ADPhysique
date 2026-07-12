@@ -331,7 +331,9 @@ export default function AthleteProfileScreen({ navigation }) {
 
   async function pickAvatar() {
     if (!ImagePicker || !user?.id) {
-      toast.show("Profile pictures aren't available in this version.", { variant: 'warning' });
+      // P-16: a missing native module reads as "this device can't do this",
+      // never as "you're on an incomplete build".
+      toast.show("Profile pictures aren't available on your device.", { variant: 'warning' });
       return;
     }
     try {
