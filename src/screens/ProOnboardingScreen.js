@@ -604,6 +604,12 @@ export default function ProOnboardingScreen({ navigation }) {
       setStep(2);
     } catch (e) {
       logError('ProOnboarding.oauth.threw', e, { provider });
+      // EP-18/UI-07: a thrown exception (native-bridge failure, browser-
+      // launch failure, malformed config) used to leave the wizard silently
+      // returning to idle with no explanation. Show the same calm fallback
+      // sentence as the resolved-error branch above (same fix pattern as
+      // LoginScreen and ProUpgradeScreen's oauth.threw catches).
+      appAlert('Sign-in failed', "That didn't go through. Try again.");
     } finally {
       setBusy(false);
     }

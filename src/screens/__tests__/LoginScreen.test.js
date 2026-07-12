@@ -66,6 +66,21 @@ describe('LoginScreen OAuth feedback (A7)', () => {
     expect(mockToastShow).not.toHaveBeenCalled();
   });
 
+  test('a thrown OAuth exception shows the same calm fallback toast, not just a log (EP-18/UI-07)', async () => {
+    signInWithGoogle.mockRejectedValue(new Error('native bridge exception'));
+    let tree;
+    await act(async () => { tree = create(<LoginScreen />); });
+    const google = findGoogleButton(tree);
+    await act(async () => { await google.props.onPress(); });
+    await flush();
+
+    expect(mockToastShow).toHaveBeenCalledWith("That didn't go through. Try again.", expect.objectContaining({ variant: 'error' }));
+    // The button returns to idle rather than being left dimmed with no
+    // explanation (the waiting caption, gated on the same loading state,
+    // is gone once the catch's finally re-enables the buttons).
+    expect(JSON.stringify(tree.toJSON())).not.toContain('Waiting for Google or Apple');
+  });
+
   test('shows a "waiting" caption while the OAuth dialog is up, gone once it resolves', async () => {
     let resolveFn;
     signInWithGoogle.mockReturnValue(new Promise((resolve) => { resolveFn = resolve; }));

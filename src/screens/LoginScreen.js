@@ -57,6 +57,13 @@ export default function LoginScreen() {
       }
     } catch (e) {
       logError('LoginScreen.oauth.threw', e, { provider });
+      // EP-18/UI-07: a thrown exception (native-bridge failure, browser-
+      // launch failure, malformed config) used to leave the button dimming
+      // then quietly returning to idle with no explanation, at the app's
+      // very first touchpoint. Show the same calm fallback sentence as the
+      // resolved-error branch above (same fix pattern as ProUpgradeScreen's
+      // oauth.threw catch).
+      toast.show("That didn't go through. Try again.", { variant: 'error' });
     } finally {
       setLoading(false);
     }
