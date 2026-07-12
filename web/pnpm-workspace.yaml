@@ -3,9 +3,9 @@ packages:
   - 'packages/*'
 overrides:
   postcss: ^8.5.16
-# pnpm 10+ blocks dependency build scripts unless approved. Approve the
-# three that need them so non-interactive CI (Vercel) can install.
-onlyBuiltDependencies:
-  - esbuild
-  - sharp
-  - unrs-resolver
+# pnpm blocks dependency build scripts unless approved. Approve the three
+# that need them so non-interactive CI (Vercel) can install.
+allowBuilds:
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
