@@ -247,10 +247,10 @@ export default function SettingsDisplayScreen() {
           showArrow={false}
           rightElement={
             <Switch
-              value={!!accessibility.reduceMotion}
-              onValueChange={v => { haptics.selection(); setAccessibilityPref('reduceMotion', v); }}
+              value={!!accessibility.reduceMotionUserPref}
+              onValueChange={v => { haptics.selection(); setAccessibilityPref('reduceMotionUserPref', v); }}
               trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
-              thumbColor={accessibility.reduceMotion ? t.colors.primary : t.colors.textMuted}
+              thumbColor={accessibility.reduceMotionUserPref ? t.colors.primary : t.colors.textMuted}
             />
           }
         />

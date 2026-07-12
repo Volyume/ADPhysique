@@ -1850,7 +1850,16 @@ const useAppStore = create((set, get) => ({
     largerText: false,    // applies a 1.2× multiplier to the fontSize tokens in applyAccessibility (theme.js)
     higherContrast: false, // brightens muted text + thickens borders via theme tokens
     colorBlindSafe: false, // swaps red/green success/error to blue/orange
-    reduceMotion: false,   // skips PRCelebration particles, RestTimer pulse, big spring anims
+    // AX-09 (launch accessibility audit): `reduceMotion` is the EFFECTIVE
+    // value every existing consumer reads (haptics.js, RestTimer, PRCelebration,
+    // App.js's own spring gating, etc) - systemReduceMotion || reduceMotionUserPref.
+    // Kept as a single field so no consumer needed editing. `reduceMotionUserPref`
+    // is the user's own explicit in-app Settings choice (persisted, as `reduceMotion`
+    // used to be). `systemReduceMotion` (below, top-level, NOT in this object so it
+    // never round-trips to AsyncStorage) mirrors the OS "Reduce Motion"/"Remove
+    // animations" setting, hydrated + kept live from App.js via AccessibilityInfo.
+    reduceMotion: false,          // skips PRCelebration particles, RestTimer pulse, big spring anims
+    reduceMotionUserPref: false, // the user's own in-app toggle; Settings reads/writes THIS
     theme: 'dark',         // COMP-029: 'dark' | 'light' | 'system'. Default dark, no existing user changes
     energyUnit: 'kcal',    // food-UI energy DISPLAY unit: 'kcal' | 'kj'. Display-only (read reactively,
                            // no reload); stored values, targets + the coaching engine stay in kcal.
@@ -1870,18 +1879,50 @@ const useAppStore = create((set, get) => ({
   loadAccessibility: async () => {
     const parsed = await loadA11yPrefs();
     if (parsed) {
-      set({ accessibility: { ...get().accessibility, ...parsed }, accessibilityLoaded: true });
+      // AX-09 migration: installs from before the system/user split persisted
+      // the user's explicit choice under `reduceMotion` directly (there was
+      // no `reduceMotionUserPref`). Seed the user pref from the legacy field
+      // once so upgrading users keep their choice, then recompute the
+      // effective field against whatever systemReduceMotion already holds
+      // (App.js's AccessibilityInfo read corrects it again moments later
+      // regardless of hydration order).
+      const userPref = parsed.reduceMotionUserPref !== undefined
+        ? !!parsed.reduceMotionUserPref
+        : !!parsed.reduceMotion;
+      const merged = { ...get().accessibility, ...parsed, reduceMotionUserPref: userPref };
+      merged.reduceMotion = !!(get().systemReduceMotion || userPref);
+      set({ accessibility: merged, accessibilityLoaded: true });
     } else {
       set({ accessibilityLoaded: true });
     }
   },
   setAccessibilityPref: async (key, value) => {
     const next = { ...get().accessibility, [key]: value };
+    // AX-09: the Settings toggle writes the USER pref, never the effective
+    // field directly - recompute `reduceMotion` (effective) here so every
+    // existing consumer that reads it stays correct without edits.
+    if (key === 'reduceMotionUserPref') {
+      next.reduceMotion = !!(get().systemReduceMotion || value);
+    }
     set({ accessibility: next });
     const serialised = JSON.stringify(next);
     try { await AsyncStorage.setItem(A11Y_PREFS_KEY, serialised); } catch (_) {}
     const { user } = get();
     if (user?.id) pushPrefSoon(user.id, A11Y_PREFS_KEY, serialised);
+  },
+  // AX-09: mirrors the OS-level Reduce Motion / Remove Animations setting.
+  // Runtime-only - NEVER persisted (App.js re-reads AccessibilityInfo on
+  // every cold boot and subscribes to 'reduceMotionChanged' for live
+  // updates, so there is nothing to save). Recomputes the effective
+  // `accessibility.reduceMotion` field whenever the OS value changes,
+  // OR-ed with whatever the user's own in-app pref currently is.
+  systemReduceMotion: false,
+  setSystemReduceMotion: (value) => {
+    const v = !!value;
+    set(state => ({
+      systemReduceMotion: v,
+      accessibility: { ...state.accessibility, reduceMotion: v || !!state.accessibility.reduceMotionUserPref },
+    }));
   },
 
   // LB-9: product-analytics opt-out. Device-local (a privacy opt-out is

@@ -7,8 +7,18 @@
  * (setLogged, prAchieved, restDone, error...) reads at the callsite
  * and the actual feedback type lives here, where it's easy to refine.
  *
- * Honours the user's "reduce motion" accessibility preference: when
- * on, all haptics no-op so a sensitive user gets a quiet experience.
+ * Honours the "reduce motion" accessibility preference: when on, all
+ * haptics no-op so a sensitive user gets a quiet experience.
+ *
+ * AX-09 (launch accessibility audit, 2026-07-12): `accessibility.reduceMotion`
+ * is now the EFFECTIVE value (systemReduceMotion || the user's own in-app
+ * toggle) - see useAppStore.js's accessibility slice. This function is
+ * unchanged, but as a side effect it now also silences haptics whenever the
+ * OS-level Reduce Motion / Remove Animations setting is on, even if the user
+ * never touched Volyume's own toggle. Whether haptics SHOULD follow motion at
+ * all, or track a separate tactile preference, is an open founder/lead
+ * decision (flagged in the AX-09 change, not decided here) - this file was
+ * deliberately left untouched pending that call.
  *
  * All helpers are safe to await OR fire-and-forget. They never throw.
  */

@@ -20,7 +20,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 // (unaffected by this provider); this complements that fix outside sheets.
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, AppState, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, AppState, Platform, AccessibilityInfo } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
@@ -484,6 +484,7 @@ export default function App() {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const accessibilityLoaded = useAppStore(s => s.accessibilityLoaded);
   const loadAccessibility = useAppStore(s => s.loadAccessibility);
+  const setSystemReduceMotion = useAppStore(s => s.setSystemReduceMotion);
   const privacyLoaded = useAppStore(s => s.privacyLoaded);
   const loadPrivacyPrefs = useAppStore(s => s.loadPrivacyPrefs);
   const [calm, setCalm] = useState(false);
@@ -544,6 +545,28 @@ export default function App() {
   useEffect(() => {
     if (!accessibilityLoaded) loadAccessibility();
   }, [accessibilityLoaded, loadAccessibility]);
+
+  // AX-09 (launch accessibility audit): hydrate the OS-level "Reduce Motion"
+  // / "Remove animations" preference before the first animated screen, and
+  // keep it live if the user flips it in OS Settings while Volyume is
+  // running. This is a live device query, not a stored value (unlike
+  // loadAccessibility above) - the store's setSystemReduceMotion recomputes
+  // the effective accessibility.reduceMotion field that every existing
+  // consumer already reads (haptics.js, RestTimer, PRCelebration, etc), so no
+  // consumer needed editing. Cleans up the subscription on unmount.
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then(enabled => { if (mounted) setSystemReduceMotion(enabled); })
+      .catch(() => {});
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', enabled => {
+      setSystemReduceMotion(enabled);
+    });
+    return () => {
+      mounted = false;
+      sub.remove();
+    };
+  }, [setSystemReduceMotion]);
 
   // Hydrate the analytics opt-out before telemetry starts flowing, so an
   // opted-out user's first foreground doesn't ship events (LB-9).
