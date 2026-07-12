@@ -28,5 +28,7 @@ web-build/
 !.claude/hooks/*
 !.claude/agents/
 !.claude/agents/*
+!.claude/skills/
+!.claude/skills/**
 google-play-service-account.json
 AuthKey_*.p8
