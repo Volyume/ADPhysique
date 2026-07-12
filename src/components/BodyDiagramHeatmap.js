@@ -36,19 +36,32 @@ function getFill(volumeByMuscle, muscle, c) {
   return entry.color;
 }
 
-// Spoken label for a muscle region so the map is usable with a screen
-// reader: the muscle name plus its volume status when the caller provides
-// one (entry.label / entry.status), e.g. "Front delts, optimal". When a
-// division fingerprint marker is present it is spoken too, e.g.
-// "Glutes, optimal, elevated for Bikini" (A4).
-function muscleLabel(volumeByMuscle, muscle, divisionMarkers, divisionLabel) {
-  const name = String(muscle).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  const entry = volumeByMuscle?.[muscle];
-  const status = entry?.label ?? entry?.status;
-  let label = status ? `${name}, ${String(status).toLowerCase()}` : name;
-  const direction = divisionMarkers?.[muscle];
-  if (direction && divisionLabel) label += `, ${direction} for ${divisionLabel}`;
-  return label;
+// AX-04 (launch accessibility audit, docs/ux-world-class-audit-2026-07-09/):
+// the unique muscle keys drawn as regions in the SVG below (side_delts, neck
+// and tibialis have no drawn region on this front/back silhouette; see the
+// comment on DIVISION_MARKER_ANCHORS). Used only to size the diagram's single
+// accessible summary label, never to alter which regions render.
+const DIAGRAM_MUSCLE_KEYS = [
+  'front_delts', 'chest', 'biceps', 'forearms', 'abs', 'quads', 'adductors',
+  'calves', 'traps', 'rear_delts', 'back', 'triceps', 'glutes', 'hamstrings',
+];
+
+// AX-04: one concise spoken summary for the WHOLE diagram (front + back
+// silhouette together), read once as a single image. Previously each tiny
+// SVG shape carried its own accessible/accessibilityRole="button"/
+// accessibilityLabel (15-29dp touch/focus targets at this viewBox scale,
+// bilateral shapes repeating identical labels, and react-native-svg's
+// per-shape focusability is platform-fragile -- see the audit finding). The
+// muscle-by-muscle detail now lives solely in VolumeHeatmapScreen's muscle
+// rows below, which are the real accessible + operable path.
+function diagramSummaryLabel(volumeByMuscle) {
+  const total = DIAGRAM_MUSCLE_KEYS.length;
+  const withVolume = DIAGRAM_MUSCLE_KEYS.filter(
+    m => (volumeByMuscle?.[m]?.workingSets || 0) > 0,
+  ).length;
+  return `Body diagram, front and back views, colour-coded by weekly training volume. `
+    + `${withVolume} of ${total} muscles have logged sets this window. `
+    + `The muscle list below has the full detail for each one.`;
 }
 
 // A4 division fingerprint: where each marked muscle's small triangle sits on
@@ -77,9 +90,15 @@ const DIVISION_MARKER_ANCHORS = {
 };
 
 // Small solid triangle: up in primary for a division-elevated muscle, down in
-// textMuted for a capped one. Static, decorative (the region's
-// accessibilityLabel carries the spoken version), no press handler so taps
-// fall through to the region beneath. CP-10: takes the live colour table
+// textMuted for a capped one. Static, decorative, no press handler so taps
+// fall through to the region beneath. AX-04: the per-region accessibilityLabel
+// that used to speak this ("elevated for Bikini") is gone along with the rest
+// of the per-shape accessibility props -- the diagram is now a single
+// decorative/summary image (diagramSummaryLabel above) and the sighted-only
+// division legend text at the foot of this component is the sole remaining
+// description of elevated/capped division markers; see this file's AX-04
+// handover note for the open question on whether that also belongs on
+// VolumeHeatmapScreen's muscle rows. CP-10: takes the live colour table
 // instead of reading the frozen `colors` singleton.
 function DivisionMarker({ x, y, direction, c }) {
   const up = direction === 'elevated';
@@ -119,18 +138,25 @@ export default function BodyDiagramHeatmap({
   const silhouetteFill = t.colors.surface;
   const regionStroke = t.colors.border;
 
+  // AX-04: per-shape onPress remains (the sighted tap-to-jump-to-the-bar
+  // interaction is unchanged), but the accessible/accessibilityRole/
+  // accessibilityLabel trio is gone -- those are what made VoiceOver/
+  // TalkBack try to focus dozens of 15-29dp duplicated-label shape nodes.
+  // The wrapping View below now carries the diagram's ONE accessible node.
   const region = muscleKey => ({
     fill: getFill(volumeByMuscle, muscleKey, t.colors),
     stroke: regionStroke,
     strokeWidth: 0.75,
     onPress: handle(muscleKey),
-    accessible: true,
-    accessibilityRole: 'button',
-    accessibilityLabel: muscleLabel(volumeByMuscle, muscleKey, divisionMarkers, divisionLabel),
   });
 
   return (
     <View style={[styles.container, live.container]}>
+      {/* AX-04: the SVG silhouette is one labelled decorative/summary image
+          for assistive tech -- see diagramSummaryLabel() above. Matches the
+          existing SvgBarSparkline.js:71 convention for wrapping a react-
+          native-svg chart in a single accessible image node. */}
+      <View accessible accessibilityRole="image" accessibilityLabel={diagramSummaryLabel(volumeByMuscle)}>
       <Svg
         viewBox={`0 0 ${TOTAL_WIDTH} ${FIGURE_HEIGHT}`}
         width="100%"
@@ -327,6 +353,7 @@ export default function BodyDiagramHeatmap({
           {renderDivisionMarkers('back', divisionMarkers, t.colors)}
         </G>
       </Svg>
+      </View>
 
       {/* Figure labels */}
       <View style={styles.labelRow}>

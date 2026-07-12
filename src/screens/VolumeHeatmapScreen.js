@@ -387,7 +387,12 @@ export default function VolumeHeatmapScreen() {
           below this scroll. */}
       <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
-        {/* Anatomical body heatmap, tap a muscle to jump to its bar below */}
+        {/* Anatomical body heatmap: a sighted-only tap-to-jump-to-its-bar
+            convenience. AX-04 (launch accessibility audit): for assistive
+            tech this diagram is a single decorative/summary image (see
+            BodyDiagramHeatmap.js); the muscle rows in the card below are the
+            real accessible + operable path to the same name/volume/status
+            data, each one an independently focusable >=44dp control. */}
         <BodyDiagramHeatmap
           volumeByMuscle={volumeByMuscle}
           onMuscleTap={handleMuscleTap}
@@ -489,16 +494,40 @@ export default function VolumeHeatmapScreen() {
             const sets = Math.round(data.workingSets || 0);
             const prevSets = Math.round(prevData.workingSets || 0);
             const landmarks = effectiveLandmarks?.[muscle] || VOLUME_LANDMARKS[muscle];
-            const { status } = getVolumeStatus(sets, muscle, effectiveLandmarks);
+            const { status, label: statusLabel } = getVolumeStatus(sets, muscle, effectiveLandmarks);
             const color = buildVolumeStatusColor(t.colors)(status);
             const mrv = landmarks.mrv || 20;
             const fillPct = Math.min(sets / mrv, 1);
             const ghostFillPct = Math.min(prevSets / mrv, 1);
 
+            // AX-04 (launch accessibility audit): freshness band/meta computed
+            // once per row so both the visual dot/chip below and the row's
+            // combined accessibilityLabel read the identical value (previously
+            // computed only inline, purely for the dot's own now-removed
+            // per-node accessibility props).
+            const lastTrained = lastTrainedMap[muscle];
+            const freshnessBandKey = lastTrained != null ? freshnessBand(lastTrained.daysAgo, muscle) : null;
+            const freshnessMetaEntry = freshnessBandKey ? freshnessMeta[freshnessBandKey] : null;
+            const lastTrainedText = lastTrained != null ? formatLastTrained(lastTrained.daysAgo) : null;
+
+            // AX-04: the body diagram above is now a single decorative/summary
+            // image for assistive tech (its per-shape press targets were
+            // 15-29dp and duplicated bilateral labels -- see
+            // BodyDiagramHeatmap.js). This row is the real accessible +
+            // operable path instead: one focusable node per muscle (never
+            // duplicated per left/right side), >=44dp tall
+            // (styles.muscleRow.minHeight below), with a single label carrying
+            // name, volume and status -- matches the BlockProgressCard.js row
+            // precedent (accessibilityRole="text" + one combined label).
+            const rowA11yLabel = `${MUSCLE_DISPLAY_NAMES[muscle]}: ${sets} of ${mrv} weekly sets, ${statusLabel}`
+              + (freshnessMetaEntry ? `, ${freshnessMetaEntry.label}, ${lastTrainedText}` : '');
+
             return (
               <View
                 key={muscle}
                 style={styles.muscleRow}
+                accessibilityRole="text"
+                accessibilityLabel={rowA11yLabel}
                 onLayout={(e) => {
                   // Per-row y is relative to the heatmap card; combine with the
                   // card's y to get a position inside the ScrollView.
@@ -525,31 +554,27 @@ export default function VolumeHeatmapScreen() {
                 </View>
                 <Text style={[styles.setsCount, live.setsCount, { color }]}>{sets}</Text>
                 <Text style={[styles.mrvLabel, live.mrvLabel]}>/{mrv}</Text>
-                {lastTrainedMap[muscle] != null && (() => {
-                  // Reuse the already-computed days-since-trained as the
-                  // freshness input. The dot is the recovery layer; the text is
-                  // the existing "last trained" recency. Null band (no data)
-                  // renders no dot, matching the chip's null-safety.
-                  const band = freshnessBand(lastTrainedMap[muscle].daysAgo, muscle);
-                  const meta = band && freshnessMeta[band];
-                  return (
-                    <View style={styles.freshnessGroup}>
-                      {meta && (
-                        <View
-                          style={[styles.freshnessDot, { backgroundColor: meta.color }]}
-                          accessibilityRole="image"
-                          accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]} ${meta.label}`}
-                        />
-                      )}
-                      <Text style={[
-                        styles.lastTrainedChip, live.lastTrainedChip,
-                        lastTrainedMap[muscle].daysAgo <= 1 && [styles.lastTrainedRecent, live.lastTrainedRecent],
-                      ]}>
-                        {formatLastTrained(lastTrainedMap[muscle].daysAgo)}
-                      </Text>
-                    </View>
-                  );
-                })()}
+                {freshnessMetaEntry && (
+                  // AX-04: decorative once the row above carries the combined
+                  // label -- an accessible child dot/chip here would nest a
+                  // second accessible node inside this one and duplicate the
+                  // "Fresh"/"Today" wording the row already speaks (the same
+                  // nested-accessible anti-pattern the audit flags for
+                  // InfoTooltip's Close button, AX-01).
+                  <View
+                    style={styles.freshnessGroup}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                  >
+                    <View style={[styles.freshnessDot, { backgroundColor: freshnessMetaEntry.color }]} />
+                    <Text style={[
+                      styles.lastTrainedChip, live.lastTrainedChip,
+                      lastTrained.daysAgo <= 1 && [styles.lastTrainedRecent, live.lastTrainedRecent],
+                    ]}>
+                      {lastTrainedText}
+                    </Text>
+                  </View>
+                )}
               </View>
             );
           })}
@@ -820,6 +845,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    // AX-04 (launch accessibility audit): this row is the real accessible +
+    // operable path for the volume-by-muscle data (the diagram above is a
+    // decorative/summary image for assistive tech), so it carries the same
+    // >=44dp minimum target/focus height as any other operable control.
+    minHeight: 44,
   },
   muscleName: {
     ...type.label,

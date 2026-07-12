@@ -45,6 +45,7 @@ import {
   getActivePlan,
 } from '../../lib/database';
 import VolumeHeatmapScreen from '../VolumeHeatmapScreen';
+import { VOLUME_LANDMARKS } from '../../lib/algorithms';
 
 const VOLUME_HEATMAP_SOURCE = require('fs').readFileSync(
   require('path').resolve(__dirname, '../VolumeHeatmapScreen.js'),
@@ -177,6 +178,69 @@ describe('VolumeHeatmapScreen states', () => {
     text = flattenText(tree.toJSON());
     expect(text).toContain('Chest11/22');
     expect(text).not.toContain('Chest3/22');
+  });
+});
+
+describe('AX-04 (launch accessibility audit): muscle rows are the accessible + operable path', () => {
+  // The body diagram above these rows is now a decorative/summary image for
+  // assistive tech (BodyDiagramHeatmap.js, own AX-04 tests); these rows carry
+  // the real accessible + operable path instead, so this pins: one focusable
+  // node per muscle (never duplicated per left/right side), each with a
+  // combined name+volume+status label, at a >=44dp target.
+  test('each muscle row is one accessibilityRole="text" node with a combined name/volume/status label, >=44dp tall', async () => {
+    getCompletedWorkoutSets.mockResolvedValueOnce(chestSets(11));
+    let tree;
+    await act(async () => { tree = create(<VolumeHeatmapScreen />); });
+    await flush();
+
+    const rows = tree.root.findAll(
+      (n) => n.props.accessibilityRole === 'text'
+        && typeof n.props.accessibilityLabel === 'string'
+        && /weekly sets/.test(n.props.accessibilityLabel)
+        && typeof n.type === 'string',
+    );
+    // One row per muscle, never duplicated (no bilateral left/right repeat
+    // the way the old per-shape diagram labels did).
+    expect(rows.length).toBe(Object.keys(VOLUME_LANDMARKS).length);
+    const labels = rows.map((r) => r.props.accessibilityLabel);
+    expect(new Set(labels).size).toBe(labels.length);
+
+    const chestRow = rows.find((r) => r.props.accessibilityLabel.startsWith('Chest:'));
+    expect(chestRow).toBeTruthy();
+    expect(chestRow.props.accessibilityLabel).toBe('Chest: 11 of 22 weekly sets, Good range');
+
+    // >=44dp target (minHeight 44 on the row style).
+    expect(chestRow.props.style.minHeight).toBeGreaterThanOrEqual(44);
+  });
+
+  test('the freshness dot/chip no longer carries its own accessibility node (avoids nesting inside the row)', async () => {
+    getLastTrainedByMuscle.mockResolvedValueOnce({ chest: { daysAgo: 0 } });
+    getCompletedWorkoutSets.mockResolvedValueOnce(chestSets(11));
+    let tree;
+    await act(async () => { tree = create(<VolumeHeatmapScreen />); });
+    await flush();
+
+    const chestRow = tree.root.findAll(
+      (n) => n.props.accessibilityRole === 'text'
+        && typeof n.props.accessibilityLabel === 'string'
+        && n.props.accessibilityLabel.startsWith('Chest:')
+        && typeof n.type === 'string',
+    )[0];
+    // daysAgo: 0 => the 'fatigued' freshness band ("Recently trained"), the
+    // resting state for a muscle trained today (see buildFreshnessMeta above).
+    expect(chestRow.props.accessibilityLabel).toContain('Recently trained');
+    expect(chestRow.props.accessibilityLabel).toContain('Today');
+
+    // The freshness group inside is hidden from assistive tech (its info is
+    // now spoken once, in the row's own combined label above).
+    const hiddenGroup = chestRow.findAll((n) => n.props.accessibilityElementsHidden === true);
+    expect(hiddenGroup.length).toBeGreaterThan(0);
+    for (const n of hiddenGroup) {
+      expect(n.props.importantForAccessibility).toBe('no-hide-descendants');
+    }
+    // No leftover per-dot accessibilityRole="image" node (the old pattern).
+    const dotImageNodes = chestRow.findAll((n) => n.props.accessibilityRole === 'image');
+    expect(dotImageNodes.length).toBe(0);
   });
 });
 
