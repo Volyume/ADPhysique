@@ -689,6 +689,17 @@ export function uninstrumentNetInfo() {
   _netInfoLastConnected = null;
 }
 
+/**
+ * True only when NetInfo has POSITIVELY reported the device disconnected.
+ * Unknown state (listener not wired, no callback yet) returns false, so
+ * consumers that suppress noise on "known offline" fail open to
+ * visibility. Used by sentry.js's expected-offline warning gate
+ * (2026-07-12, VOLYUME-S family).
+ */
+export function isKnownOffline() {
+  return _netInfoLastConnected ? !_netInfoLastConnected.isConnected : false;
+}
+
 // ─── Boot helper ─────────────────────────────────────────────────────────
 
 /**

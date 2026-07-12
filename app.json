@@ -24,6 +24,7 @@
       "bundleIdentifier": "app.volyume",
       "buildNumber": "10",
       "requireFullScreen": true,
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSSupportsLiveActivities": true,

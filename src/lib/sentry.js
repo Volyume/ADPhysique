@@ -199,6 +199,38 @@ export function captureError(error, ctx = {}) {
   } catch (_) {}
 }
 
+// Expected-offline noise gate (2026-07-12, Sentry VOLYUME-S/1A/1B/1C/1D/1E):
+// a device syncing with no connectivity retried pushes for a whole
+// backgrounded session and every attempt shipped a warning EVENT (3,856
+// events on a single issue). An unreachable network is expected
+// offline-first behaviour -- the sync queue owns the retry -- so these
+// demote to a warning-level breadcrumb: still attached to any subsequent
+// real error, no event, no quota burn. Two triggers:
+//   1. the RN fetch signature ("Network request failed") anywhere in the
+//      message or context, regardless of connectivity knowledge;
+//   2. a sync-family warning (sync.* / supabase.* scope) while NetInfo has
+//      told us the device is offline (observability.isKnownOffline) -- the
+//      aggregate warnings (e.g. sync.push.legacy.errors) don't carry the
+//      fetch text but describe the same expected condition.
+// captureError is deliberately NOT gated: real errors always ship. The
+// local errorLog ring buffer (Settings -> Debug Logs) is upstream of this
+// and keeps every warning either way.
+const NETWORK_NOISE = /network request failed/i;
+function _isExpectedOfflineNoise(message, ctx) {
+  try {
+    if (NETWORK_NOISE.test(String(message ?? ''))) return true;
+    if (ctx?.extra && NETWORK_NOISE.test(JSON.stringify(ctx.extra))) return true;
+    if (/^(sync|supabase)\./.test(String(ctx?.scope ?? ''))) {
+      // Lazy require: observability's own Sentry forwarding goes through
+      // errorLog, so a top-level import here could cycle at module init.
+      // eslint-disable-next-line global-require
+      const { isKnownOffline } = require('./observability');
+      return typeof isKnownOffline === 'function' && isKnownOffline() === true;
+    }
+  } catch (_) { /* fail open to visibility: capture normally */ }
+  return false;
+}
+
 /**
  * Forward a warning-level event. errorLog.logWarn → captureWarning.
  * Use this for "something's not right but we recovered" cases.
@@ -206,6 +238,15 @@ export function captureError(error, ctx = {}) {
 export function captureWarning(message, ctx = {}) {
   if (!SentryNative || !initialised) return;
   try {
+    if (_isExpectedOfflineNoise(message, ctx)) {
+      SentryNative.addBreadcrumb({
+        message,
+        category: ctx.scope ?? 'app',
+        level: 'warning',
+        data: ctx.extra ?? undefined,
+      });
+      return;
+    }
     SentryNative.withScope((scope) => {
       scope.setLevel('warning');
       if (ctx.scope) scope.setTag('scope', ctx.scope);

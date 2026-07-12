@@ -285,6 +285,15 @@ export async function signInWithApple() {
     if (e?.code === 'ERR_REQUEST_CANCELED' || e?.code === 'ERR_CANCELED') {
       return { cancelled: true };
     }
+    // ASAuthorizationError.unknown (Apple error 1000, surfaced as
+    // ERR_REQUEST_UNKNOWN, Sentry VOLYUME-18): Apple's sheet failed before
+    // our code or Supabase ran. In practice this is device state -- most
+    // commonly not being (fully) signed in to iCloud, or an Apple ID that
+    // needs attention -- so callers show the actual remedy instead of a
+    // dead-end "try again". The code flag is what LoginScreen branches on.
+    if (e?.code === 'ERR_REQUEST_UNKNOWN') {
+      return { error: { code: 'apple_device_state', message: e?.message ?? 'Apple sign-in failed.' } };
+    }
     return { error: { message: e?.message ?? 'Apple sign-in failed.' } };
   }
 }

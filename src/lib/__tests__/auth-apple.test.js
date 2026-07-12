@@ -65,6 +65,16 @@ describe('signInWithApple', () => {
     expect(res.error).toEqual({ message: 'bad token' });
   });
 
+  test('iOS: Apple error 1000 (ERR_REQUEST_UNKNOWN) is flagged as device state so the UI can show the iCloud remedy (VOLYUME-18)', async () => {
+    appleAuth.signInAsync.mockRejectedValue({
+      code: 'ERR_REQUEST_UNKNOWN',
+      message: 'The authorization attempt failed for an unknown reason',
+    });
+    const res = await signInWithApple();
+    expect(res.error?.code).toBe('apple_device_state');
+    expect(auth.signInWithIdToken).not.toHaveBeenCalled();
+  });
+
   test('non-iOS (Android): falls back to web OAuth, never touches the native module', async () => {
     Platform.OS = 'android';
     await signInWithApple();

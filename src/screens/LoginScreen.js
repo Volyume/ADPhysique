@@ -49,7 +49,15 @@ export default function LoginScreen() {
         // first touchpoint. The real error is already captured above by
         // logError; the user only ever sees one calm fallback sentence
         // (same fix pattern as L01-B35).
-        toast.show("That didn't go through. Try again.", { variant: 'error' });
+        // VOLYUME-18 (2026-07-12): Apple's error 1000 means the device
+        // could not complete the request (usually iCloud sign-in state),
+        // so retrying alone never helps. Show the actual remedy, still in
+        // our own calm words, never the raw SDK text.
+        if (result.error.code === 'apple_device_state') {
+          toast.show('Apple could not finish sign-in. Check you are signed in to iCloud in your phone Settings, then try again.', { variant: 'error' });
+        } else {
+          toast.show("That didn't go through. Try again.", { variant: 'error' });
+        }
       } else {
         // Success is fully driven by onAuthStateChange, log so the
         // upstream SIGNED_IN event can be correlated to this initiation.

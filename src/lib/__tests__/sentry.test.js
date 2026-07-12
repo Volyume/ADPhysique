@@ -107,3 +107,79 @@ describe('sentry.js beforeSend / beforeBreadcrumb (fail-closed)', () => {
     expect(result).not.toBe(crumb);
   });
 });
+
+/**
+ * Expected-offline warning gate (2026-07-12, VOLYUME-S/1A/1B/1C/1D/1E):
+ * a device retrying sync pushes with no connectivity shipped thousands of
+ * warning EVENTS for the expected "Network request failed" condition. The
+ * gate demotes those to warning-level breadcrumbs (still attached to any
+ * later real error) while every other warning still creates an event, and
+ * captureError is never gated. isKnownOffline fails open: unknown
+ * connectivity means capture normally.
+ */
+describe('sentry.js captureWarning expected-offline gate', () => {
+  let SentryNative;
+  let sentry;
+
+  function setup(offline) {
+    jest.resetModules();
+    mockInit.mockClear();
+    process.env.EXPO_PUBLIC_SENTRY_DSN = 'https://publicKey@o0.ingest.sentry.io/123';
+    jest.doMock('../observability', () => ({ isKnownOffline: jest.fn(() => offline) }));
+    SentryNative = require('@sentry/react-native');
+    SentryNative.captureMessage.mockClear();
+    SentryNative.addBreadcrumb.mockClear();
+    SentryNative.withScope.mockClear();
+    SentryNative.withScope.mockImplementation((cb) => cb({
+      setLevel: jest.fn(), setTag: jest.fn(), setExtra: jest.fn(),
+    }));
+    sentry = require('../sentry');
+    sentry.initSentry({ environment: 'test' });
+  }
+
+  afterEach(() => {
+    delete process.env.EXPO_PUBLIC_SENTRY_DSN;
+    jest.dontMock('../observability');
+  });
+
+  test('a "Network request failed" warning becomes a breadcrumb, not an event', () => {
+    setup(false);
+    sentry.captureWarning('TypeError: Network request failed', { scope: 'sync._pushMesocycleWeeks' });
+    expect(SentryNative.captureMessage).not.toHaveBeenCalled();
+    expect(SentryNative.addBreadcrumb).toHaveBeenCalledWith(expect.objectContaining({
+      message: 'TypeError: Network request failed',
+      level: 'warning',
+      category: 'sync._pushMesocycleWeeks',
+    }));
+  });
+
+  test('the network signature in the CONTEXT is also demoted (db.upsert.failed shape)', () => {
+    setup(false);
+    sentry.captureWarning('db.upsert.failed supabase.mesocycle_weeks', {
+      scope: 'supabase.mesocycle_weeks',
+      extra: { context: { errorMessage: 'TypeError: Network request failed', op: 'upsert' } },
+    });
+    expect(SentryNative.captureMessage).not.toHaveBeenCalled();
+    expect(SentryNative.addBreadcrumb).toHaveBeenCalledTimes(1);
+  });
+
+  test('a sync-family warning while KNOWN offline is demoted even without the fetch text', () => {
+    setup(true);
+    sentry.captureWarning('sync.push.legacy.errors', { scope: 'sync.push.legacy', extra: { context: { errors: 1 } } });
+    expect(SentryNative.captureMessage).not.toHaveBeenCalled();
+    expect(SentryNative.addBreadcrumb).toHaveBeenCalledTimes(1);
+  });
+
+  test('the same sync-family warning with connectivity UNKNOWN/online still creates an event', () => {
+    setup(false);
+    sentry.captureWarning('sync.push.legacy.errors', { scope: 'sync.push.legacy', extra: { context: { errors: 1 } } });
+    expect(SentryNative.captureMessage).toHaveBeenCalledWith('sync.push.legacy.errors');
+    expect(SentryNative.addBreadcrumb).not.toHaveBeenCalled();
+  });
+
+  test('a non-sync warning is never demoted, even while offline', () => {
+    setup(true);
+    sentry.captureWarning('payments.appStore.fetchProducts failed', { scope: 'payments.appStore.fetchProducts' });
+    expect(SentryNative.captureMessage).toHaveBeenCalled();
+  });
+});
