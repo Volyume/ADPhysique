@@ -62,6 +62,17 @@ This has four parts, all binding:
 When PRODUCT-FACTS and a draft disagree, PRODUCT-FACTS wins and the draft is
 corrected. When PRODUCT-FACTS is silent, the claim is removed, not invented.
 
+**Scope clarification (HQ ruling, 2026-07-12).** The Claim Rule governs
+numbers attributed to Volyume or used to market it: prices, day counts,
+feature counts, method thresholds presented as the app's behaviour, and
+anything a reader would take as a product fact. General evidence-based
+coaching guidance in product-free educational content (for example sensible
+weekly loss rates or typical set ranges in a community answer that names no
+product) is educational prose, not a product claim, and is permitted where
+it reflects mainstream evidence and promises no outcome. The moment such a
+number is attributed to Volyume or placed on branded collateral as a stat,
+it becomes a product claim and must trace to PRODUCT-FACTS.
+
 ---
 
 ## 3. Approved trial wording
