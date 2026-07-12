@@ -49,8 +49,11 @@
 --
 -- Applied locally:  N/A -- cloud only; these tables/policies have no local-DB
 --                   analogue (SQLite has no RLS).
--- Applied remotely: NO -- pending. CLAUDE-run, gated on the founder's exact
---                   phrase "run against production".
+-- Applied remotely: YES -- founder-run against production 2026-07-12. Confirm
+--                   with the verification queries recorded alongside the
+--                   launch-readiness notes (grants on partnerships /
+--                   engine_telemetry / consent_log; the replaced
+--                   partner_weekly_intentions UPDATE policy).
 -- Safe to re-run:   YES. DROP POLICY IF EXISTS, a REVOKE on an absent
 --                   privilege, and CREATE POLICY after a DROP are all no-ops
 --                   or idempotent.

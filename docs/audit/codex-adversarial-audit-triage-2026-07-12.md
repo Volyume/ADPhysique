@@ -143,7 +143,7 @@ fix still needs the founder's device-walk from a green EAS build.
 - AC-01 `c966050` — SCOFF + cycle + diagnostic/draft keys named out of prefs sync (interim; fail-closed allowlist still queued).
 - AC-02 `c2b227e` — periodic + write sync triggers routed through the guarded `syncAll`.
 - LS-04 + LS-05 `3c42622` — anchor pass skipped under layoff; 5% cap restored at low load.
-- BSEC-01/06/10/11 `migrate_119` (`dfba329`) — direct-write lockdown; **founder-run**, gated on "run against production".
+- BSEC-01/06/10/11 `migrate_119` (`dfba329`) — direct-write lockdown; **APPLIED to production (founder-run 2026-07-12).** Confirm with the grants/policy verification queries in the launch-readiness notes.
 
 **Tier 2 (data-loss / integrity / inputs):**
 - LS-02 `3316716` — failed workout_sets push throws so the watermark holds.
