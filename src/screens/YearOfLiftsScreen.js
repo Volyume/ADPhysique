@@ -31,6 +31,7 @@ import * as haptics from '../lib/haptics';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getYearOfLiftsData, getRecapData, getBlockReflectionData, getOpenEdPatternFlag } from '../lib/database';
+import { safeDate, safeToFixed } from '../lib/safeFormat';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { track } from '../lib/engineTelemetry';
@@ -49,8 +50,11 @@ const MONTH_NAMES = [
 ];
 
 function fmtDate(ms) {
-  if (!ms) return '';
-  const d = new Date(ms);
+  // EP-23/UI-11: a malformed/legacy ms value (bad restore/sync) would print
+  // "NaN undefined NaN" through the manual getters below; guard it to an
+  // omitted date, matching the empty-string fallback for a missing value.
+  const d = safeDate(ms);
+  if (!d) return '';
   return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
 }
 
@@ -164,7 +168,7 @@ export function buildCards(data, units, { neutral = false } = {}) {
       subline: 'Estimated max lifts logged this year',
       rows: data.topPRs.slice(0, 5).map(pr => ({
         primary: pr.exerciseName ?? pr.exercise_name,
-        secondary: `${parseFloat(pr.value).toFixed(1)}${units}`,
+        secondary: `${safeToFixed(pr.value, 1)}${units}`,
       })),
     });
   }
@@ -245,7 +249,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
     content.push({
       type: 'list', icon: 'trophy', tone: 'gold',
       headline: 'Personal bests', subline: 'Estimated max lifts this month',
-      rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${parseFloat(pr.value).toFixed(1)}${units}` })),
+      rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
     });
   }
 
@@ -334,7 +338,7 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
     content.push({
       type: 'list', icon: 'trophy', tone: 'gold',
       headline: 'Personal bests', subline: 'Estimated max lifts this week',
-      rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${parseFloat(pr.value).toFixed(1)}${units}` })),
+      rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
     });
   }
 
@@ -392,7 +396,7 @@ export function buildBlockCards(data, units) {
     cards.push({
       type: 'list', icon: 'trophy', tone: 'gold',
       headline: 'Personal bests', subline: 'Set this block',
-      rows: data.prs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${parseFloat(pr.value).toFixed(1)}${units}` })),
+      rows: data.prs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
     });
   }
 

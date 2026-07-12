@@ -5,8 +5,8 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { format } from 'date-fns/format';
 import { differenceInWeeks } from 'date-fns/differenceInWeeks';
+import { safeDate, safeFormatDate } from '../lib/safeFormat';
 import SvgBarSparkline from '../components/SvgBarSparkline';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -139,7 +139,11 @@ export default function MesocycleBuilderScreen({ navigation }) {
 
   function getCurrentWeek(mesocycle) {
     if (!mesocycle?.startDate) return 1;
-    const start = new Date(mesocycle.startDate);
+    // A malformed/legacy startDate (restore/sync) makes differenceInWeeks
+    // return NaN, which would render "Week NaN of N" below (EP-23/UI-11);
+    // fall back to week 1, the same placeholder used for no startDate.
+    const start = safeDate(mesocycle.startDate);
+    if (!start) return 1;
     const week = differenceInWeeks(new Date(), start) + 1;
     return Math.min(Math.max(week, 1), mesocycle.durationWeeks || 4);
   }
@@ -242,10 +246,10 @@ export default function MesocycleBuilderScreen({ navigation }) {
               )}
               <Text maxFontSizeMultiplier={1.3} style={[styles.mesoName, live.mesoName]}>{meso.name}</Text>
               <View style={styles.mesoMeta}>
-                {meso.startDate && (
+                {meso.startDate && safeDate(meso.startDate) && (
                   <Text maxFontSizeMultiplier={1.3} style={[styles.metaItem, live.metaItem]}>
-                    {format(new Date(meso.startDate), 'MMM d')}
-                    {meso.endDate ? ` · ${format(new Date(meso.endDate), 'MMM d')}` : ''}
+                    {safeFormatDate(meso.startDate, 'MMM d')}
+                    {meso.endDate && safeDate(meso.endDate) ? ` · ${safeFormatDate(meso.endDate, 'MMM d')}` : ''}
                   </Text>
                 )}
                 {meso.focus ? <Text maxFontSizeMultiplier={1.3} style={[styles.metaItem, live.metaItem]}>{meso.focus}</Text> : null}

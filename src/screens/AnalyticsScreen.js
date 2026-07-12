@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns/format';
+import { safeDate, safeFormatDate } from '../lib/safeFormat';
 
 import { colors, fontSize, fontWeight, spacing, radius, buildVolumeStatusColor, type, circle, iconSize, withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
@@ -1107,7 +1108,7 @@ function SessionCard({ workout, onPress }) {
       <View style={styles.sessionLeft}>
         <Text maxFontSizeMultiplier={1.3} style={[styles.sessionName, live.sessionName]} numberOfLines={1}>{name}</Text>
         <Text maxFontSizeMultiplier={1.3} style={[styles.sessionMeta, live.sessionMeta]}>
-          {at ? format(new Date(at), 'EEE d MMM') : ''}
+          {at && safeDate(at) ? safeFormatDate(at, 'EEE d MMM') : ''}
           {workout.durationMinutes ? ` - ${workout.durationMinutes}m` : ''}
         </Text>
       </View>

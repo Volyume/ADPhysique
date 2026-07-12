@@ -93,3 +93,37 @@ describe('BlockReflectionScreen load states', () => {
     expect(text).not.toContain("Couldn't load block summary");
   });
 });
+
+describe('BlockReflectionScreen malformed restored/legacy PR value (EP-23/UI-11)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  // A PR record's `value` can be malformed after a bad restore/import/sync
+  // (e.g. a corrupted string). This used to reach
+  // `parseFloat(pr.value).toFixed(1)` and silently render the string
+  // "NaNkg" in the "Records set this block" list. Proves the real screen
+  // now shows a clean placeholder instead.
+  test('a malformed PR value never renders "NaN"', async () => {
+    getBlockReflectionData.mockResolvedValue({
+      meso: { name: 'Hypertrophy block', plannedWeeks: 6 },
+      startDate: Date.UTC(2026, 5, 1),
+      endDate: Date.UTC(2026, 6, 12),
+      totalSessions: 18,
+      totalSets: 240,
+      tonnage: 42000,
+      avgDuration: 55,
+      prs: [
+        { exerciseName: 'Barbell bench press', recordType: '1rm_estimate', value: 'corrupt' },
+      ],
+      bestSession: null,
+      narrative: ['A solid block overall.'],
+    });
+
+    const { tree } = await render();
+    const text = flattenText(tree.toJSON());
+
+    expect(text).toContain('Barbell bench press');
+    expect(text).not.toMatch(/NaN/);
+  });
+});

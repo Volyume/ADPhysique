@@ -11,6 +11,7 @@ import SectionLabel from '../components/SectionLabel';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getBlockReflectionData } from '../lib/database';
+import { safeDate, safeToFixed } from '../lib/safeFormat';
 import { SkeletonCard } from '../components/Skeleton';
 import { selection as hapticSelection } from '../lib/haptics';
 
@@ -20,8 +21,11 @@ const MONTH_NAMES = [
 ];
 
 function fmtDate(ms) {
-  if (!ms) return '';
-  const d = new Date(ms);
+  // EP-23/UI-11: a malformed/legacy ms value (bad restore/sync) would print
+  // "NaN undefined NaN" through the manual getters below; guard it to an
+  // omitted date, matching the empty-string fallback for a missing value.
+  const d = safeDate(ms);
+  if (!d) return '';
   return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
 }
 
@@ -231,7 +235,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
                       <Text maxFontSizeMultiplier={1.3} style={[styles.prExercise, live.prExercise]}>{pr.exerciseName ?? pr.exercise_name}</Text>
                       <Text maxFontSizeMultiplier={1.3} style={[styles.prType, live.prType]}>{PR_TYPE_LABELS[pr.recordType ?? pr.record_type] ?? pr.recordType}</Text>
                     </View>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.prValue, live.prValue]}>{parseFloat(pr.value).toFixed(1)}{units}</Text>
+                    <Text maxFontSizeMultiplier={1.3} style={[styles.prValue, live.prValue]}>{safeToFixed(pr.value, 1)}{units}</Text>
                   </View>
                 ))}
               </View>

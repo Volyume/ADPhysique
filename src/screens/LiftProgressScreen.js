@@ -5,7 +5,7 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { format } from 'date-fns/format';
+import { safeDate, safeFormatDate, safeNumber, safeToFixed } from '../lib/safeFormat';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
@@ -213,17 +213,21 @@ export default function LiftProgressScreen({ navigation }) {
         onPress: () => navigation.navigate('ExerciseDetail', { exerciseId: row.exerciseId, __heroOrigin: originRect || undefined }),
       },
     ];
-    if (row.bestE1rm) {
+    // EP-23/UI-11: bestE1rm/lastTrainedAt can be malformed after a bad
+    // restore/sync; only offer sharing when the weight is actually a finite
+    // number, and never let a bad lastTrainedAt crash the long-press menu by
+    // calling toISOString() on an Invalid Date.
+    if (safeNumber(row.bestE1rm) > 0) {
       items.push({
         icon: 'share-outline',
         label: 'Share this PR',
         onPress: () => navigation.navigate('ShareCard', {
           prData: {
             exerciseName: row.name,
-            weight: parseFloat(row.bestE1rm).toFixed(1),
+            weight: safeToFixed(row.bestE1rm, 1),
             reps: '1',
             units,
-            date: new Date(row.lastTrainedAt).toISOString(),
+            date: (safeDate(row.lastTrainedAt) ?? new Date()).toISOString(),
           },
         }),
       });
@@ -429,7 +433,7 @@ export default function LiftProgressScreen({ navigation }) {
                   )}
                 </View>
                 <Text maxFontSizeMultiplier={1.3} style={[styles.meta, live.meta]}>
-                  {muscle ? `${muscle} - ` : ''}{item.sessions} {item.sessions === 1 ? 'session' : 'sessions'} - last {format(new Date(item.lastTrainedAt), 'd MMM')}
+                  {muscle ? `${muscle} - ` : ''}{item.sessions} {item.sessions === 1 ? 'session' : 'sessions'}{safeDate(item.lastTrainedAt) ? ` - last ${safeFormatDate(item.lastTrainedAt, 'd MMM')}` : ''}
                 </Text>
                 {/* C1: the last logged session's own numbers, distinct from the
                     all-time best headline below. liftProgress.js tracks the

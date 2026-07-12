@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { format } from 'date-fns/format';
+import { safeDate, safeFormatDate, finiteOr, safeToFixed } from '../lib/safeFormat';
 import VolyumeChart from '../components/VolyumeChart';
 import WindowChips from '../components/WindowChips';
 import {
@@ -399,7 +399,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       setGoalWeightInput(String(goal.targetWeight));
       setGoalDateInput(
         goal.targetDate
-          ? format(new Date(goal.targetDate), 'MMM yyyy')
+          ? safeFormatDate(goal.targetDate, 'MMM yyyy', '')
           : '',
       );
     } else {
@@ -486,12 +486,16 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     return est > best ? est : best;
   }, 0);
 
-  // Goal progress derived values
-  const goalProgress = goal && !goal.achievedAt
+  // Goal progress derived values. A malformed/legacy goal.targetWeight (e.g.
+  // 0 or non-numeric after a bad restore) can turn the division below into
+  // NaN/Infinity; finiteOr keeps the progress bar width and "to go" caption
+  // from ever rendering "NaN%"/"NaNkg to go" (EP-23/UI-11).
+  const rawGoalProgress = goal && !goal.achievedAt
     ? Math.min(1, best1RM / goal.targetWeight)
     : goal && goal.achievedAt
       ? 1
       : 0;
+  const goalProgress = finiteOr(rawGoalProgress, 0);
   const goalKgToGo = goal && !goal.achievedAt
     ? Math.max(0, goal.targetWeight - best1RM)
     : 0;
@@ -637,7 +641,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 {displayPR && (
                   <View style={styles.prHighlightStat}>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.prHighlightStatValue, live.prHighlightStatValue]}>
-                      {parseFloat(displayPR.value).toFixed(1)}{units}
+                      {safeToFixed(displayPR.value, 1)}{units}
                     </Text>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>
                       {displayPR.record_type === '1rm_estimate' ? 'Est. max' : 'Heaviest set'}
@@ -647,7 +651,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 {prHeavy && displayPR !== prHeavy && (
                   <View style={[styles.prHighlightStat, styles.prHighlightStatBordered, live.prHighlightStatBordered]}>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.prHighlightStatValue, live.prHighlightStatValue]}>
-                      {prHeavy.value}{units} x {prHeavy.reps}
+                      {finiteOr(prHeavy.value, '-')}{units} x {finiteOr(prHeavy.reps, '-')}
                     </Text>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>Best set</Text>
                   </View>
@@ -655,14 +659,14 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 {prReps && (
                   <View style={[styles.prHighlightStat, styles.prHighlightStatBordered, live.prHighlightStatBordered]}>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.prHighlightStatValue, live.prHighlightStatValue]}>
-                      {prReps.value}{units} x {prReps.reps}
+                      {finiteOr(prReps.value, '-')}{units} x {finiteOr(prReps.reps, '-')}
                     </Text>
                     <Text maxFontSizeMultiplier={1.3} style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>Most reps</Text>
                   </View>
                 )}
               </View>
               <Text maxFontSizeMultiplier={1.3} style={[styles.prHighlightDate, live.prHighlightDate]}>
-                Achieved {format(new Date(displayPR.achieved_date), 'MMM d yyyy')}
+                Achieved {safeFormatDate(displayPR.achieved_date, 'MMM d yyyy')}
               </Text>
             </Card>
           );
@@ -710,10 +714,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               <Ionicons name="arrow-forward" size={14} color={t.colors.textMuted} />
               <View style={styles.goalWeightItem}>
                 <Text maxFontSizeMultiplier={1.3} style={[styles.goalWeightValue, live.goalWeightValue, { color: t.colors.primary }]}>
-                  {goal.targetWeight}{units}
+                  {finiteOr(goal.targetWeight, '-')}{units}
                 </Text>
                 <Text maxFontSizeMultiplier={1.3} style={[styles.goalWeightLabel, live.goalWeightLabel]}>
-                  Target{goal.targetDate ? ` - by ${format(new Date(goal.targetDate), 'MMM yyyy')}` : ''}
+                  Target{goal.targetDate && safeDate(goal.targetDate) ? ` - by ${safeFormatDate(goal.targetDate, 'MMM yyyy')}` : ''}
                 </Text>
               </View>
             </View>
@@ -729,7 +733,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             ]}>
               {goalProgress >= 1
                 ? 'Goal reached.'
-                : `${goalKgToGo.toFixed(1)}${units} to go`}
+                : `${safeToFixed(goalKgToGo, 1)}${units} to go`}
             </Text>
           </Card>
         )}
@@ -789,7 +793,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                       title: activeMetricIsWeight
                         ? `${Math.round(p[activeYKey])} ${units}`
                         : `${Math.round(p[activeYKey])}`,
-                      sub: p.date ? format(new Date(p.date), 'MMM d') : '',
+                      sub: p.date ? safeFormatDate(p.date, 'MMM d', '') : '',
                     };
                   }}
                 />
@@ -811,11 +815,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             <SectionLabel>History (last {history.length} sessions)</SectionLabel>
             {history.map((sessionSets, i) => {
               const firstSet = sessionSets[0];
-              const date = new Date(firstSet.createdAt);
               const sessionEst1RM = Math.max(...sessionSets.map(s => calculate1RM(s.weight || 0, s.actualReps || 0)));
               return (
                 <Card radius="md" style={styles.historyCard} key={i}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.historyDate, live.historyDate]}>{format(date, 'MMM d')}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.historyDate, live.historyDate]}>{safeFormatDate(firstSet.createdAt, 'MMM d')}</Text>
                   <View style={styles.historySets}>
                     {sessionSets.map((s, j) => (
                       <Text maxFontSizeMultiplier={1.3} key={j} style={[styles.historySetText, live.historySetText]}>
@@ -870,11 +873,11 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                      pr.record_type === 'heaviest_weight' ? 'Heaviest weight' : 'Most reps'}
                   </Text>
                   <Text maxFontSizeMultiplier={1.3} style={[styles.prValue, live.prValue]}>
-                    {pr.record_type === '1rm_estimate' ? `${parseFloat(pr.value).toFixed(1)}${units}` :
-                     `${pr.value}${units} x ${pr.reps} reps`}
+                    {pr.record_type === '1rm_estimate' ? `${safeToFixed(pr.value, 1)}${units}` :
+                     `${finiteOr(pr.value, '-')}${units} x ${finiteOr(pr.reps, '-')} reps`}
                   </Text>
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.prDate, live.prDate]}>{format(new Date(pr.achieved_date), 'MMM d yyyy')}</Text>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.prDate, live.prDate]}>{safeFormatDate(pr.achieved_date, 'MMM d yyyy')}</Text>
               </Card>
             ))}
           </View>
