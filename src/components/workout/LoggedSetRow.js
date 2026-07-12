@@ -4,7 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 // Campaign item 14 (D25): zeego native long-press context menu, first
 // surface only (logged-set rows). ED-safety bound: workout-only, never
 // added to weight/nutrition surfaces.
-import * as ContextMenu from 'zeego/context-menu';
+import SetRowMenu from './SetRowMenu';
 
 import { colors, spacing, radius, fontWeight, type, iconSize, withAlpha } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
@@ -160,24 +160,13 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
   // byte-identical behaviour with zero menu wrapping.
   if (!onDelete) return row;
 
+  // Platform fork (2026-07-12, Sentry VOLYUME-1X): SetRowMenu.js carries the
+  // zeego wrap (Android); SetRowMenu.ios.js renders the bare row because the
+  // menu's native layer crash-looped iOS at startup. See both files' headers.
   return (
-    <ContextMenu.Root>
-      {/* `style={rowStyle}` here is NOT decorative -- see rowStyle's comment
-          above. zeego's asChild clobber overwrites the cloned row's style
-          with whatever the Trigger itself was given, so the Trigger must
-          carry the row's own array or the row loses its layout. */}
-      <ContextMenu.Trigger action="longPress" asChild style={rowStyle}>
-        {row}
-      </ContextMenu.Trigger>
-      <ContextMenu.Content>
-        <ContextMenu.Item key="edit-set" onSelect={() => onEdit(set)}>
-          <ContextMenu.ItemTitle>Edit set</ContextMenu.ItemTitle>
-        </ContextMenu.Item>
-        <ContextMenu.Item key="delete-set" destructive onSelect={() => onDelete(set)}>
-          <ContextMenu.ItemTitle>Delete set</ContextMenu.ItemTitle>
-        </ContextMenu.Item>
-      </ContextMenu.Content>
-    </ContextMenu.Root>
+    <SetRowMenu rowStyle={rowStyle} set={set} onEdit={onEdit} onDelete={onDelete}>
+      {row}
+    </SetRowMenu>
   );
 });
 

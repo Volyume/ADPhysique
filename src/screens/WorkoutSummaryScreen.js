@@ -972,7 +972,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     // ['top'] only, NOT ['top', 'bottom']. This screen always renders INSIDE a
     // tab stack (HomeStack / ProgressStack) with VolyumeTabBar below it, and
     // that band already owns the system bottom inset (it pads by insets.bottom;
-    // VolyumeTabBar.js height 60 + insets.bottom). Claiming 'bottom' here made
+    // VolyumeTabBar.js, content-hugging since 2026-07-12). Claiming 'bottom'
+    // here made
     // the SafeAreaView add the inset a SECOND time as padding under the sticky
     // footer, which is the ~70dp dead band the founder photographed between the
     // Close/Share footer and the tab bar. Exactly one component owns each system

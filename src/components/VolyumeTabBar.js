@@ -111,7 +111,20 @@ export default function VolyumeTabBar({ state, descriptors, navigation }) {
     <View>
       <ActiveSessionMiniBar navigation={navigation} />
       <View
-        style={[styles.bar, live.bar, { height: 60 + insets.bottom, paddingBottom: 4 + insets.bottom }]}
+        // Founder defect (2026-07-12, iOS TestFlight): reproduce the stock
+        // BottomTabBar's geometry exactly, which "sat perfectly" on both
+        // devices before the E15 custom bar. Stock = a 49pt content zone
+        // (@react-navigation/bottom-tabs DEFAULT_TABBAR_HEIGHT) with the
+        // icon+label CENTRED in it, plus the system inset as padding below;
+        // the bar fill runs edge-to-edge to the physical bottom and only the
+        // labels lift above the home indicator. The E15 bar had instead
+        // hard-coded a 60pt zone with top-aligned items (justifyContent:
+        // 'flex-start'), so it rendered as a tall slab: labels floating in
+        // the upper portion, a fat band of bar-colour below them down to the
+        // edge -- barely visible over Android's tiny inset, glaring over the
+        // iPhone's 34pt home indicator. minHeight (not height) so large
+        // system text can still grow the bar rather than clip.
+        style={[styles.bar, live.bar, { minHeight: 49 + insets.bottom, paddingBottom: insets.bottom }]}
         onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
       >
         {barWidth > 0 ? (
@@ -177,7 +190,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderSubtle,
-    paddingTop: 4,
   },
   pill: {
     position: 'absolute',
@@ -186,7 +198,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.primaryBg,
   },
-  item: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', gap: 2, paddingTop: 4 },
+  // Centred in the 49pt content zone, matching the stock BottomTabBar the
+  // founder's "sat perfectly" build used (the E15 bar top-aligned this,
+  // which is what pooled the dead band below the labels on iOS).
+  item: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
   iconWrap: { position: 'relative' },
   // T2: a calm amber dot, not an alarm-red one (the theme defines no such
   // treatment). It matches the coach-update colour; the hairline border cuts

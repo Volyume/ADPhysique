@@ -18,5 +18,22 @@ module.exports = {
     '@react-native-google-signin/google-signin': {
       platforms: { ios: null },
     },
+    // iOS TestFlight crash-loop (Sentry VOLYUME-1X, 2026-07-12, build 40):
+    // react-native-ios-utilities' RNIBaseView layer throws a fatal
+    // NSUnknownKeyException (KVC "reactPropHandler" on a plain RCTView)
+    // during Fabric component-descriptor registration at app START on
+    // RN 0.81 — before any JS renders the menu. The packages stay in
+    // package.json because zeego's shared TS sources import from them
+    // (Metro must still resolve them for the Android bundle); excluding
+    // them here removes their pods from the iOS build entirely. The one
+    // JS consumer is platform-forked so the iOS bundle never imports
+    // zeego/context-menu (src/components/workout/SetRowMenu.ios.js).
+    // Android is untouched and keeps the long-press set menu.
+    'react-native-ios-utilities': {
+      platforms: { ios: null },
+    },
+    'react-native-ios-context-menu': {
+      platforms: { ios: null },
+    },
   },
 };

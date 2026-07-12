@@ -54,6 +54,9 @@ jest.mock('../../database', () => ({
     runAsync: async (sql, params = []) => mockSqlite.prepare(sql).run(...params),
   })),
   uid: jest.fn(() => `test-id-${++mockIdCounter}`),
+  // Mirror the real serialiser (same shape as foodSync.test.js's mock): the
+  // seed chunks now ride runInTransaction rather than a raw BEGIN/COMMIT.
+  runInTransaction: async (d, task) => (d.withTransactionAsync ? d.withTransactionAsync(task) : task()),
 }));
 
 const AsyncStorage = require('@react-native-async-storage/async-storage').default;

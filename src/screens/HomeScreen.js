@@ -48,6 +48,8 @@ import {
   dayName,
   trialBannerLine,
   TRIAL_LENGTH_DAYS,
+  FIRST_CHECKIN_MIN_DAYS,
+  MIN_WEIGH_INS,
 } from '../lib/trialActivation';
 import { buildCoachLedger } from '../lib/coachLedger';
 import CoachDailyBrief from '../components/CoachDailyBrief';
@@ -529,7 +531,7 @@ export default function HomeScreen({ navigation, route }) {
       let checkinDay = 0;
       try {
         const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
-        if (raw) { const p = JSON.parse(raw); if (Number.isFinite(p?.checkinDay)) checkinDay = p.checkinDay; }
+        if (raw) { const p = JSON.parse(raw); const d = Number(p?.checkinDay); if (Number.isInteger(d) && d >= 0 && d <= 6) checkinDay = d; }
       } catch (_) {}
 
       const variant = selectTrialVariant({ completedSessions, weighIns7d });
@@ -590,7 +592,7 @@ export default function HomeScreen({ navigation, route }) {
       let checkinDay = 0;
       try {
         const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
-        if (raw) { const p = JSON.parse(raw); if (Number.isFinite(p?.checkinDay)) checkinDay = p.checkinDay; }
+        if (raw) { const p = JSON.parse(raw); const d = Number(p?.checkinDay); if (Number.isInteger(d) && d >= 0 && d <= 6) checkinDay = d; }
       } catch (_) {}
 
       // ED-safety: mirrors useWeeklyStreak's edSuppressed exactly (open flag,
@@ -1014,17 +1016,38 @@ export default function HomeScreen({ navigation, route }) {
       setLastSession(completed[0] || null);
       setTotalSessions(completed.length);
 
-      // Only show the check-in nudge on the user's actual check-in day,
-      // once they have real training data to review. Gating on the
-      // scheduled day (checkinDay in notif prefs, default Sunday) stops it
-      // claiming the check-in is ready when it is still days away.
+      // Only show the check-in nudge when the check-in screen would actually
+      // let the user in. Day-of-week alone is not enough (founder repro,
+      // 2026-07-12): a user inside the 5-day baseline window saw "Your weekly
+      // check-in is ready", tapped through, and hit the too_soon gate telling
+      // them to wait 5 more days. Mirror the WeeklyCheckIn gate exactly:
+      // scheduled day AND >= FIRST_CHECKIN_MIN_DAYS since the earliest
+      // morning weight AND >= MIN_WEIGH_INS weigh-ins in the trailing week
+      // (the same last-14-days query the gate reads).
       if (tier === 'pro' && completed.length >= 3) {
         try {
           const seen = await AsyncStorage.getItem('@volyume_seen_coaching_nudge');
           if (seen !== 'true') {
             const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
-            const checkinDay = raw ? (JSON.parse(raw).checkinDay ?? 0) : 0;
-            if (new Date().getDay() === checkinDay) setShowCoachingNudge(true);
+            let checkinDay = 0;
+            if (raw) {
+              const d = Number(JSON.parse(raw)?.checkinDay);
+              if (Number.isInteger(d) && d >= 0 && d <= 6) checkinDay = d;
+            }
+            if (new Date().getDay() === checkinDay) {
+              const weights = await getMorningWeightsLast14Days(user.id).catch(() => []);
+              const firstAt = weights.length
+                ? Math.min(...weights.map(w => w.loggedAt ?? Infinity).filter(Number.isFinite))
+                : null;
+              const daysOfData = firstAt != null
+                ? Math.floor((Date.now() - firstAt) / 86400000)
+                : 0;
+              const weekAgo = Date.now() - 7 * 86400000;
+              const weighIns7d = weights.filter(w => (w.loggedAt ?? 0) >= weekAgo).length;
+              if (daysOfData >= FIRST_CHECKIN_MIN_DAYS && weighIns7d >= MIN_WEIGH_INS) {
+                setShowCoachingNudge(true);
+              }
+            }
           }
         } catch (_) {}
       }

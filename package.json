@@ -167,7 +167,9 @@
     "autolinking": {
       "apple": {
         "exclude": [
-          "@react-native-google-signin/google-signin"
+          "@react-native-google-signin/google-signin",
+          "react-native-ios-utilities",
+          "react-native-ios-context-menu"
         ]
       }
     },

@@ -48,7 +48,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
-import { db, uid } from '../database';
+import { db, uid, runInTransaction } from '../database';
 import { logInfo, logWarn, logError } from '../errorLog';
 import { MICRO_COLUMNS, microSqlColumns, microSqlPlaceholders, microValuesFromRow } from './micronutrients';
 
@@ -104,18 +104,15 @@ export const COFID_SNAPSHOT_VERSION = '2026-07-10T05:22:13.191Z';
 
 const _inFlight = new Map();
 
-// SQLite gives us one connection shared across the app. Two importers
-// firing from RootNavigator bootstrap will both try to BEGIN on it
-// concurrently, which expo-sqlite rejects ("cannot start a transaction
-// within a transaction"). Serialise every transaction-scoped block
-// through this mutex so the second importer's chunks queue cleanly
-// behind the first.
-let _txMutex = Promise.resolve();
-function _withTxLock(fn) {
-  const next = _txMutex.then(() => fn(), () => fn());
-  _txMutex = next.then(() => {}, () => {});
-  return next;
-}
+// SQLite gives us one connection shared across the app. Chunk
+// transactions used to be serialised by a seed-local mutex with a raw
+// BEGIN/COMMIT, which only protected the two importers from EACH OTHER:
+// any transaction queued through database.js's runInTransaction (sync
+// pulls, plan generation) could still interleave on the shared
+// connection, commit-or-kill the seed's open transaction, and leave the
+// seed's COMMIT failing with "cannot commit - no transaction is active"
+// (VOLYUME-1N, iOS build 40). Chunks now ride the app-wide
+// runInTransaction queue so only one transaction is ever in flight.
 
 /**
  * OFF UK snapshot importer (branded products, ~100k+ rows).
@@ -238,11 +235,9 @@ async function _run({ scopeKey, flagKey, expectedVersion, sourceLabel, loadModul
 
   for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
     const chunk = rows.slice(i, i + CHUNK_SIZE);
-    const result = await _withTxLock(async () => {
-      let inTx = false;
-      try {
-        await d.execAsync('BEGIN');
-        inTx = true;
+    let result;
+    try {
+      result = await runInTransaction(d, async () => {
         let imp = 0;
         let skp = 0;
         for (const row of chunk) {
@@ -291,20 +286,17 @@ async function _run({ scopeKey, flagKey, expectedVersion, sourceLabel, loadModul
             skp++;
           }
         }
-        await d.execAsync('COMMIT');
-        inTx = false;
         return { imp, skp };
-      } catch (chunkErr) {
-        if (inTx) {
-          try { await d.execAsync('ROLLBACK'); } catch (_) { /* tolerate */ }
-        }
-        logError(`food.seed.${scopeKey}.chunk`, chunkErr, {
-          chunkStart: i, chunkSize: chunk.length,
-          message: chunkErr?.message,
-        });
-        return { imp: 0, skp: 0 };
-      }
-    });
+      });
+    } catch (chunkErr) {
+      // withTransactionAsync has already rolled the chunk back; log and
+      // carry on with the next chunk, same graceful path as before.
+      logError(`food.seed.${scopeKey}.chunk`, chunkErr, {
+        chunkStart: i, chunkSize: chunk.length,
+        message: chunkErr?.message,
+      });
+      result = { imp: 0, skp: 0 };
+    }
     importedRows += result.imp;
     skippedRows += result.skp;
   }
