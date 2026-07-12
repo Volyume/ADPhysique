@@ -24,6 +24,7 @@ import { getRecentCompletedWorkouts, getWorkoutSetsForWorkoutIds, getAllExercise
 import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
+import { formatNumber, formatWithUnit } from '../lib/format';
 import { workoutDayMs, workoutDayKey, calendarRelativeLabel } from '../lib/workoutDate';
 import { formatLoggedSet } from '../lib/workoutHelpers';
 import useAppStore from '../store/useAppStore';
@@ -429,7 +430,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
               </View>
               {tonnage > 0 && (
                 <View style={[styles.statChip, live.statChip]}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.statChipText, live.statChipText]}>{Math.round(tonnage).toLocaleString('en-GB')}kg lifted</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.statChipText, live.statChipText]}>{formatWithUnit(formatNumber(Math.round(tonnage)), 'kg')} lifted</Text>
                 </View>
               )}
             </View>

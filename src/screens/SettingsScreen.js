@@ -53,7 +53,7 @@ export default function SettingsScreen({ navigation }) {
         <SettingRow
           icon="body-outline"
           label="Workout & units"
-          sub="Body-weight unit, default rest timer and rest alerts"
+          sub="Body weight unit, default rest timer and rest alerts"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsWorkout'); }}
         />
         {tier === 'pro' ? (

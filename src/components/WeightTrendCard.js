@@ -4,6 +4,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../
 import useTheme from '../hooks/useTheme';
 import VolyumeChart from './VolyumeChart';
 import { formatBodyWeight } from '../lib/units';
+import { formatNumber, formatWithUnit } from '../lib/format';
 
 /**
  * "Your trend" card (COMP-004). Renders the calm, no-shame weight-trend
@@ -126,7 +127,7 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
         ) : (
           <View style={styles.maintenanceBlock}>
             <Text maxFontSizeMultiplier={1.3} style={[styles.maintenanceValue, live.maintenanceValue]}>
-              ~{maintenance.kcal.toLocaleString()} kcal/day estimated maintenance
+              ~{formatWithUnit(formatNumber(maintenance.kcal), 'kcal')}/day estimated maintenance
             </Text>
             <Text maxFontSizeMultiplier={1.3} style={[styles.maintenanceLabel, live.maintenanceLabel]}>{maintenance.label}</Text>
           </View>

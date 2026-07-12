@@ -72,3 +72,23 @@ export function formatEnergy(kcal, unit = 'kcal', opts = {}) {
   const num = formatNumber(toEnergy(kcal, unit), opts);
   return opts.withUnit ? `${num} ${energyUnitLabel(unit)}` : num;
 }
+
+// ─── Unit-display spacing (P-15, ux-copy-polish audit 2026-07-12) ─────────
+// A plain space between a number and its unit ("100 kg") can line-wrap
+// between the two tokens, splitting the unit onto its own line. A
+// non-breaking space keeps a number+unit pair on one visual line wherever
+// they are rendered as a single string (kg, lb, kcal, cm). This is the one
+// central helper for that join; do not hand-roll the join at call sites.
+export const NBSP = ' ';
+
+/**
+ * Joins an already-formatted number (e.g. from formatNumber/formatDecimal)
+ * with a short unit label using a non-breaking space, so the pair never
+ * wraps mid-token.
+ * @param {string|number} formattedValue
+ * @param {string} unit - e.g. 'kg', 'lb', 'kcal', 'cm'
+ * @returns {string}
+ */
+export function formatWithUnit(formattedValue, unit) {
+  return `${formattedValue}${NBSP}${unit}`;
+}

@@ -500,7 +500,7 @@ export default function AthleteProfileScreen({ navigation }) {
               <View style={{ flex: 1 }}>
                 <Text maxFontSizeMultiplier={1.3} style={[styles.liftName, live.liftName]} numberOfLines={1}>{row.name}</Text>
                 <Text maxFontSizeMultiplier={1.3} style={[styles.liftSub, live.liftSub]}>
-                  {level.ratio >= 1 ? `${level.ratio.toFixed(2)}x bodyweight` : `${Math.round(level.ratio * 100)}% bodyweight`}
+                  {level.ratio >= 1 ? `${level.ratio.toFixed(2)}x body weight` : `${Math.round(level.ratio * 100)}% body weight`}
                   {level.nextLabel && level.nextTarget ? ` - ${Math.max(0, level.nextTarget - row.bestE1rm).toFixed(1)} ${units} to ${level.nextLabel}` : ''}
                 </Text>
               </View>

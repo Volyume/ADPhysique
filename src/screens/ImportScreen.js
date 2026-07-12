@@ -21,6 +21,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 import { colors, fontSize, fontWeight, spacing, type, circle, letterSpacing } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import { formatNumber } from '../lib/format';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
 import Button from '../components/Button';
@@ -308,7 +309,7 @@ function Stat({ label, value }) {
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={styles.stat}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.statValue, live.statValue]}>{Number(value || 0).toLocaleString()}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.statValue, live.statValue]}>{formatNumber(value)}</Text>
       <Text maxFontSizeMultiplier={1.3} style={[styles.statLabel, live.statLabel]}>{label}</Text>
     </View>
   );

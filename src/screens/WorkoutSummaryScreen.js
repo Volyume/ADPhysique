@@ -52,6 +52,7 @@ import { syncWorkout } from '../lib/sync';
 import { incrementSessionCount, shouldPromptReview, requestReview } from '../lib/storeReview';
 import { workoutDayMs } from '../lib/workoutDate';
 import { localWeekStartMs } from '../lib/dayKey';
+import { formatNumber, formatWithUnit } from '../lib/format';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { logError } from '../lib/errorLog';
 
@@ -1043,7 +1044,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         <Card elevated padding="xl" style={styles.heroCard}>
           <StatBox
             hero
-            value={`${Math.round(tonnage || 0).toLocaleString('en-GB')} kg`}
+            value={formatWithUnit(formatNumber(Math.round(tonnage || 0)), 'kg')}
             label="Total lifted"
             tooltip={'Total weight moved this session: sets x reps x weight added together. A rough measure of how much work you did. More is not always better; quality of effort matters more than raw numbers.'}
           />
