@@ -56,6 +56,23 @@ founder-time ceiling (OPERATING-CHARTER §1).
 5. **growth-analyst logs** every publish and reads performance, treating
    follower growth as context, never the KPI (see Measurement).
 
+## Visual identity
+
+`marketing/hq/MARKETING-VISUAL-IDENTITY-LOCKED.md` is binding for every
+piece of social imagery and video on this channel, in full — not just the
+amber/near-black summary above. Two recurring approaches carry most of this
+channel's output:
+
+- **The decision-card format** (locked spec §5) — a real number, a
+  change/hold verdict pill, one plain-English reason line, built from the
+  Volyume Canva brand kit, not a stock template. This is Volyume's own
+  recurring visual unit and the one no competitor can replicate, because it
+  comes from the product's real weekly coaching decision.
+- **Category contrast** (locked spec §1) — this channel's competitors are
+  bright, hyped, and photo/transformation-led; Volyume's feed stays calm,
+  dark and editorial deliberately, as the strategic differentiator, not a
+  style preference.
+
 ## Cadence
 
 Consistency over volume. Working target once accounts exist and are
