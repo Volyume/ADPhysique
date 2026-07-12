@@ -23,7 +23,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "app.volyume",
       "associatedDomains": ["applinks:volyume.app"],
-      "buildNumber": "9",
+      "buildNumber": "10",
       "requireFullScreen": true,
       "entitlements": {
         "com.apple.security.application-groups": [
