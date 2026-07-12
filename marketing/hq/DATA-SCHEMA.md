@@ -16,15 +16,33 @@ founder per the standing Supabase rule (never automatic, never CI-triggered).
 
 The marketing department has exactly one public-facing surface: the
 volyume.app waitlist signup form, which writes with the Supabase **anon**
-key. Every other marketing table is internal — read by the founder's
-dashboard session (**authenticated** role, any authenticated user, since
-this project has no public signups against marketing tables beyond the
-waitlist) or written by the marketing agents running under the
-**service_role** key (bypasses RLS by design; agents are trusted backend
-processes, never exposed client-side).
+key. Every other marketing table is internal — read/managed by the
+founder's dashboard session under the **authenticated** role, or written by
+the marketing agents running under the **service_role** key (bypasses RLS
+by design; agents are trusted backend processes, never exposed
+client-side).
+
+**Correction (this section previously claimed "any authenticated user is
+fine because this project has no public signups against marketing tables" —
+that was wrong and has been fixed by this migration).** This Supabase
+project's `authenticated` role is not founder-only: the Volyume mobile app
+and its web companion share the same Supabase auth, so `authenticated`
+means "any logged-in end user of the product." A bare
+`TO authenticated USING (true)` policy on the marketing tables would let
+any paying customer read the content pipeline, growth metrics and audit
+ledger, and (on `marketing_content`/`marketing_channels`) write to them.
+That is not acceptable, so every authenticated policy on the four internal
+marketing tables is gated through a new allow-list table,
+`marketing_admins` (section 1a), keyed on the caller's JWT email claim.
+Only emails present in `marketing_admins` pass RLS on those tables under
+the `authenticated` role; every other logged-in app user gets zero rows
+and zero write access, identically to anon.
 
 So the posture is deliberately asymmetric per table:
 
+- `marketing_admins` — no anon or authenticated access at all, at any
+  operation. Only service_role manages membership. This is the allow-list
+  every other internal table's authenticated policies consult.
 - `marketing_waitlist` — anon may **insert only**. No anon select/update/
   delete (a stranger must never be able to read or edit the list, even their
   own row, once submitted — RLS-level protection for GDPR-consented personal
@@ -34,14 +52,20 @@ So the posture is deliberately asymmetric per table:
   apply to service_role).
 - `marketing_content`, `marketing_metrics`, `marketing_ledger`,
   `marketing_channels` — no anon access at all, at any operation.
-  Authenticated (founder) gets read access to all four, plus update on
+  Authenticated gets read access to all four, plus update on
   `marketing_content` (approving/rejecting status transitions from the
-  dashboard) and `marketing_channels` (marking a channel live/paused).
-  Agents write everything via service_role, which bypasses RLS.
+  dashboard) and `marketing_channels` (marking a channel live/paused) —
+  but only when the caller's JWT email is present in `marketing_admins`;
+  every other authenticated (i.e. ordinary app user) request is denied by
+  RLS exactly like anon. Agents write everything via service_role, which
+  bypasses RLS.
 
-Dashboards therefore always read as an authenticated founder session; agents
-always write as service_role. No table is ever writable by anon except the
-single insert-only waitlist path, and no table is ever readable by anon.
+Dashboards therefore always read as an authenticated *admin* session
+(gated by `marketing_admins` membership, not merely by being logged in);
+agents always write as service_role. No table is ever writable by anon
+except the single insert-only waitlist path, no table is ever readable by
+anon, and no marketing table beyond the waitlist insert path is reachable
+by an ordinary logged-in app user who is not a marketing admin.
 
 ---
 
@@ -70,6 +94,34 @@ so `Jo@Example.com` and `jo@example.com` collide as one signup.
 - `authenticated` — no default access (no policy grants it anything on this
   table).
 - `service_role` — full access (implicit; RLS is bypassed for service_role).
+
+---
+
+## 1a. `marketing_admins`
+
+**Purpose:** The allow-list of emails permitted to read/manage the four
+internal marketing tables (`marketing_content`, `marketing_metrics`,
+`marketing_ledger`, `marketing_channels`) from the dashboard. Exists
+because this project's `authenticated` role is shared with ordinary app
+end users — see section 0. Membership is checked via
+`auth.jwt() ->> 'email'` in every authenticated policy on those four
+tables.
+
+| Column      | Type        | Notes                              |
+|-------------|-------------|--------------------------------------|
+| `email`     | text        | PK.                                    |
+| `added_at`  | timestamptz | default `now()`.                       |
+
+**RLS:** enabled.
+- `anon` — no access.
+- `authenticated` — **no access, including to ordinary app users**. There
+  is no policy granting `authenticated` anything on this table, so even
+  reading who the admins are is impossible from a normal client session.
+- `service_role` — full access (implicit; agents/the founder tooling
+  manage membership via service_role, never via the client).
+
+**Seed:** `allansdouglas1983@gmail.com`, inserted idempotently
+(`ON CONFLICT DO NOTHING`) by migrate_120.
 
 ---
 
@@ -102,7 +154,9 @@ Operating Charter's rule that nothing publishes without a recorded PASS.
 **RLS:** enabled.
 - `anon` — no access at all.
 - `authenticated` — SELECT (read the pipeline in the dashboard) and UPDATE
-  (approve/reject status transitions from the dashboard).
+  (approve/reject status transitions from the dashboard), **gated**: both
+  policies require the caller's JWT email to exist in `marketing_admins`.
+  An ordinary logged-in app user gets neither.
 - `service_role` — full access (agents draft, review-stamp, schedule and
   publish).
 
@@ -129,7 +183,8 @@ metric per day per source, re-writable but never duplicated.
 
 **RLS:** enabled.
 - `anon` — no access.
-- `authenticated` — SELECT.
+- `authenticated` — SELECT, **gated** on `marketing_admins` membership (an
+  ordinary logged-in app user gets no rows).
 - `service_role` — full access (growth-analyst and the hourly/weekly jobs
   write here).
 
@@ -156,7 +211,8 @@ check in under 15 minutes.
 
 **RLS:** enabled.
 - `anon` — no access.
-- `authenticated` — SELECT (dashboard and digest read history here).
+- `authenticated` — SELECT (dashboard and digest read history here),
+  **gated** on `marketing_admins` membership.
 - `service_role` — full access (every agent writes its own ledger rows).
 
 ---
@@ -182,22 +238,27 @@ founder-approved).
 **RLS:** enabled.
 - `anon` — no access.
 - `authenticated` — SELECT and UPDATE (founder can flip a channel's status
-  or capability from the dashboard).
+  or capability from the dashboard), both **gated** on `marketing_admins`
+  membership.
 - `service_role` — full access.
 
 ---
 
 ## 6. Access summary
 
-| Table                 | anon                | authenticated (founder) | service_role (agents) |
-|-------------------------|---------------------|--------------------------|--------------------------|
-| `marketing_waitlist`    | INSERT only         | none                     | full                      |
-| `marketing_content`     | none                | SELECT, UPDATE           | full                      |
-| `marketing_metrics`     | none                | SELECT                   | full                      |
-| `marketing_ledger`      | none                | SELECT                   | full                      |
-| `marketing_channels`    | none                | SELECT, UPDATE           | full                      |
+| Table                 | anon                | authenticated (ordinary app user) | authenticated (marketing_admins member) | service_role (agents) |
+|-------------------------|---------------------|---------------------------------------|-----------------------------------------------|--------------------------|
+| `marketing_admins`      | none                | none                                    | none (service_role only)                        | full                      |
+| `marketing_waitlist`    | INSERT only         | none                                    | none                                             | full                      |
+| `marketing_content`     | none                | none                                    | SELECT, UPDATE                                   | full                      |
+| `marketing_metrics`     | none                | none                                    | SELECT                                           | full                      |
+| `marketing_ledger`      | none                | none                                    | SELECT                                           | full                      |
+| `marketing_channels`    | none                | none                                    | SELECT, UPDATE                                   | full                      |
 
-Dashboards always read as an authenticated founder session; agents always
-write as service_role. This keeps the one genuinely public surface (the
-waitlist form) locked to a single narrow capability, and keeps every
-internal pipeline table invisible to the public internet entirely.
+Dashboards always read as an authenticated session whose JWT email is a
+member of `marketing_admins`; being merely logged in as any app user is
+not sufficient for any internal marketing table. Agents always write as
+service_role. This keeps the one genuinely public surface (the waitlist
+form) locked to a single narrow capability, and keeps every internal
+pipeline table invisible both to the public internet and to the app's own
+ordinary logged-in users.
