@@ -33,7 +33,9 @@
       "autoIncrement": true,
       "env": {
         "APP_VARIANT": "production",
-        "EAS_SKIP_AUTO_FINGERPRINT": "1"
+        "EAS_SKIP_AUTO_FINGERPRINT": "1",
+        "RCT_USE_PREBUILT_RNCORE": "0",
+        "RCT_USE_RN_DEP": "0"
       },
       "android": {
         "buildType": "app-bundle"
