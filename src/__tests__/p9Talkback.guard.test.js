@@ -46,15 +46,18 @@ describe('P9: logging a set is spoken', () => {
     // pin is now redundant at the call site, not dropped a11y coverage. Pin
     // the equivalent guarantee instead: a Button-rendered save-path CTA
     // wired with `disabled={saving}`, backed by Button.js always merging it.
-    // Re-anchored 2026-07-11 (R4/D43 S3): the count is TWO, down from
-    // three, because the third CTA ("Log another set") was retired by
-    // design - the bar's permanent primary logs the extra set in the same
-    // gesture, so there is no separate button left to carry the state. The
-    // two survivors are Finish cluster and the main Log set primary.
-    // Window widened 300 -> 500: the main primary's opening tag grew past
-    // 300 chars when its style line gained the R4 warm-up branch.
+    // RE-ANCHORED 2026-07-12 (R3 logger rebuild): the main primary moved
+    // into WorkoutBottomBar, which wires the shared Button's `loading`
+    // morph from the screen's `saving` - loading disables the button AND
+    // sets accessibilityState.busy, a STRONGER in-flight exposure than the
+    // plain disabled it replaces. The in-screen survivor (Finish cluster)
+    // keeps disabled={saving}. All three links pinned so no hand-off can
+    // silently drop the state.
     const buttonDisabledHits = src.match(/<Button[\s\S]{0,500}?disabled=\{saving\}/g) ?? [];
-    expect(buttonDisabledHits.length).toBeGreaterThanOrEqual(2);
+    expect(buttonDisabledHits.length).toBeGreaterThanOrEqual(1);
+    expect(src).toMatch(/<WorkoutBottomBar[\s\S]{0,900}?saving=\{saving\}/);
+    const barSrc = read('src/components/workout/WorkoutBottomBar.js');
+    expect(barSrc).toMatch(/loading=\{saving\}/);
     const buttonSrc = read('src/components/Button.js');
     expect(buttonSrc).toMatch(/disabled:\s*isDisabled/);
   });

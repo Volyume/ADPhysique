@@ -161,9 +161,11 @@ describe('guided two-phase interaction: side one -> rest-class pause -> side two
   test('R4 (D64): the permanent bar primary commits side two (Log other side) - no confirm sheet', () => {
     // Mid-pair, handleCompleteSetPress routes the same primary to finishPerSide.
     expect(ACTIVE_WORKOUT).toContain('if (perSide) return finishPerSide();');
-    // The primary relabels in place; the spoken label matches.
+    // The primary relabels in place. RE-ANCHORED 2026-07-12 (R3 rebuild):
+    // the bar is WorkoutBottomBar, whose Button speaks its title - the
+    // visible and spoken label are now the SAME string by construction, so
+    // the separate a11y-label pin collapses into the label pin.
     expect(ACTIVE_WORKOUT).toContain("perSide ? 'Log other side'");
-    expect(ACTIVE_WORKOUT).toContain("perSide ? 'Other side done, log this set'");
     // The per-side WorkoutBottomSheet is retired; the between-sides state is
     // the inline banner (cluster-banner visual class, proper gap rhythm).
     expect(ACTIVE_WORKOUT).not.toContain('visible={!!perSide}');

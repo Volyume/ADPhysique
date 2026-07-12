@@ -12,7 +12,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, motion, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { workoutLoggerSize } from '../styles/layout';
-import SetEntry from '../components/SetEntry';
 import RestTimer from '../components/RestTimer';
 import AnimatedRow from '../components/AnimatedRow';
 import ExercisePickerModal from '../components/ExercisePickerModal';
@@ -28,6 +27,13 @@ import Card from '../components/Card';
 import { LoggedSetRow } from '../components/workout/LoggedSetRow';
 import EmptyExerciseView from '../components/workout/EmptyExerciseView';
 import StatusStrip from '../components/workout/StatusStrip';
+// R3 (founder order 2026-07-12, full logger rebuild): the page composes from
+// dedicated workout components; the old inline chrome is deleted. Contract:
+// docs/logger-rebuild-2026-07-12/BEHAVIOURAL-CONTRACT.md.
+import WorkoutHeader from '../components/workout/WorkoutHeader';
+import ExerciseNav from '../components/workout/ExerciseNav';
+import NowCard from '../components/workout/NowCard';
+import WorkoutBottomBar from '../components/workout/WorkoutBottomBar';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet } from '../lib/database';
@@ -278,7 +284,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // custom-exercise form when the ranked suggestions aren't what the user wants.
   const [pickerMode, setPickerMode] = useState('add');
   const [noteText, setNoteText] = useState('');
-  const [showNoteInput, setShowNoteInput] = useState(false);
+  // R3 rebuild: the coach context line is closable plain info (founder
+  // ruling 2026-07-12). Dismissal is per exercise for this session; the
+  // adjustment CONTROLS (restore plan / dismiss tweak) stay in the exercise
+  // info sheet, so closing the line hides words, never a decision. The old
+  // showNoteInput latch is gone with the corner pencil - NowCard owns the
+  // note row's own expand/collapse.
+  const [dismissedCoachLines, setDismissedCoachLines] = useState(() => new Set());
   // Superset notification, tracks which group IDs the user has already
   // seen the "heads up, paired exercises" modal for in this workout. We
   // show it once per pair so the user can grab both stations before
@@ -450,11 +462,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   // First-use info tip highlight
   const [showInfoTipPulse, setShowInfoTipPulse] = useState(false);
-  // D43 S2: the collapsed "N notes" rail is retired (replaced by
-  // StatusStrip, which owns its own per-chip expand state); this flag now
-  // only exists to be reset alongside the other per-exercise note UI state
-  // on exercise change/swap (kept for that pinned reset contract).
-  const [_notesExpanded, setNotesExpanded] = useState(false);
   const infoPulseAnim = useRef(new Animated.Value(1)).current;
   const infoPulseLoop = useRef(null);
 
@@ -779,8 +786,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setPerSide(null);
     setExtraSetArmed(false);
     setNoteText('');
-    setShowNoteInput(false);
-    setNotesExpanded(false);
     sessionSetsRef.current = [];
   }
 
@@ -1146,8 +1151,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setCurrentSet({ ...DEFAULT_SET });
     setGhostSet(null);
     setNoteText('');
-    setShowNoteInput(false);
-    setNotesExpanded(false);
     // An unfinished cluster belongs to the exercise it was started on;
     // abandon it on any exercise change (incl. superset auto-jump) so
     // its banner can't carry stale reps onto the next exercise. A
@@ -1551,7 +1554,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           setCurrentExerciseIndex(pairIdx);
           setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 50);
           setNoteText('');
-          setShowNoteInput(false);
           setGhostSet(null);
           // D44: cue the jump - previously silent (no haptic distinct from
           // setLogged, no announcement, no visible sign).
@@ -1621,7 +1623,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
       // Prepare next set
       setNoteText('');
-      setShowNoteInput(false);
       // If warmup was just completed, mark hint seen and auto-switch to working set
       if (currentSet.setType === 'warmup') {
         warmupHintSeenRef.current = true;
@@ -2412,13 +2413,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       ? readinessTweak.acknowledgement
       : null);
   const activeExerciseType = exercise?.exerciseType || 'weight_reps';
-  const firstSetPrompt = (() => {
-    if (activeExerciseType === 'duration') return 'Enter the time, then tap Log set when done.';
-    if (activeExerciseType === 'distance') return 'Enter distance and time, then tap Log set when done.';
-    if (activeExerciseType === 'reps_only') return 'Enter reps, then tap Log set when done.';
-    return 'Enter weight and reps, then tap Log set when done.';
-  })();
-  const noteActionLabel = showNoteInput || noteText.trim().length > 0 ? 'Edit note' : 'Add note';
 
   const handleCurrentSetChange = useCallback((next) => {
     if (!next.isGhost && currentSet.isGhost) setGhostSet(null);
@@ -2450,103 +2444,35 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        {/* Header. R2-2 (2026-07-11, founder build 2684 device walk; lead
-            ruling): the three top-bar controls read as ONE family now - the X
-            is a contained quiet icon button in the same chrome as the "..."
-            options button (44dp square, surface fill, subtle border, small-
-            surface radius.md); the elapsed timer keeps its type.num tabular
-            numerals but gains the standard's overline micro-label (matching
-            RestTimer's REST label grammar) so it reads as a designed element,
-            not a raw number; Finish keeps its pill but its height/radius/
-            border now match the X chrome so left and right bookend the bar. */}
-        <View style={[styles.header, live.header]}>
-          <View style={styles.headerSide}>
-            <TouchableOpacity
-              onPress={handleCancelWorkout}
-              style={[styles.headerTapTarget, styles.headerIconBtn, live.headerIconBtn]}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel workout"
-            >
-              {/* R5 (D66): size 24, textPrimary. R2-2: now sits in the shared
-                  contained icon-button chrome (headerIconBtn), matching the
-                  "..." options button. */}
-              <Ionicons name="close" size={24} color={t.colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.headerCenter}>
-            <View style={styles.headerTimerBlock}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.headerTimerLabel, live.headerTimerLabel]}>Elapsed</Text>
-              <View style={styles.headerTimerValueRow}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.timerText, live.timerText]}>{elapsedStr}</Text>
-                {timeCrunchActive && (
-                  <Ionicons
-                    name="timer"
-                    size={15}
-                    color={t.colors.warning}
-                    accessibilityLabel="Time crunch active"
-                  />
-                )}
-              </View>
-            </View>
-          </View>
-          <View style={styles.headerSideRight}>
-            {targetComplete && !extraSetArmed && isLastExercise ? (
-              <View style={styles.headerTapTarget} />
-            ) : (
-              <Button
-                title="Finish"
-                icon="checkmark-done"
-                variant="secondary"
-                size="sm"
-                fullWidth={false}
-                onPress={handleFinishWorkout}
-                style={[styles.headerTapTarget, styles.headerFinishButton]}
-                accessibilityLabel="Finish workout"
-              />
-            )}
-          </View>
-        </View>
+        {/* R3 rebuild: header is the dedicated component; Finish hands off
+            to the bottom bar when the bar itself offers Finish (last
+            exercise, target met) so two finish affordances never co-exist. */}
+        <WorkoutHeader
+          elapsedStr={elapsedStr}
+          onCancel={handleCancelWorkout}
+          onFinish={handleFinishWorkout}
+          timeCrunchActive={timeCrunchActive}
+          showFinish={!(targetComplete && !extraSetArmed && isLastExercise)}
+        />
 
         {/* COMP-013 starter-session banner moved into the collapsed "N notes"
             rail above the set-entry card (U-A-1). */}
 
-        {/* Exercise Navigator */}
-        {workoutExercises.length > 1 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={[styles.exerciseNav, live.exerciseNav]}
-            contentContainerStyle={styles.exerciseNavContent}
-          >
-            {workoutExercises.map((entry, i) => (
-              <TouchableOpacity
-                key={i}
-                style={[styles.navTab, live.navTab, i === currentExerciseIndex && [styles.navTabActive, live.navTabActive]]}
-                onPress={() => {
-                  setCurrentExerciseIndex(i);
-                }}
-                hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-                accessibilityRole="button"
-                accessibilityLabel={entry.exercise?.name || `Exercise ${i + 1}`}
-                accessibilityState={{ selected: i === currentExerciseIndex }}
-              >
-                <Text maxFontSizeMultiplier={1.3}
-                  style={[styles.navTabText, live.navTabText, i === currentExerciseIndex && [styles.navTabTextActive, live.navTabTextActive]]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {entry.exercise?.name}
-                </Text>
-                {entry.sets?.length > 0 && (
-                  <View style={[styles.navTabBadge, live.navTabBadge]}>
-                    <Text style={[styles.navTabBadgeText, live.navTabBadgeText]} maxFontSizeMultiplier={1.3}>{entry.sets.length}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
+        {/* R3 rebuild: pills with a done/total progress underline replace
+            the count badge (D43 blueprint 3.2). ExerciseNav renders nothing
+            for single-exercise sessions, same guarantee as before. */}
+        <ExerciseNav
+          items={workoutExercises.map((entry) => ({
+            key: keyForWorkoutExercise(entry),
+            name: entry.exercise?.name ?? '',
+            done: countProgressSets(entry.sets ?? []),
+            total: (entry === currentEntry ? adjustedSetCount : entry.routineExercise?.recommendedSets)
+              || DEFAULT_FREEFORM_TARGET_SETS,
+            skipped: !!entry._timeCrunchSkipped,
+          }))}
+          selectedIndex={currentExerciseIndex}
+          onSelect={setCurrentExerciseIndex}
+        />
 
         <ScrollView
           ref={scrollRef}
@@ -2723,259 +2649,112 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               empty. */}
           <RestTimer />
 
-          {/* Set Entry. D43 S2: the house Card idiom (radius lg/16, spacing.lg
-              padding) replaces the old bespoke radius.md/6px-padding card,
-              so the app's most-used surface matches Diary/Home. */}
-          <Card
-            radius="lg"
-            padding="lg"
-            style={[
-              styles.setEntryCard,
-              currentSet.setType === 'warmup' && [styles.setEntryCardWarmup, live.setEntryCardWarmup],
-              logFlash && [styles.setEntryCardFlash, live.setEntryCardFlash],
-            ]}
-          >
-            {/* D43 S2: note affordance in the card corner (blueprint 3.4).
-                D43 S3: the overflow's "Add/edit note" row is now DELETED
-                (blueprint 3.8), so this pencil is the ONE entry point --
-                same setShowNoteInput handler and noteActionLabel copy. */}
-            <TouchableOpacity
-              testID="volyume-note-corner-btn"
-              style={[styles.noteCornerBtn, live.noteCornerBtn]}
-              onPress={() => setShowNoteInput(true)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel={`${noteActionLabel} for this set`}
-            >
-              <Ionicons name="pencil-outline" size={16} color={t.colors.textMuted} />
-            </TouchableOpacity>
-            {/* D44: transient visual sign for a superset/giant-set
-                group-driven focus change. The spoken announcement already
-                fires in announceGroupFocusChange (this exact message), so
-                this row is hidden from the accessibility tree to avoid
-                double narration on TalkBack/VoiceOver - it's the visible
-                half of the cue, not a second announcement. */}
-            {groupFocusMessage && (
-              <View
-                style={[styles.groupFocusBanner, live.groupFocusBanner]}
-                accessibilityElementsHidden
-                importantForAccessibility="no-hide-descendants"
-              >
-                <Ionicons name="swap-horizontal" size={16} color={t.colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.groupFocusBannerText, live.groupFocusBannerText]}>
-                  {groupFocusMessage}
-                </Text>
-              </View>
-            )}
-            {currentSet.setType === 'warmup' && (
-              <View style={styles.warmupBanner}>
-                <Ionicons name="flame-outline" size={14} color={t.colors.warning} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.warmupBannerText, live.warmupBannerText]}>Warm-up - not counted in your totals</Text>
-              </View>
-            )}
-            {currentSet.setType === 'warmup' && !warmupHintSeenRef.current && (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.warmupOneTimeHint, live.warmupOneTimeHint]}>
-                Get the muscles and joints ready. Light weight, easy reps. Tap Log warm-up when you&apos;re ready to work.
-              </Text>
-            )}
-            {/* D43 S2: the Now card header. Line 1 folds the old orientation
-                row + separate target row into ONE tappable line -- "Set 2 of
-                3 - Working - 8-12 reps" -- the set-type picker's only entry
-                point (unchanged handler/testID). Line 2 (below) stays the
-                single priority-ordered context line the blueprint calls for
-                (group-focus flash > warm-up > coach line); the beat line's
-                tap-to-apply mechanic is unchanged, just visually compact.
-                Re-pinned in ActiveWorkoutScreen.usability.guard.test.js
-                (D43 S2): targetRow/targetText retired, folded into
-                orientationText. */}
-            <TouchableOpacity
-              testID="volyume-set-type-btn"
-              style={styles.orientationRow}
-              onPress={() => setShowSetTypePicker(true)}
-              hitSlop={{ top: 8, bottom: 4, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel={`${orientationLabel}${routineExercise ? `, ${routineExercise.recommendedRepsMin} to ${routineExercise.recommendedRepsMax} reps` : ''}, tap to change set type`}
-            >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.orientationText, live.orientationText]} numberOfLines={1}>
-                {orientationLabel}
-                {routineExercise ? (
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.orientationTarget, live.orientationTarget]}>
-                    {' - '}{routineExercise.recommendedRepsMin}-{routineExercise.recommendedRepsMax} reps
-                  </Text>
-                ) : null}
-              </Text>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-            </TouchableOpacity>
+          {/* R3 rebuild (docs/logger-rebuild-2026-07-12/BEHAVIOURAL-CONTRACT.md
+              section 3): the Now card. ONE context line, priority-ordered:
+              group-focus flash > warm-up > coach note - and the coach note is
+              closable plain info (founder ruling 2026-07-12: the old chevron
+              navigated to the exercise form guide). The old corner pencil (a
+              one-way latch: open only, dead after its first tap) is replaced
+              by the card's own honest note row. Beginner education left this
+              card for the overflow's "How logging works".
+              Warm-ups are no longer auto-suggested (recorded decision, B8):
+              the chip auto-appeared on every exercise's first set and
+              supersets don't make sense having warm-ups between paired
+              exercises. Users who want a warm-up mark the set as Warm-up via
+              the set-type line, or pull the ramp from exercise options. */}
+          {(() => {
+            const isWarmupSet = currentSet.setType === 'warmup';
+            const coachText = (sessionAdjustment?.show && !readinessDrivesTarget)
+              ? sessionAdjustment.reasonText
+              : readinessLine
+                ? readinessLine
+                : stalledAdvice
+                  ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5}${units} x ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0}${units} and push for ${stalledAdvice.r0 + 1}.`
+                  : targetReason;
+            const showCoach = !isWarmupSet && workingLogged === 0
+              && !(isDeloadWeek && !deloadDismissed)
+              && !!coachText
+              && !dismissedCoachLines.has(exercise?.id);
+            const context = groupFocusMessage
+              ? { kind: 'group', text: groupFocusMessage }
+              : isWarmupSet
+                ? {
+                  kind: 'warmup',
+                  text: warmupHintSeenRef.current
+                    ? 'Warm-up - not counted in your totals.'
+                    : "Warm-up - not counted in your totals. Light weight, easy reps; tap Log warm-up when you're ready to work.",
+                }
+                : showCoach
+                  ? {
+                    kind: 'coach',
+                    text: coachText,
+                    onDismiss: () => {
+                      hapticsVocab.selection();
+                      setDismissedCoachLines(prev => new Set(prev).add(exercise?.id));
+                    },
+                  }
+                  : null;
 
-            {/* Line 2: beat line. The previous-performance anchor plus
-                target range and direction, promoted from xs italic to
-                input-size numerals. Tap applies last session's numbers,
-                the Hevy tap-previous-to-fill mechanic. */}
-            {currentSet.setType !== 'warmup' && (() => {
-              const target = displaySetTargets[workingLogged]; // B2: readiness-trimmed suggestion
-              // prevSets is the raw previous-session array (warm-ups included),
-              // but warm-ups and working sets number their set_number
-              // independently, so a logged warm-up can sort to prevSets[0] and
-              // shift the working-set mapping. Filter warm-ups out BEFORE
-              // indexing by workingLogged so both the "Last:" line and the
-              // tap-to-fill below read the correct working set. (D1 #2)
-              const prevWorking = prevSets.filter(
-                s => (s.setType ?? s.set_type ?? 'straight') !== 'warmup',
-              );
-              const prev = prevWorking[workingLogged];
+            const target = displaySetTargets[workingLogged];
+            // Warm-ups and working sets number independently, so filter
+            // warm-ups out BEFORE indexing by workingLogged (D1 #2).
+            const prevWorking = prevSets.filter(
+              s => (s.setType ?? s.set_type ?? 'straight') !== 'warmup',
+            );
+            const prev = prevWorking[workingLogged];
+            const range = target
+              ? (target.repsMin === target.repsMax ? `${target.repsMin}` : `${target.repsMin}-${target.repsMax}`)
+              : (routineExercise?.recommendedRepsMin != null
+                ? `${routineExercise.recommendedRepsMin}-${routineExercise.recommendedRepsMax}`
+                : null);
+            let prefill = null;
+            if (!isWarmupSet) {
               if (target?.isDeload) {
-                return (
-                  <TouchableOpacity
-                    style={styles.beatLine}
-                    onPress={() => {
-                      hapticsVocab.setLogged();
-                      audit('workout.beatline.apply', { exerciseId: exercise?.id, setIndex: workingLogged });
-                      setCurrentSet(s => ({ ...s, weight: String(target.weight ?? 0), reps: target.repsMin ?? s.reps, isGhost: false }));
-                    }}
-                    hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Recovery week: ${target.weight} ${units} times ${target.repsMin}. Tap to apply.`}
-                  >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.beatLineLabel, live.beatLineLabel]} numberOfLines={2}>
-                      Recovery week - <Text maxFontSizeMultiplier={1.3} style={[styles.beatLineValue, live.beatLineValue]}>{target.weight}{units} x {target.repsMin}</Text>
-                    </Text>
-                    <View style={[styles.beatLineCue, live.beatLineCue]}>
-                      <Ionicons name="arrow-down-circle-outline" size={13} color={t.colors.textSecondary} />
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.beatLineCueText, live.beatLineCueText]}>Use</Text>
-                    </View>
-                  </TouchableOpacity>
-                );
+                prefill = {
+                  label: 'Recovery week -',
+                  valueLabel: `${target.weight}${units} x ${target.repsMin}`,
+                  onUse: () => {
+                    hapticsVocab.setLogged();
+                    audit('workout.beatline.apply', { exerciseId: exercise?.id, setIndex: workingLogged });
+                    setCurrentSet(s => ({ ...s, weight: String(target.weight ?? 0), reps: target.repsMin ?? s.reps, isGhost: false }));
+                  },
+                };
+              } else if (prev) {
+                prefill = {
+                  label: 'Last:',
+                  valueLabel: `${prev.weight}${units} x ${prev.actualReps}`,
+                  onUse: () => {
+                    hapticsVocab.setLogged();
+                    audit('workout.beatline.apply', { exerciseId: exercise?.id, setIndex: workingLogged });
+                    setCurrentSet(s => ({ ...s, weight: String(prev.weight ?? 0), reps: prev.actualReps ?? s.reps, isGhost: false }));
+                  },
+                };
+              } else if (range) {
+                prefill = { label: 'First time - Target', valueLabel: `${range} reps` };
               }
-              const range = target
-                ? (target.repsMin === target.repsMax ? `${target.repsMin}` : `${target.repsMin}-${target.repsMax}`)
-                : (routineExercise?.recommendedRepsMin != null
-                  ? `${routineExercise.recommendedRepsMin}-${routineExercise.recommendedRepsMax}`
-                  : null);
-              const glyph = target?.action === 'increase' ? '+' : target?.action === 'decrease' ? '-' : null;
-              if (prev) {
-                return (
-                  <TouchableOpacity
-                    style={styles.beatLine}
-                    onPress={() => {
-                      hapticsVocab.setLogged();
-                      audit('workout.beatline.apply', { exerciseId: exercise?.id, setIndex: workingLogged });
-                      setCurrentSet(s => ({
-                        ...s,
-                        weight: String(prev.weight ?? 0),
-                        reps: prev.actualReps ?? s.reps,
-                        isGhost: false,
-                      }));
-                    }}
-                    hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Last session: ${prev.weight} ${units} times ${prev.actualReps} reps.${range ? ` Target ${range}.` : ''} Tap to apply.`}
-                  >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.beatLineLabel, live.beatLineLabel]} numberOfLines={2}>
-                      Last: <Text maxFontSizeMultiplier={1.3} style={[styles.beatLineValue, live.beatLineValue]}>{prev.weight}{units} x {prev.actualReps}</Text>
-                      {range ? ' - Target ' : ''}
-                      {range ? <Text maxFontSizeMultiplier={1.3} style={[styles.beatLineValue, live.beatLineValue]}>{range}</Text> : null}
-                      {glyph ? <Text maxFontSizeMultiplier={1.3} style={[styles.beatLineGlyph, live.beatLineGlyph]}> {glyph}</Text> : null}
-                    </Text>
-                    <View style={[styles.beatLineCue, live.beatLineCue]}>
-                      <Ionicons name="arrow-down-circle-outline" size={13} color={t.colors.textSecondary} />
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.beatLineCueText, live.beatLineCueText]}>Use</Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              }
-              if (!range) return null;
-              return (
-                <View
-                  style={styles.beatLine}
-                  accessible
-                  accessibilityLabel={`First time on this exercise. Target ${range} reps.`}
-                >
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.beatLineLabel, live.beatLineLabel]} numberOfLines={2}>
-                    First time - Target <Text maxFontSizeMultiplier={1.3} style={[styles.beatLineValue, live.beatLineValue]}>{range}</Text>
-                  </Text>
-                </View>
-              );
-            })()}
+            }
 
-            {/* Line 3: coaching line, max one, first working set only.
-                Priority (COMP-015/B2): session adjustment > readiness tweak >
-                stalled advice > coach reason. Absent while the deload banner is
-                showing (one context line at a time; deload never co-occurs with
-                an adjustment, the engine is silent on deload weeks). Tap opens
-                the exercise info sheet, including the Adjusted today and
-                readiness sections. */}
-            {currentSet.setType !== 'warmup' && workingLogged === 0 &&
-              !(isDeloadWeek && !deloadDismissed) && (sessionAdjustment?.show || readinessLine || stalledAdvice || targetReason) && (
-              <TouchableOpacity
-                style={styles.coachLine}
-                onPress={() => setShowExecution(true)}
-                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                accessibilityRole="button"
-                accessibilityLabel={(sessionAdjustment?.show && !readinessDrivesTarget)
-                  ? `${sessionAdjustment.reasonText} Double-tap for details and to restore the plan.`
-                  : readinessLine
-                    ? `${readinessLine}${readinessReduces ? ' Double-tap for details and to use the planned targets instead.' : ''}`
-                    : stalledAdvice
-                      ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5} ${units} times ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0} ${units} and push for ${stalledAdvice.r0 + 1}.`
-                      : targetReason}
-              >
-                <Ionicons name="pulse-outline" size={13} color={t.colors.primary} style={{ marginTop: spacing.xxs }} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.coachLineText, live.coachLineText]} numberOfLines={2}>
-                  {(sessionAdjustment?.show && !readinessDrivesTarget)
-                    ? sessionAdjustment.reasonText
-                    : readinessLine
-                      ? readinessLine
-                      : stalledAdvice
-                        ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5}${units} x ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0}${units} and push for ${stalledAdvice.r0 + 1}.`
-                        : targetReason}
-                </Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} style={{ marginTop: spacing.xxs }} />
-              </TouchableOpacity>
-            )}
-            {showInfoTipPulse && loggedSets.length === 0 && prevSets.length === 0 && (
-              <View style={[styles.firstSetHint, live.firstSetHint]}>
-                <Ionicons name="information-circle-outline" size={14} color={t.colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.firstSetHintText, live.firstSetHintText]}>
-                  {/* NV-4 (ux-world-class-audit-2026-07-09/cohesion-02-novice-psychology.md):
-                      no baseline "what's a set / what's a rep" explainer existed
-                      anywhere. This is the exact gate the audit asked for: the
-                      very first exercise card, shown once ever (the seen-flag
-                      above turns off for good the moment any set is logged). */}
-                  {GLOSSARY.rep} {GLOSSARY.set} {firstSetPrompt} Use exercise options for form tips, warm-ups, swaps and session settings.
-                </Text>
-              </View>
-            )}
-            {/* Warm-ups are no longer auto-suggested. Two reasons: the
-                chip auto-appeared on every exercise's first set and
-                supersets don't make sense having warm-ups between paired
-                exercises. Users who want a warm-up can mark the current
-                set as Warmup via the Set type picker on the SetEntry
-                card below, same outcome, no prompt. */}
-            <SetEntry
-              value={currentSet}
-              onChange={handleCurrentSetChange}
-              units={units}
-              isWarmup={currentSet.setType === 'warmup'}
-              onSubmitComplete={handleCompleteSetPress}
-              exerciseType={activeExerciseType}
-              weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
-            />
-
-            {showNoteInput ? (
-              <TextInput maxFontSizeMultiplier={1.3}
-                style={[styles.noteInput, live.noteInput]}
-                value={noteText}
-                onChangeText={setNoteText}
-                placeholder="Add a note for this set"
-                placeholderTextColor={t.colors.textMuted}
-                accessibilityLabel="Add a note"
-                multiline
-                autoFocus
-                autoComplete="off"
-                textContentType="none"
+            return (
+              <NowCard
+                positionLabel={orientationLabel}
+                targetRangeLabel={!isWarmupSet && range ? `${range} reps` : null}
+                onPressSetType={() => setShowSetTypePicker(true)}
+                context={context}
+                prefill={prefill}
+                setValue={currentSet}
+                onSetChange={handleCurrentSetChange}
+                units={units}
+                isWarmup={isWarmupSet}
+                onSubmitComplete={handleCompleteSetPress}
+                exerciseType={activeExerciseType}
+                weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
+                noteText={noteText}
+                onNoteChange={setNoteText}
+                noteResetKey={`${currentExerciseIndex}-${loggedSets.length}`}
+                flash={logFlash}
               />
-            ) : null}
-          </Card>
+            );
+          })()}
 
           {/* R4 (D64): the between-sides banner. Appears only mid-pair
               (side one logged via the primary, side two pending on the same
@@ -3152,69 +2931,28 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             The earlier "no insets here" note (2026-07-02) described the stock
             always-visible tab bar and no longer holds. Math.max keeps the
             old padding on devices that report no bottom inset. */}
+        {/* R3 rebuild: the stable-identity bar is its own component. Same
+            pinned contract as before (nextExerciseButton.guard): the primary
+            testID/onPress render first and unconditionally; the advance
+            action is the additive sibling gated by the unchanged
+            `targetComplete && !extraSetArmed` condition; the whole bar hides
+            only mid-cluster (the cluster banner carries its own controls). */}
         {cluster ? null : (
-          <View style={[styles.bottomBar, live.bottomBar, { paddingBottom: Math.max(spacing.md, safeBottom + spacing.sm) }]}>
-            {/* D43 S3 (blueprint 3.7, "Bottom bar — stable identity"): the
-                primary is ALWAYS Log set / Log warm-up / Start cluster while
-                an exercise is active -- it is UNCONDITIONAL now, no longer
-                the ELSE branch of a target-complete ternary. When the target
-                is met, the bar gains a second, visually distinct advance
-                action (Next exercise / Finish workout) BESIDE it, reusing
-                the exact pinned gating (targetComplete, isLastExercise,
-                handleNextExercise, handleFinishWorkout) -- only the
-                placement changed, from replacing to additive.
-                Re-pinned in ActiveWorkoutScreen.nextExerciseButton.guard.test.js
-                (D43 S3): the primary's testID/onPress now appear first and
-                unconditionally in source; the advance action is the
-                additive sibling gated by the unchanged
-                `targetComplete && !extraSetArmed` condition. */}
-            <View style={[styles.bottomBarRow, live.bottomBarRow]}>
-              <Button
-                testID="volyume-btn-complete-set"
-                variant="primary"
-                style={[styles.completeBtn, live.completeBtn, { flex: 1 }, currentSet.setType === 'warmup' && [styles.completeBtnWarmup, live.completeBtnWarmup]]}
-                onPress={handleCompleteSetPress}
-                disabled={saving}
-                accessibilityLabel={
-                  perSide ? 'Other side done, log this set'
-                  : currentSet.setType === 'warmup' ? 'Log warm-up'
-                  : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'
-                }
-              >
-                <Ionicons name="checkmark-circle" size={20} color={currentSet.setType === 'warmup' ? t.colors.warning : t.colors.onPrimary} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.completeBtnText, live.completeBtnText, currentSet.setType === 'warmup' && [styles.completeBtnTextWarmup, live.completeBtnTextWarmup]]}>
-                  {perSide ? 'Log other side'
-                    : currentSet.setType === 'warmup' ? 'Log warm-up'
-                    : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'}
-                </Text>
-              </Button>
-              {targetComplete && !extraSetArmed && !perSide ? (
-                isLastExercise ? (
-                  <Button
-                    testID="volyume-btn-finish-primary"
-                    variant="secondary"
-                    style={[styles.extraSetBtnPromoted, live.extraSetBtnPromoted, { flex: 1 }]}
-                    onPress={handleFinishWorkout}
-                    accessibilityLabel="Finish workout"
-                  >
-                    <Ionicons name="checkmark-done" size={20} color={t.colors.primary} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.extraSetBtnPromotedText, live.extraSetBtnPromotedText]}>Finish workout</Text>
-                  </Button>
-                ) : (
-                  <Button
-                    testID="volyume-btn-next-exercise"
-                    variant="secondary"
-                    style={[styles.extraSetBtnPromoted, live.extraSetBtnPromoted, { flex: 1 }]}
-                    onPress={handleNextExercise}
-                    accessibilityLabel="Move to next exercise"
-                  >
-                    <Ionicons name="arrow-forward-circle" size={20} color={t.colors.primary} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.extraSetBtnPromotedText, live.extraSetBtnPromotedText]}>Next exercise</Text>
-                  </Button>
-                )
-              ) : null}
-            </View>
-          </View>
+          <WorkoutBottomBar
+            primaryLabel={
+              perSide ? 'Log other side'
+                : currentSet.setType === 'warmup' ? 'Log warm-up'
+                : (isClusterType(currentSet.setType) && !(exercise && unilateralExercises.has(exercise.id))) ? 'Start cluster' : 'Log set'
+            }
+            onPrimary={handleCompleteSetPress}
+            saving={saving}
+            advance={(targetComplete && !extraSetArmed && !perSide)
+              ? (isLastExercise
+                ? { label: 'Finish workout', onPress: handleFinishWorkout, testID: 'volyume-btn-finish-primary' }
+                : { label: 'Next exercise', onPress: handleNextExercise, testID: 'volyume-btn-next-exercise' })
+              : null}
+            safeBottom={safeBottom}
+          />
         )}
 
         {/* Exercise Picker Modal, shared by Add and Swap (see pickerMode) */}
@@ -3661,6 +3399,26 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Add exercise</Text>
                 </View>
               </TouchableOpacity>
+              {/* R3 rebuild (founder ruling 2026-07-12): beginner education
+                  left the set card for this named row - the card carries the
+                  set, never a lesson. Same glossary copy, on demand. */}
+              <TouchableOpacity
+                style={[styles.sheetOption, live.sheetOption]}
+                onPress={() => {
+                  setShowOverflow(false);
+                  appAlert(
+                    'How logging works',
+                    `${GLOSSARY.rep} ${GLOSSARY.set} Enter weight and reps, then tap Log set when done. Use exercise options for form tips, warm-ups, swaps and session settings.`,
+                  );
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="How logging works"
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons name="help-circle-outline" size={18} color={t.colors.textSecondary} />
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>How logging works</Text>
+                </View>
+              </TouchableOpacity>
               {/* D43 S3 (blueprint 3.8, overflow diet): Move exercise
                   up/down DELETED -- the reorder sheet below is now the ONE
                   reorder path (superseding D32's "additive" framing, which
@@ -3681,10 +3439,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 </View>
               </TouchableOpacity>
               )}
-              {/* D43 S3 (blueprint 3.8, overflow diet): "Add/edit note" row
-                  DELETED -- S2's card-corner pencil (volyume-note-corner-btn,
-                  same setShowNoteInput handler, same noteActionLabel copy)
-                  is the one entry point now. "Exercise info" row DELETED --
+              {/* R3 rebuild: notes live on the Now card's own note row
+                  (the corner pencil is deleted). "Exercise info" row DELETED --
                   tapping the exercise title (exerciseNameTap above, same
                   setShowExecution(true) handler) is the one entry point now. */}
               {/* D9: per-exercise "log per side" preference. Shown only for

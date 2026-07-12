@@ -24,9 +24,13 @@ describe('ActiveWorkout bottom bar vs the hidden tab band', () => {
     expect(screen).toMatch(
       /const safeBottom = insets\.bottom > 0 \? insets\.bottom : \(Platform\.OS === 'android' \? 48 : 0\)/
     );
-    expect(screen).toMatch(
-      /styles\.bottomBar,\s*live\.bottomBar,\s*\{\s*paddingBottom:\s*Math\.max\(spacing\.md,\s*safeBottom\s*\+\s*spacing\.sm\)/
-    );
+    // RE-ANCHORED 2026-07-12 (R3 logger rebuild): the bar is now the
+    // WorkoutBottomBar component; the screen passes safeBottom down and the
+    // component applies the SAME padding contract. Both halves pinned so
+    // neither side of the hand-off can drop the inset alone.
+    expect(screen).toMatch(/<WorkoutBottomBar[\s\S]{0,900}?safeBottom=\{safeBottom\}/);
+    const bar = read('components/workout/WorkoutBottomBar.js');
+    expect(bar).toMatch(/paddingBottom:\s*Math\.max\(spacing\.md,\s*safeBottom\s*\+\s*spacing\.sm\)/);
   });
 
   test('the SafeAreaProvider actually receives initial metrics (R2 root cause)', () => {
