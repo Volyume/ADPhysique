@@ -4,12 +4,11 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StackActions } from '@react-navigation/native';
 export const navigationRef = createNavigationContainerRef();
-import { View, Image, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
+import { View, Image, StyleSheet, Animated, Easing, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 const SPLASH_HERO = require('../../assets/volyume-wordmark.png');
 const HERO_ASPECT = 1032 / 277;
-const SPLASH_W = Math.round(Dimensions.get('window').width * 0.7);
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, spacing, motion, type } from '../styles/theme';
@@ -1596,6 +1595,13 @@ export default function RootNavigator() {
 
 function SplashScreen() {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  // UI-14 (docs audit 2026-07-09): sized from the live window-dimensions
+  // hook rather than a frozen module-level width snapshot taken once at
+  // import time, so an Android freeform/multi-window resize re-renders
+  // this at the new width instead of leaving the wordmark stuck at
+  // whatever width was current on first import.
+  const { width: windowWidth } = useWindowDimensions();
+  const splashW = Math.round(windowWidth * 0.7);
   // Reduce Motion: start every animated value at its end state so the splash
   // appears instantly without the hero scale / fade / accent-bar sweep.
   const heroOpacity  = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -1669,7 +1675,7 @@ function SplashScreen() {
       >
         <Image
           source={SPLASH_HERO}
-          style={{ width: SPLASH_W, height: Math.round(SPLASH_W / HERO_ASPECT) }}
+          style={{ width: splashW, height: Math.round(splashW / HERO_ASPECT) }}
           resizeMode="contain"
           accessibilityLabel="Volyume"
         />
