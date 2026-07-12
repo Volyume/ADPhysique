@@ -566,30 +566,47 @@ export default function PlansScreen({ navigation }) {
     return (
       <AnimatedEntrance key={plan.id} index={i}>
       <Card padding="none" style={styles.planCard}>
-        <PressableCard
-          style={styles.planCardBody}
-          onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
-          onLongPress={() => handlePlanOptions(plan)}
-          accessibilityLabel={planHeadingName(plan.name)}
-        >
-          <View style={styles.planCardMetaRow}>
-            {planWorkoutCounts[plan.id] ? (
-              <Text style={[styles.planCardMeta, live.planCardMeta]}>
-                {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
-              </Text>
-            ) : <View />}
-            <TouchableOpacity
-              style={styles.moreBtn}
-              onPress={() => handlePlanOptions(plan)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              accessibilityRole="button"
-              accessibilityLabel="Plan options"
-            >
-              <Ionicons name="ellipsis-vertical" size={18} color={t.colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          <Text style={[styles.planCardName, live.planCardName]} numberOfLines={2}>{planHeadingName(plan.name)}</Text>
-        </PressableCard>
+        {/* AX-11 (launch accessibility audit): "Plan options" used to be a
+            TouchableOpacity nested inside this PressableCard, so an
+            accessible iOS parent grouped it and it was never a separate
+            VoiceOver focus stop (also a double-activation risk). It is now
+            a SIBLING of the PressableCard under this plain, unstyled View:
+            an inert 28x28 spacer holds its old spot inside planCardMetaRow
+            so that row's height/spacing is unchanged, and the real button
+            renders absolutely at top/right = spacing.lg, the same inset
+            planCardBody's own padding already gives it as a normal-flow
+            child -- unambiguous, since this wrapper carries no padding of
+            its own. Visual position, size and hit target are unchanged;
+            only the two actions' place in the tree moved from parent/child
+            to siblings (both independently focusable and activatable, see
+            PlansScreen.optionsButtonSiblings.guard.test.js). */}
+        <View>
+          <PressableCard
+            style={styles.planCardBody}
+            onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+            onLongPress={() => handlePlanOptions(plan)}
+            accessibilityLabel={planHeadingName(plan.name)}
+          >
+            <View style={styles.planCardMetaRow}>
+              {planWorkoutCounts[plan.id] ? (
+                <Text style={[styles.planCardMeta, live.planCardMeta]}>
+                  {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
+                </Text>
+              ) : <View />}
+              <View style={styles.moreBtn} />
+            </View>
+            <Text style={[styles.planCardName, live.planCardName]} numberOfLines={2}>{planHeadingName(plan.name)}</Text>
+          </PressableCard>
+          <TouchableOpacity
+            style={[styles.moreBtn, styles.moreBtnOverlay]}
+            onPress={() => handlePlanOptions(plan)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel="Plan options"
+          >
+            <Ionicons name="ellipsis-vertical" size={18} color={t.colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
         <View style={[styles.planCardFooter, live.planCardFooter]}>
           {/* R9 (D70): the footer text links -> shared Button tertiary sm,
               matching the quiet in-card action idiom (FOOD-DESIGN-STANDARD §4). */}
@@ -889,22 +906,36 @@ export default function PlansScreen({ navigation }) {
               const collapsed = !!collapsedFolders[folder.id];
               return (
                 <View key={folder.id} style={[styles.folderBlock, live.folderBlock]}>
-                  <TouchableOpacity
-                    style={styles.folderHeader}
-                    onPress={() => toggleFolder(folder.id)}
-                    onLongPress={() => handleFolderOptions(folder)}
-                    accessibilityRole="button"
-                    accessibilityState={{ expanded: !collapsed }}
-                    accessibilityLabel={`${folder.name}, ${filed.length} plan${filed.length !== 1 ? 's' : ''}`}
-                  >
-                    <Ionicons
-                      name={collapsed ? 'chevron-forward' : 'chevron-down'}
-                      size={16}
-                      color={t.colors.textSecondary}
-                    />
-                    <Ionicons name="folder-outline" size={16} color={t.colors.textSecondary} />
-                    <Text style={[styles.folderName, live.folderName]} numberOfLines={1}>{folder.name}</Text>
-                    <Text style={[styles.folderCount, live.folderCount]}>{filed.length}</Text>
+                  {/* AX-11 (launch accessibility audit): the folder-options
+                      button used to be a TouchableOpacity nested inside this
+                      header TouchableOpacity, so an accessible iOS parent
+                      grouped it and it was never a separate VoiceOver focus
+                      stop. folderHeader (row/gap/padding, unchanged) now
+                      wraps a plain View instead of being touchable itself;
+                      its two children -- folderHeaderPress (the toggle,
+                      flex:1) and the options button -- are true siblings, and
+                      folderHeaderPress's own row+gap reproduces the same
+                      uniform gap:sm the five items used to share, so the
+                      pixel layout is unchanged (verified in
+                      PlansScreen.optionsButtonSiblings.guard.test.js). */}
+                  <View style={styles.folderHeader}>
+                    <TouchableOpacity
+                      style={styles.folderHeaderPress}
+                      onPress={() => toggleFolder(folder.id)}
+                      onLongPress={() => handleFolderOptions(folder)}
+                      accessibilityRole="button"
+                      accessibilityState={{ expanded: !collapsed }}
+                      accessibilityLabel={`${folder.name}, ${filed.length} plan${filed.length !== 1 ? 's' : ''}`}
+                    >
+                      <Ionicons
+                        name={collapsed ? 'chevron-forward' : 'chevron-down'}
+                        size={16}
+                        color={t.colors.textSecondary}
+                      />
+                      <Ionicons name="folder-outline" size={16} color={t.colors.textSecondary} />
+                      <Text style={[styles.folderName, live.folderName]} numberOfLines={1}>{folder.name}</Text>
+                      <Text style={[styles.folderCount, live.folderCount]}>{filed.length}</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.moreBtn}
                       onPress={() => handleFolderOptions(folder)}
@@ -914,7 +945,7 @@ export default function PlansScreen({ navigation }) {
                     >
                       <Ionicons name="ellipsis-vertical" size={18} color={t.colors.textSecondary} />
                     </TouchableOpacity>
-                  </TouchableOpacity>
+                  </View>
                   {!collapsed && (
                     filed.length > 0
                       ? <View style={[styles.folderBody, live.folderBody]}>{filed.map((plan, i) => renderPlanCard(plan, i))}</View>
@@ -957,30 +988,37 @@ export default function PlansScreen({ navigation }) {
             </TouchableOpacity>
             {archivedExpanded && archivedPlans.map(plan => (
               <Card key={plan.id} padding="none" style={[styles.planCard, styles.archivedPlanCard]}>
-                <PressableCard
-                  style={styles.planCardBody}
-                  onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
-                  onLongPress={() => handleArchivedPlanOptions(plan)}
-                  accessibilityLabel={planHeadingName(plan.name)}
-                >
-                  <View style={styles.planCardMetaRow}>
-                    {planWorkoutCounts[plan.id] ? (
-                      <Text style={[styles.planCardMeta, live.planCardMeta]}>
-                        {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
-                      </Text>
-                    ) : <View />}
-                    <TouchableOpacity
-                      style={styles.moreBtn}
-                      onPress={() => handleArchivedPlanOptions(plan)}
-                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                      accessibilityRole="button"
-                      accessibilityLabel="Archived plan options"
-                    >
-                      <Ionicons name="ellipsis-vertical" size={18} color={t.colors.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={[styles.planCardName, live.planCardName, styles.archivedPlanCardName, live.archivedPlanCardName]} numberOfLines={2}>{planHeadingName(plan.name)}</Text>
-                </PressableCard>
+                {/* AX-11: same fix as renderPlanCard's live plan card above --
+                    this archived-plan block duplicates that JSX rather than
+                    calling renderPlanCard, so it carried the identical nested-
+                    pressable defect and gets the identical sibling fix. */}
+                <View>
+                  <PressableCard
+                    style={styles.planCardBody}
+                    onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+                    onLongPress={() => handleArchivedPlanOptions(plan)}
+                    accessibilityLabel={planHeadingName(plan.name)}
+                  >
+                    <View style={styles.planCardMetaRow}>
+                      {planWorkoutCounts[plan.id] ? (
+                        <Text style={[styles.planCardMeta, live.planCardMeta]}>
+                          {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
+                        </Text>
+                      ) : <View />}
+                      <View style={styles.moreBtn} />
+                    </View>
+                    <Text style={[styles.planCardName, live.planCardName, styles.archivedPlanCardName, live.archivedPlanCardName]} numberOfLines={2}>{planHeadingName(plan.name)}</Text>
+                  </PressableCard>
+                  <TouchableOpacity
+                    style={[styles.moreBtn, styles.moreBtnOverlay]}
+                    onPress={() => handleArchivedPlanOptions(plan)}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Archived plan options"
+                  >
+                    <Ionicons name="ellipsis-vertical" size={18} color={t.colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
                 <View style={[styles.planCardFooter, live.planCardFooter]}>
                   {/* R9 (D70): same footer-link -> Button tertiary sm
                       conversion as the live plan card footer above; this
@@ -1195,6 +1233,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md,
   },
+  // AX-11: the toggle-pressable's own row, sibling to moreBtn inside
+  // folderHeader. flex: 1 takes the same remaining width the whole row used
+  // to give folderName, and its own gap: sm reproduces the uniform spacing
+  // the five original children shared.
+  folderHeaderPress: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1,
+  },
   folderName: { flex: 1, ...type.bodyStrong, color: colors.textPrimary },
   folderCount: { ...type.num('caption'), color: colors.textMuted },
   folderBody: {
@@ -1305,6 +1350,13 @@ const styles = StyleSheet.create({
   // footer links are now Button tertiary sm (both the live and archived
   // plan card footers).
   moreBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  // AX-11: the real "Plan options"/"Archived plan options" button renders
+  // here, absolutely positioned over the inert moreBtn spacer left inside
+  // planCardMetaRow. Its wrapping View (the plain <View> in renderPlanCard /
+  // the archived block) carries no padding of its own, so top/right must
+  // equal planCardBody's own padding (spacing.lg) to land in the exact spot
+  // the button occupied as a normal-flow child before this fix.
+  moreBtnOverlay: { position: 'absolute', top: spacing.lg, right: spacing.lg },
 
   templateCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
