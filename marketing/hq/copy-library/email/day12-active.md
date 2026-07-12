@@ -5,10 +5,9 @@
 and the user is active (see `playbooks/retention-email-loop.md`).
 **Subject:** Your Pro trial and what happens next
 **Preheader:** A quick service note, plus one small question.
-**Trustpilot line:** omitted at send time until the Trustpilot business
-profile is claimed and verified (see `FOUNDER-SETUP-PACK.md`); once live,
-`{{trustpilot_link}}` resolves and the line below is included for every
-recipient, never selectively.
+**Trustpilot line:** SHELVED by founder decision 2026-07-12; not sent until
+reactivated (see `FOUNDER-SETUP-PACK.md`). `{{trustpilot_link}}` stays
+unresolved and the line below stays omitted for every recipient until then.
 
 ---
 

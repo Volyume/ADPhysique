@@ -126,6 +126,9 @@ no code available is an incident, logged as such.
 
 ## 6. Trustpilot invitations
 
+**STATUS: SHELVED 2026-07-12 by founder decision. The Trustpilot line
+stays omitted from all sends until reactivated.**
+
 - The invitation line is included for every recipient of every loop email,
   never selectively. Gating the invitation on rating, sentiment, or any other
   signal breaks Trustpilot's and Google Play's rules on review solicitation
