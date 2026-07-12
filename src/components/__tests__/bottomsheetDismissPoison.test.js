@@ -170,6 +170,39 @@ describe('BottomSheet — gesture-dismiss must not poison the next open (R2-16)'
   });
 });
 
+describe('BottomSheet — a late onDismiss never resurrects a closed sheet (R2-15b)', () => {
+  test('close accepted, onDismiss delivered seconds later via a stale closure: sheet stays closed', () => {
+    // The founder repro: pick an intent -> sheet closes -> workout screen
+    // loads (busy JS thread) -> the close animation's completion callback
+    // finally fires. The library can deliver it as the closure captured
+    // when the close STARTED (visible still true in that snapshot). The
+    // reopen guard must judge by the consumer's CURRENT state, not the
+    // snapshot, or the sheet re-presents over the live workout.
+    let tree;
+    act(() => { tree = create(<Host />); });
+    expect(JSON.stringify(tree.toJSON())).toContain('Sheet body');
+
+    // Capture the onDismiss the modal held while the sheet was OPEN - the
+    // stale closure the animation callback can deliver later.
+    const staleOnDismiss = __mockState.latestOnDismiss.current;
+
+    // Consumer closes; the library defers completion (animation running).
+    __mockState.dropNextDismiss = true; // swallow the immediate path
+    const close = tree.root.findByProps({ testID: 'close-trigger' });
+    act(() => { close.props.onPress(); });
+
+    // Seconds later the close animation completes and the library unmounts
+    // the panel, then fires the STALE onDismiss closure.
+    act(() => {
+      __mockState.latestSetPresented.current?.(false);
+      staleOnDismiss?.();
+    });
+
+    // The sheet must NOT have re-presented itself.
+    expect(JSON.stringify(tree.toJSON())).not.toContain('Sheet body');
+  });
+});
+
 describe('BottomSheet — a dismiss that loses the present race is re-asserted (R2-15)', () => {
   test('sheet settling open while visible is false dismisses again instead of lingering', () => {
     let tree;
