@@ -5,15 +5,14 @@ TikTok / Reels / Shorts who have never heard of Volyume. Each piece is a ~18s
 reel script of seven scenes, a matching carousel adaptation, a post caption, and
 lowercase hashtags. Built on the proven Week 1 v3 spine: name a concrete problem
 the viewer feels, name and explain Volyume by scene 2, show the change-or-hold
-mechanism, make the reason the selling point, show the real app, show the one
-verified HOLD card, then the CTA. Two fresh angles, not reused from Week 1.
+mechanism, make the reason the selling point, show the real app, show the HOLD verdict (weight not foregrounded), then the CTA. Two fresh angles, not reused from Week 1.
 
 **Channel:** faceless social (IG Reels / TikTok / YT Shorts), 9:16, ~18s, seven
 scenes. Each is also a seven-slide 4:5 carousel using the same copy.
 
 **Brand and visuals:** `MARKETING-VISUAL-IDENTITY-LOCKED.md`. Amber `#F5A623` on
 near-black `#0D0D0D`, one accent. Display grotesk for words, IBM Plex Mono for
-numbers. The one verified decision card is the HOLD card. Every concept carries a
+numbers. The decision card shows the HOLD verdict only (no reason string; weight not foregrounded, ED-safety). Every concept carries a
 real branded app screenshot via `appShot` (Addendum A2, demo-account data,
 manifest usage rules). No bodies, no stock, no gradients.
 
@@ -121,8 +120,7 @@ yet to justify a change. [Claim 3]
 **Scene 6 (~3s, proof).** When there is not enough to go on, it holds and
 tells you why, rather than guessing. [Claim 3] miniCard: WEEKLY DECISION, HOLD
 (verdict only, no specific reason string shown).
-**Scene 7 (~2.5s, CTA).** Volyume. / It checks the trend before it changes
-anything. / Free to start on Google Play. [Claim 11, Claim 10] / The weekly
+**Scene 7 (~2.5s, CTA).** Volyume. / It checks whether there is enough to act on first. / Free to start on Google Play. [Claim 11, Claim 10] / The weekly
 coaching, with its food diary, is Pro. [Claim 9]
 
 ### Carousel adaptation (seven slides, 4:5, same copy)
