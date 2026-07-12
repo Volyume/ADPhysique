@@ -59,6 +59,17 @@ def main():
                     script = fh.read()
             except Exception:
                 deny("workflow script could not be read to verify agent tiers.")
+        # 2026-07-13: a NAMED workflow ({name: ...}) resolves its script
+        # server-side, so there is nothing here to inspect — that gap let a
+        # 105-agent research run inherit the Fable session tier and burn
+        # ~3.8M tokens. Named workflows are therefore blocked outright:
+        # materialise the script to a file, pin models on every agent()
+        # call, and invoke via scriptPath so it can be verified.
+        if not script:
+            deny(
+                "a named workflow's script cannot be inspected for agent tiers; "
+                "invoke via scriptPath with an explicit model on every agent() call."
+            )
         # Every agent( call must carry an approved model within its options.
         for m in re.finditer(r"\bagent\(", script):
             window = script[m.start(): m.start() + 800]
