@@ -6,8 +6,8 @@
 **Scope:** Cloud schema only, `public` schema, EU-Dublin project, all tables
 prefixed `marketing_`. Additive to the existing app schema — no existing
 table, column, policy or function is touched. Migrations live in
-`supabase/migrate_119_marketing_waitlist.sql` and
-`supabase/migrate_120_marketing_hq_tables.sql`, applied manually by the
+`supabase/migrate_120_marketing_waitlist.sql` and
+`supabase/migrate_121_marketing_hq_tables.sql`, applied manually by the
 founder per the standing Supabase rule (never automatic, never CI-triggered).
 
 ---
@@ -121,7 +121,7 @@ tables.
   manage membership via service_role, never via the client).
 
 **Seed:** `allansdouglas1983@gmail.com`, inserted idempotently
-(`ON CONFLICT DO NOTHING`) by migrate_120.
+(`ON CONFLICT DO NOTHING`) by migrate_121.
 
 ---
 
@@ -265,13 +265,13 @@ ordinary logged-in users.
 
 ---
 
-## 7. Retention email loop (migrate_122)
+## 7. Retention email loop (migrate_123)
 
 **Purpose:** The automated retention email programme -- a feedback
 thank-you email, and a trial-day-12 check-in split by activity
 (`day12_active` / `day12_quiet`) -- plus the survey it links to and the
 Play promo code pool used to reward responses. Migration:
-`supabase/migrate_122_retention_email_loop.sql`.
+`supabase/migrate_123_retention_email_loop.sql`.
 
 ### 7a. `marketing_email_log`
 
@@ -310,7 +310,7 @@ dedupe guard, enforced by the database, not just the sending job.
 **RLS:** enabled.
 - `anon` -- no access, **including no INSERT**. Unlike `marketing_waitlist`,
   the unsubscribe flow does not write directly from the browser: it runs
-  through a signed-link edge function (planned, not part of migrate_122)
+  through a signed-link edge function (planned, not part of migrate_123)
   that verifies the link signature server-side and writes with
   service_role. This keeps the opt-out table as unwritable by anon as
   `marketing_admins`, while still giving a real one-click unsubscribe.

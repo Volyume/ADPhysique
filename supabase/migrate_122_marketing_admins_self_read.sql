@@ -1,4 +1,9 @@
--- migrate_121_marketing_admins_self_read.sql
+-- migrate_122_marketing_admins_self_read.sql
+--
+-- RENUMBERED:       applied to production 2026-07-12 under the historical
+--                   name migrate_121_marketing_admins_self_read; renumbered after a parallel
+--                   migrate_119 landed on main. Do not re-apply; the DDL is
+--                   idempotent so an accidental re-run is harmless.
 --
 -- Purpose:          Allow a signed-in user to read THEIR OWN row (and only
 --                   their own row) in marketing_admins, so the dashboard's

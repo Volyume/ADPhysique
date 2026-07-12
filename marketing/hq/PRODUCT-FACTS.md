@@ -167,7 +167,7 @@ Each figure below is tied to a specific file reference, verified
   code. Mechanism: the founder generates promotional codes for the Pro
   subscription in Google Play Console (Monetise, Promotions); the marketing
   system stores them in the service-role-only `marketing_promo_codes` pool
-  (supabase/migrate_122) and issues one per completed survey by email.
+  (supabase/migrate_123) and issues one per completed survey by email.
   Redemption happens entirely inside Google Play; no app or billing code is
   involved. CONDITION: this reward may only be promised in copy while the
   pool holds available codes; if the pool is empty, sending pauses and an

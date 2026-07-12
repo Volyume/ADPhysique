@@ -1,4 +1,9 @@
--- migrate_122_retention_email_loop.sql
+-- migrate_123_retention_email_loop.sql
+--
+-- RENUMBERED:       applied to production 2026-07-12 under the historical
+--                   name migrate_122_retention_email_loop; renumbered after a parallel
+--                   migrate_119 landed on main. Do not re-apply; the DDL is
+--                   idempotent so an accidental re-run is harmless.
 --
 -- Purpose:          Create the four tables behind the Volyume retention
 --                   email loop: marketing_email_log (send/suppress record

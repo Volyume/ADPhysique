@@ -1,4 +1,9 @@
--- migrate_119_marketing_waitlist.sql
+-- migrate_120_marketing_waitlist.sql
+--
+-- RENUMBERED:       applied to production 2026-07-12 under the historical
+--                   name migrate_119_marketing_waitlist; renumbered after a parallel
+--                   migrate_119 landed on main. Do not re-apply; the DDL is
+--                   idempotent so an accidental re-run is harmless.
 --
 -- Purpose:          Create marketing_waitlist, the single public-facing
 --                   table for the Volyume Marketing HQ: captures

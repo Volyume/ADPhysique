@@ -11,7 +11,7 @@ depends on, including the `marketing_admins` gating table),
 
 **Security model:** the dashboard's own admin check is convenience/UX only.
 The real boundary is Supabase RLS via `marketing_admins` membership
-(migration `supabase/migrate_120_marketing_hq_tables.sql`). Even if the UI
+(migration `supabase/migrate_121_marketing_hq_tables.sql`). Even if the UI
 gate were bypassed, a non-admin's Supabase queries return zero rows and
 zero writes succeed, because every policy on the four internal marketing
 tables checks `auth.jwt() ->> 'email'` against `marketing_admins`.
