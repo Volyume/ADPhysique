@@ -324,3 +324,25 @@ every marketing visual asset; any exception (a new accent colour, a third
 typeface, a departure from the decision-card format) is a founder decision,
 made in advance per `CLAUDE.md` §4's no-silent-corner-cutting rule, never a
 designer's or agent's call in the moment.
+
+---
+
+## Addendum A1 (2026-07-12): approved diagram components
+
+Founder decision, made in advance and recorded here: alongside the decision
+card (§5), FOUR diagram components are approved for production use in stills
+and reels. They shipped in carousel 1, which the founder reviewed as rendered
+PNGs and approved as the production standard on 2026-07-12:
+
+1. **Weekly trend line** — amber line through morning-weight dots across a
+   week; the honest alternative to a single reading.
+2. **Fork** — a two-way split resolving to CHANGE or HOLD; the taken path
+   solid amber, the other outlined.
+3. **Lone dot** — a single amber dot in negative space; one data point,
+   deliberately unimpressive.
+4. **Filling dots (data meter)** — observations accumulating toward an act
+   threshold; the visual for "holds until the data is real".
+
+Constraints unchanged: single amber accent, near-black canvas, left-aligned,
+no gradients, numbers in monospace. Any FURTHER component beyond these four
+plus the decision card remains a founder decision in advance, per Governance.

@@ -39,6 +39,19 @@ never receives both an active and a quiet day12 email).
 **Cadence.** The feedback trigger runs hourly. The day12 window is evaluated on
 a daily job. Both consult the suppression contract before any send.
 
+**Internal accounts (never emailed, 2026-07-12).** The founder's own test
+accounts are excluded from every kind in this loop. Their feedback and trial
+state are development noise, not user signal, and emailing them consumes the
+one-per-kind slot for nothing. Current list (extend here if more are created):
+
+- `21953c19-127f-497b-a45b-d761ffacaa22` (allansdouglas1983@gmail.com)
+- `c443ed54-57df-4702-9016-ed5138855927` (allanhendy69@gmail.com)
+- `21439e83-f03f-40ee-aa78-e1da67de74f7` (allansdoug1983@gmail.com)
+
+The executor checks this list before the suppression contract; matches are
+skipped silently with no `marketing_email_log` row (the log stays a record of
+real-user handling only).
+
 ---
 
 ## 2. Survey link construction
