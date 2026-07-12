@@ -164,7 +164,7 @@ function eveningCopies(name) {
   return [
     { title: `Evening${name}`, body: 'If you haven\'t caught today\'s weight yet, there\'s still time. No worries either way.' },
     { title: `Before the day\'s out${name}`, body: 'A gentle nudge to log today\'s weight if you haven\'t already.' },
-    { title: `Quick one${name}`, body: 'If you haven\'t weighed in yet today, whenever suits keeps your coaching on track.' },
+    { title: `Quick one${name}`, body: 'If you haven\'t weighed in today, there\'s still time whenever it suits you.' },
     { title: `Evening${name}`, body: 'Still time to pop on the scales today if you fancy it. That\'s all for now.' },
   ];
 }
@@ -317,7 +317,7 @@ export async function scheduleMealReminders(reminders = []) {
 
 function checkinCopy(name) {
   return {
-    title: `How has your week gone${name}`,
+    title: `How has your week gone${name}?`,
     body: 'A two-minute check-in is all it takes, and your coach tunes next week around it.',
   };
 }

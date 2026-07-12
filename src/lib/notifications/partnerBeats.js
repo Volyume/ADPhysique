@@ -24,7 +24,7 @@ export function cheerPush(partnerName) {
   const name = (typeof partnerName === 'string' && partnerName.trim()) ? partnerName.trim() : 'Your partner';
   return {
     title: `${name} cheered you on`,
-    body: 'A tap from your training partner. They can see your week is being kept.',
+    body: 'A tap from your training partner. They can see you\'re keeping up your training this week.',
   };
 }
 
@@ -34,7 +34,7 @@ export function streakKeptPush(partnerName, run) {
   const n = Math.max(0, Math.round(Number(run) || 0));
   return {
     title: `${n} ${n === 1 ? 'week' : 'weeks'} running, together`,
-    body: `You and ${name} both kept your training week.`,
+    body: `You and ${name} both kept up your training this week.`,
   };
 }
 
@@ -46,7 +46,7 @@ export function joinPush(partnerName) {
   const name = (typeof partnerName === 'string' && partnerName.trim()) ? partnerName.trim() : 'Your partner';
   return {
     title: `${name} joined you`,
-    body: 'You are training together now. Their week shows up here from now on.',
+    body: 'You are training together now. You\'ll see their training week here from now on.',
   };
 }
 

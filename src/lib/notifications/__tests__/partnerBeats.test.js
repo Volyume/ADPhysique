@@ -2,6 +2,12 @@
  * NEW-002 partner beats — the pure decision + copy contract.
  * What these pushes must never do: fire twice for one cheer, fire for stale
  * history, fire for a lapsed/shrinking run, or carry shame copy.
+ *
+ * P-11 (Codex end-user-polish audit): three of these bodies read as
+ * machine-generated rather than natural British English ("They can see your
+ * week is being kept", "You and [name] both kept your training week",
+ * "Their week shows up here from now on"). Reworded below; pinned here so
+ * the stiff phrasing can't silently return.
  */
 import {
   cheerPush,
@@ -95,12 +101,34 @@ describe('push copy', () => {
     expect(cheerPush('').title).toBe('Your partner cheered you on');
     expect(cheerPush(null).title).toBe('Your partner cheered you on');
   });
+  // P-11: the old body ("They can see your week is being kept.") read as
+  // machine-generated. Pinned to the reworded, natural version.
+  test('cheer copy body reads as natural British English, not machine-generated', () => {
+    expect(cheerPush('Sam').body).toBe(
+      "A tap from your training partner. They can see you're keeping up your training this week.",
+    );
+    expect(cheerPush('Sam').body).not.toMatch(/your week is being kept/);
+  });
   test('streak copy states the shared run as a fact', () => {
     const c = streakKeptPush('Sam', 6);
     expect(c.title).toBe('6 weeks running, together');
     expect(c.body).toContain('Sam');
     const single = streakKeptPush(null, 1);
     expect(single.title).toBe('1 week running, together');
+  });
+  // P-11: the old body ("You and Sam both kept your training week.") read as
+  // machine-generated. Pinned to the reworded, natural version.
+  test('streak copy body reads as natural British English, not machine-generated', () => {
+    expect(streakKeptPush('Sam', 6).body).toBe("You and Sam both kept up your training this week.");
+    expect(streakKeptPush('Sam', 6).body).not.toMatch(/both kept your training week/);
+  });
+  // P-11: the old body ("Their week shows up here from now on.") read as
+  // machine-generated. Pinned to the reworded, natural version.
+  test('join copy body reads as natural British English, not machine-generated', () => {
+    expect(joinPush('Sam').body).toBe(
+      "You are training together now. You'll see their training week here from now on.",
+    );
+    expect(joinPush('Sam').body).not.toMatch(/Their week shows up here/);
   });
   test('no shame framing anywhere in the copy', () => {
     const all = [
