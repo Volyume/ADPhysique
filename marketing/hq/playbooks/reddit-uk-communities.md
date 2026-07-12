@@ -1,4 +1,4 @@
-# Playbook: Reddit and UK Communities
+# Playbook: Communities: Reddit and Quora
 
 **Owner:** the founder, personally, always (OPERATING-CHARTER §4,
 FOUNDER-ONLY — "Community and Reddit posting. Always posted by the founder
@@ -83,14 +83,71 @@ would itself violate the 90/10 rule.
   posting as promotional or astroturfing; the 90/10 ratio breached in any
   community.
 
+## r/Volyume: the official community
+
+- **The founder creates the subreddit** (founder action — a subreddit
+  creation is an account-level action only the founder can take).
+  community-manager drafts the subreddit description, the community rules,
+  the welcome post, and a launch batch of posts, all for founder-tap
+  approval before anything goes live.
+- Once created, r/Volyume is Volyume's own official home: release notes,
+  behind-the-decision explainers (why the coach made a particular call),
+  tips for getting more from the app, and a place for user questions to land
+  and be answered.
+- **Posting cadence:** 1–2 posts a week, drafted by community-manager for
+  the founder to review and post.
+- **The 90/10 rule does not apply here** — because it is Volyume's own
+  space, not a third-party community being visited, posts can be about
+  Volyume without limit. **CLAIMS-STANDARDS still gates every single post**
+  exactly as it gates any other public content — being the official
+  subreddit is not an exemption from compliance, only from the 90/10 ratio.
+- Once the subreddit is established, link it from the volyume.app footer
+  and from the Play Store listing.
+
+## Quora
+
+Quora is the evidence-led answering channel: a place to give genuinely
+useful, complete answers to real questions the target audience is already
+asking, with Volyume mentioned only when directly relevant.
+
+- **Same permanent rule as Reddit:** community-manager drafts only; the
+  founder posts every answer from his own account, personally. Nothing here
+  is ever automated or agent-posted.
+- **How it works:**
+  1. community-manager finds high-intent questions already on Quora —
+     for example: when to change calories, how many sets per muscle group,
+     best workout tracker UK, how to track macros without MyFitnessPal, is
+     AI coaching trustworthy.
+  2. community-manager drafts a genuinely complete answer that stands
+     alone and is useful even to a reader who never clicks through to
+     Volyume.
+  3. At most, the answer includes a light contextual mention of Volyume, or
+     a link to a relevant volyume.app article, only where directly relevant
+     to the question — never forced in.
+  4. The founder reviews, edits into his own words, and posts personally.
+- **Never answer-spam.** Never duplicate the same answer, or near-duplicate
+  it, across multiple questions.
+- **Disclose being the founder** whenever Volyume is mentioned in an
+  answer — no undisclosed self-promotion.
+- **Expect slow compounding, not a quick spike.** Quora answers rank in
+  Google and keep being surfaced for years; this channel is a long-horizon
+  investment, not a burst tactic.
+- **Measurement:** profile views and click-throughs are useful context;
+  **installs are the KPI.**
+
 ## Founder actions required
 
-- Review and post every pack personally — this is the entire mechanism,
-  not an occasional check-in.
+- Review and post every Reddit pack personally — this is the entire
+  mechanism, not an occasional check-in.
 - Confirm or correct community-manager's read of each community's rules
   before first posting there.
 - Report back (even briefly) what was actually posted and how it landed, so
   community-manager can keep the ledger and the 90/10 tracking accurate.
+- Create r/Volyume.
+- Maintain his own Reddit and Quora accounts, and personally post every
+  pack drafted for either channel — the paste-and-post loop is a few
+  minutes a day at most, with packs arriving in the digest/dashboard ready
+  to review.
 
 ## Hard boundaries
 
