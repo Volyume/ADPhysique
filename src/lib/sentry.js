@@ -100,13 +100,35 @@ export function initSentry({ environment } = {}) {
       //      breadcrumbs).
       //   2. Drop events tagged "drop" by the caller (used to
       //      suppress duplicate or noisy patterns).
+      //
+      // FAIL CLOSED, not open: if the scrubber itself throws (a bug in
+      // scrubEvent/scrubBreadcrumb, a malicious getter on the event, or
+      // an SDK shape change it doesn't expect), returning the original
+      // event would ship it UNSANITISED, including whatever PII was
+      // attached (e.g. the user's email, see setSentryUser below). A
+      // dropped crash report is an acceptable cost; a leaked event is
+      // not. So the catch branch returns null (drop) rather than the
+      // untouched input. No payload is logged here, only a boolean
+      // signal, so the failure is observable without repeating the leak.
       beforeSend: (event) => {
         try { return scrubEvent(event); }
-        catch (_) { return event; }
+        catch (_) {
+          if (__DEV__) {
+            // eslint-disable-next-line no-console
+            console.warn('[sentry] beforeSend scrub threw, dropping event to avoid an unsanitised send');
+          }
+          return null;
+        }
       },
       beforeBreadcrumb: (crumb) => {
         try { return scrubBreadcrumb(crumb); }
-        catch (_) { return crumb; }
+        catch (_) {
+          if (__DEV__) {
+            // eslint-disable-next-line no-console
+            console.warn('[sentry] beforeBreadcrumb scrub threw, dropping breadcrumb to avoid an unsanitised send');
+          }
+          return null;
+        }
       },
     });
     initialised = true;
@@ -219,4 +241,6 @@ export function addBreadcrumb(message, ctx = {}) {
 // per PRIVACY_CONSENT_LOCKED.md line 282. This file imports `scrubEvent`
 // and `scrubBreadcrumb` and wires them into Sentry's beforeSend +
 // beforeBreadcrumb hooks above. Audit tests live in
-// src/lib/__tests__/sentryScrub.test.js.
+// src/lib/__tests__/sentryScrub.test.js. The fail-closed behaviour of the
+// hooks themselves (drop on scrub throw, never leak the original) is
+// pinned in src/lib/__tests__/sentry.test.js.
