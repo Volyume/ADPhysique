@@ -621,7 +621,9 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   pickerSearchBar: { flex: 1 },
-  pickerClose: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  // UI-13 (end-user-polish audit, 2026-07-12): 44pt touch target, raised
+  // from 40x40 which fell below the project's touch-target contract.
+  pickerClose: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   pickerItem: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -155,6 +155,11 @@ export function ProLocked({ feature = 'This' }) {
   const navigation = useNavigation();
   const userId = useAppStore(s => s.user?.id);
   const [restoring, setRestoring] = useState(false);
+  // UI-12 (end-user-polish audit, 2026-07-12): the SafeAreaView below only
+  // absorbs top/left/right, so the scroll content needs its own bottom
+  // padding or the last control (Restore purchases) can finish under an
+  // iPhone home indicator.
+  const insets = useSafeAreaInsets();
 
   // Fire the lock impression once per feature key, not on every re-render. The
   // ref records the feature we last emitted for, so a re-render (or userId
@@ -199,7 +204,10 @@ export function ProLocked({ feature = 'This' }) {
 
   return (
     <SafeAreaView style={[styles.lockedSafe, live.lockedSafe]} edges={['top', 'left', 'right']}>
-      <ScrollView contentContainerStyle={styles.lockedScroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.lockedScroll, { paddingBottom: Math.max(spacing.xl, insets.bottom + spacing.sm) }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Founder 2026-07-02: the lock is a short gate, not a sales page.
             Identity first (lock + what this is), the example day as the one
             piece of show-don't-tell, then the CTA. The full sell (prices,
@@ -259,6 +267,7 @@ export function ProLocked({ feature = 'This' }) {
           disabled={restoring}
           accessibilityRole="button"
           accessibilityLabel="Restore purchases"
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
           {/* CP-10 theming batch, guard-test pin extended (ProGate.featureCopy.
               guard.test.js "restore purchase action is contained chrome"): the
