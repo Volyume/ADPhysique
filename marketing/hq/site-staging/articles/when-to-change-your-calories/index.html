@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>When should you actually change your calories? A decision framework</title>
+<meta name="description" content="A calm, evidence-led framework for deciding when to change your calorie intake and when to hold: enough weigh-ins, trend versus noise, and why the weekly view beats the daily one.">
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta name="theme-color" content="#0D0D0D">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://volyume.app/articles/when-to-change-your-calories/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="When should you actually change your calories? A decision framework">
+<meta property="og:description" content="A calm, evidence-led framework for deciding when to change your calorie intake and when to hold.">
+<meta property="og:url" content="https://volyume.app/articles/when-to-change-your-calories/">
+<style>
+  :root{
+    --bg:#0D0D0D; --surface:#191917; --surface2:#2A2A27;
+    --border:#6E6E6E; --borderSubtle:#2E2E2C;
+    --amber:#F5A623; --amberFill:#E08C0B; --amberBg:rgba(245,166,35,0.12);
+    --silver:#C0C0C0;
+    --text:#FFFFFF; --textSecondary:#9E9E9E; --textMuted:#9B9B9B;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --nav-h:78px;
+  }
+  *{box-sizing:border-box;}
+  html{color-scheme:dark;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font);
+    -webkit-font-smoothing:antialiased; line-height:1.5; overflow-x:hidden;}
+  a{color:inherit; text-decoration:none;}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:10px; white-space:nowrap;
+    font-weight:700; font-size:14px; border-radius:12px; padding:10px 16px; cursor:pointer; border:1px solid transparent;
+    transition:background-color .2s cubic-bezier(.2,0,0,1);}
+  .btn-primary{background:var(--amberFill); color:var(--bg);}
+  .btn-primary:hover{background:var(--amber);}
+  nav{position:fixed; top:0; left:0; right:0; height:var(--nav-h); z-index:50;
+    display:flex; align-items:center; background:rgba(13,13,13,0.88); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--borderSubtle);}
+  nav .wrap{display:flex; align-items:center; justify-content:space-between; width:100%;}
+  .brand{display:flex; align-items:center; gap:10px;}
+  .logo-word{height:clamp(34px,9vw,44px); width:auto; flex:0 0 auto; display:block;}
+  nav .navlinks{display:flex; gap:26px; align-items:center;}
+  nav .navlinks a{color:var(--textSecondary); font-size:15px; font-weight:600;}
+  nav .navlinks a:hover{color:var(--amber);}
+
+  article{padding:calc(var(--nav-h) + 48px) 0 24px;}
+  .article-inner{max-width:720px;}
+  .crumb{color:var(--textMuted); font-size:14px; margin:0 0 18px;}
+  .crumb a{color:var(--amber);}
+  article h1{font-weight:900; letter-spacing:-0.5px; font-size:clamp(30px,5.2vw,44px); line-height:1.1; margin:0;}
+  .meta{color:var(--textMuted); font-size:14px; margin:16px 0 0;}
+  article h2{font-weight:700; letter-spacing:-0.25px; font-size:24px; line-height:1.2; margin:40px 0 14px;}
+  article p{color:var(--textSecondary); font-size:17px; line-height:1.7; margin:0 0 18px; max-width:70ch;}
+  article strong{color:var(--text); font-weight:600;}
+  article ul{margin:0 0 18px; padding:0; list-style:none; display:flex; flex-direction:column; gap:11px; max-width:70ch;}
+  article li{display:flex; gap:12px; align-items:flex-start; color:var(--textSecondary); font-size:17px; line-height:1.6;}
+  article li::before{content:""; flex:0 0 auto; width:6px; height:6px; border-radius:50%; background:var(--amber); margin-top:10px;}
+  article a.inline{color:var(--amber); text-decoration:underline; text-underline-offset:3px;}
+  .applink{background:var(--amberBg); border:1px solid var(--amber); border-radius:14px; padding:20px 22px; margin:26px 0;}
+  .applink p{color:var(--text); margin:0; font-size:16px; line-height:1.6;}
+  .refs{margin-top:44px; border-top:1px solid var(--borderSubtle); padding-top:24px;}
+  .refs h2{font-size:18px; margin:0 0 14px;}
+  .refs ol{margin:0; padding-left:20px; color:var(--textMuted); font-size:14px; line-height:1.6;}
+  .refs li{display:list-item; color:var(--textMuted);}
+  .refs a{color:var(--amber); word-break:break-word;}
+
+  footer{border-top:1px solid var(--borderSubtle); padding:46px 0; margin-top:48px;}
+  footer .wrap{display:flex; flex-wrap:wrap; gap:20px 32px; align-items:center; justify-content:space-between;}
+  footer .links{display:flex; gap:24px; flex-wrap:wrap;}
+  footer a{color:var(--textMuted); font-size:14px;}
+  footer a:hover{color:var(--amber);}
+  footer .copy{color:var(--textMuted); font-size:13px; width:100%;}
+
+  @media(max-width:600px){
+    :root{--nav-h:60px;}
+    .wrap{padding:0 16px;}
+    nav .navlinks{gap:16px;}
+    nav .navlinks a{font-size:14px;}
+    article h1{font-size:28px;}
+    article p, article li{font-size:16px;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Volyume">
+      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+    </a>
+    <div class="navlinks">
+      <a href="/articles/">Articles</a>
+      <a href="/privacy/">Privacy</a>
+      <a href="https://play.google.com/store/apps/details?id=app.volyume" class="btn btn-primary">Get it on Google Play</a>
+    </div>
+  </div>
+</nav>
+
+<article>
+  <div class="wrap">
+    <div class="article-inner">
+      <p class="crumb"><a href="/articles/">Articles</a> / When to change your calories</p>
+      <h1>When should you actually change your calories? A decision framework</h1>
+      <p class="meta">Reading time about 6 minutes</p>
+
+      <p>Most people who track their intake change their calories too often. The scale ticks up after a big meal, or fails to move for three days, and the number gets cut. A week later it drops sharply, so the number goes back up. This is not adjustment. It is chasing noise, and it tends to leave you no further forward while feeling as though you are always reacting.</p>
+      <p>The alternative is a simple habit: change your calories only when the evidence is strong enough to justify it, and hold the rest of the time. This article sets out a framework for making that call. It is general guidance on how to read your own data, not a promise about any particular result.</p>
+
+      <h2>Start from energy balance, honestly</h2>
+      <p>Body weight change over time is governed by energy balance: the relationship between the energy you take in and the energy you expend. When intake is below expenditure across a sustained period, stored energy is drawn down and body mass tends to fall. When it is above, mass tends to rise. This is a well-established principle in human energy metabolism, and it is the backbone of any sensible calorie decision. Systematic reviews of energy balance describe it as dynamic: as your weight changes, your expenditure changes too, which is one reason a target that worked a month ago may need revisiting <a class="inline" href="#ref1">[1]</a>.</p>
+      <p>The practical implication is that your calorie target is not a fixed truth. It is a working estimate that you test against what actually happens on the scale. The question is never whether the estimate is perfect. It is whether the latest data gives you a strong enough reason to move it.</p>
+
+      <h2>The core problem: trend versus noise</h2>
+      <p>Daily body weight is a poor guide to fat change because it is dominated by things that have nothing to do with fat. Water balance, sodium, carbohydrate intake, the state of your digestive tract and hormonal fluctuations can each shift the scale by a kilogram or more within a day. Researchers who study self-weighing consistently point out that a single reading carries a large amount of this short-term variation <a class="inline" href="#ref2">[2]</a>.</p>
+      <p>The way through is to look at the trend rather than the reading. If you weigh yourself most mornings under similar conditions and take a weekly average, the daily fluctuations largely cancel out and what remains is a far cleaner signal of the underlying direction. Comparing this week's average with last week's, and the week before, tells you what your body is actually doing in a way that no single morning ever can.</p>
+      <p>This is why the honest unit of decision is the week, not the day. A day does not contain enough signal to act on. A week, averaged, usually does.</p>
+
+      <h2>Do you have enough weigh-ins to judge?</h2>
+      <p>Before you change anything, ask whether you have the data to support a change at all. A weekly average built from one or two weigh-ins is barely more reliable than a single reading. The more days you have contributed to the average, the more the noise cancels and the more you can trust the number.</p>
+      <p>A reasonable working standard looks like this:</p>
+      <ul>
+        <li>Weigh in on most days of the week, first thing, under similar conditions.</li>
+        <li>Build a weekly average from those readings rather than acting on any one day.</li>
+        <li>Compare at least two, and preferably three, weekly averages before concluding there is a trend.</li>
+        <li>If you are missing most of a week's weigh-ins, the honest answer is that you cannot yet judge. Hold, and gather more data.</li>
+      </ul>
+      <p>Holding when the data is thin is not indecision. It is the correct decision given what you know. Acting on insufficient data simply converts randomness into a change you will probably have to reverse.</p>
+
+      <h2>What actually justifies a change</h2>
+      <p>Once you have two or three clean weekly averages, the decision becomes far simpler. Set out what you expect from your current phase, then compare it with what the trend shows.</p>
+      <ul>
+        <li><strong>The trend is moving at roughly the rate you intended.</strong> Hold. The plan is working, and changing it only adds noise.</li>
+        <li><strong>The trend has stalled across two or three weeks</strong>, well beyond what a single week's water shift could explain, and you are confident your logging has been consistent. This is a genuine reason to adjust.</li>
+        <li><strong>The trend is moving faster than intended</strong>, for instance losing weight more quickly than a sensible rate. This is also a reason to adjust, in the other direction, because very fast loss carries its own costs.</li>
+        <li><strong>One week looks odd but the fuller picture does not.</strong> Hold. A single surprising week is usually noise, not signal.</li>
+      </ul>
+      <p>Notice that logging consistency is part of the test. If your intake records for the week were incomplete or estimated loosely, a stall may reflect the record rather than your metabolism, and the right first move is to tighten the logging, not to cut calories.</p>
+
+      <h2>Why weekly, not daily, protects you</h2>
+      <p>Reviewing on a weekly cadence does more than clean up the signal. It also protects you from the emotional pull of the daily number. When you know you are only going to make a decision once a week, from an average, a heavy reading on a Tuesday stops being a crisis. It is simply one data point feeding into a number you will read on Sunday. That distance is good for consistency and good for your relationship with the scale.</p>
+      <p>It also keeps changes small and rare. Frequent large swings in intake make it impossible to learn anything, because you never hold a target long enough to see what it does. A steady target, reviewed weekly and adjusted only when the trend clearly calls for it, is what lets you actually read cause and effect.</p>
+
+      <div class="applink">
+        <p>If you would rather this weekly read were done for you, that is what Volyume's weekly check-in does: it looks at your averaged weight trend against your logs, decides whether to change or hold, and writes down the reason. When the data is not enough to judge, it holds rather than guesses.</p>
+      </div>
+
+      <h2>A short checklist</h2>
+      <ul>
+        <li>Weigh in most mornings under similar conditions.</li>
+        <li>Work from a weekly average, never a single day.</li>
+        <li>Wait for two or three weekly averages before reading a trend.</li>
+        <li>Change only when the trend, not a single week, clearly departs from your intended rate.</li>
+        <li>Check your logging honestly before blaming your metabolism.</li>
+        <li>When in doubt, hold. Holding on thin data is a decision, not a failure.</li>
+      </ul>
+      <p>None of this guarantees a particular outcome, and no framework can. What it does is stop you making changes you cannot justify, so that the changes you do make actually mean something.</p>
+
+      <div class="refs" id="refs">
+        <h2>References</h2>
+        <ol>
+          <li id="ref1">Hall KD et al. Energy balance and its components: implications for body weight regulation. <em>American Journal of Clinical Nutrition</em>, 2012. <a href="https://pubmed.ncbi.nlm.nih.gov/22258266/">pubmed.ncbi.nlm.nih.gov/22258266</a></li>
+          <li id="ref2">Steinberg DM et al. The efficacy of a daily self-weighing weight loss intervention. <em>Annals of Behavioral Medicine</em>, 2015, on daily weight variability and trend interpretation. <a href="https://pubmed.ncbi.nlm.nih.gov/25683066/">pubmed.ncbi.nlm.nih.gov/25683066</a></li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</article>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Volyume">
+      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+    </a>
+    <div class="links">
+      <a href="/privacy/">Privacy</a>
+      <a href="/support/">Support</a>
+      <a href="/articles/">Articles</a>
+      <a href="https://play.google.com/store/apps/details?id=app.volyume">Get it on Google Play</a>
+    </div>
+    <p class="copy">© 2026 Volyume</p>
+  </div>
+</footer>
+
+<!--
+  CLAIMS TABLE — factual claims traced to PRODUCT-FACTS.md (2026-07-12).
+  General training/nutrition claims are cited to external references [1],[2] in-text.
+  ---------------------------------------------------------------------------------
+  "Volyume's weekly check-in ... change or hold ... writes down the reason" .. §A
+  "holds rather than guesses when data is insufficient" ..................... §A, §F
+  No outcome promises made (explicit "no guarantee" statements) ............. CLAIMS-STANDARDS §5
+-->
+
+</body>
+</html>

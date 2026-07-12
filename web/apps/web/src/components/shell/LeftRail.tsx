@@ -7,7 +7,7 @@ import { cn } from '@volyume/ui';
 // Sections of the user web (6a). Items without an href are not built yet, so
 // they render inert (no fake "coming soon" copy, just not yet reachable). The
 // amber active bar is the affordance; no decorative icons.
-const items: { key: string; label: string; href?: string }[] = [
+const baseItems: { key: string; label: string; href?: string }[] = [
   { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
   { key: 'plan', label: 'Plan', href: '/plan' },
   { key: 'progress', label: 'Progress', href: '/progress' },
@@ -16,8 +16,14 @@ const items: { key: string; label: string; href?: string }[] = [
   { key: 'account', label: 'Account', href: '/account' },
 ];
 
-export function LeftRail() {
+export function LeftRail({ showMarketing = false }: { showMarketing?: boolean }) {
   const pathname = usePathname();
+  // The Marketing entry is cosmetic-gated here (a lightweight admin lookup
+  // resolved server-side in AppShell); the real gate is the page-level
+  // requireMarketingAdmin() redirect plus RLS on the marketing tables.
+  const items = showMarketing
+    ? [...baseItems, { key: 'marketing', label: 'Marketing', href: '/marketing' }]
+    : baseItems;
   return (
     <nav className="flex w-[220px] shrink-0 flex-col gap-xxs border-r border-borderSubtle bg-background px-sm py-lg">
       <Link href="/dashboard" className="mb-lg px-md type-title font-bold text-textPrimary">

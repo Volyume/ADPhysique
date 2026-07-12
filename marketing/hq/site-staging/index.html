@@ -97,6 +97,18 @@
   .pchip h3{font-weight:700; font-size:15px; margin:0 0 6px;}
   .pchip p{color:var(--textMuted); font-size:14px; line-height:1.5; margin:0;}
 
+  /* Waitlist */
+  .waitlist{background:var(--surface); border:1px solid var(--borderSubtle); border-radius:18px; padding:30px; max-width:640px;}
+  .waitlist label{display:block; color:var(--textSecondary); font-size:14px; margin:0 0 8px; font-weight:600;}
+  .waitlist input[type=email]{width:100%; background:var(--bg); border:1px solid var(--border); border-radius:12px;
+    padding:13px 15px; color:var(--text); font-size:15px; font-family:var(--font);}
+  .waitlist input[type=email]:focus{outline:none; border-color:var(--amber);}
+  .consent-row{display:flex; gap:11px; align-items:flex-start; margin:18px 0 0; color:var(--textSecondary); font-size:14px; line-height:1.5;}
+  .consent-row input{margin-top:3px; flex:0 0 auto;}
+  .consent-row a{color:var(--amber);}
+  .waitlist .submit{margin:20px 0 0;}
+  .waitlist .soon{color:var(--textMuted); font-size:13px; margin:14px 0 0;}
+
   footer{border-top:1px solid var(--borderSubtle); padding:46px 0; margin-top:24px;}
   footer .wrap{display:flex; flex-wrap:wrap; gap:20px 32px; align-items:center; justify-content:space-between;}
   footer .links{display:flex; gap:24px; flex-wrap:wrap;}
@@ -250,11 +262,30 @@
     </div>
   </section>
 
-  <!-- iOS NOTE -->
+  <!-- WAITLIST -->
   <section class="section-pad">
     <div class="wrap">
-      <h2 class="title">On iPhone?</h2>
-      <p class="lead">Volyume for iOS is coming to the App Store very soon.</p>
+      <h2 class="title">Get product updates</h2>
+      <p class="lead">Occasional updates on Volyume, including when iOS goes live. No spam, and you can unsubscribe at any time.</p>
+      <!--
+        FUTURE BACKEND WIRING (Supabase):
+        This form is intentionally inert for now (data-waitlist="pending-backend").
+        When the updates backend is ready, wire the submit to a Supabase insert into
+        the updates-signup table via the sync/transport layer (never a direct client
+        query from the page). Store email + explicit consent flag + timestamp, honour
+        EU residency, and add a double opt-in confirmation step. Do not enable until
+        the consent + storage path is reviewed against CLAIMS-STANDARDS and GDPR.
+      -->
+      <form class="waitlist" data-waitlist="pending-backend" onsubmit="return false;">
+        <label for="wl-email">Email address</label>
+        <input id="wl-email" type="email" name="email" placeholder="you@example.com" autocomplete="email" disabled>
+        <div class="consent-row">
+          <input id="wl-consent" type="checkbox" name="consent" disabled>
+          <label for="wl-consent" style="margin:0; font-weight:400;">I agree to receive occasional product update emails from Volyume and have read the <a href="/privacy/">privacy policy</a>.</label>
+        </div>
+        <button type="submit" class="btn btn-primary submit" disabled>Sign up for updates</button>
+        <p class="soon">Sign-up opens shortly.</p>
+      </form>
     </div>
   </section>
 </main>
@@ -306,8 +337,6 @@
   Privacy: no adverts ...................................... §E
   Privacy: nothing sold / no PII to analytics .............. §E
 -->
-
-
 
 </body>
 </html>

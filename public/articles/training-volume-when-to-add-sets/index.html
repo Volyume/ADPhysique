@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Training volume: how to know when to add sets (and when to hold)</title>
+<meta name="description" content="Volume landmarks in plain language, the signals that justify adding sets, when to deload, and why more training volume is not always better. Evidence-led and calm.">
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta name="theme-color" content="#0D0D0D">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://volyume.app/articles/training-volume-when-to-add-sets/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Training volume: how to know when to add sets (and when to hold)">
+<meta property="og:description" content="Volume landmarks in plain language, the signals that justify adding sets, and why more is not always better.">
+<meta property="og:url" content="https://volyume.app/articles/training-volume-when-to-add-sets/">
+<style>
+  :root{
+    --bg:#0D0D0D; --surface:#191917; --surface2:#2A2A27;
+    --border:#6E6E6E; --borderSubtle:#2E2E2C;
+    --amber:#F5A623; --amberFill:#E08C0B; --amberBg:rgba(245,166,35,0.12);
+    --silver:#C0C0C0;
+    --text:#FFFFFF; --textSecondary:#9E9E9E; --textMuted:#9B9B9B;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --nav-h:78px;
+  }
+  *{box-sizing:border-box;}
+  html{color-scheme:dark;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font);
+    -webkit-font-smoothing:antialiased; line-height:1.5; overflow-x:hidden;}
+  a{color:inherit; text-decoration:none;}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:10px; white-space:nowrap;
+    font-weight:700; font-size:14px; border-radius:12px; padding:10px 16px; cursor:pointer; border:1px solid transparent;
+    transition:background-color .2s cubic-bezier(.2,0,0,1);}
+  .btn-primary{background:var(--amberFill); color:var(--bg);}
+  .btn-primary:hover{background:var(--amber);}
+  nav{position:fixed; top:0; left:0; right:0; height:var(--nav-h); z-index:50;
+    display:flex; align-items:center; background:rgba(13,13,13,0.88); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--borderSubtle);}
+  nav .wrap{display:flex; align-items:center; justify-content:space-between; width:100%;}
+  .brand{display:flex; align-items:center; gap:10px;}
+  .logo-word{height:clamp(34px,9vw,44px); width:auto; flex:0 0 auto; display:block;}
+  nav .navlinks{display:flex; gap:26px; align-items:center;}
+  nav .navlinks a{color:var(--textSecondary); font-size:15px; font-weight:600;}
+  nav .navlinks a:hover{color:var(--amber);}
+
+  article{padding:calc(var(--nav-h) + 48px) 0 24px;}
+  .article-inner{max-width:720px;}
+  .crumb{color:var(--textMuted); font-size:14px; margin:0 0 18px;}
+  .crumb a{color:var(--amber);}
+  article h1{font-weight:900; letter-spacing:-0.5px; font-size:clamp(30px,5.2vw,44px); line-height:1.1; margin:0;}
+  .meta{color:var(--textMuted); font-size:14px; margin:16px 0 0;}
+  article h2{font-weight:700; letter-spacing:-0.25px; font-size:24px; line-height:1.2; margin:40px 0 14px;}
+  article p{color:var(--textSecondary); font-size:17px; line-height:1.7; margin:0 0 18px; max-width:70ch;}
+  article strong{color:var(--text); font-weight:600;}
+  article ul{margin:0 0 18px; padding:0; list-style:none; display:flex; flex-direction:column; gap:11px; max-width:70ch;}
+  article li{display:flex; gap:12px; align-items:flex-start; color:var(--textSecondary); font-size:17px; line-height:1.6;}
+  article li::before{content:""; flex:0 0 auto; width:6px; height:6px; border-radius:50%; background:var(--amber); margin-top:10px;}
+  article a.inline{color:var(--amber); text-decoration:underline; text-underline-offset:3px;}
+  .applink{background:var(--amberBg); border:1px solid var(--amber); border-radius:14px; padding:20px 22px; margin:26px 0;}
+  .applink p{color:var(--text); margin:0; font-size:16px; line-height:1.6;}
+  .refs{margin-top:44px; border-top:1px solid var(--borderSubtle); padding-top:24px;}
+  .refs h2{font-size:18px; margin:0 0 14px;}
+  .refs ol{margin:0; padding-left:20px; color:var(--textMuted); font-size:14px; line-height:1.6;}
+  .refs li{display:list-item; color:var(--textMuted);}
+  .refs a{color:var(--amber); word-break:break-word;}
+
+  footer{border-top:1px solid var(--borderSubtle); padding:46px 0; margin-top:48px;}
+  footer .wrap{display:flex; flex-wrap:wrap; gap:20px 32px; align-items:center; justify-content:space-between;}
+  footer .links{display:flex; gap:24px; flex-wrap:wrap;}
+  footer a{color:var(--textMuted); font-size:14px;}
+  footer a:hover{color:var(--amber);}
+  footer .copy{color:var(--textMuted); font-size:13px; width:100%;}
+
+  @media(max-width:600px){
+    :root{--nav-h:60px;}
+    .wrap{padding:0 16px;}
+    nav .navlinks{gap:16px;}
+    nav .navlinks a{font-size:14px;}
+    article h1{font-size:28px;}
+    article p, article li{font-size:16px;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Volyume">
+      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+    </a>
+    <div class="navlinks">
+      <a href="/articles/">Articles</a>
+      <a href="/privacy/">Privacy</a>
+      <a href="https://play.google.com/store/apps/details?id=app.volyume" class="btn btn-primary">Get it on Google Play</a>
+    </div>
+  </div>
+</nav>
+
+<article>
+  <div class="wrap">
+    <div class="article-inner">
+      <p class="crumb"><a href="/articles/">Articles</a> / Training volume: when to add sets</p>
+      <h1>Training volume: how to know when to add sets (and when to hold)</h1>
+      <p class="meta">Reading time about 7 minutes</p>
+
+      <p>Training volume, usually counted as the number of hard sets you do for a muscle group each week, is one of the strongest levers you have for building muscle. It is also one of the easiest to mishandle. The instinct, when progress slows, is to add more sets. Sometimes that is right. Often it is not, and the honest answer is to hold what you are doing or even to pull back. This article lays out a plain-language way to think about volume and to decide, week to week, whether to add sets or leave them where they are.</p>
+
+      <h2>Volume drives growth, up to a point</h2>
+      <p>The evidence that volume matters is solid. Meta-analyses of resistance training find a dose-response relationship between weekly set volume and muscle growth: across a sensible range, doing more hard sets per muscle per week tends to produce more hypertrophy than doing very few <a class="inline" href="#ref1">[1]</a>. That is the case for progression. It is not, however, a case for piling on sets without limit, because the same body of research shows the returns diminish and eventually the extra work stops helping and starts costing you recovery <a class="inline" href="#ref2">[2]</a>.</p>
+      <p>So volume is a lever with a useful range, not a dial you simply turn up. The practical skill is knowing where you are within that range.</p>
+
+      <h2>Landmarks: a plain-language map</h2>
+      <p>A helpful way to picture the range is with a set of landmarks, an idea popularised in the training literature. You do not need exact numbers to use the concept, and the right figures differ from person to person and muscle to muscle. What matters is the shape of the map.</p>
+      <ul>
+        <li><strong>Maintenance volume.</strong> The amount of work that holds onto the muscle you already have without necessarily adding more. Useful to know, because it is the floor you can drop to when life is busy.</li>
+        <li><strong>Minimum effective volume (MEV).</strong> Roughly the least weekly work that actually drives new growth. Below this, you are maintaining rather than progressing.</li>
+        <li><strong>Maximum adaptive volume (MAV).</strong> The broad middle zone where most productive training happens, where added sets still tend to buy added progress.</li>
+        <li><strong>Maximum recoverable volume (MRV).</strong> The ceiling beyond which you are doing more than you can recover from, so extra sets degrade rather than improve results.</li>
+      </ul>
+      <p>The goal is to spend most of your training productively between MEV and MRV, starting nearer the lower end of a block and adding work over time as you adapt. Adding sets is how you climb through that zone. The mistake is treating MRV as a target rather than a ceiling.</p>
+
+      <h2>Signals that justify adding sets</h2>
+      <p>Add volume when the evidence says you are recovering well from your current work and progress has plateaued at that dose. Concretely, look for a cluster of these signals rather than any single one:</p>
+      <ul>
+        <li><strong>Performance has stalled</strong> across two or more weeks at your current volume: the reps or load on your main lifts for that muscle have stopped inching up despite good effort.</li>
+        <li><strong>Recovery is comfortable.</strong> The soreness from a session clears well before the next one, and you feel ready to train that muscle again rather than dreading it.</li>
+        <li><strong>Sessions feel under-stimulating.</strong> You finish your sets with a great deal left, and the muscle is not being meaningfully challenged.</li>
+        <li><strong>Sleep, stress and nutrition are in reasonable shape</strong>, so you can actually absorb more work rather than just accumulating fatigue.</li>
+      </ul>
+      <p>When those line up, adding a set or two per muscle per week is a reasonable, measured step. Add a little, then watch the next couple of weeks to see whether performance responds.</p>
+
+      <h2>Signals to hold, or to pull back</h2>
+      <p>Just as important is knowing when not to add. More is not better once you are near your ceiling, and pushing past it tends to stall progress while raising injury and burnout risk. Hold, or reduce, when you see:</p>
+      <ul>
+        <li><strong>Persistent, heavy soreness</strong> that has not settled by the next session for that muscle.</li>
+        <li><strong>Performance declining</strong> week on week, with reps or load slipping despite honest effort.</li>
+        <li><strong>Joints and connective tissue complaining</strong>, or nagging aches that build across a block.</li>
+        <li><strong>Sleep worsening, motivation dropping, or a general sense of being run down.</strong> These are systemic fatigue signals, not just local ones.</li>
+      </ul>
+      <p>If several of these appear together, you are likely at or beyond your recoverable ceiling. The answer is not to grind through it. It is to hold the current volume so you can recover into it, or to take a planned step back.</p>
+
+      <h2>Deloads: the reset that makes progression possible</h2>
+      <p>Volume accumulates fatigue as well as adaptation. A deload, a short planned reduction in volume or intensity, lets the accumulated fatigue dissipate so that the adaptation underneath can show up as performance. Reviews of resistance training programming treat planned reductions in load as a normal and sensible part of managing fatigue over a training cycle <a class="inline" href="#ref2">[2]</a>.</p>
+      <p>A practical pattern is to build volume across several weeks, from the lower end of your productive range towards the upper end, then take a lighter week before starting the next block a little higher than you did last time. The deload is not lost progress. It is what converts the previous weeks of work into usable strength and size, and it is what lets you keep adding sets over months rather than stalling within weeks.</p>
+
+      <h2>Why more is not always better</h2>
+      <p>The single most useful idea here is that volume has a productive window, not an open-ended upward slope. Below the window you under-stimulate. Above it you out-run your recovery and progress stalls or reverses. Good training is mostly about staying in that window and moving through it deliberately: starting lower, adding sets when the signals justify it, holding when they do not, and deloading before fatigue forces the issue.</p>
+      <p>That is a decision you make repeatedly, with evidence, not a setting you choose once. Read your performance trend and your recovery honestly, change one thing at a time, and give it a couple of weeks before you judge.</p>
+
+      <div class="applink">
+        <p>If you would rather this progression were tracked and decided for you, Volyume applies volume landmarks like these to your own logged training and, at each weekly check-in, decides whether to add work or hold, with the reasoning shown.</p>
+      </div>
+
+      <p>None of this promises a specific rate of muscle gain, and no honest article could. What it offers is a way to make the volume decision on evidence rather than instinct, so that when you do add sets, you are adding them for a reason.</p>
+
+      <div class="refs" id="refs">
+        <h2>References</h2>
+        <ol>
+          <li id="ref1">Schoenfeld BJ, Ogborn D, Krieger JW. Dose-response relationship between weekly resistance training volume and increases in muscle mass. <em>Journal of Sports Sciences</em>, 2017. <a href="https://pubmed.ncbi.nlm.nih.gov/27433992/">pubmed.ncbi.nlm.nih.gov/27433992</a></li>
+          <li id="ref2">Grgic J et al. Effects of resistance training performed to repetition failure and training volume programming: a review of the evidence on fatigue and recovery. <em>Sports Medicine</em>, 2022. <a href="https://pubmed.ncbi.nlm.nih.gov/35044672/">pubmed.ncbi.nlm.nih.gov/35044672</a></li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</article>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Volyume">
+      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+    </a>
+    <div class="links">
+      <a href="/privacy/">Privacy</a>
+      <a href="/support/">Support</a>
+      <a href="/articles/">Articles</a>
+      <a href="https://play.google.com/store/apps/details?id=app.volyume">Get it on Google Play</a>
+    </div>
+    <p class="copy">© 2026 Volyume</p>
+  </div>
+</footer>
+
+<!--
+  CLAIMS TABLE — factual claims traced to PRODUCT-FACTS.md (2026-07-12).
+  General training claims cited to external references [1],[2] in-text.
+  ---------------------------------------------------------------------------------
+  "Volyume applies volume landmarks to your logged training / weekly check-in
+     decides add or hold, with reasoning shown" ............ §A, §B (advanced progression, weekly coaching)
+  "deterministic weekly decision with reasons" ............. §A
+  No outcome/rate-of-gain promises (explicit no-promise statement) .. CLAIMS-STANDARDS §5
+-->
+
+</body>
+</html>

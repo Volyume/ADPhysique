@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why an explainable coaching decision beats a black-box one</title>
+<meta name="description" content="The honest case for deterministic, auditable coaching over a generative black box. Fair to both approaches, and clear about where each one fits.">
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta name="theme-color" content="#0D0D0D">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://volyume.app/articles/why-explainable-coaching-beats-black-box/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Why an explainable coaching decision beats a black-box one">
+<meta property="og:description" content="The honest case for deterministic, auditable coaching over a generative black box. Fair to both approaches.">
+<meta property="og:url" content="https://volyume.app/articles/why-explainable-coaching-beats-black-box/">
+<style>
+  :root{
+    --bg:#0D0D0D; --surface:#191917; --surface2:#2A2A27;
+    --border:#6E6E6E; --borderSubtle:#2E2E2C;
+    --amber:#F5A623; --amberFill:#E08C0B; --amberBg:rgba(245,166,35,0.12);
+    --silver:#C0C0C0;
+    --text:#FFFFFF; --textSecondary:#9E9E9E; --textMuted:#9B9B9B;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --nav-h:78px;
+  }
+  *{box-sizing:border-box;}
+  html{color-scheme:dark;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font);
+    -webkit-font-smoothing:antialiased; line-height:1.5; overflow-x:hidden;}
+  a{color:inherit; text-decoration:none;}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:10px; white-space:nowrap;
+    font-weight:700; font-size:14px; border-radius:12px; padding:10px 16px; cursor:pointer; border:1px solid transparent;
+    transition:background-color .2s cubic-bezier(.2,0,0,1);}
+  .btn-primary{background:var(--amberFill); color:var(--bg);}
+  .btn-primary:hover{background:var(--amber);}
+  nav{position:fixed; top:0; left:0; right:0; height:var(--nav-h); z-index:50;
+    display:flex; align-items:center; background:rgba(13,13,13,0.88); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--borderSubtle);}
+  nav .wrap{display:flex; align-items:center; justify-content:space-between; width:100%;}
+  .brand{display:flex; align-items:center; gap:10px;}
+  .logo-word{height:clamp(34px,9vw,44px); width:auto; flex:0 0 auto; display:block;}
+  nav .navlinks{display:flex; gap:26px; align-items:center;}
+  nav .navlinks a{color:var(--textSecondary); font-size:15px; font-weight:600;}
+  nav .navlinks a:hover{color:var(--amber);}
+
+  article{padding:calc(var(--nav-h) + 48px) 0 24px;}
+  .article-inner{max-width:720px;}
+  .crumb{color:var(--textMuted); font-size:14px; margin:0 0 18px;}
+  .crumb a{color:var(--amber);}
+  article h1{font-weight:900; letter-spacing:-0.5px; font-size:clamp(30px,5.2vw,44px); line-height:1.1; margin:0;}
+  .meta{color:var(--textMuted); font-size:14px; margin:16px 0 0;}
+  article h2{font-weight:700; letter-spacing:-0.25px; font-size:24px; line-height:1.2; margin:40px 0 14px;}
+  article p{color:var(--textSecondary); font-size:17px; line-height:1.7; margin:0 0 18px; max-width:70ch;}
+  article strong{color:var(--text); font-weight:600;}
+  article ul{margin:0 0 18px; padding:0; list-style:none; display:flex; flex-direction:column; gap:11px; max-width:70ch;}
+  article li{display:flex; gap:12px; align-items:flex-start; color:var(--textSecondary); font-size:17px; line-height:1.6;}
+  article li::before{content:""; flex:0 0 auto; width:6px; height:6px; border-radius:50%; background:var(--amber); margin-top:10px;}
+  article a.inline{color:var(--amber); text-decoration:underline; text-underline-offset:3px;}
+  .applink{background:var(--amberBg); border:1px solid var(--amber); border-radius:14px; padding:20px 22px; margin:26px 0;}
+  .applink p{color:var(--text); margin:0; font-size:16px; line-height:1.6;}
+  .refs{margin-top:44px; border-top:1px solid var(--borderSubtle); padding-top:24px;}
+  .refs h2{font-size:18px; margin:0 0 14px;}
+  .refs ol{margin:0; padding-left:20px; color:var(--textMuted); font-size:14px; line-height:1.6;}
+  .refs li{display:list-item; color:var(--textMuted);}
+  .refs a{color:var(--amber); word-break:break-word;}
+
+  footer{border-top:1px solid var(--borderSubtle); padding:46px 0; margin-top:48px;}
+  footer .wrap{display:flex; flex-wrap:wrap; gap:20px 32px; align-items:center; justify-content:space-between;}
+  footer .links{display:flex; gap:24px; flex-wrap:wrap;}
+  footer a{color:var(--textMuted); font-size:14px;}
+  footer a:hover{color:var(--amber);}
+  footer .copy{color:var(--textMuted); font-size:13px; width:100%;}
+
+  @media(max-width:600px){
+    :root{--nav-h:60px;}
+    .wrap{padding:0 16px;}
+    nav .navlinks{gap:16px;}
+    nav .navlinks a{font-size:14px;}
+    article h1{font-size:28px;}
+    article p, article li{font-size:16px;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Volyume">
+      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+    </a>
+    <div class="navlinks">
+      <a href="/articles/">Articles</a>
+      <a href="/privacy/">Privacy</a>
+      <a href="https://play.google.com/store/apps/details?id=app.volyume" class="btn btn-primary">Get it on Google Play</a>
+    </div>
+  </div>
+</nav>
+
+<article>
+  <div class="wrap">
+    <div class="article-inner">
+      <p class="crumb"><a href="/articles/">Articles</a> / Explainable vs black-box coaching</p>
+      <h1>Why an explainable coaching decision beats a black-box one</h1>
+      <p class="meta">Reading time about 7 minutes</p>
+
+      <p>When software tells you to change your calories or add a set, there are two very different ways it can have reached that conclusion. It can follow a set of stated rules applied to your data, in which case you can read exactly why it decided what it did. Or it can produce the answer from a large statistical model whose internal reasoning is not laid out, in which case you get the output but not an auditable account of how it got there. This is the difference between an explainable decision and a black-box one, and for coaching decisions it matters more than it first appears.</p>
+      <p>This article makes the case for the explainable approach. It tries to be fair to the alternative, because generative models are genuinely useful for some things, and pretending otherwise would be dishonest.</p>
+
+      <h2>What each approach is good at</h2>
+      <p>Generative models, the kind behind conversational assistants, are remarkable at language. They can explain a concept in a dozen ways, answer a rambling question, and produce fluent, tailored-sounding text on demand. For learning, for exploring ideas, and for turning a vague question into a readable answer, they are a real advance.</p>
+      <p>They have two properties that matter here, though. First, their output is probabilistic: the same question can yield different answers, and a fluent answer is not always a correct one. Researchers describe the tendency of these models to produce confident but unfounded statements as hallucination, and it is a well-documented, structural feature rather than a bug that has been fully solved <a class="inline" href="#ref1">[1]</a>. Second, their reasoning is not transparent by default. You can ask a model to explain itself, but the explanation it generates is itself produced text, not a guaranteed trace of the actual computation. That gap between a plausible explanation and the real basis for a decision is exactly what the field of explainable machine learning exists to address <a class="inline" href="#ref2">[2]</a>.</p>
+
+      <h2>Why a coaching decision is a special case</h2>
+      <p>A coaching decision is not the same as a piece of explanation. When you ask software to tell you whether to cut your calories this week, you are asking it to act on your body, over weeks and months, based on your own health data. Three things follow.</p>
+      <ul>
+        <li><strong>You need to be able to check it.</strong> A recommendation to change your intake is one you should be able to interrogate: on what trend, over how many weeks, against which target. If the reasoning is not visible, you cannot tell a sound decision from a confident-sounding mistake.</li>
+        <li><strong>It should be consistent.</strong> The same inputs should produce the same decision. If identical data can yield different advice on different days, you cannot learn what works, and neither can you trust that a change reflects your body rather than the model's variance.</li>
+        <li><strong>The stakes include safety.</strong> Calorie and training advice can be harmful if it drifts into under-fuelling or ignores warning signs. Rules you can read are rules you can audit for safety. A black box offers no such guarantee that a hard limit will always hold.</li>
+      </ul>
+      <p>None of this means a generative model can never help around the edges of coaching. It means the core decision, the one that acts on your body, is a poor fit for an opaque, non-reproducible process.</p>
+
+      <h2>What deterministic, explainable coaching means</h2>
+      <p>A deterministic system applies stated rules to your inputs and produces a decision that is reproducible and inspectable. Deterministic coaching, not generative coaching, has three practical properties:</p>
+      <ul>
+        <li><strong>Same inputs, same decision.</strong> Feed it the same data and it returns the same answer, every time. There is no run-to-run variance to second-guess.</li>
+        <li><strong>The reason is written down.</strong> Every decision comes with the basis for it: the trend it read, the threshold it compared against, and the rule it applied. You can agree or disagree, but you can always see the working.</li>
+        <li><strong>It can hold when the data is thin.</strong> Because the rules are explicit, they can include the rule do not decide yet, so the system waits for enough evidence instead of manufacturing a confident answer from too little.</li>
+      </ul>
+      <p>This is not a claim that rules are cleverer than a large model. They are not. It is a claim that for a decision that acts on your health, week after week, being reproducible and auditable is worth more than being fluent.</p>
+
+      <h2>The fair objection, and the honest answer</h2>
+      <p>The reasonable objection to deterministic systems is that they are only as good as their rules. A rule-based engine cannot invent an insight its designers never encoded, and a badly designed rule set will give bad advice confidently. That is true, and it is the real cost of the approach.</p>
+      <p>The honest answer is that this cost is visible and fixable in a way a black box's is not. When a rule is wrong, you can find it, read it, and correct it, because it is written down. When an opaque model gives poor advice, you often cannot even establish why, let alone guarantee the same failure will not recur. For a system that people rely on to make repeated decisions about their own bodies, a fault you can locate and fix is a far better position than a fault you cannot even name. Both approaches can be wrong. Only one of them lets you see how.</p>
+
+      <h2>Where this leaves you</h2>
+      <p>If you want to explore ideas, learn the theory, or talk something through, a conversational model is a genuinely good tool, and it would be dishonest to say otherwise. If you want a repeated decision about your training and nutrition that you can check, trust to be consistent, and hold to a safety standard, an explainable, deterministic decision is the better fit. The two are not in a fight. They are good at different jobs.</p>
+
+      <div class="applink">
+        <p>This is the approach Volyume takes for its weekly coaching decision: deterministic and explainable, so the same inputs give the same change-or-hold decision and the reason is written down for you to read.</p>
+      </div>
+
+      <p>The point is not that one method wins every contest. It is that for the specific job of deciding, repeatedly and safely, what you should do next with your own body, being able to see the reason is not a nice extra. It is the whole point.</p>
+
+      <div class="refs" id="refs">
+        <h2>References</h2>
+        <ol>
+          <li id="ref1">Ji Z et al. Survey of hallucination in natural language generation. <em>ACM Computing Surveys</em>, 2023. <a href="https://dl.acm.org/doi/10.1145/3571730">dl.acm.org/doi/10.1145/3571730</a></li>
+          <li id="ref2">Rudin C. Stop explaining black box machine learning models for high-stakes decisions and use interpretable models instead. <em>Nature Machine Intelligence</em>, 2019. <a href="https://www.nature.com/articles/s42256-019-0048-x">nature.com/articles/s42256-019-0048-x</a></li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</article>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Volyume">
+      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+    </a>
+    <div class="links">
+      <a href="/privacy/">Privacy</a>
+      <a href="/support/">Support</a>
+      <a href="/articles/">Articles</a>
+      <a href="https://play.google.com/store/apps/details?id=app.volyume">Get it on Google Play</a>
+    </div>
+    <p class="copy">© 2026 Volyume</p>
+  </div>
+</footer>
+
+<!--
+  CLAIMS TABLE — factual claims traced to PRODUCT-FACTS.md (2026-07-12).
+  General ML claims cited to external references [1],[2] in-text.
+  ---------------------------------------------------------------------------------
+  "Volyume ... deterministic and explainable ... same inputs give the same
+     change-or-hold decision, reason written down" ......... §A, CLAIMS-STANDARDS §6
+  "not conversational AI, not a black box, does not learn you" §A
+  "holds when data is insufficient" ........................ §A, §F
+  Framed per CLAIMS-STANDARDS §6 (deterministic not generative, no bare "no AI" slogan);
+  fair to generative approach, no competitor bashing ....... playbook step 3, §6
+-->
+
+</body>
+</html>
