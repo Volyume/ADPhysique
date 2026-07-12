@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "source": "marketing/hq/copy-library/social/week-1-carousels.md — Carousel 2",
+    "title": "Sets per week is the number that matters",
+    "status": "DRAFT — not publish-ready until compliance-reviewer PASS is on record"
+  },
+  "slides": [
+    {
+      "heading": "Sets per week is the number that matters.",
+      "supporting": "Not the number on the bar.",
+      "headingAmber": true
+    },
+    {
+      "heading": "Count working sets, per muscle, per week.",
+      "supporting": "That is the unit that tracks how much real work a muscle got."
+    },
+    {
+      "heading": "There is a floor and there is a ceiling.",
+      "supporting": "Below the floor you undertrain. Past the ceiling you recover slowly and progress stalls."
+    },
+    {
+      "heading": "More sets is not automatically more progress.",
+      "supporting": "Adding volume you cannot recover from just costs you recovery."
+    },
+    {
+      "heading": "Add work only when the signals say so.",
+      "supporting": "Steady logs, sets completed as planned, recovery holding up."
+    },
+    {
+      "heading": "Volyume tracks your weekly sets and decides when to add.",
+      "supporting": "Advanced progression watches the volume and moves it only when the data supports it."
+    }
+  ]
+}

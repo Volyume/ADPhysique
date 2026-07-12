@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "source": "marketing/hq/copy-library/social/week-1-carousels.md — Carousel 3",
+    "title": "Your logger knows what you did. It cannot tell you what to do next.",
+    "status": "DRAFT — not publish-ready until compliance-reviewer PASS is on record"
+  },
+  "slides": [
+    {
+      "heading": "Your logger knows what you did.",
+      "supporting": "It cannot tell you what to do next.",
+      "headingAmber": true
+    },
+    {
+      "heading": "Strong and Hevy record the session.",
+      "supporting": "Every set, every rep, saved and stacked."
+    },
+    {
+      "heading": "A food app records what you ate.",
+      "supporting": "Calories and macros, totalled for the day."
+    },
+    {
+      "heading": "Then the week ends, and the question sits there.",
+      "supporting": "What do I actually change now?"
+    },
+    {
+      "heading": "A proper weekly review looks at both sides together.",
+      "supporting": "The bodyweight trend, the sets you completed, how recovery held."
+    },
+    {
+      "heading": "Deciding is the part loggers leave to you.",
+      "supporting": "Recording is solved. The weekly call is the work."
+    },
+    {
+      "heading": "Volyume is the connected system that makes that call.",
+      "supporting": "It reads your training and your food, then decides change or hold with the reason shown."
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "source": "marketing/hq/copy-library/social/week-1-carousels.md — Carousel 4",
+    "title": "Why the app sometimes tells you to change nothing",
+    "status": "DRAFT — not publish-ready until compliance-reviewer PASS is on record"
+  },
+  "slides": [
+    {
+      "eyebrow": "HOLD",
+      "heading": "Why the app sometimes tells you to change nothing.",
+      "supporting": "A hold is a decision, not a shrug.",
+      "headingAmber": true
+    },
+    {
+      "heading": "Not every week carries a real signal.",
+      "supporting": "Some weeks are mostly noise, and noise is not a reason to act."
+    },
+    {
+      "heading": "Changing on noise makes progress harder to read.",
+      "supporting": "Move too often and you can never tell what the last change did."
+    },
+    {
+      "heading": "When the data is thin, the app waits.",
+      "supporting": "It needs enough observations before it will act, and it will not guess."
+    },
+    {
+      "heading": "Patience is the honest answer here.",
+      "supporting": "Holding this week is often what keeps next week readable."
+    },
+    {
+      "heading": "Same inputs, same decision, every week explained.",
+      "supporting": "Volyume tells you when to hold and why, not just when to push.",
+      "miniCard": {
+        "label": "Weekly decision",
+        "verdict": "Hold",
+        "pillOutline": true,
+        "reason": "It needs enough observations before it will act."
+      }
+    }
+  ]
+}
