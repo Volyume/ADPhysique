@@ -229,7 +229,100 @@ consumers is a sensitive category and the regulator treats it as such.
 
 ---
 
-## 9. The gate
+## 9. Human voice: banned patterns
+
+Readers distrust copy that reads as machine-written, and rightly so. Every
+outward artefact must read as though a knowledgeable person wrote it for
+another adult. The patterns below are the recognisable tells of generated
+text. Each is banned in all public copy. An artefact containing any of them
+**fails the gate** and is returned for a rewrite.
+
+1. **Em dashes anywhere in public copy.** Already banned under Tone; it is the
+   first tell here because it is the most reliable one. Use a full stop, a
+   comma, or a semicolon.
+   - Banned: `Volyume is calm — and it stays out of your way.`
+   - Human: `Volyume is calm. It stays out of your way.`
+
+2. **The "X, forever" / "X. Every time." dramatic fragment.** A clipped
+   fragment used for false weight.
+   - Banned: `Your data, forever.` / `Honest coaching. Every time.`
+   - Human: `Your data stays encrypted on your device.`
+
+3. **"It's not just X, it's Y" and every negation-pivot variant.** Includes
+   `This isn't about X. It's about Y.`, `More than a tracker.`, `Not another
+   fitness app.`
+   - Banned: `It's not just a food diary, it's a coaching system.`
+   - Human: `The food diary feeds the weekly coaching decision.`
+
+4. **Triadic flourishes used decoratively.** Three adjectives or phrases in a
+   row for rhythm rather than information; a list of three where the items
+   carry no distinct content.
+   - Banned: `Calm, clear and confident.`
+   - Human: `The weekly decision tells you what changed and why.`
+
+5. **Audience-sweep openers.** `Whether you're a beginner or a seasoned
+   lifter...` and any variant that opens by naming both ends of a spectrum.
+   - Banned: `Whether you're new to the gym or a seasoned lifter, Volyume has
+     you covered.`
+   - Human: `Volyume works from your own logged sets, whatever your training
+     history.`
+
+6. **Empty intensifiers and hype adjectives.** Banned words include:
+   game-changer, seamless, effortless, unlock, elevate, supercharge, dive in,
+   delve, robust, comprehensive, cutting-edge, revolutionise (and revolutionary,
+   revolution). Describe the concrete thing instead.
+   - Banned: `Unlock effortless, seamless tracking.`
+   - Human: `Log a set in two taps.`
+
+7. **Scene-setting and false-confiding openers.** `In today's fast-paced
+   world...`, `Let's face it`, `Here's the thing`.
+   - Banned: `In today's fast-paced world, who has time to plan training?`
+   - Human: `Planning a week of training by hand takes time most people don't
+     have.`
+
+8. **Rhetorical-question openers answered in the next line.**
+   - Banned: `Tired of guessing your macros? Volyume works them out for you.`
+   - Human: `Volyume sets your macro targets from your own inputs.`
+
+9. **Perfectly parallel sentence structures repeated three or more times.**
+   The mechanical `Track your X. Build your Y. Reach your Z.` cadence.
+   - Banned: `Log your sets. Track your food. Reach your goals.`
+   - Human: `You log your sets and your food, and the weekly coach reads both.`
+
+10. **Summary sign-offs.** `In conclusion`, `At the end of the day`, `The
+    bottom line`, `Ultimately`. End on a concrete point, not a wrap-up phrase.
+    - Banned: `At the end of the day, Volyume just works.`
+    - Human: `That is the whole system: log, review, adjust.`
+
+11. **Exclamation marks.** Already banned under Tone; restated. Never in public
+    copy.
+    - Banned: `Start your first plan today!`
+    - Human: `Start your first plan today.`
+
+12. **American spellings and vocabulary.** British English is checked word by
+    word. `color` → `colour`, `optimize` → `optimise`, `gotten` → `got`,
+    `personalize` → `personalise`, `favorite` → `favourite`, `math` → `maths`.
+    `workout program` is acceptable only as the established industry term;
+    prefer `training plan`. Any American spelling or idiom fails the gate.
+
+13. **Emoji in body copy.** Never in articles, website copy, store listings or
+    email. Allowed sparingly in social captions only where the platform's
+    convention plainly expects it, and then never more than one in a caption.
+
+**Write like this instead.** Write like a knowledgeable person talking to
+another adult. Vary sentence length naturally; do not fall into a single
+cadence. Prefer the concrete over the abstract and a specific number over a
+vague claim. It is better to be plain than clever. When a sentence could be
+said more simply, say it more simply.
+
+**The gate FAILS any artefact that contains a banned pattern above.** There is
+no borderline allowance: a single em dash, one hype adjective, one American
+spelling, or one rhetorical-question opener is a FAIL, returned with the exact
+offending sentence quoted.
+
+---
+
+## 10. The gate
 
 - **Nothing is marked publish-ready without a recorded PASS from the
   compliance-reviewer agent that cites this document.**

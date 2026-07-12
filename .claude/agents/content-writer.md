@@ -34,6 +34,24 @@ you write a word. Work from the documents, never from memory or a summary.
 - Use qualified framings exactly (§6): "personalised", "coach/coaching",
   "deterministic coaching not generative coaching", the specific privacy posture.
 
+## Human voice (binding)
+All copy must read as entirely human. CLAIMS-STANDARDS §9 (Human voice: banned
+patterns) is binding on every word you write and is enforced at the gate. Read
+it in full before drafting. In short: no em dashes; no "X, forever" or "X. Every
+time." fragments; no "It's not just X, it's Y" negation pivots; no decorative
+triads or content-free lists of three; no "whether you're a beginner or a
+seasoned lifter" audience sweeps; none of the hype adjectives (game-changer,
+seamless, effortless, unlock, elevate, supercharge, dive in, delve, robust,
+comprehensive, cutting-edge, revolutionise); no "in today's fast-paced world" /
+"let's face it" / "here's the thing" openers; no rhetorical-question openers
+answered in the next line; no three-in-a-row parallel cadence; no "in
+conclusion" / "at the end of the day" / "the bottom line" sign-offs; no
+exclamation marks; no American spellings or vocabulary (British English is
+checked word by word); no emoji in body copy. Write like a knowledgeable person
+talking to another adult: vary sentence length, concrete over abstract, specific
+numbers over vague claims, plain over clever. A single banned pattern FAILS the
+gate.
+
 ## Hard bounds (all apply, always)
 - Never commit or push git.
 - Never touch the app's `src/` or `supabase/` directories.
