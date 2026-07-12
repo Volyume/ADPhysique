@@ -89,6 +89,28 @@ jobs:
               print("::warning::No assetlinks fingerprints available. Set PLAY_APP_SIGNING_SHA256 (and the keystore secrets) so https://volyume.app App Links verify.")
           PY
 
+      # Fail-closed guard (Codex audit AC-18/BW-02): never publish a well-known
+      # file that still carries a REPLACE_WITH_* placeholder. assetlinks.json is
+      # injected above from secrets; apple-app-site-association carries the real
+      # Apple Team ID committed in-repo. If either still shows a placeholder at
+      # deploy time (e.g. a missing Android signing secret), the served App
+      # Links / Universal Links silently break -- so fail the deploy instead of
+      # shipping a broken association file. Last good deploy stays live.
+      - name: Fail if any well-known placeholder survives
+        run: |
+          # Only the served association files matter here -- README.md documents
+          # the placeholders and must be ignored. assetlinks.json has already
+          # been rewritten with real fingerprints by the injection step above;
+          # apple-app-site-association carries the real Team ID committed in-repo.
+          FILES="public/.well-known/assetlinks.json public/.well-known/apple-app-site-association"
+          if grep -n 'REPLACE_WITH' $FILES; then
+            echo "::error::A served well-known association file still contains a REPLACE_WITH placeholder. \
+          For assetlinks.json set the Android signing secrets (PLAY_APP_SIGNING_SHA256 + keystore); \
+          for apple-app-site-association commit the real Apple Team ID. Refusing to publish a broken association file."
+            exit 1
+          fi
+          echo "No placeholders in the served association files -- safe to publish."
+
       - name: Upload public/ as artifact
         uses: actions/upload-pages-artifact@v3
         with:
