@@ -7,15 +7,17 @@ import { TopBar } from './TopBar';
 export function AppShell({
   email,
   dateLabel,
+  showMarketing = false,
   children,
 }: {
   email: string;
   dateLabel: string;
+  showMarketing?: boolean;
   children: ReactNode;
 }) {
   return (
     <div className="flex min-h-screen bg-background">
-      <LeftRail />
+      <LeftRail showMarketing={showMarketing} />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar email={email} dateLabel={dateLabel} />
         <main className="flex-1 px-xl py-xl">{children}</main>
