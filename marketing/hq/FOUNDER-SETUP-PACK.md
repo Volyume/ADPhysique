@@ -12,7 +12,9 @@ tells you exactly where it goes instead.
 
 ## Order of value — if you only do three things today
 
-1. **Brevo** (Section 1) — unlocks email sending, currently off.
+1. **Resend** (Section 1) — unlocks email sending, currently off. The
+   `volyume.app` domain is already verified in Resend, so this is now a
+   quick step: create an API key and confirm the sending address.
 2. **Google Play promo codes** (Section 2) — unlocks reviewer/creator
    outreach immediately.
 3. **r/Volyume** (Section 3) — unlocks the whole Reddit lane, the
@@ -28,36 +30,21 @@ even though nothing depends on them today.
 
 ---
 
-## 1. Brevo (email sending — free)
+## 1. Resend (email sending — free)
 
-1. Go to brevo.com and sign up using your own email (your personal
-   Gmail is fine). No volyume.app inbox exists yet, and none is needed
-   to create the account.
-2. Verify the sender domain `volyume.app`: Brevo will show you a set of
-   DNS records to add. Typically this is 2–3 DKIM CNAME records and one
-   TXT record. This is what lets Brevo send marketing emails from a
-   branded address like `noreply@volyume.app`; it does not require a
-   real inbox to exist at that address. Add the records wherever
-   volyume.app's DNS is managed (your domain registrar or DNS host). If
-   you're not sure where that is, stop and say so rather than guessing;
-   the marketing session can generate and guide you through the exact
-   records when you reach this step.
-3. Set the reply-to address on your Brevo sender to your own Gmail, so
-   any replies to marketing emails reach you.
-4. Wait for Brevo to confirm the domain as verified (can take a few
-   hours for DNS to propagate).
+The `volyume.app` domain is already verified in Resend, so DNS is done —
+nothing further needed there. Only three steps remain:
 
-   **Optional, not needed to launch:** a proper branded inbox (e.g.
-   `hello@volyume.app`) is a free upgrade you can add later via
-   Cloudflare Email Routing; it forwards mail sent to that address to
-   your Gmail and lets you send as that address too. Nothing above
-   depends on this.
-5. Create an API key: Settings → SMTP & API → API Keys → Generate a new
-   API key. Name it something like `volyume-marketing-hq`.
-6. **What to send back:** do NOT paste the key into chat or the repo.
+1. Create an API key: Resend dashboard → API Keys → Create. Name it
+   something like `volyume-marketing-hq`.
+2. **What to send back:** do NOT paste the key into chat or the repo.
    Add it as an environment secret in the Claude Code environment
-   settings, name it exactly `BREVO_API_KEY`, then just tell the
-   marketing session "Brevo API key added."
+   settings, name it exactly `RESEND_API_KEY`, then just tell the
+   marketing session "Resend API key added."
+3. Confirm the exact verified sending address to use (e.g.
+   `noreply@volyume.app` or `hello@volyume.app`) and that its reply-to
+   is set to your own Gmail, so any replies to marketing emails reach
+   you.
 
 ---
 
