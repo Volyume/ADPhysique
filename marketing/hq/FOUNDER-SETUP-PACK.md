@@ -30,17 +30,31 @@ even though nothing depends on them today.
 
 ## 1. Brevo (email sending — free)
 
-1. Go to brevo.com and sign up using the Volyume business email.
+1. Go to brevo.com and sign up using your own email (your personal
+   Gmail is fine). No volyume.app inbox exists yet, and none is needed
+   to create the account.
 2. Verify the sender domain `volyume.app`: Brevo will show you a set of
    DNS records to add. Typically this is 2–3 DKIM CNAME records and one
-   TXT record. Add them wherever volyume.app's DNS is managed (your
-   domain registrar or DNS host). If you're not sure where that is, stop
-   and say so rather than guessing.
-3. Wait for Brevo to confirm the domain as verified (can take a few
+   TXT record. This is what lets Brevo send marketing emails from a
+   branded address like `noreply@volyume.app`; it does not require a
+   real inbox to exist at that address. Add the records wherever
+   volyume.app's DNS is managed (your domain registrar or DNS host). If
+   you're not sure where that is, stop and say so rather than guessing;
+   the marketing session can generate and guide you through the exact
+   records when you reach this step.
+3. Set the reply-to address on your Brevo sender to your own Gmail, so
+   any replies to marketing emails reach you.
+4. Wait for Brevo to confirm the domain as verified (can take a few
    hours for DNS to propagate).
-4. Create an API key: Settings → SMTP & API → API Keys → Generate a new
+
+   **Optional, not needed to launch:** a proper branded inbox (e.g.
+   `hello@volyume.app`) is a free upgrade you can add later via
+   Cloudflare Email Routing; it forwards mail sent to that address to
+   your Gmail and lets you send as that address too. Nothing above
+   depends on this.
+5. Create an API key: Settings → SMTP & API → API Keys → Generate a new
    API key. Name it something like `volyume-marketing-hq`.
-5. **What to send back:** do NOT paste the key into chat or the repo.
+6. **What to send back:** do NOT paste the key into chat or the repo.
    Add it as an environment secret in the Claude Code environment
    settings, name it exactly `BREVO_API_KEY`, then just tell the
    marketing session "Brevo API key added."
@@ -82,7 +96,8 @@ even though nothing depends on them today.
 **SHELVED 2026-07-12 by founder decision, skip for now.**
 
 1. Go to business.trustpilot.com and claim the profile for `volyume.app`.
-2. Verify using the volyume.app email.
+2. Verify using your own email (your personal Gmail is fine); no
+   volyume.app inbox is required.
 3. No paid plan is needed for this; skip any upsell offered during signup.
 4. **What to send back:** the public Trustpilot page URL.
 
@@ -105,7 +120,9 @@ even though nothing depends on them today.
 
 ## 5. Instagram, TikTok and YouTube accounts
 
-Create all three using the volyume.app email (not your personal one).
+Create all three using your own email (your personal Gmail is fine). No
+volyume.app inbox exists yet, and none is required to create any of
+these accounts.
 
 1. **Username:** try `volyumeapp` first on each platform. If taken,
    fall back to `getvolyume`. Use the same one across all three
