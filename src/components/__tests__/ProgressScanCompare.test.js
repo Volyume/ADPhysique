@@ -38,7 +38,13 @@ function scan(id, day, score = 66) {
         waistToHeight: score >= 65 ? 0.18 : 0.21,
         waistToShoulder: score >= 65 ? 0.61 : 0.66,
       },
-      assets: [{ pose: 'front' }, { pose: 'back' }],
+      // Real measured scans always persist per-pose quality metrics; the
+      // comparability gate fails closed below a minimum compared-signal
+      // count (audit D-F3), so fixtures carry them like real records.
+      assets: [
+        { pose: 'front', quality: { lightingScore: 0.9, framingScore: 0.88, segmentationConfidence: 0.9, cameraTiltDegrees: 0 } },
+        { pose: 'back', quality: { lightingScore: 0.9, framingScore: 0.88, segmentationConfidence: 0.9, cameraTiltDegrees: 0 } },
+      ],
     },
     deltaExplanation: {
       summary: 'Stored delta should not render for a selected scan pair.',

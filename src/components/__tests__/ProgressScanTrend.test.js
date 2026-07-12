@@ -30,7 +30,13 @@ function scan(id, day, { score = 66, tier = 'moderate', lightingScore = 0.7 } = 
         progressSignalLabel: 'Slight positive trend',
       },
     },
-    assets: [{ pose: 'front', lightingScore }, { pose: 'back', lightingScore }],
+    // Full quality metrics like a real measured scan (only lighting drifts in
+    // the fixtures): the comparability gate fails closed below a minimum
+    // compared-signal count (audit D-F3).
+    assets: [
+      { pose: 'front', lightingScore, framingScore: 0.88, segmentationConfidence: 0.9, cameraTiltDegrees: 0 },
+      { pose: 'back', lightingScore, framingScore: 0.88, segmentationConfidence: 0.9, cameraTiltDegrees: 0 },
+    ],
   };
 }
 
