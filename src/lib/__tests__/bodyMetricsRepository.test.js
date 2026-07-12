@@ -248,10 +248,16 @@ describe('bodyMetricsRepository', () => {
     });
 
     expect(conn.runAsync).toHaveBeenCalledTimes(1);
+    // eslint-disable-next-line global-require
+    const { parseLocalDay } = require('../dayKey');
     expect(conn.runAsync.mock.calls[0][1]).toEqual([
       'cloud-1',
       'u1',
-      new Date('2026-07-05T00:00:00Z').getTime(),
+      // LS-07: metric_date is a local-calendar-day key, so cloud-restore parses
+      // it back as LOCAL midnight (parseLocalDay), not UTC midnight. Under a
+      // non-UTC CI timezone (Europe/London) the two differ; the local-day value
+      // is the correct one and matches the sibling LS-07 test below.
+      parseLocalDay('2026-07-05').getTime(),
       78.2,
       12.9,
       'scan',
