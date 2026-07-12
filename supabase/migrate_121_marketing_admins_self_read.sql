@@ -14,7 +14,9 @@
 --                   marketing/hq/DATA-SCHEMA.md section 1a.
 --
 -- Applied locally:  NO -- cloud-only marketing table, no local equivalent.
--- Applied remotely: NO -- awaiting the founder's "run against production".
+-- Applied remotely: YES -- applied to production (project
+--                   sujrylzzxcqxxfygptns) on 2026-07-12 on the founder's
+--                   "run against production" instruction.
 -- Safe to re-run:   YES (idempotent). DROP POLICY IF EXISTS before CREATE
 --                   POLICY; GRANT is idempotent by nature.
 -- Rollback:         DROP POLICY marketing_admins_self_read ON

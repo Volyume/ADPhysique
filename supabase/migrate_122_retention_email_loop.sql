@@ -61,9 +61,9 @@
 --
 -- Applied locally:  NO -- cloud-only marketing tables, no local SQLite
 --                   equivalent exists or is planned.
--- Applied remotely: NO -- awaiting the founder's exact phrase "run against
---                   production" per the standing Supabase rule
---                   (supabase/README; CLAUDE.md section 2).
+-- Applied remotely: YES -- applied to production (project
+--                   sujrylzzxcqxxfygptns) on 2026-07-12 on the founder's
+--                   "run against production" instruction.
 -- Safe to re-run:   YES (idempotent). CREATE TABLE IF NOT EXISTS
 --                   throughout, ALTER TABLE ... ENABLE ROW LEVEL SECURITY
 --                   (idempotent by nature), DROP POLICY IF EXISTS before

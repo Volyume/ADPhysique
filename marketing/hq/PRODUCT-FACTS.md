@@ -158,3 +158,18 @@ Each figure below is tied to a specific file reference, verified
 - No meal-photo AI (no photograph-a-meal-to-log-it feature).
 - Progress Scan may withhold a score entirely when photo capture quality or
   confidence is insufficient — never promise a score will always be given.
+
+---
+
+## G. Operational Reward Mechanisms (marketing-operated, verified 2026-07-12)
+
+- Survey reward: a free week of Volyume Pro delivered as a Google Play promo
+  code. Mechanism: the founder generates promotional codes for the Pro
+  subscription in Google Play Console (Monetise, Promotions); the marketing
+  system stores them in the service-role-only `marketing_promo_codes` pool
+  (supabase/migrate_122) and issues one per completed survey by email.
+  Redemption happens entirely inside Google Play; no app or billing code is
+  involved. CONDITION: this reward may only be promised in copy while the
+  pool holds available codes; if the pool is empty, sending pauses and an
+  incident is logged. Do not imply stacking with the Play introductory offer
+  or guarantee redemption outcomes; the code is the deliverable.
