@@ -8,7 +8,7 @@
  * Pass `selected` + `onPress`. `icon` is an optional leading Ionicons name.
  */
 
-import { Text, StyleSheet } from 'react-native';
+import { Platform, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from './PressableCard';
 import { spacing, radius } from '../styles/theme';
@@ -28,11 +28,14 @@ export default function Chip({
   labelStyle,
   selectedLabelStyle,
   numberOfLines,
-  // Fixed-shape pill: caps growth at the largest system font so a row of
-  // chips does not blow past its container. House precedent (SetEntry.js,
-  // ActiveWorkoutScreen.js, WorkoutHistoryScreen.js, MealPlanScreen.js) is
-  // 1.3; callers with more room may pass a higher value.
-  maxFontSizeMultiplier = 1.3,
+  // Launch accessibility audit AX-05 (2026-07-12): this used to default to
+  // 1.3 so a row of chips could not blow past its container, silently
+  // reintroducing the app-wide 1.3x cap EP-14 removed everywhere else and
+  // denying low-vision users their requested text size on 49 call sites. No
+  // default now -- the label scales with the system like every other Text.
+  // A caller with a genuinely fixed-geometry need may still pass its own
+  // value; none currently do.
+  maxFontSizeMultiplier,
   testID,
 }) {
   // CP-10 stage 1: live theme (src/hooks/useTheme.js) instead of the static
@@ -95,6 +98,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    // AX-05: base geometry (18px label line + 8dp vertical padding) was
+    // ~36dp tall, under the 44dp minimum target size, before any large-text
+    // growth. minHeight keeps the label vertically centred at default text
+    // (unchanged look) and lets the chip grow taller instead of clipping
+    // once Dynamic Type/system scaling pushes the label past this height.
+    // Android's touch-target guidance is 48dp; iOS is 44dp.
+    minHeight: Platform.select({ android: 48, default: 44 }),
   },
   chipDisabled: { opacity: 0.5 },
   icon: { marginRight: spacing.xs },
