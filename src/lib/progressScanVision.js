@@ -1,11 +1,29 @@
 import { logError, logWarn } from './errorLog';
 
-export const PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION = 'mediapipe_selfie_segmentation_general_2021_05_06';
+// v2 (2026-07-12, Sentry VOLYUME-1F root cause): the original MediaPipe
+// asset contains the MediaPipe-proprietary custom op
+// Convolution2DTransposeBias, which the stock TFLite interpreter embedded in
+// react-native-fast-tflite cannot resolve -- interpreter construction threw
+// std::runtime_error on EVERY device, both platforms, so the TFLite path had
+// never worked and every scan silently rode the native fallback. v2 is the
+// SAME network (MediaPipe Selfie Segmentation general, 256x256) converted to
+// builtin ops only (the custom op unfused into TRANSPOSE_CONV; PINTO model
+// zoo #109 conversion). Identical IO contract: [1,256,256,3] float32 in,
+// [1,256,256,1] float32 sigmoid mask out (same `activation_10` output
+// tensor), so downstream thresholds keep their meaning. Verified by loading
+// and running both old and new assets under a real TFLite interpreter --
+// old fails with "Encountered unresolved custom op", v2 loads and segments
+// a real person photo correctly through this file's exact preprocessing.
+// The v2 FILE NAME is deliberate: resolveBundledModel caches by name under
+// caches/progress_scan_models/ and reuses any existing >=100KB file, so
+// shipping under the old name would leave existing installs loading the
+// broken cached copy forever. Provenance + SHA-256 in assets/ml/README.md.
+export const PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION = 'mediapipe_selfie_segmentation_general_builtin_ops_v2';
 export const PROGRESS_SCAN_NATIVE_SEGMENTATION_MODEL_VERSION = 'mlkit_selfie_segmentation_16.0.0-beta6';
 export const PROGRESS_SCAN_MODEL_INPUT_SIZE = 256;
 
-const MODEL_SOURCE = () => require('../../assets/ml/selfie_segmentation.tflite');
-const MODEL_FILE_NAME = 'selfie_segmentation.tflite';
+const MODEL_SOURCE = () => require('../../assets/ml/selfie_segmentation_v2.tflite');
+const MODEL_FILE_NAME = 'selfie_segmentation_v2.tflite';
 const RETAKE_REASONS = new Set([
   'too_dark',
   'too_blurry',

@@ -6,7 +6,9 @@ export const OPTIONAL_SCAN_POSES = ['side'];
 export const PHOTO_SCAN_SOURCE = 'photo_scan';
 export const PROGRESS_SCAN_CONSENT_VERSION = 'progress_scan_v1_2026-07-04';
 export const PROGRESS_SCAN_ESTIMATOR_VERSION = bfEstimatorAsset.id;
-export const PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION = 'mediapipe_selfie_segmentation_general_2021_05_06';
+// Kept in sync with progressScanVision.js (v2, builtin-ops conversion --
+// see that file's header comment for the VOLYUME-1F root cause).
+export const PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION = 'mediapipe_selfie_segmentation_general_builtin_ops_v2';
 export const PROGRESS_SCAN_SCORE_VERSION = 'volyume_physique_scan_score_v2';
 export const PROGRESS_SCAN_MIN_COMPARISON_INTERVAL_MS = 7 * 86400000;
 

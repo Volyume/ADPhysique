@@ -15,11 +15,19 @@ describe('Progress Scan on-device TFLite model guard', () => {
     expect(pkg.dependencies['react-native-nitro-modules']).toBeDefined();
     expect(pkg.dependencies['progress-scan-image']).toBe('file:./modules/progress-scan-image');
 
-    const modelPath = path.join(ROOT, 'assets', 'ml', 'selfie_segmentation.tflite');
+    // v2 (2026-07-12, VOLYUME-1F): builtin-ops conversion of the same
+    // MediaPipe network. The original asset's custom op
+    // (Convolution2DTransposeBias) made createModel throw on every device;
+    // see assets/ml/README.md for provenance, validation and the new hash.
+    const modelPath = path.join(ROOT, 'assets', 'ml', 'selfie_segmentation_v2.tflite');
     const bytes = fs.readFileSync(modelPath);
     expect(bytes.length).toBeGreaterThan(100000);
     const hash = crypto.createHash('sha256').update(bytes).digest('hex').toUpperCase();
-    expect(hash).toBe('9EE168EC7C8F2A16C56FE8E1CFBC514974CBBB7E434051B455635F1BD1462F5C');
+    expect(hash).toBe('771CD3A11CAD1A5259E308F42820E75F231ABE44B6387D2025A5D8C00B2DA339');
+    // The custom op must never come back: its presence anywhere in the
+    // flatbuffer means the stock TFLite interpreter cannot build and the
+    // whole TFLite path dies at createModel again.
+    expect(bytes.toString('latin1')).not.toContain('Convolution2DTransposeBias');
 
     const estimatorPath = path.join(ROOT, 'assets', 'ml', 'progress_scan_bf_estimator_v1.json');
     const estimatorBytes = fs.readFileSync(estimatorPath);
@@ -37,7 +45,7 @@ describe('Progress Scan on-device TFLite model guard', () => {
     expect(read('metro.config.js')).toMatch(/tflite/);
     const vision = read('src/lib/progressScanVision.js');
     expect(vision).toMatch(/loadTensorflowModel/);
-    expect(vision).toMatch(/selfie_segmentation\.tflite/);
+    expect(vision).toMatch(/selfie_segmentation_v2\.tflite/);
     expect(vision).toMatch(/Asset\.fromModule\(source\)/);
     expect(vision).toMatch(/normaliseFastTfliteUri/);
     expect(vision).toMatch(/resolveBundledModel\?\.\(MODEL_FILE_NAME\)/);

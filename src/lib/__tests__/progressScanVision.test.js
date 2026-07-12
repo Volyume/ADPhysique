@@ -13,12 +13,12 @@ import {
 } from '../progressScanVision';
 
 const mockDownloadAsync = jest.fn(async () => ({
-  localUri: 'file:///cache/selfie_segmentation.tflite',
-  uri: 'assets_ml_selfie_segmentation',
+  localUri: 'file:///cache/selfie_segmentation_v2.tflite',
+  uri: 'assets_ml_selfie_segmentation_v2',
 }));
 const mockFromModule = jest.fn(() => ({
   localUri: null,
-  uri: 'assets_ml_selfie_segmentation',
+  uri: 'assets_ml_selfie_segmentation_v2',
   downloadAsync: mockDownloadAsync,
 }));
 const mockExtractRgb = jest.fn();
@@ -141,13 +141,13 @@ describe('Progress Scan vision signal extraction', () => {
   });
 
   test('prefers native cache-copied bundled model files in release builds', async () => {
-    mockResolveBundledModel.mockResolvedValueOnce('file:///data/user/0/app/cache/progress_scan_models/selfie_segmentation.tflite');
+    mockResolveBundledModel.mockResolvedValueOnce('file:///data/user/0/app/cache/progress_scan_models/selfie_segmentation_v2.tflite');
 
     await expect(resolveProgressScanModelSource()).resolves.toEqual({
-      url: 'file:///data/user/0/app/cache/progress_scan_models/selfie_segmentation.tflite',
+      url: 'file:///data/user/0/app/cache/progress_scan_models/selfie_segmentation_v2.tflite',
     });
 
-    expect(mockResolveBundledModel).toHaveBeenCalledWith('selfie_segmentation.tflite');
+    expect(mockResolveBundledModel).toHaveBeenCalledWith('selfie_segmentation_v2.tflite');
     expect(mockFromModule).not.toHaveBeenCalled();
     expect(mockDownloadAsync).not.toHaveBeenCalled();
   });
@@ -170,7 +170,7 @@ describe('Progress Scan vision signal extraction', () => {
 
   test('rejects a loaded model with missing tensor metadata instead of running a weak unknown contract', async () => {
     const rgb = new Uint8Array(256 * 256 * 3).fill(128);
-    mockResolveBundledModel.mockResolvedValueOnce('file:///cache/selfie_segmentation.tflite');
+    mockResolveBundledModel.mockResolvedValueOnce('file:///cache/selfie_segmentation_v2.tflite');
     mockExtractRgb.mockResolvedValueOnce({
       rgbBase64: bytesToBase64(rgb),
       lightingScore: 0.9,
@@ -187,28 +187,28 @@ describe('Progress Scan vision signal extraction', () => {
 
   test('resolves bundled TFLite model to a protocol URL before native loading', async () => {
     await expect(resolveProgressScanModelSource()).resolves.toEqual({
-      url: 'file:///cache/selfie_segmentation.tflite',
+      url: 'file:///cache/selfie_segmentation_v2.tflite',
     });
     expect(mockFromModule).toHaveBeenCalledWith(1);
     expect(mockDownloadAsync).toHaveBeenCalledTimes(1);
   });
 
   test('does not pass bare Android asset keys to the native TFLite URL loader', async () => {
-    mockResolveBundledModel.mockResolvedValueOnce('assets_ml_selfie_segmentation');
+    mockResolveBundledModel.mockResolvedValueOnce('assets_ml_selfie_segmentation_v2');
     await expect(resolveProgressScanModelSource()).resolves.toEqual({
-      url: 'file:///cache/selfie_segmentation.tflite',
+      url: 'file:///cache/selfie_segmentation_v2.tflite',
     });
     expect(mockDownloadAsync).toHaveBeenCalledTimes(1);
 
     mockDownloadAsync.mockResolvedValueOnce({
       localUri: null,
-      uri: 'assets_ml_selfie_segmentation',
+      uri: 'assets_ml_selfie_segmentation_v2',
     });
     await expect(resolveProgressScanModelSource()).resolves.toBeNull();
 
     mockDownloadAsync.mockResolvedValueOnce({
       localUri: null,
-      uri: 'assets_ml_selfie_segmentation',
+      uri: 'assets_ml_selfie_segmentation_v2',
     });
     mockExtractRgb.mockResolvedValueOnce({
       rgbBase64: bytesToBase64(new Uint8Array(256 * 256 * 3).fill(128)),
@@ -220,14 +220,14 @@ describe('Progress Scan vision signal extraction', () => {
     expect(result.abstentionReasons.some((reason) => ['model_unavailable', 'model_source_unavailable', 'model_run_failed'].includes(reason))).toBe(true);
     expect(mockLoadTensorflowModel).not.toHaveBeenCalled();
     for (const [source] of mockLoadTensorflowModel.mock.calls) {
-      expect(source).not.toEqual({ url: 'assets_ml_selfie_segmentation' });
+      expect(source).not.toEqual({ url: 'assets_ml_selfie_segmentation_v2' });
     }
   });
 
   test('retries TFLite loading after a transient native load failure', async () => {
     const rgb = new Uint8Array(256 * 256 * 3).fill(128);
     const model = tfliteModel(async () => [syntheticPersonMask()]);
-    mockResolveBundledModel.mockResolvedValue('file:///cache/selfie_segmentation.tflite');
+    mockResolveBundledModel.mockResolvedValue('file:///cache/selfie_segmentation_v2.tflite');
     mockExtractRgb.mockResolvedValue({
       rgbBase64: bytesToBase64(rgb),
       lightingScore: 0.9,
@@ -253,7 +253,7 @@ describe('Progress Scan vision signal extraction', () => {
     const rgb = new Uint8Array(256 * 256 * 3).fill(128);
     const mask = syntheticPersonMask();
     const model = tfliteModel(async () => [mask]);
-    mockResolveBundledModel.mockResolvedValueOnce('file:///cache/selfie_segmentation.tflite');
+    mockResolveBundledModel.mockResolvedValueOnce('file:///cache/selfie_segmentation_v2.tflite');
     mockExtractRgb.mockResolvedValueOnce({
       rgbBase64: bytesToBase64(rgb),
       lightingScore: 0.9,
@@ -270,11 +270,11 @@ describe('Progress Scan vision signal extraction', () => {
 
     const result = await analyseProgressScanPhoto({ uri: 'file:///scan.jpg', pose: 'front' });
 
-    expect(mockLoadTensorflowModel).toHaveBeenCalledWith({ url: 'file:///cache/selfie_segmentation.tflite' }, []);
+    expect(mockLoadTensorflowModel).toHaveBeenCalledWith({ url: 'file:///cache/selfie_segmentation_v2.tflite' }, []);
     expect(mockSegmentPersonMask).not.toHaveBeenCalled();
     expect(result.modelBacked).toBe(true);
     expect(result.engine).toBe('fast_tflite');
-    expect(result.modelVersion).toBe('mediapipe_selfie_segmentation_general_2021_05_06');
+    expect(result.modelVersion).toBe('mediapipe_selfie_segmentation_general_builtin_ops_v2');
     expect(result.quality.segmentationConfidence).toBeGreaterThan(0.75);
     expect(result.silhouetteRatios.waistToShoulder).toBeGreaterThan(0);
   });
@@ -283,7 +283,7 @@ describe('Progress Scan vision signal extraction', () => {
     const rgb = new Uint8Array(256 * 256 * 3).fill(128);
     const nativeMask = syntheticPersonMask();
     const model = tfliteModel(async () => [new Float32Array(256 * 256).fill(0.02)]);
-    mockResolveBundledModel.mockResolvedValueOnce('file:///cache/selfie_segmentation.tflite');
+    mockResolveBundledModel.mockResolvedValueOnce('file:///cache/selfie_segmentation_v2.tflite');
     mockLoadTensorflowModel.mockResolvedValueOnce(model);
     mockExtractRgb.mockResolvedValueOnce({
       rgbBase64: bytesToBase64(rgb),
