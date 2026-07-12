@@ -1149,6 +1149,21 @@ const PREF_EXCLUDE_PATTERNS = [
   // Baseline timezone offset for the notification re-lay check: strictly
   // this device's timezone, meaningless on any other.
   /^@volyume_notif_tz_offset/,
+  // ─── Sensitive / special-category keys (Codex audit AC-01/H-03, 2026-07-12) ───
+  // This prefs sync is allow-by-prefix: everything @volyume_ ships unless it
+  // is excluded here. That is fail-open, so special-category health data must
+  // be named explicitly until the allow-by-prefix model is inverted to a
+  // fail-closed allowlist (follow-up on the same audit). Each key below is
+  // either special-category health data the wellbeing screen PROMISES stays
+  // device-only, or a transient diagnostic/draft that has no business in the
+  // cloud. Their real, non-sensitive counterparts (wellbeing MODE, reminder
+  // config, units) sync through their own keys/tables and are unaffected.
+  /^@volyume_scoff_answers$/,       // raw ED-screening answers (Article 9 + "device-only" promise)
+  /^@volyume_cycle_tracking/,       // menstrual-cycle data (Article 9)
+  /^@volyume_error_log/,            // diagnostic ring buffer (may hold raw messages/paths)
+  /^@volyume_last_crash_meta/,      // last-crash metadata
+  /^@volyume_feedback_/,            // pending feedback + prompt history (free text)
+  /^@volyume_pro_onboarding_draft/, // in-progress onboarding answers (sex/goals), transient
 ];
 
 export function shouldSyncPref(key) {
