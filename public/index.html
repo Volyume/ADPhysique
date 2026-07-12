@@ -97,18 +97,6 @@
   .pchip h3{font-weight:700; font-size:15px; margin:0 0 6px;}
   .pchip p{color:var(--textMuted); font-size:14px; line-height:1.5; margin:0;}
 
-  /* Waitlist */
-  .waitlist{background:var(--surface); border:1px solid var(--borderSubtle); border-radius:18px; padding:30px; max-width:640px;}
-  .waitlist label{display:block; color:var(--textSecondary); font-size:14px; margin:0 0 8px; font-weight:600;}
-  .waitlist input[type=email]{width:100%; background:var(--bg); border:1px solid var(--border); border-radius:12px;
-    padding:13px 15px; color:var(--text); font-size:15px; font-family:var(--font);}
-  .waitlist input[type=email]:focus{outline:none; border-color:var(--amber);}
-  .consent-row{display:flex; gap:11px; align-items:flex-start; margin:18px 0 0; color:var(--textSecondary); font-size:14px; line-height:1.5;}
-  .consent-row input{margin-top:3px; flex:0 0 auto;}
-  .consent-row a{color:var(--amber);}
-  .waitlist .submit{margin:20px 0 0;}
-  .waitlist .soon{color:var(--textMuted); font-size:13px; margin:14px 0 0;}
-
   footer{border-top:1px solid var(--borderSubtle); padding:46px 0; margin-top:24px;}
   footer .wrap{display:flex; flex-wrap:wrap; gap:20px 32px; align-items:center; justify-content:space-between;}
   footer .links{display:flex; gap:24px; flex-wrap:wrap;}
@@ -262,22 +250,11 @@
     </div>
   </section>
 
-  <!-- WAITLIST -->
+  <!-- iOS NOTE -->
   <section class="section-pad">
     <div class="wrap">
-      <h2 class="title">Get product updates</h2>
-      <p class="lead">Occasional updates on Volyume, including when iOS goes live. No spam, and you can unsubscribe at any time.</p>
-      <form id="wl-form" class="waitlist">
-        <label for="wl-email">Email address</label>
-        <input id="wl-email" type="email" name="email" placeholder="you@example.com" autocomplete="email">
-        <div class="consent-row">
-          <input id="wl-consent" type="checkbox" name="consent">
-          <label for="wl-consent" style="margin:0; font-weight:400;">I agree to receive occasional product update emails from Volyume and have read the <a href="/privacy/">privacy policy</a>.</label>
-        </div>
-        <button type="submit" id="wl-submit" class="btn btn-primary submit" disabled>Sign up for updates</button>
-        <p id="wl-status" class="soon" role="status" aria-live="polite"></p>
-        <noscript><p class="soon">Please enable JavaScript to sign up.</p></noscript>
-      </form>
+      <h2 class="title">On iPhone?</h2>
+      <p class="lead">Volyume for iOS is coming to the App Store very soon.</p>
     </div>
   </section>
 </main>
@@ -330,55 +307,7 @@
   Privacy: nothing sold / no PII to analytics .............. §E
 -->
 
-<script>
-(function () {
-  var form = document.getElementById('wl-form');
-  var email = document.getElementById('wl-email');
-  var consent = document.getElementById('wl-consent');
-  var submit = document.getElementById('wl-submit');
-  var status = document.getElementById('wl-status');
-  if (!form) return;
 
-  consent.addEventListener('change', function () {
-    submit.disabled = !consent.checked;
-  });
-
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    var value = (email.value || '').trim().toLowerCase();
-    if (!value || value.indexOf('@') === -1) {
-      status.textContent = 'Please enter a valid email address.';
-      return;
-    }
-    submit.disabled = true;
-    status.textContent = '';
-
-    fetch('https://sujrylzzxcqxxfygptns.supabase.co/rest/v1/marketing_waitlist', {
-      method: 'POST',
-      headers: {
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1anJ5bHp6eGNxeHhmeWdwdG5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxODIxODksImV4cCI6MjA5NDc1ODE4OX0.NjRsRu8pL1UEJe3z9TTfSrvpruKqQYQ-HrN4zXvsVVY',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1anJ5bHp6eGNxeHhmeWdwdG5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxODIxODksImV4cCI6MjA5NDc1ODE4OX0.NjRsRu8pL1UEJe3z9TTfSrvpruKqQYQ-HrN4zXvsVVY',
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({ email: value, source: 'landing-page' })
-    }).then(function (res) {
-      if (res.status === 201) {
-        form.outerHTML = '<p class="lead">Thanks. You are on the list and we will only email you when there is something worth saying.</p>';
-      } else if (res.status === 409) {
-        status.textContent = 'You are already on the list.';
-        submit.disabled = !consent.checked;
-      } else {
-        status.textContent = 'That did not work just now. Please try again later.';
-        submit.disabled = !consent.checked;
-      }
-    }).catch(function () {
-      status.textContent = 'That did not work just now. Please try again later.';
-      submit.disabled = !consent.checked;
-    });
-  });
-})();
-</script>
 
 </body>
 </html>
