@@ -140,6 +140,28 @@ in parallel with everything else.
 
 ---
 
+## 6a. Canva brand kit
+
+1. Once the two marketing typefaces are confirmed (the display face —
+   provisionally Schibsted Grotesk — and the monospace face — provisionally
+   IBM Plex Mono — per `marketing/hq/MARKETING-VISUAL-IDENTITY-LOCKED.md`
+   §3), set up a Volyume brand kit in Canva: either you do this directly in
+   Canva, or the creative-designer agent does it in an interactive session
+   once you confirm the fonts.
+2. The brand kit holds: the locked palette (near-black `#0D0D0D`, surface
+   tones, amber `#F5A623` as the one accent — no other colours available to
+   select), the two locked fonts uploaded/selected as brand fonts, the
+   device-frame components, and the decision-card template (locked spec §5
+   and §10). Canva's free Brand Kit tier supports a palette plus
+   uploaded/selected fonts, so no paid plan is needed for this step.
+3. The aim is that Canva executes this locked system precisely, rather than
+   supplying its own look — no asset should ever start from a stock Canva
+   template.
+4. **What to send back:** confirmation the brand kit exists in Canva (no
+   credentials needed in chat or the repo).
+
+---
+
 ## 7. Play Console API access (review replies + install metrics)
 
 1. Play Console → Setup → API access.
