@@ -52,6 +52,34 @@ calibration curve → blended with a versioned body-fat estimate under anchor cl
   now voids the comparison instead of reading as fake physique change. Ships with
   the front-camera default. Fails open on unknown facing.
 - **Front-camera + 5s-timer capture default + on-screen advice** (`aaf656c`).
+- **Safe hardening batch** (`33109fc`): E-F1, E-F2, E-F4/A-F5, A-F6, A-F7, A-F4
+  (applied-clamp telemetry), C-F3, D-F3 (fail-closed setup/capture-time), D-F4
+  (civil-day interval, DST-correct), B-F7 (blur over contentRect). Score path
+  untouched; corpus 26/26.
+- **Confidence honesty** (`1a35682`): C-F1 (drop-and-renormalise, 'high' gated
+  on segmentation+pose presence), C-F4 (real within-scan consistency replaces
+  the constant), C-F5 (flag semantics documented). Score path byte-identical.
+- **Invariant property suite** (`3f46160`): garbage-never-throws, [0,100]
+  bounds, full band coverage, withhold-reasons-withhold. Monotonicity property
+  deliberately deferred with D1 (see below).
+
+## DEFERRED to the device-validated fast-follow (founder launch-stability direction, 2026-07-12)
+
+The D1 spread-out-of-score change was BUILT and measured against the release
+calibration corpus: it moves `male_lean_broad_frame` (80-94 -> 78) and
+`short_muscular_stocky` (74-90 -> 71) out of their ratified bands -- i.e. it is
+a real recalibration of live users' scores, not a drop-in fix. Per the founder's
+direction ("expected fall-out ... isn't acceptable" the night before launch),
+the score path ships byte-identical to live, and D1 (blend-weight step + spread
+placement), D2 (bodyAreaRatio distance invariance -- solidity anchors are NOT
+derivable from the synthetic corpus; verified: fixture bodyAreaRatio values
+exceed their own bbox areas), D3 (lean-athlete BMI anchor protection) and D4
+(withhold promotion, pinned-test conflict) land together in one corpus/curve
+retune validated on real device photos. A KNOWN LIMITATION note in
+`computeVisualLeannessScore` and the invariant-suite header pin this so it
+cannot be forgotten. All four are masked today by the provisional ±8 anchor
+clamp (D1a/D3 latency) -- the retune must land BEFORE the estimator asset is
+ever flipped to 'validated'.
 
 ## Safe to land next (clear fix, no valid-score change, ED-safe direction)
 

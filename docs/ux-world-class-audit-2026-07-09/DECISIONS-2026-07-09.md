@@ -1656,3 +1656,35 @@ Change: MacroRings renders unconditionally (first day included);
 FirstFoodPrompt component, its test, and the firstFoodPrompt guard test
 deleted; the account-wide everLoggedFood read removed from the diary
 load. A never-re-propose comment sits at the MacroRings call site.
+
+## D76 — Progress-scan formula accuracy rulings D1–D4 (delegated, 2026-07-12) + founder launch-stability override
+
+Sources: docs/audit/progress-scan-accuracy-audit-2026-07-12.md (5-agent
+audit); progressScanCalibrationCorpus.test.js (release band contract);
+founder delegation "make your judgement on what would be best for these
+and put them into action" and subsequent direction that pinned-test
+fall-out from engine changes "isn't acceptable" the night before launch.
+
+RULINGS (lead, D33): D1 fix (continuous blend weight, lean boost pulls
+up only, spread out of the score into confidence), D3 fix (measured-lean
+silhouette keeps anchor protection regardless of BMI), D4 withhold
+(sub-0.30 segmentation, clothing/background uncertainty and >20° tilt
+promote from soft warning to withhold). D2: the distance-invariant
+solidity redefinition CANNOT be validated offline — the synthetic corpus
+fixtures' bodyAreaRatio values exceed their own bbox areas, so solidity
+anchors are underivable from them; real device photos are required.
+
+EXECUTION OVERRIDE (founder, same day): the D1 spread change was built
+and measured — it moves two ratified release-band corpus cases out of
+band (male_lean_broad_frame 80–94 → 78; short_muscular_stocky 74–90 →
+71), i.e. a real recalibration of live users' scores. On the founder's
+launch-stability direction the SCORE PATH ships byte-identical to live,
+and D1+D2+D3+D4 land together as one post-launch corpus/curve retune
+validated on real device photos. Hard constraint recorded: that retune
+must land BEFORE the bf-estimator asset is ever flipped to 'validated',
+because D1a/D3 are masked today only by the provisional ±8 clamp.
+
+LANDED tonight (no score change, corpus 26/26): hardening batch
+(33109fc), confidence honesty C-F1/C-F3/C-F4/C-F5 (1a35682), invariant
+property suite (3f46160), plus earlier D-F1 facing guard (8cd7d79) and
+capture defaults (aaf656c).
