@@ -151,8 +151,10 @@ memory.
 - **Metrics:** derived events only, until the Play Console grant lands.
   Installs and Play-sourced figures are reported as unavailable, never
   estimated (OPERATING-CHARTER §6).
-- **Email sending:** off, until an EU-based sender is approved. Digest
-  drafts are created in Gmail, not auto-sent, until the founder
+- **Email sending:** the retention loop activates once `RESEND_API_KEY` is
+  set in the environment (provider: Resend, sending from the verified
+  `volyume.app` domain — see `playbooks/retention-email-loop.md` §5).
+  Digest drafts are created in Gmail, not auto-sent, until the founder
   authorises send.
 
 Update this section whenever a capability flips state (account granted,

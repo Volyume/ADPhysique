@@ -4,7 +4,7 @@
 **Governing docs:** `marketing/hq/CLAIMS-STANDARDS.md` (supreme),
 `marketing/hq/PRODUCT-FACTS.md`, `marketing/hq/OPERATING-CHARTER.md`,
 `marketing/hq/DATA-SCHEMA.md`.
-**Provider:** Brevo (see §5).
+**Provider:** Resend (see §5).
 
 This loop sends a small number of honest, personal lifecycle emails, gathers
 structured feedback through the two-minute survey, and rewards completion with
@@ -113,12 +113,22 @@ no code available is an incident, logged as such.
 
 ## 5. Provider
 
-- **Brevo**, on the founder's account.
-- The Brevo API key lives in the environment only. It is never committed to the
-  repo, never pasted into a template, and never logged.
+- **Resend**, on the founder's account, sending from the verified
+  `volyume.app` domain.
+- Sends go via the Resend API: `POST https://api.resend.com/emails` with
+  header `Authorization: Bearer $RESEND_API_KEY` and
+  `Content-Type: application/json`. Body fields: `from`, `to`, `subject`,
+  `html`, `reply_to`.
+  - `from` must be a verified `volyume.app` address (e.g.
+    `noreply@volyume.app` or `hello@volyume.app`; the founder confirms the
+    exact sending address).
+  - `reply_to` is the founder's own Gmail, so replies reach him.
+- The `RESEND_API_KEY` lives in the environment only. It is never committed
+  to the repo, never pasted into a template, and never logged.
 - All sends are transactional lifecycle emails to existing users, honouring the
   suppression contract in §3. This loop never does mass unsolicited messaging
-  (banned by CLAIMS-STANDARDS §5).
+  (banned by CLAIMS-STANDARDS §5). Resend's free tier is ample for this
+  triggered, per-user send volume.
 - Every send and every suppression is written to `marketing_email_log` /
   `marketing_ledger` so the loop is fully auditable.
 
