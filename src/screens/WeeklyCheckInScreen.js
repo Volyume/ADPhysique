@@ -51,6 +51,7 @@ import useTheme from '../hooks/useTheme';
 import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder, scheduleWeeklyCoachReady, scheduleMissedCheckinFollowups } from '../lib/notifications';
 import { logError, logWarn } from '../lib/errorLog';
 import { audit } from '../lib/observability';
+import { useToast } from '../components/Toast';
 import { SkeletonCard } from '../components/Skeleton';
 // COMP-023: the first-check-in gate constants live in trialActivation.js as the
 // single source of truth, so the day-3 unlock date this screen gates on and the
@@ -196,6 +197,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // block) for why.
   const t = useTheme();
   const live = buildLiveStyles(t);
+  const toast = useToast();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const { user, userProfile, bodyWeightUnits, energyUnit } = useAppStore(useShallow(s => ({
     user: s.user,
@@ -710,12 +712,26 @@ export default function WeeklyCheckInScreen({ navigation }) {
       const userId = user?.id;
       if (!userId) return;
 
+      // AC-15 (Codex adversarial audit, 2026-07-12): sleepHours was parseFloat'd
+      // and written unchanged, so a negative/NaN/impossible figure (-1, 99,
+      // a stray letter) reached saveWeeklyCheckin and then the coaching
+      // engine, which rendered things like "sleep averaged -1.0 hours".
+      // Validate at this input boundary: reject non-finite or outside a
+      // realistic 0-24h range rather than coercing/clamping, so nothing
+      // impossible is ever persisted.
+      const sleepTrimmed = sleepHours.trim();
+      const sleepNum = sleepTrimmed ? parseFloat(sleepHours) : null;
+      if (sleepNum != null && (!Number.isFinite(sleepNum) || sleepNum < 0 || sleepNum > 24)) {
+        toast.show('That doesn\'t look like a realistic number of sleep hours. Enter a value between 0 and 24.', { variant: 'error' });
+        return;
+      }
+
       await saveWeeklyCheckin(userId, {
         weekStart: weekStart.getTime(),
         energyScore,
         sorenessScore,
         stressScore,
-        sleepHours: sleepHours.trim() ? parseFloat(sleepHours) : null,
+        sleepHours: sleepNum,
         calsAdherence: calsAdherence ?? null,
         stepsAdherence: stepsAdherence ?? null,
         stepsAvg: null,

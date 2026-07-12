@@ -24,6 +24,7 @@ import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionE
 import { saveNutritionTargets, getNutritionTargets, logBodyMetric, getUserBodyProfile, getLatestBodyWeight, getLatestBodyComposition } from '../lib/database';
 import { daysToActivityLevel } from '../lib/coachingGoals';
 import { hydrateLoadedTargets, getRecommendedMeals } from '../lib/nutritionTargetsView';
+import { isValidBodyWeightKg, isValidBodyFatPercent } from '../lib/bodyMetricValidate';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import * as haptics from '../lib/haptics';
@@ -443,6 +444,21 @@ export default function NutritionTargetsScreen({ navigation }) {
 
     if (!ageNum || !heightNum || !weightNum) {
       toast.show('Age, height and weight must be valid numbers', { variant: 'error' });
+      return;
+    }
+
+    // AC-08 (Codex adversarial audit, 2026-07-12): the truthiness check above
+    // let an out-of-range weight/body-fat (a mistyped 99999 kg, a negative
+    // body fat) straight through to the engine, AsyncStorage AND the
+    // auto-seeded body_metric_log below. Gate on the same shared bounds
+    // bodyMetricValidate.js uses for the Body Metrics form, so a corrupt
+    // figure is rejected here too rather than clamped silently and persisted.
+    if (!isValidBodyWeightKg(weightNum)) {
+      toast.show('That body weight looks off. Enter a realistic figure and try again.', { variant: 'error' });
+      return;
+    }
+    if (bfNum != null && !isValidBodyFatPercent(bfNum)) {
+      toast.show('That body fat looks off. Enter a percentage between 1 and 80.', { variant: 'error' });
       return;
     }
 
