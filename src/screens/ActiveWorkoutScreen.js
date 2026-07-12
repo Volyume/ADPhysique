@@ -379,6 +379,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // but the setter still arms/clears the pre-fill in loadHistory/onChange.
   const [_ghostSet, setGhostSet] = useState(null);
   const [nextTimeNotes, setNextTimeNotes] = useState([]);  // "next time" coaching notes for this routine
+  // EP-15/UI-06 (Codex end-user-polish audit): a long "next time" note was
+  // silently clamped to 4 lines with no way to read the rest. Tracks which
+  // notes (by id) the user has expanded to their full text on this screen.
+  const [expandedNoteIds, setExpandedNoteIds] = useState(() => new Set());
   // Cluster counter for myo-reps / rest-pause: 0 = activation set, 1+ = mini-set N+1
   const autoAdvanceRef = useRef(null);
   // C3 (audit 2026-07-03): mirrors autoAdvanceRef so the screen can show the
@@ -2309,7 +2313,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         finishingRef.current = false;
         appAlert(
           'Couldn\'t finish workout',
-          'Your sets are still saved, but the workout did not close. Check your connection and tap Finish workout again.',
+          'Your sets are still saved, but the workout did not close on your device, so tap Finish workout again.',
         );
       }
     }
@@ -2571,6 +2575,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               });
             }
             nextTimeNotes.forEach(note => {
+              // EP-15/UI-06: the note text itself may run past 4 lines. Clamp
+              // by default (numberOfLines) but offer a More/Less toggle so the
+              // full note stays reachable rather than being silently cut.
+              const isNoteExpanded = expandedNoteIds.has(note.id);
               items.push({
                 key: `note-${note.id}`,
                 label: 'Coach note',
@@ -2579,7 +2587,30 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 content: (
                   <View key={`note-${note.id}`} style={[styles.nextTimeBanner, live.nextTimeBanner]}>
                     <Ionicons name="bulb-outline" size={16} color={t.colors.primary} style={{ marginTop: spacing.hair }} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.nextTimeBannerText, live.nextTimeBannerText]} numberOfLines={4}>{note.note}</Text>
+                    <View style={styles.nextTimeBannerBody}>
+                      <Text
+                        maxFontSizeMultiplier={1.3}
+                        style={[styles.nextTimeBannerText, live.nextTimeBannerText]}
+                        numberOfLines={isNoteExpanded ? undefined : 4}
+                      >
+                        {note.note}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => setExpandedNoteIds(prev => {
+                          const next = new Set(prev);
+                          if (isNoteExpanded) next.delete(note.id); else next.add(note.id);
+                          return next;
+                        })}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        accessibilityRole="button"
+                        accessibilityState={{ expanded: isNoteExpanded }}
+                        accessibilityLabel={isNoteExpanded ? 'Show less of this note' : 'Show more of this note'}
+                      >
+                        <Text maxFontSizeMultiplier={1.3} style={[styles.nextTimeMoreToggleText, live.nextTimeMoreToggleText]}>
+                          {isNoteExpanded ? 'Less' : 'More'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                     <TouchableOpacity
                       style={[styles.inlineActionPill, live.inlineActionPill]}
                       onPress={async () => {
@@ -4346,6 +4377,17 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.textPrimary,
   },
+  // EP-15/UI-06: wraps the note text + its More/Less toggle so the toggle
+  // sits directly under the (possibly clamped) note, not full-width against
+  // the icon/dismiss-pill row.
+  nextTimeBannerBody: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  nextTimeMoreToggleText: {
+    ...type.label,
+    color: colors.primary,
+  },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.warningBg,
@@ -4512,6 +4554,7 @@ function buildLiveStyles(t) {
     discardConfirmBtnText: { ...t.type.label, color: t.colors.error },
     nextTimeBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.251) },
     nextTimeBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },
+    nextTimeMoreToggleText: { ...t.type.label, color: t.colors.primary },
     deloadBanner: { backgroundColor: t.colors.warningBg, borderColor: t.colors.warning },
     deloadBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.warning },
     deloadBannerSub: { ...t.type.caption, color: t.colors.textMuted },
