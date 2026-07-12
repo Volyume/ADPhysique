@@ -84,10 +84,80 @@ function ReadyToPostPack({ row }: { row: MarketingContentRow }) {
   );
 }
 
+// Rendered previews for review. Assets produced by the render pipeline are
+// mirrored into the public marketing-assets storage bucket under their
+// repo-relative path (render/out/...); a row whose body_ref names such a
+// path gets its images/video shown inline so approve/reject is an informed
+// decision, not a leap of faith. Listing needs the authenticated session
+// (RLS policy "marketing assets authenticated list"); the URLs themselves
+// are public, which is fine: these are marketing materials.
+interface PreviewAsset {
+  name: string;
+  url: string;
+  kind: 'image' | 'video';
+}
+
+async function getPreviewAssets(
+  supabase: Awaited<ReturnType<typeof createServerSupabase>>,
+  bodyRef: string | null,
+): Promise<PreviewAsset[]> {
+  const match = bodyRef?.match(/marketing\/hq\/(render\/out\/[\w.-]+)/);
+  if (!match) return [];
+  const prefix = match[1];
+  const { data, error } = await supabase.storage
+    .from('marketing-assets')
+    .list(prefix, { limit: 20, sortBy: { column: 'name', order: 'asc' } });
+  if (error || !data) return [];
+  return data
+    .filter((f) => /\.(png|jpg|jpeg|mp4)$/i.test(f.name))
+    .map((f) => ({
+      name: f.name,
+      url: supabase.storage.from('marketing-assets').getPublicUrl(`${prefix}/${f.name}`).data
+        .publicUrl,
+      kind: /\.mp4$/i.test(f.name) ? ('video' as const) : ('image' as const),
+    }));
+}
+
+function PreviewPanel({ assets }: { assets: PreviewAsset[] }) {
+  if (assets.length === 0) return null;
+  return (
+    <div className="flex gap-sm overflow-x-auto pb-xs">
+      {assets.map((a) =>
+        a.kind === 'video' ? (
+          <video
+            key={a.name}
+            src={a.url}
+            controls
+            preload="metadata"
+            className="h-72 shrink-0 rounded-md border border-borderSubtle"
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={a.name}
+            src={a.url}
+            alt={a.name}
+            loading="lazy"
+            className="h-48 shrink-0 rounded-md border border-borderSubtle"
+          />
+        ),
+      )}
+    </div>
+  );
+}
+
 export default async function MarketingContentPage() {
   await requireMarketingAdmin();
   const supabase = await createServerSupabase();
   const grouped = await getContentByStatus(supabase);
+
+  // Fetch previews for every row that references rendered output, in one
+  // parallel sweep keyed by row id.
+  const allRows = Object.values(grouped).flat();
+  const previewEntries = await Promise.all(
+    allRows.map(async (row) => [row.id, await getPreviewAssets(supabase, row.body_ref)] as const),
+  );
+  const previews = new Map(previewEntries);
 
   return (
     <div>
@@ -131,6 +201,7 @@ export default async function MarketingContentPage() {
                           <PipelineRowActions id={row.id} />
                         ) : null}
                       </div>
+                      <PreviewPanel assets={previews.get(row.id) ?? []} />
                       <ReadyToPostPack row={row} />
                     </div>
                   ))}
