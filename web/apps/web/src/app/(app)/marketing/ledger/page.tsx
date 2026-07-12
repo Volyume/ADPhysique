@@ -31,8 +31,7 @@ export default async function MarketingLedgerPage({
   const { rows, hasNextPage } = await getLedgerPage(supabase, page);
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <h1 className="type-title mb-lg font-bold text-textPrimary">Ledger</h1>
+    <div>
       <Card>
         <div className="overflow-x-auto">
           <table className="w-full text-left type-body">

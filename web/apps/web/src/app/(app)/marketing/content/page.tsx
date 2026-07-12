@@ -44,8 +44,7 @@ export default async function MarketingContentPage() {
   const grouped = await getContentByStatus(supabase);
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <h1 className="type-title mb-lg font-bold text-textPrimary">Content pipeline</h1>
+    <div>
       <div className="flex flex-col gap-lg">
         {STATUS_ORDER.map((status) => {
           const rows = grouped[status] ?? [];

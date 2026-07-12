@@ -5,12 +5,12 @@ import { getLatestMetrics, getMetricHistory, type MarketingMetricRow } from '@/l
 
 export const dynamic = 'force-dynamic';
 
-const STAT_CARDS: { metric: string; label: string }[] = [
-  { metric: 'installs', label: 'Installs' },
-  { metric: 'trial_starts', label: 'Trial starts' },
-  { metric: 'conversions', label: 'Conversions' },
-  { metric: 'rating', label: 'Rating' },
-  { metric: 'waitlist_total', label: 'Waitlist total' },
+const STAT_CARDS: { metric: string; label: string; pending: string }[] = [
+  { metric: 'installs', label: 'Installs', pending: 'Awaiting Play Console reporting access (a one-time founder grant in Play Console).' },
+  { metric: 'trial_starts', label: 'Trial starts', pending: 'No snapshot yet. The daily metrics job writes this from billing events.' },
+  { metric: 'conversions', label: 'Conversions', pending: 'No snapshot yet. The daily metrics job writes this from billing events.' },
+  { metric: 'rating', label: 'Rating', pending: 'Awaiting Play Console reporting access (a one-time founder grant in Play Console).' },
+  { metric: 'feedback_received', label: 'Feedback received', pending: 'No snapshot yet. Counts in-app feedback captured in Supabase.' },
 ];
 
 function formatValue(row: MarketingMetricRow): string {
@@ -34,10 +34,9 @@ export default async function MarketingOverviewPage() {
   );
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <h1 className="type-title mb-lg font-bold text-textPrimary">Marketing overview</h1>
+    <div>
       <div className="grid gap-lg sm:grid-cols-2 lg:grid-cols-3">
-        {STAT_CARDS.map(({ metric, label }) => {
+        {STAT_CARDS.map(({ metric, label, pending }) => {
           const row = metrics[metric];
           const history = histories.find((h) => h.metric === metric);
           const hasTrend = (history?.points.length ?? 0) > 1;
@@ -63,9 +62,7 @@ export default async function MarketingOverviewPage() {
                   ) : null}
                 </>
               ) : (
-                <p className="type-caption text-textMuted">
-                  Awaiting data for &ldquo;{metric}&rdquo; from marketing_metrics.
-                </p>
+                <p className="type-caption text-textMuted">{pending}</p>
               )}
             </Card>
           );
