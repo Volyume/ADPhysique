@@ -2087,10 +2087,18 @@ export default function HomeScreen({ navigation, route }) {
           gains the house selection() beat. Skip and the standing opt-out
           stay deliberately quiet text controls: they are de-emphasised
           escape hatches under the fold, not competing CTAs. */}
+      {/* EP-06/UI-01 (end-user-polish audit, 2026-07-12): the readiness rows
+          + three intent options + Skip + opt-out no longer fit a 320x640/
+          360x640 viewport. `scroll` puts the body in BottomSheetScrollView
+          bounded by BottomSheet's own maxDynamicContentSize (~92% of window
+          height), so the heading and every choice stay reachable by
+          scrolling instead of being pushed off-screen with no way back.
+          Selection semantics/behaviour are unchanged. */}
       <BottomSheet
         visible={showIntentPrompt}
         onClose={() => { setShowIntentPrompt(false); pendingStartRef.current = null; }}
         accessibilityLabel="How are you feeling today"
+        scroll
       >
         <Text maxFontSizeMultiplier={1.3} style={[styles.intentTitle, live.intentTitle]}>How are you feeling today?</Text>
         <Text maxFontSizeMultiplier={1.3} style={[styles.intentSub, live.intentSub]}>Takes a second. Helps us read your sessions better over time.</Text>
