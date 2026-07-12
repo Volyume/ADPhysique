@@ -106,6 +106,9 @@ would itself violate the 90/10 rule.
 
 ## Quora
 
+**STATUS: SHELVED 2026-07-12 by founder decision. Do not draft Quora
+answers or prompt the founder about Quora until reactivated.**
+
 Quora is the evidence-led answering channel: a place to give genuinely
 useful, complete answers to real questions the target audience is already
 asking, with Volyume mentioned only when directly relevant.
