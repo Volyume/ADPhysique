@@ -1,0 +1,129 @@
+/**
+ * Volyume Marketing HQ — Reels (9:16 motion) design system, as code.
+ *
+ * The MOTION counterpart to carousel.css. It reuses the locked visual
+ * identity WITHOUT diverging from it: the colour tokens, the two locked
+ * typefaces and the @font-face declarations all come straight from
+ * carousel.css via the @import below, so there is one source of truth for
+ * the palette and fonts (MARKETING-VISUAL-IDENTITY-LOCKED.md §2, §3, §8).
+ *
+ * This file only adds the 9:16 full-bleed re-layout: a taller canvas, the
+ * ~120px top/bottom safe margins for platform UI overlays (captions,
+ * buttons), and the stacked-scene frame the reel renderer animates. It
+ * introduces no new colours, fonts or layout language.
+ */
+
+@import url('carousel.css');
+
+/* Override the still canvas (1080x1350) for the 9:16 reel canvas. */
+html, body {
+  width: 1080px;
+  height: 1920px;
+}
+
+/* Reel stage: every scene is stacked full-bleed and cross-faded by
+   window.__seek — the renderer drives opacity per frame, so nothing here
+   uses CSS transitions or keyframes (they would be wall-clock, not
+   deterministic). */
+.reel-stage {
+  position: relative;
+  width: 1080px;
+  height: 1920px;
+  background: var(--canvas);
+  overflow: hidden;
+}
+
+.reel-scene {
+  position: absolute;
+  inset: 0;
+  /* Safe margins for platform UI overlays (captions/buttons) top and bottom,
+     same left-led system as the still template. */
+  padding: 120px 96px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  opacity: 0;
+  will-change: opacity;
+}
+
+/* Left-aligned, content-led — never centre a scene (§3 alignment). */
+.reel-scene__content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  width: 100%;
+  max-width: 888px;
+}
+
+/* Reel typography — the same faces and tokens, sized up for 9:16 vertical. */
+.reel-scene .eyebrow {
+  font-size: 30px;
+  margin-bottom: 32px;
+}
+
+.reel-scene .heading {
+  font-size: 82px;
+  line-height: 1.1;
+}
+
+.reel-scene .supporting {
+  font-size: 40px;
+  line-height: 1.38;
+  margin-top: 36px;
+  max-width: 840px;
+}
+
+.reel-scene .mono-stat {
+  font-size: 112px;
+}
+
+.reel-scene .mono-caption {
+  font-size: 28px;
+  margin-top: 12px;
+}
+
+/* The animated diagram region sits under the heading block. */
+.reel-diagram {
+  position: relative;
+  width: 100%;
+  max-width: 888px;
+  margin-top: 64px;
+}
+
+/* Reel footer / wordmark — pinned inside the bottom safe margin. */
+.reel-scene__footer {
+  position: absolute;
+  left: 96px;
+  bottom: 140px;
+  display: flex;
+  align-items: center;
+}
+
+.reel-scene__footer img {
+  height: 48px;
+  width: auto;
+  display: block;
+  /* Real wordmark asset, used as-is per §6 — no recolouring. */
+}
+
+/* Closing mini decision-card, sized for the 9:16 close scene. */
+.reel-scene .mini-card {
+  max-width: 760px;
+}
+
+.reel-scene .mini-card__label {
+  font-size: 24px;
+}
+
+.reel-scene .mini-card__pill {
+  font-size: 26px;
+  margin-top: 22px;
+  padding: 12px 28px;
+}
+
+.reel-scene .mini-card__reason {
+  font-size: 30px;
+  margin-top: 24px;
+}

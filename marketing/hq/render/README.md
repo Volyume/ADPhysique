@@ -70,6 +70,30 @@ never rewritten with new claims, and every asset still needs a
 compliance-reviewer PASS on record (`../CLAIMS-STANDARDS.md` §10) before it
 publishes, same as any other outward asset.
 
+## Reels (9:16 motion)
+
+`render-reel.cjs` is the motion counterpart to the still pipeline: it takes
+the same content JSON shape and produces a Reels-ready 1080x1920, 30fps,
+H.264 MP4 that animates the slides as one calm sequence (kinetic typography
+per §8 of the identity doc). `reel.css` re-lays the identity out for 9:16
+(it imports `carousel.css`, so palette and fonts have one source of truth)
+and `reel-template.html` drives deterministic frame-by-frame animation via
+`window.__seek(tMs)` — same input, same output, every run.
+
+```
+node render-reel.cjs <content.json> <out.mp4>
+```
+
+- Each slide becomes a ~3.5s scene with a gentle cross-fade; six slides
+  give a ~21s reel.
+- Output is SILENT by design. Music or voice is added at post/upload time
+  on the platform, where trending audio actually helps distribution —
+  never baked into the file.
+- ffmpeg is not a repo dependency: on first run the script downloads a
+  static linux build to `bin/ffmpeg` (gitignored) and sanity-checks it.
+- Example (what produced `out/reel-1/reel-1.mp4`):
+  `node render-reel.cjs carousel-1.json out/reel-1/reel-1.mp4`
+
 ## Canva
 
 Canva remains available for ad-hoc, one-off assembly only. Any asset that
