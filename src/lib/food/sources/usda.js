@@ -15,16 +15,17 @@ import { normaliseUsdaFood } from '../normalisers/usdaToFood';
 const USDA_BASE = 'https://api.nal.usda.gov/fdc/v1';
 const USDA_TIMEOUT_MS = 1500;
 
-// Indirect key name avoids babel-preset-expo's compile-time
-// inlining of EXPO_PUBLIC_* env vars (which substitutes both dot AND
-// static bracket access at build time, baking the build value into
-// the bundle). Computed access via a runtime variable defeats the
-// inliner, keeping process.env readable at runtime (also matters for
-// jest, which sets the value per test).
-const _USDA_KEY_NAME = 'EXPO_PUBLIC_USDA_API_KEY';
-
+// AC-12: babel-preset-expo/Metro only inline EXPO_PUBLIC_* vars when
+// accessed via a STATIC dot path (process.env.EXPO_PUBLIC_X) at build
+// time; that's how the value reaches the release bundle at all (there
+// is no runtime process.env in a release build otherwise). The
+// previous computed bracket lookup keyed off a runtime variable was
+// never inlined, so it silently evaluated to undefined in every real build
+// and USDA never ran -- Jest masked this because Jest's real
+// process.env made the computed form work in tests. Static dot-access
+// only.
 function _apiKey() {
-  return process.env[_USDA_KEY_NAME] || null;
+  return process.env.EXPO_PUBLIC_USDA_API_KEY || null;
 }
 
 function _fetchWithTimeout(url, timeoutMs, extraHeaders = null) {

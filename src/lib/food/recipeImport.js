@@ -117,6 +117,40 @@ export function extractRecipeJsonLd(html) {
   return null;
 }
 
+// AC-14: a recipe URL is user-supplied and unauthenticated, so the fetch
+// must not be allowed to hang or balloon memory on a slow/huge/hostile
+// response. RECIPE_FETCH_TIMEOUT_MS bounds the hang; RECIPE_MAX_BYTES
+// bounds the size (checked against Content-Length up front, and again by
+// truncating the body before the JSON-LD parse runs, in case the server
+// doesn't declare a length).
+const RECIPE_FETCH_TIMEOUT_MS = 8000;
+const RECIPE_MAX_BYTES = 3 * 1024 * 1024; // 3MB: no legitimate recipe page needs more.
+
+// Mirrors the AbortController timeout pattern in food/sources/usda.js.
+function _fetchWithTimeout(url, timeoutMs) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  return fetch(url, { method: 'GET', signal: ctrl.signal }).finally(() => clearTimeout(t));
+}
+
+// A recipe is only ever found in an HTML page. Reject responses that
+// declare a clearly non-HTML type (image, video, pdf, octet-stream, ...)
+// before spending effort reading/parsing the body. Missing header is
+// tolerated (some servers omit it); the byte cap below still applies.
+function isHtmlIshContentType(contentType) {
+  if (!contentType) return true;
+  const ct = contentType.toLowerCase();
+  return ct.includes('html') || ct.includes('xml') || ct.includes('text/plain');
+}
+
+// Reject up front when the server declares a size over the cap, so we
+// never start reading a body we already know is too big.
+function isOversizeByContentLength(response) {
+  const raw = response.headers?.get ? response.headers.get('content-length') : null;
+  const len = raw != null ? parseInt(raw, 10) : NaN;
+  return Number.isFinite(len) && len > RECIPE_MAX_BYTES;
+}
+
 /**
  * PURE. Only https URLs may be fetched (audit SC-8). The URL is
  * user-supplied, so without this the importer would happily follow
@@ -133,8 +167,10 @@ export function isAllowedRecipeUrl(url) {
 /**
  * Fetch a page and extract its Recipe. Returns the parsed object or
  * null on any network or parse failure (the caller shows the same calm
- * "couldn't read a recipe" toast either way). https only. Not
- * unit-tested beyond the pure extractor and the scheme gate.
+ * "couldn't read a recipe" toast either way). https only, bounded by a
+ * timeout and a size cap (AC-14): a non-ok response, a non-HTML content
+ * type, a declared oversize body, a timed-out/aborted fetch, or any
+ * other network/parse error all fold to the same calm null.
  *
  * @param {string} url
  * @returns {Promise<{ name: any, ingredients: string[], servings: number|null }|null>}
@@ -142,9 +178,15 @@ export function isAllowedRecipeUrl(url) {
 export async function importRecipeFromUrl(url) {
   if (!isAllowedRecipeUrl(url)) return null;
   try {
-    const response = await fetch(url.trim());
+    const response = await _fetchWithTimeout(url.trim(), RECIPE_FETCH_TIMEOUT_MS);
+    if (!response.ok) return null;
+    if (isOversizeByContentLength(response)) return null;
+    const contentType = response.headers?.get ? response.headers.get('content-type') : null;
+    if (!isHtmlIshContentType(contentType)) return null;
     const html = await response.text();
-    return extractRecipeJsonLd(html);
+    if (typeof html !== 'string') return null;
+    const capped = html.length > RECIPE_MAX_BYTES ? html.slice(0, RECIPE_MAX_BYTES) : html;
+    return extractRecipeJsonLd(capped);
   } catch (_e) {
     return null;
   }
