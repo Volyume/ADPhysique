@@ -57,3 +57,21 @@ export function localWeekStartMs(ms = Date.now()) {
   d.setDate(d.getDate() - day);
   return d.getTime();
 }
+
+/**
+ * The exclusive end of a local week: the NEXT local Monday 00:00.
+ *
+ * LS-06 (Codex audit, 2026-07-12): the weekly windows added a fixed
+ * 7 * 86400000 ms (168h) to a local Monday midnight. A UK week that contains
+ * a BST/GMT transition is 167h (spring) or 169h (autumn), not 168, so the
+ * fixed offset landed the boundary an hour off - a late-Sunday or early-Monday
+ * session was double-counted or dropped for the two transition weeks a year.
+ * Deriving the next Monday via local calendar arithmetic (setDate(+7) on a
+ * local-midnight Date) crosses the DST change correctly. Pass the week start
+ * (from localWeekStartMs); any ms inside the week also works.
+ */
+export function localWeekEndMs(ms = Date.now()) {
+  const d = new Date(localWeekStartMs(ms));
+  d.setDate(d.getDate() + 7);
+  return d.getTime();
+}

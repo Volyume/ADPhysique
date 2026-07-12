@@ -3,7 +3,7 @@ import { generateInsights } from './insightsEngine';
 import { calculate1RM, allocateExerciseVolume } from './algorithms';
 import { pickBestLift } from './bestLift';
 import { logError, logWarn } from './errorLog';
-import { localDayKey, localWeekStartMs } from './dayKey';
+import { localDayKey, localWeekStartMs, localWeekEndMs } from './dayKey';
 import { openEncryptedDb } from './dbCrypto';
 import { weekWindowsEndingAt as buildWeekWindowsEndingAt } from './weekWindows';
 import { createActivityRepository } from './database/activity';
@@ -5663,7 +5663,7 @@ export async function saveWeeklyCheckin(userId, data) {
   // week_start: created_at is an absolute instant, so a row written under
   // the older UTC-Monday week_start convention is still matched and updated
   // rather than duplicated. data.weekStart is the local Monday 00:00.
-  const weekEnd = data.weekStart + 7 * 86400000;
+  const weekEnd = localWeekEndMs(data.weekStart); // LS-06: DST-correct week end, not fixed 168h
   const existing = await d.getFirstAsync(
     'SELECT id FROM weekly_checkins WHERE user_id = ? AND created_at >= ? AND created_at < ? ORDER BY created_at DESC LIMIT 1',
     [userId, data.weekStart, weekEnd],
@@ -5825,7 +5825,7 @@ export async function getDeloadWeeksInRange(userId, fromMs, toMs) {
 export async function getWeeklySessionStats(userId, weekStart) {
   const weekStartMs = coerceWeekStartMs(weekStart, 'getWeeklySessionStats');
   const d = await db();
-  const weekEnd = weekStartMs + 7 * 86400000;
+  const weekEnd = localWeekEndMs(weekStartMs); // LS-06: DST-correct week end, not fixed 168h
   const row = await d.getFirstAsync(
     `SELECT COUNT(*) AS completed FROM workouts
      WHERE user_id = ? AND is_completed = 1 AND started_at >= ? AND started_at < ?`,
@@ -5908,7 +5908,7 @@ export async function getWeeklyPRCount(userId, weekStart) {
   // epoch-ms and reject a non-finite window rather than silently miscount PRs.
   const weekStartMs = coerceWeekStartMs(weekStart, 'getWeeklyPRCount');
   const d = await db();
-  const weekEnd = weekStartMs + 7 * 86400000;
+  const weekEnd = localWeekEndMs(weekStartMs); // LS-06: DST-correct week end, not fixed 168h
   // ALGO-003: a PR is the best estimated 1RM for an exercise beating its prior
   // best estimated 1RM, not just a heavier top-set weight. Epley e1RM =
   // weight * (1 + reps/30) credits a same-weight higher-rep set and a pure rep
@@ -5958,7 +5958,7 @@ export async function getWeeklyPRCount(userId, weekStart) {
 export async function getBestLiftThisWeek(userId, weekStart) {
   const weekStartMs = coerceWeekStartMs(weekStart, 'getBestLiftThisWeek');
   const d = await db();
-  const weekEnd = weekStartMs + 7 * 86400000;
+  const weekEnd = localWeekEndMs(weekStartMs); // LS-06: DST-correct week end, not fixed 168h
 
   const weekSets = await d.getAllAsync(
     `SELECT ws.exercise_id AS exerciseId, ex.name AS exerciseName,
