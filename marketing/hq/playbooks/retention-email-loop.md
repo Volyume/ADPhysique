@@ -124,7 +124,30 @@ no code available is an incident, logged as such.
 
 ---
 
-## 6. Weekly digest input
+## 6. Trustpilot invitations
+
+- The invitation line is included for every recipient of every loop email,
+  never selectively. Gating the invitation on rating, sentiment, or any other
+  signal breaks Trustpilot's and Google Play's rules on review solicitation
+  and is banned, no exceptions.
+- The line is neutral and does not ask for a positive review, only for the
+  recipient's honest experience: "If you would like to share your experience
+  publicly, our Trustpilot page is here: {{trustpilot_link}}".
+- Reviews are always written by the user, on their own Trustpilot account, in
+  their own words. Nobody ever writes, submits, or edits a review on a user's
+  behalf.
+- The invitation only activates once the founder has claimed and verified the
+  Trustpilot business profile (`FOUNDER-SETUP-PACK.md`). Until then,
+  `{{trustpilot_link}}` stays unused across all three templates: the line is
+  omitted from the send, not sent broken or blank.
+- Once live, the review-poll Routine adds Trustpilot to its watch list
+  alongside Google Play: new Trustpilot reviews are flagged in the weekly
+  digest, and reply drafts are prepared for the founder to tap-approve, the
+  same pattern already used for Play Store reviews.
+
+---
+
+## 7. Weekly digest input
 
 Each week the growth-analyst summarises, for the founder digest:
 

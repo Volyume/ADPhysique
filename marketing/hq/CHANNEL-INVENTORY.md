@@ -15,6 +15,7 @@ Tracks every channel/account, its capability level (autonomous / founder-tap / m
 | TikTok | Not created | Not started | N/A | API uploads (TikTok developer approval required) | Founder creates account; approval lead time 1+ month, start early |
 | YouTube | Not created | Not started | N/A | API uploads (Google Cloud app approval required) | Founder creates account; Google approval lead time 1+ month, start early |
 | Reddit | Founder account | Not started | Drafts only, founder posts personally | Subreddit moderation + API approval | Founder creates account and personal posting workflow |
+| Trustpilot | Not claimed | Not started | Manual (page not live) | Invitations activate in retention emails (all recipients, neutral line) + review-poll Routine watches the page for new reviews and drafts founder-tap replies | Founder claims and verifies the business profile for volyume.app (free, no paid plan needed) |
 | X (optional) | Not created | Not planned | N/A | API posting | Founder decision to create |
 | Scheduler (Postiz self-hosted) | Not set up | Not started | N/A | Autonomous scheduling across all platforms | Founder approval of tool + server signup (~€5/month) |
 | EU analytics | Not chosen | Not started | N/A | Real-time cohort retention + funnel tracking | Founder approves analytics vendor (~£9/month candidate) |
