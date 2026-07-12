@@ -22,14 +22,8 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.volyume",
-      "associatedDomains": ["applinks:volyume.app"],
       "buildNumber": "10",
       "requireFullScreen": true,
-      "entitlements": {
-        "com.apple.security.application-groups": [
-          "group.app.volyume.widget"
-        ]
-      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSSupportsLiveActivities": true,
@@ -114,7 +108,6 @@
       ]
     },
     "plugins": [
-      "./plugins/withVolyumeWidget",
       [
         "expo-splash-screen",
         {

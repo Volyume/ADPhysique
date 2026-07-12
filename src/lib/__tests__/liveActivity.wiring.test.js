@@ -11,10 +11,15 @@
  *     the launch sweep that clears a killed session's stale Activity);
  *   - set numbering stays OUT of the start payload (the "Set 3 of 2"
  *     confusion class the founder retired on Android);
- *   - the build prerequisites the viability audit found missing stay
- *     present: the podspec, the config plugin registered in app.json,
- *     NSSupportsLiveActivities on the app target, and no @main widget file
- *     inside the autolinked ios/ directory.
+ *   - the widget extension is UNWIRED from the build as of 2026-07-12
+ *     (founder decision: the extension is a separate app identity that needs
+ *     its own provisioned App ID / App Group profile, which is not set up, so
+ *     an unprovisioned target fails App Store signing). The podspec, plugin
+ *     and Swift sources stay in the tree, dormant and correct, ready to
+ *     re-wire once provisioning exists; the app.json guards below assert the
+ *     widget is NOT wired so it cannot silently creep back and break signing.
+ *     Universal links (Associated Domains) were dropped in the same decision
+ *     for the same signing reason; Android link handling is unaffected.
  */
 import fs from 'fs';
 import path from 'path';
@@ -113,9 +118,13 @@ describe('build prerequisites the viability audit found missing', () => {
     expect(fs.existsSync(path.resolve(__dirname, '../../..', 'modules/live-activity/ios/VolyumeRestTimerAttributes.swift'))).toBe(true);
   });
 
-  test('app.json registers the widget plugin and NSSupportsLiveActivities', () => {
+  test('app.json does NOT wire the widget plugin (extension parked 2026-07-12, unprovisioned)', () => {
     const app = JSON.parse(read('app.json'));
-    expect(app.expo.plugins).toContain('./plugins/withVolyumeWidget');
+    // Wiring an unprovisioned extension target fails App Store signing, so the
+    // plugin stays out of the build until the widget App ID / App Group
+    // profile is set up. The app-side Live Activity flag is harmless without
+    // the extension and stays for the eventual re-wire.
+    expect(app.expo.plugins).not.toContain('./plugins/withVolyumeWidget');
     expect(app.expo.ios.infoPlist.NSSupportsLiveActivities).toBe(true);
   });
 
@@ -157,12 +166,13 @@ describe('build prerequisites the viability audit found missing', () => {
     expect(widgetSource).not.toMatch(/weight|kcal|calorie|macro|bodyfat/i);
   });
 
-  test('the App Group entitlement is declared on both the app target and the extension target', () => {
+  test('the App Group entitlement is NOT declared while the widget is parked (would break signing)', () => {
     const app = JSON.parse(read('app.json'));
-    expect(app.expo.ios.entitlements['com.apple.security.application-groups']).toContain('group.app.volyume.widget');
-    const plugin = read('plugins/withVolyumeWidget.js');
-    expect(plugin).toMatch(/group\.app\.volyume\.widget/);
-    expect(plugin).toMatch(/CODE_SIGN_ENTITLEMENTS/);
+    // Declaring an App Group the provisioning profile does not carry fails the
+    // archive signing step, so it must stay off until the extension is
+    // provisioned. The dormant plugin still wires it internally (guarded by
+    // 'the config plugin targets the right extension shape') for the re-wire.
+    expect(app.expo.ios.entitlements?.['com.apple.security.application-groups']).toBeUndefined();
   });
 
   test('LiveActivityModule exposes writeWidgetSnapshot writing to the same App Group + key storage.js uses', () => {
