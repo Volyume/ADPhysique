@@ -17,6 +17,22 @@ the ledger and the digest, never swallowed.
 
 ## Steps
 
+0. **Learning-loop review (start of every cycle).** Read the
+   `gate_failure` rows in `marketing_ledger` since the last cycle. If any rule
+   in `ADVERTISING-PRINCIPLES.md` or `CLAIMS-STANDARDS.md` was breached more
+   than once across different pieces, that is a PATTERN — the system DRAFTS the
+   new rule automatically and acts on it by risk tier:
+   - **Safe tightening rule** (a stricter check that only raises quality, e.g.
+     "Free/Pro accuracy") → apply it to the rulebook automatically and report
+     the change in the digest.
+   - **Inviolable-adjacent rule** (anything that could touch Free/Pro gating,
+     ED-safety, billing, GDPR, or ASA law) → do NOT auto-apply; put the drafted
+     rule in the digest as a one-tap founder approval, and hold it until
+     approved. A guardrail is never auto-weakened.
+   A single one-off catch is logged but does not earn a rule. This is what makes
+   the rulebook improve as the system runs (ADVERTISING-PRINCIPLES.md, "The
+   learning loop").
+
 1. **Read governing docs and current state.**
    Read in full: `marketing/hq/OPERATING-CHARTER.md`,
    `marketing/hq/CLAIMS-STANDARDS.md`, `marketing/hq/PRODUCT-FACTS.md`, and
@@ -38,6 +54,12 @@ the ledger and the digest, never swallowed.
    output verbatim, the current roadmap stage, and ask for its Cycle Plan
    output contract — per-role briefs, lanes per OPERATING-CHARTER §4, and any
    founder questions).
+   **Balanced media mix (do not produce social video only).** Each weekly batch
+   spans the channels, not one format: aim for a spread across an SEO article
+   (web), a Play Store listing refinement (ASO), social carousels AND reels,
+   a Reddit draft (founder-only lane), and any due retention email — weighted
+   to the current roadmap stage. The director's plan states the mix explicitly;
+   a batch that is all one format is a planning miss to correct.
 
 4. **Dispatch content-writer (opus)** for the batch.
    Agent(description: "Weekly content batch", subagent_type:
@@ -59,6 +81,12 @@ the ledger and the digest, never swallowed.
      `marketing/hq/needs-fix/` if it does not exist) with the FAIL record
      attached, and record the incident in the ledger (step 9). Do not send it
      for a third round inside this cycle.
+   - **Learning-loop capture:** log EVERY gate FAIL (from steps 5, 5b, 5c) to
+     `marketing_ledger` as a `kind='note'` row with
+     `detail = {"type":"gate_failure","gate":..,"rule":..,"quote":..,"fix":..}`
+     (the `note` kind keeps within the ledger's kind constraint) so step 0 of
+     the next cycle can query `detail->>'type' = 'gate_failure'` and spot
+     patterns.
 
 5b. **Cold-viewer clarity gate (BLOCKING) on every cold-audience artefact
    (social, reels, store copy) that passed compliance in step 5.**

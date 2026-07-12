@@ -298,6 +298,22 @@ Score the opening scene/line against these; 4+ to pass:
 7. **One clear call to action:** free to start on Google Play; weekly coaching
    is Pro.
 8. **ASA-clean:** no banned weight/health/outcome claim (Layer 4). [required]
+9. **Claim-mechanism consistency** (learned from Week 2, 2026-07-12).
+   [required] Everything the piece *calls* the product must appear in the
+   mechanic it *shows*. If a line says "a workout and food-tracking app", the
+   how-it-works line must include logging food, not just training and weight.
+   A cold viewer notices the mismatch and distrusts it. Self-description and
+   demonstrated mechanism must match.
+10. **Free/Pro accuracy** (learned from Week 2, 2026-07-12; protects the
+   inviolable free/pro gating rule). [required] Never let a Pro capability read
+   as free. The free tier is training logging, plan library, plan building,
+   training history and progress tracking (incl. bodyweight logging). Pro is
+   nutrition/food diary, macros, barcode, meal planning, Progress Scan, the
+   weekly coaching, advanced progression. So: a mechanic line must not say the
+   viewer "logs their meals" as if free, and every "Free to start" must name
+   what is Pro (the nutrition and weekly coaching), not imply the whole app is
+   free. Attribute the reading/deciding to "the coaching" (Pro) rather than to
+   a free-tier action.
 
 A piece that fails any [required] line does not ship.
 
@@ -346,6 +362,34 @@ No agent may reintroduce them without fresh, sourced verification:
 3. Real causal lift (not just existence) of in-product referral/share
    features in fitness apps specifically (Layer 6.24) — evidenced as a real
    mechanism, not yet as a quantified lever.
+
+---
+
+## The learning loop (how this rulebook grows from real mistakes)
+
+The rulebook is not fixed at launch. It improves every time a gate catches
+something, so the same mistake cannot recur. The loop, run by the weekly cycle:
+
+1. **Capture.** Every gate FAIL (compliance, clarity, or principles) is logged
+   to `marketing_ledger` as a `gate_failure` row: the piece, which gate, the
+   rule breached, the exact quote, and the fix applied. A catch is never just
+   fixed and forgotten.
+2. **Detect.** At each weekly cycle, the lead reviews the accumulated
+   `gate_failure` rows since the last review. If a failure TYPE has occurred
+   more than once (the same rule breached across different pieces), it is a
+   pattern, not a one-off.
+3. **Codify.** A recurring pattern becomes a new rule: a new HOOK or
+   AD-STRUCTURE rubric line here, or a new entry in CLAIMS-STANDARDS §9. The
+   next batch is graded against it automatically, so the mistake is designed
+   out rather than re-caught. Each codified rule notes the date and the
+   failures that prompted it (as rule 9 above does: "learned from Week 2").
+4. **One-off vs pattern.** A single catch that is genuinely a one-off (a typo,
+   a one-time slip) is fixed and logged but does not need a new rule. Only
+   repeated failures earn a rule, so the rulebook stays tight, not bloated.
+
+This is what makes the system get better as it runs, rather than making the
+same class of mistake every week. The first rule born this way is rule 9
+(claim-mechanism consistency, from Week 2's Video 2).
 
 ---
 
