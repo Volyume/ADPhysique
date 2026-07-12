@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Volyume: email preferences</title>
+<meta name="description" content="Stop marketing emails from Volyume.">
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta name="theme-color" content="#0D0D0D">
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root{
+    --bg:#0D0D0D; --surface:#191917;
+    --border:#6E6E6E; --borderSubtle:#2E2E2C;
+    --amber:#F5A623; --amberFill:#E08C0B;
+    --text:#FFFFFF; --textSecondary:#9E9E9E; --textMuted:#9B9B9B;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --nav-h:78px;
+  }
+  *{box-sizing:border-box;}
+  html{color-scheme:dark;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font);
+    -webkit-font-smoothing:antialiased; line-height:1.5; overflow-x:hidden;}
+  a{color:inherit; text-decoration:none;}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
+
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:10px; white-space:nowrap;
+    font-weight:700; font-size:15px; border-radius:12px; padding:13px 22px; cursor:pointer; border:1px solid transparent;
+    transition:background-color .2s cubic-bezier(.2,0,0,1);}
+  .btn-primary{background:var(--amberFill); color:var(--bg);}
+  .btn-primary:hover{background:var(--amber);}
+  .btn-primary:disabled{opacity:.5; cursor:default;}
+
+  nav{position:fixed; top:0; left:0; right:0; height:var(--nav-h); z-index:50;
+    display:flex; align-items:center; background:rgba(13,13,13,0.88); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--borderSubtle);}
+  nav .wrap{display:flex; align-items:center; justify-content:space-between; width:100%;}
+  .brand{display:flex; align-items:center; gap:10px;}
+  .logo-word{height:clamp(34px,9vw,44px); width:auto; flex:0 0 auto; display:block;}
+
+  main{padding:calc(var(--nav-h) + 56px) 0 24px;}
+  h1{font-weight:900; letter-spacing:-0.5px; font-size:clamp(32px,6vw,46px); line-height:1.08; margin:0; max-width:760px;}
+  .intro{color:var(--textSecondary); font-size:18px; line-height:1.6; margin:22px 0 0; max-width:66ch;}
+  .actions{margin:34px 0 8px;}
+  .note{color:var(--textMuted); font-size:14px; margin:16px 0 0; max-width:66ch;}
+  .result{margin:34px 0 0; max-width:760px;}
+  .result p{color:var(--textSecondary); font-size:19px; line-height:1.6; margin:0; max-width:60ch;}
+  .hidden{display:none;}
+
+  footer{border-top:1px solid var(--borderSubtle); padding:46px 0; margin-top:64px;}
+  footer .wrap{display:flex; flex-wrap:wrap; gap:20px 32px; align-items:center; justify-content:space-between;}
+  footer .links{display:flex; gap:24px; flex-wrap:wrap;}
+  footer a{color:var(--textMuted); font-size:14px;}
+  footer a:hover{color:var(--amber);}
+  footer .copy{color:var(--textMuted); font-size:13px; width:100%;}
+
+  @media(max-width:600px){
+    :root{--nav-h:60px;}
+    .wrap{padding:0 16px;}
+    h1{font-size:30px;}
+    footer .wrap{gap:14px;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Volyume">
+      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+    </a>
+  </div>
+</nav>
+
+<main>
+  <div class="wrap">
+    <h1>Email preferences</h1>
+    <p class="intro" id="intro">If you would rather not get emails like the one that brought you here, press the button below and we will never send another. This only affects emails from the Volyume team; it does not change anything inside the app.</p>
+
+    <div class="actions" id="actions">
+      <button type="button" class="btn btn-primary" id="stop-btn">Stop these emails</button>
+      <p class="note">This takes effect straight away.</p>
+    </div>
+
+    <div class="result hidden" id="result" role="status" aria-live="polite">
+      <p id="result-text"></p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Volyume">
+      <img class="logo-word" src="/volyume-wordmark.png" alt="Volyume">
+    </a>
+    <div class="links">
+      <a href="/privacy/">Privacy Policy</a>
+      <a href="https://play.google.com/store/apps/details?id=app.volyume">Get it on Google Play</a>
+    </div>
+    <p class="copy">© 2026 Volyume</p>
+  </div>
+</footer>
+
+<script>
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1anJ5bHp6eGNxeHhmeWdwdG5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxODIxODksImV4cCI6MjA5NDc1ODE4OX0.NjRsRu8pL1UEJe3z9TTfSrvpruKqQYQ-HrN4zXvsVVY";
+  var ENDPOINT = "https://sujrylzzxcqxxfygptns.supabase.co/rest/v1/marketing_email_optout";
+
+  var stopBtn = document.getElementById("stop-btn");
+  var actions = document.getElementById("actions");
+  var resultBox = document.getElementById("result");
+  var resultText = document.getElementById("result-text");
+
+  function param(name){
+    var v = new URLSearchParams(window.location.search).get(name);
+    if (v === null) return null;
+    v = v.trim();
+    return v.length ? v : null;
+  }
+
+  function showResult(message){
+    resultText.textContent = message;
+    resultBox.classList.remove("hidden");
+  }
+
+  var userId = param("u");
+  if (!userId) {
+    actions.classList.add("hidden");
+    showResult("This link is missing its reference, so nothing can be changed from here. If you want to stop these emails, reply to the one you received and it will be handled by a person.");
+  }
+
+  stopBtn.addEventListener("click", function(){
+    stopBtn.disabled = true;
+    stopBtn.textContent = "Working";
+
+    fetch(ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+        "Prefer": "return=minimal,resolution=ignore-duplicates"
+      },
+      body: JSON.stringify({ user_id: userId })
+    }).then(function(res){
+      if (!res.ok) throw new Error("Request failed: " + res.status);
+      actions.classList.add("hidden");
+      showResult("Done. You will not get marketing emails from Volyume again. If you change your mind one day, just reply to any old email from us.");
+    }).catch(function(){
+      stopBtn.disabled = false;
+      stopBtn.textContent = "Stop these emails";
+      showResult("That did not work just now. Please try again, or reply to the email you received and it will be handled by a person.");
+    });
+  });
+</script>
+
+</body>
+</html>
