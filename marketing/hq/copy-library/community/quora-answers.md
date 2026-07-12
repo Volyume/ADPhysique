@@ -41,7 +41,7 @@ and 5 carry no link.
 The honest answer is that you lower calories when your weight has actually
 stopped moving, not when the scale has a bad morning.
 
-Pick a rate of loss you are aiming for. Something around 0.5 to 1 percent of
+Pick a rate of loss you are aiming for. Something around 0.5 to 1 per cent of
 bodyweight a week is a common range that keeps most of your strength and
 muscle. Then judge it on a weekly average, not a single reading. Weigh yourself
 most mornings under the same conditions, first thing, after the loo, before
