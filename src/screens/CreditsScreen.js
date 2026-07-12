@@ -48,7 +48,7 @@ export default function CreditsScreen() {
 
         {/* OpenFoodFacts */}
         <Card borderless style={styles.card}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.cardTitle, live.cardTitle]}>OpenFoodFacts</Text>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.cardTitle, live.cardTitle]}>Open Food Facts</Text>
           <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
             Branded UK food data, both bundled (weekly snapshot) and live (barcode misses fall through to OFF's API).
           </Text>
@@ -82,7 +82,7 @@ export default function CreditsScreen() {
         <Card borderless style={styles.card}>
           <Text maxFontSizeMultiplier={1.3} style={[styles.cardTitle, live.cardTitle]}>USDA FoodData Central</Text>
           <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
-            North-American food data, hit only when both the bundled snapshot and OpenFoodFacts miss. Used for imported items and occasional UK gaps.
+            North-American food data, hit only when both the bundled snapshot and Open Food Facts miss. Used for imported items and occasional UK gaps.
           </Text>
           <Text maxFontSizeMultiplier={1.3} style={[styles.attribution, live.attribution]}>
             Public domain data published by the U.S. Department of Agriculture, Agricultural Research Service.

@@ -57,7 +57,7 @@ export default function SettingsAboutScreen({ navigation }) {
         <SettingRow
           icon="information-circle-outline"
           label="Credits"
-          sub="OpenFoodFacts, CoFID, USDA attribution"
+          sub="Open Food Facts, CoFID, USDA attribution"
           onPress={() => navigation.navigate('Credits')}
         />
       </View>
@@ -71,7 +71,7 @@ export default function SettingsAboutScreen({ navigation }) {
             // Tap to share the build identifier. Useful when someone
             // files a bug: paste this into the report and we know
             // exactly which build they're on.
-            const v = Constants.expoConfig?.version ?? '1.1.0';
+            const v = Constants.expoConfig?.version ?? '1.2.0';
             const code = Platform.OS === 'ios'
               ? Constants.expoConfig?.ios?.buildNumber
               : Constants.expoConfig?.android?.versionCode;
@@ -86,7 +86,7 @@ export default function SettingsAboutScreen({ navigation }) {
           accessibilityLabel="App version. Tap to share, press and hold for debug logs."
         >
           <Text maxFontSizeMultiplier={1.3} style={[styles.appVersion, { fontSize: t.fontSize.sm, color: t.colors.textMuted }]}>
-            v{Constants.expoConfig?.version ?? '1.1.0'}
+            v{Constants.expoConfig?.version ?? '1.2.0'}
             {' '}
             ({Platform.OS === 'ios'
               ? Constants.expoConfig?.ios?.buildNumber
