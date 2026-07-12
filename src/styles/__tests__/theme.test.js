@@ -381,13 +381,19 @@ describe('COMP-029 light theme', () => {
     expect(ratio(colors.onPrimary, colors.primaryFill)).toBeGreaterThanOrEqual(4.5);
   });
 
-  test('onError ink clears the error FILL in both themes (U-F-1 destructive)', () => {
-    // Destructive button labels are large/bold text → WCAG 3:1 bar. White ink on
-    // the dark-red light-theme fill is the fix; dark stays white (zero-diff).
-    applyAccessibility({ theme: 'light' });
-    expect(ratio(colors.onError, colors.error)).toBeGreaterThanOrEqual(3);
+  test('onError ink clears the destructive FILL at 4.5:1 in every palette (AX-06)', () => {
+    // The destructive label is 13/16px semibold, NOT WCAG "large text", so the
+    // bar is 4.5:1 (not the 3:1 this test previously, wrongly, encoded). The
+    // button fill is errorFill (deeper than the `error` ink) precisely so white
+    // onError clears 4.5:1 in dark, light and both colour-blind palettes.
     applyAccessibility({});
-    expect(ratio(colors.onError, colors.error)).toBeGreaterThanOrEqual(3);
+    expect(ratio(colors.onError, colors.errorFill)).toBeGreaterThanOrEqual(4.5);
+    applyAccessibility({ theme: 'light' });
+    expect(ratio(colors.onError, colors.errorFill)).toBeGreaterThanOrEqual(4.5);
+    applyAccessibility({ theme: 'dark', colorBlindSafe: true });
+    expect(ratio(colors.onError, colors.errorFill)).toBeGreaterThanOrEqual(4.5);
+    applyAccessibility({ theme: 'light', colorBlindSafe: true });
+    expect(ratio(colors.onError, colors.errorFill)).toBeGreaterThanOrEqual(4.5);
   });
 
   test('light borders + chart line clear the 3:1 non-text bar', () => {

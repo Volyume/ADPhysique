@@ -56,7 +56,10 @@ function buildVariants(c) {
     outline: { bg: c.surface, fg: c.textPrimary, border: c.border },
     // fg uses onError (always-light ink, theme.js), NOT textPrimary, which flips
     // dark in the light theme and fails contrast on the dark-red fill (audit U-F-1).
-    destructive: { bg: c.error, fg: c.onError, border: 'transparent' },
+    // bg uses errorFill, not error: the flat `error` ink is only 3.68:1 under
+    // white in dark/CVD, while errorFill is the deeper red/magenta that clears
+    // the 4.5:1 semibold-label bar (AX-06 launch accessibility audit).
+    destructive: { bg: c.errorFill, fg: c.onError, border: 'transparent' },
   };
 }
 
