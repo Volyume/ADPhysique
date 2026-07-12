@@ -962,12 +962,32 @@ function compareBodyBoxMetric({ current, previous, key, threshold, reason }) {
   return { compared: true, issue: Math.abs(cur - prev) > threshold ? reason : null };
 }
 
+function scanCameraFacing(scan = {}) {
+  const facing = scan?.cameraFacing ?? scan?.camera_facing;
+  return facing === 'front' || facing === 'back' ? facing : null;
+}
+
 export function scanSetupStability(currentScan = null, previousScan = null) {
   if (!currentScan || !previousScan) {
     return { stable: false, issues: ['missing_scan'], comparedSignalCount: 0 };
   }
   const issues = [];
   let comparedSignalCount = 0;
+
+  // Scan-level camera facing (Codex progress-scan audit, 2026-07-12). A
+  // front/back lens switch changes the field of view and lens distortion,
+  // which shifts the silhouette ratios the score is built from WITHOUT moving
+  // any per-pose proxy (lighting/framing/bbox/tilt), so a back->front change
+  // would otherwise read as fake physique change. This became a live risk when
+  // the capture default flipped to the front camera. Treat a known facing
+  // change like a camera-angle change. Fail OPEN when either facing is unknown
+  // (legacy scans predating the recorded field) so old pairs are not voided.
+  const currentFacing = scanCameraFacing(currentScan);
+  const previousFacing = scanCameraFacing(previousScan);
+  if (currentFacing && previousFacing) {
+    comparedSignalCount += 1;
+    if (currentFacing !== previousFacing) issues.push('camera_facing_changed');
+  }
 
   for (const pose of [...REQUIRED_SCAN_POSES, ...OPTIONAL_SCAN_POSES]) {
     const current = scanAssetForPose(currentScan, pose);

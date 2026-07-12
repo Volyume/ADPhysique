@@ -988,6 +988,30 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(scanComparability(movedCamera, previous).comparable).toBe(false);
   });
 
+  test('a recorded front/back camera switch voids the comparison, but unknown facing fails open', () => {
+    // Codex progress-scan audit 2026-07-12: a front<->back lens switch shifts
+    // the silhouette ratios (FOV/distortion) without moving any per-pose proxy,
+    // so it must not surface as fake physique change. Live risk once the capture
+    // default became the front camera.
+    const previous = comparableScan({ id: 'old', side: true });
+    const current = comparableScan({ id: 'new', side: true });
+    expect(scanComparability(current, previous).comparable).toBe(true);
+
+    previous.cameraFacing = 'back';
+    current.cameraFacing = 'front';
+    expect(scanSetupStability(current, previous).issues).toContain('camera_facing_changed');
+    expect(scanComparability(current, previous)).toMatchObject({
+      comparable: false,
+      reason: 'The photo setup changed too much for a fair comparison.',
+    });
+
+    // Fail open: a legacy scan with no recorded facing must not fabricate a
+    // not-comparable verdict against a scan that does record one.
+    current.cameraFacing = null;
+    expect(scanSetupStability(current, previous).issues).not.toContain('camera_facing_changed');
+    expect(scanComparability(current, previous).comparable).toBe(true);
+  });
+
   test('side-photo setup drift is checked when both photo sets include side', () => {
     const previous = comparableScan({ id: 'old', side: true });
     const current = comparableScan({ id: 'new', side: true });

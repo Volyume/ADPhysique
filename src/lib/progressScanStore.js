@@ -317,6 +317,11 @@ export async function finishProgressScanSession(userId, scanId, opts = {}) {
     capturedAt: session.capturedAt,
     analysisStatus: analysis.analysisStatus,
     qualityLabel: analysis.qualityLabel,
+    // Carry the session's camera facing so scanComparability can void a
+    // front/back lens switch between sets (a facing change shifts the
+    // silhouette ratios via FOV/distortion and would otherwise read as fake
+    // physique change). Stored previous scans already carry this via rowToScan.
+    cameraFacing: session.cameraFacing ?? null,
     assets,
     estimateBodyFatPercent: null,
     estimateRangeLow: null,

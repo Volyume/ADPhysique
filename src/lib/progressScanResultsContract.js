@@ -190,6 +190,7 @@ const SETUP_ISSUE_PHRASES = {
   camera_distance_changed: 'the camera distance changed between sets',
   body_position_changed: 'your position in frame changed between sets',
   camera_height_changed: 'the camera height changed between sets',
+  camera_facing_changed: 'the camera switched between the front and rear lens between sets',
 };
 
 function reasonCodesToLines(codes = []) {
