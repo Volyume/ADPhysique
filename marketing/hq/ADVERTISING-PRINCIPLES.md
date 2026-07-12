@@ -306,14 +306,16 @@ Score the opening scene/line against these; 4+ to pass:
    demonstrated mechanism must match.
 10. **Free/Pro accuracy** (learned from Week 2, 2026-07-12; protects the
    inviolable free/pro gating rule). [required] Never let a Pro capability read
-   as free. The free tier is training logging, plan library, plan building,
-   training history and progress tracking (incl. bodyweight logging). Pro is
-   nutrition/food diary, macros, barcode, meal planning, Progress Scan, the
-   weekly coaching, advanced progression. So: a mechanic line must not say the
-   viewer "logs their meals" as if free, and every "Free to start" must name
-   what is Pro (the nutrition and weekly coaching), not imply the whole app is
-   free. Attribute the reading/deciding to "the coaching" (Pro) rather than to
-   a free-tier action.
+   as free. **Free tier = training only:** workout logging, plan library, plan
+   building, training history, training progress (PBs, lift/volume trends).
+   **Pro = everything else:** nutrition/food diary, macros, barcode, meal
+   planning, Progress Scan, the weekly coaching, advanced progression, AND
+   bodyweight / morning weight logging (Pro-only, hidden for free — founder
+   correction 2026-07-12). So a mechanic line must NEVER say the viewer "logs
+   their food" or "logs their weight" as a free action — only training logging
+   is free. Attribute the reading and the weekly decision to "the coaching"
+   (Pro). Every "Free to start" must make clear the coaching (with its food and
+   weight tracking) is Pro, never implying the whole app is free.
 
 A piece that fails any [required] line does not ship.
 

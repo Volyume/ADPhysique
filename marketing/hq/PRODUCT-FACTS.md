@@ -58,7 +58,8 @@ re-verified before reuse if the app has been updated since this date.
 - Plan library and plan use
 - Custom plan building
 - Training history
-- Progress tracking
+- Progress tracking (training progress: PBs, lift and volume trends — NOT
+  bodyweight)
 
 **Pro:**
 - Nutrition, macros, food diary
@@ -67,6 +68,8 @@ re-verified before reuse if the app has been updated since this date.
 - Progress Scan
 - Weekly Precision Coaching
 - Advanced progression
+- **Bodyweight / morning weight logging and weight-trend tracking** (Pro-only;
+  hidden for free users — founder correction 2026-07-12)
 
 ---
 
