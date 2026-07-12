@@ -252,6 +252,12 @@ export function deriveProgressScanBiasFlagsFromProfile(profile = {}) {
   return flags;
 }
 
+// Flag semantics (audit C-F5): `quality_limited` and `model_signal_limited`
+// are COMMUNICATION flags -- they surface in limitations/receipts so reduced
+// quality is explained to the user. Quality's NUMERIC effect on confidence and
+// uncertainty flows through the measured metrics and quality.label directly
+// (computeScanConfidenceScore, uncertaintyMarginPctPoints); giving these flags
+// their own penalty would double-count it.
 export function deriveBiasFlags({ sex = null, userFlags = [], modelValidated = false, quality = {} } = {}) {
   const flags = new Set(Array.isArray(userFlags) ? userFlags.filter(Boolean) : []);
   if (sex === 'female') flags.add('female_overestimation_risk');
@@ -441,28 +447,38 @@ export function scanConfidenceLabel(tier) {
   return SCAN_CONFIDENCE_COPY[tier] || SCAN_CONFIDENCE_COPY.unknown;
 }
 
-export function computeScanConfidenceScore({ assets = [], quality = {}, biasFlags = [], previousScan = null } = {}) {
+// True when both metrics the score itself is built from (segmentation mask
+// and pose landmarks) were actually measured. Without them the confidence
+// tier is capped below 'high' (audit C-F1).
+export function scanFoundationalMetricsPresent(assets = []) {
   const scoringAssets = requiredPoseAssets(assets);
   const metricAssets = scoringAssets.length ? scoringAssets : assets;
-  const qualityFallback = finiteNumber(quality?.score) ?? 0.7;
-  const segmentation = averageQualityMetric(metricAssets, 'segmentationConfidence', 'segmentationConfidence', qualityFallback);
-  const pose = averageQualityMetric(metricAssets, 'landmarkConfidence', 'poseConfidence', qualityFallback);
-  const framing = averageQualityMetric(metricAssets, 'framingScore', 'framingScore', qualityFallback);
-  const lighting = averageQualityMetric(metricAssets, 'lightingScore', 'lightingScore', qualityFallback);
-  const clothing = clothingAndOcclusionScore(metricAssets);
-  const completeness = viewCompletenessScore(assets);
-  const stability = averageQualityMetric(metricAssets, 'blurScore', 'blurScore', qualityFallback);
-  const setupConsistency = previousScan ? 0.84 : 0.82;
+  return averageQualityMetric(metricAssets, 'segmentationConfidence', 'segmentationConfidence') != null
+    && averageQualityMetric(metricAssets, 'landmarkConfidence', 'poseConfidence') != null;
+}
 
-  const base =
-    segmentation * 0.22
-    + pose * 0.18
-    + framing * 0.14
-    + lighting * 0.12
-    + clothing * 0.14
-    + completeness * 0.10
-    + stability * 0.05
-    + setupConsistency * 0.05;
+export function computeScanConfidenceScore({ assets = [], biasFlags = [], inputs = null } = {}) {
+  const scoringAssets = requiredPoseAssets(assets);
+  const metricAssets = scoringAssets.length ? scoringAssets : assets;
+  // Audit C-F1: a missing metric is DROPPED and the remaining weights
+  // renormalised -- never backfilled with a favourable aggregate, which
+  // inflated confidence on exactly the captures that measured least.
+  // Audit C-F4: the old `setupConsistency` constant (0.82/0.84) masqueraded as
+  // a measured signal; the slot now carries the real within-scan front/back
+  // read consistency, or drops out when unmeasured.
+  const components = [
+    { value: averageQualityMetric(metricAssets, 'segmentationConfidence', 'segmentationConfidence'), weight: 0.22 },
+    { value: averageQualityMetric(metricAssets, 'landmarkConfidence', 'poseConfidence'), weight: 0.18 },
+    { value: averageQualityMetric(metricAssets, 'framingScore', 'framingScore'), weight: 0.14 },
+    { value: averageQualityMetric(metricAssets, 'lightingScore', 'lightingScore'), weight: 0.12 },
+    { value: clothingAndOcclusionScore(metricAssets), weight: 0.14 },
+    { value: viewCompletenessScore(assets), weight: 0.10 },
+    { value: averageQualityMetric(metricAssets, 'blurScore', 'blurScore'), weight: 0.05 },
+    { value: withinScanConsistencyScore(inputs), weight: 0.05 },
+  ].filter((component) => component.value != null);
+  const totalWeight = components.reduce((sum, component) => sum + component.weight, 0);
+  if (totalWeight === 0) return null;
+  const base = components.reduce((sum, component) => sum + component.value * component.weight, 0) / totalWeight;
   return rounded2(clamp01(base - biasConfidencePenalty(biasFlags)));
 }
 
@@ -472,9 +488,20 @@ function inverseRatioScore(value, leanAt, softAt) {
   return clamp01((softAt - n) / (softAt - leanAt));
 }
 
-function consistencyScoreFromSpread(value) {
+// Score-path spread component -- byte-identical to the live formula (0.65
+// fallback when unmeasured). See the D1 note at the call site.
+function scoreConsistencyFromSpread(value) {
   const spread = finiteNumber(value);
   if (spread == null) return 0.65;
+  return clamp01(1 - (Math.abs(spread) / 0.08));
+}
+
+// Within-scan capture consistency from the front/back waist-read spread.
+// Null (not a guessed constant) when the spread was not measured, so the
+// confidence mean renormalises honestly (audit C-F4).
+function withinScanConsistencyScore(inputs = null) {
+  const spread = finiteNumber(inputs?.frontBackWaistSpread);
+  if (spread == null) return null;
   return clamp01(1 - (Math.abs(spread) / 0.08));
 }
 
@@ -510,12 +537,20 @@ export function computeVisualLeannessScore(inputs = {}) {
     inputs.bodyAreaRatio,
   ].some((value) => finiteNumber(value) == null)) return null;
 
+  // KNOWN LIMITATION (audit A-F2 / decision D1, 2026-07-12): the spread
+  // component is capture-consistency, not physique, and belongs in confidence
+  // only. Removing it recalibrates every existing score (verified: two release
+  // calibration-corpus cases leave their ratified bands), so the founder-
+  // directed launch-stability call keeps the score path unchanged tonight.
+  // The D1/D2 fast-follow moves it out alongside the corpus/curve retune and
+  // a device check. Do not change these weights without re-running
+  // progressScanCalibrationCorpus.test.js.
   const components = [
     { score: scoreComponent(inputs.waistToShoulder, 0.45, 0.75), weight: 0.30 },
     { score: scoreComponent(inputs.waistToHip, 0.68, 1.00), weight: 0.20 },
     { score: scoreComponent(inputs.waistToHeight, 0.18, 0.34), weight: 0.15 },
     { score: scoreComponent(inputs.bodyAreaRatio, 0.26, 0.42), weight: 0.15 },
-    { score: consistencyScoreFromSpread(inputs.frontBackWaistSpread), weight: 0.10 },
+    { score: scoreConsistencyFromSpread(inputs.frontBackWaistSpread), weight: 0.10 },
   ];
   if (finiteNumber(inputs.sideWaistToHeight) != null) {
     components.push({ score: scoreComponent(inputs.sideWaistToHeight, 0.18, 0.34), weight: 0.10 });
@@ -813,9 +848,10 @@ function previousPhysiqueAssessment(scan = null) {
   return scanSignals(scan)?.physiqueAssessment ?? null;
 }
 
+// (`quality` was dropped from the destructure when C-F1 moved confidence onto
+// per-metric renormalisation; callers may still pass it harmlessly.)
 export function buildPhysiqueAssessment({
   assets = [],
-  quality = {},
   biasFlags = [],
   modelEstimate = null,
   previousScan = null,
@@ -840,9 +876,8 @@ export function buildPhysiqueAssessment({
   );
   const scanConfidenceScore = computeScanConfidenceScore({
     assets,
-    quality,
     biasFlags,
-    previousScan,
+    inputs,
   });
   const blendDetails = blendedVisualLeannessDetails(inputs, modelEstimate, biasFlags);
   const measuredScore = blendDetails.score;
@@ -861,6 +896,11 @@ export function buildPhysiqueAssessment({
       || Math.abs(measuredScore - calibratedSilhouetteScore) > PROVISIONAL_ANCHOR_CONFIDENCE_CAP_THRESHOLD_POINTS
     );
   if (anchorEngaged) scanConfidenceTier = lowerConfidenceTier(scanConfidenceTier, 'moderate');
+  // Audit C-F1: 'high' confidence requires that segmentation and pose -- the
+  // metrics the score is built from -- were actually measured.
+  if (!scanFoundationalMetricsPresent(assets)) {
+    scanConfidenceTier = lowerConfidenceTier(scanConfidenceTier, 'moderate');
+  }
   const score = measuredScoreReady ? measuredScore : null;
   const band = leannessBandForScore(score);
   const previousAssessment = previousPhysiqueAssessment(previousScan);
