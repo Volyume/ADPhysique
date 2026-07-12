@@ -300,6 +300,23 @@ text. Each is banned in all public copy. An artefact containing any of them
    - Banned: `Log your sets. Track your food. Reach your goals.`
    - Human: `You log your sets and your food, and the weekly coach reads both.`
 
+10. **The say-it-out-loud test (founder rule, 2026-07-12).** Every on-screen
+    line and caption sentence must be something a lifter would actually say
+    to a mate, out loud, without sounding odd. Compressed shorthand that
+    only parses if you already know the product fails, however technically
+    accurate. Two real failures set this rule: `Same data in, same answer
+    out` and `One flat number can be water`. If a line needs a beat of
+    decoding, write the sentence a person would say instead.
+    - Banned: `One flat number can be water.`
+    - Human: `The scale jumps around with late meals, bad sleep and water.
+      One morning tells you almost nothing.`
+
+11. **Insider compression (founder rule, 2026-07-12).** No line in a
+    cold-audience asset may assume the reader already knows what the product
+    is, what "the app" refers to, or any product vocabulary (feature names,
+    engine terms). Branded feature names appear only after the plain-words
+    explanation has already been given in the same asset.
+
 10. **Summary sign-offs.** `In conclusion`, `At the end of the day`, `The
     bottom line`, `Ultimately`. End on a concrete point, not a wrap-up phrase.
     - Banned: `At the end of the day, Volyume just works.`

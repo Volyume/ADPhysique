@@ -84,11 +84,19 @@ left-aligned. Pill and reason, the number 3 in monospace within the reason.
 Nothing else. No invented card content anywhere in this batch.
 
 **Scene 5 (~3s).**
-On screen: Same data in, same answer out, and the reason is written down.
-Sub: Explainable, not a black box. [Claim 2: PRODUCT-FACTS A, qualified per §6]
+On screen: And it shows its working.
+Sub: Every decision comes with the reason, written in plain words. [Claim 1:
+PRODUCT-FACTS A]
 Visual: the reason line from the card holds on screen, the rest recedes.
 
-**Scene 6 (CTA end-card, ~3s).**
+**Scene 6 (evidence, the real app, ~3s).**
+On screen: This is Volyume.
+Visual: appShot of `02_know_what_to_do_today.jpg` (the Today screen: morning
+weight, next workout, check-in readiness; demo-account data per the screenshot
+manifest), rounded hairline frame on the near-black canvas. Label beneath:
+"The Today screen."
+
+**Scene 7 (CTA end-card, ~3s).**
 On screen:
 Volyume.
 The weekly decision on your training and food, change or hold, with the reason
@@ -99,9 +107,10 @@ PRODUCT-FACTS A]
 Visual: wordmark, one line of promise, the Pro line small, the Play line in
 monospace. Left-aligned.
 
-**Carousel adaptation (6 slides, 4:5):** Slide 1 = Scene 1 hook. Slide 2 =
+**Carousel adaptation (7 slides, 4:5):** Slide 1 = Scene 1 hook. Slide 2 =
 Scene 2. Slide 3 = Scene 3 (name and one-sentence answer). Slide 4 = the static
-decision card (Scene 4). Slide 5 = Scene 5. Slide 6 = the CTA end-card.
+decision card (Scene 4). Slide 5 = Scene 5. Slide 6 = the app evidence shot
+(Scene 6). Slide 7 = the CTA end-card.
 
 **Post caption:**
 You already track your sets and step on the scale most mornings, so the raw data
@@ -127,11 +136,12 @@ Sub: The obvious move is to cut calories.
 Visual: a flat monospace weight readout, unchanged across three week labels, top-left.
 
 **Scene 2 (~3s).**
-On screen: One flat number can be water, sleep or a heavy meal the night before.
+On screen: The scale jumps around with late meals, bad sleep and water.
+Sub: One morning tells you almost nothing.
 Visual: a lone amber dot sitting on a baseline, isolated, plenty of black around it.
 
 **Scene 3 (name the product, ~4s).**
-On screen: Volyume reads the weekly trend across your mornings, not one reading.
+On screen: Volyume reads your weekly trend, not one morning.
 Sub: And it only acts when the data is real. [Claim 4: PRODUCT-FACTS A, D]
 Visual: the lone dot from Scene 2 joined by more dots, an amber trend line drawn
 smoothly through them. Wordmark appears top-left.
@@ -149,7 +159,13 @@ Sub: It does not guess. [Claim 5: PRODUCT-FACTS D; Claim 3: PRODUCT-FACTS A]
 Visual: a HOLD decision card with the reason line "Need at least 3 morning
 weights for a reliable trend." [Claim 5: PRODUCT-FACTS D]
 
-**Scene 6 (CTA end-card, ~3s).**
+**Scene 6 (evidence, the real app, ~3s).**
+On screen: This is Volyume.
+Visual: appShot of `02_know_what_to_do_today.jpg` (the Today screen with the
+morning weight logged; demo-account data), rounded hairline frame. Label:
+"Morning weight, on the Today screen."
+
+**Scene 7 (CTA end-card, ~3s).**
 On screen:
 Volyume.
 It reads the weekly trend, not one bad morning, and acts only when the data is
@@ -159,10 +175,11 @@ Free to start, on Google Play. [Claim 11: PRODUCT-FACTS B; Claim 10:
 PRODUCT-FACTS A]
 Visual: wordmark, promise line, the Pro line small, Play line in monospace.
 
-**Carousel adaptation (6 slides, 4:5):** Slide 1 = the flat three-week readout
+**Carousel adaptation (7 slides, 4:5):** Slide 1 = the flat three-week readout
 (hook). Slide 2 = lone dot. Slide 3 = name and one-sentence answer, dots forming
 a trend. Slide 4 = trend line with the "3 morning weigh-ins" mono stat. Slide 5
-= the HOLD card with the reliable-trend reason. Slide 6 = CTA end-card.
+= the HOLD card with the reliable-trend reason. Slide 6 = the app evidence shot.
+Slide 7 = CTA end-card.
 
 **Post caption:**
 A flat scale after a few hard weeks is the moment most people reach for the
@@ -195,8 +212,8 @@ Visual: a monospace question sitting in open black space: "what do I change this
 week?" with a blinking cursor.
 
 **Scene 3 (name the product, ~4s).**
-On screen: Volyume is the connected system that reads both sides and makes the
-weekly call. [Claim 7: PRODUCT-FACTS A; Claim 1: PRODUCT-FACTS A]
+On screen: Volyume reads both sides and makes the weekly call. [Claim 7:
+PRODUCT-FACTS A; Claim 1: PRODUCT-FACTS A]
 Sub: Your training and your food, in one decision.
 Visual: the three input boxes from Scene 1 feeding one node. Wordmark top-left.
 
@@ -207,13 +224,19 @@ Visual: a two-way amber fork diagram on near-black, the taken path solid amber,
 the other path amber outline. Left-aligned.
 
 **Scene 5 (~3s).**
-On screen: The weekly coaching does the deciding your apps leave to you.
+On screen: The weekly coaching makes the call your other apps leave to you.
 Sub: That part is Pro. Logging, plans and progress are free. [Claim 8:
 PRODUCT-FACTS A, B; Claim 6: PRODUCT-FACTS A; Claim 9: PRODUCT-FACTS B;
 Claim 11: PRODUCT-FACTS B]
 Visual: the filled "recorded" boxes beside the now-filled "decided" node.
 
-**Scene 6 (CTA end-card, ~3s).**
+**Scene 6 (evidence, the real app, ~3s).**
+On screen: This is Volyume.
+Visual: appShot of `06_meals_planned_to_your_targets.jpg` (the food diary:
+calories and macros with planned meals; demo-account data), rounded hairline
+frame. Label: "The food diary, read by the weekly coach."
+
+**Scene 7 (CTA end-card, ~3s).**
 On screen:
 Volyume.
 One system that reads your training and your food and makes the weekly call.
@@ -222,11 +245,11 @@ Free to start, on Google Play. [Claim 11: PRODUCT-FACTS B; Claim 10:
 PRODUCT-FACTS A]
 Visual: wordmark, promise line, Play line in monospace.
 
-**Carousel adaptation (6 slides, 4:5):** Slide 1 = three filled boxes and one
+**Carousel adaptation (7 slides, 4:5):** Slide 1 = three filled boxes and one
 empty amber-outlined box (hook). Slide 2 = the lone question in black space.
 Slide 3 = name and one-sentence answer, three inputs feeding one node. Slide 4 =
 the fork diagram. Slide 5 = recorded-versus-decided, the decided node now
-filled. Slide 6 = CTA end-card.
+filled. Slide 6 = the app evidence shot. Slide 7 = CTA end-card.
 
 **Post caption:**
 A workout logger remembers every set and a food app totals every day, but when
@@ -253,8 +276,8 @@ Visual: a stack of identical "change this" instructions repeating down the
 frame, uniform and a little relentless, muted grey.
 
 **Scene 2 (~3s).**
-On screen: Change your plan on a quiet week and you lose the thread.
-Sub: You can no longer tell which change did what.
+On screen: Change things too often and you cannot tell what actually worked.
+Sub: Every extra tweak muddies the picture.
 Visual: a jittery amber line with several premature "change" markers cluttering it.
 
 **Scene 3 (name the product, ~4s).**
@@ -271,12 +294,18 @@ Visual: filling dots on near-black, then the surface-toned card with the amber
 HOLD pill and the verified reason line. Left-aligned.
 
 **Scene 5 (~3s).**
-On screen: When the signal is not there yet, it holds and tells you why.
-Sub: It holds because the data does not justify a change yet. [Claim 3:
-PRODUCT-FACTS A]
+On screen: When there is not enough to go on, it holds and tells you why.
+Sub: No change gets made without a reason you can read. [Claim 3:
+PRODUCT-FACTS A; Claim 1: PRODUCT-FACTS A]
 Visual: a steady, unhurried amber baseline holding flat, calm negative space.
 
-**Scene 6 (CTA end-card, ~3s).**
+**Scene 6 (evidence, the real app, ~3s).**
+On screen: This is Volyume.
+Visual: appShot of `03_plan_that_moves_with_you.jpg` (the training plan:
+active block and next workout; demo-account data), rounded hairline frame.
+Label: "Your plan, changed only with a reason."
+
+**Scene 7 (CTA end-card, ~3s).**
 On screen:
 Volyume.
 It tells you when to hold and why, not only when to push. [Claim 1:
@@ -286,10 +315,11 @@ Free to start, on Google Play. [Claim 11: PRODUCT-FACTS B; Claim 10:
 PRODUCT-FACTS A]
 Visual: wordmark, promise line, the Pro line small, Play line in monospace.
 
-**Carousel adaptation (6 slides, 4:5):** Slide 1 = the repeating "change this"
+**Carousel adaptation (7 slides, 4:5):** Slide 1 = the repeating "change this"
 stack (hook). Slide 2 = jittery line with premature change markers. Slide 3 =
 name and one-sentence answer, clean baseline. Slide 4 = filling data meter and
-the HOLD card. Slide 5 = the flat, held baseline. Slide 6 = CTA end-card.
+the HOLD card. Slide 5 = the flat, held baseline. Slide 6 = the app evidence
+shot. Slide 7 = CTA end-card.
 
 **Post caption:**
 Plenty of training weeks are mostly noise, and acting on noise makes real
@@ -362,3 +392,23 @@ blind cold-viewer test, in one pass:
   "same data in, same answer out"); "Weekly Precision Coaching" and "loggers"
   replaced with plain words in Concept C's on-screen copy; #liftingcoach
   dropped from all hashtag sets (compliance advisory).
+
+---
+
+## Revision note (v2.2, 2026-07-12, lead, founder-driven)
+
+Two founder rules applied across the batch, now standing law
+(CLAIMS-STANDARDS §9.10 and §9.11; MARKETING-VISUAL-IDENTITY-LOCKED
+Addendum A2):
+
+- **Say-it-out-loud pass:** "Same data in, same answer out" replaced with
+  "And it shows its working."; "One flat number can be water, sleep or a
+  heavy meal" replaced with "The scale jumps around with late meals, bad
+  sleep and water. One morning tells you almost nothing."; "connected
+  system" dropped from on-screen copy; "you lose the thread" replaced with
+  "you cannot tell what actually worked"; "when the signal is not there
+  yet" replaced with "when there is not enough to go on".
+- **Real app evidence:** every concept gains Scene 6, an appShot of a real
+  branded screenshot (Today screen, food diary, or training plan; demo
+  account, per the screenshot manifest usage rules), with the CTA moving to
+  Scene 7 and carousels to seven slides.

@@ -346,3 +346,18 @@ PNGs and approved as the production standard on 2026-07-12:
 Constraints unchanged: single amber accent, near-black canvas, left-aligned,
 no gradients, numbers in monospace. Any FURTHER component beyond these four
 plus the decision card remains a founder decision in advance, per Governance.
+
+---
+
+## Addendum A2 (2026-07-12): real app evidence is mandatory in social assets
+
+Founder decision, made in advance and recorded here: every cold-audience
+social asset (reel or carousel) MUST carry at least one view of the real
+app, using the approved branded screenshot set
+(`marketing/hq/assets/screenshots/`, demo-account data only, usage rules in
+its manifest). Abstract diagrams alone do not constitute evidence; the
+viewer must see the product. The `appShot` renderer component (screenshot
+in a rounded hairline frame on the near-black canvas, no fake bezel, no
+tilt, no gloss) is the approved vehicle. Screen 08 (Progress Photos)
+remains store-listing-only per the manifest; the no-bodies rule stands
+everywhere else.
