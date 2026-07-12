@@ -119,6 +119,12 @@ Each figure below is tied to a specific file reference, verified
   25, 50, 100 sessions, and first PR — `src/lib/milestones.js`,
   `MILESTONES`. NOTE: older material referencing 250/500-session milestones
   is stale; do not use.
+- **The weekly coach needs at least 3 morning weigh-ins** in the week before
+  it acts on a weight trend; with fewer it holds and says why
+  (`MIN_WEIGH_INS = 3`, `src/lib/weeklyCoach.js:118-124`, test-pinned in
+  `coachLedger.test.js` and `weeklyCoach.f10.test.js`; in-app hold message:
+  "Need at least 3 morning weights for a reliable trend."). Verified
+  2026-07-12 after the compliance gate flagged the number as untraced.
 - **Barcode scanning is Pro-gated** (`withProGuard`,
   `src/navigation/RootNavigator.js:249`) — never describe barcode scanning
   as free.

@@ -60,7 +60,7 @@ Visual: seven small dots with a smooth amber trend line drawn through them.
 **Slide 4.**
 Heading: Wait for enough mornings before you judge it.
 Supporting line: Three or more weigh-ins in a week give the trend something to stand on.
-Number: 3+ mornings.
+Number: 3+ mornings. (Traces to PRODUCT-FACTS section D, MIN_WEIGH_INS, verified 2026-07-12; gate FAIL resolved by verification rather than softening.)
 Visual: three dots filling in on the same baseline, the trend line firming up.
 
 **Slide 5.**
