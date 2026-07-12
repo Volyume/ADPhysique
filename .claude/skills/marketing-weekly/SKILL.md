@@ -32,9 +32,9 @@ the ledger and the digest, never swallowed.
    monitoring (haiku sweep results if any exist) folded in, and require
    every unavailable metric reported as unavailable, never estimated).
 
-3. **Dispatch marketing-director (opus)** to set the week's priorities.
+3. **Dispatch marketing-director (sonnet)** to set the week's priorities.
    Agent(description: "Weekly marketing cycle plan", subagent_type:
-   "marketing-director", model: "opus", prompt: pass it the growth-analyst
+   "marketing-director", model: "sonnet", prompt: pass it the growth-analyst
    output verbatim, the current roadmap stage, and ask for its Cycle Plan
    output contract — per-role briefs, lanes per OPERATING-CHARTER §4, and any
    founder questions).
@@ -46,14 +46,14 @@ the ledger and the digest, never swallowed.
    and the relevant playbook(s), British English, no em dashes, no
    exclamation marks in public copy).
 
-5. **Dispatch compliance-reviewer (opus) on EVERY artefact produced in step 4.**
+5. **Dispatch compliance-reviewer (sonnet) on EVERY artefact produced in step 4.**
    Agent(description: "Compliance gate on batch", subagent_type:
-   "compliance-reviewer", model: "opus", prompt: pass each artefact in full
+   "compliance-reviewer", model: "sonnet", prompt: pass each artefact in full
    against CLAIMS-STANDARDS.md, require a PASS/FAIL verdict record per
    artefact with cited reasons).
    - Never skip this step for any artefact, regardless of lane.
    - Any FAIL: return it to content-writer (opus) once for correction, using
-     the cited reasons as the brief. Re-run the compliance-reviewer (opus) on
+     the cited reasons as the brief. Re-run the compliance-reviewer (sonnet) on
      the revision.
    - If it fails a second time: move it to `needs-fix/` (create under
      `marketing/hq/needs-fix/` if it does not exist) with the FAIL record
@@ -68,7 +68,7 @@ the ledger and the digest, never swallowed.
    cold viewer). Write each artefact's on-screen text and caption to a scratch
    file with NO product context, then dispatch:
    Agent(description: "Blind cold-viewer clarity test", subagent_type:
-   "general-purpose", model: "opus", prompt: "You are a UK gym-goer scrolling
+   "general-purpose", model: "sonnet", prompt: "You are a UK gym-goer scrolling
    who has NEVER heard of the product. Read ONLY <scratch path>, no repo, no
    outside knowledge. Per asset, from the on-screen text alone: would line 1
    stop you; what is the product; what does it do for you; where to get it and
@@ -87,17 +87,30 @@ the ledger and the digest, never swallowed.
    rubric in `marketing/hq/ADVERTISING-PRINCIPLES.md` (it must read that doc
    first; the rubrics and the DO-NOT-USE list are the marking scheme):
    Agent(description: "Principles rubric scoring", subagent_type:
-   "general-purpose", model: "opus"). Hook score 4+ and every [required]
+   "general-purpose", model: "sonnet"). Hook score 4+ and every [required]
    structure line passing are the bar; any DO-NOT-USE item appearing anywhere
    is an automatic FAIL. Failures follow the same one-revision path as 5b.
 
-6. **Dispatch creative-designer (sonnet)** for visuals of PASSed items only.
-   Agent(description: "Visuals for passed content", subagent_type:
-   "creative-designer", model: "sonnet", prompt: list only the artefacts that
-   carry BOTH a compliance PASS (step 5) and, for cold-audience creative, a
-   clarity PASS (step 5b), with the record references, and require assets
-   within brand and claims rules, real app screenshot included per identity
-   Addendum A2).
+5d. **Lead review before design (main loop, no dispatch).** The main-loop
+   session reads the passed batch itself and judges it against the rulebook
+   before any assets are rendered. This is the quality backstop that lets the
+   gates run on sonnet: cheap automated gates catch rule violations, the lead
+   catches taste. Bin or send back anything that reads weak even if it passed
+   the rubrics. No agent tokens spent here.
+
+6. **Render visuals for passed items via the code pipeline (NOT Canva).**
+   The production path is `marketing/hq/render/` (deterministic HTML/CSS →
+   Playwright stills and ffmpeg reels, on locked brand). Canva could not hold
+   the brand (no font control, no shapes) and is retired for produced assets.
+   Dispatch creative-designer only to encode passed copy into the render JSON
+   and run the renderer:
+   Agent(description: "Render passed content", subagent_type:
+   "creative-designer", model: "sonnet", prompt: list the artefacts carrying a
+   compliance PASS (step 5), a clarity PASS (step 5b), a principles PASS (step
+   5c) and lead sign-off (step 5d); encode each into carousel/reel JSON per
+   `marketing/hq/render/README.md`, render stills and reels, include a real app
+   screenshot per identity Addendum A2, and mirror outputs to the
+   marketing-assets bucket for dashboard preview).
 
 7. **Stage PASSed items.**
    If the Supabase `marketing_content` pipeline is live, stage there with the
@@ -134,7 +147,10 @@ the ledger and the digest, never swallowed.
   recorded visibly in the ledger and the digest — never silently retried and
   reported as if it succeeded.
 - Every Agent dispatch in this skill must carry an explicit `model` field per
-  the mapping above: marketing-director=opus, content-writer=opus,
-  compliance-reviewer=opus, cold-viewer clarity test=opus (general-purpose),
-  aso-analyst=sonnet, creative-designer=sonnet, community-manager=sonnet,
-  growth-analyst=sonnet.
+  the mapping above (trimmed for cost 2026-07-12, founder decision — only the
+  writer, where creative quality lives, stays on opus; the gates score against
+  explicit rubrics so sonnet suffices, with the main-loop lead review at 5d as
+  the taste backstop): content-writer=opus; marketing-director=sonnet,
+  compliance-reviewer=sonnet, cold-viewer clarity test=sonnet, principles
+  scoring=sonnet, creative-designer=sonnet, aso-analyst=sonnet,
+  community-manager=sonnet, growth-analyst=sonnet.

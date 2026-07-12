@@ -33,9 +33,9 @@ If either is missing, ask before dispatching.
    PRODUCT-FACTS excerpts and playbook to ground it in, British English, no
    em dashes, no exclamation marks in public copy).
 
-3. **Dispatch compliance-reviewer (opus).**
+3. **Dispatch compliance-reviewer (sonnet).**
    Agent(description: "Compliance gate on drafted item", subagent_type:
-   "compliance-reviewer", model: "opus", prompt: pass the full draft against
+   "compliance-reviewer", model: "sonnet", prompt: pass the full draft against
    CLAIMS-STANDARDS.md, require a PASS/FAIL verdict record with cited
    reasons).
 
@@ -44,7 +44,7 @@ If either is missing, ask before dispatching.
    Write the on-screen text (and caption) to a scratch file with NO product
    context, then dispatch a blind reviewer:
    Agent(description: "Blind cold-viewer clarity test", subagent_type:
-   "general-purpose", model: "opus", prompt: "You are a UK gym-goer scrolling
+   "general-purpose", model: "sonnet", prompt: "You are a UK gym-goer scrolling
    who has NEVER heard of the product. Read ONLY this file, no repo, no outside
    knowledge: <scratch path>. For each asset answer from the on-screen text
    alone: would line 1 stop you; what is the product; what does it do for you;
@@ -63,7 +63,7 @@ If either is missing, ask before dispatching.
 
 4b. **Principles scoring (BLOCKING, cold-audience creative only).** Dispatch
    Agent(description: "Principles rubric scoring", subagent_type:
-   "general-purpose", model: "opus") to grade the artefact against the HOOK
+   "general-purpose", model: "sonnet") to grade the artefact against the HOOK
    and AD-STRUCTURE rubrics in `marketing/hq/ADVERTISING-PRINCIPLES.md` (the
    reviewer reads that doc first; its DO-NOT-USE list is an automatic FAIL if
    anything from it appears). Bar: hook 4+, every [required] structure line
@@ -90,5 +90,7 @@ If either is missing, ask before dispatching.
 - Never publish directly from this skill — staging only; publishing web
   content is the `marketing-ship-web` skill's job, and other channels follow
   OPERATING-CHARTER §4 lanes.
-- Explicit model on every dispatch: content-writer=opus,
-  compliance-reviewer=opus, cold-viewer clarity test=opus (general-purpose).
+- Explicit model on every dispatch (trimmed for cost 2026-07-12; only
+  the writer stays opus, the gates score against explicit rubrics so sonnet
+  suffices): content-writer=opus; compliance-reviewer=sonnet, cold-viewer
+  clarity test=sonnet, principles scoring=sonnet (all general-purpose).
