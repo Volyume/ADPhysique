@@ -182,6 +182,15 @@ layout-source retire with dated rationale). Lead hands-on build.
 RECOVERY: any dead session resumes FROM THE CONTRACT DOC + this entry;
 uncommitted rebuild work is lead-reviewed against the contract, never
 discarded. Old screen behaviour reference = git show ece5dd8.
+POSITION (2026-07-12): components DONE + pushed (WorkoutHeader 446ea6f,
+ExerciseNav 446ea6f, WorkoutBottomBar 446ea6f, NowCard 15b528b; kept:
+StatusStrip/RestTimer/LoggedSetRow/EmptyExerciseView/SetEntry). NEXT:
+rewrite ActiveWorkoutScreen.js as the orchestrator against the contract
+(handlers preserved per section 3-6; JSX = new components; overflow
+gains "How logging works"; education/pencil/coach-nav deleted), then
+re-anchor pinned tests per contract section 8, full suite green, ONE
+push (never push red). Sheet fixes + Diary revert already live in the
+founder's build 2700.
 
 **R2-8b/R2-11 - PRODUCTION P0 PAIR (build 2692 walk, founder repro):**
 - R2-8b LANDED 306be1a: the surviving set-log crash was a queued-start
