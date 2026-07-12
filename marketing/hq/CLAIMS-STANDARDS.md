@@ -317,23 +317,23 @@ text. Each is banned in all public copy. An artefact containing any of them
     engine terms). Branded feature names appear only after the plain-words
     explanation has already been given in the same asset.
 
-10. **Summary sign-offs.** `In conclusion`, `At the end of the day`, `The
+12. **Summary sign-offs.** `In conclusion`, `At the end of the day`, `The
     bottom line`, `Ultimately`. End on a concrete point, not a wrap-up phrase.
     - Banned: `At the end of the day, Volyume just works.`
     - Human: `That is the whole system: log, review, adjust.`
 
-11. **Exclamation marks.** Already banned under Tone; restated. Never in public
+13. **Exclamation marks.** Already banned under Tone; restated. Never in public
     copy.
     - Banned: `Start your first plan today!`
     - Human: `Start your first plan today.`
 
-12. **American spellings and vocabulary.** British English is checked word by
+14. **American spellings and vocabulary.** British English is checked word by
     word. `color` → `colour`, `optimize` → `optimise`, `gotten` → `got`,
     `personalize` → `personalise`, `favorite` → `favourite`, `math` → `maths`.
     `workout program` is acceptable only as the established industry term;
     prefer `training plan`. Any American spelling or idiom fails the gate.
 
-13. **Emoji in body copy.** Never in articles, website copy, store listings or
+15. **Emoji in body copy.** Never in articles, website copy, store listings or
     email. Allowed sparingly in social captions only where the platform's
     convention plainly expects it, and then never more than one in a caption.
 

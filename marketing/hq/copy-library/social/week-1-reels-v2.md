@@ -212,8 +212,8 @@ Visual: a monospace question sitting in open black space: "what do I change this
 week?" with a blinking cursor.
 
 **Scene 3 (name the product, ~4s).**
-On screen: Volyume reads both sides and makes the weekly call. [Claim 7:
-PRODUCT-FACTS A; Claim 1: PRODUCT-FACTS A]
+On screen: Volyume reads both sides and makes the weekly call. [Claim 1:
+PRODUCT-FACTS A]
 Sub: Your training and your food, in one decision.
 Visual: the three input boxes from Scene 1 feeding one node. Wordmark top-left.
 
