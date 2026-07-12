@@ -94,6 +94,76 @@ describe('body_composition_log push', () => {
   });
 });
 
+// LS-07: metric_date must be the LOCAL calendar day (dayKey.js's
+// localDayKey), not a UTC ISO slice -- an early-morning BST weigh-in is a
+// different UTC day to its local day. Proves the push path delegates to
+// the real, shared localDayKey rather than re-deriving the day itself
+// (the genuine BST round-trip is proven separately, under a real
+// Europe/London Node process, in bodyComposition.lsO7.dst.test.js -- Jest
+// itself cannot exercise a real BST offset because its sandbox timezone
+// is pinned at startup).
+describe('body_composition_log push: metric_date uses the shared local-day key (LS-07)', () => {
+  function makeSb() {
+    const calls = { upserts: [] };
+    return {
+      _calls: calls,
+      from: jest.fn(() => ({
+        upsert: jest.fn(async (rows) => {
+          calls.upserts.push(rows);
+          return { error: null };
+        }),
+      })),
+    };
+  }
+
+  test('metric_date is produced by the real localDayKey helper, given the raw loggedAt ms', async () => {
+    // eslint-disable-next-line global-require
+    const dayKeyModule = require('../../dayKey');
+    const spy = jest.spyOn(dayKeyModule, 'localDayKey');
+
+    const loggedAt = Date.UTC(2026, 6, 15, 23, 30, 0); // arbitrary instant
+    dbModule.getBodyMetricLog.mockResolvedValue([
+      { id: 'bm1', loggedAt, weightKg: 80, updatedAt: loggedAt, deletedAt: null },
+    ]);
+    const sb = makeSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    await pushTable('body_composition_log', { userId: 'u1', localUserId: 'u1' });
+
+    expect(spy).toHaveBeenCalledWith(loggedAt);
+    expect(sb._calls.upserts[0][0].metric_date).toBe(dayKeyModule.localDayKey(loggedAt));
+    spy.mockRestore();
+  });
+
+  test('a falsy loggedAt still yields a null metric_date and the row is filtered out', async () => {
+    dbModule.getBodyMetricLog.mockResolvedValue([
+      { id: 'bm-no-date', loggedAt: 0, weightKg: 80, updatedAt: 1, deletedAt: null },
+    ]);
+    const sb = makeSb();
+    getSupabaseClient.mockReturnValue(sb);
+
+    const result = await pushTable('body_composition_log', { userId: 'u1', localUserId: 'u1' });
+    expect(result.count).toBe(0); // filtered: no metric_date
+  });
+});
+
+// LS-07 source guard: locks the fix in place so a future edit can't
+// silently reintroduce the UTC ISO-slice bug.
+describe('LS-07 source guard', () => {
+  test('msToDate no longer derives the day via a UTC toISOString slice', () => {
+    // eslint-disable-next-line global-require
+    const fs = require('fs');
+    // eslint-disable-next-line global-require
+    const path = require('path');
+    const source = fs.readFileSync(
+      path.join(__dirname, '../tables/bodyComposition.js'),
+      'utf8',
+    );
+    expect(source).not.toMatch(/return\s+new Date\(ms\)\.toISOString\(\)\.split/);
+    expect(source).toMatch(/localDayKey\(/);
+  });
+});
+
 describe('body_composition_log pull (LWW)', () => {
   function makePullSb({ data = [], error = null } = {}) {
     return {
