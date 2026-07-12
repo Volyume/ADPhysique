@@ -176,6 +176,12 @@ function makePullSb({ data = [], error = null } = {}) {
             data: Array.isArray(data) ? data[0] ?? null : data,
             error,
           }));
+          // LS-03b: the paginated pulls (body_metrics/daily_steps/cardio_log)
+          // now call .eq(...).range(from, to); model one page of `data`.
+          chain.range = jest.fn(async (from, to) => (
+            error ? { data: null, error }
+                  : { data: (Array.isArray(data) ? data : []).slice(from, to + 1), error: null }
+          ));
           return chain;
         }),
       })),

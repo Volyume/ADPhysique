@@ -251,7 +251,15 @@ describe('notification_preferences pull', () => {
     return {
       from: jest.fn(() => ({
         select: jest.fn(() => ({
-          eq: jest.fn(async () => ({ data, error })),
+          eq: jest.fn(() => {
+            // LS-03b: awaitable AND .range()-capable (paginated pulls page via .range()).
+            const chain = Promise.resolve({ data, error });
+            chain.range = jest.fn(async (from, to) => (
+              error ? { data: null, error }
+                    : { data: (Array.isArray(data) ? data : []).slice(from, to + 1), error: null }
+            ));
+            return chain;
+          }),
         })),
       })),
     };
@@ -413,7 +421,15 @@ describe('weekly_checkins_v2 pull', () => {
     return {
       from: jest.fn(() => ({
         select: jest.fn(() => ({
-          eq: jest.fn(async () => ({ data, error })),
+          eq: jest.fn(() => {
+            // LS-03b: awaitable AND .range()-capable (paginated pulls page via .range()).
+            const chain = Promise.resolve({ data, error });
+            chain.range = jest.fn(async (from, to) => (
+              error ? { data: null, error }
+                    : { data: (Array.isArray(data) ? data : []).slice(from, to + 1), error: null }
+            ));
+            return chain;
+          }),
         })),
       })),
     };
@@ -592,7 +608,15 @@ describe('body_composition_log pull', () => {
     return {
       from: jest.fn(() => ({
         select: jest.fn(() => ({
-          eq: jest.fn(async () => ({ data, error })),
+          eq: jest.fn(() => {
+            // LS-03b: awaitable AND .range()-capable (paginated pulls page via .range()).
+            const chain = Promise.resolve({ data, error });
+            chain.range = jest.fn(async (from, to) => (
+              error ? { data: null, error }
+                    : { data: (Array.isArray(data) ? data : []).slice(from, to + 1), error: null }
+            ));
+            return chain;
+          }),
         })),
       })),
     };
@@ -866,7 +890,15 @@ describe('recipe_ingredients pull (LWW)', () => {
     return {
       from: jest.fn(() => ({
         select: jest.fn(() => ({
-          eq: jest.fn(async () => ({ data, error })),
+          eq: jest.fn(() => {
+            // LS-03b: awaitable AND .range()-capable (paginated pulls page via .range()).
+            const chain = Promise.resolve({ data, error });
+            chain.range = jest.fn(async (from, to) => (
+              error ? { data: null, error }
+                    : { data: (Array.isArray(data) ? data : []).slice(from, to + 1), error: null }
+            ));
+            return chain;
+          }),
         })),
       })),
     };
