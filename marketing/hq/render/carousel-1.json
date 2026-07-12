@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "source": "marketing/hq/copy-library/social/week-1-carousels.md — Carousel 1",
+    "title": "When should you actually change your calories?",
+    "status": "DRAFT — not publish-ready until compliance-reviewer PASS is on record"
+  },
+  "slides": [
+    {
+      "heading": "When should you actually change your calories?",
+      "supporting": "Most people move too soon.",
+      "headingAmber": true
+    },
+    {
+      "heading": "One morning is not a signal.",
+      "supporting": "Bodyweight swings with water, food timing, salt and sleep.",
+      "diagram": "loneDot"
+    },
+    {
+      "heading": "Read the weekly trend, not the daily number.",
+      "supporting": "The line across the week tells you more than any one reading.",
+      "monoStat": { "value": "7", "caption": "mornings, one trend" },
+      "diagram": "weeklyTrend"
+    },
+    {
+      "heading": "Wait for enough mornings before you judge it.",
+      "supporting": "Three or more weigh-ins in a week give the trend something to stand on.",
+      "monoStat": { "value": "3+", "caption": "mornings" },
+      "diagram": "fillingDots"
+    },
+    {
+      "heading": "Then decide. Change, or hold.",
+      "supporting": "Sometimes the honest call is to leave it exactly where it is.",
+      "diagram": "fork"
+    },
+    {
+      "heading": "This is the decision Volyume makes each week.",
+      "supporting": "It reads your logged data, calls change or hold, and writes the reason down.",
+      "miniCard": {
+        "label": "Weekly decision",
+        "verdict": "Hold",
+        "pillOutline": true,
+        "reason": "Not enough mornings logged this week for a reliable trend."
+      }
+    }
+  ]
+}
