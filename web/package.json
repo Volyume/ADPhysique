@@ -19,6 +19,6 @@
     "@typescript-eslint/eslint-plugin": "^8.60.1",
     "@typescript-eslint/parser": "^8.60.1",
     "eslint": "^8.57.1",
-    "eslint-config-next": "^15.5.16"
+    "eslint-config-next": "15.4.11"
   }
 }
