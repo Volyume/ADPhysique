@@ -849,7 +849,7 @@ export default function MealPlanScreen({ navigation, route }) {
           <EmptyState
             icon="warning-outline"
             title="Couldn't load meal builder"
-            text="Check your connection and try again. Your diary has not been changed."
+            text="Couldn't load this on your device. Try again. Your diary has not been changed."
             actionLabel="Try again"
             onAction={load}
           />

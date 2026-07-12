@@ -98,6 +98,9 @@ beforeEach(() => {
 });
 
 describe('VolumeHeatmapScreen states', () => {
+  // EP-20/UI-10 (Codex end-user-polish audit): getCompletedWorkoutSets and
+  // the other loadData reads are LOCAL SQLite (src/lib/database.js), never a
+  // network call, so a failure here must never claim a connection problem.
   test('shows a retry state when volume data fails to load', async () => {
     getCompletedWorkoutSets.mockRejectedValueOnce(new Error('offline'));
     let tree;
@@ -106,7 +109,8 @@ describe('VolumeHeatmapScreen states', () => {
 
     const text = flattenText(tree.toJSON());
     expect(text).toContain("Couldn't load volume heatmap");
-    expect(text).toContain('Check your connection and try again.');
+    expect(text).toContain("Couldn't load this on your device. Try again.");
+    expect(text).not.toContain('Check your connection');
     expect(text).toContain('Try again');
     expect(text).not.toContain('Below minimum');
   });

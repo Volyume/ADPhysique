@@ -179,6 +179,10 @@ async function mountEmpty(userProfile) {
 }
 
 describe('MealPlanScreen meal-swap sheet', () => {
+  // EP-20/UI-10 (Codex end-user-polish audit): loadActiveMealPlan reads the
+  // LOCAL active plan (src/lib/food/mealPlanService.js -> getActiveMealPlan,
+  // SQLite), never a network call, so a failure here must never claim a
+  // connection problem.
   test('shows a retryable load error instead of the empty builder state', async () => {
     loadActiveMealPlan.mockRejectedValueOnce(new Error('db failed'));
     let tree;
@@ -187,6 +191,8 @@ describe('MealPlanScreen meal-swap sheet', () => {
     });
     const text = JSON.stringify(tree.toJSON());
     expect(text).toContain("Couldn't load meal builder");
+    expect(text).toContain("Couldn't load this on your device. Try again.");
+    expect(text).not.toContain('Check your connection');
     expect(text).toContain('Your diary has not been changed.');
     expect(text).not.toContain('Build a day or week to your targets');
   });

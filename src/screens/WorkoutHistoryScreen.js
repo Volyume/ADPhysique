@@ -797,7 +797,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
             <EmptyState
               icon="alert-circle-outline"
               title="Couldn't load workout history"
-              text="Check your connection and try again. Your saved sessions have not been changed."
+              text="Couldn't load this on your device. Try again. Your saved sessions have not been changed."
               actionLabel="Try again"
               onAction={loadWorkouts}
               actionAccessibilityLabel="Try loading workout history again"

@@ -211,7 +211,7 @@ export default function CardioHistoryScreen() {
         <EmptyState
           icon="warning-outline"
           title="Couldn't load cardio history"
-          text="Check your connection and try again."
+          text="Couldn't load this on your device. Try again."
           actionLabel="Try again"
           onAction={load}
         />

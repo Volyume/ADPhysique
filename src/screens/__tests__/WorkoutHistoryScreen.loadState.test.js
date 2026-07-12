@@ -133,6 +133,9 @@ describe('WorkoutHistoryScreen load states', () => {
     jest.clearAllMocks();
   });
 
+  // EP-20/UI-10 (Codex end-user-polish audit): getRecentCompletedWorkouts is a
+  // LOCAL SQLite read (src/lib/database.js), never a network call, so a
+  // failure here must never claim a connection problem.
   test('shows a retryable error instead of the empty state when workout history fails to load', async () => {
     getRecentCompletedWorkouts.mockRejectedValue(new Error('offline'));
 
@@ -144,7 +147,8 @@ describe('WorkoutHistoryScreen load states', () => {
 
     let text = flattenText(tree.toJSON());
     expect(text).toContain("Couldn't load workout history");
-    expect(text).toContain('Check your connection and try again.');
+    expect(text).toContain("Couldn't load this on your device. Try again.");
+    expect(text).not.toContain('Check your connection');
     expect(text).toContain('Try again');
     expect(text).not.toContain('Your sessions will appear here');
     expect(logError).toHaveBeenCalledWith(

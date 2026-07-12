@@ -108,6 +108,9 @@ beforeEach(() => {
 });
 
 describe('CardioHistoryScreen states', () => {
+  // EP-20/UI-10 (Codex end-user-polish audit): getRecentCardioLog/
+  // getCardioLogRange are LOCAL SQLite reads (src/lib/database.js), never a
+  // network call, so a failure here must never claim a connection problem.
   test('shows a retry state when cardio history fails to load', async () => {
     getRecentCardioLog.mockRejectedValueOnce(new Error('offline'));
     let tree;
@@ -116,7 +119,8 @@ describe('CardioHistoryScreen states', () => {
 
     const text = flattenText(tree.toJSON());
     expect(text).toContain("Couldn't load cardio history");
-    expect(text).toContain('Check your connection and try again.');
+    expect(text).toContain("Couldn't load this on your device. Try again.");
+    expect(text).not.toContain('Check your connection');
     expect(text).toContain('Try again');
     expect(text).not.toContain('No cardio yet');
   });

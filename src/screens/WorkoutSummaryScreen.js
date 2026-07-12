@@ -620,7 +620,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     } catch (e) {
       logError('WorkoutSummaryScreen.saveWorkoutFeedback', e, { workoutId, userId: user?.id });
       setSaving(false);
-      setSaveError('Could not save your session notes and ratings. Please check your connection and try Close again.');
+      setSaveError('Could not save your session notes and ratings on your device. Try Close again.');
       toast.show('Could not save your session yet. Try Close again.', { variant: 'error' });
       return;
     }

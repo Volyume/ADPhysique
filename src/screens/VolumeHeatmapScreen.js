@@ -369,7 +369,7 @@ export default function VolumeHeatmapScreen() {
           <EmptyState
             icon="warning-outline"
             title="Couldn't load volume heatmap"
-            text="Check your connection and try again."
+            text="Couldn't load this on your device. Try again."
             actionLabel="Try again"
             onAction={loadData}
           />

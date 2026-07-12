@@ -441,7 +441,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             </View>
             <Text maxFontSizeMultiplier={1.3} style={[styles.loadErrorTitle, live.loadErrorTitle]}>Couldn't load exercise details</Text>
             <Text maxFontSizeMultiplier={1.3} style={[styles.loadErrorText, live.loadErrorText]}>
-              Check your connection and try again. Your workout history has not been changed.
+              Couldn't load this on your device. Try again. Your workout history has not been changed.
             </Text>
             <Button
               title="Try again"

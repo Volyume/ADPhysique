@@ -77,6 +77,10 @@ describe('ExerciseDetailScreen load states', () => {
     jest.clearAllMocks();
   });
 
+  // EP-20/UI-10 (Codex end-user-polish audit): getExerciseById/getWorkoutSets
+  // ForExercise/getAllExercises are LOCAL SQLite reads (src/lib/database.js),
+  // never a network call, so a failure here must never claim a connection
+  // problem.
   test('shows a retryable error when exercise details fail to load', async () => {
     getExerciseById.mockRejectedValueOnce(new Error('offline'));
 
@@ -93,7 +97,8 @@ describe('ExerciseDetailScreen load states', () => {
 
     let text = flattenText(tree.toJSON());
     expect(text).toContain("Couldn't load exercise details");
-    expect(text).toContain('Check your connection and try again.');
+    expect(text).toContain("Couldn't load this on your device. Try again.");
+    expect(text).not.toContain('Check your connection');
     expect(text).toContain('Try again');
 
     getExerciseById.mockRejectedValueOnce(new Error('still offline'));
