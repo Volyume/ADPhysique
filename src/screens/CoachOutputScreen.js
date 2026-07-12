@@ -212,7 +212,7 @@ function AdjustmentRow({
       </View>
       <View style={styles.adjustmentContent}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
-          <Text maxFontSizeMultiplier={1.3} style={emphasis ? [styles.adjustmentLabelHero, live.adjustmentLabelHero] : [styles.adjustmentLabel, live.adjustmentLabel]}>{label}</Text>
+          <Text style={emphasis ? [styles.adjustmentLabelHero, live.adjustmentLabelHero] : [styles.adjustmentLabel, live.adjustmentLabel]}>{label}</Text>
           {/* L04-11: the recovery-week (deload) row is the one jargon term
               named inline in an Apply row's label rather than a section
               header, so the gloss sits right next to it. */}
@@ -220,15 +220,15 @@ function AdjustmentRow({
           {applied && !settling && (
             <View style={[styles.appliedChip, live.appliedChip]}>
               <Ionicons name="checkmark" size={10} color={t.colors.success} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.appliedChipText, live.appliedChipText]}>Applied</Text>
+              <Text style={[styles.appliedChipText, live.appliedChipText]}>Applied</Text>
             </View>
           )}
         </View>
-        {note ? <Text maxFontSizeMultiplier={1.3} style={[styles.adjustmentNote, live.adjustmentNote]}>{note}</Text> : null}
-        {detail ? <Text maxFontSizeMultiplier={1.3} style={[styles.adjustmentDetail, live.adjustmentDetail]}>{detail}</Text> : null}
+        {note ? <Text style={[styles.adjustmentNote, live.adjustmentNote]}>{note}</Text> : null}
+        {detail ? <Text style={[styles.adjustmentDetail, live.adjustmentDetail]}>{detail}</Text> : null}
         {holdNote && !applied ? (
           <HoldEnter live={holdArrived}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.adjustmentHold, live.adjustmentHold]}>{holdNote}</Text>
+            <Text style={[styles.adjustmentHold, live.adjustmentHold]}>{holdNote}</Text>
           </HoldEnter>
         ) : null}
       </View>
@@ -382,7 +382,7 @@ function TrainingNextWeekCard({
           {!canApply && !deloadApplied && (
             <View style={[styles.planNote, live.planNote]}>
               <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.planNoteText, live.planNoteText]}>
+              <Text style={[styles.planNoteText, live.planNoteText]}>
                 Start your next training week to bring the recovery week forward.
               </Text>
             </View>
@@ -404,7 +404,7 @@ function TrainingNextWeekCard({
           />
           <View style={[styles.planNote, live.planNote]}>
             <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.planNoteText, live.planNoteText]}>
+            <Text style={[styles.planNoteText, live.planNoteText]}>
               This sets next week's starting volume. Your plan still fine-tunes each session as you train.
             </Text>
           </View>
@@ -420,7 +420,7 @@ function TrainingNextWeekCard({
               accessibilityLabel="See your updated plan"
             >
               <Ionicons name="barbell-outline" size={14} color={t.colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.planEditLinkText, live.planEditLinkText]}>See your updated plan</Text>
+              <Text style={[styles.planEditLinkText, live.planEditLinkText]}>See your updated plan</Text>
             </TouchableOpacity>
           ) : null}
         </>
@@ -442,30 +442,30 @@ function DietBreakCard({ weeksInDeficit, applied, onApply, applyState, onApplySe
   return (
     <Card style={styles.dietBreakCard} elevated={hero} tone={hero ? 'primary' : undefined}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
-        <Text maxFontSizeMultiplier={1.3} style={hero ? [styles.dietBreakTitleHero, live.dietBreakTitleHero] : [styles.dietBreakTitle, live.dietBreakTitle]}>Diet break worth considering</Text>
+        <Text style={hero ? [styles.dietBreakTitleHero, live.dietBreakTitleHero] : [styles.dietBreakTitle, live.dietBreakTitle]}>Diet break worth considering</Text>
         <InfoTooltip text={GLOSSARY.maintenanceCalories} size={13} />
         {applied && !settling && (
           <View style={[styles.appliedChip, live.appliedChip]}>
             <Ionicons name="checkmark" size={10} color={t.colors.success} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.appliedChipText, live.appliedChipText]}>Applied</Text>
+            <Text style={[styles.appliedChipText, live.appliedChipText]}>Applied</Text>
           </View>
         )}
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.dietBreakBody, live.dietBreakBody]}>
+      <Text style={[styles.dietBreakBody, live.dietBreakBody]}>
         {weeksInDeficit >= 8
           ? `You have been in a calorie deficit for ${weeksInDeficit} weeks. `
           : 'You have been in a calorie deficit for over eight weeks. '}
         {'A short diet break, returning to maintenance calories for one to two weeks, can help your body settle back to its normal calorie burn and improve long-term fat loss. Consider taking a break before your next phase.'}
       </Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.dietBreakFootnote, live.dietBreakFootnote]}>
+      <Text style={[styles.dietBreakFootnote, live.dietBreakFootnote]}>
         Based on the MATADOR trial (2017). This is a suggestion, not a requirement.
       </Text>
       {!applied && previewKcal != null ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.adjustmentDetail, live.adjustmentDetail]}>{preTapTargetLine(previewKcal, energyUnit)}</Text>
+        <Text style={[styles.adjustmentDetail, live.adjustmentDetail]}>{preTapTargetLine(previewKcal, energyUnit)}</Text>
       ) : null}
       {!applied && notice ? (
         <HoldEnter live>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.adjustmentHold, live.adjustmentHold]}>{notice}</Text>
+          <Text style={[styles.adjustmentHold, live.adjustmentHold]}>{notice}</Text>
         </HoldEnter>
       ) : null}
       {((!applied && onApply && !notice) || settling) && (
@@ -509,26 +509,26 @@ function MacroCycleCard({ macroCycle, applied, onApply, applyState, onApplySettl
         {applied && !settling && (
           <View style={[styles.appliedChip, live.appliedChip, { marginBottom: spacing.xs }]}>
             <Ionicons name="checkmark" size={10} color={t.colors.success} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.appliedChipText, live.appliedChipText]}>Applied</Text>
+            <Text style={[styles.appliedChipText, live.appliedChipText]}>Applied</Text>
           </View>
         )}
       </View>
       <View style={styles.macroCycleRow}>
         <View style={[styles.macroCycleCol, live.macroCycleCol]}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.macroCycleColLabel, live.macroCycleColLabel]}>Training days</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.macroCycleColKcal, live.macroCycleColKcal]}>{formatEnergy(trainingDay.kcal, energyUnit)} {unitLabel}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.macroCycleColCarbs, live.macroCycleColCarbs]}>{trainingDay.carbsG}g carbs</Text>
+          <Text style={[styles.macroCycleColLabel, live.macroCycleColLabel]}>Training days</Text>
+          <Text style={[styles.macroCycleColKcal, live.macroCycleColKcal]}>{formatEnergy(trainingDay.kcal, energyUnit)} {unitLabel}</Text>
+          <Text style={[styles.macroCycleColCarbs, live.macroCycleColCarbs]}>{trainingDay.carbsG}g carbs</Text>
         </View>
         <View style={[styles.macroCycleCol, live.macroCycleCol]}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.macroCycleColLabel, live.macroCycleColLabel]}>Rest days</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.macroCycleColKcal, live.macroCycleColKcal]}>{formatEnergy(restDay.kcal, energyUnit)} {unitLabel}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.macroCycleColCarbs, live.macroCycleColCarbs]}>{restDay.carbsG}g carbs</Text>
+          <Text style={[styles.macroCycleColLabel, live.macroCycleColLabel]}>Rest days</Text>
+          <Text style={[styles.macroCycleColKcal, live.macroCycleColKcal]}>{formatEnergy(restDay.kcal, energyUnit)} {unitLabel}</Text>
+          <Text style={[styles.macroCycleColCarbs, live.macroCycleColCarbs]}>{restDay.carbsG}g carbs</Text>
         </View>
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.adjustmentNote, live.adjustmentNote]}>{macroCycle.note}</Text>
+      <Text style={[styles.adjustmentNote, live.adjustmentNote]}>{macroCycle.note}</Text>
       {!applied && holdNote ? (
         <HoldEnter live={holdArrived}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.adjustmentHold, live.adjustmentHold]}>{holdNote}</Text>
+          <Text style={[styles.adjustmentHold, live.adjustmentHold]}>{holdNote}</Text>
         </HoldEnter>
       ) : null}
       {((!applied && onApply && !holdNote) || settling) && (
@@ -569,28 +569,28 @@ function RefeedCard({ refeed, applied, onApply, applyState, onApplySettled, ener
         {applied && !settling && (
           <View style={[styles.appliedChip, live.appliedChip, { marginBottom: spacing.xs }]}>
             <Ionicons name="checkmark" size={10} color={t.colors.success} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.appliedChipText, live.appliedChipText]}>Applied</Text>
+            <Text style={[styles.appliedChipText, live.appliedChipText]}>Applied</Text>
           </View>
         )}
       </View>
       <View style={styles.macroCycleRow}>
         <View style={[styles.macroCycleCol, live.macroCycleCol]}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.macroCycleColLabel, live.macroCycleColLabel]}>Refeed target</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.macroCycleColKcal, live.macroCycleColKcal]}>{formatEnergy(refeed.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.macroCycleColCarbs, live.macroCycleColCarbs]}>{refeed.carbsG}g carbs</Text>
+          <Text style={[styles.macroCycleColLabel, live.macroCycleColLabel]}>Refeed target</Text>
+          <Text style={[styles.macroCycleColKcal, live.macroCycleColKcal]}>{formatEnergy(refeed.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+          <Text style={[styles.macroCycleColCarbs, live.macroCycleColCarbs]}>{refeed.carbsG}g carbs</Text>
         </View>
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.adjustmentNote, live.adjustmentNote]}>{refeed.note}</Text>
+      <Text style={[styles.adjustmentNote, live.adjustmentNote]}>{refeed.note}</Text>
       {/* NU-4: this write is genuinely one day (the Diary resolves it onto the
           single next training day), so the duration says exactly that. Gated
           on the absence of the failure notice (holdNote) so "Applies to your
           next training day only." never stacks under "nothing was applied". */}
       {!applied && !holdNote ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.adjustmentDetail, live.adjustmentDetail]}>Applies to your next training day only.</Text>
+        <Text style={[styles.adjustmentDetail, live.adjustmentDetail]}>Applies to your next training day only.</Text>
       ) : null}
       {!applied && holdNote ? (
         <HoldEnter live>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.adjustmentHold, live.adjustmentHold]}>{holdNote}</Text>
+          <Text style={[styles.adjustmentHold, live.adjustmentHold]}>{holdNote}</Text>
         </HoldEnter>
       ) : null}
       {((!applied && onApply && !holdNote) || settling) && (
@@ -646,7 +646,7 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUn
           {standardDecisions.map((d, i) => (
             <View key={i} style={styles.heldRow}>
               <Ionicons name="pause-circle-outline" size={16} color={t.colors.textMuted} style={{ marginTop: spacing.xxs }} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.heldText, live.heldText]}>{d.reason}</Text>
+              <Text style={[styles.heldText, live.heldText]}>{d.reason}</Text>
             </View>
           ))}
           {/* COMP-006: only on standard holds, never alongside the ED-pattern
@@ -660,14 +660,14 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUn
               accessibilityLabel="See how Precision Coaching decides"
             >
               <Ionicons name="information-circle-outline" size={14} color={t.colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.heldLearnMoreText, live.heldLearnMoreText]}>See how Precision Coaching decides</Text>
+              <Text style={[styles.heldLearnMoreText, live.heldLearnMoreText]}>See how Precision Coaching decides</Text>
             </TouchableOpacity>
           ) : null}
         </>
       ) : null}
       {historyWithHeld.length > 0 ? (
         <View style={styles.heldHistoryShelf}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.heldHistoryTitle, live.heldHistoryTitle]}>PREVIOUS WEEKS</Text>
+          <Text style={[styles.heldHistoryTitle, live.heldHistoryTitle]}>PREVIOUS WEEKS</Text>
           {historyWithHeld.map((entry, i) => (
             <View
               key={i}
@@ -677,16 +677,16 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUn
                 i === historyWithHeld.length - 1 && { borderBottomWidth: 0 },
               ]}
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.heldHistoryDate, live.heldHistoryDate]}>{weekRangeLabel(entry.weekStart)}</Text>
+              <Text style={[styles.heldHistoryDate, live.heldHistoryDate]}>{weekRangeLabel(entry.weekStart)}</Text>
               {entry.heldDecisions.map((d, j) => (
-                <Text maxFontSizeMultiplier={1.3} key={j} style={[styles.heldHistoryText, live.heldHistoryText]}>{d.reason}</Text>
+                <Text key={j} style={[styles.heldHistoryText, live.heldHistoryText]}>{d.reason}</Text>
               ))}
             </View>
           ))}
         </View>
       ) : (
         <View style={styles.heldHistoryShelf}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.heldHistoryEmptyText, live.heldHistoryEmptyText]}>
+          <Text style={[styles.heldHistoryEmptyText, live.heldHistoryEmptyText]}>
             Your held-decision history will appear here as weeks pass.
           </Text>
         </View>
@@ -698,7 +698,7 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUn
           accessibilityRole="button"
           accessibilityLabel="See all coaching decisions"
         >
-          <Text maxFontSizeMultiplier={1.3} style={[styles.heldSeeAllText, live.heldSeeAllText]}>See all weeks</Text>
+          <Text style={[styles.heldSeeAllText, live.heldSeeAllText]}>See all weeks</Text>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
       ) : null}
@@ -747,30 +747,30 @@ function EdPatternLockoutBlock({ decision }) {
   }, []);
   return (
     <View style={[styles.edLockoutCard, live.edLockoutCard]}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.edLockoutHeader, live.edLockoutHeader]}>{ED_PATTERN_LOCKOUT_COPY.header}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.edLockoutTitle, live.edLockoutTitle]}>{ED_PATTERN_LOCKOUT_COPY.title}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.edLockoutBody, live.edLockoutBody]}>{ED_PATTERN_LOCKOUT_COPY.body}</Text>
+      <Text style={[styles.edLockoutHeader, live.edLockoutHeader]}>{ED_PATTERN_LOCKOUT_COPY.header}</Text>
+      <Text style={[styles.edLockoutTitle, live.edLockoutTitle]}>{ED_PATTERN_LOCKOUT_COPY.title}</Text>
+      <Text style={[styles.edLockoutBody, live.edLockoutBody]}>{ED_PATTERN_LOCKOUT_COPY.body}</Text>
       {decision?.goalLockAdvanced ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.edLockoutBody, live.edLockoutBody]}>{ED_PATTERN_LOCKOUT_COPY.bodyGoalLockExtension}</Text>
+        <Text style={[styles.edLockoutBody, live.edLockoutBody]}>{ED_PATTERN_LOCKOUT_COPY.bodyGoalLockExtension}</Text>
       ) : null}
       {showReadMore ? (
         <View style={[styles.edLockoutReadMoreBox, live.edLockoutReadMoreBox]}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.edLockoutReadMoreText, live.edLockoutReadMoreText]}>{ED_PATTERN_LOCKOUT_COPY.readMoreBody}</Text>
+          <Text style={[styles.edLockoutReadMoreText, live.edLockoutReadMoreText]}>{ED_PATTERN_LOCKOUT_COPY.readMoreBody}</Text>
         </View>
       ) : null}
       <View style={styles.edLockoutCtaRow}>
         <TouchableOpacity onPress={openSupport} style={[styles.edLockoutCtaPrimary, live.edLockoutCtaPrimary]} accessibilityRole="button">
-          <Text maxFontSizeMultiplier={1.3} style={[styles.edLockoutCtaPrimaryText, live.edLockoutCtaPrimaryText]}>
+          <Text style={[styles.edLockoutCtaPrimaryText, live.edLockoutCtaPrimaryText]}>
             {ED_PATTERN_LOCKOUT_COPY.ctaSupport} · {supportLink.name}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setShowReadMore(v => !v)} style={[styles.edLockoutCtaGhost, live.edLockoutCtaGhost]} accessibilityRole="button">
-          <Text maxFontSizeMultiplier={1.3} style={[styles.edLockoutCtaGhostText, live.edLockoutCtaGhostText]}>
+          <Text style={[styles.edLockoutCtaGhostText, live.edLockoutCtaGhostText]}>
             {showReadMore ? 'Hide' : ED_PATTERN_LOCKOUT_COPY.ctaReadMore}
           </Text>
         </TouchableOpacity>
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.edLockoutBottomNote, live.edLockoutBottomNote]}>{ED_PATTERN_LOCKOUT_COPY.bottomNote}</Text>
+      <Text style={[styles.edLockoutBottomNote, live.edLockoutBottomNote]}>{ED_PATTERN_LOCKOUT_COPY.bottomNote}</Text>
     </View>
   );
 }
@@ -796,9 +796,9 @@ function EdPatternClearedBlock() {
   }, []);
   return (
     <View style={[styles.edClearedCard, live.edClearedCard]}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.edClearedHeader, live.edClearedHeader]}>{ED_PATTERN_CLEARED_COPY.header}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.edClearedTitle, live.edClearedTitle]}>{ED_PATTERN_CLEARED_COPY.title}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.edClearedBody, live.edClearedBody]}>{ED_PATTERN_CLEARED_COPY.body}</Text>
+      <Text style={[styles.edClearedHeader, live.edClearedHeader]}>{ED_PATTERN_CLEARED_COPY.header}</Text>
+      <Text style={[styles.edClearedTitle, live.edClearedTitle]}>{ED_PATTERN_CLEARED_COPY.title}</Text>
+      <Text style={[styles.edClearedBody, live.edClearedBody]}>{ED_PATTERN_CLEARED_COPY.body}</Text>
     </View>
   );
 }
@@ -817,12 +817,12 @@ function RapidLossCorrectedBlock({ decision, energyUnit }) {
   const delta = decision?.kcalDelta;
   return (
     <View style={[styles.edClearedCard, live.edClearedCard]}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.edClearedHeader, live.edClearedHeader]}>{RAPID_LOSS_CORRECTED_COPY.header}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.edClearedTitle, live.edClearedTitle]}>{RAPID_LOSS_CORRECTED_COPY.title}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.edClearedBody, live.edClearedBody]}>{RAPID_LOSS_CORRECTED_COPY.body}</Text>
+      <Text style={[styles.edClearedHeader, live.edClearedHeader]}>{RAPID_LOSS_CORRECTED_COPY.header}</Text>
+      <Text style={[styles.edClearedTitle, live.edClearedTitle]}>{RAPID_LOSS_CORRECTED_COPY.title}</Text>
+      <Text style={[styles.edClearedBody, live.edClearedBody]}>{RAPID_LOSS_CORRECTED_COPY.body}</Text>
       {/* NU-6: the figure (not the locked copy) honours the kJ preference. */}
       {typeof delta === 'number' && delta > 0 ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.edClearedBody, live.edClearedBody]}>{`Daily target raised by ${signedEnergyChange(delta, energyUnit)}.`}</Text>
+        <Text style={[styles.edClearedBody, live.edClearedBody]}>{`Daily target raised by ${signedEnergyChange(delta, energyUnit)}.`}</Text>
       ) : null}
     </View>
   );
@@ -853,14 +853,14 @@ function InsufficientDataView({ dataNote, receipt, onClose }) {
         <View style={styles.insufficientIconRow}>
           <Ionicons name="time-outline" size={32} color={t.colors.primary} />
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.insufficientTitle, live.insufficientTitle]}>Building your baseline.</Text>
+        <Text style={[styles.insufficientTitle, live.insufficientTitle]}>Building your baseline.</Text>
         {/* A3 (audit 04 §4): the hold is a decision, so it renders as a full
             receipt, what the coach read, the rule it applied, and the named
             unlock date, not a bare "come back later" panel. The neutral
             (ED-flag) receipt has no rows by construction. */}
         {receipt?.ledger?.rows?.length ? (
           <View style={styles.receiptRows}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.receiptLabel, live.receiptLabel]}>{receipt.ledger.title}</Text>
+            <Text style={[styles.receiptLabel, live.receiptLabel]}>{receipt.ledger.title}</Text>
             {receipt.ledger.rows.map((row) => (
               <View key={row.key} style={styles.receiptRow}>
                 <Ionicons
@@ -868,17 +868,17 @@ function InsufficientDataView({ dataNote, receipt, onClose }) {
                   size={14}
                   color={row.done ? t.colors.success : t.colors.textMuted}
                 />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.receiptRowText, live.receiptRowText]}>{row.label}</Text>
+                <Text style={[styles.receiptRowText, live.receiptRowText]}>{row.label}</Text>
               </View>
             ))}
           </View>
         ) : null}
-        <Text maxFontSizeMultiplier={1.3} style={[styles.insufficientBody, live.insufficientBody]}>
+        <Text style={[styles.insufficientBody, live.insufficientBody]}>
           {receipt?.rule ?? dataNote ??
             'Your coach reads your training and weight from day one. It holds calorie and volume changes until it has about two weeks of weigh-ins plus a check-in, so it moves on a real trend rather than one noisy week. Keep logging sessions, your morning weight, and your weekly check-in. The first adjustment lands once the trend is clear.'}
         </Text>
         {receipt?.unlockLine ? (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.receiptUnlock, live.receiptUnlock]}>{receipt.unlockLine}</Text>
+          <Text style={[styles.receiptUnlock, live.receiptUnlock]}>{receipt.unlockLine}</Text>
         ) : null}
       </Card>
       <Button
@@ -907,8 +907,8 @@ function LoadErrorView({ onRetry, onClose }) {
         <View style={styles.insufficientIconRow}>
           <Ionicons name="cloud-offline-outline" size={32} color={t.colors.textMuted} />
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.insufficientTitle, live.insufficientTitle]}>Couldn't load your coach.</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.insufficientBody, live.insufficientBody]}>
+        <Text style={[styles.insufficientTitle, live.insufficientTitle]}>Couldn't load your coach.</Text>
+        <Text style={[styles.insufficientBody, live.insufficientBody]}>
           Something went wrong fetching this week&apos;s data, usually a
           dropped connection. Your logs are safe. Try again in a moment.
         </Text>
@@ -925,7 +925,7 @@ function LoadErrorView({ onRetry, onClose }) {
           (all variants carry either a fill or a border); left hand-rolled
           rather than force a visual mismatch (see final report). */}
       <TouchableOpacity style={styles.secondaryBtn} onPress={onClose} activeOpacity={0.8} accessibilityRole="button">
-        <Text maxFontSizeMultiplier={1.3} style={[styles.secondaryBtnText, live.secondaryBtnText]}>Close</Text>
+        <Text style={[styles.secondaryBtnText, live.secondaryBtnText]}>Close</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -2297,8 +2297,8 @@ export default function CoachOutputScreen({ navigation, route }) {
       >
         {/* Week header */}
         <Reanimated.View entering={stage(0)} style={styles.weekHeader}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.weekLabel, live.weekLabel]}>{weekLabel}</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.weekRange, live.weekRange]}>{weekRangeLabel(weekStart)}</Text>
+          <Text style={[styles.weekLabel, live.weekLabel]}>{weekLabel}</Text>
+          <Text style={[styles.weekRange, live.weekRange]}>{weekRangeLabel(weekStart)}</Text>
         </Reanimated.View>
 
         {/* D15 (founder ruling 2026-07-09): the adherence-why line, said once
@@ -2308,7 +2308,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         {showAdherenceWhy ? (
           <View style={styles.cardioNoteRow}>
             <Ionicons name="bulb-outline" size={14} color={t.colors.primary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.cardioNoteText, live.cardioNoteText]}>
+            <Text style={[styles.cardioNoteText, live.cardioNoteText]}>
               Consistency is what your coach reads best. The more sessions you log, the better it understands how your body responds, and the more precisely it can adjust your plan.
             </Text>
           </View>
@@ -2330,13 +2330,13 @@ export default function CoachOutputScreen({ navigation, route }) {
             {/* S1c: last week's pre-commitment, answered. Leads the card, it is
                 the "did the coach get it right" payoff that pulls users back. */}
             {coachResponse.commitmentAnswer ? (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.coachLeadCommitment, live.coachLeadCommitment]}>{coachResponse.commitmentAnswer}</Text>
+              <Text style={[styles.coachLeadCommitment, live.coachLeadCommitment]}>{coachResponse.commitmentAnswer}</Text>
             ) : null}
             {coachResponse.acknowledgement ? (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.coachLeadAck, live.coachLeadAck]}>{coachResponse.acknowledgement}</Text>
+              <Text style={[styles.coachLeadAck, live.coachLeadAck]}>{coachResponse.acknowledgement}</Text>
             ) : null}
             {coachResponse.interpretation ? (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.coachLeadInterpretation, live.coachLeadInterpretation]}>{coachResponse.interpretation}</Text>
+              <Text style={[styles.coachLeadInterpretation, live.coachLeadInterpretation]}>{coachResponse.interpretation}</Text>
             ) : null}
           </Reanimated.View>
         ) : null}
@@ -2354,7 +2354,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             {/* Wave A B6: the WHY never sits a scroll away from the WHAT. One
                 line here; the full WhyBlock further down keeps the detail. */}
             {whyThisWeek ? (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.heroWhy, live.heroWhy]}>
+              <Text style={[styles.heroWhy, live.heroWhy]}>
                 {'The reason: '}
                 {whyThisWeek.includes('. ') ? whyThisWeek.slice(0, whyThisWeek.indexOf('. ') + 1) : whyThisWeek}
               </Text>
@@ -2368,13 +2368,13 @@ export default function CoachOutputScreen({ navigation, route }) {
           <Reanimated.View entering={stage(2, motion.hero)} style={styles.heroZone}>
             <SectionLabel tone="primary" style={styles.heroLabel}>This week&apos;s main move</SectionLabel>
             <View style={[styles.holdHeroCard, live.holdHeroCard]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.holdHeroText, live.holdHeroText]}>
+              <Text style={[styles.holdHeroText, live.holdHeroText]}>
                 {heldDecisions && heldDecisions.length > 0
                   ? 'Hold steady. The reasons are below.'
                   : 'Nothing to change. The plan is working.'}
               </Text>
               {whyThisWeek ? (
-                <Text maxFontSizeMultiplier={1.3} style={[styles.heroWhy, live.heroWhy]}>
+                <Text style={[styles.heroWhy, live.heroWhy]}>
                   {'The reason: '}
                   {whyThisWeek.includes('. ') ? whyThisWeek.slice(0, whyThisWeek.indexOf('. ') + 1) : whyThisWeek}
                 </Text>
@@ -2418,8 +2418,8 @@ export default function CoachOutputScreen({ navigation, route }) {
 
         {canShowProgressScanCoachContext ? (
           <View style={[styles.planEditCard, live.planEditCard]} accessibilityRole="summary">
-            <Text maxFontSizeMultiplier={1.3} style={[styles.planEditHead, live.planEditHead]}>{progressScanCoachContext.title}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.planEditBody, live.planEditBody]}>
+            <Text style={[styles.planEditHead, live.planEditHead]}>{progressScanCoachContext.title}</Text>
+            <Text style={[styles.planEditBody, live.planEditBody]}>
               {progressScanCoachContext.body}
             </Text>
             {scanAssessmentPacket ? (
@@ -2428,12 +2428,12 @@ export default function CoachOutputScreen({ navigation, route }) {
                 accessible
                 accessibilityLabel={scanAssessmentAccessibilityLabel(scanAssessmentPacket)}
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.scanAssessmentHeadline, live.scanAssessmentHeadline]}>{scanAssessmentPacket.receipt.headline}</Text>
+                <Text style={[styles.scanAssessmentHeadline, live.scanAssessmentHeadline]}>{scanAssessmentPacket.receipt.headline}</Text>
                 {scanAssessmentPacket.receipt.detail ? (
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.scanAssessmentDetail, live.scanAssessmentDetail]}>{scanAssessmentPacket.receipt.detail}</Text>
+                  <Text style={[styles.scanAssessmentDetail, live.scanAssessmentDetail]}>{scanAssessmentPacket.receipt.detail}</Text>
                 ) : null}
                 {scanAssessmentUsedSentence ? (
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.scanAssessmentDetail, live.scanAssessmentDetail]}>{scanAssessmentUsedSentence}</Text>
+                  <Text style={[styles.scanAssessmentDetail, live.scanAssessmentDetail]}>{scanAssessmentUsedSentence}</Text>
                 ) : null}
               </View>
             ) : null}
@@ -2455,7 +2455,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             accessibilityLabel="Great week. Share it?"
           >
             <Ionicons name="share-outline" size={15} color={t.colors.success} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.shareWeekText, live.shareWeekText]}>Great week. Share it?</Text>
+            <Text style={[styles.shareWeekText, live.shareWeekText]}>Great week. Share it?</Text>
           </TouchableOpacity>
         )}
 
@@ -2483,8 +2483,8 @@ export default function CoachOutputScreen({ navigation, route }) {
             meal plan, the coach says what moved, at the gram of rice. */}
         {planEditNote ? (
           <View style={[styles.planEditCard, live.planEditCard]} accessibilityRole="summary">
-            <Text maxFontSizeMultiplier={1.3} style={[styles.planEditHead, live.planEditHead]}>{planEditNote.headline}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.planEditBody, live.planEditBody]}>{planEditNote.body}</Text>
+            <Text style={[styles.planEditHead, live.planEditHead]}>{planEditNote.headline}</Text>
+            <Text style={[styles.planEditBody, live.planEditBody]}>{planEditNote.body}</Text>
           </View>
         ) : null}
 
@@ -2492,8 +2492,8 @@ export default function CoachOutputScreen({ navigation, route }) {
             next week's meals straight from the check-in, then land on the plan
             to swap and get the shopping list. */}
         <View style={[styles.planEditCard, live.planEditCard]}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.planEditHead, live.planEditHead]}>Plan next week&apos;s meals</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.planEditBody, live.planEditBody]}>
+          <Text style={[styles.planEditHead, live.planEditHead]}>Plan next week&apos;s meals</Text>
+          <Text style={[styles.planEditBody, live.planEditBody]}>
             A full week built to next week&apos;s targets, with a shopping list.
             Review it, swap meals if needed, then add it to your diary.
           </Text>
@@ -2506,7 +2506,7 @@ export default function CoachOutputScreen({ navigation, route }) {
               accessibilityLabel="Plan a fresh week of meals"
             >
               <Ionicons name="calendar-outline" size={14} color={t.colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.planEditLinkText, live.planEditLinkText]}>{planningWeek ? 'Building' : 'Fresh week'}</Text>
+              <Text style={[styles.planEditLinkText, live.planEditLinkText]}>{planningWeek ? 'Building' : 'Fresh week'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.planEditLink, live.planEditLink]}
@@ -2516,7 +2516,7 @@ export default function CoachOutputScreen({ navigation, route }) {
               accessibilityLabel="Repeat last week's meals"
             >
               <Ionicons name="repeat-outline" size={14} color={t.colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.planEditLinkText, live.planEditLinkText]}>Repeat last week</Text>
+              <Text style={[styles.planEditLinkText, live.planEditLinkText]}>Repeat last week</Text>
             </TouchableOpacity>
           </View>
           {planEditNote?.deepLink ? (
@@ -2527,7 +2527,7 @@ export default function CoachOutputScreen({ navigation, route }) {
               accessibilityLabel={planEditNote.deepLink.label}
             >
               <Ionicons name="restaurant-outline" size={14} color={t.colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.planEditLinkText, live.planEditLinkText]}>{planEditNote.deepLink.label}</Text>
+              <Text style={[styles.planEditLinkText, live.planEditLinkText]}>{planEditNote.deepLink.label}</Text>
             </TouchableOpacity>
           ) : null}
         </View>
@@ -2538,14 +2538,14 @@ export default function CoachOutputScreen({ navigation, route }) {
         {cardioFlag ? (
           <View style={styles.cardioNoteRow}>
             <Ionicons name="alert-circle-outline" size={14} color={t.colors.warning} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.cardioNoteText, live.cardioNoteText]}>{cardioFlag}</Text>
+            <Text style={[styles.cardioNoteText, live.cardioNoteText]}>{cardioFlag}</Text>
           </View>
         ) : null}
         {/* D1: light acknowledgement of cardio logged outside a cut. */}
         {cardioAcknowledgement ? (
           <View style={styles.cardioNoteRow}>
             <Ionicons name="checkmark-circle-outline" size={14} color={t.colors.success} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.cardioNoteText, live.cardioNoteText]}>{cardioAcknowledgement}</Text>
+            <Text style={[styles.cardioNoteText, live.cardioNoteText]}>{cardioAcknowledgement}</Text>
           </View>
         ) : null}
         {/* U4: cycle-phase reassurance for a small period-week water rise
@@ -2554,7 +2554,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         {cyclePhaseNote?.note ? (
           <View style={styles.cardioNoteRow}>
             <Ionicons name="water-outline" size={14} color={t.colors.primary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.cardioNoteText, live.cardioNoteText]}>{cyclePhaseNote.note}</Text>
+            <Text style={[styles.cardioNoteText, live.cardioNoteText]}>{cyclePhaseNote.note}</Text>
           </View>
         ) : null}
 
@@ -2567,7 +2567,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             (assessDataConfidence) and persists it, but it was never surfaced.
             One calm line so the user knows how solid this week's read was. */}
         {CONFIDENCE_CAPTIONS[displayConfidence] ? (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.confidenceCaption, live.confidenceCaption]}>
+          <Text style={[styles.confidenceCaption, live.confidenceCaption]}>
             {CONFIDENCE_CAPTIONS[displayConfidence]}
             {/* Wave A B6: name WHICH data was thin when it was the weigh-ins.
                 No threshold claim here, so this line can never disagree with
@@ -2590,8 +2590,8 @@ export default function CoachOutputScreen({ navigation, route }) {
           if (!focus) return null;
           return (
             <View style={[styles.focusCard, live.focusCard]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.focusLabel, live.focusLabel]}>Focus this week</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.focusText, live.focusText]}>{focus}</Text>
+              <Text style={[styles.focusLabel, live.focusLabel]}>Focus this week</Text>
+              <Text style={[styles.focusText, live.focusText]}>{focus}</Text>
             </View>
           );
         })()}
@@ -2614,13 +2614,13 @@ export default function CoachOutputScreen({ navigation, route }) {
         {/* S1c pre-commitment: the specific, checkable thing next week's read
             will answer, named in advance. Sits with the forward-pull. */}
         {coachResponse.preCommitment ? (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.preCommitmentLine, live.preCommitmentLine]}>{coachResponse.preCommitment}</Text>
+          <Text style={[styles.preCommitmentLine, live.preCommitmentLine]}>{coachResponse.preCommitment}</Text>
         ) : null}
 
         {/* Coach response part 5: the forward-pull anchor closes the response
             below the always-visible safety shelf. */}
         {coachResponse.forward ? (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.forwardLine, live.forwardLine]}>{coachResponse.forward}</Text>
+          <Text style={[styles.forwardLine, live.forwardLine]}>{coachResponse.forward}</Text>
         ) : null}
 
         {/* B4: contest countdown. Deliberately BELOW the safety shelf (rule 1:
@@ -2631,15 +2631,15 @@ export default function CoachOutputScreen({ navigation, route }) {
             line (docs/b4-contest-countdown-ed-review-2026-07-02.md). */}
         {countdown ? (
           <View style={[styles.countdownCard, live.countdownCard]} accessibilityRole="summary">
-            <Text maxFontSizeMultiplier={1.3} style={[styles.countdownLine, live.countdownLine]}>{countdown.line}</Text>
+            <Text style={[styles.countdownLine, live.countdownLine]}>{countdown.line}</Text>
             {countdown.checkpoint ? (
               <>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.countdownCheckpointTitle, live.countdownCheckpointTitle]}>{countdown.checkpoint.title}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.countdownCheckpointDetail, live.countdownCheckpointDetail]}>{countdown.checkpoint.detail}</Text>
+                <Text style={[styles.countdownCheckpointTitle, live.countdownCheckpointTitle]}>{countdown.checkpoint.title}</Text>
+                <Text style={[styles.countdownCheckpointDetail, live.countdownCheckpointDetail]}>{countdown.checkpoint.detail}</Text>
               </>
             ) : null}
             {countdown.isPeakWeek ? (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.countdownDisclaimer, live.countdownDisclaimer]}>
+              <Text style={[styles.countdownDisclaimer, live.countdownDisclaimer]}>
                 Volyume provides estimates and guidance, not medical advice. Consult a qualified professional before making significant changes to your diet or training.
               </Text>
             ) : null}
@@ -2661,13 +2661,13 @@ export default function CoachOutputScreen({ navigation, route }) {
           accessibilityLabel="Coaching history"
         >
           <Ionicons name="time-outline" size={14} color={t.colors.textSecondary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.historyQuietText, live.historyQuietText]}>Coaching history</Text>
+          <Text style={[styles.historyQuietText, live.historyQuietText]}>Coaching history</Text>
         </TouchableOpacity>
 
         {/* Done: a quiet text action (A1 one-amber rule). The hero Apply is
             the screen's only amber fill. */}
         <TouchableOpacity style={styles.doneQuietBtn} onPress={handleClose} activeOpacity={0.8} accessibilityRole="button">
-          <Text maxFontSizeMultiplier={1.3} style={[styles.doneQuietText, live.doneQuietText]}>Done</Text>
+          <Text style={[styles.doneQuietText, live.doneQuietText]}>Done</Text>
         </TouchableOpacity>
 
         {/* Founder-approved tooltips (2026-07-09): "volume" already has a
@@ -2675,22 +2675,22 @@ export default function CoachOutputScreen({ navigation, route }) {
             "Training next week"); autoregulation and RED-S were the two
             remaining dense terms in this credential line. */}
         <View style={styles.credentialNoteRow}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.credentialNoteInline, live.credentialNoteInline]}>
+          <Text style={[styles.credentialNoteInline, live.credentialNoteInline]}>
             Precision Coaching is built on published training science: volume landmarks,{' '}
           </Text>
           <View style={styles.credentialTermRow}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.credentialNoteInline, live.credentialNoteInline]}>autoregulation,</Text>
+            <Text style={[styles.credentialNoteInline, live.credentialNoteInline]}>autoregulation,</Text>
             <InfoTooltip text={GLOSSARY.autoregulation} size={12} />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.credentialNoteInline, live.credentialNoteInline]}> and </Text>
+          <Text style={[styles.credentialNoteInline, live.credentialNoteInline]}> and </Text>
           <View style={styles.credentialTermRow}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.credentialNoteInline, live.credentialNoteInline]}>RED-S</Text>
+            <Text style={[styles.credentialNoteInline, live.credentialNoteInline]}>RED-S</Text>
             <InfoTooltip text={GLOSSARY.redS} size={12} />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.credentialNoteInline, live.credentialNoteInline]}> safety limits, configured to your data.</Text>
+          <Text style={[styles.credentialNoteInline, live.credentialNoteInline]}> safety limits, configured to your data.</Text>
         </View>
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.credentialNote, live.credentialNote]}>
+        <Text style={[styles.credentialNote, live.credentialNote]}>
           Volyume provides estimates and guidance, not medical advice. Consult a qualified professional before making significant changes to your diet or training.
         </Text>
       </ScrollView>
@@ -2942,7 +2942,9 @@ const styles = StyleSheet.create({
   adjustmentIconWrap: {
     width: 32,
     height: 32,
-    borderRadius: radius.sm,
+    // R2 (2026-07-11): icon-backing family -> radius.md (control/input/
+    // icon-backing class, FOOD-DESIGN-STANDARD.md section 4). Was radius.sm.
+    borderRadius: radius.md,
     backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -3148,7 +3150,12 @@ const styles = StyleSheet.create({
   // B4 countdown: deliberately neutral (surface + border, no amber).
   countdownCard: {
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    // R2 (remediation 2026-07-11): a plain surface content card, so it takes
+    // the app-wide card radius (radius.lg), matching its four sibling surface
+    // cards in this file (planEditCard/holdHeroCard/coachLeadCard/focusCard).
+    // It is NOT a tinted D69/D70 banner (those keep radius.md). Box only -- the
+    // ED/calm suppression gate that hides this surface is untouched.
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.lg,

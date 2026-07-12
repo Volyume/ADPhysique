@@ -53,8 +53,8 @@ function CoachBriefCard({ brief, onDismiss }) {
     <View style={[styles.coachBriefCard, live.coachBriefCard, { borderColor }]}>
       <Ionicons name={iconName} size={18} color={iconColor} style={{ marginTop: spacing.xxs }} />
       <View style={{ flex: 1, gap: 3 }}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.coachBriefHeadline, live.coachBriefHeadline]}>{brief.headline}</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.coachBriefBody, live.coachBriefBody]}>{brief.body}</Text>
+        <Text style={[styles.coachBriefHeadline, live.coachBriefHeadline]}>{brief.headline}</Text>
+        <Text style={[styles.coachBriefBody, live.coachBriefBody]}>{brief.body}</Text>
       </View>
       <TouchableOpacity
         onPress={onDismiss}

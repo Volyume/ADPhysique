@@ -24,6 +24,7 @@ import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionE
 import { saveNutritionTargets, getNutritionTargets, logBodyMetric, getUserBodyProfile, getLatestBodyWeight, getLatestBodyComposition } from '../lib/database';
 import { daysToActivityLevel } from '../lib/coachingGoals';
 import { hydrateLoadedTargets, getRecommendedMeals } from '../lib/nutritionTargetsView';
+import { isValidBodyWeightKg, isValidBodyFatPercent } from '../lib/bodyMetricValidate';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import * as haptics from '../lib/haptics';
@@ -158,8 +159,8 @@ function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent, barColor
         : null;
   return (
     <Card radius="md" padding="md" style={styles.macroCard}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.macroGrams, live.macroGrams]}>{grams}g</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.macroLabel, live.macroLabel]}>{label}</Text>
+      <Text style={[styles.macroGrams, live.macroGrams]}>{grams}g</Text>
+      <Text style={[styles.macroLabel, live.macroLabel]}>{label}</Text>
       {/* D3 (design audit 03): a thin proportional bar in the macro's
           category hue, sized by its share of the day's calories. Category
           identity only, never adherence, it does not change on hit/miss. */}
@@ -174,12 +175,12 @@ function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent, barColor
         </View>
       ) : null}
       {ratioText ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.macroPerKg, live.macroPerKg]}>{ratioText}</Text>
+        <Text style={[styles.macroPerKg, live.macroPerKg]}>{ratioText}</Text>
       ) : null}
       {/* Descriptive %-of-calories this macro contributes (grams × its Atwater
           factor ÷ target kcal). Factual readout, not a judgement. */}
       {kcalPercent != null ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.macroPercent, live.macroPercent]}>{`~${kcalPercent}% of kcal`}</Text>
+        <Text style={[styles.macroPercent, live.macroPercent]}>{`~${kcalPercent}% of kcal`}</Text>
       ) : null}
     </Card>
   );
@@ -210,10 +211,10 @@ function WhySection({ icon, color, title, body }) {
         <View style={[styles.whySectionIcon, { backgroundColor: withAlpha(color, alpha.tint) }]}>
           <Ionicons name={icon} size={14} color={color} />
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.whySectionTitle, live.whySectionTitle]}>{title}</Text>
+        <Text style={[styles.whySectionTitle, live.whySectionTitle]}>{title}</Text>
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={14} color={t.colors.textMuted} />
       </TouchableOpacity>
-      {open ? <Text maxFontSizeMultiplier={1.3} style={[styles.whySectionBody, live.whySectionBody]}>{body}</Text> : null}
+      {open ? <Text style={[styles.whySectionBody, live.whySectionBody]}>{body}</Text> : null}
     </View>
   );
 }
@@ -446,6 +447,21 @@ export default function NutritionTargetsScreen({ navigation }) {
       return;
     }
 
+    // AC-08 (Codex adversarial audit, 2026-07-12): the truthiness check above
+    // let an out-of-range weight/body-fat (a mistyped 99999 kg, a negative
+    // body fat) straight through to the engine, AsyncStorage AND the
+    // auto-seeded body_metric_log below. Gate on the same shared bounds
+    // bodyMetricValidate.js uses for the Body Metrics form, so a corrupt
+    // figure is rejected here too rather than clamped silently and persisted.
+    if (!isValidBodyWeightKg(weightNum)) {
+      toast.show('That body weight looks off. Enter a realistic figure and try again.', { variant: 'error' });
+      return;
+    }
+    if (bfNum != null && !isValidBodyFatPercent(bfNum)) {
+      toast.show('That body fat looks off. Enter a percentage between 1 and 80.', { variant: 'error' });
+      return;
+    }
+
     // Custom protein approach without a g/kg value used to crash the
     // engine. The engine now falls back, but warn here so the user knows
     // their custom value didn't take effect.
@@ -524,7 +540,9 @@ export default function NutritionTargetsScreen({ navigation }) {
       // Collapse form to show results prominently
       setFormCollapsed(true);
     } catch (e) {
-      toast.show(e.message || 'Could not calculate targets', { variant: 'error' });
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('NutritionTargets.calculate', e, { userId: user?.id }); } catch (_) {}
+      toast.show('Could not calculate your targets, try again', { variant: 'error' });
     } finally {
       setCalculating(false);
     }
@@ -560,7 +578,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               }
             />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.pageSubtitle, live.pageSubtitle]}>
+          <Text style={[styles.pageSubtitle, live.pageSubtitle]}>
             Calculate your personalised daily calorie and protein targets.
           </Text>
 
@@ -577,8 +595,8 @@ export default function NutritionTargetsScreen({ navigation }) {
               <Ionicons name="book-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.eduTitle, live.eduTitle]}>New to calories and macros?</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.eduBody, live.eduBody]}>5-minute guide to what these numbers mean and how to actually use them.</Text>
+              <Text style={[styles.eduTitle, live.eduTitle]}>New to calories and macros?</Text>
+              <Text style={[styles.eduBody, live.eduBody]}>5-minute guide to what these numbers mean and how to actually use them.</Text>
             </View>
             <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
           </Card>
@@ -589,12 +607,12 @@ export default function NutritionTargetsScreen({ navigation }) {
               unchanged); the full form is one tap away via "Fine-tune". */}
           {formCollapsed && !results ? (
             <Card style={styles.fastCard}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.fastTitle, live.fastTitle]}>Set it for me</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.fastSubtitle, live.fastSubtitle]}>
+              <Text style={[styles.fastTitle, live.fastTitle]}>Set it for me</Text>
+              <Text style={[styles.fastSubtitle, live.fastSubtitle]}>
                 Answer a few quick questions and we'll set a starting daily target. You can fine-tune anything afterwards.
               </Text>
 
-              <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Your goal</Text>
+              <Text style={[styles.fieldLabel, live.fieldLabel]}>Your goal</Text>
               <View style={styles.goalGrid}>
                 {GOALS.filter(g => !(calm && g.key === 'aggressive_cut')).map(g => {
                   const active = goal === g.key;
@@ -611,8 +629,8 @@ export default function NutritionTargetsScreen({ navigation }) {
                       {active && (
                         <Ionicons name="checkmark-circle" size={14} color={t.colors.primary} style={styles.goalCheck} />
                       )}
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.goalLabel, live.goalLabel, active && [styles.goalLabelActive, live.goalLabelActive]]}>{g.label}</Text>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.goalDetail, live.goalDetail, active && [styles.goalDetailActive, live.goalDetailActive]]}>{g.detail}</Text>
+                      <Text style={[styles.goalLabel, live.goalLabel, active && [styles.goalLabelActive, live.goalLabelActive]]}>{g.label}</Text>
+                      <Text style={[styles.goalDetail, live.goalDetail, active && [styles.goalDetailActive, live.goalDetailActive]]}>{g.detail}</Text>
                     </Card>
                   );
                 })}
@@ -625,7 +643,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                   protein approach and body fat % keep their defaults behind
                   "Fine-tune these numbers". */}
               <View style={styles.formGroup}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Sex</Text>
+                <Text style={[styles.fieldLabel, live.fieldLabel]}>Sex</Text>
                 <PillGroup
                   options={[{ key: 'male', label: 'Male' }, { key: 'female', label: 'Female' }]}
                   selected={sex}
@@ -633,11 +651,11 @@ export default function NutritionTargetsScreen({ navigation }) {
                 />
               </View>
               <View style={styles.formGroup}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Age</Text>
+                <Text style={[styles.fieldLabel, live.fieldLabel]}>Age</Text>
                 <AgeYearsField value={age} onChangeText={setAge} />
               </View>
               <View style={styles.formGroup}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Height</Text>
+                <Text style={[styles.fieldLabel, live.fieldLabel]}>Height</Text>
                 <HeightFeetInchesField
                   feet={heightFt}
                   onChangeFeet={setHeightFt}
@@ -646,7 +664,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 />
               </View>
               <View style={styles.formGroup}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Current weight (kg)</Text>
+                <Text style={[styles.fieldLabel, live.fieldLabel]}>Current weight (kg)</Text>
                 <NumericField
                   value={weight}
                   onChangeText={setWeight}
@@ -662,7 +680,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               <Card style={styles.consentCard}>
                 <Ionicons name="lock-closed-outline" size={18} color={t.colors.textSecondary} style={{ marginTop: spacing.xxs }} />
                 <View style={styles.consentBody}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.consentText, live.consentText]}>
+                  <Text style={[styles.consentText, live.consentText]}>
                     Your body data is stored only on this device. It is never shared and you can delete it at any time.
                   </Text>
                   <ConsentCheckboxRow
@@ -692,7 +710,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 accessibilityLabel="Fine-tune these numbers"
               >
                 <Ionicons name="options-outline" size={14} color={t.colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.fineTuneText, live.fineTuneText]}>Fine-tune these numbers</Text>
+                <Text style={[styles.fineTuneText, live.fineTuneText]}>Fine-tune these numbers</Text>
               </TouchableOpacity>
             </Card>
           ) : null}
@@ -706,7 +724,7 @@ export default function NutritionTargetsScreen({ navigation }) {
 
           {/* Biological sex */}
           <View style={styles.formGroup}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Sex</Text>
+            <Text style={[styles.fieldLabel, live.fieldLabel]}>Sex</Text>
             <PillGroup
               options={[{ key: 'male', label: 'Male' }, { key: 'female', label: 'Female' }]}
               selected={sex}
@@ -716,13 +734,13 @@ export default function NutritionTargetsScreen({ navigation }) {
 
           {/* Age */}
           <View style={styles.formGroup}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Age</Text>
+            <Text style={[styles.fieldLabel, live.fieldLabel]}>Age</Text>
             <AgeYearsField value={age} onChangeText={setAge} />
           </View>
 
           {/* Height */}
           <View style={styles.formGroup}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Height</Text>
+            <Text style={[styles.fieldLabel, live.fieldLabel]}>Height</Text>
             <HeightFeetInchesField
               feet={heightFt}
               onChangeFeet={setHeightFt}
@@ -733,7 +751,7 @@ export default function NutritionTargetsScreen({ navigation }) {
 
           {/* Weight */}
           <View style={styles.formGroup}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Current weight (kg)</Text>
+            <Text style={[styles.fieldLabel, live.fieldLabel]}>Current weight (kg)</Text>
             <NumericField
               value={weight}
               onChangeText={setWeight}
@@ -746,7 +764,7 @@ export default function NutritionTargetsScreen({ navigation }) {
 
           {/* Body fat */}
           <View style={styles.formGroup}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Body fat estimate % <Text maxFontSizeMultiplier={1.3} style={[styles.optional, live.optional]}>(optional)</Text></Text>
+            <Text style={[styles.fieldLabel, live.fieldLabel]}>Body fat estimate % <Text style={[styles.optional, live.optional]}>(optional)</Text></Text>
             <NumericField
               value={bodyFat}
               onChangeText={setBodyFat}
@@ -760,7 +778,7 @@ export default function NutritionTargetsScreen({ navigation }) {
           {/* BF Source, only shown when BF is entered */}
           {bodyFat.trim() ? (
             <View style={styles.formGroup}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Estimate source</Text>
+              <Text style={[styles.fieldLabel, live.fieldLabel]}>Estimate source</Text>
               <PillGroup
                 options={BF_SOURCES}
                 selected={bfSource}
@@ -774,7 +792,7 @@ export default function NutritionTargetsScreen({ navigation }) {
           <SectionHeading title="Activity & training" />
 
           <View style={styles.formGroup}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Activity level</Text>
+            <Text style={[styles.fieldLabel, live.fieldLabel]}>Activity level</Text>
             <PillGroup
               options={ACTIVITY_OPTIONS}
               selected={activity}
@@ -807,10 +825,10 @@ export default function NutritionTargetsScreen({ navigation }) {
                       style={styles.goalCheck}
                     />
                   )}
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.goalLabel, live.goalLabel, active && [styles.goalLabelActive, live.goalLabelActive]]}>
+                  <Text style={[styles.goalLabel, live.goalLabel, active && [styles.goalLabelActive, live.goalLabelActive]]}>
                     {g.label}
                   </Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.goalDetail, live.goalDetail, active && [styles.goalDetailActive, live.goalDetailActive]]}>
+                  <Text style={[styles.goalDetail, live.goalDetail, active && [styles.goalDetailActive, live.goalDetailActive]]}>
                     {g.detail}
                   </Text>
                 </Card>
@@ -831,7 +849,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               "There is no single right answer. The level you can consistently hit every day will produce better results than an aggressive target you miss half the time.\n\n" +
               "The approaches below are the specific targets Volyume uses; they sit towards the higher end of these ranges, where muscle retention is strongest."
             } />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.approachNoteText, live.approachNoteText]}>Different guidelines use different targets. Pick the level you can consistently sustain.</Text>
+            <Text style={[styles.approachNoteText, live.approachNoteText]}>Different guidelines use different targets. Pick the level you can consistently sustain.</Text>
           </View>
 
           {['standard', 'optimised', 'advanced', 'custom'].map(key => {
@@ -849,24 +867,24 @@ export default function NutritionTargetsScreen({ navigation }) {
               >
                 <View style={styles.approachCardHeader}>
                   {active && <Ionicons name="checkmark-circle" size={14} color={t.colors.primary} style={{ marginRight: spacing.xs }} />}
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.approachCardLabel, live.approachCardLabel, active && [styles.approachCardLabelActive, live.approachCardLabelActive]]}>
+                  <Text style={[styles.approachCardLabel, live.approachCardLabel, active && [styles.approachCardLabelActive, live.approachCardLabelActive]]}>
                     {ap.label}
                   </Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.approachCardRange, live.approachCardRange, active && [styles.approachCardRangeActive, live.approachCardRangeActive]]}>
+                  <Text style={[styles.approachCardRange, live.approachCardRange, active && [styles.approachCardRangeActive, live.approachCardRangeActive]]}>
                     {key !== 'custom' ? ap.range : ''}
                   </Text>
                   {key === 'optimised' && (
                     <View style={[styles.recommendedBadge, live.recommendedBadge]}>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.recommendedBadgeText, live.recommendedBadgeText]}>Recommended</Text>
+                      <Text style={[styles.recommendedBadgeText, live.recommendedBadgeText]}>Recommended</Text>
                     </View>
                   )}
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.approachCardDesc, live.approachCardDesc, active && [styles.approachCardDescActive, live.approachCardDescActive]]}>
+                <Text style={[styles.approachCardDesc, live.approachCardDesc, active && [styles.approachCardDescActive, live.approachCardDescActive]]}>
                   {ap.description}
                 </Text>
                 {active && key === 'custom' && (
                   <View style={styles.customProteinRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.customProteinLabel, live.customProteinLabel]}>Protein target</Text>
+                    <Text style={[styles.customProteinLabel, live.customProteinLabel]}>Protein target</Text>
                     <NumericField
                       fieldStyle={styles.customProteinInputField}
                       inputStyle={[styles.customProteinInput, live.customProteinInput]}
@@ -877,7 +895,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                       maxLength={4}
                       accessibilityLabel="Protein target, grams per kilogram"
                     />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.customProteinUnit, live.customProteinUnit]}>g / kg</Text>
+                    <Text style={[styles.customProteinUnit, live.customProteinUnit]}>g / kg</Text>
                   </View>
                 )}
               </Card>
@@ -889,7 +907,7 @@ export default function NutritionTargetsScreen({ navigation }) {
           <Card style={styles.consentCard}>
             <Ionicons name="lock-closed-outline" size={18} color={t.colors.textSecondary} style={{ marginTop: spacing.xxs }} />
             <View style={styles.consentBody}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.consentText, live.consentText]}>
+              <Text style={[styles.consentText, live.consentText]}>
                 Your body data is stored only on this device. It is never shared and you can delete it at any time.
               </Text>
               <ConsentCheckboxRow
@@ -907,7 +925,7 @@ export default function NutritionTargetsScreen({ navigation }) {
             <Card radius="md" padding="md" style={styles.collapsedSummary}>
               <View style={styles.collapsedRow}>
                 <Ionicons name="nutrition" size={14} color={t.colors.textMuted} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.collapsedText, live.collapsedText]} numberOfLines={1}>
+                <Text style={[styles.collapsedText, live.collapsedText]} numberOfLines={1}>
                   {age && weight && heightFt
                     ? `${sex === 'male' ? 'Male' : 'Female'} - ${age}yrs - ${heightFt}ft${heightIn ? ` ${heightIn}in` : ''} - ${weight}kg - ${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? goal}`
                     : `${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? 'Targets set during coaching setup'}`}
@@ -955,11 +973,11 @@ export default function NutritionTargetsScreen({ navigation }) {
                 const kMax = Math.round(Number(results.kcalMax) || tk * 1.1);
                 return (
                   <Card elevated padding="xl" style={styles.heroCard}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.heroLabel, live.heroLabel]}>Daily Energy Target</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.heroKcal, live.heroKcal]}>
+                    <Text style={[styles.heroLabel, live.heroLabel]}>Daily Energy Target</Text>
+                    <Text style={[styles.heroKcal, live.heroKcal]}>
                       {formatEnergy(tk, energyUnit)} {energyUnitLabel(energyUnit)}
                     </Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.heroRange, live.heroRange]}>
+                    <Text style={[styles.heroRange, live.heroRange]}>
                       Estimated range: {formatEnergy(kMin, energyUnit)} – {formatEnergy(kMax, energyUnit)} {energyUnitLabel(energyUnit)}
                     </Text>
                     {/* NU-7: make the floor's action legible. floorApplied is the
@@ -971,7 +989,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                     {results.floorApplied ? (
                       <View style={styles.heroFloorRow}>
                         <Ionicons name="shield-checkmark-outline" size={14} color={t.colors.success} />
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.heroFloorText, live.heroFloorText]}>Held at your safe minimum</Text>
+                        <Text style={[styles.heroFloorText, live.heroFloorText]}>Held at your safe minimum</Text>
                       </View>
                     ) : null}
                   </Card>
@@ -1035,7 +1053,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                   // changing any of its content.
                   <Card padding="md" style={styles.perMealCard}>
                     <View style={styles.perMealHeader}>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.perMealHeading, live.perMealHeading]}>PER MEAL</Text>
+                      <Text style={[styles.perMealHeading, live.perMealHeading]}>PER MEAL</Text>
                       <InfoTooltip
                         size={12}
                         text={
@@ -1047,8 +1065,8 @@ export default function NutritionTargetsScreen({ navigation }) {
                     </View>
 
                     <View style={styles.perMealCenter}>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.perMealValue, live.perMealValue]}>{perMeal}g</Text>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.perMealUnit, live.perMealUnit]}>protein per meal</Text>
+                      <Text style={[styles.perMealValue, live.perMealValue]}>{perMeal}g</Text>
+                      <Text style={[styles.perMealUnit, live.perMealUnit]}>protein per meal</Text>
                     </View>
 
                     <View style={styles.mealDotsRow}>
@@ -1058,7 +1076,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                     </View>
 
                     <View style={styles.mealCountRow}>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.mealCountLabel, live.mealCountLabel]}>Across</Text>
+                      <Text style={[styles.mealCountLabel, live.mealCountLabel]}>Across</Text>
                       <View style={styles.mealCountChips}>
                         {[3, 4, 5, 6, 7, 8].map(n => {
                           const active = effectiveMeals === n;
@@ -1072,7 +1090,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                               accessibilityLabel={`${n} meals per day${isRecommended ? ', recommended' : ''}`}
                               accessibilityState={{ selected: active }}
                             >
-                              <Text maxFontSizeMultiplier={1.3} style={[styles.mealCountChipText, live.mealCountChipText, active && [styles.mealCountChipTextActive, live.mealCountChipTextActive]]}>
+                              <Text style={[styles.mealCountChipText, live.mealCountChipText, active && [styles.mealCountChipTextActive, live.mealCountChipTextActive]]}>
                                 {n}
                               </Text>
                               {isRecommended && (
@@ -1082,11 +1100,11 @@ export default function NutritionTargetsScreen({ navigation }) {
                           );
                         })}
                       </View>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.mealCountLabel, live.mealCountLabel]}>meals per day</Text>
+                      <Text style={[styles.mealCountLabel, live.mealCountLabel]}>meals per day</Text>
                     </View>
 
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.mealCountRecCaption, live.mealCountRecCaption]}>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.mealCountRecCaptionDot, live.mealCountRecCaptionDot]}>●</Text>
+                    <Text style={[styles.mealCountRecCaption, live.mealCountRecCaption]}>
+                      <Text style={[styles.mealCountRecCaptionDot, live.mealCountRecCaptionDot]}>●</Text>
                       {` Recommended: ${recommended} meals per day for this protein target`}
                     </Text>
 
@@ -1107,7 +1125,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                     {windowHint && (
                       <View style={[styles.perMealHint, live.perMealHint]}>
                         <Ionicons name="information-circle-outline" size={13} color={t.colors.warning} />
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.perMealHintText, live.perMealHintText]}>{windowHint}</Text>
+                        <Text style={[styles.perMealHintText, live.perMealHintText]}>{windowHint}</Text>
                       </View>
                     )}
                   </Card>
@@ -1121,15 +1139,15 @@ export default function NutritionTargetsScreen({ navigation }) {
               {/* L05-NT2: padding="md" (was Card default "lg"), same density
                   rationale as perMealCard above. */}
               <Card padding="md" style={styles.howCard}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.howCardTitle, live.howCardTitle]}>Why these targets</Text>
+              <Text style={[styles.howCardTitle, live.howCardTitle]}>Why these targets</Text>
 
               {/* Phase, may be absent when loaded from DB */}
               {(results.goal || results.phase) ? (
                 <View style={styles.howPhaseBlock}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.phaseTitle, live.phaseTitle]}>
+                  <Text style={[styles.phaseTitle, live.phaseTitle]}>
                     {results.phase || GOALS.find(g => g.key === results.goal)?.label || ''}
                   </Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.phaseDesc, live.phaseDesc]}>
+                  <Text style={[styles.phaseDesc, live.phaseDesc]}>
                     {PHASE_DESCRIPTIONS[results.goal] ?? ''}
                   </Text>
                 </View>
@@ -1244,7 +1262,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                     >
                       <View style={styles.whyHeaderLeft}>
                         <Ionicons name="school-outline" size={18} color={t.colors.textSecondary} />
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.whyHeaderLabel, live.whyHeaderLabel]}>Open the full calculation</Text>
+                        <Text style={[styles.whyHeaderLabel, live.whyHeaderLabel]}>Open the full calculation</Text>
                       </View>
                       <Ionicons name={whyExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={t.colors.textMuted} />
                     </TouchableOpacity>
@@ -1276,7 +1294,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                     size={20}
                     color={buildConfidenceColors(t)[results.confidence] ?? t.colors.textMuted}
                   />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.confidenceText, live.confidenceText]}>
+                  <Text style={[styles.confidenceText, live.confidenceText]}>
                     {CONFIDENCE_LABELS[results.confidence]}
                   </Text>
                 </View>
@@ -1304,7 +1322,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                     {results.floorApplied ? (
                       <View style={[styles.floorBanner, live.floorBanner]}>
                         <Ionicons name="shield-checkmark-outline" size={16} color={t.colors.success} />
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.floorBannerText, live.floorBannerText]}>
+                        <Text style={[styles.floorBannerText, live.floorBannerText]}>
                           Your numbers came out below the minimum we hold targets at, so we
                           raised them. The target above is your safe minimum. Eating below it
                           would work against your training, recovery and health.
@@ -1314,7 +1332,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                     {rest.map((w, i) => (
                       <View key={i} style={[styles.warningBanner, live.warningBanner]}>
                         <Ionicons name="warning-outline" size={16} color={t.colors.warning} />
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.warningText, live.warningText]}>{w}</Text>
+                        <Text style={[styles.warningText, live.warningText]}>{w}</Text>
                       </View>
                     ))}
                   </>
@@ -1340,7 +1358,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                     activeOpacity={0.85}
                   >
                     <Ionicons name="trending-up-outline" size={16} color={t.colors.primary} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.easeNudgeText, live.easeNudgeText]}>Ease this cut to about {formatEnergy(results.eaCaution.suggestedKcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+                    <Text style={[styles.easeNudgeText, live.easeNudgeText]}>Ease this cut to about {formatEnergy(results.eaCaution.suggestedKcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
                   </TouchableOpacity>
                 );
               })() : null}
@@ -1355,17 +1373,17 @@ export default function NutritionTargetsScreen({ navigation }) {
                   <Card radius="md" padding="md" style={styles.awarenessCard}>
                     <View style={styles.awarenessHeader}>
                       <Ionicons name="nutrition-outline" size={16} color={t.colors.primary} />
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.awarenessTitle, live.awarenessTitle]}>{awareness.title}</Text>
+                      <Text style={[styles.awarenessTitle, live.awarenessTitle]}>{awareness.title}</Text>
                     </View>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.awarenessIntro, live.awarenessIntro]}>{awareness.intro}</Text>
+                    <Text style={[styles.awarenessIntro, live.awarenessIntro]}>{awareness.intro}</Text>
                     {awareness.nutrients.map(n => (
                       <View key={n.key} style={styles.awarenessNutrient}>
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.awarenessNutrientName, live.awarenessNutrientName]}>{n.name}</Text>
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.awarenessNutrientBody, live.awarenessNutrientBody]}>{n.why}</Text>
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.awarenessNutrientFoods, live.awarenessNutrientFoods]}>{n.foods}</Text>
+                        <Text style={[styles.awarenessNutrientName, live.awarenessNutrientName]}>{n.name}</Text>
+                        <Text style={[styles.awarenessNutrientBody, live.awarenessNutrientBody]}>{n.why}</Text>
+                        <Text style={[styles.awarenessNutrientFoods, live.awarenessNutrientFoods]}>{n.foods}</Text>
                       </View>
                     ))}
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.awarenessFootnote, live.awarenessFootnote]}>{awareness.footnote}</Text>
+                    <Text style={[styles.awarenessFootnote, live.awarenessFootnote]}>{awareness.footnote}</Text>
                   </Card>
                 );
               })()}
@@ -1378,7 +1396,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 style={styles.expandHeader}
                 accessibilityLabel="How was this calculated?"
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.expandTitle, live.expandTitle]}>How was this calculated?</Text>
+                <Text style={[styles.expandTitle, live.expandTitle]}>How was this calculated?</Text>
                 <Ionicons
                   name={expanded ? 'chevron-up' : 'chevron-down'}
                   size={18}
@@ -1389,48 +1407,48 @@ export default function NutritionTargetsScreen({ navigation }) {
               {expanded && (
                 <Card radius="md" padding="md" style={styles.expandBody}>
                   <View style={styles.calcRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, live.calcKey]}>Formula</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcValue, live.calcValue]}>{results.bmrFormula}</Text>
+                    <Text style={[styles.calcKey, live.calcKey]}>Formula</Text>
+                    <Text style={[styles.calcValue, live.calcValue]}>{results.bmrFormula}</Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, live.calcKey]}>Resting calorie burn</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcValue, live.calcValue]}>{formatEnergy(results.bmrKcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+                    <Text style={[styles.calcKey, live.calcKey]}>Resting calorie burn</Text>
+                    <Text style={[styles.calcValue, live.calcValue]}>{formatEnergy(results.bmrKcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, live.calcKey]}>Maintenance calories</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcValue, live.calcValue]}>{formatEnergy(results.maintenanceKcal ?? results.targetKcal ?? 0, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+                    <Text style={[styles.calcKey, live.calcKey]}>Maintenance calories</Text>
+                    <Text style={[styles.calcValue, live.calcValue]}>{formatEnergy(results.maintenanceKcal ?? results.targetKcal ?? 0, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, live.calcKey]}>Phase adjustment</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcValue, live.calcValue]}>{results.phase}</Text>
+                    <Text style={[styles.calcKey, live.calcKey]}>Phase adjustment</Text>
+                    <Text style={[styles.calcValue, live.calcValue]}>{results.phase}</Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, live.calcKey]}>Projected weekly change</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcValue, live.calcValue]}>
+                    <Text style={[styles.calcKey, live.calcKey]}>Projected weekly change</Text>
+                    <Text style={[styles.calcValue, live.calcValue]}>
                       {results.targetRateKgPerWeek > 0 ? '+' : ''}
                       {results.targetRateKgPerWeek} kg/week
                     </Text>
                   </View>
                   <View style={[styles.calcRow, { marginTop: spacing.xs, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: t.colors.border }]}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, live.calcKey, { fontWeight: fontWeight.bold }]}>Macro method</Text>
+                    <Text style={[styles.calcKey, live.calcKey, { fontWeight: fontWeight.bold }]}>Macro method</Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, live.calcKey]}>Protein basis</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcValue, live.calcValue]}>
+                    <Text style={[styles.calcKey, live.calcKey]}>Protein basis</Text>
+                    <Text style={[styles.calcValue, live.calcValue]}>
                       {results.proteinBasis === 'lbm'
                         ? `${results.proteinGPerKgLbm ?? 'n/a'} g/kg muscle mass`
                         : `${results.proteinGPerKg ?? 'n/a'} g/kg bodyweight`}
                     </Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, live.calcKey]}>Fat</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcValue, live.calcValue]}>Per phase (0.7 to 1.0 g/kg BW) · min 0.5 g/kg</Text>
+                    <Text style={[styles.calcKey, live.calcKey]}>Fat</Text>
+                    <Text style={[styles.calcValue, live.calcValue]}>Per phase (0.7 to 1.0 g/kg BW) · min 0.5 g/kg</Text>
                   </View>
                   <View style={styles.calcRow}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcKey, live.calcKey]}>Carbs</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.calcValue, live.calcValue]}>Remaining calories</Text>
+                    <Text style={[styles.calcKey, live.calcKey]}>Carbs</Text>
+                    <Text style={[styles.calcValue, live.calcValue]}>Remaining calories</Text>
                   </View>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.disclaimer, live.disclaimer]}>
+                  <Text style={[styles.disclaimer, live.disclaimer]}>
                     These targets are estimates, not medical advice. Consult a qualified professional before making significant dietary changes.
                   </Text>
                 </Card>

@@ -116,7 +116,7 @@ export default function WeeklyStoryScreen() {
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom', 'left', 'right']}>
       <BackHeader title="Your week" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.intro, live.intro]}>
+        <Text style={[styles.intro, live.intro]}>
           {story.weekLabel ? `The week of ${story.weekLabel}, in one place.` : 'This week, in one place.'}
         </Text>
 
@@ -135,7 +135,7 @@ export default function WeeklyStoryScreen() {
               <Ionicons name={c.icon} size={18} color={t.colors.primary} />
               <SectionLabel tone="muted">{c.heading}</SectionLabel>
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.chapterBody, live.chapterBody, c.empty && [styles.chapterBodyEmpty, live.chapterBodyEmpty]]}>{c.body}</Text>
+            <Text style={[styles.chapterBody, live.chapterBody, c.empty && [styles.chapterBodyEmpty, live.chapterBodyEmpty]]}>{c.body}</Text>
           </View>
         ))}
       </ScrollView>

@@ -136,10 +136,16 @@ describe('daily_steps push', () => {
 
 describe('daily_steps pull (LWW)', () => {
   function makePullSb({ data = [], error = null } = {}) {
+    // LS-03b: the pull now pages via .range(); model it so one page returns
+    // the (sub-1000-row) data and the loop ends on the short page.
     return {
       from: jest.fn(() => ({
         select: jest.fn(() => ({
-          eq: jest.fn(async () => ({ data, error })),
+          eq: jest.fn(() => ({
+            range: jest.fn(async (from, to) => (
+              error ? { data: null, error } : { data: (data || []).slice(from, to + 1), error: null }
+            )),
+          })),
         })),
       })),
     };

@@ -1,6 +1,11 @@
 /**
  * paywallExcerpts.js: COMP-007 Stage B: verified Play-review excerpts.
  *
+ * Consumer: src/screens/ProUpgradeScreen.js (the single live upgrade
+ * surface). Was previously consumed by PaywallScreen.js too; that orphaned
+ * surface was deleted under C3/D71 (2026-07-11) and its excerpt card ported
+ * onto ProUpgradeScreen, so this module survives with its test suite.
+ *
  * Content, NOT billing logic, deliberately kept out of src/lib/payments/.
  * The paywall review block renders ONLY when this list is non-empty, so it
  * ships DARK today (empty array) and lights up via a content-only edit once

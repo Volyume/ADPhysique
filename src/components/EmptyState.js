@@ -68,10 +68,10 @@ export default function EmptyState({
       </View>
 
       {!!title && (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title, ghost && [styles.titleGhost, live.titleGhost]]}>{title}</Text>
+        <Text style={[styles.title, live.title, ghost && [styles.titleGhost, live.titleGhost]]}>{title}</Text>
       )}
       {!!text && (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.text, live.text]}>{text}</Text>
+        <Text style={[styles.text, live.text]}>{text}</Text>
       )}
 
       {/* D1 sweep (f): the CTAs are the shared Button primitive, so empty

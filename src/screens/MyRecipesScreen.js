@@ -169,8 +169,8 @@ export default function MyRecipesScreen({ navigation, route }) {
           accessibilityHint="Choose servings before adding it to your diary"
         >
           <View style={styles.rowText}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.name, live.name]} numberOfLines={1}>{item.name}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.meta, live.meta]}>
+            <Text style={[styles.name, live.name]} numberOfLines={1}>{item.name}</Text>
+            <Text style={[styles.meta, live.meta]}>
               {item.total_servings} {item.total_servings === 1 ? 'serving' : 'servings'}
               {item.notes ? ` - ${item.notes}` : ''}
             </Text>
@@ -181,7 +181,7 @@ export default function MyRecipesScreen({ navigation, route }) {
                 sitting next to "N servings" read as ambiguous about which
                 one it was. */}
             {item.totals ? (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.meta, live.meta]}>
+              <Text style={[styles.meta, live.meta]}>
                 {toEnergy(perServingTotals(item.totals, item.total_servings).kcal, energyUnit)} {energyUnitLabel(energyUnit)} per serving - P {perServingTotals(item.totals, item.total_servings).protein}g
               </Text>
             ) : null}
@@ -191,7 +191,7 @@ export default function MyRecipesScreen({ navigation, route }) {
             : (
               <View style={[styles.logPill, live.logPill]}>
                 <Ionicons name="add" size={16} color={t.colors.primary} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.logPillText, live.logPillText]}>Log</Text>
+                <Text style={[styles.logPillText, live.logPillText]}>Log</Text>
               </View>
             )}
         </TouchableOpacity>
@@ -269,8 +269,8 @@ export default function MyRecipesScreen({ navigation, route }) {
         accessibilityLabel="Choose recipe servings"
         sheetStyle={styles.servingsSheet}
       >
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]} numberOfLines={1}>{servePrompt?.name}</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sheetSub, live.sheetSub]}>How many servings did you eat?</Text>
+        <Text style={[styles.sheetTitle, live.sheetTitle]} numberOfLines={1}>{servePrompt?.name}</Text>
+        <Text style={[styles.sheetSub, live.sheetSub]}>How many servings did you eat?</Text>
         <Stepper
           value={servings}
           onChange={setServings}

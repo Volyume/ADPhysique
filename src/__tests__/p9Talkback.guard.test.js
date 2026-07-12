@@ -36,20 +36,28 @@ describe('P9: logging a set is spoken', () => {
     expect(src).toMatch(/Set \$\{setNumber\} logged/);
     expect(src).toMatch(/announceForAccessibility\('Set updated'\)/);
   });
-  test('the three save-path buttons expose the in-flight state', () => {
+  test('every save-path button exposes the in-flight state', () => {
     // Stale pin -> corrected: the ActiveWorkoutScreen dedicated Button-
-    // adoption pass (design campaign 2026-07-09) moved these three CTAs
-    // (Finish cluster, Log another set, the main Log set/warm-up/Start
-    // cluster button) onto the shared <Button>, which unconditionally
-    // merges `disabled` into accessibilityState itself
-    // (components/Button.js: `mergedAccessibilityState` sets
-    // `disabled: isDisabled`), so the inline
+    // adoption pass (design campaign 2026-07-09) moved the save-path CTAs
+    // onto the shared <Button>, which unconditionally merges `disabled`
+    // into accessibilityState itself (components/Button.js:
+    // `mergedAccessibilityState` sets `disabled: isDisabled`), so the inline
     // `accessibilityState={{ disabled: saving }}` literal this test used to
     // pin is now redundant at the call site, not dropped a11y coverage. Pin
     // the equivalent guarantee instead: a Button-rendered save-path CTA
     // wired with `disabled={saving}`, backed by Button.js always merging it.
-    const buttonDisabledHits = src.match(/<Button[\s\S]{0,300}?disabled=\{saving\}/g) ?? [];
-    expect(buttonDisabledHits.length).toBeGreaterThanOrEqual(3);
+    // RE-ANCHORED 2026-07-12 (R3 logger rebuild): the main primary moved
+    // into WorkoutBottomBar, which wires the shared Button's `loading`
+    // morph from the screen's `saving` - loading disables the button AND
+    // sets accessibilityState.busy, a STRONGER in-flight exposure than the
+    // plain disabled it replaces. The in-screen survivor (Finish cluster)
+    // keeps disabled={saving}. All three links pinned so no hand-off can
+    // silently drop the state.
+    const buttonDisabledHits = src.match(/<Button[\s\S]{0,500}?disabled=\{saving\}/g) ?? [];
+    expect(buttonDisabledHits.length).toBeGreaterThanOrEqual(1);
+    expect(src).toMatch(/<WorkoutBottomBar[\s\S]{0,900}?saving=\{saving\}/);
+    const barSrc = read('src/components/workout/WorkoutBottomBar.js');
+    expect(barSrc).toMatch(/loading=\{saving\}/);
     const buttonSrc = read('src/components/Button.js');
     expect(buttonSrc).toMatch(/disabled:\s*isDisabled/);
   });

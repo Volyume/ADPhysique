@@ -27,7 +27,7 @@ import {
   getFoodEntriesForDay, getRecentLoggedDays, deleteFoodEntry, restoreFoodEntry, updateFoodEntry, getRollupForDay,
   applyCuratedMealToDiary,
   setWater, getWater, createSavedMeal, confirmPlannedDay, clearPlannedDay,
-  getSlotRecents, logFoodEntry, upsertSlotRecent, hasAnyFoodEntries,
+  getSlotRecents, logFoodEntry, upsertSlotRecent,
 } from '../lib/food/db';
 import { isoDate, shiftDate, weekDatesMon, weekdayShort, friendlyDate } from '../lib/food/diaryDates';
 import { createRaceGuard } from '../lib/food/loadRaceGuard';
@@ -46,15 +46,16 @@ import { buildPlanEditNarration } from '../lib/food/planExplain';
 import CalorieBankSheet from '../components/food/CalorieBankSheet';
 import DiaryDatePicker from '../components/food/DiaryDatePicker';
 import { audit } from '../lib/observability';
+import { logError } from '../lib/errorLog';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import MacroRings from '../components/food/MacroRings';
-import FirstFoodPrompt from '../components/food/FirstFoodPrompt';
 import MacroBreakdownSheet from '../components/food/MacroBreakdownSheet';
 import FoodDetailSheet from '../components/food/FoodDetailSheet';
 import QuickAddSheet from '../components/food/QuickAddSheet';
 import BottomSheet from '../components/BottomSheet';
 import EmptyDiary from '../components/food/EmptyDiary';
+import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/Skeleton';
 import MealSection from '../components/food/MealSection';
 import HintCaption from '../components/HintCaption';
@@ -164,6 +165,13 @@ export default function DiaryScreen({ navigation, route }) {
   // a skeleton instead of the empty state, so a day that DOES have food never
   // flashes "Nothing logged yet" before it paints (food review U-M7).
   const [loaded, setLoaded] = useState(false);
+  // EP-07/UI-02 (Codex end-user-polish audit): whether the MOST RECENT load()
+  // attempt for the day in view failed. A failed load never wipes whatever
+  // was already on screen (see the catch branch in load() below); it only
+  // flips this flag so the render layer can show a retryable error state
+  // instead of either a permanent skeleton or a false "nothing logged" empty
+  // state. Reset to false on the next successful load.
+  const [loadError, setLoadError] = useState(false);
   const [rollup, setRollup] = useState(null);
   const [waterMl, setWaterMl] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -184,16 +192,6 @@ export default function DiaryScreen({ navigation, route }) {
   // EmptyDiary's optional "Copy yesterday" action; the premium meal builder
   // now owns planning for a day with no history.
   const [yesterdayHasFood, setYesterdayHasFood] = useState(false);
-  // L05-D2 (design-usability audit 2026-07-09, progressive disclosure for new
-  // accounts): whether the account has EVER logged a real (non-planned) food
-  // entry, not just whether today has one -- reuses hasAnyFoodEntries, the
-  // same account-wide existence check the E10 read-only route guard already
-  // relies on. Defaults true (assume an established account) so a slow first
-  // load, or a transient read failure (`.catch(() => true)` below), never
-  // downgrades an existing user's full MacroRings to the simple prompt; the
-  // simple prompt only ever appears once we have POSITIVELY confirmed there
-  // is no food logged anywhere for this account yet.
-  const [everLoggedFood, setEverLoggedFood] = useState(true);
   // Audit item 6 (coach receipt chip): the latest coach output, read only for
   // Pro (free never reaches CoachOutputScreen so never has an applied
   // adjustment to point at). Used solely to detect a recent coach-applied
@@ -215,81 +213,92 @@ export default function DiaryScreen({ navigation, route }) {
   const load = useCallback(async () => {
     if (!userId) return;
     const loadToken = loadGuardRef.current.next();
-    const [es, r, w, targetsRow, trainingDay, resolvedRefeedDate, edFlag, bodyWeight, bodyComp, yEntries, coachOut, everLogged] = await Promise.all([
-      getFoodEntriesForDay(userId, selectedDate),
-      getRollupForDay(userId, selectedDate),
-      getWater(userId, selectedDate),
-      getNutritionTargets(userId),
-      macroCycle ? hasWorkoutOnDate(userId, selectedDate) : Promise.resolve(false),
-      refeed?.appliedAt ? getFirstWorkoutDateOnOrAfter(userId, refeed.appliedAt) : Promise.resolve(null),
-      // ED-safety, fail CLOSED: a transient flag read maps to the truthy
-      // 'read_failed' sentinel (setEdFlagOpen(!!edFlag) below), so the banking
-      // carve-out stays DISABLED at a possibly-flagged user rather than opening
-      // on a read error.
-      getOpenEdPatternFlag(userId).catch(() => 'read_failed'),
-      getLatestBodyWeight(userId).catch(() => null),
-      getLatestBodyComposition(userId).catch(() => null),
-      getFoodEntriesForDay(userId, shiftDate(selectedDate, -1)).catch(() => []),
-      // Audit item 6: Pro-only, best-effort. A read failure just hides the
-      // "Targets updated" chip, it never blocks the rest of the diary load.
-      !readOnly ? getLatestCoachOutput(userId).catch(() => null) : Promise.resolve(null),
-      // L05-D2: account-wide "ever logged food" check for the simple/full
-      // top-of-day choice. Fails open to `true` (assume there IS history), so
-      // a transient read failure keeps showing the full MacroRings exactly as
-      // it always has, rather than ever hiding a returning user's real data
-      // behind the new-account prompt.
-      hasAnyFoodEntries(userId).catch(() => true),
-    ]);
-    // A newer load has started since this one began; drop this stale result
-    // before doing any more work with it (never mind committing it).
-    if (!loadGuardRef.current.isCurrent(loadToken)) return;
-    // Safe banking floor = max(sex floor, FFM floor). FFM floor needs a body
-    // weight; when present we use the engine's own computeFFMFloor (with body
-    // fat if logged, else its sex-based fallback), matching the coach's RED-S
-    // floor. No weight -> sex floor alone.
-    let floor = safeDayFloorKcal({ sex });
-    if (bodyWeight?.weightKg > 0) {
-      try {
-        const ffm = computeFFMFloor(bodyWeight.weightKg, {
-          bodyFatPercent: bodyComp?.bodyFatPercent ?? null,
-          bodyFatSource: bodyComp?.bodyFatSource ?? null,
-          sex,
-        });
-        floor = safeDayFloorKcal({ sex, ffmFloorKcal: ffm?.floorKcal });
-      } catch (_) { /* keep sex floor */ }
-    }
-    // Resolve each entry's actual food name + brand from the foods /
-    // custom_foods tables. food_entries denormalises macros at log
-    // time but NOT the name, so without this enrichment the row
-    // falls through to a generic "Food" label. SQLite local reads,
-    // fast even for 10-20 entries.
-    const enriched = await Promise.all((es ?? []).map(async (entry) => {
-      try {
-        const food = await resolveFoodRef(userId, entry.food_ref);
-        return {
-          ...entry,
-          _name: food?.name ?? null,
-          _brand: food?.brand ?? null,
-        };
-      } catch (_) {
-        return { ...entry, _name: null, _brand: null };
+    // EP-07/UI-02: the whole body is now wrapped so a core read's rejection
+    // can never leave `loaded` stuck at false (the old endless-skeleton bug)
+    // nor pass silently while the day still shows stale/no data. A caught
+    // failure never wipes entries/rollup/etc already on screen (see catch
+    // below); only the try's own success path commits fresh values.
+    try {
+      const [es, r, w, targetsRow, trainingDay, resolvedRefeedDate, edFlag, bodyWeight, bodyComp, yEntries, coachOut] = await Promise.all([
+        getFoodEntriesForDay(userId, selectedDate),
+        getRollupForDay(userId, selectedDate),
+        getWater(userId, selectedDate),
+        getNutritionTargets(userId),
+        macroCycle ? hasWorkoutOnDate(userId, selectedDate) : Promise.resolve(false),
+        refeed?.appliedAt ? getFirstWorkoutDateOnOrAfter(userId, refeed.appliedAt) : Promise.resolve(null),
+        // ED-safety, fail CLOSED: a transient flag read maps to the truthy
+        // 'read_failed' sentinel (setEdFlagOpen(!!edFlag) below), so the banking
+        // carve-out stays DISABLED at a possibly-flagged user rather than opening
+        // on a read error.
+        getOpenEdPatternFlag(userId).catch(() => 'read_failed'),
+        getLatestBodyWeight(userId).catch(() => null),
+        getLatestBodyComposition(userId).catch(() => null),
+        getFoodEntriesForDay(userId, shiftDate(selectedDate, -1)).catch(() => []),
+        // Audit item 6: Pro-only, best-effort. A read failure just hides the
+        // "Targets updated" chip, it never blocks the rest of the diary load.
+        !readOnly ? getLatestCoachOutput(userId).catch(() => null) : Promise.resolve(null),
+      ]);
+      // A newer load has started since this one began; drop this stale result
+      // before doing any more work with it (never mind committing it).
+      if (!loadGuardRef.current.isCurrent(loadToken)) return;
+      // Safe banking floor = max(sex floor, FFM floor). FFM floor needs a body
+      // weight; when present we use the engine's own computeFFMFloor (with body
+      // fat if logged, else its sex-based fallback), matching the coach's RED-S
+      // floor. No weight -> sex floor alone.
+      let floor = safeDayFloorKcal({ sex });
+      if (bodyWeight?.weightKg > 0) {
+        try {
+          const ffm = computeFFMFloor(bodyWeight.weightKg, {
+            bodyFatPercent: bodyComp?.bodyFatPercent ?? null,
+            bodyFatSource: bodyComp?.bodyFatSource ?? null,
+            sex,
+          });
+          floor = safeDayFloorKcal({ sex, ffmFloorKcal: ffm?.floorKcal });
+        } catch (_) { /* keep sex floor */ }
       }
-    }));
-    // Check again: the enrichment await above is itself a second point where
-    // a newer load could have started and already committed its own result.
-    if (!loadGuardRef.current.isCurrent(loadToken)) return;
-    setEntries(enriched);
-    setRollup(r);
-    setWaterMl(w);
-    setTargets(targetsRow);
-    setIsTrainingDay(trainingDay);
-    setRefeedDate(resolvedRefeedDate);
-    setEdFlagOpen(!!edFlag);
-    setFloorKcal(floor);
-    setYesterdayHasFood((yEntries?.length ?? 0) > 0);
-    setLatestCoachOutput(coachOut ?? null);
-    setEverLoggedFood(!!everLogged);
-    setLoaded(true);
+      // Resolve each entry's actual food name + brand from the foods /
+      // custom_foods tables. food_entries denormalises macros at log
+      // time but NOT the name, so without this enrichment the row
+      // falls through to a generic "Food" label. SQLite local reads,
+      // fast even for 10-20 entries.
+      const enriched = await Promise.all((es ?? []).map(async (entry) => {
+        try {
+          const food = await resolveFoodRef(userId, entry.food_ref);
+          return {
+            ...entry,
+            _name: food?.name ?? null,
+            _brand: food?.brand ?? null,
+          };
+        } catch (_) {
+          return { ...entry, _name: null, _brand: null };
+        }
+      }));
+      // Check again: the enrichment await above is itself a second point where
+      // a newer load could have started and already committed its own result.
+      if (!loadGuardRef.current.isCurrent(loadToken)) return;
+      setEntries(enriched);
+      setRollup(r);
+      setWaterMl(w);
+      setTargets(targetsRow);
+      setIsTrainingDay(trainingDay);
+      setRefeedDate(resolvedRefeedDate);
+      setEdFlagOpen(!!edFlag);
+      setFloorKcal(floor);
+      setYesterdayHasFood((yEntries?.length ?? 0) > 0);
+      setLatestCoachOutput(coachOut ?? null);
+      setLoadError(false);
+    } catch (e) {
+      // A stale (superseded) load failing is not news; only report/commit the
+      // error for the load that is still the current one for this screen.
+      if (loadGuardRef.current.isCurrent(loadToken)) {
+        logError('DiaryScreen.load', e, { userId, selectedDate });
+        setLoadError(true);
+      }
+    } finally {
+      // Always settle `loaded`, success or failure, so a rejected read can
+      // never leave the skeleton spinning forever (EP-07/UI-02).
+      if (loadGuardRef.current.isCurrent(loadToken)) setLoaded(true);
+    }
   }, [userId, selectedDate, macroCycle, refeed, sex, readOnly]);
 
   // Planned scaffolding from a meal plan (adherence model): shown with a
@@ -449,14 +458,6 @@ export default function DiaryScreen({ navigation, route }) {
 
   const dayTypeChip = dayTypeLabel({ isRefeedDay, macroCycle, isTrainingDay, bankedDelta });
 
-  // L05-D2: the calmer top-of-day only ever replaces MacroRings once we have
-  // POSITIVELY confirmed (via the account-wide `everLoggedFood`, resolved in
-  // `load()`) that this account has never logged a real food entry, and only
-  // once that first load has resolved (`loaded`) so nothing flashes before it
-  // paints. A read-only lapse view is reached only by an account that HAS
-  // logged food (E10 route guard), so this never applies there regardless.
-  const showFirstFoodPrompt = loaded && !readOnly && !everLoggedFood;
-
   // Audit item 6 (coach receipt chip, size S): a quiet "Targets updated" link
   // shown ONLY when the COACH itself changed the calorie target recently, so
   // it never mis-attributes a self-made edit (Nutrition Targets screen,
@@ -534,12 +535,15 @@ export default function DiaryScreen({ navigation, route }) {
   // triggers doubled every load's concurrency for no benefit and made the
   // stale-result race easier to hit. One trigger is enough: mount, refocus,
   // and every dependency change while this tab is the one in view.
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => { load().catch(() => {}); }, [load]));
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await load();
-    setRefreshing(false);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
   }, [load]);
 
   // Bucket every entry by its slot, whatever the slot key (numbered, legacy or
@@ -1338,8 +1342,8 @@ export default function DiaryScreen({ navigation, route }) {
             >
               <Ionicons name="calendar-outline" size={15} color={t.colors.textSecondary} />
               <View style={styles.dateCopy}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.dateLabel, live.dateLabel]}>{dateHeading}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.dateSubLabel, live.dateSubLabel]}>{dateSubCopy}</Text>
+                <Text style={[styles.dateLabel, live.dateLabel]}>{dateHeading}</Text>
+                <Text style={[styles.dateSubLabel, live.dateSubLabel]}>{dateSubCopy}</Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity
@@ -1354,7 +1358,7 @@ export default function DiaryScreen({ navigation, route }) {
           </View>
           {!isViewingToday ? (
             <TouchableOpacity onPress={() => { haptics.selection(); gotoToday(); }} hitSlop={10} style={[styles.todayPill, live.todayPill]} accessibilityRole="button" accessibilityLabel="Jump to today">
-              <Text maxFontSizeMultiplier={1.3} style={[styles.todayPillText, live.todayPillText]}>Today</Text>
+              <Text style={[styles.todayPillText, live.todayPillText]}>Today</Text>
             </TouchableOpacity>
           ) : null}
           {!readOnly ? (
@@ -1376,18 +1380,18 @@ export default function DiaryScreen({ navigation, route }) {
           <View style={[styles.readOnlyCard, live.readOnlyCard]}>
             <View style={styles.readOnlyRow}>
               <Ionicons name="eye-outline" size={16} color={t.colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.readOnlyText, live.readOnlyText]}>
+              <Text style={[styles.readOnlyText, live.readOnlyText]}>
                 Your diary is view-only on the free plan. Everything you logged is safe and stays yours.
               </Text>
             </View>
             <TouchableOpacity
-              onPress={() => { haptics.selection(); navigation.navigate('ProUpgrade'); }}
+              onPress={() => { haptics.selection(); navigation.navigate('ProUpgrade', { source: 'diary' }); }}
               hitSlop={8}
               style={[styles.readOnlyCtaButton, live.readOnlyCtaButton]}
               accessibilityRole="button"
               accessibilityLabel="Upgrade to Pro to log food again"
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.readOnlyCta, live.readOnlyCta]}>Upgrade to keep logging</Text>
+              <Text style={[styles.readOnlyCta, live.readOnlyCta]}>Upgrade to keep logging</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -1405,27 +1409,22 @@ export default function DiaryScreen({ navigation, route }) {
               accessibilityLabel="Targets updated. See why."
             >
               <Ionicons name="information-circle-outline" size={13} color={t.colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.targetsChangedText, live.targetsChangedText]}>Targets updated. See why</Text>
+              <Text style={[styles.targetsChangedText, live.targetsChangedText]}>Targets updated. See why</Text>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
           ) : null}
-          {showFirstFoodPrompt ? (
-            <FirstFoodPrompt targetKcal={effectiveTargets?.targetKcal} energyUnit={energyUnit} />
-          ) : (
-            // Haptics completion pass (2026-07-10): the MacroRings call site
-            // below (rollup/targets/planned/dayTypeLabel/onPress) is left
-            // byte-identical -- DiaryScreen.raceGuardAndDateJump.guard.test.js
-            // and DiaryScreen.firstFoodPrompt.guard.test.js both pin it
-            // "unchanged" (a concurrent-agent stability guard), a genuine
-            // pinned-test conflict, reported rather than forced through.
-            <MacroRings
-              rollup={rollup}
-              targets={effectiveTargets}
-              planned={plannedTotals}
-              dayTypeLabel={dayTypeChip}
-              onPress={viewEntries.length ? () => setBreakdownVisible(true) : undefined}
-            />
-          )}
+          {/* MacroRings renders unconditionally, first day included (founder
+              device verdict 2026-07-12, D75: L05-D2's first-food swap
+              REVERTED - a new user must SEE the ring, targets and macros to
+              plan their first day; the meal builder tells them to build from
+              targets they could not see). Never re-propose hiding it. */}
+          <MacroRings
+            rollup={rollup}
+            targets={effectiveTargets}
+            planned={plannedTotals}
+            dayTypeLabel={dayTypeChip}
+            onPress={viewEntries.length ? () => setBreakdownVisible(true) : undefined}
+          />
           {/* NU-2: the applied split/refeed always shows its exit. One quiet
               row each; the confirm dialogs own the consequence copy.
               Haptics completion pass (2026-07-10): both rows write straight
@@ -1440,7 +1439,7 @@ export default function DiaryScreen({ navigation, route }) {
               accessibilityLabel="Stop the training/rest-day split"
             >
               <Ionicons name="swap-horizontal-outline" size={13} color={t.colors.textMuted} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.targetModeText, live.targetModeText]}>Training and rest targets active. Tap to use one target.</Text>
+              <Text style={[styles.targetModeText, live.targetModeText]}>Training and rest targets active. Tap to use one target.</Text>
             </TouchableOpacity>
           ) : null}
           {!readOnly && refeed ? (
@@ -1451,7 +1450,7 @@ export default function DiaryScreen({ navigation, route }) {
               accessibilityLabel="Clear the scheduled refeed"
             >
               <Ionicons name="restaurant-outline" size={13} color={t.colors.textMuted} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.targetModeText, live.targetModeText]}>
+              <Text style={[styles.targetModeText, live.targetModeText]}>
                 {isRefeedDay ? 'Refeed day today. Tap to remove it.' : 'Refeed scheduled. Tap to remove it.'}
               </Text>
             </TouchableOpacity>
@@ -1460,7 +1459,7 @@ export default function DiaryScreen({ navigation, route }) {
 
         {showOffCard && !readOnly && selectedDate === isoDate(new Date()) ? (
           <View style={[styles.offCard, live.offCard]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.offCardText, live.offCardText]}>
+            <Text style={[styles.offCardText, live.offCardText]}>
               Share barcode fixes? This helps food searches improve for everyone. It is off by default and you choose.
             </Text>
             <View style={styles.offCardRow}>
@@ -1501,12 +1500,27 @@ export default function DiaryScreen({ navigation, route }) {
             <SkeletonRow />
             <SkeletonRow />
           </View>
+        ) : loadError && viewEntries.length === 0 ? (
+          // EP-09/P-06: a load that FAILED must never read as "nothing logged
+          // this day". Only shown when there is nothing already on screen to
+          // preserve (a refresh failure with existing entries keeps showing
+          // them, per the loadError branch not gating that case).
+          <View style={{ paddingHorizontal: spacing.lg }}>
+            <EmptyState
+              icon="cloud-offline-outline"
+              title="Couldn't load this day"
+              text="Check your connection and try again. Nothing has been lost."
+              actionLabel="Retry"
+              onAction={load}
+              actionAccessibilityLabel="Retry loading this day"
+            />
+          </View>
         ) : viewEntries.length === 0 ? (
           readOnly ? (
             // Read-only empty day: a plain fact, not a call to action (the
             // standard empty state's three CTAs are all writes).
             <View style={styles.readOnlyEmpty}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.readOnlyEmptyText, live.readOnlyEmptyText]}>Nothing logged this day.</Text>
+              <Text style={[styles.readOnlyEmptyText, live.readOnlyEmptyText]}>Nothing logged this day.</Text>
             </View>
           ) : (
             <EmptyDiary
@@ -1636,8 +1650,8 @@ export default function DiaryScreen({ navigation, route }) {
                     <Ionicons name="restaurant-outline" size={18} color={t.colors.textSecondary} />
                   </View>
                   <View style={styles.buildPlanCopy}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.buildPlanLabel, live.buildPlanLabel]}>Meal builder</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.buildPlanSub, live.buildPlanSub]}>Create today or the week from your targets. You review everything before it is logged.</Text>
+                    <Text style={[styles.buildPlanLabel, live.buildPlanLabel]}>Meal builder</Text>
+                    <Text style={[styles.buildPlanSub, live.buildPlanSub]}>Create today or the week from your targets. You review everything before it is logged.</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
                 </TouchableOpacity>
@@ -1668,7 +1682,7 @@ export default function DiaryScreen({ navigation, route }) {
             ED flag stays deliberately unnamed here. */}
         {!bankingAvailable && !selectionMode && !readOnly && !!targets
           && (macroCycle || refeed) && !edFlagOpen && !targetWasFloored(targets) ? (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.bankOffNote, live.bankOffNote]}>
+            <Text style={[styles.bankOffNote, live.bankOffNote]}>
               {macroCycle
                 ? 'Higher-calorie day planning is paused while the training/rest-day split is on.'
                 : 'Higher-calorie day planning is paused while a refeed is scheduled.'}
@@ -1694,7 +1708,7 @@ export default function DiaryScreen({ navigation, route }) {
             the meal sections, unchanged in behaviour, just relocated. */}
         {plannedCount > 0 && !selectionMode && !readOnly ? (
           <View style={[styles.plannedBanner, live.plannedBanner]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.plannedBannerText, live.plannedBannerText]}>
+            <Text style={[styles.plannedBannerText, live.plannedBannerText]}>
               {plannedCount} planned {plannedCount === 1 ? 'meal' : 'meals'} for this day.
               {isFutureDay ? ' Confirm them on the day once eaten.' : ' Mark them as eaten when you have them so they count in your day.'}
             </Text>
@@ -1753,8 +1767,8 @@ export default function DiaryScreen({ navigation, route }) {
         onClose={() => setSavedPickerSlot(null)}
         accessibilityLabel="Saved meals and recipes"
       >
-        <Text maxFontSizeMultiplier={1.3} style={[styles.savedFoodTitle, live.savedFoodTitle]}>Saved meals and recipes</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.savedFoodIntro, live.savedFoodIntro]}>Use a saved meal from your diary, or a recipe you built.</Text>
+        <Text style={[styles.savedFoodTitle, live.savedFoodTitle]}>Saved meals and recipes</Text>
+        <Text style={[styles.savedFoodIntro, live.savedFoodIntro]}>Use a saved meal from your diary, or a recipe you built.</Text>
         <TouchableOpacity
           style={styles.savedFoodOption}
           onPress={() => { haptics.selection(); openSavedFoodRoute('MyMeals'); }}
@@ -1765,8 +1779,8 @@ export default function DiaryScreen({ navigation, route }) {
             <Ionicons name="bookmark-outline" size={20} color={t.colors.primary} />
           </View>
           <View style={styles.savedFoodText}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.savedFoodOptionTitle, live.savedFoodOptionTitle]}>Saved meals</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.savedFoodOptionSub, live.savedFoodOptionSub]}>Foods you saved together from the diary.</Text>
+            <Text style={[styles.savedFoodOptionTitle, live.savedFoodOptionTitle]}>Saved meals</Text>
+            <Text style={[styles.savedFoodOptionSub, live.savedFoodOptionSub]}>Foods you saved together from the diary.</Text>
           </View>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
@@ -1780,8 +1794,8 @@ export default function DiaryScreen({ navigation, route }) {
             <Ionicons name="restaurant-outline" size={20} color={t.colors.primary} />
           </View>
           <View style={styles.savedFoodText}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.savedFoodOptionTitle, live.savedFoodOptionTitle]}>Recipes</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.savedFoodOptionSub, live.savedFoodOptionSub]}>Recipes with ingredients and servings.</Text>
+            <Text style={[styles.savedFoodOptionTitle, live.savedFoodOptionTitle]}>Recipes</Text>
+            <Text style={[styles.savedFoodOptionSub, live.savedFoodOptionSub]}>Recipes with ingredients and servings.</Text>
           </View>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
@@ -1821,12 +1835,12 @@ export default function DiaryScreen({ navigation, route }) {
             <TouchableOpacity onPress={() => { haptics.selection(); exitSelection(); }} hitSlop={10} style={styles.selCancel} accessibilityRole="button" accessibilityLabel="Cancel selection">
               <Ionicons name="close" size={22} color={t.colors.textPrimary} />
             </TouchableOpacity>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.selCount, live.selCount]}>{selectedIds.size} selected</Text>
+            <Text style={[styles.selCount, live.selCount]}>{selectedIds.size} selected</Text>
           </View>
           <View style={styles.selActions}>
             <TouchableOpacity onPress={() => { haptics.selection(); setMovePickerVisible(true); }} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Move to another meal">
               <Ionicons name="swap-vertical" size={20} color={t.colors.textPrimary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.selActionLabel, live.selActionLabel]}>Move</Text>
+              <Text style={[styles.selActionLabel, live.selActionLabel]}>Move</Text>
             </TouchableOpacity>
             {/* Haptics completion pass (2026-07-10): copying to today is a
                 bulk food-log write (diary-marking), excluded per the
@@ -1834,15 +1848,15 @@ export default function DiaryScreen({ navigation, route }) {
                 added haptic. */}
             <TouchableOpacity onPress={doCopySelectedToToday} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Copy to today">
               <Ionicons name="copy-outline" size={20} color={t.colors.textPrimary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.selActionLabel, live.selActionLabel]}>To today</Text>
+              <Text style={[styles.selActionLabel, live.selActionLabel]}>To today</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => { haptics.selection(); openSaveMeal(); }} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Save selected as a meal">
               <Ionicons name="bookmark-outline" size={20} color={t.colors.textPrimary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.selActionLabel, live.selActionLabel]}>Save meal</Text>
+              <Text style={[styles.selActionLabel, live.selActionLabel]}>Save meal</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={doDeleteSelected} style={styles.selAction} accessibilityRole="button" accessibilityLabel="Delete selected">
               <Ionicons name="trash-outline" size={20} color={t.colors.error} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.selActionLabel, live.selActionLabel, { color: t.colors.error }]}>Delete</Text>
+              <Text style={[styles.selActionLabel, live.selActionLabel, { color: t.colors.error }]}>Delete</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1862,7 +1876,7 @@ export default function DiaryScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel={`Move to ${s.label}`}
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.moveOptionText, live.moveOptionText]}>{s.label}</Text>
+            <Text style={[styles.moveOptionText, live.moveOptionText]}>{s.label}</Text>
           </TouchableOpacity>
         ))}
       </BottomSheet>
@@ -1874,7 +1888,7 @@ export default function DiaryScreen({ navigation, route }) {
         accessibilityLabel="Save as meal"
       >
         <SectionLabel style={styles.moveTitle}>Save as meal</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.saveMealHint, live.saveMealHint]}>
+        <Text style={[styles.saveMealHint, live.saveMealHint]}>
           {saveMealItems?.length ?? 0} {(saveMealItems?.length ?? 0) === 1 ? 'food' : 'foods'} saved together. Name it.
         </Text>
         <TextField
@@ -1921,7 +1935,7 @@ export default function DiaryScreen({ navigation, route }) {
         accessibilityLabel="Diary tools"
       >
         <SectionLabel style={styles.moveTitle}>Day tools</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.saveMealHint, live.saveMealHint]}>
+        <Text style={[styles.saveMealHint, live.saveMealHint]}>
           Copy foods from another day, check nutrition trends, or export your diary.
         </Text>
         <TouchableOpacity
@@ -1934,8 +1948,8 @@ export default function DiaryScreen({ navigation, route }) {
             <Ionicons name="copy-outline" size={18} color={t.colors.primary} />
           </View>
           <View style={styles.diaryToolCopy}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.diaryToolTitle, live.diaryToolTitle]}>Copy from another day</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.diaryToolText, live.diaryToolText]}>Choose a recent logged day and copy its foods into this one.</Text>
+            <Text style={[styles.diaryToolTitle, live.diaryToolTitle]}>Copy from another day</Text>
+            <Text style={[styles.diaryToolText, live.diaryToolText]}>Choose a recent logged day and copy its foods into this one.</Text>
           </View>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
@@ -1949,8 +1963,8 @@ export default function DiaryScreen({ navigation, route }) {
             <Ionicons name="analytics-outline" size={18} color={t.colors.primary} />
           </View>
           <View style={styles.diaryToolCopy}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.diaryToolTitle, live.diaryToolTitle]}>Trends and export</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.diaryToolText, live.diaryToolText]}>See calorie, macro and consistency trends, or export your diary.</Text>
+            <Text style={[styles.diaryToolTitle, live.diaryToolTitle]}>Trends and export</Text>
+            <Text style={[styles.diaryToolText, live.diaryToolText]}>See calorie, macro and consistency trends, or export your diary.</Text>
           </View>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
@@ -1963,7 +1977,7 @@ export default function DiaryScreen({ navigation, route }) {
       >
         <SectionLabel style={styles.moveTitle}>Copy from another day</SectionLabel>
         {copyDays && copyDays.length === 0 ? (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.saveMealHint, live.saveMealHint]}>No earlier days with food logged yet.</Text>
+          <Text style={[styles.saveMealHint, live.saveMealHint]}>No earlier days with food logged yet.</Text>
         ) : (
           (copyDays || []).map((d) => (
             // Haptics completion pass (2026-07-10): copying a day's foods is
@@ -1977,8 +1991,8 @@ export default function DiaryScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel={`Copy ${friendlyDate(d.entry_date)}, ${d.count} ${d.count === 1 ? 'item' : 'items'}`}
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.moveOptionText, live.moveOptionText]}>{friendlyDate(d.entry_date)}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.copyRowMeta, live.copyRowMeta]}>
+              <Text style={[styles.moveOptionText, live.moveOptionText]}>{friendlyDate(d.entry_date)}</Text>
+              <Text style={[styles.copyRowMeta, live.copyRowMeta]}>
                 {d.count} {d.count === 1 ? 'item' : 'items'} - {toEnergy(Math.round(d.kcal ?? 0), energyUnit)} {energyUnitLabel(energyUnit)}
               </Text>
             </TouchableOpacity>
@@ -2046,7 +2060,7 @@ function WaterRow({
       <View style={styles.waterHeader}>
         <View style={styles.waterLeft}>
           <Ionicons name="water-outline" size={18} color={t.colors.primary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.waterLabel, live.waterLabel]}>Water</Text>
+          <Text style={[styles.waterLabel, live.waterLabel]}>Water</Text>
         </View>
         <View style={styles.waterButtons}>
           {/* NU-9: the value doubles as the target editor. E10 read-only: the
@@ -2060,7 +2074,7 @@ function WaterRow({
               ? `Water ${litres} of ${targetL} litres.`
               : `Water ${litres} of ${targetL} litres. Tap to change your daily target.`}
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.waterValue, live.waterValue]}>{litres} / {targetL} L</Text>
+            <Text style={[styles.waterValue, live.waterValue]}>{litres} / {targetL} L</Text>
           </TouchableOpacity>
           {/* NU-9: long-press moves a bottle (500 ml) at a time, so a full day
               of water no longer needs 12 taps. */}

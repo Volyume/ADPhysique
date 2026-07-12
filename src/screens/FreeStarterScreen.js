@@ -160,8 +160,8 @@ export default function FreeStarterScreen({ navigation, route }) {
       <ScrollView contentContainerStyle={styles.content}>
         {!onResultStep ? (
           <>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.question, live.question]}>{FREE_STARTER_STEPS[step].question}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.questionSub, live.questionSub]}>
+            <Text style={[styles.question, live.question]}>{FREE_STARTER_STEPS[step].question}</Text>
+            <Text style={[styles.questionSub, live.questionSub]}>
               {step === 0
                 ? "There's no wrong answer. You can change direction any time."
                 : step === 1
@@ -181,7 +181,7 @@ export default function FreeStarterScreen({ navigation, route }) {
                   {opt.icon ? (
                     <Ionicons name={opt.icon} size={20} color={t.colors.primary} style={{ marginRight: spacing.md }} />
                   ) : null}
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.optionText, live.optionText]}>{opt.label}</Text>
+                  <Text style={[styles.optionText, live.optionText]}>{opt.label}</Text>
                   <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
                 </TouchableOpacity>
               ))}
@@ -192,20 +192,20 @@ export default function FreeStarterScreen({ navigation, route }) {
             <View style={styles.resultIcon}>
               <Ionicons name="checkmark-circle" size={32} color={t.colors.primary} />
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.resultTitle, live.resultTitle]}>Your starter plan</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.resultIntro, live.resultIntro]}>
+            <Text style={[styles.resultTitle, live.resultTitle]}>Your starter plan</Text>
+            <Text style={[styles.resultIntro, live.resultIntro]}>
               Built for people starting out. Every session tells you exactly what to do:
               the exercises, the sets, and the reps.
             </Text>
             <Card style={[styles.resultCard, live.resultCard]}>
               <View style={[styles.resultBadge, live.resultBadge]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.resultBadgeText, live.resultBadgeText]}>Beginner friendly</Text>
+                <Text style={[styles.resultBadgeText, live.resultBadgeText]}>Beginner friendly</Text>
               </View>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.resultName, live.resultName]}>{recommendation.name}</Text>
+              <Text style={[styles.resultName, live.resultName]}>{recommendation.name}</Text>
               {recommendation.description ? (
-                <Text maxFontSizeMultiplier={1.3} style={[styles.resultDesc, live.resultDesc]} numberOfLines={4}>{recommendation.description}</Text>
+                <Text style={[styles.resultDesc, live.resultDesc]} numberOfLines={4}>{recommendation.description}</Text>
               ) : null}
-              <Text maxFontSizeMultiplier={1.3} style={[styles.resultMeta, live.resultMeta]}>
+              <Text style={[styles.resultMeta, live.resultMeta]}>
                 {[
                   recDays ? `${recDays} days a week` : null,
                   wc ? `${wc} workout${wc !== 1 ? 's' : ''}` : null,
@@ -219,14 +219,14 @@ export default function FreeStarterScreen({ navigation, route }) {
               onPress={handleStartPlan}
               accessibilityLabel={`Start with ${recommendation.name}`}
             />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.resultFootnote, live.resultFootnote]}>
+            <Text style={[styles.resultFootnote, live.resultFootnote]}>
               The first couple of weeks are for learning the movements. That counts as progress.
             </Text>
           </>
         ) : (
           <>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.resultTitle, live.resultTitle]}>We couldn't pick a plan</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.resultIntro, live.resultIntro]}>
+            <Text style={[styles.resultTitle, live.resultTitle]}>We couldn't pick a plan</Text>
+            <Text style={[styles.resultIntro, live.resultIntro]}>
               The plan library hasn't loaded yet. You can browse it yourself, or try again in a moment.
             </Text>
             <Button
@@ -247,7 +247,7 @@ export default function FreeStarterScreen({ navigation, route }) {
             accessibilityLabel="Browse all plans instead"
           >
             <Ionicons name="library-outline" size={14} color={t.colors.textSecondary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.skipLinkText, live.skipLinkText]}>Browse all plans instead</Text>
+            <Text style={[styles.skipLinkText, live.skipLinkText]}>Browse all plans instead</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -259,7 +259,7 @@ export default function FreeStarterScreen({ navigation, route }) {
           accessibilityLabel="Skip, I'll choose a plan myself"
         >
           <Ionicons name="arrow-forward" size={14} color={t.colors.textSecondary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.skipLinkText, live.skipLinkText]}>Skip, I'll choose myself</Text>
+          <Text style={[styles.skipLinkText, live.skipLinkText]}>Skip, I'll choose myself</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

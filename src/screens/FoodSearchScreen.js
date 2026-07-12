@@ -771,7 +771,7 @@ export default function FoodSearchScreen({ navigation, route }) {
           accessibilityLabel={item.label}
         >
           <Ionicons name={item.icon} size={20} color={t.colors.primary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.ctaText, live.ctaText]}>{item.label}</Text>
+          <Text style={[styles.ctaText, live.ctaText]}>{item.label}</Text>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
       );
@@ -890,7 +890,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         ListHeaderComponent={
           <View>
             {suggestMeta?.perMeal ? (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.suggestHint, live.suggestHint]}>
+              <Text style={[styles.suggestHint, live.suggestHint]}>
                 Sized for this meal: around {Math.round(suggestMeta.perMeal.protein)}g protein, {toEnergy(suggestMeta.perMeal.kcal, energyUnit)} {energyUnitLabel(energyUnit)}.
               </Text>
             ) : null}
@@ -905,7 +905,7 @@ export default function FoodSearchScreen({ navigation, route }) {
                 so the two can never say different things again. */}
             <View style={styles.suggestNoteRow}>
               <Ionicons name="leaf-outline" size={13} color={t.colors.textMuted} style={{ marginTop: spacing.hair }} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.suggestNote, live.suggestNote]}>
+              <Text style={[styles.suggestNote, live.suggestNote]}>
                 {ADDITIONS_INTRO}
               </Text>
             </View>
@@ -923,10 +923,10 @@ export default function FoodSearchScreen({ navigation, route }) {
               accessibilityLabel={isFood ? `Add ${item.quantityG}g ${item.name}` : `Open ${item.name}`}
             >
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.suggestName, live.suggestName]}>
+                <Text style={[styles.suggestName, live.suggestName]}>
                   {isFood ? `${item.name} - ${item.quantityG}g` : item.name}
                 </Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.suggestMacros, live.suggestMacros]}>
+                <Text style={[styles.suggestMacros, live.suggestMacros]}>
                   {toEnergy(item.macros.kcal, energyUnit)} {energyUnitLabel(energyUnit)} - {item.macros.protein}g protein - {item.macros.carbs}g carbs - {item.macros.fat}g fat
                 </Text>
               </View>
@@ -959,7 +959,7 @@ export default function FoodSearchScreen({ navigation, route }) {
             accessibilityRole="tab"
             accessibilityState={{ selected: activeTab === tab.key }}
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.tabLabel, live.tabLabel, activeTab === tab.key && [styles.tabLabelActive, live.tabLabelActive]]}>{tab.label}</Text>
+            <Text style={[styles.tabLabel, live.tabLabel, activeTab === tab.key && [styles.tabLabelActive, live.tabLabelActive]]}>{tab.label}</Text>
             <View style={[styles.tabUnderline, activeTab === tab.key && [styles.tabUnderlineActive, live.tabUnderlineActive]]} />
           </TouchableOpacity>
         ))}
@@ -985,7 +985,7 @@ export default function FoodSearchScreen({ navigation, route }) {
           moment a live query (2+ chars) takes over, so it never competes with
           results. */}
       {query.trim().length < 2 ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.provenanceNote, live.provenanceNote]}>
+        <Text style={[styles.provenanceNote, live.provenanceNote]}>
           Saved foods work offline. Live search can also check trusted UK generics and branded products.
         </Text>
       ) : null}
@@ -1028,8 +1028,8 @@ export default function FoodSearchScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Review selected foods"
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.plateCount, live.plateCount]}>{plate.length} selected</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.plateKcalLine, live.plateKcalLine]}>~{toEnergy(plateKcal, energyUnit)} {energyUnitLabel(energyUnit)} - tap to review</Text>
+            <Text style={[styles.plateCount, live.plateCount]}>{plate.length} selected</Text>
+            <Text style={[styles.plateKcalLine, live.plateKcalLine]}>~{toEnergy(plateKcal, energyUnit)} {energyUnitLabel(energyUnit)} - tap to review</Text>
           </TouchableOpacity>
           <Button
             title={`Log ${plate.length}`}
@@ -1050,7 +1050,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         sheetStyle={styles.plateModalSheet}
       >
         <View style={styles.plateModalHeader}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.plateModalTitle, live.plateModalTitle]} accessibilityRole="header">Selected foods ({plate.length})</Text>
+          <Text style={[styles.plateModalTitle, live.plateModalTitle]} accessibilityRole="header">Selected foods ({plate.length})</Text>
           <TouchableOpacity onPress={() => setShowPlate(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="close" size={22} color={t.colors.textPrimary} />
           </TouchableOpacity>
@@ -1059,8 +1059,8 @@ export default function FoodSearchScreen({ navigation, route }) {
           {plate.map((it) => (
             <View key={it.key} style={[styles.plateItem, live.plateItem]}>
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.plateItemName, live.plateItemName]} numberOfLines={1}>{it.food.name}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.plateItemMeta, live.plateItemMeta]}>{Math.round(it.quantityG)}g - {toEnergy(it.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+                <Text style={[styles.plateItemName, live.plateItemName]} numberOfLines={1}>{it.food.name}</Text>
+                <Text style={[styles.plateItemMeta, live.plateItemMeta]}>{Math.round(it.quantityG)}g - {toEnergy(it.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
               </View>
               <TouchableOpacity onPress={() => removeFromPlate(it.key)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${it.food.name}`}>
                 <Ionicons name="close-circle" size={22} color={t.colors.textMuted} />

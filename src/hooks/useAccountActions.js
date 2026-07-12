@@ -7,7 +7,7 @@ import * as Updates from 'expo-updates';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient, signOut } from '../lib/supabase';
-import { wipeAllUserData } from '../lib/database';
+import { wipeAllUserDataWithRetry } from '../lib/database';
 import { logError } from '../lib/errorLog';
 import { markAuthDeletionPending } from '../lib/deletionRetry';
 import { audit } from '../lib/observability';
@@ -22,6 +22,24 @@ import { audit } from '../lib/observability';
 // These paths are runtime-critical (identity + data ownership). The logic
 // below is moved verbatim from the old single-file SettingsScreen; behaviour
 // is unchanged.
+
+// R2-12: the sign-out wipe failure alert must say WHAT failed. The old copy
+// blamed "photo and scan data" for every failure class, which sent the
+// founder's own debugging down the wrong path; the wipe now tags the failing
+// step and this maps it to plain words.
+function wipeFailedBody(step) {
+  const names = {
+    photo_files: 'your photo files',
+    photo_meta_legacy: 'photo records',
+    snapshots: 'local backup copies',
+    progress_photo_meta: 'photo records',
+    progress_scan_sessions: 'scan records',
+    progress_scan_assets: 'scan records',
+  };
+  const what = step ? (names[step] ?? `local data (${step})`) : 'local data';
+  return `Removing ${what} from this device failed, so sign-out stopped to protect your privacy. Try again in a moment.`;
+}
+
 export default function useAccountActions() {
   const { user, clearAuthStateForSignOut, setHealthConsent } = useAppStore(
     useShallow(s => ({
@@ -88,10 +106,7 @@ export default function useAccountActions() {
               const result = await clearAuthStateForSignOut();
               if (result?.ok === false) {
                 if (result.reason === 'wipe_failed') {
-                  appAlert(
-                    "Couldn't sign out safely",
-                    'Local photo and scan data could not be removed from this device. Try again before signing out.',
-                  );
+                  appAlert("Couldn't sign out safely", wipeFailedBody(result.step));
                   return;
                 }
                 // AUTH-5 escape hatch: rather than a dead-end "couldn't sign
@@ -111,10 +126,7 @@ export default function useAccountActions() {
                         try {
                           const forced = await clearAuthStateForSignOut({ force: true });
                           if (forced?.ok === false && forced.reason === 'wipe_failed') {
-                            appAlert(
-                              "Couldn't sign out safely",
-                              'Local photo and scan data could not be removed from this device. Try again before signing out.',
-                            );
+                            appAlert("Couldn't sign out safely", wipeFailedBody(forced.step));
                             return;
                           }
                           await finishCloudSignOut();
@@ -288,13 +300,13 @@ export default function useAccountActions() {
       }
       // Wipe local SQLite. Reached only when (a) cloud user and cloud
       // wipe succeeded, or (b) local-only user (no cloud to wipe).
-      try { await wipeAllUserData(userId); }
-      catch (e) {
-        logError('SettingsScreen.deleteAccount.wipeLocal', e);
-        appAlert(
-          "Couldn't finish deletion on this device",
-          'Local photo and scan data could not be removed. Try again before uninstalling or sharing this device.',
-        );
+      // Sign-out escape ruling (2026-07-11): same bounded retry + verified-
+      // clean escape as sign-out, and the failure alert names the actual
+      // failing step instead of blaming photos for every failure class.
+      const localWipe = await wipeAllUserDataWithRetry(userId);
+      if (!localWipe.ok) {
+        logError('SettingsScreen.deleteAccount.wipeLocal', new Error(`wipe failed at ${localWipe.step ?? 'unknown step'}`), { userId });
+        appAlert("Couldn't finish deletion on this device", wipeFailedBody(localWipe.step));
         setDeletingAccount(false);
         return;
       }
@@ -448,7 +460,7 @@ export default function useAccountActions() {
                       await performDeleteAccount('consent_withdrawal');
                     } catch (e) {
                       logError('SettingsScreen.withdrawConsent', e, { uid: user?.id });
-                      appAlert("Couldn't withdraw", e?.message ?? 'Unknown error.');
+                      appAlert("Couldn't withdraw", 'Try again in a moment.');
                     } finally {
                       setWithdrawing(false);
                     }

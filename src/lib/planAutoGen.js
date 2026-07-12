@@ -24,6 +24,7 @@ import {
   db,
   runInTransaction,
   deleteProgrammeCascade,
+  deleteProgrammeCascadeInTx,
 } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generatePlan } from './planEngine';
@@ -157,7 +158,8 @@ export async function generateAndSavePlan(userId, profile) {
   const planName = await makeUniquePlanName(userId, baseName);
   let programmeId = null;
   try {
-    const writeResult = await runInTransaction(await db(), async () => {
+    const d = await db();
+    const writeResult = await runInTransaction(d, async () => {
       const prog = await createProgramme(
         userId, planName, plan.description ?? '', 0, null, null, null, false,
       );
@@ -191,7 +193,11 @@ export async function generateAndSavePlan(userId, profile) {
         }
       }
       if (totalWritten === 0) {
-        await deleteProgrammeCascade(prog.id, { scheduleSync: false });
+        // In-transaction rollback of the empty programme. This runs INSIDE
+        // the write transaction, and nested runInTransaction calls deadlock
+        // the queue, so the raw InTx variant is used on the same handle.
+        // No sync scheduling: the programme never becomes visible.
+        await deleteProgrammeCascadeInTx(d, prog.id);
         return { zeroMatch: true, prog, totalWritten, totalRequested, missedNames };
       }
       return { zeroMatch: false, prog, totalWritten, totalRequested, missedNames };

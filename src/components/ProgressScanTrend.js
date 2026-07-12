@@ -56,8 +56,8 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
     return (
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Score trend</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>
+          <Text style={[styles.title, live.title]}>Score trend</Text>
+          <Text style={[styles.subtitle, live.subtitle]}>
             Comparable photo sets only. Gaps are shown, never smoothed over.
           </Text>
         </View>
@@ -79,7 +79,7 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
         {renderHeader()}
         <View style={styles.placeholder}>
           <Ionicons name="leaf-outline" size={32} color={t.colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.placeholderText, live.placeholderText]}>Trend view is hidden for now.</Text>
+          <Text style={[styles.placeholderText, live.placeholderText]}>Trend view is hidden for now.</Text>
         </View>
       </SafeAreaView>
     );
@@ -91,7 +91,7 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
         {renderHeader()}
         <View style={styles.placeholder}>
           <Ionicons name="trending-up-outline" size={32} color={t.colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.placeholderText, live.placeholderText]}>{TREND_EMPTY_STATE_TEXT}</Text>
+          <Text style={[styles.placeholderText, live.placeholderText]}>{TREND_EMPTY_STATE_TEXT}</Text>
         </View>
       </SafeAreaView>
     );
@@ -102,7 +102,7 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
       {renderHeader()}
       {ladderLabel ? (
         <View style={styles.ladderRow}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.ladderText, live.ladderText]}>{ladderLabel}</Text>
+          <Text style={[styles.ladderText, live.ladderText]}>{ladderLabel}</Text>
         </View>
       ) : null}
       <ScrollView contentContainerStyle={styles.content}>
@@ -129,8 +129,8 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
               >
                 <MarkerIcon shape={point.shape} />
                 <View style={styles.pointCopy}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.pointDate, live.pointDate]}>{dateLabel}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.pointValue, live.pointValue]} numberOfLines={1}>
+                  <Text style={[styles.pointDate, live.pointDate]}>{dateLabel}</Text>
+                  <Text style={[styles.pointValue, live.pointValue]} numberOfLines={1}>
                     {point.scoreText || point.chipLabel}
                   </Text>
                 </View>
@@ -142,7 +142,7 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
               </TouchableOpacity>
               {expanded ? (
                 <View style={[styles.pointDetail, live.pointDetail]}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.pointDetailText, live.pointDetailText]}>{detailText}</Text>
+                  <Text style={[styles.pointDetailText, live.pointDetailText]}>{detailText}</Text>
                 </View>
               ) : null}
             </View>

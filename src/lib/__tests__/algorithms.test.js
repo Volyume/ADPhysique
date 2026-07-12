@@ -381,6 +381,46 @@ describe('computeSetTargets, unit-aware increments (A2-043)', () => {
   });
 });
 
+describe('computeSetTargets, layoff reduction is the final invariant (LS-04/H-13)', () => {
+  // Codex audit: returning after a >=7-day break, the anchor pass overwrote a
+  // lighter set's layoff-reduced target with the un-reduced session maximum,
+  // so the first set was pushed UP (to 10kg) while the reason still claimed a
+  // 20% cut. The anchor pass must not run under layoff.
+  test('no set is anchored above its own layoff-reduced load', () => {
+    const { targets, reason } = computeSetTargets(
+      [{ weight: 5, actualReps: 8, rir: 2 }, { weight: 10, actualReps: 8, rir: 2 }],
+      6, 12, 'kg', { layoffMultiplier: 0.8 },
+    );
+    // 5 * 0.8 = 4, 10 * 0.8 = 8. The light first set stays reduced, never
+    // anchored up to the 10kg session max.
+    expect(targets[0].weight).toBe(4);
+    expect(targets[1].weight).toBe(8);
+    expect(targets[0].weight).toBeLessThan(targets[1].weight);
+    // Every layoff target is at or below the reduced version of the session max.
+    for (const t of targets) expect(t.weight).toBeLessThanOrEqual(10 * 0.8);
+    // The copy still promises a reduction, and now the loads honour it.
+    expect(reason).toMatch(/reduced/i);
+    expect(targets.some(t => t.anchored)).toBe(false);
+  });
+});
+
+describe('computeSetTargets, the anchor pass honours the 5% cap at low load (LS-05)', () => {
+  // Codex audit: the anchor pass used the superseded (cap > 0.5 ? cap : inc)
+  // form, which disabled the 5% session-over-session cap for loads <= 10 units,
+  // so a light anchored set could jump the full increment (~25%). It must use
+  // the same cap as the main pass.
+  test('anchoring a light set caps the jump at 5% (+0.25 floor), not the full increment', () => {
+    const { targets } = computeSetTargets(
+      [{ weight: 2.5, actualReps: 8, rir: 2 }, { weight: 5, actualReps: 12, rir: 2 }],
+      6, 12, 'kg',
+    );
+    // Set 1 (5kg) hit the top with headroom → 5 + min(inc, 5*0.05=0.25) = 5.25.
+    // Set 0 anchors to that same capped 5.25, NOT to the old 6.25 (25% jump).
+    expect(targets[0].weight).toBe(5.25);
+    expect(targets[0].weight).toBeLessThanOrEqual(5 * 1.05 + 0.001);
+  });
+});
+
 describe('calculate1RM, high-rep guard (A2-040)', () => {
   test('1-20 reps behaviour is unchanged', () => {
     // Single rep returns the weight; low reps use the Epley/Brzycki blend.

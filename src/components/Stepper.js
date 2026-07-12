@@ -16,6 +16,14 @@ import PressableCard from './PressableCard';
 import { colors, fontWeight, spacing, radius } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
+// AX-15: compact button is 30x34dp. 8dp uniform hit slop on every edge
+// brings the effective touch target to 46x50dp (>= the 44x44 minimum in
+// both axes) without growing the visible icon or value text. Matches the
+// same value already used ad hoc by two call sites (BuildWorkoutScreen.js,
+// ManualBuilderScreen's STEPPER_HIT_SLOP) -- promoted here as the default so
+// every compact Stepper gets it, not only the ones that remembered to ask.
+const COMPACT_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
+
 export default function Stepper({
   value,
   onChange,
@@ -46,13 +54,21 @@ export default function Stepper({
   const SIZES = buildSizes(t.fontSize);
   const sizeStyle = SIZES[size] || SIZES.md;
   const isCompact = size === 'compact';
+  // AX-15: the compact button is a deliberately small 30x34dp visible
+  // affordance (keeps the whole control dense next to a settings row/value),
+  // but that left its touch target below the 44x44 minimum with no hit slop
+  // to make up the difference. Default hit slop on this size only; a
+  // caller-supplied hitSlop still wins (see rowCompact's matching padding
+  // below -- RN never lets hitSlop reach past the immediate parent's own
+  // bounds, so the parent has to make room for it).
+  const effectiveHitSlop = hitSlop ?? (isCompact ? COMPACT_HIT_SLOP : undefined);
 
   return (
     <View style={[styles.row, { gap: sizeStyle.gap }, isCompact && [styles.rowCompact, live.rowCompact], style]}>
       <PressableCard
         onPress={dec}
         disabled={atMin}
-        hitSlop={hitSlop}
+        hitSlop={effectiveHitSlop}
         accessibilityRole="button"
         accessibilityLabel={decreaseLabel || `Decrease ${label}`}
         accessibilityState={{ disabled: atMin }}
@@ -75,14 +91,13 @@ export default function Stepper({
         ]}
         accessibilityLabel={valueLabel || `${label} ${display}`}
         numberOfLines={1}
-        maxFontSizeMultiplier={1.3}
       >
         {display}
       </Text>
       <PressableCard
         onPress={inc}
         disabled={atMax}
-        hitSlop={hitSlop}
+        hitSlop={effectiveHitSlop}
         accessibilityRole="button"
         accessibilityLabel={increaseLabel || `Increase ${label}`}
         accessibilityState={{ disabled: atMax }}
@@ -120,6 +135,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
+    // AX-15: React Native hitSlop is clipped at the nearest parent's own
+    // layout bounds ("the touch area never extends past the parent view
+    // bounds", Libraries/Components/View/ViewPropTypes.js) -- this row is
+    // the buttons' immediate parent, so it must carry padding matching
+    // COMPACT_HIT_SLOP or the hit slop above silently does nothing. Grows
+    // the pill's outer padding, not the button/icon/value inside it.
+    padding: 8,
   },
   btn: {
     width: 44,

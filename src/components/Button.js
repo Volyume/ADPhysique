@@ -56,7 +56,10 @@ function buildVariants(c) {
     outline: { bg: c.surface, fg: c.textPrimary, border: c.border },
     // fg uses onError (always-light ink, theme.js), NOT textPrimary, which flips
     // dark in the light theme and fails contrast on the dark-red fill (audit U-F-1).
-    destructive: { bg: c.error, fg: c.onError, border: 'transparent' },
+    // bg uses errorFill, not error: the flat `error` ink is only 3.68:1 under
+    // white in dark/CVD, while errorFill is the deeper red/magenta that clears
+    // the 4.5:1 semibold-label bar (AX-06 launch accessibility audit).
+    destructive: { bg: c.errorFill, fg: c.onError, border: 'transparent' },
   };
 }
 
@@ -94,6 +97,10 @@ export default function Button({
   accessibilityLabel,
   accessibilityState,
   testID,
+  // R9 (D70): forwarded to PressableCard so compact size="sm" buttons can
+  // keep a 44pt effective touch target without visual growth (the
+  // converted hand-rolled CTAs relied on TouchableOpacity hitSlop).
+  hitSlop,
   children,
 }) {
   const t = useTheme();
@@ -163,7 +170,7 @@ export default function Button({
     <>
       <Ionicons name="checkmark" size={s.icon} color={v.fg} />
       {successLabel ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.label, { color: v.fg, fontSize: s.font, lineHeight: Math.round(s.font * lineHeight.snug) }, textStyle]}>
+        <Text style={[styles.label, { color: v.fg, fontSize: s.font, lineHeight: Math.round(s.font * lineHeight.snug) }, textStyle]}>
           {successLabel}
         </Text>
       ) : null}
@@ -172,7 +179,7 @@ export default function Button({
     <>
       {icon ? <Ionicons name={icon} size={s.icon} color={v.fg} /> : null}
       {title != null ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.label, { color: v.fg, fontSize: s.font, lineHeight: Math.round(s.font * lineHeight.snug) }, textStyle]}>
+        <Text style={[styles.label, { color: v.fg, fontSize: s.font, lineHeight: Math.round(s.font * lineHeight.snug) }, textStyle]}>
           {title}
         </Text>
       ) : null}
@@ -210,6 +217,7 @@ export default function Button({
       accessibilityLabel={accessibilityLabel || title}
       accessibilityState={mergedAccessibilityState}
       testID={testID}
+      hitSlop={hitSlop}
       style={[
         styles.base,
         {

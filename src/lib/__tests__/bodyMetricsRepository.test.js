@@ -1,4 +1,18 @@
+import fs from 'fs';
+import path from 'path';
 import { createBodyMetricsRepository } from '../database/bodyMetrics';
+
+// LS-07 source guard: locks out the old UTC-midnight parse of metric_date.
+describe('LS-07 source guard', () => {
+  test('metricDateToMs no longer parses metric_date as UTC midnight', () => {
+    const source = fs.readFileSync(
+      path.join(__dirname, '../database/bodyMetrics.js'),
+      'utf8',
+    );
+    expect(source).not.toMatch(/new Date\(`\$\{value\}T00:00:00Z`\)/);
+    expect(source).toMatch(/parseLocalDay\(/);
+  });
+});
 
 const rowToCamel = (row) => Object.fromEntries(
   Object.entries(row).map(([key, value]) => [
@@ -234,10 +248,16 @@ describe('bodyMetricsRepository', () => {
     });
 
     expect(conn.runAsync).toHaveBeenCalledTimes(1);
+    // eslint-disable-next-line global-require
+    const { parseLocalDay } = require('../dayKey');
     expect(conn.runAsync.mock.calls[0][1]).toEqual([
       'cloud-1',
       'u1',
-      new Date('2026-07-05T00:00:00Z').getTime(),
+      // LS-07: metric_date is a local-calendar-day key, so cloud-restore parses
+      // it back as LOCAL midnight (parseLocalDay), not UTC midnight. Under a
+      // non-UTC CI timezone (Europe/London) the two differ; the local-day value
+      // is the correct one and matches the sibling LS-07 test below.
+      parseLocalDay('2026-07-05').getTime(),
       78.2,
       12.9,
       'scan',
@@ -255,6 +275,28 @@ describe('bodyMetricsRepository', () => {
       new Date('2026-07-04T11:00:00.000Z').getTime(),
       new Date('2026-07-04T12:00:00.000Z').getTime(),
     ]);
+  });
+
+  // LS-07 (codex-adversarial-audit-triage-2026-07-12.md): metric_date is a
+  // local-calendar-day key (stamped by sync/tables/bodyComposition.js's
+  // msToDate via localDayKey), so the cloud-restore side must parse it back
+  // as a LOCAL calendar date, not UTC midnight -- otherwise the two sides
+  // of the sync round trip disagree about what "the day" means. This pins
+  // insertBodyMetricFromCloud to route metric_date through parseLocalDay
+  // (dayKey.js), the same local-midnight parser used elsewhere (food/db.js,
+  // workoutDate.js) whenever a stored day-key becomes a timestamp again.
+  test('insertBodyMetricFromCloud parses metric_date as a LOCAL calendar day (LS-07)', async () => {
+    const { conn, repo } = createHarness();
+
+    await repo.insertBodyMetricFromCloud('u1', {
+      id: 'cloud-2',
+      metric_date: '2026-07-15',
+      body_weight: 80,
+    });
+
+    // eslint-disable-next-line global-require
+    const { parseLocalDay } = require('../dayKey');
+    expect(conn.runAsync.mock.calls[0][1][2]).toBe(parseLocalDay('2026-07-15').getTime());
   });
 
   test('getBodyMetricUpdatedAt returns null without id and reads local LWW timestamp', async () => {

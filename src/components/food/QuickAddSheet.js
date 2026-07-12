@@ -80,10 +80,10 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
 
   return (
     <BottomSheet visible={visible} onClose={handleClose} keyboardAvoiding accessibilityLabel="Quick add">
-          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Quick add</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>Log calories now, with macros if you have them.</Text>
+          <Text style={[styles.title, live.title]}>Quick add</Text>
+          <Text style={[styles.subtitle, live.subtitle]}>Log calories now, with macros if you have them.</Text>
 
-          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Calories</Text>
+          <Text style={[styles.fieldLabel, live.fieldLabel]}>Calories</Text>
           <TextField
             value={kcal}
             onChangeText={setKcal}
@@ -118,7 +118,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
             ))}
           </View>
 
-          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Meal</Text>
+          <Text style={[styles.fieldLabel, live.fieldLabel]}>Meal</Text>
           <View style={styles.mealRow}>
             {pickerMealSlots(mealSlot, undefined, periWorkoutSlots).map(s => (
               <Chip

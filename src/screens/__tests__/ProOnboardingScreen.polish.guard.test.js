@@ -35,7 +35,7 @@ describe('ProOnboardingScreen premium polish guards', () => {
     // CP-10 batch G lane 1: outcomeChipText gained its live-theme override
     // (style={[styles.outcomeChipText, live.outcomeChipText]}); the pinned
     // contract (numberOfLines=1, flexShrink) is unchanged.
-    expect(SOURCE).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.outcomeChipText, live\.outcomeChipText\]\} numberOfLines=\{1\}>/);
+    expect(SOURCE).toMatch(/<Text style=\{\[styles\.outcomeChipText, live\.outcomeChipText\]\} numberOfLines=\{1\}>/);
     expect(SOURCE).toMatch(/outcomeChipText: \{[^}]*flexShrink: 1/);
     expect(SOURCE).toMatch(/heightImperialRow: \{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing\.md \}/);
     expect(SOURCE).toMatch(/inputHalf: \{ flex: 1, minWidth: 140 \}/);
@@ -65,7 +65,7 @@ describe('ProOnboardingScreen premium polish guards', () => {
     // itself stays non-optional (morningEnabled/checkinEnabled true, no
     // toggle handlers below) - tone only, gate assertions unchanged.
     // CP-10 batch G lane 1: requiredPillText gained its live-theme override.
-    expect(SOURCE).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.requiredPillText, live.requiredPillText]}>Part of your coaching</Text>');
+    expect(SOURCE).toContain('<Text style={[styles.requiredPillText, live.requiredPillText]}>Part of your coaching</Text>');
     expect(SOURCE).toContain('accessibilityRole="radiogroup" accessibilityLabel="Morning weight reminder time"');
     expect(SOURCE).toContain('accessibilityRole="radiogroup" accessibilityLabel="Weekly check-in day"');
     expect(SOURCE).toContain('accessibilityState={{ checked: morningHour === h }}');

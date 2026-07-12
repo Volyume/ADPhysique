@@ -32,7 +32,10 @@ describe('SC-2: total cloud failure aborts honestly', () => {
   test('the abort (alert + return) runs BEFORE sign-out and the local wipe', () => {
     const abortAt = HOOK.indexOf('if (!cloudOk) {');
     const signOutAt = HOOK.indexOf('try { await signOut(); }');
-    const localWipeAt = HOOK.indexOf('await wipeAllUserData(userId);');
+    // RE-ANCHORED 2026-07-11 (sign-out escape ruling): the local wipe now
+    // routes through wipeAllUserDataWithRetry (bounded retry + verified-clean
+    // escape); the ordering rule this pin protects is unchanged.
+    const localWipeAt = HOOK.indexOf('await wipeAllUserDataWithRetry(userId);');
     expect(abortAt).toBeGreaterThan(-1);
     expect(signOutAt).toBeGreaterThan(-1);
     expect(localWipeAt).toBeGreaterThan(-1);

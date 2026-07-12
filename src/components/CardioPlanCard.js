@@ -43,15 +43,15 @@ export default function CardioPlanCard({ userId, target, onPress, onHistory }) {
     <View style={[styles.cardioCard, live.cardioCard]}>
       <View style={styles.cardioHeader}>
         <Ionicons name="heart-outline" size={18} color={t.colors.primary} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.cardioTitle, live.cardioTitle]}>Cardio this week</Text>
+        <Text style={[styles.cardioTitle, live.cardioTitle]}>Cardio this week</Text>
         {done > 0 ? (
           <TouchableOpacity style={[styles.cardioHistoryBtn, live.cardioHistoryBtn]} onPress={onHistory} hitSlop={8} accessibilityRole="button" accessibilityLabel="Cardio history">
             <Ionicons name="time-outline" size={13} color={t.colors.textSecondary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.cardioHistoryLink, live.cardioHistoryLink]}>History</Text>
+            <Text style={[styles.cardioHistoryLink, live.cardioHistoryLink]}>History</Text>
           </TouchableOpacity>
         ) : null}
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.cardioSub, live.cardioSub]}>{sub}</Text>
+      <Text style={[styles.cardioSub, live.cardioSub]}>{sub}</Text>
       <Button
         title="Log cardio"
         variant="outline"
@@ -63,7 +63,7 @@ export default function CardioPlanCard({ userId, target, onPress, onHistory }) {
       {/* COMP-011: only when there's logged cardio to misread; the empty
           state has nothing to double-count and stays clean. */}
       {done > 0 ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.cardioFootnote, live.cardioFootnote]}>
+        <Text style={[styles.cardioFootnote, live.cardioFootnote]}>
           Cardio is already counted in your calorie target. Nothing to add back.
         </Text>
       ) : null}
@@ -73,7 +73,8 @@ export default function CardioPlanCard({ userId, target, onPress, onHistory }) {
 
 const styles = StyleSheet.create({
   cardioCard: {
-    backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1,
+    // R9 (D70): radius.md -> radius.lg, cards move to the app-wide card radius.
+    backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1,
     borderColor: colors.border, padding: spacing.md, gap: spacing.sm,
   },
   cardioHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

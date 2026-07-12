@@ -16,6 +16,7 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 jest.mock('../../lib/database', () => ({
   getWorkoutById: jest.fn(),
   wipeAllUserData: jest.fn().mockResolvedValue(undefined),
+  wipeAllUserDataWithRetry: jest.fn().mockResolvedValue({ ok: true }),
 }));
 
 const AsyncStorage = require('@react-native-async-storage/async-storage').default

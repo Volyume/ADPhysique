@@ -60,7 +60,7 @@ export default function OAuthButtons({ onApple, onGoogle, disabled, dividerLabel
             accessibilityLabel="Continue with Apple"
           >
             <Ionicons name="logo-apple" size={18} color={t.colors.appleBtnText} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.btnAppleText, live.btnAppleText]}>Continue with Apple</Text>
+            <Text style={[styles.btnAppleText, live.btnAppleText]}>Continue with Apple</Text>
           </TouchableOpacity>
         )
       )}
@@ -77,13 +77,13 @@ export default function OAuthButtons({ onApple, onGoogle, disabled, dividerLabel
           accessibilityLabel="Continue with Google"
         >
           <Ionicons name="logo-google" size={18} color={t.colors.textPrimary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.btnText, live.btnText]}>Continue with Google</Text>
+          <Text style={[styles.btnText, live.btnText]}>Continue with Google</Text>
         </TouchableOpacity>
       )}
       {dividerLabel ? (
         <View style={styles.divider}>
           <View style={[styles.dividerLine, live.dividerLine]} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.dividerText, live.dividerText]}>{dividerLabel}</Text>
+          <Text style={[styles.dividerText, live.dividerText]}>{dividerLabel}</Text>
           <View style={[styles.dividerLine, live.dividerLine]} />
         </View>
       ) : null}

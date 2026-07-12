@@ -78,7 +78,7 @@ export default function WelcomeScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Animated.View style={[styles.hero, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
           <Image source={HERO} style={styles.logoImg} resizeMode="contain" />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.tagline, live.tagline]}>Less thinking. More lifting.</Text>
+          <Text style={[styles.tagline, live.tagline]}>Less thinking. More lifting.</Text>
         </Animated.View>
 
         <Animated.View style={[styles.cards, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
@@ -92,9 +92,9 @@ export default function WelcomeScreen({ navigation }) {
               </View>
               <View style={{ flex: 1 }}>
                 <View style={styles.proTitleRow}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.proTitle, live.proTitle]}>The full app, free for 14 days</Text>
+                  <Text style={[styles.proTitle, live.proTitle]}>The full app, free for 14 days</Text>
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.proSubtitle, live.proSubtitle]}>Clear coaching that adjusts from your logged training.</Text>
+                <Text style={[styles.proSubtitle, live.proSubtitle]}>Clear coaching that adjusts from your logged training.</Text>
               </View>
             </View>
 
@@ -104,7 +104,7 @@ export default function WelcomeScreen({ navigation }) {
               {TRIAL_BULLETS.map(b => (
                 <View key={b} style={styles.bulletRow}>
                   <Ionicons name="checkmark-circle" size={15} color={t.colors.primary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.bulletText, live.bulletText]}>{b}</Text>
+                  <Text style={[styles.bulletText, live.bulletText]}>{b}</Text>
                   {/* U-E-1: inline gloss for the coach term on first appearance. */}
                   {b.includes('Coach') && (
                     <InfoTooltip text={GLOSSARY.precisionCoaching} size={13} />
@@ -113,14 +113,14 @@ export default function WelcomeScreen({ navigation }) {
               ))}
             </View>
 
-            <Text maxFontSizeMultiplier={1.3} style={[styles.trialNote, live.trialNote]}>
+            <Text style={[styles.trialNote, live.trialNote]}>
               {monthlyPrice
                 ? `No payment card needed. Afterwards it's ${monthlyPrice} a month on ${storeName()}, or carry on free.`
                 : `No payment card needed. Afterwards it's a monthly subscription on ${storeName()}, or carry on free.`}
             </Text>
 
             <View style={[styles.proCtaRow, live.proCtaRow]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.proCtaText, live.proCtaText]}>Start your 14 days</Text>
+              <Text style={[styles.proCtaText, live.proCtaText]}>Start your 14 days</Text>
               <Ionicons name="arrow-forward" size={16} color={t.colors.onPrimary} />
             </View>
           </Card>
@@ -134,8 +134,8 @@ export default function WelcomeScreen({ navigation }) {
                 <Ionicons name="create-outline" size={18} color={t.colors.textSecondary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.freeTitle, live.freeTitle]}>Yours free, always</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.freeSubtitle, live.freeSubtitle]}>If you don&apos;t subscribe after the trial, these stay.</Text>
+                <Text style={[styles.freeTitle, live.freeTitle]}>What stays free</Text>
+                <Text style={[styles.freeSubtitle, live.freeSubtitle]}>If you don&apos;t subscribe after the trial, these stay.</Text>
               </View>
             </View>
 
@@ -143,7 +143,7 @@ export default function WelcomeScreen({ navigation }) {
               {AFTER_TRIAL_BULLETS.map(b => (
                 <View key={b} style={styles.bulletRow}>
                   <Ionicons name="checkmark" size={14} color={t.colors.textSecondary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.freeBulletText, live.freeBulletText]}>{b}</Text>
+                  <Text style={[styles.freeBulletText, live.freeBulletText]}>{b}</Text>
                 </View>
               ))}
             </View>
@@ -158,16 +158,16 @@ export default function WelcomeScreen({ navigation }) {
           <View
             style={styles.trustRow}
             accessible
-            accessibilityLabel="Works fully offline. Your data exports anytime. No ads, ever."
+            accessibilityLabel="Works fully offline. Your data exports anytime. No ads."
           >
             <Ionicons name="cloud-offline-outline" size={13} color={t.colors.textMuted} importantForAccessibility="no" />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.trustText, live.trustText]}>Works fully offline</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.trustDot, live.trustDot]}>-</Text>
+            <Text style={[styles.trustText, live.trustText]}>Works fully offline</Text>
+            <Text style={[styles.trustDot, live.trustDot]}>-</Text>
             <Ionicons name="download-outline" size={13} color={t.colors.textMuted} importantForAccessibility="no" />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.trustText, live.trustText]}>Exports anytime</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.trustDot, live.trustDot]}>-</Text>
+            <Text style={[styles.trustText, live.trustText]}>Exports anytime</Text>
+            <Text style={[styles.trustDot, live.trustDot]}>-</Text>
             <Ionicons name="shield-checkmark-outline" size={13} color={t.colors.textMuted} importantForAccessibility="no" />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.trustText, live.trustText]}>No ads, ever</Text>
+            <Text style={[styles.trustText, live.trustText]}>No ads</Text>
           </View>
         </Animated.View>
 
@@ -179,8 +179,8 @@ export default function WelcomeScreen({ navigation }) {
             onPress={() => navigation.navigate('Login')}
             hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.signInText, live.signInText]}>Already have an account?</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.signInAction, live.signInAction]}> Sign in</Text>
+            <Text style={[styles.signInText, live.signInText]}>Already have an account?</Text>
+            <Text style={[styles.signInAction, live.signInAction]}> Sign in</Text>
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>

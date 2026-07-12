@@ -18,7 +18,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
   const t = useTheme();
   const live = {
     fieldLabel: { ...t.type.label, color: t.colors.textSecondary },
-    e1rmHint: { ...t.type.caption, color: t.colors.textMuted },
+    e1rmHint: { ...t.type.num('caption'), color: t.colors.textMuted },
     stepper: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     stepBtn: { backgroundColor: t.colors.surface2 },
     stepBtnText: { ...t.type.bodyStrong, color: t.colors.primary },
@@ -115,7 +115,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
       {showWeightReps && (
       <View style={styles.inputRow}>
         <View style={styles.fieldLabelWrap}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Weight ({units})</Text>
+          <Text style={[styles.fieldLabel, live.fieldLabel]}>Weight ({units})</Text>
         </View>
         <View style={[styles.stepper, live.stepper]}>
           <TouchableOpacity
@@ -129,12 +129,11 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel={`Decrease weight by ${Number(weightStepKg) > 0 ? Number(weightStepKg) : 2.5} ${units}`}
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]} maxFontSizeMultiplier={1.3}>-</Text>
+            <Text style={[styles.stepBtnText, live.stepBtnText]}>-</Text>
           </TouchableOpacity>
           <TextInput
             testID="volyume-weight-input"
             style={[styles.valueInput, live.valueInput, isGhost && [styles.valueInputGhost, live.valueInputGhost]]}
-            maxFontSizeMultiplier={1.3}
             // Render 0 as "0" not "" (was `String(weight || '')`, which hid
             // a legitimate zero-weight bodyweight set).
             value={weight == null || weight === '' ? '' : String(weight)}
@@ -168,7 +167,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel={`Increase weight by ${Number(weightStepKg) > 0 ? Number(weightStepKg) : 2.5} ${units}`}
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]} maxFontSizeMultiplier={1.3}>+</Text>
+            <Text style={[styles.stepBtnText, live.stepBtnText]}>+</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -180,7 +179,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
       {exerciseType === 'duration' && (
       <View style={styles.inputRow}>
         <View style={styles.fieldLabelWrap}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Time (mm:ss)</Text>
+          <Text style={[styles.fieldLabel, live.fieldLabel]}>Time (mm:ss)</Text>
         </View>
         <View style={[styles.stepper, live.stepper]}>
           <TouchableOpacity
@@ -194,12 +193,11 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Decrease time"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]} maxFontSizeMultiplier={1.3}>-</Text>
+            <Text style={[styles.stepBtnText, live.stepBtnText]}>-</Text>
           </TouchableOpacity>
           <TextInput
             testID="volyume-duration-input"
             style={[styles.valueInput, live.valueInput, isGhost && [styles.valueInputGhost, live.valueInputGhost]]}
-            maxFontSizeMultiplier={1.3}
             value={reps == null || reps === '' ? '' : formatSeconds(reps)}
             onChangeText={v => setField('reps', parseTimeToSeconds(v))}
             keyboardType="numbers-and-punctuation"
@@ -219,7 +217,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Increase time"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]} maxFontSizeMultiplier={1.3}>+</Text>
+            <Text style={[styles.stepBtnText, live.stepBtnText]}>+</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -233,7 +231,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
       <>
       <View style={styles.inputRow}>
         <View style={styles.fieldLabelWrap}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Distance ({units === 'kg' ? 'm' : 'yd'})</Text>
+          <Text style={[styles.fieldLabel, live.fieldLabel]}>Distance ({units === 'kg' ? 'm' : 'yd'})</Text>
         </View>
         <View style={[styles.stepper, live.stepper]}>
           <TouchableOpacity
@@ -247,12 +245,11 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Decrease distance"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]} maxFontSizeMultiplier={1.3}>-</Text>
+            <Text style={[styles.stepBtnText, live.stepBtnText]}>-</Text>
           </TouchableOpacity>
           <TextInput
             testID="volyume-distance-input"
             style={[styles.valueInput, live.valueInput, isGhost && [styles.valueInputGhost, live.valueInputGhost]]}
-            maxFontSizeMultiplier={1.3}
             value={weight == null || weight === '' ? '' : String(weight)}
             onChangeText={v => {
               if (v === '' || /^\d{0,5}\.?\d{0,2}$/.test(v)) setField('weight', v);
@@ -273,13 +270,13 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Increase distance"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]} maxFontSizeMultiplier={1.3}>+</Text>
+            <Text style={[styles.stepBtnText, live.stepBtnText]}>+</Text>
           </TouchableOpacity>
         </View>
       </View>
       <View style={styles.inputRow}>
         <View style={styles.fieldLabelWrap}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Time (mm:ss)</Text>
+          <Text style={[styles.fieldLabel, live.fieldLabel]}>Time (mm:ss)</Text>
         </View>
         <View style={[styles.stepper, live.stepper]}>
           <TouchableOpacity
@@ -293,12 +290,11 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Decrease time"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]} maxFontSizeMultiplier={1.3}>-</Text>
+            <Text style={[styles.stepBtnText, live.stepBtnText]}>-</Text>
           </TouchableOpacity>
           <TextInput
             testID="volyume-distance-time-input"
             style={[styles.valueInput, live.valueInput, isGhost && [styles.valueInputGhost, live.valueInputGhost]]}
-            maxFontSizeMultiplier={1.3}
             value={reps == null || reps === '' ? '' : formatSeconds(reps)}
             onChangeText={v => setField('reps', parseTimeToSeconds(v))}
             keyboardType="numbers-and-punctuation"
@@ -318,7 +314,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Increase time"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]} maxFontSizeMultiplier={1.3}>+</Text>
+            <Text style={[styles.stepBtnText, live.stepBtnText]}>+</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -329,16 +325,10 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
           reps_only hides only the Weight Row above; the reps field itself is
           unchanged. */}
       {(showWeightReps || exerciseType === 'reps_only') && (
+      <View style={styles.repsBlock}>
       <View style={styles.inputRow}>
         <View style={styles.fieldLabelWrap}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Reps</Text>
-          {live1RM != null && live1RM > 0 && (
-            <View style={styles.e1rmRow}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.e1rmHint, live.e1rmHint]}>Est. max ~{Math.round(live1RM)}{units}</Text>
-              {/* U-F-5: plain-English gloss for the estimated-1RM jargon. */}
-              <InfoTooltip text={GLOSSARY.estMax} size={13} />
-            </View>
-          )}
+          <Text style={[styles.fieldLabel, live.fieldLabel]}>Reps</Text>
         </View>
         <View style={[styles.stepper, live.stepper]}>
           <TouchableOpacity
@@ -352,13 +342,12 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Decrease reps by 1"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]} maxFontSizeMultiplier={1.3}>-</Text>
+            <Text style={[styles.stepBtnText, live.stepBtnText]}>-</Text>
           </TouchableOpacity>
           <TextInput
             testID="volyume-reps-input"
             ref={repsRef}
             style={[styles.valueInput, live.valueInput, isGhost && [styles.valueInputGhost, live.valueInputGhost]]}
-            maxFontSizeMultiplier={1.3}
             value={reps == null || reps === '' ? '' : String(reps)}
             onChangeText={v => {
               const n = parseInt(v, 10);
@@ -386,9 +375,22 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Increase reps by 1"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]} maxFontSizeMultiplier={1.3}>+</Text>
+            <Text style={[styles.stepBtnText, live.stepBtnText]}>+</Text>
           </TouchableOpacity>
         </View>
+      </View>
+      {/* R2-4 (2026-07-11): the Est. max readout is its own quiet caption
+          line UNDER the reps row now, not wrapped inside the narrow Reps
+          label column where it cramped and its tail collided with the
+          stepper. On its own full-width line it cannot collide at any font
+          scale. */}
+      {live1RM != null && live1RM > 0 && (
+        <View style={styles.e1rmCaptionRow}>
+          <Text style={[styles.e1rmHint, live.e1rmHint]}>Est. max ~{Math.round(live1RM)}{units}</Text>
+          {/* U-F-5: plain-English gloss for the estimated-1RM jargon. */}
+          <InfoTooltip text={GLOSSARY.estMax} size={13} />
+        </View>
+      )}
       </View>
       )}
 
@@ -434,9 +436,15 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     gap: 1,
   },
-  e1rmRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  // R2-4: reps row + its Est. max caption line as one block.
+  repsBlock: { gap: spacing.xxs },
+  // R2-4: the Est. max caption sits on its own full-width line under the
+  // reps row, right-aligned beneath the value it is derived from, so it
+  // never wraps under the Reps label or collides with the stepper.
+  e1rmCaptionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
   e1rmHint: {
-    ...type.caption,
+    // R2 numerals sweep: the Est. max readout is data -> tabular figures.
+    ...type.num('caption'),
     color: colors.textMuted,
   },
   perSideHint: {

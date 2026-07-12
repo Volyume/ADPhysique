@@ -28,7 +28,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, radius } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Button from '../components/Button';
 import BillingPeriodSelector from '../components/BillingPeriodSelector';
@@ -42,7 +42,45 @@ import { storeName } from '../lib/storeName';
 import { logError, logInfo } from '../lib/errorLog';
 import { audit } from '../lib/observability';
 import { track as trackEvent } from '../lib/engineTelemetry';
+import { getRecapData, getWeeklyPRCount } from '../lib/database';
+import { localWeekStartMs } from '../lib/dayKey';
 import useAppStore from '../store/useAppStore';
+
+// C5 / D72 (2026-07-11): a factual training recap above the trial-end choice.
+// RECAP_MIN_SESSIONS is the founder-set floor: below it the block is entirely
+// absent (never a thin recap). TRIAL_MS is the cardless trial length; the recap
+// window is [proTrialEndsAt - TRIAL_MS, proTrialEndsAt), read via getRecapData.
+// See docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md (D72).
+const RECAP_MIN_SESSIONS = 3;
+const TRIAL_MS = 14 * 86400000;
+const WEEK_MS = 7 * 86400000;
+
+/**
+ * Build the single factual recap line for the trial-end gate.
+ *
+ * Training-mechanics facts only (D72): no weight, food, or outcome/body-change
+ * language, so the line is identical for every user and reads no flag. Returns
+ * null below the founder floor so the caller renders no block at all, and omits
+ * the personal-bests segment entirely when there are none.
+ *
+ * @param {{ totalSessions:number, totalSets:number, uniqueExercises:number, prCount:number }} p
+ * @returns {string|null} e.g. "12 workouts · 96 sets · 9 exercises · 4 personal bests"
+ */
+export function buildTrialRecapLine({ totalSessions, totalSets, uniqueExercises, prCount } = {}) {
+  const sessions = Number(totalSessions) || 0;
+  if (sessions < RECAP_MIN_SESSIONS) return null;
+  const sets = Number(totalSets) || 0;
+  const exercises = Number(uniqueExercises) || 0;
+  const prs = Number(prCount) || 0;
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  const parts = [
+    plural(sessions, 'workout', 'workouts'),
+    plural(sets, 'set', 'sets'),
+    plural(exercises, 'exercise', 'exercises'),
+  ];
+  if (prs > 0) parts.push(plural(prs, 'personal best', 'personal bests'));
+  return parts.join(' · ');
+}
 
 // 2-tier model (founder override 2026-05-25): one trial-end gate, plus the
 // payment-failure overlay. M-3 (2026-06-06): the trial is 14+7, so 'day14' is
@@ -107,6 +145,9 @@ export default function CascadeGateScreen({ navigation, route }) {
   const content = _variantContent(variant);
   const [busy, setBusy] = useState(null);  // which CTA is in-flight
   const userId = useAppStore((s) => s.user?.id);
+  // C5 / D72: the factual training-recap line, or null (below floor, off-surface,
+  // or any load failure -> no block renders).
+  const [recapLine, setRecapLine] = useState(null);
   // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
@@ -129,6 +170,45 @@ export default function CascadeGateScreen({ navigation, route }) {
     // Once per mount: intentionally no deps so a re-render never re-sends it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // C5 / D72 (2026-07-11): load the factual training recap for the trial-end
+  // variant only. Render-only decoration above the choice; it touches no
+  // purchase logic and is fully best-effort, so any failure renders nothing
+  // rather than delaying or breaking the gate. Training-mechanics facts only,
+  // so the block is flag-invariant and identical for every user (nothing
+  // weight- or food-adjacent is read or shown). PBs sum getWeeklyPRCount over
+  // the window's Monday-local weeks (the app's one PB definition).
+  useEffect(() => {
+    if (content?.surface !== 'cascade_trial_end_gate' || !userId) return undefined;
+    let cancelled = false;
+    (async () => {
+      // Dual-key read mirroring HomeScreen.js:486 (camelCase | snake_case).
+      // The cloud column is timestamptz, so the store usually holds an ISO
+      // string, not epoch ms; coerce the way scheduler.js does or the block
+      // would never render for a real user.
+      const profile = useAppStore.getState().userProfile;
+      const raw = profile?.proTrialEndsAt ?? profile?.pro_trial_ends_at ?? null;
+      const endsAt = typeof raw === 'number' ? raw : Date.parse(raw ?? '');
+      if (!Number.isFinite(endsAt)) return;
+      const startMs = endsAt - TRIAL_MS;
+      const endMs = endsAt;
+      const recap = await getRecapData(userId, { startMs, endMs });
+      let prCount = 0;
+      for (let ws = localWeekStartMs(startMs); ws < endMs; ws += WEEK_MS) {
+        // eslint-disable-next-line no-await-in-loop
+        prCount += await getWeeklyPRCount(userId, ws);
+      }
+      if (cancelled) return;
+      setRecapLine(buildTrialRecapLine({
+        totalSessions: recap?.totalSessions ?? 0,
+        totalSets: recap?.totalSets ?? 0,
+        uniqueExercises: recap?.uniqueExercises ?? 0,
+        prCount,
+      }));
+    })().catch(() => { /* best-effort: a recap must never delay or break the gate */ });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content?.surface, userId]);
 
   // C-2 / PLAY-002: localised store prices. priceFor returns null until the
   // active store responds; the chips show a short placeholder rather than a
@@ -241,7 +321,7 @@ export default function CascadeGateScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]}>
         <View style={styles.center}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.errorText, live.errorText]}>Unknown cascade variant: {variant}</Text>
+          <Text style={[styles.errorText, live.errorText]}>Unknown cascade variant: {variant}</Text>
         </View>
       </SafeAreaView>
     );
@@ -252,8 +332,18 @@ export default function CascadeGateScreen({ navigation, route }) {
       <ModalHeader title="Subscription" onClose={dismiss} />
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>{content.title}</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>{content.subtitle}</Text>
+        <Text style={[styles.title, live.title]}>{content.title}</Text>
+        <Text style={[styles.subtitle, live.subtitle]}>{content.subtitle}</Text>
+
+        {/* C5 / D72: factual training recap, trial-end variant only. Render-only,
+            not tappable, no accent. Training facts only, so it is identical for
+            every user; absent below the floor or on any load failure. */}
+        {recapLine && content.surface === 'cascade_trial_end_gate' ? (
+          <View style={[styles.recapCard, live.recapCard]}>
+            <Text style={[styles.recapTitle, live.recapTitle]}>During your trial</Text>
+            <Text style={[styles.recapLine, live.recapLine]}>{recapLine}</Text>
+          </View>
+        ) : null}
 
         {/* TierComparisonStrip was a 3-tier Pro-vs-Complete strip;
             in the 2-tier model the gate is a single Pro / Free
@@ -336,6 +426,28 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   periodSelector: { marginBottom: spacing.xl },
+  // C5 / D72: neutral recap card (no accent), consistent with the screen's
+  // surface ladder + hairline card edge. New keys only; frozen keys untouched.
+  recapCard: {
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderSubtle,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  recapTitle: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    marginBottom: spacing.xs,
+  },
+  recapLine: {
+    color: colors.textSecondary,
+    fontSize: fontSize.md,
+    lineHeight: 22,
+  },
   ctaStack: {
     gap: spacing.md,
   },
@@ -355,5 +467,10 @@ function buildLiveStyles(t) {
     title: { color: t.colors.textPrimary, fontSize: t.fontSize.xxl },
     subtitle: { color: t.colors.textSecondary, fontSize: t.fontSize.md },
     errorText: { color: t.colors.error },
+    // C5 / D72: mirror only the colour/fontSize-bearing sub-properties of the
+    // recap keys (borderRadius/padding/margin are theme-invariant, so omitted).
+    recapCard: { backgroundColor: t.colors.surfaceElevated, borderColor: t.colors.borderSubtle },
+    recapTitle: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
+    recapLine: { color: t.colors.textSecondary, fontSize: t.fontSize.md },
   };
 }

@@ -409,7 +409,7 @@ export default function ProGoalSetupScreen({ navigation }) {
             lifters pick their division so volume gets biased towards the
             muscles their category is judged on. */}
         <SectionLabel style={styles.sectionLabel}>Competing in a category? (optional)</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
+        <Text style={[styles.sectionSub, live.sectionSub]}>
           Only matters if you're chasing a competitive physique. It biases your plan towards the muscles that category is judged on.
         </Text>
 
@@ -424,9 +424,9 @@ export default function ProGoalSetupScreen({ navigation }) {
         {weakPointsApplicable && (
           <>
             <SectionLabel style={styles.sectionLabelSpaced}>
-              Weak points <Text maxFontSizeMultiplier={1.3} style={[styles.optionalTag, live.optionalTag]}>(optional, max 3)</Text>
+              Weak points <Text style={[styles.optionalTag, live.optionalTag]}>(optional, max 3)</Text>
             </SectionLabel>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
+            <Text style={[styles.sectionSub, live.sectionSub]}>
               Muscles you want to bring up. Your plan puts extra work into them.
             </Text>
             <View style={styles.weakPointGrid}>
@@ -448,9 +448,9 @@ export default function ProGoalSetupScreen({ navigation }) {
         {showDateApplicable && (
           <>
             <SectionLabel style={styles.sectionLabelSpaced}>
-              Show date <Text maxFontSizeMultiplier={1.3} style={[styles.optionalTag, live.optionalTag]}>(optional)</Text>
+              Show date <Text style={[styles.optionalTag, live.optionalTag]}>(optional)</Text>
             </SectionLabel>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
+            <Text style={[styles.sectionSub, live.sectionSub]}>
               Adds a quiet weeks-out line and a prep checklist to your weekly coaching. You can clear it any time.
             </Text>
             <TextField
@@ -474,7 +474,7 @@ export default function ProGoalSetupScreen({ navigation }) {
             Drives nutrition, plan structure, and emphasis overlays
             (weak_point spec, strength_size's isolation reduction). */}
         <SectionLabel style={styles.sectionLabelSpaced}>What are you focused on right now?</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
+        <Text style={[styles.sectionSub, live.sectionSub]}>
           Drives your calorie target and how the plan is built.
         </Text>
 
@@ -487,7 +487,7 @@ export default function ProGoalSetupScreen({ navigation }) {
 
         {/* ── Training experience ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Experience</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
+        <Text style={[styles.sectionSub, live.sectionSub]}>
           This sets your starting volume and exercise selection. Change it as you get more experience.
         </Text>
         <Dropdown
@@ -499,7 +499,7 @@ export default function ProGoalSetupScreen({ navigation }) {
 
         {/* ── Training schedule ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Training days per week</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
+        <Text style={[styles.sectionSub, live.sectionSub]}>
           Changing how many days you train changes the exercise mix. Your plan rebuilds around it.
         </Text>
         <SegmentedControl
@@ -519,7 +519,7 @@ export default function ProGoalSetupScreen({ navigation }) {
 
         {/* ── Equipment ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Equipment</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
+        <Text style={[styles.sectionSub, live.sectionSub]}>
           What you have access to. The exercises adapt to your equipment.
         </Text>
         <Dropdown
@@ -531,7 +531,7 @@ export default function ProGoalSetupScreen({ navigation }) {
 
         {/* ── Recovery ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Recovery</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
+        <Text style={[styles.sectionSub, live.sectionSub]}>
           How well you're recovering between sessions. This sets how hard the coach pushes your progress.
         </Text>
         <Dropdown
@@ -543,7 +543,7 @@ export default function ProGoalSetupScreen({ navigation }) {
 
         {/* ── Protein target ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Protein target</SectionLabel>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>
+        <Text style={[styles.sectionSub, live.sectionSub]}>
           How much protein your daily targets include. Optimised works for most people.
         </Text>
 
@@ -570,15 +570,15 @@ export default function ProGoalSetupScreen({ navigation }) {
               </View>
               <View style={styles.phaseBody}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxs }}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.phaseLabel, live.phaseLabel, active && [styles.phaseLabelActive, live.phaseLabelActive]]}>{ap.label}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.approachRange, live.approachRange, active && [styles.approachRangeActive, live.approachRangeActive]]}>{ap.range}</Text>
+                  <Text style={[styles.phaseLabel, live.phaseLabel, active && [styles.phaseLabelActive, live.phaseLabelActive]]}>{ap.label}</Text>
+                  <Text style={[styles.approachRange, live.approachRange, active && [styles.approachRangeActive, live.approachRangeActive]]}>{ap.range}</Text>
                   {isSuggested && (
                     <View style={[styles.suggestedBadge, live.suggestedBadge]}>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.suggestedBadgeText, live.suggestedBadgeText]}>Suggested</Text>
+                      <Text style={[styles.suggestedBadgeText, live.suggestedBadgeText]}>Suggested</Text>
                     </View>
                   )}
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.phaseDetail, live.phaseDetail]}>{APPROACH_SHORT[key]}</Text>
+                <Text style={[styles.phaseDetail, live.phaseDetail]}>{APPROACH_SHORT[key]}</Text>
               </View>
               {active && <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} />}
             </TouchableOpacity>
@@ -588,7 +588,7 @@ export default function ProGoalSetupScreen({ navigation }) {
         {displayWeightKg ? (
           <View style={styles.footerNote}>
             <Ionicons name="scale-outline" size={15} color={t.colors.textMuted} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.footerNoteText, live.footerNoteText]}>
+            <Text style={[styles.footerNoteText, live.footerNoteText]}>
               Targets use your latest weight, {formatBodyWeightShort(displayWeightKg, userProfile?.bodyWeightUnits ?? 'st')}. Log a new one on Today.
             </Text>
           </View>
@@ -596,7 +596,7 @@ export default function ProGoalSetupScreen({ navigation }) {
 
         <View style={styles.footerNote}>
           <Ionicons name="information-circle-outline" size={15} color={t.colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.footerNoteText, live.footerNoteText]}>
+          <Text style={[styles.footerNoteText, live.footerNoteText]}>
             {/* Wave A B4: the next check-in is a date, not an abstract
                 future event. Same prefs source the check-in screen reads. */}
             Changing your goals updates your plan targets immediately.

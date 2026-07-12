@@ -180,8 +180,8 @@ export default function SettingsCoachingScreen() {
                 honesty rules in every tone; only the prose shape changes.
                 Safety copy is identical whatever is chosen. */}
             <View style={[styles.toneBlock, liveText.toneBlock]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.toneLabel, liveText.toneLabel]}>Coaching tone</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.toneSub, liveText.toneSub]}>
+              <Text style={[styles.toneLabel, liveText.toneLabel]}>Coaching tone</Text>
+              <Text style={[styles.toneSub, liveText.toneSub]}>
                 {coachTone === 'supportive'
                   ? 'Plainer wording with a little more explanation.'
                   : coachTone === 'precise'
@@ -204,7 +204,7 @@ export default function SettingsCoachingScreen() {
                       accessibilityState={{ checked: sel }}
                       accessibilityLabel={`Coaching tone ${label}`}
                     >
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.toneChipText, liveText.toneChipText, sel && [styles.toneChipTextOn, liveText.toneChipTextOn]]}>{label}</Text>
+                      <Text style={[styles.toneChipText, liveText.toneChipText, sel && [styles.toneChipTextOn, liveText.toneChipTextOn]]}>{label}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -217,8 +217,8 @@ export default function SettingsCoachingScreen() {
                 confirm-first, whatever mode is chosen (D16), so Coached is
                 never a promise to bypass a hold. */}
             <View style={[styles.toneBlock, liveText.toneBlock]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.toneLabel, liveText.toneLabel]}>Autonomy</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.toneSub, liveText.toneSub]}>
+              <Text style={[styles.toneLabel, liveText.toneLabel]}>Autonomy</Text>
+              <Text style={[styles.toneSub, liveText.toneSub]}>
                 {coachAutonomy === 'coached'
                   ? "The coach applies each week's changes for you."
                   : coachAutonomy === 'manual'
@@ -241,7 +241,7 @@ export default function SettingsCoachingScreen() {
                       accessibilityState={{ checked: sel }}
                       accessibilityLabel={`Autonomy ${label}`}
                     >
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.toneChipText, liveText.toneChipText, sel && [styles.toneChipTextOn, liveText.toneChipTextOn]]}>{label}</Text>
+                      <Text style={[styles.toneChipText, liveText.toneChipText, sel && [styles.toneChipTextOn, liveText.toneChipTextOn]]}>{label}</Text>
                     </TouchableOpacity>
                   );
                 })}

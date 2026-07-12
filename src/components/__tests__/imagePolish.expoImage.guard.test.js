@@ -19,6 +19,15 @@
  *      styles/theme tokens only, per docs/rules/styling.md).
  * ProgressPhotosScreen.js additionally carries `recyclingKey` on its
  * FlashList grid cell image, the real recycling surface this item targets.
+ *
+ * AX-13 addendum (launch accessibility audit): ProgressPhotoViewer.js and
+ * ProgressPhotoCompare.js now route their real photos through the shared
+ * ProgressPhotoImage (src/components/ProgressPhotoImage.js), which always
+ * sets accessibilityIgnoresInvertColors so Smart Invert can never be
+ * accidentally omitted again. That component is the one place in these two
+ * files that imports expo-image's Image directly; the "expo-image, never
+ * react-native's Image" invariant below is split accordingly but still holds
+ * for every touched file, including ProgressPhotoImage.js itself.
  */
 const fs = require('fs');
 const path = require('path');
@@ -41,11 +50,32 @@ const TOUCHED = [
 
 const sourceOf = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
+// AX-13: these two files no longer import expo-image's Image directly; they
+// import the shared ProgressPhotoImage wrapper instead (see file header).
+const ROUTES_THROUGH_SHARED_IMAGE = [
+  'components/ProgressPhotoViewer.js',
+  'components/ProgressPhotoCompare.js',
+];
+const DIRECT_EXPO_IMAGE = TOUCHED.filter((rel) => !ROUTES_THROUGH_SHARED_IMAGE.includes(rel));
+
 describe('image polish: expo-image import, not react-native Image', () => {
-  test.each(TOUCHED)('%s imports Image from expo-image', (rel) => {
+  test.each(DIRECT_EXPO_IMAGE)('%s imports Image from expo-image', (rel) => {
     const src = sourceOf(rel);
     expect(src).toMatch(/import\s*\{\s*Image\s*\}\s*from\s*'expo-image';/);
     // Guard against a stray second import re-introducing the RN Image.
+    expect(src).not.toMatch(/\bImage\b[^\n]*\}\s*from\s*'react-native';/);
+  });
+
+  test.each(ROUTES_THROUGH_SHARED_IMAGE)('%s routes its real photos through the shared ProgressPhotoImage (AX-13), not expo-image directly', (rel) => {
+    const src = sourceOf(rel);
+    expect(src).toContain("import ProgressPhotoImage from './ProgressPhotoImage';");
+    expect(src).not.toMatch(/import\s*\{\s*Image\s*\}\s*from\s*'expo-image';/);
+    expect(src).not.toMatch(/\bImage\b[^\n]*\}\s*from\s*'react-native';/);
+  });
+
+  test('the shared ProgressPhotoImage itself imports Image from expo-image', () => {
+    const src = sourceOf('components/ProgressPhotoImage.js');
+    expect(src).toMatch(/import\s*\{\s*Image\s*\}\s*from\s*'expo-image';/);
     expect(src).not.toMatch(/\bImage\b[^\n]*\}\s*from\s*'react-native';/);
   });
 });

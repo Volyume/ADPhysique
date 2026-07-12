@@ -184,6 +184,53 @@ test('stale workouts schema retries without optional readiness columns and still
   expect(mockStore[WM_KEY]).toBe('7000');
 });
 
+// A client that accepts every workouts upsert but rejects every workout_sets
+// upsert, so a workout shell lands while its sets do not.
+function makeSetsFailClient(capturedWorkoutIds) {
+  const readResult = { data: [], error: null };
+  return {
+    from: jest.fn((table) => ({
+      upsert: jest.fn((payload) => {
+        if (table === 'workouts') {
+          const rows = Array.isArray(payload) ? payload : [payload];
+          for (const r of rows) capturedWorkoutIds.push(r.id);
+          return makeChain({ error: null, data: [] });
+        }
+        if (table === 'workout_sets') {
+          return makeChain({ error: { message: 'permission denied', code: '42501' }, data: null });
+        }
+        return makeChain({ error: null, data: [] });
+      }),
+      insert: jest.fn(() => makeChain({ error: null, data: [] })),
+      update: jest.fn(() => makeChain({ error: null, data: [] })),
+      delete: jest.fn(() => makeChain({ error: null, data: [] })),
+      select: jest.fn(() => makeChain(readResult)),
+    })),
+    rpc: jest.fn(async () => ({ data: null, error: null })),
+  };
+}
+
+test('a workout_sets chunk failure holds the watermark so the workout retries (LS-02/H-11)', async () => {
+  mockStore[WM_KEY] = '1000';
+  db.getAllWorkouts.mockResolvedValue([
+    { id: 'w-old', isCompleted: true, updatedAt: 2000 }, // its sets will fail
+    { id: 'w-new', isCompleted: true, updatedAt: 4000 },
+  ]);
+  // Each workout has a set; the client fails every workout_sets upsert.
+  db.getWorkoutSetsForWorkout.mockResolvedValue([{ id: 's1', workoutId: 'w-old', exerciseId: 'e1' }]);
+  const captured = [];
+  getSupabaseClient.mockReturnValue(makeSetsFailClient(captured));
+
+  const res = await bulkUploadLocalData('cloud-uid', 'local-uid');
+
+  // Shells were sent, but every set chunk failed, so the push is reported as
+  // failed and the watermark must NOT advance past the workouts whose sets
+  // never landed. Before the fix _upsertSets swallowed the error, errors was
+  // 0, and the watermark jumped to 4000 - losing w-old's sets forever.
+  expect(res.errors).toBeGreaterThan(0);
+  expect(mockStore[WM_KEY]).toBe('1000');
+});
+
 test('nothing newer than the cursor: no upserts, watermark unchanged', async () => {
   mockStore[WM_KEY] = '5000';
   db.getAllWorkouts.mockResolvedValue([

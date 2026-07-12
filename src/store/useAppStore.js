@@ -378,6 +378,37 @@ const useAppStore = create((set, get) => ({
             { prevUid, status: res?.status, erroredCount: res?.errored_count ?? null });
           return { ok: false, reason: 'unsynced' };
         }
+        // AC-04 (Codex audit, 2026-07-12): the push-first syncAll re-pushes
+        // every table by UPSERT, which CANNOT express a DELETE. The only cloud
+        // delete path is the workout_delete / workout_set_delete tombstones in
+        // pending_sync_ops (src/lib/syncQueue.js), and the wipe below destroys
+        // that queue - so a workout the user deleted offline would resurrect on
+        // the next sign-in. Ship the tombstones first (drain the queue), then
+        // refuse to wipe while any delete op remains un-shipped, unless the user
+        // forced sign-out through the "sign out anyway" escape hatch. This is
+        // the delete-shaped hole the 'we deliberately do NOT block on pending'
+        // note above is blind to (that reasoning holds only for upserts).
+        try {
+          // eslint-disable-next-line global-require
+          const sq = require('../lib/syncQueue');
+          // eslint-disable-next-line global-require
+          const sbClient = require('../lib/supabase').getSupabaseClient?.();
+          if (sbClient) await sq.drainSyncQueue(sbClient, prevUid);
+          const remainingDeletes = await sq.getPendingDeleteOpCount(prevUid);
+          if (!force && remainingDeletes > 0) {
+            log.logWarn('clearAuthStateForSignOut.pendingDeletes',
+              'sign-out aborted: delete tombstones not yet shipped, keeping user signed in',
+              { prevUid, remainingDeletes });
+            return { ok: false, reason: 'unsynced' };
+          }
+        } catch (e) {
+          if (!force) {
+            log.logWarn('clearAuthStateForSignOut.deleteDrainFailed',
+              'sign-out aborted: could not confirm delete tombstones shipped',
+              { prevUid, error: e?.message });
+            return { ok: false, reason: 'unsynced' };
+          }
+        }
         try { await flushPendingTelemetry(); } catch (_) {}
       } catch (e) {
         if (!force) {
@@ -427,18 +458,26 @@ const useAppStore = create((set, get) => ({
     // restores via pullFromCloud. On sign-in to a different account,
     // local is already empty so nothing to leak.
     if (prevUid) {
-      try {
-        // eslint-disable-next-line global-require
-        const { wipeAllUserData } = require('../lib/database');
-        await wipeAllUserData(prevUid);
-        log.logInfo('clearAuthStateForSignOut.wipe.ok', `local SQLite wiped for ${prevUid}`);
-      } catch (e) {
-        log.logError('clearAuthStateForSignOut.wipe.failed', e, { prevUid });
+      // Sign-out escape ruling (2026-07-11, D33): bounded retry, then a
+      // verify pass that allows sign-out only when the device is verifiably
+      // clean of user data. The fail-closed rule is unchanged; what died is
+      // the dead end where one spurious throw blocked sign-out forever
+      // (per-attempt errors are logged inside the retry helper).
+      // eslint-disable-next-line global-require
+      const { wipeAllUserDataWithRetry } = require('../lib/database');
+      const wipe = await wipeAllUserDataWithRetry(prevUid);
+      if (wipe.ok) {
+        log.logInfo('clearAuthStateForSignOut.wipe.ok', wipe.verifiedClean
+          ? `wipe threw but device verified clean for ${prevUid}`
+          : `local SQLite wiped for ${prevUid}`);
+      } else {
+        log.logError('clearAuthStateForSignOut.wipe.failed', new Error(`wipe failed at ${wipe.step ?? 'unknown step'}`), { prevUid });
         try {
           // eslint-disable-next-line global-require
           require('../lib/sync/signOutGuard').setSignOutWiping(false);
         } catch (_) { /* tolerate */ }
-        return { ok: false, reason: 'wipe_failed' };
+        // R2-12: carry the failing step so the alert names it honestly.
+        return { ok: false, reason: 'wipe_failed', step: wipe.step ?? null };
       }
     }
 
@@ -1811,7 +1850,16 @@ const useAppStore = create((set, get) => ({
     largerText: false,    // applies a 1.2× multiplier to the fontSize tokens in applyAccessibility (theme.js)
     higherContrast: false, // brightens muted text + thickens borders via theme tokens
     colorBlindSafe: false, // swaps red/green success/error to blue/orange
-    reduceMotion: false,   // skips PRCelebration particles, RestTimer pulse, big spring anims
+    // AX-09 (launch accessibility audit): `reduceMotion` is the EFFECTIVE
+    // value every existing consumer reads (haptics.js, RestTimer, PRCelebration,
+    // App.js's own spring gating, etc) - systemReduceMotion || reduceMotionUserPref.
+    // Kept as a single field so no consumer needed editing. `reduceMotionUserPref`
+    // is the user's own explicit in-app Settings choice (persisted, as `reduceMotion`
+    // used to be). `systemReduceMotion` (below, top-level, NOT in this object so it
+    // never round-trips to AsyncStorage) mirrors the OS "Reduce Motion"/"Remove
+    // animations" setting, hydrated + kept live from App.js via AccessibilityInfo.
+    reduceMotion: false,          // skips PRCelebration particles, RestTimer pulse, big spring anims
+    reduceMotionUserPref: false, // the user's own in-app toggle; Settings reads/writes THIS
     theme: 'dark',         // COMP-029: 'dark' | 'light' | 'system'. Default dark, no existing user changes
     energyUnit: 'kcal',    // food-UI energy DISPLAY unit: 'kcal' | 'kj'. Display-only (read reactively,
                            // no reload); stored values, targets + the coaching engine stay in kcal.
@@ -1831,18 +1879,50 @@ const useAppStore = create((set, get) => ({
   loadAccessibility: async () => {
     const parsed = await loadA11yPrefs();
     if (parsed) {
-      set({ accessibility: { ...get().accessibility, ...parsed }, accessibilityLoaded: true });
+      // AX-09 migration: installs from before the system/user split persisted
+      // the user's explicit choice under `reduceMotion` directly (there was
+      // no `reduceMotionUserPref`). Seed the user pref from the legacy field
+      // once so upgrading users keep their choice, then recompute the
+      // effective field against whatever systemReduceMotion already holds
+      // (App.js's AccessibilityInfo read corrects it again moments later
+      // regardless of hydration order).
+      const userPref = parsed.reduceMotionUserPref !== undefined
+        ? !!parsed.reduceMotionUserPref
+        : !!parsed.reduceMotion;
+      const merged = { ...get().accessibility, ...parsed, reduceMotionUserPref: userPref };
+      merged.reduceMotion = !!(get().systemReduceMotion || userPref);
+      set({ accessibility: merged, accessibilityLoaded: true });
     } else {
       set({ accessibilityLoaded: true });
     }
   },
   setAccessibilityPref: async (key, value) => {
     const next = { ...get().accessibility, [key]: value };
+    // AX-09: the Settings toggle writes the USER pref, never the effective
+    // field directly - recompute `reduceMotion` (effective) here so every
+    // existing consumer that reads it stays correct without edits.
+    if (key === 'reduceMotionUserPref') {
+      next.reduceMotion = !!(get().systemReduceMotion || value);
+    }
     set({ accessibility: next });
     const serialised = JSON.stringify(next);
     try { await AsyncStorage.setItem(A11Y_PREFS_KEY, serialised); } catch (_) {}
     const { user } = get();
     if (user?.id) pushPrefSoon(user.id, A11Y_PREFS_KEY, serialised);
+  },
+  // AX-09: mirrors the OS-level Reduce Motion / Remove Animations setting.
+  // Runtime-only - NEVER persisted (App.js re-reads AccessibilityInfo on
+  // every cold boot and subscribes to 'reduceMotionChanged' for live
+  // updates, so there is nothing to save). Recomputes the effective
+  // `accessibility.reduceMotion` field whenever the OS value changes,
+  // OR-ed with whatever the user's own in-app pref currently is.
+  systemReduceMotion: false,
+  setSystemReduceMotion: (value) => {
+    const v = !!value;
+    set(state => ({
+      systemReduceMotion: v,
+      accessibility: { ...state.accessibility, reduceMotion: v || !!state.accessibility.reduceMotionUserPref },
+    }));
   },
 
   // LB-9: product-analytics opt-out. Device-local (a privacy opt-out is

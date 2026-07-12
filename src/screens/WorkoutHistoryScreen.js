@@ -24,11 +24,13 @@ import { getRecentCompletedWorkouts, getWorkoutSetsForWorkoutIds, getAllExercise
 import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
+import { formatNumber, formatWithUnit } from '../lib/format';
 import { workoutDayMs, workoutDayKey, calendarRelativeLabel } from '../lib/workoutDate';
 import { formatLoggedSet } from '../lib/workoutHelpers';
 import useAppStore from '../store/useAppStore';
 import { SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
+import PeekMenu from '../components/PeekMenu';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import { useShallow } from 'zustand/react/shallow';
@@ -85,6 +87,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const toast = useToast();
+  const peekRef = useRef(null);
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -191,22 +194,18 @@ export default function WorkoutHistoryScreen({ navigation }) {
     }
   }
 
+  // R9 (D70): a native alert as a choose-an-action menu diverged from the
+  // house options idiom - PlansScreen answers the identical "choose an
+  // action" moment on this same tab with PeekMenu, so this does too.
+  // Swipe/backdrop/back dismiss replaces the Cancel row.
   function handleRepeatWorkout(workout) {
-    appAlert(
-      'Repeat workout',
-      'How would you like to continue?',
-      [
-        {
-          text: 'Repeat as-is',
-          onPress: () => handleRepeatAsIs(workout),
-        },
-        {
-          text: 'View in Plans',
-          onPress: () => navigateCrossTab(navigation, 'PlansTab'),
-        },
-        { text: 'Cancel', style: 'cancel' },
+    peekRef.current?.open({
+      title: 'Repeat workout',
+      items: [
+        { icon: 'repeat-outline', label: 'Repeat as-is', onPress: () => handleRepeatAsIs(workout) },
+        { icon: 'albums-outline', label: 'View in Plans', onPress: () => navigateCrossTab(navigation, 'PlansTab') },
       ],
-    );
+    });
   }
 
   // Founder request 2026-06-12: delete a workout from history (a half-logged
@@ -392,16 +391,16 @@ export default function WorkoutHistoryScreen({ navigation }) {
         >
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.cardDate, live.cardDate]}>{format(date, 'd MMM yyyy')}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.cardTime, live.cardTime]}>{calendarRelativeLabel(workoutDayMs(workout))}</Text>
+              <Text style={[styles.cardDate, live.cardDate]}>{format(date, 'd MMM yyyy')}</Text>
+              <Text style={[styles.cardTime, live.cardTime]}>{calendarRelativeLabel(workoutDayMs(workout))}</Text>
             </View>
             <View style={styles.cardHeaderRight}>
               <View style={styles.cardMeta}>
                 <Ionicons name="time-outline" size={14} color={t.colors.textMuted} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.cardMetaText, live.cardMetaText]}>{workout.durationMinutes || 0}m</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.cardMetaDivider, live.cardMetaDivider]}>-</Text>
+                <Text style={[styles.cardMetaText, live.cardMetaText]}>{workout.durationMinutes || 0}m</Text>
+                <Text style={[styles.cardMetaDivider, live.cardMetaDivider]}>-</Text>
                 <Ionicons name="layers-outline" size={14} color={t.colors.textMuted} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.cardMetaText, live.cardMetaText]}>{workingSetCount} sets</Text>
+                <Text style={[styles.cardMetaText, live.cardMetaText]}>{workingSetCount} sets</Text>
               </View>
               <Ionicons
                 name={isExpanded ? 'chevron-up' : 'chevron-down'}
@@ -411,7 +410,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
               />
             </View>
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseList, live.exerciseList]} numberOfLines={isExpanded ? undefined : 2}>
+          <Text style={[styles.exerciseList, live.exerciseList]} numberOfLines={isExpanded ? undefined : 2}>
             {exerciseNames.join(', ') || 'No exercises logged'}
           </Text>
         </PressableCard>
@@ -423,15 +422,15 @@ export default function WorkoutHistoryScreen({ navigation }) {
             <View style={styles.statChipRow}>
               {!!workout.durationMinutes && (
                 <View style={[styles.statChip, live.statChip]}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.statChipText, live.statChipText]}>{workout.durationMinutes} min</Text>
+                  <Text style={[styles.statChipText, live.statChipText]}>{workout.durationMinutes} min</Text>
                 </View>
               )}
               <View style={[styles.statChip, live.statChip]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.statChipText, live.statChipText]}>{workingSetCount} working set{workingSetCount !== 1 ? 's' : ''}</Text>
+                <Text style={[styles.statChipText, live.statChipText]}>{workingSetCount} working set{workingSetCount !== 1 ? 's' : ''}</Text>
               </View>
               {tonnage > 0 && (
                 <View style={[styles.statChip, live.statChip]}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.statChipText, live.statChipText]}>{Math.round(tonnage).toLocaleString('en-GB')}kg lifted</Text>
+                  <Text style={[styles.statChipText, live.statChipText]}>{formatWithUnit(formatNumber(Math.round(tonnage)), 'kg')} lifted</Text>
                 </View>
               )}
             </View>
@@ -447,10 +446,10 @@ export default function WorkoutHistoryScreen({ navigation }) {
                     accessibilityRole="button"
                     accessibilityLabel={`See progress for ${ex.name}`}
                   >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseBreakdownName, live.exerciseBreakdownName]} numberOfLines={1}>
+                    <Text style={[styles.exerciseBreakdownName, live.exerciseBreakdownName]} numberOfLines={1}>
                       {ex.name}
                     </Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseBreakdownSummary, live.exerciseBreakdownSummary]} numberOfLines={1}>
+                    <Text style={[styles.exerciseBreakdownSummary, live.exerciseBreakdownSummary]} numberOfLines={1}>
                       {ex.summary}
                     </Text>
                     <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
@@ -459,7 +458,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
               </View>
             ) : (
               <View style={styles.exerciseBreakdown}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.loadingText, live.loadingText]}>Loading exercises…</Text>
+                <Text style={[styles.loadingText, live.loadingText]}>Loading exercises…</Text>
               </View>
             )}
 
@@ -467,7 +466,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
             {!!workout.notes && (
               <View style={[styles.notesRow, live.notesRow]}>
                 <Ionicons name="document-text-outline" size={13} color={t.colors.textMuted} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.notesText, live.notesText]}>{workout.notes}</Text>
+                <Text style={[styles.notesText, live.notesText]}>{workout.notes}</Text>
               </View>
             )}
 
@@ -599,7 +598,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
         >
           <Ionicons name="chevron-back" size={20} color={t.colors.textSecondary} />
         </TouchableOpacity>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.calendarMonthTitle, live.calendarMonthTitle]}>{format(calendarDate, 'MMMM yyyy')}</Text>
+        <Text style={[styles.calendarMonthTitle, live.calendarMonthTitle]}>{format(calendarDate, 'MMMM yyyy')}</Text>
         <TouchableOpacity
           onPress={() => {
             setCalendarDate(prev => addMonths(prev, 1));
@@ -666,7 +665,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
                   live.dayNum,
                   trained && [styles.dayNumTrained, live.dayNumTrained],
                   isSelected && [styles.dayNumSelected, live.dayNumSelected],
-                ]} maxFontSizeMultiplier={1.3}>
+                ]}>
                   {dayNum}
                 </Text>
               </View>
@@ -681,7 +680,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
     <View style={styles.listHeaderWrap}>
       {/* Top bar: title + toggle */}
       <View style={styles.topBar}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.topBarTitle, live.topBarTitle]}>
+        <Text style={[styles.topBarTitle, live.topBarTitle]}>
           {workouts.length} session{workouts.length !== 1 ? 's' : ''}
         </Text>
         <TouchableOpacity
@@ -741,7 +740,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
           <View style={styles.calendarRow}>
             {DAY_HEADERS.map((h, i) => (
               <View key={i} style={styles.calendarCell}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.dayHeader, live.dayHeader]}>{h}</Text>
+                <Text style={[styles.dayHeader, live.dayHeader]}>{h}</Text>
               </View>
             ))}
           </View>
@@ -799,7 +798,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
             <EmptyState
               icon="alert-circle-outline"
               title="Couldn't load workout history"
-              text="Check your connection and try again. Your saved sessions have not been changed."
+              text="Couldn't load this on your device. Try again. Your saved sessions have not been changed."
               actionLabel="Try again"
               onAction={loadWorkouts}
               actionAccessibilityLabel="Try loading workout history again"
@@ -823,6 +822,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
         }
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       />
+      <PeekMenu ref={peekRef} />
     </SafeAreaView>
   );
 }
@@ -844,7 +844,9 @@ const styles = StyleSheet.create({
   },
   toggleBtn: {
     padding: spacing.xs,
-    borderRadius: radius.sm,
+    // R2 (2026-07-11): control class -> radius.md (control/input/icon-backing,
+    // FOOD-DESIGN-STANDARD.md section 4). Was radius.sm.
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -968,9 +970,14 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   cardDate: {
+    // Theme gap: no md+bold type role exists; the raw pair stays (weight
+    // preserved) pending a role. R2 (2026-07-11): this is a date readout
+    // ("7 Jul 2026"), so it gains tabular figures like every other numeral
+    // readout on this screen (FOOD-DESIGN-STANDARD.md section 7.2 table date).
     fontSize: fontSize.md,
     fontWeight: fontWeight.bold,
     color: colors.textPrimary,
+    fontVariant: ['tabular-nums'],
   },
   cardTime: {
     ...type.caption,
@@ -1015,6 +1022,9 @@ const styles = StyleSheet.create({
   statChipText: {
     ...type.captionStrong,
     color: colors.textSecondary,
+    // R9 (D70): stat chip numerals ("45 min"/"12 sets"/tonnage) are data,
+    // so they get tabular numerals like every other numeral readout.
+    fontVariant: ['tabular-nums'],
   },
   exerciseBreakdown: {
     gap: spacing.sm,
@@ -1150,14 +1160,16 @@ function buildLiveStyles(t) {
     dayNumSelected: { color: t.colors.onPrimary },
     clearDayBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     clearDayText: { ...t.type.label, color: t.colors.textPrimary },
-    cardDate: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    cardDate: { fontSize: t.fontSize.md, color: t.colors.textPrimary, fontVariant: ['tabular-nums'] },
     cardTime: { ...t.type.caption, color: t.colors.textMuted },
     cardMetaText: { ...t.type.num('caption'), color: t.colors.textMuted },
     cardMetaDivider: { color: t.colors.border },
     exerciseList: { ...t.type.bodySm, color: t.colors.textSecondary },
     expandedContent: { borderTopColor: t.colors.border },
     statChip: { backgroundColor: t.colors.surface2 },
-    statChipText: { ...t.type.captionStrong, color: t.colors.textSecondary },
+    // R9 (D70): fontVariant carried on the live twin too, matching the
+    // frozen statChipText above.
+    statChipText: { ...t.type.captionStrong, color: t.colors.textSecondary, fontVariant: ['tabular-nums'] },
     exerciseBreakdownName: { ...t.type.label, color: t.colors.textPrimary },
     exerciseBreakdownSummary: { ...t.type.num('caption'), color: t.colors.textSecondary },
     loadingText: { ...t.type.caption, color: t.colors.textMuted },

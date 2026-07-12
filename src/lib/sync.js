@@ -132,7 +132,15 @@ async function fetchAllRows(scope, queryBuilder) {
   const out = [];
   for (;;) {
     const { data, error } = await queryBuilder().range(from, from + PAGE - 1);
-    if (error) { logWarn(scope, error.message); return out; }
+    // LS-03/H-12 (Codex audit, 2026-07-12): a transport error mid-pagination
+    // means this is an INCOMPLETE view. Returning the partial rows let the
+    // caller treat the pull as clean and advance its cursor past the rows that
+    // never arrived - permanently skipped until a manual cursor reset or
+    // sign-out. Throw so the caller holds its cursor and retries next pull.
+    if (error) {
+      logWarn(scope, error.message);
+      throw new Error(`${scope}: paginated fetch failed at offset ${from}: ${error.message}`);
+    }
     if (!data?.length) return out;
     out.push(...data);
     if (data.length < PAGE) return out;
@@ -165,7 +173,14 @@ export async function fetchByIdsChunked(scope, table, column, ids, queryFactory)
         // pulls. No tombstone exists yet, so this is a no-op today.
         : getClient().from(table).select('*').in(column, slice).is('deleted_at', null);
       const { data, error } = await base.range(from, from + PAGE - 1);
-      if (error) { logWarn(scope, error.message); break; }
+      // LS-03/H-12: a chunk/page error is an incomplete result. Breaking here
+      // returned the partial aggregate as if complete, so the caller advanced
+      // its cursor past child rows (e.g. workout_sets) that never arrived.
+      // Throw instead so no caller advances a cursor over unseen rows.
+      if (error) {
+        logWarn(scope, error.message);
+        throw new Error(`${scope}: chunked fetch failed: ${error.message}`);
+      }
       if (!data?.length) break;
       out.push(...data);
       if (data.length < PAGE) break;
@@ -429,15 +444,25 @@ async function _upsertSets(sb, supabaseUserId, sets) {
     updated_at: new Date(s.updatedAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time
   }));
   // Chunk to avoid hitting Supabase row limits
+  let chunkFailures = 0;
   for (let i = 0; i < rows.length; i += 200) {
     const chunk = rows.slice(i, i + 200);
     const { error } = await sb.from('workout_sets').upsert(chunk, { onConflict: 'user_id,id' });
     if (error) {
       logPgErr('sync._upsertSets', error);
-      // Continue with the next chunk rather than aborting all
-      // remaining work, the previous behaviour swallowed the error
-      // and silently lost every set in the failing batch.
+      chunkFailures++;
+      // Continue attempting the remaining chunks rather than aborting all
+      // remaining work, but record the failure so it is not swallowed.
     }
+  }
+  // LS-02/H-11 (Codex audit, 2026-07-12): throw AFTER attempting every chunk so
+  // the caller's per-workout catch counts this workout as failed. The previous
+  // silent return let `failures` stay 0, so the caller advanced the workout
+  // push watermark past a workout whose sets never landed - the next
+  // watermark-filtered sync then skipped that older workout forever and the
+  // missing sets were lost. A throw here holds the watermark so it retries.
+  if (chunkFailures > 0) {
+    throw new Error(`sync._upsertSets: ${chunkFailures} workout_sets chunk(s) failed to upsert`);
   }
 }
 
@@ -490,7 +515,14 @@ export function scheduleSync() {
       const supabaseUserId = state.session?.user?.id;
       const localUserId = state.user?.id;
       if (!supabaseUserId || !localUserId) return;
-      bulkUploadLocalData(supabaseUserId, localUserId).catch(() => {});
+      // AC-02 (Codex audit, 2026-07-12): route the debounced-on-write trigger
+      // through syncAll, not bulkUploadLocalData directly, so it passes the
+      // runner's Article 9 health-consent + sign-out-wipe gate. Per
+      // SYNC_ARCHITECTURE_LOCKED.md all four triggers go through syncAll; a
+      // direct bulk push here uploaded health data with no consent check.
+      // eslint-disable-next-line global-require
+      const { syncAll } = require('./sync/runner');
+      syncAll({ userId: supabaseUserId, localUserId, triggeredBy: 'write' }).catch(() => {});
     } catch (_) { /* store not available, tolerate */ }
   }, _SYNC_DEBOUNCE_MS);
 }
@@ -1149,6 +1181,21 @@ const PREF_EXCLUDE_PATTERNS = [
   // Baseline timezone offset for the notification re-lay check: strictly
   // this device's timezone, meaningless on any other.
   /^@volyume_notif_tz_offset/,
+  // ─── Sensitive / special-category keys (Codex audit AC-01/H-03, 2026-07-12) ───
+  // This prefs sync is allow-by-prefix: everything @volyume_ ships unless it
+  // is excluded here. That is fail-open, so special-category health data must
+  // be named explicitly until the allow-by-prefix model is inverted to a
+  // fail-closed allowlist (follow-up on the same audit). Each key below is
+  // either special-category health data the wellbeing screen PROMISES stays
+  // device-only, or a transient diagnostic/draft that has no business in the
+  // cloud. Their real, non-sensitive counterparts (wellbeing MODE, reminder
+  // config, units) sync through their own keys/tables and are unaffected.
+  /^@volyume_scoff_answers$/,       // raw ED-screening answers (Article 9 + "device-only" promise)
+  /^@volyume_cycle_tracking/,       // menstrual-cycle data (Article 9)
+  /^@volyume_error_log/,            // diagnostic ring buffer (may hold raw messages/paths)
+  /^@volyume_last_crash_meta/,      // last-crash metadata
+  /^@volyume_feedback_/,            // pending feedback + prompt history (free text)
+  /^@volyume_pro_onboarding_draft/, // in-progress onboarding answers (sex/goals), transient
 ];
 
 export function shouldSyncPref(key) {

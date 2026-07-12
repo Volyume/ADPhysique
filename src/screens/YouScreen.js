@@ -13,6 +13,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import * as haptics from '../lib/haptics';
 import ScreenHeader from '../components/ScreenHeader';
 import Card from '../components/Card';
 import { ProBadge } from '../components/ProGate';
@@ -51,10 +52,15 @@ function formatDate(ms) {
 // in a narrow card and wrapped to a second line with the long-form date
 // (founder D13.1, 2026-07-09). Same en-GB locale as every other date on this
 // screen, just the default numeric format instead of day/month/year options.
+// R2-7 (remediation 2026-07-11, founder device walk build 2684): the check-in
+// row's date fact reads as a calm British day-and-month line ("19 July"), not a
+// numeric DD/MM/YYYY. It titles a one-line NavRow subtitle now that the
+// explanatory sentence lives on WeeklyCheckInScreen (where it was already
+// conveyed in full), so the row sits level with its one-line siblings.
 function formatShortDate(ms) {
   if (!ms) return null;
   try {
-    return new Date(Number(ms)).toLocaleDateString('en-GB');
+    return new Date(Number(ms)).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
   } catch (_) {
     return null;
   }
@@ -67,10 +73,16 @@ function formatShortDate(ms) {
 function NavRow({ icon, label, sub, onPress, pro }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
+  // R9 (D70): the house selection() beat on every nav-row tap, added once
+  // here so all consumers gain it together (haptics vocabulary rule;
+  // navigation taps are never the ED diary-marking exception).
+  const handlePress = onPress
+    ? () => { haptics.selection(); onPress(); }
+    : onPress;
   return (
     <Card
       style={styles.navRow}
-      onPress={onPress}
+      onPress={handlePress}
       accessibilityLabel={pro ? `${label}. Part of Pro.` : label}
     >
       <View style={[styles.navRowIcon, live.navRowIcon]}>
@@ -78,10 +90,10 @@ function NavRow({ icon, label, sub, onPress, pro }) {
       </View>
       <View style={styles.navRowText}>
         <View style={styles.navRowLabelRow}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.navRowLabel, live.navRowLabel]}>{label}</Text>
+          <Text style={[styles.navRowLabel, live.navRowLabel]}>{label}</Text>
           {pro ? <ProBadge size="sm" /> : null}
         </View>
-        {sub ? <Text maxFontSizeMultiplier={1.3} style={[styles.navRowSub, live.navRowSub]}>{sub}</Text> : null}
+        {sub ? <Text style={[styles.navRowSub, live.navRowSub]}>{sub}</Text> : null}
       </View>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
     </Card>
@@ -130,7 +142,7 @@ function buildPendingCoachCopy(readiness) {
   if (readiness.edSuppressed) {
     return {
       title: readiness.unlockDateMs
-        ? `First check-in: ${formatShortDate(readiness.unlockDateMs)}`
+        ? `First check-in ${formatShortDate(readiness.unlockDateMs)}`
         : 'First check-in not open yet',
       body: 'Volyume is keeping this calm and will not push weigh-in counts here. Use the check-in when it opens.',
     };
@@ -160,7 +172,7 @@ function buildPendingCoachCopy(readiness) {
   }
   return {
     title: readiness.unlockDateMs
-      ? `First check-in: ${formatShortDate(readiness.unlockDateMs)}`
+      ? `First check-in ${formatShortDate(readiness.unlockDateMs)}`
       : 'First check-in not open yet',
     body: 'Keep logging morning weight and training. Volyume waits for enough baseline data before it changes targets.',
   };
@@ -204,7 +216,11 @@ export default function YouScreen({ navigation }) {
           getAllWorkouts(user.id),
           getLatestCoachOutput(user.id),
           getLatestCheckin(user.id),
-          tier !== 'pro' ? getCoachOutputHistory(user.id, 1) : Promise.resolve([]),
+          // R8 (D68): history now loads for Pro too (limit 1) - it decides
+          // whether the "Coaching decision" archive row shows while there is
+          // no completed decision for the current week (e.g. Monday's new
+          // output before this week's check-in is answered).
+          getCoachOutputHistory(user.id, 1),
           tier === 'pro' ? getMorningWeightsLast14Days(user.id) : Promise.resolve([]),
           tier === 'pro' ? AsyncStorage.getItem('@volyume_notification_prefs') : Promise.resolve(null),
           tier === 'pro' ? getOpenEdPatternFlag(user.id) : Promise.resolve(null),
@@ -324,8 +340,8 @@ export default function YouScreen({ navigation }) {
               <Ionicons name="warning-outline" size={18} color={t.colors.warning} />
             </View>
             <View style={styles.loadErrorCopy}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.loadErrorTitle, live.loadErrorTitle]}>Couldn't refresh Coach</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.loadErrorBody, live.loadErrorBody]}>Your saved profile stays unchanged. Tap to try again.</Text>
+              <Text style={[styles.loadErrorTitle, live.loadErrorTitle]}>Couldn't refresh Coach</Text>
+              <Text style={[styles.loadErrorBody, live.loadErrorBody]}>Your saved profile stays unchanged. Tap to try again.</Text>
             </View>
             <Ionicons name="refresh-outline" size={18} color={t.colors.textMuted} />
           </Card>
@@ -351,61 +367,99 @@ export default function YouScreen({ navigation }) {
           />
           <View style={styles.profileInfo}>
             <View style={styles.profileNameRow}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.profileName, live.profileName]} numberOfLines={1}>{displayName}</Text>
+              <Text style={[styles.profileName, live.profileName]} numberOfLines={1}>{displayName}</Text>
               {isPro ? <ProBadge size="sm" /> : null}
             </View>
             {sessions != null ? (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.profileStat, live.profileStat]}>{sessions} completed session{sessions === 1 ? '' : 's'}</Text>
+              <Text style={[styles.profileStat, live.profileStat]}>{sessions} completed session{sessions === 1 ? '' : 's'}</Text>
             ) : user?.id ? (
               <Skeleton width={110} height={12} />
             ) : null}
-            {profileFocus ? <Text maxFontSizeMultiplier={1.3} style={[styles.profileFocus, live.profileFocus]} numberOfLines={2}>{profileFocus}</Text> : null}
+            {profileFocus ? <Text style={[styles.profileFocus, live.profileFocus]} numberOfLines={2}>{profileFocus}</Text> : null}
           </View>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </Card>
 
-        <Card style={styles.statusCard} tone={isPro && latestReview ? 'primary' : undefined}>
-          <View style={styles.statusTop}>
-            <View style={[styles.statusIcon, live.statusIcon]}>
-              <Ionicons name="git-branch-outline" size={20} color={t.colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <SectionLabel tone="primary">Coach</SectionLabel>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.statusTitle, live.statusTitle]}>
-                {isPro
-                  ? latestReview
+        {/* R8 (D68, founder: "cobbled together mess with duplication"):
+            the status card is no longer a third voice restating what the
+            rows below already say. It renders in exactly two cases, and it
+            is now TAPPABLE - it IS the thing it describes:
+            - Pro with a completed decision: the weekly update hero, opens
+              CoachOutput directly (the old card said "Open it" but was not
+              pressable; the duplicate "Coaching decision" NavRow did the
+              opening one card down).
+            - Free: the single Pro pitch, opens ProUpgrade (replaces the
+              old non-tappable pitch card PLUS the duplicate "Upgrade to
+              Pro" NavRow underneath it).
+            Pro with no completed decision renders NO status card at all:
+            "Getting to know you" said nothing (founder verdict) and its
+            body just pointed at the check-in row, which already carries
+            the full, specific readiness status (pendingCoachCopy). */}
+        {(!isPro || latestReview) ? (
+          <Card
+            style={styles.statusCard}
+            tone={isPro && latestReview ? 'primary' : undefined}
+            onPress={isPro
+              ? () => navigation.navigate('CoachOutput', latestReview?.weekStart ? { weekStart: latestReview.weekStart } : undefined)
+              : () => navigation.navigate('ProUpgrade', { source: 'coach_pitch_card' })}
+            accessibilityLabel={isPro
+              ? `Open your weekly coach update${reviewDate ? ` from ${reviewDate}` : ''}`
+              : 'Coach is available on Pro. Opens the upgrade screen.'}
+          >
+            <View style={styles.statusTop}>
+              <View style={[styles.statusIcon, live.statusIcon]}>
+                <Ionicons name="git-branch-outline" size={20} color={t.colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <SectionLabel tone="primary">Coach</SectionLabel>
+                <Text style={[styles.statusTitle, live.statusTitle]}>
+                  {isPro
                     ? `Weekly coach update${reviewDate ? `: ${reviewDate}` : ''}`
-                    : 'Getting to know you'
-                  : 'Coach is available on Pro'}
-              </Text>
+                    : 'Coach is available on Pro'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </View>
-          </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.statusBody, live.statusBody]}>
-            {isPro
-              ? latestReview
-                ? 'Open it to see what changed, what was held, and the exact signals behind it.'
-                : 'Your coach reads your logs, applies safety limits, and explains every decision. The weekly check-in below has your current status and next date.'
-              : 'Your coach reads your logs, applies safety limits, and explains every decision.'}
-          </Text>
-        </Card>
+            <Text style={[styles.statusBody, live.statusBody]}>
+              {isPro
+                ? 'What changed, what was held, and the exact signals behind it.'
+                : 'Your coach reads your logs, applies safety limits, and explains every decision.'}
+            </Text>
+          </Card>
+        ) : null}
 
         {isPro ? (
           <View style={styles.section}>
             <SectionLabel>This week</SectionLabel>
+            {/* R2-7 (remediation 2026-07-11, founder device walk build 2684):
+                the subtitle is ONE calm line - the readiness title only (a
+                short date fact like "First check-in 19 July", or the open/
+                needs-more one-liner). The explanatory sentence
+                (pendingCoachCopy.body) is NOT concatenated here; it is already
+                conveyed in full on WeeklyCheckInScreen (the row's destination),
+                so this row sits level with its one-line siblings instead of
+                wrapping to a four-line paragraph. */}
             <NavRow
               icon="clipboard-outline"
               label="Weekly check-in"
               sub={latestReview
                 ? "Answer this week's questions so the coach has context."
-                : `${pendingCoachCopy.title}. ${pendingCoachCopy.body}`}
+                : pendingCoachCopy.title}
               onPress={() => navigation.navigate('WeeklyCheckIn')}
             />
-            <NavRow
-              icon="pulse-outline"
-              label="Coaching decision"
-              sub="See what changed, what stayed the same, and why."
-              onPress={() => navigation.navigate('CoachOutput', latestReview?.weekStart ? { weekStart: latestReview.weekStart } : undefined)}
-            />
+            {/* R8 (D68): when a completed decision exists the tappable hero
+                card above IS the decision surface, so this row would be a
+                duplicate. It renders only as the archive path: no completed
+                decision for the current week, but past decisions exist
+                (e.g. a new Monday output before the check-in is answered). */}
+            {!latestReview && hasCoachHistory ? (
+              <NavRow
+                icon="pulse-outline"
+                label="Coaching decision"
+                sub="Your latest decision stays readable here."
+                onPress={() => navigation.navigate('CoachOutput')}
+              />
+            ) : null}
             <NavRow
               icon="book-outline"
               label="Your week"
@@ -413,26 +467,20 @@ export default function YouScreen({ navigation }) {
               onPress={() => navigation.navigate('WeeklyStory')}
             />
           </View>
-        ) : (
+        ) : hasCoachHistory ? (
           <View style={styles.section}>
             <SectionLabel>Coach</SectionLabel>
+            {/* R8 (D68): the "Upgrade to Pro" NavRow is gone - the pitch
+                card above is now the single, tappable upgrade path. Only
+                the history row remains, when there is history to read. */}
             <NavRow
-              icon="barbell-outline"
-              label="Upgrade to Pro"
-              sub="Weekly coaching, nutrition targets, body metrics and progress photos."
-              pro={!isPro}
-              onPress={() => navigation.navigate('ProUpgrade')}
+              icon="book-outline"
+              label="Coaching history"
+              sub="Past Pro decisions stay readable. View-only on the free plan."
+              onPress={() => navigation.navigate('CoachHeldHistory')}
             />
-            {hasCoachHistory ? (
-              <NavRow
-                icon="book-outline"
-                label="Coaching history"
-                sub="Past Pro decisions stay readable. View-only on the free plan."
-                onPress={() => navigation.navigate('CoachHeldHistory')}
-              />
-            ) : null}
           </View>
-        )}
+        ) : null}
 
         {isPro ? (
           <View style={styles.section}>

@@ -14,14 +14,32 @@ const read = (rel) => fs.readFileSync(path.resolve(__dirname, '..', rel), 'utf8'
 describe('ActiveWorkout bottom bar vs the hidden tab band', () => {
   test('the bottom bar padding includes the safe-area inset', () => {
     const screen = read('screens/ActiveWorkoutScreen.js');
-    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): ActiveWorkoutScreen
-    // now reads a live theme (src/hooks/useTheme.js); styles.bottomBar gained
-    // a live.bottomBar override ahead of the inline paddingBottom object.
-    // The pinned contract (Math.max(spacing.md, insets.bottom + spacing.sm))
-    // is unchanged -- widened only to allow the live.bottomBar insertion.
+    // R2 (remediation 2026-07-11): the founder's device walk found the bar
+    // under the Android navigation buttons DESPITE the old insets.bottom
+    // padding - the SafeAreaProvider was mounted with a misnamed prop
+    // (initialWindowMetrics=, ignored) so insets could read 0. The contract
+    // is now STRONGER: the bar pads by safeBottom, which is insets.bottom
+    // floored at 48 on Android when the inset misreports 0 (Expo SDK 54
+    // Android is always edge-to-edge, so a 0 bottom inset is never real).
     expect(screen).toMatch(
-      /styles\.bottomBar,\s*live\.bottomBar,\s*\{\s*paddingBottom:\s*Math\.max\(spacing\.md,\s*insets\.bottom\s*\+\s*spacing\.sm\)/
+      /const safeBottom = insets\.bottom > 0 \? insets\.bottom : \(Platform\.OS === 'android' \? 48 : 0\)/
     );
+    // RE-ANCHORED 2026-07-12 (R3 logger rebuild): the bar is now the
+    // WorkoutBottomBar component; the screen passes safeBottom down and the
+    // component applies the SAME padding contract. Both halves pinned so
+    // neither side of the hand-off can drop the inset alone.
+    expect(screen).toMatch(/<WorkoutBottomBar[\s\S]{0,900}?safeBottom=\{safeBottom\}/);
+    const bar = read('components/workout/WorkoutBottomBar.js');
+    expect(bar).toMatch(/paddingBottom:\s*Math\.max\(spacing\.md,\s*safeBottom\s*\+\s*spacing\.sm\)/);
+  });
+
+  test('the SafeAreaProvider actually receives initial metrics (R2 root cause)', () => {
+    const app = read('../App.js');
+    // The prop is initialMetrics; the old initialWindowMetrics={...} was an
+    // unrecognised prop the provider silently ignored, so every inset
+    // consumer started at 0. This pin stops the misnamed prop coming back.
+    expect(app).toMatch(/<SafeAreaProvider initialMetrics=\{initialWindowMetrics\}>/);
+    expect(app).not.toMatch(/<SafeAreaProvider initialWindowMetrics=/);
   });
 
   test('VolyumeTabBar still hides on ActiveWorkout (the reason the inset is needed)', () => {
@@ -32,23 +50,41 @@ describe('ActiveWorkout bottom bar vs the hidden tab band', () => {
   // The inverse rule: on screens where the tab band IS visible it absorbs
   // the system inset, so a sticky footer there must use a flat token —
   // adding insets.bottom again doubled the gap under WorkoutSummary's
-  // Close (founder screenshot 2026-07-03). Re-affirmed at the 2026-07-11
-  // review (founder defect, build 2608): the flat-token +
-  // edges=['top','bottom'] design is frame-relative and context-adaptive,
-  // so it stays; the photo's real defect was scroll clearance, pinned
-  // below via the measured footerHeight.
-  test('WorkoutSummary sticky footer uses a flat token, never the inset again', () => {
+  // Close (founder screenshot 2026-07-03).
+  //
+  // R2-5 (remediation 2026-07-11, founder device walk build 2684): the
+  // STRUCTURAL fix of the footer/tab-bar system. The earlier design leaned
+  // on SafeAreaView's frame-relative behaviour with edges=['top','bottom'],
+  // assuming the bottom edge would resolve to 0 because the tab band sits
+  // below. On the founder's device it did NOT: the SafeAreaView added the
+  // system bottom inset as padding under the footer a SECOND time (the tab
+  // band already owns it), which was the ~70dp dead band between the footer
+  // and the tab bar. The layout model is now explicit: exactly one component
+  // owns each system inset. On this screen the VolyumeTabBar band owns the
+  // bottom inset, so the screen claims edges=['top'] only. The footer keeps
+  // its flat spacing.lg token and sits flush on the band.
+  test('WorkoutSummary owns only the top edge; the tab band owns the bottom inset', () => {
     const summary = read('screens/WorkoutSummaryScreen.js');
     expect(summary).toMatch(/styles\.stickyFooter,\s*live\.stickyFooter,\s*\{\s*paddingBottom:\s*spacing\.lg\s*\}/);
     expect(summary).not.toMatch(/stickyFooter,\s*live\.stickyFooter,\s*\{\s*paddingBottom:\s*Math\.max/);
-    expect(summary).toMatch(/<SafeAreaView style=\{\[styles\.safe, live\.safe\]\} edges=\{\['top', 'bottom'\]\}>/);
-    // 2026-07-11 (founder defect, build 2608): the scroll content's bottom
-    // padding must clear the footer's real rendered height (measured via
-    // onLayout, since it varies with the save-error card and dynamic
-    // type), not just a static token — the founder's photo showed the
-    // exercise breakdown crowding the footer.
-    expect(summary).toMatch(/paddingBottom:\s*Math\.max\(spacing\.xxxl,\s*footerHeight\s*\+\s*spacing\.lg\)/);
-    expect(summary).toMatch(/onLayout=\{\(e\) => setFooterHeight\(e\.nativeEvent\.layout\.height\)\}/);
+    // R2-5: top edge only. The old ['top', 'bottom'] must stay gone (it was
+    // the double-counted inset the founder photographed).
+    expect(summary).toMatch(/<SafeAreaView style=\{\[styles\.safe, live\.safe\]\} edges=\{\['top'\]\}>/);
+    expect(summary).not.toMatch(/edges=\{\['top', 'bottom'\]\}/);
+    // R2-6 (remediation 2026-07-11): the sticky footer is a normal-flow
+    // sibling BELOW the scroll, never an overlay, so the scroll content's
+    // bottom padding is its OWN rhythm (styles.content -> spacing.xxxl) and
+    // is independent of the footer's height. The phantom footerHeight
+    // clearance (which left ~85-100dp of dead space above the buttons) and
+    // the onLayout measurement plumbing are removed.
+    expect(summary).toMatch(/contentContainerStyle=\{styles\.content\}/);
+    // No footerHeight state or measurement remains (mentions in the
+    // explanatory comments describing the removed plumbing are fine).
+    expect(summary).not.toMatch(/\[footerHeight, setFooterHeight\]/);
+    expect(summary).not.toMatch(/setFooterHeight\(/);
+    expect(summary).not.toMatch(/onLayout=\{\(e\) => setFooterHeight/);
+    // content's own rhythm ends on spacing.xxxl (the scroll's natural breath).
+    expect(summary).toMatch(/content:\s*\{[^}]*paddingBottom:\s*spacing\.xxxl/);
   });
 
   // Bottom-anchored Modals overlay the tab band and touch the physical

@@ -50,7 +50,11 @@ describe('BillingPeriodSelector', () => {
 
 describe('paid surfaces share the billing-period selector', () => {
   const screensDir = path.join(__dirname, '..', '..', 'screens');
-  const files = ['PaywallScreen.js', 'CascadeGateScreen.js', 'ProUpgradeScreen.js'];
+  // C3 (D71), 2026-07-11: PaywallScreen.js was removed from this list when the
+  // orphaned duplicate upgrade surface was deleted. The pin's intent -- every
+  // live purchase surface uses the shared BillingPeriodSelector and never
+  // reintroduces a local period selector -- is unchanged for the survivors.
+  const files = ['CascadeGateScreen.js', 'ProUpgradeScreen.js'];
 
   test.each(files)('%s does not reintroduce local period selector styles', (file) => {
     const source = fs.readFileSync(path.join(screensDir, file), 'utf8');

@@ -236,6 +236,29 @@ export async function getQueueStats(userId) {
 }
 
 /**
+ * AC-04: count un-shipped cloud DELETE tombstones for a user. workout_delete
+ * and workout_set_delete are the only cloud-DELETE path; a bulk upsert cannot
+ * express a deletion, so before the sign-out wipe destroys pending_sync_ops we
+ * must confirm none of these remain, or a deleted workout resurrects on the
+ * next sign-in. Counts every retry state (even a give-up'd op means the
+ * tombstone never reached cloud).
+ */
+export async function getPendingDeleteOpCount(userId) {
+  if (!userId) return 0;
+  try {
+    const d = await db();
+    const r = await d.getFirstAsync(
+      `SELECT COUNT(*) as c FROM pending_sync_ops
+       WHERE user_id = ? AND op_type IN ('workout_delete', 'workout_set_delete')`,
+      [userId],
+    );
+    return r?.c ?? 0;
+  } catch (_) {
+    return 0;
+  }
+}
+
+/**
  * Clear the queue for one user. Called when the user deletes their
  * account so we don't try to ship ops for a uid that no longer exists.
  */

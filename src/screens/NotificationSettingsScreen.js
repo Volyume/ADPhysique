@@ -589,8 +589,8 @@ export default function NotificationSettingsScreen({ navigation }) {
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Notifications" />
       <View style={styles.subtitleWrap}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>
-          Volyume uses local notifications only. No marketing, ever.
+        <Text style={[styles.subtitle, live.subtitle]}>
+          Volyume uses local notifications only, never marketing.
         </Text>
       </View>
 
@@ -602,7 +602,7 @@ export default function NotificationSettingsScreen({ navigation }) {
         {permissionStatus === 'denied' && (
           <View style={[styles.permissionBanner, live.permissionBanner]}>
             <Ionicons name="alert-circle-outline" size={20} color={t.colors.warning} style={styles.bannerIcon} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.bannerText, live.bannerText]}>
+            <Text style={[styles.bannerText, live.bannerText]}>
               Notifications are currently disabled. Enable them in your device settings to use these features.
             </Text>
           </View>
@@ -627,8 +627,8 @@ export default function NotificationSettingsScreen({ navigation }) {
               <Ionicons name="pulse-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.crossLinkTitle, live.crossLinkTitle]}>Coaching reminders</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.crossLinkSub, live.crossLinkSub]}>
+              <Text style={[styles.crossLinkTitle, live.crossLinkTitle]}>Coaching reminders</Text>
+              <Text style={[styles.crossLinkSub, live.crossLinkSub]}>
                 Morning weight and weekly check-in schedule. Always on for Pro.
               </Text>
             </View>
@@ -645,7 +645,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
               <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.toggleLabel, live.toggleLabel]}>Remind me to train</Text>
+            <Text style={[styles.toggleLabel, live.toggleLabel]}>Remind me to train</Text>
             <Switch
               value={trainingEnabled}
               onValueChange={handleTrainingToggle}
@@ -666,8 +666,8 @@ export default function NotificationSettingsScreen({ navigation }) {
                 accessibilityRole="button"
                 accessibilityLabel="Set reminder time"
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.timePickerLabel, live.timePickerLabel]}>Reminder time</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.timePickerValue, live.timePickerValue]}>
+                <Text style={[styles.timePickerLabel, live.timePickerLabel]}>Reminder time</Text>
+                <Text style={[styles.timePickerValue, live.timePickerValue]}>
                   {`${String(trainingHour).padStart(2, '0')}:${String(trainingMinute).padStart(2, '0')}`}
                 </Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
@@ -677,7 +677,7 @@ export default function NotificationSettingsScreen({ navigation }) {
 
           {/* Helper text */}
           <View style={[styles.helperRow, live.helperRow]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.helperText, live.helperText]}>
+            <Text style={[styles.helperText, live.helperText]}>
               Pick the time. Volyume learns the days you usually train from your recent workouts, and reminds you then.
             </Text>
           </View>
@@ -690,7 +690,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
               <Ionicons name="rocket-outline" size={18} color={t.colors.primary} />
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.toggleLabel, live.toggleLabel]}>Getting-started nudges</Text>
+            <Text style={[styles.toggleLabel, live.toggleLabel]}>Getting-started nudges</Text>
             <Switch
               value={activationNudgeEnabled}
               onValueChange={handleActivationNudgeToggle}
@@ -701,7 +701,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             />
           </View>
           <View style={[styles.helperRow, live.helperRow]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.helperText, live.helperText]}>
+            <Text style={[styles.helperText, live.helperText]}>
               A gentle reminder in your first couple of weeks if you have not logged a session yet. It stops on its own once you are into a routine.
             </Text>
           </View>
@@ -717,7 +717,7 @@ export default function NotificationSettingsScreen({ navigation }) {
                 <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
                   <Ionicons name="restaurant-outline" size={18} color={t.colors.primary} />
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.toggleLabel, live.toggleLabel]}>{r.label}</Text>
+                <Text style={[styles.toggleLabel, live.toggleLabel]}>{r.label}</Text>
                 <Switch
                   value={r.enabled}
                   onValueChange={(v) => toggleMealReminder(r.id, v)}
@@ -734,8 +734,8 @@ export default function NotificationSettingsScreen({ navigation }) {
                   accessibilityRole="button"
                   accessibilityLabel={`Set ${r.label} reminder time`}
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.timePickerLabel, live.timePickerLabel]}>Reminder time</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.timePickerValue, live.timePickerValue]}>
+                  <Text style={[styles.timePickerLabel, live.timePickerLabel]}>Reminder time</Text>
+                  <Text style={[styles.timePickerValue, live.timePickerValue]}>
                     {`${String(r.hour).padStart(2, '0')}:${String(r.minute).padStart(2, '0')}`}
                   </Text>
                   <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
@@ -744,7 +744,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             </View>
           ))}
           <View style={[styles.helperRow, live.helperRow]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.helperText, live.helperText]}>
+            <Text style={[styles.helperText, live.helperText]}>
               Optional reminders to log meals. No streaks and no pressure. Turn any of them off whenever you like.
             </Text>
           </View>
@@ -757,7 +757,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
               <Ionicons name="moon-outline" size={18} color={t.colors.primary} />
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.toggleLabel, live.toggleLabel]}>Quiet hours</Text>
+            <Text style={[styles.toggleLabel, live.toggleLabel]}>Quiet hours</Text>
             <Switch
               value={quietHours.enabled !== false}
               onValueChange={(v) => persistQuietHours({ enabled: v })}
@@ -775,8 +775,8 @@ export default function NotificationSettingsScreen({ navigation }) {
                 accessibilityRole="button"
                 accessibilityLabel="Set quiet hours start time"
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.timePickerLabel, live.timePickerLabel]}>Starts</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.timePickerValue, live.timePickerValue]}>
+                <Text style={[styles.timePickerLabel, live.timePickerLabel]}>Starts</Text>
+                <Text style={[styles.timePickerValue, live.timePickerValue]}>
                   {`${String(quietHours.startHour).padStart(2, '0')}:${String(quietHours.startMinute).padStart(2, '0')}`}
                 </Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
@@ -787,8 +787,8 @@ export default function NotificationSettingsScreen({ navigation }) {
                 accessibilityRole="button"
                 accessibilityLabel="Set quiet hours end time"
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.timePickerLabel, live.timePickerLabel]}>Ends</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.timePickerValue, live.timePickerValue]}>
+                <Text style={[styles.timePickerLabel, live.timePickerLabel]}>Ends</Text>
+                <Text style={[styles.timePickerValue, live.timePickerValue]}>
                   {`${String(quietHours.endHour).padStart(2, '0')}:${String(quietHours.endMinute).padStart(2, '0')}`}
                 </Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
@@ -796,7 +796,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             </>
           )}
           <View style={[styles.helperRow, live.helperRow]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.helperText, live.helperText]}>
+            <Text style={[styles.helperText, live.helperText]}>
               A reminder that would land inside this window waits until it ends. Applies to every reminder Volyume schedules.
             </Text>
           </View>
@@ -804,14 +804,14 @@ export default function NotificationSettingsScreen({ navigation }) {
 
         {/* Bottom note */}
         <View style={styles.bottomNote}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.bottomNoteText, live.bottomNoteText]}>
+          <Text style={[styles.bottomNoteText, live.bottomNoteText]}>
             Volyume never sends marketing notifications. These are local reminders with no server involved. You can disable them any time from your device settings.
           </Text>
         </View>
 
         {/* Save status */}
-        {saving && <Text maxFontSizeMultiplier={1.3} style={[styles.savingText, live.savingText]}>Saving...</Text>}
-        {!saving && saved && <Text maxFontSizeMultiplier={1.3} style={[styles.savedText, live.savedText]}>Saved</Text>}
+        {saving && <Text style={[styles.savingText, live.savingText]}>Saving...</Text>}
+        {!saving && saved && <Text style={[styles.savedText, live.savedText]}>Saved</Text>}
       </ScrollView>
     </SafeAreaView>
   );

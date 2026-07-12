@@ -1,3 +1,5 @@
+import { parseLocalDay } from '../dayKey';
+
 function timestampToMs(value) {
   if (value == null) return null;
   if (typeof value === 'string') {
@@ -7,10 +9,19 @@ function timestampToMs(value) {
   return value;
 }
 
+// LS-07: `metric_date` is a plain 'YYYY-MM-DD' local calendar day (stamped
+// by sync/tables/bodyComposition.js's msToDate via localDayKey, not UTC).
+// The old parse built a Date from the day-key plus a fixed UTC midnight
+// suffix, reading it back as UTC midnight instead of the user's local
+// midnight for that day -- the two only coincide by luck at UK-adjacent
+// offsets. parseLocalDay (dayKey.js) is the shared local-midnight parser
+// used everywhere else a stored day-key is turned back into a timestamp
+// (food/db.js, workoutDate.js), so the round trip stays on the same
+// calendar day regardless of offset.
 function metricDateToMs(value) {
   if (value == null) return null;
   if (typeof value === 'number') return value;
-  const ms = new Date(`${value}T00:00:00Z`).getTime();
+  const ms = parseLocalDay(value).getTime();
   return Number.isFinite(ms) ? ms : null;
 }
 

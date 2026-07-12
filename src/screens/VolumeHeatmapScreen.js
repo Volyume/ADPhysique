@@ -369,7 +369,7 @@ export default function VolumeHeatmapScreen() {
           <EmptyState
             icon="warning-outline"
             title="Couldn't load volume heatmap"
-            text="Check your connection and try again."
+            text="Couldn't load this on your device. Try again."
             actionLabel="Try again"
             onAction={loadData}
           />
@@ -387,7 +387,12 @@ export default function VolumeHeatmapScreen() {
           below this scroll. */}
       <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
-        {/* Anatomical body heatmap, tap a muscle to jump to its bar below */}
+        {/* Anatomical body heatmap: a sighted-only tap-to-jump-to-its-bar
+            convenience. AX-04 (launch accessibility audit): for assistive
+            tech this diagram is a single decorative/summary image (see
+            BodyDiagramHeatmap.js); the muscle rows in the card below are the
+            real accessible + operable path to the same name/volume/status
+            data, each one an independently focusable >=44dp control. */}
         <BodyDiagramHeatmap
           volumeByMuscle={volumeByMuscle}
           onMuscleTap={handleMuscleTap}
@@ -414,7 +419,7 @@ export default function VolumeHeatmapScreen() {
                 accessibilityState={{ selected: active }}
                 accessibilityLabel={opt.label}
               >
-                <Text maxFontSizeMultiplier={1.3}
+                <Text
                   style={[
                     styles.windowBtnText, live.windowBtnText,
                     { color: active ? t.colors.primary : t.colors.textSecondary },
@@ -430,7 +435,7 @@ export default function VolumeHeatmapScreen() {
         {/* Rolling window note */}
         <View style={styles.windowNote}>
           <Ionicons name="time-outline" size={14} color={t.colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.windowNoteText, live.windowNoteText]}>{windowNoteText}</Text>
+          <Text style={[styles.windowNoteText, live.windowNoteText]}>{windowNoteText}</Text>
         </View>
 
         {showNoVolumeGuidance && (
@@ -489,16 +494,40 @@ export default function VolumeHeatmapScreen() {
             const sets = Math.round(data.workingSets || 0);
             const prevSets = Math.round(prevData.workingSets || 0);
             const landmarks = effectiveLandmarks?.[muscle] || VOLUME_LANDMARKS[muscle];
-            const { status } = getVolumeStatus(sets, muscle, effectiveLandmarks);
+            const { status, label: statusLabel } = getVolumeStatus(sets, muscle, effectiveLandmarks);
             const color = buildVolumeStatusColor(t.colors)(status);
             const mrv = landmarks.mrv || 20;
             const fillPct = Math.min(sets / mrv, 1);
             const ghostFillPct = Math.min(prevSets / mrv, 1);
 
+            // AX-04 (launch accessibility audit): freshness band/meta computed
+            // once per row so both the visual dot/chip below and the row's
+            // combined accessibilityLabel read the identical value (previously
+            // computed only inline, purely for the dot's own now-removed
+            // per-node accessibility props).
+            const lastTrained = lastTrainedMap[muscle];
+            const freshnessBandKey = lastTrained != null ? freshnessBand(lastTrained.daysAgo, muscle) : null;
+            const freshnessMetaEntry = freshnessBandKey ? freshnessMeta[freshnessBandKey] : null;
+            const lastTrainedText = lastTrained != null ? formatLastTrained(lastTrained.daysAgo) : null;
+
+            // AX-04: the body diagram above is now a single decorative/summary
+            // image for assistive tech (its per-shape press targets were
+            // 15-29dp and duplicated bilateral labels -- see
+            // BodyDiagramHeatmap.js). This row is the real accessible +
+            // operable path instead: one focusable node per muscle (never
+            // duplicated per left/right side), >=44dp tall
+            // (styles.muscleRow.minHeight below), with a single label carrying
+            // name, volume and status -- matches the BlockProgressCard.js row
+            // precedent (accessibilityRole="text" + one combined label).
+            const rowA11yLabel = `${MUSCLE_DISPLAY_NAMES[muscle]}: ${sets} of ${mrv} weekly sets, ${statusLabel}`
+              + (freshnessMetaEntry ? `, ${freshnessMetaEntry.label}, ${lastTrainedText}` : '');
+
             return (
               <View
                 key={muscle}
                 style={styles.muscleRow}
+                accessibilityRole="text"
+                accessibilityLabel={rowA11yLabel}
                 onLayout={(e) => {
                   // Per-row y is relative to the heatmap card; combine with the
                   // card's y to get a position inside the ScrollView.
@@ -506,7 +535,7 @@ export default function VolumeHeatmapScreen() {
                   rowOffsets.current[muscle] = (rowOffsets.current.__cardY || 0) + rowY;
                 }}
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.muscleName, live.muscleName]}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
+                <Text style={[styles.muscleName, live.muscleName]}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
                 <View style={[styles.barTrack, live.barTrack]}>
                   <View
                     style={[
@@ -523,33 +552,29 @@ export default function VolumeHeatmapScreen() {
                   <View style={[styles.landmark, live.landmark, { left: `${(landmarks.mev / mrv) * 100}%` }]} />
                   <View style={[styles.landmark, live.landmark, { left: `${(landmarks.mav / mrv) * 100}%` }]} />
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.setsCount, live.setsCount, { color }]}>{sets}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.mrvLabel, live.mrvLabel]}>/{mrv}</Text>
-                {lastTrainedMap[muscle] != null && (() => {
-                  // Reuse the already-computed days-since-trained as the
-                  // freshness input. The dot is the recovery layer; the text is
-                  // the existing "last trained" recency. Null band (no data)
-                  // renders no dot, matching the chip's null-safety.
-                  const band = freshnessBand(lastTrainedMap[muscle].daysAgo, muscle);
-                  const meta = band && freshnessMeta[band];
-                  return (
-                    <View style={styles.freshnessGroup}>
-                      {meta && (
-                        <View
-                          style={[styles.freshnessDot, { backgroundColor: meta.color }]}
-                          accessibilityRole="image"
-                          accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]} ${meta.label}`}
-                        />
-                      )}
-                      <Text maxFontSizeMultiplier={1.3} style={[
-                        styles.lastTrainedChip, live.lastTrainedChip,
-                        lastTrainedMap[muscle].daysAgo <= 1 && [styles.lastTrainedRecent, live.lastTrainedRecent],
-                      ]}>
-                        {formatLastTrained(lastTrainedMap[muscle].daysAgo)}
-                      </Text>
-                    </View>
-                  );
-                })()}
+                <Text style={[styles.setsCount, live.setsCount, { color }]}>{sets}</Text>
+                <Text style={[styles.mrvLabel, live.mrvLabel]}>/{mrv}</Text>
+                {freshnessMetaEntry && (
+                  // AX-04: decorative once the row above carries the combined
+                  // label -- an accessible child dot/chip here would nest a
+                  // second accessible node inside this one and duplicate the
+                  // "Fresh"/"Today" wording the row already speaks (the same
+                  // nested-accessible anti-pattern the audit flags for
+                  // InfoTooltip's Close button, AX-01).
+                  <View
+                    style={styles.freshnessGroup}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                  >
+                    <View style={[styles.freshnessDot, { backgroundColor: freshnessMetaEntry.color }]} />
+                    <Text style={[
+                      styles.lastTrainedChip, live.lastTrainedChip,
+                      lastTrained.daysAgo <= 1 && [styles.lastTrainedRecent, live.lastTrainedRecent],
+                    ]}>
+                      {lastTrainedText}
+                    </Text>
+                  </View>
+                )}
               </View>
             );
           })}
@@ -561,7 +586,7 @@ export default function VolumeHeatmapScreen() {
             <SectionLabel>Volume trend</SectionLabel>
             <WindowChips windows={VOLUME_WINDOWS} selectedKey={trendWindowKey} onSelect={selectTrendWindow}
               accessibilityPrefix="volume trend window" />
-            {!!volTakeaway && <Text maxFontSizeMultiplier={1.3} style={[styles.trendTakeaway, live.trendTakeaway]}>{volTakeaway}</Text>}
+            {!!volTakeaway && <Text style={[styles.trendTakeaway, live.trendTakeaway]}>{volTakeaway}</Text>}
             {trainedMuscles.map(muscle => (
               <MuscleTrendRow
                 key={muscle}
@@ -576,11 +601,11 @@ export default function VolumeHeatmapScreen() {
         {/* Edit volume targets */}
         {editing ? (
           <Card style={styles.editSection}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.editTitle, live.editTitle]}>Edit volume targets</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.editSubtitle, live.editSubtitle]}>Weekly sets per muscle - minimum / target / ceiling</Text>
+            <Text style={[styles.editTitle, live.editTitle]}>Edit volume targets</Text>
+            <Text style={[styles.editSubtitle, live.editSubtitle]}>Weekly sets per muscle - minimum / target / ceiling</Text>
             {muscles.map(muscle => (
               <View key={muscle} style={[styles.editRow, live.editRow]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.editMuscleName, live.editMuscleName]}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
+                <Text style={[styles.editMuscleName, live.editMuscleName]}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
                 <View style={styles.editInputs}>
                   {[['mev', 'Min'], ['mav', 'Target'], ['mrv', 'Max']].map(([key, label]) => (
                     <TextField
@@ -656,7 +681,7 @@ function LegendItem({ color, label }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
       <View style={{ width: 10, height: 10, borderRadius: circle(10), backgroundColor: color }} />
-      <Text maxFontSizeMultiplier={1.3} style={{ fontSize: t.fontSize.micro, color: t.colors.textMuted }}>{label}</Text>
+      <Text style={{ fontSize: t.fontSize.micro, color: t.colors.textMuted }}>{label}</Text>
     </View>
   );
 }
@@ -695,7 +720,7 @@ function MuscleTrendRow({ muscle, trendData, customLandmarks }) {
 
   return (
     <View style={trendStyles.row}>
-      <Text maxFontSizeMultiplier={1.3} style={[trendStyles.muscleName, trendLive.muscleName]} numberOfLines={1}>
+      <Text style={[trendStyles.muscleName, trendLive.muscleName]} numberOfLines={1}>
         {MUSCLE_DISPLAY_NAMES[muscle]}
       </Text>
       <View style={trendStyles.sparkContainer}>
@@ -716,7 +741,7 @@ function MuscleTrendRow({ muscle, trendData, customLandmarks }) {
           })}
         />
       </View>
-      <Text maxFontSizeMultiplier={1.3}
+      <Text
         style={[
           trendStyles.currentCount, trendLive.currentCount,
           { color: resolveVolumeStatusColor(getVolumeStatus(showCount, muscle, customLandmarks).status) },
@@ -748,9 +773,13 @@ const trendStyles = StyleSheet.create({
   },
   currentCount: {
     width: 20,
+    // Theme gap: no xs+bold type role exists; the raw pair stays (weight
+    // preserved). R2 (2026-07-11): current set-count readout gains tabular
+    // figures so the trend column doesn't jitter.
     fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
     textAlign: 'right',
+    fontVariant: ['tabular-nums'],
   },
 });
 
@@ -765,7 +794,7 @@ const trendStyles = StyleSheet.create({
 function buildTrendLiveStyles(t) {
   return {
     muscleName: { ...t.type.caption, color: t.colors.textMuted },
-    currentCount: { fontSize: t.fontSize.xs },
+    currentCount: { fontSize: t.fontSize.xs, fontVariant: ['tabular-nums'] },
   };
 }
 
@@ -816,6 +845,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    // AX-04 (launch accessibility audit): this row is the real accessible +
+    // operable path for the volume-by-muscle data (the diagram above is a
+    // decorative/summary image for assistive tech), so it carries the same
+    // >=44dp minimum target/focus height as any other operable control.
+    minHeight: 44,
   },
   muscleName: {
     ...type.label,
@@ -845,9 +879,13 @@ const styles = StyleSheet.create({
   },
   setsCount: {
     width: 22,
+    // Theme gap: no sm+bold type role exists; the raw pair stays (weight
+    // preserved). R2 (2026-07-11): this is the per-muscle set-count readout,
+    // so it gains tabular figures so the counts column doesn't jitter.
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
     textAlign: 'right',
+    fontVariant: ['tabular-nums'],
   },
   mrvLabel: {
     ...type.num('caption'),
@@ -900,8 +938,11 @@ const styles = StyleSheet.create({
   editInputs: { flexDirection: 'row', gap: spacing.sm },
   editInputGroup: { flex: 1, gap: spacing.xs },
   editInputLabel: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
-  editInputField: { borderRadius: radius.sm },
-  editInputText: { textAlign: 'center', fontWeight: fontWeight.bold },
+  // R2 (2026-07-11): input class -> radius.md (control/input/icon-backing,
+  // FOOD-DESIGN-STANDARD.md section 4). Was radius.sm.
+  editInputField: { borderRadius: radius.md },
+  // Numeric target input: tabular figures so the min/target/max values align.
+  editInputText: { textAlign: 'center', fontWeight: fontWeight.bold, fontVariant: ['tabular-nums'] },
   editActions: { flexDirection: 'row', gap: spacing.md },
   editActionButton: {
     flex: 1,
@@ -924,7 +965,7 @@ function buildLiveStyles(t) {
     muscleName: { ...t.type.label, color: t.colors.textSecondary },
     barTrack: { backgroundColor: t.colors.surface3 },
     landmark: { backgroundColor: t.colors.border },
-    setsCount: { fontSize: t.fontSize.sm },
+    setsCount: { fontSize: t.fontSize.sm, fontVariant: ['tabular-nums'] },
     mrvLabel: { ...t.type.num('caption'), color: t.colors.textMuted },
     lastTrainedChip: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     lastTrainedRecent: { color: t.colors.warning },

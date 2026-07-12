@@ -44,7 +44,32 @@ test('serialises concurrent transactions (no nested BEGIN)', async () => {
   expect(order.sort()).toEqual(['a', 'b', 'c']);
 });
 
-test('runs the task inline when a transaction is already open (reentrancy guard)', async () => {
+test('a parallel call while a queued transaction is open QUEUES; it never joins the foreign transaction', async () => {
+  // The old blanket inline guard ran a parallel flow's task INSIDE whatever
+  // transaction happened to be open - its writes committed or rolled back
+  // with someone else's work (foreign-tx inline-join, R2-11 structural
+  // follow-up). A call arriving mid-transaction must now wait its turn.
+  const d = makeStrictDb();
+  const order = [];
+  let second;
+  await runInTransaction(d, async () => {
+    order.push('a-start');
+    // A different flow fires while this transaction is open (not awaited
+    // inside - it is a genuinely parallel caller).
+    second = runInTransaction(d, async () => { order.push('b'); });
+    await new Promise(r => setTimeout(r, 0));
+    order.push('a-end');
+  });
+  await second;
+  expect(order).toEqual(['a-start', 'a-end', 'b']);
+});
+
+test('runs the task inline when a transaction the queue does not own is open (manual BEGIN)', async () => {
+  // Seed/import paths still issue manual BEGIN/COMMIT outside the queue;
+  // queueing behind a transaction the queue cannot see would nest a second
+  // BEGIN inside it. Only these foreign manual transactions inline-join now -
+  // nested runInTransaction calls are forbidden outright (they would
+  // deadlock; in-transaction callers use the *InTx variants).
   let open = true;
   const d = {
     isInTransactionSync: () => open,
@@ -53,6 +78,28 @@ test('runs the task inline when a transaction is already open (reentrancy guard)
   let ran = false;
   await runInTransaction(d, async () => { ran = true; });
   expect(ran).toBe(true);
+  open = false;
+});
+
+test('resolves to the task return value on every path (R2-13)', async () => {
+  // Production regression (build 2694, fresh-install plan generation):
+  // expo-sqlite's withTransactionAsync awaits the task but DISCARDS its
+  // return value — the strict fake above mirrors that. runInTransaction
+  // must hand the task's result back itself, or value-consuming callers
+  // (planAutoGen's writeResult) read properties off undefined AFTER the
+  // commit has already landed.
+  const d = makeStrictDb();
+  const queued = await runInTransaction(d, async () => ({ zeroMatch: false, totalWritten: 4 }));
+  expect(queued).toEqual({ zeroMatch: false, totalWritten: 4 });
+
+  // The reentrant inline path returns the value too.
+  let open = true;
+  const inline = {
+    isInTransactionSync: () => open,
+    withTransactionAsync: async () => { throw new Error('should not nest a BEGIN'); },
+  };
+  const nested = await runInTransaction(inline, async () => 'inline-value');
+  expect(nested).toBe('inline-value');
   open = false;
 });
 

@@ -33,13 +33,22 @@
  */
 
 import { logSyncError } from '../telemetry';
+import { localDayKey } from '../../dayKey';
+import { fetchAllUserRows } from './_paginate';
 
 const PUSH_BATCH_SIZE = 200;
 const PUSH_WINDOW_DAYS = 365;
 
+// LS-07: stamp metric_date on the user's LOCAL calendar day, not UTC.
+// `new Date(ms).toISOString().split('T')[0]` reads the UTC date, so an
+// early-morning weigh-in during BST (UTC+1) -- e.g. 00:30 local, which is
+// 23:30 UTC the previous day -- landed on the WRONG day once it hit the
+// cloud. localDayKey (dayKey.js) is the shared local-calendar-day helper
+// used everywhere else in the app (weight/workouts already used it; this
+// closes the last UTC-keyed gap). Same null guard as before.
 function msToDate(ms) {
   if (!ms) return null;
-  try { return new Date(ms).toISOString().split('T')[0]; } catch (_) { return null; }
+  try { return localDayKey(ms); } catch (_) { return null; }
 }
 
 function _toIso(ms) {
@@ -115,10 +124,10 @@ export async function pushBodyComposition(sb, { userId, localUserId } = {}) {
 export async function pullBodyComposition(sb, { userId } = {}) {
   if (!sb || !userId) return { count: 0, errors: 0 };
   try {
-    const { data, error } = await sb
-      .from('body_metrics')
-      .select('*')
-      .eq('user_id', userId);
+    // LS-03b: page past PostgREST's 1000-row cap so a long history restores in full.
+    const { data, error } = await fetchAllUserRows(
+      () => sb.from('body_metrics').select('*').eq('user_id', userId),
+    );
     if (error) {
       logSyncError('sync.tables.bodyComposition.pull', error);
       return { count: 0, errors: 1 };

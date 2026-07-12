@@ -45,9 +45,9 @@ export default function TodaysPlateTeaser() {
 
   return (
     <View style={[styles.card, live.card]} accessibilityRole="summary" accessibilityLabel="Example meal plan day. Pro builds this around your own targets.">
-      <Text maxFontSizeMultiplier={1.3} style={[styles.eyebrow, live.eyebrow]}>A day on Pro</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Your meals, sorted.</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.sub, live.sub]}>
+      <Text style={[styles.eyebrow, live.eyebrow]}>A day on Pro</Text>
+      <Text style={[styles.title, live.title]}>Your meals, sorted.</Text>
+      <Text style={[styles.sub, live.sub]}>
         Pro builds a day of real food to your own calories and macros, and lets
         you swap anything and log it in a tap. Here is what a day looks like.
       </Text>
@@ -56,20 +56,20 @@ export default function TodaysPlateTeaser() {
         {day.slots.map((slot) => (
           <View key={slot.slot} style={[styles.plate, live.plate]}>
             <View style={styles.plateHead}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.plateSlot, live.plateSlot]}>{mealSlotLabel(slot.slot)}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.plateKcal, live.plateKcal]}>{toEnergy(slot.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+              <Text style={[styles.plateSlot, live.plateSlot]}>{mealSlotLabel(slot.slot)}</Text>
+              <Text style={[styles.plateKcal, live.plateKcal]}>{toEnergy(slot.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.plateName, live.plateName]} numberOfLines={1}>{slot.name}</Text>
+            <Text style={[styles.plateName, live.plateName]} numberOfLines={1}>{slot.name}</Text>
           </View>
         ))}
         <View style={styles.totalRow}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.totalText, live.totalText]}>
+          <Text style={[styles.totalText, live.totalText]}>
             {`${toEnergy(day.totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${day.totals.protein} - C ${day.totals.carbs} - F ${day.totals.fat}`}
           </Text>
         </View>
       </View>
 
-      <Text maxFontSizeMultiplier={1.3} style={[styles.foot, live.foot]}>An example, not medical advice. Your plan is built around your numbers.</Text>
+      <Text style={[styles.foot, live.foot]}>An example, not medical advice. Your plan is built around your numbers.</Text>
     </View>
   );
 }

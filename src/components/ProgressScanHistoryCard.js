@@ -144,7 +144,7 @@ export default function ProgressScanHistoryCard({
     <Card padding="md" style={styles.scanCard}>
       <View style={styles.scanCardHeader}>
         <View style={styles.scanHeadingGroup}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.scanTitle, live.scanTitle]}>Photo results</Text>
+          <Text style={[styles.scanTitle, live.scanTitle]}>Photo results</Text>
         </View>
       </View>
       {scans.map((scan) => {
@@ -153,12 +153,12 @@ export default function ProgressScanHistoryCard({
           <View key={scan.id} style={[styles.scanEntry, live.scanEntry]}>
             <View style={styles.scanEntryHeader}>
               <View style={styles.scanEntryTitleGroup}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.scanDate, live.scanDate]}>{dateLabel}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.scanEntryTitle, live.scanEntryTitle]}>{comparisonLabel(scan)}</Text>
+                <Text style={[styles.scanDate, live.scanDate]}>{dateLabel}</Text>
+                <Text style={[styles.scanEntryTitle, live.scanEntryTitle]}>{comparisonLabel(scan)}</Text>
               </View>
               <View style={styles.scanEntryActions}>
                 <View style={[styles.confidencePill, live.confidencePill]}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.confidencePillText, live.confidencePillText]} numberOfLines={1}>
+                  <Text style={[styles.confidencePillText, live.confidencePillText]} numberOfLines={1}>
                     Read quality: {confidenceLabel(scan)}
                   </Text>
                 </View>
@@ -177,24 +177,24 @@ export default function ProgressScanHistoryCard({
             </View>
             <View style={styles.scanInsightGrid}>
               <View style={[styles.scanInsightCell, live.scanInsightCell]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.scanInsightLabel, live.scanInsightLabel]}>Leanness</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.scanInsightValue, live.scanInsightValue]} numberOfLines={1}>{bandLabel(scan)}</Text>
+                <Text style={[styles.scanInsightLabel, live.scanInsightLabel]}>Leanness</Text>
+                <Text style={[styles.scanInsightValue, live.scanInsightValue]} numberOfLines={1}>{bandLabel(scan)}</Text>
               </View>
               <View style={[styles.scanInsightCell, live.scanInsightCell]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.scanInsightLabel, live.scanInsightLabel]}>Change</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.scanInsightValue, live.scanInsightValue]} numberOfLines={2}>{signalLabel(scan, { suppressed })}</Text>
+                <Text style={[styles.scanInsightLabel, live.scanInsightLabel]}>Change</Text>
+                <Text style={[styles.scanInsightValue, live.scanInsightValue]} numberOfLines={2}>{signalLabel(scan, { suppressed })}</Text>
               </View>
               <View style={[styles.scanInsightCell, live.scanInsightCell]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.scanInsightLabel, live.scanInsightLabel]}>Volyume Score</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.scanInsightValue, live.scanInsightValue]} numberOfLines={1}>{scoreLabel(scan, { suppressed, hideExact })}</Text>
+                <Text style={[styles.scanInsightLabel, live.scanInsightLabel]}>Volyume Score</Text>
+                <Text style={[styles.scanInsightValue, live.scanInsightValue]} numberOfLines={1}>{scoreLabel(scan, { suppressed, hideExact })}</Text>
               </View>
               <View style={[styles.scanInsightCell, live.scanInsightCell]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.scanInsightLabel, live.scanInsightLabel]}>Weight</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.scanInsightValue, live.scanInsightValue]} numberOfLines={1}>{weightLabel(scan, { suppressed, hideExact })}</Text>
+                <Text style={[styles.scanInsightLabel, live.scanInsightLabel]}>Weight</Text>
+                <Text style={[styles.scanInsightValue, live.scanInsightValue]} numberOfLines={1}>{weightLabel(scan, { suppressed, hideExact })}</Text>
               </View>
             </View>
             <View style={[styles.scanReasonBox, live.scanReasonBox]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.scanBody, live.scanBody]} numberOfLines={3}>{whyLabel(scan, { suppressed, hideExact })}</Text>
+              <Text style={[styles.scanBody, live.scanBody]} numberOfLines={3}>{whyLabel(scan, { suppressed, hideExact })}</Text>
             </View>
             {Array.isArray(scan.assets) && scan.assets.length > 0 ? (
               <View style={styles.scanAssetRow}>
@@ -214,7 +214,7 @@ export default function ProgressScanHistoryCard({
                       recyclingKey={asset.photoName || String(asset.id)}
                       transition={reduceMotion ? 0 : motion.state}
                     />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.scanAssetPose, live.scanAssetPose]} numberOfLines={1}>{POSE_LABEL[asset.pose] || asset.pose}</Text>
+                    <Text style={[styles.scanAssetPose, live.scanAssetPose]} numberOfLines={1}>{POSE_LABEL[asset.pose] || asset.pose}</Text>
                   </TouchableOpacity>
                 ))}
               </View>

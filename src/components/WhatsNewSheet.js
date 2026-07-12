@@ -98,13 +98,13 @@ export default function WhatsNewSheet() {
   // own REDUCE_MOTION_CONFIG), unaffected by this change.
   return (
     <BottomSheet visible={visible} onClose={() => setVisible(false)} accessibilityLabel="What's new">
-      <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>What&apos;s new</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.sub, live.sub]}>Version {version}</Text>
+      <Text style={[styles.title, live.title]}>What&apos;s new</Text>
+      <Text style={[styles.sub, live.sub]}>Version {version}</Text>
       <View style={styles.list}>
         {items.map((item) => (
           <View key={item.text} style={styles.row}>
             <Ionicons name={item.icon} size={18} color={t.colors.primary} style={styles.rowIcon} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.rowText, live.rowText]}>{item.text}</Text>
+            <Text style={[styles.rowText, live.rowText]}>{item.text}</Text>
           </View>
         ))}
       </View>

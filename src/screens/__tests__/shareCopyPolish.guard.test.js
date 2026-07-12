@@ -27,34 +27,41 @@ describe('share copy polish', () => {
 
   test('Analytics share CTAs are contained controls, not loose amber text links', () => {
     const analytics = read('AnalyticsScreen.js');
-    // CP-10 batch G: the CTA chrome gained its live-theme override
-    // (style={[styles.milestoneCtaButton, live.milestoneCtaButton]}). The
-    // contract -- at least four CTAs render through the contained
-    // milestoneCtaButton chrome -- is unchanged; the patterns accept the
-    // live-array spelling.
-    expect(analytics.match(/style=\{\[styles\.milestoneCtaButton, live\.milestoneCtaButton\]\}/g)?.length).toBeGreaterThanOrEqual(4);
-    expect(analytics).toContain('style={[styles.trainingLoadCtaRow, styles.milestoneCtaButton, live.milestoneCtaButton]}');
-    expect(analytics).toMatch(/milestoneCtaButton: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(analytics).toContain('milestoneCta: { ...type.label, color: colors.textPrimary }');
-    expect(analytics).not.toMatch(/milestoneCta: \{ fontSize: fontSize\.sm,[\s\S]*color: colors\.primary/);
+    // R9 (D70), 2026-07-11: the hand-rolled milestoneCtaButton TouchableOpacity
+    // + text pair was replaced by the shared Button primitive (variant=
+    // "outline"), so the old style-pair pin no longer matches. The pin's
+    // INTENT survives unchanged: every "Create share image" CTA is still a
+    // contained, bordered control with neutral textPrimary ink, never a loose
+    // amber text link -- Button.js's own outline variant IS that contract
+    // (buildVariants: outline = { bg: c.surface, fg: c.textPrimary, border:
+    // c.border }), just resolved by the primitive instead of a screen-local
+    // StyleSheet pair. Re-anchored to the Button call sites; the deleted
+    // milestoneCtaButton/milestoneCta StyleSheet keys must stay gone.
+    const ctaMatches = analytics.match(/<Button\s+variant="outline"[\s\S]{0,220}?title="Create share image"/g);
+    expect(ctaMatches?.length).toBeGreaterThanOrEqual(5);
+    expect(analytics).toContain('style={styles.trainingLoadCtaRow}');
+    expect(analytics).not.toMatch(/milestoneCtaButton:\s*\{/);
+    expect(analytics).not.toMatch(/milestoneCta:\s*\{/);
   });
 
   test('Analytics recent sessions link uses contained neutral chrome', () => {
     const analytics = read('AnalyticsScreen.js');
-    // CP-10 batch G: seeAllButton and the icon ink now resolve from the
-    // live theme; the contained-neutral-chrome contract is unchanged.
-    expect(analytics).toContain('style={[styles.seeAllButton, live.seeAllButton]}');
-    expect(analytics).toContain('Ionicons name="list-outline" size={14} color={t.colors.textSecondary}');
-    expect(analytics).toMatch(/seeAllButton: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(analytics).toContain('seeAll:      { ...type.label, color: colors.textPrimary }');
-    expect(analytics).not.toContain('seeAll:      { ...type.label, color: colors.primary }');
+    // R9 (D70), 2026-07-11: seeAllButton -> shared Button primitive (variant=
+    // "outline"); the icon now renders through Button's own `icon` prop
+    // (tinted to the variant's ink, textPrimary), rather than a standalone
+    // Ionicons at textSecondary. The pin's intent -- a contained, neutral,
+    // non-amber control -- is unchanged and is guaranteed by Button.js's own
+    // outline variant contract; re-anchored to the Button call site, and the
+    // deleted seeAllButton/seeAll StyleSheet keys must stay gone.
+    expect(analytics).toMatch(/<Button\s+variant="outline"[\s\S]{0,220}?icon="list-outline"[\s\S]{0,220}?title="All sessions"/);
+    expect(analytics).not.toMatch(/seeAllButton:\s*\{/);
+    expect(analytics).not.toMatch(/seeAll:\s*\{/);
   });
 
   test('entry and purchase trust links use contained neutral chrome', () => {
     const welcome = read('WelcomeScreen.js');
     const upgrade = read('ProUpgradeScreen.js');
     const credits = read('CreditsScreen.js');
-    const paywall = read('PaywallScreen.js');
 
     expect(welcome).toMatch(/signInLink: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(welcome).toContain('signInAction: { ...type.label, color: colors.textPrimary }');
@@ -75,14 +82,11 @@ describe('share copy polish', () => {
     expect(credits).toContain('link: {\n    ...type.label,\n    color: colors.textPrimary,');
     expect(credits).not.toMatch(/link: \{[\s\S]*color: colors\.primary/);
 
-    // CP-10 batch G lane 1: legalButton gained its live-theme override
-    // (style={[styles.legalButton, live.legalButton, ...]}); the contract --
-    // at least three legal links render through the contained legalButton
-    // chrome -- is unchanged, so the pattern accepts the live-array spelling.
-    expect(paywall.match(/style=\{\[styles\.legalButton, live\.legalButton/g)?.length).toBeGreaterThanOrEqual(3);
-    expect(paywall).toContain('style={[styles.legalButton, live.legalButton, busy && styles.legalButtonDisabled]}');
-    expect(paywall).toMatch(/legalButton: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(paywall).not.toContain("textDecorationLine: 'underline'");
-    expect(paywall).not.toContain('legalDot');
+    // C3 (D71), 2026-07-11: the PaywallScreen legal-row assertions were retired
+    // with the screen (orphaned duplicate upgrade surface, deleted). Their
+    // intent -- legal/trust links render through contained neutral chrome, not
+    // underlined text -- remains pinned for the live surfaces above (Welcome,
+    // ProUpgrade, Credits). ProUpgrade's own restore/policy chrome is contained
+    // (styles.restoreLink / styles.policyLink), not underlined.
   });
 });

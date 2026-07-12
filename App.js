@@ -20,7 +20,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 // (unaffected by this provider); this complements that fix outside sheets.
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, AppState, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert, AppState, Platform, AccessibilityInfo } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
@@ -30,6 +30,7 @@ import { installGlobalHandlers, logError } from './src/lib/errorLog';
 import { parseInviteCode } from './src/lib/partners/link';
 import { rememberPendingPartnerCode } from './src/lib/partners/pendingInvite';
 import { loadMealLabelOverrides } from './src/lib/food/mealSlots';
+import { captureFirstTouch, warmFirstTouch } from './src/lib/attribution';
 
 // Campaign item 15 (D25): keep the native splash on screen past its default
 // autohide-on-first-render point so it can fade smoothly into the app instead
@@ -102,15 +103,21 @@ TaskManager.defineTask(VOLYUME_DAILY_SYNC, async () => {
   try {
     // eslint-disable-next-line global-require
     const { getSupabaseClient: getSb } = require('./src/lib/supabase');
+    // AC-02 (Codex audit, 2026-07-12): route the periodic background trigger
+    // through syncAll, not bulkUploadLocalData directly. SYNC_ARCHITECTURE_
+    // LOCKED.md requires all four triggers to go through the runner so the
+    // Article 9 health-consent + sign-out-wipe gate applies; a direct
+    // bulkUploadLocalData call in this headless task uploaded health data with
+    // no consent check. syncAll fails closed when consent can't be proven.
     // eslint-disable-next-line global-require
-    const { bulkUploadLocalData } = require('./src/lib/sync');
+    const { syncAll } = require('./src/lib/sync');
     const sb = getSb();
     if (!sb) return 'noData';
     const { data: { session } } = await sb.auth.getSession();
     const supabaseUserId = session?.user?.id;
     if (!supabaseUserId) return 'noData';
     // Local user id is whatever Supabase gave us once they signed in.
-    await bulkUploadLocalData(supabaseUserId, supabaseUserId);
+    await syncAll({ userId: supabaseUserId, localUserId: supabaseUserId, triggeredBy: 'periodic' });
     return 'newData';
   } catch (e) {
     try { logError('VOLYUME_DAILY_SYNC', e); } catch (_) {}
@@ -261,6 +268,9 @@ function handleQuickAction(action) {
 // Single entry point for incoming links: invite links first, then auth links.
 function handleIncomingDeepLink(url) {
   if (!url) return;
+  // C8 phase 1: passive first-touch attribution capture (?src= / ?utm_source=,
+  // first-write-wins, sanitised slug only). Never consumes or reroutes the link.
+  captureFirstTouch(url).catch(() => {});
   if (handlePartnerDeepLink(url)) return;
   handleAuthDeepLink(url);
 }
@@ -317,12 +327,20 @@ class ErrorBoundary extends React.Component {
   }
 
   static getDerivedStateFromError(error) {
-    return { error };
+    // Short opaque incident code shown to the user so support can correlate
+    // it with the privately logged crash, without ever exposing the raw
+    // exception or stack to the customer (EP-08).
+    const incidentId = `V-${Date.now().toString(36).slice(-6).toUpperCase()}`;
+    return { error, incidentId };
   }
 
   componentDidCatch(error, errorInfo) {
-    logError('ErrorBoundary', error, { componentStack: errorInfo?.componentStack?.slice(0, 1200) });
+    logError('ErrorBoundary', error, {
+      incidentId: this.state?.incidentId,
+      componentStack: errorInfo?.componentStack?.slice(0, 1200),
+    });
     AsyncStorage.setItem(CRASH_LOG_KEY, JSON.stringify({
+      incidentId: this.state?.incidentId ?? null,
       message: error?.message || String(error),
       stack: error?.stack?.slice(0, 1200) || '',
       ts: Date.now(),
@@ -331,24 +349,54 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.error) {
+      const incidentId = this.state.incidentId ?? '';
+      // Developer builds keep the raw message + full stack for debugging.
+      if (__DEV__) {
+        return (
+          <View style={eb.container}>
+            <Text style={eb.title}>Volyume: Crash Report (dev)</Text>
+            <Text style={eb.subtitle}>{incidentId}</Text>
+            <View style={eb.msgBox}>
+              <Text selectable style={eb.msg}>{this.state.error?.message || String(this.state.error)}</Text>
+            </View>
+            <ScrollView style={eb.scroll}>
+              <Text selectable style={eb.stack}>{this.state.error?.stack}</Text>
+            </ScrollView>
+            <TouchableOpacity accessibilityRole="button" style={eb.btn} onPress={() => this.setState({ error: null })}>
+              <Text style={eb.btnText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      }
+      // Production: a calm, branded recovery screen. No exception text or stack
+      // frames ever reach the customer; the incident code maps to the crash we
+      // logged privately (EP-08).
+      const supportUrl = `mailto:support@volyume.app?subject=${encodeURIComponent(`Volyume problem ${incidentId}`)}`;
       return (
         <View style={eb.container}>
-          <Text style={eb.title}>Volyume: Crash Report</Text>
-          <Text style={eb.subtitle}>Send this to support:</Text>
-          <View style={eb.msgBox}>
-            <Text selectable style={eb.msg}>
-              {this.state.error?.message || String(this.state.error)}
-            </Text>
+          <Text style={eb.calmTitle}>Something went wrong</Text>
+          <Text style={eb.body}>
+            Volyume ran into an unexpected problem. Restarting usually sorts it. If it keeps happening, contact support and quote the code below.
+          </Text>
+          <View style={eb.idBox}>
+            <Text style={eb.idLabel}>Reference code</Text>
+            <Text selectable style={eb.idValue}>{incidentId}</Text>
           </View>
-          <ScrollView style={eb.scroll}>
-            <Text selectable style={eb.stack}>
-              {__DEV__
-                ? this.state.error?.stack
-                : this.state.error?.stack?.split('\n').slice(0, 5).join('\n')}
-            </Text>
-          </ScrollView>
-          <TouchableOpacity accessibilityRole="button" style={eb.btn} onPress={() => this.setState({ error: null })}>
-            <Text style={eb.btnText}>Retry</Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Restart Volyume"
+            style={eb.btn}
+            onPress={() => { Updates.reloadAsync().catch(() => this.setState({ error: null })); }}
+          >
+            <Text style={eb.btnText}>Restart Volyume</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Contact support"
+            style={eb.btnSecondary}
+            onPress={() => { Linking.openURL(supportUrl).catch(() => {}); }}
+          >
+            <Text style={eb.btnSecondaryText}>Contact support</Text>
           </TouchableOpacity>
         </View>
       );
@@ -373,6 +421,16 @@ const eb = StyleSheet.create({
   stack: { color: '#ccc', fontSize: 11, fontFamily: 'monospace' },
   btn: { marginTop: 16, backgroundColor: '#E08C0B', borderRadius: 14, padding: 14, alignItems: 'center' },
   btnText: { color: '#0D0D0D', fontWeight: 'bold', fontSize: 16 },
+  // Calm production recovery screen (EP-08). Same literal-hex approach as the
+  // rest of eb: if the style/theme layer is what crashed, importing tokens
+  // here could re-crash the recovery screen, so these mirror the theme values.
+  calmTitle: { color: '#F5F5F5', fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
+  body: { color: '#9E9E9E', fontSize: 15, lineHeight: 22, marginBottom: 20 },
+  idBox: { backgroundColor: '#191917', borderRadius: 10, padding: 12, marginBottom: 4 },
+  idLabel: { color: '#7A7A7A', fontSize: 12, marginBottom: 4 },
+  idValue: { color: '#E0E0E0', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
+  btnSecondary: { marginTop: 10, borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#3A3A38' },
+  btnSecondaryText: { color: '#E0E0E0', fontWeight: '600', fontSize: 15 },
 });
 
 // Small inner component that fires the "crash recovered" toast +
@@ -426,6 +484,7 @@ export default function App() {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const accessibilityLoaded = useAppStore(s => s.accessibilityLoaded);
   const loadAccessibility = useAppStore(s => s.loadAccessibility);
+  const setSystemReduceMotion = useAppStore(s => s.setSystemReduceMotion);
   const privacyLoaded = useAppStore(s => s.privacyLoaded);
   const loadPrivacyPrefs = useAppStore(s => s.loadPrivacyPrefs);
   const [calm, setCalm] = useState(false);
@@ -487,6 +546,28 @@ export default function App() {
     if (!accessibilityLoaded) loadAccessibility();
   }, [accessibilityLoaded, loadAccessibility]);
 
+  // AX-09 (launch accessibility audit): hydrate the OS-level "Reduce Motion"
+  // / "Remove animations" preference before the first animated screen, and
+  // keep it live if the user flips it in OS Settings while Volyume is
+  // running. This is a live device query, not a stored value (unlike
+  // loadAccessibility above) - the store's setSystemReduceMotion recomputes
+  // the effective accessibility.reduceMotion field that every existing
+  // consumer already reads (haptics.js, RestTimer, PRCelebration, etc), so no
+  // consumer needed editing. Cleans up the subscription on unmount.
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then(enabled => { if (mounted) setSystemReduceMotion(enabled); })
+      .catch(() => {});
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', enabled => {
+      setSystemReduceMotion(enabled);
+    });
+    return () => {
+      mounted = false;
+      sub.remove();
+    };
+  }, [setSystemReduceMotion]);
+
   // Hydrate the analytics opt-out before telemetry starts flowing, so an
   // opted-out user's first foreground doesn't ship events (LB-9).
   useEffect(() => {
@@ -521,6 +602,7 @@ export default function App() {
   // RootNavigator's onAuthStateChange listener picks up any resulting session
   // automatically and re-routes the user without any extra navigation calls.
   useEffect(() => {
+    warmFirstTouch().catch(() => {});
     Linking.getInitialURL().then(url => { if (url) handleIncomingDeepLink(url); }).catch(() => {});
     const sub = Linking.addEventListener('url', ({ url }) => handleIncomingDeepLink(url));
     return () => sub.remove();
@@ -977,7 +1059,14 @@ export default function App() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <KeyboardProvider>
         <BottomSheetModalProvider>
-          <SafeAreaProvider initialWindowMetrics={initialWindowMetrics}>
+          {/* R2 (remediation 2026-07-11): the provider prop is `initialMetrics`.
+              The old `initialWindowMetrics={...}` passed an UNRECOGNISED prop,
+              so the provider mounted with no metrics and every consumer read
+              insets of 0 until the async native measurement landed - on the
+              founder's device the ActiveWorkout bottom bar (the one surface
+              that relies on raw insets.bottom, because it hides the tab bar)
+              rendered under the Android navigation buttons. */}
+          <SafeAreaProvider initialMetrics={initialWindowMetrics}>
             {/* CP-10 stage 2: live theme read (useTheme, not the static
                 resolvedTheme import) so the status bar flips with the rest of
                 the app's chrome on a theme change, no restart. `style` is the

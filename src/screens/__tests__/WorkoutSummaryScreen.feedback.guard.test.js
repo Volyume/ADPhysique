@@ -28,12 +28,14 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     // live.stickyFooter override ahead of the inline paddingBottom object.
     // The frozen `styles.stickyFooter` definition (asserted above) is
     // byte-identical -- mechanical only.
-    // 2026-07-11 (founder defect, build 2608; LEAD RULING at review): the
-    // flat spacing.lg token STAYS (the 2026-07-03 founder-evidenced rule --
-    // the tab band below absorbs the system inset; bottomBarInset.guard
-    // pins that contract), and the View gained an onLayout to measure its
-    // own real height for the scroll content's clearance.
-    expect(SOURCE).toMatch(/<View\s*\n\s*style=\{\[styles\.stickyFooter, live\.stickyFooter, \{ paddingBottom: spacing\.lg \}\]\}\s*\n\s*onLayout=\{\(e\) => setFooterHeight\(e\.nativeEvent\.layout\.height\)\}\s*\n\s*>/);
+    // R2-6 (remediation 2026-07-11, founder device walk build 2684): the
+    // footer no longer measures its own height. It is a normal-flow sibling
+    // below the scroll (never an overlay), so the scroll content's bottom
+    // padding is independent of it and the onLayout/setFooterHeight plumbing
+    // is gone. The flat spacing.lg token STAYS (the tab band below owns the
+    // system inset; bottomBarInset.guard pins the full contract).
+    expect(SOURCE).toMatch(/<View style=\{\[styles\.stickyFooter, live\.stickyFooter, \{ paddingBottom: spacing\.lg \}\]\}>/);
+    expect(SOURCE).not.toMatch(/setFooterHeight/);
     expect(SOURCE).toContain('<TouchableOpacity');
     expect(SOURCE).toContain("title={saving ? 'Saving' : 'Close'}");
     expect(SOURCE).toMatch(/title="Share"[\s\S]*?icon="share-social-outline"[\s\S]*?variant="tertiary"[\s\S]*?size="sm"/);
@@ -64,7 +66,7 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): sectionTitle gained a
     // live.sectionTitle override (source: useTheme.js); frozen style
     // byte-identical.
-    expect(SOURCE).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sectionTitle, live.sectionTitle]}>Workout feedback</Text>');
+    expect(SOURCE).toContain('<Text style={[styles.sectionTitle, live.sectionTitle]}>Workout feedback</Text>');
     expect(SOURCE).toContain('Rate this workout');
     expect(SOURCE).toContain('placeholder="Anything notable from this session"');
     expect(SOURCE).toContain('placeholder="Anything to remember for next session? e.g. try 85kg, wider grip, reduce volume"');

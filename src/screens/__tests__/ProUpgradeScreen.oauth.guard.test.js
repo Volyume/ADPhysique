@@ -10,8 +10,12 @@ const source = fs.readFileSync(path.join(__dirname, '..', 'ProUpgradeScreen.js')
 describe('ProUpgrade shared OAuth surface', () => {
   test('wires account creation through OAuthButtons', () => {
     expect(source).toMatch(/import OAuthButtons from '\.\.\/components\/auth\/OAuthButtons';/);
+    // C2 (2026-07-11): the handlers gained a funnel-telemetry tick before
+    // handleOAuth; the pinned rule is unchanged - account creation still
+    // routes exclusively through OAuthButtons/handleOAuth with the shared
+    // disabled state.
     expect(source).toMatch(
-      /<OAuthButtons[\s\S]*onApple=\{\(\) => handleOAuth\('apple'\)\}[\s\S]*onGoogle=\{\(\) => handleOAuth\('google'\)\}[\s\S]*disabled=\{busy\}[\s\S]*\/>/,
+      /<OAuthButtons[\s\S]*onApple=\{\(\) => \{ trackCta\('create_account', \{ provider: 'apple' \}\); handleOAuth\('apple'\); \}\}[\s\S]*onGoogle=\{\(\) => \{ trackCta\('create_account', \{ provider: 'google' \}\); handleOAuth\('google'\); \}\}[\s\S]*disabled=\{busy\}[\s\S]*\/>/,
     );
   });
 

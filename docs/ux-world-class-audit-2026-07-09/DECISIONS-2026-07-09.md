@@ -1280,3 +1280,379 @@ touched. Four minor findings, all triaged:
   validation) and errors (caught) never reach the arm. Guard re-anchored:
   nextExerciseButton.guard now pins that handleCompleteSetPress does NOT
   arm and handleCompleteSet's success path does. Full suite green.
+
+## D63 — In-session PR celebration: full-screen takeover RETIRED, calm toast for all (R3 ruling, 2026-07-11)
+
+The founder's device walk reported: finishing a set greys the screen, a
+stunted animation appears and hangs until tapped. Hands-on trace of every
+set-completion visual (PRCelebration full path, subdued toast, RestTimer
+inline card, auto-advance inline row, the card-border log flash) found
+exactly ONE element that greys the screen: PRCelebration's full-screen
+overlay (0.85 backdrop + centre card + 40-particle confetti), which fires
+on real PRs. Whatever animation glitch the founder's device hit, the
+pattern itself violates the logger's first principle (never break the
+loop) - no elite logger interrupts logging with a modal takeover.
+
+RULING: the full-screen path is deleted. Every in-session celebration is
+the calm top toast (gold icon for real records, primary for the honest
+first lift; strong PR haptic ladder kept for real records; light tick for
+calm/reduce-motion/first-lift), auto-dismissing at 2.2s, tap to dismiss
+early, never obscuring the inputs. The BIG celebration (MilestoneBurst)
+stays on the summary screen, untouched. ED-safety: celebrations were
+already suppressed via subdued gating; making the subdued surface the
+only surface is strictly stronger. The firstLift pin (never the PERSONAL
+RECORD treatment) and the P9 TalkBack announcement pins pass unchanged.
+Subject to the founder's device-walk taste veto like all R-campaign
+rulings.
+
+## D64 — R4 unilateral flow design (lead ruling, 2026-07-11)
+
+Sources: plan-C-unilateral-logging.md (internal study; Option 2
+recommended), COMPETITIVE-LOGGER-BAR.md (no competitor has solved
+per-side logging; JEFIT forums show live user confusion), DEFECT-MAP.md
+R4 (current build: 3 taps - Log set, "Side one done", "Side two done" -
+plus touching buttons from a gap-less fragment), and the founder's words:
+"two taps to just confirm one side... it needs to be easy to use and self
+explanatory."
+
+THE FLOW (2 taps total, no confirm bureaucracy):
+1. User does side one, taps the permanent primary "Log set" (reps/weight
+   in the inputs as normal). Side one is captured IMMEDIATELY - pressing
+   Log set IS the confirmation.
+2. The Now card flips to a compact side-two state ("Side 2 - same reps",
+   reps prefilled, editable); a short between-sides rest runs inline
+   (half the exercise's configured rest via the existing
+   halfRestSeconds, floor 15s); the primary bar button relabels to
+   "Log other side" - same button, same position (S3 stable-identity
+   principle preserved).
+3. User does side two, taps "Log other side". The pair commits as ONE
+   workout_sets row: actual_reps = lower side (conservative, matches
+   migration 054's own maths), breakdown in notes ("L 10 / R 9") - the
+   exact D9/cluster storage shape already shipped; no schema change.
+
+SELF-EXPLANATORY: a once-per-exercise first-timer walkthrough modal in
+the exact shape of the existing superset heads-up (icon, numbered steps,
+tip, "Got it" CTA) with an inline escape ("Log both sides together"
+turns per-side off). AUTO-SUGGEST: the dead laterality field finally
+gets read - obviously-unilateral exercises auto-enable per-side, and
+because the walkthrough ALWAYS fires before the first per-side set, a
+wrong regex guess is never silent; declining is one tap. Cancel path:
+a small inline cancel in the side-two state discards the pending pair.
+
+Invariants preserved: one logged set = one working set (engine/volume/PR
+maths untouched); tier-blind; no new deps; existing crash-recovery draft
+covers the mid-pair state. Subject to founder device-walk veto.
+
+## D65 — R6: PressableCard collapsed to a single animated pressable (lead ruling, 2026-07-11)
+
+Sources: founder photo (build 2608, dead band on the workout summary
+footer beside Close), DEFECT-MAP.md R6, hands-on trace to the rendering
+line.
+
+ROOT CAUSE (whole class, not one screen): PressableCard rendered an
+unstyled Pressable wrapping an inner Reanimated.View that carried the
+caller's style. The parent lays out the OUTER element, so every
+layout-in-parent style passed through Button/Card/Chip (flex: 1,
+alignSelf, width) was silently discarded; in flex rows the button
+shrink-wrapped to text width. Regressed 2026-07-09 (5d98870) when the
+summary footer and the logger's bottom bar moved off raw
+TouchableOpacity (which held flex: 1 directly) onto <Button> - the
+founder's "it was better a month ago". Live victims traced: Workout
+summary Close (dead bar band), ActiveWorkout Log set primary and the
+Next exercise / Finish workout advance action (under-width split bar).
+
+RULING: fix at the primitive, not per call site.
+PressableCard is now ONE animated pressable
+(Reanimated.createAnimatedComponent(Pressable)) carrying
+[style, animatedStyle]. Declared layout styles take effect exactly as
+written at every call site; press physics unchanged (same springs, same
+scale/opacity interpolation, same reduce-motion flat behaviour); the
+origin-aware measure API and its never-lose-a-tap fallback unchanged.
+Side benefit: the press hit area now matches the visible bounds (the
+old outer view could stretch wider than the visible button - an
+invisible tap zone).
+
+Re-anchored pins: button.stateMorph animated-ancestor count 1 -> 0
+(intent unchanged: the morph adds no animated wrapper);
+p9Talkback save-path count 3 -> 2 (the third CTA was retired by design
+in D43 S3, window widened for the grown primary tag). New pin:
+pressableCard.rowLayout.guard.test.js. Verified: full suite
+691 suites / 8,529 tests green; absolute-position sweep found no
+consumer relying on the old inert layer. Subject to founder device-walk
+veto.
+
+## D66 — R5: logger chrome and small-surface styling unified (lead ruling, 2026-07-11)
+
+Sources: FOOD-DESIGN-STANDARD.md (the measuring stick), DEFECT-MAP.md R5
+(header table + radius-cluster inventory), founder's words ("Finish
+differs from X, counter different colour/style... different styles for
+different things all over the shop").
+
+RULINGS:
+1. Header X matches ModalHeader's close exactly (size 24, textPrimary).
+2. The elapsed timer is data, not decoration: textPrimary, same
+   type.num('title') role. Header amber competed with the one filled
+   Log set CTA.
+3. Finish drops its bespoke chrome override; Button variant="secondary"
+   size="sm" shows through (the override duplicated it at radius.sm).
+4. ONE small-surface radius for the logger: radius.md (beatLineCue and
+   RestTimer skip sm -> md; logged-set row + in-place editor xs -> md).
+   Pills stay radius.full; cards radius.lg. This is the reconciliation
+   rule for any future logger surface.
+5. Raw type pairs onto house roles: beatLineLabel -> bodySm, RestTimer
+   label -> overline. The 26px rest countdown stays a sanctioned hero
+   numeral (existing eslint-disable).
+6. Content edge: logger scroll paddingHorizontal md -> lg, aligning with
+   header/exercise-nav/Food. The tighter vertical rhythm (sm gaps) is a
+   deliberate density property of the working surface and STAYS.
+Landed 75ad788; full suite green. Subject to founder device-walk veto.
+
+## D67 — Clipped-drama copy ban made mechanical (founder order 2026-07-11)
+
+Founder: "We need a search for clipped ai language... for example 'Yours
+free, always' that's not british english and sounds daft, they dont own
+it."
+
+Swept and fixed (5 strings): WelcomeScreen "Yours free, always" ->
+"What stays free"; WelcomeScreen trust chip "No ads, ever" -> "No ads"
+(+ its a11y label); SettingsDataScreen "Your data is always yours." ->
+deleted (the factual sentence stands alone); SubscriptionPolicyScreen
+"...on Pro, forever." -> "...on Pro."; NotificationSettingsScreen
+"No marketing, ever." -> "never marketing" (caught by the new lint, not
+the manual grep - the guard already outperforms the sweep).
+
+ENFORCEMENT: two new no-restricted-syntax selectors in eslint.config.js
+(both rule blocks, since the HomeScreen-scoped block replaces rather
+than merges) banning the ", always/ever/forever" tail at sentence or
+string end in Literals and JSXText. Same escape hatch as the other
+voice rules: scoped eslint-disable with a reason.
+
+## D68 — R8: Coach page real merge (lead ruling, 2026-07-11)
+
+Sources: DEFECT-MAP.md R8 (side-by-side duplication table), founder ("the
+Coach page is now just cobbled together mess with duplication...
+'Getting to know you' adds nothing and hogs space... asked for a real
+MERGE"), hands-on read of YouScreen.js in full.
+
+FINDINGS: (1) the status card was a third voice - its body pointed at
+"the weekly check-in below" while the check-in NavRow directly beneath
+carried the FULL specific readiness copy; (2) with a completed decision
+the card said "Open it..." but was NOT tappable - the duplicate
+"Coaching decision" NavRow did the opening one card down; (3) the free
+tier showed a non-tappable pitch card PLUS a duplicate "Upgrade to Pro"
+NavRow; (4) the feared readiness-logic drift is already impossible at
+source: coachLedger.js imports MIN_WEIGH_INS / FIRST_CHECKIN_MIN_DAYS /
+firstReviewUnlockDate from trialActivation.js ("so the ledger can never
+disagree with the check-in gate") - the duplication was presentational.
+
+RULINGS (one voice per fact, every surface tappable or gone):
+1. Pro + completed decision: the status card IS the weekly update hero -
+   tone primary, tappable, opens CoachOutput(weekStart), chevron. The
+   "Coaching decision" NavRow disappears in this state (duplicate).
+2. Pro, no completed decision: NO status card. "Getting to know you" is
+   deleted; the check-in NavRow's pendingCoachCopy is the single status.
+   The "Coaching decision" NavRow renders only as the archive path
+   (!latestReview && hasCoachHistory, e.g. Monday's new output before
+   this week's check-in) - history now loads for Pro too (limit 1).
+3. Free: ONE tappable pitch card (opens ProUpgrade) replaces the card +
+   "Upgrade to Pro" NavRow pair; only "Coaching history" remains below,
+   and only when history exists.
+Pins survive by design (label="Weekly check-in" / label="Coaching
+decision" / buildPendingCoachCopy / statusCard-after-profileCard /
+Coaching-decision-inside-This-week); the physiqueTile pin on the
+removed Upgrade NavRow re-anchored to the card path. Full suite
+691 suites / 8,530 tests green. Subject to founder device-walk veto.
+
+## D69 — R9 colour grammar across the five areas (lead ruling, 2026-07-11)
+
+Sources: R9 card audit (red/green class, ~7 sites), interaction audit
+(VolumeSummaryStrip note), hands-on read of WeightTrendCard.js.
+
+RULING: Food's adherence-neutral rule is absolute for food, calorie,
+macro and weight-adherence surfaces. Training-MECHANICS caution signals
+(muscle volume over MRV, insight severity, unresolved-exercise repair
+state, high session difficulty) keep semantic warning/error colour as
+one consistent status grammar: they are recovery/safety warnings about
+training load, not judgements about the body, and stripping them would
+lose safety-bearing information.
+
+BOUNDARY CASE, reversed at lead verification: the audit provisionally
+had WeightTrendCard's onTrack/watch dot going neutral. Hands-on reading
+showed the dot is ALREADY governed by COMP-027 Class B (weight numeral
+never state-coloured, dot caps at watch so no red exists, dot is
+decorative with meaning carried by the insight sentence, and the
+view-model strips dot/rate/maintenance under an open ED flag). A prior
+safety-reviewed decision outranks cohesion styling; the dot stays.
+This is the standing precedent: pre-campaign safety rulings get D37
+triage, never cohesion bulldozing.
+
+## D70 — R9 interaction/feedback cohesion rulings (lead, 2026-07-11)
+
+Sources: R9 interaction audit (findings verified hands-on before each
+build), FOOD-DESIGN-STANDARD.md sections 4-6.
+
+RULINGS AND LANDINGS:
+1. One sheet chrome: Home intent prompt (3f2de24) and PlansScreen
+   folder prompt (80dbad5) off raw Modals onto shared BottomSheet;
+   RoutineDetail's swap surface keeps its full-screen ranked-candidates
+   Modal (deliberately richer than the plain picker; D25 exception
+   class) but its bespoke header becomes the house ModalHeader.
+2. Undo over confirm for reversible writes: RoutineDetail
+   remove-exercise (full-field re-add on undo) and swap-exercise
+   (inverse write on undo); PlansScreen archive-plan (unarchive on
+   undo). Folder and template deletes KEEP their blocking confirms -
+   neither has a restore path today, which is the doc's own exception;
+   building restore machinery is a separate feature, not a cohesion
+   fix. WorkoutHistory's workout delete keeps its confirm (genuinely
+   irreversible, cloud-deleted).
+3. One options idiom: WorkoutHistory's repeat menu moves from a native
+   alert to PeekMenu, matching PlansScreen's identical moments.
+4. Blocking informational alert -> calm info toast (Analytics locked
+   Recaps tile).
+5. BuildWorkout's hand-rolled picker STAYS: it is a rapid multi-add
+   flow (stays open across adds); the shared ExercisePickerModal
+   closes on every select, which would make building a session
+   strictly worse. Not duplication - a different flow.
+6. Sanctioned box classes app-wide: Card (radius.lg, surface,
+   borderSubtle/border) and Banner (radius.md, tinted fill, accent
+   border - Home's existing banner grammar). Wave B moves the misfiled
+   card-class surfaces onto lg; banners stay md.
+7. Haptics vocabulary joins every interactive tap on the five areas
+   except the recorded ED diary-marking exception; NavRow gains it
+   centrally.
+8. DifferentialBadge excluded from every sweep (billing surface;
+   C3 paywall audit owns it).
+
+## D71 — C3 duplicate paywall: port then delete (lead ruling under D33, 2026-07-11)
+
+Sources: C3 read-only audit (lead-verified),
+docs/marketing-2026-07-11/C3-duplicate-paywall-decision-brief.md.
+Founder reaffirmed D33 delegation mid-lane: decisions are the lead's,
+ruled entirely on the best end result for users and the app.
+
+RULING: Option B. PaywallScreen's two genuinely valuable capabilities
+move to the live surface first — the Play-review social-proof excerpt
+card (paywallExcerpts.js survives with its tests) and an inline
+restore affordance (shared lib/payments/restore module, the ProGate
+pattern) land on ProUpgradeScreen — then the orphaned PaywallScreen,
+its ProfileStack registration and its orphan-only tests are deleted
+and the stale cross-references cleaned. Rationale: the orphan is
+unreachable (zero call sites), carries a superseded annual default
+and pre-C1 "7 days" copy, and is pure future-drift risk; its social
+proof and restore button are real user value the live screen lacks.
+Docs-only cleanup (option D) would have been the lighter path; D33's
+criterion is explicit that effort is never the tiebreak. An earlier
+founder quick-pick of D is superseded by his explicit reaffirmation
+that the lead rules on merits. Constraints: product IDs, restore.js,
+playBilling.js, cascade.js untouched; a written test plan covers the
+restore addition (docs/marketing-2026-07-11/); DifferentialBadge
+behaviour untouched.
+
+## D72 — C5 day-14 factual recap: enrich CascadeGate (lead ruling under D33, 2026-07-11)
+
+Sources: C5 fact recon (lead-verified at the day-14 slot and day-3
+precedent), docs/marketing-2026-07-11/C5-day14-recap-decision-memo.md.
+Founder quick-picks aligned with the merits and are adopted as the
+ruling.
+
+RULING: surface = the CascadeGateScreen trial-end variant gains a
+small factual block above the Stay-on-Pro/Drop-to-Free choice; facts =
+training-mechanics only (workouts completed, sets, unique exercises,
+personal bests) so the surface is flag-invariant and renders
+identically for every user; floor = fewer than 3 completed workouts in
+the trial window renders no block at all (never a thin recap). Window
+is [proTrialEndsAt - 14d, proTrialEndsAt) via the existing
+getRecapData; PBs via getWeeklyPRCount summed over the window's
+Monday-local weeks (the app's one PB definition). No new events, no
+notification, no server migration. ED guardrails hold by construction:
+no outcome or body-change language anywhere in the copy, nothing
+weight/food-adjacent on the surface, and the block is best-effort
+(any load failure renders nothing).
+
+## D73 — Sign-out wipe escape: bounded retry + verified-clean gate (lead ruling under D33, 2026-07-11)
+
+Sources: R2-12 investigation (session log, build-2692 walk), the founder's
+own trapped device (wipe_failed forced a full storage clear to escape),
+useAppStore.clearAuthStateForSignOut, database.wipeAllUserData,
+useAccountActions.performDeleteAccount. Founder delegated the decision
+("do what needs to be done").
+
+RULING: options A and B combined, C rejected. The wipe_failed block was a
+dead end: any throw from a fatal wipe step blocked sign-out forever
+(force:true re-ran the same wipe), which punishes the user for a transient
+error while protecting nothing. The fail-closed privacy rule is UNCHANGED —
+sign-out completes only when zero user data remains on the device — but
+"an exception was thrown" is not the same fact as "data remains", so the
+gate now measures the fact directly:
+
+1. `wipeAllUserDataWithRetry` (database.js) retries the wipe up to 3 times
+   (500ms/1500ms backoff) before concluding anything.
+2. If every attempt throws, `verifyUserWipeClean` inspects the actual fatal
+   surfaces: user-keyed fatal tables + legacy NULL-owner photo rows +
+   flat-wiped partner tables (row counts), this account's photo directory,
+   and the snapshots directory. Zero residue → sign-out proceeds
+   (`verifiedClean`, logged loudly). Any residue, or any verification error
+   other than a missing table → fail closed exactly as before, with the
+   failing step named in the alert (R2-12 honesty rule).
+3. "no such table" is no longer a fatal wipe failure anywhere in the wipe:
+   a table that does not exist holds no data, so it cannot justify trapping
+   the user (a plausible R2-12 class on an older schema).
+4. Delete-account's local-wipe step uses the same retry + verify primitive
+   and the same step-named honest alert (it previously blamed "photo and
+   scan data" for every failure class).
+
+Option C (force-with-disclosure) is rejected outright: it would let a
+sign-out complete with health data verifiably still on the device, which
+Article 9 posture does not permit for a convenience escape.
+
+Regression pins: src/lib/__tests__/signOutWipeEscape.test.js (retry,
+verified-clean escape, fail-closed residue, missing-table tolerance) plus
+re-anchored useAccountActions.guard ordering pin.
+
+## D74 — Transaction-queue contract: no nesting, no foreign joins (lead ruling under D33, 2026-07-11)
+
+Sources: R2-11 investigation (busy_timeout landed a84215c), opus
+call-graph audit of all 18 runInTransaction task bodies (session log,
+2026-07-11), founder delegation "do what needs to be done".
+
+RULING: runInTransaction's blanket inline guard (`if (inTx()) return
+task()`) is replaced by an ownership-aware rule. A parallel call while a
+QUEUED transaction is open now queues - previously it inline-joined the
+foreign transaction, so its writes committed or rolled back with someone
+else's work and never serialised. Inline-join survives only for manual
+BEGINs the queue does not own (seed/import paths). Nested
+runInTransaction calls are forbidden by contract: the audit found
+exactly one (planAutoGen's zero-match rollback via
+deleteProgrammeCascade) and it was un-nested with a raw
+deleteProgrammeCascadeInTx variant. createWorkoutSet and
+recordEngineTelemetry INSERTs ride the same write queue (audit-proven
+unreachable from any task, so deadlock-free). dbCrypto probe closes are
+logged and classification-critical paths abort recoverably on a stuck
+close (shared ref-counted native connection means a leaked probe
+poisons every later probe). Remaining enumerated lane on the board:
+migrate the four manual BEGIN/COMMIT blocks onto the queue.
+
+## D75 — L05-D2 first-food prompt REVERTED (founder device verdict, 2026-07-12)
+
+Sources: founder device walk on the fresh install (screenshots 05:14 and
+05:19, 2026-07-12), commit b7cd2ab (L05-D2, design-usability audit
+2026-07-09), DiaryScreen.js.
+
+VERDICT: REVERTED, never re-propose. L05-D2 swapped MacroRings for a
+"calm first-day prompt" while an account had never logged food. On the
+founder's own fresh-install walk that meant NO ring, NO macro targets
+and NO visibility of what to eat, on the exact day a new user plans
+their first food - while the meal builder invited them to "build a day
+or week from your targets". The audit optimised for less noise; the
+device verdict is that the numbers ARE the product on that surface.
+
+FACT CHECK recorded with it: the onboarding->nutrition-targets pipeline
+was NOT broken. The 05:19 screenshot shows the engine's own numbers
+(3497 kcal, 227g P, 440g C, 92g F) rendering in full once a food was
+logged; the empty-state card also displayed the calorie target. The
+regression was purely the display swap.
+
+Change: MacroRings renders unconditionally (first day included);
+FirstFoodPrompt component, its test, and the firstFoodPrompt guard test
+deleted; the account-wide everLoggedFood read removed from the diary
+load. A never-re-propose comment sits at the MacroRings call site.

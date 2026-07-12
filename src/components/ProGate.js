@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -85,7 +85,7 @@ export default function ProGate({ children, feature = 'This feature', style }) {
 
   function upgrade() {
     setModalVisible(false);
-    navigation.navigate('ProUpgrade');
+    navigation.navigate('ProUpgrade', { source: 'pro_gate' });
   }
 
   return (
@@ -103,7 +103,7 @@ export default function ProGate({ children, feature = 'This feature', style }) {
         >
           <View style={[styles.lockChip, live.lockChip]}>
             <Ionicons name="lock-closed" size={13} color={t.colors.onPrimary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.lockChipText, live.lockChipText]}>Pro</Text>
+            <Text style={[styles.lockChipText, live.lockChipText]}>Pro</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -118,10 +118,10 @@ export default function ProGate({ children, feature = 'This feature', style }) {
             <Ionicons name="lock-closed-outline" size={28} color={t.colors.primary} />
           </View>
 
-          <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>{feature}</Text>
+          <Text style={[styles.sheetTitle, live.sheetTitle]}>{feature}</Text>
           {/* COMP-CLARITY: per-feature line so the inline sheet matches what
               the user tapped, falling back to the coaching-layer pitch. */}
-          <Text maxFontSizeMultiplier={1.3} style={[styles.sheetBody, live.sheetBody]}>{benefitFor(feature)}</Text>
+          <Text style={[styles.sheetBody, live.sheetBody]}>{benefitFor(feature)}</Text>
 
           <Button
             title="Upgrade to Pro"
@@ -155,6 +155,11 @@ export function ProLocked({ feature = 'This' }) {
   const navigation = useNavigation();
   const userId = useAppStore(s => s.user?.id);
   const [restoring, setRestoring] = useState(false);
+  // UI-12 (end-user-polish audit, 2026-07-12): the SafeAreaView below only
+  // absorbs top/left/right, so the scroll content needs its own bottom
+  // padding or the last control (Restore purchases) can finish under an
+  // iPhone home indicator.
+  const insets = useSafeAreaInsets();
 
   // Fire the lock impression once per feature key, not on every re-render. The
   // ref records the feature we last emitted for, so a re-render (or userId
@@ -175,8 +180,9 @@ export function ProLocked({ feature = 'This' }) {
 
   // Restore is a read of an existing entitlement, not a purchase: a paid user
   // on a reinstall or new device must recover Pro here without going through
-  // the buy flow. Routes through the same shared restore module PaywallScreen
-  // uses; it re-reads the active subscription from the store and never charges.
+  // the buy flow. Routes through the shared restore module
+  // (lib/payments/restore); it re-reads the active subscription from the
+  // store and never charges.
   async function handleRestore() {
     if (restoring) return;
     setRestoring(true);
@@ -198,7 +204,10 @@ export function ProLocked({ feature = 'This' }) {
 
   return (
     <SafeAreaView style={[styles.lockedSafe, live.lockedSafe]} edges={['top', 'left', 'right']}>
-      <ScrollView contentContainerStyle={styles.lockedScroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.lockedScroll, { paddingBottom: Math.max(spacing.xl, insets.bottom + spacing.sm) }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Founder 2026-07-02: the lock is a short gate, not a sales page.
             Identity first (lock + what this is), the example day as the one
             piece of show-don't-tell, then the CTA. The full sell (prices,
@@ -207,10 +216,10 @@ export function ProLocked({ feature = 'This' }) {
         <View style={[styles.lockedIcon, live.lockedIcon]}>
           <Ionicons name="lock-closed" size={28} color={t.colors.primary} />
         </View>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.lockedTitle, live.lockedTitle]}>{feature} is part of Pro</Text>
+        <Text style={[styles.lockedTitle, live.lockedTitle]}>{feature} is part of Pro</Text>
         {/* COMP-CLARITY: per-feature benefit line so each Pro route explains
             why it is Pro, instead of the same coaching pitch on every lock. */}
-        <Text maxFontSizeMultiplier={1.3} style={[styles.lockedBody, live.lockedBody]}>{benefitFor(feature)}</Text>
+        <Text style={[styles.lockedBody, live.lockedBody]}>{benefitFor(feature)}</Text>
         {/* Show-then-sell (founder decision #6): the read-only example day,
             below the headline so it reads in context. Nutrition lock only.
             The teaser LOOKS tappable (four meal cards), so the whole block is
@@ -220,7 +229,7 @@ export function ProLocked({ feature = 'This' }) {
         {showPlateTeaser ? (
           <TouchableOpacity
             style={styles.lockedTeaser}
-            onPress={() => navigation.navigate('ProUpgrade')}
+            onPress={() => navigation.navigate('ProUpgrade', { source: 'pro_gate_teaser' })}
             activeOpacity={0.88}
             accessibilityRole="button"
             accessibilityLabel="See the food diary in Pro"
@@ -230,11 +239,11 @@ export function ProLocked({ feature = 'This' }) {
         ) : null}
         <TouchableOpacity accessibilityRole="button"
           style={[styles.lockedBtn, live.lockedBtn]}
-          onPress={() => navigation.navigate('ProUpgrade')}
+          onPress={() => navigation.navigate('ProUpgrade', { source: 'pro_gate' })}
           activeOpacity={0.88}
         >
           <Ionicons name="barbell-outline" size={16} color={t.colors.onPrimary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.lockedBtnText, live.lockedBtnText]}>Upgrade to Pro</Text>
+          <Text style={[styles.lockedBtnText, live.lockedBtnText]}>Upgrade to Pro</Text>
         </TouchableOpacity>
         <TouchableOpacity accessibilityRole="button"
           style={styles.lockedBack}
@@ -246,23 +255,25 @@ export function ProLocked({ feature = 'This' }) {
             else navigation.navigate('HomeTab');
           }}
         >
-          <Text maxFontSizeMultiplier={1.3} style={[styles.lockedBackText, live.lockedBackText]}>Not now</Text>
+          <Text style={[styles.lockedBackText, live.lockedBackText]}>Not now</Text>
         </TouchableOpacity>
         {/* COMP-CLARITY: Play-required restore, so a reinstalled paid user can
             recover Pro from the lock without buying again. Same read-only
-            entitlement path as PaywallScreen; no purchase is made here. */}
+            entitlement path as the sheet above (lib/payments/restore); no
+            purchase is made here. */}
         <TouchableOpacity
           style={[styles.lockedRestore, live.lockedRestore]}
           onPress={handleRestore}
           disabled={restoring}
           accessibilityRole="button"
           accessibilityLabel="Restore purchases"
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
           {/* CP-10 theming batch, guard-test pin extended (ProGate.featureCopy.
               guard.test.js "restore purchase action is contained chrome"): the
               literal now reads t.colors.textSecondary, same token, live read. */}
           <Ionicons name="refresh-outline" size={14} color={t.colors.textSecondary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.lockedRestoreText, live.lockedRestoreText]}>
+          <Text style={[styles.lockedRestoreText, live.lockedRestoreText]}>
             {restoring ? 'Restoring...' : 'Restore purchases'}
           </Text>
         </TouchableOpacity>
@@ -356,7 +367,7 @@ export function ProBadge({ size = 'sm' }) {
   return (
     <View style={[styles.badge, live.badge, isSmall ? styles.badgeSm : styles.badgeMd]}>
       <Ionicons name="barbell" size={isSmall ? 8 : 10} color={t.colors.onPrimary} />
-      <Text maxFontSizeMultiplier={1.3} style={[styles.badgeText, live.badgeText, isSmall ? styles.badgeTextSm : styles.badgeTextMd]}>PRO</Text>
+      <Text style={[styles.badgeText, live.badgeText, isSmall ? styles.badgeTextSm : styles.badgeTextMd]}>PRO</Text>
     </View>
   );
 }

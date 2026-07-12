@@ -30,7 +30,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { create } from 'react-test-renderer';
+import { create, act } from 'react-test-renderer';
 
 const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'VolyumeChart.js'), 'utf8');
 
@@ -199,5 +199,143 @@ describe('CP-5: highlightIndices PR markers', () => {
   test('the scrub announcement mechanism folds in "Personal best" for a highlighted point (source-level)', () => {
     expect(SOURCE).toMatch(/const isPR = Array\.isArray\(highlightIndices\) && highlightIndices\.includes\(idx\);/);
     expect(SOURCE).toMatch(/isPR \? ', Personal best' : ''/);
+  });
+});
+
+// AX-02 (launch accessibility audit, docs/... d1cd0033-launchaccessibility.md):
+// native charts had no adjustable role/actions/value and no text alternative,
+// so VoiceOver/TalkBack users could not explore a chart's points at all. This
+// suite pins the fix against the REAL component: an adjustable control whose
+// accessibilityValue carries the actual date/value/series-name/Personal-best
+// text (not a bare number), increment/decrement move the same selection the
+// pan scrub already used, the raw SVG is marked decorative once that data is
+// represented, and the "View data" list is the required text alternative.
+describe('AX-02: adjustable chart, accessibilityValue and "View data" list', () => {
+  const DATA = [
+    { value: 80.2, label: '1 Jan' },
+    { value: 79.8, label: '' },
+    { value: 79.1, label: '10 Jan' },
+  ];
+  const WIDTH = 300;
+  const HEIGHT = 120;
+
+  function adjustable(tree) {
+    return tree.root.findAll((n) => n.props.accessibilityRole === 'adjustable')[0];
+  }
+  function hiddenSvgWrappers(tree) {
+    return tree.root.findAll((n) => n.props.accessibilityElementsHidden === true);
+  }
+  const Button = require('../Button').default;
+
+  test('exposes an adjustable role with a stable increment/decrement action pair', () => {
+    const tree = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} accessibilitySummary="Weight trend chart" />);
+    const chart = adjustable(tree);
+    expect(chart).toBeTruthy();
+    expect(chart.props.accessibilityActions).toEqual([
+      { name: 'increment', label: 'Next point' },
+      { name: 'decrement', label: 'Previous point' },
+    ]);
+    expect(typeof chart.props.onAccessibilityAction).toBe('function');
+  });
+
+  test('an explicit accessibilityLabel always wins over accessibilitySummary (existing hosts unchanged)', () => {
+    const tree = create(
+      <VolyumeChart
+        data={DATA} width={WIDTH} height={HEIGHT}
+        accessibilityLabel="Explicit label" accessibilitySummary="Fallback summary"
+      />,
+    );
+    expect(adjustable(tree).props.accessibilityLabel).toBe('Explicit label');
+  });
+
+  test('accessibilityValue defaults to the most recent point, folding in the series name', () => {
+    const tree = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} accessibilitySummary="Weight trend chart" />);
+    expect(adjustable(tree).props.accessibilityValue).toEqual({ text: 'Weight trend chart. 10 Jan, 79.1' });
+  });
+
+  test('a Personal best point folds into accessibilityValue', () => {
+    const tree = create(
+      <VolyumeChart
+        data={DATA} width={WIDTH} height={HEIGHT}
+        accessibilitySummary="Weight trend chart" highlightIndices={[2]}
+      />,
+    );
+    expect(adjustable(tree).props.accessibilityValue.text).toBe('Weight trend chart. 10 Jan, 79.1, Personal best');
+  });
+
+  test('decrement moves the selection backwards and updates accessibilityValue', () => {
+    const tree = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} accessibilitySummary="Weight trend chart" />);
+    act(() => {
+      adjustable(tree).props.onAccessibilityAction({ nativeEvent: { actionName: 'decrement' } });
+    });
+    expect(adjustable(tree).props.accessibilityValue.text).toBe('Weight trend chart. 79.8');
+  });
+
+  test('increment clamps at the last point (does not run past the end)', () => {
+    const tree = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} accessibilitySummary="Weight trend chart" />);
+    act(() => {
+      adjustable(tree).props.onAccessibilityAction({ nativeEvent: { actionName: 'increment' } });
+    });
+    expect(adjustable(tree).props.accessibilityValue.text).toBe('Weight trend chart. 10 Jan, 79.1');
+  });
+
+  test('an unrecognised action name is ignored', () => {
+    const tree = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} accessibilitySummary="Weight trend chart" />);
+    act(() => {
+      adjustable(tree).props.onAccessibilityAction({ nativeEvent: { actionName: 'magicTap' } });
+    });
+    expect(adjustable(tree).props.accessibilityValue.text).toBe('Weight trend chart. 10 Jan, 79.1');
+  });
+
+  test('a host-provided formatTooltip is preferred over the raw point for accessibilityValue', () => {
+    const tree = create(
+      <VolyumeChart
+        data={DATA} width={WIDTH} height={HEIGHT} accessibilitySummary="Weight trend chart"
+        formatTooltip={(i) => ({ title: `${DATA[i].value} kg`, sub: 'custom sub' })}
+      />,
+    );
+    expect(adjustable(tree).props.accessibilityValue.text).toBe('Weight trend chart. 79.1 kg, custom sub');
+  });
+
+  test('the "View data" toggle is collapsed by default and reveals a readable row per point', () => {
+    const tree = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} accessibilitySummary="Weight trend chart" />);
+    expect(tree.root.findAllByProps({ accessibilityRole: 'list' })).toHaveLength(0);
+
+    const toggle = tree.root.findByType(Button);
+    expect(toggle.props.title).toBe('View data');
+    act(() => { toggle.props.onPress(); });
+
+    const list = tree.root.findByProps({ accessibilityRole: 'list' });
+    // findAllByProps matches both the composite <Text> and its rendered host
+    // node (both carry accessibilityRole), so de-duplicate by text content.
+    const rowTexts = [...new Set(
+      list.findAllByProps({ accessibilityRole: 'text' }).map((r) => r.props.children),
+    )];
+    expect(rowTexts).toEqual([
+      '1 Jan, 80.2',
+      '79.8',
+      '10 Jan, 79.1',
+    ]);
+
+    // Toggling again hides it (collapsed by default, on request only).
+    act(() => { tree.root.findByType(Button).props.onPress(); });
+    expect(tree.root.findAllByProps({ accessibilityRole: 'list' })).toHaveLength(0);
+  });
+
+  test('the raw SVG is marked decorative now its data is represented elsewhere', () => {
+    const tree = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} accessibilitySummary="Weight trend chart" />);
+    const hidden = hiddenSvgWrappers(tree);
+    expect(hidden.length).toBeGreaterThan(0);
+    hidden.forEach((n) => expect(n.props.importantForAccessibility).toBe('no-hide-descendants'));
+    // The Svg itself is still rendered underneath (visual output unchanged).
+    expect(hidden.some((n) => n.findAllByType('Svg').length === 1)).toBe(true);
+  });
+
+  test('the bar variant marks its SVG decorative but does not (yet) get an adjustable role (follow-on host)', () => {
+    const barData = [{ value: 3 }, { value: 5 }, { value: 2 }];
+    const tree = create(<VolyumeChart data={barData} variant="bar" width={100} height={24} accessibilityLabel="Chest volume" />);
+    expect(tree.root.findAll((n) => n.props.accessibilityRole === 'adjustable')).toHaveLength(0);
+    const hidden = hiddenSvgWrappers(tree);
+    expect(hidden.length).toBeGreaterThan(0);
   });
 });

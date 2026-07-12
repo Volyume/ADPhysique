@@ -10,9 +10,11 @@
  * pure presentation.
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import {
+  View, Text, StyleSheet, ScrollView, ActivityIndicator, AccessibilityInfo, findNodeHandle,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
@@ -21,6 +23,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 import { colors, fontSize, fontWeight, spacing, type, circle, letterSpacing } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import { formatNumber } from '../lib/format';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
 import Button from '../components/Button';
@@ -66,6 +69,26 @@ export default function ImportScreen({ navigation }) {
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);     // counts from runImport
 
+  // AX-08 (launch accessibility audit): the dynamic error below was plain
+  // Text with no alert/live-region role, so a screen-reader user who tapped
+  // Pick CSV and hit a parse error was left on the button with no idea why
+  // nothing happened. errorRef backs a best-effort focus move onto the
+  // error once it appears, same guarded findNodeHandle pattern as
+  // InfoTooltip's AX-01 fix; the live region below is the announcement
+  // itself and works even where the focus move no-ops.
+  const errorRef = useRef(null);
+
+  useEffect(() => {
+    if (!error) return undefined;
+    const id = setTimeout(() => {
+      try {
+        const node = findNodeHandle(errorRef.current);
+        if (node != null) AccessibilityInfo.setAccessibilityFocus(node);
+      } catch (_) { /* best-effort, never throw into render */ }
+    }, 50);
+    return () => clearTimeout(id);
+  }, [error]);
+
   async function handlePickFile() {
     setError(null);
     try {
@@ -110,7 +133,7 @@ export default function ImportScreen({ navigation }) {
     } catch (e) {
       setStage('idle');
       logError('ImportScreen.handlePickFile', e);
-      setError(e?.message ?? 'Could not read that file.');
+      setError('Could not read that file. Try again.');
     }
   }
 
@@ -139,7 +162,7 @@ export default function ImportScreen({ navigation }) {
       setStage('preview');
       appAlert(
         'Import failed',
-        e?.message ?? 'Something went wrong writing the data. Nothing was saved.',
+        'Something went wrong writing the data. Nothing was saved.',
       );
     }
   }
@@ -159,7 +182,7 @@ export default function ImportScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.content}>
         {/* The BackHeader title already reads "Import history"; the body copy
             below explains the flow rather than repeating a second heading. */}
-        <Text maxFontSizeMultiplier={1.3} style={[styles.body, live.body]}>
+        <Text style={[styles.body, live.body]}>
           Import a workout-history CSV from Hevy or Strong. Sessions, sets, weights and reps all
           come across; unmatched exercises are created in your library so nothing is lost.
         </Text>
@@ -171,9 +194,9 @@ export default function ImportScreen({ navigation }) {
                 <Card key={src.key}>
                   <View style={styles.sourceHead}>
                     <Ionicons name="cloud-download-outline" size={18} color={t.colors.primary} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.sourceName, live.sourceName]}>{src.name}</Text>
+                    <Text style={[styles.sourceName, live.sourceName]}>{src.name}</Text>
                   </View>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.sourceText, live.sourceText]}>{src.instructions}</Text>
+                  <Text style={[styles.sourceText, live.sourceText]}>{src.instructions}</Text>
                 </Card>
               ))}
             </View>
@@ -185,21 +208,30 @@ export default function ImportScreen({ navigation }) {
               style={styles.primaryButton}
             />
 
-            {error ? <Text maxFontSizeMultiplier={1.3} style={[styles.errorText, live.errorText]}>{error}</Text> : null}
+            {error ? (
+              <Text
+                ref={errorRef}
+                accessibilityRole="alert"
+                accessibilityLiveRegion="assertive"
+                style={[styles.errorText, live.errorText]}
+              >
+                {error}
+              </Text>
+            ) : null}
           </>
         )}
 
         {stage === 'parsing' && (
           <View style={styles.workingBlock}>
             <ActivityIndicator color={t.colors.primary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.workingText, live.workingText]}>Reading your file…</Text>
+            <Text style={[styles.workingText, live.workingText]}>Reading your file…</Text>
           </View>
         )}
 
         {stage === 'preview' && analysis && (
           <>
             <Card style={styles.previewCard}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.previewSource, live.previewSource]}>{format === 'hevy' ? 'Hevy' : 'Strong'} export</Text>
+              <Text style={[styles.previewSource, live.previewSource]}>{format === 'hevy' ? 'Hevy' : 'Strong'} export</Text>
               <View style={styles.statRow}>
                 <Stat label="Sessions" value={analysis.workoutCount} />
                 <Stat label="Sets" value={analysis.setCount} />
@@ -208,14 +240,14 @@ export default function ImportScreen({ navigation }) {
 
               <View style={styles.breakdownRow}>
                 <BreakdownDot tone="success" />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.breakdownText, live.breakdownText]}>
+                <Text style={[styles.breakdownText, live.breakdownText]}>
                   {analysis.mappedCount} matched to existing exercises
                 </Text>
               </View>
               {analysis.unmappedCount > 0 && (
                 <View style={styles.breakdownRow}>
                   <BreakdownDot tone="warning" />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.breakdownText, live.breakdownText]}>
+                  <Text style={[styles.breakdownText, live.breakdownText]}>
                     {analysis.unmappedCount} will be created as custom exercises
                   </Text>
                 </View>
@@ -223,7 +255,7 @@ export default function ImportScreen({ navigation }) {
               {analysis.alreadyImported > 0 && (
                 <View style={styles.breakdownRow}>
                   <BreakdownDot tone="muted" />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.breakdownText, live.breakdownText]}>
+                  <Text style={[styles.breakdownText, live.breakdownText]}>
                     {analysis.alreadyImported} already in Volyume, will skip
                   </Text>
                 </View>
@@ -231,14 +263,14 @@ export default function ImportScreen({ navigation }) {
 
               {analysis.unmappedCount > 0 && (
                 <View style={[styles.unmappedBlock, live.unmappedBlock]}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.unmappedHead, live.unmappedHead]}>New custom exercises</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.unmappedText, live.unmappedText]}>
+                  <Text style={[styles.unmappedHead, live.unmappedHead]}>New custom exercises</Text>
+                  <Text style={[styles.unmappedText, live.unmappedText]}>
                     {analysis.unmappedNames.join(', ')}
                     {analysis.unmappedCount > analysis.unmappedNames.length
                       ? ` +${analysis.unmappedCount - analysis.unmappedNames.length} more`
                       : ''}
                   </Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.unmappedHint, live.unmappedHint]}>
+                  <Text style={[styles.unmappedHint, live.unmappedHint]}>
                     You can edit muscle, equipment and notes later in Exercise Library.
                   </Text>
                 </View>
@@ -264,8 +296,8 @@ export default function ImportScreen({ navigation }) {
         {stage === 'importing' && (
           <View style={styles.workingBlock}>
             <ActivityIndicator color={t.colors.primary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.workingText, live.workingText]}>Bringing your history in…</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.workingSub, live.workingSub]}>This usually takes a few seconds.</Text>
+            <Text style={[styles.workingText, live.workingText]}>Bringing your history in…</Text>
+            <Text style={[styles.workingSub, live.workingSub]}>This usually takes a few seconds.</Text>
           </View>
         )}
 
@@ -273,8 +305,8 @@ export default function ImportScreen({ navigation }) {
           <>
             <Card padding="xl" style={[styles.doneCard, live.doneCard]}>
               <Ionicons name="checkmark-circle" size={32} color={t.colors.success} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.doneTitle, live.doneTitle]}>Welcome to Volyume</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.doneBody, live.doneBody]}>
+              <Text style={[styles.doneTitle, live.doneTitle]}>Welcome to Volyume</Text>
+              <Text style={[styles.doneBody, live.doneBody]}>
                 {result.workouts} sessions, {result.sets} sets and {result.exercisesCreated} new exercises
                 are now in your library.{result.skipped > 0
                   ? ` Skipped ${result.skipped} that were already imported.`
@@ -308,8 +340,8 @@ function Stat({ label, value }) {
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={styles.stat}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.statValue, live.statValue]}>{Number(value || 0).toLocaleString()}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.statLabel, live.statLabel]}>{label}</Text>
+      <Text style={[styles.statValue, live.statValue]}>{formatNumber(value)}</Text>
+      <Text style={[styles.statLabel, live.statLabel]}>{label}</Text>
     </View>
   );
 }

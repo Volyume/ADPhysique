@@ -11,6 +11,13 @@
 //
 // All values must be numeric. Nulls/undefined are filtered out so the
 // line doesn't break across a missing reading.
+//
+// AX-02 (launch accessibility audit): this is decorative by default (the
+// raw SVG curve carries no semantics a screen reader can use on its own).
+// Pass `accessibilitySummary` (e.g. "Weight trend, falling") when a host
+// wants the sparkline to read as one labelled node instead; a host that
+// already speaks the trend elsewhere in its own text (the common case
+// today) doesn't need to change anything.
 
 import { Fragment, useMemo } from 'react';
 import { View } from 'react-native';
@@ -38,6 +45,9 @@ export default function Sparkline({
   // passed in (pre-filter); an index whose value got filtered out (non-
   // finite) or is out of range draws nothing rather than the wrong point.
   highlightIndices = null,
+  // AX-02: optional accessible name. When given, the sparkline exposes a
+  // single labelled node; when omitted (the default), it stays decorative.
+  accessibilitySummary,
 }) {
   const t = useTheme();
   const resolvedColor = color ?? t.colors.primary;
@@ -71,36 +81,54 @@ export default function Sparkline({
     // Not enough data, render a flat placeholder line at the midpoint
     // so the card layout doesn't jump when more data arrives.
     return (
-      <View style={{
-        width, height,
-        borderBottomWidth: 1,
-        borderBottomColor: t.colors.border,
-        opacity: 0.3,
-      }} />
+      <View
+        style={{
+          width, height,
+          borderBottomWidth: 1,
+          borderBottomColor: t.colors.border,
+          opacity: 0.3,
+        }}
+        accessible={!!accessibilitySummary}
+        accessibilityLabel={accessibilitySummary}
+        accessibilityElementsHidden={!accessibilitySummary}
+        importantForAccessibility={accessibilitySummary ? 'auto' : 'no-hide-descendants'}
+      />
     );
   }
 
   return (
-    <View style={{ width, height, overflow: 'hidden' }} pointerEvents="none">
-      <Svg width={width} height={height}>
-        <Path d={smoothPath(points)} stroke={resolvedColor} strokeWidth={1.5} fill="none" />
-        {showDots && points.map((p, i) => (
-          <Circle key={i} cx={p.x} cy={p.y} r={2} fill={resolvedColor} />
-        ))}
-        {/* Item 10: same gold ring-and-dot idiom as VolyumeChart's CP-5
-            personal-best markers. */}
-        {Array.isArray(highlightIndices) && highlightIndices.map((idx) => {
-          const pointIdx = dataIndexToPointIndex.get(idx);
-          const p = pointIdx != null && pointIdx < points.length ? points[pointIdx] : null;
-          if (!p) return null;
-          return (
-            <Fragment key={`pr-${idx}`}>
-              <Circle cx={p.x} cy={p.y} r={5} fill="none" stroke={t.colors.gold} strokeWidth={1.5} />
-              <Circle cx={p.x} cy={p.y} r={1.5} fill={t.colors.gold} />
-            </Fragment>
-          );
-        })}
-      </Svg>
+    <View
+      style={{ width, height, overflow: 'hidden' }}
+      pointerEvents="none"
+      // AX-02: a given summary makes this one labelled node; otherwise the
+      // curve stays decorative so it never surfaces as an unlabelled node.
+      // Either way the raw SVG below is separately marked decorative, since
+      // its information (when there is any) is carried by this label, not
+      // by the individually-unlabelled path/circle shapes.
+      accessible={!!accessibilitySummary}
+      accessibilityLabel={accessibilitySummary}
+    >
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <Svg width={width} height={height}>
+          <Path d={smoothPath(points)} stroke={resolvedColor} strokeWidth={1.5} fill="none" />
+          {showDots && points.map((p, i) => (
+            <Circle key={i} cx={p.x} cy={p.y} r={2} fill={resolvedColor} />
+          ))}
+          {/* Item 10: same gold ring-and-dot idiom as VolyumeChart's CP-5
+              personal-best markers. */}
+          {Array.isArray(highlightIndices) && highlightIndices.map((idx) => {
+            const pointIdx = dataIndexToPointIndex.get(idx);
+            const p = pointIdx != null && pointIdx < points.length ? points[pointIdx] : null;
+            if (!p) return null;
+            return (
+              <Fragment key={`pr-${idx}`}>
+                <Circle cx={p.x} cy={p.y} r={5} fill="none" stroke={t.colors.gold} strokeWidth={1.5} />
+                <Circle cx={p.x} cy={p.y} r={1.5} fill={t.colors.gold} />
+              </Fragment>
+            );
+          })}
+        </Svg>
+      </View>
     </View>
   );
 }

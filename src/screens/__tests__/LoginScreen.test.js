@@ -66,6 +66,21 @@ describe('LoginScreen OAuth feedback (A7)', () => {
     expect(mockToastShow).not.toHaveBeenCalled();
   });
 
+  test('a thrown OAuth exception shows the same calm fallback toast, not just a log (EP-18/UI-07)', async () => {
+    signInWithGoogle.mockRejectedValue(new Error('native bridge exception'));
+    let tree;
+    await act(async () => { tree = create(<LoginScreen />); });
+    const google = findGoogleButton(tree);
+    await act(async () => { await google.props.onPress(); });
+    await flush();
+
+    expect(mockToastShow).toHaveBeenCalledWith("That didn't go through. Try again.", expect.objectContaining({ variant: 'error' }));
+    // The button returns to idle rather than being left dimmed with no
+    // explanation (the waiting caption, gated on the same loading state,
+    // is gone once the catch's finally re-enables the buttons).
+    expect(JSON.stringify(tree.toJSON())).not.toContain('Waiting for Google or Apple');
+  });
+
   test('shows a "waiting" caption while the OAuth dialog is up, gone once it resolves', async () => {
     let resolveFn;
     signInWithGoogle.mockReturnValue(new Promise((resolve) => { resolveFn = resolve; }));
@@ -80,5 +95,33 @@ describe('LoginScreen OAuth feedback (A7)', () => {
     await act(async () => { resolveFn({}); await Promise.resolve(); });
     await flush();
     expect(JSON.stringify(tree.toJSON())).not.toContain('Waiting for Google or Apple');
+  });
+
+  // AX-08 (launch accessibility audit): the "Waiting..." busy copy was not
+  // marked busy/live, so a screen reader never heard that sign-in was in
+  // progress. The caption now carries a polite live region (mirroring
+  // src/components/Toast.js's non-error announcement) plus
+  // accessibilityState.busy for the duration.
+  test('the waiting caption is announced: polite live region + accessibilityState.busy (AX-08)', async () => {
+    let resolveFn;
+    signInWithGoogle.mockReturnValue(new Promise((resolve) => { resolveFn = resolve; }));
+    let tree;
+    await act(async () => { tree = create(<LoginScreen />); });
+    const google = findGoogleButton(tree);
+
+    act(() => { google.props.onPress(); });
+    await flush();
+
+    const waiting = tree.root.findAll(
+      (n) => Array.isArray(n.props.children)
+        ? n.props.children.join('') === 'Waiting for Google or Apple…'
+        : n.props.children === 'Waiting for Google or Apple…',
+    )[0];
+    expect(waiting).toBeTruthy();
+    expect(waiting.props.accessibilityLiveRegion).toBe('polite');
+    expect(waiting.props.accessibilityState).toEqual({ busy: true });
+
+    await act(async () => { resolveFn({}); await Promise.resolve(); });
+    await flush();
   });
 });

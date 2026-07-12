@@ -31,7 +31,6 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, useWindowDimensions,
 } from 'react-native';
-import { Image } from 'expo-image';
 import Reanimated, {
   useSharedValue, useAnimatedStyle, withTiming, runOnJS,
 } from 'react-native-reanimated';
@@ -43,6 +42,7 @@ import {
   colors, spacing, radius, type, iconSize, motion, withAlpha,
 } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import ProgressPhotoImage from './ProgressPhotoImage';
 import { logError } from '../lib/errorLog';
 import { getPhotoMetaMap } from '../lib/progressPhotoMeta';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
@@ -94,7 +94,7 @@ function Segmented({ options, value, onChange, groupLabel }) {
                 color={active ? t.colors.onPrimary : t.colors.textMuted}
               />
             ) : null}
-            <Text maxFontSizeMultiplier={1.3} style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{opt.label}</Text>
+            <Text style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{opt.label}</Text>
           </TouchableOpacity>
         );
       })}
@@ -111,10 +111,10 @@ function Pane({ item, role, w, h, failed, onError, reduceMotion }) {
     <View style={styles.pane}>
       {failed ? (
         <View style={[styles.paneImage, live.paneImage, styles.fallback, live.fallback, { width: w, height: h }]}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackText, live.fallbackText]}>Could not load this photo.</Text>
+          <Text style={[styles.fallbackText, live.fallbackText]}>Could not load this photo.</Text>
         </View>
       ) : (
-        <Image
+        <ProgressPhotoImage
           source={{ uri: item.uri }}
           style={[styles.paneImage, live.paneImage, { width: w, height: h }]}
           contentFit="contain"
@@ -125,8 +125,8 @@ function Pane({ item, role, w, h, failed, onError, reduceMotion }) {
           onError={onError}
         />
       )}
-      <Text maxFontSizeMultiplier={1.3} style={[styles.paneRole, live.paneRole]}>{role}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.paneDate, live.paneDate]}>{formatProgressPhotoDay(item.takenAt)}</Text>
+      <Text style={[styles.paneRole, live.paneRole]}>{role}</Text>
+      <Text style={[styles.paneDate, live.paneDate]}>{formatProgressPhotoDay(item.takenAt)}</Text>
     </View>
   );
 }
@@ -172,10 +172,10 @@ function CompareSlider({
       <View style={[styles.frame, live.frame, { width: w, height: h }]}>
         {failed.later ? (
           <View style={[styles.fallback, live.fallback, { width: w, height: h }]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackText, live.fallbackText]}>Could not load this photo.</Text>
+            <Text style={[styles.fallbackText, live.fallbackText]}>Could not load this photo.</Text>
           </View>
         ) : (
-          <Image
+          <ProgressPhotoImage
             source={{ uri: later.uri }}
             style={{ width: w, height: h }}
             contentFit="contain"
@@ -189,10 +189,10 @@ function CompareSlider({
         <Reanimated.View style={[styles.clip, clipStyle]} pointerEvents="none">
           {failed.earlier ? (
             <View style={[styles.fallback, live.fallback, { width: w, height: h }]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.fallbackText, live.fallbackText]}>Could not load this photo.</Text>
+              <Text style={[styles.fallbackText, live.fallbackText]}>Could not load this photo.</Text>
             </View>
           ) : (
-            <Image
+            <ProgressPhotoImage
               source={{ uri: earlier.uri }}
               style={{ width: w, height: h }}
               contentFit="contain"
@@ -224,12 +224,12 @@ function CompareSlider({
 
       <View style={styles.ends}>
         <View style={styles.endBlock}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.paneRole, live.paneRole]}>Earlier</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.paneDate, live.paneDate]}>{formatProgressPhotoDay(earlier.takenAt)}</Text>
+          <Text style={[styles.paneRole, live.paneRole]}>Earlier</Text>
+          <Text style={[styles.paneDate, live.paneDate]}>{formatProgressPhotoDay(earlier.takenAt)}</Text>
         </View>
         <View style={[styles.endBlock, styles.endRight]}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.paneRole, live.paneRole]}>Later</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.paneDate, live.paneDate]}>{formatProgressPhotoDay(later.takenAt)}</Text>
+          <Text style={[styles.paneRole, live.paneRole]}>Later</Text>
+          <Text style={[styles.paneDate, live.paneDate]}>{formatProgressPhotoDay(later.takenAt)}</Text>
         </View>
       </View>
     </View>
@@ -267,7 +267,12 @@ function CompareOverlay({
   return (
     <View style={styles.stage}>
       <View style={[styles.frame, live.frame, { width: w, height: h }]}>
-        <Canvas style={{ width: w, height: h }}>
+        {/* Not an Image element, but a real photograph render (AX-13): the
+            Skia canvas blends the two real photos, so it carries the same
+            invert-ignore flag as a plain base-View accessibility prop
+            (BaseViewConfig.ios.js), forwarded straight through by Canvas's
+            ...viewProps spread. */}
+        <Canvas style={{ width: w, height: h }} accessibilityIgnoresInvertColors>
           {earlierImg ? (
             <SkiaImage image={earlierImg} x={0} y={0} width={w} height={h} fit="contain" />
           ) : null}
@@ -303,12 +308,12 @@ function CompareOverlay({
 
       <View style={styles.ends}>
         <View style={styles.endBlock}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.paneRole, live.paneRole]}>Earlier</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.paneDate, live.paneDate]}>{formatProgressPhotoDay(earlier.takenAt)}</Text>
+          <Text style={[styles.paneRole, live.paneRole]}>Earlier</Text>
+          <Text style={[styles.paneDate, live.paneDate]}>{formatProgressPhotoDay(earlier.takenAt)}</Text>
         </View>
         <View style={[styles.endBlock, styles.endRight]}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.paneRole, live.paneRole]}>Later</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.paneDate, live.paneDate]}>{formatProgressPhotoDay(later.takenAt)}</Text>
+          <Text style={[styles.paneRole, live.paneRole]}>Later</Text>
+          <Text style={[styles.paneDate, live.paneDate]}>{formatProgressPhotoDay(later.takenAt)}</Text>
         </View>
       </View>
       {/* The overlay has no auto-crossfade at all (a flicker would read as a
@@ -479,8 +484,8 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <View style={styles.headerCopy}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Compare Progress Photos</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>Dates and poses only. Files stay on this device.</Text>
+            <Text style={[styles.title, live.title]}>Compare Progress Photos</Text>
+            <Text style={[styles.subtitle, live.subtitle]}>Dates and poses only. Files stay on this device.</Text>
           </View>
           <TouchableOpacity
             onPress={onClose}
@@ -493,8 +498,8 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
         </View>
         <View style={styles.placeholder}>
           <Ionicons name="leaf-outline" size={32} color={t.colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.placeholderText, live.placeholderText]}>Comparison is hidden for now.</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.placeholderSub, live.placeholderSub]}>Your photos stay private to this device.</Text>
+          <Text style={[styles.placeholderText, live.placeholderText]}>Comparison is hidden for now.</Text>
+          <Text style={[styles.placeholderSub, live.placeholderSub]}>Your photos stay private to this device.</Text>
         </View>
       </SafeAreaView>
     );
@@ -507,8 +512,8 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Compare Progress Photos</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>Dates and poses only. Files stay on this device.</Text>
+          <Text style={[styles.title, live.title]}>Compare Progress Photos</Text>
+          <Text style={[styles.subtitle, live.subtitle]}>Dates and poses only. Files stay on this device.</Text>
         </View>
         <TouchableOpacity
           onPress={onClose}
@@ -545,7 +550,7 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
             accessibilityState={{ disabled: scoped.length < 2 }}
             accessibilityLabel="Earliest and latest"
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.quickText, live.quickText]}>Earliest and latest</Text>
+            <Text style={[styles.quickText, live.quickText]}>Earliest and latest</Text>
           </TouchableOpacity>
           {weeksBack ? (
             <TouchableOpacity
@@ -554,7 +559,7 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
               accessibilityRole="button"
               accessibilityLabel={`Latest and ${weeksBack.n} week${weeksBack.n === 1 ? '' : 's'} back`}
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.quickText, live.quickText]}>
+              <Text style={[styles.quickText, live.quickText]}>
                 {`Latest and ${weeksBack.n} week${weeksBack.n === 1 ? '' : 's'} back`}
               </Text>
             </TouchableOpacity>
@@ -564,7 +569,7 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
         {!ready ? (
           <View style={styles.placeholder}>
             <Ionicons name="images-outline" size={32} color={t.colors.textMuted} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.placeholderText, live.placeholderText]}>Two photos are needed to compare.</Text>
+            <Text style={[styles.placeholderText, live.placeholderText]}>Two photos are needed to compare.</Text>
           </View>
         ) : (
           <View style={styles.body}>
@@ -575,8 +580,8 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
               >
                 <Ionicons name={setupStatus.icon} size={iconSize.sm} color={t.colors.primary} />
                 <View style={styles.setupStatusCopy}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.setupStatusTitle, live.setupStatusTitle]}>{setupStatus.title}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.setupStatusBody, live.setupStatusBody]}>{setupStatus.body}</Text>
+                  <Text style={[styles.setupStatusTitle, live.setupStatusTitle]}>{setupStatus.title}</Text>
+                  <Text style={[styles.setupStatusBody, live.setupStatusBody]}>{setupStatus.body}</Text>
                 </View>
               </View>
             ) : null}
@@ -630,7 +635,7 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
                 accessibilityState={{ selected: isChosen }}
                 accessibilityLabel={`Photo from ${formatProgressPhotoDay(item.takenAt)}`}
               >
-                <Image
+                <ProgressPhotoImage
                   source={{ uri: item.uri }}
                   style={[styles.thumb, live.thumb, isChosen && [styles.thumbChosen, live.thumbChosen]]}
                   contentFit="cover"

@@ -45,6 +45,12 @@ import {
   getActivePlan,
 } from '../../lib/database';
 import VolumeHeatmapScreen from '../VolumeHeatmapScreen';
+import { VOLUME_LANDMARKS } from '../../lib/algorithms';
+
+const VOLUME_HEATMAP_SOURCE = require('fs').readFileSync(
+  require('path').resolve(__dirname, '../VolumeHeatmapScreen.js'),
+  'utf8',
+);
 
 const store = {
   user: { id: 'u1' },
@@ -93,6 +99,9 @@ beforeEach(() => {
 });
 
 describe('VolumeHeatmapScreen states', () => {
+  // EP-20/UI-10 (Codex end-user-polish audit): getCompletedWorkoutSets and
+  // the other loadData reads are LOCAL SQLite (src/lib/database.js), never a
+  // network call, so a failure here must never claim a connection problem.
   test('shows a retry state when volume data fails to load', async () => {
     getCompletedWorkoutSets.mockRejectedValueOnce(new Error('offline'));
     let tree;
@@ -101,7 +110,8 @@ describe('VolumeHeatmapScreen states', () => {
 
     const text = flattenText(tree.toJSON());
     expect(text).toContain("Couldn't load volume heatmap");
-    expect(text).toContain('Check your connection and try again.');
+    expect(text).toContain("Couldn't load this on your device. Try again.");
+    expect(text).not.toContain('Check your connection');
     expect(text).toContain('Try again');
     expect(text).not.toContain('Below minimum');
   });
@@ -168,5 +178,87 @@ describe('VolumeHeatmapScreen states', () => {
     text = flattenText(tree.toJSON());
     expect(text).toContain('Chest11/22');
     expect(text).not.toContain('Chest3/22');
+  });
+});
+
+describe('AX-04 (launch accessibility audit): muscle rows are the accessible + operable path', () => {
+  // The body diagram above these rows is now a decorative/summary image for
+  // assistive tech (BodyDiagramHeatmap.js, own AX-04 tests); these rows carry
+  // the real accessible + operable path instead, so this pins: one focusable
+  // node per muscle (never duplicated per left/right side), each with a
+  // combined name+volume+status label, at a >=44dp target.
+  test('each muscle row is one accessibilityRole="text" node with a combined name/volume/status label, >=44dp tall', async () => {
+    getCompletedWorkoutSets.mockResolvedValueOnce(chestSets(11));
+    let tree;
+    await act(async () => { tree = create(<VolumeHeatmapScreen />); });
+    await flush();
+
+    const rows = tree.root.findAll(
+      (n) => n.props.accessibilityRole === 'text'
+        && typeof n.props.accessibilityLabel === 'string'
+        && /weekly sets/.test(n.props.accessibilityLabel)
+        && typeof n.type === 'string',
+    );
+    // One row per muscle, never duplicated (no bilateral left/right repeat
+    // the way the old per-shape diagram labels did).
+    expect(rows.length).toBe(Object.keys(VOLUME_LANDMARKS).length);
+    const labels = rows.map((r) => r.props.accessibilityLabel);
+    expect(new Set(labels).size).toBe(labels.length);
+
+    const chestRow = rows.find((r) => r.props.accessibilityLabel.startsWith('Chest:'));
+    expect(chestRow).toBeTruthy();
+    expect(chestRow.props.accessibilityLabel).toBe('Chest: 11 of 22 weekly sets, Good range');
+
+    // >=44dp target (minHeight 44 on the row style).
+    expect(chestRow.props.style.minHeight).toBeGreaterThanOrEqual(44);
+  });
+
+  test('the freshness dot/chip no longer carries its own accessibility node (avoids nesting inside the row)', async () => {
+    getLastTrainedByMuscle.mockResolvedValueOnce({ chest: { daysAgo: 0 } });
+    getCompletedWorkoutSets.mockResolvedValueOnce(chestSets(11));
+    let tree;
+    await act(async () => { tree = create(<VolumeHeatmapScreen />); });
+    await flush();
+
+    const chestRow = tree.root.findAll(
+      (n) => n.props.accessibilityRole === 'text'
+        && typeof n.props.accessibilityLabel === 'string'
+        && n.props.accessibilityLabel.startsWith('Chest:')
+        && typeof n.type === 'string',
+    )[0];
+    // daysAgo: 0 => the 'fatigued' freshness band ("Recently trained"), the
+    // resting state for a muscle trained today (see buildFreshnessMeta above).
+    expect(chestRow.props.accessibilityLabel).toContain('Recently trained');
+    expect(chestRow.props.accessibilityLabel).toContain('Today');
+
+    // The freshness group inside is hidden from assistive tech (its info is
+    // now spoken once, in the row's own combined label above).
+    const hiddenGroup = chestRow.findAll((n) => n.props.accessibilityElementsHidden === true);
+    expect(hiddenGroup.length).toBeGreaterThan(0);
+    for (const n of hiddenGroup) {
+      expect(n.props.importantForAccessibility).toBe('no-hide-descendants');
+    }
+    // No leftover per-dot accessibilityRole="image" node (the old pattern).
+    const dotImageNodes = chestRow.findAll((n) => n.props.accessibilityRole === 'image');
+    expect(dotImageNodes.length).toBe(0);
+  });
+});
+
+describe('R2 (2026-07-11) design-cohesion census', () => {
+  test('the target-edit input uses the input radius (md), not the tighter sm', () => {
+    // Input class -> radius.md (FOOD-DESIGN-STANDARD.md section 4).
+    expect(VOLUME_HEATMAP_SOURCE).toMatch(/editInputField: \{ borderRadius: radius\.md \}/);
+  });
+
+  test('every pure set-count/target readout carries tabular figures', () => {
+    // This numeral-dense screen had zero tabular numerals before R2. Each pure
+    // count/target readout now aligns as tabular columns (frozen style AND its
+    // live-theme twin where one exists). mrvLabel already used type.num.
+    expect(VOLUME_HEATMAP_SOURCE).toMatch(/setsCount: \{[\s\S]*?fontVariant: \['tabular-nums'\]/);
+    expect(VOLUME_HEATMAP_SOURCE).toMatch(/currentCount: \{[\s\S]*?fontVariant: \['tabular-nums'\]/);
+    expect(VOLUME_HEATMAP_SOURCE).toMatch(/editInputText: \{[\s\S]*?fontVariant: \['tabular-nums'\]/);
+    // Live-theme twins carry it too (D70 precedent: fontVariant on the twin).
+    expect(VOLUME_HEATMAP_SOURCE).toMatch(/setsCount: \{ fontSize: t\.fontSize\.sm, fontVariant: \['tabular-nums'\] \}/);
+    expect(VOLUME_HEATMAP_SOURCE).toMatch(/currentCount: \{ fontSize: t\.fontSize\.xs, fontVariant: \['tabular-nums'\] \}/);
   });
 });

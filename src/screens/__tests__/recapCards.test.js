@@ -18,6 +18,11 @@ jest.mock('expo-haptics', () => ({
 
 import { buildMonthCards, buildBlockCards, buildCards, buildWeekCards } from '../YearOfLiftsScreen';
 
+const YEAR_OF_LIFTS_SOURCE = require('fs').readFileSync(
+  require('path').resolve(__dirname, '../YearOfLiftsScreen.js'),
+  'utf8',
+);
+
 const MS = Date.UTC(2026, 5, 1); // 1 Jun 2026
 const JUN_END = Date.UTC(2026, 6, 1); // 1 Jul 2026 (exclusive end)
 
@@ -235,5 +240,32 @@ describe('buildBlockCards', () => {
     expect(cards[0].headline).toBe('Hypertrophy Block One');
     expect(cards[0].subline).toMatch(/6 weeks/);
     expect(cards[cards.length - 1].headline).toMatch(/block is done/);
+  });
+});
+
+describe('YearOfLiftsScreen — R2 (2026-07-11) design-cohesion census (chrome only)', () => {
+  test('every pure numeric readout carries tabular figures (frozen + live twin)', () => {
+    // The hero stat value, the list rank (1-5) and the per-row secondary
+    // ("12 sets"/"100.0kg") are pure data numerals; each now aligns as tabular
+    // (FOOD-DESIGN-STANDARD.md section 5). Prose headlines stay untouched.
+    expect(YEAR_OF_LIFTS_SOURCE).toMatch(/statValue: \{[\s\S]*?fontVariant: \['tabular-nums'\]/);
+    expect(YEAR_OF_LIFTS_SOURCE).toMatch(/listRank: \{[\s\S]*?fontVariant: \['tabular-nums'\]/);
+    expect(YEAR_OF_LIFTS_SOURCE).toMatch(/listSecondary: \{[\s\S]*?fontVariant: \['tabular-nums'\]/);
+    expect(YEAR_OF_LIFTS_SOURCE).toMatch(/statValue: \{ color: t\.colors\.textPrimary, fontVariant: \['tabular-nums'\] \}/);
+    expect(YEAR_OF_LIFTS_SOURCE).toMatch(/listRank: \{ fontSize: t\.fontSize\.lg, color: t\.colors\.primary, fontVariant: \['tabular-nums'\] \}/);
+    expect(YEAR_OF_LIFTS_SOURCE).toMatch(/listSecondary: \{ fontSize: t\.fontSize\.sm, color: t\.colors\.textSecondary, fontVariant: \['tabular-nums'\] \}/);
+  });
+
+  test('the black hero pairs keep their weight (prose headlines get no tabular)', () => {
+    // Theme gap held (not fixed): no display/xxl/44px + black type role exists,
+    // so the raw weight is preserved rather than de-emphasised. heroHeadline /
+    // listHeadline render prose, so they close on `color: colors.textPrimary`
+    // with NO fontVariant line (structural match to the block's own closing).
+    expect(YEAR_OF_LIFTS_SOURCE).toMatch(
+      /heroHeadline: \{[\s\S]*?fontWeight: fontWeight\.black,\n {4}color: colors\.textPrimary,\n {2}\},/,
+    );
+    expect(YEAR_OF_LIFTS_SOURCE).toMatch(
+      /listHeadline: \{[\s\S]*?fontWeight: fontWeight\.black,\n {4}color: colors\.textPrimary,\n {2}\},/,
+    );
   });
 });

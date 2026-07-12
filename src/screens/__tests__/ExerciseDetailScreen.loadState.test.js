@@ -77,6 +77,10 @@ describe('ExerciseDetailScreen load states', () => {
     jest.clearAllMocks();
   });
 
+  // EP-20/UI-10 (Codex end-user-polish audit): getExerciseById/getWorkoutSets
+  // ForExercise/getAllExercises are LOCAL SQLite reads (src/lib/database.js),
+  // never a network call, so a failure here must never claim a connection
+  // problem.
   test('shows a retryable error when exercise details fail to load', async () => {
     getExerciseById.mockRejectedValueOnce(new Error('offline'));
 
@@ -93,7 +97,8 @@ describe('ExerciseDetailScreen load states', () => {
 
     let text = flattenText(tree.toJSON());
     expect(text).toContain("Couldn't load exercise details");
-    expect(text).toContain('Check your connection and try again.');
+    expect(text).toContain("Couldn't load this on your device. Try again.");
+    expect(text).not.toContain('Check your connection');
     expect(text).toContain('Try again');
 
     getExerciseById.mockRejectedValueOnce(new Error('still offline'));
@@ -176,6 +181,102 @@ describe('ExerciseDetailScreen goal sheet migration (D36a item 17 modal tails)',
     expect(goalWindow).not.toContain('<KeyboardAvoidingView');
     expect(goalWindow).not.toContain('styles.modalBackdrop');
     expect(goalWindow).not.toContain('styles.modalOverlay');
+  });
+});
+
+describe('ExerciseDetailScreen malformed restored/legacy data (EP-23/UI-11)', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  // A bad restore/import/sync can leave a workout set's createdAt (which
+  // becomes a PR's achieved_date) or a saved goal's targetDate/targetWeight
+  // unparseable. Every one of these used to reach a raw
+  // `format(new Date(value), fmt)` (throws RangeError: Invalid time value)
+  // or `parseFloat(value).toFixed(n)` (silently renders the string "NaN").
+  // This proves the whole screen still renders, with calm fallbacks instead
+  // of a crash or "NaNkg".
+  test('a malformed set date and a malformed goal render without throwing and without "NaN"', async () => {
+    getExerciseById.mockResolvedValueOnce({
+      id: 'e1',
+      name: 'Barbell bench press',
+      primaryMuscle: 'chest',
+      secondaryMuscles: [],
+      defaultRepMin: 6,
+      defaultRepMax: 12,
+    });
+    getWorkoutSetsForExercise.mockResolvedValueOnce([
+      {
+        workoutId: 'w1', weight: 100, actualReps: 5, setType: 'straight',
+        createdAt: 'not-a-real-date',
+      },
+    ]);
+    getExerciseGoal.mockResolvedValueOnce({
+      id: 'g1', targetWeight: 'corrupt', targetDate: 'not-a-real-date', achievedAt: null,
+    });
+    getAllExercises.mockResolvedValueOnce([]);
+
+    let tree;
+    await expect(act(async () => {
+      tree = create(
+        <ExerciseDetailScreen
+          navigation={{ goBack: jest.fn(), push: jest.fn() }}
+          route={{ params: { exerciseId: 'e1' } }}
+        />,
+      );
+    })).resolves.not.toThrow();
+    await flush();
+
+    const text = flattenText(tree.toJSON());
+    expect(text).not.toMatch(/NaN/);
+    // The PR highlight card, the all-time-bests list and the session
+    // history row all fall back to the same calm copy for the malformed
+    // achieved_date/createdAt instead of crashing.
+    expect(text).toContain('Date unavailable');
+    // The malformed goal.targetWeight renders as the existing "-"
+    // placeholder (the same fallback already used for "no 1RM yet"),
+    // never "NaNkg", and the invalid targetDate omits the "- by ..." tail
+    // rather than crashing the goal card.
+    expect(text).toContain('Target');
+    expect(text).not.toContain('by not-a-real-date');
+  });
+
+  // Opening the goal-edit sheet used to call format(new Date(goal.
+  // targetDate), 'MMM yyyy') unconditionally when targetDate was truthy;
+  // pin that a malformed value no longer crashes opening the sheet.
+  test('opening the goal sheet with a malformed saved targetDate does not throw', async () => {
+    getExerciseById.mockResolvedValueOnce({
+      id: 'e1', name: 'Barbell squat', primaryMuscle: 'quads', secondaryMuscles: [],
+      defaultRepMin: 6, defaultRepMax: 12,
+    });
+    getWorkoutSetsForExercise.mockResolvedValueOnce([]);
+    getExerciseGoal.mockResolvedValueOnce({
+      id: 'g1', targetWeight: 80, targetDate: 'not-a-real-date', achievedAt: null,
+    });
+    getAllExercises.mockResolvedValueOnce([]);
+
+    let tree;
+    await act(async () => {
+      tree = create(
+        <ExerciseDetailScreen
+          navigation={{ goBack: jest.fn(), push: jest.fn() }}
+          route={{ params: { exerciseId: 'e1' } }}
+        />,
+      );
+    });
+    await flush();
+
+    const editBtn = tree.root.findAll(
+      (n) => n.props.accessibilityLabel === 'Edit target' && typeof n.props.onPress === 'function',
+    )[0];
+    expect(editBtn).toBeTruthy();
+    await expect(act(async () => {
+      editBtn.props.onPress();
+    })).resolves.not.toThrow();
+    await flush();
+
+    const text = flattenText(tree.toJSON());
+    expect(text).not.toMatch(/NaN/);
   });
 });
 

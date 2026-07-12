@@ -16,7 +16,9 @@ import { logWarn } from './errorLog';
 
 // expo-sqlite's fixed location for openDatabaseAsync('volyume.db').
 const DB_PATH = `${FileSystem.documentDirectory}SQLite/volyume.db`;
-const SNAP_DIR = `${FileSystem.documentDirectory}snapshots/`;
+// Exported for verifyUserWipeClean (database.js), which checks this
+// directory directly during the sign-out wipe-verify pass.
+export const SNAP_DIR = `${FileSystem.documentDirectory}snapshots/`;
 const KEEP = 3; // rolling-N retention (a full DB copy is larger than a delta)
 
 // ── Pure helpers (unit-tested; no FS) ────────────────────────────────────────

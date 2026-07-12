@@ -57,6 +57,33 @@ describe('shouldSyncPref excludes device-bound keys (F1 / SD-1)', () => {
   });
 });
 
+describe('shouldSyncPref excludes special-category / sensitive keys (Codex audit AC-01/H-03)', () => {
+  // These are special-category health data the wellbeing screen promises stay
+  // device-only, or transient diagnostics/drafts with no place in the cloud.
+  // The prefs sync is allow-by-prefix (fail-open), so each MUST be named out
+  // until the model is inverted to a fail-closed allowlist.
+  const SENSITIVE = [
+    '@volyume_scoff_answers',            // raw ED-screening answers (Article 9)
+    '@volyume_cycle_tracking',           // menstrual-cycle data (Article 9)
+    '@volyume_cycle_tracking_v2',
+    '@volyume_error_log_v1',
+    '@volyume_last_crash_meta_v1',
+    '@volyume_feedback_pending_v1',
+    '@volyume_feedback_prompt_history_v1',
+    '@volyume_pro_onboarding_draft_abc123',
+  ];
+  test.each(SENSITIVE)('%s never syncs to the cloud', (key) => {
+    expect(shouldSyncPref(key)).toBe(false);
+  });
+
+  // The non-sensitive counterparts these keys sit near MUST still sync, so the
+  // exclusion did not over-reach and break legitimate cross-device restore.
+  test('non-sensitive preferences near the excluded families still sync', () => {
+    expect(shouldSyncPref('@volyume_quiet_hours_v1')).toBe(true);
+    expect(shouldSyncPref('@volyume_notification_prefs')).toBe(true);
+  });
+});
+
 describe('the PULL side applies the same exclusions (F1, hostile-review blocker)', () => {
   // Excluding keys from push alone is not enough: older builds already pushed
   // the device-bound rows to the cloud, and with the push no longer refreshing

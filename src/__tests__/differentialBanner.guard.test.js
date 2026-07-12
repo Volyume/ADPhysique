@@ -141,7 +141,10 @@ describe('NAV-4: no billing logic on Home', () => {
     const site = HOME.indexOf('showFreeCoachLine || showDifferentialBadge');
     expect(site).toBeGreaterThan(-1);
     const block = HOME.slice(site, site + 1600);
-    expect(block).toMatch(/navigation\.navigate\('ProUpgrade'\)/);
+    // C2 (2026-07-11): the navigate now threads the entry source so the
+    // upgrade screen's impression event can attribute it; the pinned rule
+    // (banner CTA -> ProUpgrade, never Paywall) is unchanged.
+    expect(block).toMatch(/navigation\.navigate\('ProUpgrade', \{ source: /);
     expect(HOME).not.toMatch(/navigate\(\s*['"]Paywall['"]/);
     // No purchase/restore/entitlement calls ride in with the banner.
     expect(HOME).not.toMatch(/playBilling|requestPurchase|restorePurchases|startCascade/);

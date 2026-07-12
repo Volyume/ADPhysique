@@ -166,13 +166,13 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
 
   test('photo-set sheets keep titles and date fields narrow-screen safe', () => {
     // Pin extended for the D30 dynamic-type codemod sweep (campaign item 6):
-    // the sweep inserts the exact, grep-able cap maxFontSizeMultiplier={1.3}
+    // the sweep inserts the exact, grep-able cap
     // immediately after the tag name, before existing props. The narrow-screen
     // guarantee this test pins (single line, tail-ellipsised) is unchanged; the
     // literal is extended to the exact attribute, never weakened to a wildcard.
     // CP-10 batch G lane 1: scanDateValue gained its live-theme override;
     // the pinned single-line, tail-ellipsised contract is unchanged.
-    expect(SCREEN).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.scanDateValue, live\.scanDateValue\]\} numberOfLines=\{1\} ellipsizeMode="tail">/);
+    expect(SCREEN).toMatch(/<Text style=\{\[styles\.scanDateValue, live\.scanDateValue\]\} numberOfLines=\{1\} ellipsizeMode="tail">/);
     expect(SCREEN).toMatch(/captureRouteTitle: \{ \.\.\.type\.title/);
     expect(SCREEN).toMatch(/scanDateTitle: \{ \.\.\.type\.bodyStrong/);
   });

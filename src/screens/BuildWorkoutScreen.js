@@ -223,12 +223,12 @@ export default function BuildWorkoutScreen({ navigation }) {
           ManualBuilderScreen) keeps the footer above the keyboard. */}
       <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>Choose the exercises you want today. You can adjust sets, reps, rest and starting weight before you train.</Text>
+        <Text style={[styles.subtitle, live.subtitle]}>Choose the exercises you want today. You can adjust sets, reps, rest and starting weight before you train.</Text>
 
         {/* Travel Mode quick-fill */}
         <TouchableOpacity style={[styles.travelChip, live.travelChip]} onPress={() => setShowTravelModal(true)} accessibilityRole="button" accessibilityLabel="Travel or hotel gym mode">
           <Ionicons name="airplane-outline" size={15} color={t.colors.textSecondary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.travelChipText, live.travelChipText]}>Travel / hotel gym</Text>
+          <Text style={[styles.travelChipText, live.travelChipText]}>Travel / hotel gym</Text>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
 
@@ -236,11 +236,11 @@ export default function BuildWorkoutScreen({ navigation }) {
           <View key={item.key} style={[styles.exerciseCard, live.exerciseCard]}>
             <View style={styles.exerciseCardHeader}>
               <View style={[styles.indexBadge, live.indexBadge]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.indexNum, live.indexNum]}>{index + 1}</Text>
+                <Text style={[styles.indexNum, live.indexNum]}>{index + 1}</Text>
               </View>
               <View style={styles.exerciseInfo}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseName, live.exerciseName]}>{item.exercise.name}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseMuscle, live.exerciseMuscle]}>
+                <Text style={[styles.exerciseName, live.exerciseName]}>{item.exercise.name}</Text>
+                <Text style={[styles.exerciseMuscle, live.exerciseMuscle]}>
                   {MUSCLE_DISPLAY_NAMES[item.exercise.primaryMuscle] ||
                     (item.exercise.primaryMuscle || '').charAt(0).toUpperCase() +
                     (item.exercise.primaryMuscle || '').slice(1).replace(/_/g, ' ')}
@@ -260,7 +260,7 @@ export default function BuildWorkoutScreen({ navigation }) {
             <View style={styles.controls}>
               {/* Sets */}
               <View style={styles.controlGroup}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.controlLabel, live.controlLabel]}>Sets</Text>
+                <Text style={[styles.controlLabel, live.controlLabel]}>Sets</Text>
                 <Stepper
                   value={item.sets}
                   min={1}
@@ -277,7 +277,7 @@ export default function BuildWorkoutScreen({ navigation }) {
 
               {/* Rep Range */}
               <View style={styles.controlGroup}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.controlLabel, live.controlLabel]}>Reps</Text>
+                <Text style={[styles.controlLabel, live.controlLabel]}>Reps</Text>
                 <View style={styles.repRow}>
                   <TextField
                     containerStyle={styles.repFieldContainer}
@@ -289,7 +289,7 @@ export default function BuildWorkoutScreen({ navigation }) {
                     maxLength={3}
                     accessibilityLabel="Minimum reps"
                   />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.repSep, live.repSep]}>-</Text>
+                  <Text style={[styles.repSep, live.repSep]}>-</Text>
                   <TextField
                     containerStyle={styles.repFieldContainer}
                     fieldStyle={styles.repField}
@@ -305,7 +305,7 @@ export default function BuildWorkoutScreen({ navigation }) {
 
               {/* Rest */}
               <View style={styles.controlGroup}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.controlLabel, live.controlLabel]}>{item.restSuggested ? 'Rest (suggested)' : 'Rest'}</Text>
+                <Text style={[styles.controlLabel, live.controlLabel]}>{item.restSuggested ? 'Rest (suggested)' : 'Rest'}</Text>
                 <Stepper
                   value={item.restSeconds}
                   min={30}
@@ -324,7 +324,7 @@ export default function BuildWorkoutScreen({ navigation }) {
 
               {/* Starting Weight */}
               <View style={styles.controlGroup}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.controlLabel, live.controlLabel]}>Weight ({units})</Text>
+                <Text style={[styles.controlLabel, live.controlLabel]}>Weight ({units})</Text>
                 <TextField
                   containerStyle={styles.weightFieldContainer}
                   fieldStyle={styles.weightField}
@@ -386,8 +386,8 @@ export default function BuildWorkoutScreen({ navigation }) {
         onClose={() => setShowTravelModal(false)}
         accessibilityLabel="Travel or hotel gym equipment picker"
       >
-        <Text maxFontSizeMultiplier={1.3} style={[styles.travelTitle, live.travelTitle]}>Travel / hotel gym</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.travelSub, live.travelSub]}>Choose what equipment you've got today. Volyume will create a full-body session that keeps you moving without changing your plan.</Text>
+        <Text style={[styles.travelTitle, live.travelTitle]}>Travel / hotel gym</Text>
+        <Text style={[styles.travelSub, live.travelSub]}>Choose what equipment you've got today. Volyume will create a full-body session that keeps you moving without changing your plan.</Text>
         <View style={styles.travelOptions} accessibilityRole="radiogroup" accessibilityLabel="Available equipment">
           {[
             { id: 'bodyweight', label: 'Bodyweight only', icon: 'body-outline' },
@@ -447,8 +447,8 @@ export default function BuildWorkoutScreen({ navigation }) {
             renderItem={({ item }) => (
               <TouchableOpacity style={styles.pickerItem} onPress={() => addExercise(item)} accessibilityRole="button" accessibilityLabel={`Add ${item.name}`}>
                 <View style={{ flex: 1 }}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.pickerItemName, live.pickerItemName]}>{item.name}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.pickerItemMuscle, live.pickerItemMuscle]}>
+                  <Text style={[styles.pickerItemName, live.pickerItemName]}>{item.name}</Text>
+                  <Text style={[styles.pickerItemMuscle, live.pickerItemMuscle]}>
                     {(item.primaryMuscle || '').charAt(0).toUpperCase() + (item.primaryMuscle || '').slice(1)}
                     {item.equipment ? ` - ${item.equipment}` : ''}
                   </Text>
@@ -460,8 +460,8 @@ export default function BuildWorkoutScreen({ navigation }) {
             ListEmptyComponent={query.trim() ? (
               <View style={styles.pickerEmpty}>
                 <Ionicons name="search-outline" size={24} color={t.colors.textMuted} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.pickerEmptyTitle, live.pickerEmptyTitle]}>No matching exercises</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.pickerEmptyText, live.pickerEmptyText]}>Try a shorter search, or clear it and browse the full library.</Text>
+                <Text style={[styles.pickerEmptyTitle, live.pickerEmptyTitle]}>No matching exercises</Text>
+                <Text style={[styles.pickerEmptyText, live.pickerEmptyText]}>Try a shorter search, or clear it and browse the full library.</Text>
                 <Button
                   title="Clear search"
                   variant="outline"
@@ -477,7 +477,7 @@ export default function BuildWorkoutScreen({ navigation }) {
             ListFooterComponent={filteredTruncated ? (
               <View style={styles.pickerHint}>
                 <Ionicons name="search-outline" size={16} color={t.colors.textMuted} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.pickerHintText, live.pickerHintText]}>Showing the first {PICKER_RENDER_CAP}. Refine your search to see more.</Text>
+                <Text style={[styles.pickerHintText, live.pickerHintText]}>Showing the first {PICKER_RENDER_CAP}. Refine your search to see more.</Text>
               </View>
             ) : null}
           />
@@ -621,7 +621,9 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   pickerSearchBar: { flex: 1 },
-  pickerClose: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  // UI-13 (end-user-polish audit, 2026-07-12): 44pt touch target, raised
+  // from 40x40 which fell below the project's touch-target contract.
+  pickerClose: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   pickerItem: {
     flexDirection: 'row',
     alignItems: 'center',

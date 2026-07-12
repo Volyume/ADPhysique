@@ -16,7 +16,7 @@
  * proved that the swipe-story is the format people actually read.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Pressable, TouchableOpacity, useWindowDimensions, StatusBar, Animated,
 } from 'react-native';
@@ -31,6 +31,7 @@ import * as haptics from '../lib/haptics';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getYearOfLiftsData, getRecapData, getBlockReflectionData, getOpenEdPatternFlag } from '../lib/database';
+import { safeDate, safeToFixed } from '../lib/safeFormat';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { track } from '../lib/engineTelemetry';
@@ -38,6 +39,7 @@ import { buildRecapMilestoneData } from '../lib/shareCard/recapPayload';
 import GradientCard from '../components/GradientCard';
 import { VolyumeMark } from '../components/BrandMark';
 import EmptyState from '../components/EmptyState';
+import { logError } from '../lib/errorLog';
 
 // How long each story card holds before auto-advancing (Instagram-story feel).
 const STORY_MS = 5000;
@@ -48,8 +50,11 @@ const MONTH_NAMES = [
 ];
 
 function fmtDate(ms) {
-  if (!ms) return '';
-  const d = new Date(ms);
+  // EP-23/UI-11: a malformed/legacy ms value (bad restore/sync) would print
+  // "NaN undefined NaN" through the manual getters below; guard it to an
+  // omitted date, matching the empty-string fallback for a missing value.
+  const d = safeDate(ms);
+  if (!d) return '';
   return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
 }
 
@@ -163,7 +168,7 @@ export function buildCards(data, units, { neutral = false } = {}) {
       subline: 'Estimated max lifts logged this year',
       rows: data.topPRs.slice(0, 5).map(pr => ({
         primary: pr.exerciseName ?? pr.exercise_name,
-        secondary: `${parseFloat(pr.value).toFixed(1)}${units}`,
+        secondary: `${safeToFixed(pr.value, 1)}${units}`,
       })),
     });
   }
@@ -244,7 +249,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
     content.push({
       type: 'list', icon: 'trophy', tone: 'gold',
       headline: 'Personal bests', subline: 'Estimated max lifts this month',
-      rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${parseFloat(pr.value).toFixed(1)}${units}` })),
+      rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
     });
   }
 
@@ -333,7 +338,7 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
     content.push({
       type: 'list', icon: 'trophy', tone: 'gold',
       headline: 'Personal bests', subline: 'Estimated max lifts this week',
-      rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${parseFloat(pr.value).toFixed(1)}${units}` })),
+      rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
     });
   }
 
@@ -391,7 +396,7 @@ export function buildBlockCards(data, units) {
     cards.push({
       type: 'list', icon: 'trophy', tone: 'gold',
       headline: 'Personal bests', subline: 'Set this block',
-      rows: data.prs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${parseFloat(pr.value).toFixed(1)}${units}` })),
+      rows: data.prs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
     });
   }
 
@@ -434,31 +439,31 @@ function StoryCard({ card, width }) {
 
         {card.type === 'stat' && (
           <>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.statValue, live.statValue]} numberOfLines={1} adjustsFontSizeToFit>
+            <Text style={[styles.statValue, live.statValue]} numberOfLines={1} adjustsFontSizeToFit>
               {card.value}
             </Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.statUnit, live.statUnit]}>{card.unit}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.statCaption, live.statCaption]}>{card.caption}</Text>
+            <Text style={[styles.statUnit, live.statUnit]}>{card.unit}</Text>
+            <Text style={[styles.statCaption, live.statCaption]}>{card.caption}</Text>
           </>
         )}
 
         {(card.type === 'intro' || card.type === 'outro') && (
           <>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.heroHeadline, live.heroHeadline]}>{card.headline}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.heroSubline, live.heroSubline]}>{card.subline}</Text>
+            <Text style={[styles.heroHeadline, live.heroHeadline]}>{card.headline}</Text>
+            <Text style={[styles.heroSubline, live.heroSubline]}>{card.subline}</Text>
           </>
         )}
 
         {card.type === 'list' && (
           <View style={styles.listWrap}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.listHeadline, live.listHeadline]}>{card.headline}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.listSubline, live.listSubline]}>{card.subline}</Text>
+            <Text style={[styles.listHeadline, live.listHeadline]}>{card.headline}</Text>
+            <Text style={[styles.listSubline, live.listSubline]}>{card.subline}</Text>
             <View style={styles.listRows}>
               {card.rows.map((row, i) => (
                 <View key={i} style={styles.listRow}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.listRank, live.listRank]}>{i + 1}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.listPrimary, live.listPrimary]} numberOfLines={1}>{row.primary}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.listSecondary, live.listSecondary]}>{row.secondary}</Text>
+                  <Text style={[styles.listRank, live.listRank]}>{i + 1}</Text>
+                  <Text style={[styles.listPrimary, live.listPrimary]} numberOfLines={1}>{row.primary}</Text>
+                  <Text style={[styles.listSecondary, live.listSecondary]}>{row.secondary}</Text>
                 </View>
               ))}
             </View>
@@ -492,53 +497,72 @@ export default function YearOfLiftsScreen({ navigation, route }) {
   const [data, setData] = useState(null);
   const [neutral, setNeutral] = useState(false);
   const [loading, setLoading] = useState(true);
+  // EP-09/P-06 (Codex end-user-polish audit): whether the most recent load
+  // attempt failed. Previously the catch here was `catch (_e) { /* leave
+  // data null -> graceful empty */ }`, so a genuine read failure and a
+  // brand-new user with no sessions logged were indistinguishable -- both
+  // rendered "No sessions yet" with no way to retry. `load` is now a stable
+  // callback (not an effect-local closure) so a Retry action can re-run the
+  // exact same read.
+  const [loadError, setLoadError] = useState(false);
   const [index, setIndex] = useState(0);
   const listRef = useRef(null);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!user?.id) { setLoading(false); return; }
-    const load = async () => {
-      try {
-        if (variant === 'month' || variant === 'week') {
-          // Neutral framing under calm mode or an open ED flag: factual deltas,
-          // evaluated at render time so no celebratory state survives a flag.
-          // S4: the weekly mini-story reuses this EXACT path (getRecapData
-          // over an arbitrary [startMs, endMs) window); a 7-day window
-          // instead of a calendar month is the only difference.
-          // Fail CLOSED: read the raw wellbeing flag rather than getWellbeingMode()
-          // (which swallows a storage read error down to 'unspecified'). A genuine
-          // read failure on either flag must suppress the celebratory framing.
-          const [mode, edFlag, recap] = await Promise.all([
-            AsyncStorage.getItem(WELLBEING_KEY).then(v => v || 'unspecified').catch(() => 'read_failed'),
-            getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
-            getRecapData(user.id, { startMs, endMs, compare: true }),
-          ]);
-          setNeutral(isCalm(mode) || mode === 'read_failed' || !!edFlag);
-          setData(recap);
-        } else if (variant === 'block') {
-          setData(await getBlockReflectionData(user.id, mesocycleId));
-        } else {
-          // Year of Lifts: raw tonnage hero + a factual year-over-year anchor
-          // (ULTIMATE-WR-5, NA-wr-10). The previous-window tonnage comes from
-          // getRecapData over the SAME [yearStart, yearEnd] window, so it shares
-          // getYearOfLiftsData's set-filter basis and the % agrees with the
-          // displayed number. Calm mode / open ED flag suppresses the comparison.
-          const yd = await getYearOfLiftsData(user.id, yearMs);
-          // Fail CLOSED: same raw wellbeing read as above; a genuine read
-          // failure on either flag must suppress the year-over-year comparison.
-          const [mode, edFlag, recap] = await Promise.all([
-            AsyncStorage.getItem(WELLBEING_KEY).then(v => v || 'unspecified').catch(() => 'read_failed'),
-            getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
-            (yd && yd.tonnage > 0 && yd.yearStart != null)
-              ? getRecapData(user.id, { startMs: yd.yearStart, endMs: yd.yearEnd, compare: true }).catch(() => null)
-              : Promise.resolve(null),
-          ]);
-          setNeutral(isCalm(mode) || mode === 'read_failed' || !!edFlag);
-          setData(recap?.previous ? { ...yd, previous: recap.previous } : yd);
-        }
-      } catch (_e) { /* leave data null → graceful empty */ }
+    setLoading(true);
+    try {
+      if (variant === 'month' || variant === 'week') {
+        // Neutral framing under calm mode or an open ED flag: factual deltas,
+        // evaluated at render time so no celebratory state survives a flag.
+        // S4: the weekly mini-story reuses this EXACT path (getRecapData
+        // over an arbitrary [startMs, endMs) window); a 7-day window
+        // instead of a calendar month is the only difference.
+        // Fail CLOSED: read the raw wellbeing flag rather than getWellbeingMode()
+        // (which swallows a storage read error down to 'unspecified'). A genuine
+        // read failure on either flag must suppress the celebratory framing.
+        const [mode, edFlag, recap] = await Promise.all([
+          AsyncStorage.getItem(WELLBEING_KEY).then(v => v || 'unspecified').catch(() => 'read_failed'),
+          getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
+          getRecapData(user.id, { startMs, endMs, compare: true }),
+        ]);
+        setNeutral(isCalm(mode) || mode === 'read_failed' || !!edFlag);
+        setData(recap);
+      } else if (variant === 'block') {
+        setData(await getBlockReflectionData(user.id, mesocycleId));
+      } else {
+        // Year of Lifts: raw tonnage hero + a factual year-over-year anchor
+        // (ULTIMATE-WR-5, NA-wr-10). The previous-window tonnage comes from
+        // getRecapData over the SAME [yearStart, yearEnd] window, so it shares
+        // getYearOfLiftsData's set-filter basis and the % agrees with the
+        // displayed number. Calm mode / open ED flag suppresses the comparison.
+        const yd = await getYearOfLiftsData(user.id, yearMs);
+        // Fail CLOSED: same raw wellbeing read as above; a genuine read
+        // failure on either flag must suppress the year-over-year comparison.
+        const [mode, edFlag, recap] = await Promise.all([
+          AsyncStorage.getItem(WELLBEING_KEY).then(v => v || 'unspecified').catch(() => 'read_failed'),
+          getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
+          (yd && yd.tonnage > 0 && yd.yearStart != null)
+            ? getRecapData(user.id, { startMs: yd.yearStart, endMs: yd.yearEnd, compare: true }).catch(() => null)
+            : Promise.resolve(null),
+        ]);
+        setNeutral(isCalm(mode) || mode === 'read_failed' || !!edFlag);
+        setData(recap?.previous ? { ...yd, previous: recap.previous } : yd);
+      }
+      setLoadError(false);
+    } catch (e) {
+      // EP-09/P-06: flag the failure rather than silently leaving `data`
+      // null; `data` itself is untouched here, so a Retry after a prior
+      // successful load never blanks it.
+      logError('YearOfLiftsScreen.load', e, { userId: user?.id, variant });
+      setLoadError(true);
+    } finally {
       setLoading(false);
-    };
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, variant, startMs, endMs, mesocycleId, yearMs]);
+
+  useEffect(() => {
     load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -669,11 +693,31 @@ export default function YearOfLiftsScreen({ navigation, route }) {
 
       {loading && (
         <View style={styles.loadingWrap}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.loadingText, live.loadingText]}>{variant === 'month' ? 'Building your recap...' : variant === 'week' ? 'Building your week...' : variant === 'block' ? 'Building your block story...' : 'Building your year...'}</Text>
+          <Text style={[styles.loadingText, live.loadingText]}>{variant === 'month' ? 'Building your recap...' : variant === 'week' ? 'Building your week...' : variant === 'block' ? 'Building your block story...' : 'Building your year...'}</Text>
         </View>
       )}
 
-      {!loading && cards.length === 0 && (
+      {/* EP-09/P-06: a FAILED load must never read as "no sessions yet" --
+          that used to happen because the catch above left `data` null and
+          the render treated it as a genuinely empty history. Shown ahead of
+          and mutually exclusive with the real empty state below. */}
+      {!loading && loadError && cards.length === 0 && (
+        <View style={styles.loadingWrap}>
+          <EmptyState
+            icon="cloud-offline-outline"
+            title="Couldn't load this"
+            text="Check your connection and try again."
+            actionLabel="Retry"
+            onAction={load}
+            actionAccessibilityLabel="Retry loading"
+            secondaryLabel="Done"
+            onSecondary={() => navigation.goBack()}
+            secondaryAccessibilityLabel="Done"
+          />
+        </View>
+      )}
+
+      {!loading && !loadError && cards.length === 0 && (
         <View style={styles.loadingWrap}>
           <EmptyState
             icon="barbell-outline"
@@ -796,11 +840,15 @@ const styles = StyleSheet.create({
 
   // Stat layout
   statValue: {
+    // Theme gap: no display-size + black type role exists; the raw hero pair
+    // stays (96px + black weight preserved). R2 (2026-07-11): the hero value is
+    // a data readout (sessions/tonnage/sets), so it gains tabular figures.
     // eslint-disable-next-line no-restricted-syntax -- Year-of-Lifts hero number, 96px by design
     fontSize: 96,
     lineHeight: 100,
     fontWeight: fontWeight.black,
     color: colors.textPrimary,
+    fontVariant: ['tabular-nums'],
   },
   statUnit: {
     ...type.h3,
@@ -814,6 +862,9 @@ const styles = StyleSheet.create({
 
   // Intro / outro hero
   heroHeadline: {
+    // Theme gap: no 44px + black type role exists; the raw hero pair stays
+    // (weight preserved). R2 (2026-07-11): intro/outro headlines render prose
+    // ("Your year of lifts", block names), not a pure readout, so no tabular.
     // eslint-disable-next-line no-restricted-syntax -- Year-of-Lifts secondary hero number
     fontSize: 44,
     lineHeight: 48,
@@ -828,6 +879,9 @@ const styles = StyleSheet.create({
   // List layout
   listWrap: { gap: spacing.md },
   listHeadline: {
+    // Theme gap: no xxl + black type role exists; the raw pair stays (weight
+    // preserved). R2 (2026-07-11): list headlines render prose ("Your top
+    // lifts", "Personal bests"), not a pure readout, so no tabular.
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.black,
     color: colors.textPrimary,
@@ -845,10 +899,13 @@ const styles = StyleSheet.create({
   },
   listRank: {
     width: 24,
+    // Theme gap: no lg + black type role exists; the raw pair stays (weight
+    // preserved). R2 (2026-07-11): the rank (1-5) is a pure readout -> tabular.
     fontSize: fontSize.lg,
     fontWeight: fontWeight.black,
     color: colors.primary,
     textAlign: 'center',
+    fontVariant: ['tabular-nums'],
   },
   listPrimary: {
     ...type.bodyStrong,
@@ -856,8 +913,11 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   listSecondary: {
+    // R2 (2026-07-11): the secondary readout is a data numeral ("12 sets",
+    // "100.0kg"), so it gains tabular figures so the column doesn't jitter.
     fontSize: fontSize.sm,
     color: colors.textSecondary,
+    fontVariant: ['tabular-nums'],
   },
 
   // Tap-zone band, narrow strip just under the pips, so the bulk of
@@ -898,16 +958,16 @@ function buildLiveStyles(t) {
     // statValue/heroHeadline keep their raw display-size literals in the
     // frozen block (intentional hero sizes, theme-invariant) -- only the
     // ink is mirrored here.
-    statValue: { color: t.colors.textPrimary },
+    statValue: { color: t.colors.textPrimary, fontVariant: ['tabular-nums'] },
     statUnit: { ...t.type.h3, color: t.colors.textPrimary },
     statCaption: { ...t.type.body, color: t.colors.textSecondary },
     heroHeadline: { color: t.colors.textPrimary },
     heroSubline: { ...t.type.body, color: t.colors.textSecondary },
     listHeadline: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
     listSubline: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    listRank: { fontSize: t.fontSize.lg, color: t.colors.primary },
+    listRank: { fontSize: t.fontSize.lg, color: t.colors.primary, fontVariant: ['tabular-nums'] },
     listPrimary: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    listSecondary: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    listSecondary: { fontSize: t.fontSize.sm, color: t.colors.textSecondary, fontVariant: ['tabular-nums'] },
     tapPressed: { backgroundColor: withAlpha(t.colors.textPrimary, 0.08) },
   };
 }

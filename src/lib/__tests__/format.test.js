@@ -5,10 +5,15 @@
  * display-only (stored values + nutrition targets + the coaching engine stay in
  * kcal), 1 kcal = 4.184 kJ, output is whole-number en-GB-grouped, and a
  * non-finite input never prints NaN.
+ *
+ * The `formatWithUnit`/`NBSP` block locks the P-15 fix (ux-copy-polish audit
+ * 2026-07-12): a non-breaking space between a number and its unit so the
+ * pair can never line-wrap apart, for kg/lb/kcal/cm display strings.
  */
 import {
   formatNumber, formatDecimal,
   toEnergy, energyUnitLabel, formatEnergy, KJ_PER_KCAL,
+  formatWithUnit, NBSP,
 } from '../format';
 
 describe('formatNumber / formatDecimal (en-GB)', () => {
@@ -60,5 +65,26 @@ describe('formatEnergy — grouped display in the chosen unit', () => {
   });
   test('non-finite falls back without NaN', () => {
     expect(formatEnergy(NaN, 'kj', { withUnit: true })).toBe('0 kJ');
+  });
+});
+
+describe('formatWithUnit / NBSP (P-15)', () => {
+  test('NBSP is the actual non-breaking space character, not a plain space', () => {
+    expect(NBSP).toBe(' ');
+    expect(NBSP).not.toBe(' ');
+    expect(NBSP.charCodeAt(0)).toBe(160);
+  });
+
+  test('joins a formatted number and unit with NBSP for kg/lb/kcal/cm', () => {
+    expect(formatWithUnit(formatNumber(100), 'kg')).toBe('100 kg');
+    expect(formatWithUnit(formatNumber(3400), 'kg')).toBe('3,400 kg');
+    expect(formatWithUnit('168', 'lb')).toBe('168 lb');
+    expect(formatWithUnit(formatNumber(2450), 'kcal')).toBe('2,450 kcal');
+    expect(formatWithUnit('180', 'cm')).toBe('180 cm');
+  });
+
+  test('never uses a plain breakable space between value and unit', () => {
+    expect(formatWithUnit('100', 'kg')).not.toMatch(/100 kg/);
+    expect(formatWithUnit('100', 'kg').split(' ')).toEqual(['100', 'kg']);
   });
 });

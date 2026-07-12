@@ -45,6 +45,22 @@ describe('accessibility and design consistency guardrails', () => {
     expect(offences).toEqual([]);
   });
 
+  test('no screen re-introduces the blanket 1.3x text-scaling cap (EP-14)', () => {
+    // EP-14 (end-user-polish audit 2026-07-12, founder-ruled real fix):
+    // ~2,200 Text/TextInput elements hard-capped system text scaling at 1.3x
+    // while Settings told users the phone's text size was respected. The
+    // blanket cap was removed app-wide so low-vision users get the size they
+    // ask for. A genuinely fixed-geometry glyph may still carry a DIFFERENT,
+    // lower cap (e.g. the RestTimer countdown numerals at 1.15); this guard
+    // only forbids the blanket 1.3x value returning by a copy-paste.
+    const offences = [];
+    for (const file of files) {
+      const text = fs.readFileSync(file, 'utf8');
+      if (/maxFontSizeMultiplier=\{1\.3\}/.test(text)) offences.push(relative(file));
+    }
+    expect(offences).toEqual([]);
+  });
+
   test('native stack headers stay hidden so screens use the shared app chrome', () => {
     const navigationDir = path.resolve(SRC, 'navigation');
     const offences = [];

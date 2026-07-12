@@ -29,6 +29,7 @@ import {
 } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -144,6 +145,10 @@ export default function BeforeAfterShareSheet({
   const userId = useAppStore((s) => s.user?.id);
   const bodyWeightUnits = useAppStore((s) => s.bodyWeightUnits) || 'kg';
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
+  // EP-11/UI-03: hooks must run unconditionally (this component early-returns
+  // null below), so the window width is read here alongside the other
+  // top-level hooks rather than next to where it's used near the render.
+  const { width: windowWidth } = useWindowDimensions();
 
   const sorted = useMemo(
     () => (Array.isArray(photos) ? photos : [])
@@ -159,8 +164,24 @@ export default function BeforeAfterShareSheet({
   const [metaMap, setMetaMap] = useState({});
   const [beforeImg, setBeforeImg] = useState(null);
   const [afterImg, setAfterImg] = useState(null);
+  // EP-17/UI-05 (Codex end-user-polish audit): whether the pair of photos is
+  // still being decoded. `beforeImg`/`afterImg` are null both while decoding
+  // AND after a permanent decode failure (a deleted/corrupt photo), so this
+  // flag is what lets the preview effect below tell "still working" apart
+  // from "failed", instead of spinning forever on a real failure.
+  const [decodingPhotos, setDecodingPhotos] = useState(false);
+  // A manual bump forces the decode effect to re-run on Retry, even when
+  // `older`/`newer` haven't changed (a transient read failure can succeed on
+  // a second attempt with the exact same pair).
+  const [decodeRetryToken, setDecodeRetryToken] = useState(0);
   const [wordmark, setWordmark] = useState(null);
   const [previewB64, setPreviewB64] = useState(null);
+  // Explicit idle/loading/ready/error states: previously `previewB64 ===
+  // null` meant "nothing to show yet" whether that was because no pair was
+  // chosen, the photos were still decoding, or the card genuinely failed to
+  // build (missing Skia/typeface, a decode failure, or a surface/encode
+  // fault) -- so a real failure spun the ActivityIndicator forever.
+  const [previewStatus, setPreviewStatus] = useState('idle'); // 'idle' | 'loading' | 'ready' | 'error'
   const [sharing, setSharing] = useState(false);
   const [savingToGallery, setSavingToGallery] = useState(false);
 
@@ -245,16 +266,23 @@ export default function BeforeAfterShareSheet({
 
   // Decode the two chosen photos into SkImages (bounded: one pair at a time).
   useEffect(() => {
-    if (!active || !pairReady) { setBeforeImg(null); setAfterImg(null); return undefined; }
+    if (!active || !pairReady) { setBeforeImg(null); setAfterImg(null); setDecodingPhotos(false); return undefined; }
     let alive = true;
+    setDecodingPhotos(true);
     (async () => {
       const [bi, ai] = await Promise.all([decodePhoto(older.uri), decodePhoto(newer.uri)]);
       if (!alive) return;
       setBeforeImg(bi);
       setAfterImg(ai);
+      setDecodingPhotos(false);
     })();
     return () => { alive = false; };
-  }, [active, pairReady, older, newer]);
+  }, [active, pairReady, older, newer, decodeRetryToken]);
+
+  // EP-17/UI-05: re-attempt the decode for the SAME chosen pair (a transient
+  // read failure can succeed on a second try); a genuinely deleted/corrupt
+  // photo will fail again and the error card stays up.
+  const retryDecode = useCallback(() => setDecodeRetryToken((n) => n + 1), []);
 
   const buildParams = useCallback(() => {
     const om = (older && metaMap[older.name]) || {};
@@ -301,10 +329,29 @@ export default function BeforeAfterShareSheet({
   }, [typefaces, wordmark, beforeImg, afterImg, buildParams]);
 
   // Live preview: re-render whenever anything that changes the card changes.
+  // EP-17/UI-05: distinguishes idle (nothing chosen yet) / loading (photos
+  // still decoding, or the render hasn't been attempted) / ready / error, so
+  // a genuine failure (missing Skia/typeface, a decode failure on a
+  // deleted/corrupt photo, or a surface/encode fault) never looks identical
+  // to "still working" and spins the ActivityIndicator forever.
   useEffect(() => {
-    if (!active) { setPreviewB64(null); return; }
-    setPreviewB64(renderCardBase64(PREVIEW_RENDER_W));
-  }, [active, renderCardBase64]);
+    if (!active || !pairReady) { setPreviewB64(null); setPreviewStatus('idle'); return; }
+    if (decodingPhotos) { setPreviewB64(null); setPreviewStatus('loading'); return; }
+    if (!beforeImg || !afterImg) {
+      // A permanent decode failure (a photo that no longer opens).
+      setPreviewB64(null);
+      setPreviewStatus('error');
+      return;
+    }
+    const b64 = renderCardBase64(PREVIEW_RENDER_W);
+    if (b64) {
+      setPreviewB64(b64);
+      setPreviewStatus('ready');
+    } else {
+      setPreviewB64(null);
+      setPreviewStatus('error');
+    }
+  }, [active, pairReady, decodingPhotos, beforeImg, afterImg, renderCardBase64]);
 
   // Render the export-resolution PNG to a cache file; the single-file artefact
   // every share/save uses (S2 single-file contract). Null if it can't generate.
@@ -344,7 +391,9 @@ export default function BeforeAfterShareSheet({
   const withGeneratedFile = useCallback(async (consume) => {
     if (useAppStore.getState().tier !== 'pro' || suppressed) return;
     if (!Skia || !FileSystem || !typefaces) {
-      toast.show("Progress image sharing isn't available in this version.", { variant: 'error', duration: 5000 });
+      // P-16: a missing native module reads as "this device can't do this",
+      // never as "you're on an incomplete build".
+      toast.show("Progress image sharing isn't available on your device.", { variant: 'error', duration: 5000 });
       return;
     }
     if (!pairReady) { toast.show('Choose two photos first', { variant: 'info' }); return; }
@@ -368,7 +417,7 @@ export default function BeforeAfterShareSheet({
     ensureConfirmed(() => withGeneratedFile(async (uri) => {
       setSharing(true);
       try {
-        if (!Sharing) { toast.show("Sharing isn't available in this version.", { variant: 'error', duration: 5000 }); return; }
+        if (!Sharing) { toast.show("Sharing isn't available on your device.", { variant: 'error', duration: 5000 }); return; }
         const canShare = await Sharing.isAvailableAsync();
         if (!canShare) { toast.show('Sharing is not available on this device', { variant: 'warning', duration: 5000 }); return; }
         // ONE composited file, never a multi-attach (S2 §1).
@@ -383,7 +432,7 @@ export default function BeforeAfterShareSheet({
 
   const onSaveToGallery = useCallback(() => {
     ensureConfirmed(() => withGeneratedFile(async (uri) => {
-      if (!MediaLibrary) { toast.show("Saving to your gallery isn't available in this version.", { variant: 'error', duration: 5000 }); return; }
+      if (!MediaLibrary) { toast.show("Saving to your gallery isn't available on your device.", { variant: 'error', duration: 5000 }); return; }
       setSavingToGallery(true);
       try {
         const perm = await MediaLibrary.requestPermissionsAsync();
@@ -418,15 +467,21 @@ export default function BeforeAfterShareSheet({
   if (!visible || suppressed || tier !== 'pro') return null;
 
   const isSquare = aspect !== 'story';
-  const previewH = cardHeight(PREVIEW_DISPLAY_W, isSquare, aspect);
+  // EP-11/UI-03: the preview used to hard-code a 300dp width inside the
+  // sheet's 16dp horizontal padding, overflowing a 320dp-wide phone (300 +
+  // 2*16 = 332dp > 320dp available). Cap at the design width but never
+  // exceed what this sheet's own padding leaves available; height is
+  // derived from THAT width so the card's aspect ratio is preserved.
+  const previewW = Math.min(PREVIEW_DISPLAY_W, windowWidth - 2 * spacing.lg);
+  const previewH = cardHeight(previewW, isSquare, aspect);
   const busy = sharing || savingToGallery;
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Private share image</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>One composed image. No raw photo files. You choose share or save.</Text>
+          <Text style={[styles.title, live.title]}>Private share image</Text>
+          <Text style={[styles.subtitle, live.subtitle]}>One composed image. No raw photo files. You choose share or save.</Text>
         </View>
         <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
           <Ionicons name="close" size={26} color={t.colors.textPrimary} />
@@ -437,15 +492,15 @@ export default function BeforeAfterShareSheet({
         <View style={[styles.privacyReceipt, live.privacyReceipt]}>
           <View style={styles.receiptRow}>
             <Ionicons name="image-outline" size={16} color={t.colors.primary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.receiptText, live.receiptText]}>Exports one composed PNG, not your raw photos.</Text>
+            <Text style={[styles.receiptText, live.receiptText]}>Exports one composed PNG, not your raw photos.</Text>
           </View>
           <View style={styles.receiptRow}>
             <Ionicons name="lock-closed-outline" size={16} color={t.colors.primary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.receiptText, live.receiptText]}>Nothing leaves the device until you tap Share or Save.</Text>
+            <Text style={[styles.receiptText, live.receiptText]}>Nothing leaves the device until you tap Share or Save.</Text>
           </View>
           <View style={styles.receiptRow}>
             <Ionicons name="shield-checkmark-outline" size={16} color={t.colors.primary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.receiptText, live.receiptText]}>Names, notes, measurements and your photo library never appear.</Text>
+            <Text style={[styles.receiptText, live.receiptText]}>Names, notes, measurements and your photo library never appear.</Text>
           </View>
         </View>
 
@@ -477,12 +532,12 @@ export default function BeforeAfterShareSheet({
                       <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} />
                     </View>
                   ) : null}
-                  {range ? <Text maxFontSizeMultiplier={1.3} style={[styles.thumbRange, live.thumbRange]} numberOfLines={1}>{range}</Text> : null}
+                  {range ? <Text style={[styles.thumbRange, live.thumbRange]} numberOfLines={1}>{range}</Text> : null}
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.hint, live.hint]}>
+          <Text style={[styles.hint, live.hint]}>
             {pairReady
               ? `Ready with two ${usingScans ? 'scans' : 'photos'}.`
               : `Choose two ${usingScans ? 'scans' : 'photos'} for the image.`}
@@ -503,16 +558,34 @@ export default function BeforeAfterShareSheet({
         <View style={styles.section}>
           <SectionLabel>Preview</SectionLabel>
           <View style={styles.previewOuter}>
-            {previewB64 ? (
+            {previewStatus === 'ready' && previewB64 ? (
               <Image
                 source={{ uri: `data:image/png;base64,${previewB64}` }}
-                style={{ width: PREVIEW_DISPLAY_W, height: previewH, borderRadius: radius.lg }}
+                style={{ width: previewW, height: previewH, borderRadius: radius.lg }}
                 contentFit="contain"
                 transition={reduceMotion ? 0 : motion.state}
               />
+            ) : previewStatus === 'error' ? (
+              // EP-17/UI-05: a permanent failure (a deleted/corrupt photo
+              // that won't decode, or a render/encode fault) gets a compact
+              // error card with Retry, never an endless spinner.
+              <View style={[styles.previewPlaceholder, live.previewPlaceholder, styles.previewErrorBox, { width: previewW, height: previewH }]}>
+                <Ionicons name="alert-circle-outline" size={24} color={t.colors.textMuted} />
+                <Text style={[styles.previewErrorText, live.previewErrorText]}>
+                  Couldn't build the preview. Try again, or choose a different photo above.
+                </Text>
+                <Button
+                  title="Retry"
+                  onPress={retryDecode}
+                  variant="secondary"
+                  size="sm"
+                  fullWidth={false}
+                  accessibilityLabel="Retry building the preview"
+                />
+              </View>
             ) : (
-              <View style={[styles.previewPlaceholder, live.previewPlaceholder, { width: PREVIEW_DISPLAY_W, height: previewH }]}>
-                {pairReady ? <ActivityIndicator color={t.colors.primary} /> : <Text maxFontSizeMultiplier={1.3} style={[styles.hint, live.hint]}>Choose two photos</Text>}
+              <View style={[styles.previewPlaceholder, live.previewPlaceholder, { width: previewW, height: previewH }]}>
+                {previewStatus === 'loading' ? <ActivityIndicator color={t.colors.primary} /> : <Text style={[styles.hint, live.hint]}>Choose two photos</Text>}
               </View>
             )}
           </View>
@@ -523,7 +596,7 @@ export default function BeforeAfterShareSheet({
         <View style={styles.section}>
           <View style={[styles.togglesCard, live.togglesCard]}>
             <View style={[styles.toggleRow, live.toggleRow, styles.toggleRowLast]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.toggleLabel, live.toggleLabel]}>Include weight on this export</Text>
+              <Text style={[styles.toggleLabel, live.toggleLabel]}>Include weight on this export</Text>
               <Switch
                 value={showWeight}
                 onValueChange={setShowWeight}
@@ -534,22 +607,22 @@ export default function BeforeAfterShareSheet({
           </View>
           <View style={[styles.exportReceipt, live.exportReceipt]}>
             <View style={styles.exportReceiptCol}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.exportReceiptTitle, live.exportReceiptTitle]}>Included</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.exportReceiptLine, live.exportReceiptLine]}>Two selected photos</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.exportReceiptLine, live.exportReceiptLine]}>Dates and elapsed time</Text>
+              <Text style={[styles.exportReceiptTitle, live.exportReceiptTitle]}>Included</Text>
+              <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Two selected photos</Text>
+              <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Dates and elapsed time</Text>
               {usingScans && !hideScanRange ? (
-                <Text maxFontSizeMultiplier={1.3} style={[styles.exportReceiptLine, live.exportReceiptLine]}>Visible Volyume Score</Text>
+                <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Visible Volyume Score</Text>
               ) : null}
-              <Text maxFontSizeMultiplier={1.3} style={[styles.exportReceiptLine, live.exportReceiptLine]}>Weight: {showWeight ? 'included' : 'off'}</Text>
+              <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Weight: {showWeight ? 'included' : 'off'}</Text>
             </View>
             <View style={styles.exportReceiptCol}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.exportReceiptTitle, live.exportReceiptTitle]}>Kept private</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.exportReceiptLine, live.exportReceiptLine]}>Raw photo files</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.exportReceiptLine, live.exportReceiptLine]}>Name, notes and measurements</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.exportReceiptLine, live.exportReceiptLine]}>Your photo library</Text>
+              <Text style={[styles.exportReceiptTitle, live.exportReceiptTitle]}>Kept private</Text>
+              <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Raw photo files</Text>
+              <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Name, notes and measurements</Text>
+              <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Your photo library</Text>
             </View>
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.privacyNote, live.privacyNote]}>
+          <Text style={[styles.privacyNote, live.privacyNote]}>
             The exported file is a single composed image. It includes only the two photos, dates, optional Volyume Score, weights only if you switch them on, and elapsed time. Your name, measurements and private notes are never included.
           </Text>
         </View>
@@ -607,7 +680,7 @@ function SegmentBtn({ label, active, onPress, icon }) {
       accessibilityLabel={label}
     >
       <Ionicons name={icon} size={15} color={active ? t.colors.primary : t.colors.textMuted} />
-      <Text maxFontSizeMultiplier={1.3} style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{label}</Text>
+      <Text style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -675,6 +748,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border,
   },
+  // EP-17/UI-05: the compact error card shown in place of an endlessly
+  // spinning preview when the two-photo card can't be built.
+  previewErrorBox: { gap: spacing.sm, padding: spacing.md },
+  previewErrorText: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
   togglesCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
@@ -741,6 +818,7 @@ function buildLiveStyles(t) {
     segmentText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     segmentTextActive: { color: t.colors.textPrimary },
     previewPlaceholder: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    previewErrorText: { ...t.type.bodySm, color: t.colors.textSecondary },
     togglesCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     toggleRow: { borderBottomColor: t.colors.border },
     toggleLabel: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },

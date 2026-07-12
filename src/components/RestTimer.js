@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from './AppAlert';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useShallow } from 'zustand/react/shallow';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, letterSpacing, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 // D2: all haptics ride the named vocabulary so the reduce-motion setting
@@ -82,7 +82,7 @@ export default function RestTimer() {
     almostDone: { color: t.colors.warning },
     countdownNum: { fontSize: t.fontSize.xxl, color: t.colors.warning },
     countdownNumCompact: { fontSize: t.fontSize.xl },
-    label: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    label: { ...t.type.overline, color: t.colors.textMuted },
     skipBtn: { borderColor: t.colors.border },
     skipText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     adjBtn: { borderColor: withAlpha(t.colors.primary, alpha.mid), backgroundColor: t.colors.primaryBg },
@@ -152,7 +152,17 @@ export default function RestTimer() {
     (async () => {
       try {
         if (AppState.currentState !== 'active') return; // no FGS starts from the background
-        if (fgsActiveRef.current) await stopRestForeground();
+        // R2-8b (founder crash, build 2692): NO stop-before-start on a
+        // re-anchor. The service already treats ACTION_START_REST on a live
+        // instance as an in-place re-anchor (notification update + re-capped
+        // self-stop), and the old stop-then-start churn is what crashed:
+        // Android accepts the new start (creating a startForeground
+        // obligation) while the previous stop's stopSelf() kills the service
+        // with that start still queued, so the obligation is never met and
+        // the OS executes the app. The E6A worry this choreography served
+        // (outliving the fixed OS deadline) is handled NATIVELY by the
+        // instance cap - worst case a very long chained window ends the
+        // chronometer a little early, which is harmless next to a crash.
         const s = useAppStore.getState();
         const ex = s.workoutExercises?.[s.currentExerciseIndex];
         const ok = await startRestForeground({
@@ -160,15 +170,18 @@ export default function RestTimer() {
           exerciseName: ex?.exercise?.name ?? ex?.name,
         });
         if (!ok) { fgsActiveRef.current = false; return; }
-        // In-flight re-check (E6A review): the rest may have been skipped or
-        // re-anchored while the native start was pending. A stale success
-        // must not leave a ghost countdown on the lock screen.
+        // In-flight re-check (E6A review): the rest may have ENDED while the
+        // native start was pending - a stale success must not leave a ghost
+        // countdown. R2-8b: an anchor MISMATCH with the rest still active
+        // means a newer re-anchor owns the host now - leave it alone (the
+        // old stop here could kill the newer rest's queued start).
         const now = useAppStore.getState();
-        if (!now.restTimerActive || now.restTimerEndsAt !== anchor) {
+        if (!now.restTimerActive) {
           fgsActiveRef.current = false;
           stopRestForeground().catch(() => {});
           return;
         }
+        if (now.restTimerEndsAt !== anchor) return;
         fgsActiveRef.current = true;
         fgsDeadlineRef.current = Date.now() + REST_FOREGROUND_MAX_MS;
         // The chronometer replaces the sticky; drop any sticky already
@@ -390,7 +403,7 @@ export default function RestTimer() {
     return (
       <View style={[styles.doneContainer, live.doneContainer]}>
         <Ionicons name="checkmark-circle" size={18} color={t.colors.success} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.doneText, live.doneText]}>Start next set</Text>
+        <Text style={[styles.doneText, live.doneText]}>Start next set</Text>
       </View>
     );
   }
@@ -419,7 +432,7 @@ export default function RestTimer() {
           ) : (
             <Text style={[styles.timeText, live.timeText, compact && styles.timeTextCompact, isAlmostDone && [styles.almostDone, live.almostDone]]} maxFontSizeMultiplier={1.15}>{timeStr}</Text>
           )}
-          <Text maxFontSizeMultiplier={1.3} style={[styles.label, live.label]} numberOfLines={1}>{isCountdown ? 'seconds' : 'rest'}</Text>
+          <Text style={[styles.label, live.label]} numberOfLines={1}>{isCountdown ? 'seconds' : 'rest'}</Text>
         </View>
         {TIME_ADJUSTMENTS.map(({ delta, label }) => {
           const isNeg = delta < 0;
@@ -435,7 +448,7 @@ export default function RestTimer() {
               accessibilityRole="button"
               accessibilityLabel={isNeg ? 'Remove 15 seconds' : 'Add 15 seconds'}
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.adjBtnText, live.adjBtnText, isNeg && [styles.adjBtnTextNeg, live.adjBtnTextNeg]]}>{label}</Text>
+              <Text style={[styles.adjBtnText, live.adjBtnText, isNeg && [styles.adjBtnTextNeg, live.adjBtnTextNeg]]}>{label}</Text>
             </TouchableOpacity>
           );
         })}
@@ -446,7 +459,7 @@ export default function RestTimer() {
           accessibilityLabel="Skip rest timer"
           accessibilityRole="button"
         >
-          <Text maxFontSizeMultiplier={1.3} style={[styles.skipText, live.skipText]}>Skip</Text>
+          <Text style={[styles.skipText, live.skipText]}>Skip</Text>
         </TouchableOpacity>
       </View>
       {/* D2: the draining remaining-rest fill. Decorative (the live region
@@ -487,7 +500,15 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     minHeight: 64,
   },
+  // R2-3 (2026-07-11, founder build 2684): the readout now absorbs the row's
+  // free space (flex: 1) and may shrink (minWidth: 0) so the ±15 / Skip
+  // controls sit right-aligned and ALWAYS stay on-screen. Before, the readout
+  // was content-sized with no flex and the right controls had no flexShrink,
+  // so on a tight width (the R5 scrollContent md -> lg change removed 8px)
+  // the Skip button overflowed and clipped half off the right screen edge.
   timerReadout: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -512,28 +533,36 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   countdownNumCompact: { fontSize: fontSize.xl, minWidth: 32 },
+  // R5 (D66): the hand-rolled xs/uppercase/tracked combination IS the house
+  // overline role - named once in theme.js, used here by name.
   label: {
-    fontSize: fontSize.xs,
+    ...type.overline,
     color: colors.textMuted,
     flex: 1,
-    textTransform: 'uppercase',
-    letterSpacing: letterSpacing.overline,
   },
   skipBtn: {
     minHeight: 44,
+    // R2-3: never shrink below its label width, so it can't clip at the edge.
+    flexShrink: 0,
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
-    borderRadius: radius.sm,
+    // R5 (D66): radius.sm -> radius.md, the logger's one small-surface
+    // radius (matches this timer's own container).
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
   },
   skipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
   adjBtn: {
     minHeight: 44,
+    // R2-3: keep full size when the row is tight (see timerReadout).
+    flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
-    borderRadius: radius.sm,
+    // R5 (D66, review catch): same row as skipBtn - the logger's one
+    // small-surface radius applies to both.
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: withAlpha(colors.primary, alpha.mid),
     backgroundColor: colors.primaryBg,

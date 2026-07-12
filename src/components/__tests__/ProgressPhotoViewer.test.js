@@ -488,3 +488,39 @@ test('suppression still gates the comparison entry and bodyweight line around th
     { name: 'decrement', label: 'Previous photo' },
   ]);
 });
+
+// ─── Smart Invert stays off real photos (launch accessibility audit, AX-13) ─
+//
+// The audit found the main stage photo omitted accessibilityIgnoresInvertColors,
+// so on iOS Smart Invert a user's own progress photo would render as a colour
+// negative. Both the main stage image and the hero-morph overlay image now
+// route through the shared ProgressPhotoImage (AX-13 fix), which always sets
+// the flag; this pins the real render, not just the source.
+
+test('AX-13: the main stage photo ignores Smart Invert', async () => {
+  const tree = await mount(baseProps());
+  const images = tree.root.findAll((n) => n.type === 'Image');
+  expect(images.length).toBeGreaterThan(0);
+  for (const img of images) {
+    expect(img.props.accessibilityIgnoresInvertColors).toBe(true);
+  }
+});
+
+test('AX-13: the hero-morph overlay photo also ignores Smart Invert', async () => {
+  const tree = await mount(baseProps({ originRect: { x: 20, y: 300, width: 120, height: 120 } }));
+  const images = tree.root.findAll((n) => n.type === 'Image');
+  // At least the stage image and the morph overlay image should be present.
+  expect(images.length).toBeGreaterThanOrEqual(2);
+  for (const img of images) {
+    expect(img.props.accessibilityIgnoresInvertColors).toBe(true);
+  }
+});
+
+test('AX-13 source guard: both real-photo sites route through the shared ProgressPhotoImage', () => {
+  expect(SOURCE).toContain("import ProgressPhotoImage from './ProgressPhotoImage';");
+  expect(SOURCE).toContain('Animated.createAnimatedComponent(ProgressPhotoImage)');
+  expect(SOURCE).toContain('<ProgressPhotoImage');
+  // Never re-import expo-image's Image directly in this file (that would let
+  // a future edit bypass the shared invert-ignore flag).
+  expect(SOURCE).not.toMatch(/import\s*\{\s*Image\s*\}\s*from\s*'expo-image';/);
+});

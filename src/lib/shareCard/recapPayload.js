@@ -1,3 +1,5 @@
+import { formatNumber } from '../format';
+
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -11,17 +13,23 @@ function fmtDate(ms) {
   return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+// P-15 (ux-copy-polish audit 2026-07-12): aligned to the shared en-GB
+// formatter (src/lib/format.js) so this recap, Workout Summary and Workout
+// History all group numbers the same way. `value`/`label` are drawn as two
+// separate canvas text nodes at different sizes (see drawShareCard.js
+// drawStatBoxes) rather than concatenated into one string, so no unit
+// nbsp-join is needed here.
 function formatCount(value) {
-  return (value || 0).toLocaleString('en-GB');
+  return formatNumber(value || 0);
 }
 
 function recapStats(data) {
   const stats = [];
-  if (data.tonnage > 0) stats.push({ value: data.tonnage.toLocaleString('en-GB'), label: 'kg lifted' });
-  if (data.totalSets > 0) stats.push({ value: data.totalSets.toLocaleString('en-GB'), label: 'sets' });
+  if (data.tonnage > 0) stats.push({ value: formatNumber(data.tonnage), label: 'kg lifted' });
+  if (data.totalSets > 0) stats.push({ value: formatNumber(data.totalSets), label: 'sets' });
   if (data.topPRs?.length > 0) {
     stats.push({
-      value: data.topPRs.length.toLocaleString('en-GB'),
+      value: formatNumber(data.topPRs.length),
       label: data.topPRs.length === 1 ? 'PR' : 'PRs',
     });
   }
@@ -60,8 +68,8 @@ export function buildRecapMilestoneData(data, {
 
   if (variant === 'block') {
     const stats = [];
-    if (data.tonnage > 0) stats.push({ value: data.tonnage.toLocaleString('en-GB'), label: 'kg lifted' });
-    if (data.totalSets > 0) stats.push({ value: data.totalSets.toLocaleString('en-GB'), label: 'sets' });
+    if (data.tonnage > 0) stats.push({ value: formatNumber(data.tonnage), label: 'kg lifted' });
+    if (data.totalSets > 0) stats.push({ value: formatNumber(data.totalSets), label: 'sets' });
     if (data.meso?.plannedWeeks) {
       stats.push({
         value: String(data.meso.plannedWeeks),
@@ -79,10 +87,10 @@ export function buildRecapMilestoneData(data, {
   }
 
   const stats = [];
-  if (data.tonnage > 0) stats.push({ value: data.tonnage.toLocaleString('en-GB'), label: 'kg lifted' });
-  if (data.totalSets > 0) stats.push({ value: data.totalSets.toLocaleString('en-GB'), label: 'sets' });
+  if (data.tonnage > 0) stats.push({ value: formatNumber(data.tonnage), label: 'kg lifted' });
+  if (data.totalSets > 0) stats.push({ value: formatNumber(data.totalSets), label: 'sets' });
   if (data.uniqueExercises > 0) {
-    stats.push({ value: data.uniqueExercises.toLocaleString('en-GB'), label: 'exercises' });
+    stats.push({ value: formatNumber(data.uniqueExercises), label: 'exercises' });
   }
   return {
     title: 'My year of lifts',

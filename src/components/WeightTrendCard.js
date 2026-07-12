@@ -4,6 +4,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../
 import useTheme from '../hooks/useTheme';
 import VolyumeChart from './VolyumeChart';
 import { formatBodyWeight } from '../lib/units';
+import { formatNumber, formatWithUnit } from '../lib/format';
 
 /**
  * "Your trend" card (COMP-004). Renders the calm, no-shame weight-trend
@@ -80,7 +81,7 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
 
   return (
     <View style={[styles.card, live.card]} accessible accessibilityLabel={a11y}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.label, live.label]}>Your trend</Text>
+      <Text style={[styles.label, live.label]}>Your trend</Text>
 
       {hasSparkline && lineData.length >= 2 && (
         <View
@@ -104,8 +105,8 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
           once there is a meaningful smoothed value (state 2+). */}
       {state >= 2 && ewmaNow != null && (
         <View style={styles.statRow}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.ewmaValue, live.ewmaValue]}>{formatBodyWeight(ewmaNow, bodyWeightUnits)}</Text>
-          {showRate && rateText && <Text maxFontSizeMultiplier={1.3} style={[styles.rateValue, live.rateValue]}>{rateText}</Text>}
+          <Text style={[styles.ewmaValue, live.ewmaValue]}>{formatBodyWeight(ewmaNow, bodyWeightUnits)}</Text>
+          {showRate && rateText && <Text style={[styles.rateValue, live.rateValue]}>{rateText}</Text>}
         </View>
       )}
 
@@ -115,35 +116,39 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
         {dotColor && (
           <View style={[styles.dot, { backgroundColor: dotColor }]} accessibilityElementsHidden importantForAccessibility="no" />
         )}
-        <Text maxFontSizeMultiplier={1.3} style={[styles.insight, live.insight]}>{insight}</Text>
+        <Text style={[styles.insight, live.insight]}>{insight}</Text>
       </View>
 
       {maintenance && (
         maintenance.building ? (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.maintenanceBuilding, live.maintenanceBuilding]}>
+          <Text style={[styles.maintenanceBuilding, live.maintenanceBuilding]}>
             Your coach is building your estimate. Keep logging and it appears in about a week.
           </Text>
         ) : (
           <View style={styles.maintenanceBlock}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.maintenanceValue, live.maintenanceValue]}>
-              ~{maintenance.kcal.toLocaleString()} kcal/day estimated maintenance
+            <Text style={[styles.maintenanceValue, live.maintenanceValue]}>
+              ~{formatWithUnit(formatNumber(maintenance.kcal), 'kcal')}/day estimated maintenance
             </Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.maintenanceLabel, live.maintenanceLabel]}>{maintenance.label}</Text>
+            <Text style={[styles.maintenanceLabel, live.maintenanceLabel]}>{maintenance.label}</Text>
           </View>
         )
       )}
 
       {/* COMP-026 (B): step-trend line, only in a week the modifier sized the
           change. Already suppressed under an open ED flag by the view-model. */}
-      {stepTrendLine && <Text maxFontSizeMultiplier={1.3} style={[styles.stepTrendLine, live.stepTrendLine]}>{stepTrendLine}</Text>}
+      {stepTrendLine && <Text style={[styles.stepTrendLine, live.stepTrendLine]}>{stepTrendLine}</Text>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // R9 (D69): radius.md -> lg, the app-wide card class. The state dot's
+  // colour grammar is NOT touched: COMP-027 Class B already rules it
+  // (caps at watch, decorative only, stripped under an open ED flag) and
+  // that safety-reviewed decision outranks cohesion styling.
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,

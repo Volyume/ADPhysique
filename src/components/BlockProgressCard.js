@@ -22,9 +22,9 @@ export default function BlockProgressCard({ blockProgress, currentMesoWeek }) {
   return (
     <View style={[styles.card, live.card]}>
       <View style={styles.header}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>This week's plan</Text>
+        <Text style={[styles.title, live.title]}>This week's plan</Text>
         {currentMesoWeek && (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.week, live.week]}>
+          <Text style={[styles.week, live.week]}>
             Week {currentMesoWeek.weekIndex}/{currentMesoWeek.plannedWeeks}
             {currentMesoWeek.isDeload
               ? ' · Recovery week'
@@ -45,11 +45,11 @@ export default function BlockProgressCard({ blockProgress, currentMesoWeek }) {
             accessibilityRole="text"
             accessibilityLabel={`${p.label}: ${p.actual} of ${p.planned} sets`}
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.muscle, live.muscle]} numberOfLines={1}>{p.label}</Text>
+            <Text style={[styles.muscle, live.muscle]} numberOfLines={1}>{p.label}</Text>
             <View style={[styles.barBg, live.barBg]}>
               <View style={[styles.barFill, { width: `${Math.round(pct * 100)}%`, backgroundColor: fillColor }]} />
             </View>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.sets, live.sets]}>{p.actual}/{p.planned}</Text>
+            <Text style={[styles.sets, live.sets]}>{p.actual}/{p.planned}</Text>
           </View>
         );
       })}

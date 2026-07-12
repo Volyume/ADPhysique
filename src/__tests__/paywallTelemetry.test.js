@@ -79,7 +79,6 @@ jest.mock('../store/useAppStore', () => {
 
 import useAppStore from '../store/useAppStore';
 import { track } from '../lib/engineTelemetry';
-import PaywallScreen from '../screens/PaywallScreen';
 import CascadeGateScreen from '../screens/CascadeGateScreen';
 import { ProLocked } from '../components/ProGate';
 
@@ -112,30 +111,13 @@ beforeEach(() => {
   useAppStore.__setState({ tier: 'free', user: { id: 'user-telemetry' } });
 });
 
+// C3 (D71), 2026-07-11: the PaywallScreen impression case was removed with the
+// screen itself (orphaned duplicate upgrade surface, deleted; its excerpt card
+// and inline restore ported onto ProUpgradeScreen). The CascadeGate and
+// ProLocked impression pins below are for LIVE surfaces and stay: this file is
+// NOT Paywall-only, so it is not deleted. ProUpgrade's own impression contract
+// is source-guarded in proUpgradeTelemetry.guard.test.js.
 describe('paywall telemetry impressions', () => {
-  test('PaywallScreen emits paywall_shown once per mount with trigger and pricing window', async () => {
-    const route = { params: { trigger: 'deload', ctaMode: 'try_pro_14d', pricingWindow: 'founders' } };
-    const tree = await mount(<PaywallScreen navigation={nav} route={route} />);
-
-    expect(track).toHaveBeenCalledWith('user-telemetry', 'paywall_shown', {
-      surface: 'paywall_screen',
-      trigger: 'deload',
-      user_pricing_window: 'founders',
-    });
-
-    track.mockClear();
-    await act(async () => {
-      tree.update(<PaywallScreen navigation={nav} route={route} />);
-    });
-    await flush();
-
-    expect(track).not.toHaveBeenCalledWith(
-      'user-telemetry',
-      'paywall_shown',
-      expect.any(Object)
-    );
-  });
-
   test('CascadeGateScreen emits paywall_shown once per mount with gate variant', async () => {
     const route = { params: { variant: 'day14', pricingWindow: 'open_beta' } };
     const tree = await mount(<CascadeGateScreen navigation={nav} route={route} />);

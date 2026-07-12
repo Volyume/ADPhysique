@@ -84,9 +84,19 @@ class WorkoutForegroundService : Service() {
   }
 
   private val stopHandler = Handler(Looper.getMainLooper())
+  // R2-8b (founder crash, build 2692): the newest delivered startId. Every
+  // self-stop except onTimeout uses stopSelf(lastStartId) so a START_REST
+  // command that Android has ALREADY ACCEPTED (creating a startForeground
+  // obligation) but not yet run is never dropped by a bare stopSelf() - the
+  // service stays alive, the queued command runs, and the obligation is met.
+  // A dropped queued start was the surviving crash path: rapid chained
+  // per-side rests interleave stop-then-start, and killing the service with
+  // a start still queued left its obligation unmet -> the OS executes the
+  // app (ForegroundServiceDidNotStartInTimeException).
+  private var lastStartId = -1
   private val stopRunnable = Runnable {
     stopForegroundCompat()
-    stopSelf()
+    stopSelf(lastStartId)
   }
   private var foregrounded = false
   // When this instance first called startForeground(). The OS shortService
@@ -106,10 +116,12 @@ class WorkoutForegroundService : Service() {
   override fun onBind(intent: Intent?): IBinder? = null
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    lastStartId = startId
     if (intent?.action == ACTION_STOP) {
       stopHandler.removeCallbacks(stopRunnable)
       stopForegroundCompat()
-      stopSelf()
+      // R2-8b: startId form - never drop a queued later START_REST.
+      stopSelf(startId)
       return START_NOT_STICKY
     }
 
@@ -121,7 +133,8 @@ class WorkoutForegroundService : Service() {
       RestTimerLiveModule.emitRestAction(REST_ACTION_ID_SKIP)
       stopHandler.removeCallbacks(stopRunnable)
       stopForegroundCompat()
-      stopSelf()
+      // R2-8b: startId form - never drop a queued later START_REST.
+      stopSelf(startId)
       return START_NOT_STICKY
     }
 
@@ -154,7 +167,8 @@ class WorkoutForegroundService : Service() {
         // Delivered to a service with no live rest (e.g. a lingering PendingIntent
         // fired after teardown): emit only, then stop without ever going
         // foreground. The JS-side guard turns the emit into a no-op too.
-        stopSelf()
+        // R2-8b: startId form - never drop a queued later START_REST.
+        stopSelf(startId)
       }
       return START_NOT_STICKY
     }
@@ -165,15 +179,35 @@ class WorkoutForegroundService : Service() {
 
     val notification = if (intent?.action == ACTION_START_REST) {
       val endTimeMs = intent.getLongExtra(EXTRA_END_TIME_MS, 0L)
-      if (endTimeMs <= System.currentTimeMillis()) {
-        // Nothing left to count down; never start a foreground for it.
-        stopHandler.removeCallbacks(stopRunnable)
-        if (foregrounded) stopForegroundCompat()
-        stopSelf()
-        return START_NOT_STICKY
-      }
+      val startTitle = intent.getStringExtra(EXTRA_TITLE) ?: "Rest timer"
       ensureChannel(channelId, "Rest timer",
         "Live countdown shown on the lock screen while the rest timer is running")
+      // Founder crash, production 2026-07-11 (Sentry fatal,
+      // ForegroundServiceDidNotStartInTimeException): ACTION_START_REST is
+      // delivered via startForegroundService(), which OBLIGES a
+      // startForeground() call on this instance no matter what - but an
+      // already-expired rest returned via stopSelf() below without ever going
+      // foreground, and Android executes the whole app for that. The
+      // unilateral per-side flow hits it routinely: its halved, chained rests
+      // can lapse between the JS-side expiry check and this delivery. So on a
+      // cold instance the obligation is discharged FIRST, then the expiry
+      // decision runs; the expired path now tears down a properly-
+      // foregrounded service, which is legal and instant (the silent LOW
+      // channel means at most a one-frame shade flash).
+      if (!foregrounded) {
+        goForeground(buildRestNotification(
+          channelId, startTitle,
+          maxOf(endTimeMs, System.currentTimeMillis() + 1_000L), deepLink,
+        ))
+      }
+      if (endTimeMs <= System.currentTimeMillis()) {
+        // Nothing left to count down; tear the (now-foregrounded) host down.
+        stopHandler.removeCallbacks(stopRunnable)
+        stopForegroundCompat()
+        // R2-8b: startId form - never drop a queued later START_REST.
+        stopSelf(startId)
+        return START_NOT_STICKY
+      }
       // Self-stop at rest end, capped inside the shortService window. An
       // adjusted end time re-schedules (this runs on every delivery). The
       // cap is anchored at THIS INSTANCE's startForeground time, not at now:
@@ -185,14 +219,15 @@ class WorkoutForegroundService : Service() {
       val windowMs = minOf(endTimeMs - now, MAX_WINDOW_MS, instanceCapMs)
       if (windowMs <= 0L) {
         stopForegroundCompat()
-        stopSelf()
+        // R2-8b: startId form - never drop a queued later START_REST.
+        stopSelf(startId)
         return START_NOT_STICKY
       }
       stopHandler.postDelayed(stopRunnable, windowMs)
       // D34: remember the live rest so a "+15s" action tap can rebuild the
       // chronometer natively (the tap intent carries only its own action).
       currentEndTimeMs = endTimeMs
-      currentTitle = intent.getStringExtra(EXTRA_TITLE) ?: "Rest timer"
+      currentTitle = startTitle
       currentChannelId = channelId
       currentDeepLink = deepLink
       buildRestNotification(channelId, currentTitle, endTimeMs, deepLink)
@@ -205,20 +240,13 @@ class WorkoutForegroundService : Service() {
     }
 
     if (!foregrounded) {
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-        // Android 14+: type is mandatory. shortService needs no
-        // type-specific permission and no Play FGS declaration; the manifest
-        // entry declares the same type (a mismatch throws).
-        startForeground(NOTIF_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE)
-      } else {
-        startForeground(NOTIF_ID, notification)
-      }
-      foregrounded = true
-      foregroundedAtMs = System.currentTimeMillis()
+      goForeground(notification)
     } else {
-      // Already foregrounded: this delivery is an update (±15 s adjust or a
-      // new rest in the same window). Never re-call startForeground — that
-      // is what would need a fresh from-background FGS grant.
+      // Already foregrounded: this delivery is an update (±15 s adjust, a
+      // new rest in the same window, or the final notification after the
+      // obligation-first startForeground above). Never re-call
+      // startForeground — that is what would need a fresh from-background
+      // FGS grant.
       val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
       manager.notify(NOTIF_ID, notification)
     }
@@ -237,6 +265,10 @@ class WorkoutForegroundService : Service() {
   override fun onTimeout(startId: Int) {
     stopHandler.removeCallbacks(stopRunnable)
     stopForegroundCompat()
+    // Deliberately the unconditional form: the OS deadline has fired and the
+    // service MUST stop promptly (missing it ANRs). The theoretical race with
+    // a just-queued start is accepted here - the JS churn fix makes fresh
+    // starts near the 180 s deadline vanishingly rare.
     stopSelf()
   }
 
@@ -250,6 +282,24 @@ class WorkoutForegroundService : Service() {
     stopForegroundCompat()
     foregrounded = false
     super.onDestroy()
+  }
+
+  // The one startForeground seam. Every path that can be reached by a
+  // startForegroundService() delivery MUST route through here before any
+  // early return (see the ACTION_START_REST obligation-first block) - a cold
+  // delivery that returns without it is the fatal
+  // ForegroundServiceDidNotStartInTimeException (production crash 2026-07-11).
+  private fun goForeground(notification: Notification) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+      // Android 14+: type is mandatory. shortService needs no type-specific
+      // permission and no Play FGS declaration; the manifest entry declares
+      // the same type (a mismatch throws).
+      startForeground(NOTIF_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE)
+    } else {
+      startForeground(NOTIF_ID, notification)
+    }
+    foregrounded = true
+    foregroundedAtMs = System.currentTimeMillis()
   }
 
   private fun stopForegroundCompat() {

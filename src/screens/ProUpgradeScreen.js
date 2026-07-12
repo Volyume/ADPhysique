@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, shadow } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import { track as trackEvent } from '../lib/engineTelemetry';
 import Button from '../components/Button';
 import BillingPeriodSelector from '../components/BillingPeriodSelector';
 import ModalHeader from '../components/ModalHeader';
@@ -13,6 +14,7 @@ import { storeName } from '../lib/storeName';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
+import { appAlert } from '../components/AppAlert';
 import { signInWithGoogle, signInWithApple, getSupabaseClient } from '../lib/supabase';
 import { syncAll, bulkUploadLocalData, pullFromCloud } from '../lib/sync';
 import { PRO_BETA_ACTIVE } from '../lib/proGate';
@@ -20,7 +22,9 @@ import * as haptics from '../lib/haptics';
 import * as cascade from '../lib/payments/cascade';
 import * as playBilling from '../lib/payments/playBilling';
 import { skuFor } from '../lib/payments/catalogue';
+import { restorePurchases } from '../lib/payments/restore';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
+import { pickPaywallExcerpt } from './paywallExcerpts';
 
 const PRO_PERKS = [
   { icon: 'barbell-outline', text: 'A plan built around your schedule, goals, and experience level' },
@@ -91,11 +95,50 @@ export default function ProUpgradeScreen({ navigation, route }) {
   // the session and calls completeUpgrade itself.
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  // C3 (D71): restore is a read of an existing entitlement, not a purchase,
+  // so it carries its own busy flag rather than the purchase/OAuth `busy` (a
+  // quiet chrome action must not spin the primary CTA).
+  const [restoring, setRestoring] = useState(false);
+  // C3 (D71): one verified Google Play excerpt, ported from the deleted
+  // PaywallScreen. Deterministic daily pick; null (block hidden) until the
+  // honesty bar in paywallExcerpts.js is met. Static, offline, no PII.
+  const excerpt = pickPaywallExcerpt();
   // Founder decision 2026-07-02 (supersedes COMP-007's annual anchor): monthly
   // is the pre-selected period on every subscribe surface, matching the
   // cascade gate, so the two revenue surfaces never disagree. Annual stays
   // visible with its honest saving; anchor, don't hide.
   const [period, setPeriod] = useState('monthly'); // billing period when subscribing
+
+  // C2 (founder-accepted marketing sequence, 2026-07-11): the main upgrade
+  // destination was the one unmeasured surface in the funnel. Reuses the
+  // allow-listed paywall_shown / paywall_tapped_cta events with
+  // surface: 'pro_upgrade' (no new server allow-list needed); the opt-out
+  // is enforced centrally in telemetry transport (LB-9). Payloads carry
+  // enums and flags only, never PII. Sheet-level events
+  // (purchase_initiated/completed/failed) stay in playBilling - never
+  // duplicated here.
+  const shownRef = useRef(false);
+  useEffect(() => {
+    if (shownRef.current) return;
+    shownRef.current = true;
+    if (user?.id) {
+      trackEvent(user.id, 'paywall_shown', {
+        surface: 'pro_upgrade',
+        source: route?.params?.source ?? 'unknown',
+        can_trial: !!canTrial,
+        has_account: !!hasAccount,
+      }).catch(() => {});
+    }
+    // Once per mount, PaywallScreen's exact idiom: no deps so a re-render
+    // never re-sends it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  function trackCta(cta, extra = null) {
+    if (!user?.id) return;
+    trackEvent(user.id, 'paywall_tapped_cta', {
+      surface: 'pro_upgrade', cta, period, ...(extra || {}),
+    }).catch(() => {});
+  }
 
   async function activatePro(supabaseUserId, { isNew }) {
     // E12 step 1: profile mirrors to cloud via the registry runner (the
@@ -152,6 +195,11 @@ export default function ProUpgradeScreen({ navigation, route }) {
       if (!/cancel|abort/i.test(msg)) {
         logError('ProUpgrade.purchaseFailed', e, {});
         toast.show('Purchase did not complete, try again', { variant: 'error' });
+      } else {
+        // C2: a user-cancelled store sheet is funnel signal, not a failure -
+        // playBilling deliberately keeps E_USER_CANCELLED out of
+        // purchase_failed so failure metrics stay clean.
+        trackCta('sheet_cancelled');
       }
     } finally {
       setBusy(false);
@@ -243,6 +291,38 @@ export default function ProUpgradeScreen({ navigation, route }) {
     setBusy(false);
   }
 
+  // C3 (D71): inline restore, ported from PaywallScreen. A paid user on a
+  // reinstall or new device recovers Pro here without buying again. Mirrors
+  // ProGate.handleRestore / PaywallScreen.handleRestore semantics: routes
+  // through the shared restore module (lib/payments/restore), which re-reads
+  // the active subscription from the store and NEVER charges. restorePurchases
+  // has already written the entitlement server-side on success, so we reconcile
+  // tier from the cloud the same light-touch way the purchase path does
+  // (refreshTierFromCloud); if that is a no-op the confirmation alone is enough.
+  async function handleRestore() {
+    if (restoring || busy) return;
+    trackCta('restore');
+    setRestoring(true);
+    try {
+      const result = await restorePurchases();
+      if (!result.ok) {
+        appAlert('Could not restore', 'Try again in a moment.');
+      } else if (result.tier === 'pro') {
+        if (session?.user?.id) {
+          refreshTierFromCloud(getSupabaseClient(), session.user.id).catch(() => {});
+        }
+        appAlert('Pro restored', 'Your subscription is active again.');
+      } else {
+        appAlert('Nothing to restore', 'We could not find an active subscription for this store account.');
+      }
+    } catch (e) {
+      require('../lib/errorLog').logError('ProUpgrade.restoreFailed', e, {});
+      appAlert('Could not restore', 'Try again in a moment.');
+    } finally {
+      setRestoring(false);
+    }
+  }
+
   // OAuth path (Google / Apple). Sign-in completes via the deep-link
   // handler in App.js > onAuthStateChange in RootNavigator. We don't need
   // to call activatePro from here, the SIGNED_IN handler runs
@@ -259,7 +339,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
       const result = await fn();
       if (result?.error) {
         logError('ProUpgrade.oauth.providerError', result.error, { provider });
-        toast.show(result.error.message || 'Sign-in failed', { variant: 'error' });
+        toast.show('Sign-in did not complete, try again', { variant: 'error' });
         setBusy(false);
         return;
       }
@@ -336,8 +416,8 @@ export default function ProUpgradeScreen({ navigation, route }) {
           <View style={[styles.successCircle, live.successCircle]}>
             <Ionicons name="checkmark" size={40} color={t.colors.onPrimary} />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.successTitle, live.successTitle]}>You're Pro.</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.successBody, live.successBody]}>
+          <Text style={[styles.successTitle, live.successTitle]}>You're Pro.</Text>
+          <Text style={[styles.successBody, live.successBody]}>
             {needsSetup
               ? 'Everything is ready and your data is backed up. Set up your training plan and nutrition targets and the coach can start.'
               : 'Everything is ready and your data is backed up.'}
@@ -367,14 +447,14 @@ export default function ProUpgradeScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-      <ModalHeader title="Upgrade" onClose={() => navigation.goBack()} />
+      <ModalHeader title="Upgrade" onClose={() => { trackCta('dismiss'); navigation.goBack(); }} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={[styles.iconWrap, live.iconWrap]}>
             <Ionicons name="barbell-outline" size={30} color={t.colors.primary} />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Go Pro</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>
+          <Text style={[styles.title, live.title]}>Go Pro</Text>
+          <Text style={[styles.subtitle, live.subtitle]}>
             Free keeps your training log. Pro reads it like a coach and adjusts your plan as you go.
           </Text>
 
@@ -384,14 +464,30 @@ export default function ProUpgradeScreen({ navigation, route }) {
                 <View style={[styles.perkIcon, live.perkIcon]}>
                   <Ionicons name={p.icon} size={16} color={t.colors.primary} />
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.perkText, live.perkText]}>{p.text}</Text>
+                <Text style={[styles.perkText, live.perkText]}>{p.text}</Text>
               </View>
             ))}
           </View>
 
-          <Text maxFontSizeMultiplier={1.3} style={[styles.credentialNote, live.credentialNote]}>
+          <Text style={[styles.credentialNote, live.credentialNote]}>
             Precision Coaching follows clear training rules and explains every change. It uses your recovery, food and progress.
           </Text>
+
+          {/* C3 (D71): one verified Google Play excerpt, ported from the
+              deleted PaywallScreen so proof lands BEFORE price. Renders only
+              when a curated excerpt exists (ships dark until the honesty bar
+              in paywallExcerpts.js is met). */}
+          {excerpt ? (
+            <View style={[styles.reviewCard, live.reviewCard]} accessible accessibilityLabel={`${excerpt.stars} star review. ${excerpt.quote}. ${excerpt.name}, ${excerpt.source}, ${excerpt.date}.`}>
+              <View style={styles.reviewStars} accessibilityElementsHidden importantForAccessibility="no">
+                {Array.from({ length: Math.max(0, Math.min(5, excerpt.stars)) }).map((_, i) => (
+                  <Ionicons key={i} name="star" size={13} color={t.colors.primary} />
+                ))}
+              </View>
+              <Text style={[styles.reviewQuote, live.reviewQuote]} numberOfLines={3}>{`"${excerpt.quote}"`}</Text>
+              <Text style={[styles.reviewMeta, live.reviewMeta]}>{`${excerpt.name} - ${excerpt.source} - ${excerpt.date}`}</Text>
+            </View>
+          ) : null}
 
           {/* Wave-1 A8: the same store-priced Free-vs-Pro strip the Pro locks
               use, so the decision point carries the honest side-by-side.
@@ -403,7 +499,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
 
           {hasAccount ? (
             <>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.accountNote, live.accountNote]}>
+              <Text style={[styles.accountNote, live.accountNote]}>
                 {PRO_BETA_ACTIVE
                   ? 'Your account is ready. Activate Pro to switch on the coaching features.'
                   : canTrial
@@ -415,7 +511,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
               {!PRO_BETA_ACTIVE && !canTrial ? (
                 <BillingPeriodSelector
                   value={period}
-                  onChange={(p) => { haptics.selection(); setPeriod(p); }}
+                  onChange={(p) => { haptics.selection(); setPeriod(p); trackCta('select_period', { period: p }); }}
                   monthlyPrice={monthlyPrice}
                   annualPrice={annualPrice}
                   disabled={busy}
@@ -429,12 +525,15 @@ export default function ProUpgradeScreen({ navigation, route }) {
                 icon="barbell-outline"
                 size="lg"
                 loading={busy}
-                onPress={confirmExistingAccount}
+                onPress={() => {
+                  trackCta(PRO_BETA_ACTIVE ? 'activate_beta' : canTrial ? 'start_trial' : 'buy_pro');
+                  confirmExistingAccount();
+                }}
               />
             </>
           ) : (
             <>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.accountNote, live.accountNote]}>
+              <Text style={[styles.accountNote, live.accountNote]}>
                 Pro needs a free account so your plan and progress are backed up and your access carries over across devices.
               </Text>
 
@@ -442,8 +541,8 @@ export default function ProUpgradeScreen({ navigation, route }) {
                   OAuthButtons owns the platform policy, including hiding Google
                   on iOS until an iOS Google OAuth client is configured. */}
               <OAuthButtons
-                onApple={() => handleOAuth('apple')}
-                onGoogle={() => handleOAuth('google')}
+                onApple={() => { trackCta('create_account', { provider: 'apple' }); handleOAuth('apple'); }}
+                onGoogle={() => { trackCta('create_account', { provider: 'google' }); handleOAuth('google'); }}
                 disabled={busy}
               />
             </>
@@ -453,14 +552,36 @@ export default function ProUpgradeScreen({ navigation, route }) {
               legal links. Plain headings (this screen has no collapse
               pattern); each answer is one or two calm, honest sentences. */}
           <View style={styles.faqWrap}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.faqTitle, live.faqTitle]}>Common questions</Text>
+            <Text style={[styles.faqTitle, live.faqTitle]}>Common questions</Text>
             {FAQ_ITEMS.map(item => (
               <View key={item.q} style={styles.faqItem}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.faqQ, live.faqQ]}>{item.q}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.faqA, live.faqA]}>{item.a}</Text>
+                <Text style={[styles.faqQ, live.faqQ]}>{item.q}</Text>
+                <Text style={[styles.faqA, live.faqA]}>{item.a}</Text>
               </View>
             ))}
           </View>
+
+          {/* C3 (D71): quiet inline restore, ported from PaywallScreen and
+              shown only to a signed-in account (a reinstalled paid user can
+              recover Pro without buying again). Text-level chrome, not a
+              primary CTA. Billing-consequential, so like ProGate it carries no
+              added haptic. Same read-only entitlement path (lib/payments/
+              restore) as every other restore surface; no purchase is made. */}
+          {hasAccount ? (
+            <TouchableOpacity
+              style={styles.restoreLink}
+              onPress={handleRestore}
+              disabled={restoring || busy}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Restore purchases"
+            >
+              <Ionicons name="refresh-outline" size={14} color={t.colors.textSecondary} />
+              <Text style={[styles.restoreLinkText, live.restoreLinkText]}>
+                {restoring ? 'Restoring...' : 'Restore purchases'}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
 
           <TouchableOpacity
             style={[styles.policyLink, live.policyLink]}
@@ -470,7 +591,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
             accessibilityLabel="Subscription terms"
           >
             <Ionicons name="information-circle-outline" size={14} color={t.colors.textSecondary} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.policyLinkText, live.policyLinkText]}>
+            <Text style={[styles.policyLinkText, live.policyLinkText]}>
               What stays if you switch back to Free later
             </Text>
           </TouchableOpacity>
@@ -479,8 +600,8 @@ export default function ProUpgradeScreen({ navigation, route }) {
               plan-comparison segment nor a navigation row (the campaign's
               allowed set for this screen family) -- left without an added
               haptic. */}
-          <TouchableOpacity style={styles.laterBtn} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Maybe later">
-            <Text maxFontSizeMultiplier={1.3} style={[styles.laterText, live.laterText]}>Maybe later</Text>
+          <TouchableOpacity style={styles.laterBtn} onPress={() => { trackCta('dismiss'); navigation.goBack(); }} accessibilityRole="button" accessibilityLabel="Maybe later">
+            <Text style={[styles.laterText, live.laterText]}>Maybe later</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -524,6 +645,18 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   policyLinkText: { ...type.caption, color: colors.textSecondary },
+  // C3 (D71): quiet text-level restore action (not the contained policyLink
+  // chrome) so it reads as a secondary affordance, not a second CTA.
+  restoreLink: {
+    minHeight: 40,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  restoreLinkText: { ...type.caption, color: colors.textSecondary },
   perkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   perkIcon: {
     width: 32, height: 32, borderRadius: radius.md,
@@ -537,6 +670,17 @@ const styles = StyleSheet.create({
   },
 
   compareWrap: { marginTop: spacing.lg, marginBottom: spacing.xl },
+
+  // C3 (D71): Play-review social-proof card, ported from PaywallScreen and
+  // matched to this screen's card idiom.
+  reviewCard: {
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, padding: spacing.md,
+    marginTop: spacing.lg, gap: spacing.xs,
+  },
+  reviewStars: { flexDirection: 'row', gap: 2 },
+  reviewQuote: { ...type.bodySm, color: colors.textPrimary, fontStyle: 'italic' },
+  reviewMeta: { ...type.caption, color: colors.textMuted },
 
   // Wave-1 A8 FAQ
   faqWrap: { gap: spacing.md, marginTop: spacing.xl },
@@ -622,6 +766,10 @@ function buildLiveStyles(t) {
     subtitle: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
     policyLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     policyLinkText: { ...t.type.caption, color: t.colors.textSecondary },
+    restoreLinkText: { ...t.type.caption, color: t.colors.textSecondary },
+    reviewCard: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    reviewQuote: { ...t.type.bodySm, color: t.colors.textPrimary },
+    reviewMeta: { ...t.type.caption, color: t.colors.textMuted },
     perkIcon: { backgroundColor: t.colors.primaryBg },
     perkText: { ...t.type.bodySm, color: t.colors.textSecondary },
     credentialNote: { ...t.type.captionTight, color: t.colors.textMuted },

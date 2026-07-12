@@ -61,8 +61,18 @@ const SRC = fs.readFileSync(
 // advance-action pair (blueprint 3.7's additive layout), so the old
 // "single-nesting-level" regex no longer matches reliably. Located by
 // anchor strings instead, robust to the exact nesting depth.
-const BAR_START = SRC.indexOf('{(cluster || perSide) ? null : (\n          <View style={[styles.bottomBar,');
+// RE-ANCHORED 2026-07-12 (R3 logger rebuild): the bar is the dedicated
+// WorkoutBottomBar component; the window now spans the screen's call site.
+// The stable-identity invariants are unchanged - the primary renders first
+// and unconditionally INSIDE the component (pinned below against the
+// component source), the advance action is the additive `advance` prop
+// gated by the same condition this suite always pinned.
+const BAR_START = SRC.indexOf('{cluster ? null : (\n          <WorkoutBottomBar');
 const BAR_END = SRC.indexOf('{/* Exercise Picker Modal, shared by Add and Swap', BAR_START);
+const BAR_COMPONENT = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'components', 'workout', 'WorkoutBottomBar.js'),
+  'utf8',
+);
 const bottomBarWindow = (BAR_START >= 0 && BAR_END > BAR_START) ? SRC.slice(BAR_START, BAR_END) : '';
 
 // D43 S3 (blueprint 3.7, "Bottom bar — stable identity"): the bar's
@@ -79,26 +89,21 @@ describe('target-reached bottom bar gains "Next exercise" / "Finish workout" BES
     expect(SRC).toContain('const targetSets = adjustedSetCount || routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS;');
     expect(SRC).toContain('const workingLogged = countProgressSets(loggedSets);');
     expect(SRC).toContain('const targetComplete = targetSets && workingLogged >= targetSets;');
-    expect(bottomBarWindow).toContain('{targetComplete && !extraSetArmed ? (');
+    expect(bottomBarWindow).toContain('advance={(targetComplete && !extraSetArmed && !perSide)');
   });
 
   test('reaching target on a non-last exercise shows "Next exercise" ADDITIVELY, wired to the existing handleNextExercise nav', () => {
-    expect(bottomBarWindow).toContain('testID="volyume-btn-next-exercise"');
-    expect(bottomBarWindow).toContain('onPress={handleNextExercise}');
-    expect(bottomBarWindow).toContain('accessibilityLabel="Move to next exercise"');
-    // D43 S3: the secondary advance action reuses the extraSetBtnPromoted
-    // outline style (visually distinct from the filled completeBtn primary
-    // beside it), not styles.completeBtnText -- re-anchored from the old
-    // "same filled style as the primary it replaced" pin.
-    expect(bottomBarWindow).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.extraSetBtnPromotedText, live.extraSetBtnPromotedText]}>Next exercise</Text>');
+    expect(bottomBarWindow).toContain("label: 'Next exercise', onPress: handleNextExercise, testID: 'volyume-btn-next-exercise'");
+    // R3: the advance action renders on the shared Button's secondary
+    // variant inside WorkoutBottomBar - visually distinct from the filled
+    // primary beside it, same distinctness invariant as before.
+    expect(BAR_COMPONENT).toMatch(/advance\.label[\s\S]{0,400}?testID=\{advance\.testID\}/);
+    expect(BAR_COMPONENT).toContain('variant="secondary"');
   });
 
   test('reaching target on the last exercise shows "Finish workout" ADDITIVELY instead, routed through handleFinishWorkout', () => {
-    expect(bottomBarWindow).toContain('isLastExercise ? (');
-    expect(bottomBarWindow).toContain('testID="volyume-btn-finish-primary"');
-    expect(bottomBarWindow).toContain('onPress={handleFinishWorkout}');
-    expect(bottomBarWindow).toContain('accessibilityLabel="Finish workout"');
-    expect(bottomBarWindow).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.extraSetBtnPromotedText, live.extraSetBtnPromotedText]}>Finish workout</Text>');
+    expect(bottomBarWindow).toContain('isLastExercise');
+    expect(bottomBarWindow).toContain("label: 'Finish workout', onPress: handleFinishWorkout, testID: 'volyume-btn-finish-primary'");
   });
 
   test('a trailing time-crunch-skipped exercise cannot leave the finish offer unreachable: last means no un-skipped exercise remains after this one', () => {
@@ -110,20 +115,19 @@ describe('target-reached bottom bar gains "Next exercise" / "Finish workout" BES
     expect(SRC).not.toContain('const isLastExercise = currentExerciseIndex === workoutExercises.length - 1;');
   });
 
-  test('D43 S3: the Log set primary is UNCONDITIONAL -- it appears first in source, and the advance action is the additive sibling gated after it', () => {
-    expect(bottomBarWindow).toContain('testID="volyume-btn-complete-set"');
-    expect(bottomBarWindow).toContain('onPress={handleCompleteSetPress}');
-    // Re-anchored: the primary is no longer the ELSE branch of a
-    // target-complete ternary (that ternary is gone). It is unconditional,
-    // so it is written FIRST in source; the gate for the advance action, and
-    // that action's testID, both come AFTER it now -- the inverse order of
-    // the pre-S3 shape this test used to pin.
-    const logSetIndex = bottomBarWindow.indexOf('testID="volyume-btn-complete-set"');
-    const gateIndex = bottomBarWindow.indexOf('{targetComplete && !extraSetArmed ? (');
-    const nextExerciseIndex = bottomBarWindow.indexOf('testID="volyume-btn-next-exercise"');
-    expect(logSetIndex).toBeGreaterThanOrEqual(0);
-    expect(gateIndex).toBeGreaterThan(logSetIndex);
-    expect(nextExerciseIndex).toBeGreaterThan(gateIndex);
+  test('D43 S3/R3: the Log set primary is UNCONDITIONAL -- WorkoutBottomBar always renders it with the pinned testID; the advance is the gated additive prop', () => {
+    expect(bottomBarWindow).toContain('onPrimary={handleCompleteSetPress}');
+    // The primary carries the Maestro-pinned testID INSIDE the component,
+    // outside any conditional: the advance slot is the only ternary.
+    expect(BAR_COMPONENT).toContain('testID="volyume-btn-complete-set"');
+    const primaryIdx = BAR_COMPONENT.indexOf('testID="volyume-btn-complete-set"');
+    expect(primaryIdx).toBeGreaterThan(-1);
+    // The screen's wiring order: the primary handler precedes the gated
+    // advance prop, mirroring the old primary-first source order.
+    const onPrimaryIdx = bottomBarWindow.indexOf('onPrimary={handleCompleteSetPress}');
+    const gateIdx = bottomBarWindow.indexOf('advance={(targetComplete && !extraSetArmed && !perSide)');
+    expect(onPrimaryIdx).toBeGreaterThanOrEqual(0);
+    expect(gateIdx).toBeGreaterThan(onPrimaryIdx);
   });
 });
 
@@ -150,7 +154,7 @@ describe('extra sets beyond the plan stay loggable (D8 junk-volume: never a wall
     // targetComplete && !extraSetArmed is false and only the (unconditional)
     // primary remains, same end-state as pre-S3, reached by one tap instead
     // of two.
-    expect(bottomBarWindow).toContain('{targetComplete && !extraSetArmed ? (');
+    expect(bottomBarWindow).toContain('advance={(targetComplete && !extraSetArmed && !perSide)');
     expect(SRC).toContain('const [extraSetArmed, setExtraSetArmed] = useState(false);');
   });
 });
@@ -160,8 +164,14 @@ describe('the advance action never shows mid-exercise, and never mid a per-side 
     expect(SRC).toContain('const targetComplete = targetSets && workingLogged >= targetSets;');
   });
 
-  test('the whole bottom bar (primary AND the conditional advance action) is hidden while a cluster or per-side pair is mid-flight', () => {
-    expect(SRC).toMatch(/\{\(cluster \|\| perSide\) \? null : \(\s*<View style=\{\[styles\.bottomBar/);
+  test('R4 (D64): the bar hides only for a cluster - mid per-side pair it STAYS, relabelled to commit side two', () => {
+    // Cluster keeps its own in-card controls, so the bar hides there.
+    expect(SRC).toMatch(/\{cluster \? null : \(\s*<WorkoutBottomBar/);
+    // Mid-pair the permanent primary IS the side-two control ("Log other
+    // side" -> finishPerSide), and the advance action stays suppressed via
+    // the && !perSide gate pinned above.
+    expect(SRC).toContain('if (perSide) return finishPerSide();');
+    expect(SRC).toContain("perSide ? 'Log other side'");
   });
 
   test('no auto-navigation fires on reaching target from this change — advancing is a tap, never automatic', () => {

@@ -321,13 +321,13 @@ export default function AddCustomFoodScreen({ navigation, route }) {
           plus interactive dismiss, no fixed footer below this scroll. */}
       <KeyboardGestureArea interpolator="ios" style={styles.keyboardAvoid}>
       <KeyboardAwareScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <Text maxFontSizeMultiplier={1.3} style={[styles.contextLabel, live.contextLabel]}>Save this food, then add it to your diary.</Text>
+        <Text style={[styles.contextLabel, live.contextLabel]}>Save this food, then add it to your diary.</Text>
         {prefillBarcode ? (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.barcodeHint, live.barcodeHint]}>Scanned barcode: {prefillBarcode}</Text>
+          <Text style={[styles.barcodeHint, live.barcodeHint]}>Scanned barcode: {prefillBarcode}</Text>
         ) : null}
         {dupeFood ? (
           <View style={[styles.dupeBanner, live.dupeBanner]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.dupeText, live.dupeText]}>
+            <Text style={[styles.dupeText, live.dupeText]}>
               You've saved this barcode before as {dupeFood.name}.
             </Text>
             <Button
@@ -345,7 +345,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         {(_unsure('kcal100g', kcal) || _unsure('protein100g', protein)
           || _unsure('carbs100g', carbs) || _unsure('fat100g', fat)
           || _unsure('fibre100g', fibre)) ? (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.unsureNote, live.unsureNote]}>Amber figures aren't certain, check them.</Text>
+          <Text style={[styles.unsureNote, live.unsureNote]}>Amber figures aren't certain, check them.</Text>
         ) : null}
         <View style={styles.row}>
           <NumField label="Calories" value={kcal} onChange={setKcal} suffix="kcal" unsure={_unsure('kcal100g', kcal)} />
@@ -374,11 +374,11 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         </View>
         {/* L05-ACF3 (2026-07-09 design audit): the two gram fields sat side by
             side with no explanation of which drives what. */}
-        <Text maxFontSizeMultiplier={1.3} style={[styles.unsureNote, live.unsureNote]}>
+        <Text style={[styles.unsureNote, live.unsureNote]}>
           Serving is this food's usual portion, saved for next time. Eaten is how much you had today, logged now.
         </Text>
         {portionPreview ? (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.portionPreview, live.portionPreview]}>
+          <Text style={[styles.portionPreview, live.portionPreview]}>
             {`${quantityG} g${portionPreview.unitPrefix} works out to ${portionPreview.kcal} kcal - P ${portionPreview.protein}g - C ${portionPreview.carbs}g - F ${portionPreview.fat}g.`}
           </Text>
         ) : null}
@@ -458,7 +458,7 @@ function NumField({ label, value, onChange, suffix, unsure }) {
       surface={t.colors.inputBg}
       containerStyle={[styles.field, styles.numField]}
       fieldStyle={unsure && [styles.numWrapUnsure, live.numWrapUnsure]}
-      trailing={<Text maxFontSizeMultiplier={1.3} style={[styles.numSuffix, live.numSuffix]}>{suffix}</Text>}
+      trailing={<Text style={[styles.numSuffix, live.numSuffix]}>{suffix}</Text>}
     />
   );
 }

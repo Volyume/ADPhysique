@@ -62,7 +62,7 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
   if (isEditing) {
     return (
       <View style={[styles.editingWrap, live.editingWrap]}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.editingTitle, live.editingTitle]}>
+        <Text style={[styles.editingTitle, live.editingTitle]}>
           {isWarmup ? 'Edit warm-up set' : `Edit set ${progressNum}`}
         </Text>
         {editValue && (
@@ -82,7 +82,7 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
             accessibilityRole="button"
             accessibilityLabel="Cancel editing set"
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.editingCancelText, live.editingCancelText]}>Cancel</Text>
+            <Text style={[styles.editingCancelText, live.editingCancelText]}>Cancel</Text>
           </TouchableOpacity>
           <Button
             variant="primary"
@@ -135,16 +135,16 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
         <Ionicons name="flame-outline" size={14} color={t.colors.warning} style={{ width: 22, textAlign: 'center' }} />
       ) : (
         <View style={[styles.setNumBadge, live.setNumBadge]}>
-          <Text style={[styles.setNumText, live.setNumText]} maxFontSizeMultiplier={1.3}>{progressNum}</Text>
+          <Text style={[styles.setNumText, live.setNumText]}>{progressNum}</Text>
         </View>
       )}
-      <Text maxFontSizeMultiplier={1.3} style={[styles.loggedSetText, live.loggedSetText, isWarmup && [styles.loggedSetTextWarmup, live.loggedSetTextWarmup]]} numberOfLines={1}>
+      <Text style={[styles.loggedSetText, live.loggedSetText, isWarmup && [styles.loggedSetTextWarmup, live.loggedSetTextWarmup]]} numberOfLines={1}>
         {fmt.text}
         {perSide ? ` - ${perSide}` : ''}
         {isWarmup ? ' - Warm-up' : ''}
       </Text>
       {!isWarmup && est1RM > 0 && (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.loggedEst1RM, live.loggedEst1RM]}>Est. max ~{est1RM.toFixed(0)}{units}</Text>
+        <Text style={[styles.loggedEst1RM, live.loggedEst1RM]}>Est. max ~{est1RM.toFixed(0)}{units}</Text>
       )}
       <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
     </TouchableOpacity>
@@ -184,7 +184,10 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
 // Frozen base styles, moved verbatim from ActiveWorkoutScreen.js's `styles`
 // StyleSheet (D43 S1) -- only the keys LoggedSetRow uses exclusively.
 const styles = StyleSheet.create({
-  loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs2, minHeight: workoutLoggerSize.loggedSetMinHeight, backgroundColor: colors.surface, borderRadius: radius.xs, paddingVertical: spacing.xxs, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.border },
+  // R5 (D66): radius.xs -> radius.md, the logger's one small-surface radius
+  // (RestTimer container, noteInput, completeBtn all sit on md; the xs
+  // corner was the odd one out in the founder's style-mish-mash walk).
+  loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs2, minHeight: workoutLoggerSize.loggedSetMinHeight, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.xxs, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.border },
   loggedSetRowWarmup: { borderColor: withAlpha(colors.warning, 0.376), backgroundColor: colors.warningBg || colors.surface },
   loggedSetTextWarmup: { color: colors.warning },
   setNumBadge: { width: workoutLoggerSize.setNumberBadge, height: workoutLoggerSize.setNumberBadge, borderRadius: radius.lg, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
@@ -201,7 +204,7 @@ const styles = StyleSheet.create({
   // D43 S4: in-place editor block, replaces the modal sheet's chrome with a
   // house Card-adjacent surface local to the row -- same radius/border
   // language as loggedSetRow, no new one-off idiom.
-  editingWrap: { gap: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.xs, padding: spacing.sm, borderWidth: 1, borderColor: colors.border },
+  editingWrap: { gap: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.sm, borderWidth: 1, borderColor: colors.border },
   editingTitle: { ...type.label, color: colors.textPrimary },
   editingActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.md },
   editingCancelBtn: { minHeight: workoutLoggerSize.loggedSetMinHeight, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.sm },

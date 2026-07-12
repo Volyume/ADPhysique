@@ -51,6 +51,7 @@ import useTheme from '../hooks/useTheme';
 import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder, scheduleWeeklyCoachReady, scheduleMissedCheckinFollowups } from '../lib/notifications';
 import { logError, logWarn } from '../lib/errorLog';
 import { audit } from '../lib/observability';
+import { useToast } from '../components/Toast';
 import { SkeletonCard } from '../components/Skeleton';
 // COMP-023: the first-check-in gate constants live in trialActivation.js as the
 // single source of truth, so the day-3 unlock date this screen gates on and the
@@ -95,8 +96,8 @@ function SectionLabel({ children, hint }) {
   const live = buildLiveStyles(t);
   return (
     <View style={styles.sectionLabelWrap}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.sectionLabel, live.sectionLabel]}>{children}</Text>
-      {hint ? <Text maxFontSizeMultiplier={1.3} style={[styles.sectionHint, live.sectionHint]}>{hint}</Text> : null}
+      <Text style={[styles.sectionLabel, live.sectionLabel]}>{children}</Text>
+      {hint ? <Text style={[styles.sectionHint, live.sectionHint]}>{hint}</Text> : null}
     </View>
   );
 }
@@ -162,16 +163,16 @@ function ScanPromptCard({ onScan, onDismiss }) {
   return (
     <View style={[styles.scanPromptCard, live.scanPromptCard]}>
       <View style={{ flex: 1, gap: spacing.xxs }}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.scanPromptTitle, live.scanPromptTitle]}>Add a progress scan first?</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.scanPromptBody, live.scanPromptBody]}>
+        <Text style={[styles.scanPromptTitle, live.scanPromptTitle]}>Add a progress scan first?</Text>
+        <Text style={[styles.scanPromptBody, live.scanPromptBody]}>
           A recent scan gives this check-in extra visual context. It is optional and skipping it changes nothing.
         </Text>
         <View style={styles.scanPromptActions}>
           <TouchableOpacity onPress={onScan} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Do a scan">
-            <Text maxFontSizeMultiplier={1.3} style={[styles.scanPromptActionPrimary, live.scanPromptActionPrimary]}>Do a scan</Text>
+            <Text style={[styles.scanPromptActionPrimary, live.scanPromptActionPrimary]}>Do a scan</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={onDismiss} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Not now">
-            <Text maxFontSizeMultiplier={1.3} style={[styles.scanPromptActionSecondary, live.scanPromptActionSecondary]}>Not now</Text>
+            <Text style={[styles.scanPromptActionSecondary, live.scanPromptActionSecondary]}>Not now</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -196,6 +197,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // block) for why.
   const t = useTheme();
   const live = buildLiveStyles(t);
+  const toast = useToast();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const { user, userProfile, bodyWeightUnits, energyUnit } = useAppStore(useShallow(s => ({
     user: s.user,
@@ -710,12 +712,26 @@ export default function WeeklyCheckInScreen({ navigation }) {
       const userId = user?.id;
       if (!userId) return;
 
+      // AC-15 (Codex adversarial audit, 2026-07-12): sleepHours was parseFloat'd
+      // and written unchanged, so a negative/NaN/impossible figure (-1, 99,
+      // a stray letter) reached saveWeeklyCheckin and then the coaching
+      // engine, which rendered things like "sleep averaged -1.0 hours".
+      // Validate at this input boundary: reject non-finite or outside a
+      // realistic 0-24h range rather than coercing/clamping, so nothing
+      // impossible is ever persisted.
+      const sleepTrimmed = sleepHours.trim();
+      const sleepNum = sleepTrimmed ? parseFloat(sleepHours) : null;
+      if (sleepNum != null && (!Number.isFinite(sleepNum) || sleepNum < 0 || sleepNum > 24)) {
+        toast.show('That doesn\'t look like a realistic number of sleep hours. Enter a value between 0 and 24.', { variant: 'error' });
+        return;
+      }
+
       await saveWeeklyCheckin(userId, {
         weekStart: weekStart.getTime(),
         energyScore,
         sorenessScore,
         stressScore,
-        sleepHours: sleepHours.trim() ? parseFloat(sleepHours) : null,
+        sleepHours: sleepNum,
         calsAdherence: calsAdherence ?? null,
         stepsAdherence: stepsAdherence ?? null,
         stepsAvg: null,
@@ -833,8 +849,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
   function renderStep0() {
     return (
       <>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.stepHeading, live.stepHeading]}>How are you feeling?</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.stepSubtitle, live.stepSubtitle]}>These answers help Volyume read the week in context, not just by numbers.</Text>
+        <Text style={[styles.stepHeading, live.stepHeading]}>How are you feeling?</Text>
+        <Text style={[styles.stepSubtitle, live.stepSubtitle]}>These answers help Volyume read the week in context, not just by numbers.</Text>
 
         <View style={styles.section}>
           <SectionLabel>Energy and motivation this week</SectionLabel>
@@ -889,8 +905,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
   function renderStep1() {
     return (
       <>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.stepHeading, live.stepHeading]}>This week's data</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.stepSubtitle, live.stepSubtitle]}>We pre-fill what we can from your logs. Correct anything that does not reflect the week.</Text>
+        <Text style={[styles.stepHeading, live.stepHeading]}>This week's data</Text>
+        <Text style={[styles.stepSubtitle, live.stepSubtitle]}>We pre-fill what we can from your logs. Correct anything that does not reflect the week.</Text>
 
         {/* Weight trend, read-only */}
         {!loading && (
@@ -903,16 +919,16 @@ export default function WeeklyCheckInScreen({ navigation }) {
             {weekWeights.length > 0 ? (
               <View style={[styles.weightSummaryRow, live.weightSummaryRow]}>
                 <Ionicons name="checkmark-circle" size={16} color={t.colors.success} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.weightSummaryText, live.weightSummaryText]}>
+                <Text style={[styles.weightSummaryText, live.weightSummaryText]}>
                   {weekWeights.length} {weekWeights.length === 1 ? 'day' : 'days'} logged
                   {trendKg ? ` - trend ${formatBodyWeightShort(trendKg, bwu)}` : ''}
                 </Text>
                 {!alreadyLoggedToday && (
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.weightSummaryMissed, live.weightSummaryMissed]}>Not yet today</Text>
+                  <Text style={[styles.weightSummaryMissed, live.weightSummaryMissed]}>Not yet today</Text>
                 )}
               </View>
             ) : (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.skipNote, live.skipNote]}>
+              <Text style={[styles.skipNote, live.skipNote]}>
                 No morning weights logged this week. Log each morning from the Today tab. One reading per day makes the trend far more accurate.
               </Text>
             )}
@@ -928,16 +944,16 @@ export default function WeeklyCheckInScreen({ navigation }) {
           <View style={styles.section}>
             <SectionLabel>Progress scan</SectionLabel>
             {(scanEvidencePacket.status === 'no_scan_ever' || scanEvidencePacket.status === 'no_recent_scan') ? (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.skipNote, live.skipNote]}>No photo set this period.</Text>
+              <Text style={[styles.skipNote, live.skipNote]}>No photo set this period.</Text>
             ) : (
               <View accessible accessibilityLabel={scanEvidenceAccessibilityLabel(scanEvidencePacket)}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.scanEvidenceHeadline, live.scanEvidenceHeadline]}>{scanEvidencePacket.receipt.headline}</Text>
+                <Text style={[styles.scanEvidenceHeadline, live.scanEvidenceHeadline]}>{scanEvidencePacket.receipt.headline}</Text>
                 {scanEvidencePacket.receipt.detail ? (
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.scanEvidenceDetail, live.scanEvidenceDetail]}>{scanEvidencePacket.receipt.detail}</Text>
+                  <Text style={[styles.scanEvidenceDetail, live.scanEvidenceDetail]}>{scanEvidencePacket.receipt.detail}</Text>
                 ) : null}
-                <Text maxFontSizeMultiplier={1.3} style={[styles.scanEvidenceDetail, live.scanEvidenceDetail]}>{scanEvidencePacket.receipt.usedSentence}</Text>
+                <Text style={[styles.scanEvidenceDetail, live.scanEvidenceDetail]}>{scanEvidencePacket.receipt.usedSentence}</Text>
                 {scanEvidencePacket.status === 'valid' && (
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.scanEvidenceConfidence, live.scanEvidenceConfidence]}>{confidenceChipLabel(scanEvidencePacket.confidenceTier)}</Text>
+                  <Text style={[styles.scanEvidenceConfidence, live.scanEvidenceConfidence]}>{confidenceChipLabel(scanEvidencePacket.confidenceTier)}</Text>
                 )}
               </View>
             )}
@@ -972,7 +988,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             <SectionLabel>Calorie target: how did you get on?</SectionLabel>
             {autoDerived.calsMeta ? (
               autoDerived.calsMeta.daysLogged > 0 ? (
-                <Text maxFontSizeMultiplier={1.3} style={[styles.autoDerivedNote, live.autoDerivedNote]}>
+                <Text style={[styles.autoDerivedNote, live.autoDerivedNote]}>
                   From your diary: {autoDerived.calsMeta.daysLogged} of 7 days logged,
                   averaging {formatEnergy(autoDerived.calsMeta.avgKcal, energyUnit)} {energyUnitLabel(energyUnit)} a day
                   against your {formatEnergy(autoDerived.calsMeta.target, energyUnit)} target ({
@@ -982,14 +998,14 @@ export default function WeeklyCheckInScreen({ navigation }) {
                   }). Adjust below only if your logging was off, for example you tracked in another app.
                 </Text>
               ) : (
-                <Text maxFontSizeMultiplier={1.3} style={[styles.autoDerivedNote, live.autoDerivedNote]}>
+                <Text style={[styles.autoDerivedNote, live.autoDerivedNote]}>
                   No food logged in your diary this week. If you tracked elsewhere, set it below.
                 </Text>
               )
             ) : null}
             {unconfirmedPlannedDays.length > 0 ? (
               <View style={[styles.plannedBackstop, live.plannedBackstop]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.plannedBackstopText, live.plannedBackstopText]}>
+                <Text style={[styles.plannedBackstopText, live.plannedBackstopText]}>
                   You had a meal plan on {unconfirmedPlannedDays.length} {unconfirmedPlannedDays.length === 1 ? 'day' : 'days'} this
                   week but didn't confirm eating {unconfirmedPlannedDays.length === 1 ? 'it' : 'them'}, so {unconfirmedPlannedDays.length === 1 ? "it isn't" : "they aren't"} counted
                   above. If you stuck to your plan, confirm so it counts.
@@ -1020,7 +1036,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           <View style={styles.section}>
             <SectionLabel>Calorie target</SectionLabel>
             <TouchableOpacity onPress={() => navigation.navigate('NutritionTargets')} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Set up nutrition targets">
-              <Text maxFontSizeMultiplier={1.3} style={[styles.skipNoteTappable, live.skipNoteTappable]}>
+              <Text style={[styles.skipNoteTappable, live.skipNoteTappable]}>
                 Nutrition targets not set. Tap to set them up and turn on calorie coaching.
               </Text>
             </TouchableOpacity>
@@ -1034,7 +1050,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             {/* A7 provenance: the pre-selected answer names its source, matching
                 the diary and logged-sessions notes above. */}
             {cardioMeta ? (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.autoDerivedNote, live.autoDerivedNote]}>
+              <Text style={[styles.autoDerivedNote, live.autoDerivedNote]}>
                 {cardioMeta.sessions > 0 && cardioMeta.targetSessions > 0
                   ? `From your cardio log: ${cardioMeta.sessions} of ${cardioMeta.targetSessions} prescribed session${cardioMeta.targetSessions === 1 ? '' : 's'} this week. Adjust below only if you did cardio that isn't logged here.`
                   : cardioMeta.sessions > 0
@@ -1060,8 +1076,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
   function renderStep2() {
     return (
       <>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.stepHeading, live.stepHeading]}>Recovery and issues</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.stepSubtitle, live.stepSubtitle]}>Helps the coach decide whether to hold, push, or ease off training.</Text>
+        <Text style={[styles.stepHeading, live.stepHeading]}>Recovery and issues</Text>
+        <Text style={[styles.stepSubtitle, live.stepSubtitle]}>Helps the coach decide whether to hold, push, or ease off training.</Text>
 
         <View style={styles.section}>
           <SectionLabel>Overall muscle soreness this week</SectionLabel>
@@ -1134,7 +1150,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             textAlignVertical="top"
             returnKeyType="default"
           />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.charCount, live.charCount]}>{notes.length}/280</Text>
+          <Text style={[styles.charCount, live.charCount]}>{notes.length}/280</Text>
         </View>
       </>
     );
@@ -1143,8 +1159,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
   function renderStep3() {
     return (
       <>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.stepHeading, live.stepHeading]}>Training performance</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.stepSubtitle, live.stepSubtitle]}>
+        <Text style={[styles.stepHeading, live.stepHeading]}>Training performance</Text>
+        <Text style={[styles.stepSubtitle, live.stepSubtitle]}>
           {autoDerived.trainingPerformance
             ? 'Pre-filled from your logged sessions. Tap a different option if it feels wrong.'
             : 'How did your sessions go compared to what you expected?'}
@@ -1153,7 +1169,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         <View style={styles.section}>
           <SectionLabel>This week's training felt like</SectionLabel>
           {autoDerived.trainingMeta && autoDerived.trainingMeta.completed > 0 ? (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.autoDerivedNote, live.autoDerivedNote]}>
+            <Text style={[styles.autoDerivedNote, live.autoDerivedNote]}>
               From your logged sessions: {autoDerived.trainingMeta.completed} session{autoDerived.trainingMeta.completed === 1 ? '' : 's'} this
               week, {autoDerived.trainingMeta.prs} PR{autoDerived.trainingMeta.prs === 1 ? '' : 's'}
               {autoDerived.trainingMeta.volDeltaPct != null
@@ -1167,7 +1183,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               Tap an option to change it.
             </Text>
           ) : (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.autoDerivedNote, live.autoDerivedNote]}>
+            <Text style={[styles.autoDerivedNote, live.autoDerivedNote]}>
               No sessions logged in the app this week. Pick how training went below.
             </Text>
           )}
@@ -1194,7 +1210,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
                     size={22}
                     color={isSelected ? t.colors.primary : t.colors.textSecondary}
                   />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.perfCardText, isSelected && styles.perfCardTextSelected, live.perfCardText, isSelected && live.perfCardTextSelected]}>
+                  <Text style={[styles.perfCardText, isSelected && styles.perfCardTextSelected, live.perfCardText, isSelected && live.perfCardTextSelected]}>
                     {opt.label}
                   </Text>
                 </TouchableOpacity>
@@ -1254,8 +1270,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
     return (
       <>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.stepHeading, live.stepHeading]}>Quick check-in</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.stepSubtitle, live.stepSubtitle]}>
+        <Text style={[styles.stepHeading, live.stepHeading]}>Quick check-in</Text>
+        <Text style={[styles.stepSubtitle, live.stepSubtitle]}>
           Volyume has read your week from your logs. Confirm energy and recovery, then submit.
         </Text>
 
@@ -1263,15 +1279,15 @@ export default function WeeklyCheckInScreen({ navigation }) {
           {summaryRows.map(row => (
             <View key={row.key} style={styles.fastSummaryRow}>
               <Ionicons name={row.icon} size={16} color={t.colors.textSecondary} style={styles.fastSummaryIcon} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.fastSummaryLabel, live.fastSummaryLabel]}>{row.label}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.fastSummaryValue, live.fastSummaryValue]} numberOfLines={1}>{row.value}</Text>
+              <Text style={[styles.fastSummaryLabel, live.fastSummaryLabel]}>{row.label}</Text>
+              <Text style={[styles.fastSummaryValue, live.fastSummaryValue]} numberOfLines={1}>{row.value}</Text>
               <Ionicons name="checkmark-circle" size={16} color={t.colors.success} />
             </View>
           ))}
           {/* Wave A B6: the fastest path was the least transparent, one
               muted provenance line so the confirm-not-recall promise is
               visibly grounded in the user's own logs. */}
-          <Text maxFontSizeMultiplier={1.3} style={[styles.fastSummaryProvenance, live.fastSummaryProvenance]}>
+          <Text style={[styles.fastSummaryProvenance, live.fastSummaryProvenance]}>
             {[
               autoDerived.trainingMeta
                 ? `From your logged sessions: ${autoDerived.trainingMeta.completed} of ${autoDerived.trainingMeta.planned}`
@@ -1340,17 +1356,17 @@ export default function WeeklyCheckInScreen({ navigation }) {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
           </TouchableOpacity>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.gateHeaderTitle, live.gateHeaderTitle]}>Weekly check-in</Text>
+          <Text style={[styles.gateHeaderTitle, live.gateHeaderTitle]}>Weekly check-in</Text>
           <View style={{ width: 24 }} />
         </View>
         <ScrollView contentContainerStyle={styles.gateScroll}>
           <View style={[styles.gateCard, live.gateCard]}>
             <Ionicons name="calendar-outline" size={40} color={t.colors.surface3} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.gateTitle, live.gateTitle]}>Come back on {dayName}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.gateBody, live.gateBody]}>
+            <Text style={[styles.gateTitle, live.gateTitle]}>Come back on {dayName}</Text>
+            <Text style={[styles.gateBody, live.gateBody]}>
               Your check-in day is {dayName}. Coaching runs on a weekly rhythm tied to that day, so the numbers compare like for like each time.
             </Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.gateBody, live.gateBody]}>
+            <Text style={[styles.gateBody, live.gateBody]}>
               You can change the day in your coaching reminder settings. In the meantime, log your weight each morning from the Today tab. Every reading makes the trend more accurate.
             </Text>
           </View>
@@ -1361,10 +1377,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
             accessibilityRole="button"
             accessibilityLabel="Change check-in day"
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.gateDeferBtnText, live.gateDeferBtnText]}>Change check-in day</Text>
+            <Text style={[styles.gateDeferBtnText, live.gateDeferBtnText]}>Change check-in day</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.gateBtn, live.gateBtn]} onPress={() => navigation.goBack()} activeOpacity={0.85} accessibilityRole="button">
-            <Text maxFontSizeMultiplier={1.3} style={[styles.gateBtnText, live.gateBtnText]}>Got it</Text>
+            <Text style={[styles.gateBtnText, live.gateBtnText]}>Got it</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
@@ -1382,25 +1398,25 @@ export default function WeeklyCheckInScreen({ navigation }) {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
           </TouchableOpacity>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.gateHeaderTitle, live.gateHeaderTitle]}>Weekly check-in</Text>
+          <Text style={[styles.gateHeaderTitle, live.gateHeaderTitle]}>Weekly check-in</Text>
           <View style={{ width: 24 }} />
         </View>
         <ScrollView contentContainerStyle={styles.gateScroll}>
           <View style={[styles.gateCard, live.gateCard]}>
             <Ionicons name="calendar-outline" size={40} color={t.colors.surface3} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.gateTitle, live.gateTitle]}>Your check-in day was {dayName}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.gateBody, live.gateBody]}>
+            <Text style={[styles.gateTitle, live.gateTitle]}>Your check-in day was {dayName}</Text>
+            <Text style={[styles.gateBody, live.gateBody]}>
               You&apos;re one day late, so the week you missed can still be reviewed. If travel or illness pushed you off your day, check in now rather than lose the week.
             </Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.gateBody, live.gateBody]}>
+            <Text style={[styles.gateBody, live.gateBody]}>
               A day&apos;s delay makes the read slightly less accurate than checking in on {dayName}. Your next check-in lands back on {dayName} as normal.
             </Text>
           </View>
           <TouchableOpacity style={[styles.gateBtn, live.gateBtn]} onPress={() => setGateState('open')} activeOpacity={0.85} accessibilityRole="button">
-            <Text maxFontSizeMultiplier={1.3} style={[styles.gateBtnText, live.gateBtnText]}>Check in anyway</Text>
+            <Text style={[styles.gateBtnText, live.gateBtnText]}>Check in anyway</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.gateDeferBtn} onPress={() => navigation.goBack()} activeOpacity={0.75} accessibilityRole="button">
-            <Text maxFontSizeMultiplier={1.3} style={[styles.gateDeferBtnText, live.gateDeferBtnText]}>Wait for {dayName}</Text>
+            <Text style={[styles.gateDeferBtnText, live.gateDeferBtnText]}>Wait for {dayName}</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
@@ -1423,22 +1439,22 @@ export default function WeeklyCheckInScreen({ navigation }) {
           <View style={[styles.gateIconWrap, live.gateIconWrap]}>
             <Ionicons name="time-outline" size={32} color={t.colors.primary} />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.gateTitle, live.gateTitle]}>First check-in needs more data</Text>
+          <Text style={[styles.gateTitle, live.gateTitle]}>First check-in needs more data</Text>
           {hasStartedBaseline ? (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.gateBody, live.gateBody]}>
+            <Text style={[styles.gateBody, live.gateBody]}>
               Your coach needs at least {FIRST_CHECKIN_MIN_DAYS} days of data before the first weekly check-in. Right now there {daysToWait === 1 ? 'is 1 day' : `are ${daysToWait} days`} of baseline data left.
               {'\n\n'}
               Volyume waits for your next {scheduledDayName} after that baseline is ready, so each check-in compares like for like. Keep logging your morning weight each day, and food if you use Eat. Your first check-in opens on {safeFirstCheckinLabel}.
             </Text>
           ) : (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.gateBody, live.gateBody]}>
+            <Text style={[styles.gateBody, live.gateBody]}>
               Your coach needs at least {FIRST_CHECKIN_MIN_DAYS} days of data before the first weekly check-in.
               {'\n\n'}
               Log your first morning weight from the Today tab to start the baseline. Once the baseline is ready, your first check-in opens on your scheduled day: {scheduledDayName}.
             </Text>
           )}
           <TouchableOpacity style={[styles.gateBtn, live.gateBtn]} onPress={() => navigation.goBack()} activeOpacity={0.85} accessibilityRole="button">
-            <Text maxFontSizeMultiplier={1.3} style={[styles.gateBtnText, live.gateBtnText]}>Got it</Text>
+            <Text style={[styles.gateBtnText, live.gateBtnText]}>Got it</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
@@ -1459,8 +1475,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
           <View style={[styles.gateIconWrap, live.gateIconWrap]}>
             <Ionicons name="scale-outline" size={32} color={t.colors.warning} />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.gateTitle, live.gateTitle]}>A few more weight readings needed</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.gateBody, live.gateBody]}>
+          <Text style={[styles.gateTitle, live.gateTitle]}>A few more weight readings needed</Text>
+          <Text style={[styles.gateBody, live.gateBody]}>
             You've logged {weighInsThisWeek} {weighInsThisWeek === 1 ? 'reading' : 'readings'} this week. Your coach needs at least {MIN_WEIGH_INS} to calculate a reliable trend.
             {'\n\n'}
             Body weight shifts naturally each day due to fluid, food, and hormones. Logging every other day gives enough readings to smooth out that noise and see what's actually changing. With fewer readings, the coaching adjustments won't be as accurate.
@@ -1479,10 +1495,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
             activeOpacity={0.85}
             accessibilityRole="button"
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.gateBtnText, live.gateBtnText]}>Log my weight first</Text>
+            <Text style={[styles.gateBtnText, live.gateBtnText]}>Log my weight first</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.gateDeferBtn} onPress={() => setGateState('open')} activeOpacity={0.75} accessibilityRole="button">
-            <Text maxFontSizeMultiplier={1.3} style={[styles.gateDeferBtnText, live.gateDeferBtnText]}>Check in anyway</Text>
+            <Text style={[styles.gateDeferBtnText, live.gateDeferBtnText]}>Check in anyway</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
@@ -1501,8 +1517,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
           <View style={[styles.gateIconWrap, live.gateIconWrap]}>
             <Ionicons name="cloud-offline-outline" size={32} color={t.colors.warning} />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.gateTitle, live.gateTitle]}>Couldn't load your week</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.gateBody, live.gateBody]}>
+          <Text style={[styles.gateTitle, live.gateTitle]}>Couldn't load your week</Text>
+          <Text style={[styles.gateBody, live.gateBody]}>
             We couldn't read this week's data, so the check-in is held to keep the coaching accurate.
           </Text>
           <TouchableOpacity
@@ -1511,7 +1527,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             activeOpacity={0.85}
             accessibilityRole="button"
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.gateBtnText, live.gateBtnText]}>Try again</Text>
+            <Text style={[styles.gateBtnText, live.gateBtnText]}>Try again</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
@@ -1548,9 +1564,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
           accessible
           accessibilityLabel={fastEligible ? `${checkinDayLabel}, quick check-in` : `${checkinDayLabel}, step ${step + 1} of ${TOTAL_STEPS}`}
         >
-          <Text maxFontSizeMultiplier={1.3} style={[styles.headerTitle, live.headerTitle]}>{checkinDayLabel}</Text>
+          <Text style={[styles.headerTitle, live.headerTitle]}>{checkinDayLabel}</Text>
           {fastEligible
-            ? <Text maxFontSizeMultiplier={1.3} style={[styles.headerQuickTag, live.headerQuickTag]}>Quick check-in</Text>
+            ? <Text style={[styles.headerQuickTag, live.headerQuickTag]}>Quick check-in</Text>
             : <StepBar current={step} total={TOTAL_STEPS} />}
         </View>
         <View style={styles.headerSpacer} />
@@ -1580,18 +1596,18 @@ export default function WeeklyCheckInScreen({ navigation }) {
           {/* Ritual intro, only on the wizard's first step */}
           {!fastEligible && step === 0 && (
             <View style={styles.ritualIntro}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.ritualIntroTitle, live.ritualIntroTitle]}>{checkinDayLabel}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.ritualIntroSub, live.ritualIntroSub]}>Four short sections. Volyume combines them with your logs, then shows the weekly coaching decision straight away.</Text>
+              <Text style={[styles.ritualIntroTitle, live.ritualIntroTitle]}>{checkinDayLabel}</Text>
+              <Text style={[styles.ritualIntroSub, live.ritualIntroSub]}>Four short sections. Volyume combines them with your logs, then shows the weekly coaching decision straight away.</Text>
             </View>
           )}
 
           {/* Week label */}
-          <Text maxFontSizeMultiplier={1.3} style={[styles.weekLabel, live.weekLabel]}>{weekLabel}</Text>
+          <Text style={[styles.weekLabel, live.weekLabel]}>{weekLabel}</Text>
 
           {alreadyCheckedIn && (fastEligible || step === 0) && (
             <View style={[styles.alreadyInRow, live.alreadyInRow]}>
               <Ionicons name="checkmark-circle" size={16} color={t.colors.success} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.alreadyInText, live.alreadyInText]}>
+              <Text style={[styles.alreadyInText, live.alreadyInText]}>
                 You've checked in this week. Your answers are loaded, edit and resubmit to update.
               </Text>
             </View>
@@ -1657,16 +1673,16 @@ export default function WeeklyCheckInScreen({ navigation }) {
               accessibilityState={{ disabled: busy || submitSuccess }}
             >
               <Ionicons name="create-outline" size={16} color={t.colors.textSecondary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.fastExpandText, live.fastExpandText]}>Add more detail</Text>
+              <Text style={[styles.fastExpandText, live.fastExpandText]}>Add more detail</Text>
             </TouchableOpacity>
           )}
 
           {fastEligible && !fastCanSubmit && (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.ctaHint, live.ctaHint]}>Rate your energy and soreness to continue.</Text>
+            <Text style={[styles.ctaHint, live.ctaHint]}>Rate your energy and soreness to continue.</Text>
           )}
 
           {!fastEligible && !stepCanAdvance(step) && step !== 1 && (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.ctaHint, live.ctaHint]}>
+            <Text style={[styles.ctaHint, live.ctaHint]}>
               {step === 0 ? 'Rate your energy to continue.' : step === 2 ? 'Rate your soreness to continue.' : 'Pick how training felt to continue.'}
             </Text>
           )}

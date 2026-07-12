@@ -197,10 +197,10 @@ function VolumeRow({ muscle, data }) {
   return (
     <View style={styles.volumeRow}>
       <View style={[styles.volumeDot, { backgroundColor: dot }]} />
-      <Text maxFontSizeMultiplier={1.3} style={[styles.volumeMuscleName, live.volumeMuscleName]}>{displayName}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.volumeSetCount, live.volumeSetCount]}>{sets} {sets === 1 ? 'set' : 'sets'}</Text>
+      <Text style={[styles.volumeMuscleName, live.volumeMuscleName]}>{displayName}</Text>
+      <Text style={[styles.volumeSetCount, live.volumeSetCount]}>{sets} {sets === 1 ? 'set' : 'sets'}</Text>
       <View style={[styles.volumeBadge, { backgroundColor: withAlpha(dot, alpha.tint) }]}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.volumeBadgeText, { color: dot }]}>{label}</Text>
+        <Text style={[styles.volumeBadgeText, { color: dot }]}>{label}</Text>
       </View>
     </View>
   );
@@ -214,8 +214,8 @@ function InsightRow({ icon, iconColor, text, subtext }) {
     <View style={styles.insightRow}>
       <Ionicons name={icon} size={16} color={iconColor || t.colors.textSecondary} style={styles.insightIcon} />
       <View style={styles.insightTextWrap}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.insightText, live.insightText]}>{text}</Text>
-        {subtext ? <Text maxFontSizeMultiplier={1.3} style={[styles.insightSubtext, live.insightSubtext]}>{subtext}</Text> : null}
+        <Text style={[styles.insightText, live.insightText]}>{text}</Text>
+        {subtext ? <Text style={[styles.insightSubtext, live.insightSubtext]}>{subtext}</Text> : null}
       </View>
     </View>
   );
@@ -228,9 +228,9 @@ function RecommendationRow({ index, text }) {
   return (
     <View style={styles.recRow}>
       <View style={[styles.recIndex, live.recIndex]}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.recIndexText, live.recIndexText]}>{index + 1}</Text>
+        <Text style={[styles.recIndexText, live.recIndexText]}>{index + 1}</Text>
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.recText, live.recText]}>{text}</Text>
+      <Text style={[styles.recText, live.recText]}>{text}</Text>
     </View>
   );
 }
@@ -501,7 +501,7 @@ export default function CoachReviewScreen() {
         {/* Date range subline, relocated here now the BackHeader carries the
             page title (previously duplicated as an in-body "Training review"
             heading, drawing a double header under the native bar). */}
-        {dateLabel ? <Text maxFontSizeMultiplier={1.3} style={[styles.headerDate, live.headerDate]}>{dateLabel}</Text> : null}
+        {dateLabel ? <Text style={[styles.headerDate, live.headerDate]}>{dateLabel}</Text> : null}
 
         {/* -- No data state -- */}
         {!hasData && (
@@ -519,23 +519,23 @@ export default function CoachReviewScreen() {
           <>
             {/* -- Sessions this week -- */}
             <Card>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.cardTitle, live.cardTitle]}>Sessions this week</Text>
+              <Text style={[styles.cardTitle, live.cardTitle]}>Sessions this week</Text>
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.statValue, live.statValue]}>{weeklyWorkouts.length}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.statLabel, live.statLabel]}>{weeklyWorkouts.length === 1 ? 'session' : 'sessions'}</Text>
+                  <Text style={[styles.statValue, live.statValue]}>{weeklyWorkouts.length}</Text>
+                  <Text style={[styles.statLabel, live.statLabel]}>{weeklyWorkouts.length === 1 ? 'session' : 'sessions'}</Text>
                 </View>
                 <View style={[styles.statDivider, live.statDivider]} />
                 <View style={styles.statItem}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.statValue, live.statValue]}>{Math.round(totalSets)}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.statLabel, live.statLabel]}>total sets</Text>
+                  <Text style={[styles.statValue, live.statValue]}>{Math.round(totalSets)}</Text>
+                  <Text style={[styles.statLabel, live.statLabel]}>total sets</Text>
                 </View>
                 {topMuscle && (
                   <>
                     <View style={[styles.statDivider, live.statDivider]} />
                     <View style={styles.statItem}>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.statValue, live.statValue]} numberOfLines={1}>{topMuscle}</Text>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.statLabel, live.statLabel]}>most trained</Text>
+                      <Text style={[styles.statValue, live.statValue]} numberOfLines={1}>{topMuscle}</Text>
+                      <Text style={[styles.statLabel, live.statLabel]}>most trained</Text>
                     </View>
                   </>
                 )}
@@ -546,7 +546,7 @@ export default function CoachReviewScreen() {
             {trainedMuscles.length > 0 && (
               <View style={styles.section}>
                 <SectionHeading title="Volume this week" />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSubtext, live.sectionSubtext]}>
+                <Text style={[styles.sectionSubtext, live.sectionSubtext]}>
                   How much training each muscle group received, and whether it falls within a helpful range for growth.
                 </Text>
                 <Card style={styles.cardNoPad}>
@@ -571,7 +571,7 @@ export default function CoachReviewScreen() {
               <SectionHeading title="What went well" />
               {optimalMuscles.length === 0 && progressionWins.length === 0 ? (
                 <Card>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.emptySubText, live.emptySubText]}>
+                  <Text style={[styles.emptySubText, live.emptySubText]}>
                     Keep logging sessions and patterns will show up here.
                   </Text>
                 </Card>
@@ -604,7 +604,7 @@ export default function CoachReviewScreen() {
               <SectionHeading title="What to watch" />
               {watchMuscles.length === 0 && !deloadResult?.deload && !jointFlag ? (
                 <Card>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.emptySubText, live.emptySubText]}>
+                  <Text style={[styles.emptySubText, live.emptySubText]}>
                     Nothing to flag this week, your training is looking nicely balanced.
                   </Text>
                 </Card>

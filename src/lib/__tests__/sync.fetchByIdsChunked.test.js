@@ -89,4 +89,33 @@ describe('fetchByIdsChunked within-chunk pagination', () => {
     expect(out).toEqual([]);
     expect(called).toBe(false);
   });
+
+  // LS-03/H-12: a transport error mid-fetch must THROW, not return the partial
+  // rows collected so far - otherwise the caller sees a clean result, advances
+  // its cursor, and permanently skips the child rows that never arrived.
+  test('throws (does not return partial) when a page errors', async () => {
+    const ids = ['a'];
+    const queryFactory = () => ({
+      range: (from) => {
+        // First page succeeds (full), second page errors mid-pagination.
+        if (from === 0) {
+          return Promise.resolve({ data: Array.from({ length: 1000 }, (_, i) => ({ id: i })), error: null });
+        }
+        return Promise.resolve({ data: null, error: { message: 'network blip', code: '500' } });
+      },
+    });
+    await expect(
+      fetchByIdsChunked('test', 'workout_sets', 'workout_id', ids, queryFactory),
+    ).rejects.toThrow(/chunked fetch failed/);
+  });
+
+  // Source guard: fetchAllRows (not exported) must apply the same rule.
+  test('fetchAllRows also throws on a page error (source guard)', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const SRC = fs.readFileSync(path.resolve(__dirname, '../sync.js'), 'utf8');
+    const fn = SRC.slice(SRC.indexOf('async function fetchAllRows'), SRC.indexOf('export async function fetchByIdsChunked'));
+    expect(fn).toMatch(/if \(error\) \{[\s\S]*?throw new Error\(`\$\{scope\}: paginated fetch failed/);
+    expect(fn).not.toMatch(/if \(error\) \{ logWarn\(scope, error\.message\); return out; \}/);
+  });
 });

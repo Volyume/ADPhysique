@@ -65,7 +65,12 @@ describe('DiaryScreen BUG-1 day-load race guard wiring', () => {
   });
 
   test('the redundant focus/plain-effect double trigger is collapsed to one', () => {
-    expect(SRC).toMatch(/useFocusEffect\(useCallback\(\(\) => \{ load\(\); \}, \[load\]\)\);/);
+    // EP-07/UI-02 (Codex end-user-polish audit): load() is now fully
+    // try/catch/finally-wrapped internally and never rejects, but the focus
+    // caller still `.catch`es defensively so a future throw here can never
+    // surface as an unhandled rejection instead of the screen's own error
+    // state.
+    expect(SRC).toMatch(/useFocusEffect\(useCallback\(\(\) => \{ load\(\)\.catch\(\(\) => \{\}\); \}, \[load\]\)\);/);
     // The old bare `useEffect(() => { load(); }, [load]);` sibling trigger
     // must be gone; useFocusEffect alone already re-fires on every load()
     // dependency change while the screen is focused.
@@ -158,8 +163,8 @@ describe('DiaryScreen diary tools', () => {
     // live.diaryToolTitle override in a style array. The pinned contract
     // (which frozen style backs this text) is unchanged -- widened only to
     // allow the insertion.
-    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.diaryToolTitle, live\.diaryToolTitle\]\}>Copy from another day<\/Text>/);
-    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.diaryToolTitle, live\.diaryToolTitle\]\}>Trends and export<\/Text>/);
+    expect(SRC).toMatch(/<Text style=\{\[styles\.diaryToolTitle, live\.diaryToolTitle\]\}>Copy from another day<\/Text>/);
+    expect(SRC).toMatch(/<Text style=\{\[styles\.diaryToolTitle, live\.diaryToolTitle\]\}>Trends and export<\/Text>/);
     expect(SRC).toMatch(/Copy foods from another day, check nutrition trends, or export your diary\./);
     expect(SRC).not.toMatch(/'Diary options'/);
   });
@@ -175,7 +180,7 @@ describe('DiaryScreen meal-planning entry point', () => {
     // Same pins, new shape; the frozen buildPlanIcon definition below (still
     // colors.surface/colors.border) is untouched.
     expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{18\} color=\{t\.colors\.textSecondary\} \/>/);
-    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.buildPlanLabel, live\.buildPlanLabel\]\}>Meal builder<\/Text>/);
+    expect(SRC).toMatch(/<Text style=\{\[styles\.buildPlanLabel, live\.buildPlanLabel\]\}>Meal builder<\/Text>/);
     expect(SRC).toMatch(/Create today or the week from your targets\. You review everything before it is logged\./);
     expect(SRC).toMatch(/buildPlanIcon: \{[\s\S]*backgroundColor: colors\.surface,[\s\S]*borderColor: colors\.border/);
   });
@@ -252,9 +257,9 @@ describe('DiaryScreen saved food entry points', () => {
     expect(SRC).toMatch(/accessibilityLabel="Saved meals and recipes"/);
     // CP-10 batch E (2026-07-10): live-themed, so each style prop now carries
     // the style-array form with a live.* override. Same pins, new shape.
-    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.savedFoodTitle, live\.savedFoodTitle\]\}>Saved meals and recipes<\/Text>/);
-    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.savedFoodOptionTitle, live\.savedFoodOptionTitle\]\}>Saved meals<\/Text>/);
-    expect(SRC).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.savedFoodOptionTitle, live\.savedFoodOptionTitle\]\}>Recipes<\/Text>/);
+    expect(SRC).toMatch(/<Text style=\{\[styles\.savedFoodTitle, live\.savedFoodTitle\]\}>Saved meals and recipes<\/Text>/);
+    expect(SRC).toMatch(/<Text style=\{\[styles\.savedFoodOptionTitle, live\.savedFoodOptionTitle\]\}>Saved meals<\/Text>/);
+    expect(SRC).toMatch(/<Text style=\{\[styles\.savedFoodOptionTitle, live\.savedFoodOptionTitle\]\}>Recipes<\/Text>/);
     expect(SRC).toMatch(/is in Saved meals/);
     expect(SRC).toMatch(/navigation\.navigate\(routeName, \{ mealSlot, entryDate: selectedDate \}\)/);
     expect(SRC).toMatch(/openSavedFoodRoute\('MyMeals'\)/);

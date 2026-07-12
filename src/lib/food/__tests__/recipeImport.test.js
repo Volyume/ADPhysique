@@ -201,10 +201,109 @@ describe('SC-8: https-only scheme gate', () => {
         recipeIngredient: ['1 egg'],
         recipeYield: '1',
       })}</script>`;
-      global.fetch = jest.fn(async () => ({ text: async () => html }));
+      global.fetch = jest.fn(async () => ({
+        ok: true,
+        headers: { get: (h) => (h === 'content-type' ? 'text/html; charset=utf-8' : null) },
+        text: async () => html,
+      }));
       const parsed = await importRecipeFromUrl(' https://example.com/recipe ');
-      expect(global.fetch).toHaveBeenCalledWith('https://example.com/recipe');
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://example.com/recipe',
+        expect.objectContaining({ method: 'GET' }),
+      );
       expect(parsed?.name).toBe('Gate pass');
     });
+  });
+});
+
+// AC-14 (codex-adversarial-audit-triage-2026-07-12.md): the recipe fetch
+// had no timeout, no response.ok check, no content-type check, and no
+// size cap, so a slow, error, or huge/hostile response could hang the
+// importer or balloon memory. These tests fail without the fix.
+describe('AC-14: bounded recipe fetch', () => {
+  const realFetch = global.fetch;
+  afterEach(() => { global.fetch = realFetch; jest.useRealTimers(); });
+
+  function okHtmlResponse(html, extraHeaders = {}) {
+    const headers = { 'content-type': 'text/html', ...extraHeaders };
+    return {
+      ok: true,
+      headers: { get: (h) => headers[h.toLowerCase()] ?? null },
+      text: async () => html,
+    };
+  }
+
+  test('a non-ok response is rejected without parsing', async () => {
+    global.fetch = jest.fn(async () => ({
+      ok: false,
+      status: 404,
+      headers: { get: () => null },
+      text: async () => '<script type="application/ld+json">{"@type":"Recipe","name":"Nope"}</script>',
+    }));
+    await expect(importRecipeFromUrl('https://example.com/missing')).resolves.toBeNull();
+  });
+
+  test('a non-HTML content type is rejected without reading the body', async () => {
+    let textCalled = false;
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      headers: { get: (h) => (h === 'content-type' ? 'image/jpeg' : null) },
+      text: async () => { textCalled = true; return ''; },
+    }));
+    await expect(importRecipeFromUrl('https://example.com/photo.jpg')).resolves.toBeNull();
+    expect(textCalled).toBe(false);
+  });
+
+  test('a declared oversize body (Content-Length over the cap) is rejected before reading', async () => {
+    let textCalled = false;
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      headers: { get: (h) => ({ 'content-type': 'text/html', 'content-length': String(50 * 1024 * 1024) }[h.toLowerCase()] ?? null) },
+      text: async () => { textCalled = true; return ''; },
+    }));
+    await expect(importRecipeFromUrl('https://example.com/huge')).resolves.toBeNull();
+    expect(textCalled).toBe(false);
+  });
+
+  test('an oversize body with no declared Content-Length is truncated before parsing, not left to grow unbounded', async () => {
+    const recipeBlock = `<script type="application/ld+json">${JSON.stringify({
+      '@type': 'Recipe', name: 'Truncated', recipeIngredient: ['1 egg'], recipeYield: '1',
+    })}</script>`;
+    // Pad well past the cap, with the real recipe block placed AFTER the
+    // cap boundary: proves the body is genuinely capped before parsing
+    // (the recipe past the cutoff must NOT be found).
+    const padding = 'x'.repeat(4 * 1024 * 1024);
+    const html = padding + recipeBlock;
+    global.fetch = jest.fn(async () => okHtmlResponse(html));
+    const parsed = await importRecipeFromUrl('https://example.com/huge-no-length');
+    expect(parsed).toBeNull();
+  });
+
+  test('a request that never resolves is aborted by the timeout and yields null', async () => {
+    jest.useFakeTimers();
+    let capturedSignal = null;
+    global.fetch = jest.fn((_url, opts) => {
+      capturedSignal = opts?.signal;
+      return new Promise((_resolve, reject) => {
+        capturedSignal?.addEventListener('abort', () => {
+          const err = new Error('Aborted');
+          err.name = 'AbortError';
+          reject(err);
+        });
+      });
+    });
+    const promise = importRecipeFromUrl('https://example.com/slow');
+    // Let the microtask queue settle so the fetch mock's listener is attached.
+    await Promise.resolve();
+    jest.runAllTimers();
+    await expect(promise).resolves.toBeNull();
+    expect(capturedSignal?.aborted).toBe(true);
+  });
+
+  test('a normal html response with a small declared Content-Length is accepted', async () => {
+    const html = okHtmlResponse('<script type="application/ld+json">{"@type":"Recipe","name":"Fine"}</script>', { 'content-length': '200' });
+    global.fetch = jest.fn(async () => html);
+    const parsed = await importRecipeFromUrl('https://example.com/fine');
+    expect(parsed?.name).toBe('Fine');
   });
 });

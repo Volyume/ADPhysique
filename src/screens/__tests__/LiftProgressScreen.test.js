@@ -31,9 +31,23 @@ jest.mock('@react-navigation/native', () => ({
 // Sparkline pulls in react-native-svg (native-only); stub it like the other
 // screen tests do for chart components (FoodInsightsScreen -> VolyumeChart).
 jest.mock('../../components/Sparkline', () => () => null);
-// PeekMenu pulls in expo-haptics (native-only) and is never opened in this
-// suite (no long-press), so stub it out.
-jest.mock('../../components/PeekMenu', () => () => null);
+// PeekMenu pulls in expo-haptics (native-only). It's stubbed out for most of
+// this suite, but the EP-23/UI-11 malformed-data tests below need to reach
+// the "Share this PR" item's onPress (built in openLiftMenu, LiftProgress
+// Screen.js), so the stub forwards a ref exposing `open`/`close` the same
+// shape the real component does, capturing the last `open({ title, items })`
+// call for those tests to inspect.
+let capturedPeekMenuOpen = null;
+jest.mock('../../components/PeekMenu', () => {
+  const React = require('react');
+  return React.forwardRef((_props, ref) => {
+    React.useImperativeHandle(ref, () => ({
+      open: (args) => { capturedPeekMenuOpen = args; },
+      close: () => {},
+    }));
+    return null;
+  });
+});
 jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn() }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 
@@ -57,6 +71,11 @@ import {
 } from '../../lib/database';
 import { calculate1RM } from '../../lib/algorithms';
 import LiftProgressScreen from '../LiftProgressScreen';
+
+const LIFT_PROGRESS_SOURCE = require('fs').readFileSync(
+  require('path').resolve(__dirname, '../LiftProgressScreen.js'),
+  'utf8',
+);
 
 const store = { user: { id: 'user-1' }, units: 'kg' };
 const nav = { navigate: jest.fn() };
@@ -354,5 +373,111 @@ describe('LiftProgressScreen — last-time line (C1)', () => {
 
     const squatText = renderedText(capturedListProps.renderItem({ item: squatRow, index: 0 }));
     expect(squatText).toContain(`Last time: 100kg - est. max ${squatE1rm}kg`);
+  });
+});
+
+describe('LiftProgressScreen — R2 (2026-07-11) design-cohesion census', () => {
+  test('badges use the pill/badge radius (full)', () => {
+    // levelBadge + prTag join the pill/chip/badge class (FOOD-DESIGN-STANDARD.md
+    // section 4). Both were radius.sm.
+    expect(LIFT_PROGRESS_SOURCE).toMatch(/levelBadge: \{[\s\S]*?borderRadius: radius\.full/);
+    expect(LIFT_PROGRESS_SOURCE).toMatch(/prTag: \{[\s\S]*?borderRadius: radius\.full/);
+  });
+
+  test('badge/chip label text maps onto the exact captionStrong role', () => {
+    // xs+semibold raw pairs -> type.captionStrong (frozen + live twin).
+    expect(LIFT_PROGRESS_SOURCE).toMatch(/levelBadgeText: \{ \.\.\.type\.captionStrong \}/);
+    expect(LIFT_PROGRESS_SOURCE).toMatch(/levelBadgeText: \{ \.\.\.t\.type\.captionStrong \}/);
+    expect(LIFT_PROGRESS_SOURCE).toMatch(/metricChipText: \{ \.\.\.type\.captionStrong, color: colors\.textSecondary \}/);
+    expect(LIFT_PROGRESS_SOURCE).toMatch(/metricChipText: \{ \.\.\.t\.type\.captionStrong, color: t\.colors\.textSecondary \}/);
+  });
+
+  test('the headline stat readout carries tabular figures (frozen + live twin)', () => {
+    expect(LIFT_PROGRESS_SOURCE).toMatch(/statValue: \{[\s\S]*?fontVariant: \['tabular-nums'\]/);
+    expect(LIFT_PROGRESS_SOURCE).toMatch(/statValue: \{ fontSize: t\.fontSize\.lg, color: t\.colors\.textPrimary, fontVariant: \['tabular-nums'\] \}/);
+  });
+});
+
+describe('LiftProgressScreen malformed restored/legacy data (EP-23/UI-11)', () => {
+  // liftProgress.js already coerces a set's createdAt via
+  // `Number(s.createdAt ?? s.created_at) || 0`, so a non-numeric legacy
+  // value (e.g. a corrupted string) is neutralised to epoch 0 before it
+  // reaches the screen. The real crash vector this guards is a stored
+  // value that survives that coercion as a NON-FINITE number (e.g.
+  // Infinity from a bad migration/overflow) -- `Number(x) || 0` only
+  // falls back on falsy results, and Infinity is truthy, so it passes
+  // through as `lastTrainedAt: Infinity`. `new Date(Infinity)` is an
+  // Invalid Date, which used to throw inside `format(...)` (row meta) and
+  // `.toISOString()` (Share this PR) and can still equally be a huge but
+  // finite out-of-range ms value; Infinity is the simplest reproduction.
+  beforeEach(() => {
+    jest.clearAllMocks();
+    capturedListProps = null;
+    capturedPeekMenuOpen = null;
+    useAppStore.mockImplementation((selector) =>
+      (typeof selector === 'function' ? selector(store) : store));
+    getAllExercises.mockResolvedValue(EXERCISES);
+    getLatestBodyWeight.mockResolvedValue(null);
+  });
+
+  test('a non-finite lastTrainedAt renders the row without throwing and without "NaN" or a date', async () => {
+    getCompletedWorkoutSets.mockResolvedValue([
+      set({ exerciseId: 'bench', workoutId: 'w1', weight: 60, reps: 8, at: Infinity }),
+    ]);
+
+    await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
+    await flush();
+
+    const row = capturedListProps.data.find(r => r.name === 'Barbell Bench Press');
+    expect(Number.isFinite(row.lastTrainedAt)).toBe(false);
+
+    let text;
+    expect(() => {
+      text = renderedText(capturedListProps.renderItem({ item: row, index: 0 }));
+    }).not.toThrow();
+    expect(text).not.toMatch(/NaN/);
+    // The "- last {date}" tail is omitted entirely rather than shown as a
+    // fallback string, per this fix's per-site judgement (the row already
+    // reads fine as "1 session" alone).
+    expect(text).not.toContain('- last');
+  });
+
+  test('"Share this PR" with a non-finite lastTrainedAt still builds a valid ISO date and a finite weight, not a crash', async () => {
+    getCompletedWorkoutSets.mockResolvedValue([
+      set({ exerciseId: 'bench', workoutId: 'w1', weight: 60, reps: 8, at: Infinity }),
+    ]);
+
+    await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
+    await flush();
+
+    const row = capturedListProps.data.find(r => r.name === 'Barbell Bench Press');
+    expect(row.bestE1rm).toBeGreaterThan(0);
+
+    let rowTree;
+    act(() => { rowTree = create(capturedListProps.renderItem({ item: row, index: 0 })); });
+    const pressable = rowTree.root.findAll(
+      n => typeof n.props.onLongPressWithLayout === 'function',
+    )[0];
+    expect(pressable).toBeTruthy();
+
+    expect(() => {
+      act(() => { pressable.props.onLongPressWithLayout({ x: 0, y: 0, width: 10, height: 10 }); });
+    }).not.toThrow();
+
+    expect(capturedPeekMenuOpen).toBeTruthy();
+    const shareItem = capturedPeekMenuOpen.items.find(i => i.label === 'Share this PR');
+    expect(shareItem).toBeTruthy();
+
+    expect(() => { shareItem.onPress(); }).not.toThrow();
+    expect(nav.navigate).toHaveBeenCalledWith('ShareCard', expect.objectContaining({
+      prData: expect.objectContaining({
+        weight: expect.not.stringMatching(/NaN/),
+        date: expect.any(String),
+      }),
+    }));
+    const { date, weight } = nav.navigate.mock.calls[nav.navigate.mock.calls.length - 1][1].prData;
+    expect(() => new Date(date).toISOString()).not.toThrow();
+    expect(Number.isNaN(new Date(date).getTime())).toBe(false);
+    expect(weight).not.toBe('NaN');
   });
 });

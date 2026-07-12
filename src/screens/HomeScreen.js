@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Modal,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns/format';
@@ -26,6 +26,9 @@ import HomeProTeaserCard from '../components/HomeProTeaserCard';
 import HomeLastSessionCard from '../components/HomeLastSessionCard';
 import HomeBlockShapeSheet from '../components/HomeBlockShapeSheet';
 import HomeChangeWorkoutSheet from '../components/HomeChangeWorkoutSheet';
+import BottomSheet from '../components/BottomSheet';
+import Chip from '../components/Chip';
+import * as haptics from '../lib/haptics';
 import { buildCoachBrief } from '../lib/homeCoachBrief';
 import {
   getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
@@ -94,29 +97,39 @@ function getGreeting(firstName) {
 // (Fresh/Mild/Sore) scale the adaptive engine + computeRecoveryEMAs read;
 // sleep + energy on the 1-5 domain (chips offer 2/3/4) so the weekly
 // sleep_quality write and CoachReview's <2.5 thresholds stay valid.
+// R2-10 (founder decision "Reorder", 2026-07-11): the rows render ABOVE the
+// intent options now, compacted to one line each (`short` is the inline
+// label; `label` stays the full accessible phrasing). The old layout put
+// them BELOW the three buttons that start the session, so they were
+// unreachable the moment the user answered - the founder rightly called
+// them pointless as laid out.
 const READINESS_ROWS = [
   {
     key: 'soreness24hBefore',
     label: 'Soreness coming in',
+    short: 'Soreness',
     chips: [{ label: 'Fresh', value: 1 }, { label: 'Mild', value: 2 }, { label: 'Sore', value: 3 }],
   },
   {
     key: 'sleepQuality',
     label: 'Sleep last night',
+    short: 'Sleep',
     chips: [{ label: 'Poor', value: 2 }, { label: 'OK', value: 3 }, { label: 'Good', value: 4 }],
   },
   {
     key: 'energyScore',
     label: 'Energy today',
+    short: 'Energy',
     chips: [{ label: 'Low', value: 2 }, { label: 'OK', value: 3 }, { label: 'High', value: 4 }],
   },
 ];
 
 export default function HomeScreen({ navigation, route }) {
   const toast = useToast();
-  const insets = useSafeAreaInsets();
-  const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments, reduceMotion } = useAppStore(
-    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments, reduceMotion: s.accessibility?.reduceMotion }))
+  // R9 (D70): insets and reduceMotion left with the raw intent Modal -
+  // the shared BottomSheet owns both now.
+  const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments } = useAppStore(
+    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments }))
   );
 
   // CP-10 stage 3 (theming batch 2): live theme (src/hooks/useTheme.js).
@@ -140,16 +153,17 @@ export default function HomeScreen({ navigation, route }) {
     mesoBriefChip: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     mesoBriefText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
     workoutOptionsText: { color: t.colors.textSecondary },
-    proRecoverBtn: { backgroundColor: t.colors.primaryFill },
-    proRecoverBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
     noPlanIconWrap: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
     noPlanTitle: { ...t.type.h3, color: t.colors.textPrimary },
     noPlanSub: { ...t.type.bodySm, color: t.colors.textSecondary },
-    blankSessionLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    blankSessionLinkText: { ...t.type.label, color: t.colors.textPrimary },
     starterCard: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     glanceTitle: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    glanceStatValue: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
+    // R9/D70 (design-cohesion sweep): raw fontSize.xl + black weight moved
+    // onto the frozen numeral role that matches it in size (t.type.num('h3')
+    // is fontSizeTable.xl, same 20px this readout always rendered at; h2
+    // steps up to xxl/24px, a visible size jump for a "stat at a glance"
+    // number this compact) -- see FOOD-DESIGN-STANDARD.md section 3.
+    glanceStatValue: { ...t.type.num('h3'), color: t.colors.textPrimary },
     glanceStatLabel: { ...t.type.caption, color: t.colors.textMuted },
     glanceDivider: { backgroundColor: t.colors.border },
     coachingNudge: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
@@ -157,13 +171,11 @@ export default function HomeScreen({ navigation, route }) {
     coachingNudgeTitle: { ...t.type.label, color: t.colors.textPrimary },
     coachingNudgeBody: { ...t.type.captionTight, color: t.colors.textSecondary },
     coachingNudgeScanSubline: { ...t.type.captionTight, color: t.colors.textMuted },
-    coachingNudgeBtnText: { fontSize: t.fontSize.xs, color: t.colors.primary },
-    intentOverlay: { backgroundColor: t.colors.scrim },
-    intentSheet: { backgroundColor: t.colors.surface },
     intentTitle: { ...t.type.h3, color: t.colors.textPrimary },
     intentSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     intentOption: { backgroundColor: t.colors.surface2 ?? t.colors.background, borderColor: t.colors.border },
     intentOptionIcon: { backgroundColor: t.colors.primaryBg },
+    readinessGroupLabel: { ...t.type.overline, color: t.colors.textMuted },
     intentOptionLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     intentOptionSub: { ...t.type.caption, color: t.colors.textSecondary },
     readinessLabel: { ...t.type.caption, color: t.colors.textSecondary },
@@ -308,6 +320,11 @@ export default function HomeScreen({ navigation, route }) {
   const [showCoachingNudge, setShowCoachingNudge] = useState(false);
   const [totalSessions, setTotalSessions] = useState(0);
   const [showIntentPrompt, setShowIntentPrompt] = useState(false);
+  // R2-1: single-flight guard across every start surface (start button,
+  // repeat-last-session). Synchronous ref, so a double-tap or a second
+  // surface can never queue a second intent-sheet open that would resolve
+  // after the workout has already begun.
+  const startFlowRef = useRef(false);
   // COMP-008: the three "walked-in-with" readiness facts, captured on the
   // pre-workout prompt where they are accurate rather than recalled after the
   // session. All optional, reset each time the prompt opens. Stored on the
@@ -1161,6 +1178,14 @@ export default function HomeScreen({ navigation, route }) {
   async function handleStartNextWorkout(starter = false) {
     const target = selectedWorkoutOverride || nextWorkout;
     if (!target?.routine) return;
+    // R2-1 (founder defect, build 2684): a second trigger while the routine
+    // was still loading (or the sheet already up / a start committing) queued
+    // a second prompt-open that resolved AFTER the workout began - and the
+    // shared BottomSheet floats above the navigator, so the ask re-appeared
+    // over the live session. One start flow at a time; the ref is synchronous
+    // so a rapid double-tap can't race the state reads.
+    if (startFlowRef.current || showIntentPrompt || isStartingWorkout) return;
+    startFlowRef.current = true;
     try {
       const routine = target.routine;
       const withExercises = await getRoutineExercisesWithDetails(routine.id);
@@ -1183,18 +1208,20 @@ export default function HomeScreen({ navigation, route }) {
         return;
       }
       // Clear any readiness from a previously-cancelled prompt so each session
-      // starts from blank chips.
+      // starts from blank chips and no remembered intent.
       setReadiness({ soreness24hBefore: null, sleepQuality: null, energyScore: null });
       setShowIntentPrompt(true);
     } catch (e) {
       setIsStartingWorkout(false);
       logError('HomeScreen.handleStartNextWorkout', e, { userId: user?.id, routineId: target?.routine?.id });
       toast.show("Couldn't load workout, try again", { variant: 'error' });
+    } finally {
+      startFlowRef.current = false;
     }
   }
 
   // COMP-008: an intent tap carries whatever readiness chips were set; Skip
-  // passes intent null and no readiness (see the Modal). The values flow
+  // passes intent null and no readiness (see the intent sheet). The values flow
   // straight into createWorkout, which writes them to the workout row.
   async function confirmStart(intent, readinessOverride = readiness) {
     setShowIntentPrompt(false);
@@ -1254,6 +1281,10 @@ export default function HomeScreen({ navigation, route }) {
   // handler identity actually stops it re-rendering on every Home tick.
   const handleRepeatLastSession = useCallback(async () => {
     if (!lastSession) return;
+    // R2-1: same single-flight guard as handleStartNextWorkout - this is the
+    // other surface that opens the intent sheet, and the two must never race.
+    if (startFlowRef.current || showIntentPrompt || isStartingWorkout) return;
+    startFlowRef.current = true;
     const routineId = lastSession.routineId || lastSession.routine_id || null;
 
     try {
@@ -1284,11 +1315,15 @@ export default function HomeScreen({ navigation, route }) {
       }
 
       pendingStartRef.current = { routineId, initialExercises };
+      setReadiness({ soreness24hBefore: null, sleepQuality: null, energyScore: null });
       setShowIntentPrompt(true);
     } catch (e) {
       logError('HomeScreen.handleRepeatLastSession', e, { userId: user?.id, lastSessionId: lastSession?.id, routineId });
       toast.show("Couldn't load last session, try again", { variant: 'error' });
+    } finally {
+      startFlowRef.current = false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastSession, user?.id, toast]);
 
   const hasActiveWorkout = !!activeWorkout && !isStartingWorkout;
@@ -1429,7 +1464,7 @@ export default function HomeScreen({ navigation, route }) {
 
   // Stable handler identities for the memoised (React.memo) extracted
   // components below, so passing them as props doesn't defeat the memo.
-  const goToProUpgrade = useCallback(() => navigation.navigate('ProUpgrade'), [navigation]);
+  const goToProUpgrade = useCallback(() => navigation.navigate('ProUpgrade', { source: 'home' }), [navigation]);
   const goToWorkoutHistory = useCallback(() => navigation.navigate('WorkoutHistory'), [navigation]);
   const closeBlockShape = useCallback(() => setShowBlockShape(false), []);
   const closeChangeWorkout = useCallback(() => setShowChangeWorkout(false), []);
@@ -1448,7 +1483,7 @@ export default function HomeScreen({ navigation, route }) {
 
         {/* ── Training schedule context line ── */}
         {scheduleContext && (
-          <Text maxFontSizeMultiplier={1.3} style={[
+          <Text style={[
             styles.scheduleContextLine,
             live.scheduleContextLine,
             scheduleContext.daysUntil === 0 && [styles.scheduleContextLineToday, live.scheduleContextLineToday],
@@ -1480,7 +1515,7 @@ export default function HomeScreen({ navigation, route }) {
             // A bare navigate from HomeStack is silently dropped in production,
             // making the flagship banner a dead tap; route via the parent tab
             // navigator like the phase banner above.
-            onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput', { weekStart: latestCoachOutput.weekStart })}
+            onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput', { weekStart: latestCoachOutput.weekStart }); }}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel="This week's coaching review. Tap to open."
@@ -1488,8 +1523,8 @@ export default function HomeScreen({ navigation, route }) {
             <View style={styles.coachBannerLeft}>
               <Ionicons name="pulse-outline" size={18} color={t.colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.coachBannerTitle, live.coachBannerTitle]}>Coach - this week's decision</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.coachBannerBody, live.coachBannerBody]}>
+                <Text style={[styles.coachBannerTitle, live.coachBannerTitle]}>Coach - this week's decision</Text>
+                <Text style={[styles.coachBannerBody, live.coachBannerBody]}>
                   {latestCoachOutput.adjustments?.calories?.applied
                     ? `Calories adjusted to ${latestCoachOutput.adjustments.calories.newKcal} kcal. Tap to see why.`
                     : 'Tap to see what changed and why.'}
@@ -1533,7 +1568,7 @@ export default function HomeScreen({ navigation, route }) {
         {showDeloadBanner && (
           <TouchableOpacity
             style={[styles.deloadBanner, live.deloadBanner]}
-            onPress={() => navigation.navigate('CoachReview')}
+            onPress={() => { haptics.selection(); navigation.navigate('CoachReview'); }}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel="Recovery week suggested. Tap to review."
@@ -1543,8 +1578,8 @@ export default function HomeScreen({ navigation, route }) {
                   working for you, not a hazard. Primary amber, not warning. */}
               <Ionicons name="battery-charging-outline" size={20} color={t.colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.deloadBannerTitle, live.deloadBannerTitle]}>Recovery week suggested</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.deloadBannerBody, live.deloadBannerBody]}>
+                <Text style={[styles.deloadBannerTitle, live.deloadBannerTitle]}>Recovery week suggested</Text>
+                <Text style={[styles.deloadBannerBody, live.deloadBannerBody]}>
                   {deloadSuggestion.reasons?.[0] ?? 'Your recent training signals it is time for a lighter week.'}
                 </Text>
               </View>
@@ -1564,12 +1599,12 @@ export default function HomeScreen({ navigation, route }) {
         {showPhaseBanner && (
           <View style={[styles.phaseBanner, live.phaseBanner]}>
             <Ionicons name="information-circle-outline" size={18} color={t.colors.primary} style={{ marginTop: spacing.hair }} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.phaseBannerText, live.phaseBannerText]} numberOfLines={3}>
+            <Text style={[styles.phaseBannerText, live.phaseBannerText]} numberOfLines={3}>
               Your nutrition targets are set for {phaseMismatch.savedPhaseLabel}. Update them in Coach to reflect your current plan.
             </Text>
             <TouchableOpacity
               style={styles.phaseBannerArrow}
-              onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets')}
+              onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets'); }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
               accessibilityLabel="Go to nutrition targets"
@@ -1593,14 +1628,14 @@ export default function HomeScreen({ navigation, route }) {
         {showPlateauBanner && (
           <TouchableOpacity
             style={[styles.plateauBanner, live.plateauBanner]}
-            onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'ExerciseDetail', { exerciseId: plateauBanner.exerciseId })}
+            onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProgressTab', 'ExerciseDetail', { exerciseId: plateauBanner.exerciseId }); }}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel={plateauBanner.line}
           >
             <View style={styles.plateauBannerLeft}>
               <Ionicons name="analytics-outline" size={18} color={t.colors.primary} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.plateauBannerText, live.plateauBannerText]} numberOfLines={2}>{plateauBanner.line}</Text>
+              <Text style={[styles.plateauBannerText, live.plateauBannerText]} numberOfLines={2}>{plateauBanner.line}</Text>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
             </View>
             <TouchableOpacity
@@ -1619,7 +1654,7 @@ export default function HomeScreen({ navigation, route }) {
         {showActivationBanner && (
           <TouchableOpacity
             style={[styles.activationBanner, live.activationBanner]}
-            onPress={() => handleStartNextWorkout(false)}
+            onPress={() => { haptics.selection(); handleStartNextWorkout(false); }}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel={activationBannerLine(activationNudge.stage)?.title}
@@ -1627,10 +1662,10 @@ export default function HomeScreen({ navigation, route }) {
             <View style={styles.activationBannerLeft}>
               <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.activationBannerTitle, live.activationBannerTitle]} numberOfLines={1}>
+                <Text style={[styles.activationBannerTitle, live.activationBannerTitle]} numberOfLines={1}>
                   {activationBannerLine(activationNudge.stage)?.title}
                 </Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.activationBannerBody, live.activationBannerBody]} numberOfLines={2}>
+                <Text style={[styles.activationBannerBody, live.activationBannerBody]} numberOfLines={2}>
                   {activationBannerLine(activationNudge.stage)?.body}
                 </Text>
               </View>
@@ -1657,7 +1692,7 @@ export default function HomeScreen({ navigation, route }) {
             })}
             freeCoachLine={freeCoachLine}
             onFreeLineDismiss={dismissFreeCoachLine}
-            onUpgrade={() => navigation.navigate('ProUpgrade')}
+            onUpgrade={() => navigation.navigate('ProUpgrade', { source: 'home_attention_card' })}
             differential={differentialBanner}
             onDifferentialCta={(action) => {
               if (action === 'shown') {
@@ -1667,7 +1702,7 @@ export default function HomeScreen({ navigation, route }) {
                   user_pricing_window: userProfile?.lockedInPriceTier ?? 'open_beta',
                 }).catch(() => {});
               } else if (action === 'pay') {
-                navigation.navigate('ProUpgrade');
+                navigation.navigate('ProUpgrade', { source: `differential_${differentialBanner.trigger}` });
               } else if (action === 'dismiss') {
                 trackEngineEvent(user?.id, 'paywall_tapped_cta', {
                   surface: `differential_${differentialBanner.trigger}`,
@@ -1744,8 +1779,8 @@ export default function HomeScreen({ navigation, route }) {
                 <Ionicons name="play" size={20} color={t.colors.onPrimary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.continueTitle, live.continueTitle]}>Workout in progress</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.continueSub, live.continueSub]}>Tap to return to your workout</Text>
+                <Text style={[styles.continueTitle, live.continueTitle]}>Workout in progress</Text>
+                <Text style={[styles.continueSub, live.continueSub]}>Tap to return to your workout</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={withAlpha(t.colors.onPrimary, 0.8)} />
             </View>
@@ -1755,11 +1790,11 @@ export default function HomeScreen({ navigation, route }) {
             <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={1}>
               {planProgress}
             </SectionLabel>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.workoutName, live.workoutName]} numberOfLines={2}>
+            <Text style={[styles.workoutName, live.workoutName]} numberOfLines={2}>
               {displayWorkout?.routine?.name}
             </Text>
             {exerciseCounts[displayWorkout?.routine?.id] ? (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.workoutMeta, live.workoutMeta]}>
+              <Text style={[styles.workoutMeta, live.workoutMeta]}>
                 {exerciseCounts[displayWorkout.routine.id]} exercises
               </Text>
             ) : null}
@@ -1774,7 +1809,7 @@ export default function HomeScreen({ navigation, route }) {
             {readinessSummary && (
               <TouchableOpacity
                 style={[styles.mesoBriefChip, live.mesoBriefChip]}
-                onPress={() => setShowBlockShape(true)}
+                onPress={() => { haptics.selection(); setShowBlockShape(true); }}
                 accessibilityRole="button"
                 accessibilityLabel="See the shape of your training block"
               >
@@ -1783,7 +1818,7 @@ export default function HomeScreen({ navigation, route }) {
                   size={12}
                   color={BRIEF_ICON_COLOR[readinessSummary.tone] ?? BRIEF_ICON_COLOR.go}
                 />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.mesoBriefText, live.mesoBriefText]}>{readinessSummary.line}</Text>
+                <Text style={[styles.mesoBriefText, live.mesoBriefText]}>{readinessSummary.line}</Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
             )}
@@ -1829,28 +1864,27 @@ export default function HomeScreen({ navigation, route }) {
                   <View style={[styles.noPlanIconWrap, live.noPlanIconWrap]}>
                     <Ionicons name="barbell-outline" size={28} color={t.colors.primary} />
                   </View>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.noPlanTitle, live.noPlanTitle]}>No active plan yet</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.noPlanSub, live.noPlanSub]}>
+                  <Text style={[styles.noPlanTitle, live.noPlanTitle]}>No active plan yet</Text>
+                  <Text style={[styles.noPlanSub, live.noPlanSub]}>
                     If you just signed in, we may still be pulling your data from the cloud. If nothing arrives, start with a plan and we'll rebuild it from your profile.
                   </Text>
                 </View>
-                <TouchableOpacity
-                  style={[styles.proRecoverBtn, live.proRecoverBtn]}
-                  accessibilityRole="button"
+                <Button
+                  variant="primary"
+                  title="Start with a plan"
+                  icon="clipboard-outline"
                   accessibilityLabel="Start with a plan"
                   onPress={async () => {
                     const result = await generateAndSavePlan(user.id, userProfile);
                     if (result.ok) {
                       await loadData();
                     } else {
-                      toast.show(`Couldn't start plan: ${result.error}`, { variant: 'error', duration: 5000 });
+                      logError('HomeScreen.startWithPlan', new Error(result.error ?? 'plan_generation_failed'), { userId: user?.id });
+                      toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
                     }
                   }}
-                  activeOpacity={0.88}
-                >
-                  <Ionicons name="clipboard-outline" size={18} color={t.colors.onPrimary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.proRecoverBtnText, live.proRecoverBtnText]}>Start with a plan</Text>
-                </TouchableOpacity>
+                  style={styles.proRecoverBtn}
+                />
               </>
             ) : (
               /* B2: the free "what do I do today" answer. One strong, calm
@@ -1860,8 +1894,8 @@ export default function HomeScreen({ navigation, route }) {
                 <View style={[styles.noPlanIconWrap, live.noPlanIconWrap]}>
                   <Ionicons name="compass-outline" size={28} color={t.colors.primary} />
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.noPlanTitle, live.noPlanTitle]}>No active plan yet</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.noPlanSub, live.noPlanSub]}>
+                <Text style={[styles.noPlanTitle, live.noPlanTitle]}>No active plan yet</Text>
+                <Text style={[styles.noPlanSub, live.noPlanSub]}>
                   {lastSession == null
                     ? "Answer three quick questions and we'll suggest a starter plan. You can also browse the library."
                     : "You've been training without a set plan. Answer three quick questions and we'll suggest a starter plan, or browse the library."}
@@ -1885,18 +1919,18 @@ export default function HomeScreen({ navigation, route }) {
             {/* Progress at a glance, shown when there's history but no plan */}
             {lastSession != null && (
               <Card style={styles.glanceCard}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.glanceTitle, live.glanceTitle]}>Your progress at a glance</Text>
+                <Text style={[styles.glanceTitle, live.glanceTitle]}>Your progress at a glance</Text>
                 <View style={styles.glanceRow}>
                   <View style={styles.glanceStat}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.glanceStatValue, live.glanceStatValue]}>{weekStats.sessions}</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.glanceStatLabel, live.glanceStatLabel]}>Sessions this week</Text>
+                    <Text style={[styles.glanceStatValue, live.glanceStatValue]}>{weekStats.sessions}</Text>
+                    <Text style={[styles.glanceStatLabel, live.glanceStatLabel]}>Sessions this week</Text>
                   </View>
                   <View style={[styles.glanceDivider, live.glanceDivider]} />
                   <View style={styles.glanceStat}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.glanceStatValue, live.glanceStatValue]}>
+                    <Text style={[styles.glanceStatValue, live.glanceStatValue]}>
                       {getRelativeDay(lastSession.startedAt)}
                     </Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.glanceStatLabel, live.glanceStatLabel]}>Last session</Text>
+                    <Text style={[styles.glanceStatLabel, live.glanceStatLabel]}>Last session</Text>
                   </View>
                 </View>
               </Card>
@@ -1915,24 +1949,25 @@ export default function HomeScreen({ navigation, route }) {
                   <Ionicons name="barbell-outline" size={28} color={t.colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.quickStartTitle, live.quickStartTitle]}>Start your first workout</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.quickStartSub, live.quickStartSub]}>Log sets as you go. No plan needed to start. Your profile builds as you train.</Text>
+                  <Text style={[styles.quickStartTitle, live.quickStartTitle]}>Start your first workout</Text>
+                  <Text style={[styles.quickStartSub, live.quickStartSub]}>Log sets as you go. No plan needed to start. Your profile builds as you train.</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </PressableCard>
             )}
 
             {tier !== 'pro' && (
-              <TouchableOpacity
-                style={[styles.blankSessionLink, live.blankSessionLink]}
+              <Button
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                title="Just want to log? Start a blank workout"
+                icon="play-outline"
+                trailingIcon="chevron-forward"
                 onPress={() => startBlankSession()}
-                accessibilityRole="button"
                 accessibilityLabel="Just want to log? Start a blank workout"
-              >
-                <Ionicons name="play-outline" size={14} color={t.colors.textSecondary} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.blankSessionLinkText, live.blankSessionLinkText]}>Just want to log? Start a blank workout</Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-              </TouchableOpacity>
+                style={styles.blankSessionLink}
+              />
             )}
           </View>
         )}
@@ -1980,28 +2015,28 @@ export default function HomeScreen({ navigation, route }) {
               <Ionicons name="pulse-outline" size={20} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1, gap: spacing.xs }}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.coachingNudgeTitle, live.coachingNudgeTitle]}>Your weekly check-in is ready</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.coachingNudgeBody, live.coachingNudgeBody]}>
+              <Text style={[styles.coachingNudgeTitle, live.coachingNudgeTitle]}>Your weekly check-in is ready</Text>
+              <Text style={[styles.coachingNudgeBody, live.coachingNudgeBody]}>
                 It's your check-in day. See how your week went and what to adjust.
               </Text>
               {!photoScanSuppressed && (
-                <Text maxFontSizeMultiplier={1.3} style={[styles.coachingNudgeScanSubline, live.coachingNudgeScanSubline]}>
+                <Text style={[styles.coachingNudgeScanSubline, live.coachingNudgeScanSubline]}>
                   If you like, add a progress scan first for extra visual context. Skipping it is fine.
                 </Text>
               )}
-              <TouchableOpacity
-                style={styles.coachingNudgeBtn}
-                accessibilityRole="button"
+              <Button
+                variant="tertiary"
+                size="sm"
+                fullWidth={false}
+                title="Open check-in"
+                trailingIcon="chevron-forward"
                 accessibilityLabel="Open check-in"
                 onPress={() => {
                   dismissCoachingNudge();
                   navigation.navigate('ProfileTab', { screen: 'WeeklyCheckIn', initial: false });
                 }}
-                activeOpacity={0.8}
-              >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.coachingNudgeBtnText, live.coachingNudgeBtnText]}>Open check-in</Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-              </TouchableOpacity>
+                style={styles.coachingNudgeBtn}
+              />
             </View>
             <TouchableOpacity
               onPress={dismissCoachingNudge}
@@ -2045,102 +2080,120 @@ export default function HomeScreen({ navigation, route }) {
       />
 
       {/* ── Pre-workout intent prompt ── */}
-      <Modal
+      {/* R9 (D70): the pre-workout intent prompt moves off its hand-rolled
+          raw Modal onto the shared BottomSheet (scrim, drag handle,
+          swipe/backdrop/back dismiss, reduce-motion handling all owned
+          there), the readiness pickers onto the shared Chip, and every tap
+          gains the house selection() beat. Skip and the standing opt-out
+          stay deliberately quiet text controls: they are de-emphasised
+          escape hatches under the fold, not competing CTAs. */}
+      {/* EP-06/UI-01 (end-user-polish audit, 2026-07-12): the readiness rows
+          + three intent options + Skip + opt-out no longer fit a 320x640/
+          360x640 viewport. `scroll` puts the body in BottomSheetScrollView
+          bounded by BottomSheet's own maxDynamicContentSize (~92% of window
+          height), so the heading and every choice stay reachable by
+          scrolling instead of being pushed off-screen with no way back.
+          Selection semantics/behaviour are unchanged. */}
+      <BottomSheet
         visible={showIntentPrompt}
-        transparent
-        animationType={reduceMotion ? 'none' : 'slide'}
-        onRequestClose={() => { setShowIntentPrompt(false); pendingStartRef.current = null; }}
+        onClose={() => { setShowIntentPrompt(false); pendingStartRef.current = null; }}
+        accessibilityLabel="How are you feeling today"
+        scroll
       >
-        <View style={[styles.intentOverlay, live.intentOverlay]}>
-          <View style={[styles.intentSheet, live.intentSheet, { paddingBottom: spacing.xxxl + insets.bottom }]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.intentTitle, live.intentTitle]}>How are you feeling today?</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.intentSub, live.intentSub]}>Takes a second. Helps us read your sessions better over time.</Text>
-            {[
-              { key: 'sharp', label: 'Sharp', sub: 'Energised and ready', icon: 'flash-outline' },
-              { key: 'average', label: 'Average', sub: 'Normal day, feeling fine', icon: 'remove-outline' },
-              { key: 'below_par', label: 'Below par', sub: 'Tired, stressed, or off', icon: 'arrow-down-outline' },
-            ].map(opt => (
-              <TouchableOpacity
-                key={opt.key}
-                style={[styles.intentOption, live.intentOption]}
-                onPress={() => confirmStart(opt.key)}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel={`${opt.label}. ${opt.sub}`}
-              >
-                <View style={[styles.intentOptionIcon, live.intentOptionIcon]}>
-                  <Ionicons name={opt.icon} size={20} color={t.colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptionLabel, live.intentOptionLabel]}>{opt.label}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptionSub, live.intentOptionSub]}>{opt.sub}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-              </TouchableOpacity>
-            ))}
-
-            {/* COMP-008: optional readiness chips. These tune the session
-                without blocking it; tapping an intent option above (or Skip)
-                still starts immediately, carrying whatever is selected here. */}
-            {READINESS_ROWS.map(row => (
-              <View key={row.key} style={styles.readinessRow}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.readinessLabel, live.readinessLabel]}>{row.label}</Text>
-                <View style={styles.readinessChips} accessibilityRole="radiogroup" accessibilityLabel={row.label}>
-                  {row.chips.map(chip => {
-                    const selected = readiness[row.key] === chip.value;
-                    return (
-                      <TouchableOpacity
-                        key={chip.value}
-                        style={[styles.readinessChip, live.readinessChip, selected && [styles.readinessChipActive, live.readinessChipActive]]}
-                        onPress={() => setReadiness(r => ({
-                          // Tapping the selected chip again clears it, so the
-                          // row stays genuinely optional.
-                          ...r,
-                          [row.key]: selected ? null : chip.value,
-                        }))}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected }}
-                        accessibilityLabel={`${row.label}: ${chip.label}`}
-                      >
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.readinessChipText, live.readinessChipText, selected && [styles.readinessChipTextActive, live.readinessChipTextActive]]}>
-                          {chip.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            ))}
-
-            <TouchableOpacity
-              style={styles.intentSkip}
-              accessibilityRole="button"
-              accessibilityLabel="Skip and start without answering"
-              onPress={() => confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null })}
-            >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.intentSkipText, live.intentSkipText]}>Skip</Text>
-            </TouchableOpacity>
-
-            {/* D2 (Option A): the standing opt-out. Persists, then starts this
-                session exactly as Skip would, null intent, no readiness, no
-                fabricated input. Reversible in Settings, Coaching. */}
-            <TouchableOpacity
-              style={styles.intentOptOut}
-              onPress={() => {
-                AsyncStorage.setItem('@volyume_intent_prompt_off', 'true').catch(() => {});
-                confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null });
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Don't ask before each session"
-            >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptOutText, live.intentOptOutText]}>Don't ask before each session</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.intentOptOutSub, live.intentOptOutSub]}>
-                Without it, sessions are not adjusted to how you're feeling. Turn it back on any time in Settings, Coaching.
-              </Text>
-            </TouchableOpacity>
+        <Text style={[styles.intentTitle, live.intentTitle]}>How are you feeling today?</Text>
+        <Text style={[styles.intentSub, live.intentSub]}>Takes a second. Helps us read your sessions better over time.</Text>
+        {/* R2-10 (founder decision "Reorder", 2026-07-11): the optional
+            readiness rows sit ABOVE the intent options, compacted to one
+            aligned line each, because the intent tap below starts the
+            session instantly - anything beneath that trigger is unreachable
+            (the original flaw). Zero added taps: ignoring the rows costs
+            nothing, setting one is a single tap on the way down, and the
+            intent tap carries whatever is set. */}
+        <Text style={[styles.readinessGroupLabel, live.readinessGroupLabel]}>
+          Readiness (optional)
+        </Text>
+        {READINESS_ROWS.map(row => (
+          <View key={row.key} style={styles.readinessRow}>
+            <Text style={[styles.readinessLabel, live.readinessLabel]}>{row.short}</Text>
+            <View style={styles.readinessChips} accessibilityRole="radiogroup" accessibilityLabel={row.label}>
+              {row.chips.map(chip => {
+                const selected = readiness[row.key] === chip.value;
+                return (
+                  <Chip
+                    key={chip.value}
+                    label={chip.label}
+                    selected={selected}
+                    style={styles.readinessChipThird}
+                    accessibilityRole="radio"
+                    accessibilityLabel={`${row.label}: ${chip.label}`}
+                    onPress={() => {
+                      haptics.selection();
+                      setReadiness(r => ({
+                        // Tapping the selected chip again clears it, so the
+                        // row stays genuinely optional.
+                        ...r,
+                        [row.key]: selected ? null : chip.value,
+                      }));
+                    }}
+                  />
+                );
+              })}
+            </View>
           </View>
-        </View>
-      </Modal>
+        ))}
+
+        {/* The three answers: one tap starts the session instantly, carrying
+            whatever readiness is set above. */}
+        {[
+          { key: 'sharp', label: 'Sharp', sub: 'Energised and ready', icon: 'flash-outline' },
+          { key: 'average', label: 'Average', sub: 'Normal day, feeling fine', icon: 'remove-outline' },
+          { key: 'below_par', label: 'Below par', sub: 'Tired, stressed, or off', icon: 'arrow-down-outline' },
+        ].map((opt, i) => (
+          <PressableCard
+            key={opt.key}
+            style={[styles.intentOption, live.intentOption, i === 0 && styles.intentOptionFirst]}
+            onPress={() => { haptics.selection(); confirmStart(opt.key); }}
+            accessibilityLabel={`${opt.label}. ${opt.sub}. Starts the workout.`}
+          >
+            <View style={[styles.intentOptionIcon, live.intentOptionIcon]}>
+              <Ionicons name={opt.icon} size={20} color={t.colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.intentOptionLabel, live.intentOptionLabel]}>{opt.label}</Text>
+              <Text style={[styles.intentOptionSub, live.intentOptionSub]}>{opt.sub}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+          </PressableCard>
+        ))}
+
+        <TouchableOpacity
+          style={styles.intentSkip}
+          accessibilityRole="button"
+          accessibilityLabel="Skip and start without answering"
+          onPress={() => { haptics.selection(); confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null }); }}
+        >
+          <Text style={[styles.intentSkipText, live.intentSkipText]}>Skip</Text>
+        </TouchableOpacity>
+
+        {/* D2 (Option A): the standing opt-out. Persists, then starts this
+            session exactly as Skip would, null intent, no readiness, no
+            fabricated input. Reversible in Settings, Coaching. */}
+        <TouchableOpacity
+          style={styles.intentOptOut}
+          onPress={() => {
+            haptics.selection();
+            AsyncStorage.setItem('@volyume_intent_prompt_off', 'true').catch(() => {});
+            confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null });
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Don't ask before each session"
+        >
+          <Text style={[styles.intentOptOutText, live.intentOptOutText]}>Don't ask before each session</Text>
+          <Text style={[styles.intentOptOutSub, live.intentOptOutSub]}>
+            Without it, sessions are not adjusted to how you're feeling. Turn it back on any time in Settings, Coaching.
+          </Text>
+        </TouchableOpacity>
+      </BottomSheet>
       {/* Sharpener: one dismissible what's-new sheet per update. */}
       <WhatsNewSheet />
     </SafeAreaView>
@@ -2265,12 +2318,10 @@ const styles = StyleSheet.create({
 
   // No plan, plan-first section
   noPlanSection: { gap: spacing.md },
+  // R9/D70: box/fill/radius/padding/label now come from the shared <Button
+  // variant="primary">; only the layout margin survives.
   proRecoverBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: colors.primaryFill, borderRadius: radius.lg, paddingVertical: 14, marginTop: spacing.sm,
-  },
-  proRecoverBtnText: {
-    ...type.bodyStrong, color: colors.onPrimary,
+    marginTop: spacing.sm,
   },
   noPlanHero: {
     alignItems: 'center',
@@ -2291,19 +2342,12 @@ const styles = StyleSheet.create({
   noPlanSub: {
     ...type.bodySm, color: colors.textSecondary, textAlign: 'center',
   },
+  // R9/D70: box/fill/radius/padding/label now come from the shared <Button
+  // variant="secondary">; only the self-centering survives (this pill sits
+  // alone under the starter card, not stretched full width).
   blankSessionLink: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     alignSelf: 'center',
-    gap: spacing.xs,
-    minHeight: 40,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
   },
-  blankSessionLinkText: { ...type.label, color: colors.textPrimary },
 
   // B2: free no-plan starter card. One calm card, quiz first, library second.
   starterCard: {
@@ -2338,9 +2382,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
   },
+  // R9/D70: raw fontSize.xl + black weight moved onto the matching frozen
+  // numeral role, see the live twin's comment above for why h3 not h2.
   glanceStatValue: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.black,
+    ...type.num('h3'),
     color: colors.textPrimary,
   },
   glanceStatLabel: {
@@ -2380,27 +2425,14 @@ const styles = StyleSheet.create({
   coachingNudgeScanSubline: {
     ...type.captionTight, color: colors.textMuted,
   },
+  // R9/D70: box/label now come from the shared <Button variant="tertiary">;
+  // only the layout margin survives.
   coachingNudgeBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    alignSelf: 'flex-start', marginTop: spacing.xs,
-  },
-  coachingNudgeBtnText: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary,
+    marginTop: spacing.xs,
   },
 
-  intentOverlay: {
-    flex: 1,
-    backgroundColor: colors.scrim,
-    justifyContent: 'flex-end',
-  },
-  intentSheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    padding: spacing.xl,
-    gap: spacing.md,
-    paddingBottom: spacing.xxxl,
-  },
+  // R9 (D70): intentOverlay/intentSheet deleted - the shared BottomSheet
+  // owns the scrim, panel chrome, insets and child gap now.
   intentTitle: {
     ...type.h3,
     color: colors.textPrimary,
@@ -2437,17 +2469,38 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.xxs,
   },
-  // COMP-008 readiness chips
+  // R2-10 ("Reorder"): the readiness block above the intent options. A quiet
+  // overline heads it; each row is ONE line - fixed label column so the three
+  // rows align, then three equal-width chips filling the rest.
+  readinessGroupLabel: {
+    ...type.overline,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+  },
   readinessRow: {
-    gap: spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   readinessLabel: {
     ...type.caption,
     color: colors.textSecondary,
+    width: 76,
   },
   readinessChips: {
+    flex: 1,
     flexDirection: 'row',
     gap: spacing.xs,
+  },
+  // Equal thirds: overrides Chip's own alignSelf so the three chips share
+  // the row evenly and every row's columns line up.
+  readinessChipThird: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  // Breathing room between the optional block and the primary answers.
+  intentOptionFirst: {
+    marginTop: spacing.md,
   },
   readinessChip: {
     flex: 1,

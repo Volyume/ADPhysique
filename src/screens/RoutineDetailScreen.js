@@ -29,6 +29,7 @@ import { audit } from '../lib/observability';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
+import ModalHeader from '../components/ModalHeader';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 import BottomSheet from '../components/BottomSheet';
 import * as haptics from '../lib/haptics';
@@ -90,7 +91,7 @@ function MuscleTagRow({ exercises }) {
             : [tagStyles.chipTextLow, tagLive.chipTextLow];
           return (
             <View key={muscle} style={[tagStyles.chip, chipStyle]}>
-              <Text maxFontSizeMultiplier={1.3} style={[tagStyles.chipText, tagLive.chipText, textStyle]}>
+              <Text style={[tagStyles.chipText, tagLive.chipText, textStyle]}>
                 {displayName} ×{count}
               </Text>
             </View>
@@ -173,10 +174,60 @@ export default function RoutineDetailScreen({ navigation, route }) {
     }
   }
 
-  async function removeExercise(routineExercise) {
+  // R9 (D70): commit-with-undo replaces the old blocking confirm + silent
+  // success. Removing an exercise from a template is trivially reversible
+  // (all its targets live on the captured row), so per the house rule the
+  // write lands immediately and the 8-second undo toast re-adds it with
+  // every field intact - alerts stay reserved for irreversible actions.
+  async function removeExercise(routineExercise, exerciseName) {
     haptics.commit();
+    const captured = { ...routineExercise };
     await removeExerciseFromRoutine(routineExercise.id);
     await loadRoutine();
+    toast.show(`${exerciseName || 'Exercise'} removed.`, {
+      variant: 'undo',
+      action: {
+        label: 'Undo',
+        onPress: async () => {
+          try {
+            const restored = await addExerciseToRoutine(
+              captured.routineId ?? routineId,
+              captured.exerciseId,
+              captured.orderInRoutine ?? exercises.length,
+              captured.recommendedRepsMin ?? 6,
+              captured.recommendedRepsMax ?? 12,
+              captured.notes ?? null,
+              captured.recommendedSets ?? 3,
+              captured.startingWeight ?? null,
+              captured.restSeconds ?? null,
+              captured.supersetGroupId ?? null,
+            );
+            // Close-review fix (R9): a reorder inside the undo window
+            // renumbers the list densely, so the captured slot may now be
+            // occupied and ORDER BY order_in_routine has no tiebreak - the
+            // restored row's position would be implementation-defined.
+            // Renumber deterministically: sort by order with the restored
+            // row winning its captured slot, then persist only the rows
+            // whose index actually changed.
+            const rows = await getRoutineExercisesWithDetails(captured.routineId ?? routineId);
+            const sorted = [...rows].sort((a, b) => {
+              const ao = a.routineExercise.orderInRoutine ?? 0;
+              const bo = b.routineExercise.orderInRoutine ?? 0;
+              if (ao !== bo) return ao - bo;
+              if (a.routineExercise.id === restored?.id) return -1;
+              if (b.routineExercise.id === restored?.id) return 1;
+              return 0;
+            });
+            for (let i = 0; i < sorted.length; i++) {
+              if ((sorted[i].routineExercise.orderInRoutine ?? 0) !== i) {
+                await updateRoutineExerciseOrder(sorted[i].routineExercise.id, i);
+              }
+            }
+            await loadRoutine();
+          } catch (_) { /* best effort - the toast window may outlive the screen */ }
+        },
+      },
+    });
   }
 
   async function addExercise(exercise) {
@@ -231,26 +282,34 @@ export default function RoutineDetailScreen({ navigation, route }) {
     setSwapState({ routineExerciseId: routineExercise.id, exercise });
   }
 
-  function handleConfirmSwap(newExercise) {
+  // R9 (D70): the swap commits immediately with an undo toast (swapping
+  // back is the exact inverse write), replacing the old blocking confirm +
+  // silent success. Targets are untouched either way; the toast copy keeps
+  // the old confirm's one load-bearing fact (future sessions change).
+  async function handleConfirmSwap(newExercise) {
     if (!swapState) return;
-    const originalName = swapState.exercise?.name || 'this exercise';
-    appAlert(
-      'Swap this exercise in the routine?',
-      `${originalName} will be replaced with ${newExercise.name}. This affects all future sessions of this routine. Your set, rep and rest targets stay the same.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Swap',
-          onPress: async () => {
-            haptics.selection();
-            await updateRoutineExerciseExercise(swapState.routineExerciseId, newExercise.id);
-            setSwapState(null);
-            setSwapCandidates([]);
-            await loadRoutine();
-          },
+    const originalId = swapState.exercise?.id;
+    const originalName = swapState.exercise?.name || 'exercise';
+    const rowId = swapState.routineExerciseId;
+    haptics.selection();
+    await updateRoutineExerciseExercise(rowId, newExercise.id);
+    setSwapState(null);
+    setSwapCandidates([]);
+    await loadRoutine();
+    toast.show(`${originalName} swapped for ${newExercise.name} in future sessions.`, {
+      variant: 'undo',
+      action: {
+        label: 'Undo',
+        onPress: async () => {
+          try {
+            if (originalId) {
+              await updateRoutineExerciseExercise(rowId, originalId);
+              await loadRoutine();
+            }
+          } catch (_) { /* best effort */ }
         },
-      ],
-    );
+      },
+    });
   }
 
   // D32 (2026-07-10, campaign item 20): made BLOCK-AWARE, closing this
@@ -356,7 +415,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       accessibilityRole="button"
       accessibilityLabel={isReordering ? 'Done reordering' : 'Reorder exercises'}
     >
-      <Text maxFontSizeMultiplier={1.3} style={{ fontSize: t.fontSize.md, color: isReordering ? t.colors.primary : t.colors.textSecondary, fontWeight: isReordering ? fontWeight.bold : fontWeight.regular }}>
+      <Text style={{ fontSize: t.fontSize.md, color: isReordering ? t.colors.primary : t.colors.textSecondary, fontWeight: isReordering ? fontWeight.bold : fontWeight.regular }}>
         {isReordering ? 'Done' : 'Reorder'}
       </Text>
     </TouchableOpacity>
@@ -377,10 +436,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
       />
       <MuscleTagRow exercises={exercises} />
       {divisionLine ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.divisionLine, live.divisionLine]}>{divisionLine}</Text>
+        <Text style={[styles.divisionLine, live.divisionLine]}>{divisionLine}</Text>
       ) : null}
       {routine.split_type ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.splitRationale, live.splitRationale]}>{getSplitRationale(routine.split_type)}</Text>
+        <Text style={[styles.splitRationale, live.splitRationale]}>{getSplitRationale(routine.split_type)}</Text>
       ) : null}
     </>
   );
@@ -415,17 +474,17 @@ export default function RoutineDetailScreen({ navigation, route }) {
             accessibilityLabel={isReordering ? undefined : (exercise.unresolved ? `Re-link ${exercise.name}` : `Edit ${exercise.name}`)}
           >
             <View style={[styles.orderBadge, live.orderBadge, exercise.unresolved && [styles.orderBadgeUnresolved, live.orderBadgeUnresolved]]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.orderNum, live.orderNum]}>{index + 1}</Text>
+              <Text style={[styles.orderNum, live.orderNum]}>{index + 1}</Text>
             </View>
             <View style={styles.exerciseInfo}>
               <View style={styles.exerciseTitleRow}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseName, live.exerciseName, exercise.unresolved && [styles.exerciseNameUnresolved, live.exerciseNameUnresolved]]}>
+                <Text style={[styles.exerciseName, live.exerciseName, exercise.unresolved && [styles.exerciseNameUnresolved, live.exerciseNameUnresolved]]}>
                   {exercise.name || 'Exercise (couldn’t restore)'}
                 </Text>
                 {exercise.unresolved && (
                   <View style={[styles.relinkChip, live.relinkChip]}>
                     <Ionicons name="link-outline" size={12} color={t.colors.warning} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.relinkChipText, live.relinkChipText]}>Tap to re-link</Text>
+                    <Text style={[styles.relinkChipText, live.relinkChipText]}>Tap to re-link</Text>
                   </View>
                 )}
                 {(() => {
@@ -435,31 +494,31 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   return (
                     <View style={[styles.supersetChip, live.supersetChip]}>
                       <Ionicons name="link" size={11} color={t.colors.primary} />
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.supersetChipText, live.supersetChipText]}>
+                      <Text style={[styles.supersetChipText, live.supersetChipText]}>
                         Superset {String.fromCharCode(65 + gIdx)}
                       </Text>
                     </View>
                   );
                 })()}
               </View>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseMeta, live.exerciseMeta]}>
+              <Text style={[styles.exerciseMeta, live.exerciseMeta]}>
                 {routineExercise.recommendedSets} sets ·{' '}
                 {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
                 {routineExercise.restSeconds ? ` · ${routineExercise.restSeconds}s rest` : ''}
               </Text>
               {routineExercise.startingWeight > 0 ? (
-                <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseStartWeight, live.exerciseStartWeight]}>
+                <Text style={[styles.exerciseStartWeight, live.exerciseStartWeight]}>
                   Start: {routineExercise.startingWeight} kg
                 </Text>
               ) : null}
-              <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseMuscle, live.exerciseMuscle]}>
+              <Text style={[styles.exerciseMuscle, live.exerciseMuscle]}>
                 {MUSCLE_DISPLAY_NAMES[exercise.primaryMuscle] ||
                   (exercise.primaryMuscle || '').charAt(0).toUpperCase() +
                   (exercise.primaryMuscle || '').slice(1).replace(/_/g, ' ')}
               </Text>
               {(() => {
                 const why = getExerciseWhyThis(exercise.name, exercise.subregion);
-                return why ? <Text maxFontSizeMultiplier={1.3} style={[styles.exerciseWhy, live.exerciseWhy]}>{why}</Text> : null;
+                return why ? <Text style={[styles.exerciseWhy, live.exerciseWhy]}>{why}</Text> : null;
               })()}
             </View>
             {isReordering ? (
@@ -514,14 +573,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   <Ionicons name="swap-horizontal" size={20} color={t.colors.textMuted} />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => appAlert(
-                    'Remove exercise?',
-                    `Remove ${exercise.name} from this routine?`,
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'Remove', style: 'destructive', onPress: () => removeExercise(routineExercise) },
-                    ],
-                  )}
+                  onPress={() => removeExercise(routineExercise, exercise.name)}
                   hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
                   accessibilityRole="button"
                   accessibilityLabel={`Remove ${exercise.name}`}
@@ -579,7 +631,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
             />
           ) : (
             <View style={styles.empty}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.emptyText, live.emptyText]}>No exercises yet. Add some below.</Text>
+              <Text style={[styles.emptyText, live.emptyText]}>No exercises yet. Add some below.</Text>
             </View>
           )}
           {/* Same footer FlashList renders below -- reorder mode showed it
@@ -597,7 +649,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
           ListEmptyComponent={
             !exercises.length ? (
               <View style={styles.empty}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.emptyText, live.emptyText]}>No exercises yet. Add some below.</Text>
+                <Text style={[styles.emptyText, live.emptyText]}>No exercises yet. Add some below.</Text>
               </View>
             ) : null
           }
@@ -621,7 +673,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
         keyboardAvoiding
         accessibilityLabel={editingExercise?.exercise?.name ? `Edit ${editingExercise.exercise.name}` : 'Edit exercise'}
       >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.editTitle, live.editTitle]}>{editingExercise?.exercise?.name}</Text>
+            <Text style={[styles.editTitle, live.editTitle]}>{editingExercise?.exercise?.name}</Text>
             <View style={styles.editRow}>
               <TextField
                 label="Sets"
@@ -707,16 +759,15 @@ export default function RoutineDetailScreen({ navigation, route }) {
             this sheet while it's the modal's own content (matches
             BottomSheet.js/AppAlert.js/FeedbackSheet.js/PeekMenu.js). */}
         <SafeAreaView style={[styles.swapSafe, live.swapSafe]} edges={['top', 'bottom']} accessibilityViewIsModal>
-          <View style={[styles.swapHeader, live.swapHeader]}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.swapTitle, live.swapTitle]}>Swap exercise</Text>
-            <TouchableOpacity onPress={() => { setSwapState(null); setSwapCandidates([]); }} accessibilityRole="button" accessibilityLabel="Close swap">
-              <Ionicons name="close" size={24} color={t.colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.swapSubtitle, live.swapSubtitle]}>
-            Replacing: <Text maxFontSizeMultiplier={1.3} style={{ color: t.colors.primary }}>{swapState?.exercise?.name}</Text>
+          {/* R9 (D70): bespoke header bar replaced by the house ModalHeader
+              (centred title, 44pt close, hairline rule) - the ranked-swap
+              surface itself stays, it is deliberately richer than the plain
+              library picker. */}
+          <ModalHeader title="Swap exercise" onClose={() => { setSwapState(null); setSwapCandidates([]); }} />
+          <Text style={[styles.swapSubtitle, live.swapSubtitle]}>
+            Replacing: <Text style={{ color: t.colors.primary }}>{swapState?.exercise?.name}</Text>
           </Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.swapNote, live.swapNote]}>
+          <Text style={[styles.swapNote, live.swapNote]}>
             Choose a substitute. Your routine will be updated. Your set, rep and rest targets stay the same.
           </Text>
           <FlashList
@@ -732,14 +783,14 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 accessibilityLabel={`Swap in ${item.exercise.name}`}
               >
                 <View style={{ flex: 1 }}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.swapItemName, live.swapItemName]}>{item.exercise.name}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.swapItemReason, live.swapItemReason]}>{item.reason}</Text>
+                  <Text style={[styles.swapItemName, live.swapItemName]}>{item.exercise.name}</Text>
+                  <Text style={[styles.swapItemReason, live.swapItemReason]}>{item.reason}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </Card>
             )}
             ListEmptyComponent={
-              <Text maxFontSizeMultiplier={1.3} style={{ color: t.colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
+              <Text style={{ color: t.colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
                 No close matches yet.
               </Text>
             }
@@ -850,7 +901,11 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
     color: colors.primary,
   },
-  exerciseMeta: { fontSize: fontSize.sm, color: colors.primary },
+  // R9 (D70): tabular numerals ("3 sets, 6-12 reps" is data), and colour
+  // moves from colors.primary to colors.textSecondary - a meta line is
+  // supporting text, not brand decoration (same D66 rationale as the
+  // logger timer).
+  exerciseMeta: { fontSize: fontSize.sm, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
   exerciseMuscle: { ...type.caption, color: colors.textMuted },
   exerciseWhy: { ...type.captionTight, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.xxs },
   splitRationale: { ...type.bodySm, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.sm },
@@ -902,15 +957,6 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', paddingVertical: spacing.xl },
   emptyText: { ...type.body, color: colors.textMuted },
   swapSafe: { flex: 1, backgroundColor: colors.background },
-  swapHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  swapTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
   swapSubtitle: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
@@ -1003,7 +1049,9 @@ function buildLiveStyles(t) {
     relinkChipText: { fontSize: t.fontSize.xs, color: t.colors.warning },
     supersetChip: { backgroundColor: t.colors.primaryBg },
     supersetChipText: { fontSize: t.fontSize.xs, color: t.colors.primary },
-    exerciseMeta: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    // R9 (D70): colour matches the frozen exerciseMeta above (textSecondary,
+    // not primary - a meta line is supporting text, not brand decoration).
+    exerciseMeta: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     exerciseMuscle: { ...t.type.caption, color: t.colors.textMuted },
     exerciseWhy: { ...t.type.captionTight, color: t.colors.textMuted },
     splitRationale: { ...t.type.bodySm, color: t.colors.textMuted },
@@ -1017,8 +1065,6 @@ function buildLiveStyles(t) {
     addBtnText: { fontSize: t.fontSize.md, color: t.colors.primary },
     emptyText: { ...t.type.body, color: t.colors.textMuted },
     swapSafe: { backgroundColor: t.colors.background },
-    swapHeader: { borderBottomColor: t.colors.border },
-    swapTitle: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
     swapSubtitle: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     swapNote: { ...t.type.caption, color: t.colors.textMuted },
     swapItemName: { ...t.type.bodyStrong, color: t.colors.textPrimary },

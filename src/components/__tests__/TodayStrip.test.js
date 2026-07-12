@@ -78,13 +78,22 @@ describe('weight cell', () => {
   });
 
   test('empty weight prompt uses neutral contained chrome, not an amber text link', () => {
+    // R9/D70 (design-cohesion sweep, 2026-07-11): the hand-rolled
+    // metricAction/metricActionText fill+ink pair (asserted here up to
+    // 2026-07-11) was converted onto the shared <Button variant="primary">
+    // primitive per docs/remediation-2026-07-11/FOOD-DESIGN-STANDARD.md
+    // section 4. The RULE this test pins is UNCHANGED -- a contained solid
+    // action, never a bare amber text link -- Button's primary variant IS
+    // that solid primaryFill/onPrimary treatment (Button.js:53), just
+    // expressed through the shared primitive instead of a bespoke style
+    // block, so there is no longer a static metricActionText to assert
+    // byte-for-byte.
     expect(SOURCE).toContain('metricRow: {');
     expect(SOURCE).toContain('metricIcon: {');
     expect(SOURCE).toContain('metricAction: {');
     expect(SOURCE).toContain('borderColor: colors.border');
     expect(SOURCE).toContain('backgroundColor: colors.surface2');
-    expect(SOURCE).toContain('backgroundColor: colors.primaryFill');
-    expect(SOURCE).toContain('metricActionText: { ...type.label, color: colors.onPrimary }');
+    expect(SOURCE).toMatch(/variant="primary"[\s\S]{0,200}title="Log"/);
     expect(SOURCE).toContain('logPrompt: { ...type.label, color: colors.textPrimary }');
     expect(SOURCE).not.toContain('emptyLogBox: {');
     expect(SOURCE).not.toContain('logPrompt: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary }');
@@ -98,6 +107,19 @@ describe('weight cell', () => {
     act(() => input.props.onChangeText('80'));
     act(() => findByLabel(tree, 'Log morning weight').props.onPress());
     expect(onLogWeight).toHaveBeenCalledWith(80);
+  });
+});
+
+describe('R2 radius cohesion (2026-07-11)', () => {
+  // Lead-ruled one-liner: the "Logged" pill joins the pill/chip/badge class at
+  // radius.full (FOOD-DESIGN-STANDARD.md section 4). The strip's OTHER inner sm
+  // radii (metricIcon/weightField/logBtn) are a recorded density decision and
+  // deliberately stay radius.sm; pinned here so neither side drifts.
+  test('loggedPill is a full-radius badge; density-exception radii stay sm', () => {
+    expect(SOURCE).toMatch(/loggedPill:\s*\{[\s\S]*?borderRadius:\s*radius\.full/);
+    expect(SOURCE).toMatch(/metricIcon:\s*\{[\s\S]*?borderRadius:\s*radius\.sm/);
+    expect(SOURCE).toMatch(/weightField:\s*\{[\s\S]*?borderRadius:\s*radius\.sm/);
+    expect(SOURCE).toMatch(/logBtn:\s*\{[\s\S]*?borderRadius:\s*radius\.sm/);
   });
 });
 

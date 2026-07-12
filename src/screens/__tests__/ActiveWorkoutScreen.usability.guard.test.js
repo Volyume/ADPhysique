@@ -28,6 +28,13 @@ const EMPTY_EXERCISE_VIEW = fs.readFileSync(
 // replaced by StatusStrip (content-labelled chips, tap-to-expand per chip,
 // no count). Assertions that used to read the chip styling off ACTIVE_WORKOUT
 // now read the same source text off StatusStrip.js instead.
+// RE-ANCHORED 2026-07-12 (R3 logger rebuild, founder order: full page
+// rebuild): the Now card, header and bottom bar became dedicated
+// components; several pins below moved with them. Every invariant is
+// carried, none deleted - only the source anchor moved.
+const NOW_CARD = fs.readFileSync(path.resolve(__dirname, '../../components/workout/NowCard.js'), 'utf8');
+const BOTTOM_BAR = fs.readFileSync(path.resolve(__dirname, '../../components/workout/WorkoutBottomBar.js'), 'utf8');
+const WORKOUT_HEADER = fs.readFileSync(path.resolve(__dirname, '../../components/workout/WorkoutHeader.js'), 'utf8');
 const STATUS_STRIP = fs.readFileSync(
   path.join(__dirname, '..', '..', 'components', 'workout', 'StatusStrip.js'),
   'utf8',
@@ -35,9 +42,16 @@ const STATUS_STRIP = fs.readFileSync(
 
 describe('ActiveWorkoutScreen gym-use polish', () => {
   test('terminal workout completion has one primary finish control', () => {
-    expect(ACTIVE_WORKOUT).toContain('targetComplete && !extraSetArmed && isLastExercise');
-    expect(ACTIVE_WORKOUT).toContain('testID="volyume-btn-finish-primary"');
-    expect(ACTIVE_WORKOUT).toContain('<View style={styles.headerTapTarget} />');
+    // R3: the header hides Finish exactly when the bar offers it, so two
+    // finish affordances never co-exist; the header keeps layout balance
+    // with a ghost slot inside WorkoutHeader.
+    expect(ACTIVE_WORKOUT).toContain('showFinish={!(targetComplete && !extraSetArmed && isLastExercise)}');
+    expect(ACTIVE_WORKOUT).toContain("testID: 'volyume-btn-finish-primary'");
+    // Founder device note on 2705: equal flexible side slots keep the
+    // elapsed block SCREEN-centred whatever each side holds (including a
+    // hidden Finish), replacing the fixed-width ghost.
+    expect(WORKOUT_HEADER).toMatch(/side: \{ flex: 1, alignItems: 'flex-start' \}/);
+    expect(WORKOUT_HEADER).toMatch(/sideRight: \{ alignItems: 'flex-end' \}/);
   });
 
   test('finish-workout confirmation and retry copy use the same action name', () => {
@@ -55,35 +69,33 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   });
 
   test('primary set CTA speaks the same action the user sees', () => {
-    const spokenLabel = ACTIVE_WORKOUT.match(/accessibilityLabel=\{\s*currentSet\.setType === 'warmup'[\s\S]{0,420}\}/)?.[0] ?? '';
-
-    expect(spokenLabel).toContain("currentSet.setType === 'warmup' ? 'Log warm-up'");
-    expect(spokenLabel).toContain("? 'Start cluster' : 'Log set'");
-    expect(spokenLabel).not.toContain("? 'Start cluster' : 'Complete set'");
-    expect(ACTIVE_WORKOUT).toContain("currentSet.setType === 'warmup' ? 'Log warm-up'");
-    expect(ACTIVE_WORKOUT).not.toContain("currentSet.setType === 'warmup' ? 'Done'");
+    // R3: the bar's Button speaks its title (Button.js falls back
+    // accessibilityLabel -> title), so the visible and spoken label are the
+    // same string BY CONSTRUCTION - pin the label ternary and the fallback.
+    const label = ACTIVE_WORKOUT.match(/primaryLabel=\{[\s\S]{0,420}?\}/)?.[0] ?? '';
+    expect(label).toContain("perSide ? 'Log other side'");
+    expect(label).toContain("currentSet.setType === 'warmup' ? 'Log warm-up'");
+    expect(label).toContain("? 'Start cluster' : 'Log set'");
+    expect(label).not.toContain('Complete set');
+    expect(BOTTOM_BAR).toContain('accessibilityLabel={primaryLabel}');
   });
 
-  test('first-set hint names the More control instead of relying on the glyph', () => {
-    expect(ACTIVE_WORKOUT).toContain("if (activeExerciseType === 'duration') return 'Enter the time, then tap Log set when done.';");
-    expect(ACTIVE_WORKOUT).toContain("if (activeExerciseType === 'distance') return 'Enter distance and time, then tap Log set when done.';");
-    expect(ACTIVE_WORKOUT).toContain("if (activeExerciseType === 'reps_only') return 'Enter reps, then tap Log set when done.';");
-    expect(ACTIVE_WORKOUT).toContain('return \'Enter weight and reps, then tap Log set when done.\';');
+  test('beginner education is a named overflow row, never chrome inside the set card (founder ruling 2026-07-12)', () => {
+    // R3 rebuild: the in-card first-set paragraph is DELETED - the founder
+    // ruled the set card carries the set, never a lesson. The same glossary
+    // education is pull-only behind a named row.
+    expect(ACTIVE_WORKOUT).toContain("'How logging works'");
+    expect(ACTIVE_WORKOUT).toContain('accessibilityLabel="How logging works"');
     expect(ACTIVE_WORKOUT).toContain('Use exercise options for form tips, warm-ups, swaps and session settings.');
     expect(ACTIVE_WORKOUT).toContain('accessibilityLabel="Exercise options"');
     expect(ACTIVE_WORKOUT).not.toContain('accessibilityLabel="More options for this exercise"');
-    expect(ACTIVE_WORKOUT).toContain('placeholder="Add a note for this set"');
-    expect(ACTIVE_WORKOUT).not.toContain('placeholder="Add a note..."');
-    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): ActiveWorkoutScreen
-    // now reads a live theme (src/hooks/useTheme.js); inline colour props
-    // moved from the frozen `colors.*` singleton to `t.colors.*`.
-    expect(ACTIVE_WORKOUT).toContain('name="information-circle-outline" size={14} color={t.colors.primary}');
-    // Re-pinned for D43 S2: the "16px textSecondary info-circle" belonged to
-    // the retired notesChip; StatusStrip's chip icon carries the equivalent
-    // "content-labelled, textSecondary by default" contract now.
+    // The hint's RENDER is gone (its frozen style entries await the queued
+    // dead-styles sweep, recorded on the board).
+    expect(ACTIVE_WORKOUT).not.toContain('styles.firstSetHint');
+    // The note input moved into NowCard, same calm placeholder.
+    expect(NOW_CARD).toContain('placeholder="Add a note for this set"');
     expect(STATUS_STRIP).toContain("item.icon && <Ionicons name={item.icon} size={14} color={item.iconColor || t.colors.textSecondary} />");
     expect(STATUS_STRIP).toMatch(/chip: \{[\s\S]*borderWidth: 1,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
-    expect(ACTIVE_WORKOUT).toMatch(/firstSetHint: \{[\s\S]*backgroundColor: colors\.surface,[\s\S]*borderColor: colors\.borderSubtle/);
     expect(ACTIVE_WORKOUT).not.toContain('sparkles');
   });
 
@@ -104,16 +116,19 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(swapWindow).toContain("setClusterReps('');");
     expect(swapWindow).toContain('setExtraSetArmed(false);');
     expect(swapWindow).toContain("setNoteText('');");
-    expect(swapWindow).toContain('setShowNoteInput(false);');
-    expect(swapWindow).toContain('setNotesExpanded(false);');
+    // R3: the note UI's open/closed state lives in NowCard, collapsed by
+    // its noteResetKey (exercise index + logged count) - the screen only
+    // clears the text.
+    expect(ACTIVE_WORKOUT).toContain('noteResetKey={`${currentExerciseIndex}-${loggedSets.length}`}');
   });
 
   test('exercise changes clear stale per-exercise note UI', () => {
     const loadWindow = ACTIVE_WORKOUT.match(/\/\/ Load previous performance and set defaults when exercise changes[\s\S]*?async function loadHistory/)?.[0] ?? '';
 
     expect(loadWindow).toContain("setNoteText('');");
-    expect(loadWindow).toContain('setShowNoteInput(false);');
-    expect(loadWindow).toContain('setNotesExpanded(false);');
+    // R3: see the swap test above - NowCard's noteResetKey collapses the
+    // note row on every exercise change.
+    expect(NOW_CARD).toContain('useEffect(() => { setNoteOpen(false); }, [noteResetKey]);');
   });
 
   test('empty workout state uses the same fixed header layout as the logger', () => {
@@ -149,26 +164,18 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(SET_ENTRY).toContain("...type.num('bodyStrong')");
     expect(SET_ENTRY).not.toContain('fontWeight: fontWeight.bold');
     expect(SET_ENTRY.match(/hitSlop=\{STEPPER_HIT_SLOP\}/g)?.length).toBeGreaterThanOrEqual(10);
-    // Re-pinned for D43 S2: the bespoke radius.md/6px-padding setEntryCard
-    // is retired -- the Now card now sits on the house Card (radius lg,
-    // padding lg passed as PROPS at the call site, asserted separately
-    // below); this frozen style only carries the internal row gap now.
-    expect(ACTIVE_WORKOUT).toMatch(/setEntryCard: \{ gap: spacing\.xs \}/);
-    expect(ACTIVE_WORKOUT).toContain('radius="lg"\n            padding="lg"');
-    // CP-10 stage 3 (theming FINAL batch, 2026-07-10): exerciseName/targetText
-    // gained a live.* override in their style arrays (source: useTheme.js);
-    // the frozen `styles` definitions asserted next are byte-identical.
-    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>');
+    // R3 rebuild: the Now card is the NowCard component on the house Card
+    // (radius lg / padding lg as props there); position + target fold into
+    // its ONE tappable line; the prefill row keeps a 36 min-height target.
+    expect(NOW_CARD).toContain('radius="lg"');
+    expect(NOW_CARD).toContain('padding="lg"');
+    expect(NOW_CARD).toContain('positionLabel');
+    expect(ACTIVE_WORKOUT).toContain('positionLabel={orientationLabel}');
+    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>');
     expect(ACTIVE_WORKOUT).toContain('exerciseName: { flex: 1, ...type.title, color: colors.textPrimary }');
-    // Re-pinned for D43 S2: the separate targetRow/targetText line is
-    // retired -- the reps target now folds into orientationText's own Text
-    // node on Line 1 ("Set 2 of 3 - Working - 8-12 reps"), one line where
-    // two stood.
-    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.orientationText, live.orientationText]} numberOfLines={1}>');
-    expect(ACTIVE_WORKOUT).toContain('orientationTarget: { ...type.label, color: colors.textMuted }');
     expect(ACTIVE_WORKOUT).not.toContain('targetRow:');
     expect(ACTIVE_WORKOUT).not.toContain('targetText:');
-    expect(ACTIVE_WORKOUT).toMatch(/beatLine: \{[\s\S]*minHeight: 36/);
+    expect(NOW_CARD).toMatch(/prefillRow: \{[\s\S]*minHeight: 36/);
     // Re-pinned for D43 S1 extraction: loggedSetRow moved to
     // src/components/workout/LoggedSetRow.js's own frozen styles.
     expect(LOGGED_SET_ROW).toMatch(/loggedSetRow: \{[\s\S]*minHeight: workoutLoggerSize\.loggedSetMinHeight/);
@@ -179,7 +186,10 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   });
 
   test('high-impact workout text uses the semantic Inter type roles', () => {
-    expect(ACTIVE_WORKOUT).toContain("timerText: { ...type.num('title'), color: colors.primary }");
+    // R5 (D66, 2026-07-11): the elapsed timer moved off brand amber onto
+    // textPrimary - it is data, not decoration, and the header amber
+    // competed with the single filled Log set CTA. Same type.num role.
+    expect(ACTIVE_WORKOUT).toContain("timerText: { ...type.num('title'), color: colors.textPrimary }");
     // letterSpacing: 0 literal removed (design campaign D3, 2026-07-09): raw
     // letterSpacing literals are swept to tokens/deleted app-wide; 0 was
     // value-identical to the RN default so the property is simply gone now.
@@ -212,10 +222,12 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toMatch(/overflowBtn: \{\s*width: workoutLoggerSize\.overflowButton,\s*height: workoutLoggerSize\.overflowButton,/);
     expect(ACTIVE_WORKOUT).not.toContain('style={styles.swapBtn}');
     expect(ACTIVE_WORKOUT).not.toContain('swapBtnText');
-    expect(ACTIVE_WORKOUT).toContain('headerFinishButton');
+    // R3 rebuild: the header's finish control and the bar's actions moved
+    // to WorkoutHeader/WorkoutBottomBar, both on the shared Button/thumb
+    // minimums.
+    expect(WORKOUT_HEADER).toMatch(/finishBtn: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
+    expect(BOTTOM_BAR).toContain('size="lg"');
     expect(ACTIVE_WORKOUT).toContain('inlineActionPill');
-    expect(ACTIVE_WORKOUT).toMatch(/completeBtn: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight,[\s\S]*paddingVertical: spacing\.xs/);
-    expect(ACTIVE_WORKOUT).toMatch(/extraSetBtnPromoted: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight,[\s\S]*paddingVertical: spacing\.xs/);
     // Re-pinned for D43 S1 extraction: addFirstBtn/addFirstBtnText moved to
     // src/components/workout/EmptyExerciseView.js's own frozen styles.
     expect(EMPTY_EXERCISE_VIEW).toMatch(/addFirstBtn: \{[\s\S]*minHeight: workoutLoggerSize\.addExerciseMinHeight,[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*paddingHorizontal: spacing\.lg,[\s\S]*paddingVertical: spacing\.sm/);
@@ -232,16 +244,15 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): sheetOptionLabel
     // gained a live.sheetOptionLabel override in its style array (source:
     // useTheme.js); the frozen `styles.sheetOptionLabel` is byte-identical.
-    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Add exercise</Text>');
-    // Re-pinned for D43 S3 (blueprint 3.8): the overflow's "Add/edit note"
-    // row (a sheetOptionLabel Text showing noteActionLabel) is DELETED --
-    // the S2 card-corner pencil (volyume-note-corner-btn) is the one entry
-    // point, using noteActionLabel only in its accessibilityLabel, not as
-    // visible sheet-row text.
-    expect(ACTIVE_WORKOUT).toContain("const noteActionLabel = showNoteInput || noteText.trim().length > 0 ? 'Edit note' : 'Add note';");
-    expect(ACTIVE_WORKOUT).toContain('testID="volyume-note-corner-btn"');
-    expect(ACTIVE_WORKOUT).toContain('accessibilityLabel={`${noteActionLabel} for this set`}');
-    expect(ACTIVE_WORKOUT).not.toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{noteActionLabel}</Text>');
+    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Add exercise</Text>');
+    // R3 rebuild (founder ruling 2026-07-12): the corner pencil was a
+    // one-way latch (open only, dead after its first tap) and is DELETED.
+    // NowCard's note row is the one entry point and toggles honestly both
+    // ways - Add a note opens it, Remove note closes it.
+    expect(ACTIVE_WORKOUT).not.toContain('volyume-note-corner-btn');
+    expect(NOW_CARD).toContain('testID="volyume-note-row"');
+    expect(NOW_CARD).toContain('accessibilityLabel="Add a note for this set"');
+    expect(NOW_CARD).toContain('accessibilityLabel="Remove this note"');
     // Re-pinned for D43 S2: the U-A-1 "N notes"/"N cues" count wording is
     // retired entirely -- StatusStrip labels every chip by content (Deload,
     // Superset, Coach note, Starter session, Target met), never a count.
@@ -260,7 +271,7 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).not.toContain('actionBtnText');
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live.keepTrainingBtnText
     // override appended (source: useTheme.js); frozen style byte-identical.
-    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.keepTrainingBtnText, live.keepTrainingBtnText]}>Keep training</Text>');
+    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.keepTrainingBtnText, live.keepTrainingBtnText]}>Keep training</Text>');
     expect(ACTIVE_WORKOUT).not.toContain('>Keep Training<');
     expect(ACTIVE_WORKOUT).toContain("const retryAction = currentSet.setType === 'warmup'");
     expect(ACTIVE_WORKOUT).toContain("? 'Log warm-up'");
@@ -283,7 +294,7 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('accessibilityLabel="Warm-up sets"');
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live.sheetTitle
     // override appended (source: useTheme.js); frozen style byte-identical.
-    expect(ACTIVE_WORKOUT).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Warm-up sets</Text>');
+    expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.sheetTitle, live.sheetTitle]}>Warm-up sets</Text>');
     expect(ACTIVE_WORKOUT).toContain('Choose a warm-up set to load it, then tap Log warm-up.');
     expect(ACTIVE_WORKOUT).toContain('Load as a warm-up set.');
     expect(ACTIVE_WORKOUT).not.toContain('Tap a row to load it as a warm-up');

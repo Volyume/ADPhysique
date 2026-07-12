@@ -16,6 +16,11 @@
  *   right    optional node rendered on the right (e.g. an add button). A
  *            fixed-width spacer is rendered when absent so the title stays
  *            optically centred against the back chevron.
+ *
+ * AX-07 (launch accessibility audit, 2026-07-12): the title always carries
+ * accessibilityRole="header" -- it is the screen's primary heading at every
+ * one of its ~61 call sites, so VoiceOver/TalkBack heading navigation can
+ * land on it directly instead of scanning plain text.
  */
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -52,7 +57,11 @@ export default function BackHeader({ title, onBack, right }) {
       >
         <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
       </TouchableOpacity>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.title, { ...t.type.title, color: t.colors.textPrimary }]} numberOfLines={1}>
+      <Text
+        style={[styles.title, { ...t.type.title, color: t.colors.textPrimary }]}
+        numberOfLines={1}
+        accessibilityRole="header"
+      >
         {title}
       </Text>
       <View style={styles.right}>{right ?? null}</View>

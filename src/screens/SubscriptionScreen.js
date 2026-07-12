@@ -144,11 +144,11 @@ export default function SubscriptionScreen({ navigation, route }) {
 
         {/* Current state card */}
         <Card borderless style={styles.card}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.cardLabel, live.cardLabel]}>Your plan</Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.cardValue, live.cardValue]}>
+          <Text style={[styles.cardLabel, live.cardLabel]}>Your plan</Text>
+          <Text style={[styles.cardValue, live.cardValue]}>
             {tier === 'pro' ? 'Pro' : 'Free'}
           </Text>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.cardSub, live.cardSub]}>
+          <Text style={[styles.cardSub, live.cardSub]}>
             {STAGE_LABEL[stage] ?? '-'}
             {daysLeft != null ? ` - ${daysLeft} day${daysLeft === 1 ? '' : 's'} remaining` : ''}
           </Text>
@@ -168,11 +168,11 @@ export default function SubscriptionScreen({ navigation, route }) {
 
         {currentSku ? (
           <Card borderless style={styles.card}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.cardLabel, live.cardLabel]}>Price</Text>
+            <Text style={[styles.cardLabel, live.cardLabel]}>Price</Text>
             {/* PLAY-002: the store's localised price, or a short placeholder
                 until the active store responds. Never a hardcoded fallback. */}
-            <Text maxFontSizeMultiplier={1.3} style={[styles.cardValue, live.cardValue]}>{priceFor('pro', period) ?? '...'}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.cardSub, live.cardSub]}>
+            <Text style={[styles.cardValue, live.cardValue]}>{priceFor('pro', period) ?? '...'}</Text>
+            <Text style={[styles.cardSub, live.cardSub]}>
               {period === 'annual' ? 'Billed yearly' : 'Billed monthly'}
             </Text>
           </Card>
@@ -205,7 +205,7 @@ export default function SubscriptionScreen({ navigation, route }) {
           ) : null}
         </View>
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.footnote, live.footnote]}>
+        <Text style={[styles.footnote, live.footnote]}>
           Billing is handled by {platformStore}.
           To change your payment method or cancel, open subscription settings in
           {` ${platformStore}`}.

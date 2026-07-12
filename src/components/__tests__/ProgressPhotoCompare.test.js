@@ -279,3 +279,64 @@ describe('ProgressPhotoCompare, suppression self-guard', () => {
     expect(findByLabel(guarded, 'Close compare')).toBeDefined();
   });
 });
+
+// ─── Smart Invert stays off real photos (launch accessibility audit, AX-13) ─
+//
+// The audit found the comparison images omitted accessibilityIgnoresInvertColors,
+// so on iOS Smart Invert a before/after comparison would render as colour
+// negatives and become unusable. Every real photo here (side-by-side panes,
+// the slider's two photos, and the dated thumbnail ribbon) now routes through
+// the shared ProgressPhotoImage (AX-13 fix), which always sets the flag; this
+// pins the real render, not just the source. The overlay mode blends the two
+// photos on a Skia canvas rather than an <Image>, so it carries the same flag
+// directly as a plain View accessibility prop.
+describe('ProgressPhotoCompare, AX-13 Smart Invert', () => {
+  test('the default side-by-side panes ignore Smart Invert', async () => {
+    const tree = await render();
+    const imgs = paneImages(tree);
+    expect(imgs.length).toBe(2);
+    for (const img of imgs) {
+      expect(img.props.accessibilityIgnoresInvertColors).toBe(true);
+    }
+  });
+
+  test('the slider mode photos ignore Smart Invert', async () => {
+    const tree = await render();
+    await press(tree, 'Slider');
+    const imgs = tree.root.findAll((n) => n.type === 'Image');
+    expect(imgs.length).toBeGreaterThanOrEqual(2);
+    for (const img of imgs) {
+      expect(img.props.accessibilityIgnoresInvertColors).toBe(true);
+    }
+  });
+
+  test('the dated thumbnail ribbon photos ignore Smart Invert', async () => {
+    const tree = await render();
+    const ribbonThumbs = tree.root.findAll(
+      (n) => n.type === 'Image' && typeof n.props?.recyclingKey === 'string' && !n.props?.accessibilityLabel,
+    );
+    expect(ribbonThumbs.length).toBeGreaterThan(0);
+    for (const img of ribbonThumbs) {
+      expect(img.props.accessibilityIgnoresInvertColors).toBe(true);
+    }
+  });
+
+  test('the overlay mode Skia canvas carries the same invert-ignore flag', async () => {
+    const tree = await render();
+    await press(tree, 'Overlay');
+    const canvas = tree.root.findAll((n) => n.type === 'Canvas')[0];
+    expect(canvas).toBeDefined();
+    expect(canvas.props.accessibilityIgnoresInvertColors).toBe(true);
+  });
+
+  test('source guard: every real-photo Image in this file routes through the shared ProgressPhotoImage', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const source = fs.readFileSync(path.join(__dirname, '..', 'ProgressPhotoCompare.js'), 'utf8');
+    expect(source).toContain("import ProgressPhotoImage from './ProgressPhotoImage';");
+    // Every remaining <Image occurrence (there should be none left) would mean
+    // a real-photo site slipped past the shared component.
+    expect(source).not.toMatch(/<Image\b/);
+    expect(source).not.toMatch(/import\s*\{\s*Image\s*\}\s*from\s*'expo-image';/);
+  });
+});

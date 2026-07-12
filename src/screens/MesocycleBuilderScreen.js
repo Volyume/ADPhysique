@@ -5,8 +5,8 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { format } from 'date-fns/format';
 import { differenceInWeeks } from 'date-fns/differenceInWeeks';
+import { safeDate, safeFormatDate } from '../lib/safeFormat';
 import SvgBarSparkline from '../components/SvgBarSparkline';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -25,6 +25,7 @@ import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 import { predictDeloadWeek, evaluateAutoReg } from '../lib/mesocycle';
+import { planHeadingName } from '../lib/planDisplay';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -138,7 +139,11 @@ export default function MesocycleBuilderScreen({ navigation }) {
 
   function getCurrentWeek(mesocycle) {
     if (!mesocycle?.startDate) return 1;
-    const start = new Date(mesocycle.startDate);
+    // A malformed/legacy startDate (restore/sync) makes differenceInWeeks
+    // return NaN, which would render "Week NaN of N" below (EP-23/UI-11);
+    // fall back to week 1, the same placeholder used for no startDate.
+    const start = safeDate(mesocycle.startDate);
+    if (!start) return 1;
     const week = differenceInWeeks(new Date(), start) + 1;
     return Math.min(Math.max(week, 1), mesocycle.durationWeeks || 4);
   }
@@ -159,7 +164,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
               <View style={[styles.planCard, live.planCard]}>
                 <View style={styles.planCardHead}>
                   <Ionicons name="barbell" size={18} color={t.colors.primary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.planCardTag, live.planCardTag]}>Your active plan</Text>
+                  <Text style={[styles.planCardTag, live.planCardTag]}>Your active plan</Text>
                   <InfoTooltip
                     size={14}
                     text={
@@ -174,8 +179,8 @@ export default function MesocycleBuilderScreen({ navigation }) {
                     }
                   />
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.planCardName, live.planCardName]}>{activePlan.name}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.planCardMeta, live.planCardMeta]}>
+                <Text style={[styles.planCardName, live.planCardName]}>{planHeadingName(activePlan.name)}</Text>
+                <Text style={[styles.planCardMeta, live.planCardMeta]}>
                   {activePlan.splitType ? `${activePlan.splitType} · ` : ''}
                   {activePlan.workoutCount} workout{activePlan.workoutCount !== 1 ? 's' : ''}
                 </Text>
@@ -186,7 +191,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                   const isDeload = activeMeso.deloadWeek != null && currentWeek === activeMeso.deloadWeek;
                   return (
                     <View style={styles.planWeekRow}>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.planWeekLabel, live.planWeekLabel, isDeload && [styles.planWeekLabelDeload, live.planWeekLabelDeload]]}>
+                      <Text style={[styles.planWeekLabel, live.planWeekLabel, isDeload && [styles.planWeekLabelDeload, live.planWeekLabelDeload]]}>
                         Week {currentWeek} of {totalWeeks}{isDeload ? ' · recovery week' : ''}
                       </Text>
                       <View style={styles.planWeekBar}>
@@ -206,7 +211,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                   );
                 })()}
                 {!activeStats?.active && (
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.planCardNote, live.planCardNote]}>
+                  <Text style={[styles.planCardNote, live.planCardNote]}>
                     This is the training your coach built. A training block is an
                     optional multi-week layer on top of it. Set a start date,
                     duration and recovery week to track periodised progress.
@@ -224,7 +229,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
             )}
 
             {mesocycles.some(m => !(m.isActive === 1 || m.isActive === true)) && (
-              <Text maxFontSizeMultiplier={1.3} style={[styles.historyLabel, live.historyLabel]}>Past blocks</Text>
+              <Text style={[styles.historyLabel, live.historyLabel]}>Past blocks</Text>
             )}
           </>
         }
@@ -236,18 +241,18 @@ export default function MesocycleBuilderScreen({ navigation }) {
             <View style={[styles.mesoCard, live.mesoCard, isActive && [styles.mesoCardActive, live.mesoCardActive]]}>
               {isActive && (
                 <View style={[styles.activeBadge, live.activeBadge]}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.activeBadgeText, live.activeBadgeText]}>Active</Text>
+                  <Text style={[styles.activeBadgeText, live.activeBadgeText]}>Active</Text>
                 </View>
               )}
-              <Text maxFontSizeMultiplier={1.3} style={[styles.mesoName, live.mesoName]}>{meso.name}</Text>
+              <Text style={[styles.mesoName, live.mesoName]}>{meso.name}</Text>
               <View style={styles.mesoMeta}>
-                {meso.startDate && (
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.metaItem, live.metaItem]}>
-                    {format(new Date(meso.startDate), 'MMM d')}
-                    {meso.endDate ? ` · ${format(new Date(meso.endDate), 'MMM d')}` : ''}
+                {meso.startDate && safeDate(meso.startDate) && (
+                  <Text style={[styles.metaItem, live.metaItem]}>
+                    {safeFormatDate(meso.startDate, 'MMM d')}
+                    {meso.endDate && safeDate(meso.endDate) ? ` · ${safeFormatDate(meso.endDate, 'MMM d')}` : ''}
                   </Text>
                 )}
-                {meso.focus ? <Text maxFontSizeMultiplier={1.3} style={[styles.metaItem, live.metaItem]}>{meso.focus}</Text> : null}
+                {meso.focus ? <Text style={[styles.metaItem, live.metaItem]}>{meso.focus}</Text> : null}
               </View>
               {!isActive && (
                 <Button
@@ -265,7 +270,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
               {isActive && (
                 <View style={styles.weekProgress}>
                   <View style={styles.weekProgressHeader}>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.weekLabel, live.weekLabel]}>Week {currentWeek} of {totalWeeks}</Text>
+                    <Text style={[styles.weekLabel, live.weekLabel]}>Week {currentWeek} of {totalWeeks}</Text>
                     <InfoTooltip
                       size={13}
                       text={
@@ -291,7 +296,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                     ))}
                   </View>
                   {meso.deloadWeek && (
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.deloadLabel, live.deloadLabel]}>Week {meso.deloadWeek} = recovery week · {currentWeek < meso.deloadWeek ? `${meso.deloadWeek - currentWeek} week${meso.deloadWeek - currentWeek !== 1 ? 's' : ''} away` : currentWeek === meso.deloadWeek ? 'this week' : 'done'}</Text>
+                    <Text style={[styles.deloadLabel, live.deloadLabel]}>Week {meso.deloadWeek} = recovery week · {currentWeek < meso.deloadWeek ? `${meso.deloadWeek - currentWeek} week${meso.deloadWeek - currentWeek !== 1 ? 's' : ''} away` : currentWeek === meso.deloadWeek ? 'this week' : 'done'}</Text>
                   )}
                 </View>
               )}
@@ -352,12 +357,12 @@ function ActiveMesoDashboard({ stats, currentWeek }) {
       {/* Header */}
       <View style={styles.dashHeader}>
         <View style={[styles.activeBadge, live.activeBadge]}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.activeBadgeText, live.activeBadgeText]}>Active</Text>
+          <Text style={[styles.activeBadgeText, live.activeBadgeText]}>Active</Text>
         </View>
         <Ionicons name="layers" size={16} color={t.colors.primary} />
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.dashName, live.dashName]} numberOfLines={1}>{active.name}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.dashWeek, live.dashWeek]}>
+      <Text style={[styles.dashName, live.dashName]} numberOfLines={1}>{active.name}</Text>
+      <Text style={[styles.dashWeek, live.dashWeek]}>
         Week {currentWeek} of {totalWeeks}
         {active.focus ? `  ·  ${active.focus}` : ''}
       </Text>
@@ -370,7 +375,7 @@ function ActiveMesoDashboard({ stats, currentWeek }) {
       {/* Weekly tonnage BarChart */}
       {hasTonnage && (
         <View style={styles.tonnageWrap}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.tonnageLabel, live.tonnageLabel]}>Weekly load (kg moved)</Text>
+          <Text style={[styles.tonnageLabel, live.tonnageLabel]}>Weekly load (kg moved)</Text>
           {/* CP-10 batch G: the bar colour ternary resolves HERE, at render
               time, from the live theme -- the same deload/current/rest
               mapping loadActiveStats() bakes into frontColor (left in place
@@ -403,20 +408,20 @@ function ActiveMesoDashboard({ stats, currentWeek }) {
         <View style={styles.recovRow}>
           {recovery.soreness != null && (
             <View style={styles.recovItem}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.recovValue, live.recovValue]}>{recovery.soreness.toFixed(1)}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.recovLabel, live.recovLabel]}>Soreness</Text>
+              <Text style={[styles.recovValue, live.recovValue]}>{recovery.soreness.toFixed(1)}</Text>
+              <Text style={[styles.recovLabel, live.recovLabel]}>Soreness</Text>
             </View>
           )}
           {recovery.fatigue != null && (
             <View style={styles.recovItem}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.recovValue, live.recovValue]}>{recovery.fatigue.toFixed(1)}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.recovLabel, live.recovLabel]}>Fatigue</Text>
+              <Text style={[styles.recovValue, live.recovValue]}>{recovery.fatigue.toFixed(1)}</Text>
+              <Text style={[styles.recovLabel, live.recovLabel]}>Fatigue</Text>
             </View>
           )}
           {recovery.joint != null && (
             <View style={styles.recovItem}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.recovValue, live.recovValue]}>{recovery.joint.toFixed(1)}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.recovLabel, live.recovLabel]}>Joints</Text>
+              <Text style={[styles.recovValue, live.recovValue]}>{recovery.joint.toFixed(1)}</Text>
+              <Text style={[styles.recovLabel, live.recovLabel]}>Joints</Text>
             </View>
           )}
         </View>
@@ -430,7 +435,7 @@ function ActiveMesoDashboard({ stats, currentWeek }) {
             size={14}
             color={deloadCopy.urgent ? t.colors.error : t.colors.warning}
           />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.deloadBannerText, live.deloadBannerText, deloadCopy.urgent && { color: t.colors.onErrorBg }]}>
+          <Text style={[styles.deloadBannerText, live.deloadBannerText, deloadCopy.urgent && { color: t.colors.onErrorBg }]}>
             {deloadCopy.text}
           </Text>
         </View>

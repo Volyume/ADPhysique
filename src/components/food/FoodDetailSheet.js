@@ -270,8 +270,8 @@ export default function FoodDetailSheet({
   return (
     <>
     <BottomSheet visible={visible} onClose={handleClose} keyboardAvoiding accessibilityLabel={food.name}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]} numberOfLines={2}>{food.name}</Text>
-          {food.brand ? <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>{food.brand}</Text> : null}
+          <Text style={[styles.title, live.title]} numberOfLines={2}>{food.name}</Text>
+          {food.brand ? <Text style={[styles.subtitle, live.subtitle]}>{food.brand}</Text> : null}
           {/* A6: the shared SourceChip replaces the inline uppercase text so
               CoFID rows carry their verified treatment + "what is CoFID?"
               gloss at the point of use. */}
@@ -280,10 +280,10 @@ export default function FoodDetailSheet({
               (off/usda) rows only, reusing foods.fetched_at. Never implies the
               food is wrong -- it only states when it was last checked. */}
           {isNetworkSourced(food.source) && food.fetched_at ? (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.lastVerified, live.lastVerified]}>{formatLastVerified(food.fetched_at)}</Text>
+            <Text style={[styles.lastVerified, live.lastVerified]}>{formatLastVerified(food.fetched_at)}</Text>
           ) : null}
 
-          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Amount</Text>
+          <Text style={[styles.fieldLabel, live.fieldLabel]}>Amount</Text>
           {units.length > 1 ? (
             <View style={styles.unitRow}>
               {units.map(u => (
@@ -335,7 +335,7 @@ export default function FoodDetailSheet({
             </Pressable>
           </View>
           {unitKey === 'serving' ? (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.gramHint, live.gramHint]}>= {Math.round(quantityG)} g</Text>
+            <Text style={[styles.gramHint, live.gramHint]}>= {Math.round(quantityG)} g</Text>
           ) : null}
 
           {/* Ultimate-Audit item 12: only shown for a curated food with a real
@@ -345,7 +345,7 @@ export default function FoodDetailSheet({
               conversion). */}
           {showWeightChoice ? (
             <>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Weighed</Text>
+              <Text style={[styles.fieldLabel, live.fieldLabel]}>Weighed</Text>
               <View style={styles.unitRow}>
                 <Chip
                   label="Raw"
@@ -386,8 +386,8 @@ export default function FoodDetailSheet({
           {extraNutrients.length ? (
             <View style={styles.extraRow}>
               {extraNutrients.map((n) => (
-                <Text maxFontSizeMultiplier={1.3} key={n.key} style={[styles.extraText, live.extraText]}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.extraLabel, live.extraLabel]}>{n.label} </Text>{n.value}
+                <Text key={n.key} style={[styles.extraText, live.extraText]}>
+                  <Text style={[styles.extraLabel, live.extraLabel]}>{n.label} </Text>{n.value}
                 </Text>
               ))}
             </View>
@@ -402,7 +402,7 @@ export default function FoodDetailSheet({
               the one place a user can give it a real, editable time. */}
           {mode === 'edit' ? (
             <>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Eaten at</Text>
+              <Text style={[styles.fieldLabel, live.fieldLabel]}>Eaten at</Text>
               <View style={styles.unitRow}>
                 <Pressable
                   onPress={() => { haptics.selection(); setShowTimePicker(true); }}
@@ -412,7 +412,7 @@ export default function FoodDetailSheet({
                     ? `Change the time you ate this, currently ${new Date(eatenAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
                     : 'Set the time you ate this'}
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.unitBtnTextActive, live.unitBtnTextActive]}>
+                  <Text style={[styles.unitBtnTextActive, live.unitBtnTextActive]}>
                     {eatenAt
                       ? new Date(eatenAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
                       : 'No time set'}
@@ -425,14 +425,14 @@ export default function FoodDetailSheet({
                     accessibilityRole="button"
                     accessibilityLabel="Clear the eaten time"
                   >
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.unitBtnText, live.unitBtnText]}>Clear</Text>
+                    <Text style={[styles.unitBtnText, live.unitBtnText]}>Clear</Text>
                   </Pressable>
                 ) : null}
               </View>
             </>
           ) : null}
 
-          <Text maxFontSizeMultiplier={1.3} style={[styles.fieldLabel, live.fieldLabel]}>Meal</Text>
+          <Text style={[styles.fieldLabel, live.fieldLabel]}>Meal</Text>
           <View style={styles.mealRow}>
             {pickerMealSlots(mealSlot, undefined, periWorkoutSlots).map(s => (
               <Chip
@@ -492,8 +492,8 @@ function MacroPill({ label, value }) {
   const live = buildLiveStyles(t);
   return (
     <View style={[styles.macroPill, live.macroPill]}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.macroPillValue, live.macroPillValue]}>{value}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.macroPillLabel, live.macroPillLabel]}>{label}</Text>
+      <Text style={[styles.macroPillValue, live.macroPillValue]}>{value}</Text>
+      <Text style={[styles.macroPillLabel, live.macroPillLabel]}>{label}</Text>
     </View>
   );
 }

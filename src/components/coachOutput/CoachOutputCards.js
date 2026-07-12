@@ -32,10 +32,10 @@ export function StatChip({ icon, iconColor, label, value, valueColor, tooltip })
       {icon ? (
         <Ionicons name={icon} size={15} color={iconColor ?? t.colors.textSecondary} />
       ) : null}
-      <Text maxFontSizeMultiplier={1.3} style={[styles.statChipValue, live.statChipValue, valueColor ? { color: valueColor } : null]}>
+      <Text style={[styles.statChipValue, live.statChipValue, valueColor ? { color: valueColor } : null]}>
         {value}
       </Text>
-      {label ? <Text maxFontSizeMultiplier={1.3} style={[styles.statChipLabel, live.statChipLabel]}>{label}</Text> : null}
+      {label ? <Text style={[styles.statChipLabel, live.statChipLabel]}>{label}</Text> : null}
       {tooltip ? <InfoTooltip text={tooltip} size={12} /> : null}
     </View>
   );
@@ -59,7 +59,7 @@ export function LedgerCard({ working, off }) {
             {working.map((item, i) => (
               <View key={i} style={styles.bulletRow}>
                 <Ionicons name="checkmark" size={15} color={t.colors.success} style={styles.bulletIcon} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.bulletText, live.bulletText]}>{item}</Text>
+                <Text style={[styles.bulletText, live.bulletText]}>{item}</Text>
               </View>
             ))}
           </View>
@@ -72,7 +72,7 @@ export function LedgerCard({ working, off }) {
             {off.map((item, i) => (
               <View key={i} style={styles.bulletRow}>
                 <Ionicons name="remove" size={15} color={t.colors.warning} style={styles.bulletIcon} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.bulletText, live.bulletText]}>{item}</Text>
+                <Text style={[styles.bulletText, live.bulletText]}>{item}</Text>
               </View>
             ))}
           </View>
@@ -90,8 +90,8 @@ export function WhyBlock({ text, onLearnMore }) {
   const live = buildLiveStyles(t);
   return (
     <View style={styles.whyBlock}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.whyLabel, live.whyLabel]}>Why this week:</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.whyText, live.whyText]}>{text}</Text>
+      <Text style={[styles.whyLabel, live.whyLabel]}>Why this week:</Text>
+      <Text style={[styles.whyText, live.whyText]}>{text}</Text>
       {onLearnMore ? (
         <TouchableOpacity
           style={[styles.link44, live.link44]}
@@ -101,7 +101,7 @@ export function WhyBlock({ text, onLearnMore }) {
           accessibilityLabel="Understand how this decision was made"
         >
           <Ionicons name="information-circle-outline" size={iconSize.sm} color={t.colors.textSecondary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.whyLearnMore, live.whyLearnMore]}>Understand how this decision was made</Text>
+          <Text style={[styles.whyLearnMore, live.whyLearnMore]}>Understand how this decision was made</Text>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
       ) : null}
@@ -119,9 +119,9 @@ export function RapidLossAlert() {
     <View style={[styles.rapidLossCard, live.rapidLossCard]}>
       <View style={styles.rapidLossHeader}>
         <Ionicons name="warning-outline" size={18} color={t.colors.error} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.rapidLossTitle, live.rapidLossTitle]}>Weight dropping quickly</Text>
+        <Text style={[styles.rapidLossTitle, live.rapidLossTitle]}>Weight dropping quickly</Text>
       </View>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.rapidLossBody, live.rapidLossBody]}>
+      <Text style={[styles.rapidLossBody, live.rapidLossBody]}>
         Your weight is falling more than 1.5% of your body weight per week and your energy is low. Losing at this rate risks losing muscle alongside fat and makes training harder. Eating a little more this week protects muscle while you lose.
       </Text>
     </View>

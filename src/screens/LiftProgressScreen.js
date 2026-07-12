@@ -5,7 +5,7 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { format } from 'date-fns/format';
+import { safeDate, safeFormatDate, safeNumber, safeToFixed } from '../lib/safeFormat';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
@@ -213,17 +213,21 @@ export default function LiftProgressScreen({ navigation }) {
         onPress: () => navigation.navigate('ExerciseDetail', { exerciseId: row.exerciseId, __heroOrigin: originRect || undefined }),
       },
     ];
-    if (row.bestE1rm) {
+    // EP-23/UI-11: bestE1rm/lastTrainedAt can be malformed after a bad
+    // restore/sync; only offer sharing when the weight is actually a finite
+    // number, and never let a bad lastTrainedAt crash the long-press menu by
+    // calling toISOString() on an Invalid Date.
+    if (safeNumber(row.bestE1rm) > 0) {
       items.push({
         icon: 'share-outline',
         label: 'Share this PR',
         onPress: () => navigation.navigate('ShareCard', {
           prData: {
             exerciseName: row.name,
-            weight: parseFloat(row.bestE1rm).toFixed(1),
+            weight: safeToFixed(row.bestE1rm, 1),
             reps: '1',
             units,
-            date: new Date(row.lastTrainedAt).toISOString(),
+            date: (safeDate(row.lastTrainedAt) ?? new Date()).toISOString(),
           },
         }),
       });
@@ -264,16 +268,16 @@ export default function LiftProgressScreen({ navigation }) {
         <View style={[styles.standingCard, live.standingCard]}>
           {standing ? (
             <View style={[styles.standingHeadline, live.standingHeadline]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.standingLabel, live.standingLabel]}>{standing.overallLabel}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.standingSub, live.standingSub]}>
+              <Text style={[styles.standingLabel, live.standingLabel]}>{standing.overallLabel}</Text>
+              <Text style={[styles.standingSub, live.standingSub]}>
                 overall across {standing.count} main {standing.count === 1 ? 'lift' : 'lifts'}
               </Text>
               {standing.nearest ? (
-                <Text maxFontSizeMultiplier={1.3} style={[styles.standingNext, live.standingNext]}>
+                <Text style={[styles.standingNext, live.standingNext]}>
                   {standing.nearest.delta} {units} from {standing.nearest.toLabel} on {standing.nearest.lift}
                 </Text>
               ) : (
-                <Text maxFontSizeMultiplier={1.3} style={[styles.standingNext, live.standingNext]}>At the top of the standards on every tracked lift.</Text>
+                <Text style={[styles.standingNext, live.standingNext]}>At the top of the standards on every tracked lift.</Text>
               )}
             </View>
           ) : null}
@@ -284,19 +288,19 @@ export default function LiftProgressScreen({ navigation }) {
               text={'How your best estimated lifts compare to your own body weight.\n\n1.0x = you can lift your body weight\n1.5x = strong for most people\n2.0x = advanced\n\nBeginner > Novice > Intermediate > Advanced > Elite'}
             />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.sectionSub, live.sectionSub]}>Based on {bodyWeight} {units} body weight</Text>
+          <Text style={[styles.sectionSub, live.sectionSub]}>Based on {bodyWeight} {units} body weight</Text>
           {Object.entries(strengthLevels).map(([name, lvl]) => (
             <View key={name} style={[styles.strengthRow, live.strengthRow]}>
               <View style={{ flex: 1 }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.strengthName, live.strengthName]} numberOfLines={1}>{name}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.strengthNarrative, live.strengthNarrative]}>
+                <Text style={[styles.strengthName, live.strengthName]} numberOfLines={1}>{name}</Text>
+                <Text style={[styles.strengthNarrative, live.strengthNarrative]}>
                   {lvl.ratio >= 1
                     ? `${lvl.ratio.toFixed(2)}x your body weight`
                     : `${Math.round(lvl.ratio * 100)}% of your body weight`}
                 </Text>
               </View>
               <View style={[styles.levelBadge, { backgroundColor: withAlpha(resolveLevelColor(lvl.label), 0.133) }]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.levelBadgeText, live.levelBadgeText, { color: resolveLevelColor(lvl.label) }]}>{lvl.label}</Text>
+                <Text style={[styles.levelBadgeText, live.levelBadgeText, { color: resolveLevelColor(lvl.label) }]}>{lvl.label}</Text>
               </View>
             </View>
           ))}
@@ -311,8 +315,8 @@ export default function LiftProgressScreen({ navigation }) {
         >
           <Ionicons name="body-outline" size={20} color={t.colors.primary} />
           <View style={{ flex: 1 }}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.bwPromptTitle, live.bwPromptTitle]}>Add your body weight</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.bwPromptText, live.bwPromptText]}>
+            <Text style={[styles.bwPromptTitle, live.bwPromptTitle]}>Add your body weight</Text>
+            <Text style={[styles.bwPromptText, live.bwPromptText]}>
               Add your body weight once and we'll show you how your lifts compare to your body weight.
             </Text>
           </View>
@@ -331,7 +335,7 @@ export default function LiftProgressScreen({ navigation }) {
               accessibilityState={{ selected: filter === f }}
               accessibilityLabel={f === 'all' ? 'All lifts' : 'Recent bests'}
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.filterTabText, live.filterTabText, filter === f && [styles.filterTabTextActive, live.filterTabTextActive]]}>
+              <Text style={[styles.filterTabText, live.filterTabText, filter === f && [styles.filterTabTextActive, live.filterTabTextActive]]}>
                 {f === 'all' ? 'All lifts' : 'Recent bests'}
               </Text>
             </TouchableOpacity>
@@ -354,7 +358,7 @@ export default function LiftProgressScreen({ navigation }) {
               accessibilityState={{ selected: metric === m.key }}
               accessibilityLabel={`Show ${m.label} trend`}
             >
-              <Text maxFontSizeMultiplier={1.3} style={[styles.metricChipText, live.metricChipText, metric === m.key && [styles.metricChipTextActive, live.metricChipTextActive]]}>
+              <Text style={[styles.metricChipText, live.metricChipText, metric === m.key && [styles.metricChipTextActive, live.metricChipTextActive]]}>
                 {m.label}
               </Text>
             </TouchableOpacity>
@@ -421,31 +425,31 @@ export default function LiftProgressScreen({ navigation }) {
             >
               <View style={styles.cardMain}>
                 <View style={styles.nameRow}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.name, live.name]} numberOfLines={1}>{item.name}</Text>
+                  <Text style={[styles.name, live.name]} numberOfLines={1}>{item.name}</Text>
                   {best && (
                     <View style={[styles.prTag, live.prTag]}>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.prTagText, live.prTagText]}>PR</Text>
+                      <Text style={[styles.prTagText, live.prTagText]}>PR</Text>
                     </View>
                   )}
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.meta, live.meta]}>
-                  {muscle ? `${muscle} - ` : ''}{item.sessions} {item.sessions === 1 ? 'session' : 'sessions'} - last {format(new Date(item.lastTrainedAt), 'd MMM')}
+                <Text style={[styles.meta, live.meta]}>
+                  {muscle ? `${muscle} - ` : ''}{item.sessions} {item.sessions === 1 ? 'session' : 'sessions'}{safeDate(item.lastTrainedAt) ? ` - last ${safeFormatDate(item.lastTrainedAt, 'd MMM')}` : ''}
                 </Text>
                 {/* C1: the last logged session's own numbers, distinct from the
                     all-time best headline below. liftProgress.js tracks the
                     session's top weight and its e1RM only (no rep count is
                     computed per session), so the line reports those two. */}
-                <Text maxFontSizeMultiplier={1.3} style={[styles.lastTime, live.lastTime]}>
+                <Text style={[styles.lastTime, live.lastTime]}>
                   Last time: {item.latestWeight}{units} - est. max {item.latestE1rm}{units}
                 </Text>
                 <View style={styles.statRow}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.statValue, live.statValue]}>{headlineValue}{headlineMeta.isWeight ? units : ''}</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.statLabel, live.statLabel]}>{headlineMeta.label}</Text>
+                  <Text style={[styles.statValue, live.statValue]}>{headlineValue}{headlineMeta.isWeight ? units : ''}</Text>
+                  <Text style={[styles.statLabel, live.statLabel]}>{headlineMeta.label}</Text>
                   {/* U-D-3: plain-English gloss for estimated 1RM on the row.
                       Only meaningful for the e1RM lens itself. */}
                   {headlineMetric === 'e1rm' && <InfoTooltip text={GLOSSARY.estMax} size={11} />}
                   {item.deltaPct != null && item.sessions > 1 && (
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.delta, live.delta, { color: trendColor(item.deltaPct) }]}>
+                    <Text style={[styles.delta, live.delta, { color: trendColor(item.deltaPct) }]}>
                       {item.deltaPct > 0 ? '+' : ''}{item.deltaPct}%
                     </Text>
                   )}
@@ -458,7 +462,7 @@ export default function LiftProgressScreen({ navigation }) {
                 {(series?.length ?? 0) > 2 ? (
                   <Sparkline data={series} width={84} height={34} color={trendColor(item.deltaPct)} highlightIndices={prIndices} />
                 ) : (
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.trendBuilding, live.trendBuilding]}>Building</Text>
+                  <Text style={[styles.trendBuilding, live.trendBuilding]}>Building</Text>
                 )}
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </View>
@@ -481,10 +485,10 @@ export default function LiftProgressScreen({ navigation }) {
           ) : (
             <View style={styles.empty}>
               <Ionicons name={q ? 'search-outline' : 'barbell-outline'} size={56} color={t.colors.textMuted} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.emptyTitle, live.emptyTitle]}>
+              <Text style={[styles.emptyTitle, live.emptyTitle]}>
                 {q ? 'No matching lifts' : filter === 'best' ? 'Your bests will show here' : 'Your lifts start here'}
               </Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.emptyText, live.emptyText]}>
+              <Text style={[styles.emptyText, live.emptyText]}>
                 {q
                   ? "No lift name matches your search. Try a different search."
                   : filter === 'best'
@@ -544,8 +548,11 @@ const styles = StyleSheet.create({
   },
   strengthName: { ...type.label, color: colors.textPrimary },
   strengthNarrative: { ...type.num('caption'), color: colors.textMuted, marginTop: spacing.xxs },
-  levelBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.sm, flexShrink: 0 },
-  levelBadgeText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
+  // R2 (2026-07-11): badge class -> radius.full; label text -> captionStrong
+  // (exact xs+semibold role, FOOD-DESIGN-STANDARD.md sections 3-4). Was
+  // radius.sm and a raw fontSize.xs + fontWeight.semibold pair.
+  levelBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.full, flexShrink: 0 },
+  levelBadgeText: { ...type.captionStrong },
 
   bwPromptCard: {
     flexDirection: 'row',
@@ -587,7 +594,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   metricChipActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  metricChipText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  // R2 (2026-07-11): raw xs+semibold pair -> captionStrong (exact role match).
+  metricChipText: { ...type.captionStrong, color: colors.textSecondary },
   metricChipTextActive: { color: colors.primary },
 
   // ── Lift row ──
@@ -606,7 +614,9 @@ const styles = StyleSheet.create({
   name: { ...type.bodyStrong, color: colors.textPrimary, flexShrink: 1 },
   prTag: {
     backgroundColor: withAlpha(colors.primary, 0.16),
-    borderRadius: radius.sm,
+    // R2 (2026-07-11): badge class -> radius.full (FOOD-DESIGN-STANDARD.md
+    // section 4). Was radius.sm.
+    borderRadius: radius.full,
     paddingHorizontal: spacing.xs,
     paddingVertical: 1,
   },
@@ -614,7 +624,10 @@ const styles = StyleSheet.create({
   meta: { ...type.caption, color: colors.textMuted },
   lastTime: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
   statRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs, marginTop: spacing.xxs },
-  statValue: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.textPrimary },
+  // Theme gap: no lg+heavy type role exists; the raw pair stays (weight
+  // preserved). R2 (2026-07-11): headline is a weight/e1RM readout, so it
+  // gains tabular figures like the delta beside it.
+  statValue: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   statLabel: { ...type.caption, color: colors.textMuted },
   delta: { ...type.num('label'), marginLeft: spacing.xs },
   cardRight: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
@@ -645,7 +658,7 @@ function buildLiveStyles(t) {
     strengthRow: { borderTopColor: t.colors.border },
     strengthName: { ...t.type.label, color: t.colors.textPrimary },
     strengthNarrative: { ...t.type.num('caption'), color: t.colors.textMuted },
-    levelBadgeText: { fontSize: t.fontSize.xs },
+    levelBadgeText: { ...t.type.captionStrong },
     bwPromptCard: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, 0.267) },
     bwPromptTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     bwPromptText: { ...t.type.captionTight, color: t.colors.textSecondary },
@@ -655,7 +668,7 @@ function buildLiveStyles(t) {
     filterTabTextActive: { color: t.colors.primary },
     metricChip: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     metricChipActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
-    metricChipText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    metricChipText: { ...t.type.captionStrong, color: t.colors.textSecondary },
     metricChipTextActive: { color: t.colors.primary },
     card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     name: { ...t.type.bodyStrong, color: t.colors.textPrimary },
@@ -663,7 +676,7 @@ function buildLiveStyles(t) {
     prTagText: { fontSize: t.fontSize.micro, color: t.colors.primary },
     meta: { ...t.type.caption, color: t.colors.textMuted },
     lastTime: { ...t.type.caption, color: t.colors.textSecondary },
-    statValue: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
+    statValue: { fontSize: t.fontSize.lg, color: t.colors.textPrimary, fontVariant: ['tabular-nums'] },
     statLabel: { ...t.type.caption, color: t.colors.textMuted },
     delta: { ...t.type.num('label') },
     trendBuilding: { fontSize: t.fontSize.xs, color: t.colors.textMuted },

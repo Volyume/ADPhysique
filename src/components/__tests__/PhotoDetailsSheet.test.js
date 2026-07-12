@@ -42,7 +42,7 @@ test('date field copy is narrow-screen safe', () => {
   // `[styles.dateText, live.dateText]`), so the pin matches that form
   // instead of the bare `styles.dateText`. Same call site, same frozen
   // style object underneath, still asserted below.
-  expect(SOURCE).toMatch(/<Text maxFontSizeMultiplier=\{1\.3\} style=\{\[styles\.dateText, live\.dateText\]\} numberOfLines=\{1\} ellipsizeMode="tail">/);
+  expect(SOURCE).toMatch(/<Text style=\{\[styles\.dateText, live\.dateText\]\} numberOfLines=\{1\} ellipsizeMode="tail">/);
   expect(SOURCE).toMatch(/sheetTitle: \{ \.\.\.type\.bodyStrong/);
 });
 

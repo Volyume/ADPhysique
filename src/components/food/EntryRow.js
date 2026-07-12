@@ -103,13 +103,13 @@ export function EntryRow({
       ) : null}
       <View style={styles.entryMain}>
         <View style={styles.entryNameRow}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.entryName, live.entryName]} numberOfLines={1}>{name}</Text>
+          <Text style={[styles.entryName, live.entryName]} numberOfLines={1}>{name}</Text>
           {/* Item 9: quiet weighing-basis chip, shown only for an explicit
               raw/cooked weight_state. Decorative only, same as mealTag below
               (no accessibility change to the row's own label). */}
           {weightStateLabel ? (
             <View style={[styles.weightStateTag, live.weightStateTag]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.weightStateTagText, live.weightStateTagText]} numberOfLines={1}>{weightStateLabel}</Text>
+              <Text style={[styles.weightStateTagText, live.weightStateTagText]} numberOfLines={1}>{weightStateLabel}</Text>
             </View>
           ) : null}
           {/* Ultimate-Audit item 15 (D22 15a): the meal name as a small quiet
@@ -118,16 +118,16 @@ export function EntryRow({
               row's own accessibilityLabel below is unaffected). */}
           {mealLabel ? (
             <View style={[styles.mealTag, live.mealTag]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.mealTagText, live.mealTagText]} numberOfLines={1}>{mealLabel}</Text>
+              <Text style={[styles.mealTagText, live.mealTagText]} numberOfLines={1}>{mealLabel}</Text>
             </View>
           ) : null}
         </View>
-        {brand ? <Text maxFontSizeMultiplier={1.3} style={[styles.entryBrand, live.entryBrand]} numberOfLines={1}>{brand}</Text> : null}
-        {metaLine ? <Text maxFontSizeMultiplier={1.3} style={[styles.entryQuantity, live.entryQuantity]}>{metaLine}</Text> : null}
+        {brand ? <Text style={[styles.entryBrand, live.entryBrand]} numberOfLines={1}>{brand}</Text> : null}
+        {metaLine ? <Text style={[styles.entryQuantity, live.entryQuantity]}>{metaLine}</Text> : null}
       </View>
       <View style={styles.entryMacros}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.entryKcal, live.entryKcal]}>{toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.entryMacroLine, live.entryMacroLine]}>{p}P {c}C {f}F</Text>
+        <Text style={[styles.entryKcal, live.entryKcal]}>{toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+        <Text style={[styles.entryMacroLine, live.entryMacroLine]}>{p}P {c}C {f}F</Text>
       </View>
     </TouchableOpacity>
   );
@@ -151,7 +151,7 @@ export function SwipeableEntryRow({
       onPress={() => onDelete?.(entry, () => ref.current?.close?.())}
     >
       <Ionicons name="trash-outline" size={20} color={t.colors.textPrimary} />
-      <Text maxFontSizeMultiplier={1.3} style={[styles.swipeDeleteText, live.swipeDeleteText]}>Delete</Text>
+      <Text style={[styles.swipeDeleteText, live.swipeDeleteText]}>Delete</Text>
     </TouchableOpacity>
   ), [entry, onDelete, live.swipeDelete, live.swipeDeleteText, t.colors.textPrimary]);
   return (

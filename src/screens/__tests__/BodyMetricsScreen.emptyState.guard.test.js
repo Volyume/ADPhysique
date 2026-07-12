@@ -14,6 +14,35 @@ describe('BodyMetricsScreen empty-state design guard', () => {
     expect(source).not.toMatch(/styles\.emptyCard/);
   });
 
+  // EP-09/P-06 (Codex end-user-polish audit): before this fix, loadHistory()'s
+  // catch block reset a rejected read straight to `setHistory([]);
+  // setEwmaData([]);`, which the render below could then only ever paint as
+  // "No body metrics yet" -- a load FAILURE masquerading as a genuinely empty
+  // history. This suite pins that a failure is now tracked separately and
+  // never wipes whatever history was already on screen.
+  test('a failed history read is tracked separately and never blanks existing history', () => {
+    expect(source).toMatch(/const \[historyLoadError, setHistoryLoadError\] = useState\(false\);/);
+    const catchStart = source.indexOf('} catch (_e) {\n      // EP-09/P-06');
+    expect(catchStart).toBeGreaterThan(-1);
+    const catchEnd = source.indexOf('\n    }\n\n    // Lift data', catchStart);
+    expect(catchEnd).toBeGreaterThan(catchStart);
+    const catchBody = source.slice(catchStart, catchEnd);
+    expect(catchBody).toMatch(/setHistoryLoadError\(true\);/);
+    expect(catchBody).not.toMatch(/setHistory\(\[\]\)/);
+    expect(catchBody).not.toMatch(/setEwmaData\(\[\]\)/);
+  });
+
+  test('a failed history read renders its own retryable error, ahead of the real empty state', () => {
+    const idxError = source.indexOf('historyLoadError ? (');
+    const idxEmpty = source.indexOf('title="No body metrics yet"');
+    expect(idxError).toBeGreaterThan(-1);
+    expect(idxEmpty).toBeGreaterThan(idxError);
+    const errorBlock = source.slice(idxError, idxEmpty);
+    expect(errorBlock).toMatch(/title="Couldn't load body metrics"/);
+    expect(errorBlock).toMatch(/actionLabel="Retry"/);
+    expect(errorBlock).toMatch(/onAction=\{loadHistory\}/);
+  });
+
   test('read-only and recomposition CTAs are contained controls, not loose amber text', () => {
     // CP-10 batch G lane 1: readOnlyCtaButton gained its live-theme override
     // and both icons' ink now resolves from the live theme; the contained-

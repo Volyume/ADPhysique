@@ -15,6 +15,19 @@ import { getUserBodyProfile, saveUserBodyProfile } from '../lib/database';
 import { ageYearsFromDateOfBirth, dateOfBirthFromAgeYears } from '../lib/profileAge';
 import { logError } from '../lib/errorLog';
 import * as haptics from '../lib/haptics';
+import { useToast } from '../components/Toast';
+
+// AC-08 (Codex adversarial audit, 2026-07-12): height/age feed BMR and
+// calorie-floor maths same as weight/body fat, but saveHeight/saveAge below
+// used to only guard falsy/zero, so a mistyped 900cm height or a 3-year-old
+// age would persist unchecked. bodyMetricValidate.js doesn't export height/
+// age bounds (it only covers weight/body-fat/circumference), so these two
+// realistic-human ranges are defined locally, generous on purpose like that
+// module's own bounds, matching the brief's fallback figures.
+const HEIGHT_MIN_CM = 100;
+const HEIGHT_MAX_CM = 250;
+const AGE_MIN_YEARS = 13;
+const AGE_MAX_YEARS = 100;
 
 const DIET_OPTIONS = [
   { value: 'omnivore', label: 'Omnivore' },
@@ -51,6 +64,7 @@ export default function SettingsProfileScreen() {
   const [heightFt, setHeightFt] = useState('');
   const [heightIn, setHeightIn] = useState('');
   const [age,      setAge]      = useState('');
+  const toast = useToast();
   // CP-10 stage 3: live theme (src/hooks/useTheme.js). `live` is the shared
   // settingsStyles override (SettingsPrimitives.js); `liveText` covers this
   // screen's own colour/type-bearing style keys the same way.
@@ -98,6 +112,13 @@ export default function SettingsProfileScreen() {
     const inNum = parseFloat(inches) || 0;
     const heightCm = ftNum * 30.48 + inNum * 2.54;
     if (!heightCm) return;
+    // AC-08: reject an out-of-range height rather than persisting it. This
+    // feeds BMR/calorie-floor maths same as weight, so a mistyped figure
+    // must never reach saveUserBodyProfile.
+    if (heightCm < HEIGHT_MIN_CM || heightCm > HEIGHT_MAX_CM) {
+      toast.show('That height looks off. Enter a realistic figure and try again.', { variant: 'error' });
+      return;
+    }
     try {
       await saveLocalProfile(user.id, { ...(userProfile || {}), heightCm });
       const existing = await getUserBodyProfile(user.id).catch(() => null);
@@ -115,6 +136,13 @@ export default function SettingsProfileScreen() {
     if (!user?.id) return;
     const ageNum = parseInt(ageStr, 10);
     if (!ageNum) return;
+    // AC-08: reject an out-of-range age rather than persisting it. Age feeds
+    // BMR/calorie-floor maths same as weight, so a mistyped figure must never
+    // reach saveUserBodyProfile.
+    if (ageNum < AGE_MIN_YEARS || ageNum > AGE_MAX_YEARS) {
+      toast.show('That age looks off. Enter a realistic figure and try again.', { variant: 'error' });
+      return;
+    }
     const dateOfBirth = dateOfBirthFromAgeYears(ageNum);
     try {
       await saveLocalProfile(user.id, { ...(userProfile || {}), age: ageNum });
@@ -192,8 +220,8 @@ export default function SettingsProfileScreen() {
               <Ionicons name="male-female-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingLabel, live.settingLabel]}>Biological sex</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingSub, live.settingSub]}>Used for calorie floors and nutrition targets. Changes apply on your next weekly check-in.</Text>
+              <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Biological sex</Text>
+              <Text style={[settingsStyles.settingSub, live.settingSub]}>Used for calorie floors and nutrition targets. Changes apply on your next weekly check-in.</Text>
             </View>
           </View>
           <View style={styles.dietChips}>
@@ -220,8 +248,8 @@ export default function SettingsProfileScreen() {
               <Ionicons name="resize-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingLabel, live.settingLabel]}>Height</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingSub, live.settingSub]}>Used for calorie floors and nutrition targets.</Text>
+              <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Height</Text>
+              <Text style={[settingsStyles.settingSub, live.settingSub]}>Used for calorie floors and nutrition targets.</Text>
             </View>
           </View>
           <HeightFeetInchesField
@@ -239,8 +267,8 @@ export default function SettingsProfileScreen() {
               <Ionicons name="calendar-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingLabel, live.settingLabel]}>Date of birth</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingSub, live.settingSub]}>Enter your age. Used for calorie floors and nutrition targets.</Text>
+              <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Date of birth</Text>
+              <Text style={[settingsStyles.settingSub, live.settingSub]}>Enter your age. Used for calorie floors and nutrition targets.</Text>
             </View>
           </View>
           <AgeYearsField value={age} onChangeText={setAge} onBlur={() => saveAge(age)} />
@@ -251,8 +279,8 @@ export default function SettingsProfileScreen() {
               <Ionicons name="nutrition-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingLabel, live.settingLabel]}>Diet preference</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[settingsStyles.settingSub, live.settingSub]}>Filters the meals Volyume suggests.</Text>
+              <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Diet preference</Text>
+              <Text style={[settingsStyles.settingSub, live.settingSub]}>Filters the meals Volyume suggests.</Text>
             </View>
           </View>
           <View style={styles.dietChips}>

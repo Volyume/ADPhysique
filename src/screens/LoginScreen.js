@@ -57,6 +57,13 @@ export default function LoginScreen() {
       }
     } catch (e) {
       logError('LoginScreen.oauth.threw', e, { provider });
+      // EP-18/UI-07: a thrown exception (native-bridge failure, browser-
+      // launch failure, malformed config) used to leave the button dimming
+      // then quietly returning to idle with no explanation, at the app's
+      // very first touchpoint. Show the same calm fallback sentence as the
+      // resolved-error branch above (same fix pattern as ProUpgradeScreen's
+      // oauth.threw catch).
+      toast.show("That didn't go through. Try again.", { variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -78,7 +85,7 @@ export default function LoginScreen() {
           {/* ── Brand block ── */}
           <View style={styles.brand}>
             <VolyumeMark size={56} style={styles.brandMark} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.brandTagline, live.brandTagline]}>Less thinking. More lifting.</Text>
+            <Text style={[styles.brandTagline, live.brandTagline]}>Less thinking. More lifting.</Text>
           </View>
 
           {/* Thin divider below brand */}
@@ -94,9 +101,20 @@ export default function LoginScreen() {
           />
           {/* A7: the only affordance while waiting was dimmed buttons, no
               indication anything is actually happening. A calm caption names
-              what's in progress. */}
+              what's in progress.
+              AX-08 (launch accessibility audit): the caption wasn't marked
+              busy/live, so a screen reader never heard that sign-in was in
+              progress. accessibilityLiveRegion announces it on appearance
+              (polite, mirroring Toast's non-error pattern); accessibilityState
+              busy reinforces the in-progress state for the duration. */}
           {loading ? (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.oauthWaiting, live.oauthWaiting]}>Waiting for Google or Apple…</Text>
+            <Text
+              style={[styles.oauthWaiting, live.oauthWaiting]}
+              accessibilityLiveRegion="polite"
+              accessibilityState={{ busy: true }}
+            >
+              Waiting for Google or Apple…
+            </Text>
           ) : null}
 
           {/* "Continue without an account" removed per

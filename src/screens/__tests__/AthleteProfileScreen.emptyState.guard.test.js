@@ -23,4 +23,13 @@ describe('AthleteProfileScreen shared empty state', () => {
     expect(source).toMatch(/Tap to try again/);
     expect(source).toMatch(/setReloadKey\(\(n\) => n \+ 1\)/);
   });
+
+  // P-16 (Codex end-user-polish audit): a missing native module (no
+  // ImagePicker, or the pre-first-sync moment before user?.id resolves) used
+  // to read as "this app build is incomplete", which is alarming and wrong --
+  // it's a device/build-time capability gap, not a broken install.
+  test('missing image-picker copy reads as a device limitation, not an incomplete build', () => {
+    expect(source).toMatch(/Profile pictures aren't available on your device\./);
+    expect(source).not.toMatch(/Profile pictures aren't available in this version/);
+  });
 });

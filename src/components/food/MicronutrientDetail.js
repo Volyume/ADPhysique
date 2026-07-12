@@ -64,12 +64,12 @@ export default function MicronutrientDetail({ food, quantityG }) {
         onToggle={() => setOpen((v) => !v)}
       >
         {knownCount < MIN_KNOWN_TO_SHOW_GRID ? (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.emptyText, live.emptyText]}>No vitamin and mineral data for this food yet.</Text>
+          <Text style={[styles.emptyText, live.emptyText]}>No vitamin and mineral data for this food yet.</Text>
         ) : (
           <>
             {knownVitamins.length ? (
               <>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.groupLabel, live.groupLabel]}>Vitamins</Text>
+                <Text style={[styles.groupLabel, live.groupLabel]}>Vitamins</Text>
                 {knownVitamins.map((n) => (
                   <NutrientRow key={n.key} nutrient={n} amount={scaled[n.key]} />
                 ))}
@@ -77,7 +77,7 @@ export default function MicronutrientDetail({ food, quantityG }) {
             ) : null}
             {knownMinerals.length ? (
               <>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.groupLabel, live.groupLabel, knownVitamins.length ? styles.groupLabelSpacer : null]}>Minerals</Text>
+                <Text style={[styles.groupLabel, live.groupLabel, knownVitamins.length ? styles.groupLabelSpacer : null]}>Minerals</Text>
                 {knownMinerals.map((n) => (
                   <NutrientRow key={n.key} nutrient={n} amount={scaled[n.key]} />
                 ))}
@@ -101,10 +101,10 @@ function NutrientRow({ nutrient, amount }) {
       accessible
       accessibilityLabel={`${nutrient.label}, ${amount} ${nutrient.unit}${pct != null ? `, ${pct}% of NRV` : ''}`}
     >
-      <Text maxFontSizeMultiplier={1.3} style={[styles.rowLabel, live.rowLabel]}>{nutrient.label}</Text>
+      <Text style={[styles.rowLabel, live.rowLabel]}>{nutrient.label}</Text>
       <View style={styles.rowValues}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.rowAmount, live.rowAmount]}>{`${amount} ${nutrient.unit}`}</Text>
-        {pct != null ? <Text maxFontSizeMultiplier={1.3} style={[styles.rowNrv, live.rowNrv]}>{`${pct}% NRV`}</Text> : null}
+        <Text style={[styles.rowAmount, live.rowAmount]}>{`${amount} ${nutrient.unit}`}</Text>
+        {pct != null ? <Text style={[styles.rowNrv, live.rowNrv]}>{`${pct}% NRV`}</Text> : null}
       </View>
     </View>
   );

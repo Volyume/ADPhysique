@@ -91,20 +91,20 @@ function ChangeCard({ icon, title, prev, next, reason, unchanged }) {
     <Card style={[styles.card, unchanged && styles.cardUnchanged]}>
       <View style={styles.cardHeader}>
         <Ionicons name={icon} size={16} color={unchanged ? t.colors.textMuted : t.colors.primary} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.cardTitle, live.cardTitle]}>{title}</Text>
-        {unchanged && <Text maxFontSizeMultiplier={1.3} style={[styles.unchangedTag, live.unchangedTag]}>unchanged</Text>}
+        <Text style={[styles.cardTitle, live.cardTitle]}>{title}</Text>
+        {unchanged && <Text style={[styles.unchangedTag, live.unchangedTag]}>unchanged</Text>}
       </View>
       {unchanged ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.cardValue, live.cardValue]}>{next}</Text>
+        <Text style={[styles.cardValue, live.cardValue]}>{next}</Text>
       ) : (
         <View style={styles.diffRow}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.diffPrev, live.diffPrev]}>{prev}</Text>
+          <Text style={[styles.diffPrev, live.diffPrev]}>{prev}</Text>
           <Ionicons name="arrow-forward" size={14} color={t.colors.textMuted} style={styles.diffArrow} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.diffNext, live.diffNext]}>{next}</Text>
+          <Text style={[styles.diffNext, live.diffNext]}>{next}</Text>
         </View>
       )}
       {!!reason && !unchanged && (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.cardReason, live.cardReason]}>{reason}</Text>
+        <Text style={[styles.cardReason, live.cardReason]}>{reason}</Text>
       )}
     </Card>
   );
@@ -120,19 +120,19 @@ function MacroRow({ label, prev, next, unit = 'g' }) {
   const sign = delta > 0 ? '+' : '';
   return (
     <View style={styles.macroRow}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.macroLabel, live.macroLabel]}>{label}</Text>
+      <Text style={[styles.macroLabel, live.macroLabel]}>{label}</Text>
       <View style={styles.macroValues}>
         {changed ? (
           <>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.macroPrev, live.macroPrev]}>{prev ?? '-'}{unit}</Text>
+            <Text style={[styles.macroPrev, live.macroPrev]}>{prev ?? '-'}{unit}</Text>
             <Ionicons name="arrow-forward" size={11} color={t.colors.textMuted} style={{ marginHorizontal: spacing.xs }} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.macroNext, live.macroNext]}>{next ?? '-'}{unit}</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.macroDelta, live.macroDelta, delta > 0 ? [styles.macroDeltaUp, live.macroDeltaUp] : [styles.macroDeltaDown, live.macroDeltaDown]]}>
+            <Text style={[styles.macroNext, live.macroNext]}>{next ?? '-'}{unit}</Text>
+            <Text style={[styles.macroDelta, live.macroDelta, delta > 0 ? [styles.macroDeltaUp, live.macroDeltaUp] : [styles.macroDeltaDown, live.macroDeltaDown]]}>
               {' '}({sign}{delta}{unit})
             </Text>
           </>
         ) : (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.macroUnchanged, live.macroUnchanged]}>{next ?? '-'}{unit}</Text>
+          <Text style={[styles.macroUnchanged, live.macroUnchanged]}>{next ?? '-'}{unit}</Text>
         )}
       </View>
     </View>
@@ -214,8 +214,8 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
         <Card tone="success" style={styles.heroCard}>
           <Ionicons name="checkmark-circle" size={28} color={t.colors.success} />
           <View style={{ flex: 1 }}>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.heroTitle, live.heroTitle]}>Goals updated</Text>
-            <Text maxFontSizeMultiplier={1.3} style={[styles.heroBody, live.heroBody]}>
+            <Text style={[styles.heroTitle, live.heroTitle]}>Goals updated</Text>
+            <Text style={[styles.heroBody, live.heroBody]}>
               {anyChanged
                 ? `Your plan and nutrition targets have been updated to match. Here's a breakdown of what shifted and why.`
                 : `Nothing meaningful changed. Your plan and nutrition stay as they were.`}
@@ -265,13 +265,13 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
               <Card style={styles.card}>
                 <View style={styles.cardHeader}>
                   <Ionicons name="restaurant-outline" size={16} color={t.colors.primary} />
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.cardTitle, live.cardTitle]}>Daily macros</Text>
+                  <Text style={[styles.cardTitle, live.cardTitle]}>Daily macros</Text>
                 </View>
                 <MacroRow label="Protein" prev={prevP} next={nextP} />
                 <MacroRow label="Carbs"   prev={prevC} next={nextC} />
                 <MacroRow label="Fat"     prev={prevF} next={nextF} />
                 {!macrosChanged && (
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.cardReason, live.cardReason]}>Your macros stay where they are. The change you made does not shift them meaningfully.</Text>
+                  <Text style={[styles.cardReason, live.cardReason]}>Your macros stay where they are. The change you made does not shift them meaningfully.</Text>
                 )}
               </Card>
             )}
@@ -292,7 +292,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
         <Card style={[styles.nextCard, live.nextCard]}>
           <View style={styles.nextRow}>
             <Ionicons name="ellipse" size={6} color={t.colors.primary} style={styles.bullet} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.nextText, live.nextText]}>
+            <Text style={[styles.nextText, live.nextText]}>
               {planRerolled
                 ? 'A fresh plan has been built for your new goal and is now your active plan. Your next session comes from it. Review the full plan from Train.'
                 : 'Your goal is saved, but the training plan didn\'t rebuild this time. Open Train and choose "Start with a plan" to retry.'}
@@ -300,14 +300,14 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
           </View>
           <View style={styles.nextRow}>
             <Ionicons name="ellipse" size={6} color={t.colors.primary} style={styles.bullet} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.nextText, live.nextText]}>
+            <Text style={[styles.nextText, live.nextText]}>
               Nutrition targets in the Coach tab now reflect the updated numbers. Open Nutrition Targets to see the full breakdown.
             </Text>
           </View>
           {next.phase === 'cut' && !edFlagOpen && (
             <View style={styles.nextRow}>
               <Ionicons name="ellipse" size={6} color={t.colors.primary} style={styles.bullet} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.nextText, live.nextText]}>
+              <Text style={[styles.nextText, live.nextText]}>
                 If you stay in a deficit for more than eight weeks, Volyume will suggest a short diet break to support recovery and metabolic rate.
               </Text>
             </View>

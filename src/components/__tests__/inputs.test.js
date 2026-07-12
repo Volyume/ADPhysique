@@ -4,7 +4,7 @@
  * lock their contract before rollout.
  */
 import { create, act } from 'react-test-renderer';
-import { ActivityIndicator, TextInput } from 'react-native';
+import { ActivityIndicator, TextInput, View } from 'react-native';
 
 import SearchBar from '../SearchBar';
 import TextField from '../TextField';
@@ -173,6 +173,35 @@ describe('Chip', () => {
     expect(tree.root.findByProps({ accessibilityLabel: 'Diet preference Vegan' })).toBeTruthy();
     expect(JSON.stringify(tree.toJSON())).toContain('red');
   });
+
+  // AX-05 (launch accessibility audit, 2026-07-12): Chip used to default
+  // maxFontSizeMultiplier to 1.3, silently re-capping text EP-14 had already
+  // uncapped everywhere else, and its ~36dp default geometry missed the
+  // 44dp touch-target minimum. Both are fixed at the primitive; this proves
+  // it at render time (Chip.a11y.guard.test.js pins the same facts at
+  // source level for the ~49 call sites that can't all be mounted here).
+  test('meets the 44dp minimum touch target at default text size', () => {
+    let tree;
+    act(() => { tree = create(<Chip label="Cut" onPress={() => {}} />); });
+    const pressable = tree.root
+      .findAllByProps({ accessibilityRole: 'button' })
+      .find(n => typeof n.props.onPress === 'function');
+    const flat = Object.assign({}, ...[].concat(pressable.props.style).filter(Boolean));
+    expect(flat.minHeight).toBeGreaterThanOrEqual(44);
+  });
+
+  test('label carries no maxFontSizeMultiplier cap, even at a long label a large system text size would wrap further', () => {
+    let tree;
+    const longLabel = 'A longer chip label than usual, the kind Dynamic Type at 200% produces';
+    act(() => { tree = create(<Chip label={longLabel} onPress={() => {}} />); });
+    const label = tree.root.findByProps({ children: longLabel });
+    // No cap: RN's own (uncapped) system font scaling applies, matching
+    // every other Text in the app since EP-14.
+    expect(label.props.maxFontSizeMultiplier).toBeUndefined();
+    // No forced numberOfLines either: the label is free to wrap/grow at a
+    // large multiplier instead of being clipped/truncated.
+    expect(label.props.numberOfLines).toBeUndefined();
+  });
 });
 
 describe('Stepper', () => {
@@ -228,5 +257,53 @@ describe('Stepper', () => {
     expect(tree.root.findByProps({ accessibilityLabel: 'Decrease rest for bench press' })).toBeTruthy();
     expect(tree.root.findByProps({ accessibilityLabel: 'Increase rest for bench press' })).toBeTruthy();
     expect(tree.root.findByProps({ accessibilityLabel: 'Rest 90s' })).toBeTruthy();
+  });
+
+  // AX-15 (launch accessibility audit, 2026-07-12): the compact button's
+  // visible box is a deliberately small 30x34dp, below the 44x44dp minimum
+  // touch target. Fix is a default 8dp hit slop on every edge PLUS matching
+  // padding on the wrapping row (RN clips hitSlop to the parent's own
+  // bounds, so the row has to make room for it or the hit slop is a no-op).
+  // This proves the real effective target, not just that a hitSlop prop
+  // exists: visible box size + hit slop >= 44 in both axes, and the row's
+  // own padding is large enough that the hit slop actually reaches that far
+  // (Stepper.a11y.guard.test.js pins the same facts at source level).
+  test('compact button reaches a 44dp effective touch target without growing the visible affordance (AX-15)', () => {
+    let tree;
+    act(() => {
+      tree = create(
+        <Stepper
+          value={90}
+          onChange={() => {}}
+          min={30}
+          max={600}
+          step={15}
+          size="compact"
+          label="rest"
+          decreaseLabel="Decrease rest"
+          increaseLabel="Increase rest"
+        />,
+      );
+    });
+
+    const decBtn = tree.root.findByProps({ accessibilityLabel: 'Decrease rest' });
+    const flatBtn = Object.assign({}, ...[].concat(decBtn.props.style).filter(Boolean));
+    const hitSlop = decBtn.props.hitSlop;
+    expect(hitSlop).toBeTruthy();
+
+    // Visible affordance is untouched: still the compact 30x34 box.
+    expect(flatBtn.width).toBe(30);
+    expect(flatBtn.height).toBe(34);
+
+    // Effective touch target, box + hit slop, meets 44dp in both axes.
+    expect(flatBtn.width + hitSlop.left + hitSlop.right).toBeGreaterThanOrEqual(44);
+    expect(flatBtn.height + hitSlop.top + hitSlop.bottom).toBeGreaterThanOrEqual(44);
+
+    // The row wrapping the button must have at least as much padding as the
+    // hit slop, or RN's "never past the parent bounds" rule clips it away.
+    const row = tree.root.findByType(View);
+    const flatRow = Object.assign({}, ...[].concat(row.props.style).flat(Infinity).filter(Boolean));
+    expect(flatRow.padding).toBeGreaterThanOrEqual(hitSlop.left);
+    expect(flatRow.padding).toBeGreaterThanOrEqual(hitSlop.top);
   });
 });

@@ -3,7 +3,7 @@ import { generateInsights } from './insightsEngine';
 import { calculate1RM, allocateExerciseVolume } from './algorithms';
 import { pickBestLift } from './bestLift';
 import { logError, logWarn } from './errorLog';
-import { localDayKey, localWeekStartMs } from './dayKey';
+import { localDayKey, localWeekStartMs, localWeekEndMs } from './dayKey';
 import { openEncryptedDb } from './dbCrypto';
 import { weekWindowsEndingAt as buildWeekWindowsEndingAt } from './weekWindows';
 import { createActivityRepository } from './database/activity';
@@ -153,6 +153,17 @@ async function _doInit() {
     try { require('./errorLog').logWarn('database.plaintextFallback', 'local DB opened UNENCRYPTED (SQLCipher unavailable / migration fallback)', {}); } catch (_) {}
   }
   await opened.execAsync('PRAGMA journal_mode = WAL;');
+  // R2-11 (production P0, build 2692, founder repro: "database is locked" at
+  // plan build / sign-out wipe / set logging). expo-sqlite runs statements on
+  // a parallel IO pool with no per-connection mutex, and only transaction
+  // BLOCKS are queued app-side (_txTail) - a raw single-statement write that
+  // collides with an open BEGIN got SQLITE_BUSY back INSTANTLY and surfaced
+  // as a hard "database is locked" rejection. With one shared connection a
+  // wait cannot deadlock, so a busy handler that retries through the
+  // sub-second contention window is the correct behaviour. The deeper fix
+  // (queueing ALL writes + the runInTransaction reentrancy flag) is queued
+  // on the board; this line is what stops the user-facing failures.
+  await opened.execAsync('PRAGMA busy_timeout = 5000;');
   await opened.execAsync(`
     CREATE TABLE IF NOT EXISTS exercises (
       id TEXT PRIMARY KEY,
@@ -2178,15 +2189,59 @@ export async function db() {
 //
 // runInTransaction chains transactions so only one BEGIN/COMMIT is ever in
 // flight across the whole app (database, food, sync all route through here).
-// A reentrancy guard runs the task inline if a transaction is somehow
-// already open, so a task that itself calls runInTransaction cannot deadlock
-// on the queue or nest a second BEGIN.
+//
+// Reentrancy contract (tightened 2026-07-11, R2-11 structural follow-up):
+// nested runInTransaction calls are FORBIDDEN - a nested call would queue
+// behind its own enclosing transaction and deadlock. In-transaction callers
+// use the *InTx variants (deleteProgrammeCascadeInTx) instead; the call-graph
+// audit of every task body found exactly one nest (planAutoGen's zero-match
+// rollback) and it was un-nested. The old blanket inline guard
+// (`if (inTx()) return task()`) is now scoped to transactions the queue does
+// NOT own (a manual BEGIN, e.g. seed/import paths): a runInTransaction call
+// arriving while a QUEUED transaction is open used to inline-join that
+// foreign transaction - its writes committed or rolled back with someone
+// else's work and never serialised. Such callers now queue like everyone
+// else.
 let _txTail = Promise.resolve();
+let _txQueueActive = false;
 export async function runInTransaction(d, task) {
   const inTx = () => typeof d.isInTransactionSync === 'function' && d.isInTransactionSync();
-  if (inTx()) return task();
-  const run = _txTail.then(() => (inTx() ? task() : d.withTransactionAsync(task)));
+  // Inline-join ONLY a transaction the queue does not own (a manual BEGIN
+  // elsewhere): queueing behind a transaction the queue cannot see would
+  // start a second BEGIN inside it.
+  if (inTx() && !_txQueueActive) return task();
+  // R2-13 (production, build 2694, founder repro "Cannot read property
+  // 'zeroMatch' of undefined" at plan generation): expo-sqlite's
+  // withTransactionAsync AWAITS the task but DISCARDS its return value, so
+  // this used to resolve to undefined on the normal path and any caller
+  // consuming the result (planAutoGen's writeResult since 4900099) blew up
+  // AFTER the commit. Capture the task's result in a closure so callers get
+  // it back on every path; commit/rollback semantics are unchanged.
+  const run = _txTail.then(async () => {
+    if (inTx()) return task();
+    _txQueueActive = true;
+    try {
+      let result;
+      await d.withTransactionAsync(async () => { result = await task(); });
+      return result;
+    } finally {
+      _txQueueActive = false;
+    }
+  });
   // Keep the queue alive whatever this transaction's outcome.
+  _txTail = run.then(() => {}, () => {});
+  return run;
+}
+
+// R2-11 structural follow-up: single-statement writes that can fire while a
+// queued transaction holds the connection (set logging, engine telemetry)
+// ride the same queue, so they never contend with an open BEGIN - the
+// busy_timeout pragma then only covers the residual native-thread window.
+// NEVER call this from inside a runInTransaction task: it would queue behind
+// its own transaction and deadlock (call-graph audited 2026-07-11 - neither
+// createWorkoutSet nor recordEngineTelemetry is reachable from a task).
+function queuedWrite(fn) {
+  const run = _txTail.then(() => fn());
   _txTail = run.then(() => {}, () => {});
   return run;
 }
@@ -2876,7 +2931,9 @@ export async function createWorkoutSet(data) {
       exerciseName = exRow?.name ?? null;
     } catch (_) { /* tolerate */ }
   }
-  await d.runAsync(
+  // Queued (R2-11): set logging fires while plan/coach transactions can hold
+  // the connection; riding the write queue removes that contention entirely.
+  await queuedWrite(() => d.runAsync(
     `INSERT INTO workout_sets
       (id, user_id, workout_id, exercise_id, exercise_name, set_number, set_type,
        target_reps_min, target_reps_max, actual_reps, weight, rir, rpe,
@@ -2905,7 +2962,7 @@ export async function createWorkoutSet(data) {
       now,
       now,
     ],
-  );
+  ));
   return { id, ...data, createdAt: now, updatedAt: now };
 }
 
@@ -3162,18 +3219,24 @@ export async function createProgramme(userId, name, description = null, isLibrar
   return { id, userId, name, description, isLibrary, tags, splitType, difficulty, createdAt: now, updatedAt: now };
 }
 
+// Raw cascade for callers ALREADY inside a runInTransaction task
+// (planAutoGen's zero-match rollback). Nested runInTransaction calls are
+// forbidden - a nested call queues behind its own enclosing transaction and
+// deadlocks - so in-transaction callers use this variant on their own handle.
+export async function deleteProgrammeCascadeInTx(d, programmeId) {
+  await d.runAsync(
+    `DELETE FROM routine_exercises
+     WHERE routine_id IN (SELECT id FROM routines WHERE programme_id = ?)`,
+    [programmeId],
+  );
+  await d.runAsync('DELETE FROM routines WHERE programme_id = ?', [programmeId]);
+  await d.runAsync('DELETE FROM programmes WHERE id = ?', [programmeId]);
+}
+
 export async function deleteProgrammeCascade(programmeId, { scheduleSync = true } = {}) {
   if (!programmeId) return;
   const d = await db();
-  await runInTransaction(d, async () => {
-    await d.runAsync(
-      `DELETE FROM routine_exercises
-       WHERE routine_id IN (SELECT id FROM routines WHERE programme_id = ?)`,
-      [programmeId],
-    );
-    await d.runAsync('DELETE FROM routines WHERE programme_id = ?', [programmeId]);
-    await d.runAsync('DELETE FROM programmes WHERE id = ?', [programmeId]);
-  });
+  await runInTransaction(d, () => deleteProgrammeCascadeInTx(d, programmeId));
   if (scheduleSync) _scheduleSync();
 }
 
@@ -4548,6 +4611,14 @@ const PARTNER_LOCAL_WIPE_TABLES = [
   'partnerships',
 ];
 
+// "no such table" from an older schema means the table holds no data, so a
+// fatal wipe step has nothing to remove there. Fail-closed protects data that
+// exists, not tables that don't - without this a single missing fatal table
+// dead-ends sign-out permanently (sign-out escape ruling, 2026-07-11).
+function isMissingTableError(e) {
+  return /no such table/i.test(e?.message ?? '');
+}
+
 export async function wipeAllUserData(userId) {
   if (!userId) return;
   const d = await db();
@@ -4625,16 +4696,23 @@ export async function wipeAllUserData(userId) {
       } catch (e) {
         // Continue with other tables. A missing table on an older schema
         // shouldn't abort the whole wipe.
+        if (isMissingTableError(e)) continue;
         logError(`database.wipeAllUserData.${table}`, e, { userId });
-        if (FATAL_LOCAL_WIPE_TABLES.has(table)) throw e;
+        // R2-12: name the failing step on the error so the sign-out alert
+        // (and the Sentry event) says WHAT failed instead of a generic
+        // photo-and-scan line for every failure class.
+        if (FATAL_LOCAL_WIPE_TABLES.has(table)) { e.wipeStep = table; throw e; }
       }
     }
 
     try {
       await d.runAsync('DELETE FROM progress_photo_meta WHERE user_id IS NULL');
     } catch (e) {
-      logError('database.wipeAllUserData.progress_photo_meta_legacy', e, { userId });
-      throw e;
+      if (!isMissingTableError(e)) {
+        logError('database.wipeAllUserData.progress_photo_meta_legacy', e, { userId });
+        e.wipeStep = 'photo_meta_legacy';
+        throw e;
+      }
     }
 
     try {
@@ -4647,6 +4725,7 @@ export async function wipeAllUserData(userId) {
       await require('./progressPhotos').wipeProgressPhotoDirectoryForUser(userId);
     } catch (e) {
       logError('database.wipeAllUserData.progress_photo_files', e, { userId });
+      e.wipeStep = 'photo_files';
       throw e;
     }
 
@@ -4658,6 +4737,7 @@ export async function wipeAllUserData(userId) {
       await require('./dbSnapshot').purgeSnapshots();
     } catch (e) {
       logError('database.wipeAllUserData.snapshots', e, { userId });
+      e.wipeStep = 'snapshots';
       throw e;
     }
 
@@ -4680,8 +4760,9 @@ export async function wipeAllUserData(userId) {
       try {
         await d.runAsync(`DELETE FROM ${table}`);
       } catch (e) {
+        if (isMissingTableError(e)) continue;
         logError(`database.wipeAllUserData.${table}`, e, { userId });
-        if (FATAL_LOCAL_WIPE_TABLES.has(table)) throw e;
+        if (FATAL_LOCAL_WIPE_TABLES.has(table)) { e.wipeStep = table; throw e; }
       }
     }
 
@@ -4694,6 +4775,130 @@ export async function wipeAllUserData(userId) {
       await d.execAsync(`INSERT INTO custom_foods_fts(custom_foods_fts) VALUES('rebuild')`);
     } catch (_) { /* no FTS index on this install */ }
   });
+}
+
+// ─── Sign-out wipe escape (ruling 2026-07-11, D33) ──────────────────────────
+//
+// The wipe_failed path used to be a dead end: any throw from a fatal wipe
+// step blocked sign-out forever (force:true re-runs the same wipe), and the
+// only way off the founder's own device was clearing app storage. The privacy
+// rule is UNCHANGED - sign-out completes only when zero user data remains on
+// this device - but "an exception was thrown" is not the same fact as "data
+// remains". verifyUserWipeClean inspects the actual fatal surfaces (row
+// counts, this account's photo directory, DB snapshots) so the caller can
+// retry the wipe and, if every retry still throws, allow sign-out only when
+// the device is verifiably clean. Any verification error that is not a
+// missing table counts as residue: fail closed.
+
+export async function verifyUserWipeClean(userId) {
+  if (!userId) return { clean: false, residue: ['no_user'] };
+  const d = await db();
+  const residue = [];
+
+  const userKeyedFatalTables = [...FATAL_LOCAL_WIPE_TABLES]
+    .filter((t) => !PARTNER_LOCAL_WIPE_TABLES.includes(t));
+  for (const table of userKeyedFatalTables) {
+    try {
+      const row = await d.getFirstAsync(
+        `SELECT COUNT(*) AS n FROM ${table} WHERE user_id = ?`, [userId],
+      );
+      if (Number(row?.n ?? 0) > 0) residue.push(table);
+    } catch (e) {
+      if (!isMissingTableError(e)) residue.push(table);
+    }
+  }
+
+  // Legacy pre-ownership photo rows carry no user_id but are fatal too.
+  try {
+    const row = await d.getFirstAsync(
+      'SELECT COUNT(*) AS n FROM progress_photo_meta WHERE user_id IS NULL',
+    );
+    if (Number(row?.n ?? 0) > 0) residue.push('photo_meta_legacy');
+  } catch (e) {
+    if (!isMissingTableError(e)) residue.push('photo_meta_legacy');
+  }
+
+  // Partner tables are wiped flat (local SQLite is single-user).
+  for (const table of PARTNER_LOCAL_WIPE_TABLES) {
+    try {
+      const row = await d.getFirstAsync(`SELECT COUNT(*) AS n FROM ${table}`);
+      if (Number(row?.n ?? 0) > 0) residue.push(table);
+    } catch (e) {
+      if (!isMissingTableError(e)) residue.push(table);
+    }
+  }
+
+  // This account's photo files on disk. Read the directory raw (never via
+  // listProgressPhotos, whose ensurePhotoDir would recreate the directory).
+  try {
+    // eslint-disable-next-line global-require
+    const { photoDir } = require('./progressPhotos');
+    // eslint-disable-next-line global-require
+    const FileSystem = require('expo-file-system/legacy');
+    const dir = photoDir(userId);
+    const info = await FileSystem.getInfoAsync(dir);
+    if (info?.exists) {
+      const names = await FileSystem.readDirectoryAsync(dir).catch(() => null);
+      if (names === null || names.length > 0) residue.push('photo_files');
+    }
+  } catch (_) {
+    residue.push('photo_files');
+  }
+
+  // DB snapshots are byte-for-byte pre-wipe copies; any survivor is residue.
+  try {
+    // eslint-disable-next-line global-require
+    const { SNAP_DIR } = require('./dbSnapshot');
+    // eslint-disable-next-line global-require
+    const FileSystem = require('expo-file-system/legacy');
+    const info = await FileSystem.getInfoAsync(SNAP_DIR);
+    if (info?.exists) {
+      const names = await FileSystem.readDirectoryAsync(SNAP_DIR).catch(() => null);
+      if (names === null || names.length > 0) residue.push('snapshots');
+    }
+  } catch (_) {
+    residue.push('snapshots');
+  }
+
+  return { clean: residue.length === 0, residue };
+}
+
+// Bounded-retry wipe for the account-boundary flows (sign-out, delete
+// account). Returns { ok: true } on success, { ok: true, verifiedClean: true }
+// when every attempt threw but the device is verifiably clean (the wipe's
+// goal is met), or { ok: false, step } to fail closed with the step named for
+// the alert (R2-12).
+export async function wipeAllUserDataWithRetry(userId, { attempts = 3, delaysMs = [500, 1500] } = {}) {
+  if (!userId) return { ok: true };
+  let lastErr = null;
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      await wipeAllUserData(userId);
+      return { ok: true };
+    } catch (e) {
+      lastErr = e;
+      logError('database.wipeAllUserDataWithRetry', e, { userId, attempt: i + 1, attempts });
+      if (i < attempts - 1) {
+        const wait = delaysMs[Math.min(i, delaysMs.length - 1)] ?? 0;
+        if (wait > 0) await new Promise((resolve) => { setTimeout(resolve, wait); });
+      }
+    }
+  }
+  try {
+    const check = await verifyUserWipeClean(userId);
+    if (check.clean) {
+      logWarn(
+        'database.wipeAllUserDataWithRetry.verifiedClean',
+        `wipe threw ${attempts} times but the device is verifiably clean; sign-out may proceed`,
+        { userId },
+      );
+      return { ok: true, verifiedClean: true };
+    }
+    return { ok: false, step: lastErr?.wipeStep ?? check.residue[0] ?? null };
+  } catch (e) {
+    logError('database.wipeAllUserDataWithRetry.verify', e, { userId });
+    return { ok: false, step: lastErr?.wipeStep ?? null };
+  }
 }
 
 // ─── Full local backup / restore ────────────────────────────────────────────
@@ -5458,7 +5663,7 @@ export async function saveWeeklyCheckin(userId, data) {
   // week_start: created_at is an absolute instant, so a row written under
   // the older UTC-Monday week_start convention is still matched and updated
   // rather than duplicated. data.weekStart is the local Monday 00:00.
-  const weekEnd = data.weekStart + 7 * 86400000;
+  const weekEnd = localWeekEndMs(data.weekStart); // LS-06: DST-correct week end, not fixed 168h
   const existing = await d.getFirstAsync(
     'SELECT id FROM weekly_checkins WHERE user_id = ? AND created_at >= ? AND created_at < ? ORDER BY created_at DESC LIMIT 1',
     [userId, data.weekStart, weekEnd],
@@ -5620,7 +5825,7 @@ export async function getDeloadWeeksInRange(userId, fromMs, toMs) {
 export async function getWeeklySessionStats(userId, weekStart) {
   const weekStartMs = coerceWeekStartMs(weekStart, 'getWeeklySessionStats');
   const d = await db();
-  const weekEnd = weekStartMs + 7 * 86400000;
+  const weekEnd = localWeekEndMs(weekStartMs); // LS-06: DST-correct week end, not fixed 168h
   const row = await d.getFirstAsync(
     `SELECT COUNT(*) AS completed FROM workouts
      WHERE user_id = ? AND is_completed = 1 AND started_at >= ? AND started_at < ?`,
@@ -5703,7 +5908,7 @@ export async function getWeeklyPRCount(userId, weekStart) {
   // epoch-ms and reject a non-finite window rather than silently miscount PRs.
   const weekStartMs = coerceWeekStartMs(weekStart, 'getWeeklyPRCount');
   const d = await db();
-  const weekEnd = weekStartMs + 7 * 86400000;
+  const weekEnd = localWeekEndMs(weekStartMs); // LS-06: DST-correct week end, not fixed 168h
   // ALGO-003: a PR is the best estimated 1RM for an exercise beating its prior
   // best estimated 1RM, not just a heavier top-set weight. Epley e1RM =
   // weight * (1 + reps/30) credits a same-weight higher-rep set and a pure rep
@@ -5753,7 +5958,7 @@ export async function getWeeklyPRCount(userId, weekStart) {
 export async function getBestLiftThisWeek(userId, weekStart) {
   const weekStartMs = coerceWeekStartMs(weekStart, 'getBestLiftThisWeek');
   const d = await db();
-  const weekEnd = weekStartMs + 7 * 86400000;
+  const weekEnd = localWeekEndMs(weekStartMs); // LS-06: DST-correct week end, not fixed 168h
 
   const weekSets = await d.getAllAsync(
     `SELECT ws.exercise_id AS exerciseId, ex.name AS exerciseName,
@@ -7583,11 +7788,13 @@ export async function recordEngineTelemetry(userId, event, payload = null) {
   const d = await db();
   const id = uid();
   const now = Date.now();
-  await d.runAsync(
+  // Queued (R2-11): telemetry fires throughout onboarding, exactly when the
+  // plan-generation transaction holds the connection.
+  await queuedWrite(() => d.runAsync(
     `INSERT INTO engine_telemetry (id, user_id, event, payload_json, occurred_at)
      VALUES (?, ?, ?, ?, ?)`,
     [id, userId, event, payload ? JSON.stringify(payload) : null, now],
-  );
+  ));
   return id;
 }
 

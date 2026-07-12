@@ -16,6 +16,7 @@
 const mockDb = {
   getAllAsync: jest.fn(async () => []),
   runAsync: jest.fn(async () => {}),
+  getFirstAsync: jest.fn(async () => ({ c: 0 })),
 };
 jest.mock('../database', () => ({ db: jest.fn(async () => mockDb) }));
 jest.mock('../errorLog', () => ({
@@ -89,5 +90,26 @@ describe('drainSyncQueue body_metric fallback (B2)', () => {
       expect.stringMatching(/DELETE FROM pending_sync_ops/),
       ['q1'],
     );
+  });
+});
+
+describe('AC-04: getPendingDeleteOpCount counts un-shipped delete tombstones', () => {
+  const { getPendingDeleteOpCount } = require('../syncQueue');
+
+  test('counts workout_delete / workout_set_delete rows for the user', async () => {
+    mockDb.getFirstAsync.mockResolvedValueOnce({ c: 3 });
+    const n = await getPendingDeleteOpCount('u1');
+    expect(n).toBe(3);
+    // The query is scoped to the two cloud-DELETE op types, not all pending ops.
+    expect(mockDb.getFirstAsync).toHaveBeenCalledWith(
+      expect.stringMatching(/op_type IN \('workout_delete', 'workout_set_delete'\)/),
+      ['u1'],
+    );
+  });
+
+  test('returns 0 for a missing user and tolerates a query failure', async () => {
+    expect(await getPendingDeleteOpCount(null)).toBe(0);
+    mockDb.getFirstAsync.mockRejectedValueOnce(new Error('no table'));
+    expect(await getPendingDeleteOpCount('u1')).toBe(0);
   });
 });

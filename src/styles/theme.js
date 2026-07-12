@@ -67,8 +67,9 @@ const baseColors = {
   // separate from textPrimary so the light theme keeps a light ink on the
   // dark-red fill instead of flipping to dark ink (which fails contrast on red,
   // audit U-F-1). White in every palette: zero-diff in dark (destructive already
-  // rendered white via textPrimary) and the fix in light. Destructive labels are
-  // large/bold text, so the applicable WCAG bar is 3:1.
+  // rendered white via textPrimary) and the fix in light. The applicable WCAG
+  // bar is 4.5:1 (AX-06): the destructive label is 13/16px semibold, which is
+  // not "large text", so `errorFill` (below) is the fill chosen to clear it.
   onError: '#FFFFFF',
 
   // Semantic status. warning is Okabe-Ito yellow (#F0E442), retuned off the
@@ -84,6 +85,15 @@ const baseColors = {
   warningBg: 'rgba(240, 228, 66, 0.15)',
   error: '#F44336',
   errorBg: 'rgba(244, 67, 54, 0.15)',
+  // AX-06 (launch accessibility audit 2026-07-12): the destructive BUTTON
+  // fill, held separate from the `error` INK. `error` (#F44336) is correct as
+  // a red ink on the dark background, but as a button fill under white
+  // `onError` ink it is only 3.68:1 -- and the destructive label is 13/16px
+  // semibold, which is NOT WCAG "large text", so the bar is 4.5:1, not 3:1.
+  // This deeper red clears 4.5:1 with white (5.58:1) while `error` stays bright
+  // for text/icons. Light inherits this value (its own `error` was already
+  // #C62828); the CVD palettes override it with a deeper magenta below.
+  errorFill: '#C62828',
 
   // Text/icon ink reserved for rendering ON the matching `*Bg` tint (status
   // pills, banners) rather than on a flat background, analogous to how
@@ -256,6 +266,9 @@ const darkCVD = {
   successBg: 'rgba(86, 180, 233, 0.15)',
   error:     '#CC79A7',
   errorBg:   'rgba(204, 121, 167, 0.15)',
+  // AX-06: white ink on the CVD pink (#CC79A7) is only 2.89:1 as a button
+  // fill; this deeper magenta clears 4.5:1 (5.36:1) while keeping the CVD hue.
+  errorFill: '#9C4D76',
   // On-tint ink (AY-2/D7) re-derived for the CVD hue swap above: without
   // these, a colour-blind-safe user would still get the DEFAULT (green/red)
   // onSuccessBg/onErrorBg ink sitting on the swapped blue/pink tint, which
@@ -269,6 +282,8 @@ const lightCVD = {
   successBg: 'rgba(0, 114, 178, 0.10)',
   error:     '#9C4D76',
   errorBg:   'rgba(156, 77, 118, 0.10)',
+  // AX-06: same deeper magenta as the button fill (already 5.36:1 with white).
+  errorFill: '#9C4D76',
   onSuccessBg: '#006096',
   onErrorBg:   '#854164',
 };

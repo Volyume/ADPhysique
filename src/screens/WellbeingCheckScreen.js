@@ -98,34 +98,48 @@ export default function WellbeingCheckScreen({ navigation }) {
       <BackHeader title="Wellbeing check" onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.intro, live.intro]}>
+        <Text style={[styles.intro, live.intro]}>
           Five questions about your relationship with food and eating. Your answers are private, stored only on this device, and help shape how your coaching is approached.
         </Text>
 
         <View style={styles.list}>
           {SCOFF_QUESTIONS.map((q, i) => (
             <View key={i} style={[styles.item, live.item]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.question, live.question]}>{q}</Text>
-              <View style={styles.btnRow}>
+              {/* AX-14 (launch accessibility audit): each question is a labelled
+                  radiogroup with two mutually-exclusive radios, so a screen
+                  reader hears the question as the group and each option as a
+                  radio with a checked state -- instead of five identical
+                  unqualified "Yes"/"No" buttons. The visible question is hidden
+                  from assistive tech here because the radiogroup label already
+                  carries it (otherwise it would be read twice). Answer/scoring
+                  behaviour (toggle) is unchanged. */}
+              <Text
+                style={[styles.question, live.question]}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+              >
+                {q}
+              </Text>
+              <View style={styles.btnRow} accessibilityRole="radiogroup" accessibilityLabel={q}>
                 <TouchableOpacity
                   style={[styles.btn, live.btn, answers[i] === true && [styles.btnSelected, live.btnSelected]]}
                   onPress={() => toggle(i, true)}
                   activeOpacity={0.8}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: answers[i] === true }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: answers[i] === true }}
                   accessibilityLabel="Yes"
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.btnText, live.btnText, answers[i] === true && [styles.btnTextSelected, live.btnTextSelected]]}>Yes</Text>
+                  <Text style={[styles.btnText, live.btnText, answers[i] === true && [styles.btnTextSelected, live.btnTextSelected]]}>Yes</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.btn, live.btn, answers[i] === false && [styles.btnSelected, live.btnSelected]]}
                   onPress={() => toggle(i, false)}
                   activeOpacity={0.8}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: answers[i] === false }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: answers[i] === false }}
                   accessibilityLabel="No"
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.btnText, live.btnText, answers[i] === false && [styles.btnTextSelected, live.btnTextSelected]]}>No</Text>
+                  <Text style={[styles.btnText, live.btnText, answers[i] === false && [styles.btnTextSelected, live.btnTextSelected]]}>No</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -140,7 +154,17 @@ export default function WellbeingCheckScreen({ navigation }) {
           onPress={handleSave}
         />
 
-        <Text maxFontSizeMultiplier={1.3} style={[styles.privacy, live.privacy]}>
+        {/* AX-14: Save is disabled until every question is answered. Without a
+            visible reason a screen-reader user (and anyone) just meets a
+            greyed-out button; this caption explains it and, as a polite live
+            region, is announced when it appears/clears as answers change. */}
+        {!allAnswered ? (
+          <Text style={[styles.saveHint, live.saveHint]} accessibilityLiveRegion="polite">
+            Answer all five questions to save.
+          </Text>
+        ) : null}
+
+        <Text style={[styles.privacy, live.privacy]}>
           Your answers are stored on this device and never shared without your permission.
         </Text>
       </ScrollView>
@@ -199,6 +223,12 @@ const styles = StyleSheet.create({
   },
 
 
+  saveHint: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
   privacy: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
@@ -227,6 +257,7 @@ function buildLiveStyles(t) {
     btnSelected: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
     btnText: { ...t.type.label, color: t.colors.textMuted },
     btnTextSelected: { color: t.colors.primary },
+    saveHint: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
     privacy: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
   };
 }

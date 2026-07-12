@@ -54,20 +54,20 @@ export default function PartnerPrivacyReceipt() {
 
   const body = (
     <>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.heading, live.heading]}>What your partner can see</Text>
+      <Text style={[styles.heading, live.heading]}>What your partner can see</Text>
 
       <View style={[styles.columns, stack && styles.columnsStack]}>
         <View style={styles.col}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.colHeader, live.colHeader]}>THEY WILL SEE</Text>
+          <Text style={[styles.colHeader, live.colHeader]}>THEY WILL SEE</Text>
           {CROSSES.map((line) => (
-            <Text maxFontSizeMultiplier={1.3} key={line} style={[styles.crossLine, live.crossLine]}>{line}</Text>
+            <Text key={line} style={[styles.crossLine, live.crossLine]}>{line}</Text>
           ))}
         </View>
 
         {stack ? <View style={[styles.ruleH, live.ruleH]} /> : <View style={[styles.ruleV, live.ruleV]} />}
 
         <View style={styles.col}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.colHeader, live.colHeader]}>THEY NEVER SEE</Text>
+          <Text style={[styles.colHeader, live.colHeader]}>THEY NEVER SEE</Text>
           {NEVER.map((line) => (
             <View key={line} style={styles.neverRow}>
               <Ionicons
@@ -76,13 +76,13 @@ export default function PartnerPrivacyReceipt() {
                 color={t.colors.textSecondary}
                 style={styles.lockIcon}
               />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.neverLine, live.neverLine]}>{line}</Text>
+              <Text style={[styles.neverLine, live.neverLine]}>{line}</Text>
             </View>
           ))}
         </View>
       </View>
 
-      <Text maxFontSizeMultiplier={1.3} style={[styles.footer, live.footer]}>
+      <Text style={[styles.footer, live.footer]}>
         Either of you can end this at any time. Everything shared is deleted.
       </Text>
     </>

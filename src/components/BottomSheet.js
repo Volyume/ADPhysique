@@ -111,13 +111,29 @@ export default function BottomSheet({
   // `visible` becoming false, so the resulting onDismiss knows the consumer
   // already knows the sheet is closing (see file header).
   const dismissingFromPropRef = useRef(false);
+  // Whether THIS component believes the modal is currently presented (set on
+  // present(), cleared when the library reports onDismiss). R2-16 (founder
+  // device walk, build 2698): after a GESTURE dismiss the library has already
+  // unmounted the modal and told us via onDismiss -> onClose; when the
+  // consumer then flips `visible` false, the old code called dismiss() AGAIN
+  // on the unmounted modal. gorhom v5's dismiss() falls through in that state
+  // and strands its internal status at DISMISSING with no animation left to
+  // resolve it - the NEXT present() mounts into that poisoned status and the
+  // sheet jams a sliver above the bottom edge, then never opens again. Gate
+  // the prop-driven dismiss() on actually being presented.
+  const presentedRef = useRef(false);
+  // Latest `visible` for callbacks the library may invoke with a stale
+  // closure (onChange below).
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
 
   useEffect(() => {
     const was = prevVisibleRef.current;
     prevVisibleRef.current = visible;
     if (visible) {
+      presentedRef.current = true;
       modalRef.current?.present();
-    } else if (was) {
+    } else if (was && presentedRef.current) {
       dismissingFromPropRef.current = true;
       modalRef.current?.dismiss();
     }
@@ -174,15 +190,43 @@ export default function BottomSheet({
   // time this stale dismiss resolves) closes that race without touching
   // the synchronous-close contract every other call site already relies on.
   const handleDismiss = useCallback(() => {
+    presentedRef.current = false;
     if (dismissingFromPropRef.current) {
       dismissingFromPropRef.current = false;
-      if (visible) {
+      // R2-15b (founder repro, build 2698: pick an intent -> the sheet
+      // closes -> it RE-APPEARS over the live workout a couple of seconds
+      // later). This reopen guard exists for the genuine fast-close-reopen
+      // race (see bottomsheetReopenRace.test.js), but the library delivers
+      // onDismiss when the close ANIMATION finishes - on a busy JS thread
+      // (a workout screen mounting) that is seconds after the close, and
+      // this callback can arrive as a STALE closure whose `visible` still
+      // reads true. Reading through the ref pierces the stale closure: the
+      // sheet only re-presents if the consumer WANTS it open right now.
+      if (visibleRef.current) {
+        presentedRef.current = true;
         modalRef.current?.present();
       }
       return;
     }
     onClose?.();
-  }, [onClose, visible]);
+  }, [onClose]);
+
+  // R2-15 (founder device walk, build 2698: the pre-workout intent sheet
+  // re-appeared OVER the live session and would not respond to taps): a
+  // dismiss() fired while the mount/present animation is still running can
+  // LOSE that race - the mount spring supersedes the forceClose and the
+  // sheet settles fully open while the consumer's `visible` is already
+  // false. Taps inside it then no-op (the consumer's state is already
+  // closed, so its onClose flips nothing) and only the pan gesture works.
+  // onChange fires whenever the sheet settles at an index: settling OPEN
+  // while the consumer wants it CLOSED means exactly that lost race, so
+  // re-assert the consumer's state and dismiss again.
+  const handleChange = useCallback((index) => {
+    if (index >= 0 && !visibleRef.current && presentedRef.current) {
+      dismissingFromPropRef.current = true;
+      modalRef.current?.dismiss();
+    }
+  }, []);
 
   // Backdrop tap: call onClose directly, synchronously, the same instant as
   // the old Pressable's onPress — never wait for the library's own close
@@ -256,6 +300,7 @@ export default function BottomSheet({
       animateOnMount={!reduceMotion}
       animationConfigs={animationConfigs}
       onDismiss={handleDismiss}
+      onChange={handleChange}
       backdropComponent={renderBackdrop}
       handleComponent={showHandle ? undefined : NoHandle}
       handleIndicatorStyle={[styles.handleIndicator, live.handleIndicator]}

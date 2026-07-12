@@ -120,11 +120,17 @@ describe('D44: group-driven focus change gets a cue (source guard)', () => {
     expect(roundReturnIdx).toBeGreaterThan(restIdx);
   });
 
-  test('the visible banner is rendered at the top of the Set Entry card and hidden from the accessibility tree (the spoken announcement already covers screen readers, so this avoids double narration)', () => {
-    expect(SRC).toMatch(
-      /\{groupFocusMessage && \([\s\S]*?accessibilityElementsHidden\s*\n\s*importantForAccessibility="no-hide-descendants"/,
-    );
-    expect(SRC).toContain('{groupFocusMessage}');
+  test('the visible banner is rendered as the Now card context line and hidden from the accessibility tree (the spoken announcement already covers screen readers, so this avoids double narration)', () => {
+    // RE-ANCHORED 2026-07-12 (R3 logger rebuild): the banner is now the Now
+    // card's context line - the screen maps groupFocusMessage to the
+    // top-priority context (kind 'group'), and NowCard applies the a11y
+    // hiding for exactly that kind. Both halves pinned.
+    expect(SRC).toMatch(/groupFocusMessage\s*\?\s*\{ kind: 'group', text: groupFocusMessage \}/);
+    const fs = require('fs');
+    const path = require('path');
+    const NOWCARD = fs.readFileSync(path.resolve(__dirname, '../../components/workout/NowCard.js'), 'utf8');
+    expect(NOWCARD).toMatch(/accessibilityElementsHidden=\{context\.kind === 'group'\}/);
+    expect(NOWCARD).toMatch(/importantForAccessibility=\{context\.kind === 'group' \? 'no-hide-descendants' : 'auto'\}/);
   });
 
   test('finishPerSide (unilateral) has exactly one handleCompleteSet call site, so it inherits the cue with no separate wiring', () => {

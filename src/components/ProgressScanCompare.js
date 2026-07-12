@@ -72,11 +72,11 @@ function ScanSummary({ scan, label, hideExact }) {
   const confidenceChip = scanConfidenceChipText(scan);
   return (
     <View style={[styles.summaryPanel, live.summaryPanel]}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.summaryLabel, live.summaryLabel]}>{label}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.summaryDate, live.summaryDate]}>{formatProgressPhotoDay(scan?.capturedAt)}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.summaryRange, live.summaryRange]}>{scanRangeLabel(scan, { hideExact })}</Text>
-      {confidenceChip ? <Text maxFontSizeMultiplier={1.3} style={[styles.summaryConfidence, live.summaryConfidence]}>{confidenceChip}</Text> : null}
-      <Text maxFontSizeMultiplier={1.3} style={[styles.summaryMeta, live.summaryMeta]}>
+      <Text style={[styles.summaryLabel, live.summaryLabel]}>{label}</Text>
+      <Text style={[styles.summaryDate, live.summaryDate]}>{formatProgressPhotoDay(scan?.capturedAt)}</Text>
+      <Text style={[styles.summaryRange, live.summaryRange]}>{scanRangeLabel(scan, { hideExact })}</Text>
+      {confidenceChip ? <Text style={[styles.summaryConfidence, live.summaryConfidence]}>{confidenceChip}</Text> : null}
+      <Text style={[styles.summaryMeta, live.summaryMeta]}>
         {[scan?.qualityLabel || 'saved', weight, `${scan?.assets?.length || 0} photos`].filter(Boolean).join(' | ')}
       </Text>
     </View>
@@ -90,7 +90,7 @@ function ScanAssetCell({ asset, dateLabel, reduceMotion }) {
   if (!asset) {
     return (
       <View style={[styles.photoCell, live.photoCell, styles.photoMissing, live.photoMissing]}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.photoMissingText, live.photoMissingText]}>Not taken</Text>
+        <Text style={[styles.photoMissingText, live.photoMissingText]}>Not taken</Text>
       </View>
     );
   }
@@ -134,8 +134,8 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
   const renderHeader = () => (
     <View style={styles.header}>
       <View style={styles.headerCopy}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Compare photo sets</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.subtitle, live.subtitle]}>Compare two photo sets by score, confidence and matched poses.</Text>
+        <Text style={[styles.title, live.title]}>Compare photo sets</Text>
+        <Text style={[styles.subtitle, live.subtitle]}>Compare two photo sets by score, confidence and matched poses.</Text>
       </View>
       <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close photo-set comparison">
         <Ionicons name="close" size={26} color={t.colors.textPrimary} />
@@ -149,7 +149,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
         {renderHeader()}
         <View style={styles.placeholder}>
           <Ionicons name="leaf-outline" size={32} color={t.colors.textMuted} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.placeholderText, live.placeholderText]}>Score comparison is hidden for now.</Text>
+          <Text style={[styles.placeholderText, live.placeholderText]}>Score comparison is hidden for now.</Text>
         </View>
       </SafeAreaView>
     );
@@ -172,8 +172,8 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
                 accessibilityLabel={`Photo score from ${formatProgressPhotoDay(scan.capturedAt)}${active ? ', chosen' : ''}`}
                 style={[styles.scanChip, live.scanChip, active && [styles.scanChipActive, live.scanChipActive]]}
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.scanChipDate, live.scanChipDate, active && [styles.scanChipDateActive, live.scanChipDateActive]]}>{formatProgressPhotoDay(scan.capturedAt)}</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.scanChipRange, live.scanChipRange, active && [styles.scanChipRangeActive, live.scanChipRangeActive]]}>{scanRangeLabel(scan, { hideExact })}</Text>
+                <Text style={[styles.scanChipDate, live.scanChipDate, active && [styles.scanChipDateActive, live.scanChipDateActive]]}>{formatProgressPhotoDay(scan.capturedAt)}</Text>
+                <Text style={[styles.scanChipRange, live.scanChipRange, active && [styles.scanChipRangeActive, live.scanChipRangeActive]]}>{scanRangeLabel(scan, { hideExact })}</Text>
               </TouchableOpacity>
             );
           })}
@@ -182,7 +182,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
         {!(earlier && later) ? (
           <View style={styles.placeholder}>
             <Ionicons name="scan-outline" size={32} color={t.colors.textMuted} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.placeholderText, live.placeholderText]}>Two scored photo sets are needed.</Text>
+            <Text style={[styles.placeholderText, live.placeholderText]}>Two scored photo sets are needed.</Text>
           </View>
         ) : (
           <>
@@ -193,8 +193,8 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
 
             {deltaText ? (
               <View style={[styles.deltaBox, live.deltaBox]}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.deltaLabel, live.deltaLabel]}>Why this looks different</Text>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.deltaText, live.deltaText]}>{deltaText}</Text>
+                <Text style={[styles.deltaLabel, live.deltaLabel]}>Why this looks different</Text>
+                <Text style={[styles.deltaText, live.deltaText]}>{deltaText}</Text>
               </View>
             ) : null}
 
@@ -203,15 +203,15 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
               const laterDate = formatProgressPhotoDay(later.capturedAt);
               return (
                 <View key={row.pose} style={styles.poseBlock}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.poseTitle, live.poseTitle]}>{POSE_LABEL[row.pose] || row.pose}</Text>
+                  <Text style={[styles.poseTitle, live.poseTitle]}>{POSE_LABEL[row.pose] || row.pose}</Text>
                   <View style={styles.photoPair}>
                     <View style={styles.photoSide}>
                       <ScanAssetCell asset={row.earlier} dateLabel={earlierDate} reduceMotion={reduceMotion} />
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.photoLabel, live.photoLabel]}>Earlier</Text>
+                      <Text style={[styles.photoLabel, live.photoLabel]}>Earlier</Text>
                     </View>
                     <View style={styles.photoSide}>
                       <ScanAssetCell asset={row.later} dateLabel={laterDate} reduceMotion={reduceMotion} />
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.photoLabel, live.photoLabel]}>Later</Text>
+                      <Text style={[styles.photoLabel, live.photoLabel]}>Later</Text>
                     </View>
                   </View>
                 </View>

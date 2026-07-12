@@ -117,8 +117,8 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
   return (
     <View style={[styles.section, live.section]}>
       <View style={styles.headerRow}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.title, live.title]}>Your weeks</Text>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.runLine, live.runLine]} numberOfLines={2}>{runLine}</Text>
+        <Text style={[styles.title, live.title]}>Your weeks</Text>
+        <Text style={[styles.runLine, live.runLine]} numberOfLines={2}>{runLine}</Text>
       </View>
 
       {/* 12-week glyph strip */}
@@ -147,7 +147,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
         ].map(({ state, label }) => (
           <View key={state} style={styles.glyphKeyItem}>
             <Ionicons name={GLYPH[state].icon} size={12} color={GLYPH[state].color} />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.glyphKeyLabel, live.glyphKeyLabel]}>{label}</Text>
+            <Text style={[styles.glyphKeyLabel, live.glyphKeyLabel]}>{label}</Text>
           </View>
         ))}
       </View>
@@ -155,34 +155,46 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
       {justRepaired ? (
         <View style={styles.repairRow}>
           <Ionicons name="git-compare" size={14} color={t.colors.primary} />
-          <Text maxFontSizeMultiplier={1.3} style={[styles.repairLine, live.repairLine]}>A lighter week, and you came back. Your run carried on.</Text>
+          <Text style={[styles.repairLine, live.repairLine]}>A lighter week, and you came back. Your run carried on.</Text>
         </View>
       ) : null}
 
       {longestRun > 0 ? (
-        <Text maxFontSizeMultiplier={1.3} style={[styles.longest, live.longest]}>Longest run: {longestRun} {longestRun === 1 ? 'week' : 'weeks'}.</Text>
+        <Text style={[styles.longest, live.longest]}>Longest run: {longestRun} {longestRun === 1 ? 'week' : 'weeks'}.</Text>
       ) : null}
 
       {/* Manual-goal editor, plan-less users only */}
+      {/* EP-12/UI-04 (end-user-polish audit, 2026-07-12): six 40x40 chips in
+          one non-wrapping row needed 280dp but a 320dp phone only offers
+          254dp inside this card (320 - 32 screen padding - 2 border - 32
+          card padding), so the last chip spilled through the card edge.
+          Two rows of three at 44x44 (the project's touch-target minimum,
+          src/styles/layout.js touchTarget.minimum) fits with room to spare
+          on 320dp (3*44 + 2*8 = 148dp per row) and meets the 44dp contract
+          without hitSlop. Selection semantics are unchanged. */}
       {!hasTarget ? (
         <View style={styles.goalBlock}>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.goalLabel, live.goalLabel]}>How many sessions a week are you aiming for?</Text>
-          <View style={styles.goalChips}>
-            {[1, 2, 3, 4, 5, 6].map(n => {
-              const sel = vm.manualGoal === n;
-              return (
-                <TouchableOpacity
-                  key={n}
-                  style={[styles.goalChip, live.goalChip, sel && [styles.goalChipOn, live.goalChipOn]]}
-                  onPress={() => setGoal(n)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: sel }}
-                  accessibilityLabel={`${n} sessions a week`}
-                >
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.goalChipText, live.goalChipText, sel && [styles.goalChipTextOn, live.goalChipTextOn]]}>{n}</Text>
-                </TouchableOpacity>
-              );
-            })}
+          <Text style={[styles.goalLabel, live.goalLabel]}>How many sessions a week are you aiming for?</Text>
+          <View style={styles.goalChipsGrid}>
+            {[[1, 2, 3], [4, 5, 6]].map((row, i) => (
+              <View key={i} style={styles.goalChipsRow}>
+                {row.map(n => {
+                  const sel = vm.manualGoal === n;
+                  return (
+                    <TouchableOpacity
+                      key={n}
+                      style={[styles.goalChip, live.goalChip, sel && [styles.goalChipOn, live.goalChipOn]]}
+                      onPress={() => setGoal(n)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: sel }}
+                      accessibilityLabel={`${n} sessions a week`}
+                    >
+                      <Text style={[styles.goalChipText, live.goalChipText, sel && [styles.goalChipTextOn, live.goalChipTextOn]]}>{n}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ))}
           </View>
         </View>
       ) : null}
@@ -194,7 +206,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
         accessibilityLabel="Pause your run"
       >
         <Ionicons name="pause-outline" size={16} color={t.colors.textSecondary} />
-        <Text maxFontSizeMultiplier={1.3} style={[styles.pauseBtnText, live.pauseBtnText]}>Pause</Text>
+        <Text style={[styles.pauseBtnText, live.pauseBtnText]}>Pause</Text>
       </TouchableOpacity>
 
       <BottomSheet
@@ -202,7 +214,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
         onClose={() => setPauseOpen(false)}
         accessibilityLabel="Pause your run options"
       >
-        <Text maxFontSizeMultiplier={1.3} style={[styles.sheetTitle, live.sheetTitle]}>Life happens. Pause your run and nothing is lost.</Text>
+        <Text style={[styles.sheetTitle, live.sheetTitle]}>Life happens. Pause your run and nothing is lost.</Text>
         {PAUSE_OPTIONS.map(opt => (
           <TouchableOpacity
             key={opt.weeks}
@@ -211,7 +223,7 @@ export default function StreakWeeksSection({ userId, scoffScore = 0 }) {
             accessibilityRole="button"
             accessibilityLabel={`Pause for ${opt.label}`}
           >
-            <Text maxFontSizeMultiplier={1.3} style={[styles.sheetOptionText, live.sheetOptionText]}>{opt.label}</Text>
+            <Text style={[styles.sheetOptionText, live.sheetOptionText]}>{opt.label}</Text>
           </TouchableOpacity>
         ))}
       </BottomSheet>
@@ -243,9 +255,15 @@ const styles = StyleSheet.create({
   repairLine: { ...type.captionTight, flex: 1, color: colors.textSecondary },
   goalBlock: { gap: spacing.sm, marginTop: spacing.xs },
   goalLabel: { fontSize: fontSize.sm, color: colors.textSecondary },
-  goalChips: { flexDirection: 'row', gap: spacing.sm },
+  // EP-12/UI-04: two explicit rows of three, guaranteed to fit a 320dp card
+  // (see the render-site comment above), rather than a single non-wrapping
+  // row that overflowed.
+  goalChipsGrid: { gap: spacing.sm },
+  goalChipsRow: { flexDirection: 'row', gap: spacing.sm },
   goalChip: {
-    width: 40, height: 40, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+    // 44pt touch target (src/styles/layout.js touchTarget.minimum), raised
+    // from 40x40 which fell below the project's touch-target contract.
+    width: 44, height: 44, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center',
   },
   goalChipOn: { borderColor: colors.primary, backgroundColor: withAlpha(colors.primary, alpha.tint) },

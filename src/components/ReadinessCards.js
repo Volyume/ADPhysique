@@ -190,12 +190,12 @@ export default function ReadinessCards({ userId, tier }) {
             {lastUnlocked && (
               <View style={styles.milestoneUnlocked}>
                 <Ionicons name={lastUnlocked.icon} size={16} color={t.colors.gold} />
-                <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneUnlockedText, live.milestoneUnlockedText]}>{lastUnlocked.label}</Text>
+                <Text style={[styles.milestoneUnlockedText, live.milestoneUnlockedText]}>{lastUnlocked.label}</Text>
               </View>
             )}
             {next && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.milestoneNext, live.milestoneNext]}>{next.sessions - totalWorkouts} to go: {next.label}</Text>
+                <Text style={[styles.milestoneNext, live.milestoneNext]}>{next.sessions - totalWorkouts} to go: {next.label}</Text>
                 <InfoTooltip size={11} text={"Consistency is the biggest predictor of long-term progress. The more sessions you log, the better Volyume understands how your body responds, so it can suggest the right weights, spot when your reps are slipping, and time your lighter weeks correctly.\n\nBuilding the habit is the foundation everything else sits on."} />
               </View>
             )}
@@ -220,11 +220,11 @@ export default function ReadinessCards({ userId, tier }) {
             <RecoveryGauge label="Fatigue" value={recovery.fatigue} />
             <RecoveryGauge label="Joint comfort" value={recovery.joint} invertGood />
           </View>
-          <Text maxFontSizeMultiplier={1.3} style={[styles.recoveryNote, live.recoveryNote]}>Scale 1-5 · Lower is better for soreness & fatigue</Text>
+          <Text style={[styles.recoveryNote, live.recoveryNote]}>Scale 1-5 · Lower is better for soreness & fatigue</Text>
           {cardioLoad === 'high' && (
             <View style={[styles.cardioLoadNote, live.cardioLoadNote]}>
               <Ionicons name="heart-outline" size={13} color={t.colors.warning} />
-              <Text maxFontSizeMultiplier={1.3} style={[styles.cardioLoadText, live.cardioLoadText]}>
+              <Text style={[styles.cardioLoadText, live.cardioLoadText]}>
                 Your cardio is adding to your fatigue this week. Keep it low-impact, or trim a session.
               </Text>
             </View>
@@ -238,16 +238,16 @@ export default function ReadinessCards({ userId, tier }) {
                   <Ionicons name="flash-outline" size={20} color={t.colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.mfTitle, live.mfTitle]}>Muscle readiness</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.mfSub, live.mfSub]}>How recovered your muscles are based on your recent training.</Text>
+                  <Text style={[styles.mfTitle, live.mfTitle]}>Muscle readiness</Text>
+                  <Text style={[styles.mfSub, live.mfSub]}>How recovered your muscles are based on your recent training.</Text>
                 </View>
               </View>
               <View style={styles.mfChipGrid}>
                 {freshnessEntries.map(({ key, displayName, label, color, dot }) => (
                   <View key={key} style={[styles.mfChip, { borderColor: withAlpha(color, alpha.edge), backgroundColor: withAlpha(color, alpha.ghost) }]}>
                     <View style={[styles.mfDot, { backgroundColor: dot }]} />
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.mfChipName, live.mfChipName, { color: t.colors.textPrimary }]}>{displayName}</Text>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.mfChipLabel, live.mfChipLabel, { color }]}>{label}</Text>
+                    <Text style={[styles.mfChipName, live.mfChipName, { color: t.colors.textPrimary }]}>{displayName}</Text>
+                    <Text style={[styles.mfChipLabel, live.mfChipLabel, { color }]}>{label}</Text>
                   </View>
                 ))}
               </View>
@@ -262,7 +262,7 @@ export default function ReadinessCards({ userId, tier }) {
               size={16}
               color={recoveryTrendInsight.type === 'good' ? t.colors.success : t.colors.warning}
             />
-            <Text maxFontSizeMultiplier={1.3} style={[styles.trendInsightText, live.trendInsightText]}>{recoveryTrendInsight.text}</Text>
+            <Text style={[styles.trendInsightText, live.trendInsightText]}>{recoveryTrendInsight.text}</Text>
           </View>
         )}
       </View>
@@ -296,9 +296,9 @@ function RecoveryGauge({ label, value, invertGood = false }) {
   return (
     <View style={styles.gaugeItem}>
       <View style={[styles.gaugeDot, { backgroundColor: dotColor }]} />
-      <Text maxFontSizeMultiplier={1.3} style={[styles.gaugeValue, live.gaugeValue]}>{display}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.gaugeLabel, live.gaugeLabel]}>{label}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.gaugeScale, live.gaugeScale]}>{scaleNote}</Text>
+      <Text style={[styles.gaugeValue, live.gaugeValue]}>{display}</Text>
+      <Text style={[styles.gaugeLabel, live.gaugeLabel]}>{label}</Text>
+      <Text style={[styles.gaugeScale, live.gaugeScale]}>{scaleNote}</Text>
     </View>
   );
 }

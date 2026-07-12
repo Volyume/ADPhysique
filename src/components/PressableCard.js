@@ -13,6 +13,22 @@
  * bounciness 6 feel. This file is the canonical press physics for
  * Button, Card, Chip, Stepper and every direct consumer.
  *
+ * R6 (remediation 2026-07-11, founder defect build 2608): collapsed the
+ * old two-view structure (a bare Pressable wrapping an inner
+ * Reanimated.View that carried the caller's style) into ONE animated
+ * pressable. The old shape silently discarded every layout-in-parent
+ * style a caller passed (flex, alignSelf, width, margins): the style
+ * landed on the inner view while the unstyled outer Pressable, the
+ * element the parent actually lays out, shrink-wrapped its content. In
+ * any flex row that left `flex: 1` buttons at text width, the class
+ * behind the WorkoutSummary footer's dead band beside Close and
+ * ActiveWorkout's under-width Log set bar, both regressed when those
+ * bars adopted <Button> (5d98870, 2026-07-09). With a single view the
+ * caller's style IS the element the parent lays out, and the press hit
+ * area matches the visible bounds exactly (the old outer view could
+ * stretch wider than the visible button, an invisible tap zone).
+ * Pinned in pressableCard.rowLayout.guard.test.js.
+ *
  * Reduce-motion users get a flat behaviour (no scale, no opacity
  * change) automatically. Honour the same a11y guard the rest of the
  * app uses.
@@ -32,6 +48,8 @@ import Reanimated, {
 } from 'react-native-reanimated';
 import useAppStore from '../store/useAppStore';
 import { motion } from '../styles/theme';
+
+const AnimatedPressable = Reanimated.createAnimatedComponent(Pressable);
 
 export default function PressableCard({
   onPress,
@@ -103,7 +121,8 @@ export default function PressableCard({
   }, [reduceMotion, scale]);
 
   return (
-    <Pressable
+    <AnimatedPressable
+      ref={viewRef}
       onPress={onPressWithLayout ? handlePressWithLayout : onPress}
       onLongPress={onLongPressWithLayout ? handleLongPressWithLayout : onLongPress}
       onPressIn={pressIn}
@@ -115,10 +134,9 @@ export default function PressableCard({
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
       accessibilityState={accessibilityState}
+      style={[style, animatedStyle]}
     >
-      <Reanimated.View ref={viewRef} style={[style, animatedStyle]}>
-        {children}
-      </Reanimated.View>
-    </Pressable>
+      {children}
+    </AnimatedPressable>
   );
 }

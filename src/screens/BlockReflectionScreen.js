@@ -11,6 +11,7 @@ import SectionLabel from '../components/SectionLabel';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getBlockReflectionData } from '../lib/database';
+import { safeDate, safeToFixed } from '../lib/safeFormat';
 import { SkeletonCard } from '../components/Skeleton';
 import { selection as hapticSelection } from '../lib/haptics';
 
@@ -20,8 +21,11 @@ const MONTH_NAMES = [
 ];
 
 function fmtDate(ms) {
-  if (!ms) return '';
-  const d = new Date(ms);
+  // EP-23/UI-11: a malformed/legacy ms value (bad restore/sync) would print
+  // "NaN undefined NaN" through the manual getters below; guard it to an
+  // omitted date, matching the empty-string fallback for a missing value.
+  const d = safeDate(ms);
+  if (!d) return '';
   return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
 }
 
@@ -34,8 +38,8 @@ function StatBlock({ icon, value, label }) {
   return (
     <View style={styles.statBlock}>
       <Ionicons name={icon} size={20} color={t.colors.primary} style={styles.statIcon} />
-      <Text maxFontSizeMultiplier={1.3} style={[styles.statValue, live.statValue]}>{value}</Text>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.statLabel, live.statLabel]}>{label}</Text>
+      <Text style={[styles.statValue, live.statValue]}>{value}</Text>
+      <Text style={[styles.statLabel, live.statLabel]}>{label}</Text>
     </View>
   );
 }
@@ -187,9 +191,9 @@ export default function BlockReflectionScreen({ navigation, route }) {
           <>
             {/* Block title and dates */}
             <View style={styles.blockTitle}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.blockName, live.blockName]} accessibilityRole="header">{data.meso?.name ?? 'Training Block'}</Text>
+              <Text style={[styles.blockName, live.blockName]} accessibilityRole="header">{data.meso?.name ?? 'Training Block'}</Text>
               {data.startDate ? (
-                <Text maxFontSizeMultiplier={1.3} style={[styles.blockDates, live.blockDates]}>
+                <Text style={[styles.blockDates, live.blockDates]}>
                   {fmtDate(data.startDate)}
                   {data.endDate ? ` – ${fmtDate(data.endDate)}` : ''}
                   {data.meso?.plannedWeeks ? ` · ${data.meso.plannedWeeks} weeks` : ''}
@@ -214,7 +218,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
             {/* Narrative */}
             <View style={[styles.narrativeCard, live.narrativeCard]}>
               {narrative.map((line, i) => (
-                <Text maxFontSizeMultiplier={1.3} key={i} style={[styles.narrativeLine, live.narrativeLine]}>{line}</Text>
+                <Text key={i} style={[styles.narrativeLine, live.narrativeLine]}>{line}</Text>
               ))}
             </View>
 
@@ -228,10 +232,10 @@ export default function BlockReflectionScreen({ navigation, route }) {
                 {data.prs.map((pr, i) => (
                   <View key={i} style={[styles.prRow, live.prRow]}>
                     <View style={styles.prInfo}>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.prExercise, live.prExercise]}>{pr.exerciseName ?? pr.exercise_name}</Text>
-                      <Text maxFontSizeMultiplier={1.3} style={[styles.prType, live.prType]}>{PR_TYPE_LABELS[pr.recordType ?? pr.record_type] ?? pr.recordType}</Text>
+                      <Text style={[styles.prExercise, live.prExercise]}>{pr.exerciseName ?? pr.exercise_name}</Text>
+                      <Text style={[styles.prType, live.prType]}>{PR_TYPE_LABELS[pr.recordType ?? pr.record_type] ?? pr.recordType}</Text>
                     </View>
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.prValue, live.prValue]}>{parseFloat(pr.value).toFixed(1)}{units}</Text>
+                    <Text style={[styles.prValue, live.prValue]}>{safeToFixed(pr.value, 1)}{units}</Text>
                   </View>
                 ))}
               </View>
@@ -242,10 +246,10 @@ export default function BlockReflectionScreen({ navigation, route }) {
               <View style={[styles.bestSessionCard, live.bestSessionCard]}>
                 <Ionicons name="flash-outline" size={16} color={t.colors.primary} />
                 <View style={styles.bestSessionInfo}>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.bestSessionLabel, live.bestSessionLabel]}>Best session</Text>
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.bestSessionDate, live.bestSessionDate]}>{fmtDate(data.bestSession.startedAt)}</Text>
+                  <Text style={[styles.bestSessionLabel, live.bestSessionLabel]}>Best session</Text>
+                  <Text style={[styles.bestSessionDate, live.bestSessionDate]}>{fmtDate(data.bestSession.startedAt)}</Text>
                 </View>
-                <Text maxFontSizeMultiplier={1.3} style={[styles.bestSessionVolume, live.bestSessionVolume]}>
+                <Text style={[styles.bestSessionVolume, live.bestSessionVolume]}>
                   {Math.round(data.bestSession.volume).toLocaleString('en-GB')} kg
                 </Text>
               </View>
@@ -253,8 +257,8 @@ export default function BlockReflectionScreen({ navigation, route }) {
 
             {/* What's next */}
             <View style={[styles.nextSection, live.nextSection]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.nextTitle, live.nextTitle]} accessibilityRole="header">What's next</Text>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.nextBody, live.nextBody]}>
+              <Text style={[styles.nextTitle, live.nextTitle]} accessibilityRole="header">What's next</Text>
+              <Text style={[styles.nextBody, live.nextBody]}>
                 Take a few days of lighter activity to recover, then start your next block. That recovery is when your progress takes hold.
               </Text>
               <Button

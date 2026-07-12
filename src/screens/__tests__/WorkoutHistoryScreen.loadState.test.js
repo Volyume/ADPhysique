@@ -1,6 +1,13 @@
 import { create, act } from 'react-test-renderer';
 
 jest.mock('../../components/AppAlert', () => ({ appAlert: jest.fn() }));
+jest.mock('../../components/PeekMenu', () => {
+  const React = require('react');
+  // R9 (D70): the repeat menu moved onto PeekMenu, which imports the
+  // haptics vocabulary (expo-haptics) - mocked out like the other shared
+  // components above so this render-only suite stays hermetic.
+  return React.forwardRef(() => null);
+});
 jest.mock('../../components/BackHeader', () => {
   const React = require('react');
   const { Text } = require('react-native');
@@ -126,6 +133,9 @@ describe('WorkoutHistoryScreen load states', () => {
     jest.clearAllMocks();
   });
 
+  // EP-20/UI-10 (Codex end-user-polish audit): getRecentCompletedWorkouts is a
+  // LOCAL SQLite read (src/lib/database.js), never a network call, so a
+  // failure here must never claim a connection problem.
   test('shows a retryable error instead of the empty state when workout history fails to load', async () => {
     getRecentCompletedWorkouts.mockRejectedValue(new Error('offline'));
 
@@ -137,7 +147,8 @@ describe('WorkoutHistoryScreen load states', () => {
 
     let text = flattenText(tree.toJSON());
     expect(text).toContain("Couldn't load workout history");
-    expect(text).toContain('Check your connection and try again.');
+    expect(text).toContain("Couldn't load this on your device. Try again.");
+    expect(text).not.toContain('Check your connection');
     expect(text).toContain('Try again');
     expect(text).not.toContain('Your sessions will appear here');
     expect(logError).toHaveBeenCalledWith(
@@ -494,6 +505,21 @@ describe('WorkoutHistoryScreen summary polish', () => {
     // before this fix; pin them too so the whole action group stays aligned.
     expect(WORKOUT_HISTORY_SOURCE).toContain("accessibilityLabel=\"Repeat workout\"");
     expect(WORKOUT_HISTORY_SOURCE).toContain("accessibilityLabel=\"Delete workout\"");
+  });
+
+  test('R2 (2026-07-11) design-cohesion census: control radius + date tabular', () => {
+    // Control class -> radius.md (FOOD-DESIGN-STANDARD.md section 4): the
+    // header list/calendar toggle joins the control/input/icon-backing family.
+    expect(WORKOUT_HISTORY_SOURCE).toMatch(/toggleBtn: \{[\s\S]*?borderRadius: radius\.md/);
+    // The card date ("7 Jul 2026") is a data readout, so it carries tabular
+    // figures like every other numeral on this screen. Both the frozen style
+    // and its live-theme twin.
+    expect(WORKOUT_HISTORY_SOURCE).toMatch(/cardDate: \{[\s\S]*?fontVariant: \['tabular-nums'\]/);
+    expect(WORKOUT_HISTORY_SOURCE).toMatch(/cardDate: \{ fontSize: t\.fontSize\.md, color: t\.colors\.textPrimary, fontVariant: \['tabular-nums'\] \}/);
+    // Theme gap held (not fixed): cardDate keeps its raw fontSize.md +
+    // fontWeight.bold pair because no md+bold type role exists; the weight is
+    // preserved rather than de-emphasised.
+    expect(WORKOUT_HISTORY_SOURCE).toMatch(/cardDate: \{[\s\S]*?fontWeight: fontWeight\.bold/);
   });
 
   test('calendar reset uses a contained neutral control', () => {

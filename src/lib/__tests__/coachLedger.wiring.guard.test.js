@@ -36,21 +36,19 @@ describe('A3: Home coach ledger (day 0, pre-first-review)', () => {
 
   test('attention-card coach CTAs use contained neutral buttons, not loose amber text links', () => {
     const CARD = read('../../components/AttentionCard.js');
-    // CP-10 stage 3 (theming batch 2, 2026-07-10): AttentionCard now appends
-    // a live theme override after the frozen style in each array (same
-    // "frozen base + live override" pattern as batch 1), so the JSX call
-    // site is `style={[styles.X, live.X]}` instead of `style={styles.X}`.
-    // The pinned RULE is unchanged: both CTAs are still the CONTAINED
-    // neutral-button treatment (minHeight 40, bordered, surfaced), not a
-    // loose amber text link -- the static StyleSheet.create block below
-    // (asserted next) is byte-identical to before, so this is a mechanical
-    // update, not a weakening.
-    expect(CARD).toMatch(/accessibilityLabel="How Precision Coaching works"[\s\S]*style=\{\[styles\.trialMethodologyButton, live\.trialMethodologyButton\]\}/);
-    expect(CARD).toMatch(/accessibilityLabel="Pro reads the full story\. Learn about Pro coaching\."[\s\S]*style=\{\[styles\.freeCoachFooterButton, live\.freeCoachFooterButton\]\}/);
-    expect(CARD).toMatch(/trialMethodologyButton: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface/);
-    expect(CARD).toMatch(/freeCoachFooterButton: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface/);
-    expect(CARD).toContain('trialBannerLink: { ...type.label, color: colors.textPrimary, flex: 1 }');
-    expect(CARD).toContain('freeCoachFooter: {');
+    // R9/D70 (2026-07-11): both CTAs moved off their hand-rolled bordered
+    // rows onto the shared <Button variant="outline"> - which IS the
+    // contained neutral treatment (surface bg, 1px border, textPrimary
+    // ink, Button.js buildVariants). The pinned RULE is unchanged: a
+    // contained neutral control, never a loose amber text link; it is now
+    // enforced through the variant choice rather than byte-pinned local
+    // styles (which are deleted).
+    expect(CARD).toMatch(/variant="outline"[\s\S]{0,500}accessibilityLabel="How Precision Coaching works"/);
+    expect(CARD).toMatch(/variant="outline"[\s\S]{0,500}accessibilityLabel="Pro reads the full story\. Learn about Pro coaching\."/);
+    // The old style names may survive as layout-only margins; what must
+    // never return is a hand-rolled box (background/border) on them.
+    expect(CARD).not.toMatch(/trialMethodologyButton: \{[^}]*backgroundColor/);
+    expect(CARD).not.toMatch(/freeCoachFooterButton: \{[^}]*backgroundColor/);
     expect(CARD).not.toContain('trialBannerLink: { ...type.caption, color: colors.primary');
   });
 });

@@ -171,14 +171,14 @@ export default function CoachHeldHistoryScreen({ navigation }) {
       <BackHeader title="Coaching history" />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text maxFontSizeMultiplier={1.3} style={[styles.intro, live.intro]}>
+        <Text style={[styles.intro, live.intro]}>
           Every weekly coaching decision, what changed, what stayed the same, and why.
         </Text>
 
         {/* S1 the coach's scorecard (the track record). Hidden under ED/calm
             suppression and below the minimum sample; counts only, no body data. */}
         {scorecard != null && (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.scorecard, live.scorecard]}>
+          <Text style={[styles.scorecard, live.scorecard]}>
             Weeks you applied the call and the next trend landed on target: {scorecard.onTarget} of {scorecard.of}.
           </Text>
         )}
@@ -210,7 +210,7 @@ export default function CoachHeldHistoryScreen({ navigation }) {
           const rows = buildDecisionRows(week, pairs);
           return (
             <View key={week.weekStart ?? wi} style={[styles.weekBlock, live.weekBlock]}>
-              <Text maxFontSizeMultiplier={1.3} style={[styles.weekLabel, live.weekLabel]} accessibilityRole="header">
+              <Text style={[styles.weekLabel, live.weekLabel]} accessibilityRole="header">
                 Week of {formatWeekStart(week.weekStart)}
               </Text>
               {rows.map((row, ri) => (
@@ -231,20 +231,20 @@ export default function CoachHeldHistoryScreen({ navigation }) {
                   />
                   <View style={{ flex: 1 }}>
                     {row.label && (
-                      <Text maxFontSizeMultiplier={1.3} style={[
+                      <Text style={[
                         styles.decisionLabel, live.decisionLabel,
                         row.type === 'changed' && [styles.decisionLabelChanged, live.decisionLabelChanged],
                       ]}>
                         {row.label}
                       </Text>
                     )}
-                    <Text maxFontSizeMultiplier={1.3} style={[styles.decisionDetail, live.decisionDetail]}>{row.detail}</Text>
+                    <Text style={[styles.decisionDetail, live.decisionDetail]}>{row.detail}</Text>
                     {row.applied && (
                       <View style={styles.appliedRow}>
                         <View style={[styles.appliedPill, live.appliedPill]}>
-                          <Text maxFontSizeMultiplier={1.3} style={[styles.appliedPillText, live.appliedPillText]}>Applied</Text>
+                          <Text style={[styles.appliedPillText, live.appliedPillText]}>Applied</Text>
                         </View>
-                        <Text maxFontSizeMultiplier={1.3} style={[styles.verdictText, live.verdictText]}>{row.verdictText}</Text>
+                        <Text style={[styles.verdictText, live.verdictText]}>{row.verdictText}</Text>
                       </View>
                     )}
                   </View>
@@ -255,7 +255,7 @@ export default function CoachHeldHistoryScreen({ navigation }) {
         })}
 
         {totalDecisions > 0 && (
-          <Text maxFontSizeMultiplier={1.3} style={[styles.footer, live.footer]}>
+          <Text style={[styles.footer, live.footer]}>
             {totalDecisions} decision{totalDecisions !== 1 ? 's' : ''} across {weeks.length} week{weeks.length !== 1 ? 's' : ''}
           </Text>
         )}

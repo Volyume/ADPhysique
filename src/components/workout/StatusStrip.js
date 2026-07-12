@@ -51,7 +51,7 @@ export default function StatusStrip({ items }) {
               accessibilityLabel={`${item.label}, tap to ${expanded ? 'collapse' : 'expand'}`}
             >
               {item.icon && <Ionicons name={item.icon} size={14} color={item.iconColor || t.colors.textSecondary} />}
-              <Text maxFontSizeMultiplier={1.3} style={[styles.chipText, { color: t.colors.textPrimary }]}>{item.label}</Text>
+              <Text style={[styles.chipText, { color: t.colors.textPrimary }]}>{item.label}</Text>
               <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={13} color={t.colors.textMuted} />
             </TouchableOpacity>
           );

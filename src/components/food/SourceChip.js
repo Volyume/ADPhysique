@@ -46,7 +46,7 @@ export default function SourceChip({ source }) {
       {isCofid ? (
         <Ionicons name="checkmark-circle" size={fontSize.xs} color={t.colors.success} style={styles.tick} />
       ) : null}
-      <Text style={[styles.text, live.text]} numberOfLines={1} maxFontSizeMultiplier={1.3}>{label}</Text>
+      <Text style={[styles.text, live.text]} numberOfLines={1}>{label}</Text>
     </View>
   );
   if (!isCofid) return chip;

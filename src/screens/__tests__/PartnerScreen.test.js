@@ -983,7 +983,7 @@ describe('manage sheet: block confirm', () => {
   test('shared phase status uses a contained neutral action instead of a text link', () => {
     // CP-10 batch G: blockStatusActionText gained its live-theme override;
     // contract (contained neutral action, exact copy) unchanged.
-    expect(PARTNER_SCREEN_SOURCE).toContain('<Text maxFontSizeMultiplier={1.3} style={[styles.blockStatusActionText, live.blockStatusActionText]}>Sharing settings</Text>');
+    expect(PARTNER_SCREEN_SOURCE).toContain('<Text style={[styles.blockStatusActionText, live.blockStatusActionText]}>Sharing settings</Text>');
     expect(PARTNER_SCREEN_SOURCE).not.toContain('<Text style={styles.blockStatusActionText}>Manage label</Text>');
     expect(PARTNER_SCREEN_SOURCE).toMatch(/blockStatusAction: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface/);
     expect(PARTNER_SCREEN_SOURCE).toContain('blockStatusActionText: { ...type.label, color: colors.textPrimary }');

@@ -159,6 +159,11 @@ function makeSupabaseMock({ select = {}, upsertError = null } = {}) {
             data: Array.isArray(tableSelect) ? tableSelect[0] ?? null : tableSelect,
             error: null,
           }));
+          // LS-03b: paginated pulls (body_metrics/daily_steps/cardio_log) page via .range().
+          eqChain.range = jest.fn(async (from, to) => ({
+            data: (Array.isArray(tableSelect) ? tableSelect : []).slice(from, to + 1),
+            error: null,
+          }));
           return eqChain;
         }),
         // NEW-002 pair-scoped pull: .select().or(...) and .select().in(...).

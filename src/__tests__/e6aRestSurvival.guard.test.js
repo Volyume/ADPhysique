@@ -91,15 +91,31 @@ describe('E6A: the JS orchestration posture', () => {
     expect(src).toMatch(/fgsDeadlineRef\.current = Date\.now\(\) \+ REST_FOREGROUND_MAX_MS;/);
   });
 
-  test('host stops are unconditional and each re-anchor gets a fresh service instance (E6A review)', () => {
+  test('re-anchors ride the live host; stops fire only when the rest is over (R2-8b)', () => {
+    // RE-ANCHORED 2026-07-11 (R2-8b, production crash on build 2692). The
+    // original pin locked the E6A-review choreography this suite is named
+    // for: stop the host before every re-anchor so each rest got a fresh
+    // service instance. That exact choreography was the surviving crash
+    // path - Android accepts the new startForegroundService (creating a
+    // startForeground obligation) while the previous stop's stopSelf()
+    // kills the service with the start still queued, so the obligation is
+    // never met and the OS executes the app. The deadline concern the old
+    // choreography protected (a re-anchor outliving the fixed shortService
+    // window) is handled NATIVELY by the instance cap in
+    // WorkoutForegroundService. These pins lock the NEW contract.
     const src = read('src/components/RestTimer.js');
-    // Teardown and window-exit stop WITHOUT consulting the ref (an in-flight
-    // start has not flipped it yet), and a stale in-flight success re-checks
-    // the live store before claiming the shade.
+    // Teardown and window-exit still stop WITHOUT consulting the ref (an
+    // in-flight start has not flipped it yet).
     const stops = src.match(/fgsActiveRef\.current = false;\s*\n\s*stopRestForeground\(\)\.catch/g) || [];
     expect(stops.length).toBeGreaterThanOrEqual(2);
-    expect(src).toMatch(/if \(fgsActiveRef\.current\) await stopRestForeground\(\);/);
-    expect(src).toMatch(/!now\.restTimerActive \|\| now\.restTimerEndsAt !== anchor/);
+    // NO stop-before-start on a re-anchor: the live instance re-anchors in
+    // place. The old conditional stop must never come back.
+    expect(src).not.toMatch(/if \(fgsActiveRef\.current\) await stopRestForeground\(\);/);
+    // A stale in-flight success stops the host ONLY when the rest has
+    // genuinely ended; an anchor mismatch with the rest still active means
+    // a newer re-anchor owns the host and is left alone.
+    expect(src).toMatch(/if \(!now\.restTimerActive\) \{/);
+    expect(src).toMatch(/if \(now\.restTimerEndsAt !== anchor\) return;/);
     expect(src).toMatch(/AppState\.currentState !== 'active'/);
   });
 
