@@ -429,15 +429,25 @@ async function _upsertSets(sb, supabaseUserId, sets) {
     updated_at: new Date(s.updatedAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time
   }));
   // Chunk to avoid hitting Supabase row limits
+  let chunkFailures = 0;
   for (let i = 0; i < rows.length; i += 200) {
     const chunk = rows.slice(i, i + 200);
     const { error } = await sb.from('workout_sets').upsert(chunk, { onConflict: 'user_id,id' });
     if (error) {
       logPgErr('sync._upsertSets', error);
-      // Continue with the next chunk rather than aborting all
-      // remaining work, the previous behaviour swallowed the error
-      // and silently lost every set in the failing batch.
+      chunkFailures++;
+      // Continue attempting the remaining chunks rather than aborting all
+      // remaining work, but record the failure so it is not swallowed.
     }
+  }
+  // LS-02/H-11 (Codex audit, 2026-07-12): throw AFTER attempting every chunk so
+  // the caller's per-workout catch counts this workout as failed. The previous
+  // silent return let `failures` stay 0, so the caller advanced the workout
+  // push watermark past a workout whose sets never landed - the next
+  // watermark-filtered sync then skipped that older workout forever and the
+  // missing sets were lost. A throw here holds the watermark so it retries.
+  if (chunkFailures > 0) {
+    throw new Error(`sync._upsertSets: ${chunkFailures} workout_sets chunk(s) failed to upsert`);
   }
 }
 
