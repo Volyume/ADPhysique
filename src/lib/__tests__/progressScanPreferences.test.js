@@ -10,6 +10,13 @@ import {
   PROGRESS_SCAN_MEANING_MOMENT_SEEN_KEY,
   PROGRESS_SCAN_RECALIBRATION_SEEN_KEY,
   setProgressScanMeaningMomentSeen,
+  getProgressScanCapturePreferences,
+  setProgressScanCameraFacingPreference,
+  setProgressScanTimerPreference,
+  PROGRESS_SCAN_CAMERA_FACING_KEY,
+  PROGRESS_SCAN_TIMER_SECONDS_KEY,
+  normaliseProgressScanTimerSeconds,
+  normaliseProgressScanCameraFacing,
 } from '../progressScanPreferences';
 
 beforeEach(async () => {
@@ -30,6 +37,43 @@ describe('progressScanPreferences', () => {
     await setProgressScanHideExactPreference(true);
     expect(await AsyncStorage.getItem(PROGRESS_SCAN_HIDE_EXACT_KEY)).toBe('true');
     expect(await getProgressScanHideExactPreference()).toBe(true);
+  });
+});
+
+// Launch capture defaults (founder 2026-07-12): a new user opens the scan
+// camera self-facing (front) with a 5-second timer selected. An explicit choice
+// is preserved -- including an explicit "no timer" (0), which must not be
+// re-defaulted back to 5 (the Number(null)===0 trap the read path guards).
+describe('progress-scan capture defaults', () => {
+  test('a new install defaults to the front camera and a 5-second timer', async () => {
+    const prefs = await getProgressScanCapturePreferences();
+    expect(prefs).toEqual({ cameraFacing: 'front', timerSeconds: 5 });
+  });
+
+  test('an explicit rear-camera + timer-off choice is preserved, not re-defaulted', async () => {
+    await setProgressScanCameraFacingPreference('back');
+    await setProgressScanTimerPreference(0);
+    expect(await AsyncStorage.getItem(PROGRESS_SCAN_CAMERA_FACING_KEY)).toBe('back');
+    expect(await AsyncStorage.getItem(PROGRESS_SCAN_TIMER_SECONDS_KEY)).toBe('0');
+    const prefs = await getProgressScanCapturePreferences();
+    expect(prefs).toEqual({ cameraFacing: 'back', timerSeconds: 0 });
+  });
+
+  test('an explicit 10s / front choice round-trips', async () => {
+    await setProgressScanCameraFacingPreference('front');
+    await setProgressScanTimerPreference(10);
+    const prefs = await getProgressScanCapturePreferences();
+    expect(prefs).toEqual({ cameraFacing: 'front', timerSeconds: 10 });
+  });
+
+  test('normalise falls back to the launch defaults for null/invalid values', () => {
+    expect(normaliseProgressScanCameraFacing(null)).toBe('front');
+    expect(normaliseProgressScanCameraFacing('sideways')).toBe('front');
+    expect(normaliseProgressScanCameraFacing('back')).toBe('back');
+    expect(normaliseProgressScanTimerSeconds('nonsense')).toBe(5);
+    expect(normaliseProgressScanTimerSeconds(7)).toBe(5);
+    expect(normaliseProgressScanTimerSeconds(0)).toBe(0);
+    expect(normaliseProgressScanTimerSeconds(10)).toBe(10);
   });
 });
 

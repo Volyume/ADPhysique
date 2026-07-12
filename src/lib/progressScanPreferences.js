@@ -11,13 +11,24 @@ export const PROGRESS_SCAN_RECALIBRATION_SEEN_KEY = '@volyume_progress_scan_reca
 export const PROGRESS_SCAN_MEANING_MOMENT_SEEN_KEY = '@volyume_progress_scan_meaning_moment_seen';
 const RECALIBRATION_SEEN_ID_CAP = 500;
 
+// Launch capture defaults (founder 2026-07-12): a NEW user meets the
+// self-facing (front) camera with a 5-second timer, so they can prop the phone,
+// step back into full-body framing and see themselves before the shot. This is
+// also capture-consistency-positive: the back camera hides the framing, so the
+// body is more likely to be cropped or inconsistently placed between sets, and
+// the Volyume Score depends on consistent framing. An explicit user choice
+// (including timer 0 = "no timer") is always preserved; only a never-set or
+// corrupt value falls to these defaults.
+export const PROGRESS_SCAN_DEFAULT_CAMERA_FACING = 'front';
+export const PROGRESS_SCAN_DEFAULT_TIMER_SECONDS = 5;
+
 export function normaliseProgressScanCameraFacing(value) {
-  return value === 'front' || value === 'back' ? value : 'back';
+  return value === 'front' || value === 'back' ? value : PROGRESS_SCAN_DEFAULT_CAMERA_FACING;
 }
 
 export function normaliseProgressScanTimerSeconds(value) {
   const n = Number(value);
-  return [0, 5, 10].includes(n) ? n : 0;
+  return [0, 5, 10].includes(n) ? n : PROGRESS_SCAN_DEFAULT_TIMER_SECONDS;
 }
 
 export async function getProgressScanHideExactPreference() {
@@ -45,11 +56,22 @@ export async function getProgressScanCapturePreferences() {
       AsyncStorage.getItem(PROGRESS_SCAN_TIMER_SECONDS_KEY),
     ]);
     return {
-      cameraFacing: normaliseProgressScanCameraFacing(cameraFacing),
-      timerSeconds: normaliseProgressScanTimerSeconds(timerSeconds),
+      // Guard null (never set) BEFORE normalising: Number(null) === 0, so an
+      // unset timer would otherwise be indistinguishable from an explicit
+      // "no timer (0)". Unset -> launch default; any stored value is normalised
+      // and preserved (including an explicit 0).
+      cameraFacing: cameraFacing == null
+        ? PROGRESS_SCAN_DEFAULT_CAMERA_FACING
+        : normaliseProgressScanCameraFacing(cameraFacing),
+      timerSeconds: timerSeconds == null
+        ? PROGRESS_SCAN_DEFAULT_TIMER_SECONDS
+        : normaliseProgressScanTimerSeconds(timerSeconds),
     };
   } catch (_) {
-    return { cameraFacing: 'back', timerSeconds: 0 };
+    return {
+      cameraFacing: PROGRESS_SCAN_DEFAULT_CAMERA_FACING,
+      timerSeconds: PROGRESS_SCAN_DEFAULT_TIMER_SECONDS,
+    };
   }
 }
 

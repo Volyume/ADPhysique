@@ -16,6 +16,7 @@
 import fs from 'fs';
 import path from 'path';
 import { create, act } from 'react-test-renderer';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import ProgressGhostCapture from '../ProgressGhostCapture';
 import useAppStore from '../../store/useAppStore';
@@ -96,7 +97,20 @@ async function render(props = {}) {
   return tree;
 }
 
-beforeEach(() => {
+// The launch default is now a 5s timer, so the shutter reads "Start 5 second
+// timer" and begins a countdown. The pipeline/tier-guard tests below exercise
+// the IMMEDIATE-capture path, so they select "Timer off" first to isolate it
+// from the countdown (which has its own default-state coverage).
+async function selectTimerOff(tree) {
+  const off = tree.root.find((n) => n.props?.accessibilityLabel === 'Timer off');
+  await act(async () => { off.props.onPress(); });
+}
+
+beforeEach(async () => {
+  // Clear persisted capture prefs so each test starts from the launch default
+  // (front camera + 5s timer); otherwise a test that selects "Timer off"
+  // persists 0 into the mock store and contaminates the default assertions.
+  await AsyncStorage.clear();
   mockPermission = { granted: true, canAskAgain: true };
   mockStoreState = { tier: 'pro', accessibility: { reduceMotion: false } };
   order.length = 0;
@@ -184,6 +198,7 @@ test('capture previews the photo, then saves, records the pose, and calls onCapt
   const onCaptured = jest.fn();
   const tree = await render({ referencePhoto: REF, pose: 'side', onCaptured });
 
+  await selectTimerOff(tree);
   const captureBtn = tree.root.find((n) => n.props?.accessibilityLabel === 'Take photo');
   await act(async () => {
     await captureBtn.props.onPress();
@@ -215,6 +230,18 @@ test('capture previews the photo, then saves, records the pose, and calls onCapt
   expect(order).toEqual(['save', 'meta']);
 });
 
+test('opens self-facing with a 5s timer selected and advises it on screen (launch default)', async () => {
+  const tree = await render({ referencePhoto: REF, pose: 'front' });
+  const json = JSON.stringify(tree.toJSON());
+  // The 5s timer chip is the selected one, and the shutter reflects the timer.
+  const shutter = tree.root.find((n) => n.props?.accessibilityLabel === 'Start 5 second timer');
+  expect(shutter).toBeTruthy();
+  const fiveChip = tree.root.find((n) => n.props?.accessibilityLabel === '5 second timer');
+  expect(fiveChip.props.accessibilityState).toMatchObject({ selected: true });
+  // The on-screen advice tells the user the front camera + timer are on.
+  expect(json).toContain('Front camera and a 5-second timer are on');
+});
+
 test('capture is blocked when the live tier is no longer pro (mid-modal flip)', async () => {
   act(() => { useAppStore.setState({ tier: 'pro' }); });
   const onCaptured = jest.fn();
@@ -223,6 +250,7 @@ test('capture is blocked when the live tier is no longer pro (mid-modal flip)', 
   // The tier flips to free while the capture modal is open.
   act(() => { useAppStore.setState({ tier: 'free' }); });
 
+  await selectTimerOff(tree);
   const captureBtn = tree.root.find((n) => n.props?.accessibilityLabel === 'Take photo');
   await act(async () => {
     await captureBtn.props.onPress();
@@ -243,6 +271,7 @@ test('capture re-checks the live tier after the native camera returns', async ()
   const onCaptured = jest.fn();
   const tree = await render({ referencePhoto: REF, pose: 'front', onCaptured });
 
+  await selectTimerOff(tree);
   const captureBtn = tree.root.find((n) => n.props?.accessibilityLabel === 'Take photo');
   await act(async () => {
     await captureBtn.props.onPress();
@@ -265,6 +294,7 @@ test('capture cleans up a saved file if the tier lapses before metadata is writt
   const onCaptured = jest.fn();
   const tree = await render({ referencePhoto: REF, pose: 'front', onCaptured });
 
+  await selectTimerOff(tree);
   const captureBtn = tree.root.find((n) => n.props?.accessibilityLabel === 'Take photo');
   await act(async () => {
     await captureBtn.props.onPress();

@@ -52,6 +52,8 @@ import {
   getProgressScanCapturePreferences,
   setProgressScanCameraFacingPreference,
   setProgressScanTimerPreference,
+  PROGRESS_SCAN_DEFAULT_CAMERA_FACING,
+  PROGRESS_SCAN_DEFAULT_TIMER_SECONDS,
 } from '../lib/progressScanPreferences';
 import { getPoseCaptureGuidance } from '../lib/progressCaptureGuide';
 import { useToast } from './Toast';
@@ -186,8 +188,12 @@ export default function ProgressGhostCapture({
 
   const [opacity, setOpacity] = useState(OPACITY_DEFAULT);
   const [showGrid, setShowGrid] = useState(true);
-  const [facing, setFacing] = useState('back');
-  const [timerSeconds, setTimerSeconds] = useState(0);
+  // Seed from the launch capture defaults (front camera + 5s timer) so a new
+  // user opens straight into the self-facing preview with no back-camera flash
+  // before the stored preference resolves in the effect below. An explicit
+  // stored choice still overrides these once loaded.
+  const [facing, setFacing] = useState(PROGRESS_SCAN_DEFAULT_CAMERA_FACING);
+  const [timerSeconds, setTimerSeconds] = useState(PROGRESS_SCAN_DEFAULT_TIMER_SECONDS);
   const [countdown, setCountdown] = useState(null);
   const [capturing, setCapturing] = useState(false);
   const [pendingCaptureUri, setPendingCaptureUri] = useState(null);
@@ -423,6 +429,16 @@ export default function ProgressGhostCapture({
   const guidance = getPoseCaptureGuidance(pose);
   const modeLabel = title ? 'Photo set' : 'Progress photo';
   const captureInstruction = subtitle || guidance.line;
+  // On-screen advice for the self-facing default (founder 2026-07-12): tell the
+  // user the front camera and timer are on so they know to prop the phone and
+  // step back into full-body framing. Reflects the live facing/timer state, so
+  // it updates if they flip the camera or change the timer, and hides once they
+  // choose the rear camera (they have then opted into a helper/mirror setup).
+  const selfieAdvice = facing === 'front'
+    ? (timerSeconds > 0
+      ? `Front camera and a ${timerSeconds}-second timer are on, so you can prop your phone, step back into frame, and let it count you in.`
+      : 'Front camera is on. Prop your phone and step back so your whole body fits the frame.')
+    : null;
   // Level colouring: "aligned" when within ~1.5 deg of level. The tilt itself
   // is live sensor data, not a transition; Reduce Motion flattens the visual so
   // nothing rotates on screen.
@@ -578,6 +594,12 @@ export default function ProgressGhostCapture({
             </View>
             ) : null}
           </View>
+        ) : null}
+
+        {selfieAdvice ? (
+          <Text style={[styles.selfieAdvice, live.selfieAdvice]} accessibilityLiveRegion="polite">
+            {selfieAdvice}
+          </Text>
         ) : null}
 
         <View style={[styles.timerRow, live.timerRow]}>
@@ -849,6 +871,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
   },
+  selfieAdvice: {
+    ...type.caption,
+    color: withAlpha(colors.textPrimary, 0.92),
+    textAlign: 'center',
+    alignSelf: 'center',
+    maxWidth: 360,
+    backgroundColor: withAlpha(colors.background, 0.55),
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    lineHeight: 18,
+  },
   timerRow: {
     flexDirection: 'row',
     alignSelf: 'center',
@@ -1027,6 +1062,7 @@ function buildLiveStyles(t) {
     opacityPresetActive: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.primary },
     opacityPresetText: { color: withAlpha(t.colors.textPrimary, 0.86) },
     opacityPresetTextActive: { color: t.colors.onPrimary },
+    selfieAdvice: { color: withAlpha(t.colors.textPrimary, 0.92), backgroundColor: withAlpha(t.colors.background, 0.55) },
     timerRow: { backgroundColor: withAlpha(t.colors.background, 0.5) },
     timerChipActive: { backgroundColor: t.colors.primaryFill },
     timerChipText: { color: t.colors.textSecondary },
