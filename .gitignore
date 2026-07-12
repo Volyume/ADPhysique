@@ -32,3 +32,6 @@ web-build/
 !.claude/skills/**
 google-play-service-account.json
 AuthKey_*.p8
+
+# Vercel local build output
+.vercel/
