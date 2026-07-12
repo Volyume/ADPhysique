@@ -22,6 +22,9 @@ jobs:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       BUILD_ID: e78730d8-19fe-4706-af62-c387fb0f7e9d
     steps:
+      - name: Checkout (eas-cli must run inside the project)
+        uses: actions/checkout@v4
+
       - name: Build metadata (error + any log URLs)
         run: |
           npx -y eas-cli@latest build:view "$BUILD_ID" --json > build.json || true
