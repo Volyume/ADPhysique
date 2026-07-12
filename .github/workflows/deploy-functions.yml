@@ -36,6 +36,8 @@ on:
           - play-billing-rtdn
           - app-store-verify
           - app-store-notifications
+          - delete-account
+          - partner-cheer
           - all
 
 # GitHub forces JavaScript actions onto Node 24 on 2026-06-16. Opt in early so
@@ -96,4 +98,21 @@ jobs:
           if [ "$CHOICE" = "app-store-notifications" ] || [ "$CHOICE" = "all" ]; then
             echo "Deploying app-store-notifications (--no-verify-jwt; Apple presents no Supabase JWT)"
             supabase functions deploy app-store-notifications --project-ref "$REF" --no-verify-jwt
+          fi
+          if [ "$CHOICE" = "delete-account" ] || [ "$CHOICE" = "all" ]; then
+            # GDPR Article 17 erasure endpoint. The app calls it authenticated
+            # and the function itself rejects a missing/invalid JWT (401 via
+            # auth.getUser), so it deploys with gateway JWT verification ON --
+            # never --no-verify-jwt, which would expose account deletion to
+            # anonymous callers. Codex audit BSEC-13: it was previously never
+            # deployed, so erasure could not run in production.
+            echo "Deploying delete-account (JWT verification on; authenticated erasure endpoint)"
+            supabase functions deploy delete-account --project-ref "$REF"
+          fi
+          if [ "$CHOICE" = "partner-cheer" ] || [ "$CHOICE" = "all" ]; then
+            # Authenticated one-tap partner cheer. Verifies the caller JWT
+            # internally (401 on missing/invalid), so gateway verification stays
+            # ON. Codex audit BSEC-13: previously never deployed.
+            echo "Deploying partner-cheer (JWT verification on; authenticated endpoint)"
+            supabase functions deploy partner-cheer --project-ref "$REF"
           fi
