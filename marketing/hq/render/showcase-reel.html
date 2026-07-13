@@ -141,7 +141,10 @@ html, body { width: 1080px; height: 1920px; background: var(--canvas); overflow:
   border-radius: 60px;
   background: #050505;
   padding: 13px;
-  box-shadow: 0 60px 130px rgba(0,0,0,0.72), 0 0 0 2px #1b1b19, inset 0 0 0 1px rgba(255,255,255,0.04);
+  /* warm rim light on the bezel edges, matching the founder's reference renders */
+  box-shadow: 0 60px 130px rgba(0,0,0,0.72), 0 0 0 2px #1b1b19,
+    inset 0 0 0 1px rgba(255,255,255,0.04),
+    -3px -2px 8px rgba(245,166,35,0.18), 3px 3px 10px rgba(245,166,35,0.10);
   will-change: transform, opacity;
 }
 .phone::before { /* amber depth glow hugging the device */
@@ -361,6 +364,9 @@ function build() {
   // caption B
   nodes.capB = caption('IT READS YOUR WHOLE WEEK', 'Your training and your food, logged in one place.');
   stage.appendChild(nodes.capB);
+  // caption C (Eat scene)
+  nodes.capC = caption('NUTRITION THAT FITS', 'Meals planned to your targets, ticked off as you eat.');
+  stage.appendChild(nodes.capC);
   // pills
   const pills = el('div'); pills.id = 'pills';
   pills.append(pill('Train'), pill('Eat'), pill('Check in'));
@@ -410,10 +416,14 @@ function pill(label) {
   return p;
 }
 
-function set(node, { o = 1, x = 0, y = 0, s = 1, blur = 0, rot = 0 } = {}) {
+function set(node, { o = 1, x = 0, y = 0, s = 1, blur = 0, rot = 0, ry = 0, rx = 0 } = {}) {
   node.style.opacity = o;
-  let tr = `translate(${x}px, ${y}px)`;
+  // perspective first so rotateY/rotateX give a real 3D angled-device look
+  let tr = (ry || rx) ? 'perspective(1700px) ' : '';
+  tr += `translate(${x}px, ${y}px)`;
   if (s !== 1) tr += ` scale(${s})`;
+  if (ry) tr += ` rotateY(${ry}deg)`;
+  if (rx) tr += ` rotateX(${rx}deg)`;
   if (rot) tr += ` rotate(${rot}deg)`;
   node.style.transform = tr;
   node.style.filter = blur ? `blur(${blur}px)` : 'none';
@@ -453,6 +463,9 @@ function seek(t) {
     y: lerp(760, 470, bIn) + floatB,
     s: lerp(0.9, 1, bIn),
     rot: lerp(4, 1.5, bIn),
+    // angled 3D device, easing towards the camera as it settles
+    ry: lerp(-22, -10, bIn),
+    rx: lerp(4, 2, bIn),
   });
   // glare sweep once around 4.6s
   const sweep = seg(t, 4500, 5400);
@@ -473,13 +486,21 @@ function seek(t) {
   const floatC = Math.sin((t - 7700) / 1500) * 14;
   set(nodes.phoneEat, {
     o: cIn * cOut,
-    x: lerp(620, 250, cIn),
-    y: lerp(560, 470, cIn) + floatC,
+    x: lerp(620, 300, cIn),
+    y: lerp(620, 540, cIn) + floatC,
     s: lerp(0.9, 1, cIn),
     rot: lerp(-4, -1.5, cIn),
+    // mirrored angle to the Train device
+    ry: lerp(22, 10, cIn),
+    rx: lerp(4, 2, cIn),
   });
   const sweepC = seg(t, 8700, 9600);
   nodes.phoneEat.querySelector('.glare').style.setProperty('--sweep', `${lerp(-200, 260, sweepC)}%`);
+  // caption C (paired with Eat)
+  const capCIn = easeOutCubic(seg(t, 8300, 9000));
+  const capCOut = 1 - seg(t, 10700, 11200);
+  set(nodes.capC, { o: capCIn * capCOut, y: lerp(150, 96, capCIn) });
+  nodes.capC.style.top = '150px';
 
   /* Scene D — decision 11400..15000 */
   const dIn = easeOutCubic(seg(t, 11600, 12300));
