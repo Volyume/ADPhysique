@@ -34,7 +34,7 @@
 
 import { Platform } from 'react-native';
 import { getSupabaseClient } from '../supabase';
-import { logError, logWarn } from '../errorLog';
+import { logError, logWarn, logInfo } from '../errorLog';
 
 // ────────────────────────────────────────────────────────────────────
 // RPC wrappers
@@ -342,8 +342,14 @@ export async function reconcilePaidEntitlement(profile) {
     // then downgrades on the next cycle, while a blip self-heals via a later
     // active read that re-stamps the verified clock.
     if (recentlyVerifiedWithinGrace) {
-      logWarn('payments.cascade.reconcile.inactiveWithinGrace',
-        'paid_pro read returned inactive but Play confirmed active within grace; deferring', {});
+      // logInfo, not logWarn (2026-07-13, Sentry VOLYUME-26): this branch is
+      // the reconciler SELF-HEALING as designed — deferring within grace and
+      // re-checking. It fired three warning events in ten minutes of the
+      // founder's clean-slate walk without anything being wrong. The
+      // actionable outcomes keep their warnings: the past-grace lapse below
+      // (a real tier change) still logs logWarn.
+      logInfo('payments.cascade.reconcile.inactiveWithinGrace',
+        'paid_pro read returned inactive but Play confirmed active within grace; deferring');
       return { ok: true, checked: true, active: false, deferred: true };
     }
     logWarn('payments.cascade.reconcile.lapsed',

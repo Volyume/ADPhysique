@@ -1375,7 +1375,7 @@ export async function seedExercisesIfNeeded() {
     await AsyncStorage.setItem(LIBRARY_VERSION_KEY, 'true');
     logInfo('seedExercises.seed', `Inserted ${RAW.length} exercises`);
   } catch (err) {
-    logError('seedExercises.seedExercisesIfNeeded', err);
+    logSeedChainFailure('seedExercises.seedExercisesIfNeeded', err);
   }
 }
 
@@ -1403,7 +1403,7 @@ export async function topUpNewExercisesIfNeeded() {
     await AsyncStorage.setItem(LIBRARY_VERSION_KEY, 'true');
     if (added > 0) logInfo('seedExercises.topUp', `Topped up ${added} new exercises`);
   } catch (err) {
-    logError('seedExercises.topUpNewExercisesIfNeeded', err);
+    logSeedChainFailure('seedExercises.topUpNewExercisesIfNeeded', err);
   }
 }
 
@@ -1433,8 +1433,40 @@ export async function backfillExerciseMetadataIfNeeded() {
     await AsyncStorage.setItem(METADATA_BACKFILL_KEY, 'true');
     if (updated > 0) logInfo('seedExercises.backfill', `Backfilled metadata on ${updated} exercises`);
   } catch (err) {
-    logError('seedExercises.backfillExerciseMetadataIfNeeded', err);
+    logSeedChainFailure('seedExercises.backfillExerciseMetadataIfNeeded', err);
   }
+}
+
+
+// Founder clean-slate round (2026-07-13, Sentry VOLYUME-27): the boot-time
+// seed/derive chain runs hundreds of statements fire-and-forget. When a
+// concurrent database lifecycle event (the sign-in account switch or the
+// sign-out wipe resetting local data) releases the connection mid-loop,
+// the next statement rejects with "Cannot use shared object that was
+// already released" / "cannot be cast to type expo.modules.sqlite...".
+// That interruption is BENIGN: every task here is idempotent and
+// version-flagged, and the flag is only written on completion, so the
+// task simply re-runs on the next launch. It must therefore log as a
+// breadcrumb-level info line, not a Sentry error. Walks the cause chain
+// because the release detail can sit on a nested cause.
+export function isDbLifecycleInterruption(err) {
+  let node = err;
+  for (let depth = 0; node && depth < 6; depth += 1) {
+    const msg = String(node.message ?? node ?? '');
+    if (/already released|cannot be cast to type expo\.modules\.sqlite|NativeDatabase.*(closed|released)/i.test(msg)) {
+      return true;
+    }
+    node = node.cause;
+  }
+  return false;
+}
+
+function logSeedChainFailure(scope, err) {
+  if (isDbLifecycleInterruption(err)) {
+    logInfo(scope, `interrupted by a concurrent database reset; will re-run next launch (${String(err?.message ?? '').slice(0, 120)})`);
+    return;
+  }
+  logError(scope, err);
 }
 
 // One-shot full re-derive for installs that ran the v1 backfill before the
@@ -1460,6 +1492,6 @@ export async function rederiveExerciseMetadataIfNeeded() {
     await AsyncStorage.setItem(METADATA_REDERIVE_KEY, 'true');
     if (updated > 0) logInfo('seedExercises.rederive', `Re-derived metadata on ${updated} exercises`);
   } catch (err) {
-    logError('seedExercises.rederiveExerciseMetadataIfNeeded', err);
+    logSeedChainFailure('seedExercises.rederiveExerciseMetadataIfNeeded', err);
   }
 }
