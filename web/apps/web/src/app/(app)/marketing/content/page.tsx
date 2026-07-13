@@ -49,6 +49,29 @@ function formatCitations(citations: unknown): string {
   return JSON.stringify(citations, null, 2);
 }
 
+// The actual copy of the item, so approve/reject is a read decision not a
+// leap of faith. Stored on compliance_record.preview_text by the pipeline
+// (the human-readable script, caption and hashtags). Shown for every item
+// that has it, expanded, above the controls.
+function previewText(row: MarketingContentRow): string | null {
+  const rec = row.compliance_record as Record<string, unknown> | null;
+  const pt = rec?.preview_text;
+  return typeof pt === 'string' ? pt : null;
+}
+
+function ContentPreview({ row }: { row: MarketingContentRow }) {
+  const text = previewText(row);
+  if (!text) return null;
+  return (
+    <div className="mt-sm flex flex-col gap-xs rounded-md bg-surface2 p-sm">
+      <p className="type-caption font-medium uppercase tracking-label text-textMuted">Content</p>
+      <pre className="max-h-96 select-text overflow-y-auto whitespace-pre-wrap break-words rounded-sm bg-surface1 p-sm type-caption text-textPrimary">
+        {text}
+      </pre>
+    </div>
+  );
+}
+
 // A ready-to-post pack for approved social items: everything a founder needs
 // to actually hand the item to a channel. body_ref is rendered as selectable
 // text rather than truncated decoration (there is no in-app editor for it,
@@ -201,6 +224,7 @@ export default async function MarketingContentPage() {
                           <PipelineRowActions id={row.id} />
                         ) : null}
                       </div>
+                      <ContentPreview row={row} />
                       <PreviewPanel assets={previews.get(row.id) ?? []} />
                       <ReadyToPostPack row={row} />
                     </div>
