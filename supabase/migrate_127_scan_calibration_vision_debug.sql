@@ -8,8 +8,8 @@
 -- (src/lib/progressScanCalibrationAccess.js); every other account's rows
 -- never carry image-derived pixels, preserving the consent promise.
 --
--- Status: NOT applied at authoring time; founder-gated ("run against
--- production").
+-- Status: APPLIED to production (EU-Dublin) 2026-07-13 on the founder's
+-- exact phrase; both columns verified present.
 -- Safe to re-run: yes (ADD COLUMN IF NOT EXISTS).
 -- Rollback: alter table public.scan_calibration_events
 --   drop column if exists vision_debug;
