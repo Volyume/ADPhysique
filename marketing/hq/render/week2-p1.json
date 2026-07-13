@@ -1,0 +1,42 @@
+{
+  "meta": {
+    "title": "Week 2 Piece 1 - The Sunday-night guess"
+  },
+  "slides": [
+    {
+      "heading": "Every Sunday you decide whether to change your training or your food.",
+      "supporting": "And really, you are guessing.",
+      "headingAmber": true
+    },
+    {
+      "heading": "Volyume is a workout and food-tracking app that makes that weekly call for you."
+    },
+    {
+      "heading": "It reads your training and your food, and each week it says change, or hold."
+    },
+    {
+      "heading": "Then it shows you the reason behind the call, in plain English."
+    },
+    {
+      "heading": "This is the app.",
+      "appShot": {
+        "src": "05_log_every_set.jpg",
+        "label": "Logging your training."
+      }
+    },
+    {
+      "heading": "Some weeks the honest answer is hold.",
+      "supporting": "It tells you why instead of inventing a change.",
+      "miniCard": {
+        "label": "WEEKLY DECISION",
+        "verdict": "HOLD",
+        "pillOutline": true,
+        "reason": ""
+      }
+    },
+    {
+      "heading": "Volyume.",
+      "supporting": "Free to start on Google Play. The weekly coaching, with its food diary, is Pro."
+    }
+  ]
+}

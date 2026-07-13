@@ -127,3 +127,8 @@ html, body {
   font-size: 30px;
   margin-top: 24px;
 }
+
+/* appShot sizing for the 9:16 reel canvas */
+.reel-scene .appshot { align-items: flex-start; margin-top: 36px; }
+.reel-scene .appshot__frame img { width: 460px; }
+.reel-scene .appshot__label { font-size: 30px; }

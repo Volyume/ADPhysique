@@ -346,3 +346,15 @@ body {
   color: var(--text-muted);
   letter-spacing: 0.04em;
 }
+
+/* ---- appShot: a real app screenshot in a calm rounded frame (Addendum A2) ---- */
+.appshot { display: flex; flex-direction: column; align-items: flex-start; gap: 22px; margin-top: 44px; }
+.appshot__frame {
+  border: 1px solid var(--border-subtle);
+  border-radius: 30px;
+  overflow: hidden;
+  background: var(--surface);
+  line-height: 0;
+}
+.appshot__frame img { display: block; width: 380px; height: auto; }
+.appshot__label { font-family: var(--font-mono); font-size: 26px; color: var(--text-muted); letter-spacing: 0.02em; }

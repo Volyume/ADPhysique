@@ -316,6 +316,20 @@ function buildScene(slide, index, total) {
     content.appendChild(wrap);
   }
 
+  // A real app screenshot in a calm rounded frame (identity Addendum A2).
+  var shot = null;
+  if (slide.appShot) {
+    var sw = el('div', 'appshot');
+    var frame = el('div', 'appshot__frame');
+    var simg = document.createElement('img');
+    simg.src = 'assets/screenshots/' + slide.appShot.src;
+    frame.appendChild(simg);
+    sw.appendChild(frame);
+    if (slide.appShot.label) sw.appendChild(el('div', 'appshot__label', slide.appShot.label));
+    shot = sw;
+    content.appendChild(sw);
+  }
+
   scene.appendChild(content);
 
   // Wordmark on the closing scene only (kept inside the bottom safe margin).
@@ -335,6 +349,7 @@ function buildScene(slide, index, total) {
     if (hb.nodes.stat) reveal(hb.nodes.stat, seg(t, 560, 1300));
     if (diagram && diagram.__anim) diagram.__anim(t);
     if (mini) reveal(mini, seg(t, 900, 1650));
+    if (shot) reveal(shot, seg(t, 500, 1300));
     if (footer) reveal(footer, seg(t, 1200, 1950));
   };
   return scene;

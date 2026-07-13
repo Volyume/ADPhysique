@@ -262,6 +262,18 @@ function buildSlide(slide) {
     content.appendChild(wrap);
   }
 
+  // A real app screenshot in a calm rounded frame (identity Addendum A2).
+  if (slide.appShot) {
+    const wrap = el('div', 'appshot');
+    const frame = el('div', 'appshot__frame');
+    const img = document.createElement('img');
+    img.src = 'assets/screenshots/' + slide.appShot.src;
+    frame.appendChild(img);
+    wrap.appendChild(frame);
+    if (slide.appShot.label) wrap.appendChild(el('div', 'appshot__label', slide.appShot.label));
+    content.appendChild(wrap);
+  }
+
   root.appendChild(content);
   root.appendChild(buildFooter(slide));
   root.appendChild(buildIndex(slide));

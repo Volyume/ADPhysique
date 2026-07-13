@@ -1,0 +1,12 @@
+{
+  "meta": {"title": "Week 2 Piece 2 - The over-adjuster"},
+  "slides": [
+    {"heading": "You change something most weeks. A new split, then a calorie cut.", "supporting": "Now you cannot tell what actually worked.", "headingAmber": true},
+    {"heading": "Volyume checks whether there is really enough to act on before it changes anything."},
+    {"heading": "You log your training. The weekly coaching reads that and your food, and says change, or hold."},
+    {"heading": "Plenty of weeks it says hold, because there is not enough in your data yet to justify a change."},
+    {"heading": "This is the app.", "appShot": {"src": "03_plan_that_moves_with_you.jpg", "label": "Your plan, changed only with a reason."}},
+    {"heading": "When there is not enough to go on, it holds and tells you why.", "supporting": "Rather than guessing.", "miniCard": {"label": "WEEKLY DECISION", "verdict": "HOLD", "pillOutline": true, "reason": ""}},
+    {"heading": "Volyume.", "supporting": "Free to start on Google Play. The weekly coaching, with its food diary, is Pro."}
+  ]
+}
