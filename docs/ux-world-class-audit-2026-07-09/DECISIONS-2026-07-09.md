@@ -1998,3 +1998,28 @@ divergences (second-order), HEIC-in-.jpg un-baked orientation path.
 Process note: a piped test command masked a red suite and one commit
 reached main red for ~15 minutes before being fixed; gates now run
 with explicit exit-code checks.
+
+## D85 — UIKit removed from the iOS analysis render; fix PROVEN on device (2026-07-13 evening)
+
+The D84 inversion was confirmed red-handed: the founder's own export
+(scan scored 82) contained the exact 256px model inputs, both
+upside-down. Founder asked for the structural option rather than the
+CTM-flip correction ("B if it is definitely a better solution"):
+extractRgb now draws the CGImage directly with CGContext.draw -- no
+UIKit in the analysis path, so no coordinate-space mismatch exists to
+correct and the flip bug class cannot recur. EXIF stays baked in by
+kCGImageSourceCreateThumbnailWithTransform; the centred contentRect
+keeps pixel placement identical. Guard test pins extractRgb to the
+pure-CG primitive (UIImage/UIGraphicsPushContext/.draw(in:) banned on
+code lines). Landed on main d7cf68f; gate lint 0 / test 0,
+9,061 passed.
+
+Founder built and scanned: the model input pulled from
+scan_calibration_events (row a5aad947) is UPRIGHT, and every broken
+signal normalised -- waistToShoulder 1.12-1.79 -> 0.609,
+frontBackWaistSpread 0.131 -> 0.04, fragments 26-40 -> 12-18, score 83
+"Lean" vs Android 89-91. Founder verdict: acceptable as an indicator
+for now. OPEN (not parked -- founder said "not bothered for now"):
+the residual ~6-8 point iOS-vs-Android gap, now investigable with
+clean paired telemetry; prediction on record that including the side
+pose lifts confidence from moderate.
