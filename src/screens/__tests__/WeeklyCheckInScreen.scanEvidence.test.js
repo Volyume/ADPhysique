@@ -147,8 +147,17 @@ async function render({ suppressed = false, scan = null, note = undefined, sessi
   let tree;
   await act(async () => { tree = create(<WeeklyCheckInScreen navigation={nav} />); });
   await flush();
+  _mountedTree = tree;
   return tree;
 }
+
+// The submit Button holds a success state for SUCCESS_HOLD_MS (900ms real
+// time) then setStates this screen; floating post-save best-effort writes
+// (scan classification, reminder reschedule) also resolve after the assert.
+// Draining inside act and unmounting in afterEach stops any update landing
+// after the test completes ("Cannot log after tests are done" -> jest --ci
+// exit 1, the main-CI red). Tolerant of a test that already unmounted.
+let _mountedTree = null;
 
 // Forces the full wizard (no auto-derived training performance, so
 // fastEligible is false) and steps from step 0 to step 1 ("This week's
@@ -171,7 +180,25 @@ function findPressable(tree, label) {
     && n.props.accessibilityLabel === label && typeof n.props.onPress === 'function');
 }
 
-afterEach(() => jest.clearAllMocks());
+// Fake timers so the submit Button's 900ms success-hold timer (and any
+// debounce) can never outlive a test as a real timer. flush()'s
+// Promise.resolve() microtasks are unaffected (only timers are faked).
+beforeEach(() => { jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] }); });
+
+afterEach(async () => {
+  if (_mountedTree) {
+    try { await act(async () => { jest.runOnlyPendingTimers(); }); } catch (_) { /* tolerate */ }
+    // Unmount FIRST so React fibers are torn down (Button's success-timer
+    // cleanup runs, and any later floating setState hits an unmounted tree
+    // and no-ops), THEN drain remaining microtasks inside act so nothing
+    // logs after teardown.
+    try { await act(async () => { _mountedTree.unmount(); }); } catch (_) { /* already unmounted by the test */ }
+    await act(async () => { for (let i = 0; i < 20; i++) await Promise.resolve(); });
+    _mountedTree = null;
+  }
+  jest.clearAllMocks();
+  jest.useRealTimers();
+});
 
 describe('WeeklyCheckInScreen optional scan prompt', () => {
   test('renders when no scan exists yet, and "Not now" dismisses it without persisting anything', async () => {

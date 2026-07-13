@@ -103,8 +103,17 @@ async function renderScreen() {
   let tree;
   await act(async () => { tree = create(<WeeklyCheckInScreen navigation={nav} />); });
   await flush();
+  _mountedTree = tree;
   return tree;
 }
+
+// The submit Button holds a success state for SUCCESS_HOLD_MS (900ms real
+// time) then fires onSettled -> a setState on this screen. The tests assert
+// well before that timer elapses, so without an unmount the timer fires
+// after teardown ("Cannot log after tests are done" -> jest --ci exit 1,
+// the main-CI red). Unmounting runs Button's useEffect cleanup, which
+// clearTimeout()s the pending success timer.
+let _mountedTree = null;
 
 // Drives the forced four-step wizard (getWeeklySessionStats returns
 // completed:0/planned:0 above, so fastEligible is false and trainingPerformance
@@ -150,7 +159,32 @@ async function driveToSubmit(tree, sleepText) {
   await flush();
 }
 
-afterEach(() => jest.clearAllMocks());
+// Fake timers so the submit Button's 900ms success-hold timer (and any
+// debounce) can never outlive a test as a real timer. flush()'s
+// Promise.resolve() microtasks are unaffected (only timers are faked).
+beforeEach(() => { jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] }); });
+
+afterEach(async () => {
+  if (_mountedTree) {
+    try { await act(async () => { jest.runOnlyPendingTimers(); }); } catch (_) { /* tolerate */ }
+    // Drain any trailing best-effort async from handleSubmit (post-save scan
+    // classification, reminder reschedule, navigation) INSIDE act so its
+    // setState lands within an act pass, then unmount so Button's
+    // success-timer cleanup runs. Both together stop any state update from
+    // landing after the test completes ("Cannot log after tests are done"
+    // -> jest --ci exit 1). Generous tick count: the post-save chain is
+    // several awaits deep.
+    // Unmount FIRST so React fibers are torn down (Button's success-timer
+    // cleanup runs, and any later floating setState hits an unmounted tree
+    // and no-ops), THEN drain remaining microtasks inside act so nothing
+    // logs after teardown.
+    try { await act(async () => { _mountedTree.unmount(); }); } catch (_) { /* already unmounted by the test */ }
+    await act(async () => { for (let i = 0; i < 20; i++) await Promise.resolve(); });
+    _mountedTree = null;
+  }
+  jest.clearAllMocks();
+  jest.useRealTimers();
+});
 
 describe('AC-15: sleepHours save-gate rejects impossible values', () => {
   test('negative sleep hours (-1) is rejected: nothing is saved, a calm toast fires', async () => {
