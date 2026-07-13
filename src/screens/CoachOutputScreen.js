@@ -1806,9 +1806,18 @@ export default function CoachOutputScreen({ navigation, route }) {
       const lastCalAdjustmentWeekStart = result.adjustments?.calories?.change
         ? weekStart
         : prevCalAdjustmentWeekStart;
-      await saveCoachOutput(user.id, { weekStart, ...result, lastCalAdjustmentWeekStart });
+      // Coach-wiring audit finding 1 (2026-07-13): the off-target counter fed
+      // to the engine was derived from lastOutput.consecutiveOffTargetWeeks
+      // but NEVER persisted, so it could only ever be 0 or 1 and the standard
+      // calorie-adjustment gate (needs 2-3 consecutive weeks) could never
+      // fire. Persist the value that was passed in this week, and keep it in
+      // the React state object too: the apply handlers re-save the whole
+      // record from state, so a missing field there would wipe it on the
+      // first tap of Apply.
+      const persistedResult = { ...result, consecutiveOffTargetWeeks, lastCalAdjustmentWeekStart };
+      await saveCoachOutput(user.id, { weekStart, ...persistedResult });
 
-      setOutput(result);
+      setOutput(persistedResult);
 
       // T2 (world-class-audit-2026-07-03/05-cohesion.md #4): viewing a real
       // review counts as "seen" even if the user never taps the Home banner's

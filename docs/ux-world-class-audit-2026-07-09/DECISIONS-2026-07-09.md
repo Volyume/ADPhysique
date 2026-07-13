@@ -1914,3 +1914,42 @@ and per-user scan records remain device-only (the no-sync guard is
 untouched: this is one-way, fire-and-forget telemetry, not sync).
 Cloud table scan_calibration_events (migration 117, founder-run):
 insert-only for authenticated clients, no client read access.
+
+## D82 — Coaching end-to-end verification + wiring fixes (founder order, 2026-07-13 evening)
+
+Founder: confirm coaching + check-in works exactly as prescribed; weeks of
+device testing are not plausible. Method: two-agent verification (opus) --
+an adversarial wiring trace with file:line evidence, and a 14-week
+simulation of the REAL engine (no mocks) across 5 personas with per-week
+invariants. Results:
+1. ENGINE VERIFIED: 35 existing suites (659 tests) green; simulation
+   passed all invariants (floors never crossed, step sizes bounded,
+   deterministic, no NaN; female near-floor held by the FFM gate; erratic
+   user abstains for 14 weeks; rapid loser locked out of cuts from week 2
+   by the ED-pattern detector and only ever adjusted upward).
+2. FIXED (CONFIRMED-BROKEN): consecutiveOffTargetWeeks was derived from
+   the previous saved coach output but never persisted, so it was
+   permanently capped at 1 and the standard calorie-adjustment gate
+   (needs 2-3 consecutive off-target weeks) could NEVER fire -- the core
+   calorie loop was silently dead; only the rapid-loss override could
+   change calories, and users saw "1 more week of the same trend needed"
+   forever. Fix: the counter is persisted with the saved output and held
+   in the screen state so apply-handler re-saves keep it. Guard test
+   pins the wiring (CoachOutputScreen.offTargetCounter.guard.test.js).
+3. FIXED (CONFIRMED-BROKEN): the onboarding-scheduled check-in reminder
+   ignored the FIRST_CHECKIN_MIN_DAYS unlock, so a brand-new user's first
+   reminder could open a locked "wait a few days" screen (same trust-
+   defect class as the 2026-07-13 Home-nudge fix, at the push layer).
+   Fix: scheduleCheckinReminder accepts earliestMs (same roll-forward
+   mechanism as its min-gap rule) and Pro onboarding passes the unlock
+   time. Scheduler test added.
+4. NOTED RISKS (no action without founder call): (a) apply-time re-clamp
+   covers the static sex floors only; the FFM floor is engine-time (the
+   engine nulls sub-FFM cuts before they exist -- exposure limited to
+   intake collapsing between run and tap, self-corrects next run);
+   (b) coach_outputs/planned_muscle_volume/adaptation_events still sync
+   via the legacy bulk path -- register them before any legacy-path
+   removal; (c) the -1.5%/week rapid-loss flag reads the slow EWMA and
+   can trail a true rapid loss by weeks -- the ED-pattern detector and
+   the losing-too-fast upward corrections cover the gap (verified in
+   simulation), but the flag itself is deliberately lagged.

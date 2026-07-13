@@ -355,8 +355,17 @@ export async function scheduleCheckinReminder(weekday = 0, hour = 12, minute = 0
     // weekly trend window.
     const minGapMs = (options.minGapDays ?? 0) * 24 * 60 * 60 * 1000;
     const lastCheckinMs = options.lastCheckinMs ?? 0;
-    if (minGapMs > 0 && lastCheckinMs > 0) {
-      const earliest = lastCheckinMs + minGapMs;
+    // Coach-wiring audit finding 2 (2026-07-13, same trust-defect class as
+    // the Home nudge fix): a reminder must never fire before the check-in
+    // gate can possibly open. Callers that know an unlock time (onboarding
+    // knows the first check-in needs FIRST_CHECKIN_MIN_DAYS of data) pass
+    // earliestMs; occurrences before it roll forward a week at a time,
+    // exactly like the min-gap rule.
+    const earliest = Math.max(
+      minGapMs > 0 && lastCheckinMs > 0 ? lastCheckinMs + minGapMs : 0,
+      options.earliestMs ?? 0,
+    );
+    if (earliest > 0) {
       while (fireAt.getTime() < earliest) {
         fireAt.setDate(fireAt.getDate() + 7);
       }

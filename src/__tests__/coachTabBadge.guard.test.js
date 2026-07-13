@@ -42,7 +42,7 @@ describe('T2: HomeScreen mirrors showCoachBanner, not a second condition', () =>
 
 describe('T2: CoachOutputScreen clears the SAME dismissal flag on a real review', () => {
   test('gated on hasEnoughData, not the insufficient-data hold', () => {
-    const site = COACH.indexOf('setOutput(result);');
+    const site = COACH.indexOf('setOutput(persistedResult);');
     expect(site).toBeGreaterThan(-1);
     const window = COACH.slice(site, site + 1000);
     expect(window).toMatch(/if \(result\.hasEnoughData\) \{/);

@@ -42,6 +42,7 @@ import {
 import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
 import { saveDraft, loadDraft, clearDraft, DRAFT_DEBOUNCE_MS } from '../lib/proOnboardingDraft';
 import { dateOfBirthFromAgeYears } from '../lib/profileAge';
+import { FIRST_CHECKIN_MIN_DAYS } from '../lib/trialActivation';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
@@ -811,7 +812,13 @@ export default function ProOnboardingScreen({ navigation }) {
         if (status === 'granted') {
           await scheduleMorningWeightNotification(morningHour, 0);
           await scheduleEveningWeightReminder();
-          await scheduleCheckinReminder(checkinDay, 12, 0);
+          // Audit finding 2 (2026-07-13): the first check-in unlocks only
+          // after FIRST_CHECKIN_MIN_DAYS of data, so the first reminder must
+          // never fire before then -- a day-0 schedule could invite a brand
+          // new user into a locked "wait a few days" screen.
+          await scheduleCheckinReminder(checkinDay, 12, 0, {
+            earliestMs: Date.now() + FIRST_CHECKIN_MIN_DAYS * 86400000,
+          });
           // OPP-C03: pre-lay the missed check-in follow-up pair for the
           // first check-in cycle (reads the prefs blob just saved; the
           // helper self-guards on tier, toggle and ED flag).

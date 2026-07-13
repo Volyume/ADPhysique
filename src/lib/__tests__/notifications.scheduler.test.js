@@ -292,6 +292,16 @@ describe('scheduleCheckinReminder', () => {
     expect(fireDate.getTime()).toBeGreaterThanOrEqual(yesterday + 7 * 24 * 60 * 60 * 1000);
   });
 
+  test('earliestMs floor rolls the first fire past the check-in unlock (audit finding 2, 2026-07-13)', async () => {
+    // A brand-new user's first check-in is locked for FIRST_CHECKIN_MIN_DAYS,
+    // so a reminder scheduled at onboarding must never fire inside that
+    // window and invite them into a locked screen.
+    const unlockMs = Date.now() + 5 * 24 * 60 * 60 * 1000;
+    await scheduler.scheduleCheckinReminder(0, 12, 0, { earliestMs: unlockMs });
+    const fireDate = mockScheduleAsync.mock.calls[0][0].trigger.date;
+    expect(fireDate.getTime()).toBeGreaterThanOrEqual(unlockMs);
+  });
+
   test('failure -> notification_failed with weekly_checkin_reminder category', async () => {
     mockScheduleAsync.mockRejectedValue(new Error('boom'));
     await scheduler.scheduleCheckinReminder(0, 12, 0);

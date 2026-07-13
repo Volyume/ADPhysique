@@ -88,7 +88,7 @@ describe('ALGO-005: real elapsed weeks since the last calorie change', () => {
   });
   test('source guard: carries lastCalAdjustmentWeekStart into the saved output', () => {
     expect(COACH).toMatch(/const lastCalAdjustmentWeekStart = result\.adjustments\?\.calories\?\.change/);
-    expect(COACH).toMatch(/saveCoachOutput\(user\.id, \{ weekStart, \.\.\.result, lastCalAdjustmentWeekStart \}\)/);
+    expect(COACH).toMatch(/saveCoachOutput\(user\.id, \{ weekStart, \.\.\.persistedResult \}\)/);
   });
 });
 
