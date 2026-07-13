@@ -178,3 +178,16 @@ with the repo and headless Supabase access.
 - volyume-marketing-weekly-cycle: trig_01XRe8SaCWKNHCY656vHiFWK, cron 0 7 * * 1
 - volyume-marketing-executor: trig_01QuLqhPb2JzEn4FEGkXbc8n, cron 0 */6 * * * (6-hourly for token frugality per founder instruction 2026-07-12; also owns the daily marketing_metrics snapshot; tighten to hourly when pipeline volume justifies)
 - volyume-marketing-review-poll: trig_01QXSjVdMeQKZp9ThsqWiZcE, cron 0 8 * * 2,5 (site health mode until Play Console API access granted)
+
+## Dashboard (Vercel) — access facts (2026-07-13)
+
+- **Stable production URL: https://ad-physique.vercel.app** — use this, bookmark
+  it. Serves the dashboard sign-in with no Vercel login wall.
+- Do NOT use the long per-deployment URLs
+  (`ad-physique-<hash>-volyume-marketing-hq.vercel.app`): the hash changes every
+  deploy and those are behind Vercel Authentication.
+- **Google sign-in requires** the Web OAuth client
+  (`520741631478-apaethkp3g55o06lott116jag73l0ves`) to list
+  `https://ad-physique.vercel.app` under Authorised JavaScript origins (Google
+  Cloud Console → Credentials). Sign in only with allansdouglas1983@gmail.com
+  (the marketing-admin allowlist).
