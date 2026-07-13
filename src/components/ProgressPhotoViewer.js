@@ -46,7 +46,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, Modal,
   ScrollView, useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS,
@@ -200,6 +200,7 @@ export default function ProgressPhotoViewer({
   const navRef = useRef({ change: changePage });
   navRef.current.change = changePage;
 
+  const insets = useSafeAreaInsets();
   const win = useWindowDimensions();
   const imgW = win.width;
   const imgH = Math.round(win.height * 0.62);
@@ -562,7 +563,13 @@ export default function ProgressPhotoViewer({
       statusBarTranslucent
     >
       <Animated.View style={[StyleSheet.absoluteFill, chromeStyle]}>
-      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
+      {/* Founder iOS report (2026-07-13): the header rendered up behind the
+          status-bar clock. SafeAreaView measures its insets NATIVELY, and
+          inside an RN Modal (a separate native hierarchy) that measurement
+          reads 0 on iOS -- the exact defect fixed on PartnerScreen's invite
+          journey this morning. useSafeAreaInsets() reads the provider
+          through React context, which survives the Modal boundary. */}
+      <View style={[styles.safe, live.safe, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="chevron-back" size={26} color={t.colors.textPrimary} />
@@ -693,7 +700,7 @@ export default function ProgressPhotoViewer({
             </>
           ) : null}
         </ScrollView>
-      </SafeAreaView>
+      </View>
       </Animated.View>
 
       {/* Hero-morph overlay (D31): the tapped photo growing into place on open
