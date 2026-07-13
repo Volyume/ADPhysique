@@ -129,6 +129,11 @@ Each figure below is tied to a specific file reference, verified
   citing the exact figure.
 - **3 personal-best types** auto-detected: estimated 1RM, heaviest weight,
   most reps at a weight — `src/lib/algorithms.js`, `PR_TYPE_RANK`.
+- **Tech stack (developer-audience posts only)**: built with React Native
+  0.81.5 + Expo SDK 54 — root `package.json` (`"react-native": "0.81.5"`,
+  `"expo": "~54.0.35"`), verified 2026-07-13. Use only where a technical
+  audience makes it relevant (e.g. r/SideProject, r/androidapps); it is not
+  a consumer-facing selling point.
 - **Training milestones**: first week (3 sessions in 7 days), then 5, 10,
   25, 50, 100 sessions, and first PR — `src/lib/milestones.js`,
   `MILESTONES`. NOTE: older material referencing 250/500-session milestones
