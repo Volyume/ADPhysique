@@ -1953,3 +1953,17 @@ invariants. Results:
    can trail a true rapid loss by weeks -- the ED-pattern detector and
    the losing-too-fast upward corrections cover the gap (verified in
    simulation), but the flag itself is deliberately lagged.
+
+**D82 addendum (founder "Yes we fix this", 2026-07-13 night):** the
+founder's iOS build-43 scan (69, telemetry-verified v3+curve build)
+exposed two capture-integrity gaps: an 11-degree propped-phone tilt
+collapsed the shoulder read (waistToShoulder 1.79, anatomically
+impossible) yet sailed under the 20-degree tilt gate AND was scored.
+Fixes: (1) tilt retake threshold 20 -> 10 degrees in both the vision and
+analysis gates; (2) new 'silhouette_implausible' abstention (waist to
+shoulder > 1.3, waist to hip > 2.2, or shoulder read < 0.12 of height)
+at the vision layer AND belt-and-braces on stored ratios at the analysis
+layer, added to SCORE_WITHHOLD_REASONS so an impossible capture is never
+scored -- calm retake copy names the tilted/propped phone. Valid-scan
+score path unchanged (corpus + BodyM untouched by construction; full
+suite green).

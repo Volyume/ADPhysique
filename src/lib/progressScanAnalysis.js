@@ -20,7 +20,10 @@ const FINAL_SCAN_QUALITY_GATES = {
   pose: 0.22,
   segmentation: 0.30,
   separation: 0.20,
-  tiltDegrees: 20,
+  // 20 -> 10 (founder real-device evidence 2026-07-13): an 11-degree tilt
+  // distorted the silhouette enough to collapse the shoulder measurement
+  // while sailing under the old gate.
+  tiltDegrees: 10,
 };
 
 const SCORE_WITHHOLD_REASONS = new Set([
@@ -38,6 +41,10 @@ const SCORE_WITHHOLD_REASONS = new Set([
   'pose_not_clear',
   'estimate_out_of_range',
   'duplicate_pose_content',
+  // Anatomically impossible measured ratios (e.g. waist reading 1.79x the
+  // shoulders on the founder's tilted-phone scan, 2026-07-13): a broken
+  // capture must withhold the score, never hand out a confidently wrong one.
+  'silhouette_implausible',
 ]);
 
 export const PROGRESS_SCAN_LEANNESS_BANDS = [
@@ -239,6 +246,16 @@ export function abstentionReasonsForAssets(assets = []) {
     if (segmentation != null && segmentation < FINAL_SCAN_QUALITY_GATES.segmentation) reasons.add('segmentation_low_confidence');
     if (tilt != null && Math.abs(tilt) > FINAL_SCAN_QUALITY_GATES.tiltDegrees) reasons.add('camera_tilted');
     if (separation != null && separation < FINAL_SCAN_QUALITY_GATES.separation) reasons.add('clothing_or_background_uncertain');
+    // Belt-and-braces plausibility gate on the stored ratios (mirrors the
+    // vision-layer gate so legacy signals and any alternative measurement
+    // path are covered): impossible ratios mean a broken capture.
+    const ratios = signals?.silhouetteRatios || {};
+    const w2s = finiteNumber(ratios.waistToShoulder);
+    const w2h = finiteNumber(ratios.waistToHip);
+    const s2h = finiteNumber(ratios.shoulderToHeight);
+    if ((w2s != null && w2s > 1.3) || (w2h != null && w2h > 2.2) || (s2h != null && s2h < 0.12)) {
+      reasons.add('silhouette_implausible');
+    }
   }
   return [...reasons];
 }

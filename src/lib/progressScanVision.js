@@ -52,6 +52,7 @@ const RETAKE_REASONS = new Set([
   'clothing_or_background_uncertain',
   'pose_not_clear',
   'camera_tilted',
+  'silhouette_implausible',
 ]);
 const UNAVAILABLE_RETAKE_REASONS = new Set([
   'no_person_detected',
@@ -797,8 +798,23 @@ export function measureMaskSignals(mask, opts = {}) {
   if (segmentationConfidence < 0.30) reasons.push('segmentation_low_confidence');
   if (separation < 0.20) reasons.push('clothing_or_background_uncertain');
   if (poseConfidence < 0.22) reasons.push('pose_not_clear');
-  if (bodyTiltDegrees != null && Math.abs(bodyTiltDegrees) > 20) reasons.push('camera_tilted');
+  // Founder real-device evidence (2026-07-13): an 11-degree propped-phone
+  // tilt distorted the silhouette enough to collapse the shoulder read
+  // (waistToShoulder measured 1.79) yet sat comfortably under the old
+  // 20-degree gate. 10 degrees is the retake line now.
+  if (bodyTiltDegrees != null && Math.abs(bodyTiltDegrees) > 10) reasons.push('camera_tilted');
   if (components.count > 1 && componentDominance < 0.78) reasons.push('multiple_people');
+  // Anatomical plausibility gate (same founder scan): no human has a waist
+  // wider than ~1.3x their shoulder width or ~2.2x their hip width in frontal
+  // silhouette terms, and a shoulder read under 0.12 of height means the
+  // shoulder band missed the shoulders entirely. Ratios like these are a
+  // broken CAPTURE (tilt, perspective, occlusion), and scoring them would
+  // hand the user a confidently wrong number -- abstain and ask for a
+  // retake instead.
+  const silhouetteImplausible = (waistToShoulder != null && waistToShoulder > 1.3)
+    || (waistToHip != null && waistToHip > 2.2)
+    || (shoulderToHeight != null && shoulderToHeight < 0.12);
+  if (silhouetteImplausible) reasons.push('silhouette_implausible');
 
   return {
     modelBacked: opts.modelBacked !== false,
@@ -909,6 +925,7 @@ export function retakeCopyForVisionResult(result) {
   if (reasons.has('clothing_or_background_uncertain')) return 'Your outline blends into the background or clothing too much for a reliable scan. Try plain fitted clothing against a plain background.';
   if (reasons.has('pose_not_clear')) return 'Your stance was not clear enough for the scan. Stand tall, face the camera squarely, and retake.';
   if (reasons.has('camera_tilted')) return 'The camera looks tilted for this scan. Keep the phone upright and retake.';
+  if (reasons.has('silhouette_implausible')) return 'The body outline read as distorted, which usually means the phone was tilted or propped low. Stand the phone upright and level, then retake.';
   return 'This photo is not reliable enough for analysis. Retake it now, or use the photo without analysis.';
 }
 

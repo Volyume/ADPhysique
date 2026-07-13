@@ -486,6 +486,51 @@ describe('Progress Scan vision signal extraction', () => {
     expect(result.measurementVersion).toBe('silhouette_bands_anatomical_v3');
   });
 
+  test('anatomically impossible ratios abstain with a retake prompt instead of scoring (founder tilted-phone scan, 2026-07-13)', () => {
+    // The founder's 11-degree propped-phone iOS scan measured
+    // waistToShoulder 1.79 -- no human body -- and still scored (69).
+    // A capture whose shoulder read collapses must abstain, never score.
+    // Synthetic: a body whose "shoulders" are a narrow neck-width column
+    // while the lower body is wide.
+    const width = 256;
+    const mask = new Float32Array(width * 256).fill(0.04);
+    for (let y = 26; y <= 236; y += 1) {
+      const rel = (y - 26) / 210;
+      const halfWidth = rel < 0.34 ? 7 : 40;
+      for (let x = 128 - halfWidth; x <= 128 + halfWidth; x += 1) {
+        mask[y * width + x] = 0.96;
+      }
+    }
+    const result = measureMaskSignals(mask, {
+      lightingScore: 0.9, blurScore: 0.88, pose: 'front',
+    });
+    expect(result.silhouetteRatios.waistToShoulder).toBeGreaterThan(1.3);
+    expect(result.abstentionReasons).toContain('silhouette_implausible');
+    expect(result.needsRetake).toBe(true);
+    expect(retakeCopyForVisionResult(result)).toMatch(/distorted/i);
+  });
+
+  test('a tilt above 10 degrees asks for a retake (gate lowered from 20, founder evidence 2026-07-13)', () => {
+    // Shift the lower body sideways so the shoulder->hip centre line leans
+    // ~12 degrees, the geometry an 11-degree propped phone produces.
+    const width = 256;
+    const mask = new Float32Array(width * 256).fill(0.04);
+    for (let y = 26; y <= 236; y += 1) {
+      const rel = (y - 26) / 210;
+      const lean = Math.round(rel * 70);
+      const halfWidth = 24;
+      const cx = 96 + lean;
+      for (let x = cx - halfWidth; x <= cx + halfWidth; x += 1) {
+        mask[y * width + x] = 0.96;
+      }
+    }
+    const result = measureMaskSignals(mask, {
+      lightingScore: 0.9, blurScore: 0.88, pose: 'front',
+    });
+    expect(Math.abs(result.quality.cameraTiltDegrees)).toBeGreaterThan(10);
+    expect(result.abstentionReasons).toContain('camera_tilted');
+  });
+
   test('adaptive threshold accepts lower-probability ML Kit silhouettes from real photos', () => {
     const result = measureMaskSignals(syntheticPersonMask({
       foregroundProbability: 0.43,

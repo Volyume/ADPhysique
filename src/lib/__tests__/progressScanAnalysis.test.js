@@ -131,6 +131,33 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(flagged).toBeGreaterThan(plain);
   });
 
+  test('anatomically impossible measured ratios withhold the score (founder tilted-phone scan, 2026-07-13)', () => {
+    // The founder's real 11-degree tilted iOS capture: waistToShoulder 1.79.
+    // Scoring it produced a confidently wrong 69; it must abstain instead.
+    const implausibleAssets = modelBackedAssets.map((asset) => ({
+      ...asset,
+      signals: {
+        ...asset.signals,
+        silhouetteRatios: {
+          waistToShoulder: 1.79,
+          waistToHip: 0.89,
+          waistToHeight: 0.22,
+          bodyAreaRatio: 0.25,
+          shoulderToHeight: 0.124,
+        },
+      },
+    }));
+    const out = analyseProgressScan({
+      assets: implausibleAssets,
+      modelEstimate: null,
+      sex: 'male',
+      heightCm: 178,
+      weightKg: 90,
+    });
+    expect(out.abstentionReasons).toContain('silhouette_implausible');
+    expect(out.physiqueAssessment?.visualLeannessScore ?? null).toBeNull();
+  });
+
   test('missing required front/back poses abstains', () => {
     const out = analyseProgressScan({ assets: [{ pose: 'front', qualityScore: 0.9 }], modelEstimate: 20 });
     expect(out.analysisStatus).toBe('abstained');
@@ -206,7 +233,7 @@ describe('Progress Scan uncertainty and abstention', () => {
         blurScore: 0.4,
         lightingScore: 0.4,
         poseConfidence: 0.35,
-        cameraTiltDegrees: 12,
+        cameraTiltDegrees: 8,
         backgroundSeparation: 0.34,
       },
       abstentionReasons: [],
@@ -302,7 +329,7 @@ describe('Progress Scan uncertainty and abstention', () => {
         lightingScore: 0.30,
         poseConfidence: 0.26,
         backgroundSeparation: 0.24,
-        cameraTiltDegrees: 12,
+        cameraTiltDegrees: 8,
         foregroundThreshold: 0.38,
         componentDominance: 0.82,
       },
