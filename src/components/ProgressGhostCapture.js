@@ -522,9 +522,18 @@ export default function ProgressGhostCapture({
 
   return (
     <View style={[styles.root, live.root]}>
+      {/* Founder root cause (2026-07-13 night, "why is it cropped that super
+          thin?"): expo-camera crops every STILL to the PREVIEW's aspect
+          (CameraPhotoCapture.swift AVMakeRect against previewSize). With a
+          full-screen preview that meant a 19.5:9 sliver of the 4:3 sensor --
+          about 40% of the frame thrown away, quality and framing with it.
+          The preview now IS the sensor's 3:4 shape, centred: nothing is
+          cropped, and what the user frames is exactly what is saved and
+          scored, identically on both platforms. */}
+      <View style={styles.previewFrame} pointerEvents="box-none">
       <CameraView
         ref={cameraRef}
-        style={StyleSheet.absoluteFill}
+        style={styles.preview}
         facing={facing}
         // Founder defect (2026-07-13, "it flips photos the wrong way"): the
         // front-camera live preview is mirrored (like a mirror) but the
@@ -589,6 +598,7 @@ export default function ProgressGhostCapture({
           </View>
         ) : null}
       </CameraView>
+      </View>
 
       {/* Top bar: framing copy + close. */}
       <View style={[styles.topBar, compactOverlay && styles.topBarCompact, topInsetStyle]} pointerEvents="box-none">
@@ -713,6 +723,18 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.camera,
+  },
+  // The preview box IS the sensor's portrait 3:4 shape, centred with black
+  // bars: stills are cropped to the preview's aspect, so a full-screen
+  // preview silently threw away ~40% of every frame (founder root cause,
+  // 2026-07-13 night). WYSIWYG: framed = saved = scored, both platforms.
+  previewFrame: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  preview: {
+    width: '100%',
+    aspectRatio: 3 / 4,
   },
 
   // Grid lines (rule of thirds).

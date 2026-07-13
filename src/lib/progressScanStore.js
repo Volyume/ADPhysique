@@ -426,6 +426,7 @@ export async function finishProgressScanSession(userId, scanId, opts = {}) {
     const row = telemetry.buildScanCalibrationRow({
       assets,
       physiqueAssessment,
+      abstentionReasons: analysis.abstentionReasons ?? null,
       estimatorInputs: signalsSummary?.estimatorInputs ?? null,
       sex: opts.sex ?? null,
       heightCm: opts.heightCm ?? null,

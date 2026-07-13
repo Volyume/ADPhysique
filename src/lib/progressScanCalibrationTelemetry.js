@@ -63,13 +63,21 @@ export function buildScanCalibrationRow({
   assets = [],
   physiqueAssessment = null,
   estimatorInputs = null,
+  abstentionReasons = null,
   sex = null,
   heightCm = null,
   weightKg = null,
   appVersion = null,
 } = {}) {
   const score = finiteNumber(physiqueAssessment?.visualLeannessScore);
-  if (score == null) return null;
+  // Abstained and withheld scans MUST send a row too (founder blind spot,
+  // 2026-07-13 night: a "not confident enough" scan produced no telemetry,
+  // making the exact failures we most need to diagnose invisible). score is
+  // null and abstention_reasons carries the engine's own reason codes.
+  const reasons = Array.isArray(abstentionReasons)
+    ? abstentionReasons.filter((r) => typeof r === 'string').slice(0, 12)
+    : [];
+  if (score == null && reasons.length === 0 && !physiqueAssessment) return null;
   const poseRatios = {};
   const quality = {};
   let engine = null;
@@ -110,6 +118,7 @@ export function buildScanCalibrationRow({
     score,
     band: typeof physiqueAssessment?.leannessBandLabel === 'string' ? physiqueAssessment.leannessBandLabel : null,
     confidence: typeof physiqueAssessment?.scanConfidenceTier === 'string' ? physiqueAssessment.scanConfidenceTier : null,
+    abstention_reasons: reasons.length ? reasons : null,
     ratios: numbersOnly(estimatorInputs, [
       'waistToShoulder', 'waistToHip', 'waistToHeight', 'bodyAreaRatio',
       'frontBackWaistSpread', 'sideWaistToHeight', 'bmi',
@@ -162,6 +171,13 @@ export async function submitScanCalibrationRow(row) {
     const { getSupabaseClient } = require('./supabase');
     const c = getSupabaseClient();
     if (!c) return;
-    await c.from('scan_calibration_events').insert(row);
+    const { error } = await c.from('scan_calibration_events').insert(row);
+    // Schema lag must never silently kill the whole row (founder blind spot,
+    // 2026-07-13 night: builds attaching vision_debug before the column
+    // existed lost EVERY row). Retry once without the optional columns.
+    if (error && /column|schema/i.test(error.message ?? '')) {
+      const { vision_debug: _vd, abstention_reasons: _ar, ...base } = row;
+      await c.from('scan_calibration_events').insert(base);
+    }
   } catch (_) { /* best effort by design */ }
 }

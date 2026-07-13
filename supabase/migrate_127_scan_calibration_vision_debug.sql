@@ -16,3 +16,8 @@
 
 alter table public.scan_calibration_events
   add column if not exists vision_debug jsonb;
+
+-- Abstained/withheld scans now send rows too (score null): the engine's own
+-- abstention reason codes, so failed scans are diagnosable from the table.
+alter table public.scan_calibration_events
+  add column if not exists abstention_reasons jsonb;

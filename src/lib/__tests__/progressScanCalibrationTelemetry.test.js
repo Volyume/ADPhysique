@@ -82,9 +82,17 @@ describe('scan calibration telemetry row', () => {
     expect(json).not.toMatch(/\d{13}/); // no epoch-ms timestamps
   });
 
-  test('returns null when the scan produced no score', () => {
-    expect(build({ physiqueAssessment: { visualLeannessScore: null } })).toBeNull();
-    expect(build({ physiqueAssessment: null })).toBeNull();
+  test('an abstained scan still sends a row carrying the abstention reasons (score null)', () => {
+    // Founder blind spot (2026-07-13 night): a "not confident enough" scan
+    // sent nothing, making the most important failures invisible.
+    const row = build({
+      physiqueAssessment: { visualLeannessScore: null },
+      abstentionReasons: ['silhouette_implausible', 'camera_tilted'],
+    });
+    expect(row.score).toBeNull();
+    expect(row.abstention_reasons).toEqual(['silhouette_implausible', 'camera_tilted']);
+    // A scan with no assessment and no reasons still sends nothing.
+    expect(build({ physiqueAssessment: null, abstentionReasons: [] })).toBeNull();
   });
 
   test('vision debug attaches ONLY for allow-listed founder accounts, never for users (D83)', () => {
