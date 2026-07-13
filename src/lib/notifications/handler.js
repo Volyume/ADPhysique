@@ -23,7 +23,7 @@ export function configureNotificationHandler() {
         // In the foreground the in-app timer row, beeps and haptics already
         // carry the moment, so showing it again would double-fire.
         if (dataType === 'rest_end') {
-          return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
+          return { shouldShowAlert: false, shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false };
         }
         // morning_weight now fires with sound (Q1), and the evening backstop is
         // a second daily weight prompt — so both stand down once the weight is
@@ -32,13 +32,13 @@ export function configureNotificationHandler() {
         // never weakens a floor or threshold).
         if ((dataType === 'morning_weight' || dataType === 'evening_weight')
             && (await _alreadyLoggedWeightToday() || await _edFlagOpen())) {
-          return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
+          return { shouldShowAlert: false, shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false };
         }
         if (dataType === 'weekly_checkin' && await _alreadyCheckedInThisWeek()) {
-          return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
+          return { shouldShowAlert: false, shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false };
         }
         if (dataType === 'training_reminder' && await _alreadyTrainedToday()) {
-          return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
+          return { shouldShowAlert: false, shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false };
         }
         // OPP-C03 follow-ups: stand down if the user has in fact checked in
         // recently (the episode resolved after the pair was laid), and stay
@@ -46,7 +46,7 @@ export function configureNotificationHandler() {
         // never altered).
         if (dataType === 'checkin_missed'
             && (await _checkedInRecently() || await _edFlagOpen())) {
-          return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
+          return { shouldShowAlert: false, shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false };
         }
         // S6: the activation nudge stands down if the user has progressed past
         // the stage it was laid for (they trained since), or an ED flag has
@@ -54,13 +54,19 @@ export function configureNotificationHandler() {
         // is consumed here, never altered.
         if (dataType === 'activation_nudge'
             && (await _activationStagePassed(notification?.request?.content?.data?.stage) || await _edFlagOpen())) {
-          return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
+          return { shouldShowAlert: false, shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false };
         }
       } catch (_) {
         // Fall through to showing the notification on any DB error.
       }
       return {
         shouldShowAlert: true,
+        // iOS audit (2026-07-13): shouldShowAlert alone is the deprecated
+        // legacy key -- iOS 14+ needs shouldShowBanner/shouldShowList or the
+        // foreground banner silently never shows (Android still honours the
+        // legacy key, which is why only iOS went quiet).
+        shouldShowBanner: true,
+        shouldShowList: true,
         shouldPlaySound: false,
         shouldSetBadge: false,
       };
