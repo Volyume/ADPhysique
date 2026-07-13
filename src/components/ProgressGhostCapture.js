@@ -56,6 +56,7 @@ import {
   PROGRESS_SCAN_DEFAULT_TIMER_SECONDS,
 } from '../lib/progressScanPreferences';
 import { getPoseCaptureGuidance } from '../lib/progressCaptureGuide';
+import { normaliseCapturedPhoto } from '../lib/progressPhotoOrientation';
 import { useToast } from './Toast';
 import {
   colors,
@@ -199,6 +200,10 @@ export default function ProgressGhostCapture({
   const [pendingCaptureUri, setPendingCaptureUri] = useState(null);
   const [savingCapture, setSavingCapture] = useState(false);
   const [tilt, setTilt] = useState(null); // degrees; null => no level sensor
+  // Latest accelerometer roll, read at the shutter by the orientation
+  // normaliser (2026-07-13) - a ref so the capture callback never closes
+  // over a stale value.
+  const rollRef = useRef(null);
 
   const cameraAvailable = !!CameraView;
   const granted = !!permission?.granted;
@@ -242,7 +247,12 @@ export default function ProgressGhostCapture({
     Accelerometer.setUpdateInterval(120);
     const sub = Accelerometer.addListener(({ x, y }) => {
       // Roll relative to portrait upright: 0 deg when the phone is level.
-      setTilt(Math.atan2(x, y) * (180 / Math.PI));
+      const roll = Math.atan2(x, y) * (180 / Math.PI);
+      setTilt(roll);
+      // Shutter-time lean for the orientation normaliser (2026-07-13): the
+      // capture callback reads this ref, not the state, so it can never see
+      // a stale closure value.
+      rollRef.current = roll;
     });
     return () => { try { sub?.remove?.(); } catch (_) { /* noop */ } };
   }, [granted]);
@@ -257,10 +267,29 @@ export default function ProgressGhostCapture({
     if (!cam?.takePictureAsync) return;
     setCapturing(true);
     try {
-      const pic = await cam.takePictureAsync({ quality: 0.92 });
+      // exif: true so the platform's own orientation declaration (when it
+      // makes one) drives the normaliser below.
+      const pic = await cam.takePictureAsync({ quality: 0.92, exif: true });
       if (!pic?.uri) return;
       if (useAppStore.getState().tier !== 'pro') return;
-      setPendingCaptureUri(pic.uri);
+      // Founder defect (2026-07-13): a propped/flat phone confuses the
+      // platform's portrait-vs-landscape guess, so the camera wrote sideways
+      // frames; the scorer then saw a rotated body (camera_tilted abstention)
+      // and the library thumbnail rendered sideways. Straighten to the
+      // portrait-locked preview HERE - before the approval preview, the save,
+      // and the score - so every consumer reads the same upright file. A
+      // genuinely sideways SUBJECT in a correct frame is untouched
+      // (requiredUprightRotation never rotates portrait pixels) and stays a
+      // retake prompt via the body-tilt gate. Fail-open on any tool failure.
+      const norm = await normaliseCapturedPhoto({
+        uri: pic.uri,
+        width: pic.width ?? null,
+        height: pic.height ?? null,
+        exifOrientation: pic.exif?.Orientation ?? null,
+        rollSign: rollRef.current != null ? (Math.sign(rollRef.current) || null) : null,
+      });
+      if (useAppStore.getState().tier !== 'pro') return;
+      setPendingCaptureUri(norm.uri);
     } catch (e) {
       logError('ProgressGhostCapture.capture', e, { pose });
       toast.show('Could not take that photo. Please try again.', { variant: 'error' });

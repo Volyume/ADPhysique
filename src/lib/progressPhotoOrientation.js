@@ -77,3 +77,48 @@ export function requiredUprightRotation({
   //    (A genuinely sideways SUBJECT lands here on purpose — untouched.)
   return { degrees: 0, reason: 'portrait_pixels' };
 }
+
+/**
+ * Apply the decision above to the captured file and return the uri the rest
+ * of the pipeline (preview approval → save → SCORE → library) must use. The
+ * whole design is that this runs BEFORE anything reads the photo, so the
+ * scorer and the gallery consume the same already-upright file.
+ *
+ * Fail-open: if the image tool is unavailable or throws, the original uri is
+ * returned and the capture continues — a sideways photo the tilt gate can
+ * catch is strictly better than a lost capture. The founder-approved image
+ * tool is expo-image-manipulator (2026-07-13); it is lazy-required so this
+ * module stays importable in test/web environments without the native module.
+ *
+ * @param {object} args  { uri, width, height, exifOrientation, rollSign }
+ * @returns {Promise<{ uri: string, rotated: boolean, degrees: number, reason: string }>}
+ */
+export async function normaliseCapturedPhoto({ uri, width = null, height = null, exifOrientation = null, rollSign = null } = {}) {
+  const { degrees, reason } = requiredUprightRotation({ width, height, exifOrientation, rollSign });
+  if (!uri || degrees === 0) {
+    return { uri, rotated: false, degrees: 0, reason };
+  }
+  try {
+    // eslint-disable-next-line global-require, import/no-unresolved
+    const { manipulateAsync, SaveFormat } = require('expo-image-manipulator');
+    const out = await manipulateAsync(uri, [{ rotate: degrees }], {
+      // Matches the capture quality (takePictureAsync quality: 0.92). The
+      // scorer downsamples to 256px, so one re-encode at this quality has no
+      // measurable effect on scoring signals; the library keeps full size.
+      compress: 0.92,
+      format: SaveFormat.JPEG,
+    });
+    if (!out?.uri) {
+      return { uri, rotated: false, degrees: 0, reason: 'manipulator_no_output' };
+    }
+    return { uri: out.uri, rotated: true, degrees, reason };
+  } catch (e) {
+    // A genuine native failure is worth seeing once — but the capture flow
+    // continues on the original file either way.
+    try {
+      // eslint-disable-next-line global-require
+      require('./errorLog').logWarn('progressPhotoOrientation.normalise', e?.message ?? 'manipulate_failed', { degrees, reason });
+    } catch (_) { /* tolerate */ }
+    return { uri, rotated: false, degrees: 0, reason: 'manipulator_failed' };
+  }
+}

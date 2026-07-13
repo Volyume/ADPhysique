@@ -204,7 +204,9 @@ test('capture previews the photo, then saves, records the pose, and calls onCapt
     await captureBtn.props.onPress();
   });
 
-  expect(mockTakePicture).toHaveBeenCalledWith({ quality: 0.92 });
+  // exif: true (2026-07-13 orientation fix): the platform's own orientation
+  // declaration drives normaliseCapturedPhoto before the approval preview.
+  expect(mockTakePicture).toHaveBeenCalledWith({ quality: 0.92, exif: true });
   expect(saveProgressPhoto).not.toHaveBeenCalled();
   expect(JSON.stringify(tree.toJSON())).toContain('Check this photo');
   expect(JSON.stringify(tree.toJSON())).toContain('file:///captured.jpg');

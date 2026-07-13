@@ -51,3 +51,61 @@ describe('requiredUprightRotation', () => {
     expect(requiredUprightRotation({ width: NaN, height: NaN }).degrees).toBe(0);
   });
 });
+
+// ── normaliseCapturedPhoto: applies the decision via the founder-approved
+// image tool, fail-open so a failed rotate can never lose a capture. ──
+jest.mock('expo-image-manipulator', () => ({
+  manipulateAsync: jest.fn(),
+  SaveFormat: { JPEG: 'jpeg' },
+}));
+jest.mock('../errorLog', () => ({ logWarn: jest.fn(), logError: jest.fn(), logInfo: jest.fn() }));
+
+const { manipulateAsync } = require('expo-image-manipulator');
+const { logWarn } = require('../errorLog');
+const { normaliseCapturedPhoto } = require('../progressPhotoOrientation');
+
+describe('normaliseCapturedPhoto', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  test('a portrait frame never touches the manipulator (score-what-you-see)', async () => {
+    const r = await normaliseCapturedPhoto({ uri: 'file:///p.jpg', width: 3000, height: 4000 });
+    expect(r).toEqual({ uri: 'file:///p.jpg', rotated: false, degrees: 0, reason: 'portrait_pixels' });
+    expect(manipulateAsync).not.toHaveBeenCalled();
+  });
+
+  test('a sideways frame is baked upright BEFORE anything downstream reads it', async () => {
+    manipulateAsync.mockResolvedValue({ uri: 'file:///upright.jpg' });
+    const r = await normaliseCapturedPhoto({ uri: 'file:///p.jpg', width: 4000, height: 3000, rollSign: -1 });
+    expect(manipulateAsync).toHaveBeenCalledWith('file:///p.jpg', [{ rotate: -90 }], { compress: 0.92, format: 'jpeg' });
+    expect(r.uri).toBe('file:///upright.jpg');
+    expect(r.rotated).toBe(true);
+    expect(r.degrees).toBe(-90);
+  });
+
+  test('EXIF declaration drives the bake even when pixels look landscape', async () => {
+    manipulateAsync.mockResolvedValue({ uri: 'file:///upright.jpg' });
+    const r = await normaliseCapturedPhoto({ uri: 'file:///p.jpg', width: 4000, height: 3000, exifOrientation: 6 });
+    expect(manipulateAsync).toHaveBeenCalledWith('file:///p.jpg', [{ rotate: 90 }], expect.any(Object));
+    expect(r.uri).toBe('file:///upright.jpg');
+  });
+
+  test('fail-open: a manipulator throw keeps the original capture and logs once', async () => {
+    manipulateAsync.mockRejectedValue(new Error('native fail'));
+    const r = await normaliseCapturedPhoto({ uri: 'file:///p.jpg', width: 4000, height: 3000 });
+    expect(r).toEqual({ uri: 'file:///p.jpg', rotated: false, degrees: 0, reason: 'manipulator_failed' });
+    expect(logWarn).toHaveBeenCalledTimes(1);
+  });
+
+  test('fail-open: empty manipulator output keeps the original capture', async () => {
+    manipulateAsync.mockResolvedValue({});
+    const r = await normaliseCapturedPhoto({ uri: 'file:///p.jpg', width: 4000, height: 3000 });
+    expect(r.uri).toBe('file:///p.jpg');
+    expect(r.rotated).toBe(false);
+  });
+
+  test('missing uri is a safe no-op', async () => {
+    const r = await normaliseCapturedPhoto({ width: 4000, height: 3000 });
+    expect(r.rotated).toBe(false);
+    expect(manipulateAsync).not.toHaveBeenCalled();
+  });
+});
