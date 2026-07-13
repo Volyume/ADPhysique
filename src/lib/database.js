@@ -3192,8 +3192,14 @@ export async function deleteOrphanedRoutines(userId) {
   const orphans = await getOrphanedRoutines(userId);
   if (!orphans.length) return 0;
   const d = await db();
-  await d.execAsync('BEGIN');
-  try {
+  // 2026-07-13: the LAST raw BEGIN outside the queue (missed by the
+  // 2026-07-12 sweep, D77.8). Rides runInTransaction like everything else
+  // so it can't interleave with a queued transaction and die with
+  // 'cannot commit - no transaction is active'. A repo-wide guard test
+  // (noRawTransactions.guard.test.js) now bans the pattern mechanically;
+  // rollback-on-error is runInTransaction's own contract, the error still
+  // propagates to the caller exactly as before.
+  await runInTransaction(d, async () => {
     const now = Date.now();
     for (const r of orphans) {
       await d.runAsync(
@@ -3201,13 +3207,9 @@ export async function deleteOrphanedRoutines(userId) {
         [now, now, r.id],
       );
     }
-    await d.execAsync('COMMIT');
-    _scheduleSync();
-    return orphans.length;
-  } catch (e) {
-    try { await d.execAsync('ROLLBACK'); } catch (_) {}
-    throw e;
-  }
+  });
+  _scheduleSync();
+  return orphans.length;
 }
 
 // ─── Programmes ───────────────────────────────────────────────────────────────────────────────────────

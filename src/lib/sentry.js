@@ -216,10 +216,20 @@ export function captureError(error, ctx = {}) {
 // local errorLog ring buffer (Settings -> Debug Logs) is upstream of this
 // and keeps every warning either way.
 const NETWORK_NOISE = /network request failed/i;
+// Store-side "cannot sell right now" warnings from the payments layer
+// (2026-07-13, founder clean-slate mandate): a sideloaded Android build --
+// the founder's whole test loop -- gets one of these from Google's billing
+// client on EVERY paywall/catalogue touch ("SKU not found", ITEM/BILLING/
+// SERVICE UNAVAILABLE, unknown St13runtime_error from the Nitro fetch),
+// and both stores emit them during transient outages. Same classification
+// as src/lib/payments/storeErrors.js plus the raw Nitro fetch failure;
+// scoped to payments.* warnings only, and captureError is never gated.
+const STORE_NOISE = /sku not found|item.{0,12}unavailable|billing.{0,12}unavailable|service.{0,12}unavailable|no play offer|product not found|st13runtime_error/i;
 function _isExpectedOfflineNoise(message, ctx) {
   try {
     if (NETWORK_NOISE.test(String(message ?? ''))) return true;
     if (ctx?.extra && NETWORK_NOISE.test(JSON.stringify(ctx.extra))) return true;
+    if (/^payments\./.test(String(ctx?.scope ?? '')) && STORE_NOISE.test(String(message ?? ''))) return true;
     if (/^(sync|supabase)\./.test(String(ctx?.scope ?? ''))) {
       // Lazy require: observability's own Sentry forwarding goes through
       // errorLog, so a top-level import here could cycle at module init.

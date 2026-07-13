@@ -179,7 +179,28 @@ describe('sentry.js captureWarning expected-offline gate', () => {
 
   test('a non-sync warning is never demoted, even while offline', () => {
     setup(true);
-    sentry.captureWarning('payments.appStore.fetchProducts failed', { scope: 'payments.appStore.fetchProducts' });
+    sentry.captureWarning('purchase acknowledgement failed', { scope: 'payments.playBilling.acknowledge' });
+    expect(SentryNative.captureMessage).toHaveBeenCalled();
+  });
+
+  // 2026-07-13 (founder clean-slate mandate): store-side "cannot sell right
+  // now" warnings -- what a sideloaded Android build gets from Google's
+  // billing client on every catalogue/paywall touch -- demote to
+  // breadcrumbs. Actionable payments warnings (previous test) stay loud.
+  test('a store-unavailability payments warning becomes a breadcrumb, not an event', () => {
+    setup(false);
+    sentry.captureWarning('Unknown St13runtime_error error.', { scope: 'payments.appStore.fetchProducts' });
+    expect(SentryNative.captureMessage).not.toHaveBeenCalled();
+    expect(SentryNative.addBreadcrumb).toHaveBeenCalledTimes(1);
+    SentryNative.addBreadcrumb.mockClear();
+    sentry.captureWarning('SKU not found', { scope: 'payments.playBilling.offer' });
+    expect(SentryNative.captureMessage).not.toHaveBeenCalled();
+    expect(SentryNative.addBreadcrumb).toHaveBeenCalledTimes(1);
+  });
+
+  test('the same store message OUTSIDE a payments scope still creates an event', () => {
+    setup(false);
+    sentry.captureWarning('SKU not found', { scope: 'exercise.library' });
     expect(SentryNative.captureMessage).toHaveBeenCalled();
   });
 });

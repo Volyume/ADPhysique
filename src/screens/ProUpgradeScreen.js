@@ -192,14 +192,25 @@ export default function ProUpgradeScreen({ navigation, route }) {
       setDone(true);
     } catch (e) {
       const msg = e?.message ?? '';
-      if (!/cancel|abort/i.test(msg)) {
-        logError('ProUpgrade.purchaseFailed', e, {});
-        toast.show('Purchase did not complete, try again', { variant: 'error' });
-      } else {
+      if (/cancel|abort/i.test(msg)) {
         // C2: a user-cancelled store sheet is funnel signal, not a failure -
         // playBilling deliberately keeps E_USER_CANCELLED out of
         // purchase_failed so failure metrics stay clean.
         trackCta('sheet_cancelled');
+      } else {
+        // eslint-disable-next-line global-require
+        const { isStoreUnavailableError } = require('../lib/payments/storeErrors');
+        if (isStoreUnavailableError(e)) {
+          // Store-side "cannot sell right now" (sideloaded build, catalogue
+          // outage): nothing our code can act on, so breadcrumb-level info,
+          // not a Sentry error event. See storeErrors.js's header.
+          // eslint-disable-next-line global-require
+          require('../lib/errorLog').logInfo('ProUpgrade.storeUnavailable', msg || 'store_unavailable');
+          toast.show('The store is not available right now. Try again in a moment.', { variant: 'error' });
+        } else {
+          logError('ProUpgrade.purchaseFailed', e, {});
+          toast.show('Purchase did not complete, try again', { variant: 'error' });
+        }
       }
     } finally {
       setBusy(false);

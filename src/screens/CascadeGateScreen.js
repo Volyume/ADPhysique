@@ -269,8 +269,18 @@ export default function CascadeGateScreen({ navigation, route }) {
         logInfo('CascadeGate.purchaseTimedOut', `tier=${targetTier}`);
         toast.show('Purchase did not finish. Try again.', { variant: 'warning', duration: 4000 });
       } else {
-        logError('CascadeGate.purchaseFailed', e, { targetTier });
-        toast.show('Purchase did not complete. Try again or pick a different option', { variant: 'warning', duration: 5000 });
+        // eslint-disable-next-line global-require
+        const { isStoreUnavailableError } = require('../lib/payments/storeErrors');
+        if (isStoreUnavailableError(e)) {
+          // Store-side "cannot sell right now" (sideloaded build, catalogue
+          // outage): breadcrumb-level info, not a Sentry error event. See
+          // storeErrors.js's header.
+          logInfo('CascadeGate.storeUnavailable', `tier=${targetTier} ${msg || 'store_unavailable'}`);
+          toast.show('The store is not available right now. Try again in a moment.', { variant: 'warning', duration: 5000 });
+        } else {
+          logError('CascadeGate.purchaseFailed', e, { targetTier });
+          toast.show('Purchase did not complete. Try again or pick a different option', { variant: 'warning', duration: 5000 });
+        }
       }
     } finally {
       setBusy(null);
