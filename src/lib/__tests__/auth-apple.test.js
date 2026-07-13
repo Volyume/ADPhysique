@@ -75,6 +75,30 @@ describe('signInWithApple', () => {
     expect(auth.signInWithIdToken).not.toHaveBeenCalled();
   });
 
+  test('iOS: a concurrent second call is single-flighted, never starting a duplicate native request (VOLYUME-2B)', async () => {
+    // Fabric can fire the native Apple button's onPress twice per tap. The
+    // duplicate ASAuthorization request was always rejected by iOS with
+    // error 1000, logging a sign-in error against every SUCCESSFUL sign-in.
+    // The second overlapping call must return { duplicate: true } without
+    // touching the native module or Supabase.
+    let resolveSheet;
+    appleAuth.signInAsync.mockImplementation(
+      () => new Promise((resolve) => { resolveSheet = resolve; }),
+    );
+    const first = signInWithApple();
+    // Let the first call pass isAvailableAsync and reach the native sheet.
+    await new Promise((r) => setImmediate(r));
+    const second = await signInWithApple();
+    expect(second).toEqual({ duplicate: true });
+    expect(appleAuth.signInAsync).toHaveBeenCalledTimes(1);
+    resolveSheet({ identityToken: 'apple-id-token' });
+    expect(await first).toEqual({ ok: true });
+    expect(auth.signInWithIdToken).toHaveBeenCalledTimes(1);
+    // The guard releases: a later, non-overlapping call runs normally.
+    appleAuth.signInAsync.mockResolvedValue({ identityToken: 'apple-id-token' });
+    expect(await signInWithApple()).toEqual({ ok: true });
+  });
+
   test('non-iOS (Android): falls back to web OAuth, never touches the native module', async () => {
     Platform.OS = 'android';
     await signInWithApple();

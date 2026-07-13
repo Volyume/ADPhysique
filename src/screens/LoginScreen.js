@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fontSize, spacing, type } from '../styles/theme';
@@ -20,6 +20,7 @@ export default function LoginScreen() {
   // (IDENTITY_AND_OWNERSHIP_LOCKED.md rule 1).
   const toast = useToast();
   const [loading, setLoading] = useState(false);
+  const oauthInFlightRef = useRef(false);
   // CP-10 batch F (2026-07-11): live theme (src/hooks/useTheme.js). This
   // screen never renders a FlatList/FlashList/SectionList row (a single
   // ScrollView), so an unmemoised call matches AddCustomFoodScreen's own
@@ -28,6 +29,13 @@ export default function LoginScreen() {
   const live = buildLiveStyles(t);
 
   async function handleOAuth(provider) {
+    // VOLYUME-2B: under Fabric the native Apple button can fire onPress twice
+    // per tap, so two authorization requests raced -- the second always died
+    // with Apple error 1000 and logged a sign-in error against every
+    // successful sign-in. A ref is synchronous where `loading` state is not,
+    // so the duplicate invocation exits before it touches anything.
+    if (oauthInFlightRef.current) return;
+    oauthInFlightRef.current = true;
     audit('auth.signin.attempt', { method: provider });
     // Disable both buttons while the OAuth dialog is up. The actual sign-in
     // completion is handled by RootNavigator's onAuthStateChange listener
@@ -73,6 +81,7 @@ export default function LoginScreen() {
       // oauth.threw catch).
       toast.show("That didn't go through. Try again.", { variant: 'error' });
     } finally {
+      oauthInFlightRef.current = false;
       setLoading(false);
     }
   }

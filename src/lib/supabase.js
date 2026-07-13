@@ -251,6 +251,17 @@ export async function signInWithGoogle() {
 // ID, and configure the Apple provider in Supabase (Authentication →
 // Providers → Apple) with the app's bundle id (app.volyume) as an allowed
 // client id so signInWithIdToken accepts the native token.
+// VOLYUME-2B root cause (2026-07-13): under the new architecture (Fabric) the
+// native AppleAuthenticationButton can fire onPress twice per tap, so two
+// concurrent ASAuthorization requests started. iOS only allows one: the first
+// presented the sheet and signed in fine every time, the second was rejected
+// immediately with ASAuthorizationError 1000 -- which then logged as a sign-in
+// error alongside every SUCCESSFUL sign-in. The guard below makes this
+// function single-flight: a call arriving while a native request is already
+// up joins the caller silently (duplicate: true routes to the no-op logInfo
+// branch in the screens, never a toast, never Sentry).
+let _appleSignInInFlight = false;
+
 export async function signInWithApple() {
   if (Platform.OS !== 'ios') {
     return _signInWithOAuthProvider('apple');
@@ -266,6 +277,10 @@ export async function signInWithApple() {
   } catch (_) {
     return _signInWithOAuthProvider('apple');
   }
+  if (_appleSignInInFlight) {
+    return { duplicate: true };
+  }
+  _appleSignInInFlight = true;
   try {
     const available = await AppleAuthentication.isAvailableAsync();
     if (!available) return _signInWithOAuthProvider('apple');
@@ -295,6 +310,8 @@ export async function signInWithApple() {
       return { error: { code: 'apple_device_state', message: e?.message ?? 'Apple sign-in failed.' } };
     }
     return { error: { message: e?.message ?? 'Apple sign-in failed.' } };
+  } finally {
+    _appleSignInInFlight = false;
   }
 }
 

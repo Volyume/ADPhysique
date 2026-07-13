@@ -434,6 +434,7 @@ export default function ProOnboardingScreen({ navigation }) {
   const [accountCreated, setAccountCreated] = useState(false);
 
   const [busy, setBusy] = useState(false);
+  const oauthInFlightRef = useRef(false);
 
   const nameRef = useRef(null);
   useEffect(() => {
@@ -575,6 +576,13 @@ export default function ProOnboardingScreen({ navigation }) {
     // OAuth happens inside the in-app browser sheet, the Supabase session
     // callback is handled by App.js's deep-link handler. We just need to
     // wait for the result, then advance onboarding if successful.
+    // VOLYUME-2B: under Fabric the native Apple button can fire onPress twice
+    // per tap; the duplicate authorization request always died with Apple
+    // error 1000 and logged a sign-in error against every successful sign-in.
+    // A ref is synchronous where `busy` state is not, so the duplicate
+    // invocation exits before it touches anything.
+    if (oauthInFlightRef.current) return;
+    oauthInFlightRef.current = true;
     const { logInfo, logError } = require('../lib/errorLog');
     logInfo('ProOnboarding.oauth.begin', `provider=${provider}`);
     setBusy(true);
@@ -611,6 +619,7 @@ export default function ProOnboardingScreen({ navigation }) {
       // LoginScreen and ProUpgradeScreen's oauth.threw catches).
       appAlert('Sign-in failed', "That didn't go through. Try again.");
     } finally {
+      oauthInFlightRef.current = false;
       setBusy(false);
     }
   }

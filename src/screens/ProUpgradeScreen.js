@@ -94,6 +94,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
   // (founder 2026-07-01); email confirmation was flaky. handleOAuth polls for
   // the session and calls completeUpgrade itself.
   const [busy, setBusy] = useState(false);
+  const oauthInFlightRef = useRef(false);
   const [done, setDone] = useState(false);
   // C3 (D71): restore is a read of an existing entitlement, not a purchase,
   // so it carries its own busy flag rather than the purchase/OAuth `busy` (a
@@ -342,6 +343,13 @@ export default function ProUpgradeScreen({ navigation, route }) {
   // we listen briefly for the session and then activate. This mirrors
   // LoginScreen.handleOAuth + ProOnboardingScreen.handleOAuthOnboarding.
   async function handleOAuth(provider) {
+    // VOLYUME-2B: under Fabric the native Apple button can fire onPress twice
+    // per tap; the duplicate authorization request always died with Apple
+    // error 1000 and logged a sign-in error against every successful sign-in.
+    // A ref is synchronous where `busy` state is not, so the duplicate
+    // invocation exits before it touches anything.
+    if (oauthInFlightRef.current) return;
+    oauthInFlightRef.current = true;
     const { logInfo, logError } = require('../lib/errorLog');
     logInfo('ProUpgrade.oauth.begin', `provider=${provider}`);
     setBusy(true);
@@ -383,6 +391,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
       // happened rather than leaving the button to quietly stop spinning.
       toast.show('Sign-in did not complete, try again', { variant: 'error' });
     } finally {
+      oauthInFlightRef.current = false;
       setBusy(false);
     }
   }
