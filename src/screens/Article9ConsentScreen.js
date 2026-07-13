@@ -195,6 +195,7 @@ export default function Article9ConsentScreen({ navigation }) {
           'Your weekly check-ins, including energy, recovery, and how you feel',
           'The screening questions you answer about eating habits',
           'Progress photos you choose to take, plus photo quality, result confidence, leanness band, Volyume Score and progress change when you use photo analysis',
+          'Anonymous measurement numbers from photo analysis (never the photos, never your name or account) to keep scoring accurate for every body type',
         ]} />
 
         <Text style={[styles.body, live.body]}>

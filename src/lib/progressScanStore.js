@@ -417,6 +417,23 @@ export async function finishProgressScanSession(userId, scanId, opts = {}) {
       scanId,
     ],
   );
+  // D81: one anonymous calibration row per completed scoring run (no user
+  // id, no photo, banded height/weight; see progressScanCalibrationTelemetry).
+  // Fire-and-forget: a failure or offline state never affects the scan.
+  try {
+    // eslint-disable-next-line global-require
+    const telemetry = require('./progressScanCalibrationTelemetry');
+    const row = telemetry.buildScanCalibrationRow({
+      assets,
+      physiqueAssessment,
+      estimatorInputs: signalsSummary?.estimatorInputs ?? null,
+      sex: opts.sex ?? null,
+      heightCm: opts.heightCm ?? null,
+      weightKg: scanStats.weightKg ?? opts.weightKg ?? null,
+      appVersion: opts.appVersion ?? null,
+    });
+    telemetry.submitScanCalibrationRow(row).catch(() => {});
+  } catch (_) { /* best effort by design */ }
   return getProgressScanSession(userId, scanId);
 }
 
