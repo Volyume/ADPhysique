@@ -101,6 +101,13 @@ export default function Button({
   // keep a 44pt effective touch target without visual growth (the
   // converted hand-rolled CTAs relied on TouchableOpacity hitSlop).
   hitSlop,
+  // Founder defect (2026-07-13 Android walk): side-by-side CTAs ("Log set"
+  // + "Finish workout" in WorkoutBottomBar) mis-sized because the longer
+  // label wrapped to two lines and doubled that button's height. Opt-in:
+  // the label stays on one line and scales down slightly if tight, so
+  // paired buttons always match height. Off by default so no existing
+  // button changes.
+  singleLine = false,
   children,
 }) {
   const t = useTheme();
@@ -179,7 +186,12 @@ export default function Button({
     <>
       {icon ? <Ionicons name={icon} size={s.icon} color={v.fg} /> : null}
       {title != null ? (
-        <Text style={[styles.label, { color: v.fg, fontSize: s.font, lineHeight: Math.round(s.font * lineHeight.snug) }, textStyle]}>
+        <Text
+          numberOfLines={singleLine ? 1 : undefined}
+          adjustsFontSizeToFit={singleLine}
+          minimumFontScale={singleLine ? 0.8 : undefined}
+          style={[styles.label, { color: v.fg, fontSize: s.font, lineHeight: Math.round(s.font * lineHeight.snug) }, textStyle]}
+        >
           {title}
         </Text>
       ) : null}

@@ -64,14 +64,10 @@ export default function SettingsScreen({ navigation }) {
             onPress={() => { haptics.selection(); navigation.navigate('NutritionTargets'); }}
           />
         ) : null}
-        {tier === 'pro' ? (
-          <SettingRow
-            icon="restaurant-outline"
-            label="Meal names"
-            sub="Rename your meals"
-            onPress={() => { haptics.selection(); navigation.navigate('MealNames'); }}
-          />
-        ) : null}
+        {/* Founder order (2026-07-13): the "Meal names" settings row is
+            REMOVED - not needed. The MealNames screen and its route stay
+            registered (harmless, unreachable from Settings) in case meal
+            renaming ever returns by founder decision. */}
         {tier === 'pro' ? (
           <SettingRow
             icon="calendar-outline"

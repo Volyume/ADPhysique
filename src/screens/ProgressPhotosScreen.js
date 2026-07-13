@@ -83,6 +83,7 @@ import ProgressScanMeaningMoment from '../components/ProgressScanMeaningMoment';
 import ProgressGhostCapture from '../components/ProgressGhostCapture';
 import BeforeAfterShareSheet from '../components/BeforeAfterShareSheet';
 import PhotoDetailsSheet from '../components/PhotoDetailsSheet';
+import HintCaption from '../components/HintCaption';
 import PhotoDateRangeSheet from '../components/PhotoDateRangeSheet';
 import PhotoDatePicker from '../components/PhotoDatePicker';
 import CollapsibleSection from '../components/CollapsibleSection';
@@ -124,6 +125,7 @@ const POSES = [
 const POSE_LABEL = { front: 'Front', side: 'Side', back: 'Back' };
 const SCORE_POSES = ['front', 'back'];
 const PHOTO_LIBRARY_POSES = ['front', 'back', 'side'];
+const BASELINE_HINT_KEY = '@volyume_seen_scan_baseline_receipt';
 const PROGRESS_SCAN_MIN_INTERVAL_MS = 7 * 86400000;
 const PROGRESS_SCAN_LIBRARY_LIMIT = 100;
 const PROGRESS_SCAN_IMAGE_QUALITY = 0.92;
@@ -217,6 +219,21 @@ export default function ProgressPhotosScreen({ navigation }) {
   // before that read resolves.
   const [seenRecalibrationIds, setSeenRecalibrationIds] = useState([]);
   const [meaningMomentSeen, setMeaningMomentSeen] = useState(null);
+  // Founder walk (2026-07-13): the baseline "Your starting set is saved..."
+  // receipt bloated the day block (date + photos + score). It now renders as
+  // one dismissible HintCaption line instead of the receipt block, once ever
+  // (null until the persisted flag resolves, so it never flashes). Scored
+  // receipts (score + Why?) are unchanged.
+  const [baselineHintDismissed, setBaselineHintDismissed] = useState(null);
+  useEffect(() => {
+    AsyncStorage.getItem(BASELINE_HINT_KEY)
+      .then((v) => setBaselineHintDismissed(v === 'true'))
+      .catch(() => setBaselineHintDismissed(false));
+  }, []);
+  const dismissBaselineHint = useCallback(() => {
+    setBaselineHintDismissed(true);
+    AsyncStorage.setItem(BASELINE_HINT_KEY, 'true').catch(() => {});
+  }, []);
   const [captureRouteOpen, setCaptureRouteOpen] = useState(false);
   const [captureOpen, setCaptureOpen] = useState(false);
   const [captureReference, setCaptureReference] = useState(null);
@@ -1344,7 +1361,23 @@ export default function ProgressPhotosScreen({ navigation }) {
               ))}
             </View>
           ) : null}
-          {receipt ? (
+          {receipt && receipt.outcome === 'baseline' ? (
+            <>
+              {baselineHintDismissed === false ? (
+                <HintCaption
+                  text={receipt.sentence}
+                  onDismiss={dismissBaselineHint}
+                />
+              ) : null}
+              {/* The one-ever recalibration note is independent of the
+                  baseline caption swap and must survive it. */}
+              {showRecalibrationNote ? (
+                <View style={[styles.scanReceiptBlock, live.scanReceiptBlock]}>
+                  <Text style={[styles.scanRecalibrationNote, live.scanRecalibrationNote]}>{RECALIBRATION_NOTE_TEXT}</Text>
+                </View>
+              ) : null}
+            </>
+          ) : receipt ? (
             <View style={[styles.scanReceiptBlock, live.scanReceiptBlock]}>
               <Text style={[styles.scanReceiptSentence, live.scanReceiptSentence]}>{receipt.sentence}</Text>
               {showRecalibrationNote ? (

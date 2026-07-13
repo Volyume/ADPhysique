@@ -514,17 +514,21 @@ export default function App() {
       .finally(() => setThemeReady(true));
   }, []);
 
-  // Campaign item 15 (D25): hide the native splash only once themeReady flips,
-  // i.e. once the real RootNavigator is about to paint rather than the
-  // pre-theme placeholder above — otherwise the splash's hero image would cut
-  // to a blank frame first and only then fade into the app, defeating the
-  // point of a smooth fade. bootstrapVisualSystem above is a few fast local
-  // reads, so this rarely holds the splash for more than a frame or two.
-  // Best-effort: hideAsync() rejects harmlessly if the splash was never shown
-  // (e.g. preventAutoHideAsync above failed) or is already hidden.
+  // Founder defect (2026-07-13, Android walk): TWO splash screens showed
+  // back to back. This effect used to hide the NATIVE splash the moment
+  // themeReady flipped, which was before RootNavigator's boot gate (splash
+  // flags + the initialAuthResolved session latch) had resolved — so the
+  // user saw native splash → the animated JS SplashScreen → the app: two
+  // distinct loading screens. The native hide now lives in RootNavigator,
+  // fired exactly when the boot gate lifts, so the native splash covers
+  // the whole boot and the app appears directly behind it: one splash.
+  // This effect keeps only a hard failsafe so a wedged boot can never
+  // strand the user on the native splash forever (same philosophy as the
+  // gate's own 8s auth latch failsafe; 12s sits safely beyond it).
   useEffect(() => {
     if (!themeReady) return;
-    SplashScreen.hideAsync().catch(() => {});
+    const failsafe = setTimeout(() => { SplashScreen.hideAsync().catch(() => {}); }, 12000);
+    return () => clearTimeout(failsafe);
   }, [themeReady]);
 
   // Boot the observability layer — session id, build identity, crash

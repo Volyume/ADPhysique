@@ -54,4 +54,18 @@ describe('RootNavigator initial-auth splash latch (founder defect 2026-07-12)', 
     expect(src).toMatch(/const \[initialAuthResolved, setInitialAuthResolved\] = useState\(false\)/);
     expect(src).not.toMatch(/setInitialAuthResolved\(false\)/);
   });
+
+  // Founder defect (2026-07-13, Android walk): the latch made the JS
+  // SplashScreen visible AFTER the native splash, reading as two loading
+  // screens. Single-splash contract: the native splash hides exactly when
+  // the boot gate lifts (here), and App.js no longer hides it on
+  // themeReady (only a hard failsafe timer remains there).
+  test('the native splash hides when the boot gate lifts, not on themeReady', () => {
+    expect(src).toMatch(/const bootGateResolved = splashReady && firstRunChecked && tierChecked && initialAuthResolved/);
+    expect(src).toMatch(/if \(!bootGateResolved\) return;[\s\S]{0,220}?require\('expo-splash-screen'\)\.hideAsync\(\)/);
+    const app = fs.readFileSync(path.resolve(__dirname, '..', '..', '..', 'App.js'), 'utf8');
+    // App.js's only remaining hide is inside the failsafe timer.
+    expect(app).toMatch(/const failsafe = setTimeout\(\(\) => \{ SplashScreen\.hideAsync\(\)\.catch\(\(\) => \{\}\); \}, 12000\)/);
+    expect(app).not.toMatch(/if \(!themeReady\) return;\s*SplashScreen\.hideAsync/);
+  });
 });

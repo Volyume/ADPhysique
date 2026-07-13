@@ -66,11 +66,16 @@ describe('SC-2: RPC-only fallback is reported as partial success', () => {
     // flow makes session-less by design.
     expect(HOOK).toMatch(/if \(authRemovalPending\) \{[\s\S]{0,900}?sign in again with the same Apple or Google account/);
     expect(HOOK).not.toMatch(/completes automatically the next time the app starts/);
-    // The honest alert precedes the bundle reload so it is actually seen.
-    const alertAt = HOOK.indexOf('sign in again with the same Apple or Google account');
-    const reloadAt = HOOK.indexOf('await Updates.reloadAsync();', alertAt);
-    expect(alertAt).toBeGreaterThan(-1);
-    expect(reloadAt).toBeGreaterThan(alertAt);
+  });
+  test('account flows never reload the bundle (black-screen class, 2026-07-13)', () => {
+    // Updates.reloadAsync() fired straight after an appAlert modal leaves
+    // the presented modal hierarchy alive over a reloaded React root - a
+    // permanent black screen. Hit on iOS TestFlight, then reproduced on the
+    // founder's Android walk after only iOS was exempted. Sign-out and
+    // delete-account are state-driven navigation everywhere; the reload
+    // must never return.
+    expect(HOOK).not.toMatch(/Updates\.reloadAsync\(\)\s*;/);
+    expect(HOOK).not.toMatch(/import \* as Updates from 'expo-updates'/);
   });
 });
 

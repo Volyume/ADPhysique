@@ -1501,6 +1501,23 @@ export default function RootNavigator() {
     if (!user && isAuthLoading) setAuthLoading(false);
   }, [user, tierChecked, firstRunChecked, isAuthLoading, checkTier, checkFirstRun, setAuthLoading]);
 
+  // Founder defect (2026-07-13, Android walk): ONE splash, not two. The
+  // native expo-splash-screen used to hide on App.js's themeReady (before
+  // this gate resolved), exposing the animated JS SplashScreen as a second
+  // loading screen. The native splash now hides HERE, exactly when the
+  // boot gate lifts, so it covers the whole boot and the app appears
+  // directly. App.js keeps only a 12s failsafe hide. The JS SplashScreen
+  // below still serves post-boot gates (the consent resolver, sign-out
+  // re-gates), where the native splash is long gone.
+  const bootGateResolved = splashReady && firstRunChecked && tierChecked && initialAuthResolved;
+  useEffect(() => {
+    if (!bootGateResolved) return;
+    try {
+      // eslint-disable-next-line global-require
+      require('expo-splash-screen').hideAsync().catch(() => {});
+    } catch (_) { /* tolerate */ }
+  }, [bootGateResolved]);
+
   // Splash gate fires ONLY during initial bootstrap, before splashReady,
   // firstRunChecked, tierChecked and the ONE-SHOT initialAuthResolved
   // latch have completed their first pass. initialAuthResolved (2026-07-12

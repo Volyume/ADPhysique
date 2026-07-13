@@ -3,7 +3,6 @@ import { appAlert } from '../components/AppAlert';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Updates from 'expo-updates';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient, signOut } from '../lib/supabase';
@@ -95,18 +94,15 @@ export default function useAccountActions() {
                   catch (e) { logError('SettingsScreen.handleSignOut.cloudSignOut', e); }
                 }
               }
-              // iOS: NO reload. Updates.reloadAsync() straight after the
-              // sign-out alert (a native Modal) left the app on a permanent
-              // black screen on TestFlight (founder device report
-              // 2026-07-13): the React root reloads but the presented modal
-              // hierarchy is not torn down. The reload is not needed for
-              // correctness - clearing the user routes RootNavigator to
-              // Welcome - so iOS relies on state-driven navigation and only
-              // Android keeps the bundle-adoption reload.
-              if (Platform.OS !== 'ios') {
-                try { await Updates.reloadAsync(); }
-                catch (_) { /* dev / Expo Go, no-op */ }
-              }
+              // NO reload on ANY platform. Updates.reloadAsync() straight
+              // after the sign-out alert (a native Modal) leaves the app on
+              // a permanent black screen: the React root reloads but the
+              // presented modal hierarchy is not torn down. First hit on
+              // iOS TestFlight, then reproduced identically on the
+              // founder's Android walk (2026-07-13) after only iOS was
+              // exempted. The reload is not needed for correctness -
+              // clearing the user routes RootNavigator back to Welcome -
+              // so sign-out is state-driven navigation everywhere.
             }
             try {
               // Push-first sign-out: wipes local SQLite only after a
@@ -375,15 +371,14 @@ export default function useAccountActions() {
           );
         });
       }
-      // Reload the JS bundle so any installed-but-not-yet-loaded APK
-      // update takes effect on the next launch back to Welcome. Without
-      // this, an install-on-top of a newer APK keeps the OLD bundle
-      // running, the user signs up again, and the old sync code fires
-      // against a fresh account, re-producing whatever the new bundle
-      // was meant to fix. Best-effort: dev builds and Expo Go don't
-      // support reload.
-      try { await Updates.reloadAsync(); }
-      catch (_) { /* dev / Expo Go, no-op */ }
+      // NO reload here either (2026-07-13, same black-screen class as
+      // sign-out): Updates.reloadAsync() fired straight after the
+      // appAlert modal above leaves the presented modal hierarchy alive
+      // over a reloaded React root - a permanent black screen. Clearing
+      // the user routes RootNavigator back to Welcome by state. The old
+      // install-on-top bundle-adoption concern is handled by the process
+      // restart the user naturally does long before re-signing up on a
+      // deleted account.
     } finally {
       setDeletingAccount(false);
     }

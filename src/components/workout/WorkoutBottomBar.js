@@ -43,6 +43,10 @@ export default function WorkoutBottomBar({
         },
       ]}
     >
+      {/* singleLine on BOTH (founder defect 2026-07-13): "Finish workout"
+          wrapped to two lines in the narrower advance slot and doubled that
+          button's height against "Log set". Labels stay one line and scale
+          down slightly if tight, so the pair always matches height. */}
       {advance ? (
         <View style={styles.advanceSlot}>
           <Button
@@ -50,6 +54,7 @@ export default function WorkoutBottomBar({
             onPress={advance.onPress}
             variant="secondary"
             size="lg"
+            singleLine
             testID={advance.testID}
             accessibilityLabel={advance.label}
           />
@@ -61,6 +66,7 @@ export default function WorkoutBottomBar({
           onPress={onPrimary}
           variant="primary"
           size="lg"
+          singleLine
           loading={saving}
           testID="volyume-btn-complete-set"
           accessibilityLabel={primaryLabel}

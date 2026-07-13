@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform, BackHandler, AppState, Animated, AccessibilityInfo } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Keyboard, Platform, BackHandler, AppState, Animated, AccessibilityInfo } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -1397,6 +1397,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const effectiveNotes = overrides.notes ?? (noteText || null);
     const isWeightReps = validation.isWeightReps;
 
+    // Founder request (2026-07-13 Android walk): the keyboard stayed up
+    // after logging until manually dismissed. Logging the set IS the end
+    // of typing, so dismiss on the action rather than on a timer (a timed
+    // dismissal would yank the keyboard mid-entry between weight and
+    // reps). Sits AFTER validation so a rejected set keeps the keyboard
+    // up for correction.
+    Keyboard.dismiss();
     setSaving(true);
     // D2: warm-ups get the softer tick, working sets the standard beat.
     if ((currentSet.setType ?? 'straight') === 'warmup') hapticsVocab.warmupLogged();

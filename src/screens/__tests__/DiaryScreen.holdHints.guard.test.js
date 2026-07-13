@@ -37,18 +37,19 @@ describe('DiaryScreen hold-to-discover hints (Wave A C7)', () => {
     expect(SRC).toMatch(/const DIARY_WATER_HINT_KEY = '@volyume_seen_diary_water_hint';/);
   });
 
-  test('both hints default to hidden and only show when the stored flag is not "true"', () => {
-    expect(SRC).toMatch(
-      /AsyncStorage\.getItem\(DIARY_FOOD_HINT_KEY\)\.then\(\(v\) => \{\s*if \(active && v !== 'true'\) setShowFoodHint\(true\);\s*\}\)/,
-    );
+  test('the water hint defaults hidden and only shows when the stored flag is not "true"', () => {
+    // Founder order (2026-07-13): the FOOD caption is removed outright (it
+    // stacked on the mark-eaten hint as notification noise), so only the
+    // water hint's read remains.
     expect(SRC).toMatch(
       /AsyncStorage\.getItem\(DIARY_WATER_HINT_KEY\)\.then\(\(v\) => \{\s*if \(active && v !== 'true'\) setShowWaterHint\(true\);\s*\}\)/,
     );
+    expect(SRC).not.toMatch(/setShowFoodHint/);
   });
 
   test('dismissing either hint persists the flag so it never returns', () => {
     expect(SRC).toMatch(
-      /const dismissFoodHint = useCallback\(\(\) => \{\s*setShowFoodHint\(false\);\s*AsyncStorage\.setItem\(DIARY_FOOD_HINT_KEY, 'true'\)\.catch\(\(\) => \{\}\);\s*\}, \[\]\);/,
+      /const dismissFoodHint = useCallback\(\(\) => \{\s*AsyncStorage\.setItem\(DIARY_FOOD_HINT_KEY, 'true'\)\.catch\(\(\) => \{\}\);\s*\}, \[\]\);/,
     );
     expect(SRC).toMatch(
       /const dismissWaterHint = useCallback\(\(\) => \{\s*setShowWaterHint\(false\);\s*AsyncStorage\.setItem\(DIARY_WATER_HINT_KEY, 'true'\)\.catch\(\(\) => \{\}\);\s*\}, \[\]\);/,
@@ -85,10 +86,10 @@ describe('DiaryScreen hold-to-discover hints (Wave A C7)', () => {
     );
   });
 
-  test('the diary meals caption renders once for multi-select, gated off in read-only and selection mode', () => {
-    expect(SRC).toMatch(
-      /\{showFoodHint && !readOnly && !selectionMode \? \(\s*<HintCaption\s*text="Hold a food to select several\."\s*onDismiss=\{dismissFoodHint\}\s*\/>\s*\) : null\}/,
-    );
+  test('the food multi-select caption stays REMOVED (founder order 2026-07-13)', () => {
+    // It stacked on top of the mark-eaten hint and read as notification
+    // noise. Do not re-add without a founder decision.
+    expect(SRC).not.toMatch(/Hold a food to select several/);
   });
 
   test('the water caption renders inside WaterRow, gated off in read-only', () => {

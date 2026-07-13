@@ -628,7 +628,8 @@ export default function DiaryScreen({ navigation, route }) {
   // '@volyume_seen_*' convention as ActiveWorkoutScreen's info-button tip:
   // shown until the user performs the gesture it describes (proves
   // discovery) or dismisses it directly, never again after.
-  const [showFoodHint, setShowFoodHint] = useState(false);
+  // showFoodHint state removed 2026-07-13 (founder order): the caption is
+  // gone; the once-ever key + dismissFoodHint discovery write remain.
   const [showWaterHint, setShowWaterHint] = useState(false);
   // D12 item 3 (ux-world-class-audit-2026-07-09): a user's first sight of
   // planned meals in the diary now has no bulk-mark button right there (it
@@ -642,9 +643,6 @@ export default function DiaryScreen({ navigation, route }) {
   const [showPlanAddedHint, setShowPlanAddedHint] = useState(false);
   useEffect(() => {
     let active = true;
-    AsyncStorage.getItem(DIARY_FOOD_HINT_KEY).then((v) => {
-      if (active && v !== 'true') setShowFoodHint(true);
-    }).catch(() => {});
     AsyncStorage.getItem(DIARY_WATER_HINT_KEY).then((v) => {
       if (active && v !== 'true') setShowWaterHint(true);
     }).catch(() => {});
@@ -669,7 +667,6 @@ export default function DiaryScreen({ navigation, route }) {
     return () => { active = false; };
   }, [route?.params?.justAddedPlan, navigation]);
   const dismissFoodHint = useCallback(() => {
-    setShowFoodHint(false);
     AsyncStorage.setItem(DIARY_FOOD_HINT_KEY, 'true').catch(() => {});
   }, []);
   const dismissWaterHint = useCallback(() => {
@@ -1573,17 +1570,13 @@ export default function DiaryScreen({ navigation, route }) {
                 onDismiss={dismissMarkEatenHint}
               />
             ) : null}
-            {/* Wave A C7: one quiet caption the first time the day's meals
-                render with content, covering both "hold a food" gestures a
-                user will meet logging into this diary (portion edit on the
-                add-food picker, multi-select here). Gone the moment either
-                is discovered, or on "Got it". */}
-            {showFoodHint && !readOnly && !selectionMode ? (
-              <HintCaption
-                text="Hold a food to select several."
-                onDismiss={dismissFoodHint}
-              />
-            ) : null}
+            {/* Founder order (2026-07-13): the "Hold a food to select
+                several" caption is REMOVED - it stacked on top of the
+                mark-eaten hint above and read as notification noise. The
+                gesture still works; discovery keeps writing the same
+                once-ever flag (dismissFoodHint on first selection) so this
+                stays dead for users who already saw it if it is ever
+                reconsidered. Do not re-add without a founder decision. */}
             {visibleSlots.map((slot, i) => (
               <View
                 key={slot.key}
