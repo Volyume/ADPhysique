@@ -1836,3 +1836,26 @@ measurement layer reads the wrong anatomical stations:
    labels are then set so his physique reads high-Athletic/Lean and softer
    users are never insulted (display floor already 40). Retuning the curve
    blind against mis-measured inputs would just be another guess.
+
+**D79 addendum (population validation, same day):** the founder asked
+whether calibrating against one individual is sound. It is not, and the
+system is not: the calibration sources are the BodyM external research
+dataset (real photographs with real tape measurements; opt-in smoke suite
+runs the REAL vision measurement over them), the nine-case synthetic
+corpus, and published anthropometric ranges. The founder's scans serve
+only as defect evidence (impossible v1 values) and one ground-truth point.
+Running the BodyM suite against measurement v2 caught a real regression
+the founder's case never could: a BMI 37.5 subject scored 72 "Defined"
+because F1(a)'s flat ±8 provisional-estimator cap blocked the deliberate
+large-body downward correction (pre-existing clamps allowed -24/-26).
+RULING (lead, D33): the provisional downward limit now comes from
+estimatorAnchorDownwardLimit (8 for lean/protected physiques, so the
+F1(a) athlete guarantee is fully preserved and pinned; 16-26 only via the
+high-BMI/large-body gates). Upward stays capped at 8. BodyM suite passes;
+corpus bands unchanged; founder's predicted v2 cases unchanged
+(82 Lean / 74 Defined / 67 Athletic). The three analysis tests that had
+pinned the flat cap (with comments recording the pre-F1 intent) were
+re-pinned to the honest outcomes; the F1(a) invariant test now pins BOTH
+guarantees (lean ±8, large-body -26). Standing rule: any scan measurement
+or scoring change MUST run the BodyM smoke suite before landing
+(PROGRESS_SCAN_BODYM_SMOKE=1), it is skip-by-default in CI.

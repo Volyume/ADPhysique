@@ -732,8 +732,20 @@ function blendedVisualLeannessDetails(inputs = {}, modelEstimate = null, biasFla
   }
   const weighted = silhouetteScore * (1 - estimateWeight) + estimateScore * estimateWeight;
   const provisional = estimatorIsProvisional();
+  // F1(a) bounds the PROVISIONAL estimator's influence to ±8 so an
+  // unvalidated regressor can never drag a lean athlete's score around. That
+  // protection was one-size-fits-all and also blocked the estimator's
+  // legitimate LARGE-BODY downward correction, which the pre-existing clamps
+  // deliberately allowed (up to -24/-26): with the ±8 floor, a real BodyM
+  // subject at BMI 37.5 and tape waist-to-height over 0.60 rode the
+  // silhouette score to "Defined" (caught by the external-dataset invariant,
+  // 2026-07-13). The downward room now comes from estimatorAnchorDownwardLimit,
+  // which returns 8 for lean/protected physiques (explicit lean-anchor
+  // protection unchanged, so athletes keep the full F1(a) guarantee) and
+  // opens to 16-26 only via the high-BMI / large-body gates where pulling the
+  // score DOWN is the honest reading. Upward influence stays capped at 8.
   const downwardLimit = provisional
-    ? PROVISIONAL_ANCHOR_MAX_POINTS
+    ? Math.max(PROVISIONAL_ANCHOR_MAX_POINTS, estimatorAnchorDownwardLimit(inputs, anchorBiasFlags))
     : estimatorAnchorDownwardLimit(inputs, anchorBiasFlags);
   const upwardLimit = provisional
     ? PROVISIONAL_ANCHOR_MAX_POINTS

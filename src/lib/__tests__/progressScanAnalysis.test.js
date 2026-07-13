@@ -581,11 +581,15 @@ describe('Progress Scan uncertainty and abstention', () => {
       estimatorAnchorMaxDownwardPoints: 26,
       boundedEstimatorAnchorScore: 57,
     });
-    // Was <=64/Foundation-Active-Athletic under the pre-F1(a) clamp (down to -26); the anchor
-    // still pulls the score down off the silhouette (83 -> 75), but is now bounded to -8 while
-    // the estimator is provisional, so the visible score stays inside Defined this time.
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(75);
-    expect(out.physiqueAssessment.leannessBandLabel).toBe('Defined');
+    // D79 (2026-07-13): F1(a)'s flat ±8 provisional cap blocked the
+    // large-body downward correction the pre-existing clamps deliberately
+    // allowed, letting a BMI 37.5 subject ride the silhouette to "Defined"
+    // (caught by the BodyM external-dataset invariant). The provisional cap
+    // now opens downward via estimatorAnchorDownwardLimit's high-BMI /
+    // large-body gates only; lean/protected physiques keep the full ±8
+    // guarantee. 83 -> 57, honestly inside Active.
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(57);
+    expect(out.physiqueAssessment.leannessBandLabel).toBe('Active');
     expect(out.physiqueAssessment.anchorEngaged).toBe(true);
   });
 
@@ -622,10 +626,11 @@ describe('Progress Scan uncertainty and abstention', () => {
       estimatorAnchorMaxDownwardPoints: 26,
       boundedEstimatorAnchorScore: 62,
     });
-    // Was <=69/Foundation-Active-Athletic under the pre-F1(a) clamp (down to -26); now bounded
-    // to -8 while the estimator is provisional, so the visible score only moves 88 -> 80.
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(80);
-    expect(out.physiqueAssessment.leannessBandLabel).toBe('Lean');
+    // D79 (2026-07-13): the large-body downward gate applies while the
+    // estimator is provisional (see the large-body test above), so the
+    // deceptively lean silhouette is corrected 88 -> 68, Athletic.
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
+    expect(out.physiqueAssessment.leannessBandLabel).toBe('Athletic');
     expect(out.physiqueAssessment.anchorEngaged).toBe(true);
   });
 
@@ -662,11 +667,11 @@ describe('Progress Scan uncertainty and abstention', () => {
       estimatorAnchorMaxDownwardPoints: 16,
       boundedEstimatorAnchorScore: 68,
     });
-    // Was <=69/Foundation-Active-Athletic under the pre-F1(a) clamp (down to -16); now bounded
-    // to -8 while the estimator is provisional, so the visible score only moves 84 -> 76 and
-    // stays in Defined.
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(76);
-    expect(out.physiqueAssessment.leannessBandLabel).toBe('Defined');
+    // D79 (2026-07-13): the near-large-body gate (-16) applies while the
+    // estimator is provisional, so the disagreeing estimator corrects the
+    // lean silhouette 84 -> 69, out of Defined.
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(69);
+    expect(out.physiqueAssessment.leannessBandLabel).toBe('Athletic');
     expect(out.physiqueAssessment.anchorEngaged).toBe(true);
   });
 
@@ -1239,15 +1244,48 @@ describe('F1(a) provisional anchor gating', () => {
     });
   }
 
-  test('the anchor cannot move the visible score beyond 8 points off the calibrated silhouette score while validation is pending', () => {
+  test('while validation is pending the anchor stays within +8, and within -8 unless the large-body gates open honest downward room (D79)', () => {
     expect(bfEstimatorAsset.status).toBe('provisional_validation_pending');
+    // D79 (2026-07-13): F1(a)'s flat ±8 blocked the deliberate large-body
+    // downward correction and let a real BodyM subject at BMI 37.5 read as
+    // "Defined" (external-dataset invariant). Downward room now comes from
+    // estimatorAnchorDownwardLimit: 8 for lean/protected physiques (the
+    // F1(a) athlete guarantee, pinned below), up to 26 via the high-BMI /
+    // large-body gates. Upward influence stays capped at 8 for everyone.
     const out = largeBodyScan();
     const { calibratedSilhouetteScore } = out.physiqueAssessment.indexInputs;
     const shift = out.physiqueAssessment.visualLeannessScore - calibratedSilhouetteScore;
-    expect(Math.abs(shift)).toBeLessThanOrEqual(8);
-    // This fixture's uncapped blend moves further than 8 points downward (pre-F1(a) it clamped
-    // to -26), so the bound is actually engaged here, not just technically satisfied.
-    expect(shift).toBe(-8);
+    expect(shift).toBe(-26);
+
+    // The lean-physique guarantee F1(a) exists for is untouched: a lean
+    // silhouette (anchor-protected ratios, no large-body context) with a
+    // disagreeing low estimator still cannot be dragged more than 8 points.
+    const leanEstimate = {
+      source: 'photo_scan',
+      estimatorVersion: 'progress_scan_bf_estimator_v1',
+      value: 24,
+      inputs: {
+        sex: 'male',
+        bmi: 24.5,
+        waistToShoulder: 0.6,
+        waistToHip: 0.8,
+        waistToHeight: 0.19,
+        bodyAreaRatio: 0.24,
+        frontBackWaistSpread: 0,
+        sideWaistToHeight: 0.14,
+      },
+      biasFlags: [],
+    };
+    const lean = analyseProgressScan({
+      assets: modelBackedAssets,
+      modelEstimate: leanEstimate,
+      sex: 'male',
+      heightCm: 178,
+      weightKg: 78,
+    });
+    const leanShift = lean.physiqueAssessment.visualLeannessScore
+      - lean.physiqueAssessment.indexInputs.calibratedSilhouetteScore;
+    expect(Math.abs(leanShift)).toBeLessThanOrEqual(8);
   });
 
   test('confidence caps at moderate exactly when the clamped anchor moves the score by more than 4 points, and not otherwise', () => {
