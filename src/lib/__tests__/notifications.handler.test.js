@@ -51,8 +51,8 @@ function notif(type) {
   return { request: { content: { data: { type } } } };
 }
 
-const SHOW = { shouldShowAlert: true, shouldPlaySound: false, shouldSetBadge: false };
-const SUPPRESS = { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
+const SHOW = { shouldShowAlert: true, shouldShowBanner: true, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: false };
+const SUPPRESS = { shouldShowAlert: false, shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false };
 
 beforeEach(() => {
   mockGetMorningWeightToday.mockReset();
