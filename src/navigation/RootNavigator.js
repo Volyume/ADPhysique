@@ -856,6 +856,18 @@ export default function RootNavigator() {
   const checkTier = useAppStore(s => s.checkTier);
   const refreshTierFromCloud = useAppStore(s => s.refreshTierFromCloud);
   const [splashReady, setSplashReady] = useState(false);
+  // Founder defect (2026-07-12, TestFlight): every cold launch flashed the
+  // Welcome (free/Pro) page for a beat even when signed in. The splash gate
+  // waited on the two fast AsyncStorage flags but NOT on the initial
+  // session restore, which sits behind awaited SQLCipher init + migrations
+  // in bootstrap() -- so renderNavigator ran its `!user -> WelcomeStack`
+  // branch until getSession() landed. This flag latches true ONCE, at the
+  // first auth resolution (session found, no session, or bootstrap
+  // failure), and never resets, so the OAuth loop that gating on the live
+  // isAuthLoading flag caused (it flips on every SIGNED_IN, see the splash
+  // gate comment) cannot come back. A hard timeout in the bootstrap effect
+  // stops it ever hanging the splash.
+  const [initialAuthResolved, setInitialAuthResolved] = useState(false);
   // CP-10 stage 2: drives the NavigationContainer theme prop below live (was
   // the static resolvedTheme/colors imports, class 3 per the CP-10 plan --
   // already inline JSX, so it only needed RootNavigator itself to re-render
@@ -1050,6 +1062,7 @@ export default function RootNavigator() {
               } catch (_) { /* lib not loadable in this env */ }
 
               setAuthLoading(false);
+              setInitialAuthResolved(true);
               return;
             }
           }
@@ -1080,6 +1093,7 @@ export default function RootNavigator() {
         // spec's scenario A ('Fresh install, signs up') and scenario
         // F ('Uninstall, reinstall') both depend on.
         setAuthLoading(false);
+        setInitialAuthResolved(true);
         try {
           const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
           if (raw) {
@@ -1093,10 +1107,18 @@ export default function RootNavigator() {
         // No anonymous-mode fallback (spec rule 1), the user lands
         // on Welcome and signs in/up against a real account.
         setAuthLoading(false);
+        setInitialAuthResolved(true);
       }
     }
 
-    bootstrap().catch((e) => _bootLog('error', 'RootNavigator.bootstrap.unhandled', e));
+    bootstrap().catch((e) => {
+      _bootLog('error', 'RootNavigator.bootstrap.unhandled', e);
+      setInitialAuthResolved(true);
+    });
+    // Hard failsafe: the splash must never hang on the auth latch even if
+    // bootstrap stalls inside a hung await (same philosophy as the
+    // setAuthLoading failsafe above). 8s is far beyond a healthy boot.
+    const authLatchTimer = setTimeout(() => setInitialAuthResolved(true), 8000);
 
     let subscription;
     try {
@@ -1461,7 +1483,10 @@ export default function RootNavigator() {
       }
     } catch (_e) {}
 
-    return () => subscription?.unsubscribe();
+    return () => {
+      clearTimeout(authLatchTimer);
+      subscription?.unsubscribe();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1477,14 +1502,21 @@ export default function RootNavigator() {
   }, [user, tierChecked, firstRunChecked, isAuthLoading, checkTier, checkFirstRun, setAuthLoading]);
 
   // Splash gate fires ONLY during initial bootstrap, before splashReady,
-  // firstRunChecked, and tierChecked have completed their first pass.
+  // firstRunChecked, tierChecked and the ONE-SHOT initialAuthResolved
+  // latch have completed their first pass. initialAuthResolved (2026-07-12
+  // founder defect) holds the splash until the initial getSession()
+  // restore has actually resolved, so a signed-in cold launch can no
+  // longer flash WelcomeStack (the free/Pro page) through the `!user`
+  // branch below while the session is still loading behind SQLCipher init.
   // Deliberately not gated on isAuthLoading: that flag flips true during
   // every SIGNED_IN event, and showing the splash mid-flow unmounts the
   // currently-rendered stack (ProOnboardingStack in particular), wiping
   // the screen's step state. The result was an OAuth loop on Step 1.
-  // The store updates (tier, firstRunComplete, user) re-trigger this
-  // render naturally, so seamless transitions happen without a splash.
-  if (!splashReady || !firstRunChecked || !tierChecked) {
+  // The latch never resets after its first flip, so it cannot recreate
+  // that loop. The store updates (tier, firstRunComplete, user)
+  // re-trigger this render naturally, so seamless transitions happen
+  // without a splash.
+  if (!splashReady || !firstRunChecked || !tierChecked || !initialAuthResolved) {
     return <SplashScreen />;
   }
 
