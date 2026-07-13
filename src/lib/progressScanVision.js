@@ -925,7 +925,7 @@ export function retakeCopyForVisionResult(result) {
   if (reasons.has('clothing_or_background_uncertain')) return 'Your outline blends into the background or clothing too much for a reliable scan. Try plain fitted clothing against a plain background.';
   if (reasons.has('pose_not_clear')) return 'Your stance was not clear enough for the scan. Stand tall, face the camera squarely, and retake.';
   if (reasons.has('camera_tilted')) return 'The camera looks tilted for this scan. Keep the phone upright and retake.';
-  if (reasons.has('silhouette_implausible')) return 'The body outline read as distorted, which usually means the phone was tilted or propped low. Stand the phone upright and level, then retake.';
+  if (reasons.has('silhouette_implausible')) return 'The body outline read as distorted. This usually means bright light behind you or a tilted phone. Face away from windows, keep the phone upright, and retake.';
   return 'This photo is not reliable enough for analysis. Retake it now, or use the photo without analysis.';
 }
 
