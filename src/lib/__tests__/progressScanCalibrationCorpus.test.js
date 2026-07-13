@@ -126,7 +126,11 @@ const CALIBRATION_CASES = [
       bboxWidthRatio: 0.32,
     },
     includeSide: true,
-    expected: { min: 88, max: 100, bands: ['Lean', 'Very Lean', 'Peak Condition'], minConfidence: 'moderate' },
+    // D80 re-ratification (founder order "Retune now", 2026-07-13): under the
+    // stretched top curve this synthetic sits in Lean with headroom -- its
+    // ratios measure equal-or-softer than the founder's real v3 scan (88
+    // Lean), and Very Lean / Peak are reserved for stage-level condition.
+    expected: { min: 80, max: 92, bands: ['Lean', 'Very Lean'], minConfidence: 'moderate' },
   },
   {
     id: 'male_lean_broad_frame',
@@ -144,7 +148,9 @@ const CALIBRATION_CASES = [
       bboxWidthRatio: 0.36,
     },
     userBiasFlags: ['very_muscular'],
-    expected: { min: 80, max: 94, bands: ['Lean', 'Very Lean'], minConfidence: 'moderate' },
+    // D80: broad-frame lifter re-ratified one band down under the stretched
+    // top curve; Defined (70-79) is the honest read for these ratios.
+    expected: { min: 72, max: 88, bands: ['Defined', 'Lean'], minConfidence: 'moderate' },
   },
   {
     id: 'male_athletic_average_frame',
@@ -230,7 +236,8 @@ const CALIBRATION_CASES = [
       bboxWidthRatio: 0.40,
     },
     userBiasFlags: ['very_muscular'],
-    expected: { min: 74, max: 90, bands: ['Defined', 'Lean', 'Very Lean'], minConfidence: 'moderate' },
+    // D80: stocky-muscular re-ratified with the stretched top curve.
+    expected: { min: 66, max: 84, bands: ['Athletic', 'Defined', 'Lean'], minConfidence: 'moderate' },
   },
   {
     id: 'lean_photo_usable_not_ideal',
@@ -350,7 +357,10 @@ describe('Progress Scan calibration corpus', () => {
   test('a lean muscular user is never shown the raw low silhouette number when calibrated inputs exist', () => {
     const out = scoreCase(CALIBRATION_CASES.find((testCase) => testCase.id === 'male_lean_broad_frame'));
     expect(out.physiqueAssessment.indexInputs.rawSilhouetteScore).toBeLessThan(out.physiqueAssessment.visualLeannessScore);
-    expect(out.physiqueAssessment.visualLeannessScore).toBeGreaterThanOrEqual(80);
+    // D80: floor re-ratified with the stretched top curve (76 Defined today);
+    // the invariant is that the calibrated display sits well above the raw
+    // internal number, never that this fixture reads Lean.
+    expect(out.physiqueAssessment.visualLeannessScore).toBeGreaterThanOrEqual(72);
   });
 
   test('height alone does not move a same-ratio same-BMI physique into a different score band', () => {

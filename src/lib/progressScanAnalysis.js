@@ -614,10 +614,20 @@ function estimatorIsProvisional() {
 export function calibrateVolyumeScore(rawScore) {
   const n = finiteNumber(rawScore);
   if (n == null) return null;
+  // D80 (founder order "Retune now", 2026-07-13): the original top end mapped
+  // every strong raw score to 87+ (raw 65 -> 87, 75 -> 92), so a lean-but-not-
+  // stage physique landed within a few points of Peak Condition and a full
+  // cut moved the score almost nothing. The top half is stretched so Lean
+  // (80-89) covers visibly lean condition with real headroom, and Very Lean /
+  // Peak are reserved for stage-level leanness. The lower half (Foundation /
+  // Active / Athletic) is UNCHANGED: softer physiques keep the same calm
+  // floors (display never below 40), and the BodyM population invariants pin
+  // that region. Re-ratified against the calibration corpus, the BodyM
+  // external dataset and the founder's real measured scan in the same change.
   const curve = [
     [0, 40], [10, 50], [20, 60], [30, 66], [35, 70],
-    [45, 77], [55, 82], [65, 87], [75, 92], [85, 96],
-    [92, 98], [100, 100],
+    [45, 77], [55, 79], [65, 81], [75, 85], [85, 89],
+    [92, 94], [100, 100],
   ];
   return rounded0(clamp(interpolateBodyFatIndex(n, curve), 0, 100));
 }

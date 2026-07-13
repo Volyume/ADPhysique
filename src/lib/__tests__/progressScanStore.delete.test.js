@@ -272,7 +272,7 @@ describe('finishProgressScanSession estimator persistence', () => {
       physiqueScoreVersion: 'volyume_physique_scan_score_v2',
       physiqueAssessment: {
         analysisType: 'visual_physique_score',
-        visualLeannessScore: 83,
+        visualLeannessScore: 80,
         leannessBandLabel: 'Lean',
         scanConfidenceTier: 'moderate',
         progressSignal: 'baseline',
@@ -309,7 +309,7 @@ describe('finishProgressScanSession estimator persistence', () => {
 
     const update = mockRunCalls.find((call) => /UPDATE progress_scan_sessions SET/.test(call.sql));
     const signals = JSON.parse(update.params[14]);
-    expect(signals.physiqueAssessment.visualLeannessScore).toBe(83);
+    expect(signals.physiqueAssessment.visualLeannessScore).toBe(80);
     expect(signals.physiqueAssessment.progressSignal).toBe('trend_pending');
     expect(signals.physiqueAssessment.progressSignalLabel).toBe('Trend not ready');
     expect(signals.deltaExplanation.comparisonStatus).toBe('not_comparable');
@@ -352,7 +352,7 @@ describe('progress scan calibration export', () => {
       signals_json: JSON.stringify({
         estimatorInputs: { sex: 'male', bmi: 25.3 },
         physiqueAssessment: {
-          visualLeannessScore: 83,
+          visualLeannessScore: 80,
           leannessBandLabel: 'Lean',
           scanConfidenceTier: 'moderate',
         },
@@ -369,8 +369,8 @@ describe('progress scan calibration export', () => {
       sex: 'male',
       weightKg: 82,
       expected: {
-        min: 79,
-        max: 87,
+        min: 76,
+        max: 84,
         bands: ['Lean'],
         minConfidence: 'moderate',
       },

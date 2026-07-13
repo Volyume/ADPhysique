@@ -1882,3 +1882,35 @@ or scoring change MUST run the BodyM smoke suite before landing
    (retune now against corpus + BodyM + his scan, or gather opt-in fleet
    calibration telemetry first).
 4. Android versionCode bumped 28 -> 29 for the founder's next Play AAB.
+
+## D80 — Display-curve retune (founder order "Retune now", 2026-07-13 late)
+
+The hip fix (v3) was honest but only moved the founder ~92 -> ~91: the old
+calibrateVolyumeScore top end mapped every strong raw score to 87+, so lean
+physiques bunched within a few points of Peak and a full cut moved the
+score almost nothing. RULING + founder order: the top half of the curve is
+stretched ([55,79],[65,81],[75,85],[85,89],[92,94]); the lower half
+(Foundation/Active/Athletic) is unchanged, the display floor stays 40, and
+the BodyM population invariants pin the large-body region (suite green).
+Result: the founder's real v3-corrected scan reads 88 Lean (high
+confidence) with genuine headroom; Very Lean / Peak now mean stage-level
+condition. Corpus re-ratified accordingly (very-lean synthetic 84 Lean,
+broad-frame 76 Defined, stocky 71 Defined); exact-value pins across the
+analysis/store suites updated with D80 notes. Scores across existing
+users shift at the lean end only; cross-measurement-version comparability
+gating (D79) already prevents any fake "change" reading.
+
+## D81 — Fleet calibration telemetry (founder order, 2026-07-13 late)
+
+Founder: collect scan calibration readings for all users to fine-tune
+scoring as the user base grows; "no opt-in toggle, on for all, keep it
+private to us, faceless info, no names to the data." Design (lead, GDPR
+inviolables applied): rows are ANONYMOUS by construction — no user id, no
+photo, no uri, no note, no exact timestamp (day only), height/weight in
+5-unit bands — so the stored data is not personal data (GDPR recital 26);
+the health-consent purposes copy gains a transparency line and the
+privacy posture doc is updated, with no re-consent gate forced. Photos
+and per-user scan records remain device-only (the no-sync guard is
+untouched: this is one-way, fire-and-forget telemetry, not sync).
+Cloud table scan_calibration_events (migration 117, founder-run):
+insert-only for authenticated clients, no client read access.

@@ -218,7 +218,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(abstentionReasonsForAssets(usableAssets)).toEqual([]);
     const out = analyseProgressScan({ assets: usableAssets, modelEstimate: null });
     expect(out.analysisStatus).toBe('complete');
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(89);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(82);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
   });
 
@@ -271,9 +271,9 @@ describe('Progress Scan uncertainty and abstention', () => {
 
     expect(out.analysisStatus).toBe('complete');
     expect(out.abstentionReasons).toEqual([]);
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(89);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(82);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
-    expect(out.copySummary).toMatch(/Baseline Volyume Score 89\/100/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score 82\/100/i);
 
     const summary = measuredSignalsSummaryFromAssets(assets, null, {
       physiqueAssessment: out.physiqueAssessment,
@@ -344,10 +344,10 @@ describe('Progress Scan uncertainty and abstention', () => {
     const out = analyseProgressScan({ assets, modelEstimate: null });
 
     expect(out.analysisStatus).toBe('complete');
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(89);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(82);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
     expect(out.physiqueAssessment.progressSignal).toBe('baseline');
-    expect(out.copySummary).toMatch(/Baseline Volyume Score 89\/100/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score 82\/100/i);
   });
 
   test('soft vision warnings lower confidence without erasing a complete measured score', () => {
@@ -405,9 +405,9 @@ describe('Progress Scan uncertainty and abstention', () => {
       'clothing_or_background_uncertain',
       'camera_tilted',
     ]));
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(89);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(82);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('low');
-    expect(out.copySummary).toMatch(/Baseline Volyume Score 89\/100/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score 82\/100/i);
   });
 
   test('model-backed silhouette signals produce a Volyume physique assessment without public body fat fields', () => {
@@ -446,7 +446,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.physiqueAssessment).toMatchObject({
       source: 'photo_scan',
       analysisType: 'visual_physique_score',
-      visualLeannessScore: 83,
+      visualLeannessScore: 80,
       leannessBandLabel: 'Lean',
       scanConfidenceTier: 'moderate',
       progressSignal: 'baseline',
@@ -454,7 +454,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     });
     expect(out.biasFlags).toContain('skin_tone_not_collected_validation_gap');
     expect(out.biasFlags).toContain('side_pose_missing');
-    expect(out.copySummary).toMatch(/Baseline Volyume Score 83\/100/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score 80\/100/i);
     expect(out.copySummary).toMatch(/Score from photos taken in similar conditions/i);
   });
 
@@ -540,12 +540,14 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.analysisStatus).toBe('complete');
     expect(out.physiqueAssessment.indexInputs).toMatchObject({
       rawSilhouetteScore: 68,
-      calibratedSilhouetteScore: 89,
-      boundedEstimatorAnchorScore: 81,
+      calibratedSilhouetteScore: 82,
+      boundedEstimatorAnchorScore: 74,
     });
     expect(out.physiqueAssessment.indexInputs.estimatorAnchorAdjustment).toBeGreaterThan(0);
-    expect(out.physiqueAssessment.visualLeannessScore).toBeGreaterThanOrEqual(80);
-    expect(out.physiqueAssessment.leannessBandLabel).toBe('Lean');
+    expect(out.physiqueAssessment.visualLeannessScore).toBeGreaterThanOrEqual(74);
+    // D80 stretched top curve: this fixture reads Defined (74) now; the
+    // invariant is the floor above (never demoralising), not the Lean label.
+    expect(['Defined', 'Lean']).toContain(out.physiqueAssessment.leannessBandLabel);
   });
 
   test('large-body anthropometric signal can pull an over-lean silhouette out of defined bands', () => {
@@ -576,10 +578,10 @@ describe('Progress Scan uncertainty and abstention', () => {
 
     expect(out.analysisStatus).toBe('complete');
     expect(out.physiqueAssessment.indexInputs).toMatchObject({
-      calibratedSilhouetteScore: 83,
+      calibratedSilhouetteScore: 79,
       estimatorAnchorScore: 40,
       estimatorAnchorMaxDownwardPoints: 26,
-      boundedEstimatorAnchorScore: 57,
+      boundedEstimatorAnchorScore: 53,
     });
     // D79 (2026-07-13): F1(a)'s flat ±8 provisional cap blocked the
     // large-body downward correction the pre-existing clamps deliberately
@@ -588,7 +590,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     // now opens downward via estimatorAnchorDownwardLimit's high-BMI /
     // large-body gates only; lean/protected physiques keep the full ±8
     // guarantee. 83 -> 57, honestly inside Active.
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(57);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(53);
     expect(out.physiqueAssessment.leannessBandLabel).toBe('Active');
     expect(out.physiqueAssessment.anchorEngaged).toBe(true);
   });
@@ -621,15 +623,15 @@ describe('Progress Scan uncertainty and abstention', () => {
 
     expect(out.analysisStatus).toBe('complete');
     expect(out.physiqueAssessment.indexInputs).toMatchObject({
-      calibratedSilhouetteScore: 88,
+      calibratedSilhouetteScore: 82,
       estimatorAnchorScore: 58,
       estimatorAnchorMaxDownwardPoints: 26,
-      boundedEstimatorAnchorScore: 62,
+      boundedEstimatorAnchorScore: 58,
     });
     // D79 (2026-07-13): the large-body downward gate applies while the
     // estimator is provisional (see the large-body test above), so the
     // deceptively lean silhouette is corrected 88 -> 68, Athletic.
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(66);
     expect(out.physiqueAssessment.leannessBandLabel).toBe('Athletic');
     expect(out.physiqueAssessment.anchorEngaged).toBe(true);
   });
@@ -662,15 +664,15 @@ describe('Progress Scan uncertainty and abstention', () => {
 
     expect(out.analysisStatus).toBe('complete');
     expect(out.physiqueAssessment.indexInputs).toMatchObject({
-      calibratedSilhouetteScore: 84,
+      calibratedSilhouetteScore: 80,
       estimatorAnchorScore: 62,
       estimatorAnchorMaxDownwardPoints: 16,
-      boundedEstimatorAnchorScore: 68,
+      boundedEstimatorAnchorScore: 64,
     });
     // D79 (2026-07-13): the near-large-body gate (-16) applies while the
     // estimator is provisional, so the disagreeing estimator corrects the
     // lean silhouette 84 -> 69, out of Defined.
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(69);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(68);
     expect(out.physiqueAssessment.leannessBandLabel).toBe('Athletic');
     expect(out.physiqueAssessment.anchorEngaged).toBe(true);
   });
@@ -736,9 +738,9 @@ describe('Progress Scan uncertainty and abstention', () => {
     });
     expect(out.analysisStatus).toBe('complete');
     expect(out.abstentionReasons).toEqual([]);
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(83);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(80);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('moderate');
-    expect(out.copySummary).toMatch(/Baseline Volyume Score 83\/100/i);
+    expect(out.copySummary).toMatch(/Baseline Volyume Score 80\/100/i);
   });
 
   test('known bias flags concretely lower scan confidence, not just copy', () => {
@@ -787,7 +789,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     });
 
     expect(out.analysisStatus).toBe('complete');
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(89);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(82);
     expect(out.physiqueAssessment.scanConfidenceScore).toBeGreaterThanOrEqual(0.64);
     expect(out.physiqueAssessment.scanConfidenceTier).toBe('moderate');
     expect(out.biasFlags).toEqual(expect.arrayContaining([
@@ -805,7 +807,7 @@ describe('Progress Scan uncertainty and abstention', () => {
       frontBackWaistSpread: 0.01,
     })).toBe(68);
     expect(calibrateVolyumeScore(37)).toBe(71);
-    expect(calibrateVolyumeScore(68)).toBe(89);
+    expect(calibrateVolyumeScore(68)).toBe(82);
     expect(computeVisualLeannessScore({
       waistToShoulder: 0.63,
       waistToHip: 0.77,
@@ -892,7 +894,7 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(out.analysisStatus).toBe('complete');
     expect(out.estimate).toBeNull();
     expect(out.range).toBeNull();
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(89);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(82);
   });
 
   test('measured delta explanation never fabricates visual observations', () => {
@@ -1334,7 +1336,7 @@ describe('F1(a) provisional anchor gating', () => {
     const out = largeBodyScan();
     // Matches the pre-F1(a) expectation for this exact fixture (see the calibration test of the
     // same name in the describe block above): downward limit reverts to 26, upward to 20.
-    expect(out.physiqueAssessment.visualLeannessScore).toBe(57);
+    expect(out.physiqueAssessment.visualLeannessScore).toBe(53);
     expect(out.physiqueAssessment.anchorEngaged).toBe(false);
   });
 });
