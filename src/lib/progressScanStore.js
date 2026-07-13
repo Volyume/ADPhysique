@@ -432,7 +432,7 @@ export async function finishProgressScanSession(userId, scanId, opts = {}) {
       weightKg: scanStats.weightKg ?? opts.weightKg ?? null,
       appVersion: opts.appVersion ?? null,
     });
-    telemetry.submitScanCalibrationRow(row).catch(() => {});
+    telemetry.submitScanCalibrationRow(telemetry.withFounderVisionDebug(row)).catch(() => {});
   } catch (_) { /* best effort by design */ }
   return getProgressScanSession(userId, scanId);
 }

@@ -534,6 +534,16 @@ export default function ProgressGhostCapture({
         // saved and scored (the score's ratio signals are mirror-invariant).
         // Matches the iOS Camera app's default behaviour.
         mirror={facing === 'front'}
+        // Founder cross-device root cause (2026-07-13, telemetry-verified):
+        // expo-camera's iOS DEFAULT pictureSize is "High", which is Apple's
+        // 1080p VIDEO session preset -- stills were captured through the
+        // video pipeline: cropped field of view, video-grade noise, soft
+        // detail. The segmentation mask fragmented (26-30 components vs
+        // Android's 5-9) and measurements distorted, scoring the same body
+        // 68 vs 91 in identical conditions. "Photo" selects the full-sensor
+        // photo pipeline. iOS-only: Android expects a resolution string from
+        // its own available-sizes list, not this preset name.
+        pictureSize={Platform.OS === 'ios' ? 'Photo' : undefined}
         accessibilityLabel={hasReference
           ? 'Camera preview aligned against your saved photo'
           : 'Camera preview'}

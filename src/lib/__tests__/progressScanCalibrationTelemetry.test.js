@@ -5,7 +5,15 @@
  * lock on that construction: if a future edit adds an identifying field,
  * the JSON sweep here fails before it ships.
  */
-import { buildScanCalibrationRow, fiveUnitBand } from '../progressScanCalibrationTelemetry';
+import { buildScanCalibrationRow, fiveUnitBand, withFounderVisionDebug } from '../progressScanCalibrationTelemetry';
+
+jest.mock('../../store/useAppStore', () => ({
+  __esModule: true,
+  default: { getState: () => ({ user: { email: global.__mockUserEmail } }) },
+}));
+jest.mock('../progressScanVision', () => ({
+  getLastVisionDebug: () => ({ front: { engine: 'fast_tflite', rgbBase64: 'QUJD', maskBase64: 'REVG' } }),
+}));
 
 const assets = [
   {
@@ -77,6 +85,27 @@ describe('scan calibration telemetry row', () => {
   test('returns null when the scan produced no score', () => {
     expect(build({ physiqueAssessment: { visualLeannessScore: null } })).toBeNull();
     expect(build({ physiqueAssessment: null })).toBeNull();
+  });
+
+  test('vision debug attaches ONLY for allow-listed founder accounts, never for users (D83)', () => {
+    // __DEV__ short-circuits the allow-list in dev builds; force the
+    // production path so the email gate itself is what is under test.
+    const devDescriptor = Object.getOwnPropertyDescriptor(global, '__DEV__');
+    // eslint-disable-next-line no-global-assign
+    global.__DEV__ = false;
+    try {
+      global.__mockUserEmail = 'ordinary.user@example.com';
+      const userRow = withFounderVisionDebug(build());
+      expect(userRow.vision_debug).toBeUndefined();
+      expect(JSON.stringify(userRow)).not.toMatch(/rgbBase64|maskBase64|vision_debug/);
+
+      global.__mockUserEmail = 'allansdouglas1983@gmail.com';
+      const founderRow = withFounderVisionDebug(build());
+      expect(founderRow.vision_debug.front.rgbBase64).toBe('QUJD');
+    } finally {
+      if (devDescriptor) Object.defineProperty(global, '__DEV__', devDescriptor);
+      delete global.__mockUserEmail;
+    }
   });
 
   test('five-unit bands are coarse and never leak the exact value', () => {

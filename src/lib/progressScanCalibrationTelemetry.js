@@ -123,6 +123,34 @@ export function buildScanCalibrationRow({
 }
 
 /**
+ * FOUNDER ACCOUNTS ONLY (D83, founder order "put it all" 2026-07-13): attach
+ * the in-memory model input + mask from the most recent analysis run to the
+ * telemetry row, so cross-device divergences can be diagnosed straight from
+ * the cloud table without an export tap. The gate is the same email
+ * allow-list as the calibration export. For every other account the row is
+ * returned untouched: user photo-derived pixels NEVER leave the device (the
+ * consent copy promises exactly that).
+ */
+export function withFounderVisionDebug(row) {
+  if (!row) return row;
+  try {
+    // eslint-disable-next-line global-require
+    const { default: store } = require('../store/useAppStore');
+    const email = store.getState()?.user?.email ?? null;
+    // eslint-disable-next-line global-require
+    const { isProgressScanCalibrationExportAllowed } = require('./progressScanCalibrationAccess');
+    if (!isProgressScanCalibrationExportAllowed({ email })) return row;
+    // eslint-disable-next-line global-require
+    const { getLastVisionDebug } = require('./progressScanVision');
+    const debug = getLastVisionDebug();
+    if (debug && Object.keys(debug).length > 0) {
+      return { ...row, vision_debug: debug };
+    }
+  } catch (_) { /* diagnostics only */ }
+  return row;
+}
+
+/**
  * Fire-and-forget send. Missing client, missing table, offline, RLS refusal:
  * all silently dropped -- calibration telemetry must never affect the scan
  * experience or surface an error.
