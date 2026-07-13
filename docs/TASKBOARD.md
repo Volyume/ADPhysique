@@ -767,6 +767,14 @@ BOTH platforms - nothing here is OTA-carryable._
 
 ## 2. QUEUED (build slots - two agents at a time, lowest capable tier)
 
+### SCAN-ACC-1: Progress Scan accuracy round (founder order 2026-07-13 "when I next do a round of fixes I want it improved")
+- **Source:** D85 (decisions register) + paired telemetry evidence in `scan_calibration_events` (iOS row a5aad947 vs Android 89/91 rows): waist reads match cross-device; gap is the shoulder read (shoulderToHeight 0.291 iOS vs 0.311 Android) driven by smaller body-in-frame (bodyAreaRatio 0.133 vs 0.143-0.152) eroding shoulder pixels at 256px.
+- **CURRENT STATE:** iOS orientation fixed and device-proven (D85); iOS scores ~6-8 pts under Android on the same body; founder accepts as indicator for now.
+- **END STATE (all deterministic, platform-shared, no AI):** (1) two-pass zoom analysis - segment person bbox, re-run segmentation on the person crop so the body gets the model's full 256px at any camera distance; (2) decode/resample normalisation across platforms (recorded D84 RISK); (3) P3->sRGB colour normalisation on iOS (D84 RISK); (4) median-of-three-frames per pose (same frames -> same result, determinism intact); (5) side-pose nudge (prediction on record: lifts moderate->high confidence); (6) cross-device calibration pass from accumulated clean telemetry.
+- **ELEVATES BECAUSE:** direct founder order; accuracy is the product's headline promise and the telemetry now proves where the error lives.
+- **Bounds:** engine stays pure/deterministic; ED-safety untouched; guard test on extractRgb (pure-CG) must stay green; both native modules change in lockstep or not at all.
+- **Recovery path:** all evidence and analysis recorded in D85; paired rows queryable by platform in scan_calibration_events.
+
 ### CP-10 screen theming - remaining batches (F onward)
 - **Source:** `CP-10-restart-free-theming-plan.md`; D16, D24, D29; handover THEMING COVERAGE TRACKER.
 - **CURRENT STATE:** components 105/110 live; screens 37/85 live at batch E close (48 static remain); the stage-5 honesty gate (retiring the restart prompt) stays blocked until a toggle's full dependency set is live.
