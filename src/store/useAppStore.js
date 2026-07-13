@@ -37,6 +37,11 @@ const PAID_VERIFIED_AT_KEY = '@volyume_paid_verified_at';
 // slice here on each mutation and rehydrate it on launch (WK-1).
 const ACTIVE_WORKOUT_KEY = '@volyume_active_workout';
 
+// Monotonic stamp for PR celebrations (see showPRCelebration): App.js keys
+// the PRCelebration component on it so every celebration remounts and its
+// mount-time auto-dismiss timer actually runs.
+let _prCelebrationSeq = 0;
+
 // Workout preferences (Hevy teardown 2026-06-29, R1): the global default rest
 // timer and whether the rest timer auto-starts when a set is logged. Both are
 // device-local prefs (like accessibility), persisted to AsyncStorage and
@@ -335,18 +340,39 @@ const useAppStore = create((set, get) => ({
         // abort (normal: user gets the "Sign out anyway" prompt) or lets a
         // forced sign-out proceed to the wipe.
         const SIGN_OUT_SYNC_TIMEOUT_MS = 20_000;
-        let _signOutSyncTimer;
+        const _signOutSyncStarted = Date.now();
         let res;
-        try {
-          res = await Promise.race([
-            syncAll({ userId: prevUid, localUserId: prevUid, triggeredBy: 'sign_out' }),
-            new Promise((_, reject) => {
-              _signOutSyncTimer = setTimeout(
-                () => reject(new Error('signout-sync-timeout')), SIGN_OUT_SYNC_TIMEOUT_MS);
-            }),
-          ]);
-        } finally {
-          clearTimeout(_signOutSyncTimer);
+        // 'skipped' means ANOTHER sync held the runner lock, so OUR push never
+        // ran at all. That is routine right after an edit (push-on-save is
+        // usually still in flight when the user reaches Settings), and a
+        // single attempt sent every such user to the scary "Sync incomplete"
+        // prompt (founder device report 2026-07-13). Retry while the lock is
+        // contended, inside the same overall time budget, and only surface
+        // the prompt when the push genuinely cannot run or fails.
+        for (let attempt = 0; ; attempt += 1) {
+          const remainingMs = SIGN_OUT_SYNC_TIMEOUT_MS - (Date.now() - _signOutSyncStarted);
+          let _signOutSyncTimer;
+          try {
+            res = await Promise.race([
+              syncAll({ userId: prevUid, localUserId: prevUid, triggeredBy: 'sign_out' }),
+              new Promise((_, reject) => {
+                _signOutSyncTimer = setTimeout(
+                  () => reject(new Error('signout-sync-timeout')), Math.max(1, remainingMs));
+              }),
+            ]);
+          } finally {
+            clearTimeout(_signOutSyncTimer);
+          }
+          // Only lock contention is worth retrying; the other skip reasons
+          // (consent unresolved, wipe in progress) never change mid-loop.
+          if (res?.status !== 'skipped' || res?.reason !== 'already_running') break;
+          // Leave headroom for the delete-tombstone drain below; give up on
+          // lock contention only when the budget is nearly spent.
+          if (attempt >= 6 || (Date.now() - _signOutSyncStarted) > SIGN_OUT_SYNC_TIMEOUT_MS - 4_000) break;
+          // Wait for the in-flight run to release the lock (bounded), rather
+          // than a blind sleep.
+          // eslint-disable-next-line global-require
+          await require('../lib/sync/runner').whenSyncIdle({ timeoutMs: 2_000 }).catch(() => {});
         }
         // Abort the wipe only when we can't prove the push reached cloud:
         //   'error'           - a migrated table push threw/failed
@@ -1678,9 +1704,17 @@ const useAppStore = create((set, get) => ({
   // second. Now we queue, the top of the queue renders, dismiss pops.
   prCelebration: null,
   prCelebrationQueue: [],
-  showPRCelebration: (pr) => set((state) => state.prCelebration
-    ? { prCelebrationQueue: [...state.prCelebrationQueue, pr] }
-    : { prCelebration: pr }),
+  // Each celebration is stamped with a unique _seq so App.js can key the
+  // PRCelebration component off it. Without the key, a queued celebration
+  // popping in reuses the mounted component, whose auto-dismiss timer only
+  // runs on mount, so the toast stuck on screen indefinitely (founder
+  // device report 2026-07-13: "First lift logged" never went away).
+  showPRCelebration: (pr) => set((state) => {
+    const stamped = { ...pr, _seq: ++_prCelebrationSeq };
+    return state.prCelebration
+      ? { prCelebrationQueue: [...state.prCelebrationQueue, stamped] }
+      : { prCelebration: stamped };
+  }),
   hidePRCelebration: () => set((state) => {
     if (state.prCelebrationQueue.length === 0) {
       return { prCelebration: null };

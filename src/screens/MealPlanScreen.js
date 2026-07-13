@@ -242,17 +242,6 @@ function MealPreferencesControls({
         onSelect={(v) => onSetPref({ mealPlanVariety: v })}
         busy={busy}
       />
-      <PrefRow
-        label="Around training"
-        help="Switch this on if you want separate meals before and after training. Leave it off for a simpler day."
-        options={[
-          { value: false, label: 'Off' },
-          { value: true, label: 'Pre + post' },
-        ]}
-        value={!!prefs.periWorkoutSlots}
-        onSelect={(v) => onSetPref({ mealPlanPeriWorkout: v })}
-        busy={busy}
-      />
     </>
   );
 }
@@ -784,9 +773,8 @@ export default function MealPlanScreen({ navigation, route }) {
       : prefs.variety === 0.5
         ? 'mixed'
         : 'easy to repeat';
-    const workoutMeals = prefs.periWorkoutSlots ? 'workout meals on' : 'workout meals off';
-    return `${meals} meals, ${variety}, ${workoutMeals}`;
-  }, [prefs.mealsPerDay, prefs.periWorkoutSlots, prefs.variety]);
+    return `${meals} meals, ${variety}`;
+  }, [prefs.mealsPerDay, prefs.variety]);
   // Reads the same `userProfile` this screen already selects from the store,
   // so a change made on SettingsDietaryScreen (a different tab's stack)
   // updates this instantly: Zustand subscribers re-render on any store

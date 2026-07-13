@@ -155,7 +155,7 @@ export function buildProgressStudioCaptureRoutes({
       icon: 'images-outline',
       eyebrow: 'Existing set',
       title: 'Import a photo set',
-      body: 'Choose existing front, back and side photos, then set the date.',
+      body: 'Choose existing front, back and side photos, then set the date. Photos taken in the same lighting and quality compare best.',
       actionLabel: 'Import photo set',
       disabled: !canScan,
       disabledReason: 'Sign in to save imported photo sets.',

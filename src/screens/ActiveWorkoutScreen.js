@@ -2483,7 +2483,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
+          // 'interactive' on iOS, never 'on-drag': iOS fires 'on-drag' for the
+          // PROGRAMMATIC auto-scroll that keeps the focused input visible, so
+          // the keyboard dropped after one keystroke (founder device report
+          // 2026-07-13). Android has no 'interactive', so it keeps 'on-drag'.
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         >
           {/* Exercise Title */}
           <View style={styles.exerciseHeader}>

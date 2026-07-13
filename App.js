@@ -1085,6 +1085,11 @@ export default function App() {
                 <RootNavigator />
                 {prCelebration && (
                   <PRCelebration
+                    // Keyed per celebration: the auto-dismiss timer runs on
+                    // mount only, so a queued PR popping into an unkeyed
+                    // component would sit on screen forever (founder device
+                    // report 2026-07-13).
+                    key={prCelebration._seq ?? 'pr'}
                     pr={prCelebration}
                     onDismiss={hidePRCelebration}
                     // Honour either calm-mode (wellbeing preference) OR the

@@ -99,6 +99,31 @@ export async function pushNotificationPreferences(sb, { userId, localUserId } = 
       .from('notification_preferences')
       .upsert(rowsToPush, { onConflict: 'user_id,category' });
     if (error) {
+      // 23514 = the cloud category CHECK rejected a row. The client's
+      // category set legitimately runs ahead of the cloud constraint
+      // (migration 085 -> 117 lag), and one schema-lagged category used to
+      // fail the WHOLE batch, poison errored_count and block sign-out with
+      // "Sync incomplete" (Sentry VOLYUME-20/21/22, founder repro
+      // 2026-07-13). Retry per row so accepted categories land; rows the
+      // CHECK rejects stay local (their updated_at is untouched, so they
+      // re-push and succeed once migration 117 is applied) and are counted
+      // as skipped, not errored - schema lag is not a data-loss failure.
+      if (error.code === '23514') {
+        let pushed = 0;
+        let rejected = 0;
+        for (const row of rowsToPush) {
+          const { error: rowError } = await sb
+            .from('notification_preferences')
+            .upsert(row, { onConflict: 'user_id,category' });
+          if (!rowError) pushed += 1;
+          else if (rowError.code === '23514') rejected += 1;
+          else {
+            logSyncError('sync.tables.notificationPreferences.pushUpsert', rowError);
+            return { count: pushed, errors: 1 };
+          }
+        }
+        return { count: pushed, errors: 0, skipped: (rows.length - rowsToPush.length) + rejected };
+      }
       logSyncError('sync.tables.notificationPreferences.pushUpsert', error);
       return { count: 0, errors: 1 };
     }

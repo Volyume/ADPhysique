@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -1498,7 +1498,11 @@ export default function HomeScreen({ navigation, route }) {
         ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.content}
-        keyboardDismissMode="on-drag"
+        // 'interactive' on iOS, never 'on-drag': iOS fires 'on-drag' for the
+        // PROGRAMMATIC auto-scroll that keeps the focused input visible, so
+        // the keyboard dropped after one keystroke (founder device report
+        // 2026-07-13). Android has no 'interactive', so it keeps 'on-drag'.
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={t.colors.primary} />}
       >
         {/* ── Branded header ── */}

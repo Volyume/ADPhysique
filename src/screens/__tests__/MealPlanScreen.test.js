@@ -357,8 +357,13 @@ describe('MealPlanScreen review-before-add flow', () => {
     expect(source).toContain('easy to repeat');
     expect(source).not.toContain('repeat-friendly');
     expect(source).toContain('Repeat is easiest to prep. Mixed keeps some meals familiar. Varied changes more across the week.');
-    expect(source).toContain('Switch this on if you want separate meals before and after training. Leave it off for a simpler day.');
-    expect(source).toContain("label: 'Pre + post'");
+    // Founder order 2026-07-13: the "Around training" (Off / Pre + post)
+    // control is REMOVED from the Meal Builder. It never added the meals it
+    // promised (day plans always assemble as rest-day variants and "Repeat"
+    // weeks collapse to one rest day, so the toggle read as broken on
+    // device). Pinned OUT so it cannot quietly return without a decision.
+    expect(source).not.toContain('Switch this on if you want separate meals before and after training.');
+    expect(source).not.toContain("label: 'Pre + post'");
     expect(source).toContain('accessibilityState={{ checked: selected, disabled: busy }}');
     expect(source).toContain('const insets = useSafeAreaInsets();');
     expect(source).toContain("edges={['top', 'bottom']}");

@@ -95,8 +95,18 @@ export default function useAccountActions() {
                   catch (e) { logError('SettingsScreen.handleSignOut.cloudSignOut', e); }
                 }
               }
-              try { await Updates.reloadAsync(); }
-              catch (_) { /* dev / Expo Go, no-op */ }
+              // iOS: NO reload. Updates.reloadAsync() straight after the
+              // sign-out alert (a native Modal) left the app on a permanent
+              // black screen on TestFlight (founder device report
+              // 2026-07-13): the React root reloads but the presented modal
+              // hierarchy is not torn down. The reload is not needed for
+              // correctness - clearing the user routes RootNavigator to
+              // Welcome - so iOS relies on state-driven navigation and only
+              // Android keeps the bundle-adoption reload.
+              if (Platform.OS !== 'ios') {
+                try { await Updates.reloadAsync(); }
+                catch (_) { /* dev / Expo Go, no-op */ }
+              }
             }
             try {
               // Push-first sign-out: wipes local SQLite only after a

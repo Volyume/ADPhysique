@@ -1857,7 +1857,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Text style={[styles.captureRouteIntro, live.captureRouteIntro]}>
                   {latestPartialCapture
                     ? `Your latest set is missing the ${latestPartialCapture.nextPoseLabel.toLowerCase()} photo. Add it there, or start a separate set if these photos are from another day.`
-                    : 'Add a new set from the camera or your photo library. Use front, back and side photos.'}
+                    : 'Add a new set from the camera or your photo library. Use front, back and side photos. Keep the lighting, distance and photo quality the same each time, as differences make changes harder to assess.'}
                 </Text>
                 <ScrollView
                   style={styles.captureRouteScroll}
@@ -2255,9 +2255,15 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     marginBottom: spacing.md,
   },
+  // Fixed height + flex-start, NOT minHeight: the card row's default
+  // alignItems 'stretch' tied the cover to the tallest sibling, so opening
+  // the Why? expansion stretched the photo into a tall distorted crop that
+  // stuck after collapse (founder device report 2026-07-13). The thumbnail
+  // keeps one portrait shape regardless of how tall the text column grows.
   checkInCover: {
     width: 104,
-    minHeight: 132,
+    height: 132,
+    alignSelf: 'flex-start',
     borderRadius: radius.sm,
     overflow: 'hidden',
     backgroundColor: colors.surface2,
@@ -2369,9 +2375,15 @@ const styles = StyleSheet.create({
   captureRouteBackdrop: {
     ...StyleSheet.absoluteFillObject,
   },
+  // The height cap lives HERE, not on the sheet: this is the direct child of
+  // the flex:1 overlay, so the percentage actually resolves. On the sheet
+  // (whose parent is auto-height) Yoga could not resolve '76%', the sheet
+  // grew past the screen and the top of the option list was cut off
+  // (founder device report 2026-07-13).
   captureRouteSafe: {
     justifyContent: 'flex-end',
     paddingBottom: spacing.lg,
+    maxHeight: '76%',
   },
   captureRouteSheet: {
     backgroundColor: colors.surface,
@@ -2383,7 +2395,8 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
     gap: spacing.md,
-    maxHeight: '76%',
+    flexShrink: 1,
+    minHeight: 0,
   },
   captureRouteHandle: {
     width: 36,

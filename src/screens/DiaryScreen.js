@@ -1290,7 +1290,11 @@ export default function DiaryScreen({ navigation, route }) {
   // purely from `t` (buildLiveStyles(t) above), so depending on `t` already
   // captures every render where live.scanFab/live.selectionBar could change.
   const scanFabStyle = useMemo(
-    () => [styles.scanFab, live.scanFab, { bottom: spacing.xl + bottomInset }],
+    // Founder report 2026-07-13: the FAB floated a full spacing.xl above the
+    // tab bar and sat over the water card / last food rows. Tuck it into the
+    // corner just above the bar instead, and give the scroll content enough
+    // bottom padding (scrollContent) that everything can scroll clear of it.
+    () => [styles.scanFab, live.scanFab, { bottom: spacing.sm + bottomInset }],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [bottomInset, t],
   );
@@ -2280,7 +2284,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   scroll: { flex: 1 },
-  scrollContent: { padding: spacing.lg, paddingBottom: spacing.xxxl },
+  // Bottom padding clears the 56pt scan FAB (bottom: spacing.sm) plus a gap,
+  // so the water card / last food rows always scroll out from under it.
+  scrollContent: { padding: spacing.lg, paddingBottom: spacing.sm + 56 + spacing.xl },
   macroRingsWrap: { marginBottom: spacing.lg },
   bankRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',

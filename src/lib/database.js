@@ -163,7 +163,13 @@ async function _doInit() {
   // sub-second contention window is the correct behaviour. The deeper fix
   // (queueing ALL writes + the runInTransaction reentrancy flag) is queued
   // on the board; this line is what stops the user-facing failures.
-  await opened.execAsync('PRAGMA busy_timeout = 5000;');
+  // 30s, up from 5s (Sentry VOLYUME-23/-25, founder repro 2026-07-13:
+  // "database is locked" during Pro onboarding). The food seed and the
+  // first plan build are legitimate long queued transactions that can hold
+  // the write lock well past 5s on a first sign-in while the session-restore
+  // sync pull writes concurrently; with one shared connection a longer wait
+  // cannot deadlock, it just outlasts the window instead of erroring.
+  await opened.execAsync('PRAGMA busy_timeout = 30000;');
   await opened.execAsync(`
     CREATE TABLE IF NOT EXISTS exercises (
       id TEXT PRIMARY KEY,

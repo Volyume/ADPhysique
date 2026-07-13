@@ -243,7 +243,7 @@ describe('DiaryScreen bottom controls', () => {
     expect(SRC).toMatch(/import \{ SafeAreaView, useSafeAreaInsets \} from 'react-native-safe-area-context';/);
     expect(SRC).toMatch(/const insets = useSafeAreaInsets\(\);/);
     expect(SRC).toMatch(/const scanFabStyle = useMemo\(/);
-    expect(SRC).toMatch(/bottom: spacing\.xl \+ bottomInset/);
+    expect(SRC).toMatch(/bottom: spacing\.sm \+ bottomInset/);
     expect(SRC).toMatch(/const selectionBarStyle = useMemo\(/);
     expect(SRC).toMatch(/paddingBottom: spacing\.xl \+ bottomInset/);
   });
