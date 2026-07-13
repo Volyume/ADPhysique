@@ -480,8 +480,9 @@ function seek(t) {
   const pillsOut = 1 - seg(t, 7100, 7600);
   set(nodes.pills, { o: pillsIn * pillsOut, y: lerp(40, 0, pillsIn) });
 
-  /* Scene C — phone Eat 7600..11400 */
-  const cIn = easeOutCubic(seg(t, 7700, 8500));
+  /* Scene C — phone Eat 7200..11400 (enters while Train exits, so the two
+     devices cross and the frame is never empty mid-handover) */
+  const cIn = easeOutCubic(seg(t, 7200, 8000));
   const cOut = 1 - easeInOutCubic(seg(t, 10900, 11500));
   const floatC = Math.sin((t - 7700) / 1500) * 14;
   set(nodes.phoneEat, {
@@ -494,10 +495,10 @@ function seek(t) {
     ry: lerp(22, 10, cIn),
     rx: lerp(4, 2, cIn),
   });
-  const sweepC = seg(t, 8700, 9600);
+  const sweepC = seg(t, 8300, 9200);
   nodes.phoneEat.querySelector('.glare').style.setProperty('--sweep', `${lerp(-200, 260, sweepC)}%`);
   // caption C (paired with Eat)
-  const capCIn = easeOutCubic(seg(t, 8300, 9000));
+  const capCIn = easeOutCubic(seg(t, 7900, 8600));
   const capCOut = 1 - seg(t, 10700, 11200);
   set(nodes.capC, { o: capCIn * capCOut, y: lerp(150, 96, capCIn) });
   nodes.capC.style.top = '150px';
