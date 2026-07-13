@@ -94,6 +94,38 @@ node render-reel.cjs <content.json> <out.mp4>
 - Example (what produced `out/reel-1/reel-1.mp4`):
   `node render-reel.cjs carousel-1.json out/reel-1/reel-1.mp4`
 
+## Publishing to the dashboard (`publish-previews.cjs`)
+
+The render output is not the finish line — the founder reviews and posts from
+the HQ dashboard, so every rendered item must be wired into it. That is one
+codified step, never a hand edit:
+
+```
+node publish-previews.cjs \
+  --id <marketing_content row uuid> \
+  --slug <kebab-case, e.g. week2-p1> \
+  --carousel out/week2-p1 \
+  --reel out/reel-week2-p1/reel-week2-p1.mp4 \
+  --caption-file <path to caption text> \
+  --hashtags "#one #two #three"
+```
+
+It copies the slides and reel into
+`../../../web/apps/web/public/marketing-previews/<slug>/` (served by the
+dashboard itself — no external bucket, no Vercel/Supabase sign-in wall between
+the founder and the file) and prints an idempotent `update marketing_content
+... compliance_record || '{...}'::jsonb` statement. The pipeline (the
+`marketing-weekly` skill, step 6b) runs that SQL through the Supabase MCP to
+set `preview_assets`, `caption` and `hashtags` on the row. The dashboard
+content page reads those and renders a playable video, a slide gallery,
+per-file download links, and copy buttons for the caption and hashtags.
+
+`--carousel` and `--reel` are each optional (reel-only or carousel-only items
+are fine) but at least one is required. The script writes nothing to the
+database itself; it only moves files and prints SQL, so it is safe to re-run.
+Commit the staged `public/marketing-previews/<slug>/` files — they deploy with
+the app.
+
 ## Canva
 
 Canva remains available for ad-hoc, one-off assembly only. Any asset that

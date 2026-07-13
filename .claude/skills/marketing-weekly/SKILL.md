@@ -136,9 +136,23 @@ the ledger and the digest, never swallowed.
    "creative-designer", model: "sonnet", prompt: list the artefacts carrying a
    compliance PASS (step 5), a clarity PASS (step 5b), a principles PASS (step
    5c) and lead sign-off (step 5d); encode each into carousel/reel JSON per
-   `marketing/hq/render/README.md`, render stills and reels, include a real app
-   screenshot per identity Addendum A2, and mirror outputs to the
-   marketing-assets bucket for dashboard preview).
+   `marketing/hq/render/README.md`, render stills and reels, and include a real
+   app screenshot per identity Addendum A2).
+
+6b. **Wire each rendered item into the dashboard (the render→publish step).**
+   For every item rendered in step 6, run
+   `node marketing/hq/render/publish-previews.cjs` with its `marketing_content`
+   row id, a kebab-case slug, the carousel out dir and/or reel mp4, a caption
+   file and the hashtags (see the script header for exact flags). It stages the
+   assets into `web/apps/web/public/marketing-previews/<slug>/` (served with the
+   dashboard, no external bucket, no sign-in wall) and prints an idempotent
+   `update marketing_content ...` statement. Run that printed SQL through the
+   Supabase MCP (`execute_sql`) to write `preview_assets`, `caption` and
+   `hashtags` onto the row's `compliance_record`. The dashboard content page
+   then renders a playable, downloadable, copyable pack from those fields.
+   Never hand-write this SQL or hand-copy assets — this codified step IS the
+   wire; content reaches the dashboard only through it. Commit the staged
+   `public/marketing-previews/<slug>/` files (they deploy with the app).
 
 7. **Stage PASSed items.**
    If the Supabase `marketing_content` pipeline is live, stage there with the
