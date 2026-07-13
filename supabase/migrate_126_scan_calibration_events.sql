@@ -8,8 +8,9 @@
 -- INSERT only; no client may read, update or delete. Photos and per-user
 -- scan records remain device-only (this is one-way telemetry, not sync).
 --
--- Status: NOT applied locally or remotely at authoring time. Applied
--- manually by the founder ("run against production" per batch).
+-- Status: APPLIED to production (EU-Dublin) 2026-07-13 on the founder's
+-- exact phrase "run against production"; verified (RLS enabled, single
+-- insert-only policy, no client read access).
 -- Safe to re-run: yes (IF NOT EXISTS / conditional policy creation).
 -- Rollback: drop policy if exists "scan_calibration_insert_only" on
 --   public.scan_calibration_events; drop table if exists
