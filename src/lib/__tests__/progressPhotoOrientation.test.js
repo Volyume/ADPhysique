@@ -119,7 +119,7 @@ describe('normaliseCapturedPhoto', () => {
 // while keeping raw pixels). ──
 const fs = require('fs');
 const path = require('path');
-const { jpegExifOrientation } = require('../progressPhotos');
+const { jpegExifOrientation, stripJpegExifBytes } = require('../progressPhotos');
 
 // Minimal JPEG: SOI + APP1(Exif, TIFF, IFD0 with orientation tag) + EOI.
 function jpegWithOrientation(value, { little = true } = {}) {
@@ -136,6 +136,40 @@ function jpegWithOrientation(value, { little = true } = {}) {
   const len = exif.length + 2;
   return new Uint8Array([0xFF, 0xD8, 0xFF, 0xE1, (len >> 8) & 0xFF, len & 0xFF, ...exif, 0xFF, 0xD9]);
 }
+
+describe('iPhone XMP-first APP1 layout (founder native-camera photo scored 33/100, 2026-07-13)', () => {
+  function iphoneStyleJpeg({ xmpFirst = true } = {}) {
+    const xmpBody = Array.from('http://ns.adobe.com/xap/1.0/ <x:xmpmeta/>').map((c) => c.charCodeAt(0));
+    const xmp = [0xFF, 0xE1, (xmpBody.length + 2) >> 8, (xmpBody.length + 2) & 0xFF, ...xmpBody];
+    const tiff = [
+      0x4D, 0x4D, 0x00, 0x2A, 0x00, 0x00, 0x00, 0x08,
+      0x00, 0x01,
+      0x01, 0x12, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x06, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00,
+    ];
+    const exifBody = [0x45, 0x78, 0x69, 0x66, 0x00, 0x00, ...tiff];
+    const exif = [0xFF, 0xE1, (exifBody.length + 2) >> 8, (exifBody.length + 2) & 0xFF, ...exifBody];
+    const sos = [0xFF, 0xDA, 0x00, 0x02, 0x11, 0x22, 0x33];
+    const eoi = [0xFF, 0xD9];
+    const segs = xmpFirst ? [...xmp, ...exif] : [...exif, ...xmp];
+    return new Uint8Array([0xFF, 0xD8, ...segs, ...sos, ...eoi]);
+  }
+
+  test('orientation is read past a leading XMP APP1 (the layout real iPhone JPEGs use)', () => {
+    expect(jpegExifOrientation(iphoneStyleJpeg({ xmpFirst: true }))).toBe(6);
+    expect(jpegExifOrientation(iphoneStyleJpeg({ xmpFirst: false }))).toBe(6);
+  });
+
+  test('REGRESSION: the old first-APP1-only read skipped the bake while the strip still deleted the tag, leaving the photo permanently sideways', () => {
+    // With the fix, the orientation IS readable, so copyPhotoStrippingExif
+    // bakes the pixels upright BEFORE the strip runs. The strip itself
+    // removing every APP1 is then lossless by construction.
+    const jpg = iphoneStyleJpeg({ xmpFirst: true });
+    expect(jpegExifOrientation(jpg)).toBe(6);
+    const stripped = stripJpegExifBytes(jpg);
+    expect(jpegExifOrientation(stripped)).toBeNull();
+  });
+});
 
 describe('jpegExifOrientation', () => {
   test('reads orientation 6 (little-endian TIFF)', () => {

@@ -178,7 +178,14 @@ export function jpegExifOrientation(bytes) {
     if (marker === 0xDA) return null; // image data: no EXIF beyond here
     if (marker === 0xE1) {
       const seg = buf.subarray(offset + 4, offset + 2 + length);
-      // "Exif\0\0" preamble then TIFF header.
+      // "Exif\0\0" preamble then TIFF header. APP1 also carries XMP, and
+      // real iPhone JPEGs frequently put the XMP APP1 BEFORE the Exif one;
+      // the old early-return below treated "first APP1 isn't Exif" as "no
+      // orientation", so the upright bake was skipped while the strip still
+      // deleted every APP1 -- leaving the photo permanently sideways and the
+      // scanner measuring a lying-down body (founder's native-camera photo
+      // scored 33/100; proven byte-for-byte in the orientation tests). A
+      // non-Exif APP1 now just advances to the next segment.
       if (seg.length > 14
         && seg[0] === 0x45 && seg[1] === 0x78 && seg[2] === 0x69 && seg[3] === 0x66
         && seg[4] === 0x00 && seg[5] === 0x00) {
@@ -208,7 +215,8 @@ export function jpegExifOrientation(bytes) {
           }
         }
       }
-      return null; // one APP1 checked; cameras write orientation in the first
+      // Not the Exif APP1 (e.g. XMP), or Exif without a usable orientation
+      // in IFD0: keep scanning the remaining segments.
     }
     offset += 2 + length;
   }
