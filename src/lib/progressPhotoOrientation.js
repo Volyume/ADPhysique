@@ -101,7 +101,16 @@ export async function normaliseCapturedPhoto({ uri, width = null, height = null,
   try {
     // eslint-disable-next-line global-require, import/no-unresolved
     const { manipulateAsync, SaveFormat } = require('expo-image-manipulator');
-    const out = await manipulateAsync(uri, [{ rotate: degrees }], {
+    // CRITICAL semantics (caught in review before any build, 2026-07-13):
+    // the manipulator DECODES with EXIF orientation applied — decode alone
+    // yields upright pixels for an EXIF-declared file. So for exif_* reasons
+    // the action list is EMPTY (the re-encode bakes the decoded upright
+    // pixels and resets orientation to 1); an explicit rotate on top would
+    // rotate PAST upright. The rotate action is only for the no-EXIF
+    // landscape-pixels case, where decode changes nothing and the rotation
+    // does the actual work.
+    const actions = reason.startsWith('exif') ? [] : [{ rotate: degrees }];
+    const out = await manipulateAsync(uri, actions, {
       // Matches the capture quality (takePictureAsync quality: 0.92). The
       // scorer downsamples to 256px, so one re-encode at this quality has no
       // measurable effect on scoring signals; the library keeps full size.

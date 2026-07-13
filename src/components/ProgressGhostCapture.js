@@ -526,6 +526,14 @@ export default function ProgressGhostCapture({
         ref={cameraRef}
         style={StyleSheet.absoluteFill}
         facing={facing}
+        // Founder defect (2026-07-13, "it flips photos the wrong way"): the
+        // front-camera live preview is mirrored (like a mirror) but the
+        // captured file was not, so the save looked left-right flipped
+        // against what the user framed and approved. mirror on front facing
+        // makes the saved output match the preview — what you saw is what is
+        // saved and scored (the score's ratio signals are mirror-invariant).
+        // Matches the iOS Camera app's default behaviour.
+        mirror={facing === 'front'}
         accessibilityLabel={hasReference
           ? 'Camera preview aligned against your saved photo'
           : 'Camera preview'}

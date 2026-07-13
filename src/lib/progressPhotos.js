@@ -156,14 +156,100 @@ export function stripJpegExifBytes(bytes) {
   return out.subarray(0, outPos);
 }
 
+
+// Reads the EXIF orientation tag (0x0112, values 1..8) out of a JPEG byte
+// buffer, or null when absent/unparseable. Pure and defensive: anything
+// malformed returns null (callers treat null as "already upright"). Walks
+// the same marker stream as stripJpegExifBytes above, then the TIFF
+// structure inside APP1: byte-order (II/MM), magic 42, IFD0 entries.
+export function jpegExifOrientation(bytes) {
+  const buf = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  if (buf.length < 4 || buf[0] !== 0xFF || buf[1] !== 0xD8) return null;
+  let offset = 2;
+  while (offset + 4 <= buf.length) {
+    if (buf[offset] !== 0xFF) return null;
+    const marker = buf[offset + 1];
+    if (marker === 0xD8 || marker === 0x01 || (marker >= 0xD0 && marker <= 0xD9)) {
+      offset += 2;
+      continue;
+    }
+    const length = (buf[offset + 2] << 8) | buf[offset + 3];
+    if (length < 2 || offset + 2 + length > buf.length) return null;
+    if (marker === 0xDA) return null; // image data: no EXIF beyond here
+    if (marker === 0xE1) {
+      const seg = buf.subarray(offset + 4, offset + 2 + length);
+      // "Exif\0\0" preamble then TIFF header.
+      if (seg.length > 14
+        && seg[0] === 0x45 && seg[1] === 0x78 && seg[2] === 0x69 && seg[3] === 0x66
+        && seg[4] === 0x00 && seg[5] === 0x00) {
+        const tiff = seg.subarray(6);
+        const little = tiff[0] === 0x49 && tiff[1] === 0x49;
+        const big = tiff[0] === 0x4D && tiff[1] === 0x4D;
+        if (!little && !big) return null;
+        const u16 = (at) => (at + 2 <= tiff.length
+          ? (little ? tiff[at] | (tiff[at + 1] << 8) : (tiff[at] << 8) | tiff[at + 1])
+          : null);
+        const u32 = (at) => (at + 4 <= tiff.length
+          ? (little
+            ? (tiff[at] | (tiff[at + 1] << 8) | (tiff[at + 2] << 16)) + tiff[at + 3] * 0x1000000
+            : tiff[at] * 0x1000000 + ((tiff[at + 1] << 16) | (tiff[at + 2] << 8) | tiff[at + 3]))
+          : null);
+        if (u16(2) !== 42) return null;
+        const ifd0 = u32(4);
+        if (ifd0 == null || ifd0 + 2 > tiff.length) return null;
+        const entryCount = u16(ifd0);
+        if (entryCount == null) return null;
+        for (let i = 0; i < entryCount; i += 1) {
+          const at = ifd0 + 2 + i * 12;
+          if (at + 12 > tiff.length) return null;
+          if (u16(at) === 0x0112) {
+            const value = u16(at + 8);
+            return value != null && value >= 1 && value <= 8 ? value : null;
+          }
+        }
+      }
+      return null; // one APP1 checked; cameras write orientation in the first
+    }
+    offset += 2 + length;
+  }
+  return null;
+}
+
 // Copies `from` to `to`, stripping Exif/GPS metadata along the way. Falls
 // back to a raw byte copy if the source can't be read/written as base64 for
 // any reason (matches the old copyAsync failure surface — a save should
 // never fail solely because the strip step's string plumbing hiccups).
 async function copyPhotoStrippingExif(from, to) {
   try {
-    const base64 = await FileSystem.readAsStringAsync(from, { encoding: FileSystem.EncodingType.Base64 });
-    const stripped = stripJpegExifBytes(base64ToBytes(base64));
+    let base64 = await FileSystem.readAsStringAsync(from, { encoding: FileSystem.EncodingType.Base64 });
+    let bytes = base64ToBytes(base64);
+    // Founder defect (2026-07-13): iOS saves sideways pixels + an EXIF
+    // "rotate me" tag; the strip below used to discard that tag while
+    // keeping the raw pixels, so a photo that previewed upright (viewers
+    // honour EXIF) saved sideways for the library AND the scorer. Bake the
+    // orientation into the pixels FIRST: an empty manipulate decodes with
+    // EXIF applied (all 8 tags, mirrored variants included) and re-encodes
+    // upright with orientation reset to 1 — then the strip is lossless by
+    // construction. This is the one choke point every save path crosses
+    // (camera capture, picker import, share-in). Fail-open: any bake
+    // failure falls through to stripping the original bytes, exactly the
+    // pre-existing behaviour.
+    const orientation = jpegExifOrientation(bytes);
+    if (orientation != null && orientation > 1) {
+      try {
+        // eslint-disable-next-line global-require, import/no-unresolved
+        const { manipulateAsync, SaveFormat } = require('expo-image-manipulator');
+        const baked = await manipulateAsync(from, [], { compress: 0.92, format: SaveFormat.JPEG });
+        if (baked?.uri) {
+          base64 = await FileSystem.readAsStringAsync(baked.uri, { encoding: FileSystem.EncodingType.Base64 });
+          bytes = base64ToBytes(base64);
+          FileSystem.deleteAsync(baked.uri, { idempotent: true }).catch(() => {});
+        }
+      } catch (bakeErr) {
+        logError('progressPhotos.orientationBake', bakeErr, { orientation });
+      }
+    }
+    const stripped = stripJpegExifBytes(bytes);
     await FileSystem.writeAsStringAsync(to, bytesToBase64(stripped), { encoding: FileSystem.EncodingType.Base64 });
   } catch (e) {
     logError('progressPhotos.copyStrippingExif', e, {});

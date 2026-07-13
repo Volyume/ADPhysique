@@ -73,7 +73,7 @@ describe('normaliseCapturedPhoto', () => {
     expect(manipulateAsync).not.toHaveBeenCalled();
   });
 
-  test('a sideways frame is baked upright BEFORE anything downstream reads it', async () => {
+  test('a sideways NO-EXIF frame gets an explicit rotate (decode alone fixes nothing)', async () => {
     manipulateAsync.mockResolvedValue({ uri: 'file:///upright.jpg' });
     const r = await normaliseCapturedPhoto({ uri: 'file:///p.jpg', width: 4000, height: 3000, rollSign: -1 });
     expect(manipulateAsync).toHaveBeenCalledWith('file:///p.jpg', [{ rotate: -90 }], { compress: 0.92, format: 'jpeg' });
@@ -82,11 +82,15 @@ describe('normaliseCapturedPhoto', () => {
     expect(r.degrees).toBe(-90);
   });
 
-  test('EXIF declaration drives the bake even when pixels look landscape', async () => {
+  test('an EXIF-declared frame bakes via decode-normalisation with NO extra rotate (double-rotate regression)', async () => {
+    // The manipulator decodes with EXIF applied, so an explicit rotate on an
+    // EXIF-tagged file would rotate PAST upright. EXIF cases must send an
+    // EMPTY action list - the re-encode itself bakes the upright pixels.
     manipulateAsync.mockResolvedValue({ uri: 'file:///upright.jpg' });
     const r = await normaliseCapturedPhoto({ uri: 'file:///p.jpg', width: 4000, height: 3000, exifOrientation: 6 });
-    expect(manipulateAsync).toHaveBeenCalledWith('file:///p.jpg', [{ rotate: 90 }], expect.any(Object));
+    expect(manipulateAsync).toHaveBeenCalledWith('file:///p.jpg', [], expect.any(Object));
     expect(r.uri).toBe('file:///upright.jpg');
+    expect(r.rotated).toBe(true);
   });
 
   test('fail-open: a manipulator throw keeps the original capture and logs once', async () => {
@@ -107,5 +111,59 @@ describe('normaliseCapturedPhoto', () => {
     const r = await normaliseCapturedPhoto({ width: 4000, height: 3000 });
     expect(r.rotated).toBe(false);
     expect(manipulateAsync).not.toHaveBeenCalled();
+  });
+});
+
+// ── jpegExifOrientation + the orientation-safe strip (founder repro:
+// preview upright, saved sideways — the save stripped the EXIF rotate tag
+// while keeping raw pixels). ──
+const fs = require('fs');
+const path = require('path');
+const { jpegExifOrientation } = require('../progressPhotos');
+
+// Minimal JPEG: SOI + APP1(Exif, TIFF, IFD0 with orientation tag) + EOI.
+function jpegWithOrientation(value, { little = true } = {}) {
+  const tiff = little
+    ? [0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00, // II, 42, IFD0 @8
+       0x01, 0x00,                                     // 1 entry
+       0x12, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, value, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00]                         // next IFD
+    : [0x4D, 0x4D, 0x00, 0x2A, 0x00, 0x00, 0x00, 0x08,
+       0x00, 0x01,
+       0x01, 0x12, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, value, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00];
+  const exif = [0x45, 0x78, 0x69, 0x66, 0x00, 0x00, ...tiff];
+  const len = exif.length + 2;
+  return new Uint8Array([0xFF, 0xD8, 0xFF, 0xE1, (len >> 8) & 0xFF, len & 0xFF, ...exif, 0xFF, 0xD9]);
+}
+
+describe('jpegExifOrientation', () => {
+  test('reads orientation 6 (little-endian TIFF)', () => {
+    expect(jpegExifOrientation(jpegWithOrientation(6))).toBe(6);
+  });
+  test('reads orientation 8 (big-endian TIFF)', () => {
+    expect(jpegExifOrientation(jpegWithOrientation(8, { little: false }))).toBe(8);
+  });
+  test('upright and absent tags read as 1 / null', () => {
+    expect(jpegExifOrientation(jpegWithOrientation(1))).toBe(1);
+    expect(jpegExifOrientation(new Uint8Array([0xFF, 0xD8, 0xFF, 0xD9]))).toBe(null);
+  });
+  test('malformed input is null, never a throw', () => {
+    expect(jpegExifOrientation(new Uint8Array([0x00, 0x01]))).toBe(null);
+    expect(jpegExifOrientation(new Uint8Array([]))).toBe(null);
+  });
+});
+
+describe('the save path bakes orientation before stripping (source pin)', () => {
+  const src = fs.readFileSync(path.resolve(__dirname, '..', 'progressPhotos.js'), 'utf8');
+  test('copyPhotoStrippingExif reads the tag, bakes when rotated, then strips', () => {
+    const fnAt = src.indexOf('async function copyPhotoStrippingExif');
+    const readTagAt = src.indexOf('jpegExifOrientation(bytes)', fnAt);
+    const bakeAt = src.indexOf('manipulateAsync(from, [],', fnAt);
+    const stripAt = src.indexOf('stripJpegExifBytes(bytes)', fnAt);
+    expect(fnAt).toBeGreaterThan(-1);
+    expect(readTagAt).toBeGreaterThan(fnAt);
+    expect(bakeAt).toBeGreaterThan(readTagAt);
+    expect(stripAt).toBeGreaterThan(bakeAt);
   });
 });

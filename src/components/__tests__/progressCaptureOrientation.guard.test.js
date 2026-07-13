@@ -45,4 +45,11 @@ describe('ProgressGhostCapture orientation wiring (founder ruling 2026-07-13)', 
     expect(src).toMatch(/const rollRef = useRef\(null\)/);
     expect(src).toMatch(/rollRef\.current = roll;/);
   });
+
+  test('front-camera saves are mirrored to match the preview the user approves', () => {
+    // Founder defect (2026-07-13): the front preview is mirrored but the
+    // captured file was not, so saves looked left-right flipped against what
+    // was framed. What you saw is what is saved and scored.
+    expect(src).toMatch(/mirror=\{facing === 'front'\}/);
+  });
 });
