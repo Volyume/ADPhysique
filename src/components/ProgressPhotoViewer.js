@@ -50,7 +50,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS,
-  interpolate, Extrapolation,
+  interpolate, Extrapolation, cancelAnimation,
 } from 'react-native-reanimated';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { appAlert } from './AppAlert';
@@ -316,6 +316,19 @@ export default function ProgressPhotoViewer({
   const measuredRef = useRef(false);
   const closingRef = useRef(false);
   const stageImageRef = useRef(null);
+
+  // Founder defect (2026-07-13, iOS TestFlight, VOLYUME-2A fatal): closing the
+  // photo viewer crashed with a native C++ JSI error. On unmount, any
+  // in-flight withTiming/withSpring on these shared values keeps a scheduled
+  // completion callback (several fire runOnJS back into JS: closeParent,
+  // setMorphPhase) that then runs against a torn-down component tree. Cancel
+  // every animation on unmount so no worklet callback can fire post-teardown.
+  useEffect(() => () => {
+    for (const sv of [morph, destX, destY, destW, destH, scale, savedScale, tx, ty, savedTx, savedTy]) {
+      try { cancelAnimation(sv); } catch (_) { /* tolerate */ }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Measure the resting photo rect once the stage lays out, then grow from the
   // thumbnail to it. Runs on the real device (react-test-renderer never lays

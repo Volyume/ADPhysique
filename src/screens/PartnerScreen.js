@@ -19,7 +19,7 @@ import {
   Share, ActivityIndicator, Linking, Platform, Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Animated, {
   FadeInDown, useSharedValue, useAnimatedStyle, withSpring, withTiming,
@@ -1516,6 +1516,14 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
+  // Founder defect (2026-07-13, iOS): the X + progress dots rendered up over
+  // the status bar / clock and were untappable. react-native-safe-area-
+  // context's <SafeAreaView> measures natively INSIDE a RN <Modal>, which is
+  // a separate native view tree outside the app's SafeAreaProvider, so it
+  // read a 0 top inset. useSafeAreaInsets() reads the provider through React
+  // context (which the Modal does NOT break), so it returns the real insets;
+  // apply them as padding on a plain View instead.
+  const insets = useSafeAreaInsets();
   return (
     <Modal
       visible={visible}
@@ -1524,7 +1532,7 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
       transparent={false}
       statusBarTranslucent={Platform.OS === 'android'}
     >
-      <SafeAreaView style={[styles.journeySafe, live.journeySafe]} edges={['top', 'bottom']}>
+      <View style={[styles.journeySafe, live.journeySafe, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <View style={styles.journeyHead}>
           <TouchableOpacity onPress={onClose} hitSlop={hitSlop} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="close" size={iconSize.lg} color={t.colors.textPrimary} />
@@ -1595,7 +1603,7 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
             </EntranceView>
           ) : null}
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }

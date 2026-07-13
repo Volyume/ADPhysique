@@ -1,4 +1,4 @@
-import { logError, logWarn } from './errorLog';
+import { logError, logWarn, logInfo } from './errorLog';
 
 // v2 (2026-07-12, Sentry VOLYUME-1F root cause): the original MediaPipe
 // asset contains the MediaPipe-proprietary custom op
@@ -167,7 +167,12 @@ function logVisionDiagnosticIfNeeded(scope, result) {
     || (finiteNumber(quality.framingScore) ?? 1) < 0.5
     || (finiteNumber(quality.poseConfidence) ?? 1) < 0.5;
   if (!reasons.length && !lowSignal) return;
-  logWarn(scope, 'progress_scan_vision_diagnostic', progressScanVisionDiagnostic(result));
+  // logInfo, not logWarn (2026-07-13, Sentry VOLYUME-29): this is scan-QUALITY
+  // telemetry — it fires on every scan the engine abstains on or flags as
+  // low-signal (a tilted/poorly-framed photo, which is EXPECTED user input and
+  // handled by the retake prompt), so it must be a breadcrumb, not a Sentry
+  // warning event. It carried noise like camera_tilted after a normal scan.
+  logInfo(scope, 'progress_scan_vision_diagnostic', progressScanVisionDiagnostic(result));
 }
 
 function safeFastTfliteSource(source) {
@@ -182,13 +187,19 @@ export async function resolveProgressScanModelSource() {
     const normalisedNativeUri = normaliseFastTfliteUri(nativeUri);
     if (normalisedNativeUri) return { url: normalisedNativeUri };
     const nativeDiagnostic = await imageModule.diagnoseBundledModel?.(MODEL_FILE_NAME).catch(() => null);
+    // logInfo, not logWarn (2026-07-13, Sentry VOLYUME-28): the native
+    // resolveBundledModel not finding the bundled .tflite is RECOVERABLE — the
+    // caller falls through to the Expo Asset path below, which loads the model
+    // fine (confirmed: modelBacked:true, engine:fast_tflite once resolved). So
+    // this is a breadcrumb, not a Sentry warning event. If BOTH paths fail,
+    // `modelSourceUnavailable` below still logs as a genuine warning.
     if (nativeUri) {
-      logWarn('progressScanVision.nativeModelSourceRejected', 'progress_scan_native_model_source_unusable', {
+      logInfo('progressScanVision.nativeModelSourceRejected', 'progress_scan_native_model_source_unusable', {
         modelSourceUrlProtocol: sourceProtocolForLog({ url: nativeUri }),
         nativeModelDiagnostic: safeModelDiagnosticForLog(nativeDiagnostic),
       });
     } else if (nativeDiagnostic) {
-      logWarn('progressScanVision.nativeModelSourceMissing', 'progress_scan_native_model_source_missing', {
+      logInfo('progressScanVision.nativeModelSourceMissing', 'progress_scan_native_model_source_missing', {
         nativeModelDiagnostic: safeModelDiagnosticForLog(nativeDiagnostic),
       });
     }
