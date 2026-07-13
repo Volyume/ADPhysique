@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, StatusDot } from '@volyume/ui';
 import { requireMarketingAdmin } from '@/lib/marketing/auth';
 import { getContentByStatus, type MarketingContentRow } from '@/lib/marketing/queries';
 import { PipelineRowActions } from './PipelineRowActions';
+import { CopyButton } from './CopyButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,133 +39,154 @@ function verdictTone(verdict: string | null): 'on' | 'off' | 'neutral' {
   return 'neutral';
 }
 
-// Renders marketing_content.claims_citations (jsonb, shape not fixed by the
-// schema beyond "citations backing a factual claim") defensively: a string
-// as-is, an array one citation per line, anything else pretty-printed.
-function formatCitations(citations: unknown): string {
-  if (typeof citations === 'string') return citations;
-  if (Array.isArray(citations)) {
-    return citations.map((c) => (typeof c === 'string' ? c : JSON.stringify(c))).join('\n');
-  }
-  return JSON.stringify(citations, null, 2);
+// The item's compliance_record (jsonb) carries everything the founder needs to
+// review and post: the human-readable script/notes (preview_text), the final
+// caption and hashtags, and a manifest of the rendered files. Read defensively
+// -- any field may be absent on older rows.
+function record(row: MarketingContentRow): Record<string, unknown> | null {
+  return (row.compliance_record as Record<string, unknown> | null) ?? null;
 }
 
-// The actual copy of the item, so approve/reject is a read decision not a
-// leap of faith. Stored on compliance_record.preview_text by the pipeline
-// (the human-readable script, caption and hashtags). Shown for every item
-// that has it, expanded, above the controls.
-function previewText(row: MarketingContentRow): string | null {
-  const rec = row.compliance_record as Record<string, unknown> | null;
-  const pt = rec?.preview_text;
-  return typeof pt === 'string' ? pt : null;
+function stringField(row: MarketingContentRow, key: string): string | null {
+  const v = record(row)?.[key];
+  return typeof v === 'string' && v.trim().length > 0 ? v : null;
 }
 
-function ContentPreview({ row }: { row: MarketingContentRow }) {
-  const text = previewText(row);
-  if (!text) return null;
-  return (
-    <div className="mt-sm flex flex-col gap-xs rounded-md bg-surface2 p-sm">
-      <p className="type-caption font-medium uppercase tracking-label text-textMuted">Content</p>
-      <pre className="max-h-96 select-text overflow-y-auto whitespace-pre-wrap break-words rounded-sm bg-surface1 p-sm type-caption text-textPrimary">
-        {text}
-      </pre>
-    </div>
-  );
+// A rendered file bundled with the item, served from the dashboard's own
+// /public/marketing-previews/... path (deployed with the app on Vercel). Each
+// entry is playable/viewable and downloadable inline -- no external bucket,
+// no sign-in wall. Shape written by the render pipeline into
+// compliance_record.preview_assets.
+interface PreviewAsset {
+  path: string;
+  kind: 'video' | 'image';
+  label: string;
 }
 
-// A ready-to-post pack for approved social items: everything a founder needs
-// to actually hand the item to a channel. body_ref is rendered as selectable
-// text rather than truncated decoration (there is no in-app editor for it,
-// per DASHBOARD-SPEC.md section 5 non-goals -- this is read-only reference).
+function previewAssets(row: MarketingContentRow): PreviewAsset[] {
+  const raw = record(row)?.preview_assets;
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((a) => {
+    if (!a || typeof a !== 'object') return [];
+    const o = a as Record<string, unknown>;
+    const path = o.path;
+    const kind = o.kind;
+    const label = o.label;
+    if (typeof path !== 'string') return [];
+    if (kind !== 'video' && kind !== 'image') return [];
+    return [{ path, kind, label: typeof label === 'string' ? label : path }];
+  });
+}
+
+// Everything the founder needs to actually post the item: play the video, see
+// every carousel slide, download any file, and copy the caption and hashtags.
+// Rendered for any item that has a preview_assets manifest, at any status --
+// review is a real viewing decision, not a leap of faith.
 function ReadyToPostPack({ row }: { row: MarketingContentRow }) {
-  if (!row.channel.startsWith('social_') || row.status !== 'approved') return null;
+  const assets = previewAssets(row);
+  const caption = stringField(row, 'caption');
+  const hashtags = stringField(row, 'hashtags');
+  const notes = stringField(row, 'preview_text');
+
+  if (assets.length === 0 && !caption && !hashtags && !notes) return null;
+
+  const videos = assets.filter((a) => a.kind === 'video');
+  const images = assets.filter((a) => a.kind === 'image');
+
   return (
-    <div className="mt-sm flex flex-col gap-sm rounded-md bg-surface2 p-sm">
+    <div className="mt-sm flex flex-col gap-md rounded-md bg-surface2 p-md">
       <p className="type-caption font-medium uppercase tracking-label text-textPrimary">
         Ready to post
       </p>
-      <div>
-        <p className="type-caption text-textMuted">Body reference</p>
-        <pre className="select-all whitespace-pre-wrap break-all rounded-sm bg-surface1 p-xs type-caption text-textPrimary">
-          {row.body_ref ?? 'No body_ref recorded on this item.'}
-        </pre>
-      </div>
-      {row.claims_citations ? (
-        <div>
-          <p className="type-caption text-textMuted">Claims citations</p>
-          <pre className="select-all whitespace-pre-wrap break-all rounded-sm bg-surface1 p-xs type-caption text-textPrimary">
-            {formatCitations(row.claims_citations)}
+
+      {videos.length > 0 ? (
+        <div className="flex flex-col gap-sm">
+          <p className="type-caption text-textMuted">Video</p>
+          <div className="flex flex-wrap gap-md">
+            {videos.map((v) => (
+              <div key={v.path} className="flex flex-col gap-xs">
+                <video
+                  src={v.path}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="h-96 rounded-md border border-borderSubtle bg-black"
+                />
+                <a
+                  href={v.path}
+                  download
+                  className="type-caption text-primary underline underline-offset-2"
+                >
+                  Download {v.label}
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {images.length > 0 ? (
+        <div className="flex flex-col gap-sm">
+          <p className="type-caption text-textMuted">
+            Carousel ({images.length} {images.length === 1 ? 'slide' : 'slides'})
+          </p>
+          <div className="flex gap-sm overflow-x-auto pb-xs">
+            {images.map((img) => (
+              <div key={img.path} className="flex shrink-0 flex-col items-center gap-xs">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={img.path}
+                  alt={img.label}
+                  loading="lazy"
+                  className="h-72 rounded-md border border-borderSubtle"
+                />
+                <a
+                  href={img.path}
+                  download
+                  className="type-caption text-primary underline underline-offset-2"
+                >
+                  Download
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {caption ? (
+        <div className="flex flex-col gap-xs">
+          <div className="flex items-center justify-between gap-sm">
+            <p className="type-caption text-textMuted">Caption</p>
+            <CopyButton text={caption} label="Copy caption" />
+          </div>
+          <pre className="select-text whitespace-pre-wrap break-words rounded-sm bg-surface p-sm type-caption text-textPrimary">
+            {caption}
           </pre>
         </div>
-      ) : (
-        <p className="type-caption text-textMuted">No claims citations recorded on this item.</p>
-      )}
-      <p className="type-caption text-textMuted">
-        Caption text is not stored as its own field on marketing_content; it lives inline in the
-        copy at the body reference above.
-      </p>
-    </div>
-  );
-}
+      ) : null}
 
-// Rendered previews for review. Assets produced by the render pipeline are
-// mirrored into the public marketing-assets storage bucket under their
-// repo-relative path (render/out/...); a row whose body_ref names such a
-// path gets its images/video shown inline so approve/reject is an informed
-// decision, not a leap of faith. Listing needs the authenticated session
-// (RLS policy "marketing assets authenticated list"); the URLs themselves
-// are public, which is fine: these are marketing materials.
-interface PreviewAsset {
-  name: string;
-  url: string;
-  kind: 'image' | 'video';
-}
+      {hashtags ? (
+        <div className="flex flex-col gap-xs">
+          <div className="flex items-center justify-between gap-sm">
+            <p className="type-caption text-textMuted">Hashtags</p>
+            <CopyButton text={hashtags} label="Copy hashtags" />
+          </div>
+          <pre className="select-text whitespace-pre-wrap break-words rounded-sm bg-surface p-sm type-caption text-textPrimary">
+            {hashtags}
+          </pre>
+        </div>
+      ) : null}
 
-async function getPreviewAssets(
-  supabase: Awaited<ReturnType<typeof createServerSupabase>>,
-  bodyRef: string | null,
-): Promise<PreviewAsset[]> {
-  const match = bodyRef?.match(/marketing\/hq\/(render\/out\/[\w.-]+)/);
-  if (!match) return [];
-  const prefix = match[1];
-  const { data, error } = await supabase.storage
-    .from('marketing-assets')
-    .list(prefix, { limit: 20, sortBy: { column: 'name', order: 'asc' } });
-  if (error || !data) return [];
-  return data
-    .filter((f) => /\.(png|jpg|jpeg|mp4)$/i.test(f.name))
-    .map((f) => ({
-      name: f.name,
-      url: supabase.storage.from('marketing-assets').getPublicUrl(`${prefix}/${f.name}`).data
-        .publicUrl,
-      kind: /\.mp4$/i.test(f.name) ? ('video' as const) : ('image' as const),
-    }));
-}
-
-function PreviewPanel({ assets }: { assets: PreviewAsset[] }) {
-  if (assets.length === 0) return null;
-  return (
-    <div className="flex gap-sm overflow-x-auto pb-xs">
-      {assets.map((a) =>
-        a.kind === 'video' ? (
-          <video
-            key={a.name}
-            src={a.url}
-            controls
-            preload="metadata"
-            className="h-72 shrink-0 rounded-md border border-borderSubtle"
-          />
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={a.name}
-            src={a.url}
-            alt={a.name}
-            loading="lazy"
-            className="h-48 shrink-0 rounded-md border border-borderSubtle"
-          />
-        ),
-      )}
+      {notes ? (
+        <details className="flex flex-col gap-xs">
+          <summary className="cursor-pointer type-caption text-textMuted">
+            Full script and notes
+          </summary>
+          <pre className="mt-xs max-h-96 select-text overflow-y-auto whitespace-pre-wrap break-words rounded-sm bg-surface p-sm type-caption text-textPrimary">
+            {notes}
+          </pre>
+        </details>
+      ) : null}
     </div>
   );
 }
@@ -173,14 +195,6 @@ export default async function MarketingContentPage() {
   await requireMarketingAdmin();
   const supabase = await createServerSupabase();
   const grouped = await getContentByStatus(supabase);
-
-  // Fetch previews for every row that references rendered output, in one
-  // parallel sweep keyed by row id.
-  const allRows = Object.values(grouped).flat();
-  const previewEntries = await Promise.all(
-    allRows.map(async (row) => [row.id, await getPreviewAssets(supabase, row.body_ref)] as const),
-  );
-  const previews = new Map(previewEntries);
 
   return (
     <div>
@@ -224,8 +238,6 @@ export default async function MarketingContentPage() {
                           <PipelineRowActions id={row.id} />
                         ) : null}
                       </div>
-                      <ContentPreview row={row} />
-                      <PreviewPanel assets={previews.get(row.id) ?? []} />
                       <ReadyToPostPack row={row} />
                     </div>
                   ))}
