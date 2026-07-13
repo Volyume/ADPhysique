@@ -359,7 +359,11 @@ test('gesture architecture: zoom wins over paging (pan only drives the swipe at 
 });
 
 test('reduce motion disables springs for zoom, pan and paging alike (one settle helper)', () => {
-  expect(SOURCE).toContain("const settle = (target) => (reduceMotion ? target : withSpring(target, motion.springs.settle));");
+  // VOLYUME-2A: settle is now a WORKLET (the plain closure form compiled as a
+  // non-worklet function whose UI-thread call was a fatal jsi::JSError on
+  // every swipe release). The reduce-motion contract is unchanged.
+  expect(SOURCE).toContain("const settle = (target) => {");
+  expect(SOURCE).toMatch(/const settle = \(target\) => \{\s*'worklet';\s*return reduceMotion \? target : withSpring\(target, motion\.springs\.settle\);/);
 });
 
 test('zoom state resets whenever the page changes, both by swipe and by accessibility action', () => {

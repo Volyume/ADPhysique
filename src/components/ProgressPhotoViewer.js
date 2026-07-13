@@ -205,7 +205,17 @@ export default function ProgressPhotoViewer({
   const imgH = Math.round(win.height * 0.62);
 
   const composed = useMemo(() => {
-    const settle = (target) => (reduceMotion ? target : withSpring(target, motion.springs.settle));
+    // VOLYUME-2A root cause (compiler-verified 2026-07-13): without the
+    // directive this compiled as a PLAIN function captured into the gesture
+    // worklets' closures, and every pan release / pinch end / double-tap
+    // called it synchronously on the UI thread -- the worklets runtime
+    // throws for that, which on the new architecture is a fatal C++
+    // jsi::JSError (the app died on photo swipes). clampAxis above always
+    // had the directive; this helper must too.
+    const settle = (target) => {
+      'worklet';
+      return reduceMotion ? target : withSpring(target, motion.springs.settle);
+    };
     const goPage = (dir) => navRef.current.change(dir);
     const pageThreshold = win.width * 0.2;
 
