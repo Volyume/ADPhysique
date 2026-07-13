@@ -291,25 +291,18 @@ describe('Suppression: fail-closed, no scores/chips/receipts, photos stay viewab
   });
 });
 
-describe('Receipts render one calm sentence plus a Why? expansion', () => {
-  test('a withheld scan shows the engine copySummary and a Why? section with the reason', async () => {
-    // CollapsibleSection is a real nested component, so this exercises the
-    // fully MOUNTED tree (not the raw renderItem output used elsewhere in
-    // this file): "Why?" and its why-line text are unique to this surface
-    // (no other permanently-mounted Modal renders either string), so there
-    // is no cross-surface contamination risk here.
+describe('Receipts render one calm sentence, never a Why? expansion', () => {
+  test('a withheld scan shows the engine copySummary with no Why? section (founder order 2026-07-13)', async () => {
+    // The Why? expansion was removed on founder order: the receipt sentence
+    // already carries the primary reason, and the extra box read as clutter
+    // on device. This pins that no scan card ever renders "Why?" or the
+    // why-line copy again.
     const s = scan('s-withheld', { ts: TS, score: null });
     const tree = await render([s]);
-    let text = flattenText(tree.toJSON());
+    const text = flattenText(tree.toJSON());
     expect(text).toContain('No score this time. The back photo was too dark to read reliably. Your photos are saved.');
-    expect(text).toContain('Why?');
+    expect(text).not.toContain('Why?');
     expect(text).not.toContain('One of the photos was too dark to read reliably.');
-    const whyToggle = tree.root.findAll((n) => typeof n.props?.accessibilityLabel === 'string'
-      && n.props.accessibilityLabel === 'Why?' && typeof n.props.onPress === 'function')[0];
-    expect(whyToggle).toBeTruthy();
-    await act(async () => { whyToggle.props.onPress(); });
-    text = flattenText(tree.toJSON());
-    expect(text).toContain('One of the photos was too dark to read reliably.');
   });
 });
 

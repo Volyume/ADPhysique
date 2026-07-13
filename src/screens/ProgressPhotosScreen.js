@@ -86,7 +86,6 @@ import PhotoDetailsSheet from '../components/PhotoDetailsSheet';
 import HintCaption from '../components/HintCaption';
 import PhotoDateRangeSheet from '../components/PhotoDateRangeSheet';
 import PhotoDatePicker from '../components/PhotoDatePicker';
-import CollapsibleSection from '../components/CollapsibleSection';
 import {
   formatVolyumeScore,
   progressScanAssessmentForDisplay,
@@ -210,9 +209,8 @@ export default function ProgressPhotosScreen({ navigation }) {
   const [shareOpen, setShareOpen] = useState(false);
   // Wave 3 results contract: the Low-tier "Show score anyway" affordance is
   // per-scan and resets on refresh (a reveal is a viewing choice, never
-  // persisted); the Why? expansion open state is likewise transient.
+  // persisted).
   const [revealedLowScoreIds, setRevealedLowScoreIds] = useState(() => new Set());
-  const [whyOpenScanIds, setWhyOpenScanIds] = useState(() => new Set());
   // The recalibration note and the meaning moment each render at most once
   // ever (device-local, progressScanPreferences.js). `meaningMomentSeen` is
   // null until the persisted flag is read, so the moment never flashes open
@@ -1074,13 +1072,6 @@ export default function ProgressPhotosScreen({ navigation }) {
       return next;
     });
   }
-  function toggleWhyOpen(scanId) {
-    setWhyOpenScanIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(scanId)) next.delete(scanId); else next.add(scanId);
-      return next;
-    });
-  }
 
   // NEW high-risk surfaces are withheld under the shared suppression gate
   // (fail-closed): the comparison entry and the share card. Viewing the dated
@@ -1261,7 +1252,6 @@ export default function ProgressPhotosScreen({ navigation }) {
     const receipt = (!suppressed && scanForDay)
       ? buildScanReceipt(scanForDay, { previousScan: previousScanFor(scanForDay) })
       : null;
-    const whyOpen = scanForDay ? whyOpenScanIds.has(scanForDay.id) : false;
     const showRecalibrationNote = !suppressed && !!scanForDay
       && isRecalibratedAssessment(progressScanAssessmentForDisplay(scanForDay))
       && !seenRecalibrationIds.includes(scanForDay.id);
@@ -1383,17 +1373,11 @@ export default function ProgressPhotosScreen({ navigation }) {
               {showRecalibrationNote ? (
                 <Text style={[styles.scanRecalibrationNote, live.scanRecalibrationNote]}>{RECALIBRATION_NOTE_TEXT}</Text>
               ) : null}
-              {receipt.whyLines.length > 0 ? (
-                <CollapsibleSection
-                  title="Why?"
-                  open={whyOpen}
-                  onToggle={() => toggleWhyOpen(scanForDay.id)}
-                >
-                  {receipt.whyLines.map((line) => (
-                    <Text key={line} style={[styles.scanReceiptWhyLine, live.scanReceiptWhyLine]}>{line}</Text>
-                  ))}
-                </CollapsibleSection>
-              ) : null}
+              {/* The Why? expansion was removed on founder order (2026-07-13):
+                  the receipt sentence already carries the primary reason, and
+                  the extra box read as clutter on device. buildScanReceipt
+                  still produces whyLines for the engine contract; this
+                  surface simply no longer renders them. */}
               {showCheckInValueLine ? (
                 <Text style={[styles.scanCheckInValueLine, live.scanCheckInValueLine]}>
                   If you check in this week, the coach can use this as context.
@@ -2366,7 +2350,6 @@ const styles = StyleSheet.create({
   },
   scanReceiptSentence: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
   scanRecalibrationNote: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
-  scanReceiptWhyLine: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
   scanCheckInValueLine: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   checkInPoseRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   checkInPoseChip: {
@@ -2603,7 +2586,6 @@ function buildLiveStyles(t) {
     scanReceiptBlock: { borderLeftColor: t.colors.primary, backgroundColor: t.colors.surface2 },
     scanReceiptSentence: { ...t.type.bodySm, color: t.colors.textSecondary },
     scanRecalibrationNote: { ...t.type.caption, color: t.colors.textMuted },
-    scanReceiptWhyLine: { ...t.type.bodySm, color: t.colors.textSecondary },
     scanCheckInValueLine: { ...t.type.caption, color: t.colors.textMuted },
     checkInPoseChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     checkInPoseChipDone: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },

@@ -1763,3 +1763,31 @@ RULINGS:
    (FIRST_CHECKIN_MIN_DAYS + MIN_WEIGH_INS from the same query) and the
    checkinDay pref parse is unified (string-stored day can no longer split
    the surfaces).
+
+## D78 — Founder orders, iOS build 42 walk (2026-07-13, second wave)
+
+1. **The Why? expansion is REMOVED from Progress Photos (founder order).**
+   The receipt sentence already carries the primary reason; the extra box
+   read as clutter on device (it also appeared platform-asymmetric: it only
+   rendered when a scan carried quality warnings, so iOS showed it while
+   Android's clean scan did not). buildScanReceipt still produces whyLines
+   for the engine contract; no surface renders them. Regression pinned in
+   ProgressPhotosScreen.resultsContract.test.js.
+2. **VOLYUME-2B root cause = Fabric double-fire of the native Apple
+   button's onPress, NOT device state.** Sign-in always succeeded; the
+   duplicate concurrent ASAuthorization request was rejected by iOS with
+   error 1000 and logged an error against every successful sign-in
+   (release 1.2.0+42 events confirm scope LoginScreen.oauth.providerError
+   with a successful session each time). Fix: signInWithApple is
+   single-flight (duplicate returns { duplicate: true }, silent) plus a
+   synchronous in-flight ref guard in all three OAuth surfaces
+   (LoginScreen, ProUpgradeScreen, ProOnboardingScreen) so the duplicate
+   press never starts. The D77-5 apple_device_state remedy toast stays for
+   GENUINE single-request error 1000. Pinned in auth-apple.test.js.
+3. **iOS 57 vs Android 60 (Active vs Athletic band boundary) is OPEN and
+   significant per the founder.** Scoring is platform-blind (verified: no
+   Platform branches in progressScanAnalysis/Vision/ResultsContract); the
+   next step is signal-file diffing via the existing calibration export
+   (long-press the "Private on this device" pill in Progress Photos — share
+   sheet, founder's email is on the allow-list). No engine change without
+   the diff evidence; D76 lock stands until then.
