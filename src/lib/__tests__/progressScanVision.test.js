@@ -42,6 +42,10 @@ jest.mock('react-native-fast-tflite', () => ({
   loadTensorflowModel: (...args) => mockLoadTensorflowModel(...args),
 }));
 
+// Anatomically-placed synthetic body (measurement v2, 2026-07-13): shoulder
+// bulge ~0.22 of body height, natural-waist dip ~0.40, hip/glute bulge ~0.50.
+// The old generator put the waist dip at 0.52 and the hip bulge at 0.66 --
+// matching the v1 bands' misplacement rather than a human body.
 function syntheticPersonMask({
   width = 256, height = 256, shiftX = 0, top = 26, bottom = 236, widthScale = 1,
   foregroundProbability = 0.96, backgroundProbability = 0.04,
@@ -51,15 +55,60 @@ function syntheticPersonMask({
   for (let y = top; y <= bottom; y += 1) {
     const rel = (y - top) / bodyHeight;
     const halfWidth = (18
-      + 24 * Math.exp(-((rel - 0.24) ** 2) / 0.012)
-      + 13 * Math.exp(-((rel - 0.66) ** 2) / 0.018)
-      - 6 * Math.exp(-((rel - 0.52) ** 2) / 0.014)) * widthScale;
+      + 24 * Math.exp(-((rel - 0.22) ** 2) / 0.012)
+      + 13 * Math.exp(-((rel - 0.50) ** 2) / 0.018)
+      - 6 * Math.exp(-((rel - 0.40) ** 2) / 0.014)) * widthScale;
     const cx = Math.round(width / 2 + shiftX);
     for (let x = Math.max(0, Math.round(cx - halfWidth)); x <= Math.min(width - 1, Math.round(cx + halfWidth)); x += 1) {
       mask[y * width + x] = foregroundProbability;
     }
   }
   return mask;
+}
+
+// A body whose legs are visible as two separate mask runs below the crotch
+// (feet shoulder-width apart), with a merged-legs twin of identical tissue
+// width for the stability regression: torso to 0.55 of body height, then
+// either two 16px-wide legs with a 16px gap, or one 32px joined column.
+function syntheticLeggedPersonMask({
+  width = 256, height = 256, top = 26, bottom = 236, legsApart = true,
+  foregroundProbability = 0.96, backgroundProbability = 0.04,
+} = {}) {
+  const mask = new Float32Array(width * height).fill(backgroundProbability);
+  const bodyHeight = bottom - top;
+  const cx = width / 2;
+  for (let y = top; y <= bottom; y += 1) {
+    const rel = (y - top) / bodyHeight;
+    if (rel <= 0.55) {
+      const halfWidth = 18
+        + 24 * Math.exp(-((rel - 0.22) ** 2) / 0.012)
+        + 13 * Math.exp(-((rel - 0.50) ** 2) / 0.018)
+        - 6 * Math.exp(-((rel - 0.40) ** 2) / 0.014);
+      for (let x = Math.round(cx - halfWidth); x <= Math.round(cx + halfWidth); x += 1) {
+        mask[y * width + x] = foregroundProbability;
+      }
+    } else if (legsApart) {
+      for (let x = Math.round(cx - 24); x <= Math.round(cx - 9); x += 1) mask[y * width + x] = foregroundProbability;
+      for (let x = Math.round(cx + 9); x <= Math.round(cx + 24); x += 1) mask[y * width + x] = foregroundProbability;
+    } else {
+      for (let x = Math.round(cx - 16); x <= Math.round(cx + 15); x += 1) mask[y * width + x] = foregroundProbability;
+    }
+  }
+  return mask;
+}
+
+// Drops a detached foreground blob (a shadow, furniture, a curtain edge the
+// model half-kept) away from the body.
+function addBackgroundBlob(mask, {
+  width = 256, x = 8, y = 200, size = 18, foregroundProbability = 0.96,
+} = {}) {
+  const out = new Float32Array(mask);
+  for (let by = y; by < y + size; by += 1) {
+    for (let bx = x; bx < x + size; bx += 1) {
+      out[by * width + bx] = foregroundProbability;
+    }
+  }
+  return out;
 }
 
 function widenMaskRows(mask, {
@@ -330,8 +379,8 @@ describe('Progress Scan vision signal extraction', () => {
       pose: 'front',
     });
     const noisy = measureMaskSignals(widenMaskRows(syntheticPersonMask(), {
-      yStart: 134,
-      yEnd: 136,
+      yStart: 110,
+      yEnd: 112,
       halfWidth: 82,
     }), {
       lightingScore: 0.9,
@@ -362,6 +411,46 @@ describe('Progress Scan vision signal extraction', () => {
       armsDown.silhouetteRatios.waistToShoulder - base.silhouetteRatios.waistToShoulder,
     )).toBeLessThan(0.05);
     expect(armsDown.silhouetteRatios.waistToShoulder).toBeLessThan(0.8);
+  });
+
+  test('a legs-apart stance measures the same hips and thighs as legs-together (founder cross-device defect 2026-07-13)', () => {
+    // The v1 nearest-centre row read returned ONE leg on a crisp split mask
+    // and both-legs-plus-gap on a merged mask: the same body measured
+    // hipToHeight 0.08 on one device and 0.30 on the other, and waistToHip
+    // reached an anatomically impossible 3.1. The central segment sum makes
+    // the two stances agree.
+    const apart = measureMaskSignals(syntheticLeggedPersonMask({ legsApart: true }), {
+      lightingScore: 0.9, blurScore: 0.88, pose: 'front',
+    });
+    const together = measureMaskSignals(syntheticLeggedPersonMask({ legsApart: false }), {
+      lightingScore: 0.9, blurScore: 0.88, pose: 'front',
+    });
+    expect(apart.silhouetteRatios.hipToHeight).toBeGreaterThan(0.1);
+    expect(Math.abs(apart.silhouetteRatios.hipToHeight - together.silhouetteRatios.hipToHeight)).toBeLessThan(0.03);
+    expect(Math.abs(apart.silhouetteRatios.thighToHeight - together.silhouetteRatios.thighToHeight)).toBeLessThan(0.03);
+    expect(apart.silhouetteRatios.waistToHip).toBeLessThan(1.6);
+    expect(together.silhouetteRatios.waistToHip).toBeLessThan(1.6);
+  });
+
+  test('a detached background blob cannot stretch the body box or inflate the body area', () => {
+    const base = measureMaskSignals(syntheticPersonMask(), {
+      lightingScore: 0.9, blurScore: 0.88, pose: 'front',
+    });
+    const noisy = measureMaskSignals(addBackgroundBlob(syntheticPersonMask()), {
+      lightingScore: 0.9, blurScore: 0.88, pose: 'front',
+    });
+    expect(noisy.quality.connectedComponents).toBeGreaterThan(1);
+    expect(noisy.silhouetteRatios.bboxWidthRatio).toBeCloseTo(base.silhouetteRatios.bboxWidthRatio, 3);
+    expect(noisy.silhouetteRatios.bboxHeightRatio).toBeCloseTo(base.silhouetteRatios.bboxHeightRatio, 3);
+    expect(noisy.silhouetteRatios.bodyAreaRatio).toBeCloseTo(base.silhouetteRatios.bodyAreaRatio, 3);
+    expect(noisy.silhouetteRatios.waistToShoulder).toBeCloseTo(base.silhouetteRatios.waistToShoulder, 3);
+  });
+
+  test('results carry the measurement-method version so cross-version scans are never compared as physique change', () => {
+    const result = measureMaskSignals(syntheticPersonMask(), {
+      lightingScore: 0.9, blurScore: 0.88, pose: 'front',
+    });
+    expect(result.measurementVersion).toBe('silhouette_bands_anatomical_v2');
   });
 
   test('adaptive threshold accepts lower-probability ML Kit silhouettes from real photos', () => {

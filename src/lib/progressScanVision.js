@@ -22,6 +22,21 @@ export const PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION = 'mediapipe_selfie_segmen
 export const PROGRESS_SCAN_NATIVE_SEGMENTATION_MODEL_VERSION = 'mlkit_selfie_segmentation_16.0.0-beta6';
 export const PROGRESS_SCAN_MODEL_INPUT_SIZE = 256;
 
+// Measurement-method version, independent of the segmentation model. Bumped
+// whenever HOW the silhouette is measured changes (band placement, segment
+// handling, geometry source), because two scans measured by different methods
+// must never be compared as if the body changed (scanComparability gates on
+// this). v2 (2026-07-13, founder real-device evidence): the v1 bands sat one
+// anatomical station too low across the board -- "waist" read the hip/crotch
+// region (loose shorts included), "hip" read mid-thigh (bimodal: one leg vs
+// both-legs-plus-gap depending on stance and mask sharpness; waistToHip
+// reached an impossible 3.1 on one device), "thigh" read the knee. v2 places
+// the bands at the true anatomical stations, sums split limb segments so a
+// legs-apart stance measures the same tissue width as legs-together, and
+// restricts all geometry to the dominant mask component so background blobs
+// cannot distort the body box.
+export const PROGRESS_SCAN_MEASUREMENT_VERSION = 'silhouette_bands_anatomical_v2';
+
 const MODEL_SOURCE = () => require('../../assets/ml/selfie_segmentation_v2.tflite');
 const MODEL_FILE_NAME = 'selfie_segmentation_v2.tflite';
 const RETAKE_REASONS = new Set([
@@ -414,9 +429,8 @@ export function blurScoreFromRgb(rgb, width, height, contentRect = null) {
   return round(clamp(Math.log10(Math.max(0, variance) + 1) / 3, 0, 1), 3);
 }
 
-function rowWidthAndCenter(binary, width, bbox, y) {
+function rowSegments(binary, width, bbox, y) {
   const row = y * width;
-  const targetCenter = (bbox.minX + bbox.maxX + 1) / 2;
   const segments = [];
   let minX = -1;
   for (let x = bbox.minX; x <= bbox.maxX; x += 1) {
@@ -428,12 +442,20 @@ function rowWidthAndCenter(binary, width, bbox, y) {
     }
   }
   if (minX >= 0) segments.push({ minX, maxX: bbox.maxX });
+  return segments.map((segment) => ({
+    ...segment,
+    width: segment.maxX - segment.minX + 1,
+    center: (segment.minX + segment.maxX + 1) / 2,
+  }));
+}
+
+function rowWidthAndCenter(binary, width, bbox, y) {
+  const targetCenter = (bbox.minX + bbox.maxX + 1) / 2;
+  const segments = rowSegments(binary, width, bbox, y);
   if (!segments.length) return null;
   const chosen = segments
     .map((segment) => ({
       ...segment,
-      width: segment.maxX - segment.minX + 1,
-      center: (segment.minX + segment.maxX + 1) / 2,
       distance: targetCenter < segment.minX
         ? segment.minX - targetCenter
         : targetCenter > segment.maxX
@@ -447,13 +469,34 @@ function rowWidthAndCenter(binary, width, bbox, y) {
   };
 }
 
-function profileInRange(binary, width, height, bbox, startRatio, endRatio) {
+// Tissue width for the lower-body stations (hip/thigh): the SUM of the widths
+// of the central segments, with a width-weighted centre. Below the crotch a
+// legs-apart stance splits the row into two runs; the old nearest-centre pick
+// returned ONE leg on a crisp mask and both-legs-plus-gap on a merged mask --
+// the same body measured 0.08 vs 0.30 of height on two devices minutes apart
+// (founder evidence, 2026-07-13). Summing the runs measures the same tissue
+// whether the mask splits or merges. Segments hugging the body-box edges are
+// excluded (outer 20% each side): hands hanging beside the thighs sit there,
+// while legs always sit central.
+function rowCentralWidthSum(binary, width, bbox, y) {
+  const segments = rowSegments(binary, width, bbox, y);
+  if (!segments.length) return null;
+  const lowX = bbox.minX + bbox.width * 0.2;
+  const highX = bbox.maxX - bbox.width * 0.2;
+  const central = segments.filter((segment) => segment.center >= lowX && segment.center <= highX);
+  const used = central.length ? central : segments;
+  const total = used.reduce((sum, segment) => sum + segment.width, 0);
+  const centre = used.reduce((sum, segment) => sum + segment.center * segment.width, 0) / Math.max(1, total);
+  return { width: total, center: centre };
+}
+
+function profileInRange(binary, width, height, bbox, startRatio, endRatio, measureRow = rowWidthAndCenter) {
   if (!bbox) return null;
   const yStart = Math.max(0, Math.round(bbox.minY + bbox.height * startRatio));
   const yEnd = Math.min(height - 1, Math.round(bbox.minY + bbox.height * endRatio));
   const samples = [];
   for (let y = yStart; y <= yEnd; y += 1) {
-    const row = rowWidthAndCenter(binary, width, bbox, y);
+    const row = measureRow(binary, width, bbox, y);
     if (row) samples.push(row);
   }
   return samples.length ? samples : null;
@@ -479,6 +522,7 @@ function connectedComponents(binary, width, height) {
   const queue = new Int32Array(binary.length);
   let count = 0;
   let largest = 0;
+  let largestSeed = -1;
 
   for (let start = 0; start < binary.length; start += 1) {
     if (!binary[start] || visited[start]) continue;
@@ -509,10 +553,59 @@ function connectedComponents(binary, width, height) {
         }
       }
     }
-    if (size > largest) largest = size;
+    if (size > largest) {
+      largest = size;
+      largestSeed = start;
+    }
   }
 
-  return { count, largest };
+  return { count, largest, largestSeed };
+}
+
+// The body's own pixels: the largest connected component only. Geometry (body
+// box, area, width profiles) reads THIS mask, so a stray foreground blob --
+// a shadow, a dark curtain edge, furniture the model half-kept -- can no
+// longer stretch the body box or inflate the body area (measurement v2,
+// founder evidence 2026-07-13). Quality metrics keep reading the raw mask:
+// component dominance and separation are meant to describe the whole picture.
+function dominantComponentGeometry(binary, width, height, seed) {
+  const kept = new Uint8Array(binary.length);
+  const queue = new Int32Array(binary.length);
+  let head = 0;
+  let tail = 0;
+  let size = 0;
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+  queue[tail] = seed;
+  tail += 1;
+  kept[seed] = 1;
+  while (head < tail) {
+    const i = queue[head];
+    head += 1;
+    size += 1;
+    const x = i % width;
+    const y = Math.floor(i / width);
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+    const neighbours = [
+      x > 0 ? i - 1 : -1,
+      x < width - 1 ? i + 1 : -1,
+      y > 0 ? i - width : -1,
+      y < height - 1 ? i + width : -1,
+    ];
+    for (const n of neighbours) {
+      if (n >= 0 && binary[n] && !kept[n]) {
+        kept[n] = 1;
+        queue[tail] = n;
+        tail += 1;
+      }
+    }
+  }
+  return { binary: kept, foreground: size, minX, minY, maxX, maxY };
 }
 
 function adaptiveForegroundThreshold(mask, width, height, contentRect) {
@@ -600,19 +693,28 @@ export function measureMaskSignals(mask, opts = {}) {
 
   if (foreground < contentArea * 0.045) return unavailableVisionResult('no_person_detected');
 
-  const bbox = {
-    minX,
-    minY,
-    maxX,
-    maxY,
-    width: maxX - minX + 1,
-    height: maxY - minY + 1,
-    centerX: ((minX + maxX + 1) / 2 - contentRect.x) / contentRect.width,
-    centerY: ((minY + maxY + 1) / 2 - contentRect.y) / contentRect.height,
-  };
-
   const components = connectedComponents(binary, width, height);
   const componentDominance = foreground > 0 ? components.largest / foreground : 0;
+
+  // Geometry reads the dominant component only (measurement v2): stray mask
+  // blobs keep influencing the QUALITY metrics below, but not the body box,
+  // the area, or the width profiles the score is built from.
+  const body = components.count > 1 && components.largestSeed >= 0
+    ? dominantComponentGeometry(binary, width, height, components.largestSeed)
+    : {
+      binary, foreground, minX, minY, maxX, maxY,
+    };
+  const bodyForeground = body.foreground;
+  const bbox = {
+    minX: body.minX,
+    minY: body.minY,
+    maxX: body.maxX,
+    maxY: body.maxY,
+    width: body.maxX - body.minX + 1,
+    height: body.maxY - body.minY + 1,
+    centerX: ((body.minX + body.maxX + 1) / 2 - contentRect.x) / contentRect.width,
+    centerY: ((body.minY + body.maxY + 1) / 2 - contentRect.y) / contentRect.height,
+  };
   const fgMean = foreground > 0 ? fgProb / foreground : 0;
   const bgMean = bgCount > 0 ? bgProb / bgCount : 0;
   const separation = clamp((fgMean - bgMean + 0.2) / 1.2, 0, 1);
@@ -622,9 +724,9 @@ export function measureMaskSignals(mask, opts = {}) {
     1,
   ), 3);
 
-  const touchesTop = minY <= contentRect.y + 1;
-  const touchesBottom = maxY >= contentRect.y + contentRect.height - 2;
-  const touchesSide = minX <= contentRect.x + 1 || maxX >= contentRect.x + contentRect.width - 2;
+  const touchesTop = bbox.minY <= contentRect.y + 1;
+  const touchesBottom = bbox.maxY >= contentRect.y + contentRect.height - 2;
+  const touchesSide = bbox.minX <= contentRect.x + 1 || bbox.maxX >= contentRect.x + contentRect.width - 2;
   const heightRatio = bbox.height / contentRect.height;
   const widthRatio = bbox.width / contentRect.width;
   const centreScore = 1 - clamp(Math.abs(bbox.centerX - 0.5) / 0.35, 0, 1);
@@ -632,10 +734,19 @@ export function measureMaskSignals(mask, opts = {}) {
   const cropPenalty = (touchesTop || touchesBottom ? 0.32 : 0) + (touchesSide ? 0.16 : 0);
   const framingScore = round(clamp((centreScore * 0.35) + (heightScore * 0.5) + 0.15 - cropPenalty, 0, 1), 3);
 
-  const shoulderProfile = profileInRange(binary, width, height, bbox, 0.18, 0.31);
-  const waistProfile = profileInRange(binary, width, height, bbox, 0.44, 0.58);
-  const hipProfile = profileInRange(binary, width, height, bbox, 0.60, 0.72);
-  const thighProfile = profileInRange(binary, width, height, bbox, 0.76, 0.84);
+  // Measurement v2 band placement (fractions of body-box height, head at 0,
+  // soles at 1). The v1 bands sat one anatomical station too low: "waist"
+  // 0.44-0.58 read the hip/crotch region (a loose pair of shorts, not the
+  // waist), "hip" 0.60-0.72 read mid-thigh, "thigh" 0.76-0.84 read the knee.
+  // True stations on a standing adult: natural waist ~0.36-0.45, widest
+  // hip/glute line ~0.46-0.55 (crotch ~0.53-0.57), mid-thigh ~0.58-0.68.
+  // Waist and shoulders keep the nearest-centre row read (arms held slightly
+  // away stay excluded); hip and thigh use the central segment SUM so a
+  // legs-apart stance measures the same tissue as legs-together.
+  const shoulderProfile = profileInRange(body.binary, width, height, bbox, 0.18, 0.31);
+  const waistProfile = profileInRange(body.binary, width, height, bbox, 0.36, 0.48);
+  const hipProfile = profileInRange(body.binary, width, height, bbox, 0.46, 0.58, rowCentralWidthSum);
+  const thighProfile = profileInRange(body.binary, width, height, bbox, 0.58, 0.70, rowCentralWidthSum);
   const shoulderWidth = widthFromProfile(shoulderProfile, 0.85);
   const shoulderCenter = centerFromProfile(shoulderProfile);
   const waistWidth = widthFromProfile(waistProfile, 0.25);
@@ -678,6 +789,7 @@ export function measureMaskSignals(mask, opts = {}) {
     heuristicBacked: !!opts.heuristicBacked,
     engine: opts.engine || null,
     modelVersion: opts.modelVersion || PROGRESS_SCAN_SEGMENTATION_MODEL_VERSION,
+    measurementVersion: PROGRESS_SCAN_MEASUREMENT_VERSION,
     fallbackReason: opts.fallbackReason || null,
     inputSize: width,
     contentRect,
@@ -700,8 +812,8 @@ export function measureMaskSignals(mask, opts = {}) {
       backgroundMeanProbability: round(bgMean, 3),
     },
     bodyBox: {
-      x: round((minX - contentRect.x) / contentRect.width, 4),
-      y: round((minY - contentRect.y) / contentRect.height, 4),
+      x: round((bbox.minX - contentRect.x) / contentRect.width, 4),
+      y: round((bbox.minY - contentRect.y) / contentRect.height, 4),
       width: round(widthRatio, 4),
       height: round(heightRatio, 4),
       centerX: round(bbox.centerX, 4),
@@ -715,7 +827,9 @@ export function measureMaskSignals(mask, opts = {}) {
       waistToHip: waistToHip == null ? null : round(waistToHip, 4),
       hipToShoulder: hipToShoulder == null ? null : round(hipToShoulder, 4),
       thighToHeight: thighWidth == null ? null : round(thighWidth / bbox.height, 4),
-      bodyAreaRatio: round(foreground / contentArea, 4),
+      // Body pixels only (dominant component): stray blobs no longer count
+      // toward the area the score reads. The raw-mask ratio stays in `mask`.
+      bodyAreaRatio: round(bodyForeground / contentArea, 4),
       bboxHeightRatio: round(heightRatio, 4),
       bboxWidthRatio: round(widthRatio, 4),
     },

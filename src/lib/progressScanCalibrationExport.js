@@ -81,6 +81,27 @@ function poseRatios(assets = []) {
   return out;
 }
 
+// Capture provenance per pose (2026-07-13, cross-platform score
+// investigation): the export must say WHICH segmentation engine, model and
+// measurement method produced each pose's numbers, or a cross-device diff
+// cannot distinguish camera variance from a backend divergence.
+function poseCapture(assets = []) {
+  const out = {};
+  for (const asset of assets) {
+    const pose = asset?.pose;
+    if (!pose) continue;
+    const signal = signalForAsset(asset);
+    out[pose] = {
+      engine: signal.engine ?? null,
+      modelBacked: signal.modelBacked === true,
+      modelVersion: signal.modelVersion ?? null,
+      measurementVersion: signal.measurementVersion ?? null,
+      fallbackReason: signal.fallbackReason ?? null,
+    };
+  }
+  return out;
+}
+
 function qualityForAsset(asset = {}) {
   const signal = signalForAsset(asset);
   const quality = signal.quality || asset.quality || {};
@@ -163,6 +184,7 @@ export function buildProgressScanCalibrationCase(scan = {}, opts = {}) {
     weightKg,
     ratios: averageRatios(allScoringAssets),
     poseRatios: poseRatios(assets),
+    poseCapture: poseCapture(assets),
     includeSide: assets.some((asset) => asset.pose === 'side'),
     quality: averageQuality(allScoringAssets),
     userBiasFlags: Array.isArray(opts.userBiasFlags) ? opts.userBiasFlags : undefined,

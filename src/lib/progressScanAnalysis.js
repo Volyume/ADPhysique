@@ -1060,6 +1060,23 @@ function scanCameraFacing(scan = {}) {
   return facing === 'front' || facing === 'back' ? facing : null;
 }
 
+// How the silhouette was MEASURED (progressScanVision measurement bands and
+// segment handling), independent of which segmentation model ran. Scans
+// measured by different methods must never be compared as physique change:
+// the v1 bands read the wrong anatomical stations (waist at the crotch, hip
+// at mid-thigh), so a v1-vs-v2 pair would show a huge fake "change" for an
+// identical body. Scans predating the field are 'legacy' (v1 by definition),
+// so a legacy pair still compares among itself. Fails CLOSED across versions
+// on purpose.
+function scanMeasurementVersion(scan = {}) {
+  const assets = scanAssetsForComparison(scan);
+  for (const asset of assets) {
+    const version = assetSignals(asset)?.measurementVersion;
+    if (typeof version === 'string' && version) return version;
+  }
+  return 'legacy';
+}
+
 const MIN_COMPARED_SETUP_SIGNALS = 3;
 
 export function scanSetupStability(currentScan = null, previousScan = null) {
@@ -1201,6 +1218,17 @@ export function scanComparability(currentScan = null, previousScan = null) {
   const previousConfidence = scanComparisonConfidenceTier(previousScan);
   if (SCAN_CONFIDENCE_RANK[currentConfidence] <= 0 || SCAN_CONFIDENCE_RANK[previousConfidence] <= 0) {
     return { comparable: false, status: 'not_comparable', reason: 'One scan did not have enough confidence for a fair comparison.', comparableCount: 0 };
+  }
+  // Cross-measurement-version pairs fail CLOSED: the measuring method itself
+  // changed between the scans, so any ratio difference would read as fake
+  // physique change (the v1 bands measured the wrong anatomical stations).
+  if (scanMeasurementVersion(currentScan) !== scanMeasurementVersion(previousScan)) {
+    return {
+      comparable: false,
+      status: 'not_comparable',
+      reason: 'The scan measuring method was updated between these two photo sets, so they cannot be fairly compared. Your next two scans will compare normally.',
+      comparableCount: 0,
+    };
   }
   const setup = scanSetupStability(currentScan, previousScan);
   if (!setup.stable) {

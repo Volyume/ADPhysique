@@ -1041,6 +1041,31 @@ describe('Progress Scan uncertainty and abstention', () => {
     expect(scanComparability(current, previous).comparable).toBe(true);
   });
 
+  test('a measurement-method change between scans voids the comparison, and same-method pairs compare normally', () => {
+    // Measurement v2 (founder cross-device evidence 2026-07-13): the v1 bands
+    // measured the wrong anatomical stations, so a v1-vs-v2 pair would show a
+    // huge fake physique "change" for an identical body. Fails CLOSED across
+    // versions; legacy pairs (no recorded version) still compare among
+    // themselves, as do v2 pairs.
+    const previous = comparableScan({ id: 'old' });
+    const current = comparableScan({ id: 'new' });
+    expect(scanComparability(current, previous).comparable).toBe(true);
+
+    for (const asset of current.signals.assets) {
+      asset.signals = { measurementVersion: 'silhouette_bands_anatomical_v2' };
+    }
+    expect(scanComparability(current, previous)).toMatchObject({
+      comparable: false,
+      status: 'not_comparable',
+      reason: expect.stringMatching(/measuring method was updated/),
+    });
+
+    for (const asset of previous.signals.assets) {
+      asset.signals = { measurementVersion: 'silhouette_bands_anatomical_v2' };
+    }
+    expect(scanComparability(current, previous).comparable).toBe(true);
+  });
+
   test('side-photo setup drift is checked when both photo sets include side', () => {
     const previous = comparableScan({ id: 'old', side: true });
     const current = comparableScan({ id: 'new', side: true });

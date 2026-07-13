@@ -1791,3 +1791,48 @@ RULINGS:
    (long-press the "Private on this device" pill in Progress Photos — share
    sheet, founder's email is on the allow-list). No engine change without
    the diff evidence; D76 lock stands until then.
+
+## D79 — Scan measurement v2 (founder orders + evidence, 2026-07-13 afternoon)
+
+**Evidence base:** the founder's signal exports from both phones replayed
+through the engine reproduce 57 (iOS) and 60 (Android) EXACTLY — the engine
+is deterministic and platform-blind; every cross-device difference is in
+the measured inputs. His real stats (5'10", 90 kg, 31-inch waist, amateur
+men's physique competitor) and the real front photo prove the v1
+measurement layer reads the wrong anatomical stations:
+- "waist" band (0.44-0.58 of body box) sat at hip/crotch level and measured
+  his loose shorts (waistToShoulder 0.83-0.92 measured vs ~0.6 true), which
+  zeroed the 30%-weight score component on BOTH devices;
+- "hip" band (0.60-0.72) sat at mid-thigh; nearest-centre row read made it
+  bimodal (one leg = 0.08 on Android vs both-legs-plus-gap = 0.30 on iOS;
+  waistToHip 3.1, anatomically impossible);
+- body box/area included stray mask blobs and both final scores sat on the
+  provisional ±8 estimator clamp floor (silhouette-8: 65-8=57, 68-8=60).
+
+**Rulings (lead, D33; founder orders quoted):**
+1. "A 3 difference is significant and needs ironed out properly" +
+   "iron it out properly" → measurement v2 SHIPPED: anatomical bands
+   (waist 0.36-0.48, hip 0.46-0.58, thigh 0.58-0.70), central-segment-sum
+   for hip/thigh (legs-apart == legs-together), dominant-component
+   geometry (blob-proof body box/area), PROGRESS_SCAN_MEASUREMENT_VERSION
+   = 'silhouette_bands_anatomical_v2'. The ANALYSIS layer (weights, curve,
+   corpus) is untouched and byte-identical: it was calibrated for true
+   anatomical ratios all along and the vision layer now supplies them.
+   D76's byte-identical lock is superseded for the measurement layer only,
+   by the founder's explicit order on real-device evidence.
+2. Cross-measurement-version scan pairs fail CLOSED in scanComparability
+   ("The scan measuring method was updated...") so a v1-vs-v2 pair can
+   never read as fake physique change. Legacy pairs and v2 pairs compare
+   normally.
+3. Calibration export now carries per-pose capture provenance (engine,
+   modelVersion, measurementVersion, fallbackReason, modelBacked) so the
+   next cross-device diff can separate camera variance from backend
+   divergence.
+4. "We need to make the ratings higher and the scoring higher... We can't
+   be offending people" → display-calibration uplift is ACCEPTED and
+   EVIDENCE-GATED, deliberately sequenced AFTER one v2 scan pair from the
+   founder's devices: the corrected measurements land first, he scans and
+   exports once per phone, and the calibrateVolyumeScore curve + band
+   labels are then set so his physique reads high-Athletic/Lean and softer
+   users are never insulted (display floor already 40). Retuning the curve
+   blind against mis-measured inputs would just be another guess.
