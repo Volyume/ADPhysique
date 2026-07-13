@@ -35,7 +35,11 @@ export const PROGRESS_SCAN_MODEL_INPUT_SIZE = 256;
 // legs-apart stance measures the same tissue width as legs-together, and
 // restricts all geometry to the dominant mask component so background blobs
 // cannot distort the body box.
-export const PROGRESS_SCAN_MEASUREMENT_VERSION = 'silhouette_bands_anatomical_v2';
+// v3 (same day): hands hanging beside the hips were summed into the hip and
+// thigh widths (sub-half-width runs now dropped, founder ruling "tighten the
+// hip read"). Version bumped again so a v2-measured scan is never compared
+// against a v3 one.
+export const PROGRESS_SCAN_MEASUREMENT_VERSION = 'silhouette_bands_anatomical_v3';
 
 const MODEL_SOURCE = () => require('../../assets/ml/selfie_segmentation_v2.tflite');
 const MODEL_FILE_NAME = 'selfie_segmentation_v2.tflite';
@@ -484,7 +488,19 @@ function rowCentralWidthSum(binary, width, bbox, y) {
   const lowX = bbox.minX + bbox.width * 0.2;
   const highX = bbox.maxX - bbox.width * 0.2;
   const central = segments.filter((segment) => segment.center >= lowX && segment.center <= highX);
-  const used = central.length ? central : segments;
+  let used = central.length ? central : segments;
+  // Measurement v3 (founder ruling "tighten the hip read", 2026-07-13): hands
+  // hanging beside the hips sit INSIDE the central band and were summed into
+  // the hip width (the founder's real front pose read hips at 0.34 of height,
+  // roughly two hand-widths over truth, flattering waist-to-hip). A hand or
+  // wrist run is far narrower than any torso or leg run in the same row, so
+  // runs under half the row's widest segment are dropped. Legs stay: a
+  // legs-apart pair is near-equal width. Hands PRESSED against the body merge
+  // into the torso run and remain a known, smaller residual.
+  if (used.length > 1) {
+    const widest = Math.max(...used.map((segment) => segment.width));
+    used = used.filter((segment) => segment.width >= widest * 0.5);
+  }
   const total = used.reduce((sum, segment) => sum + segment.width, 0);
   const centre = used.reduce((sum, segment) => sum + segment.center * segment.width, 0) / Math.max(1, total);
   return { width: total, center: centre };

@@ -1859,3 +1859,26 @@ re-pinned to the honest outcomes; the F1(a) invariant test now pins BOTH
 guarantees (lean ±8, large-body -26). Standing rule: any scan measurement
 or scoring change MUST run the BodyM smoke suite before landing
 (PROGRESS_SCAN_BODYM_SMOKE=1), it is skip-by-default in CI.
+
+**D79 second addendum (v3, founder rulings same day):**
+1. Real Android scan on measurement v2 verified end-to-end: 60 -> 92
+   (Very Lean, moderate), both poses fast_tflite + builtin-ops v2 model
+   (provenance in the enriched export), ratios anatomically sane and
+   consistent with the founder's tape reality. Replay reproduces the
+   device score.
+2. Founder ruling: "Tighten the hip read" -> measurement v3: hand-width
+   runs (under half the row's widest segment) are dropped from the
+   hip/thigh central sums; legs (near-equal widths) are kept. Version
+   bumped to silhouette_bands_anatomical_v3 so his v2 baseline is never
+   compared against v3 scans (he retakes the baseline on the next build).
+   Regression pinned (hands-beside-hips test).
+3. Honest outcome note: the hip fix corrects the measurement and the
+   week-to-week stability, but the founder's score only moves ~92 -> ~91
+   because calibrateVolyumeScore compresses the top (raw 65+ maps to 87+),
+   and three components saturate at the lean end. The remaining
+   "headroom / stage-lean discrimination" concern lives in the display
+   curve + leanAt anchors, NOT the measurement. Retuning those is a
+   population-level calibration change: OPEN, pending the founder's call
+   (retune now against corpus + BodyM + his scan, or gather opt-in fleet
+   calibration telemetry first).
+4. Android versionCode bumped 28 -> 29 for the founder's next Play AAB.

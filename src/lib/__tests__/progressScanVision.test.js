@@ -432,6 +432,39 @@ describe('Progress Scan vision signal extraction', () => {
     expect(together.silhouetteRatios.waistToHip).toBeLessThan(1.6);
   });
 
+  test('hands hanging beside the hips are not summed into the hip width (founder ruling 2026-07-13, measurement v3)', () => {
+    // Narrow hand-width runs beside the hips sit inside the central band and
+    // were summed into the hip read, flattering waist-to-hip on the founder's
+    // real scan (front hips measured ~0.34 of height, about two hand-widths
+    // over truth). Hand runs are far narrower than the torso run in the same
+    // rows, so they must be dropped while legs (near-equal widths) are kept.
+    const base = measureMaskSignals(syntheticPersonMask(), {
+      lightingScore: 0.9, blurScore: 0.88, pose: 'front',
+    });
+    // Hip band rows for the synthetic body (top 26, height 210, bbox rows):
+    // hip station ~0.46-0.58 of the body box. Hands: two 6px-wide runs just
+    // outside the torso but inside the central 60% of the (unchanged) bbox.
+    const withHands = (() => {
+      const mask = new Float32Array(syntheticPersonMask());
+      const width = 256;
+      for (let y = 130; y <= 150; y += 1) {
+        for (let x = 74; x <= 80; x += 1) mask[y * width + x] = 0.96;
+        for (let x = 176; x <= 182; x += 1) mask[y * width + x] = 0.96;
+      }
+      // Connect the hand runs to the body via thin arms so they join the
+      // dominant component (a detached blob is already excluded by the
+      // component filter; this pins the harder merged case).
+      for (let x = 80; x <= 128; x += 1) mask[129 * width + x] = 0.96;
+      for (let x = 128; x <= 176; x += 1) mask[129 * width + x] = 0.96;
+      return mask;
+    })();
+    const measured = measureMaskSignals(withHands, {
+      lightingScore: 0.9, blurScore: 0.88, pose: 'front',
+    });
+    expect(Math.abs(measured.silhouetteRatios.hipToHeight - base.silhouetteRatios.hipToHeight)).toBeLessThan(0.02);
+    expect(Math.abs(measured.silhouetteRatios.waistToHip - base.silhouetteRatios.waistToHip)).toBeLessThan(0.06);
+  });
+
   test('a detached background blob cannot stretch the body box or inflate the body area', () => {
     const base = measureMaskSignals(syntheticPersonMask(), {
       lightingScore: 0.9, blurScore: 0.88, pose: 'front',
@@ -450,7 +483,7 @@ describe('Progress Scan vision signal extraction', () => {
     const result = measureMaskSignals(syntheticPersonMask(), {
       lightingScore: 0.9, blurScore: 0.88, pose: 'front',
     });
-    expect(result.measurementVersion).toBe('silhouette_bands_anatomical_v2');
+    expect(result.measurementVersion).toBe('silhouette_bands_anatomical_v3');
   });
 
   test('adaptive threshold accepts lower-probability ML Kit silhouettes from real photos', () => {

@@ -61,7 +61,7 @@
         "monochromeImage": "./assets/adaptive-icon-monochrome.png"
       },
       "package": "app.volyume",
-      "versionCode": 28,
+      "versionCode": 29,
       "allowBackup": false,
       "permissions": [
         "android.permission.CAMERA",
