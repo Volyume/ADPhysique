@@ -3,6 +3,7 @@ import {
   assetFieldsFromVisionResult,
   base64ToFloat32Array,
   base64ToUint8Array,
+  getLastVisionDebug,
   measureMaskSignals,
   progressScanVisionDiagnostic,
   resolveProgressScanModelSource,
@@ -507,7 +508,7 @@ describe('Progress Scan vision signal extraction', () => {
     expect(result.silhouetteRatios.waistToShoulder).toBeGreaterThan(1.3);
     expect(result.abstentionReasons).toContain('silhouette_implausible');
     expect(result.needsRetake).toBe(true);
-    expect(retakeCopyForVisionResult(result)).toMatch(/distorted/i);
+    expect(retakeCopyForVisionResult(result)).toMatch(/could not be read reliably/i);
   });
 
   test('a tilt above 10 degrees asks for a retake (gate lowered from 20, founder evidence 2026-07-13)', () => {
@@ -637,6 +638,31 @@ describe('Progress Scan vision signal extraction', () => {
     expect(contentMeasured.contentRect).toEqual({ x: 0, y: 64, width: 256, height: 128 });
     expect(contentMeasured.silhouetteRatios.bboxHeightRatio).toBeGreaterThan(padded.silhouetteRatios.bboxHeightRatio);
     expect(contentMeasured.bodyBox.y).toBeCloseTo((82 - 64) / 128, 2);
+  });
+
+  test('vision debug retention keeps the exact model input and mask in memory for the founder export (D83)', async () => {
+    const rgb = new Uint8Array(256 * 256 * 3).fill(128);
+    const mask = syntheticPersonMask();
+    mockResolveBundledModel.mockResolvedValueOnce('file:///cache/selfie_segmentation_v2.tflite');
+    mockExtractRgb.mockResolvedValueOnce({
+      rgbBase64: bytesToBase64(rgb),
+      lightingScore: 0.9,
+      contentRect: { x: 0, y: 0, width: 256, height: 256 },
+    });
+    mockLoadTensorflowModel.mockResolvedValueOnce(tfliteModel(async () => [mask]));
+    mockSegmentPersonMask.mockResolvedValue(null);
+
+    await analyseProgressScanPhoto({ uri: 'file:///scan.jpg', pose: 'front' });
+    const debug = getLastVisionDebug();
+    expect(debug.front).toBeTruthy();
+    expect(debug.front.engine).toBe('fast_tflite');
+    expect(debug.front.inputSize).toBe(256);
+    // The retained input is byte-identical to what the model received.
+    expect(debug.front.rgbBase64).toBe(bytesToBase64(rgb));
+    // The mask is quantised to bytes: probability 0.96 -> 245.
+    const decodedMask = base64ToUint8Array(debug.front.maskBase64);
+    expect(decodedMask.length).toBe(256 * 256);
+    expect(Math.max(...decodedMask)).toBe(245);
   });
 
   test('asset fields persist bounded metrics, not raw image data', () => {

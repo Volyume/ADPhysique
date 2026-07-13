@@ -177,7 +177,7 @@ const REASON_LINES = {
   segmentation_low_confidence: 'The outline was less clear than usual in one of the photos.',
   clothing_or_background_uncertain: 'Clothing or background made the outline less certain.',
   camera_tilted: 'The camera was tilted more than usual.',
-  silhouette_implausible: 'The body outline read as distorted in one of the photos, usually from bright light behind you or a tilted phone.',
+  silhouette_implausible: 'The body outline could not be read reliably in one of the photos, so this set was not scored.',
 };
 
 // scanSetupStability issues are pose-prefixed (e.g. "front_lighting_changed");

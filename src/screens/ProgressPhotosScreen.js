@@ -1177,8 +1177,24 @@ export default function ProgressPhotosScreen({ navigation }) {
       return;
     }
     try {
-      const json = await getProgressScanCalibrationJson(userId, latestScan.id, { sex: userSex ?? undefined });
+      let json = await getProgressScanCalibrationJson(userId, latestScan.id, { sex: userSex ?? undefined });
       if (!json) throw new Error('progress_scan_calibration_export_empty');
+      // D83: attach the in-memory model input + mask from the most recent
+      // analysis run (founder-gated export only, user-initiated share). Lets
+      // a cross-device divergence be diagnosed from the exact on-device
+      // pipeline data. Empty if the app restarted since the scan.
+      try {
+        // eslint-disable-next-line global-require
+        const { getLastVisionDebug } = require('../lib/progressScanVision');
+        const visionDebug = getLastVisionDebug();
+        if (visionDebug && Object.keys(visionDebug).length > 0) {
+          const parsed = JSON.parse(json);
+          if (Array.isArray(parsed) && parsed[0]) {
+            parsed[0].visionDebug = visionDebug;
+            json = JSON.stringify(parsed, null, 2);
+          }
+        }
+      } catch (_) { /* export still valid without the debug block */ }
       const capturedAt = Number(latestScan.capturedAt ?? latestScan.captured_at) || Date.now();
       const stamp = new Date(capturedAt).toISOString().replace(/[-:]/g, '').replace(/\..+$/, '');
       const fileUri = `${FileSystem.cacheDirectory}volyume_progress_scan_signals_${stamp}.json`;

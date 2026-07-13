@@ -925,8 +925,51 @@ export function retakeCopyForVisionResult(result) {
   if (reasons.has('clothing_or_background_uncertain')) return 'Your outline blends into the background or clothing too much for a reliable scan. Try plain fitted clothing against a plain background.';
   if (reasons.has('pose_not_clear')) return 'Your stance was not clear enough for the scan. Stand tall, face the camera squarely, and retake.';
   if (reasons.has('camera_tilted')) return 'The camera looks tilted for this scan. Keep the phone upright and retake.';
-  if (reasons.has('silhouette_implausible')) return 'The body outline read as distorted. This usually means bright light behind you or a tilted phone. Face away from windows, keep the phone upright, and retake.';
+  if (reasons.has('silhouette_implausible')) return 'The body outline could not be read reliably for this scan, so no score was given. Keep the phone upright and the room evenly lit, then retake.';
   return 'This photo is not reliable enough for analysis. Retake it now, or use the photo without analysis.';
+}
+
+// D83 diagnostic retention (founder cross-device divergence, 2026-07-13):
+// the last model input (256px RGB) and output mask per pose, kept in MEMORY
+// ONLY -- never written to disk, never sent anywhere on its own. The founder-
+// allow-listed calibration export attaches it so the exact on-device pipeline
+// data can be compared across platforms. Cleared on app restart by nature.
+const lastVisionDebugByPose = new Map();
+
+function bytesToBase64(bytes) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 3) {
+    const a = bytes[i];
+    const b = i + 1 < bytes.length ? bytes[i + 1] : 0;
+    const c = i + 2 < bytes.length ? bytes[i + 2] : 0;
+    const n = (a << 16) | (b << 8) | c;
+    out += chars[(n >> 18) & 63];
+    out += chars[(n >> 12) & 63];
+    out += i + 1 < bytes.length ? chars[(n >> 6) & 63] : '=';
+    out += i + 2 < bytes.length ? chars[n & 63] : '=';
+  }
+  return out;
+}
+
+function retainVisionDebug(pose, rgb, mask, contentRect, engine) {
+  try {
+    const quantised = new Uint8Array(mask.length);
+    for (let i = 0; i < mask.length; i += 1) {
+      quantised[i] = Math.max(0, Math.min(255, Math.round((Number(mask[i]) || 0) * 255)));
+    }
+    lastVisionDebugByPose.set(pose || 'unknown', {
+      engine: engine || null,
+      contentRect: contentRect || null,
+      inputSize: PROGRESS_SCAN_MODEL_INPUT_SIZE,
+      rgbBase64: bytesToBase64(rgb),
+      maskBase64: bytesToBase64(quantised),
+    });
+  } catch (_) { /* diagnostics only, never affects the scan */ }
+}
+
+export function getLastVisionDebug() {
+  return Object.fromEntries(lastVisionDebugByPose.entries());
 }
 
 export async function analyseProgressScanPhoto({ uri, pose } = {}) {
@@ -963,6 +1006,7 @@ export async function analyseProgressScanPhoto({ uri, pose } = {}) {
         logVisionDiagnosticIfNeeded('progressScanVision.modelRunFailed', { ...result, pose });
       }
       if (mask) {
+        retainVisionDebug(pose, rgb, mask, extracted.contentRect, 'fast_tflite');
         const result = measureMaskSignals(mask, {
           ...common,
           modelBacked: true,
@@ -980,6 +1024,7 @@ export async function analyseProgressScanPhoto({ uri, pose } = {}) {
     );
     const nativeMask = nativeSegmentationMaskFromResult(nativeSegmentation);
     if (nativeMask) {
+      retainVisionDebug(pose, rgb, nativeMask.mask, nativeSegmentation.contentRect || extracted.contentRect, nativeSegmentation.engine || 'mlkit_selfie_segmentation');
       const result = measureMaskSignals(nativeMask.mask, {
         ...common,
         width: nativeMask.width,
