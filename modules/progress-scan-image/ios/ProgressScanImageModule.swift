@@ -101,6 +101,17 @@ public class ProgressScanImageModule: Module {
         ) else { return }
         context.setFillColor(UIColor.black.cgColor)
         context.fill(CGRect(origin: .zero, size: size))
+        // iOS pipeline audit (2026-07-13, CONFIRMED): a hand-built CGContext
+        // is bottom-left origin and NOT y-flipped, but UIImage.draw(in:)
+        // assumes UIKit's flipped top-left coordinate space -- so the model
+        // input rendered here was VERTICALLY UPSIDE-DOWN while Android's
+        // Canvas path rendered upright. The anatomy bands then read a
+        // head-down body (shoulder band on the legs), producing low or
+        // implausible scores from good photos on iOS only. Flip the CTM so
+        // UIKit drawing lands upright, matching preparedImage() below,
+        // which already uses the correctly-flipped UIGraphicsImageRenderer.
+        context.translateBy(x: 0, y: CGFloat(height))
+        context.scaleBy(x: 1, y: -1)
         UIGraphicsPushContext(context)
         image.draw(in: contentRect)
         UIGraphicsPopContext()

@@ -1967,3 +1967,34 @@ layer, added to SCORE_WITHHOLD_REASONS so an impossible capture is never
 scored -- calm retake copy names the tilted/propped phone. Valid-scan
 score path unchanged (corpus + BodyM untouched by construction; full
 suite green).
+
+## D84 — iOS reads its analysis buffer upside-down (audits + founder files, 2026-07-13 late night)
+
+Two adversarial audits (opus) ran on the founder's order to find "why iOS
+doesn't work with the components we use". Pipeline audit, top finding
+CONFIRMED: modules/progress-scan-image iOS extractRgb drew the photo into
+a hand-built CGContext (bottom-left origin, unflipped) with
+UIImage.draw(in:) (assumes UIKit's flipped space) -- the 256px model
+input was rendered VERTICALLY UPSIDE-DOWN on iOS while Android rendered
+upright. Dormant until this morning's v2-model fix switched iOS scans
+from the Apple Vision fallback (whose preparedImage uses the correctly
+flipped UIGraphicsImageRenderer) onto the flipped path: from then on
+every on-iPhone scan measured a head-down body (shoulder band on the
+legs) -- low-but-plausible scores or silhouette_implausible/inconclusive,
+regardless of photo source. Verified against the founder's own iOS photo:
+through a correct upright pipeline here it measures waistToShoulder
+0.569 / waistToHeight 0.171 (elite lean ratios) -- the photo was always
+good; the reading was broken, exactly as the founder said. Fix: CTM
+flip in extractRgb before the UIKit draw. Also fixed from the
+integration audit, CONFIRMED: notifications foreground handler returned
+only the deprecated shouldShowAlert, so iOS showed no foreground
+banners at all (all seven return sites now carry
+shouldShowBanner/shouldShowList; ED suppression unchanged).
+Recorded RISKS (no action tonight): expo-camera mirror saved-file
+divergence Android-vs-iOS (device-walk item), iOS 64-pending-
+notification ceiling under large meal-reminder lists, manipulateAsync
+deprecation migration, decode-resolution/resampling and P3 colour
+divergences (second-order), HEIC-in-.jpg un-baked orientation path.
+Process note: a piped test command masked a red suite and one commit
+reached main red for ~15 minutes before being fixed; gates now run
+with explicit exit-code checks.
