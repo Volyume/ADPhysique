@@ -72,15 +72,14 @@ public class ProgressScanImageModule: Module {
         kCGImageSourceThumbnailMaxPixelSize: max(width, height) * 2
       ]
       guard let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbOptions as CFDictionary) else { return nil }
-      let image = UIImage(cgImage: thumbnail)
 
       let rgbaCount = width * height * 4
       var rgba = [UInt8](repeating: 0, count: rgbaCount)
       let colourSpace = CGColorSpaceCreateDeviceRGB()
       let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
       let size = CGSize(width: width, height: height)
-      let imageWidth = max(1.0, image.size.width)
-      let imageHeight = max(1.0, image.size.height)
+      let imageWidth = max(1.0, CGFloat(thumbnail.width))
+      let imageHeight = max(1.0, CGFloat(thumbnail.height))
       let scale = min(CGFloat(width) / imageWidth, CGFloat(height) / imageHeight)
       let contentWidth = max(1.0, imageWidth * scale)
       let contentHeight = max(1.0, imageHeight * scale)
@@ -101,20 +100,20 @@ public class ProgressScanImageModule: Module {
         ) else { return }
         context.setFillColor(UIColor.black.cgColor)
         context.fill(CGRect(origin: .zero, size: size))
-        // iOS pipeline audit (2026-07-13, CONFIRMED): a hand-built CGContext
-        // is bottom-left origin and NOT y-flipped, but UIImage.draw(in:)
-        // assumes UIKit's flipped top-left coordinate space -- so the model
-        // input rendered here was VERTICALLY UPSIDE-DOWN while Android's
-        // Canvas path rendered upright. The anatomy bands then read a
-        // head-down body (shoulder band on the legs), producing low or
-        // implausible scores from good photos on iOS only. Flip the CTM so
-        // UIKit drawing lands upright, matching preparedImage() below,
-        // which already uses the correctly-flipped UIGraphicsImageRenderer.
-        context.translateBy(x: 0, y: CGFloat(height))
-        context.scaleBy(x: 1, y: -1)
-        UIGraphicsPushContext(context)
-        image.draw(in: contentRect)
-        UIGraphicsPopContext()
+        // iOS pipeline audit (2026-07-13, CONFIRMED) + founder D85: the old
+        // UIImage.draw(in:) call assumes UIKit's flipped top-left coordinate
+        // space, but a hand-built CGContext is bottom-left origin -- so the
+        // model input rendered VERTICALLY UPSIDE-DOWN while Android's Canvas
+        // path rendered upright (shoulder band read on the legs; low or
+        // implausible scores from good photos, iOS only). Rather than keep
+        // UIKit in the analysis path and correct for it with a CTM flip,
+        // draw the CGImage directly with Core Graphics: CGContext.draw has
+        // no coordinate-space mismatch to correct, so the flip bug class
+        // cannot exist here. EXIF orientation is already baked into the
+        // thumbnail by kCGImageSourceCreateThumbnailWithTransform above,
+        // and contentRect is centred, so pixel placement is unchanged.
+        context.interpolationQuality = .high
+        context.draw(thumbnail, in: contentRect)
       }
 
       var rgb = [UInt8](repeating: 0, count: width * height * 3)

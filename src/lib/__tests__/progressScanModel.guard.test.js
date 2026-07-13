@@ -91,6 +91,32 @@ describe('Progress Scan on-device TFLite model guard', () => {
     expect(iosModule).toMatch(/maskBase64\(from: pixelBuffer\)/);
   });
 
+  test('iOS analysis buffer renders via pure Core Graphics, never UIKit draw (D85)', () => {
+    // 2026-07-13, caught red-handed from the founder's own device export:
+    // UIImage.draw(in:) inside a hand-built CGContext rendered every model
+    // input UPSIDE-DOWN on iOS (UIKit assumes a flipped top-left space; a
+    // raw CGContext is bottom-left), so the segmenter scored a head-down
+    // body while Android scored the same photo upright. D85 removed UIKit
+    // from the analysis path entirely: CGContext.draw(CGImage) has no
+    // coordinate mismatch, so the whole flip bug class cannot recur. This
+    // guard pins the extractRgb block to the pure-CG primitive.
+    const iosModule = read('modules/progress-scan-image/ios/ProgressScanImageModule.swift');
+    const start = iosModule.indexOf('AsyncFunction("extractRgb")');
+    const end = iosModule.indexOf('AsyncFunction(', start + 1);
+    expect(start).toBeGreaterThan(-1);
+    const extractRgb = iosModule.slice(start, end);
+    // The block's comment names the banned UIImage.draw(in:) call while
+    // explaining the bug, so the negative pins run over code lines only.
+    const codeOnly = extractRgb.split('\n')
+      .filter((line) => !line.trim().startsWith('//'))
+      .join('\n');
+    expect(codeOnly).toMatch(/context\.draw\(thumbnail, in: contentRect\)/);
+    expect(codeOnly).toMatch(/kCGImageSourceCreateThumbnailWithTransform: true/);
+    expect(codeOnly).not.toMatch(/UIImage\(/);
+    expect(codeOnly).not.toMatch(/\.draw\(in:/);
+    expect(codeOnly).not.toMatch(/UIGraphicsPushContext/);
+  });
+
   test('iOS deployment target remains 16.0 for v1', () => {
     const app = JSON.parse(read('app.json'));
     const buildProps = app.expo.plugins.find((entry) => Array.isArray(entry) && entry[0] === 'expo-build-properties');
