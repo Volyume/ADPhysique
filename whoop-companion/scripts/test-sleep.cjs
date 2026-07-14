@@ -436,4 +436,32 @@ const recentRegularity = sleepRegularity.sleepRegularity(newestFirstWindows);
 assert(recentConsistency?.nights === 5 && recentConsistency.score >= 95, 'consistency selects the latest five nights from newest-first DB rows');
 assert(recentRegularity?.nights === 14 && recentRegularity.score >= 95, 'regularity selects the latest 14 nights from newest-first DB rows');
 
+// Item 3 (blueprint Change 3): respiratory-rate variability refines deep vs REM
+// among already-asleep epochs, without changing any sleep/wake totals.
+const stageMinute = 60_000;
+const stageStart = 1_800_000;
+function stagingNight(withResp) {
+  const rows = [];
+  for (let i = 0; i < 60; i += 1) {
+    rows.push({ ts: stageStart + i * stageMinute, hr: 55, motion: 0, rmssd: 70, respVar: withResp ? 4.0 : null });
+  }
+  for (let i = 0; i < 60; i += 1) {
+    const steady = i < 20; // steady-breathing REM epochs that should reclassify to deep
+    rows.push({ ts: stageStart + (60 + i) * stageMinute, hr: 62, motion: 0, rmssd: 30, respVar: withResp ? (steady ? 1.0 : 4.0) : null });
+  }
+  return rows;
+}
+const baseStaging = sleep.computeSleep(stagingNight(false), undefined, { forceWindow: true });
+const respStaging = sleep.computeSleep(stagingNight(true), undefined, { forceWindow: true });
+assert(baseStaging && respStaging, 'staging computes for both inputs');
+assert(baseStaging.stages.deep > 0 && baseStaging.stages.rem > 0, 'baseline night has both deep and REM');
+assert(
+  respStaging.stages.deep + respStaging.stages.rem === baseStaging.stages.deep + baseStaging.stages.rem,
+  'respiratory refinement preserves total restorative minutes',
+);
+assert(respStaging.asleepMin === baseStaging.asleepMin, 'respiratory refinement preserves asleep minutes');
+assert(respStaging.inBedMin === baseStaging.inBedMin, 'respiratory refinement preserves time in bed');
+assert(respStaging.stages.awake === baseStaging.stages.awake, 'respiratory refinement never creates or removes wake');
+assert(respStaging.stages.deep > baseStaging.stages.deep, 'steady breathing reclassifies REM epochs as deep');
+
 console.log('sleep reliability regression tests passed');

@@ -34,7 +34,38 @@ export type RecoveryInputs = {
   baselineSampleCount?: number;
   minimumBaselineSamples?: number;
   calibrationSamples?: number;
+  weights?: RecoveryWeightProfile; // defaults to the WHOOP-faithful blend
 };
+
+/** Relative weight of each recovery signal before renormalisation. */
+export type RecoveryWeightProfile = Record<RecoveryContributorKey, number>;
+
+// WHOOP's published Recovery is HRV-dominant and built from HRV, resting heart
+// rate and respiratory rate measured during sleep (HRV carries most of the
+// predictive value; RHR and respiration add non-overlapping information). WHOOP
+// surfaces sleep performance and skin temperature elsewhere rather than folding
+// them into Recovery, so this profile drops those terms. The ~65/20/15 split
+// mirrors WHOOP's own explanation of the score. The weighting profile is a
+// sourced approximation of a proprietary model, not WHOOP's exact coefficients.
+export const WHOOP_RECOVERY_WEIGHTS: RecoveryWeightProfile = {
+  hrv: 0.65,
+  rhr: 0.2,
+  resp: 0.15,
+  sleep: 0,
+  temp: 0,
+};
+
+// The previous transparent blend, retained so any night can be rescored and the
+// two profiles compared, and so the change stays reversible.
+export const LEGACY_RECOVERY_WEIGHTS: RecoveryWeightProfile = {
+  hrv: 0.4,
+  rhr: 0.25,
+  resp: 0.1,
+  sleep: 0.15,
+  temp: 0.1,
+};
+
+export const DEFAULT_RECOVERY_WEIGHTS: RecoveryWeightProfile = WHOOP_RECOVERY_WEIGHTS;
 
 export type RecoveryContributorKey = 'hrv' | 'rhr' | 'resp' | 'temp' | 'sleep';
 
@@ -145,15 +176,22 @@ export function computeRecovery(inp: RecoveryInputs): RecoveryResult | null {
 
   // Build one term per signal, then derive both the score and attribution from
   // this list. A contributor cannot be counted once in the score and again in
-  // the attribution payload.
-  const terms: Array<{ key: RecoveryContributorKey; weight: number; score: number }> = [
-    { key: 'hrv', weight: 0.4, score: hrvSub },
-    { key: 'rhr', weight: 0.25, score: rhrSub },
-    { key: 'sleep', weight: 0.15, score: sleepSub },
+  // the attribution payload. A signal with zero weight or missing evidence is
+  // excluded from both the score and the contributor attribution; the remaining
+  // weights renormalise to one below.
+  const profile = inp.weights ?? DEFAULT_RECOVERY_WEIGHTS;
+  const candidateTerms: Array<{ key: RecoveryContributorKey; weight: number; score: number; available: boolean }> = [
+    { key: 'hrv', weight: profile.hrv, score: hrvSub, available: true },
+    { key: 'rhr', weight: profile.rhr, score: rhrSub, available: true },
+    { key: 'sleep', weight: profile.sleep, score: sleepSub, available: true },
+    { key: 'resp', weight: profile.resp, score: respSub ?? 0, available: respSub != null },
+    { key: 'temp', weight: profile.temp, score: tempSub ?? 0, available: tempSub != null },
   ];
-  if (respSub != null) terms.push({ key: 'resp', weight: 0.1, score: respSub });
-  if (tempSub != null) terms.push({ key: 'temp', weight: 0.1, score: tempSub });
+  const terms = candidateTerms
+    .filter((term) => term.available && Number.isFinite(term.weight) && term.weight > 0)
+    .map(({ key, weight, score }) => ({ key, weight, score }));
   const weight = terms.reduce((sum, term) => sum + term.weight, 0);
+  if (terms.length === 0 || weight <= 0) return null;
   const rawScore = clamp(terms.reduce((sum, term) => sum + term.weight * term.score, 0) / weight, 1, 99);
   // Apply provisional-baseline calibration exactly once, at the aggregate
   // score. Component sub-scores remain useful diagnostic signal values.

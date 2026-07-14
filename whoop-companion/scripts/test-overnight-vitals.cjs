@@ -255,4 +255,49 @@ assert(vitals.recoverySleepEvidence(missingSource, 480) === null, 'missing sleep
 const recoveryEvidence = vitals.recoverySleepEvidence(stableSleep, 480);
 assert(recoveryEvidence != null && recoveryEvidence > 0 && recoveryEvidence < 1, 'recovery sleep evidence uses bounded duration and efficiency');
 
+// Item 2 (blueprint Change 2): overnight RMSSD from the deepest resting window,
+// selected by independent HR/motion, never by the RMSSD-derived deep label.
+function hrSegment(startSec, minutes, bpm, rrPair) {
+  const rows = [];
+  for (let second = 0; second < minutes * 60; second += 1) {
+    rows.push({
+      ts: BASE_TS + (startSec + second) * 1000,
+      bpm,
+      rr: [second % 2 === 0 ? rrPair[0] : rrPair[1]],
+      source: 'whoop5_v18',
+    });
+  }
+  return rows;
+}
+
+const deepPortion = hrSegment(0, 20, 55, [1010, 1130]); // low HR, wider beat-to-beat
+const lightPortion = hrSegment(20 * 60, 20, 78, [760, 800]); // higher HR, tighter beats
+const combinedNight = [...deepPortion, ...lightPortion];
+const restWindow = vitals.deepRestWindow(combinedNight);
+assert(
+  restWindow && restWindow.startTs === BASE_TS && restWindow.endTs <= BASE_TS + 20 * 60 * 1000 + 1000,
+  'deep-rest window selects the low-HR portion of the night',
+);
+const deepRestRmssd = vitals.computeRmssdFromDeepRest(combinedNight);
+const allEpochRmssd = vitals.computeRmssdFromRows(combinedNight);
+assert(deepRestRmssd != null && allEpochRmssd != null, 'deep-rest and all-epoch RMSSD are both available');
+assert(
+  deepRestRmssd >= allEpochRmssd,
+  `deep-rest RMSSD reflects the resting floor, not the tighter light beats (deep ${deepRestRmssd} vs all ${allEpochRmssd})`,
+);
+
+const flatNight = hrSegment(0, 20, 60, [1010, 1130]);
+assert(
+  vitals.computeRmssdFromDeepRest(flatNight) === vitals.computeRmssdFromRows(flatNight),
+  'on flat HR the deep-rest RMSSD equals the all-epoch RMSSD (no circular inflation)',
+);
+
+const shortNight = hrSegment(0, 3, 55, [1010, 1130]);
+assert(vitals.deepRestWindow(shortNight) === null, 'a sub-5-minute deep-rest run does not qualify');
+assert(vitals.computeRmssdFromDeepRest(shortNight) === null, 'no deep-rest RMSSD when the window is too short');
+assert(
+  vitals.computeRmssdFromRows(shortNight) != null,
+  'the all-stable-epoch fallback still yields RMSSD when the deep-rest window is too short',
+);
+
 console.log('overnight vitals regression tests passed');

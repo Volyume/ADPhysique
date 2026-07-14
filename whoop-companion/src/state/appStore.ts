@@ -92,6 +92,7 @@ import {
   recoverySleepEvidence,
 } from '../metrics/overnightVitals';
 import type { IndependentSleepQuality } from '../metrics/overnightVitals';
+import { respiratoryRateFromHeartRate } from '../metrics/respiratory';
 import { computeSleepScore, SleepScore } from '../metrics/sleepScore';
 import { sleepRegularity, SleepRegularity } from '../metrics/sleepRegularity';
 import { FALLBACK_SLEEP_SCHEDULE, inferSleepSchedule, SleepSchedule } from '../metrics/sleepSchedule';
@@ -3652,6 +3653,7 @@ async function buildSleepInput(
   const stepRows = await getStepSamplesBetween(winStart, winEnd).catch(() => []);
   const hrByMinute = new Map(nightPerMin.map((p) => [Math.floor(p.tsMs / 60000), p.hr]));
   const rmssdByMinute = perMinuteRmssd(hrRows);
+  const respVarByMinute = perMinuteRespVar(hrRows);
   const stateByMinute = minuteMode(sleepStates, (s) => s.state);
   const motionByMinute = sleepMotionByMinute(stepRows);
   for (const [minute, intensity] of imuMotionByMinute(imuRows)) {
@@ -3672,8 +3674,59 @@ async function buildSleepInput(
         motion: motionByMinute.get(minute) ?? null,
         rmssd: rmssdByMinute.get(minute) ?? null,
         bandSleepState: stateByMinute.get(minute) ?? null,
+        respVar: respVarByMinute.get(minute) ?? null,
       };
     });
+}
+
+/**
+ * Per-minute respiratory-rate variability from timestamped sleeping heart rate
+ * (RSA). A stable respiratory rate (low variability) supports slow-wave sleep;
+ * a fluctuating one supports REM. Computed only where the overnight HR is dense
+ * enough for a robust RSA estimate; otherwise the minute carries no evidence and
+ * staging behaviour is exactly as it is today.
+ */
+function perMinuteRespVar(rows: HrSampleRow[]): Map<number, number> {
+  const out = new Map<number, number>();
+  const hr = rows
+    .filter((row) => Number.isFinite(row.ts) && Number.isFinite(row.bpm) && row.bpm >= 35 && row.bpm <= 130)
+    .map((row) => ({ ts: row.ts, bpm: row.bpm }))
+    .sort((a, b) => a.ts - b.ts);
+  if (hr.length < 300) return out;
+  const first = hr[0]!.ts;
+  const last = hr[hr.length - 1]!.ts;
+  const BLOCK_MS = 5 * 60 * 1000; // 5-minute block gives a stable RSA estimate
+  const STEP_MS = 2 * 60 * 1000; // 2-minute cadence
+
+  const blocks: Array<{ startMin: number; endMin: number; rate: number }> = [];
+  let cursor = 0;
+  for (let start = first; start + BLOCK_MS <= last + 1; start += STEP_MS) {
+    const end = start + BLOCK_MS;
+    while (cursor < hr.length && hr[cursor]!.ts < start) cursor += 1;
+    const block: Array<{ ts: number; bpm: number }> = [];
+    for (let i = cursor; i < hr.length && hr[i]!.ts < end; i += 1) block.push(hr[i]!);
+    const rate = respiratoryRateFromHeartRate(block);
+    if (rate != null) {
+      blocks.push({ startMin: Math.floor(start / 60000), endMin: Math.floor((end - 1) / 60000), rate });
+    }
+  }
+  if (blocks.length < 3) return out;
+
+  for (let i = 0; i < blocks.length; i += 1) {
+    const neighbours: number[] = [];
+    for (let j = Math.max(0, i - 2); j <= Math.min(blocks.length - 1, i + 2); j += 1) {
+      neighbours.push(blocks[j]!.rate);
+    }
+    if (neighbours.length < 3) continue;
+    const mean = neighbours.reduce((sum, value) => sum + value, 0) / neighbours.length;
+    const sd = Math.sqrt(neighbours.reduce((sum, value) => sum + (value - mean) ** 2, 0) / neighbours.length);
+    const block = blocks[i]!;
+    for (let minute = block.startMin; minute <= block.endMin; minute += 1) {
+      const existing = out.get(minute);
+      out.set(minute, existing == null ? sd : Math.max(existing, sd));
+    }
+  }
+  return out;
 }
 
 function independentSleepQuality(samples: SleepMinute[]): IndependentSleepQuality[] {

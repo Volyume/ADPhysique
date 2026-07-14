@@ -199,9 +199,83 @@ export function computeOvernightVitals(
   return {
     // No vital is used as a gate or selector for another vital.
     rhr: computeRhrFromRows(directRows),
-    rmssd: computeRmssdFromRows(directRows),
+    // Overnight RMSSD is computed preferentially from the deepest resting window
+    // of the night; if that window yields no valid estimate it falls back to the
+    // all-stable-epoch computation, so a night never loses HRV it would have had.
+    rmssd: computeRmssdFromDeepRest(directRows) ?? computeRmssdFromRows(directRows),
     resp: computeRespiratoryRateFromRows(directRows),
   };
+}
+
+const DEEP_REST_HR_PERCENTILE = 0.4; // lower part of the sleeping-HR distribution
+const MIN_DEEP_REST_MS = 5 * 60 * 1000;
+
+/**
+ * RMSSD from the deepest resting window of the night, selected by independent
+ * heart-rate and motion stability, never by the RMSSD-derived deep-sleep stage
+ * label (which would select epochs because they already have high RMSSD and
+ * inflate the result). WHOOP measures HRV during slow-wave sleep; this mirrors
+ * that intent using the low-HR resting floor as the independent selector.
+ */
+export function computeRmssdFromDeepRest(samples: HrSampleRow[]): number | null {
+  const window = deepRestWindow(samples);
+  if (!window) return null;
+  const rows = samples.filter((row) => Number.isFinite(row.ts) && row.ts >= window.startTs && row.ts < window.endTs);
+  return computeRmssdFromRows(rows);
+}
+
+/**
+ * The longest contiguous run of stable epochs whose heart rate sits in the
+ * lower part of the night's sleeping-HR distribution. Selection uses only rate
+ * and timing (the rows are already motion-filtered by the stable mask), so it
+ * is independent of the RMSSD it will later summarise.
+ */
+export function deepRestWindow(samples: HrSampleRow[]): { startTs: number; endTs: number } | null {
+  const sorted = samples
+    .filter((row) => Number.isFinite(row.ts) && isFiniteHeartRate(row.bpm))
+    .slice()
+    .sort((a, b) => a.ts - b.ts);
+  if (sorted.length < 30) return null;
+  const threshold = percentile(sorted.map((row) => row.bpm), DEEP_REST_HR_PERCENTILE);
+
+  let bestStart: number | null = null;
+  let bestEnd: number | null = null;
+  let bestDuration = -1;
+  let runStart: number | null = null;
+  let lastTs: number | null = null;
+  const close = () => {
+    if (runStart != null && lastTs != null) {
+      const duration = lastTs - runStart;
+      if (duration > bestDuration) {
+        bestDuration = duration;
+        bestStart = runStart;
+        bestEnd = lastTs;
+      }
+    }
+    runStart = null;
+    lastTs = null;
+  };
+  for (const row of sorted) {
+    if (row.bpm > threshold) {
+      close();
+      continue;
+    }
+    const contiguous = lastTs != null && row.ts > lastTs && row.ts - lastTs <= ROW_CONTIGUITY_GAP_MS;
+    if (runStart != null && !contiguous) close();
+    if (runStart == null) runStart = row.ts;
+    lastTs = row.ts;
+  }
+  close();
+
+  if (bestStart == null || bestEnd == null || bestDuration < MIN_DEEP_REST_MS) return null;
+  return { startTs: bestStart, endTs: bestEnd + 1000 };
+}
+
+function percentile(values: number[], pct: number): number {
+  if (values.length === 0) return 0;
+  const sorted = values.slice().sort((a, b) => a - b);
+  const index = Math.min(sorted.length - 1, Math.max(0, Math.round((sorted.length - 1) * pct)));
+  return sorted[index] as number;
 }
 
 /** RHR from median HR in contiguous quality windows, never a low percentile. */

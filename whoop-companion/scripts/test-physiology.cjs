@@ -218,6 +218,64 @@ assert(
   stableRecovery && deviatedRecovery && stableRecovery.score > deviatedRecovery.score,
   'large respiratory and skin-temperature deviations lower recovery',
 );
+
+// HRV-dominant weighting (blueprint Change 1): an equal-magnitude improvement in
+// HRV must move Recovery more than the same improvement in RHR.
+assert(
+  recovery.WHOOP_RECOVERY_WEIGHTS.hrv > recovery.WHOOP_RECOVERY_WEIGHTS.rhr &&
+    recovery.WHOOP_RECOVERY_WEIGHTS.sleep === 0 &&
+    recovery.WHOOP_RECOVERY_WEIGHTS.temp === 0,
+  'default recovery profile is HRV-dominant and drops sleep and skin-temperature terms',
+);
+const hrvLedRecovery = recovery.computeRecovery({
+  rmssd: 74, rmssdBaseline: 50, rmssdSd: 8,
+  restingHr: 55, rhrBaseline: 55, rhrSd: 4,
+  respiratoryRate: 14, respiratoryBaseline: 14, respiratorySd: 1,
+  sleepPerformance: 0.85, baselineSampleCount: 28,
+});
+const rhrLedRecovery = recovery.computeRecovery({
+  rmssd: 50, rmssdBaseline: 50, rmssdSd: 8,
+  restingHr: 43, rhrBaseline: 55, rhrSd: 4,
+  respiratoryRate: 14, respiratoryBaseline: 14, respiratorySd: 1,
+  sleepPerformance: 0.85, baselineSampleCount: 28,
+});
+assert(
+  hrvLedRecovery && rhrLedRecovery && hrvLedRecovery.score > rhrLedRecovery.score,
+  'an equal z-score HRV gain raises recovery more than the same RHR gain',
+);
+
+// Sleep performance is a diagnostic under the default profile (weight 0) but a
+// weighted term under the legacy profile.
+const defaultLowSleep = recovery.computeRecovery({
+  rmssd: 50, rmssdBaseline: 50, rmssdSd: 8, restingHr: 55, rhrBaseline: 55, rhrSd: 4,
+  respiratoryRate: 14, respiratoryBaseline: 14, respiratorySd: 1, sleepPerformance: 0.4, baselineSampleCount: 28,
+});
+const defaultHighSleep = recovery.computeRecovery({
+  rmssd: 50, rmssdBaseline: 50, rmssdSd: 8, restingHr: 55, rhrBaseline: 55, rhrSd: 4,
+  respiratoryRate: 14, respiratoryBaseline: 14, respiratorySd: 1, sleepPerformance: 1, baselineSampleCount: 28,
+});
+assert(
+  defaultLowSleep && defaultHighSleep && defaultLowSleep.score === defaultHighSleep.score,
+  'sleep performance does not move the default (WHOOP-faithful) recovery score',
+);
+assert(
+  defaultLowSleep && !defaultLowSleep.contributors.some((c) => c.key === 'sleep' || c.key === 'temp'),
+  'zero-weight signals are excluded from contributor attribution',
+);
+const legacyLowSleep = recovery.computeRecovery({
+  rmssd: 50, rmssdBaseline: 50, rmssdSd: 8, restingHr: 55, rhrBaseline: 55, rhrSd: 4,
+  respiratoryRate: 14, respiratoryBaseline: 14, respiratorySd: 1, sleepPerformance: 0.4,
+  baselineSampleCount: 28, weights: recovery.LEGACY_RECOVERY_WEIGHTS,
+});
+const legacyHighSleep = recovery.computeRecovery({
+  rmssd: 50, rmssdBaseline: 50, rmssdSd: 8, restingHr: 55, rhrBaseline: 55, rhrSd: 4,
+  respiratoryRate: 14, respiratoryBaseline: 14, respiratorySd: 1, sleepPerformance: 1,
+  baselineSampleCount: 28, weights: recovery.LEGACY_RECOVERY_WEIGHTS,
+});
+assert(
+  legacyLowSleep && legacyHighSleep && legacyHighSleep.score > legacyLowSleep.score,
+  'the legacy profile still folds sleep performance into recovery for comparison',
+);
 const illnessWithTemp = illness.illnessRisk({
   rhr: { value: 55, baseline: 55, sd: 4 },
   hrv: { value: 50, baseline: 50, sd: 8 },

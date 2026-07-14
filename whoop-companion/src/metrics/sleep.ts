@@ -19,6 +19,7 @@ export type SleepMinute = {
   motion: number | null; // arbitrary units; higher = more movement
   rmssd?: number | null;
   bandSleepState?: number | null; // WHOOP 5 v18 @81 candidate: 0 wake-like, 1 still, 2 sleep-like, 3 up-like
+  respVar?: number | null; // short-term respiratory-rate variability (brpm SD); higher = more variable
 };
 
 export type SleepStage = 'awake' | 'light' | 'deep' | 'rem';
@@ -164,7 +165,7 @@ function expandToMinutes(
   const out: SleepMinute[] = [];
   for (let minute = startMinute; minute < endMinute; minute += 1) {
     const existing = byMinute.get(minute);
-    out.push(existing ?? { ts: minute * 60000, hr: null, motion: null, rmssd: null, bandSleepState: null });
+    out.push(existing ?? { ts: minute * 60000, hr: null, motion: null, rmssd: null, bandSleepState: null, respVar: null });
   }
   return out;
 }
@@ -602,6 +603,13 @@ export function computeSleep(
   const sustainedWakeHr = Math.min(meanHr * 1.08, Math.max(p50 + 6, p20 + spread * 0.85));
   const rmssds = window.map((s) => s.rmssd).filter((v): v is number => v != null);
   const meanRmssd = rmssds.length ? rmssds.reduce((a, b) => a + b, 0) / rmssds.length : null;
+  // Respiratory rate is fairly constant during slow-wave sleep and increased and
+  // more variable during REM. When enough per-minute respiratory-variability
+  // evidence exists, its median is the reference for refining deep vs REM below.
+  const respVars = window
+    .map((s) => s.respVar)
+    .filter((v): v is number => v != null && Number.isFinite(v) && v >= 0);
+  const medianRespVar = respVars.length >= 20 ? percentile(respVars, 0.5) : null;
   const stages: Record<SleepStage, number> = { awake: 0, light: 0, deep: 0, rem: 0 };
   const timeline: SleepTimelineStage[] = [];
   const observedTimeline: boolean[] = [];
@@ -632,6 +640,16 @@ export function computeSleep(
     )
       stage = 'rem';
     else stage = 'light';
+    // Respiratory variability only refines the choice between deep and REM for
+    // epochs already classified as asleep; steady breathing supports deep and
+    // variable breathing supports REM. When respVar is absent the label is
+    // exactly as it was, and awake/light epochs are never touched.
+    if (medianRespVar != null && s.respVar != null && Number.isFinite(s.respVar)) {
+      const steady = s.respVar <= medianRespVar * 0.8;
+      const variable = s.respVar >= medianRespVar * 1.2;
+      if (stage === 'rem' && steady) stage = 'deep';
+      else if (stage === 'deep' && variable) stage = 'rem';
+    }
     stages[stage] += 1;
     timeline.push(stage);
     observedTimeline.push(true);
