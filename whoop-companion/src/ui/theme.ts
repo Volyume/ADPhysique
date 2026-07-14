@@ -82,7 +82,36 @@ export const radius = {
   card: 12,
   button: 999,
   pill: 999,
+  hero: 20,
 };
+
+// The theme exposes reusable elevation (shadow) presets and motion timing tokens
+// so surfaces and animations are consistent across the app.
+export const elevation = {
+  none: {},
+  card: {
+    shadowColor: '#000',
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  hero: {
+    shadowColor: '#000',
+    shadowOpacity: 0.38,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
+  },
+} as const;
+
+export const motion = {
+  fast: 160,
+  base: 260,
+  slow: 520,
+  ring: 900, // ring sweep animation
+  pressScale: 0.97, // scale a surface settles to while pressed
+} as const;
 
 import { fonts } from './fonts';
 

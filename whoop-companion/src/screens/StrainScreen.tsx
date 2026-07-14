@@ -18,6 +18,7 @@ import {
   WeeklyBars,
 } from '../ui/components';
 import { colors, strainZoneColors } from '../ui/theme';
+import { GlowRing } from '../ui/GlowRing';
 import { Nav } from '../ui/navigation';
 import { formatDuration } from '../util/time';
 import type { HrZone } from '../metrics/strain';
@@ -101,8 +102,8 @@ export function StrainScreen({ nav }: { nav: Nav }) {
         onSelect={(selected) => nav.navigate({ name: 'day', day: selected })}
       />
 
-      <Card style={{ alignItems: 'center', paddingVertical: 24 }}>
-        <Ring
+      <Card elevated style={{ alignItems: 'center', paddingVertical: 24 }}>
+        <GlowRing
           value={strain != null ? strain / 21 : 0}
           color={colors.strainBlue}
           centerTop="Day Strain"

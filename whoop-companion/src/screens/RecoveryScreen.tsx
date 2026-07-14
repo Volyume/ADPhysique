@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
 import { calculateTonightPlan, Card, ContributorRow, MetricRow, NavRow, parsePinnedWakeMinute, parsePlanningWindowMinute, Ring, Screen, SectionLabel, SleepConfidenceStatus, Stat, TonightBand, tonightEfficiencyPercent } from '../ui/components';
+import { GlowRing } from '../ui/GlowRing';
 import type { DailyMetricRow } from '../db/database';
 import { colors, fonts, recoveryColor } from '../ui/theme';
 import { Nav } from '../ui/navigation';
@@ -232,8 +233,8 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
         onPress={() => nav.navigate({ name: 'sleepCoach' })}
       />
 
-      <Card style={{ alignItems: 'center', paddingVertical: 24 }}>
-        <Ring
+      <Card elevated style={{ alignItems: 'center', paddingVertical: 24 }}>
+        <GlowRing
           value={recovery != null ? recovery / 100 : 0}
           color={recoveryColor(recovery)}
           centerTop="Recovery"

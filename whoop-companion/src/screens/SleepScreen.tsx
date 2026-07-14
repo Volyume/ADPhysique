@@ -23,6 +23,7 @@ import { colors, fonts, sleepStageColors } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { Band, BAND_LABEL, bandColors } from '../metrics/sleepBands';
 import { fourTier } from '../metrics/bands';
+import { GlowRing } from '../ui/GlowRing';
 import { formatClock, formatDuration, startOfDayMs } from '../util/time';
 import { DayRail } from './DayScreen';
 import type { DailyMetricRow } from '../db/database';
@@ -119,8 +120,8 @@ export function SleepScreen({ nav }: { nav: Nav }) {
       />
 
       {/* Sleep Performance composite ring */}
-      <Card style={{ alignItems: 'center', paddingVertical: 24 }} onPress={() => nav.navigate({ name: 'metric', key: 'sleep_performance' })}>
-        <Ring
+      <Card elevated style={{ alignItems: 'center', paddingVertical: 24 }} onPress={() => nav.navigate({ name: 'metric', key: 'sleep_performance' })}>
+        <GlowRing
           value={sleepPerformancePct != null ? sleepPerformancePct / 100 : 0}
           color={colors.sleepTeal}
           centerTop="Sleep Performance"

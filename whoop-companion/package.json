@@ -26,11 +26,13 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
+    "@shopify/react-native-skia": "2.2.12",
     "babel-preset-expo": "~54.0.10",
     "expo": "~54.0.35",
     "expo-build-properties": "~1.0.10",
     "expo-file-system": "~19.0.23",
     "expo-font": "~14.0.12",
+    "expo-haptics": "~15.0.8",
     "expo-linear-gradient": "~15.0.8",
     "expo-location": "~19.0.8",
     "expo-sharing": "~14.0.8",

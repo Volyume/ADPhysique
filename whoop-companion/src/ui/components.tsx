@@ -16,8 +16,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Line, Polyline, Rect, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 
-import { colors, radius, spacing, type, fonts, sleepStageColors, tintedWash } from './theme';
+import { colors, radius, spacing, type, fonts, sleepStageColors, tintedWash, elevation } from './theme';
 import { formatClock } from '../util/time';
+import { tapHaptic } from './haptics';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -71,22 +72,28 @@ export function Card({
   children,
   style,
   onPress,
+  elevated,
 }: {
   children: ReactNode;
   style?: ViewStyle;
   onPress?: () => void;
+  elevated?: boolean;
 }) {
+  const elev = elevated ? elevation.card : null;
   if (onPress) {
     return (
       <Pressable
-        onPress={onPress}
-        style={({ pressed }) => [styles.card, style, pressed && styles.pressed]}
+        onPress={() => {
+          tapHaptic();
+          onPress();
+        }}
+        style={({ pressed }) => [styles.card, elev, style, pressed && styles.pressed, pressed && styles.pressedScale]}
       >
         {children}
       </Pressable>
     );
   }
-  return <View style={[styles.card, style]}>{children}</View>;
+  return <View style={[styles.card, elev, style]}>{children}</View>;
 }
 
 export function SectionLabel({ children, right }: { children: ReactNode; right?: ReactNode }) {
@@ -133,7 +140,7 @@ export function PrimaryButton({
   return (
     <TouchableOpacity
       style={[styles.primaryBtn, disabled && styles.btnDisabled]}
-      onPress={onPress}
+      onPress={() => { tapHaptic(); onPress?.(); }}
       disabled={disabled}
       activeOpacity={0.85}
     >
@@ -156,7 +163,7 @@ export function SecondaryButton({
   return (
     <TouchableOpacity
       style={[styles.secondaryBtn, disabled && styles.btnDisabled]}
-      onPress={onPress}
+      onPress={() => { tapHaptic(); onPress?.(); }}
       disabled={disabled}
       activeOpacity={0.85}
     >
@@ -216,6 +223,20 @@ export function Ring({
           </SvgGradient>
         </Defs>
         <Circle cx={size / 2} cy={size / 2} r={r} stroke={colors.surface} strokeWidth={stroke} fill="none" />
+        {/* Soft glow halo behind the crisp arc for a premium, WHOOP-grade ring. */}
+        <AnimatedCircle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke={color}
+          strokeWidth={stroke * 1.9}
+          fill="none"
+          opacity={0.16}
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={dashoffset as unknown as number}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
         <AnimatedCircle
           cx={size / 2}
           cy={size / 2}
@@ -415,7 +436,7 @@ export function TonightBand({
           {` · bed ${formatClockMinute(bedMinute)} · wake ${formatClockMinute(wakeMinute)}`}
         </Text>
       </View>
-      <Pressable onPress={onPress} hitSlop={8} style={({ pressed }) => [styles.tonightAction, pressed && styles.pressed]}>
+      <Pressable onPress={() => { tapHaptic(); onPress?.(); }} hitSlop={8} style={({ pressed }) => [styles.tonightAction, pressed && styles.pressed]}>
         <Text style={styles.tonightActionText}>Sleep Coach</Text>
         <Ionicons name="chevron-forward" size={16} color={colors.sleepTeal} />
       </Pressable>
@@ -468,7 +489,7 @@ export function Dial({
   }, [clamped, progress]);
   const dashoffset = progress.interpolate({ inputRange: [0, 1], outputRange: [c, c - c] });
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={dialStyles.wrap}>
+    <TouchableOpacity onPress={() => { tapHaptic(); onPress?.(); }} activeOpacity={0.8} style={dialStyles.wrap}>
       <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
         <Svg width={size} height={size}>
           <Circle cx={size / 2} cy={size / 2} r={r} stroke={colors.surface} strokeWidth={stroke} fill="none" />
@@ -673,7 +694,7 @@ export function ContributorRow({
     </View>
   );
   return onPress ? (
-    <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
+    <Pressable onPress={() => { tapHaptic(); onPress?.(); }} style={({ pressed }) => pressed && styles.pressed}>
       {body}
     </Pressable>
   ) : (
@@ -866,7 +887,7 @@ export function MetricRow({
     </View>
   );
   return onPress ? (
-    <Pressable onPress={onPress} style={({ pressed }) => pressed && styles.pressed}>
+    <Pressable onPress={() => { tapHaptic(); onPress?.(); }} style={({ pressed }) => pressed && styles.pressed}>
       {body}
     </Pressable>
   ) : (
@@ -946,7 +967,7 @@ export function NavRow({
   last?: boolean;
 }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [navRowStyles.row, last && navRowStyles.last, pressed && styles.pressed]}>
+    <Pressable onPress={() => { tapHaptic(); onPress?.(); }} style={({ pressed }) => [navRowStyles.row, last && navRowStyles.last, pressed && styles.pressed]}>
       {icon ? (
         <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={20} color={iconColor ?? colors.textSecondary} style={navRowStyles.icon} />
       ) : null}
@@ -977,7 +998,7 @@ export function Tile({
   style?: ViewStyle;
 }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.card, tileStyles.tile, style, pressed && styles.pressed]}>
+    <Pressable onPress={() => { tapHaptic(); onPress?.(); }} style={({ pressed }) => [styles.card, tileStyles.tile, style, pressed && styles.pressed]}>
       <View style={tileStyles.head}>
         {icon ? <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={16} color={color ?? colors.textSecondary} /> : null}
         <Text style={tileStyles.title}>{title}</Text>
@@ -993,7 +1014,7 @@ export function Tile({
 /** Floating action button — WHOOP's "+" for logging. */
 export function FAB({ onPress, icon = 'add' }: { onPress: () => void; icon?: string }) {
   return (
-    <TouchableOpacity style={fabStyles.fab} onPress={onPress} activeOpacity={0.85}>
+    <TouchableOpacity style={fabStyles.fab} onPress={() => { tapHaptic(); onPress?.(); }} activeOpacity={0.85}>
       <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={30} color="#000" />
     </TouchableOpacity>
   );
@@ -1027,6 +1048,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.item,
   },
   pressed: { opacity: 0.6 },
+  pressedScale: { transform: [{ scale: 0.985 }] },
   sectionLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.section, marginBottom: spacing.sm },
   sectionLabel: {},
   stat: { flex: 1 },
