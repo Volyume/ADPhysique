@@ -96,3 +96,42 @@ export function computeStress(rrMs: number[]): StressResult | null {
     si: Math.round(si),
   };
 }
+
+export type StressWindow = { hr: number; rmssd: number | null };
+
+function mean(xs: number[]): number {
+  return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
+}
+
+function stdev(xs: number[], m: number): number {
+  if (xs.length < 2) return 0;
+  return Math.sqrt(xs.reduce((a, b) => a + (b - m) ** 2, 0) / (xs.length - 1));
+}
+
+/**
+ * WHOOP-style daytime stress: the daytime stress series scores each window from
+ * HR and HRV z-scores against the day's own distribution (higher HR and lower
+ * HRV read as more stress), rather than mapping an absolute Stress Index onto
+ * fixed population anchors — so an individual's stress is judged relative to
+ * their own physiology, not a high- or low-HRV person's systematic offset. The
+ * scale stays 0-3 and continuous, centred near the middle for a typical window.
+ * Needs at least three windows to have a distribution; with fewer it returns an
+ * empty array (a window without enough beats to score returns no value rather
+ * than a guess — the caller omits such windows before calling).
+ */
+export function stressSeriesFromWindows(windows: StressWindow[]): number[] {
+  const hrs = windows.map((w) => w.hr).filter((v) => Number.isFinite(v));
+  if (windows.length < 3 || hrs.length < 3) return [];
+  const rms = windows.map((w) => w.rmssd).filter((v): v is number => v != null && Number.isFinite(v));
+  const hrMean = mean(hrs);
+  const hrSd = stdev(hrs, hrMean) || 1;
+  const rmMean = rms.length ? mean(rms) : 0;
+  const rmSd = rms.length ? stdev(rms, rmMean) || 1 : 1;
+  return windows.map((w) => {
+    const hrZ = Number.isFinite(w.hr) ? (w.hr - hrMean) / hrSd : 0;
+    const rmZ = w.rmssd != null && rms.length ? (w.rmssd - rmMean) / rmSd : 0;
+    const stressZ = 0.6 * -rmZ + 0.4 * hrZ;
+    const score = Math.max(0, Math.min(3, 1.5 + stressZ * 0.9));
+    return Math.round(score * 10) / 10;
+  });
+}

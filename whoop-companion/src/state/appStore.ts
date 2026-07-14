@@ -104,7 +104,7 @@ import { computeSleepPerformance, SleepPerformance } from '../metrics/sleepPerfo
 import { autoSleepAtSafetyCeiling, longAutoSleepNeedsCorroboration, sleepEvidencePct, sleepHasCorroboration, sleepStateWakeConflict } from '../metrics/sleepEvidence';
 import { edwardsTrimp, hrZones, strainFromLoad, totalTrimp, UserProfile } from '../metrics/strain';
 import { kcalPerMinute, totalKcal } from '../metrics/calories';
-import { computeStress } from '../metrics/stress';
+import { computeStress, stressSeriesFromWindows } from '../metrics/stress';
 import { computeHealthMonitor, HealthMonitorResult } from '../metrics/healthMonitor';
 import { autoSecondarySleepIsReliable, encodeNapDetail, MAX_AUTO_SECONDARY_SLEEP_MIN, napCreditMin, napCreditMinWithin, napDetailFromSleep, parseNapDetail, StoredNapDetail } from '../metrics/naps';
 import { decodeHeartbeatSteps } from '../whoop/strapEvents';
@@ -4393,17 +4393,28 @@ function recoveryEstimate(input: {
 
 function stressSeriesFromRows(rows: HrSampleRow[]): Array<{ tsMs: number; score: number }> {
   const WIN_MS = 5 * 60 * 1000;
-  const buckets = new Map<number, number[]>();
+  const buckets = new Map<number, HrSampleRow[]>();
   for (const r of rows) {
     const b = Math.floor(r.ts / WIN_MS);
     const arr = buckets.get(b) ?? [];
-    arr.push(...r.rr);
+    arr.push(r);
     buckets.set(b, arr);
   }
+  // Per five-minute window, take the window's median HR and its RMSSD, then score
+  // the day's series against its own distribution (WHOOP-style self-normalisation)
+  // rather than mapping an absolute Stress Index onto fixed population anchors.
+  const windows: Array<{ tsMs: number; hr: number; rmssd: number | null }> = [];
+  for (const [b, bucketRows] of [...buckets.entries()].sort((a, c) => a[0] - c[0])) {
+    const bpms = bucketRows.map((r) => r.bpm).filter((v) => Number.isFinite(v) && v >= 30 && v <= 220).sort((a, c) => a - c);
+    if (bpms.length < 10) continue; // a window without enough beats returns no value
+    const hrv = computeHrvSegments(contiguousRrSegments(bucketRows));
+    const rmssd = hrv && hrv.rmssd >= 5 && hrv.rmssd <= 180 ? hrv.rmssd : null;
+    windows.push({ tsMs: b * WIN_MS, hr: median(bpms), rmssd });
+  }
+  const scores = stressSeriesFromWindows(windows.map((w) => ({ hr: w.hr, rmssd: w.rmssd })));
   const out: Array<{ tsMs: number; score: number }> = [];
-  for (const [b, rr] of [...buckets.entries()].sort((a, c) => a[0] - c[0])) {
-    const s = computeStress(rr);
-    if (s) out.push({ tsMs: b * WIN_MS, score: s.score });
+  for (let i = 0; i < windows.length && i < scores.length; i += 1) {
+    out.push({ tsMs: (windows[i] as { tsMs: number }).tsMs, score: scores[i] as number });
   }
   return out;
 }

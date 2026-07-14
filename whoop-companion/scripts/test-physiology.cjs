@@ -42,6 +42,7 @@ const maverick = require(path.join(__dirname, '..', 'src', 'whoop', 'maverick.ts
 const alarmSchedule = loadTypeScriptModule(path.join('src', 'util', 'alarmSchedule.ts'));
 const dataQuality = loadTypeScriptModule(path.join('src', 'metrics', 'dataQuality.ts'));
 const strain = loadTypeScriptModule(path.join('src', 'metrics', 'strain.ts'));
+const stress = loadTypeScriptModule(path.join('src', 'metrics', 'stress.ts'));
 const historySyncPolicy = loadTypeScriptModule(path.join('src', 'whoop', 'historySyncPolicy.ts'));
 const recovery = loadTypeScriptModule(path.join('src', 'metrics', 'recovery.ts'));
 const illness = loadTypeScriptModule(path.join('src', 'metrics', 'illness.ts'));
@@ -394,6 +395,35 @@ assert(alarmSchedule.localAlarmMinuteOfDay(localSeven) === 7 * 60, 'alarm stores
 const afterSeven = new Date(2026, 6, 10, 7, 1, 0, 0).getTime();
 const nextSeven = alarmSchedule.nextLocalAlarmTimestamp(7 * 60, afterSeven);
 assert(new Date(nextSeven).getHours() === 7 && new Date(nextSeven).getDate() === 11, 'daily alarm rolls to the next local 07:00');
+
+// Recovery supporting signals are neutral at baseline (deferred blueprint Change A):
+// a stable respiratory rate no longer drags recovery; a large deviation still does.
+const stableResp = recovery.computeRecovery({
+  rmssd: 50, rmssdBaseline: 50, rmssdSd: 8, restingHr: 55, rhrBaseline: 55, rhrSd: 4,
+  respiratoryRate: 14, respiratoryBaseline: 14, respiratorySd: 1, sleepPerformance: 0.85, baselineSampleCount: 28,
+});
+assert(stableResp && stableResp.respSub > 50, 'a respiratory rate at baseline scores neutral-good (>50)');
+const deviatedResp = recovery.computeRecovery({
+  rmssd: 50, rmssdBaseline: 50, rmssdSd: 8, restingHr: 55, rhrBaseline: 55, rhrSd: 4,
+  respiratoryRate: 17, respiratoryBaseline: 14, respiratorySd: 1, sleepPerformance: 0.85, baselineSampleCount: 28,
+});
+assert(deviatedResp && deviatedResp.respSub < 30, 'a 3-SD respiratory deviation scores well below neutral');
+
+// Daytime stress self-normalises against the person (deferred blueprint Change B):
+// the same within-day pattern scores the same regardless of absolute HRV level.
+const stressPattern = (hrvBase) => [
+  { hr: 60, rmssd: hrvBase + 10 },
+  { hr: 62, rmssd: hrvBase + 8 },
+  { hr: 64, rmssd: hrvBase + 6 },
+  { hr: 80, rmssd: hrvBase - 20 }, // stressed window: high HR, low HRV
+];
+const athleteStress = stress.stressSeriesFromWindows(stressPattern(80)); // high baseline HRV
+const lowHrvStress = stress.stressSeriesFromWindows(stressPattern(25)); // low baseline HRV
+assert(athleteStress.length === 4 && lowHrvStress.length === 4, 'stress series returns one score per window');
+assert(Math.abs(athleteStress[3] - lowHrvStress[3]) < 0.2, 'a stressed window scores the same regardless of absolute HRV level');
+assert(athleteStress[3] > athleteStress[0], 'a high-HR low-HRV window scores higher stress than a calm one');
+assert(athleteStress.every((s) => s >= 0 && s <= 3), 'daytime stress stays on the 0-3 scale');
+assert(stress.stressSeriesFromWindows([{ hr: 60, rmssd: 50 }, { hr: 61, rmssd: 49 }]).length === 0, 'fewer than three windows returns no series');
 
 // HR zones: WHOOP's Zone 1 begins at 40% heart-rate reserve (blueprint Change 1).
 const zoneProfile = { ageYears: 40, sex: 'male', restingHr: 50, maxHr: 150 }; // HRR span 100 bpm

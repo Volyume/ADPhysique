@@ -109,6 +109,10 @@ function zToScore(z: number, gain = 1.1): number {
   return s;
 }
 
+// Deviation (in SDs) a supporting signal may drift before its sub-score drops
+// below the neutral 50. At baseline (|z| = 0) the sub-score is above 50.
+const DEVIATION_TOLERANCE_Z = 1.0;
+
 export function computeRecovery(inp: RecoveryInputs): RecoveryResult | null {
   if (
     !Number.isFinite(inp.rmssd) ||
@@ -152,9 +156,14 @@ export function computeRecovery(inp: RecoveryInputs): RecoveryResult | null {
     inp.respiratoryBaseline != null &&
     Number.isFinite(inp.respiratoryRate) &&
     Number.isFinite(inp.respiratoryBaseline);
+  // A respiratory or skin-temperature reading at baseline scores neutral-good
+  // (above 50), and only a deviation of more than about one standard deviation
+  // pulls the sub-score below neutral. Larger deviations still lower it
+  // monotonically, so an abnormal respiratory rate or skin temperature still
+  // reduces recovery — but a stable, healthy reading no longer drags a good day.
   const respSd = inp.respiratorySd && inp.respiratorySd > 0 ? inp.respiratorySd : 1;
   const respSub = hasResp
-    ? zToScore(-Math.abs(((inp.respiratoryRate as number) - (inp.respiratoryBaseline as number)) / respSd), 0.9)
+    ? zToScore(DEVIATION_TOLERANCE_Z - Math.abs(((inp.respiratoryRate as number) - (inp.respiratoryBaseline as number)) / respSd), 0.9)
     : null;
 
   const hasTemp =
@@ -167,10 +176,11 @@ export function computeRecovery(inp: RecoveryInputs): RecoveryResult | null {
     inp.skinTemperatureSd > 0;
   const tempSub = hasTemp
     ? zToScore(
-        -Math.abs(
-          ((inp.skinTemperature as number) - (inp.skinTemperatureBaseline as number)) /
-            (inp.skinTemperatureSd as number),
-        ),
+        DEVIATION_TOLERANCE_Z -
+          Math.abs(
+            ((inp.skinTemperature as number) - (inp.skinTemperatureBaseline as number)) /
+              (inp.skinTemperatureSd as number),
+          ),
       )
     : null;
 
