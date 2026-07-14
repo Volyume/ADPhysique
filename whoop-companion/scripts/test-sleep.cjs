@@ -384,6 +384,18 @@ assert(
   'automatic secondary sleep remains capped at four hours',
 );
 
+// A short, flat, sedentary window (sitting at a desk) must not be accepted as a
+// nap unless it shows observed wake boundaries — the false 100% efficiency nap.
+const shortFlatWindow = { inBedMin: 40, asleepMin: 40, signalMin: 40, motionMin: 32, stillMin: 32, movingMin: 0, efficiency: 1 };
+assert(
+  !naps.autoSecondarySleepIsReliable(shortFlatWindow, false),
+  'a short flat sedentary window with no wake boundaries is rejected as a nap',
+);
+assert(
+  naps.autoSecondarySleepIsReliable(shortFlatWindow, true),
+  'a short nap with observed wake boundaries is still accepted',
+);
+
 assert(
   database.NAP_OVERLAP_QUERY ===
     "SELECT * FROM cardio WHERE source = 'nap' AND start_ts < ? AND end_ts > ? ORDER BY start_ts ASC",

@@ -51,9 +51,13 @@ export function autoSecondarySleepIsReliable(nap: SleepResult, boundariesCovered
     nap.efficiency >= 0.6
   );
   if (!baseReliable) return false;
+  // Every auto-detected nap must show a wake-to-sleep-to-wake boundary
+  // transition; a continuously sedentary period with no such boundaries is never
+  // accepted as sleep, however flat and efficient the window looks (this is what
+  // let sitting at a desk read as a 100% efficiency nap).
+  if (!boundariesCovered) return false;
   if (nap.inBedMin <= 90) return true;
   return (
-    boundariesCovered &&
     coveragePct >= 70 &&
     corroborationPct >= 45 &&
     nap.signalMin >= Math.ceil(nap.inBedMin * 0.7)

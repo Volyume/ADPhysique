@@ -2808,7 +2808,21 @@ class AppStore extends Store<AppState> {
       const napHr = await getHrSamplesBetween(nap.startTs, nap.endTs).catch(() => []);
       const bpms = napHr.map((r) => r.bpm).filter((v) => v >= 30 && v <= 160);
       const avgHr = bpms.length ? Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length) : null;
-      if (avgHr != null && avgHr > dayMedianHr - 2 && avgHr > 75) continue;
+      if (avgHr == null) continue;
+      // An auto-nap is rejected unless its average heart rate is clearly below the
+      // heart rate of the awake periods immediately before and after it, so that
+      // sitting quietly (no real drop) is not mistaken for sleep.
+      const NAP_HR_DROP_BPM = 5;
+      const [preHr, postHr] = await Promise.all([
+        getHrSamplesBetween(nap.startTs - 15 * 60000, nap.startTs).catch(() => []),
+        getHrSamplesBetween(nap.endTs, nap.endTs + 15 * 60000).catch(() => []),
+      ]);
+      const flankBpms = [...preHr, ...postHr].map((r) => r.bpm).filter((v) => v >= 30 && v <= 160).sort((a, b) => a - b);
+      if (flankBpms.length >= 10) {
+        if (avgHr > median(flankBpms) - NAP_HR_DROP_BPM) continue;
+      } else if (avgHr > dayMedianHr - NAP_HR_DROP_BPM) {
+        continue;
+      }
 
       await insertCardio({
         id: `nap_${nap.startTs}`,
