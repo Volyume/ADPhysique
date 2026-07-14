@@ -38,6 +38,7 @@ import { WeeklyPlanScreen } from './src/screens/WeeklyPlanScreen';
 import { colors } from './src/ui/theme';
 import { fonts, useWhoopFonts } from './src/ui/fonts';
 import { Nav, Route, TabKey, TABS } from './src/ui/navigation';
+import { tapHaptic } from './src/ui/haptics';
 
 // Apply WHOOP's Proxima Nova as the base font for all text.
 const ThemedText = Text as unknown as { defaultProps?: { style?: unknown } };
@@ -109,7 +110,16 @@ export default function App() {
           {TABS.map((t) => {
             const active = tab === t.key;
             return (
-              <TouchableOpacity key={t.key} style={styles.tab} onPress={() => nav.setTab(t.key)}>
+              <TouchableOpacity
+                key={t.key}
+                style={styles.tab}
+                activeOpacity={0.7}
+                onPress={() => {
+                  tapHaptic();
+                  nav.setTab(t.key);
+                }}
+              >
+                <View style={[styles.tabIndicator, active && styles.tabIndicatorActive]} />
                 <Ionicons
                   name={(active ? t.icon : `${t.icon}-outline`) as keyof typeof Ionicons.glyphMap}
                   size={22}
@@ -204,7 +214,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  tab: { flex: 1, alignItems: 'center', paddingVertical: 8, gap: 2 },
+  tab: { flex: 1, alignItems: 'center', paddingTop: 6, paddingBottom: 8, gap: 2 },
+  tabIndicator: { width: 18, height: 3, borderRadius: 2, backgroundColor: 'transparent', marginBottom: 4 },
+  tabIndicatorActive: { backgroundColor: colors.greenVibrant },
   tabLabel: { color: colors.textTertiary, fontSize: 10, fontFamily: fonts.textSemibold },
   tabLabelActive: { color: colors.text },
 });
