@@ -68,6 +68,10 @@ detector scored and the sleep result it produced.
 - A read-only diagnostics export reconstructs, for the most recent nights, the
   exact per-minute input the detector scored and the sleep result it produced,
   and never writes or changes any stored metric.
+- The nights audited are the last calendar days, reconstructed directly from
+  synced heart-rate history, so a night is captured even when no daily-metric row
+  exists for it yet; each night carries a note and its synced-data span so an
+  empty night (no history synced) is self-explanatory rather than a silent zero.
 - The diagnostics file is shared only through the user's own share sheet and is
   never uploaded anywhere by the app.
 

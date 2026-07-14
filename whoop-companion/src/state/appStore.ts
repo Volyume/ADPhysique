@@ -2199,9 +2199,16 @@ class AppStore extends Store<AppState> {
    * over-reported night can be exported and inspected instead of guessed at. It
    * never writes anything and never changes stored metrics.
    */
-  async exportSleepDiagnostics(maxNights = 5): Promise<string> {
+  async exportSleepDiagnostics(maxNights = 7): Promise<string> {
     const now = Date.now();
-    const days = (await getRecentDailyMetrics(30)).map((d) => d.day).slice(0, maxNights);
+    // Audit the last N calendar days directly, so a night with synced HR history
+    // is captured even when no daily-metric row exists for it yet.
+    const nowStart = localDayStartOffset(now, 0);
+    const days: string[] = [];
+    for (let i = 0; i < maxNights; i += 1) {
+      const d = new Date(localDayStartOffset(nowStart, -i));
+      days.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+    }
     const nights: unknown[] = [];
     for (const day of days) {
       const sod = dayStartFromKey(day);
@@ -2238,10 +2245,21 @@ class AppStore extends Store<AppState> {
             !!manual,
           )
         : null;
+      const firstSampleTs = sleepInput.find((s) => s.hr != null)?.ts ?? null;
+      const lastSampleTs = [...sleepInput].reverse().find((s) => s.hr != null)?.ts ?? null;
+      const note = candidateSleep
+        ? reliable
+          ? 'Sleep detected and reported.'
+          : 'A sleep window was found but not trusted for reporting.'
+        : firstSampleTs == null
+          ? 'No heart-rate history is synced for this night. Pull history while connected, then re-export.'
+          : 'No sleep detected in the synced data for this night.';
       nights.push({
         day,
         manual: !!manual,
         searchWindow: { startTs: winStart, endTs: winEnd },
+        syncedDataSpan: { firstSampleTs, lastSampleTs, sampleMinutes: sleepInput.filter((s) => s.hr != null).length },
+        note,
         reliable,
         confidence,
         overnightJaggednessBpm: Math.round(overnightJaggednessBpm * 10) / 10,
