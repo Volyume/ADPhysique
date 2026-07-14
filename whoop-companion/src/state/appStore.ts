@@ -3289,7 +3289,19 @@ class AppStore extends Store<AppState> {
       : Math.round((nightPerMin.length / captureWindowMin) * 100);
     const boundedSleepCoveragePct = Math.max(0, Math.min(100, sleepCoveragePct));
     const captureNightHr = captureSleep ? nightHr.filter((s) => s.ts >= captureSleep.startTs && s.ts < captureSleep.endTs) : nightHr;
-    const captureConfidence = sleepConfidence(captureEvidence.signalMin, boundedSleepCoveragePct, !!manual, captureTrustEvidence);
+    // A jagged overnight heart rate is quiet wakefulness, not continuous sleep;
+    // it lowers confidence (and, via staging, the reported hours) without ever
+    // deleting the night.
+    const overnightJaggednessBpm = captureSleep
+      ? hrJaggednessBpm(
+          nightPerMin.filter((p) => p.tsMs >= captureSleep.startTs && p.tsMs < captureSleep.endTs).map((p) => p.hr),
+        )
+      : 0;
+    const captureConfidence = downgradeSleepConfidenceForJaggedness(
+      sleepConfidence(captureEvidence.signalMin, boundedSleepCoveragePct, !!manual, captureTrustEvidence),
+      overnightJaggednessBpm,
+      !!manual,
+    );
     const sleepCapture: AppState['sleepCapture'] = {
       ...captureEvidence,
       coveragePct: boundedSleepCoveragePct,
@@ -3303,6 +3315,7 @@ class AppStore extends Store<AppState> {
         signalMin: captureEvidence.signalMin,
         coveragePct: boundedSleepCoveragePct,
         evidence: captureTrustEvidence,
+        confidence: captureConfidence,
       }),
     };
     let sleepScoreResult: SleepScore | null = null;
@@ -3330,6 +3343,7 @@ class AppStore extends Store<AppState> {
         sleepStress: sleepStressResult,
         manual: !!manual,
         includeQualityScore: true,
+        overnightJaggednessBpm,
       });
       sleepPerformanceResult = scored.performance;
       sleepScoreResult = scored.score;
@@ -4086,6 +4100,7 @@ function buildSleepDetail(input: {
   sleepStress: SleepStress | null;
   manual: boolean;
   includeQualityScore: boolean;
+  overnightJaggednessBpm?: number;
 }): {
   detail: SleepDetail;
   performance: SleepPerformance;
@@ -4096,7 +4111,11 @@ function buildSleepDetail(input: {
 } {
   const { sleep, need, consistencyPct, sleepStress, manual } = input;
   const coveragePct = boundedSleepCoveragePct(sleep);
-  const confidence = sleepConfidence(sleep.signalMin, coveragePct, manual, sleep);
+  const confidence = downgradeSleepConfidenceForJaggedness(
+    sleepConfidence(sleep.signalMin, coveragePct, manual, sleep),
+    input.overnightJaggednessBpm ?? 0,
+    manual,
+  );
   const hoursVsNeededPct = clampPct(Math.round((sleep.asleepMin / need.neededMin) * 100));
   const efficiencyPct = clampPct(Math.round(sleep.efficiency * 100));
   const restorativePct = sleep.asleepMin > 0 ? Math.round((sleep.restorativeMin / sleep.asleepMin) * 100) : 0;
@@ -4184,6 +4203,24 @@ function sleepIsReliable(sleep: SleepResult | null, manual: boolean, samples: Sl
     if (stillPct < 10 && sleep.movingMin > sleep.stillMin) return false;
   }
   return sleep.signalMin >= requiredSignalMin && sleepCoveragePct(sleep) >= MIN_SLEEP_SCORE_COVERAGE_PCT;
+}
+
+export function downgradeSleepConfidenceForJaggedness(
+  confidence: SleepConfidence,
+  jaggednessBpm: number,
+  manual: boolean,
+): SleepConfidence {
+  // jaggednessBpm is the whole-night median minute-to-minute HR swing. Real sleep
+  // is smooth (~2-4 bpm); a window this erratic is physiologically implausible as
+  // continuous sleep, so its confidence is lowered — never raised — capping the
+  // reported performance and quality without deleting the night. A window the
+  // wearer logged by hand keeps its evidence-based confidence.
+  const OVERNIGHT_JAGGEDNESS_BPM = 6;
+  const OVERNIGHT_SEVERE_JAGGEDNESS_BPM = 10;
+  if (manual) return confidence;
+  if (jaggednessBpm >= OVERNIGHT_SEVERE_JAGGEDNESS_BPM) return 'low';
+  if (jaggednessBpm >= OVERNIGHT_JAGGEDNESS_BPM) return confidence === 'high' ? 'medium' : 'low';
+  return confidence;
 }
 
 function sleepConfidence(
@@ -4544,8 +4581,9 @@ function sleepCaptureNote(input: {
   signalMin: number;
   coveragePct: number;
   evidence?: SleepEvidence | null;
+  confidence?: SleepConfidence;
 }): string {
-  const confidence = sleepConfidence(input.signalMin, input.coveragePct, input.manual, input.evidence);
+  const confidence = input.confidence ?? sleepConfidence(input.signalMin, input.coveragePct, input.manual, input.evidence);
   const vitalSignalMin = input.evidence?.inBedMin
     ? durationAwareSignalMin(input.evidence.inBedMin, MIN_VITAL_SIGNAL_MIN, 120, 0.7)
     : MIN_VITAL_SIGNAL_MIN;

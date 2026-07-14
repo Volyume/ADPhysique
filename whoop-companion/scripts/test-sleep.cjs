@@ -577,4 +577,47 @@ assert(
 );
 assert(contribOf({ asleepMin: 480 }, 'total') >= contribOf({ asleepMin: 360 }, 'total'), 'duration adequacy is monotonic up to need');
 
+// ---- Overnight jaggedness lowers sleep confidence (never raises it) ----
+// Extract just the pure helper from appStore.ts so the whole store (and its
+// native deps) need not be loaded.
+function loadPureExport(relativePath, exportName) {
+  const sourcePath = path.join(__dirname, '..', relativePath);
+  const source = fs.readFileSync(sourcePath, 'utf8');
+  const start = source.indexOf(`export function ${exportName}`);
+  assert(start >= 0, `${exportName} must be exported`);
+  const open = source.indexOf('{', source.indexOf(')', start));
+  let depth = 0;
+  let close = -1;
+  for (let i = open; i < source.length; i += 1) {
+    if (source[i] === '{') depth += 1;
+    if (source[i] === '}') {
+      depth -= 1;
+      if (depth === 0) { close = i + 1; break; }
+    }
+  }
+  assert(close > open, `${exportName} body must be balanced`);
+  const snippet = source.slice(start, close);
+  const out = ts.transpileModule(`${snippet}\nmodule.exports = ${exportName};`, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+    fileName: sourcePath,
+  }).outputText;
+  const loaded = new Module(sourcePath, module);
+  loaded.filename = sourcePath;
+  loaded.paths = module.paths;
+  loaded._compile(out, sourcePath);
+  return loaded.exports;
+}
+
+const downgradeSleepConfidenceForJaggedness = loadPureExport('src/state/appStore.ts', 'downgradeSleepConfidenceForJaggedness');
+// A smooth night keeps its confidence.
+assert(downgradeSleepConfidenceForJaggedness('high', 3, false) === 'high', 'a smooth overnight window keeps high confidence');
+assert(downgradeSleepConfidenceForJaggedness('medium', 4, false) === 'medium', 'a smooth overnight window keeps medium confidence');
+// A jagged night is lowered, never raised.
+assert(downgradeSleepConfidenceForJaggedness('high', 7, false) === 'medium', 'a jagged overnight window downgrades high to medium');
+assert(downgradeSleepConfidenceForJaggedness('medium', 7, false) === 'low', 'a jagged overnight window downgrades medium to low');
+assert(downgradeSleepConfidenceForJaggedness('high', 12, false) === 'low', 'a very jagged overnight window downgrades straight to low');
+assert(downgradeSleepConfidenceForJaggedness('low', 20, false) === 'low', 'confidence is never raised by the jaggedness gate');
+// A hand-logged window is never downgraded by jaggedness.
+assert(downgradeSleepConfidenceForJaggedness('high', 20, true) === 'high', 'a manually logged window keeps its evidence-based confidence');
+
 console.log('sleep reliability regression tests passed');
