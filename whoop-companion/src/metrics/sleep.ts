@@ -97,14 +97,18 @@ export type SleepNeed = {
   neededMin: number;
 };
 
-// WHOOP's per-term coefficients are computed server-side and are NOT in the APK;
-// these reproduce the confirmed breakdown STRUCTURE (baseline − naps + strain +
-// debt) and are tuned to the founder's screenshot. Treat the strain/debt slopes
-// as approximations, clearly the parts WHOOP keeps proprietary.
-const STRAIN_NEED_THRESHOLD = 10; // strain below this adds ~no extra need
-const STRAIN_NEED_SLOPE_MIN = 6; // minutes of need per strain-point above threshold
-const MAX_DEBT_REPAY_MIN = 120; // fold at most ~2 h of accrued debt into one night
+// Proprietary Sleep Need (VOLYUME), replacing the earlier screenshot-tuned
+// coefficients with science-based terms. Structure stays baseline − nap + strain
+// + debt; the wellbeing floor is preserved and never lowered.
+const STRAIN_NEED_KNEE = 8; // below this strain adds negligible need (easy days ≈ +0)
+const MAX_STRAIN = 21;
+const STRAIN_NEED_MAX_MIN = 60; // hard-day ceiling (WHOOP's published 30-60 min range)
+const STRAIN_NEED_EXP = 1.15; // gentle convexity from knee to ceiling
+const DEBT_FOLD_FRACTION = 0.5; // repay half of accrued debt tonight (partial, multi-night)
+const DEBT_FOLD_CAP_MIN = 90;
+const MAX_NAP_CREDIT_MIN = 120; // a long nap cannot zero the night's need
 const SLEEP_NEED_FLOOR_MIN = 300; // never recommend below 5 h (wellbeing floor)
+const SLEEP_NEED_CEIL_HEADROOM_MIN = 180; // ceiling = personal baseline + headroom
 
 export function computeSleepNeed(input: {
   baselineMin?: number;
@@ -113,18 +117,29 @@ export function computeSleepNeed(input: {
   napMin?: number;
 }): SleepNeed {
   const baselineMin = input.baselineMin ?? BASE_NEED_MIN;
-  // Strain only adds meaningful need above a moderate threshold (matches WHOOP's
-  // near-zero strain term on easy days, e.g. +0:02).
+  // The strain term ramps smoothly from a knee at strain 8 to a maximum of 60
+  // minutes at strain 21 (60 * t^1.15), zero when strain is unknown or ≤ knee.
   const strainMin =
     input.recentStrain != null
       ? Math.round(
-          Math.max(0, Math.min(11, input.recentStrain - STRAIN_NEED_THRESHOLD)) *
-            STRAIN_NEED_SLOPE_MIN,
+          STRAIN_NEED_MAX_MIN *
+            Math.pow(
+              Math.max(0, Math.min(1, (input.recentStrain - STRAIN_NEED_KNEE) / (MAX_STRAIN - STRAIN_NEED_KNEE))),
+              STRAIN_NEED_EXP,
+            ),
         )
       : 0;
-  const debtMin = Math.round(Math.max(0, Math.min(MAX_DEBT_REPAY_MIN, input.accruedDebtMin)));
-  const napMin = Math.round(Math.max(0, input.napMin ?? 0));
-  const neededMin = Math.max(SLEEP_NEED_FLOOR_MIN, baselineMin - napMin + strainMin + debtMin);
+  // The debt term repays half of accrued sleep debt on a night, capped at 90
+  // minutes, so recovery from debt is partial and multi-night.
+  const debtMin = Math.round(Math.min(DEBT_FOLD_CAP_MIN, DEBT_FOLD_FRACTION * Math.max(0, input.accruedDebtMin)));
+  const napMin = Math.round(Math.min(MAX_NAP_CREDIT_MIN, Math.max(0, input.napMin ?? 0)));
+  // The needed minutes are clamped between the 300-minute wellbeing floor and the
+  // personal baseline plus 180 minutes of headroom.
+  const rawNeeded = baselineMin - napMin + strainMin + debtMin;
+  const neededMin = Math.max(
+    SLEEP_NEED_FLOOR_MIN,
+    Math.min(baselineMin + SLEEP_NEED_CEIL_HEADROOM_MIN, rawNeeded),
+  );
   return { baselineMin, strainMin, debtMin, napMin, neededMin: Math.round(neededMin) };
 }
 

@@ -496,4 +496,33 @@ assert(
   'flank refinement preserves total restorative minutes',
 );
 
+// Proprietary Sleep Need (blueprint Change SN): science-based strain/debt terms.
+const needEasy = sleep.computeSleepNeed({ baselineMin: 480, recentStrain: 6, accruedDebtMin: 0, napMin: 0 });
+assert(needEasy.strainMin === 0, 'strain at or below the knee (8) adds no need');
+const needMax = sleep.computeSleepNeed({ baselineMin: 480, recentStrain: 21, accruedDebtMin: 0, napMin: 0 });
+assert(needMax.strainMin === 60, 'maximal strain adds the 60-minute ceiling');
+const needMid = sleep.computeSleepNeed({ baselineMin: 480, recentStrain: 14, accruedDebtMin: 0, napMin: 0 });
+assert(needMid.strainMin > 0 && needMid.strainMin < 60, 'mid strain adds between 0 and 60 minutes');
+assert(needMid.strainMin >= needEasy.strainMin, 'the strain term is monotonic in strain');
+assert(
+  sleep.computeSleepNeed({ baselineMin: 480, recentStrain: null, accruedDebtMin: 60, napMin: 0 }).debtMin === 30,
+  'the debt term repays half of accrued debt',
+);
+assert(
+  sleep.computeSleepNeed({ baselineMin: 480, recentStrain: null, accruedDebtMin: 400, napMin: 0 }).debtMin === 90,
+  'debt repayment is capped at 90 minutes',
+);
+assert(
+  sleep.computeSleepNeed({ baselineMin: 480, recentStrain: null, accruedDebtMin: 0, napMin: 200 }).napMin === 120,
+  'nap credit is capped at 120 minutes',
+);
+assert(
+  sleep.computeSleepNeed({ baselineMin: 400, recentStrain: null, accruedDebtMin: 0, napMin: 200 }).neededMin === 300,
+  'need never drops below the 300-minute wellbeing floor',
+);
+assert(
+  sleep.computeSleepNeed({ baselineMin: 480, recentStrain: 21, accruedDebtMin: 400, napMin: 0 }).neededMin <= 480 + 180,
+  'need never exceeds the personal baseline plus 180 minutes',
+);
+
 console.log('sleep reliability regression tests passed');
