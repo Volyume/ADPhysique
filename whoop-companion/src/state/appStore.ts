@@ -1511,6 +1511,81 @@ class AppStore extends Store<AppState> {
     return divisor;
   };
 
+  /**
+   * Guided step-audit walk: read the band counter samples for exactly the walked
+   * window and report the total ticks, the movement-accepted ticks, the ticks
+   * rejected as inactive, and the divisor that would map the accepted ticks onto
+   * the real step count. Read-only — it never fabricates steps or writes a metric.
+   */
+  auditStepWalk = async (
+    startTs: number,
+    endTs: number,
+    actualSteps?: number,
+  ): Promise<{
+    ok: boolean;
+    reason?: string;
+    windowMin: number;
+    sampleCount: number;
+    totalTicks: number;
+    acceptedTicks: number;
+    rejectedInactiveTicks: number;
+    droppedIntervals: number;
+    resetCount: number;
+    movementLinkedPct: number;
+    confidence: BandStepEstimate['confidence'] | null;
+    estimatedSteps: number;
+    suggestedDivisor: number | null;
+  }> => {
+    const windowMin = Math.max(0, Math.round((endTs - startTs) / 60000));
+    const empty = {
+      windowMin,
+      sampleCount: 0,
+      totalTicks: 0,
+      acceptedTicks: 0,
+      rejectedInactiveTicks: 0,
+      droppedIntervals: 0,
+      resetCount: 0,
+      movementLinkedPct: 0,
+      confidence: null,
+      estimatedSteps: 0,
+      suggestedDivisor: null,
+    };
+    if (!Number.isFinite(startTs) || !Number.isFinite(endTs) || endTs <= startTs) {
+      return { ok: false, reason: 'Mark the start and then the stop of the walk before checking.', ...empty };
+    }
+    const rows = await stepRowsForRange(startTs, endTs);
+    const estimate = estimateBandStepsFromCounters(rows, this.getState().bandStepDivisor, {
+      countFromTs: startTs,
+      countToTs: endTs,
+    });
+    if (!estimate) {
+      return {
+        ok: false,
+        reason: 'No band step counters are synced for this walk yet. Keep the strap connected, pull history, then re-check.',
+        ...empty,
+      };
+    }
+    const totalTicks = estimate.activeRawTicks + estimate.inactiveRawTicks;
+    const suggestedDivisor =
+      actualSteps != null && actualSteps > 0 && estimate.rawTicks > 0
+        ? normaliseStepDivisor(estimate.rawTicks / Math.round(actualSteps))
+        : null;
+    return {
+      ok: true,
+      windowMin,
+      sampleCount: estimate.sampleCount,
+      totalTicks,
+      acceptedTicks: estimate.rawTicks,
+      rejectedInactiveTicks: estimate.inactiveRawTicks,
+      droppedIntervals: estimate.droppedIntervals,
+      resetCount: estimate.resetCount,
+      movementLinkedPct: estimate.movementLinkedPct,
+      confidence: estimate.confidence,
+      estimatedSteps: estimate.steps,
+      suggestedDivisor,
+    };
+  };
+
   calibrateBandSteps = async (actualSteps: number): Promise<number> => {
     const actual = Math.max(1, Math.round(actualSteps));
     const estimate = this.getState().bandStepEstimate;

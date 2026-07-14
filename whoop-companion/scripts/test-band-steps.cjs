@@ -115,4 +115,22 @@ const reset = estimateBandStepsFromCounters(
 assert(reset?.resetCount === 1 && !bandStepEstimateIsTrusted(reset), 'counter resets prevent publication');
 assert(reset?.rawTicks === 50, 'recovers after a reset without counting the reset jump');
 
+// Guided step-audit walk: a controlled walk reports accepted vs inactive-rejected
+// ticks, and a divisor that maps accepted ticks onto the real step count.
+const walkRows = Array.from({ length: 21 }, (_, i) => ({
+  ts: i * 2000,
+  counter: i * 10,
+  activityClass: i < 11 ? 1 : 0,
+}));
+const walkEstimate = estimateBandStepsFromCounters(walkRows, 1, { countFromTs: 0, countToTs: 41_000 });
+assert(walkEstimate != null, 'a controlled walk produces an audit estimate');
+assert(walkEstimate.acceptedRawTicks === 110, 'audit reports movement-accepted ticks');
+assert(walkEstimate.rejectedInactiveRawTicks === 90, 'audit reports ticks rejected as inactive');
+const auditTotal = walkEstimate.activeRawTicks + walkEstimate.inactiveRawTicks;
+assert(auditTotal === walkEstimate.acceptedRawTicks + walkEstimate.rejectedInactiveRawTicks, 'total ticks split cleanly into accepted and rejected');
+const auditActual = 100;
+const suggestedDivisor = Math.round((walkEstimate.rawTicks / auditActual) * 10) / 10;
+const recalibrated = estimateBandStepsFromCounters(walkRows, suggestedDivisor, { countFromTs: 0, countToTs: 41_000 });
+assert(Math.abs(recalibrated.steps - auditActual) <= 1, 'suggested divisor maps accepted ticks onto the real step count');
+
 console.log('band step regression tests passed');

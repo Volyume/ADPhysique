@@ -32,6 +32,11 @@ export function AdvancedDeviceScreen({ nav }: { nav: Nav }) {
   const [exportProgress, setExportProgress] = useState<{ exported: number; total: number } | null>(null);
   const [exportingSleep, setExportingSleep] = useState(false);
   const [savedFrames, setSavedFrames] = useState<number | null>(null);
+  const [walkStart, setWalkStart] = useState<number | null>(null);
+  const [walkEnd, setWalkEnd] = useState<number | null>(null);
+  const [walkActual, setWalkActual] = useState('');
+  const [walkBusy, setWalkBusy] = useState(false);
+  const [walkResult, setWalkResult] = useState<Awaited<ReturnType<typeof appStore.auditStepWalk>> | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -177,6 +182,55 @@ export function AdvancedDeviceScreen({ nav }: { nav: Nav }) {
     }
   };
 
+  const runWalkAudit = async (start: number, end: number) => {
+    setWalkBusy(true);
+    try {
+      // Pull the walk's counters off the strap before reading them.
+      if (connected) {
+        try {
+          await appStore.runHistoryDrain('manual');
+        } catch {
+          // Fall through to audit whatever is already synced.
+        }
+      }
+      const actual = Number(walkActual.replace(/,/g, '').trim());
+      const res = await appStore.auditStepWalk(start, end, Number.isFinite(actual) && actual > 0 ? actual : undefined);
+      setWalkResult(res);
+    } catch (e) {
+      Alert.alert('Step audit failed', String(e));
+    } finally {
+      setWalkBusy(false);
+    }
+  };
+
+  const startWalk = () => {
+    setWalkStart(Date.now());
+    setWalkEnd(null);
+    setWalkResult(null);
+  };
+
+  const stopWalk = async () => {
+    if (walkStart == null) return;
+    const end = Date.now();
+    setWalkEnd(end);
+    await runWalkAudit(walkStart, end);
+  };
+
+  const recheckWalk = async () => {
+    if (walkStart == null || walkEnd == null) return;
+    await runWalkAudit(walkStart, walkEnd);
+  };
+
+  const applyWalkDivisor = async () => {
+    if (!walkResult?.suggestedDivisor) return;
+    try {
+      const divisor = await appStore.setBandStepDivisor(walkResult.suggestedDivisor);
+      Alert.alert('Step calibration updated', `${divisor.toFixed(1)} counter units per step`);
+    } catch (e) {
+      Alert.alert('Could not apply calibration', String(e));
+    }
+  };
+
   const confirmClearFrames = async () => {
     const totalFrames = await countRawFrames();
     if (totalFrames === 0) {
@@ -267,6 +321,66 @@ export function AdvancedDeviceScreen({ nav }: { nav: Nav }) {
           onPress={() => void exportSleepDiagnostics()}
           disabled={exportingSleep}
         />
+      </Card>
+
+      <SectionLabel>Step audit walk</SectionLabel>
+      <Card>
+        <Text style={styles.hint}>
+          Walk a known number of steps to check the band counter. Press start, walk, press stop, then enter how many
+          steps you actually took. It shows how many counter ticks the strap produced, how many were accepted as
+          movement, and the divisor that makes them match your real count.
+        </Text>
+        {walkStart == null || walkEnd != null ? (
+          <SecondaryButton title="Start walk" onPress={startWalk} disabled={walkBusy} />
+        ) : (
+          <>
+            <Text style={styles.diagText}>
+              Walking - started {new Date(walkStart).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </Text>
+            <SecondaryButton title={walkBusy ? 'Reading counters...' : 'Stop walk'} onPress={() => void stopWalk()} disabled={walkBusy} />
+          </>
+        )}
+        {walkEnd != null ? (
+          <View style={styles.calibrationRow}>
+            <View style={styles.inputCell}>
+              <Text style={styles.fieldLabel}>Steps you actually took</Text>
+              <TextInput
+                style={styles.input}
+                value={walkActual}
+                onChangeText={setWalkActual}
+                keyboardType="number-pad"
+                placeholder="e.g. 200"
+                placeholderTextColor={colors.textTertiary}
+              />
+            </View>
+            <View style={styles.calibrationActions}>
+              <SecondaryButton title={walkBusy ? '...' : 'Re-check'} onPress={() => void recheckWalk()} disabled={walkBusy} />
+            </View>
+          </View>
+        ) : null}
+        {walkResult ? (
+          walkResult.ok ? (
+            <View>
+              <Text style={styles.diagText}>Walk window: {walkResult.windowMin} min ({walkResult.sampleCount} samples)</Text>
+              <Text style={styles.diagText}>Total counter ticks: {walkResult.totalTicks}</Text>
+              <Text style={styles.diagText}>Accepted (movement-linked): {walkResult.acceptedTicks}</Text>
+              <Text style={styles.diagText}>Rejected as inactive: {walkResult.rejectedInactiveTicks}</Text>
+              <Text style={styles.diagText}>Movement-linked: {walkResult.movementLinkedPct}% - confidence {walkResult.confidence}</Text>
+              <Text style={styles.diagText}>Counter resets: {walkResult.resetCount} - dropped intervals: {walkResult.droppedIntervals}</Text>
+              <Text style={styles.diagText}>Estimated steps (current divisor): {walkResult.estimatedSteps}</Text>
+              {walkResult.suggestedDivisor != null ? (
+                <>
+                  <Text style={styles.diagText}>Suggested divisor: {walkResult.suggestedDivisor.toFixed(1)} units/step</Text>
+                  <SecondaryButton title="Apply suggested divisor" onPress={() => void applyWalkDivisor()} disabled={walkBusy} />
+                </>
+              ) : (
+                <Text style={styles.hint}>Enter your real step count above and press Re-check to get a suggested divisor.</Text>
+              )}
+            </View>
+          ) : (
+            <Text style={styles.error}>{walkResult.reason}</Text>
+          )
+        ) : null}
       </Card>
 
       <SectionLabel>Step calibration</SectionLabel>
