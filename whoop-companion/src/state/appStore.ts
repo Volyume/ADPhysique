@@ -3696,7 +3696,7 @@ function perMinuteRespVar(rows: HrSampleRow[]): Map<number, number> {
   const first = hr[0]!.ts;
   const last = hr[hr.length - 1]!.ts;
   const BLOCK_MS = 5 * 60 * 1000; // 5-minute block gives a stable RSA estimate
-  const STEP_MS = 2 * 60 * 1000; // 2-minute cadence
+  const STEP_MS = BLOCK_MS; // non-overlapping blocks: one RSA estimate per block, ~96 per night
 
   const blocks: Array<{ startMin: number; endMin: number; rate: number }> = [];
   let cursor = 0;

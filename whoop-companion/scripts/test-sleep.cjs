@@ -464,4 +464,36 @@ assert(respStaging.inBedMin === baseStaging.inBedMin, 'respiratory refinement pr
 assert(respStaging.stages.awake === baseStaging.stages.awake, 'respiratory refinement never creates or removes wake');
 assert(respStaging.stages.deep > baseStaging.stages.deep, 'steady breathing reclassifies REM epochs as deep');
 
+// An awake minute flanked by REM and deep must never be smoothed into sleep once
+// respiratory refinement makes both flanks 'deep' (the ordering blocker). Build a
+// long night so a genuine wake episode survives, with an isolated awake minute
+// between a REM run and a deep run, and steady breathing on the REM side.
+function flankNight(withResp) {
+  const rows = [];
+  let i = 0;
+  const push = (count, hr, motion, rmssd, respVar) => {
+    for (let k = 0; k < count; k += 1) {
+      rows.push({ ts: stageStart + i * stageMinute, hr, motion, rmssd, respVar: withResp ? respVar : null });
+      i += 1;
+    }
+  };
+  push(40, 62, 0, 30, 1.0); // REM run, steady breathing -> would reclassify to deep
+  push(1, 95, 0.9, 30, 4.0); // a single clear awake minute (high HR + motion)
+  push(40, 55, 0, 70, 4.0); // deep run
+  return rows;
+}
+const baseFlank = sleep.computeSleep(flankNight(false), undefined, { forceWindow: true });
+const respFlank = sleep.computeSleep(flankNight(true), undefined, { forceWindow: true });
+assert(baseFlank && respFlank, 'flank staging computes for both inputs');
+assert(baseFlank.stages.awake >= 1, 'baseline flank night keeps the isolated awake minute');
+assert(
+  respFlank.stages.awake === baseFlank.stages.awake,
+  'respiratory refinement never converts a flanked awake minute into sleep',
+);
+assert(respFlank.asleepMin === baseFlank.asleepMin, 'flank refinement preserves asleep minutes');
+assert(
+  respFlank.stages.deep + respFlank.stages.rem === baseFlank.stages.deep + baseFlank.stages.rem,
+  'flank refinement preserves total restorative minutes',
+);
+
 console.log('sleep reliability regression tests passed');

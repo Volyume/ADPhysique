@@ -640,35 +640,28 @@ export function computeSleep(
     )
       stage = 'rem';
     else stage = 'light';
-    // Respiratory variability only refines the choice between deep and REM for
-    // epochs already classified as asleep; steady breathing supports deep and
-    // variable breathing supports REM. When respVar is absent the label is
-    // exactly as it was, and awake/light epochs are never touched.
-    if (medianRespVar != null && s.respVar != null && Number.isFinite(s.respVar)) {
-      const steady = s.respVar <= medianRespVar * 0.8;
-      const variable = s.respVar >= medianRespVar * 1.2;
-      if (stage === 'rem' && steady) stage = 'deep';
-      else if (stage === 'deep' && variable) stage = 'rem';
-    }
     stages[stage] += 1;
     timeline.push(stage);
     observedTimeline.push(true);
   }
 
+  // Smoothing runs on the base labels, so sleep/wake totals are exactly as they
+  // are today. Respiratory refinement is applied AFTER smoothing and only swaps
+  // deep<->rem, so it can never convert an awake epoch to sleep nor be re-read by
+  // the smoother — the wake/light/asleep totals stay invariant to it.
   const smoothedTimeline = smoothStageTimeline(timeline, observedTimeline);
-  if (smoothedTimeline !== timeline) {
-    stages.awake = 0;
-    stages.light = 0;
-    stages.deep = 0;
-    stages.rem = 0;
-    for (const stage of smoothedTimeline) {
-      if (stage !== 'unknown') stages[stage] += 1;
-    }
+  const stagedTimeline = refineRestorativeStages(smoothedTimeline, window, medianRespVar);
+  stages.awake = 0;
+  stages.light = 0;
+  stages.deep = 0;
+  stages.rem = 0;
+  for (const stage of stagedTimeline) {
+    if (stage !== 'unknown') stages[stage] += 1;
   }
 
   // Compress the per-minute timeline into stage segments for the hypnogram.
   const hypnogram: Array<{ stage: SleepTimelineStage; minutes: number }> = [];
-  for (const stage of smoothedTimeline) {
+  for (const stage of stagedTimeline) {
     const last = hypnogram[hypnogram.length - 1];
     if (last && last.stage === stage) last.minutes += 1;
     else hypnogram.push({ stage, minutes: 1 });
@@ -775,6 +768,40 @@ function boundaryShowsWake(samples: SleepMinute[], restingReference: number): bo
 
 function isAsleepStage(stage: SleepTimelineStage): stage is Exclude<SleepStage, 'awake'> {
   return stage === 'light' || stage === 'deep' || stage === 'rem';
+}
+
+/**
+ * Respiratory variability only refines the choice between deep and REM for
+ * epochs already classified as asleep: steady breathing (low variability)
+ * supports a deep-sleep label, variable breathing supports a REM label. It runs
+ * on the already-smoothed labels, only swaps deep<->rem, and never touches
+ * awake, light or unknown epochs, so it cannot convert an awake epoch to sleep
+ * and leaves every sleep/wake total unchanged.
+ */
+function refineRestorativeStages(
+  timeline: SleepTimelineStage[],
+  window: SleepMinute[],
+  medianRespVar: number | null,
+): SleepTimelineStage[] {
+  if (medianRespVar == null) return timeline;
+  let changed = false;
+  const out = timeline.slice();
+  for (let i = 0; i < timeline.length; i += 1) {
+    const stage = timeline[i];
+    if (stage !== 'deep' && stage !== 'rem') continue;
+    const respVar = window[i]?.respVar;
+    if (respVar == null || !Number.isFinite(respVar)) continue;
+    const steady = respVar <= medianRespVar * 0.8;
+    const variable = respVar >= medianRespVar * 1.2;
+    if (stage === 'rem' && steady) {
+      out[i] = 'deep';
+      changed = true;
+    } else if (stage === 'deep' && variable) {
+      out[i] = 'rem';
+      changed = true;
+    }
+  }
+  return changed ? out : timeline;
 }
 
 function smoothStageTimeline(timeline: SleepTimelineStage[], observed: boolean[]): SleepTimelineStage[] {
