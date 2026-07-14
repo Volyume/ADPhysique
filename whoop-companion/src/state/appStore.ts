@@ -4335,6 +4335,14 @@ function recoveryEstimate(input: {
   const rhrSd = Math.max(MIN_RHR_BASELINE_SD_BPM, robustStdev(rhrSamples, baselineOptions) || 0);
   const respSd = Math.max(MIN_RESP_BASELINE_SD_RPM, robustStdev(respSamples, baselineOptions) || 0);
   const skinTempSd = Math.max(0.2, robustStdev(skinTempSamples, baselineOptions) || 0);
+  // Log-domain RMSSD baseline (RMSSD is log-normal) for the ln-HRV z-score, and
+  // the multi-day HRV-trend sub-score. Both degrade gracefully to absent.
+  const lnRmssdSamples = rmssdSamples
+    .filter((s) => Number.isFinite(s.value) && s.value > 0)
+    .map((s) => ({ day: s.day, value: Math.log(s.value) }));
+  const lnRmssdBaseline = robustBaseline(lnRmssdSamples, baselineOptions).value;
+  const lnRmssdSd = Math.max(0.08, robustStdev(lnRmssdSamples, baselineOptions) || 0);
+  const hrvTrendSub = hrvBalance(rmssdSamples)?.score ?? null;
   const baseline = {
     hrvAccepted: rmssdEstimate.acceptedSamples,
     rhrAccepted: rhrEstimate.acceptedSamples,
@@ -4366,6 +4374,10 @@ function recoveryEstimate(input: {
       skinTemperatureBaseline: skinTempBaseline,
       skinTemperatureSd: skinTempBaseline == null ? null : skinTempSd,
       sleepPerformance,
+      lnRmssd: Math.log(rmssd),
+      lnRmssdBaseline,
+      lnRmssdSd,
+      hrvTrendSub,
       baselineSampleCount: Math.min(rmssdEstimate.acceptedSamples, rhrEstimate.acceptedSamples),
       minimumBaselineSamples: MIN_RECOVERY_BASELINE_NIGHTS,
       calibrationSamples: FULL_RECOVERY_BASELINE_NIGHTS,

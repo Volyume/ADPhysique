@@ -247,8 +247,27 @@ assert(
   'an equal z-score HRV gain raises recovery more than the same RHR gain',
 );
 
-// Sleep performance is a diagnostic under the default profile (weight 0) but a
-// weighted term under the legacy profile.
+// Under the WHOOP-faithful profile sleep carries zero weight, so it is a
+// diagnostic that does not move the score and is excluded from contributors.
+const whoopLowSleep = recovery.computeRecovery({
+  rmssd: 50, rmssdBaseline: 50, rmssdSd: 8, restingHr: 55, rhrBaseline: 55, rhrSd: 4,
+  respiratoryRate: 14, respiratoryBaseline: 14, respiratorySd: 1, sleepPerformance: 0.4,
+  baselineSampleCount: 28, weights: recovery.WHOOP_RECOVERY_WEIGHTS,
+});
+const whoopHighSleep = recovery.computeRecovery({
+  rmssd: 50, rmssdBaseline: 50, rmssdSd: 8, restingHr: 55, rhrBaseline: 55, rhrSd: 4,
+  respiratoryRate: 14, respiratoryBaseline: 14, respiratorySd: 1, sleepPerformance: 1,
+  baselineSampleCount: 28, weights: recovery.WHOOP_RECOVERY_WEIGHTS,
+});
+assert(
+  whoopLowSleep && whoopHighSleep && whoopLowSleep.score === whoopHighSleep.score,
+  'sleep performance does not move the WHOOP-faithful recovery score',
+);
+assert(
+  whoopLowSleep && !whoopLowSleep.contributors.some((c) => c.key === 'sleep' || c.key === 'temp'),
+  'zero-weight signals are excluded from contributor attribution',
+);
+// The proprietary default profile (Pulse v2) does fold sleep in as a contributor.
 const defaultLowSleep = recovery.computeRecovery({
   rmssd: 50, rmssdBaseline: 50, rmssdSd: 8, restingHr: 55, rhrBaseline: 55, rhrSd: 4,
   respiratoryRate: 14, respiratoryBaseline: 14, respiratorySd: 1, sleepPerformance: 0.4, baselineSampleCount: 28,
@@ -258,12 +277,8 @@ const defaultHighSleep = recovery.computeRecovery({
   respiratoryRate: 14, respiratoryBaseline: 14, respiratorySd: 1, sleepPerformance: 1, baselineSampleCount: 28,
 });
 assert(
-  defaultLowSleep && defaultHighSleep && defaultLowSleep.score === defaultHighSleep.score,
-  'sleep performance does not move the default (WHOOP-faithful) recovery score',
-);
-assert(
-  defaultLowSleep && !defaultLowSleep.contributors.some((c) => c.key === 'sleep' || c.key === 'temp'),
-  'zero-weight signals are excluded from contributor attribution',
+  defaultLowSleep && defaultHighSleep && defaultHighSleep.score > defaultLowSleep.score,
+  'the proprietary default profile folds sleep performance into recovery',
 );
 const legacyLowSleep = recovery.computeRecovery({
   rmssd: 50, rmssdBaseline: 50, rmssdSd: 8, restingHr: 55, rhrBaseline: 55, rhrSd: 4,
@@ -395,6 +410,29 @@ assert(alarmSchedule.localAlarmMinuteOfDay(localSeven) === 7 * 60, 'alarm stores
 const afterSeven = new Date(2026, 6, 10, 7, 1, 0, 0).getTime();
 const nextSeven = alarmSchedule.nextLocalAlarmTimestamp(7 * 60, afterSeven);
 assert(new Date(nextSeven).getHours() === 7 && new Date(nextSeven).getDate() === 11, 'daily alarm rolls to the next local 07:00');
+
+// Pulse Recovery v2 (proprietary): ln-HRV, asymmetric RHR, HRV-trend, trim-only modifier.
+const baseInputs = {
+  rmssd: 50, rmssdBaseline: 50, rmssdSd: 8, restingHr: 55, rhrBaseline: 55, rhrSd: 4,
+  respiratoryRate: 14, respiratoryBaseline: 14, respiratorySd: 1, sleepPerformance: 0.85, baselineSampleCount: 28,
+};
+// HRV-trend term contributes when supplied and is absent otherwise.
+const withTrend = recovery.computeRecovery({ ...baseInputs, hrvTrendSub: 90 });
+assert(withTrend && withTrend.hrvTrendSub === 90 && withTrend.contributors.some((c) => c.key === 'hrvTrend'), 'HRV-trend contributes when supplied');
+assert(recovery.computeRecovery(baseInputs).hrvTrendSub === null, 'HRV-trend is absent when not supplied');
+// Bounded modifier can only trim, never inflate.
+const trimmed = recovery.computeRecovery({ ...baseInputs, readinessModifier: 0.85 });
+const unmodified = recovery.computeRecovery(baseInputs);
+assert(trimmed && unmodified && trimmed.score <= unmodified.score, 'a readiness modifier only trims the score');
+assert(recovery.computeRecovery({ ...baseInputs, readinessModifier: 1.5 }).score <= unmodified.score, 'a modifier above 1 cannot inflate the score');
+// ln-HRV z: an unusually high RMSSD still raises recovery via the log baseline.
+const lnHigh = recovery.computeRecovery({ ...baseInputs, rmssd: 80, lnRmssd: Math.log(80), lnRmssdBaseline: Math.log(50), lnRmssdSd: 0.2 });
+const lnBase = recovery.computeRecovery({ ...baseInputs, rmssd: 50, lnRmssd: Math.log(50), lnRmssdBaseline: Math.log(50), lnRmssdSd: 0.2 });
+assert(lnHigh && lnBase && lnHigh.score > lnBase.score, 'ln-HRV z raises recovery when RMSSD is above the log baseline');
+// Asymmetric RHR: an abnormally LOW resting HR does not keep rewarding linearly.
+const rhrMod = recovery.computeRecovery({ ...baseInputs, restingHr: 55 - 1.5 * 4 });
+const rhrExtreme = recovery.computeRecovery({ ...baseInputs, restingHr: 55 - 4 * 4 });
+assert(rhrMod && rhrExtreme && rhrExtreme.rhrSub <= rhrMod.rhrSub, 'an abnormally low RHR is penalised, not linearly rewarded');
 
 // Recovery supporting signals are neutral at baseline (deferred blueprint Change A):
 // a stable respiratory rate no longer drags recovery; a large deviation still does.

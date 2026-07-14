@@ -34,7 +34,18 @@ export type RecoveryInputs = {
   baselineSampleCount?: number;
   minimumBaselineSamples?: number;
   calibrationSamples?: number;
-  weights?: RecoveryWeightProfile; // defaults to the WHOOP-faithful blend
+  weights?: RecoveryWeightProfile; // defaults to the proprietary Pulse v2 blend
+  // Log-domain RMSSD (RMSSD is log-normal). When the log baseline is supplied,
+  // HRV uses a natural-log z-score; otherwise it falls back to the linear z.
+  lnRmssd?: number | null;
+  lnRmssdBaseline?: number | null;
+  lnRmssdSd?: number | null;
+  // Multi-day HRV-trend sub-score (0..100, short vs long baseline balance),
+  // included as its own contributor when available and dropped otherwise.
+  hrvTrendSub?: number | null;
+  // Bounded readiness modifier (load + autonomic stability). Must be <= 1: it may
+  // only trim the score, never inflate it. Absent/undefined means no effect (1).
+  readinessModifier?: number | null;
 };
 
 /** Relative weight of each recovery signal before renormalisation. */
@@ -49,6 +60,7 @@ export type RecoveryWeightProfile = Record<RecoveryContributorKey, number>;
 // sourced approximation of a proprietary model, not WHOOP's exact coefficients.
 export const WHOOP_RECOVERY_WEIGHTS: RecoveryWeightProfile = {
   hrv: 0.65,
+  hrvTrend: 0,
   rhr: 0.2,
   resp: 0.15,
   sleep: 0,
@@ -59,15 +71,29 @@ export const WHOOP_RECOVERY_WEIGHTS: RecoveryWeightProfile = {
 // two profiles compared, and so the change stays reversible.
 export const LEGACY_RECOVERY_WEIGHTS: RecoveryWeightProfile = {
   hrv: 0.4,
+  hrvTrend: 0,
   rhr: 0.25,
   resp: 0.1,
   sleep: 0.15,
   temp: 0.1,
 };
 
-export const DEFAULT_RECOVERY_WEIGHTS: RecoveryWeightProfile = WHOOP_RECOVERY_WEIGHTS;
+// VOLYUME's proprietary recovery profile. The default profile weights HRV family
+// highest (hrv + hrvTrend = 0.52), then RHR, sleep, respiration and skin
+// temperature, and renormalises over available terms. Adds a multi-day HRV-trend
+// term and a skin-temperature term that WHOOP's recovery omits.
+export const PULSE_V2_RECOVERY_WEIGHTS: RecoveryWeightProfile = {
+  hrv: 0.42,
+  hrvTrend: 0.1,
+  rhr: 0.18,
+  resp: 0.1,
+  temp: 0.08,
+  sleep: 0.12,
+};
 
-export type RecoveryContributorKey = 'hrv' | 'rhr' | 'resp' | 'temp' | 'sleep';
+export const DEFAULT_RECOVERY_WEIGHTS: RecoveryWeightProfile = PULSE_V2_RECOVERY_WEIGHTS;
+
+export type RecoveryContributorKey = 'hrv' | 'hrvTrend' | 'rhr' | 'resp' | 'temp' | 'sleep';
 
 export type RecoveryContributor = {
   key: RecoveryContributorKey;
@@ -80,6 +106,7 @@ export type RecoveryResult = {
   score: number; // 0..100
   band: 'green' | 'yellow' | 'red';
   hrvSub: number;
+  hrvTrendSub: number | null;
   rhrSub: number;
   respSub: number | null;
   tempSub: number | null;
@@ -140,13 +167,39 @@ export function computeRecovery(inp: RecoveryInputs): RecoveryResult | null {
     ? null
     : recoveryCalibration(inp.baselineSampleCount, inp.minimumBaselineSamples, inp.calibrationSamples);
   if (calibration?.status === 'unavailable') return null;
-  // HRV: higher than baseline -> better.
-  const hrvZ = inp.rmssdSd > 0 ? (inp.rmssd - inp.rmssdBaseline) / inp.rmssdSd : 0;
-  const hrvSub = zToScore(hrvZ);
+  // HRV uses a natural-log RMSSD z-score against a log-domain baseline (RMSSD is
+  // log-normal), when the log baseline is supplied, falling back to the linear z.
+  const hasLnHrv =
+    inp.lnRmssd != null &&
+    inp.lnRmssdBaseline != null &&
+    inp.lnRmssdSd != null &&
+    Number.isFinite(inp.lnRmssd) &&
+    Number.isFinite(inp.lnRmssdBaseline) &&
+    Number.isFinite(inp.lnRmssdSd) &&
+    (inp.lnRmssdSd as number) > 0;
+  const hrvZ = hasLnHrv
+    ? clamp((inp.lnRmssd as number) - (inp.lnRmssdBaseline as number), -4, 4) / (inp.lnRmssdSd as number)
+    : inp.rmssdSd > 0
+      ? (inp.rmssd - inp.rmssdBaseline) / inp.rmssdSd
+      : 0;
+  const hrvSub = zToScore(hrvZ, 1.0);
 
-  // RHR: lower than baseline -> better, so invert the delta.
-  const rhrZ = inp.rhrSd > 0 ? (inp.rhrBaseline - inp.restingHr) / inp.rhrSd : 0;
-  const rhrSub = zToScore(rhrZ);
+  // Multi-day HRV-trend term (0..100), included as its own contributor when
+  // available and dropped otherwise, so one good night on a declining trend does
+  // not read as full recovery.
+  const hrvTrendSub =
+    inp.hrvTrendSub != null && Number.isFinite(inp.hrvTrendSub)
+      ? clamp(inp.hrvTrendSub, 0, 100)
+      : null;
+
+  // Resting heart rate is scored asymmetrically: a lower-than-baseline reading is
+  // rewarded but the reward saturates, and a reading abnormal by more than two
+  // standard deviations in either direction is penalised (an unusually low
+  // nightly RHR is not linearly "better" — it can flag parasympathetic overreach).
+  const rhrLowerZ = inp.rhrSd > 0 ? (inp.rhrBaseline - inp.restingHr) / inp.rhrSd : 0;
+  const rhrReward = Math.min(rhrLowerZ, 1.5);
+  const rhrExcess = Math.max(0, Math.abs(rhrLowerZ) - 2);
+  const rhrSub = zToScore(rhrReward - 0.6 * rhrExcess, 1.0);
 
   // Sleep performance maps 0..1 -> 0..100; if unknown, fall back to neutral 60.
   const sleepSub = inp.sleepPerformance === null ? 60 : clamp(inp.sleepPerformance * 100, 0, 100);
@@ -192,6 +245,7 @@ export function computeRecovery(inp: RecoveryInputs): RecoveryResult | null {
   const profile = inp.weights ?? DEFAULT_RECOVERY_WEIGHTS;
   const candidateTerms: Array<{ key: RecoveryContributorKey; weight: number; score: number; available: boolean }> = [
     { key: 'hrv', weight: profile.hrv, score: hrvSub, available: true },
+    { key: 'hrvTrend', weight: profile.hrvTrend, score: hrvTrendSub ?? 0, available: hrvTrendSub != null },
     { key: 'rhr', weight: profile.rhr, score: rhrSub, available: true },
     { key: 'sleep', weight: profile.sleep, score: sleepSub, available: true },
     { key: 'resp', weight: profile.resp, score: respSub ?? 0, available: respSub != null },
@@ -202,7 +256,14 @@ export function computeRecovery(inp: RecoveryInputs): RecoveryResult | null {
     .map(({ key, weight, score }) => ({ key, weight, score }));
   const weight = terms.reduce((sum, term) => sum + term.weight, 0);
   if (terms.length === 0 || weight <= 0) return null;
-  const rawScore = clamp(terms.reduce((sum, term) => sum + term.weight * term.score, 0) / weight, 1, 99);
+  const core = terms.reduce((sum, term) => sum + term.weight * term.score, 0) / weight;
+  // Bounded load/stability modifier may only trim the score, never inflate it,
+  // and equals one (no effect) when its inputs are absent.
+  const modifier =
+    inp.readinessModifier != null && Number.isFinite(inp.readinessModifier)
+      ? clamp(inp.readinessModifier, 0.5, 1)
+      : 1;
+  const rawScore = clamp(core * modifier, 1, 99);
   // Apply provisional-baseline calibration exactly once, at the aggregate
   // score. Component sub-scores remain useful diagnostic signal values.
   const score = calibration ? calibrateRecoveryScore(rawScore, calibration) : Math.round(rawScore);
@@ -214,6 +275,7 @@ export function computeRecovery(inp: RecoveryInputs): RecoveryResult | null {
     score,
     band: score >= 67 ? 'green' : score >= 34 ? 'yellow' : 'red',
     hrvSub: Math.round(hrvSub),
+    hrvTrendSub: hrvTrendSub == null ? null : Math.round(hrvTrendSub),
     rhrSub: Math.round(rhrSub),
     respSub: respSub == null ? null : Math.round(respSub),
     tempSub: tempSub == null ? null : Math.round(tempSub),
