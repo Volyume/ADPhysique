@@ -128,7 +128,7 @@ export function HealthScreen({ nav }: { nav: Nav }) {
       </Card>
 
       <Text style={styles.footnote}>
-        Skin Temperature comes from validated WHOOP 5 v18 history. Blood Oxygen remains unavailable until its Gen5 mapping is validated. Rhythm screening is not a medical diagnostic.
+        Skin Temperature is decoded from the WHOOP 5 v18 history register (offset corroborated by community reverse-engineering, not yet ground-truthed on your strap). Blood Oxygen remains unavailable until its Gen5 mapping is confirmed. Rhythm screening is not a medical diagnostic.
       </Text>
     </Screen>
   );

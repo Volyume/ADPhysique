@@ -93,7 +93,7 @@ const DEFS: Record<string, Def> = {
     pick: (d) => d.skinTempC,
     measured: true,
     blurb:
-      'Skin temperature varies day to day and is different from core temperature. Pulse decodes the validated WHOOP 5 v18 skin-temperature register and compares overnight averages with your own range.',
+      'Skin temperature varies day to day and is different from core temperature. Pulse decodes the WHOOP 5 v18 skin-temperature register (offset corroborated by community reverse-engineering, not yet ground-truthed on-device) and compares overnight averages with your own range.',
   },
   recovery: {
     title: 'Recovery',

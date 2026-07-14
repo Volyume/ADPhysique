@@ -117,7 +117,7 @@ export function computeHealthMonitor(input: {
       'skin_temp',
       'Skin Temperature',
       'C',
-      'Skin temperature indicates how your body is regulating heat and varies day to day. It is decoded from the validated WHOOP 5 v18 skin-temperature register and builds a personal nightly range.',
+      'Skin temperature indicates how your body is regulating heat and varies day to day. It is decoded from the WHOOP 5 v18 skin-temperature register (not yet ground-truthed on-device) and builds a personal nightly range.',
       input.skinTemp,
     ),
   ];
