@@ -525,4 +525,38 @@ assert(
   'need never exceeds the personal baseline plus 180 minutes',
 );
 
+// Proprietary Sleep Score (blueprint Change SS): two-sided curves + confidence gate.
+const sleepScore = loadTypeScriptModule(path.join('src', 'metrics', 'sleepScore.ts'));
+const SLEEP_SCORE_BASE = Date.UTC(2026, 0, 1, 23, 0, 0);
+function makeSleepResult(overrides = {}) {
+  const base = {
+    startTs: SLEEP_SCORE_BASE, endTs: SLEEP_SCORE_BASE + 480 * 60000, inBedMin: 480, asleepMin: 450,
+    restorativeMin: 200, latencyMin: 15, wakeEvents: 1, efficiency: 0.94,
+    stages: { awake: 30, light: 250, deep: 90, rem: 110 }, hypnogram: [{ stage: 'light', minutes: 450 }],
+    unscoredMin: 0, cappedBySafetyLimit: false, performance: 0.95, neededMin: 480, source: 'auto_hr',
+    signalMin: 450, hrvMin: 300, motionMin: 450, stillMin: 450, movingMin: 0,
+    sleepStateMin: 0, sleepStateWakeMin: 0, sleepStateStillMin: 0, sleepStateAsleepMin: 0, sleepStateUpMin: 0,
+  };
+  return { ...base, ...overrides, stages: { ...base.stages, ...(overrides.stages || {}) } };
+}
+const scoreOf = (o) => sleepScore.computeSleepScore(makeSleepResult(o)).score;
+const contribOf = (o, key) => sleepScore.computeSleepScore(makeSleepResult(o)).contributors.find((c) => c.key === key).score;
+assert(scoreOf() >= 1 && scoreOf() <= 99, 'sleep score stays in range');
+assert(
+  contribOf({ stages: { rem: 99 } }, 'rem') > contribOf({ stages: { rem: 36 } }, 'rem') &&
+    contribOf({ stages: { rem: 99 } }, 'rem') > contribOf({ stages: { rem: 180 } }, 'rem'),
+  'two-sided REM penalises both too-little and too-much',
+);
+assert(
+  contribOf({ latencyMin: 15 }, 'latency') > contribOf({ latencyMin: 2 }, 'latency') &&
+    contribOf({ latencyMin: 15 }, 'latency') > contribOf({ latencyMin: 60 }, 'latency'),
+  'two-sided latency penalises very short and very long',
+);
+assert(
+  scoreOf({ source: 'manual_duration', stages: { rem: 180, deep: 20 } }) ===
+    scoreOf({ source: 'manual_duration', stages: { rem: 99, deep: 90 } }),
+  'with zero staging confidence, REM/deep values do not move the score',
+);
+assert(contribOf({ asleepMin: 480 }, 'total') >= contribOf({ asleepMin: 360 }, 'total'), 'duration adequacy is monotonic up to need');
+
 console.log('sleep reliability regression tests passed');
