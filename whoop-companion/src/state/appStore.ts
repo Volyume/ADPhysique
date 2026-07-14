@@ -106,7 +106,7 @@ import { pulseLoad, hrZones, strainFromLoad, totalTrimp, UserProfile } from '../
 import { kcalPerMinute, totalKcal } from '../metrics/calories';
 import { computeStress, stressSeriesFromWindows } from '../metrics/stress';
 import { computeHealthMonitor, HealthMonitorResult } from '../metrics/healthMonitor';
-import { autoSecondarySleepIsReliable, encodeNapDetail, MAX_AUTO_SECONDARY_SLEEP_MIN, napCreditMin, napCreditMinWithin, napDetailFromSleep, parseNapDetail, StoredNapDetail } from '../metrics/naps';
+import { autoSecondarySleepIsReliable, encodeNapDetail, hrJaggednessBpm, MAX_AUTO_SECONDARY_SLEEP_MIN, napCreditMin, napCreditMinWithin, napDetailFromSleep, parseNapDetail, StoredNapDetail } from '../metrics/naps';
 import { decodeHeartbeatSteps } from '../whoop/strapEvents';
 import { hrvBalance, HrvBalance } from '../metrics/hrvBalance';
 import { illnessRisk, IllnessResult } from '../metrics/illness';
@@ -2823,6 +2823,13 @@ class AppStore extends Store<AppState> {
       } else if (avgHr > dayMedianHr - NAP_HR_DROP_BPM) {
         continue;
       }
+      // An auto-nap is rejected when its per-minute heart rate is too erratic (a
+      // large median minute-to-minute change of the smoothed series), because
+      // real sleep heart rate is smooth and gradual, not jagged like sitting and
+      // moving at a desk.
+      const NAP_MAX_HR_JAGGEDNESS_BPM = 4;
+      const napPerMinHr = segment.filter((p) => p.tsMs >= nap.startTs && p.tsMs < nap.endTs).map((p) => p.hr);
+      if (hrJaggednessBpm(napPerMinHr) > NAP_MAX_HR_JAGGEDNESS_BPM) continue;
 
       await insertCardio({
         id: `nap_${nap.startTs}`,

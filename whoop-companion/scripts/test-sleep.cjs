@@ -396,6 +396,12 @@ assert(
   'a short nap with observed wake boundaries is still accepted',
 );
 
+// HR jaggedness: real sleep HR is smooth (low), an awake/desk trace is jagged.
+const smoothSleepHr = Array.from({ length: 30 }, (_, i) => 56 + Math.round(Math.sin(i / 6)));
+const jaggedDeskHr = Array.from({ length: 30 }, (_, i) => (i % 2 === 0 ? 58 : 88));
+assert(naps.hrJaggednessBpm(smoothSleepHr) < 4, 'a smooth sleeping HR trace has low jaggedness');
+assert(naps.hrJaggednessBpm(jaggedDeskHr) > 4, 'an erratic desk HR trace has high jaggedness');
+
 assert(
   database.NAP_OVERLAP_QUERY ===
     "SELECT * FROM cardio WHERE source = 'nap' AND start_ts < ? AND end_ts > ? ORDER BY start_ts ASC",

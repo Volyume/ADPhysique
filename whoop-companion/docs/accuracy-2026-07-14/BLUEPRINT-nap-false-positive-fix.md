@@ -24,6 +24,18 @@ shows neither. `src/` edits quote the normative lines here via `.claude/edit-gat
   heart rate of the awake periods immediately before and after it, so that
   sitting quietly (no real drop) is not mistaken for sleep.
 
+## Change NAP-C — Reject jagged (non-sleep) heart-rate windows (`src/state/appStore.ts`)
+
+The founder's HR trace for the false nap swung erratically between the 50s and
+90s — real sleep heart rate is smooth and gradual, sedentary-but-active periods
+are jagged. This is an absolute check, independent of the surrounding context.
+
+**Spec (normative):**
+
+- An auto-nap is rejected when its per-minute heart rate is too erratic (a large
+  median minute-to-minute change of the smoothed series), because real sleep
+  heart rate is smooth and gradual.
+
 ## Verification
 
 `npm run typecheck`; the full Pulse suite; a new nap test asserting a short nap

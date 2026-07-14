@@ -37,6 +37,23 @@ export function canInsertAutoNap(candidate: NapInterval, existing: NapInterval[]
 }
 
 /** Admit a long split-sleep episode only with stronger evidence than a nap. */
+/**
+ * Median minute-to-minute change of the smoothed per-minute heart-rate series
+ * (bpm). Real sleep heart rate is smooth (low value); an awake/active window
+ * (e.g. sitting and moving at a desk) is jagged (high value).
+ */
+export function hrJaggednessBpm(perMinHr: number[]): number {
+  const hr = perMinHr.filter((v) => Number.isFinite(v));
+  if (hr.length < 5) return 0;
+  const smoothed = hr.map((h, i) => ((hr[i - 1] ?? h) + h + (hr[i + 1] ?? h)) / 3);
+  const deltas: number[] = [];
+  for (let i = 1; i < smoothed.length; i += 1) deltas.push(Math.abs((smoothed[i] as number) - (smoothed[i - 1] as number)));
+  if (!deltas.length) return 0;
+  deltas.sort((a, b) => a - b);
+  const mid = Math.floor(deltas.length / 2);
+  return deltas.length % 2 ? (deltas[mid] as number) : ((deltas[mid - 1] as number) + (deltas[mid] as number)) / 2;
+}
+
 export function autoSecondarySleepIsReliable(nap: SleepResult, boundariesCovered: boolean): boolean {
   const coveragePct = Math.round((nap.signalMin / Math.max(1, nap.inBedMin)) * 100);
   const corroborationPct = sleepEvidencePct(nap);
