@@ -36,15 +36,31 @@ as a baseline), since native modules cannot be runtime-rendered in this session.
 - When the value is unavailable the ring shows an empty track and the em-dash
   centre, never a fabricated arc.
 
-## Change GLASS — Elevated, pressable surfaces (`src/ui/components.tsx`)
+## Change GLASS — Elevated + frosted surfaces (`src/ui/components.tsx`)
 
 **Spec (normative):**
 
 - Card gains an optional elevated variant with a subtle shadow and a press-scale
   animation for hero surfaces.
+- Card gains an optional frosted variant backed by expo-blur that renders a
+  translucent blurred surface, degrading to the solid card where blur is
+  unsupported.
 
-(A frosted/blur variant via expo-blur is deferred until it can be verified on a
-device render; expo-blur was removed to keep the dependency set to what is used.)
+## Change CHART — Gradient-filled hypnogram bars (`src/ui/components.tsx`)
+
+**Spec (normative):**
+
+- The sleep hypnogram bars are filled with a soft vertical gradient per stage
+  (upgraded rendering), keeping the same stage lanes, colours and segment
+  proportions.
+
+(A full Skia hypnogram reimplementation is deferred as low-ROI versus the
+gradient upgrade; the Skia dependency is already exercised and build-verified by
+the GlowRing hero ring, and the frosted Card variant exercises expo-blur.
+reanimated-driven transitions are deferred: reanimated 4's worklets/babel setup
+causes a runtime launch crash if misconfigured, which the APK build cannot catch,
+and it cannot be runtime-verified in this environment. Transitions use the
+built-in Animated API meanwhile.)
 
 ## Verification
 

@@ -16,6 +16,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Line, Polyline, Rect, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 
+import { BlurView } from 'expo-blur';
+
 import { colors, radius, spacing, type, fonts, sleepStageColors, tintedWash, elevation } from './theme';
 import { formatClock } from '../util/time';
 import { tapHaptic } from './haptics';
@@ -73,13 +75,24 @@ export function Card({
   style,
   onPress,
   elevated,
+  frosted,
 }: {
   children: ReactNode;
   style?: ViewStyle;
   onPress?: () => void;
   elevated?: boolean;
+  frosted?: boolean;
 }) {
   const elev = elevated ? elevation.card : null;
+  // Frosted: a translucent blurred surface (expo-blur), degrading to the solid
+  // card where blur is unsupported. Content sits inside the BlurView.
+  if (frosted && !onPress) {
+    return (
+      <BlurView intensity={22} tint="dark" style={[styles.card, styles.frosted, elev, style]}>
+        {children}
+      </BlurView>
+    );
+  }
   if (onPress) {
     return (
       <Pressable
@@ -584,7 +597,7 @@ export function Hypnogram({
         width={Math.max(1, w)}
         height={laneH}
         rx={3}
-        fill={STAGE_COLOR[s.stage] ?? sleepStageColors.light}
+        fill={`url(#hyp-${STAGE_COLOR[s.stage] ? s.stage : 'light'})`}
       />
     );
   });
@@ -604,6 +617,14 @@ export function Hypnogram({
           </View>
         ) : null}
         <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={hypnogramStyles.chart}>
+          <Defs>
+            {rows.map((stage) => (
+              <SvgGradient key={`grad-${stage}`} id={`hyp-${stage}`} x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={STAGE_COLOR[stage]} stopOpacity="1" />
+                <Stop offset="1" stopColor={STAGE_COLOR[stage]} stopOpacity="0.7" />
+              </SvgGradient>
+            ))}
+          </Defs>
           {rows.map((stage) => (
             <Rect
               key={`lane-${stage}`}
@@ -1055,6 +1076,7 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.6 },
   pressedScale: { transform: [{ scale: 0.985 }] },
+  frosted: { overflow: 'hidden', backgroundColor: 'rgba(26,34,39,0.55)' },
   sectionLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.section, marginBottom: spacing.sm },
   sectionLabel: {},
   stat: { flex: 1 },
