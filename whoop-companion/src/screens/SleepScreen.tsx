@@ -76,7 +76,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   // WHOOP defines Sleep Performance as total sleep divided by sleep need,
   // clamped to 100 — not the four-factor blend, which is kept as the separate
   // sleep-quality contributors below.
-  const sleepPerformancePct = sleep ? Math.min(100, Math.round((sleep.asleepMin / neededMin) * 100)) : null;
+  const sleepPerformancePct = sleep && neededMin > 0 ? Math.min(100, Math.round((sleep.asleepMin / neededMin) * 100)) : null;
   const surplusSleepMin = sleep ? Math.max(0, sleep.asleepMin - neededMin) : 0;
   const stageEstimateAvailable = !!sleep?.hypnogram.some((segment) => segment.minutes > 0);
   const autoWindowNeedsReview = autoSleepAtSafetyCeiling(sleep);
