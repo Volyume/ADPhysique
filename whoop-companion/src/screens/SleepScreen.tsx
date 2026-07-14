@@ -73,7 +73,10 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const debtExcludedNights = useMemo(() => lowTrustDebtNightCount(recentDays, today?.day), [recentDays, today?.day]);
   const todayStart = startOfDayMs(Date.now());
   const naps = cardio.filter((c) => c.source === 'nap' && c.startTs >= todayStart).slice(0, 4);
-  const perfScore = perf ? displayPct(perf.score) : null;
+  // WHOOP defines Sleep Performance as total sleep divided by sleep need,
+  // clamped to 100 — not the four-factor blend, which is kept as the separate
+  // sleep-quality contributors below.
+  const sleepPerformancePct = sleep ? Math.min(100, Math.round((sleep.asleepMin / neededMin) * 100)) : null;
   const surplusSleepMin = sleep ? Math.max(0, sleep.asleepMin - neededMin) : 0;
   const stageEstimateAvailable = !!sleep?.hypnogram.some((segment) => segment.minutes > 0);
   const autoWindowNeedsReview = autoSleepAtSafetyCeiling(sleep);
@@ -116,10 +119,10 @@ export function SleepScreen({ nav }: { nav: Nav }) {
       {/* Sleep Performance composite ring */}
       <Card style={{ alignItems: 'center', paddingVertical: 24 }} onPress={() => nav.navigate({ name: 'metric', key: 'sleep_performance' })}>
         <Ring
-          value={perfScore != null ? perfScore / 100 : 0}
+          value={sleepPerformancePct != null ? sleepPerformancePct / 100 : 0}
           color={colors.sleepTeal}
           centerTop="Sleep Performance"
-          centerMain={perfScore != null ? `${perfScore}%` : '—'}
+          centerMain={sleepPerformancePct != null ? `${sleepPerformancePct}%` : '—'}
           centerSub={sleep ? formatDuration(sleep.asleepMin) : 'awaiting last night'}
         />
       </Card>
@@ -503,11 +506,6 @@ function lowTrustDebtNightCount(days: DailyMetricRow[], todayDay: string | undef
     .filter((d) => d.day !== todayDay && d.sleepMin != null)
     .slice(0, 14)
     .filter((d) => sleepTrustTier(d.sleepDetail) === 'low').length;
-}
-
-function displayPct(value: number | null | undefined): number | null {
-  if (value == null || !Number.isFinite(value)) return null;
-  return Math.max(0, Math.min(100, Math.round(value)));
 }
 
 const styles = StyleSheet.create({

@@ -132,7 +132,9 @@ const hrrZones = strain.hrZones(
   ],
   { ageYears: 30, sex: 'male', restingHr: 60, maxHr: 200 },
 );
-assert(hrrZones[0].minutes === 1 && hrrZones[1].minutes === 1 && hrrZones[2].minutes === 1, 'WHOOP zones use HR reserve boundaries');
+// 120 bpm = 42.86% HRR and 130 bpm = 50% HRR both fall in Zone 1 (WHOOP Zone 1 =
+// 40-60% HRR); 144 bpm = 60% HRR is Zone 2; nothing lands in the rest bucket.
+assert(hrrZones[0].minutes === 0 && hrrZones[1].minutes === 2 && hrrZones[2].minutes === 1, 'WHOOP HRR zones start Zone 1 at 40% reserve');
 
 assert(
   historySyncPolicy.historySyncIsDurablyComplete({ reason: 'complete', rawRecords: 20, durableEndChunks: 2, acknowledgedEndChunks: 2, failed: false }),
@@ -392,5 +394,23 @@ assert(alarmSchedule.localAlarmMinuteOfDay(localSeven) === 7 * 60, 'alarm stores
 const afterSeven = new Date(2026, 6, 10, 7, 1, 0, 0).getTime();
 const nextSeven = alarmSchedule.nextLocalAlarmTimestamp(7 * 60, afterSeven);
 assert(new Date(nextSeven).getHours() === 7 && new Date(nextSeven).getDate() === 11, 'daily alarm rolls to the next local 07:00');
+
+// HR zones: WHOOP's Zone 1 begins at 40% heart-rate reserve (blueprint Change 1).
+const zoneProfile = { ageYears: 40, sex: 'male', restingHr: 50, maxHr: 150 }; // HRR span 100 bpm
+const zones45 = strain.hrZones([{ hr: 95, minutes: 30 }], zoneProfile); // hr 95 = 45% HRR
+assert(zones45.find((z) => z.zone === 1)?.minutes === 30, '45% HRR counts as Zone 1');
+assert(zones45.find((z) => z.zone === 0)?.minutes === 0, '45% HRR does not fall in the rest bucket');
+assert(
+  strain.edwardsTrimp([{ hr: 85, minutes: 30 }], zoneProfile) === 0,
+  'below 40% HRR (35%) is rest and adds no strain load',
+);
+assert(
+  strain.edwardsTrimp([{ hr: 95, minutes: 30 }], zoneProfile) > 0,
+  '40-50% HRR contributes to the Edwards strain load',
+);
+assert(
+  strain.hrZones([{ hr: 115, minutes: 10 }], zoneProfile).find((z) => z.zone === 2)?.minutes === 10,
+  '65% HRR remains Zone 2 (upper zone boundaries unchanged)',
+);
 
 console.log('physiology regression tests passed');

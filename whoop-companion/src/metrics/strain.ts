@@ -66,10 +66,12 @@ export function trimpToStrain(trimp: number): number {
 }
 
 /**
- * Edwards zone-weighted TRIMP using WHOOP's six heart-rate zones (0–5 by % max
- * HR). Weight = the zone number (0–5), so Zone 0 (below 50% max HR — i.e. rest)
+ * Edwards zone-weighted TRIMP using WHOOP's five heart-rate-reserve zones plus a
+ * rest bucket. Weight = the zone number (0–5), so the rest bucket (below 40% HRR)
  * contributes nothing and a sedentary day scores ~0, matching WHOOP. Higher
- * zones count progressively more.
+ * zones count progressively more. Heart rate between 40% and 50% HRR counts
+ * toward Zone 1 and contributes to the Edwards strain load, not to the
+ * weight-zero rest bucket.
  */
 export function edwardsTrimp(
   samples: Array<{ hr: number; minutes: number }>,
@@ -95,13 +97,15 @@ export function strainFromLoad(load: number): number {
 
 export type HrZone = { zone: number; label: string; range: string; minutes: number };
 
-// Current WHOOP zones use heart-rate reserve (HRR), accounting for resting and maximum HR.
-// Zone 0 <50%, 1 50–60%, 2 60–70%, 3 70–80%, 4 80–90%, 5 90–100%.
-const ZONE_MAX_EDGES = [0.5, 0.6, 0.7, 0.8, 0.9];
-const ZONE_LABELS = ['Zone 0', 'Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5'];
-const ZONE_RANGES = ['<50%', '50–60%', '60–70%', '70–80%', '80–90%', '90–100%'];
+// Current WHOOP zones use heart-rate reserve (HRR), accounting for resting and
+// maximum HR. The lowest training zone (Zone 1) begins at 40% heart-rate reserve,
+// matching WHOOP's five-zone model; only below 40% HRR counts as rest.
+// Rest <40%, Zone 1 40–60%, 2 60–70%, 3 70–80%, 4 80–90%, 5 90–100%.
+const ZONE_MAX_EDGES = [0.4, 0.6, 0.7, 0.8, 0.9];
+const ZONE_LABELS = ['Rest', 'Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5'];
+const ZONE_RANGES = ['<40%', '40–60%', '60–70%', '70–80%', '80–90%', '90–100%'];
 
-/** Minutes spent in each WHOOP heart-rate zone (0–5 by % max HR). */
+/** Minutes spent in each WHOOP heart-rate-reserve zone (rest + Zones 1–5). */
 export function hrZones(
   samples: Array<{ hr: number; minutes: number }>,
   profile: UserProfile,
