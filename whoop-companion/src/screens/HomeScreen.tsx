@@ -3,7 +3,7 @@ import { Pressable, Text, View, StyleSheet } from 'react-native';
 
 import { appStore } from '../state/appStore';
 import { useStoreSelector } from '../state/store';
-import { Card, Dial, Empty, FAB, Screen, SectionLabel } from '../ui/components';
+import { Card, Dial, Empty, FAB, Screen, SectionLabel, Tile } from '../ui/components';
 import { colors, fonts, recoveryColor } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { formatClock, formatDuration } from '../util/time';
@@ -23,6 +23,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
   const sleep = useStoreSelector(appStore, (s) => s.lastSleep);
   const session = useStoreSelector(appStore, (s) => s.session);
+  const steps = useStoreSelector(appStore, (s) => s.steps);
 
   const recovery = today?.recovery ?? null;
   const strain = today?.strain ?? null;
@@ -117,6 +118,16 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             />
           </View>
         </Card>
+
+        <SectionLabel>Today</SectionLabel>
+        <Tile
+          title="Steps"
+          value={steps != null ? steps.toLocaleString() : '—'}
+          sub={steps != null ? 'WHOOP counter' : 'awaiting sync'}
+          icon="footsteps"
+          color={colors.recoveryGreen}
+          onPress={() => nav.navigate({ name: 'metric', key: 'steps' })}
+        />
 
         {todayFocus ? (
           <Card onPress={() => nav.navigate(todayFocus.route)}>

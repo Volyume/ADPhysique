@@ -423,7 +423,7 @@ function recoveryDriverInsight(
     };
   }
 
-  const rows = [
+  const candidateRows = [
     { key: 'hrv', metric: 'HRV', score: parts.hrvSub, route: { name: 'metric', key: 'hrv' } as const, icon: 'pulse' },
     { key: 'rhr', metric: 'Resting HR', score: parts.rhrSub, route: { name: 'metric', key: 'rhr' } as const, icon: 'heart' },
     ...(parts.respSub != null
@@ -434,6 +434,11 @@ function recoveryDriverInsight(
       : []),
     { key: 'sleep', metric: 'Sleep', score: parts.sleepSub, route: { name: 'sleep' } as const, icon: 'moon' },
   ];
+  // Only signals that carry weight in the active recovery profile may be named as
+  // dragging or supporting recovery; a zero-weight signal is diagnostic only. Fall
+  // back to the full list when no contributor weights are available (older rows).
+  const weightedKeys = new Set((parts.contributors ?? []).map((contributor) => contributor.key));
+  const rows = weightedKeys.size ? candidateRows.filter((row) => weightedKeys.has(row.key as never)) : candidateRows;
   const weakest = rows.slice().sort((a, b) => a.score - b.score)[0];
   if (weakest && weakest.score < 70) {
     return {
