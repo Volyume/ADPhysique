@@ -173,7 +173,7 @@ export function HomeScreen({ nav }: { nav: Nav }) {
             </Pressable>
           ) : null}
           {todayCardio.length === 0 && !sleep ? (
-            <Empty text="No activities yet today. Tap + to log one." />
+            <Empty icon="barbell-outline" text="No activities yet today. Tap + to log one." />
           ) : (
             todayCardio.map((c) => (
               <Pressable

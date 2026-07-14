@@ -325,8 +325,14 @@ function AnimatedFill({
   return <Animated.View style={[style, { width, backgroundColor: color }]} />;
 }
 
-export function Empty({ text }: { text: string }) {
-  return <Text style={styles.empty}>{text}</Text>;
+export function Empty({ text, icon }: { text: string; icon?: string }) {
+  if (!icon) return <Text style={styles.empty}>{text}</Text>;
+  return (
+    <View style={styles.emptyWrap}>
+      <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={24} color={colors.textTertiary} />
+      <Text style={[styles.empty, { marginTop: 8, textAlign: 'center' }]}>{text}</Text>
+    </View>
+  );
 }
 
 export function SleepConfidenceStatus({
@@ -1086,6 +1092,7 @@ const styles = StyleSheet.create({
   barFill: { height: 10, borderRadius: 5 },
   barRight: { color: colors.textSecondary, fontSize: 12, width: 60, textAlign: 'right', fontFamily: fonts.text },
   empty: { color: colors.textTertiary, fontSize: 13, marginTop: spacing.item, lineHeight: 18, fontFamily: fonts.text },
+  emptyWrap: { alignItems: 'center', paddingVertical: 10 },
   confidenceStatus: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: spacing.item, paddingVertical: 10, paddingHorizontal: 2 },
   confidenceDot: { width: 9, height: 9, borderRadius: 5 },
   confidenceCopy: { flex: 1 },
