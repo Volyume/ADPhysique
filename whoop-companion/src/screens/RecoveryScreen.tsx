@@ -302,6 +302,15 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
               color={fourTier(parts.hrvSub).color}
               onPress={() => nav.navigate({ name: 'metric', key: 'hrv' })}
             />
+            {parts.hrvTrendSub != null && contributes('hrvTrend') ? (
+              <ContributorRow
+                label="HRV trend"
+                percent={parts.hrvTrendSub}
+                value={fourTier(parts.hrvTrendSub).label}
+                color={fourTier(parts.hrvTrendSub).color}
+                onPress={() => nav.navigate({ name: 'metric', key: 'hrv' })}
+              />
+            ) : null}
             <ContributorRow
               label="Resting heart rate"
               percent={parts.rhrSub}
@@ -431,6 +440,9 @@ function recoveryDriverInsight(
 
   const candidateRows = [
     { key: 'hrv', metric: 'HRV', score: parts.hrvSub, route: { name: 'metric', key: 'hrv' } as const, icon: 'pulse' },
+    ...(parts.hrvTrendSub != null
+      ? [{ key: 'hrvTrend', metric: 'HRV trend', score: parts.hrvTrendSub, route: { name: 'metric', key: 'hrv' } as const, icon: 'trending-up' }]
+      : []),
     { key: 'rhr', metric: 'Resting HR', score: parts.rhrSub, route: { name: 'metric', key: 'rhr' } as const, icon: 'heart' },
     ...(parts.respSub != null
       ? [{ key: 'resp', metric: 'Respiratory', score: parts.respSub, route: { name: 'metric', key: 'respiratory' } as const, icon: 'fitness' }]
@@ -480,6 +492,7 @@ function recoveryDriverInsight(
 
 function recoveryDriverBody(key: string, score: number): string {
   if (key === 'hrv') return `HRV is below your current baseline band (${score}), so recovery should stay conservative.`;
+  if (key === 'hrvTrend') return `Your multi-day HRV trend is below its longer baseline (${score}), a sign strain or illness is accumulating.`;
   if (key === 'rhr') return `Resting heart rate is elevated relative to baseline (${score}), often a sign to ease off.`;
   if (key === 'resp') return `Respiratory rate is away from baseline (${score}), so recovery confidence should be tempered.`;
   if (key === 'temp') return `Skin temperature is away from your personal baseline (${score}), which can signal strain or poor recovery.`;
@@ -489,6 +502,7 @@ function recoveryDriverBody(key: string, score: number): string {
 
 function recoverySupportBody(key: string): string {
   if (key === 'hrv') return 'HRV is carrying the recovery score in the right direction.';
+  if (key === 'hrvTrend') return 'Your multi-day HRV trend is at or above its longer baseline.';
   if (key === 'rhr') return 'Resting heart rate is supporting recovery against your baseline.';
   if (key === 'resp') return 'Respiratory rate is close enough to baseline to support the score.';
   if (key === 'temp') return 'Skin temperature is stable against your baseline.';

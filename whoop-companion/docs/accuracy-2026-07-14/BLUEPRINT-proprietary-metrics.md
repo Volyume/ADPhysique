@@ -85,6 +85,19 @@ logarithmic 0-21 curve where 21 is attainable.
 - The Banister female constant is corrected to 0.86 (it was the male 0.64),
   so women's load is no longer computed with the male scalar.
 
+## Change UI — Surface the new metrics where WHOOP surfaces them
+
+So the app is familiar and easy to pick up, the proprietary values are shown in
+their WHOOP-equivalent places using the existing components.
+
+**Spec (normative):**
+
+- The recovery contributors list shows an HRV-trend row (multi-day HRV balance)
+  when it is available, alongside HRV, resting heart rate, respiration and
+  skin temperature.
+- The Sleep screen shows the proprietary Sleep Score (0-100) with its
+  contributors, in addition to the WHOOP hours/need Sleep Performance ring.
+
 ## Verification
 
 Each change ships with invariant tests written to fail (determinism, bounds,

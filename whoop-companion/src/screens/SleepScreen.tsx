@@ -22,6 +22,7 @@ import {
 import { colors, fonts, sleepStageColors } from '../ui/theme';
 import { Nav } from '../ui/navigation';
 import { Band, BAND_LABEL, bandColors } from '../metrics/sleepBands';
+import { fourTier } from '../metrics/bands';
 import { formatClock, formatDuration, startOfDayMs } from '../util/time';
 import { DayRail } from './DayScreen';
 import type { DailyMetricRow } from '../db/database';
@@ -49,6 +50,7 @@ export function SleepScreen({ nav }: { nav: Nav }) {
   const sleepSchedule = useStoreSelector(appStore, (s) => s.sleepSchedule);
   const consistency = useStoreSelector(appStore, (s) => s.sleepConsistency);
   const stress = useStoreSelector(appStore, (s) => s.sleepStress);
+  const sleepScore = useStoreSelector(appStore, (s) => s.sleepScore);
   const today = useStoreSelector(appStore, (s) => s.today);
   const recentDays = useStoreSelector(appStore, (s) => s.recentDays);
   const cardio = useStoreSelector(appStore, (s) => s.cardio);
@@ -125,6 +127,28 @@ export function SleepScreen({ nav }: { nav: Nav }) {
           centerMain={sleepPerformancePct != null ? `${sleepPerformancePct}%` : '—'}
           centerSub={sleep ? formatDuration(sleep.asleepMin) : 'awaiting last night'}
         />
+      </Card>
+
+      {/* Proprietary 0–100 Sleep Score with its contributors, alongside the ring */}
+      <SectionLabel>Sleep Score</SectionLabel>
+      <Card onPress={() => nav.navigate({ name: 'metric', key: 'sleep_performance' })}>
+        {sleepScore ? (
+          <>
+            <View style={styles.scoreHead}>
+              <Text style={[styles.scoreBig, { color: fourTier(sleepScore.score).color }]}>{sleepScore.score}</Text>
+              <Text style={styles.scoreOutOf}>/ 100 · {fourTier(sleepScore.score).label}</Text>
+            </View>
+            {sleepScore.contributors.map((c) => (
+              <View key={c.key} style={styles.scoreRow}>
+                <Text style={styles.scoreRowLabel}>{c.label}</Text>
+                <Text style={styles.scoreRowDetail}>{c.detail}</Text>
+                <Text style={[styles.scoreRowValue, { color: fourTier(c.score).color }]}>{c.score}</Text>
+              </View>
+            ))}
+          </>
+        ) : (
+          <Empty text="Your Sleep Score and its contributors appear after a scored night." />
+        )}
       </Card>
 
       {/* The four Sleep Performance contributors with Poor / Sufficient / Optimal bands */}
@@ -517,6 +541,13 @@ const styles = StyleSheet.create({
   focusBody: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 3, fontFamily: fonts.text },
   grid: { flexDirection: 'row', gap: 12 },
   half: { flex: 1 },
+  scoreHead: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 10 },
+  scoreBig: { fontSize: 34, fontFamily: fonts.black },
+  scoreOutOf: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.text },
+  scoreRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 9, borderTopWidth: 1, borderTopColor: colors.border },
+  scoreRowLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold, width: 128 },
+  scoreRowDetail: { color: colors.textTertiary, fontSize: 12, fontFamily: fonts.text, flex: 1 },
+  scoreRowValue: { fontSize: 16, fontFamily: fonts.bold, width: 40, textAlign: 'right' },
   contribRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: colors.border },
   contribLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.textSemibold, flex: 1 },
   segWrap: { flexDirection: 'row', gap: 4, width: 96, marginHorizontal: 10 },

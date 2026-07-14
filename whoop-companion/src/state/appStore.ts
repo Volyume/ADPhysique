@@ -412,6 +412,7 @@ export type AppState = {
   // Oura-style derived insights (all HR/R-R only):
   recoveryParts: {
     hrvSub: number;
+    hrvTrendSub: number | null;
     rhrSub: number;
     respSub: number | null;
     tempSub: number | null;
@@ -4387,6 +4388,7 @@ function recoveryEstimate(input: {
       score: r.score,
       parts: {
         hrvSub: r.hrvSub,
+        hrvTrendSub: r.hrvTrendSub,
         rhrSub: r.rhrSub,
         respSub: r.respSub,
         tempSub: r.tempSub,
