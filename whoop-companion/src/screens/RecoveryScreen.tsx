@@ -199,6 +199,10 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
   const baselineNights = recoveryBaseline?.acceptedNights ?? 0;
   const days = orderedDays(today, recentDays);
   const recoveryDriver = recoveryDriverInsight(parts, confidence, sleepDetail, confidenceCap);
+  // The recovery contributors list shows only signals that carry weight in the
+  // active recovery profile; when no weights are stored it falls back to all.
+  const weightedKeys = new Set((parts?.contributors ?? []).map((contributor) => contributor.key));
+  const contributes = (key: string) => weightedKeys.size === 0 || weightedKeys.has(key as never);
   const efficiencySamples = recentDays
     .filter((d) => sleepTrustTier(d.sleepDetail) !== 'low')
     .map((d) => d.sleepDetail?.efficiency)
@@ -305,7 +309,7 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
               color={fourTier(parts.rhrSub).color}
               onPress={() => nav.navigate({ name: 'metric', key: 'rhr' })}
             />
-            {parts.respSub != null ? (
+            {parts.respSub != null && contributes('resp') ? (
               <ContributorRow
                 label="Respiratory rate"
                 percent={parts.respSub}
@@ -314,7 +318,7 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
                 onPress={() => nav.navigate({ name: 'metric', key: 'respiratory' })}
               />
             ) : null}
-            {parts.tempSub != null ? (
+            {parts.tempSub != null && contributes('temp') ? (
               <ContributorRow
                 label="Skin temperature"
                 percent={parts.tempSub}
@@ -323,13 +327,15 @@ export function RecoveryScreen({ nav }: { nav: Nav }) {
                 onPress={() => nav.navigate({ name: 'metric', key: 'skin_temp' })}
               />
             ) : null}
-            <ContributorRow
-              label="Sleep"
-              percent={parts.sleepSub}
-              value={fourTier(parts.sleepSub).label}
-              color={fourTier(parts.sleepSub).color}
-              onPress={() => nav.navigate({ name: 'metric', key: 'sleep_performance' })}
-            />
+            {contributes('sleep') ? (
+              <ContributorRow
+                label="Sleep"
+                percent={parts.sleepSub}
+                value={fourTier(parts.sleepSub).label}
+                color={fourTier(parts.sleepSub).color}
+                onPress={() => nav.navigate({ name: 'metric', key: 'sleep_performance' })}
+              />
+            ) : null}
           </Card>
         </>
       ) : null}

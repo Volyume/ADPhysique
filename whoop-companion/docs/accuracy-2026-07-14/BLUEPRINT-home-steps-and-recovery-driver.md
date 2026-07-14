@@ -38,6 +38,20 @@ announce "Sleep is dragging recovery". Attribution must match the score.
 - When no weighted contributors are available the insight falls back to its
   previous signal list, so older stored rows still produce an insight.
 
+## Change C — Recovery contributors reflect the weighting (`src/screens/RecoveryScreen.tsx`)
+
+**Rationale.** Same principle as Change B, applied to the "Recovery
+contributors" list. WHOOP's recovery contributors are HRV, resting heart rate
+and respiratory rate; listing sleep and skin temperature there implies they
+score when, under the default profile, they do not.
+
+**Spec (normative):**
+
+- The recovery contributors list shows only signals that carry weight in the
+  active recovery profile, taken from the computed contributor list.
+- When no weighted contributors are available the list falls back to showing all
+  available sub-scores, so older stored rows still render a breakdown.
+
 ## Verification
 
 - `npm run typecheck`.
