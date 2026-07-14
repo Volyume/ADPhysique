@@ -1,33 +1,11 @@
 /**
- * Tactile feedback. A single haptics helper wraps expo-haptics and fails safe
- * (never throws) so a platform without haptics simply does nothing. WHOOP leans
- * heavily on subtle haptics; these give the app the same physical feel.
+ * Tactile feedback. No-op fallbacks — the native haptics module was removed
+ * after it was implicated in a startup crash on device. These keep every call
+ * site working (they simply do nothing) until haptics can be re-added with a
+ * device-verified build. Never throws.
  */
-import * as Haptics from 'expo-haptics';
 
-function safe(run: () => Promise<unknown>): void {
-  try {
-    void run().catch(() => {});
-  } catch {
-    // Older devices / web: silently no-op.
-  }
-}
-
-/** Light selection tick for taps on cards, tiles, rows and buttons. */
-export function tapHaptic(): void {
-  safe(() => Haptics.selectionAsync());
-}
-
-/** A slightly firmer press for primary actions. */
-export function impactHaptic(): void {
-  safe(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
-}
-
-/** Success / warning notifications for outcome moments. */
-export function successHaptic(): void {
-  safe(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success));
-}
-
-export function warnHaptic(): void {
-  safe(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning));
-}
+export function tapHaptic(): void {}
+export function impactHaptic(): void {}
+export function successHaptic(): void {}
+export function warnHaptic(): void {}

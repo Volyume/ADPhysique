@@ -16,8 +16,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Line, Polyline, Rect, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 
-import { BlurView } from 'expo-blur';
-
 import { colors, radius, spacing, type, fonts, sleepStageColors, tintedWash, elevation } from './theme';
 import { formatClock } from '../util/time';
 import { tapHaptic } from './haptics';
@@ -84,15 +82,9 @@ export function Card({
   frosted?: boolean;
 }) {
   const elev = elevated ? elevation.card : null;
-  // Frosted: a translucent blurred surface (expo-blur), degrading to the solid
-  // card where blur is unsupported. Content sits inside the BlurView.
-  if (frosted && !onPress) {
-    return (
-      <BlurView intensity={22} tint="dark" style={[styles.card, styles.frosted, elev, style]}>
-        {children}
-      </BlurView>
-    );
-  }
+  // `frosted` is accepted for compatibility but currently renders a solid card:
+  // the expo-blur native module was removed after a startup crash on device.
+  void frosted;
   if (onPress) {
     return (
       <Pressable
