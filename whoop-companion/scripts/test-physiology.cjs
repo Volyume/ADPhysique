@@ -431,16 +431,25 @@ const zones45 = strain.hrZones([{ hr: 95, minutes: 30 }], zoneProfile); // hr 95
 assert(zones45.find((z) => z.zone === 1)?.minutes === 30, '45% HRR counts as Zone 1');
 assert(zones45.find((z) => z.zone === 0)?.minutes === 0, '45% HRR does not fall in the rest bucket');
 assert(
-  strain.edwardsTrimp([{ hr: 85, minutes: 30 }], zoneProfile) === 0,
-  'below 40% HRR (35%) is rest and adds no strain load',
-);
-assert(
-  strain.edwardsTrimp([{ hr: 95, minutes: 30 }], zoneProfile) > 0,
-  '40-50% HRR contributes to the Edwards strain load',
-);
-assert(
   strain.hrZones([{ hr: 115, minutes: 10 }], zoneProfile).find((z) => z.zone === 2)?.minutes === 10,
   '65% HRR remains Zone 2 (upper zone boundaries unchanged)',
 );
+
+// Pulse Strain (blueprint Change ST): gated Banister load + logarithmic 0-21 map.
+assert(strain.loadPerMinute(0.15, 'male') === 0, 'below the 20% HRR basal gate adds no load');
+assert(strain.loadPerMinute(0.5, 'male') > 0, 'above the basal gate contributes load');
+assert(strain.loadPerMinute(0.6, 'male') > strain.loadPerMinute(0.4, 'male'), 'load is strictly increasing in intensity');
+assert(strain.pulseLoad([{ hr: 60, minutes: 60 }], zoneProfile) === 0, 'a sedentary hour (10% HRR) adds no strain load');
+assert(strain.pulseLoad([{ hr: 95, minutes: 30 }], zoneProfile) > 0, 'active minutes above the gate build load');
+// Logarithmic map: 0 at rest, exactly 21 at maximal load, clamps above, monotonic.
+assert(strain.strainFromLoad(0) === 0, 'zero load is zero strain');
+assert(strain.strainFromLoad(500) === 21, 'maximal daily load reaches exactly 21');
+assert(strain.strainFromLoad(1000) === 21, 'load beyond maximal clamps at 21, never exceeds');
+assert(strain.strainFromLoad(100) > strain.strainFromLoad(50), 'strain is monotonic in load');
+// Diminishing returns: the last strain point costs more load than an early one.
+const loadFor = (target) => { let lo = 0, hi = 500; for (let i = 0; i < 40; i += 1) { const mid = (lo + hi) / 2; if (strain.strainFromLoad(mid) < target) lo = mid; else hi = mid; } return (lo + hi) / 2; };
+assert((loadFor(21) - loadFor(20)) > (loadFor(5) - loadFor(4)), 'each successive strain point costs more load than the last');
+// Female uses the corrected Banister constant (0.86), not the male 0.64.
+assert(strain.loadPerMinute(0.5, 'female') !== strain.loadPerMinute(0.5, 'male'), 'female load uses its own Banister constant');
 
 console.log('physiology regression tests passed');

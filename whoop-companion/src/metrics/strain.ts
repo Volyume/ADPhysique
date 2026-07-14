@@ -33,14 +33,32 @@ export function hrReserveFraction(hr: number, profile: UserProfile): number {
   return clamp01((hr - profile.restingHr) / denom);
 }
 
+// Banister sex-specific constants. The female constant is corrected to 0.86 (it
+// was the male 0.64), so women's load is no longer computed with the male scalar.
+function banisterConst(sex: 'male' | 'female'): { m: number; b: number } {
+  return sex === 'female' ? { m: 0.86, b: 1.67 } : { m: 0.64, b: 1.92 };
+}
+
 /**
  * Banister TRIMP for one HR sample held for `minutes`.
- * TRIMP = minutes × HRr × 0.64 × e^(b × HRr), b = 1.92 (male) / 1.67 (female).
+ * TRIMP = minutes × HRr × m × e^(b × HRr); (m, b) = (0.64, 1.92) male / (0.86, 1.67) female.
  */
 export function trimpForSample(hr: number, minutes: number, profile: UserProfile): number {
   const hrr = hrReserveFraction(hr, profile);
-  const b = profile.sex === 'female' ? 1.67 : 1.92;
-  return minutes * hrr * 0.64 * Math.exp(b * hrr);
+  const { m, b } = banisterConst(profile.sex);
+  return minutes * hrr * m * Math.exp(b * hrr);
+}
+
+// Strain reflects cardiovascular demand ABOVE rest: per-minute load is zero below
+// a 20% heart-rate-reserve basal gate, so sitting and sleeping contribute nothing
+// while brisk walking / on-your-feet activity still counts.
+const HRR_BASAL_GATE = 0.2;
+
+/** Gated exponentially-weighted Banister load for one minute at reserve `hrr`. */
+export function loadPerMinute(hrr: number, sex: 'male' | 'female'): number {
+  if (!Number.isFinite(hrr) || hrr < HRR_BASAL_GATE) return 0;
+  const { m, b } = banisterConst(sex);
+  return hrr * m * Math.exp(b * hrr);
 }
 
 /** Sum TRIMP across a series of {hr, minutes} samples. */
@@ -54,44 +72,31 @@ export function totalTrimp(
 }
 
 /**
- * Map a Banister TRIMP load to a 0–21 strain scale with a log curve. Retained
- * for reference; day strain now uses Edwards zone TRIMP (see below), which does
- * not accumulate at rest.
+ * Accumulated gated Banister load across {hr, minutes} samples. The daily load is
+ * the sum of the per-minute loads; the load-to-strain map is applied once to this
+ * accumulated load, never by summing per-minute strain (which would linearise it).
  */
-const TRIMP_REF = 300;
-export function trimpToStrain(trimp: number): number {
-  if (trimp <= 0) return 0;
-  const strain = 21 * (Math.log1p(trimp) / Math.log1p(TRIMP_REF));
-  return Math.round(Math.min(21, strain) * 10) / 10;
-}
-
-/**
- * Edwards zone-weighted TRIMP using WHOOP's five heart-rate-reserve zones plus a
- * rest bucket. Weight = the zone number (0–5), so the rest bucket (below 40% HRR)
- * contributes nothing and a sedentary day scores ~0, matching WHOOP. Higher
- * zones count progressively more. Heart rate between 40% and 50% HRR counts
- * toward Zone 1 and contributes to the Edwards strain load, not to the
- * weight-zero rest bucket.
- */
-export function edwardsTrimp(
+export function pulseLoad(
   samples: Array<{ hr: number; minutes: number }>,
   profile: UserProfile,
 ): number {
-  const zones = hrZones(samples, profile);
   let load = 0;
-  for (const z of zones) load += z.minutes * z.zone; // zone weight = 0..5
+  for (const s of samples) load += s.minutes * loadPerMinute(hrReserveFraction(s.hr, profile), profile.sex);
   return load;
 }
 
 /**
- * Map an Edwards load to WHOOP's 0–21 strain scale. Saturating exponential:
- * 0 at rest, ~18 for a hard day (~350 load), approaching 21 for very hard days.
- * EDWARDS_REF is the calibration constant.
+ * Map accumulated load to a 0–21 strain scale with a logarithmic curve reaching
+ * exactly 21 at the maximal daily load (STRAIN_L_MAX) and clamped to 21 above it,
+ * so a maximal day attains 21 rather than approaching it asymptotically, and each
+ * successive strain point costs more load than the last (Borg-style).
  */
-const EDWARDS_REF = 180;
+const STRAIN_TAU = 20; // low-end shape constant (load units)
+const STRAIN_L_MAX = 500; // maximal daily gated load → exactly 21
+const STRAIN_LOG_DENOM = Math.log(1 + STRAIN_L_MAX / STRAIN_TAU);
 export function strainFromLoad(load: number): number {
-  if (load <= 0) return 0;
-  const strain = 21 * (1 - Math.exp(-load / EDWARDS_REF));
+  if (!Number.isFinite(load) || load <= 0) return 0;
+  const strain = 21 * (Math.log(1 + load / STRAIN_TAU) / STRAIN_LOG_DENOM);
   return Math.round(Math.min(21, strain) * 10) / 10;
 }
 

@@ -102,7 +102,7 @@ import { sleepDebt } from '../metrics/sleepDebt';
 import { computeSleepStress, SleepStress, StressEpoch } from '../metrics/sleepStress';
 import { computeSleepPerformance, SleepPerformance } from '../metrics/sleepPerformance';
 import { autoSleepAtSafetyCeiling, longAutoSleepNeedsCorroboration, sleepEvidencePct, sleepHasCorroboration, sleepStateWakeConflict } from '../metrics/sleepEvidence';
-import { edwardsTrimp, hrZones, strainFromLoad, totalTrimp, UserProfile } from '../metrics/strain';
+import { pulseLoad, hrZones, strainFromLoad, totalTrimp, UserProfile } from '../metrics/strain';
 import { kcalPerMinute, totalKcal } from '../metrics/calories';
 import { computeStress, stressSeriesFromWindows } from '../metrics/stress';
 import { computeHealthMonitor, HealthMonitorResult } from '../metrics/healthMonitor';
@@ -2126,7 +2126,7 @@ class AppStore extends Store<AppState> {
     const dayHr = await getHrSamplesBetween(sod, dayEnd);
     const perMin = perMinuteHr(dayHr);
     const strainSamples = perMin.map((p) => ({ hr: p.hr, minutes: 1 }));
-    const load = edwardsTrimp(strainSamples, profile);
+    const load = pulseLoad(strainSamples, profile);
     const strain = strainSamples.length ? strainFromLoad(load) : null;
     const stepEstimate = estimateBandStepsFromCounters(await stepRowsForRange(sod, dayEnd), this.getState().bandStepDivisor, {
       countFromTs: sod,
@@ -2652,9 +2652,9 @@ class AppStore extends Store<AppState> {
     const load = isNap
       ? null
       : perMinSamples.length
-      ? edwardsTrimp(perMinSamples, profile)
+      ? pulseLoad(perMinSamples, profile)
       : input.avgHr
-        ? edwardsTrimp([{ hr: input.avgHr, minutes }], profile)
+        ? pulseLoad([{ hr: input.avgHr, minutes }], profile)
         : null;
     const strain = load !== null ? strainFromLoad(load) : null;
     // Calories from HR (Keytel) — the WHOOP-style HR-driven energy estimate.
@@ -3013,7 +3013,7 @@ class AppStore extends Store<AppState> {
     const avgHr = bpms.length ? Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length) : null;
     const maxHr = bpms.length ? Math.max(...bpms) : s.maxHr;
     const zones = hrZones(perMin.map((p) => ({ hr: p.hr, minutes: 1 })), this.getState().profile);
-    const load = edwardsTrimp(perMin.map((p) => ({ hr: p.hr, minutes: 1 })), this.getState().profile);
+    const load = pulseLoad(perMin.map((p) => ({ hr: p.hr, minutes: 1 })), this.getState().profile);
     const strain = perMin.length ? strainFromLoad(load) : null;
     const stepStats = await this.sessionStepStats(s, now);
     return {
@@ -3149,7 +3149,7 @@ class AppStore extends Store<AppState> {
     const storedStressSeries = stressSeriesFromRows(dayHr);
     const storedStress = storedStressSeries[storedStressSeries.length - 1]?.score ?? null;
     const strainSamples = perMin.map((p) => ({ hr: p.hr, minutes: 1 }));
-    const load = edwardsTrimp(strainSamples, profile);
+    const load = pulseLoad(strainSamples, profile);
     const strain = strainSamples.length ? strainFromLoad(load) : null;
     const bestSteps = await this.refreshBandSteps();
 
@@ -3573,7 +3573,7 @@ class AppStore extends Store<AppState> {
     const out: Array<{ tsMs: number; strain: number }> = [];
     let cumLoad = 0;
     for (const p of perMin) {
-      cumLoad += edwardsTrimp([{ hr: p.hr, minutes: 1 }], profile);
+      cumLoad += pulseLoad([{ hr: p.hr, minutes: 1 }], profile);
       out.push({ tsMs: p.tsMs, strain: strainFromLoad(cumLoad) });
     }
     return out;
@@ -3639,7 +3639,7 @@ async function strainBetween(fromTs: number, toTs: number, profile: UserProfile)
   const rows = await getHrSamplesBetween(fromTs, toTs);
   const samples = perMinuteHr(rows).map((point) => ({ hr: point.hr, minutes: 1 }));
   if (!samples.length) return null;
-  return strainFromLoad(edwardsTrimp(samples, profile));
+  return strainFromLoad(pulseLoad(samples, profile));
 }
 
 async function buildSleepInput(

@@ -64,11 +64,26 @@ A richer 0-100 score alongside (not replacing) the WHOOP hours/need headline.
   from a low-confidence night cannot move the score.
 - The existing hours/need Sleep Performance headline is unchanged.
 
-## Change ST — Proprietary Strain/Load (`src/metrics/strain.ts`)
+## Change ST — Proprietary Strain/Load ("Pulse Strain", `src/metrics/strain.ts`)
 
-(Design pending; to be added when the strain research completes. Intent: a
-genuinely logarithmic cardiovascular-load-to-strain curve where 21 is attainable
-at a realistic maximal load, driven by exponentially-weighted Banister TRIMP.)
+Replaces Edwards linear zone load + a saturating-exponential map (which can never
+reach 21) with an exponentially-weighted Banister load and a genuinely
+logarithmic 0-21 curve where 21 is attainable.
+
+**Spec (normative):**
+
+- Per-minute cardiovascular load uses exponentially-weighted Banister TRIMP on
+  heart-rate reserve with sex-specific constants (male 0.64/1.92, female
+  0.86/1.67), and is zero below a 20% heart-rate-reserve basal gate so strain
+  reflects demand above rest, not sitting or sleeping.
+- The daily load is the sum of the per-minute loads, and the load-to-strain map
+  is applied once to the accumulated load, never by summing per-minute strain.
+- Strain maps load to 0-21 with a logarithmic curve reaching exactly 21 at the
+  maximal daily load and clamped to 21 above it, so a maximal day attains 21
+  rather than approaching it asymptotically, and each successive strain point
+  costs more load than the last.
+- The Banister female constant is corrected to 0.86 (it was the male 0.64),
+  so women's load is no longer computed with the male scalar.
 
 ## Verification
 
