@@ -43,6 +43,34 @@ penalised — only a mostly-jagged capture is downgraded.
 - The confidence downgrade applies to automatically detected sleep only; a window
   the wearer logged by hand is left at its evidence-based confidence.
 
+## Change SLEEP-OVER-C — Conservative onset/offset trim (`src/metrics/sleep.ts`)
+
+Founder decision (2026-07-14): ship a conservative trim now, then trim farther
+once real exported nights are inspected. This is the safe first step: the padding
+kept around the detected sleep core when trimming the window is reduced, so less
+pre-onset settling and post-wake in-bed time is reported as sleep.
+
+**Spec (normative):**
+
+- The padding kept around the sustained sleep core when trimming the window is
+  reduced, so less pre-onset settling and post-wake in-bed time is reported as
+  sleep; the trim only ever shrinks the detected window, never extends it.
+
+## Change SLEEP-DIAG — Sleep diagnostics export (`src/state/appStore.ts`, `src/screens/AdvancedDeviceScreen.tsx`)
+
+Founder decision (2026-07-14): add a means to get the real variables out of the
+app so the detector can be tuned against actual nights, not guessed. A read-only
+export reconstructs, for the most recent nights, the exact per-minute input the
+detector scored and the sleep result it produced.
+
+**Spec (normative):**
+
+- A read-only diagnostics export reconstructs, for the most recent nights, the
+  exact per-minute input the detector scored and the sleep result it produced,
+  and never writes or changes any stored metric.
+- The diagnostics file is shared only through the user's own share sheet and is
+  never uploaded anywhere by the app.
+
 ## Verification
 
 `npm run typecheck`; the full Pulse suite; a new test asserting a jagged overnight

@@ -2117,6 +2117,94 @@ class AppStore extends Store<AppState> {
     }
   }
 
+  /**
+   * Read-only diagnostics dump for tuning sleep detection. For each of the most
+   * recent nights it reconstructs the exact per-minute input the detector saw
+   * (mirroring backfillDailyMetric) and the sleep result it produced, so a real
+   * over-reported night can be exported and inspected instead of guessed at. It
+   * never writes anything and never changes stored metrics.
+   */
+  async exportSleepDiagnostics(maxNights = 5): Promise<string> {
+    const now = Date.now();
+    const days = (await getRecentDailyMetrics(30)).map((d) => d.day).slice(0, maxNights);
+    const nights: unknown[] = [];
+    for (const day of days) {
+      const sod = dayStartFromKey(day);
+      const wakeDayEnd = localDayStartOffset(sod, 1);
+      const manualRaw = await kvGet(`manualSleep:${day}`);
+      const manual = manualRaw ? (JSON.parse(manualRaw) as { startTs: number; endTs: number }) : null;
+      const winStart = manual ? manual.startTs : localDayHour(sod, -1, 10);
+      const winEnd = manual ? manual.endTs : Math.min(localDayHour(sod, 1, 2), now);
+      const nightHr = sleepDetectionHrSamples(await getHrSamplesBetween(winStart, winEnd));
+      const nightPerMin = perMinuteHr(nightHr);
+      const sleepInput = await buildSleepInput(nightPerMin, winStart, winEnd, nightHr);
+      let candidateSleep = manual
+        ? computeSleep(sleepInput, undefined, {
+            forceWindow: true,
+            startTs: manual.startTs,
+            endTs: manual.endTs,
+            source: nightPerMin.length >= 10 ? 'manual_hr' : 'manual_duration',
+          })
+        : computeSleep(sleepInput, undefined, { endAfterTs: sod, endBeforeTs: wakeDayEnd });
+      if (manual && !candidateSleep) candidateSleep = durationOnlySleep(manual.startTs, manual.endTs);
+      const reliable = sleepIsReliable(candidateSleep, !!manual, sleepInput) && sleepBelongsToDay(candidateSleep, day, !!manual);
+      const coveragePct = candidateSleep
+        ? Math.round((candidateSleep.signalMin / Math.max(1, candidateSleep.inBedMin)) * 100)
+        : 0;
+      const overnightJaggednessBpm = candidateSleep
+        ? hrJaggednessBpm(
+            nightPerMin.filter((p) => p.tsMs >= candidateSleep!.startTs && p.tsMs < candidateSleep!.endTs).map((p) => p.hr),
+          )
+        : 0;
+      const confidence = candidateSleep
+        ? downgradeSleepConfidenceForJaggedness(
+            sleepConfidence(candidateSleep.signalMin, coveragePct, !!manual, candidateSleep),
+            overnightJaggednessBpm,
+            !!manual,
+          )
+        : null;
+      nights.push({
+        day,
+        manual: !!manual,
+        searchWindow: { startTs: winStart, endTs: winEnd },
+        reliable,
+        confidence,
+        overnightJaggednessBpm: Math.round(overnightJaggednessBpm * 10) / 10,
+        result: candidateSleep
+          ? {
+              startTs: candidateSleep.startTs,
+              endTs: candidateSleep.endTs,
+              inBedMin: candidateSleep.inBedMin,
+              asleepMin: candidateSleep.asleepMin,
+              efficiency: Math.round(candidateSleep.efficiency * 100),
+              latencyMin: candidateSleep.latencyMin,
+              wakeEvents: candidateSleep.wakeEvents,
+              unscoredMin: candidateSleep.unscoredMin,
+              signalMin: candidateSleep.signalMin,
+              motionMin: candidateSleep.motionMin,
+              stillMin: candidateSleep.stillMin,
+              movingMin: candidateSleep.movingMin,
+              source: candidateSleep.source,
+              cappedBySafetyLimit: candidateSleep.cappedBySafetyLimit,
+              stages: candidateSleep.stages,
+              hypnogram: candidateSleep.hypnogram,
+            }
+          : null,
+        // Exact per-minute series the detector scored: t=epoch ms, hr, m=motion,
+        // rr=RMSSD, bs=band sleep-state nibble, rv=respiratory-rate variability.
+        series: sleepInput.map((s) => ({
+          t: s.ts,
+          hr: s.hr,
+          m: s.motion,
+          rr: s.rmssd ?? null,
+          bs: s.bandSleepState ?? null,
+          rv: s.respVar ?? null,
+        })),
+      });
+    }
+    return JSON.stringify({ app: 'VOLYUME Pulse sleep diagnostics', schema: 1, generatedTs: now, nights }, null, 0);
+  }
+
   private async backfillDailyMetric(day: string): Promise<void> {
     const profile = this.getState().profile;
     const now = Date.now();

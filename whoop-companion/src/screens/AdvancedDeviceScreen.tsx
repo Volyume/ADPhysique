@@ -30,6 +30,7 @@ export function AdvancedDeviceScreen({ nav }: { nav: Nav }) {
   const bandStepDivisor = useStoreSelector(appStore, (s) => s.bandStepDivisor);
   const [actualSteps, setActualSteps] = useState('');
   const [exportProgress, setExportProgress] = useState<{ exported: number; total: number } | null>(null);
+  const [exportingSleep, setExportingSleep] = useState(false);
   const [savedFrames, setSavedFrames] = useState<number | null>(null);
 
   useEffect(() => {
@@ -139,6 +140,43 @@ export function AdvancedDeviceScreen({ nav }: { nav: Nav }) {
     }
   };
 
+  const exportSleepDiagnostics = async () => {
+    if (exportingSleep) return;
+    setExportingSleep(true);
+    try {
+      const json = await appStore.exportSleepDiagnostics();
+      const file = new File(Paths.cache, `pulse-sleep-diagnostics-${Date.now()}.json`);
+      file.create({ overwrite: true });
+      const handle = file.open();
+      try {
+        writeAscii(handle, json);
+      } finally {
+        handle.close();
+      }
+      const uri = file.uri;
+      const info = await FileSystem.getInfoAsync(uri);
+      if (!info.exists) {
+        Alert.alert('Export failed', 'The sleep diagnostics file could not be written to disk.');
+        return;
+      }
+      const sizeKb = 'size' in info && info.size ? Math.round(info.size / 1024) : 0;
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/json',
+          UTI: 'public.json',
+          dialogTitle: 'Export sleep diagnostics',
+        });
+        Alert.alert('Sleep diagnostics exported', `${sizeKb} KB written to:\n${uri}`);
+      } else {
+        Alert.alert('Saved', `${sizeKb} KB saved to:\n${uri}`);
+      }
+    } catch (e) {
+      Alert.alert('Export failed', String(e));
+    } finally {
+      setExportingSleep(false);
+    }
+  };
+
   const confirmClearFrames = async () => {
     const totalFrames = await countRawFrames();
     if (totalFrames === 0) {
@@ -215,6 +253,20 @@ export function AdvancedDeviceScreen({ nav }: { nav: Nav }) {
         {exportProgress ? <Text style={styles.diagText}>Exported {exportProgress.exported.toLocaleString()} / {exportProgress.total.toLocaleString()} frames</Text> : null}
         <SecondaryButton title="Clear captured frames" onPress={() => void confirmClearFrames()} />
         <Text style={styles.hint}>Capture writes proprietary strap frames to the local database so they can be exported for decoder work.</Text>
+      </Card>
+
+      <SectionLabel>Sleep diagnostics</SectionLabel>
+      <Card>
+        <Text style={styles.hint}>
+          Exports the exact per-minute inputs (heart rate, motion, R-R variability, band state) and the detected
+          sleep result for the last few nights, so an over-reported night can be inspected and the detector tuned
+          against real data rather than a guess. Nothing is uploaded; the file is shared only where you choose.
+        </Text>
+        <SecondaryButton
+          title={exportingSleep ? 'Exporting...' : 'Export sleep diagnostics'}
+          onPress={() => void exportSleepDiagnostics()}
+          disabled={exportingSleep}
+        />
       </Card>
 
       <SectionLabel>Step calibration</SectionLabel>

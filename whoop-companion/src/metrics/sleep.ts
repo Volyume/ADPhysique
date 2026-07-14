@@ -64,6 +64,12 @@ const MAX_AUTO_SLEEP_WINDOW_MIN = 11 * 60;
 const MAX_FRAGMENTED_AUTO_SLEEP_WINDOW_MIN = 16 * 60;
 const MAX_AUTO_BRIDGE_MIN = 5;
 const MAX_OBSERVED_AWAKENING_MIN = 120;
+// Padding kept around the sustained sleep core when trimming the window. A
+// smaller pad reports less pre-onset settling and post-wake in-bed time as
+// sleep — a small, conservative reduction of over-reporting. It only ever
+// shrinks the window; it never extends it.
+const ONSET_TRIM_PAD_MIN = 4;
+const OFFSET_TRIM_PAD_MIN = 4;
 const MIN_STRONG_AUTO_CORE_MIN = 90;
 const LONG_AUTO_SLEEP_MIN = 8 * 60;
 const AUTO_SLEEP_BOUNDARY_WINDOW_MIN = 90;
@@ -432,7 +438,7 @@ function trimSleepWindow(
   for (let i = start; i < Math.min(end, start + 180); i += 1) {
     const to = Math.min(end, i + 20);
     if (to - i >= 12 && sustainedCore(i, to)) {
-      trimmedStart = Math.max(start, i - 8);
+      trimmedStart = Math.max(start, i - ONSET_TRIM_PAD_MIN);
       break;
     }
   }
@@ -441,7 +447,7 @@ function trimSleepWindow(
   for (let i = end - 1; i >= Math.max(trimmedStart, end - 180); i -= 1) {
     const from = Math.max(trimmedStart, i - 19);
     if (i - from + 1 >= 12 && sustainedCore(from, i + 1)) {
-      trimmedEnd = Math.min(end, i + 9);
+      trimmedEnd = Math.min(end, i + 1 + OFFSET_TRIM_PAD_MIN);
       break;
     }
   }
