@@ -463,8 +463,12 @@ describe('nutritionEngine: fuzz invariants', () => {
   });
 
   test('shouldSuggestDietBreak returns an object with `suggest` boolean', () => {
-    const r1 = shouldSuggestDietBreak(new Date(NOW - 1 * DAY));
-    const r2 = shouldSuggestDietBreak(new Date(NOW - 90 * DAY));
+    // Pass the suite's frozen clock explicitly: the default currentDate is
+    // the real `new Date()`, which made this assertion time-bomb once the
+    // real date drifted past the diet-break threshold (it detonated
+    // 2026-07-14).
+    const r1 = shouldSuggestDietBreak(new Date(NOW - 1 * DAY), new Date(NOW));
+    const r2 = shouldSuggestDietBreak(new Date(NOW - 90 * DAY), new Date(NOW));
     expect(typeof r1).toBe('object');
     expect(typeof r1.suggest).toBe('boolean');
     expect(typeof r2.suggest).toBe('boolean');

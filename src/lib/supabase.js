@@ -5,9 +5,17 @@ import * as SecureStore from 'expo-secure-store';
 
 // SecureStore adapter for Supabase auth session, encrypted on both iOS and Android.
 // Falls back silently so the app still launches if SecureStore is unavailable (e.g. emulator).
+// iOS (VOLYUME-2E): the default Keychain accessibility (WHEN_UNLOCKED) refuses
+// reads while the phone is locked ("User interaction is not allowed"), so any
+// background wake -- notification handling, token auto-refresh -- lost the
+// session read and could treat a signed-in user as signed out. Match the
+// database key's accessibility (dbCrypto.js): AFTER_FIRST_UNLOCK keeps the
+// session readable from background once the device has been unlocked since
+// boot, and the item is still hardware-encrypted at rest.
+const KEY_OPTS = { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK };
 const secureAuthStorage = {
   getItem: async (key) => {
-    try { return await SecureStore.getItemAsync(key); }
+    try { return await SecureStore.getItemAsync(key, KEY_OPTS); }
     catch (e) {
       // Lazy-require errorLog to avoid any import cycle with this module.
       // eslint-disable-next-line global-require
@@ -16,14 +24,14 @@ const secureAuthStorage = {
     }
   },
   setItem: async (key, value) => {
-    try { await SecureStore.setItemAsync(key, value); }
+    try { await SecureStore.setItemAsync(key, value, KEY_OPTS); }
     catch (e) {
       // eslint-disable-next-line global-require
       try { require('./errorLog').logError('supabase.secureStore.setItem', e); } catch (_) {}
     }
   },
   removeItem: async (key) => {
-    try { await SecureStore.deleteItemAsync(key); }
+    try { await SecureStore.deleteItemAsync(key, KEY_OPTS); }
     catch (e) {
       // eslint-disable-next-line global-require
       try { require('./errorLog').logError('supabase.secureStore.removeItem', e); } catch (_) {}
