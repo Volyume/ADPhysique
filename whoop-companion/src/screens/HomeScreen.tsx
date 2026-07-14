@@ -128,6 +128,22 @@ export function HomeScreen({ nav }: { nav: Nav }) {
           color={colors.recoveryGreen}
           onPress={() => nav.navigate({ name: 'metric', key: 'steps' })}
         />
+        <Tile
+          title="Resting HR"
+          value={today?.rhr != null ? `${today.rhr} bpm` : '—'}
+          sub="overnight"
+          icon="heart"
+          color={colors.recoveryRed}
+          onPress={() => nav.navigate({ name: 'metric', key: 'rhr' })}
+        />
+        <Tile
+          title="HRV"
+          value={today?.rmssd != null ? `${Math.round(today.rmssd)} ms` : '—'}
+          sub="overnight RMSSD"
+          icon="pulse"
+          color={colors.sleepTeal}
+          onPress={() => nav.navigate({ name: 'metric', key: 'hrv' })}
+        />
 
         {todayFocus ? (
           <Card onPress={() => nav.navigate(todayFocus.route)}>

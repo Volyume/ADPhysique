@@ -23,6 +23,9 @@ not show them.
   total has been decoded yet, and never invents a value.
 - The tile uses the app's own step colour and footsteps icon; it does not copy
   WHOOP's exact colours or branding.
+- The Home Today section additionally shows resting heart rate and HRV as
+  tappable tiles opening their metric details, each showing an em dash until a
+  value is available.
 
 ## Change B — Recovery driver insight respects the active weight profile (`src/screens/RecoveryScreen.tsx`)
 
@@ -51,6 +54,20 @@ score when, under the default profile, they do not.
   active recovery profile, taken from the computed contributor list.
 - When no weighted contributors are available the list falls back to showing all
   available sub-scores, so older stored rows still render a breakdown.
+
+## Audit — Sleep and Strain screens (no changes)
+
+Both were reviewed against WHOOP's layout and already mirror it closely with
+Pulse's own colours, so they are intentionally left unchanged:
+
+- Sleep: Sleep Performance ring hero, four performance-contributor bands, the
+  hypnogram with per-stage duration/percentage bars and typical-range markers,
+  and the WHOOP-style sleep-need breakdown.
+- Strain: Day Strain ring (0-21), the recovery-based optimal-strain target,
+  the intraday strain curve, time-in-HR-zone bars, and weekly trend bars.
+
+A blind visual rewrite of these polished screens without an on-device render
+would risk regressions for no clear gain, so it is deliberately not done here.
 
 ## Verification
 
