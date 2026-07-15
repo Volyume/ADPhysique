@@ -649,4 +649,13 @@ assert(downgradeSleepConfidenceForJaggedness('low', 20, false) === 'low', 'confi
 // A hand-logged window is never downgraded by jaggedness.
 assert(downgradeSleepConfidenceForJaggedness('high', 20, true) === 'high', 'a manually logged window keeps its evidence-based confidence');
 
+// ---- Resting HR is auto-calibrated (no static assumption) ----
+const calibrateRestingHr = loadPureExport('src/state/appStore.ts', 'calibrateRestingHr');
+assert(calibrateRestingHr([]) === null, 'no measured nights -> keep the stored resting HR');
+assert(calibrateRestingHr([66, 67]) === null, 'too few nights -> keep the stored resting HR');
+assert(calibrateRestingHr([66, 68, 67, 69, 66]) === 67, 'calibrates to the median of measured overnight resting HR');
+// A single anomalous night cannot drag the median; only recent nights count.
+assert(calibrateRestingHr([70, 71, 69, 70, 200]) === 70, 'an outlier night does not distort the calibrated resting HR');
+assert(calibrateRestingHr([200, 5, 70, 70, 70]) === 70, 'calibrated resting HR stays at the robust median');
+
 console.log('sleep reliability regression tests passed');

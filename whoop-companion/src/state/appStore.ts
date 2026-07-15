@@ -3341,10 +3341,24 @@ class AppStore extends Store<AppState> {
   recomputeToday = (): Promise<void> => this.enqueueDerivedMetrics(() => this.recomputeTodayNow());
 
   private async recomputeTodayNow(): Promise<void> {
-    const profile = this.getState().profile;
+    let profile = this.getState().profile;
     const now = Date.now();
     const sod = startOfDayMs(now);
     const today = dayKey(now);
+
+    // Auto-calibrate the resting heart rate that Strain and HR zones depend on
+    // from measured overnight data, so nothing runs on a stale hand-entered value
+    // (which over-reads effort when the wearer's true resting HR has shifted, e.g.
+    // on a stimulant). Falls back to the stored value until enough nights exist.
+    const recentRestingHr = (await getRecentDailyMetrics(30))
+      .filter((d) => d.day !== today && typeof d.rhr === 'number')
+      .map((d) => d.rhr as number);
+    const calibratedRestingHr = calibrateRestingHr(recentRestingHr);
+    if (calibratedRestingHr != null && calibratedRestingHr !== profile.restingHr) {
+      profile = { ...profile, restingHr: calibratedRestingHr };
+      await saveProfile(profile);
+      this.setState({ profile });
+    }
 
     // Daytime strain from per-minute HR.
     const dayHr = await getHrSamplesBetween(sod, now);
@@ -4684,6 +4698,22 @@ function round1(x: number): number {
 
 function dayStartFromKey(day: string): number {
   return new Date(`${day}T00:00:00`).getTime();
+}
+
+/**
+ * Rolling, clamped median of recent measured overnight resting heart rates,
+ * used to auto-calibrate the resting HR that Strain and HR zones depend on.
+ * Returns null when too few nights exist so the caller keeps the stored value.
+ * `recentRhr` is newest-first; only the most recent nights are used, and the
+ * clamp stops a single anomalous night distorting the calibration.
+ */
+export function calibrateRestingHr(recentRhr: number[]): number | null {
+  const values = recentRhr.filter((v) => typeof v === 'number' && Number.isFinite(v)).slice(0, 14);
+  if (values.length < 3) return null;
+  const sorted = values.slice().sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const median = sorted.length % 2 ? (sorted[mid] as number) : ((sorted[mid - 1] as number) + (sorted[mid] as number)) / 2;
+  return Math.max(35, Math.min(110, Math.round(median)));
 }
 
 function localDayStartOffset(fromTs: number, days: number): number {
