@@ -75,6 +75,26 @@ detector scored and the sleep result it produced.
 - The diagnostics file is shared only through the user's own share sheet and is
   never uploaded anywhere by the app.
 
+## Change SLEEP-OVER-E — Resting-HR anchor stops elevated still-time counting as sleep (`src/metrics/sleep.ts`)
+
+Founder decision (2026-07-15, "ship conservative now"), grounded in two real
+exported nights: a confirmed 13-hour window (17:00→06:00) counted 9h34m asleep
+even though heart rate sat at 74–80 bpm the whole time — well above the ~66 bpm
+sleeping floor — and an evening sitting block (18:50→21:11) at ~72 bpm read as
+2h21m of 99%-efficiency sleep. The sleep/wake line is measured only relative to
+the window's own average, so in a window full of awake time the threshold floats
+up and 78–80 bpm still reads as sleep.
+
+**Spec (normative):**
+
+- A minute already classified as light sleep is reclassified as awake when its
+  heart rate is clearly above the window's own sleeping floor (its low
+  percentile) by a fixed physiological margin, because sustained sleep heart rate
+  stays close to the sleeping floor and elevated still-time is quiet wakefulness.
+- The anchor only ever converts light to awake; deep, REM, unknown and already
+  awake minutes are never touched, so restorative sleep is preserved and a real
+  night is only shortened, never deleted.
+
 ## Verification
 
 `npm run typecheck`; the full Pulse suite; a new test asserting a jagged overnight

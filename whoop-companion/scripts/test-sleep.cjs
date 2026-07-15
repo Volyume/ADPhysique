@@ -577,6 +577,35 @@ assert(
 );
 assert(contribOf({ asleepMin: 480 }, 'total') >= contribOf({ asleepMin: 360 }, 'total'), 'duration adequacy is monotonic up to need');
 
+// ---- Resting-HR anchor: elevated still-time is not counted as sleep ----
+// A confirmed window that is mostly still but sits ~16 bpm above the sleeping
+// floor (quiet wakefulness) must not read as sleep, while the near-floor minutes
+// remain asleep.
+const elevatedStill = [
+  ...Array.from({ length: 20 }, (_, i) => ({ ts: start + i * minute, hr: 62, motion: 0 })),
+  ...Array.from({ length: 100 }, (_, i) => ({ ts: start + (20 + i) * minute, hr: 78, motion: 0 })),
+];
+const anchored = sleep.computeSleep(elevatedStill, undefined, {
+  forceWindow: true,
+  source: 'manual_hr',
+  startTs: elevatedStill[0].ts,
+  endTs: elevatedStill[elevatedStill.length - 1].ts + minute,
+});
+assert(anchored != null, 'scores a forced/confirmed window');
+assert(anchored.stages.awake >= 90, 'still-time well above the sleeping floor is reclassified as awake, not sleep');
+assert(anchored.asleepMin <= 40, 'only near-floor minutes remain asleep in an elevated-HR confirmed window');
+
+// A normal night that stays close to its sleeping floor is preserved: the anchor
+// never converts genuine near-floor light sleep into wake.
+const nearFloorNight = Array.from({ length: 120 }, (_, i) => ({ ts: start + i * minute, hr: 58 + (i % 6), motion: 0 }));
+const nearFloor = sleep.computeSleep(nearFloorNight, undefined, {
+  forceWindow: true,
+  source: 'manual_hr',
+  startTs: nearFloorNight[0].ts,
+  endTs: nearFloorNight[nearFloorNight.length - 1].ts + minute,
+});
+assert(nearFloor != null && nearFloor.asleepMin >= 110, 'near-floor light sleep is preserved by the resting-HR anchor');
+
 // ---- Overnight jaggedness lowers sleep confidence (never raises it) ----
 // Extract just the pure helper from appStore.ts so the whole store (and its
 // native deps) need not be loaded.

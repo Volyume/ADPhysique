@@ -70,6 +70,11 @@ const MAX_OBSERVED_AWAKENING_MIN = 120;
 // shrinks the window; it never extends it.
 const ONSET_TRIM_PAD_MIN = 4;
 const OFFSET_TRIM_PAD_MIN = 4;
+// A light-sleep minute whose heart rate sits this far above the window's own
+// sleeping floor (its low percentile) is quiet wakefulness, not sleep: sustained
+// sleep heart rate stays close to the sleeping floor. Only light minutes are
+// reclassified; deep and REM are always preserved.
+const WAKE_ABS_MARGIN_BPM = 8;
 const MIN_STRONG_AUTO_CORE_MIN = 90;
 const LONG_AUTO_SLEEP_MIN = 8 * 60;
 const AUTO_SLEEP_BOUNDARY_WINDOW_MIN = 90;
@@ -617,6 +622,7 @@ export function computeSleep(
     return durationOnlySleep(start, end, neededMin);
   }
   const meanHr = hrs.reduce((a, b) => a + b, 0) / hrs.length;
+  const restingFloorHr = percentile(hrs, 0.05);
   const p20 = percentile(hrs, 0.2);
   const p50 = percentile(hrs, 0.5);
   const p80 = percentile(hrs, 0.8);
@@ -666,12 +672,15 @@ export function computeSleep(
     observedTimeline.push(true);
   }
 
-  // Smoothing runs on the base labels, so sleep/wake totals are exactly as they
-  // are today. Respiratory refinement is applied AFTER smoothing and only swaps
-  // deep<->rem, so it can never convert an awake epoch to sleep nor be re-read by
-  // the smoother — the wake/light/asleep totals stay invariant to it.
+  // Smoothing runs on the base labels first. A light minute whose heart rate is
+  // clearly above the window's sleeping floor is then reclassified as quiet
+  // wakefulness (light -> awake only), so elevated still-time in an over-wide or
+  // manually confirmed window stops inflating the reported hours. Respiratory
+  // refinement is applied LAST and only swaps deep<->rem, so it never converts an
+  // awake epoch to sleep nor is re-read by the smoother.
   const smoothedTimeline = smoothStageTimeline(timeline, observedTimeline);
-  const stagedTimeline = refineRestorativeStages(smoothedTimeline, window, medianRespVar);
+  const wakeAnchoredTimeline = demoteElevatedLightToWake(smoothedTimeline, window, restingFloorHr + WAKE_ABS_MARGIN_BPM);
+  const stagedTimeline = refineRestorativeStages(wakeAnchoredTimeline, window, medianRespVar);
   stages.awake = 0;
   stages.light = 0;
   stages.deep = 0;
@@ -819,6 +828,33 @@ function refineRestorativeStages(
       changed = true;
     } else if (stage === 'deep' && variable) {
       out[i] = 'rem';
+      changed = true;
+    }
+  }
+  return changed ? out : timeline;
+}
+
+/**
+ * Reclassify a light-sleep minute as awake when its heart rate is clearly above
+ * the window's own sleeping floor (`wakeHrCeiling` = low percentile + margin).
+ * Sustained sleep heart rate stays close to the sleeping floor, so elevated
+ * still-time — the evening/pre-sleep lead-in of an over-wide or manually confirmed
+ * window, or quiet sedentary wakefulness — is not sleep. It only ever converts
+ * light -> awake: deep, REM, unknown and already-awake minutes are untouched, so
+ * restorative sleep is preserved and a real night is only shortened, never deleted.
+ */
+function demoteElevatedLightToWake(
+  timeline: SleepTimelineStage[],
+  window: SleepMinute[],
+  wakeHrCeiling: number,
+): SleepTimelineStage[] {
+  let changed = false;
+  const out = timeline.slice();
+  for (let i = 0; i < timeline.length; i += 1) {
+    if (timeline[i] !== 'light') continue;
+    const hr = window[i]?.hr;
+    if (hr != null && hr > wakeHrCeiling) {
+      out[i] = 'awake';
       changed = true;
     }
   }
