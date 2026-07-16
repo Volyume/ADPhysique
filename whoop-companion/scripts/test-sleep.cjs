@@ -577,6 +577,30 @@ assert(
 );
 assert(contribOf({ asleepMin: 480 }, 'total') >= contribOf({ asleepMin: 360 }, 'total'), 'duration adequacy is monotonic up to need');
 
+// ---- A sustained activity block (e.g. a dog walk) breaks the night ----
+const walkNight = [
+  ...Array.from({ length: 60 }, (_, i) => ({ ts: start + i * minute, hr: 60, motion: 0 })),
+  ...Array.from({ length: 8 }, (_, i) => ({ ts: start + (60 + i) * minute, hr: 90, motion: 1 })),
+  ...Array.from({ length: 60 }, (_, i) => ({ ts: start + (68 + i) * minute, hr: 60, motion: 0 })),
+];
+const walk = sleep.computeSleep(walkNight, undefined, {
+  forceWindow: true,
+  source: 'manual_hr',
+  startTs: walkNight[0].ts,
+  endTs: walkNight[walkNight.length - 1].ts + minute,
+});
+assert(walk != null, 'scores a window with a mid-sleep activity block');
+assert(walk.stages.awake >= 16, 'a sustained activity block plus its settling period is marked awake');
+let episodeSplit = false;
+for (let i = 1; i < walk.hypnogram.length - 1; i += 1) {
+  const seg = walk.hypnogram[i];
+  if (seg.stage !== 'awake' || seg.minutes < 8) continue;
+  const asleepBefore = walk.hypnogram.slice(0, i).some((s) => s.stage === 'light' || s.stage === 'deep' || s.stage === 'rem');
+  const asleepAfter = walk.hypnogram.slice(i + 1).some((s) => s.stage === 'light' || s.stage === 'deep' || s.stage === 'rem');
+  if (asleepBefore && asleepAfter) { episodeSplit = true; break; }
+}
+assert(episodeSplit, 'the activity block splits the window into separate sleep episodes');
+
 // ---- Resting-HR anchor: elevated still-time is not counted as sleep ----
 // A confirmed window that is mostly still but sits ~16 bpm above the sleeping
 // floor (quiet wakefulness) must not read as sleep, while the near-floor minutes

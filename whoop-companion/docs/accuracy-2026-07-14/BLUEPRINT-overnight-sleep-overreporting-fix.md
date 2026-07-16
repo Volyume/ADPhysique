@@ -95,6 +95,25 @@ up and 78–80 bpm still reads as sleep.
   awake minutes are never touched, so restorative sleep is preserved and a real
   night is only shortened, never deleted.
 
+## Change SLEEP-OVER-F — Sustained activity (e.g. a dog walk) breaks the night (`src/metrics/sleep.ts`)
+
+Founder decision (2026-07-16), from a labelled export ("long early sleep, then dog
+walk then nap"): a single confirmed window merged an early sleep, a dog walk and a
+nap into one 9.9h block. Motion is the one reliable channel here (heart rate is flat
+on a stimulant), and the walk shows as clear movement. This is a structural fix — it
+separates the episodes; it does not claim to measure the still-time total, which is
+sensor-limited for this wearer.
+
+**Spec (normative):**
+
+- A sustained activity block within the sleep window (several minutes of clear
+  movement, bridging brief pauses) and a short settling period after it are marked
+  awake, so an activity such as a dog walk breaks the night instead of being
+  absorbed into one merged sleep episode.
+- Only non-awake observed minutes are converted; unknown (unscored) minutes are
+  never fabricated as wake, and deep, REM and light minutes outside an activity
+  block are untouched.
+
 ## Verification
 
 `npm run typecheck`; the full Pulse suite; a new test asserting a jagged overnight

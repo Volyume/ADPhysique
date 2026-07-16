@@ -75,6 +75,13 @@ const OFFSET_TRIM_PAD_MIN = 4;
 // sleep heart rate stays close to the sleeping floor. Only light minutes are
 // reclassified; deep and REM are always preserved.
 const WAKE_ABS_MARGIN_BPM = 8;
+// A sustained block of clear movement inside the window (e.g. a dog walk) plus a
+// short settling period after it is quiet-but-awake, not sleep. Motion is the
+// reliable channel for this; heart rate can be flat throughout on a stimulant.
+const ACTIVITY_MOTION = 0.35;
+const ACTIVITY_BRIDGE_MIN = 3;
+const MIN_ACTIVITY_RUN_MIN = 5;
+const POST_ACTIVITY_SETTLE_MIN = 10;
 const MIN_STRONG_AUTO_CORE_MIN = 90;
 const LONG_AUTO_SLEEP_MIN = 8 * 60;
 const AUTO_SLEEP_BOUNDARY_WINDOW_MIN = 90;
@@ -680,7 +687,8 @@ export function computeSleep(
   // awake epoch to sleep nor is re-read by the smoother.
   const smoothedTimeline = smoothStageTimeline(timeline, observedTimeline);
   const wakeAnchoredTimeline = demoteElevatedLightToWake(smoothedTimeline, window, restingFloorHr + WAKE_ABS_MARGIN_BPM);
-  const stagedTimeline = refineRestorativeStages(wakeAnchoredTimeline, window, medianRespVar);
+  const activityCarvedTimeline = carveActivityBlocksToWake(wakeAnchoredTimeline, window);
+  const stagedTimeline = refineRestorativeStages(activityCarvedTimeline, window, medianRespVar);
   stages.awake = 0;
   stages.light = 0;
   stages.deep = 0;
@@ -856,6 +864,57 @@ function demoteElevatedLightToWake(
     if (hr != null && hr > wakeHrCeiling) {
       out[i] = 'awake';
       changed = true;
+    }
+  }
+  return changed ? out : timeline;
+}
+
+/**
+ * Mark a sustained block of clear movement (e.g. a dog walk) and a short settling
+ * period after it as awake, so an activity inside the sleep window breaks the night
+ * instead of being absorbed into one merged sleep episode. Motion is the reliable
+ * channel — heart rate can stay flat throughout on a stimulant. Only non-awake
+ * observed minutes are converted; unknown (unscored) minutes are never fabricated
+ * as wake, so a real night is only broken/shortened, never invented.
+ */
+function carveActivityBlocksToWake(timeline: SleepTimelineStage[], window: SleepMinute[]): SleepTimelineStage[] {
+  const n = timeline.length;
+  const active = window.map((s) => s.motion != null && s.motion >= ACTIVITY_MOTION);
+  const out = timeline.slice();
+  let changed = false;
+  let i = 0;
+  while (i < n) {
+    if (!active[i]) {
+      i += 1;
+      continue;
+    }
+    // Extend the run over any brief (<= bridge) still pauses within the activity.
+    let end = i;
+    let activeCount = 0;
+    let gap = 0;
+    let j = i;
+    while (j < n) {
+      if (active[j]) {
+        end = j;
+        activeCount += 1;
+        gap = 0;
+      } else {
+        gap += 1;
+        if (gap > ACTIVITY_BRIDGE_MIN) break;
+      }
+      j += 1;
+    }
+    if (activeCount >= MIN_ACTIVITY_RUN_MIN) {
+      const settleEnd = Math.min(n, end + 1 + POST_ACTIVITY_SETTLE_MIN);
+      for (let k = i; k < settleEnd; k += 1) {
+        if (out[k] !== 'awake' && out[k] !== 'unknown') {
+          out[k] = 'awake';
+          changed = true;
+        }
+      }
+      i = settleEnd;
+    } else {
+      i = end + 1;
     }
   }
   return changed ? out : timeline;
