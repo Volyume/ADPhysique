@@ -3507,7 +3507,20 @@ export async function duplicateRoutine(routineId, userId, newName) {
 
 export async function removeExerciseFromRoutine(id) {
   const d = await db();
-  await d.runAsync('DELETE FROM routine_exercises WHERE id = ?', [id]);
+  // Soft delete (tombstone), NOT a hard DELETE. A hard delete removed the row
+  // locally but left the cloud copy alive, so the next pullFromCloud
+  // re-inserted it and the exercise "came back" (founder-reported on the first
+  // iOS build, 2026-07-19). Setting deleted_at + scheduling a sync pushes the
+  // tombstone to cloud (sync.js push map sends deleted_at), so the removal
+  // sticks across pulls and devices. Reads already exclude tombstoned rows
+  // (getRoutineExercisesWithDetails filters deleted_at IS NULL), and the pull
+  // (insertRoutineExerciseFromCloud) already honours a cloud deleted_at.
+  const now = Date.now();
+  await d.runAsync(
+    'UPDATE routine_exercises SET deleted_at = ?, updated_at = ? WHERE id = ?',
+    [now, now, id],
+  );
+  _scheduleSync();
 }
 
 export async function updateRoutineExerciseOrder(id, newOrderIndex) {

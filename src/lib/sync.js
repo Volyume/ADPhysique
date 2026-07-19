@@ -836,6 +836,11 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
           // F5 Phase A: previously pushed with NO updated_at, so the cloud
           // value never moved on upsert and delta pulls could not see edits.
           updated_at: new Date(re.updatedAt ?? re.createdAt ?? Date.now()).toISOString(),
+          // Tombstone: soft-deleted routine_exercises MUST carry deleted_at to
+          // cloud, otherwise the cloud row stays alive and the next pull
+          // resurrects a locally-removed exercise. getAllRoutineExercisesForUser
+          // intentionally includes deleted rows so this push propagates them.
+          deleted_at: re.deletedAt ? new Date(re.deletedAt).toISOString() : null,
         }));
       const orphanCount = routineExs.length - rows.length;
       if (orphanCount > 0) {
