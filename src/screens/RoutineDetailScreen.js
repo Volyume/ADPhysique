@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Platform } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -125,6 +125,12 @@ export default function RoutineDetailScreen({ navigation, route }) {
   const [swapState, setSwapState] = useState(null);
   const [swapCandidates, setSwapCandidates] = useState([]);
   const [showSwapPicker, setShowSwapPicker] = useState(false);
+  // iOS cannot present a second native modal while the first is still up, so
+  // the ranked swap sheet must fully dismiss BEFORE the full-library picker is
+  // presented. This latch hides the ranked sheet; the sheet's onDismiss (iOS)
+  // then opens the picker. Without it the "Search all exercises" button looked
+  // dead and only fired the picker after the next tap dismissed the sheet.
+  const [pendingSwapPicker, setPendingSwapPicker] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
   // D35: edge auto-scroll for the reorder-mode ScrollView below.
   const { scrollRef, scrollOffset, onScroll, onContentSizeChange } = useDragAutoScrollBridge();
@@ -295,6 +301,8 @@ export default function RoutineDetailScreen({ navigation, route }) {
     await updateRoutineExerciseExercise(rowId, newExercise.id);
     setSwapState(null);
     setSwapCandidates([]);
+    setShowSwapPicker(false);
+    setPendingSwapPicker(false);
     await loadRoutine();
     toast.show(`${originalName} swapped for ${newExercise.name} in future sessions.`, {
       variant: 'undo',
@@ -751,9 +759,15 @@ export default function RoutineDetailScreen({ navigation, route }) {
 
       {/* Plan-level swap modal */}
       <Modal
-        visible={swapState != null}
+        visible={swapState != null && !pendingSwapPicker}
         animationType={reduceMotion ? 'none' : 'slide'}
-        onRequestClose={() => { setSwapState(null); setSwapCandidates([]); }}
+        onRequestClose={() => { setSwapState(null); setSwapCandidates([]); setPendingSwapPicker(false); }}
+        onDismiss={() => {
+          // iOS only: fires after this sheet has fully dismissed. If the user
+          // asked for the full library, present it now rather than stacking it
+          // on top of the still-open sheet (which iOS silently refuses).
+          if (pendingSwapPicker) setShowSwapPicker(true);
+        }}
       >
         {/* AY-4 (2026-07-09 design audit): traps screen-reader navigation to
             this sheet while it's the modal's own content (matches
@@ -763,7 +777,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
               (centred title, 44pt close, hairline rule) - the ranked-swap
               surface itself stays, it is deliberately richer than the plain
               library picker. */}
-          <ModalHeader title="Swap exercise" onClose={() => { setSwapState(null); setSwapCandidates([]); }} />
+          <ModalHeader title="Swap exercise" onClose={() => { setSwapState(null); setSwapCandidates([]); setPendingSwapPicker(false); }} />
           <Text style={[styles.swapSubtitle, live.swapSubtitle]}>
             Replacing: <Text style={{ color: t.colors.primary }}>{swapState?.exercise?.name}</Text>
           </Text>
@@ -799,7 +813,14 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 title="Search all exercises or create your own"
                 icon="search"
                 variant="tertiary"
-                onPress={() => setShowSwapPicker(true)}
+                onPress={() => {
+                  // iOS: dismiss the ranked sheet first; its onDismiss opens
+                  // the picker (two stacked native modals never present on iOS).
+                  // Android has no such limit and does not fire Modal.onDismiss,
+                  // so present the picker directly there.
+                  if (Platform.OS === 'ios') setPendingSwapPicker(true);
+                  else setShowSwapPicker(true);
+                }}
                 style={[styles.swapSearchAll, { backgroundColor: 'transparent' }]}
                 textStyle={[styles.swapSearchAllText, live.swapSearchAllText]}
                 accessibilityLabel="Search all exercises or create your own"
@@ -821,7 +842,15 @@ export default function RoutineDetailScreen({ navigation, route }) {
           so it confirms + applies the same way as a ranked pick. */}
       <ExercisePickerModal
         visible={showSwapPicker}
-        onClose={() => setShowSwapPicker(false)}
+        onClose={() => {
+          // Cancelling the full picker closes the whole swap flow. Clearing
+          // swapState keeps the ranked sheet from re-presenting into the
+          // picker's dismiss animation (the reverse of the iOS stacking bug).
+          setShowSwapPicker(false);
+          setPendingSwapPicker(false);
+          setSwapState(null);
+          setSwapCandidates([]);
+        }}
         onSelect={(ex) => { setShowSwapPicker(false); handleConfirmSwap(ex); }}
         saveLabel="Swap in"
       />

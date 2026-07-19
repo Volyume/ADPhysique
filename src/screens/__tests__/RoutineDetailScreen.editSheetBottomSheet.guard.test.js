@@ -38,9 +38,13 @@ describe('RoutineDetailScreen edit-exercise sheet (D36a)', () => {
     expect(editWindow).toMatch(/label="Sets"[\s\S]*label="Reps min"[\s\S]*label="Reps max"[\s\S]*label="Rest \(s\)"[\s\S]*label="Start weight"/);
   });
 
-  test('the plan-level swap modal is untouched (out of this build slot)', () => {
+  test('the plan-level swap modal stays a raw Modal (not folded into BottomSheet)', () => {
+    // Negative control: this modal is deliberately a raw RN Modal, not the
+    // shared BottomSheet. Its visibility now also gates on !pendingSwapPicker
+    // (the iOS modal-handoff fix, pinned in its own guard suite) — still a raw
+    // Modal, so the BottomSheet-migration control holds.
     const swapWindow = ROUTINE_DETAIL.match(/\{\/\* Plan-level swap modal \*\/\}[\s\S]{0,300}/)?.[0] ?? '';
     expect(swapWindow).toContain('<Modal');
-    expect(swapWindow).toContain('visible={swapState != null}');
+    expect(swapWindow).toContain('visible={swapState != null && !pendingSwapPicker}');
   });
 });
