@@ -10,7 +10,7 @@ describe('layout sizing policy', () => {
   });
 
   test('set-entry visual controls stay compact but governed by one token', () => {
-    expect(workoutLoggerSize.setEntryLabelWidth).toBe(68);
+    expect(workoutLoggerSize.setEntryLabelWidth).toBe(96);
     expect(workoutLoggerSize.setEntryStepperButton).toBe(36);
     expect(workoutLoggerSize.setEntryStepperButton).toBeLessThan(touchTarget.minimum);
   });

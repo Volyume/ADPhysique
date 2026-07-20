@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   fieldLabelWrap: {
     minWidth: workoutLoggerSize.setEntryLabelWidth,
     flexBasis: workoutLoggerSize.setEntryLabelWidth,
-    maxWidth: 74,
+    maxWidth: 100,
     flexShrink: 0,
     gap: 1,
   },
