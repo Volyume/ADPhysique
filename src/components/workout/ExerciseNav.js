@@ -32,6 +32,14 @@ export default function ExerciseNav({ items, selectedIndex, onSelect }) {
       {items.map((item, i) => {
         const selected = i === selectedIndex;
         const progress = item.total > 0 ? Math.min(1, item.done / item.total) : 0;
+        // Complete = every planned set logged (and not skipped for time). Its
+        // underline goes full-width green to signify done at a glance (founder
+        // request 2026-07-19), overriding the selected-amber/rest-grey so a
+        // finished exercise always reads green whether or not it's current.
+        const complete = !item.skipped && item.total > 0 && item.done >= item.total;
+        const fillColor = complete
+          ? t.colors.success
+          : (selected ? t.colors.primary : t.colors.textMuted);
         return (
           <TouchableOpacity
             key={item.key}
@@ -46,7 +54,7 @@ export default function ExerciseNav({ items, selectedIndex, onSelect }) {
             onPress={() => onSelect(i)}
             accessibilityRole="button"
             accessibilityState={{ selected }}
-            accessibilityLabel={`${item.name}, ${item.done} of ${item.total} sets done${item.skipped ? ', skipped for time' : ''}`}
+            accessibilityLabel={`${item.name}, ${item.done} of ${item.total} sets done${complete ? ', complete' : ''}${item.skipped ? ', skipped for time' : ''}`}
           >
             <Text
               numberOfLines={1}
@@ -59,7 +67,7 @@ export default function ExerciseNav({ items, selectedIndex, onSelect }) {
                 style={[
                   styles.fill,
                   {
-                    backgroundColor: selected ? t.colors.primary : t.colors.textMuted,
+                    backgroundColor: fillColor,
                     width: `${Math.round(progress * 100)}%`,
                   },
                 ]}
