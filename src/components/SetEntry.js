@@ -5,6 +5,7 @@ import { colors, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { calculate1RM } from '../lib/algorithms';
 import { formatSeconds, parseTimeToSeconds } from '../lib/workoutHelpers';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import InfoTooltip from './InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { workoutLoggerSize } from '../styles/layout';
@@ -21,7 +22,6 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
     e1rmHint: { ...t.type.num('caption'), color: t.colors.textMuted },
     stepper: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     stepBtn: { backgroundColor: t.colors.surface2 },
-    stepBtnText: { ...t.type.bodyStrong, color: t.colors.primary },
     valueInput: { ...t.type.bodyStrong, fontVariant: ['tabular-nums'], color: t.colors.textPrimary },
     valueInputGhost: { color: t.colors.textMuted },
   };
@@ -129,7 +129,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel={`Decrease weight by ${Number(weightStepKg) > 0 ? Number(weightStepKg) : 2.5} ${units}`}
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]}>-</Text>
+            <Ionicons name="remove" size={20} color={t.colors.primary} />
           </TouchableOpacity>
           <TextInput
             testID="volyume-weight-input"
@@ -167,7 +167,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel={`Increase weight by ${Number(weightStepKg) > 0 ? Number(weightStepKg) : 2.5} ${units}`}
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]}>+</Text>
+            <Ionicons name="add" size={20} color={t.colors.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -193,7 +193,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Decrease time"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]}>-</Text>
+            <Ionicons name="remove" size={20} color={t.colors.primary} />
           </TouchableOpacity>
           <TextInput
             testID="volyume-duration-input"
@@ -217,7 +217,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Increase time"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]}>+</Text>
+            <Ionicons name="add" size={20} color={t.colors.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -245,7 +245,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Decrease distance"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]}>-</Text>
+            <Ionicons name="remove" size={20} color={t.colors.primary} />
           </TouchableOpacity>
           <TextInput
             testID="volyume-distance-input"
@@ -270,7 +270,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Increase distance"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]}>+</Text>
+            <Ionicons name="add" size={20} color={t.colors.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -290,7 +290,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Decrease time"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]}>-</Text>
+            <Ionicons name="remove" size={20} color={t.colors.primary} />
           </TouchableOpacity>
           <TextInput
             testID="volyume-distance-time-input"
@@ -314,7 +314,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Increase time"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]}>+</Text>
+            <Ionicons name="add" size={20} color={t.colors.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -342,7 +342,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Decrease reps by 1"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]}>-</Text>
+            <Ionicons name="remove" size={20} color={t.colors.primary} />
           </TouchableOpacity>
           <TextInput
             testID="volyume-reps-input"
@@ -375,7 +375,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             accessibilityLabel="Increase reps by 1"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Text style={[styles.stepBtnText, live.stepBtnText]}>+</Text>
+            <Ionicons name="add" size={20} color={t.colors.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -469,11 +469,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface2,
-  },
-  stepBtnText: {
-    ...type.bodyStrong,
-    color: colors.primary,
-    lineHeight: 18,
   },
   valueInput: {
     flex: 1,
