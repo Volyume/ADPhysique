@@ -46,7 +46,7 @@ import Button from '../Button';
 // itself is NOT modified (pinned input contract); this composes with it.
 export const LoggedSetRow = React.memo(function LoggedSetRow({
   set, units, progressNum, exerciseType = 'weight_reps', onEdit, onDelete,
-  isEditing = false, editValue, onChangeEditValue, onSaveEdit, onCancelEdit, saving = false, weightStepKg,
+  isEditing = false, editValue, onChangeEditValue, onSaveEdit, onCancelEdit, onDeleteEdit, saving = false, weightStepKg,
 }) {
   // CP-10 stage 3 (theming FINAL batch): live theme (src/hooks/useTheme.js).
   // See buildLiveStyles' header comment (defined further down this
@@ -55,10 +55,14 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
   const live = buildLiveStyles(t);
   const isWarmup = set.setType === 'warmup';
 
-  // In-place editor: replaces the row entirely while open. Save/Cancel are
-  // the only actions here -- Delete stays reachable only via the long-press
-  // zeego menu (onDelete below), which keeps its existing confirm dialog;
-  // no duplicate delete affordance is introduced inline.
+  // In-place editor: replaces the row entirely while open. Delete sits on the
+  // left (destructive, separated from Save so it is not fat-fingered), with
+  // Cancel/Save on the right. `onDeleteEdit` reuses the SAME confirm-then-
+  // remove flow as the long-press zeego menu (ActiveWorkoutScreen's
+  // handleDeleteEditedSet) -- the menu stays as a shortcut, but Delete is now
+  // discoverable where users look for it: by tapping the set they logged by
+  // mistake (founder-reported 2026-07-19; the long-press menu alone was
+  // invisible). Optional so the plain live-theme mount stays byte-identical.
   if (isEditing) {
     return (
       <View style={[styles.editingWrap, live.editingWrap]}>
@@ -76,6 +80,18 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
           />
         )}
         <View style={styles.editingActions}>
+          {onDeleteEdit && (
+            <TouchableOpacity
+              style={styles.editingDeleteBtn}
+              onPress={() => onDeleteEdit(set)}
+              disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel="Delete this set"
+            >
+              <Ionicons name="trash-outline" size={iconSize.sm} color={t.colors.error} />
+              <Text style={[styles.editingDeleteText, live.editingDeleteText]}>Delete</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={styles.editingCancelBtn}
             onPress={onCancelEdit}
@@ -196,6 +212,10 @@ const styles = StyleSheet.create({
   editingWrap: { gap: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.sm, borderWidth: 1, borderColor: colors.border },
   editingTitle: { ...type.label, color: colors.textPrimary },
   editingActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.md },
+  // Destructive Delete on the LEFT of the action row (marginRight:'auto' pushes
+  // Cancel/Save to the right), so it can never be next to Save and fat-fingered.
+  editingDeleteBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs, minHeight: workoutLoggerSize.loggedSetMinHeight, justifyContent: 'center', paddingHorizontal: spacing.sm, marginRight: 'auto' },
+  editingDeleteText: { ...type.label, color: colors.error },
   editingCancelBtn: { minHeight: workoutLoggerSize.loggedSetMinHeight, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.sm },
   editingCancelText: { ...type.label, color: colors.textSecondary },
   editingSaveBtn: { minWidth: 96 },
@@ -220,6 +240,7 @@ function buildLiveStyles(t) {
     loggedEst1RM: { ...t.type.num('caption'), color: t.colors.textMuted },
     editingWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     editingTitle: { ...t.type.label, color: t.colors.textPrimary },
+    editingDeleteText: { ...t.type.label, color: t.colors.error },
     editingCancelText: { ...t.type.label, color: t.colors.textSecondary },
   };
 }

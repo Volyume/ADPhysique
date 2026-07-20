@@ -332,6 +332,16 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(LOGGED_SET_ROW).toContain('accessibilityLabel="Cancel editing set"');
   });
 
+  // Founder-reported 2026-07-19: an accidentally-logged set could only be
+  // removed via the (invisible) long-press menu. The inline editor now hosts a
+  // discoverable destructive Delete, reusing the SAME handleDeleteEditedSet
+  // confirm-then-remove flow the long-press menu already used.
+  test('the in-place set editor exposes a discoverable Delete that reuses the existing delete flow', () => {
+    expect(LOGGED_SET_ROW).toContain('accessibilityLabel="Delete this set"');
+    expect(LOGGED_SET_ROW).toMatch(/onPress=\{\(\) => onDeleteEdit\(set\)\}/);
+    expect(ACTIVE_WORKOUT).toContain('onDeleteEdit={handleDeleteEditedSet}');
+  });
+
   test('modal actions use the same compact logger button system', () => {
     expect(ACTIVE_WORKOUT).toMatch(/staleResume: \{[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
     expect(ACTIVE_WORKOUT).toMatch(/keepTrainingBtn: \{[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);

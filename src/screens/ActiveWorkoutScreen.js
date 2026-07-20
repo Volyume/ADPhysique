@@ -2940,6 +2940,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     onChangeEditValue={setEditValue}
                     onSaveEdit={handleSaveEditedSet}
                     onCancelEdit={closeEditSet}
+                    onDeleteEdit={handleDeleteEditedSet}
                     saving={editingSet != null && editingSet.id === s.id ? saving : false}
                     weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
                   />
