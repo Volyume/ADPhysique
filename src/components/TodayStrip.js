@@ -317,7 +317,11 @@ const styles = StyleSheet.create({
   editHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   stFields: { flexDirection: 'row', gap: spacing.xs, alignItems: 'center', flex: 1 },
-  kgField: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs, flex: 1 },
+  // 'center', not 'baseline': the unit label ("kg"/"lbs") sits beside a
+  // bordered TextField box, and baseline resolves to the input's text baseline
+  // (below the box's optical centre), leaving the unit floating low. Matches
+  // the sibling stFields row and HeightFeetInchesField's box+unit pairing.
+  kgField: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1 },
   weightFieldContainer: {
     flex: 1,
     minWidth: 64,
