@@ -103,11 +103,12 @@ describe('signInWithApple', () => {
     expect(second).toEqual({ duplicate: true });
     expect(appleAuth.signInAsync).toHaveBeenCalledTimes(1);
     resolveSheet({ identityToken: 'apple-id-token' });
-    expect(await first).toEqual({ ok: true });
+    // No fullName/email in this mock credential -> Guideline 4 fields are null.
+    expect(await first).toEqual({ ok: true, appleGivenName: null, appleEmail: null });
     expect(auth.signInWithIdToken).toHaveBeenCalledTimes(1);
     // The guard releases: a later, non-overlapping call runs normally.
     appleAuth.signInAsync.mockResolvedValue({ identityToken: 'apple-id-token' });
-    expect(await signInWithApple()).toEqual({ ok: true });
+    expect(await signInWithApple()).toEqual({ ok: true, appleGivenName: null, appleEmail: null });
   });
 
   test('non-iOS (Android): falls back to web OAuth, never touches the native module', async () => {
