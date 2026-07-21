@@ -45,7 +45,11 @@ export default function OAuthButtons({ onApple, onGoogle, disabled, dividerLabel
           >
             <AppleButton
               buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              // WHITE, not BLACK: the app background is near-black (#0D0D0D), so a
+              // BLACK Apple button had no contrast and no visible frame, which
+              // App Review flagged under Guideline 4 (unclear it is a button).
+              // Apple's HIG prescribes the white button on dark backgrounds.
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
               cornerRadius={radius.md}
               style={styles.appleNativeBtn}
               onPress={onApple}

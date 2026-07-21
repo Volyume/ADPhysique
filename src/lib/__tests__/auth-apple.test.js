@@ -42,7 +42,18 @@ describe('signInWithApple', () => {
     const res = await signInWithApple();
     expect(appleAuth.signInAsync).toHaveBeenCalledTimes(1);
     expect(auth.signInWithIdToken).toHaveBeenCalledWith({ provider: 'apple', token: 'apple-id-token' });
-    expect(res).toEqual({ ok: true });
+    // Guideline 4: no name/email in the credential (later sign-in) -> nulls.
+    expect(res).toEqual({ ok: true, appleGivenName: null, appleEmail: null });
+  });
+
+  test('iOS: returns the name and email Apple provides on first sign-in (Guideline 4, no re-prompt)', async () => {
+    appleAuth.signInAsync.mockResolvedValueOnce({
+      identityToken: 'apple-id-token',
+      fullName: { givenName: 'Allan', familyName: 'Douglas' },
+      email: 'allan@example.com',
+    });
+    const res = await signInWithApple();
+    expect(res).toEqual({ ok: true, appleGivenName: 'Allan', appleEmail: 'allan@example.com' });
   });
 
   test('iOS: a user cancel returns { cancelled } and never exchanges a token', async () => {

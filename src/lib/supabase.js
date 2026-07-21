@@ -302,7 +302,15 @@ export async function signInWithApple() {
     if (!idToken) return { error: { message: 'Apple did not return a sign-in token.' } };
     const { error } = await c.auth.signInWithIdToken({ provider: 'apple', token: idToken });
     if (error) return { error };
-    return { ok: true };
+    // Guideline 4: Authentication Services already supplies the user's name and
+    // email on the FIRST authorisation (both are null on later sign-ins), so we
+    // return them for the caller to pre-fill onboarding rather than making the
+    // user type information Apple already gave us.
+    return {
+      ok: true,
+      appleGivenName: credential?.fullName?.givenName || null,
+      appleEmail: credential?.email || null,
+    };
   } catch (e) {
     // The native sheet throws a cancellation error code when the user backs out.
     if (e?.code === 'ERR_REQUEST_CANCELED' || e?.code === 'ERR_CANCELED') {

@@ -603,9 +603,16 @@ export default function ProOnboardingScreen({ navigation }) {
         logInfo('ProOnboarding.oauth.cancelled', `provider=${provider}`);
         return;
       }
-      // OAuth doesn't pre-fill a userProfile from the provider's metadata
-      // here, the onboarding wizard collects the training fields in the
-      // next steps. Mark the auth step complete and advance.
+      // Guideline 4 (App Review, 2026-07-21): Sign in with Apple already
+      // provides the user's name via Authentication Services on first sign-in,
+      // so pre-fill the first-name field from it rather than requiring the user
+      // to re-type information Apple gave us. Only pre-fill an empty field, and
+      // only when Apple actually returned a name (null on later sign-ins).
+      if (result?.appleGivenName && !firstName.trim()) {
+        setFirstName(result.appleGivenName);
+      }
+      // The onboarding wizard collects the training fields in the next steps.
+      // Mark the auth step complete and advance.
       logInfo('ProOnboarding.oauth.success', `provider=${provider}, advancing to step 2`);
       setProOnboardingAccountCreated(true);
       setAccountCreated(true);
