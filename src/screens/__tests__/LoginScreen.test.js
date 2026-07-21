@@ -15,9 +15,23 @@ jest.mock('../../lib/errorLog', () => ({ logInfo: jest.fn(), logError: jest.fn()
 jest.mock('../../lib/supabase', () => ({
   signInWithGoogle: jest.fn(),
   signInWithApple: jest.fn(),
+  signInWithEmail: jest.fn(),
+  signUpWithEmail: jest.fn(),
 }));
+// TextField/Button pull in @gorhom/bottom-sheet and expo-haptics (native
+// Expo modules) at import; this suite tests LoginScreen's handler behaviour,
+// not those components' internals, so stub them to plain host elements whose
+// props (value/onChangeText/onPress) stay inspectable.
+jest.mock('../../components/TextField', () => (props) => {
+  const React = require('react');
+  return React.createElement('TextField', props);
+});
+jest.mock('../../components/Button', () => (props) => {
+  const React = require('react');
+  return React.createElement('Button', props);
+});
 
-import { signInWithGoogle } from '../../lib/supabase';
+import { signInWithGoogle, signInWithEmail, signUpWithEmail } from '../../lib/supabase';
 import LoginScreen from '../LoginScreen';
 
 function findGoogleButton(tree) {
@@ -123,5 +137,60 @@ describe('LoginScreen OAuth feedback (A7)', () => {
 
     await act(async () => { resolveFn({}); await Promise.resolve(); });
     await flush();
+  });
+});
+
+describe('LoginScreen email + password (founder 2026-07-21)', () => {
+  function typeCreds(tree, e, p) {
+    const emailField = tree.root.findByProps({ accessibilityLabel: 'Email address' });
+    const pwField = tree.root.findByProps({ accessibilityLabel: 'Password' });
+    act(() => { emailField.props.onChangeText(e); });
+    act(() => { pwField.props.onChangeText(p); });
+  }
+
+  test('sign in calls signInWithEmail and shows no toast on a returned session (onAuthStateChange drives)', async () => {
+    signInWithEmail.mockResolvedValue({ data: { session: { user: { id: 'u1' } } }, error: null });
+    let tree;
+    await act(async () => { tree = create(<LoginScreen />); });
+    typeCreds(tree, 'test@volyume.app', 'hunter2pw');
+    const submit = tree.root.findByProps({ accessibilityLabel: 'Sign in with email' });
+    await act(async () => { await submit.props.onPress(); });
+    await flush();
+    expect(signInWithEmail).toHaveBeenCalledWith('test@volyume.app', 'hunter2pw');
+    expect(mockToastShow).not.toHaveBeenCalled();
+  });
+
+  test('a wrong password maps to a calm message, never the raw SDK string', async () => {
+    signInWithEmail.mockResolvedValue({ data: null, error: { message: 'Invalid login credentials' } });
+    let tree;
+    await act(async () => { tree = create(<LoginScreen />); });
+    typeCreds(tree, 'test@volyume.app', 'wrongpw');
+    const submit = tree.root.findByProps({ accessibilityLabel: 'Sign in with email' });
+    await act(async () => { await submit.props.onPress(); });
+    await flush();
+    expect(mockToastShow).toHaveBeenCalledWith('That email or password is not right.', expect.objectContaining({ variant: 'error' }));
+  });
+
+  test('empty fields are blocked before any network call', async () => {
+    let tree;
+    await act(async () => { tree = create(<LoginScreen />); });
+    const submit = tree.root.findByProps({ accessibilityLabel: 'Sign in with email' });
+    await act(async () => { await submit.props.onPress(); });
+    await flush();
+    expect(signInWithEmail).not.toHaveBeenCalled();
+    expect(mockToastShow).toHaveBeenCalledWith('Enter your email and password.', expect.objectContaining({ variant: 'info' }));
+  });
+
+  test('toggling to sign-up routes the submit to signUpWithEmail', async () => {
+    signUpWithEmail.mockResolvedValue({ data: { session: { user: { id: 'u2' } } }, error: null });
+    let tree;
+    await act(async () => { tree = create(<LoginScreen />); });
+    const toggle = tree.root.findByProps({ accessibilityLabel: 'Switch to creating an account' });
+    act(() => { toggle.props.onPress(); });
+    typeCreds(tree, 'new@volyume.app', 'freshpw12');
+    const submit = tree.root.findByProps({ accessibilityLabel: 'Create account with email' });
+    await act(async () => { await submit.props.onPress(); });
+    await flush();
+    expect(signUpWithEmail).toHaveBeenCalledWith('new@volyume.app', 'freshpw12');
   });
 });
