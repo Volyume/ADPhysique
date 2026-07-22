@@ -8,6 +8,7 @@ import {
   AccessibilityInfo,
   useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as haptics from '../lib/haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
@@ -139,6 +140,12 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
   // the identical surface, so the suppression rules are simpler and
   // strictly stronger than before.
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  // The toast is an absolutely-positioned overlay, so it must clear the status
+  // bar / notch / Dynamic Island itself: a fixed top offset (spacing.xxl = 32)
+  // sat UNDER the ~59pt Dynamic Island and overlapped the clock on iOS
+  // (founder device report 2026-07-22). Offset by the real safe-area top inset
+  // instead, which also covers the Android status bar.
+  const insets = useSafeAreaInsets();
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour/fontSize-
   // bearing keys only.
@@ -206,7 +213,7 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
 
   return (
     <TouchableOpacity accessibilityRole="button"
-      style={styles.toastWrap}
+      style={[styles.toastWrap, { top: insets.top + spacing.xs }]}
       activeOpacity={0.9}
       onPress={onDismiss}
     >
@@ -229,7 +236,8 @@ const styles = StyleSheet.create({
   },
   toastWrap: {
     position: 'absolute',
-    top: spacing.xxl,
+    // `top` is applied inline from the safe-area inset (see render); it must
+    // clear the status bar / Dynamic Island, which a fixed value cannot.
     left: spacing.lg,
     right: spacing.lg,
   },
