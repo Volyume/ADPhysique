@@ -341,6 +341,10 @@ const styles = StyleSheet.create({
   logBtn: {
     borderRadius: radius.sm,
     minWidth: 76,
+    // Match the weight input's minHeight (40) so the button and the field it
+    // sits beside are the same height and align in the row, rather than the
+    // button reading short next to the taller box.
+    minHeight: 40,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
