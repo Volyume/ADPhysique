@@ -11,8 +11,23 @@
  * the reps slot, and a reps_only exercise hides the weight field while keeping
  * the reps field working.
  */
-import { create, act } from 'react-test-renderer';
+import { create as rtrCreate, act } from 'react-test-renderer';
 import { Keyboard } from 'react-native';
+
+// Unmount every rendered tree after each test. SetEntry arms an 8s idle-
+// dismiss setTimeout on weight/reps onChangeText (founder 2026-07-22); its
+// cleanup runs on unmount, so without this the timer is left pending and Jest
+// warns "did not exit". Wrapping create() tracks trees with no call-site churn.
+const _rendered = [];
+function create(element, options) {
+  const tree = rtrCreate(element, options);
+  _rendered.push(tree);
+  return tree;
+}
+afterEach(() => {
+  act(() => { _rendered.forEach(t => { try { t.unmount(); } catch (_) {} }); });
+  _rendered.length = 0;
+});
 
 // expo-haptics can't construct its native EventEmitter in the bare test env;
 // mock it as the other SetEntry suite does.

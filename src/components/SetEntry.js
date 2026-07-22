@@ -1,5 +1,5 @@
-import { memo, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Keyboard } from 'react-native';
+import { memo, useRef, useEffect, useId } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Keyboard, InputAccessoryView, Platform } from 'react-native';
 import * as haptics from '../lib/haptics';
 import { colors, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
@@ -24,9 +24,34 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
     stepBtn: { backgroundColor: t.colors.surface2 },
     valueInput: { ...t.type.bodyStrong, fontVariant: ['tabular-nums'], color: t.colors.textPrimary },
     valueInputGhost: { color: t.colors.textMuted },
+    keyboardDoneBar: { backgroundColor: t.colors.surface2, borderTopColor: t.colors.border },
+    keyboardDoneText: { ...t.type.bodyStrong, color: t.colors.primary },
   };
   const { weight, reps, isGhost } = value;
   const repsRef = useRef(null);
+
+  // Numeric-keypad dismissal (founder 2026-07-22 iOS walk). iOS decimal-pad
+  // and number-pad have NO return/Done key, so the weight/distance/reps fields
+  // could only be closed by tapping a bare patch of screen. Two dismissals,
+  // both requested:
+  //   1) A Done bar above the keyboard (InputAccessoryView, iOS only) -- one
+  //      tap, always visible, never closes on its own.
+  //   2) An 8s inactivity timeout as a safety net for walking away from the
+  //      field. It resets on every keystroke and on focus, so it only fires
+  //      when the field is genuinely left alone -- never mid-entry between
+  //      weight and reps, which is the exact failure the 2026-07-13 Android
+  //      walk rejected a naive timer for.
+  const isIOS = Platform.OS === 'ios';
+  const accessoryID = 'volyume-setentry-done-' + useId().replace(/:/g, '');
+  const numericAccessory = isIOS ? { inputAccessoryViewID: accessoryID } : null;
+  const idleTimer = useRef(null);
+  function clearIdle() {
+    if (idleTimer.current) { clearTimeout(idleTimer.current); idleTimer.current = null; }
+  }
+  function bumpIdle() {
+    clearIdle();
+    idleTimer.current = setTimeout(() => Keyboard.dismiss(), 8000);
+  }
   // weighted_bodyweight renders byte-identically to weight_reps (weight field
   // + reps field, weight defaulting to 0). reps_only hides the weight field;
   // duration / distance swap in time/distance fields. Anything unrecognised
@@ -77,7 +102,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
     stopRepeat();
     repeatRef.current = setInterval(() => adjustFrom(valueRef.current, field, delta), 200);
   }
-  useEffect(() => () => stopRepeat(), []);
+  useEffect(() => () => { stopRepeat(); clearIdle(); }, []);
 
 
   // Time stepper for the duration / distance schemas. Steps the seconds count
@@ -138,6 +163,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             // a legitimate zero-weight bodyweight set).
             value={weight == null || weight === '' ? '' : String(weight)}
             onChangeText={v => {
+              bumpIdle();
               // Preserve in-progress decimal entry. The previous code did
               //   const n = parseFloat(v); setField('weight', n)
               // which stripped the trailing dot, typing "21." stored 21,
@@ -150,11 +176,14 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
                 setField('weight', v); // keep raw string; parseFloat on read
               }
             }}
+            onFocus={bumpIdle}
+            onBlur={clearIdle}
             keyboardType="decimal-pad"
             returnKeyType="next"
             onSubmitEditing={() => repsRef.current?.focus()}
             selectTextOnFocus
             accessibilityLabel={`Weight in ${units}`}
+            {...numericAccessory}
           />
           <TouchableOpacity
             style={[styles.stepBtn, live.stepBtn]}
@@ -252,12 +281,16 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             style={[styles.valueInput, live.valueInput, isGhost && [styles.valueInputGhost, live.valueInputGhost]]}
             value={weight == null || weight === '' ? '' : String(weight)}
             onChangeText={v => {
+              bumpIdle();
               if (v === '' || /^\d{0,5}\.?\d{0,2}$/.test(v)) setField('weight', v);
             }}
+            onFocus={bumpIdle}
+            onBlur={clearIdle}
             keyboardType="decimal-pad"
             returnKeyType="next"
             selectTextOnFocus
             accessibilityLabel="Distance"
+            {...numericAccessory}
           />
           <TouchableOpacity
             style={[styles.stepBtn, live.stepBtn]}
@@ -350,10 +383,13 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             style={[styles.valueInput, live.valueInput, isGhost && [styles.valueInputGhost, live.valueInputGhost]]}
             value={reps == null || reps === '' ? '' : String(reps)}
             onChangeText={v => {
+              bumpIdle();
               const n = parseInt(v, 10);
               if (!isNaN(n)) setField('reps', Math.min(Math.max(n, 1), 200));
               else if (v === '') setField('reps', '');
             }}
+            onFocus={bumpIdle}
+            onBlur={clearIdle}
             keyboardType="number-pad"
             returnKeyType="done"
             // Keyboard-completes-the-set (ULTIMATE-WR-1): reps is the last field,
@@ -363,6 +399,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
             onSubmitEditing={() => (onSubmitComplete ? onSubmitComplete() : Keyboard.dismiss())}
             selectTextOnFocus
             accessibilityLabel="Number of reps"
+            {...numericAccessory}
           />
           <TouchableOpacity
             style={[styles.stepBtn, live.stepBtn]}
@@ -403,6 +440,24 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
           row in ActiveWorkoutScreen is now the set-type picker's entry
           point. The duplicate 1RM chip went with it; the inline e1rmHint
           beside the Reps label is the single in-card estimate. */}
+
+      {/* Done bar over the numeric keypad (iOS only; InputAccessoryView is a
+          no-op on Android). Gives the decimal-pad/number-pad fields a
+          one-tap dismiss the OS keyboards do not provide. */}
+      {isIOS && (
+        <InputAccessoryView nativeID={accessoryID}>
+          <View style={[styles.keyboardDoneBar, live.keyboardDoneBar]}>
+            <TouchableOpacity
+              onPress={() => { haptics.selection(); Keyboard.dismiss(); }}
+              style={styles.keyboardDoneBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Done, close keyboard"
+            >
+              <Text style={[styles.keyboardDoneText, live.keyboardDoneText]}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </InputAccessoryView>
+      )}
     </View>
   );
 }
@@ -505,6 +560,26 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   rirBtnTextActive: {
+    color: colors.primary,
+  },
+  // Numeric-keypad Done bar (iOS InputAccessoryView). Colours come from `live`.
+  keyboardDoneBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.surface2,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  keyboardDoneBtn: {
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  keyboardDoneText: {
+    ...type.bodyStrong,
     color: colors.primary,
   },
 });
