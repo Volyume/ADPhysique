@@ -1206,7 +1206,7 @@ export default function BodyMetricsScreen() {
           <View style={[styles.formCard, live.formCard]}>
             <Text style={[styles.formTitle, live.formTitle]}>{editingId ? 'Edit entry' : 'New entry'}</Text>
             <View style={styles.formRow}>
-              <Text style={[styles.formLabel, live.formLabel]}>Date</Text>
+              <Text style={[styles.formLabel, live.formLabel]} numberOfLines={1}>Date</Text>
               <TextField
                 containerStyle={styles.formFieldContainer}
                 fieldStyle={styles.formField}
@@ -1220,7 +1220,7 @@ export default function BodyMetricsScreen() {
             </View>
             {bwu === 'st' ? (
               <View style={styles.formRow}>
-                <Text style={[styles.formLabel, live.formLabel]}>Body weight</Text>
+                <Text style={[styles.formLabel, live.formLabel]} numberOfLines={1}>Body weight</Text>
                 <View style={{ flex: 1, flexDirection: 'row', gap: spacing.sm }}>
                   <TextField
                     containerStyle={styles.formSplitFieldContainer}
@@ -1250,7 +1250,7 @@ export default function BodyMetricsScreen() {
               </View>
             ) : (
               <View style={styles.formRow}>
-                <Text style={[styles.formLabel, live.formLabel]}>Body weight ({bwu})</Text>
+                <Text style={[styles.formLabel, live.formLabel]} numberOfLines={1}>Body weight ({bwu})</Text>
                 <TextField
                   containerStyle={styles.formFieldContainer}
                   fieldStyle={styles.formField}
@@ -1266,7 +1266,7 @@ export default function BodyMetricsScreen() {
             )}
 
             <View style={styles.formRow}>
-              <Text style={[styles.formLabel, live.formLabel]}>Body fat (%)</Text>
+              <Text style={[styles.formLabel, live.formLabel]} numberOfLines={1}>Body fat (%)</Text>
               <TextField
                 containerStyle={styles.formFieldContainer}
                 fieldStyle={styles.formField}
@@ -1301,7 +1301,7 @@ export default function BodyMetricsScreen() {
 
             {showMeasurements && MEASUREMENTS.map(m => (
               <View key={m.key} style={styles.formRow}>
-                <Text style={[styles.formLabel, live.formLabel]}>{m.label} (cm)</Text>
+                <Text style={[styles.formLabel, live.formLabel]} numberOfLines={1}>{m.label} (cm)</Text>
                 <TextField
                   containerStyle={styles.formFieldContainer}
                   fieldStyle={styles.formField}

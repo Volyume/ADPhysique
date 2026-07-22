@@ -527,7 +527,11 @@ const styles = StyleSheet.create({
   },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   stepBtn: {
-    width: 48, height: 48,
+    // Height matches stepInputField.minHeight (54) so the -/+ buttons and the
+    // amount field they flank are the same height and their edges line up in
+    // the row (the row is alignItems:'center', so a shorter button floated a
+    // few dp inside the taller field before).
+    width: 48, height: 54,
     borderRadius: radius.md,
     backgroundColor: colors.surface2,
     borderWidth: 1, borderColor: colors.border,

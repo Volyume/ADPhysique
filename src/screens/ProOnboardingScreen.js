@@ -1897,7 +1897,7 @@ export default function ProOnboardingScreen({ navigation }) {
             <Text style={[styles.fieldHint, live.fieldHint]}>Make cardio available as a logging option. It is not added to your plan by default.</Text>
 
             <View style={[styles.notifSection, live.notifSection]}>
-              <View style={styles.notifHeader}>
+              <View style={[styles.notifHeader, styles.notifHeaderToggle]}>
                 <View style={[styles.notifIconWrap, live.notifIconWrap]}>
                   <Ionicons name="heart-outline" size={18} color={t.colors.primary} />
                 </View>
@@ -2180,6 +2180,12 @@ const styles = StyleSheet.create({
     padding: spacing.md, marginBottom: spacing.md,
   },
   notifHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  // The two coaching-reminder rows carry a static "Part of your coaching"
+  // pill, where top-alignment reads fine as a badge. The cardio row instead
+  // ends in an interactive switch, which should sit centred against the icon
+  // and the two-line copy block like every other toggle row in the app
+  // (all the Settings toggles centre via the shared SettingRow).
+  notifHeaderToggle: { alignItems: 'center' },
   notifCopy: { flex: 1, minWidth: 0 },
   notifIconWrap: {
     width: 36, height: 36, borderRadius: radius.md,

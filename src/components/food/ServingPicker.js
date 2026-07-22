@@ -9,7 +9,7 @@
  * and any future surface (saved meals, recipes) share the same
  * input pattern.
  */
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import TextField from '../TextField';
 import Chip from '../Chip';
 import { colors, spacing } from '../../styles/theme';
@@ -81,7 +81,10 @@ const styles = StyleSheet.create({
   },
   inputField: {
     backgroundColor: colors.surface,
-    minHeight: 44,
+    // Match Chip's base minHeight so the quantity field and the unit chips
+    // beside it are the same height on both platforms (Chip is android 48 /
+    // default 44; a flat 44 left the field 4dp short of the chips on Android).
+    minHeight: Platform.select({ android: 48, default: 44 }),
   },
   input: {
     paddingHorizontal: spacing.sm,

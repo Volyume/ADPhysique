@@ -685,6 +685,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
             <View style={styles.editRow}>
               <TextField
                 label="Sets"
+                labelNumberOfLines={1}
                 containerStyle={styles.editField}
                 fieldStyle={styles.editInputField}
                 inputStyle={[styles.editInput, live.editInput]}
@@ -697,6 +698,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
               />
               <TextField
                 label="Reps min"
+                labelNumberOfLines={1}
                 containerStyle={styles.editField}
                 fieldStyle={styles.editInputField}
                 inputStyle={[styles.editInput, live.editInput]}
@@ -709,6 +711,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
               />
               <TextField
                 label="Reps max"
+                labelNumberOfLines={1}
                 containerStyle={styles.editField}
                 fieldStyle={styles.editInputField}
                 inputStyle={[styles.editInput, live.editInput]}
@@ -723,6 +726,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
             <View style={styles.editRow}>
               <TextField
                 label="Rest (s)"
+                labelNumberOfLines={1}
                 containerStyle={styles.editField}
                 fieldStyle={styles.editInputField}
                 inputStyle={[styles.editInput, live.editInput]}
@@ -736,6 +740,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
               />
               <TextField
                 label="Start weight"
+                labelNumberOfLines={1}
                 containerStyle={styles.editField}
                 fieldStyle={styles.editInputField}
                 inputStyle={[styles.editInput, live.editInput]}

@@ -44,6 +44,11 @@ const TextField = forwardRef(function TextField({
   trailing,
   containerStyle,
   labelStyle,
+  // Clamp the label to N lines. Default (undefined) keeps the label free to
+  // wrap, which is right for full-width single-field prompts. Multi-column
+  // rows (several fields side by side) pass 1 so a longer label can't wrap
+  // and drop its field below the single-line siblings, breaking row alignment.
+  labelNumberOfLines,
   fieldStyle,
   inputStyle,
   editable = true,
@@ -80,7 +85,7 @@ const TextField = forwardRef(function TextField({
   return (
     <View style={[styles.container, containerStyle]}>
       {label ? (
-        <Text style={[styles.label, { ...t.type.captionStrong, color: t.colors.textSecondary }, labelStyle]}>
+        <Text style={[styles.label, { ...t.type.captionStrong, color: t.colors.textSecondary }, labelStyle]} numberOfLines={labelNumberOfLines}>
           {label}
         </Text>
       ) : null}

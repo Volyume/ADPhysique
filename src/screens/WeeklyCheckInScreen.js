@@ -1279,7 +1279,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           {summaryRows.map(row => (
             <View key={row.key} style={styles.fastSummaryRow}>
               <Ionicons name={row.icon} size={16} color={t.colors.textSecondary} style={styles.fastSummaryIcon} />
-              <Text style={[styles.fastSummaryLabel, live.fastSummaryLabel]}>{row.label}</Text>
+              <Text style={[styles.fastSummaryLabel, live.fastSummaryLabel]} numberOfLines={1}>{row.label}</Text>
               <Text style={[styles.fastSummaryValue, live.fastSummaryValue]} numberOfLines={1}>{row.value}</Text>
               <Ionicons name="checkmark-circle" size={16} color={t.colors.success} />
             </View>

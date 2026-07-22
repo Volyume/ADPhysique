@@ -225,7 +225,10 @@ function TargetStepper({
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={styles.controlGroup}>
-      <Text style={[styles.controlLabel, live.controlLabel]}>{label}</Text>
+      {/* One line only: a two-word label (Reps min/Reps max) must not wrap
+          under large text, or its stepper drops below the single-line
+          siblings and the four controls step out of row alignment. */}
+      <Text style={[styles.controlLabel, live.controlLabel]} numberOfLines={1}>{label}</Text>
       <Stepper
         value={value}
         min={min}

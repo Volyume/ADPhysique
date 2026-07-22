@@ -260,7 +260,7 @@ export default function BuildWorkoutScreen({ navigation }) {
             <View style={styles.controls}>
               {/* Sets */}
               <View style={styles.controlGroup}>
-                <Text style={[styles.controlLabel, live.controlLabel]}>Sets</Text>
+                <Text style={[styles.controlLabel, live.controlLabel]} numberOfLines={1}>Sets</Text>
                 <Stepper
                   value={item.sets}
                   min={1}
@@ -277,7 +277,7 @@ export default function BuildWorkoutScreen({ navigation }) {
 
               {/* Rep Range */}
               <View style={styles.controlGroup}>
-                <Text style={[styles.controlLabel, live.controlLabel]}>Reps</Text>
+                <Text style={[styles.controlLabel, live.controlLabel]} numberOfLines={1}>Reps</Text>
                 <View style={styles.repRow}>
                   <TextField
                     containerStyle={styles.repFieldContainer}
@@ -305,7 +305,7 @@ export default function BuildWorkoutScreen({ navigation }) {
 
               {/* Rest */}
               <View style={styles.controlGroup}>
-                <Text style={[styles.controlLabel, live.controlLabel]}>{item.restSuggested ? 'Rest (suggested)' : 'Rest'}</Text>
+                <Text style={[styles.controlLabel, live.controlLabel]} numberOfLines={1}>{item.restSuggested ? 'Rest (suggested)' : 'Rest'}</Text>
                 <Stepper
                   value={item.restSeconds}
                   min={30}
@@ -324,7 +324,7 @@ export default function BuildWorkoutScreen({ navigation }) {
 
               {/* Starting Weight */}
               <View style={styles.controlGroup}>
-                <Text style={[styles.controlLabel, live.controlLabel]}>Weight ({units})</Text>
+                <Text style={[styles.controlLabel, live.controlLabel]} numberOfLines={1}>Weight ({units})</Text>
                 <TextField
                   containerStyle={styles.weightFieldContainer}
                   fieldStyle={styles.weightField}
