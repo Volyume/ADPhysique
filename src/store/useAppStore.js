@@ -87,6 +87,24 @@ async function _persistProfileTimestamps(userId, map) {
 }
 
 // Snapshot (or clear) the in-progress workout for crash/kill recovery (WK-1).
+// Invariant: every workoutExercises entry carries an array `sets`. A single
+// entry with `sets === undefined` crashed handleFinishWorkout on `e.sets.filter`
+// (VOLYUME-2N) -- the finish threw before navigating, so the whole session
+// ended with no summary. Normalise at every boundary where entries enter state
+// so no consumer (finish, empty-view, aggregates) can ever meet a missing
+// array. Preserves array identity when nothing needs fixing (no needless
+// re-renders); only rewrites the offending entries.
+function withSetsArrays(list) {
+  if (!Array.isArray(list)) return [];
+  let changed = false;
+  const out = list.map((e) => {
+    if (e && Array.isArray(e.sets)) return e;
+    changed = true;
+    return { ...(e || {}), sets: [] };
+  });
+  return changed ? out : list;
+}
+
 // Fire-and-forget: called synchronously after each workout mutation. When
 // there's no active workout it clears the key so a finished/cancelled session
 // can't be resurrected. Tagged with the user id so restore only rehydrates
@@ -1220,8 +1238,9 @@ const useAppStore = create((set, get) => ({
   setActiveWorkout: (workout) => set({ activeWorkout: workout }),
   setWorkoutExercises: (next) => {
     set((state) => ({
-      workoutExercises:
+      workoutExercises: withSetsArrays(
         typeof next === 'function' ? next(state.workoutExercises) : next,
+      ),
     }));
     _persistActiveWorkout(get());
   },
@@ -1387,7 +1406,7 @@ const useAppStore = create((set, get) => ({
     try { require('../lib/errorLog').logInfo('workout.start', `id=${workout?.id} exercises=${initialExercises.length}`); } catch (_) {}
     set({
       activeWorkout: workout,
-      workoutExercises: initialExercises,
+      workoutExercises: withSetsArrays(initialExercises),
       currentExerciseIndex: 0,
       workoutStartTime: Date.now(),
       lastActivityAt: Date.now(),
@@ -1441,7 +1460,7 @@ const useAppStore = create((set, get) => ({
       if (get().activeWorkout) return false;
       set({
         activeWorkout: snap.workout,
-        workoutExercises: Array.isArray(snap.workoutExercises) ? snap.workoutExercises : [],
+        workoutExercises: withSetsArrays(snap.workoutExercises),
         currentExerciseIndex: snap.currentExerciseIndex ?? 0,
         workoutStartTime: snap.workoutStartTime ?? Date.now(),
         lastActivityAt: Date.now(),

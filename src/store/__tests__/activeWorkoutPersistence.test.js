@@ -160,3 +160,49 @@ describe('restoreActiveWorkout', () => {
     expect(ok).toBe(false);
   });
 });
+
+// VOLYUME-2N: a single workoutExercises entry with `sets === undefined` (an
+// exercise never logged) crashed handleFinishWorkout on `e.sets.filter`, so
+// Finish threw before navigating and the whole session ended with no summary.
+// Every boundary that admits entries into state must guarantee an array `sets`.
+describe('workoutExercises sets-array invariant (VOLYUME-2N)', () => {
+  test('startWorkout coerces a missing sets to an empty array', async () => {
+    useAppStore.getState().startWorkout(
+      { id: 'w1' },
+      [{ exercise: { id: 'e1' } }, { exercise: { id: 'e2' }, sets: [{ id: 's1' }] }],
+    );
+    const entries = useAppStore.getState().workoutExercises;
+    expect(Array.isArray(entries[0].sets)).toBe(true);
+    expect(entries[0].sets).toHaveLength(0);
+    expect(entries[1].sets).toHaveLength(1);
+    await flush(); // drain the fire-and-forget snapshot write
+  });
+
+  test('setWorkoutExercises coerces a missing sets (array and updater forms)', async () => {
+    useAppStore.getState().startWorkout({ id: 'w1' }, [{ exercise: { id: 'e1' }, sets: [] }]);
+
+    useAppStore.getState().setWorkoutExercises([{ exercise: { id: 'e9' } }]);
+    expect(Array.isArray(useAppStore.getState().workoutExercises[0].sets)).toBe(true);
+
+    useAppStore.getState().setWorkoutExercises((prev) => [...prev, { exercise: { id: 'e10' } }]);
+    expect(Array.isArray(useAppStore.getState().workoutExercises[1].sets)).toBe(true);
+    await flush(); // drain the fire-and-forget snapshot write
+  });
+
+  test('restoreActiveWorkout coerces a missing sets from a legacy snapshot', async () => {
+    await AsyncStorage.setItem(KEY, JSON.stringify({
+      userId: 'u1',
+      workout: { id: 'w1' },
+      workoutExercises: [{ exercise: { id: 'e1' } }],
+      currentExerciseIndex: 0,
+      workoutStartTime: 1000,
+      savedAt: 2000,
+    }));
+    db.getWorkoutById.mockResolvedValue({ id: 'w1', isCompleted: false });
+
+    const ok = await useAppStore.getState().restoreActiveWorkout('u1');
+
+    expect(ok).toBe(true);
+    expect(Array.isArray(useAppStore.getState().workoutExercises[0].sets)).toBe(true);
+  });
+});

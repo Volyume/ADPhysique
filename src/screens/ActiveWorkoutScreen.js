@@ -2184,9 +2184,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       let allSets;
       try {
         const dbRows = await getWorkoutSetsForWorkout(activeWorkout.id);
-        allSets = (dbRows && dbRows.length) ? dbRows : snapshotExercises.flatMap(e => e.sets);
+        allSets = (dbRows && dbRows.length) ? dbRows : snapshotExercises.flatMap(e => e.sets || []);
       } catch (_) {
-        allSets = snapshotExercises.flatMap(e => e.sets);
+        allSets = snapshotExercises.flatMap(e => e.sets || []);
       }
       const { totalSets, workingSetCount, tonnage } = summariseWorkoutSets(allSets);
       const exerciseNames = snapshotExercises.map(e => e.exercise?.name).filter(Boolean);
@@ -2293,10 +2293,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         exerciseData: snapshotExercises.map(e => ({
           exerciseId: e.exercise?.id,
           name: e.exercise?.name,
-          recommendedSets: e.sets.filter(s => s.setType !== 'warmup').length || 3,
+          recommendedSets: (e.sets || []).filter(s => s.setType !== 'warmup').length || 3,
           repsMin: e.routineExercise?.recommendedRepsMin || 8,
           repsMax: e.routineExercise?.recommendedRepsMax || 12,
-          loggedSets: e.sets.map(s => ({
+          loggedSets: (e.sets || []).map(s => ({
             weight: s.weight,
             reps: s.actualReps ?? s.reps,
             setType: s.setType,
@@ -2312,7 +2312,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         logError('ActiveWorkoutScreen.handleFinishWorkout', e, {
           userId: user?.id,
           workoutId: activeWorkout?.id,
-          setCount: snapshotExercises.flatMap(ex => ex.sets).length,
+          setCount: snapshotExercises.flatMap(ex => ex.sets || []).length,
         });
         // Reset the double-tap guard so the user can retry. On the
         // happy path the guard stays set forever because we've
