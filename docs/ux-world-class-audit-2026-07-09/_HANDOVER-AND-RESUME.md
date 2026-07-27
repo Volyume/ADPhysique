@@ -1,7 +1,92 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ FRESH SESSION START HERE (2026-07-23, chat cleared, founder moving to PC) ★
+## ★ FRESH SESSION START HERE (2026-07-27, final pre-release sweep) ★
+===============================================================================
+
+**Read this block, then `docs/TASKBOARD.md`, then `CLAUDE.md`, then
+`git status`. Every block below this one is SUPERSEDED and kept as history.**
+
+Branch: `claude/codebase-audit-docs-pv6mjd`. Working tree green at the last
+landing: lint clean, full suite passing.
+
+### What happened this session
+
+**Connectors came back.** The founder removed and re-authorised them, so the
+Supabase and Sentry MCP connectors both work. Everything that was blocked on
+them is now done.
+
+**Migration 128 applied to production** on the founder's "run against
+production". Both Apple App Review accounts exist and were verified live:
+`appreview.pro@volyume.app` (pro / paid_pro) and `appreview.free@volyume.app`
+(free / free), email-confirmed, onboarding complete, health consent recorded.
+The bcrypt hashes originally committed did not validate under `crypt()`; they
+were re-derived during the run and the migration file now matches the issued
+credentials. Passwords live in chat only, never in the repo.
+
+**CORRECTION to a long-standing wrong note.** Production was NOT stuck at
+migration 116 with 117-128 pending. The live history shows 117, 118, 120-124,
+126 and 127 already applied under drifted names. The real gap was three files;
+128 is now applied, and **119 and 125 remain unapplied and unauthorised** —
+surfaced to the founder in TASKBOARD section 3.
+
+**Sentry triage: complete, zero unresolved issues remain.** 13 issues were
+open. Nine of them were ONE failure chain and a genuine data bug, not noise:
+with the phone locked, the Supabase refresh timer kept ticking in the
+background, the iOS Keychain refused the session read, the client continued
+with no user JWT, `auth.uid()` came back NULL, and every RLS policy of the form
+`(auth.uid() = user_id)` rejected the write with 42501. **User data was being
+dropped.** Fixed in `f4327e8`. RLS policies were deliberately NOT loosened —
+they were correct; the session was missing. Evidence:
+`docs/audit/sentry-triage-2026-07-27.md`.
+
+**Full adversarial pre-release sweep** run by four read-only audit agents
+(share cards, data entry/keyboard, layout/sizing, crash safety). All findings
+and the lead rulings on every fork are in
+`docs/audit/pre-release-sweep-2026-07-27.md` and
+`docs/audit/share-card-audit-2026-07-27.md`. Read those before touching any of
+those surfaces — the rulings are made, not open.
+
+### Landed commits (in order)
+
+- `f4327e8` background session loss dropping cloud writes + Sentry flood guard
+- `f64c012` share-card brand lockup: cannot export unbranded, one lockup size
+  across formats, descender/empty-hero/PB fixes, ED suppression now fails closed
+- `08b80d6` pre-release sweep audit findings and lead rulings
+- `3fdc7ac` comma-decimal corruption of typed numbers + two unusable numeric
+  inputs
+- `791cd45` taskboard update
+
+### IN FLIGHT at the time of writing
+
+Two Sonnet build agents were dispatched against
+`docs/audit/pre-release-sweep-2026-07-27.md`:
+- **Lane A** (keyboard): centralise the iOS numeric Done bar in
+  `src/components/TextField.js`, add `keyboardShouldPersistTaps="handled"`,
+  strip dead `returnKeyType` from numeric pads.
+- **Lane C/D** (errors + layout): stop raw exception text reaching users in the
+  plan rebuild and snapshot restore; font-scale ceilings on fixed containers;
+  toast safe-area bottom inset; Analytics hero wrap; plan-name capping;
+  body-metrics label wrap.
+
+**Recovery path if this session died mid-flight:** their work is uncommitted in
+the working tree. Lead-review each diff against the ruling it cites in the
+sweep doc, run `npm run lint && npm test`, then land it. Do not discard it and
+do not commit it blind. The edit-gate (`.claude/edit-gate`) is armed against
+`docs/audit/pre-release-sweep-2026-07-27.md`; it is a SHARED single file, so
+never let two agents rewrite it concurrently.
+
+### Still open, needing the founder
+
+All in `docs/TASKBOARD.md` section 3: whether to apply migrations 119 and 125;
+deleting the review accounts after review; a one-line CLAUDE.md correction (the
+weekly recap card is a SECOND founder-approved bodyweight exception, ruled
+2026-06-22 and recorded at `src/lib/shareCard/greatWeek.js:13-19`, but Section 2
+still says there is only one); the share-card 1:1 vs 4:5 canvas question; and
+the still-empty `SUPABASE_DB_URL` secret.
+
+===============================================================================
+## SUPERSEDED (2026-07-23, chat cleared, founder moving to PC)
 ===============================================================================
 
 **Read this block, then `docs/TASKBOARD.md`, then `CLAUDE.md`, then
