@@ -41,10 +41,11 @@
  *                                        such as scan trend-only mode
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Modal,
-  ScrollView, useWindowDimensions,
+  ScrollView, useWindowDimensions, KeyboardAvoidingView, Platform, Pressable,
+  InputAccessoryView, Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -138,6 +139,13 @@ export default function ProgressPhotoViewer({
   const [metaMap, setMetaMap] = useState({});
   const [editing, setEditing] = useState(null); // 'note' | null
   const [draftNote, setDraftNote] = useState('');
+  // A6 (pre-release sweep 2026-07-27): the multiline note field's Return key
+  // only inserts a newline, so it needs its own explicit Done affordance
+  // (InputAccessoryView, iOS only -- Android has its own back gesture),
+  // exactly TextField.js's numeric Done-bar pattern, colocated here since the
+  // ruling is fix-in-place rather than a TextField change.
+  const isIOS = Platform.OS === 'ios';
+  const noteAccessoryID = 'volyume-progress-photo-note-done-' + useId().replace(/:/g, '');
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const namesKey = photos.map((p) => p.name).join('|');
@@ -718,34 +726,77 @@ export default function ProgressPhotoViewer({
         />
       ) : null}
 
-      {/* Note editor */}
+      {/* Note editor. A6 (pre-release sweep 2026-07-27): this bespoke Modal
+          had no KeyboardAvoidingView (the field could sit under the
+          keyboard), a backdrop that was a plain View with no press handler
+          (tapping it did nothing), and a multiline field whose Return key
+          only inserts a newline, so on iOS there was no way out except
+          Cancel/Save. Fixed in place per the ruling, not migrated to
+          BottomSheet:
+            - KeyboardAvoidingView, same behavior prop the rest of the app
+              uses (Platform.OS === 'ios' ? 'padding' : undefined).
+            - The backdrop is now a Pressable that dismisses on tap. This
+              mirrors the EXISTING Cancel/onRequestClose semantics exactly:
+              an unsaved note is discarded, same as before, just reachable
+              from one more gesture -- no save/cancel behaviour changed.
+            - The sheet itself claims its own touches via
+              onStartShouldSetResponder so a tap inside it never bubbles up
+              to the backdrop's dismiss (same pattern as
+              PhotoDetailsSheet.js's backdrop).
+            - An explicit Done bar (InputAccessoryView, iOS only) so the
+              keyboard can always be put away without leaving the sheet. */}
       <Modal
         visible={editing === 'note'}
         transparent
         animationType={reduceMotion ? 'none' : 'fade'}
         onRequestClose={() => setEditing(null)}
       >
-        <View style={[styles.sheetBackdrop, live.sheetBackdrop]}>
-          <View style={[styles.sheet, live.sheet]}>
-            <Text style={[styles.sheetTitle, live.sheetTitle]}>Note</Text>
-            <TextField
-              containerStyle={styles.noteFieldContainer}
-              fieldStyle={[styles.noteField, live.noteField]}
-              inputStyle={styles.noteInput}
-              value={draftNote}
-              onChangeText={setDraftNote}
-              placeholder="A short note for yourself"
-              placeholderTextColor={t.colors.textMuted}
-              multiline
-              maxLength={280}
-              accessibilityLabel="Photo note"
-            />
-            <View style={styles.sheetActions}>
-              <Button title="Cancel" variant="tertiary" size="sm" fullWidth={false} onPress={() => setEditing(null)} accessibilityLabel="Cancel the note" />
-              <Button title="Save" size="sm" fullWidth={false} onPress={saveNote} accessibilityLabel="Save the note" />
+        <KeyboardAvoidingView
+          style={styles.sheetKeyboardAvoid}
+          behavior={isIOS ? 'padding' : undefined}
+        >
+          <Pressable
+            style={[styles.sheetBackdrop, live.sheetBackdrop]}
+            onPress={() => setEditing(null)}
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss the note editor"
+          >
+            <View style={[styles.sheet, live.sheet]} onStartShouldSetResponder={() => true}>
+              <Text style={[styles.sheetTitle, live.sheetTitle]}>Note</Text>
+              <TextField
+                containerStyle={styles.noteFieldContainer}
+                fieldStyle={[styles.noteField, live.noteField]}
+                inputStyle={styles.noteInput}
+                value={draftNote}
+                onChangeText={setDraftNote}
+                placeholder="A short note for yourself"
+                placeholderTextColor={t.colors.textMuted}
+                multiline
+                maxLength={280}
+                accessibilityLabel="Photo note"
+                inputAccessoryViewID={isIOS ? noteAccessoryID : undefined}
+              />
+              <View style={styles.sheetActions}>
+                <Button title="Cancel" variant="tertiary" size="sm" fullWidth={false} onPress={() => setEditing(null)} accessibilityLabel="Cancel the note" />
+                <Button title="Save" size="sm" fullWidth={false} onPress={saveNote} accessibilityLabel="Save the note" />
+              </View>
+              {isIOS && (
+                <InputAccessoryView nativeID={noteAccessoryID}>
+                  <View style={[styles.keyboardDoneBar, live.keyboardDoneBar]}>
+                    <TouchableOpacity
+                      onPress={() => { try { haptics.selection(); } catch (_) { /* best-effort */ } Keyboard.dismiss(); }}
+                      style={styles.keyboardDoneBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel="Done, close keyboard"
+                    >
+                      <Text style={[styles.keyboardDoneText, live.keyboardDoneText]}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                </InputAccessoryView>
+              )}
             </View>
-          </View>
-        </View>
+          </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Date editor — the real date picker, past-only (no future). */}
@@ -821,6 +872,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.borderSubtle,
   },
+  // A6: KeyboardAvoidingView wraps the backdrop, so it needs its own flex:1
+  // rather than relying on the Modal's implicit full-screen sizing.
+  sheetKeyboardAvoid: { flex: 1 },
   sheetBackdrop: {
     flex: 1, backgroundColor: colors.scrim, alignItems: 'center', justifyContent: 'center',
     padding: spacing.xl,
@@ -842,6 +896,23 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   sheetActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, marginTop: spacing.lg },
+  // A6: note field's Done bar (iOS InputAccessoryView), same shape as
+  // TextField.js's keyboardDoneBar/keyboardDoneBtn. Colours come from the
+  // live override below.
+  keyboardDoneBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    borderTopWidth: 1,
+  },
+  keyboardDoneBtn: {
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  keyboardDoneText: {},
 });
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the
@@ -873,5 +944,7 @@ function buildLiveStyles(t) {
     sheet: { backgroundColor: t.colors.surfaceElevated ?? t.colors.surface, borderColor: t.colors.border },
     sheetTitle: { color: t.colors.textPrimary },
     noteField: { backgroundColor: t.colors.inputBg },
+    keyboardDoneBar: { backgroundColor: t.colors.surface2, borderTopColor: t.colors.border },
+    keyboardDoneText: { ...t.type.bodyStrong, color: t.colors.primary },
   };
 }

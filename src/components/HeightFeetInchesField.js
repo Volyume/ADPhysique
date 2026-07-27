@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
@@ -22,6 +23,14 @@ export default function HeightFeetInchesField({
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
   const live = buildLiveStyles(t);
+  // A4 (pre-release sweep 2026-07-27): feet and inches are both numeric-pad
+  // keyboards (no Return key on iOS), so returnKeyType/onSubmitEditing would
+  // be inert here -- the previous wave removed exactly that dead-prop
+  // pattern (A3). Chain focus instead via TextField's numeric Done-bar
+  // "Next" affordance: the feet field's bar grows a Next button that focuses
+  // inches; inches stays the last field in the pair, so it keeps the plain
+  // Done-only bar.
+  const inchesRef = useRef(null);
   return (
     <View style={styles.heightRow}>
       <View style={styles.heightUnit}>
@@ -37,11 +46,13 @@ export default function HeightFeetInchesField({
           keyboardType="number-pad"
           maxLength={1}
           accessibilityLabel="Height, feet"
+          onAccessoryNext={() => inchesRef.current?.focus()}
         />
         <Text style={[styles.unitLabel, live.unitLabel]}>ft</Text>
       </View>
       <View style={styles.heightUnit}>
         <TextField
+          ref={inchesRef}
           surface={t.colors.inputBg}
           fieldStyle={styles.numInputField}
           inputStyle={styles.numInput}

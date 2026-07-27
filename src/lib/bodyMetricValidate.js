@@ -21,6 +21,9 @@
 import { parseDecimalInput } from './parseDecimalInput';
 
 import { stoneLbsToKg, parseBodyWeightToKg } from './units';
+// A7 (pre-release sweep 2026-07-27): explicit calendar-validity check for the
+// freeform metric_date field, shared with ProGoalSetupScreen's show date.
+import { isValidCalendarDateString, parseCalendarDateString, INVALID_CALENDAR_DATE_MESSAGE } from './calendarDateValidate';
 
 // Realistic human ranges. Generous on purpose (see header).
 export const BODY_WEIGHT_MIN_KG = 20;
@@ -77,8 +80,24 @@ export const CIRCUMFERENCE_FIELDS = [
 export function validateBodyMetricForm(form, { bwu } = {}) {
   const f = form || {};
   const data = { notes: f.notes || null };
-  const d = f.metric_date ? new Date(f.metric_date) : new Date();
-  data.loggedAt = Number.isNaN(d.getTime()) ? Date.now() : d.getTime();
+
+  // A7 (pre-release sweep 2026-07-27): the date field used to go straight
+  // into `new Date(f.metric_date)`, and a native Date silently rolls an
+  // impossible-but-syntactically-shaped date ("2026-02-30") forward to a
+  // different real date with no error, so getTime() is finite and the old
+  // NaN fallback never caught it -- a mistyped date landed silently on the
+  // wrong day. An explicit calendar check now rejects it with a calm message
+  // instead of guessing. An empty date still defaults to now, exactly as
+  // before.
+  const trimmedDate = f.metric_date ? String(f.metric_date).trim() : '';
+  if (trimmedDate) {
+    if (!isValidCalendarDateString(trimmedDate)) {
+      return { ok: false, message: INVALID_CALENDAR_DATE_MESSAGE };
+    }
+    data.loggedAt = parseCalendarDateString(trimmedDate);
+  } else {
+    data.loggedAt = Date.now();
+  }
 
   let hasValidField = false;
 

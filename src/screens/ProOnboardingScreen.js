@@ -306,6 +306,14 @@ export default function ProOnboardingScreen({ navigation }) {
 
   const [step, setStep] = useState(1);
 
+  // A4 (pre-release sweep 2026-07-27): feet/inches and stone/lbs are both
+  // numeric-pad pairs (no Return key on iOS, so returnKeyType/
+  // onSubmitEditing would be inert -- A3 removed exactly that dead-prop
+  // pattern). Chain focus instead via TextField's numeric Done-bar "Next"
+  // affordance.
+  const heightInchesRef = useRef(null);
+  const bodyWeightLbsRef = useRef(null);
+
   // COMP-013: Reduce Motion skips the staged build sequence entirely (the button
   // spinner stays, exactly the old behaviour). Same flag ProSetupComplete reads.
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
@@ -1237,10 +1245,12 @@ export default function ProOnboardingScreen({ navigation }) {
                         maxLength={1}
                         autoComplete="off"
                         textContentType="none"
+                        onAccessoryNext={() => heightInchesRef.current?.focus()}
                       />
                     </View>
                     <View style={styles.inputHalf}>
                       <TextField accessibilityLabel="Height inches"
+                        ref={heightInchesRef}
                         fieldStyle={styles.inputField}
                         inputStyle={styles.input}
                         value={heightIn}
@@ -1302,10 +1312,12 @@ export default function ProOnboardingScreen({ navigation }) {
                         maxLength={3}
                         autoComplete="off"
                         textContentType="none"
+                        onAccessoryNext={() => bodyWeightLbsRef.current?.focus()}
                       />
                     </View>
                     <View style={styles.inputPounds}>
                       <TextField accessibilityLabel="Current body weight remaining pounds"
+                        ref={bodyWeightLbsRef}
                         fieldStyle={styles.inputField}
                         inputStyle={styles.input}
                         value={bodyWeightStLbs}

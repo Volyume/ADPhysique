@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { VolyumeMark } from '../components/BrandMark';
@@ -28,6 +29,11 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [emailMode, setEmailMode] = useState('signin'); // 'signin' | 'signup'
   const [emailSubmitting, setEmailSubmitting] = useState(false);
+  // A5 (pre-release sweep 2026-07-27): the password field had no show/hide
+  // toggle, though EmailPasswordFields.js (unused here, ruled fix-in-place
+  // per the blast-radius ruling) implements exactly this. Mirrored below.
+  const [showPassword, setShowPassword] = useState(false);
+  const passwordRef = useRef(null);
   // CP-10 batch F (2026-07-11): live theme (src/hooks/useTheme.js). This
   // screen never renders a FlatList/FlashList/SectionList row (a single
   // ScrollView), so an unmemoised call matches AddCustomFoodScreen's own
@@ -209,19 +215,41 @@ export default function LoginScreen() {
               autoCorrect={false}
               textContentType="emailAddress"
               editable={!emailSubmitting}
+              // A5: email is a genuine text keyboard (Return key exists), so
+              // unlike the numeric-pad sibling pairs elsewhere in the app,
+              // returnKeyType/onSubmitEditing are live here, not dead props.
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+              blurOnSubmit={false}
             />
             <TextField
+              ref={passwordRef}
               label="Password"
               value={password}
               onChangeText={setPassword}
               accessibilityLabel="Password"
-              secureTextEntry
+              secureTextEntry={!showPassword}
               autoCapitalize="none"
               autoCorrect={false}
               textContentType={emailMode === 'signup' ? 'newPassword' : 'password'}
               returnKeyType="go"
               onSubmitEditing={handleEmailAuth}
               editable={!emailSubmitting}
+              // A5: show/hide toggle, mirrored from EmailPasswordFields.js
+              // (same icon, same accessibility label convention) rather than
+              // swapping LoginScreen over to that component -- primary
+              // sign-in funnel, smaller blast radius per the ruling.
+              trailing={(
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowPassword(v => !v)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={19} color={t.colors.textMuted} />
+                </TouchableOpacity>
+              )}
             />
             <Button
               title={emailMode === 'signup' ? 'Create account' : 'Sign in'}
@@ -299,6 +327,13 @@ const styles = StyleSheet.create({
   emailForm: { gap: spacing.md },
   emailSubmit: { marginTop: spacing.xs },
   emailToggle: { ...type.caption, color: colors.primary, textAlign: 'center', marginTop: spacing.xs },
+  eyeBtn: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xs,
+  },
 });
 
 // CP-10 batch F (2026-07-11): the frozen `styles` block above stays byte-

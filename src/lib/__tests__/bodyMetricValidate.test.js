@@ -153,6 +153,37 @@ describe('validateBodyMetricForm — DATA-001 gate', () => {
     expect(r.data.chestCm).toBe(104);
   });
 
+  // A7 (pre-release sweep 2026-07-27): an impossible-but-syntactically-shaped
+  // date used to silently coerce via `new Date()` (either rolling forward to
+  // a different real date, or -- for a genuinely malformed string -- falling
+  // back to today with no warning). Both are now rejected with a calm
+  // message instead of guessing at what the user meant.
+  test('rejects an impossible calendar date (day out of range for its month)', () => {
+    const r = validateBodyMetricForm({ metric_date: '2026-02-30', waist: '80' }, { bwu: 'kg' });
+    expect(r.ok).toBe(false);
+    expect(r.data).toBeUndefined();
+    expect(r.message).toMatch(/date/i);
+  });
+
+  test('rejects an out-of-range month', () => {
+    const r = validateBodyMetricForm({ metric_date: '2026-13-45', waist: '80' }, { bwu: 'kg' });
+    expect(r.ok).toBe(false);
+  });
+
+  test('29 Feb is rejected outside a leap year, accepted inside one', () => {
+    expect(validateBodyMetricForm({ metric_date: '2026-02-29', waist: '80' }, { bwu: 'kg' }).ok).toBe(false);
+    const r = validateBodyMetricForm({ metric_date: '2024-02-29', waist: '80' }, { bwu: 'kg' });
+    expect(r.ok).toBe(true);
+    expect(new Date(r.data.loggedAt).getDate()).toBe(29);
+    expect(new Date(r.data.loggedAt).getMonth()).toBe(1);
+  });
+
+  test('an empty date still defaults to now, unchanged from before', () => {
+    const r = validateBodyMetricForm({ metric_date: '', waist: '80' }, { bwu: 'kg' });
+    expect(r.ok).toBe(true);
+    expect(r.data.loggedAt).toBeGreaterThan(Date.now() - 5000);
+  });
+
   test('rejection copy carries no em dash (lint rule + calm-voice guard)', () => {
     const messages = [
       validateBodyMetricForm({ ...base, body_weight: '-5' }, { bwu: 'kg' }).message,

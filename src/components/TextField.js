@@ -73,6 +73,17 @@ const TextField = forwardRef(function TextField({
   // it rather than being born broken. Opt out with noAccessory when a
   // caller already renders its own bar (so a field never gets two).
   noAccessory = false,
+  // A4 (pre-release sweep 2026-07-27, LANE A -- "focus chaining between
+  // sibling fields"): iOS number-pad/decimal-pad keyboards have no Return
+  // key, so returnKeyType/onSubmitEditing are inert on them (the previous
+  // wave deliberately removed exactly those dead props, A3). A numeric
+  // sibling chain (feet -> inches, MEV -> MAV -> MRV, ...) therefore has no
+  // native way to advance focus. When a caller supplies onAccessoryNext, the
+  // numeric Done bar grows a leading "Next" button that calls it (typically
+  // `() => nextRef.current?.focus()`); "Done" stays exactly as before.
+  // Absent (the default, every existing caller), the bar is byte-for-byte
+  // unchanged from A1.
+  onAccessoryNext,
   ...inputProps
 }, ref) {
   const [focused, setFocused] = useState(false);
@@ -161,10 +172,24 @@ const TextField = forwardRef(function TextField({
       </View>
       {/* A1: Done bar over the numeric keypad (iOS only; InputAccessoryView is
           a no-op on Android). Gives number-pad/decimal-pad fields a one-tap
-          dismiss the OS keyboards do not provide, exactly as SetEntry.js. */}
+          dismiss the OS keyboards do not provide, exactly as SetEntry.js.
+          A4: when the caller wires onAccessoryNext, a leading "Next" button
+          shares the same bar so a numeric sibling chain (no Return key to
+          chain through) can still advance focus with one tap; omitted by
+          every existing caller, so the bar is unchanged for them. */}
       {wantsAccessory && (
         <InputAccessoryView nativeID={accessoryID}>
           <View style={[styles.keyboardDoneBar, { backgroundColor: t.colors.surface2, borderTopColor: t.colors.border }]}>
+            {onAccessoryNext ? (
+              <TouchableOpacity
+                onPress={() => { doneFeedback(); onAccessoryNext(); }}
+                style={styles.keyboardDoneBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Next field"
+              >
+                <Text style={[styles.keyboardDoneText, { ...t.type.bodyStrong, color: t.colors.primary }]}>Next</Text>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
               onPress={() => { doneFeedback(); Keyboard.dismiss(); }}
               style={styles.keyboardDoneBtn}

@@ -282,6 +282,12 @@ export default function VolumeHeatmapScreen() {
   const scrollRef = useRef(null);
   const heatmapCardRef = useRef(null);
   const rowOffsets = useRef({});
+  // A4 (pre-release sweep 2026-07-27): the edit-volume-targets Min/Target/Max
+  // fields are all number-pad (no Return key on iOS), so returnKeyType/
+  // onSubmitEditing would be inert -- chain focus instead via TextField's
+  // numeric Done-bar "Next" affordance. Keyed by `${muscle}:${key}` since
+  // every muscle row renders its own MEV/MAV/MRV trio.
+  const editFieldRefs = useRef({});
 
   // Build the diagram input: for each known muscle, attach workingSets +
   // status + colour from getVolumeStatus. Muscles with no data fall through
@@ -607,24 +613,29 @@ export default function VolumeHeatmapScreen() {
               <View key={muscle} style={[styles.editRow, live.editRow]}>
                 <Text style={[styles.editMuscleName, live.editMuscleName]}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
                 <View style={styles.editInputs}>
-                  {[['mev', 'Min'], ['mav', 'Target'], ['mrv', 'Max']].map(([key, label]) => (
-                    <TextField
-                      key={key}
-                      label={label}
-                      value={String(editValues[muscle]?.[key] ?? '')}
-                      onChangeText={v => setEditValues(prev => ({
-                        ...prev,
-                        [muscle]: { ...prev[muscle], [key]: v },
-                      }))}
-                      keyboardType="number-pad"
-                      selectTextOnFocus
-                      accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]} ${label}`}
-                      containerStyle={styles.editInputGroup}
-                      labelStyle={[styles.editInputLabel, live.editInputLabel]}
-                      fieldStyle={styles.editInputField}
-                      inputStyle={styles.editInputText}
-                    />
-                  ))}
+                  {[['mev', 'Min'], ['mav', 'Target'], ['mrv', 'Max']].map(([key, label], idx, arr) => {
+                    const nextKey = arr[idx + 1]?.[0];
+                    return (
+                      <TextField
+                        key={key}
+                        ref={el => { editFieldRefs.current[`${muscle}:${key}`] = el; }}
+                        label={label}
+                        value={String(editValues[muscle]?.[key] ?? '')}
+                        onChangeText={v => setEditValues(prev => ({
+                          ...prev,
+                          [muscle]: { ...prev[muscle], [key]: v },
+                        }))}
+                        keyboardType="number-pad"
+                        selectTextOnFocus
+                        accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]} ${label}`}
+                        containerStyle={styles.editInputGroup}
+                        labelStyle={[styles.editInputLabel, live.editInputLabel]}
+                        fieldStyle={styles.editInputField}
+                        inputStyle={styles.editInputText}
+                        onAccessoryNext={nextKey ? () => editFieldRefs.current[`${muscle}:${nextKey}`]?.focus() : undefined}
+                      />
+                    );
+                  })}
                 </View>
               </View>
             ))}

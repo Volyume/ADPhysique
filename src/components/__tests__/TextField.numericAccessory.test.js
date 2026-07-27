@@ -120,3 +120,60 @@ describe('TextField numeric Done bar (A1)', () => {
     dismiss.mockRestore();
   });
 });
+
+describe('TextField numeric Done bar "Next" affordance (A4)', () => {
+  // A4 (pre-release sweep 2026-07-27): iOS number-pad/decimal-pad keyboards
+  // have no Return key, so a numeric sibling chain (feet -> inches,
+  // MEV -> MAV -> MRV, ...) has no native returnKeyType/onSubmitEditing way
+  // to advance focus (that dead-prop pattern was removed at A3). A caller
+  // that wires onAccessoryNext gets a leading "Next" button sharing the same
+  // bar; every existing caller omits it, so A1's contract above stays
+  // byte-for-byte unchanged.
+  test('onAccessoryNext adds a Next button that calls it, alongside the unchanged Done button', () => {
+    Platform.OS = 'ios';
+    const onNext = jest.fn();
+    let tree;
+    act(() => {
+      tree = create(
+        <TextField label="Feet" value="" onChangeText={() => {}} keyboardType="number-pad" onAccessoryNext={onNext} />,
+      );
+    });
+    // Still exactly one accessory bar (A1's contract is unaffected).
+    expect(tree.root.findAllByType(InputAccessoryView).length).toBe(1);
+
+    const nextBtn = tree.root.findByProps({ accessibilityLabel: 'Next field' });
+    act(() => nextBtn.props.onPress());
+    expect(onNext).toHaveBeenCalledTimes(1);
+
+    // Done is still there and still dismisses, unaffected by Next existing.
+    const { Keyboard } = require('react-native');
+    const dismiss = jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => {});
+    const doneBtn = tree.root.findByProps({ accessibilityLabel: 'Done, close keyboard' });
+    act(() => doneBtn.props.onPress());
+    expect(dismiss).toHaveBeenCalledTimes(1);
+    dismiss.mockRestore();
+  });
+
+  test('without onAccessoryNext there is no Next button (every pre-existing caller)', () => {
+    Platform.OS = 'ios';
+    let tree;
+    act(() => {
+      tree = create(
+        <TextField label="Reps" value="" onChangeText={() => {}} keyboardType="number-pad" />,
+      );
+    });
+    expect(tree.root.findAll((n) => n.props && n.props.accessibilityLabel === 'Next field').length).toBe(0);
+  });
+
+  test('onAccessoryNext on Android renders no accessory at all (Android is unchanged, per A1)', () => {
+    Platform.OS = 'android';
+    const onNext = jest.fn();
+    let tree;
+    act(() => {
+      tree = create(
+        <TextField label="Feet" value="" onChangeText={() => {}} keyboardType="number-pad" onAccessoryNext={onNext} />,
+      );
+    });
+    expect(tree.root.findAllByType(InputAccessoryView).length).toBe(0);
+  });
+});

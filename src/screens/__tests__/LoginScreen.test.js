@@ -7,6 +7,11 @@
 import { create, act } from 'react-test-renderer';
 
 const mockToastShow = jest.fn();
+// A5: shared fake `.focus()` the password field's forwarded ref exposes, so
+// the email field's onSubmitEditing hop can be asserted end to end (jest
+// hoists jest.mock() above this file's imports/consts, but a `mock`-prefixed
+// binding is specially hoisted alongside it -- standard jest convention).
+const mockPasswordFocus = jest.fn();
 
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }) => children }));
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: mockToastShow }) }));
@@ -22,9 +27,27 @@ jest.mock('../../lib/supabase', () => ({
 // Expo modules) at import; this suite tests LoginScreen's handler behaviour,
 // not those components' internals, so stub them to plain host elements whose
 // props (value/onChangeText/onPress) stay inspectable.
-jest.mock('../../components/TextField', () => (props) => {
+//
+// A5 (pre-release sweep 2026-07-27): the password field's show/hide toggle
+// is passed as a `trailing` element (real TouchableOpacity/Ionicons, same as
+// EmailPasswordFields.js). Left as a raw, unconsumed prop on this host-tag
+// stub, react-test-renderer's toJSON() serialises it verbatim, including the
+// element's dev-mode `_owner` fiber pointer -- a circular structure that
+// blows up the OAuth tests' `JSON.stringify(tree.toJSON())` assertions
+// below, which have nothing to do with the password field. Rendering
+// trailing/leading as real children (as the real TextField does) reconciles
+// them into ordinary serialisable host nodes instead.
+jest.mock('../../components/TextField', () => {
   const React = require('react');
-  return React.createElement('TextField', props);
+  // forwardRef so LoginScreen's passwordRef (A5's email->password focus hop)
+  // resolves to a real object with a `.focus()` the test can assert against,
+  // exactly like the real TextField forwards its ref to the underlying input.
+  const Comp = React.forwardRef((props, ref) => {
+    const { trailing, leading, ...rest } = props;
+    React.useImperativeHandle(ref, () => ({ focus: mockPasswordFocus }));
+    return React.createElement('TextField', rest, leading, trailing);
+  });
+  return { __esModule: true, default: Comp };
 });
 jest.mock('../../components/Button', () => (props) => {
   const React = require('react');
@@ -192,5 +215,42 @@ describe('LoginScreen email + password (founder 2026-07-21)', () => {
     await act(async () => { await submit.props.onPress(); });
     await flush();
     expect(signUpWithEmail).toHaveBeenCalledWith('new@volyume.app', 'freshpw12');
+  });
+});
+
+// A5 (pre-release sweep 2026-07-27): the email field did not advance to
+// password on Return, and the password field had no show/hide toggle, even
+// though EmailPasswordFields.js already implements one (unused here per the
+// fix-in-place ruling -- smaller blast radius on the primary sign-in funnel
+// than swapping the whole form component).
+describe('LoginScreen focus hop + password visibility (A5)', () => {
+  test('email is a genuine text keyboard: returnKeyType="next" advances focus to password on submit', async () => {
+    let tree;
+    await act(async () => { tree = create(<LoginScreen />); });
+    const emailField = tree.root.findByProps({ accessibilityLabel: 'Email address' });
+    expect(emailField.props.returnKeyType).toBe('next');
+    expect(typeof emailField.props.onSubmitEditing).toBe('function');
+
+    mockPasswordFocus.mockClear();
+    await act(async () => { emailField.props.onSubmitEditing(); });
+    expect(mockPasswordFocus).toHaveBeenCalledTimes(1);
+  });
+
+  test('password starts hidden, and the toggle reveals it and flips its own label', async () => {
+    let tree;
+    await act(async () => { tree = create(<LoginScreen />); });
+    const passwordField = () => tree.root.findByProps({ accessibilityLabel: 'Password' });
+    expect(passwordField().props.secureTextEntry).toBe(true);
+
+    const showToggle = tree.root.findByProps({ accessibilityLabel: 'Show password' });
+    await act(async () => { showToggle.props.onPress(); });
+
+    expect(passwordField().props.secureTextEntry).toBe(false);
+    expect(() => tree.root.findByProps({ accessibilityLabel: 'Hide password' })).not.toThrow();
+
+    // Toggling back re-hides it (round trip, not a one-way reveal).
+    const hideToggle = tree.root.findByProps({ accessibilityLabel: 'Hide password' });
+    await act(async () => { hideToggle.props.onPress(); });
+    expect(passwordField().props.secureTextEntry).toBe(true);
   });
 });
