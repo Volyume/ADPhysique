@@ -33,6 +33,49 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
+## R3. BLOCKED ON CONNECTORS — DO THESE FIRST (founder-ordered 2026-07-23, UNSTARTED)
+
+Both were ordered in the 2026-07-23 session and are BLOCKED, not parked: the
+Sentry and Supabase MCP connectors disconnected mid-session and never
+returned (checked three times). The founder moved to their PC specifically to
+get working connectors. Full context, including why the account seeding is
+shaped the way it is, in the 2026-07-23 resume block of
+`docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md`.
+
+- [ ] **R3-1 Sentry triage, last two weeks.** Org `volyume`, region
+  `https://de.sentry.io`. Loudest open issue is `VOLYUME-2E`
+  ("getValueWithKeyAsync failed", ~1,011 events / 3 users, secure-store) —
+  never investigated. Also open: `VOLYUME-2D/2C/2F` (anonymous, high count),
+  `VOLYUME-2H` (food_sync_pull not authenticated), `VOLYUME-2G` (SQLCipher key
+  unavailable). `VOLYUME-2N` is already fixed (`b312969`) and should
+  auto-resolve on deploy; if it reappears with a post-deploy timestamp it is a
+  NEW bug, not the old one.
+- [ ] **R3-2 Apple review test accounts (Pro + Free).** Do NOT hand-seed
+  `auth.users` via SQL — consent runs through the `record_health_consent` RPC
+  and a half-formed account fails App Review. Create both through the app's
+  own email/password sign-up, walk onboarding, then flip one:
+  `update users_profile set trial_state = 'paid_pro' where id = (select id
+  from auth.users where email = '<pro address>');` (`paid_pro`, never a trial
+  state — it must not expire mid-review; Free stays `free`). BLOCKED ON THE
+  FOUNDER for: the two email addresses, and whether Supabase email
+  confirmation is on. Passwords were given in chat on 2026-07-23 and are
+  deliberately NOT in this repo; regenerate if lost, and disable both accounts
+  after review.
+
+## R2b. OPEN FROM THE 2026-07-23 AUDIT (D88) — founder decision needed, not approved
+
+- [ ] **kJ users cannot log custom foods in kJ.** `AddCustomFoodScreen.js` and
+  `components/food/QuickAddSheet.js` have ZERO energy-unit awareness while
+  `DiaryScreen.js` has it; `NutritionEducationScreen.js` teaches only in kcal
+  ("stay within ±100 kcal"). Not data corruption (everything is stored kcal),
+  but a kJ user meets a kcal-only entry form. This is a build with data-entry
+  risk, not a copy tweak — it was surfaced, never approved.
+- [ ] **ProUpgrade FAQ undersells the trial.** The accountNote's "store adds
+  another week free" is CORRECT (founder confirmed 2026-07-23 the stores are
+  configured for 7 free days) and was left untouched. The FAQ on the same
+  screen mentions only the 14 days. Billing copy is founder-gated, so no edit
+  was made.
+
 ## R2. THIRD DEVICE WALK (founder, build 2684, 2026-07-11 evening) — ABOVE ALL ELSE
 
 _The founder's verdict: the logger was ordered PERFECT and got a token tidy;
