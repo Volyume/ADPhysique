@@ -215,3 +215,57 @@ not be allowed to displace anything above it.
 - GDPR/Article 9 consent gate, EU residency: untouched.
 - Billing, product IDs, identity, free/pro gating: untouched.
 - No new dependencies.
+
+---
+
+## OUTSTANDING AT FIRST LANDING — surfaced, not parked
+
+The first wave landed A1-A3, B1-B2, C1-C2 and D1-D5, plus the share-card
+lockup work. The items below were RULED "FIX" and then not built in that wave.
+Recording them here rather than letting them sit silently, per Section 4.
+Second wave dispatched 2026-07-27 to close them.
+
+### Share cards (authority: share-card-audit-2026-07-27.md)
+- **R6/H5** story layout wastes 30-40% of the canvas; distribute the content
+  block around the vertical centre as drawBeforeAfter already does.
+- **R8/M5** hard-coded 'kg' on the session card and recap payload; thread units
+  through. `src/__tests__/p15UnitDisplayCopy.guard.test.js` pins the current
+  string and must be updated in the same change.
+- **M2** two-line truncation drops the tail with no ellipsis; append an ellipsis
+  when wrapText returns more lines than the cap.
+- **M3** plan name and eyebrow are drawn with no width fit and no clip; wrap in
+  fitFont as the weekly hero label already does.
+- **R10/M7** the before/after card - the ONLY Pro card and the only one
+  carrying bodyweight - has no rendered-output coverage in
+  `scripts/render-share-card.cjs` or drawShareCard.test.js. Add square,
+  portrait and story cases. Delete the dead `premium` fixture key.
+- **R9/M9** share entry-point and action copy is inconsistent; standardise
+  entry points on "Create share image", actions on "Share image" / "Save to
+  gallery".
+- **R9/L5** `AnalyticsScreen.js:47` "A year of showing up. Few do that." is a
+  comparison against other people on a card family whose stated principle is
+  never a comparison to others. Drop the second sentence.
+- **R11/M4** the Date toggle is dead on the streak and Year-of-Lifts milestone
+  cards; default the date in buildParams rather than patching seven call sites.
+- **R11/L2** a zero-work session is still shareable; hide the action at 0
+  working sets.
+- **R11/L3** stat boxes stretch to fill the row so proportions differ card to
+  card; fix the box width and centre the row.
+- **R11/L4** fixed cache filenames mean consecutive exports overwrite in the
+  cache dir; append a timestamp.
+- **M8** the footer hugs the bottom edge on square (19px against a 74px side
+  pad); give the last footer element at least `pad * 0.5` clearance.
+
+### Keyboard (authority: LANE A above)
+- **A4** no focus chaining between sibling fields (feet/inches, stone/lbs,
+  MEV/MAV/MRV). Add returnKeyType="next" + an onSubmitEditing ref hop on
+  TEXT-keyboard fields only.
+- **A5** LoginScreen: no email-to-password hop and no password visibility
+  toggle, though `src/components/auth/EmailPasswordFields.js` implements one
+  and is unused. Fix IN PLACE per the ruling; do not swap the component.
+- **A6** ProgressPhotoViewer's note editor is a bespoke Modal with no
+  KeyboardAvoidingView, no backdrop-tap dismiss, and a multiline field whose
+  Return inserts a newline - on iOS there is no guaranteed way out. Fix all
+  three IN PLACE per the ruling; do not migrate to BottomSheet.
+- **A7** freeform date fields accept a syntactically parseable but invalid date
+  ("2026-13-45"). Add explicit calendar validation and a calm message.
