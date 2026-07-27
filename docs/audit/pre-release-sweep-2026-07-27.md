@@ -269,3 +269,29 @@ Second wave dispatched 2026-07-27 to close them.
   three IN PLACE per the ruling; do not migrate to BottomSheet.
 - **A7** freeform date fields accept a syntactically parseable but invalid date
   ("2026-13-45"). Add explicit calendar validation and a calm message.
+
+---
+
+## CORRECTION TO THE AUDIT — A7 was half wrong
+
+The keyboard audit claimed both freeform date fields lacked calendar
+validation. Verified hands-on: only ONE did.
+
+- `src/screens/BodyMetricsScreen.js` — the claim was CORRECT. `metric_date`
+  had no keyboardType at all and `bodyMetricValidate.js:77` only fell back when
+  `getTime()` was NaN, so "2026-02-30" silently saved as 2 March. Fixed via the
+  new shared `src/lib/calendarDateValidate.js`.
+- `src/screens/ProGoalSetupScreen.js` — the claim was WRONG. It delegates to
+  `parseShowDate` in `src/lib/contestCountdown.js:29`, which regex-matches the
+  shape and then applies a round-trip guard (`dt.getFullYear() !== y ||
+  dt.getMonth() !== mo - 1 || dt.getDate() !== d`). That rejects 2026-02-30 and
+  a non-leap-year 2026-02-29, and accepts 2024-02-29, because JS rolls
+  impossible dates forward and the round-trip catches the roll. It already
+  showed a calm toast. This predates the sweep (B4, 2026-07-02 ED review).
+
+The building agent stopped and reported rather than duplicating validation into
+a file it did not own — `contestCountdown.js` is ED-safety-reviewed. Correct
+call. No change made there, and none is needed.
+
+Recorded per the founder rule that a document contradicting the source is
+surfaced, never quietly worked around.
