@@ -53,6 +53,8 @@ export default function NowCard({
   onSubmitComplete,
   exerciseType,
   weightStepKg,
+  // D87: buildRecordLine() result (or null), passed straight to SetEntry.
+  recordLine = null,
   // Note row
   noteText,
   onNoteChange,
@@ -179,6 +181,7 @@ export default function NowCard({
         onSubmitComplete={onSubmitComplete}
         exerciseType={exerciseType}
         weightStepKg={weightStepKg}
+        recordLine={recordLine}
       />
 
       {/* Note: collapsed row, honest toggle both ways. */}

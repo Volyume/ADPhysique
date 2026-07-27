@@ -30,6 +30,11 @@ export default function WorkoutBottomBar({
   // null, or { label, onPress, testID } - rendered BESIDE the primary.
   advance = null,
   safeBottom = 0,
+  // D87: leading Ionicons name on the primary ('trophy' while the entered
+  // set would break a record), icon only. accessibilityLabel stays
+  // primaryLabel per the R4/D64 same-string rule; the record row in the set
+  // card carries the spoken detail.
+  primaryIcon = null,
 }) {
   const t = useTheme();
   return (
@@ -63,6 +68,7 @@ export default function WorkoutBottomBar({
       <View style={styles.primarySlot}>
         <Button
           title={primaryLabel}
+          icon={primaryIcon ?? undefined}
           onPress={onPrimary}
           variant="primary"
           size="lg"

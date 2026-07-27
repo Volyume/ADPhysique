@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Keyboard, Platform, BackHandler, AppState, Animated, AccessibilityInfo } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -49,6 +49,7 @@ import {
   MUSCLE_DISPLAY_NAMES,
   generateDeloadPrescription,
 } from '../lib/algorithms';
+import { buildRecordLine } from '../lib/workoutRecordLine';
 import { rankSwaps } from '../lib/swapEngine';
 import { isClusterType, clusterLabel, summariseCluster, mergeClusterNote } from '../lib/clusterSet';
 import {
@@ -2425,6 +2426,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       : null);
   const activeExerciseType = exercise?.exerciseType || 'weight_reps';
 
+  // D87: the live record line under the steppers. Pure derivation from data
+  // already in memory -- allTimeSets (every past set for this exercise,
+  // excluding this workout) plus loggedSets (this session's sets for it),
+  // which is the same history shape handleCompleteSet assembles as prHistory
+  // before calling detectPR. buildRecordLine calls that same detectPR, so the
+  // flag and the celebration can only ever agree. No query, no engine change.
+  const recordLine = useMemo(() => buildRecordLine({
+    weight: currentSet.weight,
+    reps: currentSet.reps,
+    historySets: [...allTimeSets, ...loggedSets],
+    units,
+    isWarmup: currentSet.setType === 'warmup',
+    exerciseType: activeExerciseType,
+  }), [currentSet.weight, currentSet.reps, currentSet.setType, allTimeSets, loggedSets, units, activeExerciseType]);
+
   const handleCurrentSetChange = useCallback((next) => {
     if (!next.isGhost && currentSet.isGhost) setGhostSet(null);
     setCurrentSet(next);
@@ -2789,6 +2805,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 onSubmitComplete={handleCompleteSetPress}
                 exerciseType={activeExerciseType}
                 weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
+                recordLine={recordLine}
                 noteText={noteText}
                 onNoteChange={setNoteText}
                 noteResetKey={`${currentExerciseIndex}-${loggedSets.length}`}
@@ -2979,6 +2996,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             action is the additive sibling gated by the unchanged
             `targetComplete && !extraSetArmed` condition; the whole bar hides
             only mid-cluster (the cluster banner carries its own controls). */}
+        {/* D87: primaryIcon carries the record signal through to the moment
+            of commitment. Icon only; the label and its spoken twin are
+            unchanged (R4/D64 same-string rule). */}
         {cluster ? null : (
           <WorkoutBottomBar
             primaryLabel={
@@ -2988,6 +3008,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             }
             onPrimary={handleCompleteSetPress}
             saving={saving}
+            primaryIcon={recordLine?.isRecord ? 'trophy' : null}
             advance={(targetComplete && !extraSetArmed && !perSide)
               ? (isLastExercise
                 ? { label: 'Finish workout', onPress: handleFinishWorkout, testID: 'volyume-btn-finish-primary' }

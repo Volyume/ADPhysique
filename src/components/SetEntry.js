@@ -1,7 +1,7 @@
 import { memo, useRef, useEffect, useId } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Keyboard, InputAccessoryView, Platform } from 'react-native';
 import * as haptics from '../lib/haptics';
-import { colors, spacing, radius, type } from '../styles/theme';
+import { colors, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { calculate1RM } from '../lib/algorithms';
 import { formatSeconds, parseTimeToSeconds } from '../lib/workoutHelpers';
@@ -12,7 +12,10 @@ import { workoutLoggerSize } from '../styles/layout';
 
 const STEPPER_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 
-function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitComplete, exerciseType = 'weight_reps', weightStepKg = 2.5 }) {
+// D87: `recordLine` is the pure buildRecordLine() result (or null). The
+// caller owns it because the set history lives on the screen; SetEntry only
+// renders it. Absent (the logged-set edit sheet) = today's card, unchanged.
+function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitComplete, exerciseType = 'weight_reps', weightStepKg = 2.5, recordLine = null }) {
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour/fontSize/
   // type-bearing keys only.
@@ -26,6 +29,9 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
     valueInputGhost: { color: t.colors.textMuted },
     keyboardDoneBar: { backgroundColor: t.colors.surface2, borderTopColor: t.colors.border },
     keyboardDoneText: { ...t.type.bodyStrong, color: t.colors.primary },
+    recordRow: { backgroundColor: withAlpha(t.colors.gold, alpha.soft) },
+    recordHeadline: { ...t.type.label, color: t.colors.gold },
+    recordWhy: { ...t.type.caption, color: t.colors.textSecondary },
   };
   const { weight, reps, isGhost } = value;
   const repsRef = useRef(null);
@@ -423,6 +429,11 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
           scale. */}
       {live1RM != null && live1RM > 0 && (
         <View style={styles.e1rmCaptionRow}>
+          {/* D87: the bar to beat rides the caption that already sits here,
+              so the card gains the reference without gaining a row. */}
+          {recordLine?.bestLabel ? (
+            <Text style={[styles.e1rmHint, live.e1rmHint]}>{recordLine.bestLabel} · </Text>
+          ) : null}
           <Text style={[styles.e1rmHint, live.e1rmHint]}>Est. max ~{Math.round(live1RM)}{units}</Text>
           {/* U-F-5: plain-English gloss for the estimated-1RM jargon. */}
           <InfoTooltip text={GLOSSARY.estMax} size={13} />
@@ -430,6 +441,27 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
       )}
       </View>
       )}
+
+      {/* D87: the record flag. Exists ONLY while what is dialled in would
+          break a record, so the card stays exactly as it is on an ordinary
+          set. Gold, not the primary amber: the Log set fill keeps the
+          one-amber rule. buildRecordLine reuses detectPR, so this can never
+          claim a record the celebration then withholds. */}
+      {recordLine?.isRecord ? (
+        <View
+          style={[styles.recordRow, live.recordRow]}
+          accessible
+          accessibilityLabel={recordLine.a11y}
+        >
+          <Ionicons name="trophy" size={15} color={t.colors.gold} />
+          <View style={styles.recordCopy}>
+            <Text style={[styles.recordHeadline, live.recordHeadline]}>{recordLine.headline}</Text>
+            {recordLine.reasons.length > 0 ? (
+              <Text style={[styles.recordWhy, live.recordWhy]}>{recordLine.reasons.join(' · ')}</Text>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
 
       {/* Effort picker removed, was rarely used in practice. RIR still
           gets recorded internally (defaulted in DEFAULT_SET) so the
@@ -507,6 +539,21 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: -spacing.xs,
   },
+  // D87 record flag. Gold tint, never the primary amber: the Log set fill is
+  // the screen's one amber (one-amber rule), and gold is already the app's
+  // record colour (PRCelebration trophy).
+  recordRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    backgroundColor: withAlpha(colors.gold, alpha.soft),
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  recordCopy: { flex: 1, gap: 1 },
+  recordHeadline: { ...type.label, color: colors.gold },
+  recordWhy: { ...type.caption, color: colors.textSecondary },
   stepper: {
     flex: 1,
     flexDirection: 'row',

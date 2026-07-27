@@ -2066,3 +2066,36 @@ reason:" prefix dropped. (6) The bottom credential jargon row (volume
 landmarks / autoregulation / RED-S inline-tooltip row, the misaligned
 "gumpf") removed; the medical-guidance disclaimer stays. Engine files,
 weeklyCoach, nutritionEngine, floors, gates: zero changes.
+
+## D87 — Live personal-record indicator on the logging screen (founder GO 2026-07-23)
+
+Founder, from the active-workout screen (IMG_1884), verbatim: "I want Pr on
+the screen so it's easily visible of going for a record or not consider the
+best place to have that". Placement proposed and approved ("Ok go for it").
+
+Lead ruling (D33): ONE live record line directly beneath the weight/reps
+steppers, absorbing the existing "Est. max" caption rather than adding a row.
+Two states. Quiet: "Best 90kg x 12 - Est. max ~128kg", so the bar to beat is
+always on screen. Armed, when the currently entered weight and reps would
+break a record: a gold trophy row reading "Record set if you hit this" plus a
+plain why line naming WHICH record and the number to beat, and the bottom
+bar's primary button takes a trophy icon so the signal is unmissable at the
+moment of commitment.
+
+Bounds. The indicator is a pure derivation from data the screen already
+holds (allTimeSets plus this session's loggedSets for the exercise); no new
+query, no new dependency, no engine change. It reuses detectPR, the same
+function that fires the PR celebration on log, over the SAME history shape
+(all-time sets plus this session's sets for the exercise, warm-ups included,
+exactly as prHistory is built in handleCompleteSet), so the screen can never
+promise a record it then fails to award. All three record types are covered
+and named separately, because they do not move together: a heavier weight
+for fewer reps can be a heaviest-weight record while not being an estimated-
+max record. Silent cases, all deliberate: warm-up sets (a warm-up must never
+chase a record), non weight-and-reps schemas (duration/distance reuse the
+weight field, so a weight x reps detector would report meaningless records,
+matching the existing isWeightReps gate), and an empty history (the
+first-ever set of an exercise beats nothing, holding Wave A A1's honest
+first-lift rule). WorkoutBottomBar keeps accessibilityLabel={primaryLabel}
+unchanged per the R4/D64 same-string rule; the trophy is a leading icon only,
+and the record row carries its own spoken label.
