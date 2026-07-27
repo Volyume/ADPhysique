@@ -33,7 +33,52 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## R3. BLOCKED ON CONNECTORS — DO THESE FIRST (founder-ordered 2026-07-23, UNSTARTED)
+## R3. CONNECTOR-BLOCKED WORK — CLEARED 2026-07-27
+
+**UNBLOCKED and DONE.** The founder removed and re-authorised the connectors on
+2026-07-27; Supabase and Sentry MCP both came back. Everything in this section
+ran that session. Detail below, corrections included.
+
+- [x] **R3-0 migration deploy secret — ROUTED AROUND, still worth fixing.**
+  `SUPABASE_DB_URL` is still empty and `deploy-migrations.yml` still cannot
+  run, but it is no longer on the critical path: migration 128 was applied
+  directly through the Supabase MCP connector (`apply_migration`), which
+  bypasses the workflow entirely. Fixing the secret remains founder-side ops
+  (moved to section 3) so the workflow is available as a fallback.
+  **CORRECTION to the old note below:** production was NOT at 116 with 117-128
+  pending. The live migration history shows repo migrations 117, 118 and
+  120-124, 126, 127 already applied under drifted names. The real gap was only
+  three files: `migrate_119_lock_direct_client_writes.sql`,
+  `migrate_125_notification_preferences_category_full_enum.sql` and 128.
+  128 is now applied. **119 and 125 remain unapplied and are NOT authorised** —
+  the founder's "run against production" was given for the App Review accounts.
+  Raised as a question in section 3.
+
+- [x] **R3-1 Sentry triage, last two weeks — DONE, root cause fixed.**
+  13 unresolved issues. Nine of them were ONE failure chain and a real data
+  bug, not log noise: with the phone locked, the Supabase refresh timer kept
+  ticking in the background, the iOS Keychain refused the session read, the
+  client carried on with no user JWT, `auth.uid()` came back NULL, and every
+  RLS policy `(auth.uid() = user_id)` rejected the write with 42501. User data
+  was being dropped. Fixed in commit f4327e8: foreground-only token refresh, a
+  fail-open live-session guard on sync, in-place Keychain accessibility
+  upgrade, and Sentry rate limiting (one phone had produced 1,589 events).
+  Full evidence: `docs/audit/sentry-triage-2026-07-27.md`.
+  Remaining: VOLYUME-2B, 2M, 2K and 2N need RESOLVING in the Sentry UI once
+  the next build ships — all are already fixed in code or are benign.
+
+- [x] **R3-2 Apple App Review accounts — DONE and verified in production.**
+  `appreview.pro@volyume.app` (tier pro / paid_pro) and
+  `appreview.free@volyume.app` (tier free / free). Both email-confirmed, email
+  identity present, `first_run_complete` true, health consent recorded with one
+  consent_log row each. Passwords were handed to the founder in chat and are
+  NOT in the repo. The hashes originally committed in migration 128 did not
+  validate under `crypt()`; they were re-derived during the run and the file
+  now matches the issued credentials. Delete both accounts after review.
+
+### Original R3 notes, kept for context
+
+
 
 Both were ordered in the 2026-07-23 session and are BLOCKED, not parked: the
 Sentry and Supabase MCP connectors disconnected mid-session and never
@@ -887,6 +932,45 @@ conditional on the decision; recorded here so they are visible, not lost._
 ---
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
+
+### OPEN (2026-07-27) - DECISION NEEDED: apply migrations 119 and 125?
+Production migration history was checked directly this session. The old
+"production is at 116, 117-128 pending" note was WRONG: 117, 118, 120-124,
+126 and 127 are all applied (under drifted names). Migration 128 was applied
+this session on your "run against production".
+
+Two repo migrations are genuinely NOT applied and NOT authorised:
+- `migrate_119_lock_direct_client_writes.sql`
+- `migrate_125_notification_preferences_category_full_enum.sql`
+Your authorisation was given in the context of the App Review accounts, so I
+have not touched these. Say "run against production" again naming 119 and 125
+if you want them applied.
+
+### OPEN (2026-07-27) - Apple App Review accounts: DELETE AFTER REVIEW
+Both accounts are live in production now. Rollback SQL is in the header of
+`supabase/migrate_128_apple_review_accounts.sql`. Run it once review completes;
+they are not meant to live indefinitely.
+
+### OPEN (2026-07-27) - CLAUDE.md wording lags a founder decision
+Section 2 says share cards never include bodyweight, with ONE approved
+exception (the Pro before/after card). The weekly recap card is a SECOND
+approved exception - you ruled it on 2026-06-22, recorded verbatim at
+`src/lib/shareCard/greatWeek.js:13-19`. The code is correct and stays as is;
+the constitution's sentence needs a one-line correction to match. Flagged
+rather than edited, because Section 2 is yours.
+
+### OPEN (2026-07-27) - share-card canvas format question
+The share-card audit recommends retiring the 1:1 square canvas for 4:5, which
+is the largest ratio Instagram renders without cropping and would remove the
+dead space on story cards. I have NOT changed it: it is a product decision
+about what users are already sharing, not a defect. Want it changed?
+
+### OPEN (2026-07-27) - SUPABASE_DB_URL secret still empty
+`deploy-migrations.yml` still cannot run (five consecutive failures at step 1).
+Not blocking any more - cloud work now goes through the Supabase connector -
+but worth adding in repo Settings -> Secrets and variables -> Actions so the
+workflow survives as a fallback.
+
 
 - **App Store Connect IAP check (VOLYUME-17, founder said "tomorrow" on
   2026-07-12).** Two things: (1) Business/Agreements shows the Paid
