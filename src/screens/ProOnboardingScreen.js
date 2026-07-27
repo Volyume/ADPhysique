@@ -1021,9 +1021,12 @@ export default function ProOnboardingScreen({ navigation }) {
           // a bare spinner. Flag it; the post-try block falls back to the form
           // with this alert and never plays a completion tick.
           planFailed = true;
+          // D88: the caught error is logged just above, never shown. It was
+          // being interpolated raw into this alert, so the last thing a new
+          // user saw at the end of setup could be a JS or database error.
           appAlert(
             'Plan setup didn\'t finish',
-            `Your profile is saved but your training plan didn\'t generate (${planResult.error}). Open Today and choose "Start with a plan" to retry.`,
+            'Your profile is saved, but your training plan did not generate. Open Today and choose "Start with a plan" to retry.',
           );
         } else if (planResult.partial) {
           // FF-003: the plan generated but couldn't fulfil every requested move
@@ -1032,7 +1035,12 @@ export default function ProOnboardingScreen({ navigation }) {
         }
       }
     } catch (e) {
-      appAlert('Something went wrong', e?.message ?? 'Try again.');
+      // D88: never surface a raw exception message (the FR-2/EP-18 pattern
+      // this catch-all had missed). It is logged instead, so the diagnostic
+      // is not lost now that it no longer reaches the user.
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('ProOnboardingScreen.finish', e, { userId: user?.id }); } catch (_) {}
+      appAlert('Something went wrong', 'We could not finish setting up your account. Check your connection and try again.');
       endSequence();
       setBusy(false);
       submittingRef.current = false;
