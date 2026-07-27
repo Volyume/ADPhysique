@@ -594,7 +594,9 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           {best1RM > 0 && (
             <View style={[styles.est1RM, live.est1RM]}>
               <Ionicons name="trophy-outline" size={16} color={t.colors.gold} />
-              <Text style={[styles.est1RMText, live.est1RMText]}>Estimated max: {best1RM.toFixed(1)} {units}</Text>
+              {/* D88: an estimate is never exact. One convention everywhere:
+                  hedged and whole, matching the session rows below. */}
+              <Text style={[styles.est1RMText, live.est1RMText]}>Estimated max: ~{Math.round(best1RM)} {units}</Text>
               <InfoTooltip text="Your estimated max lift: the most weight you could lift for a single rep, calculated from the sets you've logged. It updates automatically as you get stronger." size={12} />
             </View>
           )}
@@ -858,7 +860,9 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {/* PRs */}
         {prs.length > 0 && (
           <View style={styles.section}>
-            <SectionLabel>All-time bests</SectionLabel>
+            {/* D88: was "All-time bests" beside a "Personal bests" card on
+                the same screen, for one list. One name. */}
+            <SectionLabel>Personal bests</SectionLabel>
             {prs.slice(0, 5).map((pr) => (
               <Card radius="md" style={styles.prRow} key={pr.id}>
                 <Ionicons

@@ -487,7 +487,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
             <View style={styles.exerciseInfo}>
               <View style={styles.exerciseTitleRow}>
                 <Text style={[styles.exerciseName, live.exerciseName, exercise.unresolved && [styles.exerciseNameUnresolved, live.exerciseNameUnresolved]]}>
-                  {exercise.name || 'Exercise (couldn’t restore)'}
+                  {exercise.name || "Exercise (couldn't restore)"}
                 </Text>
                 {exercise.unresolved && (
                   <View style={[styles.relinkChip, live.relinkChip]}>
@@ -511,7 +511,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
               </View>
               <Text style={[styles.exerciseMeta, live.exerciseMeta]}>
                 {routineExercise.recommendedSets} sets ·{' '}
-                {routineExercise.recommendedRepsMin}–{routineExercise.recommendedRepsMax} reps
+                {routineExercise.recommendedRepsMin}-{routineExercise.recommendedRepsMax} reps
                 {routineExercise.restSeconds ? ` · ${routineExercise.restSeconds}s rest` : ''}
               </Text>
               {routineExercise.startingWeight > 0 ? (

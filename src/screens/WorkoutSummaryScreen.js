@@ -1099,7 +1099,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             tooltip={'Hard sets counted in your weekly totals. Warm-up sets are excluded.\n\nA working set is any set where you trained close to your limit, typically 0 to 3 reps from failure.'}
             animateOrder={1}
           />
-          <StatBox icon="time-outline" value={`${durationMinutes || 0}m`} label="Duration" animateOrder={2} />
+          <StatBox icon="time-outline" value={`${durationMinutes || 0} min`} label="Duration" animateOrder={2} />
         </View>
 
         {/* NEW-002 rebuild, widened under L06-F4: the post-workout partner

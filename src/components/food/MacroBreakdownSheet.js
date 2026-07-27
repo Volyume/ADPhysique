@@ -68,7 +68,10 @@ function MacroLine({ kcal, protein, carbs, fat, energyUnit }) {
         {toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)} - {protein}P {carbs}C {fat}F
       </Text>
       <Text style={[styles.rowMacroKcal, live.rowMacroKcal]}>
-        {protein}x4 + {carbs}x4 + {fat}x9 = {macroKcal} kcal
+        {/* D88: this figure was hardcoded to kcal while the line above
+            converts through toEnergy, so a kJ user saw two numbers in two
+            units for one meal. */}
+        {protein}x4 + {carbs}x4 + {fat}x9 = {toEnergy(macroKcal, energyUnit)} {energyUnitLabel(energyUnit)}
       </Text>
       {split ? <Text style={[styles.rowMacroSplit, live.rowMacroSplit]}>{split} of calories</Text> : null}
     </View>

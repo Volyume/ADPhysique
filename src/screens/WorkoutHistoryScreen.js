@@ -397,10 +397,11 @@ export default function WorkoutHistoryScreen({ navigation }) {
             <View style={styles.cardHeaderRight}>
               <View style={styles.cardMeta}>
                 <Ionicons name="time-outline" size={14} color={t.colors.textMuted} />
-                <Text style={[styles.cardMetaText, live.cardMetaText]}>{workout.durationMinutes || 0}m</Text>
+                {/* D88: was "45m" here and "45 min" once expanded, same value. */}
+                <Text style={[styles.cardMetaText, live.cardMetaText]}>{workout.durationMinutes || 0} min</Text>
                 <Text style={[styles.cardMetaDivider, live.cardMetaDivider]}>-</Text>
                 <Ionicons name="layers-outline" size={14} color={t.colors.textMuted} />
-                <Text style={[styles.cardMetaText, live.cardMetaText]}>{workingSetCount} sets</Text>
+                <Text style={[styles.cardMetaText, live.cardMetaText]}>{workingSetCount} set{workingSetCount !== 1 ? 's' : ''}</Text>
               </View>
               <Ionicons
                 name={isExpanded ? 'chevron-up' : 'chevron-down'}

@@ -982,7 +982,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                       {formatEnergy(tk, energyUnit)} {energyUnitLabel(energyUnit)}
                     </Text>
                     <Text style={[styles.heroRange, live.heroRange]}>
-                      Estimated range: {formatEnergy(kMin, energyUnit)} – {formatEnergy(kMax, energyUnit)} {energyUnitLabel(energyUnit)}
+                      Estimated range: {formatEnergy(kMin, energyUnit)} to {formatEnergy(kMax, energyUnit)} {energyUnitLabel(energyUnit)}
                     </Text>
                     {/* NU-7: make the floor's action legible. floorApplied is the
                         engine's structured signal that a safety system raised
