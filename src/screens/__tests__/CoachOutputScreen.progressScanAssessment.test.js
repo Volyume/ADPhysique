@@ -112,24 +112,25 @@ describe('CoachOutputScreen v2 assessment receipt: packet composition', () => {
 describe('CoachOutputScreen v2 assessment receipt: card render', () => {
   test('the deduped packet/usedSentence are computed once outside JSX, alongside canShowProgressScanCoachContext', () => {
     expect(SCREEN).toMatch(/const scanAssessmentPacket = canShowProgressScanCoachContext \? \(progressScanCoachContext\.packet \?\? null\) : null;/);
-    expect(SCREEN).toMatch(/const scanAssessmentUsedSentence = scanAssessmentPacket\s*\n\s*\? dedupeUsedSentence\(progressScanCoachContext\.body, scanAssessmentPacket\.receipt\.usedSentence\)\s*\n\s*: null;/);
+    // D86: the compact card renders headline + one muted line, so the dedupe
+    // runs against the text that is actually rendered (headline + detail),
+    // not the resolver body the card no longer shows.
+    expect(SCREEN).toMatch(/const scanAssessmentUsedSentence = scanAssessmentPacket\s*\n\s*\? dedupeUsedSentence\(\[scanAssessmentPacket\.receipt\.headline, scanAssessmentPacket\.receipt\.detail\]\.filter\(Boolean\)\.join\(' '\), scanAssessmentPacket\.receipt\.usedSentence\)\s*\n\s*: null;/);
   });
 
-  test('the card renders the receipt headline, optional detail, and the deduped usedSentence, gated on scanAssessmentPacket', () => {
+  test('the compact card (D86) renders the receipt headline plus ONE muted line: detail when present, else the non-authority sentence', () => {
     const cardStart = SCREEN.indexOf('{canShowProgressScanCoachContext ? (');
     expect(cardStart).toBeGreaterThan(-1);
-    // Window widened 1200 -> 1400 (dynamic-type codemod sweep, campaign item
-    // 6 / D30, 2026-07-10): the inserted maxFontSizeMultiplier attributes
-    // pushed {scanAssessmentUsedSentence} to offset 1304 within this block.
-    // Assertions unchanged.
     const cardBlock = SCREEN.slice(cardStart, cardStart + 1400);
     expect(cardBlock).toMatch(/\{scanAssessmentPacket \? \(/);
     expect(cardBlock).toMatch(/\{scanAssessmentPacket\.receipt\.headline\}/);
-    expect(cardBlock).toMatch(/scanAssessmentPacket\.receipt\.detail \? \(/);
-    expect(cardBlock).toMatch(/\{scanAssessmentPacket\.receipt\.detail\}/);
-    expect(cardBlock).toMatch(/scanAssessmentUsedSentence \? \(/);
-    expect(cardBlock).toMatch(/\{scanAssessmentUsedSentence\}/);
-    expect(cardBlock).toMatch(/accessibilityLabel=\{scanAssessmentAccessibilityLabel\(scanAssessmentPacket\)\}/);
+    // The muted line renders whenever either string exists, and detail wins;
+    // every receipt branch's detail (and the fallback non-authority sentence)
+    // states that targets come from logged data, so the invariant sentence is
+    // present on every rendered path (progressScanCheckInEvidence.js).
+    expect(cardBlock).toMatch(/\(scanAssessmentPacket\.receipt\.detail \|\| scanAssessmentUsedSentence\) \? \(/);
+    expect(cardBlock).toMatch(/\{scanAssessmentPacket\.receipt\.detail \?\? scanAssessmentUsedSentence\}/);
+    expect(cardBlock).toMatch(/accessibilityLabel=\{scanAssessmentPacket \? scanAssessmentAccessibilityLabel\(scanAssessmentPacket\) : progressScanCoachContext\.body\}/);
   });
 });
 

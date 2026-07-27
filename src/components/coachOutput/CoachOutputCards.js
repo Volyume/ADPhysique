@@ -144,14 +144,15 @@ const styles = StyleSheet.create({
   sectionHeaderInline: {
     marginBottom: 0,
   },
+  // D86: borderless surface2 pill (the exercise-nav tab family). The old
+  // surface + 1px border chrome matched the app's outlined BUTTONS (rest
+  // -15/+15/Skip), so these read as tappable when they are pure stats.
   statChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surface2,
     borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
@@ -251,7 +252,7 @@ const styles = StyleSheet.create({
 // bulletRow/bulletIcon/actions have no colour tokens either.
 function buildLiveStyles(t) {
   return {
-    statChip: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    statChip: { backgroundColor: t.colors.surface2 },
     statChipValue: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     statChipLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     bulletText: { ...t.type.body, color: t.colors.textPrimary },

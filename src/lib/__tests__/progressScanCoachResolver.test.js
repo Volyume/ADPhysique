@@ -55,9 +55,11 @@ describe('Progress Scan out-of-engine coach resolver', () => {
     const down = resolveProgressScanCoachNote({ scan, output: { primary: { domain: 'calories' }, adjustments: { calories: { change: -150 } } } });
     const up = resolveProgressScanCoachNote({ scan: { ...scan, trendDirection: 'up' }, output: { primary: { domain: null }, adjustments: {} } });
 
-    expect(down.coachLine).toMatch(/photo context/i);
-    expect(down.body).toMatch(/not from this scan/i);
-    expect(up.coachLine).toMatch(/check on consistency/i);
+    // D86 plain-voice copy: same ED-safe meaning, human wording.
+    expect(down.coachLine).toMatch(/not a reason to push the cut harder/i);
+    expect(down.body).toMatch(/not from your photos/i);
+    expect(up.coachLine).toMatch(/nudge on consistency/i);
+    expect(up.coachLine).toMatch(/not a reason to change your calories/i);
     expect(up.affectsTargets).toBe(false);
     expect(JSON.stringify(up)).not.toMatch(/floorKcal|ffm|katch|deeper cut/i);
   });
@@ -66,9 +68,10 @@ describe('Progress Scan out-of-engine coach resolver', () => {
     const note = resolveProgressScanCoachNote({
       scan: { ...scan, trendDirection: 'down', comparisonStatus: 'baseline', rangeLow: 10, rangeHigh: 22 },
     });
-    expect(note.body).toMatch(/baseline/i);
+    // D86: "baseline" became the plainer "starting point".
+    expect(note.body).toMatch(/starting point/i);
     expect(note.body).not.toMatch(/points lower/i);
-    expect(note.coachLine).toMatch(/baseline/i);
+    expect(note.coachLine).toMatch(/starting point/i);
     expect(note.coachLine).not.toMatch(/supporting trend context/i);
   });
 
@@ -80,7 +83,7 @@ describe('Progress Scan out-of-engine coach resolver', () => {
     );
 
     expect(response.interpretation).toContain('Your 7-day average is level with last week.');
-    expect(response.interpretation).toContain('Progress photos also show positive change');
+    expect(response.interpretation).toContain('Your photos also show progress');
     expect(response.progressScanContext).toEqual({
       usedFor: 'visual_trend_context_only',
       affectsTargets: false,
@@ -91,9 +94,11 @@ describe('Progress Scan out-of-engine coach resolver', () => {
   // for future coach/check-in integration. These pin behavioural properties
   // that must hold BEFORE any new integration surface is ever built.
   const DECISION_LINE_STRINGS = [
-    'I will keep it as photo context until the weekly read has enough logged data beside it.',
-    'The weekly target still comes from your logs, weight trend, training and recovery, not from this scan.',
-    'It sits beside the weekly read as a low-confidence cross-check, not as a target-setting trigger.',
+    // D86 plain-voice copy. Same invariant: every branch states that targets
+    // come from logged data, never from photos.
+    'They stay as context until the weekly read has enough logged data beside it.',
+    'Your weekly targets still come from your logs, weight trend, training and recovery, not from your photos.',
+    'Photos never set your targets. Those come from your logged training, food and weight trend.',
   ];
 
   function includesADecisionLineSentence(text) {

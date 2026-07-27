@@ -2023,3 +2023,46 @@ for now. OPEN (not parked -- founder said "not bothered for now"):
 the residual ~6-8 point iOS-vs-Android gap, now investigable with
 clean paired telemetry; prediction on record that including the side
 pose lifts confidence from moderate.
+
+## D86 — Coaching-decision results page: elite simplification (founder directive 2026-07-23)
+
+Founder, from device screenshots of the weekly Coaching decision page
+(IMG_1882/1883), verbatim: "Weekly check in results page is pretty crap.
+Buttons that don't match the style of the app. Gumpf at the bottom out of
+alignment and unnecessary. This is meant to be an elite app ... looks cheap
+and unexpeccaey ai talk and also not user friendly language. We don't need
+progress photos talk dominating the page either." Follow-up rulings,
+verbatim: "we want this progress portal as like an addition to the check
+ins. It's not a necessary thing ... food and work out logging is the primary
+core function of check ins ... we can mention it ... but we don't have it
+dominating the page ... Load down is probably better." "this needs to be
+understandable, usable by end users, simplified, and for them to understand
+what's changed and why ... There's a lot of text at the bottom of the page,
+which is, like, fucking calculations and stuff like that that does not need
+to be displayed there." Hard bound, verbatim: "We're not changing the
+engine at all." "do not be stripping out things that are already there.
+They're changing the look and feel of the page to make it more
+understandable for the end user."
+
+Delegated ruling (D33, lead): presentation-only rebuild of
+CoachOutputScreen and its copy sources. (1) The top summary card renders
+the weekly decision only: the photo sentence no longer folds into the
+displayed lead paragraph. The applyProgressScanCoachContext wiring stays
+exactly as the isolation guard pins it; only which interpretation string
+the lead card displays changes. (2) One compact "Progress photos" card
+low on the page (receipt headline plus one muted attribution line;
+detail-or-non-authority-sentence, so every path still states targets come
+from logged data). The scan evidence packet composition, suppression
+gates (ED/calm fail-closed), and engine isolation are untouched. (3)
+progressScanCoachResolver display strings rewritten from first-person
+machine voice ("I am not using them", "low-confidence cross-check, not as
+a target-setting trigger") to plain calm human copy with identical
+meaning, including the ED-safe framings (not a reason to push the cut
+harder; not a reason to change calories). (4) StatChip restyled from
+bordered button-look pills to the app's quiet borderless surface2 chip
+family (exercise-nav tab precedent) so stats stop reading as buttons.
+(5) Hero hold copy simplified ("Hold steady this week."); the "The
+reason:" prefix dropped. (6) The bottom credential jargon row (volume
+landmarks / autoregulation / RED-S inline-tooltip row, the misaligned
+"gumpf") removed; the medical-guidance disclaimer stays. Engine files,
+weeklyCoach, nutritionEngine, floors, gates: zero changes.

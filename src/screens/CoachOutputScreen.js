@@ -2060,8 +2060,11 @@ export default function CoachOutputScreen({ navigation, route }) {
   // card body BEFORE render (see dedupeUsedSentence above), computed once
   // here rather than inline in JSX.
   const scanAssessmentPacket = canShowProgressScanCoachContext ? (progressScanCoachContext.packet ?? null) : null;
+  // D86: the compact card renders headline + ONE muted line (the receipt's
+  // detail, else the shared non-authority sentence), so dedupe runs against
+  // the text that is actually rendered now.
   const scanAssessmentUsedSentence = scanAssessmentPacket
-    ? dedupeUsedSentence(progressScanCoachContext.body, scanAssessmentPacket.receipt.usedSentence)
+    ? dedupeUsedSentence([scanAssessmentPacket.receipt.headline, scanAssessmentPacket.receipt.detail].filter(Boolean).join(' '), scanAssessmentPacket.receipt.usedSentence)
     : null;
   // D18 lead ruling (2026-07-09 resume session; docs/ux-world-class-audit-
   // 2026-07-09/DECISIONS-2026-07-09.md D18; plan-F §4.4 fork, delegated to
@@ -2329,12 +2332,12 @@ export default function CoachOutputScreen({ navigation, route }) {
         {/* Coach response parts 1 and 2: the specific, data-referenced
             acknowledgement and the plain-language trend read lead the
             card before any decision detail. */}
-        {(coachResponse.commitmentAnswer || coachResponse.acknowledgement || coachResponse.interpretation) ? (
+        {(coachResponse.commitmentAnswer || coachResponse.acknowledgement || baseCoachResponse.interpretation) ? (
           <Reanimated.View
             entering={stage(1)}
             style={[styles.coachLeadCard, live.coachLeadCard]}
             accessible
-            accessibilityLabel={[coachResponse.commitmentAnswer, coachResponse.acknowledgement, coachResponse.interpretation].filter(Boolean).join(' ')}
+            accessibilityLabel={[coachResponse.commitmentAnswer, coachResponse.acknowledgement, baseCoachResponse.interpretation].filter(Boolean).join(' ')}
           >
             {/* S1c: last week's pre-commitment, answered. Leads the card, it is
                 the "did the coach get it right" payoff that pulls users back. */}
@@ -2344,8 +2347,14 @@ export default function CoachOutputScreen({ navigation, route }) {
             {coachResponse.acknowledgement ? (
               <Text style={[styles.coachLeadAck, live.coachLeadAck]}>{coachResponse.acknowledgement}</Text>
             ) : null}
-            {coachResponse.interpretation ? (
-              <Text style={[styles.coachLeadInterpretation, live.coachLeadInterpretation]}>{coachResponse.interpretation}</Text>
+            {/* D86: the lead paragraph is the WEEKLY decision only, so it
+                renders the base interpretation. The photo sentence that
+                applyProgressScanCoachContext folds in (wiring unchanged, see
+                progressScanCoachIsolation.guard) now surfaces once, in the
+                compact Progress photos card low on the page, instead of
+                dominating the top of the screen. */}
+            {baseCoachResponse.interpretation ? (
+              <Text style={[styles.coachLeadInterpretation, live.coachLeadInterpretation]}>{baseCoachResponse.interpretation}</Text>
             ) : null}
           </Reanimated.View>
         ) : null}
@@ -2364,7 +2373,6 @@ export default function CoachOutputScreen({ navigation, route }) {
                 line here; the full WhyBlock further down keeps the detail. */}
             {whyThisWeek ? (
               <Text style={[styles.heroWhy, live.heroWhy]}>
-                {'The reason: '}
                 {whyThisWeek.includes('. ') ? whyThisWeek.slice(0, whyThisWeek.indexOf('. ') + 1) : whyThisWeek}
               </Text>
             ) : null}
@@ -2379,12 +2387,11 @@ export default function CoachOutputScreen({ navigation, route }) {
             <View style={[styles.holdHeroCard, live.holdHeroCard]}>
               <Text style={[styles.holdHeroText, live.holdHeroText]}>
                 {heldDecisions && heldDecisions.length > 0
-                  ? 'Hold steady. The reasons are below.'
+                  ? 'Hold steady this week.'
                   : 'Nothing to change. The plan is working.'}
               </Text>
               {whyThisWeek ? (
                 <Text style={[styles.heroWhy, live.heroWhy]}>
-                  {'The reason: '}
                   {whyThisWeek.includes('. ') ? whyThisWeek.slice(0, whyThisWeek.indexOf('. ') + 1) : whyThisWeek}
                 </Text>
               ) : null}
@@ -2425,29 +2432,9 @@ export default function CoachOutputScreen({ navigation, route }) {
           )}
         </Reanimated.View>
 
-        {canShowProgressScanCoachContext ? (
-          <View style={[styles.planEditCard, live.planEditCard]} accessibilityRole="summary">
-            <Text style={[styles.planEditHead, live.planEditHead]}>{progressScanCoachContext.title}</Text>
-            <Text style={[styles.planEditBody, live.planEditBody]}>
-              {progressScanCoachContext.body}
-            </Text>
-            {scanAssessmentPacket ? (
-              <View
-                style={[styles.scanAssessmentBlock, live.scanAssessmentBlock]}
-                accessible
-                accessibilityLabel={scanAssessmentAccessibilityLabel(scanAssessmentPacket)}
-              >
-                <Text style={[styles.scanAssessmentHeadline, live.scanAssessmentHeadline]}>{scanAssessmentPacket.receipt.headline}</Text>
-                {scanAssessmentPacket.receipt.detail ? (
-                  <Text style={[styles.scanAssessmentDetail, live.scanAssessmentDetail]}>{scanAssessmentPacket.receipt.detail}</Text>
-                ) : null}
-                {scanAssessmentUsedSentence ? (
-                  <Text style={[styles.scanAssessmentDetail, live.scanAssessmentDetail]}>{scanAssessmentUsedSentence}</Text>
-                ) : null}
-              </View>
-            ) : null}
-          </View>
-        ) : null}
+        {/* (D86: the Progress photos card moved LOW on the page, beside the
+            confidence caption, and compacted. Photos are an optional add-on
+            to check-ins, never the story of the week.) */}
 
         {/* Opt-in "share your week", only on a genuinely great, ED-safe week
             (blueprint §5/§7). Routes through the qualitative, ED-safe recap card.
@@ -2591,6 +2578,38 @@ export default function CoachOutputScreen({ navigation, route }) {
           </Text>
         ) : null}
 
+        {/* D86 (founder 2026-07-23): progress photos are an optional add-on to
+            check-ins, so their note lives LOW on the page as one compact card:
+            the receipt headline plus a single muted line. That muted line is
+            the receipt's detail when present, else the shared non-authority
+            sentence, and every branch of both states that targets come from
+            logged data (progressScanCheckInEvidence.js), so the invariant
+            "photos never set targets" stays visibly true on every path. The
+            packet composition, ED/calm suppression and engine isolation are
+            untouched (progressScanCoachIsolation.guard.test.js). */}
+        {canShowProgressScanCoachContext ? (
+          <View
+            style={[styles.planEditCard, live.planEditCard]}
+            accessibilityRole="summary"
+            accessible
+            accessibilityLabel={scanAssessmentPacket ? scanAssessmentAccessibilityLabel(scanAssessmentPacket) : progressScanCoachContext.body}
+          >
+            <Text style={[styles.planEditHead, live.planEditHead]}>{progressScanCoachContext.title}</Text>
+            {scanAssessmentPacket ? (
+              <>
+                <Text style={[styles.planEditBody, live.planEditBody]}>{scanAssessmentPacket.receipt.headline}</Text>
+                {(scanAssessmentPacket.receipt.detail || scanAssessmentUsedSentence) ? (
+                  <Text style={[styles.scanAssessmentDetail, live.scanAssessmentDetail]}>
+                    {scanAssessmentPacket.receipt.detail ?? scanAssessmentUsedSentence}
+                  </Text>
+                ) : null}
+              </>
+            ) : (
+              <Text style={[styles.planEditBody, live.planEditBody]}>{progressScanCoachContext.body}</Text>
+            )}
+          </View>
+        ) : null}
+
         {/* 7. One focus for next week. Coach response part 4 (the single
             tactical cue, deterministic priority, ED/calm aware) feeds this
             card; buildFocus stays as the fallback when no cue is built. */}
@@ -2679,26 +2698,11 @@ export default function CoachOutputScreen({ navigation, route }) {
           <Text style={[styles.doneQuietText, live.doneQuietText]}>Done</Text>
         </TouchableOpacity>
 
-        {/* Founder-approved tooltips (2026-07-09): "volume" already has a
-            glossary entry + tooltip elsewhere on this screen (SectionHeader,
-            "Training next week"); autoregulation and RED-S were the two
-            remaining dense terms in this credential line. */}
-        <View style={styles.credentialNoteRow}>
-          <Text style={[styles.credentialNoteInline, live.credentialNoteInline]}>
-            Precision Coaching is built on published training science: volume landmarks,{' '}
-          </Text>
-          <View style={styles.credentialTermRow}>
-            <Text style={[styles.credentialNoteInline, live.credentialNoteInline]}>autoregulation,</Text>
-            <InfoTooltip text={GLOSSARY.autoregulation} size={12} />
-          </View>
-          <Text style={[styles.credentialNoteInline, live.credentialNoteInline]}> and </Text>
-          <View style={styles.credentialTermRow}>
-            <Text style={[styles.credentialNoteInline, live.credentialNoteInline]}>RED-S</Text>
-            <InfoTooltip text={GLOSSARY.redS} size={12} />
-          </View>
-          <Text style={[styles.credentialNoteInline, live.credentialNoteInline]}> safety limits, configured to your data.</Text>
-        </View>
-
+        {/* D86 (founder 2026-07-23): the credential jargon row (volume
+            landmarks / autoregulation / RED-S with inline tooltips) is gone.
+            It read as misaligned technical filler to end users; the science
+            grounding lives on the Methodology screen, one tap from the Why
+            block above. The medical-guidance line stays. */}
         <Text style={[styles.credentialNote, live.credentialNote]}>
           Volyume provides estimates and guidance, not medical advice. Consult a qualified professional before making significant changes to your diet or training.
         </Text>
@@ -2725,14 +2729,9 @@ const styles = StyleSheet.create({
   },
   planEditHead: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
   planEditBody: { ...type.bodySm, color: colors.textSecondary },
-  scanAssessmentBlock: {
-    gap: spacing.xxs,
-    marginTop: spacing.xxs,
-    paddingTop: spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  scanAssessmentHeadline: { ...type.bodySm, color: colors.textPrimary },
+  // D86: scanAssessmentBlock/scanAssessmentHeadline deleted with the receipt
+  // sub-block; the compact card renders headline via planEditBody and one
+  // muted line via scanAssessmentDetail.
   scanAssessmentDetail: { ...type.caption, color: colors.textSecondary },
   planEditLink: {
     flexDirection: 'row',
@@ -3197,25 +3196,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     marginTop: spacing.sm,
   },
-  // Wraps the credential sentence as flex fragments so the autoregulation/
-  // RED-S InfoTooltips can sit directly beside their term.
-  credentialNoteRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    marginTop: spacing.sm,
-  },
-  credentialNoteInline: {
-    ...type.caption,
-    color: colors.textMuted,
-    lineHeight: 17,
-  },
-  credentialTermRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  // D86: credentialNoteRow/credentialNoteInline/credentialTermRow deleted
+  // with the credential jargon row; credentialNote (the medical line) stays.
 
   // Held decisions transparency card (box from <Card>; gap is the local extra)
   heldCard: {
@@ -3398,8 +3380,6 @@ function buildLiveStyles(t) {
     planEditCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     planEditHead: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     planEditBody: { ...t.type.bodySm, color: t.colors.textSecondary },
-    scanAssessmentBlock: { borderTopColor: t.colors.border },
-    scanAssessmentHeadline: { ...t.type.bodySm, color: t.colors.textPrimary },
     scanAssessmentDetail: { ...t.type.caption, color: t.colors.textSecondary },
     planEditLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     planEditLinkText: { ...t.type.label, color: t.colors.textPrimary },
@@ -3459,7 +3439,6 @@ function buildLiveStyles(t) {
     countdownCheckpointDetail: { ...t.type.body, color: t.colors.textSecondary },
     countdownDisclaimer: { ...t.type.caption, color: t.colors.textMuted },
     credentialNote: { ...t.type.caption, color: t.colors.textMuted },
-    credentialNoteInline: { ...t.type.caption, color: t.colors.textMuted },
     edLockoutCard: { backgroundColor: t.colors.surface2, borderColor: t.colors.warning },
     edLockoutHeader: { fontSize: t.fontSize.xs, color: t.colors.warning },
     edLockoutTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },

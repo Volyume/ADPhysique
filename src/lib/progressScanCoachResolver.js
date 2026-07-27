@@ -24,12 +24,12 @@ function clean(str) {
 
 function trendOnlyLabel(scan) {
   const direction = scan?.trendDirection || 'uncertain';
-  if (scan?.comparisonStatus === 'not_comparable') return 'Your latest progress photos are saved, but I am not comparing them because the setup changed too much.';
-  if (scan?.comparisonStatus !== 'comparable') return 'Your latest progress photos are saved as a baseline until there is another comparable photo set.';
-  if (direction === 'down') return 'Your latest progress photos show positive visual change against the last comparable photo set.';
-  if (direction === 'up') return 'Your latest progress photos show a visual drift to watch against the last comparable photo set.';
-  if (direction === 'steady') return 'Your latest progress photos are holding steady against the last comparable photo set.';
-  return 'Your latest progress photos are saved as a baseline until there is another comparable photo set.';
+  if (scan?.comparisonStatus === 'not_comparable') return 'Your progress photos are saved. This set was not compared because the photo setup changed.';
+  if (scan?.comparisonStatus !== 'comparable') return 'Your progress photos are saved as a starting point. The next set taken the same way will be compared against it.';
+  if (direction === 'down') return 'Your progress photos show visible progress since your last comparable set.';
+  if (direction === 'up') return 'Your progress photos show a small shift worth keeping an eye on.';
+  if (direction === 'steady') return 'Your progress photos look steady since your last comparable set.';
+  return 'Your progress photos are saved as a starting point. The next set taken the same way will be compared against it.';
 }
 
 function scanLabel(scan) {
@@ -47,48 +47,51 @@ function trendLine(scan, label, trendOnly = false) {
   if (trendOnly || !label) return trendOnlyLabel(scan);
   const direction = scan?.trendDirection || 'uncertain';
   if (scan?.comparisonStatus === 'not_comparable') {
-    return `Your latest progress photos are ${label}, but I am not comparing them because the setup changed too much.`;
+    return `Your progress photos read as ${label}. This set was not compared because the photo setup changed.`;
   }
   if (scan?.comparisonStatus !== 'comparable') {
-    return `Your latest progress photos are ${label}. This is a baseline until there is another comparable photo set.`;
+    return `Your progress photos read as ${label}. This is your starting point until another set is taken the same way.`;
   }
   if (direction === 'down') {
-    return `Your latest progress photos are ${label}, with positive visual change against the last comparable photo set.`;
+    return `Your progress photos read as ${label}, with visible progress since your last comparable set.`;
   }
   if (direction === 'up') {
-    return `Your latest progress photos are ${label}, with a visual drift to watch against the last comparable photo set.`;
+    return `Your progress photos read as ${label}, with a small shift worth keeping an eye on.`;
   }
   if (direction === 'steady') {
-    return `Your latest progress photos are ${label}. I am reading them as holding steady.`;
+    return `Your progress photos read as ${label}, holding steady since your last comparable set.`;
   }
-  return `Your latest progress photos are ${label}. This is a baseline until there is another comparable photo set.`;
+  return `Your progress photos read as ${label}. This is your starting point until another set is taken the same way.`;
 }
 
 function coachLine(scan, label, trendOnly = false) {
   const direction = scan?.trendDirection || 'uncertain';
   if (scan?.comparisonStatus === 'not_comparable') {
-    return 'Progress photos are saved, but I am not using them as a comparison because the setup changed too much.';
+    return 'Your photos are saved, but this set was not compared because the photo setup changed.';
   }
   if (scan?.comparisonStatus !== 'comparable') {
-    return 'Progress photos are now saved as a baseline. I will compare future photo sets only when the setup is comparable.';
+    return 'Your photos are saved as a starting point. Future sets are compared once they are taken the same way.';
   }
-  const context = label && !trendOnly ? label : 'the photo read';
-  if (direction === 'down') return `Progress photos also show positive change from ${context}. I am treating that as photo context, not a reason to push the cut harder.`;
-  if (direction === 'up') return `Progress photos show a drift to watch from ${context}. I am treating that as a check on consistency, not as a calorie trigger.`;
-  if (direction === 'steady') return `Progress photos are steady from ${context}. That supports holding the read calm unless your logged trend says otherwise.`;
-  return `Progress photos are now saved as a baseline from ${context}. I will compare future photo sets only when the setup is comparable.`;
+  // D86: the band/confidence label is deliberately not repeated here.
+  // trendLine already carries it; this line's job is the ED-safe framing,
+  // never a score readout.
+  void label; void trendOnly;
+  if (direction === 'down') return 'Your photos also show progress. That is context, not a reason to push the cut harder.';
+  if (direction === 'up') return 'Your photos show a small shift. It reads as a nudge on consistency, not a reason to change your calories.';
+  if (direction === 'steady') return 'Your photos look steady. That supports holding things as they are.';
+  return 'Your photos are saved as a starting point. Future sets are compared once they are taken the same way.';
 }
 
 function decisionLine(output) {
   const hasWeeklyOutput = !!output;
   const primary = output?.primary?.domain ?? null;
   if (!hasWeeklyOutput) {
-    return 'I will keep it as photo context until the weekly read has enough logged data beside it.';
+    return 'They stay as context until the weekly read has enough logged data beside it.';
   }
   if (primary === 'calories' || output?.adjustments?.calories) {
-    return 'The weekly target still comes from your logs, weight trend, training and recovery, not from this scan.';
+    return 'Your weekly targets still come from your logs, weight trend, training and recovery, not from your photos.';
   }
-  return 'It sits beside the weekly read as a low-confidence cross-check, not as a target-setting trigger.';
+  return 'Photos never set your targets. Those come from your logged training, food and weight trend.';
 }
 
 export function resolveProgressScanCoachNote({
@@ -103,8 +106,9 @@ export function resolveProgressScanCoachNote({
 
   const body = clean([
     trendLine(scan, label, trendOnly),
-    trendOnly && label ? 'Detailed score and band are hidden by your preference.' : null,
-    'This is photo context from repeatable progress photos.',
+    // D86: the "This is photo context from repeatable progress photos." filler
+    // sentence is gone; the trend line and the targets line carry everything.
+    trendOnly && label ? 'Detailed scores are hidden, as you chose.' : null,
     decisionLine(output),
   ].filter(Boolean).join(' '));
 
@@ -124,7 +128,7 @@ export function resolveProgressScanCoachNote({
 
   return {
     source: PHOTO_SCAN_SOURCE,
-    title: 'Progress photo context',
+    title: 'Progress photos',
     body,
     coachLine: foldedCoachLine,
     trendDirection: scan.trendDirection || 'uncertain',
