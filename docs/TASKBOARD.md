@@ -933,6 +933,57 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
+### CLOSED (2026-07-27) - FULL migration sweep: production is COMPLETE
+
+Founder: "Run all non applied against production there might be more." Swept
+every one of the 125 repo migrations against the ACTUAL production schema, not
+against the migration history (the history only starts at 101 - everything
+before that was applied outside the runner, so it can never answer this).
+
+Method: extracted every object the migrations create - 55 tables, 121 columns,
+46 functions - and checked each one for existence in production.
+
+**Result: ZERO missing. Zero tables, zero columns, zero functions.** Every repo
+migration is applied. Constraint-only changes were checked separately, since an
+object sweep cannot see them: migration 059's numbered meal-slot CHECK is live
+(`meal_[0-9]+` present in the pattern), so it is applied despite the CLAUDE.md
+header still listing it as HELD - another stale note, like the "116 with
+117-128 pending" one.
+
+**Migration 049 is correctly NOT applied and must stay that way.** It drops
+`peak_week_plans`, and its own header says "This is a DRAFT. Do not apply yet.
+Client-side cleanup required first", listing five client changes that must land
+first (sync.js `_pushPeakWeekPlans`, database.js CREATE TABLE and the
+deleted_at step, the drift-audit expected set, migration 025's DELETE branch).
+Verified: the table still exists. Applying it now would break sync. NOT applied.
+
+### OPEN (2026-07-27) - hardening, NOT a live hole, needs founder sign-off
+Ran Supabase's own security advisors while connected. **No ERROR-level findings.**
+97 WARN/INFO, of which one class is worth a decision:
+
+**34 SECURITY DEFINER functions are executable by the `anon` role.** I checked
+the two that carry no `auth.uid()` guard, because those are the ones that could
+matter, and BOTH are safe in effect:
+- `apply_founder_pro_entitlement(_user_id, ...)` - gated on the allow-list
+  `private.is_founder_pro_user(_user_id)`. An anon caller passing an arbitrary
+  UUID gets `founder_pro: false`. It cannot grant Pro to anyone not already
+  entitled, so there is no free-Pro path.
+- `cascade_advance_due_users()` - takes no parameters and only DOWNGRADES users
+  whose trial has already expired. An anon caller can only do what the
+  scheduled worker already does. It cannot upgrade anyone.
+
+So: no privilege escalation and no data exposure. It is still poor posture that
+`anon` can reach them at all. Revoking `EXECUTE FROM anon` is the fix, but these
+are TIER/BILLING functions and CLAUDE.md Section 2 requires explicit founder
+permission before any billing change - so I have not touched them.
+**Founder: say the word and I will revoke anon EXECUTE on the tier/billing RPCs.**
+
+Also WARN, judged intentional, no action taken: three always-true INSERT
+policies (`marketing_waitlist`, `marketing_survey_responses`,
+`scan_calibration_events`) - all deliberately anonymous-insert surfaces; 15
+functions with a mutable `search_path`; one public storage bucket allowing
+listing; and Supabase's leaked-password protection being off.
+
 ### CLOSED (2026-07-27) - migrations 119 and 125 APPLIED
 Founder authorised: "Yes run 119 and 125 against production". Both applied
 through the Supabase connector and verified against production afterwards.
