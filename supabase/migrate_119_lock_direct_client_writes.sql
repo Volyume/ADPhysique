@@ -49,11 +49,27 @@
 --
 -- Applied locally:  N/A -- cloud only; these tables/policies have no local-DB
 --                   analogue (SQLite has no RLS).
--- Applied remotely: YES -- founder-run against production 2026-07-12. Confirm
---                   with the verification queries recorded alongside the
---                   launch-readiness notes (grants on partnerships /
---                   engine_telemetry / consent_log; the replaced
---                   partner_weekly_intentions UPDATE policy).
+-- Applied remotely: YES. Originally founder-run against production
+--                   2026-07-12, but applied OUTSIDE the migration runner, so
+--                   it never appeared in the cloud migration history and this
+--                   file read as pending for two weeks. Re-applied through the
+--                   runner 2026-07-27 on the founder's explicit "Yes run 119
+--                   and 125 against production", purely so the history records
+--                   it; the re-run was a no-op, as the idempotency note below
+--                   promises.
+--                   Verified 2026-07-27 against production, BEFORE and AFTER:
+--                   all four write policies absent; `authenticated` holds no
+--                   INSERT/UPDATE/DELETE on partnerships and no INSERT on
+--                   engine_telemetry or consent_log; the
+--                   partner_weekly_intentions UPDATE policy carries the
+--                   hardened active-pair-membership qual in both USING and
+--                   WITH CHECK.
+--                   NOTE (not a hole, checked): `authenticated` retains
+--                   UPDATE/DELETE GRANTS on engine_telemetry and consent_log,
+--                   which this migration never revoked. RLS is enabled on both
+--                   and neither has any UPDATE or DELETE policy, so RLS denies
+--                   those operations regardless of the grant. The append-only
+--                   consent audit trail is intact.
 -- Safe to re-run:   YES. DROP POLICY IF EXISTS, a REVOKE on an absent
 --                   privilege, and CREATE POLICY after a DROP are all no-ops
 --                   or idempotent.

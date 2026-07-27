@@ -23,9 +23,18 @@
 --   - Purpose:                 extend notification_preferences category
 --                              CHECK to the full client category enum
 --   - Applied locally:         no (no local dev Supabase project at v1)
---   - Applied remotely:        pending founder apply -- NEVER run from
---                              an agent; production requires the exact
---                              phrase "run against production"
+--   - Applied remotely:        APPLIED 2026-07-27 on the founder's explicit
+--                              "Yes run 119 and 125 against production".
+--                              Recorded in the cloud migration history as
+--                              migrate_125_notification_preferences_category_full_enum.
+--                              Verified after the run: the CHECK admits
+--                              'planned_meal_confirm' (the category whose
+--                              23514 rejection failed the whole preference
+--                              push every sync and blocked sign-out) and
+--                              carries all 23 categories. The list was
+--                              diffed against CATEGORY in
+--                              src/lib/notifications/categories.js before
+--                              applying: 23 for 23, no drift either way.
 --   - Safe to re-run:          yes (DROP CONSTRAINT IF EXISTS + ADD)
 --   - Rollback:                re-run migration 085's constraint block to
 --                              restore the previous 14-value CHECK

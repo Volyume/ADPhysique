@@ -933,7 +933,30 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
-### OPEN (2026-07-27) - DECISION NEEDED: apply migrations 119 and 125?
+### CLOSED (2026-07-27) - migrations 119 and 125 APPLIED
+Founder authorised: "Yes run 119 and 125 against production". Both applied
+through the Supabase connector and verified against production afterwards.
+
+- **119 (lock direct client writes)** was ALREADY applied on 2026-07-12, but
+  outside the migration runner, so it never showed in the cloud history and the
+  file read as pending for two weeks. Re-running it was a no-op; it is now
+  recorded in the history so this cannot mislead again. Verified: all four
+  write policies absent, no INSERT/UPDATE/DELETE for `authenticated` on
+  partnerships, no INSERT on engine_telemetry or consent_log, and the
+  partner_weekly_intentions UPDATE policy carries the hardened
+  active-pair-membership qual. Checked and NOT a hole: `authenticated` still
+  holds UPDATE/DELETE grants on engine_telemetry and consent_log, but RLS is on
+  and neither table has an UPDATE or DELETE policy, so RLS denies both.
+- **125 (notification category CHECK)** genuinely was pending. Applied.
+  Verified the CHECK now admits 'planned_meal_confirm' - the category whose
+  23514 rejection failed the entire preference push every sync and blocked
+  sign-out behind "Sync incomplete" - and carries all 23 categories. The list
+  was diffed against CATEGORY in src/lib/notifications/categories.js before
+  applying: 23 for 23, no drift in either direction.
+
+**Every repo migration is now applied to production.** No pending schema work.
+
+### (superseded) OPEN (2026-07-27) - DECISION NEEDED: apply migrations 119 and 125?
 Production migration history was checked directly this session. The old
 "production is at 116, 117-128 pending" note was WRONG: 117, 118, 120-124,
 126 and 127 are all applied (under drifted names). Migration 128 was applied
