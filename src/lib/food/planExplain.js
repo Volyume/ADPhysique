@@ -107,7 +107,10 @@ export function buildPlanEditNarration(change, opts = {}) {
     body = `${capitalise(takenWord)} ${carbPhrase} ${offWord} your plan: ${editList}. Protein held.`;
   } else {
     headline = `Your target ${dirWord} ${absKcal} kcal this week.`;
-    body = `I have ${takenWord} ${carbPhrase} ${offWord} your plan. That is ${editList}. Your protein stays the same.`;
+    // D88: the actor is "your coach", never "I" (locked voice doc,
+    // actor-naming rule). This module sits outside weeklyCoach, so the
+    // coach-voice regression guard never caught it.
+    body = `Your coach has ${takenWord} ${carbPhrase} ${offWord} your plan. That is ${editList}. Your protein stays the same.`;
   }
 
   const floorNote = change.floorHeld
