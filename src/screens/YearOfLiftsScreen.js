@@ -631,7 +631,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
     if (!data) return;
     // COMP-005: same milestone canvas, eyebrow/title/hero/stats vary by variant.
     // Factual training stats only: never bodyweight, measurements or notes.
-    const milestoneData = buildRecapMilestoneData(data, { variant, monthLabel, weekLabel, blockName });
+    const milestoneData = buildRecapMilestoneData(data, { variant, monthLabel, weekLabel, blockName, units });
     navigation.navigate('ShareCard', { milestoneData });
   }
 
@@ -675,7 +675,9 @@ export default function YearOfLiftsScreen({ navigation, route }) {
             onPress={handleShareYear}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
-            accessibilityLabel={variant === 'month' ? 'Share your month' : variant === 'week' ? 'Share your week' : variant === 'block' ? 'Share your block' : 'Share your year'}
+            // R9/M9 (share-card audit 2026-07-27): entry points into the share
+            // flow standardise on "Create share image" across the app.
+            accessibilityLabel="Create share image"
           >
             <Ionicons name="share-outline" size={18} color={t.colors.textPrimary} />
           </TouchableOpacity>

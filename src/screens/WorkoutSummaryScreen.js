@@ -759,6 +759,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       prCount: detectedPRs.length,
       topSet,
       intensityTier: tier,
+      // R8/M5 (share-card audit 2026-07-27): the session card hard-coded 'kg'
+      // for the tonnage hero/stat/top-lift line regardless of the user's
+      // chosen gym unit.
+      units: units === 'lbs' ? 'lbs' : 'kg',
     };
     const prData = detectedPRs.length > 0 ? detectedPRs[0] : null;
     // Pass every PR from the session so the share card can let the user choose
@@ -1548,7 +1552,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             accessibilityLabel="Close"
             accessibilityState={{ disabled: saving }}
           />
-          {!readOnly && (
+          {/* R11/L2 (share-card audit 2026-07-27): a zero-working-set session
+              (e.g. a warm-up-only or cardio-only log) still offered Share and
+              rendered a card reading "0 SETS / 0m" -- nothing worth sharing. */}
+          {!readOnly && displayWorkingSets > 0 && (
             <Button
               title="Share"
               icon="share-social-outline"

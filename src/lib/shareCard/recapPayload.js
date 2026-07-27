@@ -23,9 +23,13 @@ function formatCount(value) {
   return formatNumber(value || 0);
 }
 
-function recapStats(data) {
+// Gym weights are stored in the user's chosen unit (kg|lbs); this hard-coded
+// 'kg lifted' regardless of `units` (share-card audit R8/M5) -- a latent lie
+// for any lbs user, even though the gym-units-are-kg-only assumption held
+// true so far.
+function recapStats(data, u) {
   const stats = [];
-  if (data.tonnage > 0) stats.push({ value: formatNumber(data.tonnage), label: 'kg lifted' });
+  if (data.tonnage > 0) stats.push({ value: formatNumber(data.tonnage), label: `${u} lifted` });
   if (data.totalSets > 0) stats.push({ value: formatNumber(data.totalSets), label: 'sets' });
   if (data.topPRs?.length > 0) {
     stats.push({
@@ -41,8 +45,10 @@ export function buildRecapMilestoneData(data, {
   monthLabel,
   weekLabel,
   blockName,
+  units = 'kg',
 } = {}) {
   if (!data) return null;
+  const u = units === 'lbs' ? 'lbs' : 'kg';
 
   if (variant === 'month') {
     return {
@@ -51,7 +57,7 @@ export function buildRecapMilestoneData(data, {
       heroValue: formatCount(data.totalSessions),
       heroUnit: data.totalSessions === 1 ? 'session' : 'sessions',
       caption: `${fmtDate(data.startMs)} to ${fmtDate(data.endMs - DAY_MS)}`,
-      stats: recapStats(data),
+      stats: recapStats(data, u),
     };
   }
 
@@ -62,13 +68,13 @@ export function buildRecapMilestoneData(data, {
       heroValue: formatCount(data.totalSessions),
       heroUnit: data.totalSessions === 1 ? 'session' : 'sessions',
       caption: `${fmtDate(data.startMs)} to ${fmtDate(data.endMs - DAY_MS)}`,
-      stats: recapStats(data),
+      stats: recapStats(data, u),
     };
   }
 
   if (variant === 'block') {
     const stats = [];
-    if (data.tonnage > 0) stats.push({ value: formatNumber(data.tonnage), label: 'kg lifted' });
+    if (data.tonnage > 0) stats.push({ value: formatNumber(data.tonnage), label: `${u} lifted` });
     if (data.totalSets > 0) stats.push({ value: formatNumber(data.totalSets), label: 'sets' });
     if (data.meso?.plannedWeeks) {
       stats.push({
@@ -87,7 +93,7 @@ export function buildRecapMilestoneData(data, {
   }
 
   const stats = [];
-  if (data.tonnage > 0) stats.push({ value: formatNumber(data.tonnage), label: 'kg lifted' });
+  if (data.tonnage > 0) stats.push({ value: formatNumber(data.tonnage), label: `${u} lifted` });
   if (data.totalSets > 0) stats.push({ value: formatNumber(data.totalSets), label: 'sets' });
   if (data.uniqueExercises > 0) {
     stats.push({ value: formatNumber(data.uniqueExercises), label: 'exercises' });

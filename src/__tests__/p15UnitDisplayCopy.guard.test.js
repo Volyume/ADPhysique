@@ -60,7 +60,22 @@ describe('Recap share-card payload aligns tonnage/count formatting to the shared
   test('imports and uses formatNumber for every stat value, no direct toLocaleString', () => {
     expect(RECAP_PAYLOAD).toMatch(/import \{ formatNumber \} from '\.\.\/format';/);
     expect(RECAP_PAYLOAD).not.toMatch(/toLocaleString/);
-    expect(RECAP_PAYLOAD).toMatch(/value: formatNumber\(data\.tonnage\), label: 'kg lifted'/);
+    // Share-card audit R8/M5: the tonnage stat used to hard-code 'kg lifted'
+    // regardless of the user's chosen unit; it now threads `units` (kg|lbs)
+    // through buildRecapMilestoneData, so every occurrence reads the
+    // templated unit label instead of a bare 'kg' string.
+    expect(RECAP_PAYLOAD).not.toMatch(/label: 'kg lifted'/);
+    expect(RECAP_PAYLOAD.match(/label: `\$\{u\} lifted`/g)?.length).toBe(3);
+  });
+
+  test('defaults to kg lifted when no unit is supplied (unchanged default behaviour)', () => {
+    // eslint-disable-next-line global-require
+    const { buildRecapMilestoneData } = require('../lib/shareCard/recapPayload');
+    const data = { totalSessions: 4, tonnage: 1000, totalSets: 20, uniqueExercises: 3, yearStart: 0, yearEnd: 0 };
+    const yearCard = buildRecapMilestoneData(data, { variant: 'year' });
+    expect(yearCard.stats.find((s) => s.label.endsWith('lifted'))).toMatchObject({ label: 'kg lifted' });
+    const lbsCard = buildRecapMilestoneData(data, { variant: 'year', units: 'lbs' });
+    expect(lbsCard.stats.find((s) => s.label.endsWith('lifted'))).toMatchObject({ label: 'lbs lifted' });
   });
 
   test('does not add or expose any field beyond what was already on the card (GDPR share-card rule)', () => {

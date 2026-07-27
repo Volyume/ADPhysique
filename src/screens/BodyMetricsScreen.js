@@ -1223,6 +1223,18 @@ export default function BodyMetricsScreen() {
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor={t.colors.textMuted}
                 accessibilityLabel="Date, year month day"
+                // A7 (pre-release sweep 2026-07-27): this field had no
+                // keyboardType, so it opened the full default keyboard
+                // (autocorrect/autocapitalise included) for a fixed
+                // YYYY-MM-DD shape. numbers-and-punctuation matches the
+                // equivalent prep-countdown date field in
+                // ProGoalSetupScreen.js; validateBodyMetricForm now also
+                // rejects a syntactically-shaped but impossible date
+                // (bodyMetricValidate.js, calendarDateValidate.js).
+                keyboardType="numbers-and-punctuation"
+                autoCapitalize="none"
+                autoCorrect={false}
+                maxLength={10}
               />
             </View>
             {bwu === 'st' ? (

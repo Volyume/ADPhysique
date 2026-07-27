@@ -202,7 +202,14 @@ export default function ShareCardScreen({ route }) {
       const m = milestoneData || {};
       return {
         cardType: 'milestone', isSquare, showDate,
-        date: (showDate && m.date) ? formatLongDate(m.date) : '',
+        // R11/M4 (share-card audit 2026-07-27): the extra `&& m.date` check
+        // made the Date toggle dead on any milestone whose caller doesn't
+        // carry its own timestamp (the streak/perfect-month/tonnage/training-
+        // load milestones, and every Recaps card from buildRecapMilestoneData).
+        // formatLongDate() already defaults to today when its argument is
+        // falsy -- matching the session/PR branches below, which never guard
+        // on the source field being present, only on the toggle.
+        date: showDate ? formatLongDate(m.date) : '',
         eyebrow: m.eyebrow || '',
         title: m.title || '',
         heroValue: m.heroValue != null ? m.heroValue : '',
@@ -226,6 +233,12 @@ export default function ShareCardScreen({ route }) {
         prCount: s.prCount || 0,
         topSet: s.topSet || null,
         intensityTier: s.intensityTier || 'solid',
+        // R8/M5 (share-card audit 2026-07-27): the session card hard-coded
+        // 'kg' for the tonnage hero/stat/top-lift line. `sessionData.units`
+        // (set at the WorkoutSummaryScreen call site) wins; the route-level
+        // `units` (already used by the weekly recap) is the fallback for any
+        // other caller.
+        units: s.units || units || 'kg',
       };
     }
     const p = prs[Math.min(selectedPrIndex, Math.max(0, prs.length - 1))] || prData || {};
@@ -313,7 +326,12 @@ export default function ShareCardScreen({ route }) {
   const renderCardToFile = useCallback(async () => {
     const b64 = renderCardBase64(1080);
     if (!b64) return null;
-    const filename = `volyume-${cardType}-card-${isSquare ? 'square' : 'story'}.png`;
+    // R11/L4 (share-card audit 2026-07-27): a fixed filename meant a second
+    // export in the same session (e.g. toggling a switch, then sharing again)
+    // overwrote the first file in the cache dir before the OS share sheet/
+    // gallery save had necessarily finished reading it. The timestamp makes
+    // every export its own file.
+    const filename = `volyume-${cardType}-card-${isSquare ? 'square' : 'story'}-${Date.now()}.png`;
     const uri = (FileSystem.cacheDirectory || '') + filename;
     await FileSystem.writeAsStringAsync(uri, b64, { encoding: FileSystem.EncodingType.Base64 });
     return uri;
@@ -561,9 +579,14 @@ export default function ShareCardScreen({ route }) {
             share for Instagram/Facebook, but route through the normal share
             screen rather than a direct-composer intent, so no extra dependency or
             Facebook App ID is needed). The user picks Instagram or Facebook from
-            the sheet; both let you post the image to a Story. */}
+            the sheet; both let you post the image to a Story. R9/M9 (share-card
+            audit 2026-07-27): the visible label standardises on "Share image"
+            with every other action button in the family; the Instagram/Facebook
+            framing still comes through the icons and the pinned accessibility
+            label below, so the 2026-06-30 decision (OS share sheet, not a
+            direct-composer intent) is unaffected. */}
         <Button
-          title="Share to Story"
+          title="Share image"
           icon="logo-instagram"
           trailingIcon="logo-facebook"
           onPress={handleShareToStories}

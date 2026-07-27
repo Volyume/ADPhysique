@@ -295,3 +295,37 @@ call. No change made there, and none is needed.
 
 Recorded per the founder rule that a document contradicting the source is
 surfaced, never quietly worked around.
+
+---
+
+## TWO REGRESSIONS FROM MY OWN R3/H2 CHANGE — caught by rendering, both fixed
+
+Both were introduced by the first share-card landing (`f64c012`) and neither
+was visible in the diff or the test suite. Only rendering the PNGs found them.
+Recorded because "the tests were green" was not evidence of correctness here.
+
+**1. Before/after story card: the footer painted over the photo.**
+H2 lifted the footer clear of Instagram's reply bar, but `drawBeforeAfter`
+computed `cellsBottom` from `H - footerH` without accounting for that lift, so
+the photo cell and its caption ran underneath the raised footer and the
+wordmark was drawn on top of the image. Found by the building agent while
+rendering; fixed with the same lift-aware formula the other layouts use.
+
+**2. Square and portrait: the tagline and the URL collided.**
+R3 made `volyume.app` print on every format. It had previously printed on story
+ONLY (`if (!isSquare) text(... 'volyume.app' ...)`), and the square footer
+height of 162 was sized for four elements, not five. At W=1080 the tagline
+baseline landed at fy+127 and the URL baseline at fy+125 -- drawn on top of
+each other, on the DEFAULT format, on every card type.
+
+The building agent reported this as "pre-existing and independent of my
+changes". That was WRONG, and checked rather than accepted: `git show
+f4327e8:src/lib/shareCard/drawShareCard.js` confirms the URL was never drawn on
+square before R3. It was my regression, and a worse defect than the
+inconsistency R3 set out to fix.
+
+Fixed by growing the square footer to 216 so all five elements have real
+separation, and by collapsing the `isSquare ? 162 : 250` expression -- which
+was DUPLICATED IN FIVE PLACES -- into one `footerHeight()` helper. That
+duplication is precisely why a footer-height assumption could go stale in one
+place and not the others. Verified by rendering square and story footers.

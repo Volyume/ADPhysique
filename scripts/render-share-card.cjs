@@ -75,13 +75,50 @@ async function main() {
     console.log(`${name}  ${width}x${H}`);
   };
 
-  const premiumMilestone = { cardType: 'milestone', premium: true, eyebrow: 'Perfect month', title: 'A perfect month', showDate: true, date: 'Sun · 22 Jun 2026', heroValue: '4', heroUnit: 'weeks on target', caption: 'Four weeks running, every session and target met.', stats: [{ label: 'Weeks', value: '4' }, { label: 'Sessions', value: '16' }] };
-  const tonnage = { cardType: 'milestone', premium: true, eyebrow: 'Lifetime total', title: 'Total weight lifted', showDate: true, date: 'Sun · 22 Jun 2026', heroValue: '1,000,000', heroUnit: 'kg lifted', caption: 'Every working set you have ever logged, added up.', stats: [] };
+  // Share-card audit R10/M7: `premium` was a dead fixture key here -- drawShareCard
+  // never reads params.premium (there is no premium/free branch in the renderer;
+  // free/pro gating happens at the screen, not the card). Deleted from both
+  // fixtures below rather than carried forward as cargo-cult data.
+  const premiumMilestone = { cardType: 'milestone', eyebrow: 'Perfect month', title: 'A perfect month', showDate: true, date: 'Sun · 22 Jun 2026', heroValue: '4', heroUnit: 'weeks on target', caption: 'Four weeks running, every session and target met.', stats: [{ label: 'Weeks', value: '4' }, { label: 'Sessions', value: '16' }] };
+  const tonnage = { cardType: 'milestone', eyebrow: 'Lifetime total', title: 'Total weight lifted', showDate: true, date: 'Sun · 22 Jun 2026', heroValue: '1,000,000', heroUnit: 'kg lifted', caption: 'Every working set you have ever logged, added up.', stats: [] };
 
   [['session', session], ['pr', pr], ['milestone', milestone], ['weekly', weekly], ['weeklyLift', weeklyLift], ['premium', premiumMilestone], ['tonnage', tonnage]].forEach(([n, p]) => {
     render({ ...p, isSquare: true }, 1080, `card_${n}_square`);
     render({ ...p, isSquare: false }, 1080, `card_${n}_story`);
   });
+
+  // Share-card audit R10/M7: the before/after progress card is the ONLY Pro
+  // card and the only one carrying bodyweight, and had NO rendered-output
+  // coverage here at all. Two synthetic portrait-ish swatches stand in for the
+  // user's before/after photos (matches drawShareCard.test.js's makeSwatch).
+  const baBefore = { ps: Skia.Surface.MakeOffscreen(64, 96) };
+  baBefore.ps.getCanvas().drawRect(Skia.XYWHRect(0, 0, 64, 96), (() => { const pt = Skia.Paint(); pt.setColor(Skia.Color('#8a8f7a')); return pt; })());
+  baBefore.ps.flush();
+  const baBeforeImg = baBefore.ps.makeImageSnapshot();
+  const baAfter = { ps: Skia.Surface.MakeOffscreen(64, 96) };
+  baAfter.ps.getCanvas().drawRect(Skia.XYWHRect(0, 0, 64, 96), (() => { const pt = Skia.Paint(); pt.setColor(Skia.Color('#b0a890')); return pt; })());
+  baAfter.ps.flush();
+  const baAfterImg = baAfter.ps.makeImageSnapshot();
+  const beforeAfterBase = {
+    cardType: 'beforeAfter',
+    elapsedLabel: '14 weeks',
+    before: { date: '3 Mar 2026', scanRange: 'Defined index 54', weight: '82.4 kg' },
+    after: { date: '9 Jun 2026', scanRange: 'Lean index 66', weight: '78.1 kg' },
+  };
+  const renderBeforeAfter = (aspect, name) => {
+    const H = cardHeight(1080, aspect !== 'story', aspect);
+    const surf = Skia.Surface.MakeOffscreen(1080, H);
+    drawShareCard(surf.getCanvas(), {
+      Skia, width: 1080, params: { ...beforeAfterBase, aspect }, typefaces, wordmark,
+      photos: { before: baBeforeImg, after: baAfterImg },
+    });
+    surf.flush();
+    fs.writeFileSync(path.join(OUT, `${name}.png`), Buffer.from(surf.makeImageSnapshot().encodeToBytes()));
+    console.log(`${name}  1080x${H}`);
+  };
+  renderBeforeAfter('square', 'card_beforeAfter_square');
+  renderBeforeAfter('portrait', 'card_beforeAfter_portrait');
+  renderBeforeAfter('story', 'card_beforeAfter_story');
 
   // Gym-photo background: a synthetic bright/varied "photo" to check the scrim +
   // cover-fit keep white/amber text legible over a real image.

@@ -2448,10 +2448,15 @@ export default function CoachOutputScreen({ navigation, route }) {
             style={[styles.shareWeekBtn, live.shareWeekBtn]}
             onPress={handleShareWeek}
             accessibilityRole="button"
-            accessibilityLabel="Great week. Share it?"
+            // R9/M9 (share-card audit 2026-07-27): entry points into the share
+            // flow standardise on "Create share image" across the app; the
+            // success-tint chrome + share-outline icon still carry the
+            // "genuinely great week" framing (the button only renders under
+            // the `greatWeek` gate above).
+            accessibilityLabel="Create share image"
           >
             <Ionicons name="share-outline" size={15} color={t.colors.success} />
-            <Text style={[styles.shareWeekText, live.shareWeekText]}>Great week. Share it?</Text>
+            <Text style={[styles.shareWeekText, live.shareWeekText]}>Create share image</Text>
           </TouchableOpacity>
         )}
 

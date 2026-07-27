@@ -358,7 +358,11 @@ export default function BeforeAfterShareSheet({
   const renderCardToFile = useCallback(async () => {
     const b64 = renderCardBase64(1080);
     if (!b64) return null;
-    const filename = `volyume-progress-${aspect}.png`;
+    // R11/L4 (share-card audit 2026-07-27): a fixed filename meant a second
+    // export in the same session (e.g. toggling the weight switch, then
+    // sharing again) overwrote the first file in the cache dir. The timestamp
+    // makes every export its own file.
+    const filename = `volyume-progress-${aspect}-${Date.now()}.png`;
     const uri = (FileSystem.cacheDirectory || '') + filename;
     await FileSystem.writeAsStringAsync(uri, b64, { encoding: FileSystem.EncodingType.Base64 });
     return uri;
@@ -652,7 +656,9 @@ export default function BeforeAfterShareSheet({
 
         {MediaLibrary ? (
           <Button
-            title="Save image"
+            // R9/M9 (share-card audit 2026-07-27): action buttons standardise
+            // on "Share image" / "Save to gallery" across the share family.
+            title="Save to gallery"
             icon="download-outline"
             onPress={onSaveToGallery}
             disabled={busy || !pairReady}

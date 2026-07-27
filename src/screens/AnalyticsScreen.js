@@ -44,7 +44,10 @@ const STREAK_MILESTONE_COPY = {
   4: '4 weeks of showing up.',
   12: '12 weeks of showing up. That\'s a habit.',
   26: 'Half a year of showing up.',
-  52: 'A year of showing up. Few do that.',
+  // R9/L5 (share-card audit 2026-07-27): "Few do that" compared the user
+  // against other people, on a card family whose stated principle
+  // (greatWeek.js) is never a comparison to others.
+  52: 'A year of showing up.',
 };
 
 // Severity → icon + color mapping (jargon-free UI)
