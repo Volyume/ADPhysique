@@ -31,10 +31,22 @@ const CLAMP = 0;
 const PALETTE = {
   bg0: '#0D0D0D', bg1: '#141413', bg2: '#191917',
   surface: '#222220', surface2: '#2A2A27',
-  border: '#343431', divider: 'rgba(255,255,255,0.06)',
+  // `border` tracks theme.js `border` (#6E6E6E), chosen for 3:1 WCAG 1.4.11.
+  // It previously held #343431, which is theme.js `surface3` -- a fill colour,
+  // not an outline one. Stat-box and chip outlines were near-invisible in the
+  // exported PNG and disappeared entirely under platform re-compression.
+  border: '#6E6E6E', divider: 'rgba(255,255,255,0.06)',
   accent: '#F5A623', gold: '#FFD700',
-  text: '#FFFFFF', textSecondary: '#9E9E9E', textMuted: '#9B9B9B',
+  // textSecondary tracks theme.js `textSecondary`; textMuted tracks theme.js
+  // `textMuted` (#9C9C9C) -- it had drifted by a digit to #9B9B9B.
+  text: '#FFFFFF', textSecondary: '#9E9E9E', textMuted: '#9C9C9C',
 };
+
+// The brand lockup is a fixed fraction of the canvas width on every format, so
+// the logo is identical across square, portrait and story (audit R3).
+const MARK_WIDTH_RATIO = 0.23;
+// How far a 9:16 story footer lifts to clear Instagram's reply bar (audit H2).
+const STORY_SAFE_BOTTOM_RATIO = 0.10;
 
 // Optional user gym photo (SkImage) used as the card background. Set per-render
 // at the top of drawShareCard; single-threaded so a module-level handle is safe.
@@ -75,6 +87,33 @@ function text(canvas, Skia, str, x, y, font, colorStr, align) {
   if (align === 'center') dx = x - measure(font, str) / 2;
   else if (align === 'right') dx = x - measure(font, str);
   canvas.drawText(String(str), dx, y, paintFor(Skia, colorStr, FILL), font);
+}
+
+// Centred text with explicit letter tracking. Skia has no letter-spacing, so
+// the tagline used to fake it with a literal double space inside the string
+// ("SMARTER  TRAINING"), which reads as a typo anywhere the string is reused.
+// Drawing glyph by glyph gives real, tunable tracking.
+function drawTracked(canvas, Skia, str, cx, y, font, colorStr, tracking) {
+  const chars = String(str).split('');
+  const total = chars.reduce((acc, ch) => acc + measure(font, ch), 0)
+    + tracking * Math.max(0, chars.length - 1);
+  let x = cx - total / 2;
+  const paint = paintFor(Skia, colorStr, FILL);
+  for (const ch of chars) {
+    canvas.drawText(ch, x, y, paint, font);
+    x += measure(font, ch) + tracking;
+  }
+}
+
+// Baseline for the label that sits under a hero numeral. Digits with descenders
+// (commas in "1,240,000") struck straight through labels placed at a flat
+// offset -- rendered and confirmed on the session and milestone cards. The
+// weekly card already solved this; the formula lives here now so all four
+// layouts share one rule (audit R4/H3).
+function heroLabelBaseline(heroBaseline, heroFont, isSquare, s) {
+  return heroBaseline
+    + Math.round(heroFont.getSize() * 0.24)
+    + Math.round((isSquare ? 16 : 22) * s);
 }
 
 function fillRect(canvas, Skia, x, y, w, h, colorStr) {
@@ -165,25 +204,54 @@ function drawFooter(canvas, Skia, W, H, pad, isSquare, s, font, wordmark) {
   // tagline, and the amber accent underline. Sized so the logo reads as the
   // logo (wordmark ~23% of the card width), aligned with the rest of the card.
   const footerH = Math.round((isSquare ? 162 : 250) * s);
-  const fy = H - footerH;
+  // On a 9:16 story the footer sat in the last 250px of the canvas, which is
+  // exactly where Instagram overlays its reply bar and gesture area -- so the
+  // logo, tagline and URL were the FIRST things a viewer lost (audit H2). Lift
+  // the whole block clear of that band. Square is unaffected.
+  const storyLift = isSquare ? 0 : Math.round(H * STORY_SAFE_BOTTOM_RATIO);
+  const fy = H - footerH - storyLift;
   fillRect(canvas, Skia, pad, fy, W - pad * 2, Math.max(1, Math.round(1 * s)), PALETTE.divider);
 
-  const markH = Math.round((isSquare ? 66 : 90) * s);
+  // ONE lockup, ONE relative size, on every format (share-card audit R3). This
+  // used to be `isSquare ? 66 : 90`, which made the mark 22.8% of the width on
+  // square and 31.1% on story -- a 36% jump between formats of the same card,
+  // and half of the reported "some have the logo ... depending on the sizing".
+  // Deriving the width as a fraction of the canvas keeps the brand identical
+  // everywhere regardless of the asset's pixel dimensions.
+  const markW = W * MARK_WIDTH_RATIO;
+  const hasMark = !!(wordmark && wordmark.width && wordmark.height && wordmark.width() && wordmark.height());
+  const markH = hasMark
+    ? Math.round(markW / (wordmark.width() / wordmark.height()))
+    : Math.round((isSquare ? 66 : 90) * s);
   const markY = fy + Math.round((isSquare ? 26 : 36) * s);
-  if (wordmark && wordmark.width && wordmark.height) {
-    const mw = markH * (wordmark.width() / wordmark.height());
+  // No fake wordmark. This used to draw the plain system-font word "Volyume"
+  // when the asset was missing, which shipped an off-brand card that LOOKED
+  // deliberate -- the reported "some don't have the logo". The screen now
+  // refuses to export until the mark has loaded (ShareCardScreen `cardReady`),
+  // so in the app this branch is unreachable; it exists only so the Node render
+  // harness and layout tests, which pass no wordmark, still lay out and do not
+  // throw. Space is reserved either way so the footer geometry never shifts.
+  if (hasMark) {
     const p = Skia.Paint(); p.setAntiAlias(true);
-    canvas.drawImageRect(wordmark, Skia.XYWHRect(0, 0, wordmark.width(), wordmark.height()), Skia.XYWHRect((W - mw) / 2, markY, mw, markH), p);
-  } else {
-    text(canvas, Skia, 'Volyume', W / 2, markY + markH * 0.78, font(Math.round(markH * 0.72 / s), 'bold'), PALETTE.text, 'center');
+    canvas.drawImageRect(
+      wordmark,
+      Skia.XYWHRect(0, 0, wordmark.width(), wordmark.height()),
+      Skia.XYWHRect((W - markW) / 2, markY, markW, markH),
+      p,
+    );
   }
 
   const taglineY = markY + markH + Math.round((isSquare ? 34 : 44) * s);
-  text(canvas, Skia, 'SMARTER  TRAINING', W / 2, taglineY, font(isSquare ? 20 : 28), PALETTE.accent, 'center');
+  // Explicit tracking rather than a literal double space, which read as a typo
+  // and broke the moment the string was copied anywhere else (audit L1).
+  drawTracked(canvas, Skia, 'SMARTER TRAINING', W / 2, taglineY, font(isSquare ? 20 : 28), PALETTE.accent, Math.round(6 * s));
   const accW = (W - pad * 2) * 0.4;
   fillRect(canvas, Skia, (W - accW) / 2, taglineY + Math.round((isSquare ? 14 : 18) * s), accW, Math.round(3 * s), PALETTE.accent);
 
-  if (!isSquare) text(canvas, Skia, 'volyume.app', W / 2, H - Math.round(36 * s), font(22, 'regular'), PALETTE.textMuted, 'center');
+  // The URL now prints on EVERY format, not only story (audit R3), and is
+  // positioned inside the footer block so it travels with the story lift
+  // instead of being pinned to the canvas bottom.
+  text(canvas, Skia, 'volyume.app', W / 2, fy + footerH - Math.round(36 * s), font(22, 'regular'), PALETTE.textMuted, 'center');
 }
 
 function drawIntensityBadge(canvas, Skia, W, y, tier, s, font) {
@@ -286,9 +354,10 @@ function drawSession(canvas, Skia, W, H, p, s, font, wordmark) {
   const heroNum = fitFont(null, heroValue, W - pad * 2, p.isSquare ? 140 : 220, (px) => font(px));
   const heroY = p.isSquare ? y + heroNum.getSize() : Math.round(H * 0.42);
   text(canvas, Skia, heroValue, W / 2, heroY, heroNum, heroColor, 'center');
-  text(canvas, Skia, heroLabel, W / 2, heroY + Math.round((p.isSquare ? 30 : 50) * s), font(p.isSquare ? 18 : 24), PALETTE.textSecondary, 'center');
+  const heroLabelY = heroLabelBaseline(heroY, heroNum, p.isSquare, s);
+  text(canvas, Skia, heroLabel, W / 2, heroLabelY, font(p.isSquare ? 18 : 24), PALETTE.textSecondary, 'center');
 
-  y = heroY + Math.round((p.isSquare ? 60 : 90) * s);
+  y = heroLabelY + Math.round((p.isSquare ? 30 : 40) * s);
   y = drawIntensityBadge(canvas, Skia, W, y, p.intensityTier, s, font);
 
   const stats = [
@@ -378,11 +447,18 @@ function drawMilestone(canvas, Skia, W, H, p, s, font, wordmark) {
   y += Math.round(24 * s);
 
   const heroValue = String(p.heroValue != null ? p.heroValue : '');
-  const heroNum = fitFont(null, heroValue, W - pad * 2, p.isSquare ? 140 : 220, (px) => font(px));
-  const heroY = p.isSquare ? y + heroNum.getSize() : Math.round(H * 0.42);
-  text(canvas, Skia, heroValue, W / 2, heroY, heroNum, PALETTE.accent, 'center');
-  if (p.heroUnit) text(canvas, Skia, String(p.heroUnit).toUpperCase(), W / 2, heroY + Math.round((p.isSquare ? 30 : 50) * s), font(p.isSquare ? 18 : 24), PALETTE.textSecondary, 'center');
-  y = heroY + Math.round((p.isSquare ? 64 : 100) * s);
+  // An empty hero used to reserve the full hero band anyway, leaving a ~300px
+  // void between the title and the caption (audit H4). Skip the band entirely.
+  if (heroValue) {
+    const heroNum = fitFont(null, heroValue, W - pad * 2, p.isSquare ? 140 : 220, (px) => font(px));
+    const heroY = p.isSquare ? y + heroNum.getSize() : Math.round(H * 0.42);
+    text(canvas, Skia, heroValue, W / 2, heroY, heroNum, PALETTE.accent, 'center');
+    const unitY = heroLabelBaseline(heroY, heroNum, p.isSquare, s);
+    if (p.heroUnit) text(canvas, Skia, String(p.heroUnit).toUpperCase(), W / 2, unitY, font(p.isSquare ? 18 : 24), PALETTE.textSecondary, 'center');
+    y = (p.heroUnit ? unitY : heroY) + Math.round((p.isSquare ? 34 : 46) * s);
+  } else {
+    y += Math.round(8 * s);
+  }
 
   if (p.caption) {
     const capFont = font(p.isSquare ? 22 : 28, 'regular');
@@ -453,7 +529,7 @@ function drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark) {
   if (p.bestLift && p.bestLift.weight) {
     const bl = p.bestLift;
     text(canvas, Skia, 'BEST LIFT', pad, y, font(p.isSquare ? 18 : 22), PALETTE.textMuted, 'left');
-    if (bl.isNewBest) text(canvas, Skia, 'NEW PB', W - pad, y, font(p.isSquare ? 18 : 22), PALETTE.gold, 'right');
+    if (bl.isNewBest) text(canvas, Skia, 'NEW PR', W - pad, y, font(p.isSquare ? 18 : 22), PALETTE.gold, 'right');
     y += Math.round((p.isSquare ? 40 : 52) * s);
     const liftStr = `${bl.exerciseName} · ${bl.weight} ${bl.units || 'kg'} × ${bl.reps}`;
     const blFont = fitFont(null, liftStr, W - pad * 2, p.isSquare ? 42 : 54, (px) => font(px));

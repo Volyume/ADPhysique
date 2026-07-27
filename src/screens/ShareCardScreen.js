@@ -25,6 +25,7 @@ import SectionLabel from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
 import { drawShareCard, cardHeight } from '../lib/shareCard/drawShareCard';
 import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
+import usePhotoSuppression from '../hooks/usePhotoSuppression';
 
 // Optional native modules, guarded so the screen still mounts (e.g. in tests
 // or before a rebuild) without them; the card just can't render/share until the
@@ -74,8 +75,21 @@ export default function ShareCardScreen({ route }) {
     units = 'kg',
     // Set by CoachOutputScreen when an ED-pattern flag is open OR calm mode is
     // active: all weight/progress language is stripped from the recap card.
-    suppress = false,
+    // Read `suppressParam` rather than `suppress` -- the effective value is
+    // computed below and must never be taken from the route alone.
+    suppress: suppressParam = false,
   } = route.params || {};
+
+  // ED-safety gate, fail closed. A route param defaulting to false meant any
+  // caller that forgot to pass it -- or a lost param on a remount -- exported
+  // the weekly card's progress hero with no gate at all. An ED-safety gate must
+  // not depend on a caller remembering something. This hook reads the open
+  // ED-pattern flag and calm mode at source, starts SUPPRESSED before the async
+  // read resolves, and suppresses on a read failure of either input, matching
+  // the sibling Pro surface (BeforeAfterShareSheet). OR-ed with the param so a
+  // caller can still force suppression, never clear it.
+  const suppressedLive = usePhotoSuppression();
+  const suppress = suppressParam || suppressedLive;
 
   // Session leads whenever session data is present (a workout share opens as the
   // session card even when it also carries a PR). A standalone "Share this PR"
@@ -134,6 +148,11 @@ export default function ShareCardScreen({ route }) {
 
   // Load the wordmark once as an SkImage for the card footer.
   const [wordmark, setWordmark] = useState(null);
+  // Nothing may export until the card can be drawn WITH its brand mark. The
+  // wordmark loads asynchronously, so without this the Share and Save buttons
+  // were live during the window where the footer would fall back to plain
+  // system text -- an unbranded card, shipped silently.
+  const cardReady = !!(Skia && typefaces && wordmark);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -224,7 +243,12 @@ export default function ShareCardScreen({ route }) {
 
   // ── ONE renderer for preview + export ──────────────────────────────────────
   const renderCardBase64 = useCallback((width) => {
-    if (!Skia || !typefaces) return null;
+    // R1 (share-card audit 2026-07-27): `wordmark` is loaded asynchronously,
+    // so the first render always ran with it null and drawShareCard silently
+    // fell back to plain system-font text instead of the brand mark. That is
+    // the reported "some don't have the logo". A card that cannot be branded
+    // must not render at all, let alone export.
+    if (!Skia || !typefaces || !wordmark) return null;
     const params = buildParams();
     const H = cardHeight(width, params.isSquare);
     const surface = Skia.Surface.MakeOffscreen(width, H);
@@ -304,7 +328,7 @@ export default function ShareCardScreen({ route }) {
       toast.show("Saving to your gallery isn't available on your device.", { variant: 'error', duration: 5000 });
       return;
     }
-    if (!typefaces) {
+    if (!typefaces || !wordmark) {
       toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
       return;
     }
@@ -340,7 +364,7 @@ export default function ShareCardScreen({ route }) {
       toast.show("Story sharing isn't available on your device.", { variant: 'error', duration: 5000 });
       return;
     }
-    if (!typefaces) {
+    if (!typefaces || !wordmark) {
       toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
       return;
     }
@@ -543,7 +567,7 @@ export default function ShareCardScreen({ route }) {
           icon="logo-instagram"
           trailingIcon="logo-facebook"
           onPress={handleShareToStories}
-          disabled={sharingToStories}
+          disabled={sharingToStories || !cardReady}
           loading={sharingToStories}
           accessibilityLabel="Share to Instagram or Facebook Story"
           variant="outline"
@@ -558,7 +582,7 @@ export default function ShareCardScreen({ route }) {
           title="Save to gallery"
           icon="download-outline"
           onPress={handleSaveToGallery}
-          disabled={savingToGallery}
+          disabled={savingToGallery || !cardReady}
           loading={savingToGallery}
           accessibilityLabel="Save to gallery"
           variant="outline"

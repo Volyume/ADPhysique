@@ -34,6 +34,14 @@ jest.mock('expo-haptics', () => ({
   ImpactFeedbackStyle: { Light: 'Light', Medium: 'Medium', Heavy: 'Heavy' },
   NotificationFeedbackType: { Success: 'Success', Warning: 'Warning', Error: 'Error' },
 }));
+// The footer wordmark is loaded through expo-asset. Without it the screen
+// cannot brand the card, and export is now deliberately BLOCKED in that state
+// (share-card audit R1) -- so the branded path has to be mocked for these
+// export tests to exercise what a real user actually gets.
+jest.mock('expo-asset', () => ({
+  Asset: { fromModule: () => ({ downloadAsync: async () => {}, localUri: 'file:///wordmark.png', uri: 'file:///wordmark.png' }) },
+}));
+
 jest.mock('expo-file-system/legacy', () => ({
   cacheDirectory: 'file:///cache/',
   EncodingType: { Base64: 'base64' },
