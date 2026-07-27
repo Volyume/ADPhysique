@@ -19,6 +19,7 @@ import Chip from '../components/Chip';
 import { getAllExercises, createWorkout } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { suggestRestSeconds } from '../lib/restSuggest';
+import { parseDecimalInput, parseIntegerInput } from '../lib/parseDecimalInput';
 import { generateTravelPlan } from '../lib/travelMode';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -101,6 +102,40 @@ export default function BuildWorkoutScreen({ navigation }) {
 
   function updateField(key, field, value) {
     setExercises(prev => prev.map(e => e.key === key ? { ...e, [field]: value } : e));
+  }
+
+  // Raw in-progress text for the numeric fields, keyed `${exerciseKey}:${field}`
+  // (pre-release sweep 2026-07-27, B2). These inputs are controlled off the
+  // NUMBER, so parsing on every keystroke made them unusable: clearing the box
+  // ran `parseInt('') || previous`, which restored the old value instantly, and
+  // typing "2." collapsed to "2" before the next digit landed -- so a value
+  // could be neither cleared and retyped nor given a decimal. Hold the raw
+  // string while the user is typing and commit only what parses, exactly as
+  // SetEntry.js does.
+  const [numDrafts, setNumDrafts] = useState({});
+
+  function numValue(key, field, modelValue) {
+    const draft = numDrafts[`${key}:${field}`];
+    return draft !== undefined ? draft : modelValue;
+  }
+
+  function onNumChange(key, field, raw, { integer = false, min = null } = {}) {
+    setNumDrafts(prev => ({ ...prev, [`${key}:${field}`]: raw }));
+    const parsed = integer ? parseIntegerInput(raw) : parseDecimalInput(raw);
+    if (Number.isFinite(parsed) && (min === null || parsed >= min)) {
+      updateField(key, field, parsed);
+    }
+  }
+
+  // Drop the draft on blur so the field re-renders from the committed model
+  // (and an abandoned, unparseable entry reverts rather than sticking).
+  function onNumBlur(key, field) {
+    setNumDrafts(prev => {
+      if (!(`${key}:${field}` in prev)) return prev;
+      const next = { ...prev };
+      delete next[`${key}:${field}`];
+      return next;
+    });
   }
 
   function setExerciseSets(key, value) {
@@ -283,8 +318,9 @@ export default function BuildWorkoutScreen({ navigation }) {
                     containerStyle={styles.repFieldContainer}
                     fieldStyle={styles.repField}
                     inputStyle={[styles.repInput, live.repInput]}
-                    value={String(item.repsMin)}
-                    onChangeText={v => updateField(item.key, 'repsMin', parseInt(v) || item.repsMin)}
+                    value={numValue(item.key, 'repsMin', String(item.repsMin))}
+                    onChangeText={v => onNumChange(item.key, 'repsMin', v, { integer: true, min: 1 })}
+                    onBlur={() => onNumBlur(item.key, 'repsMin')}
                     keyboardType="number-pad"
                     maxLength={3}
                     accessibilityLabel="Minimum reps"
@@ -294,8 +330,9 @@ export default function BuildWorkoutScreen({ navigation }) {
                     containerStyle={styles.repFieldContainer}
                     fieldStyle={styles.repField}
                     inputStyle={[styles.repInput, live.repInput]}
-                    value={String(item.repsMax)}
-                    onChangeText={v => updateField(item.key, 'repsMax', parseInt(v) || item.repsMax)}
+                    value={numValue(item.key, 'repsMax', String(item.repsMax))}
+                    onChangeText={v => onNumChange(item.key, 'repsMax', v, { integer: true, min: 1 })}
+                    onBlur={() => onNumBlur(item.key, 'repsMax')}
                     keyboardType="number-pad"
                     maxLength={3}
                     accessibilityLabel="Maximum reps"
@@ -329,8 +366,9 @@ export default function BuildWorkoutScreen({ navigation }) {
                   containerStyle={styles.weightFieldContainer}
                   fieldStyle={styles.weightField}
                   inputStyle={[styles.weightInput, live.weightInput]}
-                  value={item.startingWeight > 0 ? String(item.startingWeight) : ''}
-                  onChangeText={v => updateField(item.key, 'startingWeight', parseFloat(v) || 0)}
+                  value={numValue(item.key, 'startingWeight', item.startingWeight > 0 ? String(item.startingWeight) : '')}
+                  onChangeText={v => onNumChange(item.key, 'startingWeight', v, { min: 0 })}
+                  onBlur={() => onNumBlur(item.key, 'startingWeight')}
                   placeholder="0"
                   placeholderTextColor={t.colors.textMuted}
                   accessibilityLabel={`Starting weight in ${units}`}

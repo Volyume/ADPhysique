@@ -19,6 +19,7 @@
  * British English; no marketing absolutes.
  */
 import { todayLocalKey } from '../lib/dayKey';
+import { parseDecimalInput } from '../lib/parseDecimalInput';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
@@ -238,11 +239,36 @@ export default function RecipeBuilderScreen({ navigation, route }) {
     setIngredients((prev) => prev.filter((_, idx) => idx !== i));
   }
 
+  // Raw in-progress quantity text, keyed by ingredient index (pre-release sweep
+  // 2026-07-27, B2). The field is controlled off the NUMBER, so coercing on
+  // every keystroke made a fractional quantity impossible to type: "2." became
+  // Number("2.") === 2, the field re-rendered as "2", and the decimal point the
+  // user had just typed vanished before the next digit landed.
+  const [qtyDrafts, setQtyDrafts] = useState({});
+
+  function qtyValue(i, modelValue) {
+    return qtyDrafts[i] !== undefined ? qtyDrafts[i] : modelValue;
+  }
+
   function onChangeQty(i, raw) {
-    // Filter to digits and a single decimal so a stray character can't turn the
-    // whole macro preview into NaN.
-    const q = Number(raw.replace(/[^0-9.]/g, '')) || 0;
+    // Filter to digits and separators so a stray character can't turn the whole
+    // macro preview into NaN. The comma survives the filter and is normalised
+    // by parseDecimalInput, so a comma-locale keyboard works (B1).
+    const cleaned = raw.replace(/[^0-9.,]/g, '');
+    setQtyDrafts((prev) => ({ ...prev, [i]: cleaned }));
+    const parsed = parseDecimalInput(cleaned);
+    const q = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
     setIngredients((prev) => prev.map((ing, idx) => idx === i ? { ...ing, quantity_g: q } : ing));
+  }
+
+  // Drop the draft on blur so the field re-renders from the committed value.
+  function onBlurQty(i) {
+    setQtyDrafts((prev) => {
+      if (!(i in prev)) return prev;
+      const next = { ...prev };
+      delete next[i];
+      return next;
+    });
   }
 
   const canSave = name.trim().length > 0 && Number(totalServings) > 0 && !saving;
@@ -450,8 +476,9 @@ export default function RecipeBuilderScreen({ navigation, route }) {
                 ) : null}
               </View>
               <TextField
-                value={String(ing.quantity_g ?? 0)}
+                value={qtyValue(i, String(ing.quantity_g ?? 0))}
                 onChangeText={(v) => onChangeQty(i, v)}
+                onBlur={() => onBlurQty(i)}
                 surface="surface"
                 keyboardType="decimal-pad"
                 maxLength={5}

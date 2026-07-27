@@ -17,6 +17,9 @@
  * plausible-but-unusual bodies. No I/O and no store reads, so this is safe to
  * unit-test and to import from a screen without pulling in the DB layer.
  */
+// Comma-decimal tolerance on typed input (pre-release sweep 2026-07-27, B1).
+import { parseDecimalInput } from './parseDecimalInput';
+
 import { stoneLbsToKg, parseBodyWeightToKg } from './units';
 
 // Realistic human ranges. Generous on purpose (see header).
@@ -29,20 +32,20 @@ export const CIRCUMFERENCE_MAX_CM = 300;
 
 // Body weight in kg: finite, positive, within a realistic human range.
 export function isValidBodyWeightKg(kg) {
-  const n = Number(kg);
+  const n = parseDecimalInput(kg);
   return Number.isFinite(n) && n >= BODY_WEIGHT_MIN_KG && n <= BODY_WEIGHT_MAX_KG;
 }
 
 // Body fat as a percentage: finite, within a realistic range.
 export function isValidBodyFatPercent(pct) {
-  const n = Number(pct);
+  const n = parseDecimalInput(pct);
   return Number.isFinite(n) && n >= BODY_FAT_MIN_PCT && n <= BODY_FAT_MAX_PCT;
 }
 
 // A body circumference in cm: finite, positive (>= 1cm), within a realistic
 // range. Rejects negatives, zero and absurd values.
 export function isValidCircumferenceCm(cm) {
-  const n = Number(cm);
+  const n = parseDecimalInput(cm);
   return Number.isFinite(n) && n >= CIRCUMFERENCE_MIN_CM && n <= CIRCUMFERENCE_MAX_CM;
 }
 
@@ -95,7 +98,7 @@ export function validateBodyMetricForm(form, { bwu } = {}) {
   // Body fat %. Stored with its source so a future scale/scan import can be
   // told apart from a typed-in value.
   if (f.body_fat !== '' && f.body_fat != null) {
-    const bf = parseFloat(f.body_fat);
+    const bf = parseDecimalInput(f.body_fat);
     if (!isValidBodyFatPercent(bf)) {
       return { ok: false, message: 'That body fat looks off. Enter a percentage between 1 and 80.' };
     }
@@ -107,7 +110,7 @@ export function validateBodyMetricForm(form, { bwu } = {}) {
   // Circumference measurements (cm).
   for (const { key, dbField, label } of CIRCUMFERENCE_FIELDS) {
     if (f[key] !== '' && f[key] != null) {
-      const n = parseFloat(f[key]);
+      const n = parseDecimalInput(f[key]);
       if (!isValidCircumferenceCm(n)) {
         return { ok: false, message: `That ${label} measurement looks off. Enter a realistic figure in cm.` };
       }

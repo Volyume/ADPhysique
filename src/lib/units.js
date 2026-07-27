@@ -9,8 +9,12 @@
 
 // ─── Conversions ──────────────────────────────────────────────────────────────
 
+// A typed number may use a comma decimal separator on a comma-locale device
+// (pre-release sweep 2026-07-27, B1). parseFloat would silently truncate it.
+import { parseDecimalInput, parseIntegerInput } from './parseDecimalInput';
+
 export function stoneLbsToKg(stone, lbs = 0) {
-  const totalLbs = (parseInt(stone, 10) || 0) * 14 + (parseFloat(lbs) || 0);
+  const totalLbs = (parseIntegerInput(stone) || 0) * 14 + (parseDecimalInput(lbs) || 0);
   return totalLbs * 0.453592;
 }
 
@@ -49,9 +53,9 @@ export function parseBodyWeightToKg(value, bodyWeightUnits, stoneLbsExtra = '0')
     return stoneLbsToKg(value, stoneLbsExtra);
   }
   if (bodyWeightUnits === 'lbs') {
-    return lbsToKg(parseFloat(value));
+    return lbsToKg(parseDecimalInput(value));
   }
-  return parseFloat(value); // kg
+  return parseDecimalInput(value); // kg
 }
 
 // ─── Formatting kg → display string ──────────────────────────────────────────
@@ -122,5 +126,5 @@ export function usesImperialHeight(bodyWeightUnits) {
 }
 
 export function ftInToCm(ft, inches) {
-  return Math.round(((parseInt(ft, 10) || 0) * 12 + (parseInt(inches, 10) || 0)) * 2.54);
+  return Math.round(((parseIntegerInput(ft) || 0) * 12 + (parseIntegerInput(inches) || 0)) * 2.54);
 }
