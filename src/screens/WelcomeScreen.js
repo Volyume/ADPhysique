@@ -32,7 +32,7 @@ const TRIAL_BULLETS = [
 
 const AFTER_TRIAL_BULLETS = [
   'Unlimited workout logging',
-  'Exercise library and Personal Records',
+  'Exercise library and personal records',
   'Plan library and create your own plans',
   'Training blocks and full progress stats',
 ];

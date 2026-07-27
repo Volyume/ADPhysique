@@ -2157,7 +2157,24 @@ code, not a user-facing trust breaker. The verification error was checking
 that a navigate() call existed without checking the conditional wrapping it.
 Recorded so the false finding does not outlive the session.
 
-STILL OPEN, FOUNDER'S WORD NEEDED: PR versus PB. Both are live in user copy
-(PR on the logger, coach output and Lifts; personal best on Year of Lifts,
-Progress and the cascade gate). CLAUDE.md itself says "PBs"; the founder said
-"PR" in chat. Not resolved unilaterally.
+RESOLVED (founder 2026-07-23): PR, not PB. Evidence was the repo's own
+competitor teardowns -- Hevy ships "explicit PR callouts" (cited to
+help.hevyapp.com) and JEFIT ships "PR tracking" -- plus the term of art in
+bodybuilding and strength culture, which is PR worldwide including the UK.
+The lead's earlier PB recommendation rested on British English, but that rule
+governs spelling and voice (colour, behaviour, optimise), not domain jargon;
+"PR" is not an Americanism the way "color" is. Standard form is now "personal
+record" in prose and headings, "PR"/"PRs" in chips and badges. CLAUDE.md's
+free-tier list is corrected from "PBs" to "PRs" so a later session cannot
+reverse it.
+
+NOT swept, deliberately, and each verified in place:
+- AnalyticsScreen's longest-run line ("A new personal best. 12 weeks running,
+  your longest yet") is a CONSISTENCY STREAK record, not a lift. "A new PR"
+  reads wrong for a streak, so it keeps "personal best".
+- Every PB token in telemetry/events.js, database.js and partners/* is an
+  event name, column or code comment (e.g. longest_run_pb_reached), not copy.
+  Renaming those would break the analytics and partner wire contracts.
+- ED check before sweeping the chart marker: only LiftProgressScreen passes
+  highlightIndices, so bodyweight charts never carry a record marker. A
+  bodyweight "record" would have been an ED-safety problem; there is none.

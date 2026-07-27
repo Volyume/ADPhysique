@@ -120,7 +120,7 @@ describe('great-week pipeline — real engine → trigger → card → pixels', 
   test('a non-cut (lean bulk) week leads with the LIFT exactly, never a bodyweight figure', () => {
     const out = runWeeklyCoach(baseInputs({ goalPhase: 'mild_bulk', morningWeights: trendSharp(80, 0.15), bodyweightKg: 80, prsThisWeek: 2 }));
     const p = buildWeeklyRecapParams(out, { units: 'kg', bestLift: LIFT });
-    expect(p.hero).toEqual({ heading: 'Barbell Bench Press', value: '100 kg × 5', context: 'new personal best' });
+    expect(p.hero).toEqual({ heading: 'Barbell Bench Press', value: '100 kg × 5', context: 'new personal record' });
     expect(p.coachLine).not.toMatch(/lost|gained/);     // no weight-change language on a bulk
     if (env) expect(renderToBytes(p).length).toBeGreaterThan(2000);
   });

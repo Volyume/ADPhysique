@@ -40,7 +40,7 @@ const PRO_PERKS = [
 const FAQ_ITEMS = [
   {
     q: 'What happens to my logged data if I go back to Free?',
-    a: 'Everything you logged is saved, and will be exactly as you left it if you come back. Your training log, plans and personal bests stay fully usable on Free.',
+    a: 'Everything you logged is saved, and will be exactly as you left it if you come back. Your training log, plans and personal records stay fully usable on Free.',
   },
   {
     q: 'How do I cancel?',
@@ -48,7 +48,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'What stays free forever?',
-    a: 'Workout logging, building your own plans, the exercise library, personal bests and your progress stats. None of it is ever taken away.',
+    a: 'Workout logging, building your own plans, the exercise library, personal records and your progress stats. None of it is ever taken away.',
   },
   {
     q: 'How does the 14-day trial work?',

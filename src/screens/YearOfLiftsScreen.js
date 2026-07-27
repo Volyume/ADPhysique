@@ -164,7 +164,7 @@ export function buildCards(data, units, { neutral = false } = {}) {
       type: 'list',
       icon: 'trophy',
       tone: 'gold',
-      headline: 'Personal bests',
+      headline: 'Personal records',
       subline: 'Estimated max lifts logged this year',
       rows: data.topPRs.slice(0, 5).map(pr => ({
         primary: pr.exerciseName ?? pr.exercise_name,
@@ -248,7 +248,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
   if (data.topPRs?.length > 0) {
     content.push({
       type: 'list', icon: 'trophy', tone: 'gold',
-      headline: 'Personal bests', subline: 'Estimated max lifts this month',
+      headline: 'Personal records', subline: 'Estimated max lifts this month',
       rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
     });
   }
@@ -337,7 +337,7 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
   if (data.topPRs?.length > 0) {
     content.push({
       type: 'list', icon: 'trophy', tone: 'gold',
-      headline: 'Personal bests', subline: 'Estimated max lifts this week',
+      headline: 'Personal records', subline: 'Estimated max lifts this week',
       rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
     });
   }
@@ -395,7 +395,7 @@ export function buildBlockCards(data, units) {
   if (data.prs?.length > 0) {
     cards.push({
       type: 'list', icon: 'trophy', tone: 'gold',
-      headline: 'Personal bests', subline: 'Set this block',
+      headline: 'Personal records', subline: 'Set this block',
       rows: data.prs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
     });
   }
@@ -881,7 +881,7 @@ const styles = StyleSheet.create({
   listHeadline: {
     // Theme gap: no xxl + black type role exists; the raw pair stays (weight
     // preserved). R2 (2026-07-11): list headlines render prose ("Your top
-    // lifts", "Personal bests"), not a pure readout, so no tabular.
+    // lifts", "Personal records"), not a pure readout, so no tabular.
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.black,
     color: colors.textPrimary,

@@ -140,7 +140,7 @@ local/staging only; production requires the exact phrase "run against
 production".
 
 **Free/Pro gating is absolute and binary.** Free: Plan Library, builder,
-workout logging, exercise library, PBs, progress stats. Pro: everything
+workout logging, exercise library, PRs, progress stats. Pro: everything
 nutrition/coaching (food diary, barcode, meal suggestions, targets, macros,
 cardio, check-ins, Precision Coaching, division plans, wearables). Never
 expose Pro to free; never gate a free feature. When in doubt: ask.

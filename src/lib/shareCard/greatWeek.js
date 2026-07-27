@@ -123,7 +123,7 @@ export function buildWeeklyRecapParams(output, { suppress = false, includeProgre
     hero = {
       heading: String(bestLiftBlock.exerciseName || 'best lift'),
       value: `${bestLiftBlock.weight} ${bestLiftBlock.units || 'kg'} × ${bestLiftBlock.reps}`,
-      context: bestLiftBlock.isNewBest ? 'new personal best' : 'your best set this week',
+      context: bestLiftBlock.isNewBest ? 'new personal record' : 'your best set this week',
     };
     bestLiftBlock = null;
   } else if (prs > 0) {

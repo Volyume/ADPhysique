@@ -637,7 +637,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             <Card tone="primary" style={styles.prHighlightCard}>
               <View style={styles.prHighlightHeader}>
                 <Ionicons name="trophy" size={18} color={t.colors.primary} />
-                <SectionLabel tone="muted">Personal bests</SectionLabel>
+                <SectionLabel tone="muted">Personal records</SectionLabel>
               </View>
               <View style={styles.prHighlightRow}>
                 {displayPR && (
@@ -860,9 +860,9 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {/* PRs */}
         {prs.length > 0 && (
           <View style={styles.section}>
-            {/* D88: was "All-time bests" beside a "Personal bests" card on
+            {/* D88: was "All-time bests" beside a "Personal records" card on
                 the same screen, for one list. One name. */}
-            <SectionLabel>Personal bests</SectionLabel>
+            <SectionLabel>Personal records</SectionLabel>
             {prs.slice(0, 5).map((pr) => (
               <Card radius="md" style={styles.prRow} key={pr.id}>
                 <Ionicons

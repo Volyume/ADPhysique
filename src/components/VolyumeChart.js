@@ -25,7 +25,7 @@
 // `interactive` enables the scrub; `formatTooltip(index) => { title, sub }` lets
 // the host phrase the tooltip from its own (dated) data. `highlightIndices`
 // (line variant only) marks personal-best points with a small gold ring, and
-// folds "Personal best" into the scrub announcement for a marked point.
+// folds "Personal record" into the scrub announcement for a marked point.
 
 import React, { useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, AccessibilityInfo } from 'react-native';
@@ -104,7 +104,7 @@ export default function VolyumeChart({
   // CP-5 (scorecard): indices into `data` (line variant only) that earned a
   // personal best. Rendered as a small ring-and-dot marker in the gold trophy
   // token (matching the app's existing PR iconography, e.g. ExerciseDetailScreen's
-  // "Personal bests" card) and folded into the scrub announcement ("Personal
+  // "Personal records" card) and folded into the scrub announcement ("Personal
   // best") where the chart already speaks the scrubbed point. No celebratory
   // copy beyond that: training-performance data, not weight/body, so no
   // ED-suppression gating applies (ED-safety note, CP-5).
@@ -191,7 +191,7 @@ export default function VolyumeChart({
         const tt = formatTooltip(idx);
         if (tt) {
           const isPR = Array.isArray(highlightIndices) && highlightIndices.includes(idx);
-          const announcement = `${tt.title}${tt.sub ? `, ${tt.sub}` : ''}${isPR ? ', Personal best' : ''}`;
+          const announcement = `${tt.title}${tt.sub ? `, ${tt.sub}` : ''}${isPR ? ', Personal record' : ''}`;
           AccessibilityInfo.announceForAccessibility(announcement);
         }
       }
@@ -203,7 +203,7 @@ export default function VolyumeChart({
     if (onScrubIndex) onScrubIndex(null);
   }
 
-  // AX-02 (launch accessibility audit): "date + value, Personal best" for one
+  // AX-02 (launch accessibility audit): "date + value, Personal record" for one
   // point, index into `data` (line variant; `data`/`points` stay index-aligned
   // the same way the existing x-axis label render above already assumes).
   // Prefers the host's own `formatTooltip` (already dated/unit-formatted by
@@ -216,13 +216,13 @@ export default function VolyumeChart({
     const isPR = Array.isArray(highlightIndices) && highlightIndices.includes(idx);
     if (formatTooltip) {
       const tt = formatTooltip(idx);
-      if (tt) return `${tt.title}${tt.sub ? `, ${tt.sub}` : ''}${isPR ? ', Personal best' : ''}`;
+      if (tt) return `${tt.title}${tt.sub ? `, ${tt.sub}` : ''}${isPR ? ', Personal record' : ''}`;
     }
     const d = data[idx] || {};
     const dateText = d.date || d.label || '';
     const valueText = Number.isFinite(d.value) ? `${formatTick(d.value, span)}${yAxisSuffix}` : '';
     const parts = [dateText, valueText].filter(Boolean);
-    return `${parts.join(', ')}${isPR ? ', Personal best' : ''}`;
+    return `${parts.join(', ')}${isPR ? ', Personal record' : ''}`;
   }
   // The series name is folded into the value text itself (not just the
   // container's accessibilityLabel) because TalkBack/VoiceOver commonly only

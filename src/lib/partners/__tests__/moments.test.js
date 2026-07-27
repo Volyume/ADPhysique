@@ -131,7 +131,7 @@ describe('exact B6 copy', () => {
     partnerSignal({ current: { weekStart: String(CUR), completedBlock: 0, hitPb: 1, updatedAt: NOW } });
     const [m] = await getVisibleMoments(ME);
     expect(m.kind).toBe('hit_pb');
-    expect(m.line).toBe('Sam set a new personal best.');
+    expect(m.line).toBe('Sam set a new personal record.');
   });
 
   test('missing partner first name falls back without a raw id', async () => {

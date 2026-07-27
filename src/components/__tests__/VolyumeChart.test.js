@@ -16,7 +16,7 @@
  *                               ring-and-dot marker at each index named in
  *                               `highlightIndices`, out-of-range indices
  *                               are ignored (bounds safety), and the scrub
- *                               announcement folds in "Personal best" for
+ *                               announcement folds in "Personal record" for
  *                               a highlighted point.
  *
  * The derivation of WHICH sessions are PR sessions (CP-5's third pin, the
@@ -196,9 +196,9 @@ describe('CP-5: highlightIndices PR markers', () => {
     expect(goldDots(tree)).toHaveLength(0);
   });
 
-  test('the scrub announcement mechanism folds in "Personal best" for a highlighted point (source-level)', () => {
+  test('the scrub announcement mechanism folds in "Personal record" for a highlighted point (source-level)', () => {
     expect(SOURCE).toMatch(/const isPR = Array\.isArray\(highlightIndices\) && highlightIndices\.includes\(idx\);/);
-    expect(SOURCE).toMatch(/isPR \? ', Personal best' : ''/);
+    expect(SOURCE).toMatch(/isPR \? ', Personal record' : ''/);
   });
 });
 
@@ -260,7 +260,7 @@ describe('AX-02: adjustable chart, accessibilityValue and "View data" list', () 
         accessibilitySummary="Weight trend chart" highlightIndices={[2]}
       />,
     );
-    expect(adjustable(tree).props.accessibilityValue.text).toBe('Weight trend chart. 10 Jan, 79.1, Personal best');
+    expect(adjustable(tree).props.accessibilityValue.text).toBe('Weight trend chart. 10 Jan, 79.1, Personal record');
   });
 
   test('decrement moves the selection backwards and updates accessibilityValue', () => {

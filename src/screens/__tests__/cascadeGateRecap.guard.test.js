@@ -75,7 +75,7 @@ const SRC = fs.readFileSync(path.join(__dirname, '..', 'CascadeGateScreen.js'), 
 describe('buildTrialRecapLine — pure factual line', () => {
   test('normal plurals', () => {
     expect(buildTrialRecapLine({ totalSessions: 12, totalSets: 96, uniqueExercises: 9, prCount: 4 }))
-      .toBe('12 workouts · 96 sets · 9 exercises · 4 personal bests');
+      .toBe('12 workouts · 96 sets · 9 exercises · 4 personal records');
   });
 
   test('singulars', () => {
@@ -84,7 +84,7 @@ describe('buildTrialRecapLine — pure factual line', () => {
       .toBe(null);
     // Exactly at the floor with single set/exercise/PR to exercise the singulars.
     expect(buildTrialRecapLine({ totalSessions: 3, totalSets: 1, uniqueExercises: 1, prCount: 1 }))
-      .toBe('3 workouts · 1 set · 1 exercise · 1 personal best');
+      .toBe('3 workouts · 1 set · 1 exercise · 1 personal record');
   });
 
   test('personal-bests segment omitted at zero or nullish', () => {
@@ -100,7 +100,7 @@ describe('buildTrialRecapLine — pure factual line', () => {
     expect(buildTrialRecapLine({ totalSessions: 2, totalSets: 20, uniqueExercises: 4, prCount: 2 }))
       .toBe(null);
     expect(buildTrialRecapLine({ totalSessions: 3, totalSets: 24, uniqueExercises: 5, prCount: 2 }))
-      .toBe('3 workouts · 24 sets · 5 exercises · 2 personal bests');
+      .toBe('3 workouts · 24 sets · 5 exercises · 2 personal records');
   });
 
   test('no banned outcome/body-change language in any produced line', () => {

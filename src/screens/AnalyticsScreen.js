@@ -431,7 +431,7 @@ export default function AnalyticsScreen({ navigation, route }) {
                   sub="Last 30 days"
                   bars={prSpark.bars}
                   onPress={() => navigation.navigate('LiftProgress')}
-                  accessibilityLabel={`New personal bests. ${prSpark.total} in the last 30 days. Opens lifts.`}
+                  accessibilityLabel={`New personal records. ${prSpark.total} in the last 30 days. Opens lifts.`}
                 />
               </View>
             </View>
@@ -743,7 +743,7 @@ export default function AnalyticsScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* The old full-width "New personal bests" sparkline section moved
+        {/* The old full-width "New personal records" sparkline section moved
             into the half-width New bests card at the top of the dashboard
             (A5); the detail per lift lives on LiftProgress, which that card
             opens. */}

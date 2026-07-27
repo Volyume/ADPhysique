@@ -22,7 +22,7 @@ import {
 const BAD_PR = { exerciseName: 'Barbell bench press', value: 'corrupt', reps: 5 };
 
 function personalBestsRows(cards) {
-  const card = cards.find(c => c.headline === 'Personal bests');
+  const card = cards.find(c => c.headline === 'Personal records');
   return card ? card.rows : null;
 }
 

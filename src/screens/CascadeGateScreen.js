@@ -64,7 +64,7 @@ const WEEK_MS = 7 * 86400000;
  * the personal-bests segment entirely when there are none.
  *
  * @param {{ totalSessions:number, totalSets:number, uniqueExercises:number, prCount:number }} p
- * @returns {string|null} e.g. "12 workouts · 96 sets · 9 exercises · 4 personal bests"
+ * @returns {string|null} e.g. "12 workouts · 96 sets · 9 exercises · 4 personal records"
  */
 export function buildTrialRecapLine({ totalSessions, totalSets, uniqueExercises, prCount } = {}) {
   const sessions = Number(totalSessions) || 0;
@@ -78,7 +78,7 @@ export function buildTrialRecapLine({ totalSessions, totalSets, uniqueExercises,
     plural(sets, 'set', 'sets'),
     plural(exercises, 'exercise', 'exercises'),
   ];
-  if (prs > 0) parts.push(plural(prs, 'personal best', 'personal bests'));
+  if (prs > 0) parts.push(plural(prs, 'personal record', 'personal records'));
   return parts.join(' · ');
 }
 

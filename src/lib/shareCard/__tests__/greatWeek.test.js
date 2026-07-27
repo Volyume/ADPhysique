@@ -108,7 +108,7 @@ describe('buildWeeklyRecapParams — ED-safe by construction', () => {
   test('non-cut week leads with the best lift as the hero', () => {
     const lift = { exerciseName: 'Squat', weight: 140, reps: 3, isNewBest: true, units: 'kg' };
     const p = buildWeeklyRecapParams(out({ goalPhase: 'mod_bulk', trend: { onTarget: true, delta: 0.3 } }), { bestLift: lift });
-    expect(p.hero).toEqual({ heading: 'Squat', value: '140 kg × 3', context: 'new personal best' });
+    expect(p.hero).toEqual({ heading: 'Squat', value: '140 kg × 3', context: 'new personal record' });
     expect(p.bestLift).toBeNull(); // promoted to hero, not duplicated below
   });
 

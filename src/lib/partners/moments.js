@@ -59,7 +59,7 @@ const PRIORITY = { partner_joined: -1, streak_week_kept: 0, completed_block: 1, 
 // exclamation marks.
 const STREAK_LINE = 'Another week you both showed up.';
 const blockLine = (name) => `${name} finished their training block.`;
-const pbLine = (name) => `${name} set a new personal best.`;
+const pbLine = (name) => `${name} set a new personal record.`;
 const joinedLine = (name) => `${name} joined you.`;
 
 /** Deterministic moment id: pair + kind + week key (dayKey/week convention). */
