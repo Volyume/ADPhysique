@@ -527,7 +527,7 @@ export default function ShareCardScreen({ route }) {
           </View>
           <Text style={[styles.privacyNote, live.privacyNote]}>
             {isWeekly
-              ? 'Only this week’s progress, lifts and sessions are shown. Your measurements and private notes are never included.'
+              ? "Only this week's progress, lifts and sessions are shown. Your measurements and private notes are never included."
               : 'Name, bodyweight, measurements and private notes are never included.'}
           </Text>
         </View>

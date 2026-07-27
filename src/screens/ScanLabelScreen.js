@@ -403,12 +403,12 @@ export default function ScanLabelScreen({ navigation, route }) {
           <View style={[styles.choiceScrim, live.choiceScrim]} />
           <View style={[styles.choiceCard, live.choiceCard]}>
             <Text style={[styles.choiceTitle, live.choiceTitle]}>
-              {offline ? 'Couldn’t check the full database' : 'Not in the database yet'}
+              {offline ? "Couldn't check the full database" : 'Not in the database yet'}
             </Text>
             <Text style={[styles.choiceBody, live.choiceBody]}>
               {offline
-                ? 'You’re offline, so only the on-device list was checked. Label scanning still works offline. Whatever you save is kept on this phone.'
-                : 'Fix it once and it’s yours. Scan the label, about 30 seconds, or type it in. The barcode is saved either way, so next time it scans instantly.'}
+                ? "You're offline, so only the on-device list was checked. Label scanning still works offline. Whatever you save is kept on this phone."
+                : "Fix it once and it's yours. Scan the label, about 30 seconds, or type it in. The barcode is saved either way, so next time it scans instantly."}
             </Text>
             <Button title="Scan the label" onPress={() => setArrivalChoice(false)} />
             <Button title="Type it in" variant="tertiary" onPress={gotoManual} />

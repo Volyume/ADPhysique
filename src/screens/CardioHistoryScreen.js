@@ -179,7 +179,8 @@ export default function CardioHistoryScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   function confirmDelete(row) {
-    appAlert('Remove this session?', `${row.activityName}, ${row.durationMin} min.`, [
+    // D88: the confirm restated the item but never said what removing it does.
+    appAlert('Remove this session?', `${row.activityName}, ${row.durationMin} min. This is removed from your history and cannot be undone.`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',

@@ -45,6 +45,12 @@ export function buildOffItems(output, checkin) {
   }
   if (checkin?.calsAdherence === 'untracked') {
     items.push('You did not log your calories.');
+    // D88 audit note: the two branches below are currently UNREACHABLE.
+    // checkinDerive.js only ever writes 'yes' | 'no' | 'untracked', so a user
+    // who misses their target always gets the generic line further down. The
+    // copy is kept because it is correct and ready if calsAdherence is ever
+    // extended to carry direction; that would be a product decision, not a
+    // copy fix, so nothing is wired here.
   } else if (checkin?.calsAdherence === 'under') {
     items.push('You came in under your calorie target.');
   } else if (checkin?.calsAdherence === 'over') {

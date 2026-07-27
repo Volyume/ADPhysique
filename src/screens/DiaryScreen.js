@@ -1238,7 +1238,9 @@ export default function DiaryScreen({ navigation, route }) {
         { variant: ok > 0 ? 'info' : 'error' },
       );
     } else {
-      toast.show(`Copied ${ok} ${ok === 1 ? 'item' : 'items'}.`, { variant: 'success' });
+      // D88: one word for one thing. These rows are "entries" when deleted and
+      // added, so they are entries here too.
+      toast.show(`Copied ${ok} ${ok === 1 ? 'entry' : 'entries'}.`, { variant: 'success' });
     }
   }, [canWrite, userId, selectedDate, load, toast]);
 
@@ -1886,7 +1888,7 @@ export default function DiaryScreen({ navigation, route }) {
       >
         <SectionLabel style={styles.moveTitle}>Save as meal</SectionLabel>
         <Text style={[styles.saveMealHint, live.saveMealHint]}>
-          {saveMealItems?.length ?? 0} {(saveMealItems?.length ?? 0) === 1 ? 'food' : 'foods'} saved together. Name it.
+          {saveMealItems?.length ?? 0} {(saveMealItems?.length ?? 0) === 1 ? 'entry' : 'entries'} saved together. Name it.
         </Text>
         <TextField
           fieldStyle={styles.saveMealInputField}
@@ -1986,11 +1988,11 @@ export default function DiaryScreen({ navigation, route }) {
               style={styles.moveOption}
               onPress={() => { setCopyDays(null); copyFromDate(d.entry_date); }}
               accessibilityRole="button"
-              accessibilityLabel={`Copy ${friendlyDate(d.entry_date)}, ${d.count} ${d.count === 1 ? 'item' : 'items'}`}
+              accessibilityLabel={`Copy ${friendlyDate(d.entry_date)}, ${d.count} ${d.count === 1 ? 'entry' : 'entries'}`}
             >
               <Text style={[styles.moveOptionText, live.moveOptionText]}>{friendlyDate(d.entry_date)}</Text>
               <Text style={[styles.copyRowMeta, live.copyRowMeta]}>
-                {d.count} {d.count === 1 ? 'item' : 'items'} - {toEnergy(Math.round(d.kcal ?? 0), energyUnit)} {energyUnitLabel(energyUnit)}
+                {d.count} {d.count === 1 ? 'entry' : 'entries'} - {toEnergy(Math.round(d.kcal ?? 0), energyUnit)} {energyUnitLabel(energyUnit)}
               </Text>
             </TouchableOpacity>
           ))
