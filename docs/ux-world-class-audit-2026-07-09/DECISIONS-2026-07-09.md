@@ -2099,3 +2099,65 @@ first-ever set of an exercise beats nothing, holding Wave A A1's honest
 first-lift rule). WorkoutBottomBar keeps accessibilityLabel={primaryLabel}
 unchanged per the R4/D64 same-string rule; the trophy is a leading icon only,
 and the record row carries its own spoken label.
+
+## D88 — Copy/design/trust audit remediation (founder GO 2026-07-23)
+
+Five read-only Sonnet lanes audited onboarding/paywall, coaching/check-in,
+food, training and a cross-app terminology sweep. Every finding was verified
+hands-on before acting; unsupported claims were dropped (the cross-app lane
+claimed "PB" appears only in code comments -- false, both PR and PB are live
+in user copy). Founder: "Approve all your fixes."
+
+RESOLVED BY FOUNDER, NO CHANGE: the ProUpgradeScreen trial line stating the
+store "adds another week free" is CORRECT -- founder verbatim: "I have
+configred the stores to give 7 days free." The audit flagged it as a possible
+overclaim against playBilling's server-enforced eligibility comment; the
+founder confirms the store offer is configured. Billing copy left untouched.
+
+APPROVED AND BUILT (presentation and copy only; no engine, no thresholds):
+1. Raw crash text reaching users: ProOnboardingScreen (plan-fail alert and
+   the completion catch-all) and ProGoalSetupScreen (plan-rebuild toast) all
+   interpolated a caught e.message straight into user-facing copy, one of them
+   at the very end of onboarding. The interpolation is dropped; the existing
+   logError calls keep the diagnostics.
+2. First-person machine voice in live coach output: planExplain.js's
+   supportive register said "I have taken ... off your plan". The actor is now
+   "Your coach", per the locked voice doc's actor-naming rule.
+3. Two energy totals on one card: MacroBreakdownSheet rendered the converted
+   figure (toEnergy) beside an Atwater sum hardcoded to "kcal", so a kJ user
+   saw two numbers in two units for one meal. The second figure now converts
+   through the same helper.
+4. En dashes in user copy (banned): NutritionTargetsScreen's estimated range
+   and RoutineDetailScreen's rep range.
+5. One number, two conventions: workout duration ("45m" collapsed vs "45 min"
+   expanded on the same card) and estimated max ("82.5 kg" vs "~93kg" on one
+   screen). Estimated max standardises on the hedged, whole-number form
+   because it is an estimate, never an exact figure.
+6. Terminology drift inside single screens: BuildWorkoutScreen named one
+   action "workout", "training" and "session"; DiaryScreen called the same
+   rows entries, items and foods; ExerciseDetailScreen had "Personal bests"
+   and "All-time bests" for one list.
+7. Destructive confirms that never said what is lost (cardio session removal,
+   and the two divergent discard-workout bodies).
+8. Smaller: curly apostrophes against a straight-apostrophe norm, an
+   unguarded "1 sets" plural, and unreachable under/over calorie branches.
+
+HEALTH SETTINGS -- AUDIT FINDING WITHDRAWN, NO CHANGE MADE. The lead
+initially ruled that SettingsHealthScreen was a reachable "ghost feature"
+(native Health deps absent from package.json and the app config, yet the
+screen still routed and still offering Read morning weight / Write workouts /
+Sync weight now, plus a prompt to install Health Connect). That ruling was
+WRONG and is withdrawn. SettingsScreen gates the row on
+`healthOn = isHealthAvailable()`, and health.js's getIosModule/getAndroidModule
+deliberately always return null (documented, founder 2026-06-30: the
+health-platform permissions were a Google Play review liability), so
+isHealthAvailable() is always false and the row never renders. The feature is
+correctly neutralised and unreachable; the screen and route are inert dead
+code, not a user-facing trust breaker. The verification error was checking
+that a navigate() call existed without checking the conditional wrapping it.
+Recorded so the false finding does not outlive the session.
+
+STILL OPEN, FOUNDER'S WORD NEEDED: PR versus PB. Both are live in user copy
+(PR on the logger, coach output and Lifts; personal best on Year of Lifts,
+Progress and the cascade gate). CLAUDE.md itself says "PBs"; the founder said
+"PR" in chat. Not resolved unilaterally.

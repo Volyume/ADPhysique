@@ -81,7 +81,10 @@ trial/subscription state (`PRO_BETA_ACTIVE = false`). Pro screens wrap in
 `src/lib/errorLog.js` (`logError/logWarn/logInfo`) + `engineTelemetry.js`.
 No PII to any external service.
 
-**Auth.** Apple + Google OAuth ONLY (email/password removed 2026-07-01).
+**Auth.** Apple + Google OAuth, plus email/password (re-added 2026-07-21 on
+founder order for App Review demo accounts and users who prefer email; it is
+ungated and available to everyone). Email/password had been removed
+2026-07-01; do not "restore" that removal without asking.
 No anonymous mode (`docs/IDENTITY_AND_OWNERSHIP_LOCKED.md`).
 
 **Notifications.** `src/lib/notifications/` — scheduler, quiet hours,
