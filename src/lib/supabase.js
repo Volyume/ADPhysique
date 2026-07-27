@@ -13,13 +13,47 @@ import * as SecureStore from 'expo-secure-store';
 // session readable from background once the device has been unlocked since
 // boot, and the item is still hardware-encrypted at rest.
 const KEY_OPTS = { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK };
+
+// An iOS Keychain item keeps the accessibility it was WRITTEN with, so the
+// KEY_OPTS above only govern items this build created. Anyone who signed in
+// before that change still has a WHEN_UNLOCKED session item, which keeps
+// failing exactly as VOLYUME-2E describes however many times we re-read it.
+// Rewriting the value once, on the first read that actually succeeds (so the
+// device is demonstrably unlocked), upgrades the item in place. Guarded per
+// key so this costs one extra write per key per launch, never a loop.
+const _accessibilityUpgraded = new Set();
+async function _upgradeAccessibility(key, value) {
+  if (value == null || _accessibilityUpgraded.has(key)) return;
+  _accessibilityUpgraded.add(key);
+  try { await SecureStore.setItemAsync(key, value, KEY_OPTS); } catch (_) {}
+}
+
+// "User interaction is not allowed" is the Keychain refusing a read on a
+// LOCKED device. It is an expected state, not a defect: the correct response
+// is to leave the session alone until the device is unlocked. It is not
+// evidence that the user is signed out, and logging it at error level is what
+// buried thirteen days of real signal under 1,589 events.
+function _isKeychainLocked(e) {
+  const msg = String(e?.message || e || '');
+  return msg.includes('User interaction is not allowed')
+    || msg.includes('errSecInteractionNotAllowed');
+}
+
 const secureAuthStorage = {
   getItem: async (key) => {
-    try { return await SecureStore.getItemAsync(key, KEY_OPTS); }
+    try {
+      const value = await SecureStore.getItemAsync(key, KEY_OPTS);
+      _upgradeAccessibility(key, value).catch(() => {});
+      return value;
+    }
     catch (e) {
       // Lazy-require errorLog to avoid any import cycle with this module.
       // eslint-disable-next-line global-require
-      try { require('./errorLog').logError('supabase.secureStore.getItem', e); } catch (_) {}
+      try {
+        const log = require('./errorLog');
+        if (_isKeychainLocked(e)) log.logInfo('supabase.secureStore.locked', 'keychain locked, deferring session read');
+        else log.logError('supabase.secureStore.getItem', e);
+      } catch (_) {}
       return null;
     }
   },
@@ -70,10 +104,64 @@ export function getSupabaseClient() {
     } catch (_) {
       _client = rawClient;
     }
+    _bindAutoRefreshToAppState(rawClient);
   } catch (_e) {
     _client = null;
   }
   return _client;
+}
+
+// VOLYUME-2E root fix. autoRefreshToken starts a timer that keeps ticking
+// after the app is backgrounded. Every tick reads the session out of the
+// Keychain, and on a locked phone that read is refused -- so supabase-js
+// carried on with NO user JWT, auth.uid() came back NULL in Postgres, and
+// every RLS policy of the form (auth.uid() = user_id) rejected the write with
+// 42501. That is the whole of VOLYUME-2D/2F/2H/2C/2J/28: user data was being
+// dropped on the floor, not merely logged noisily.
+//
+// This is the documented Supabase React Native pattern: refresh only while the
+// app is in the foreground, where the Keychain is readable by definition.
+// autoRefreshToken stays true so a foreground launch still refreshes
+// immediately even if AppState never fires.
+let _appStateSub = null;
+function _bindAutoRefreshToAppState(client) {
+  if (_appStateSub || !client?.auth?.startAutoRefresh) return;
+  try {
+    // eslint-disable-next-line global-require
+    const { AppState } = require('react-native');
+    _appStateSub = AppState.addEventListener('change', (state) => {
+      try {
+        if (state === 'active') client.auth.startAutoRefresh();
+        else client.auth.stopAutoRefresh();
+      } catch (_) { /* never let lifecycle wiring throw into the app */ }
+    });
+  } catch (_) { /* no AppState (tests, node): leave the default timer alone */ }
+}
+
+// Test seam: lets a suite drop the AppState subscription between runs.
+export function _resetAuthRefreshBindingForTests() {
+  try { _appStateSub?.remove?.(); } catch (_) {}
+  _appStateSub = null;
+}
+
+// Tri-state on purpose: true (token in hand), false (positively established
+// there is no token), or null (could not determine).
+//
+// The distinction matters. Callers gate sync on this, and "I could not check"
+// is NOT evidence that the user is signed out -- treating it as such would
+// silently disable sync for everyone the moment this call became unavailable,
+// which is a far worse failure than the RLS rejections it exists to prevent.
+// Only an answered getSession() with no access token returns false.
+export async function hasLiveSession() {
+  const c = getSupabaseClient();
+  if (!c) return null;
+  try {
+    const { data, error } = await c.auth.getSession();
+    if (error) return null;
+    return !!data?.session?.access_token;
+  } catch (_) {
+    return null;
+  }
 }
 
 // Test seam, mirroring playBilling's injectProvider/_resetForTests pattern.

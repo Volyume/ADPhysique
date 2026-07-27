@@ -40,7 +40,16 @@
 --
 -- APPLIED
 --   Locally:  N/A (cloud-only; nothing in database.js changes)
---   Remotely: PENDING -- awaiting the founder's "run against production"
+--   Remotely: APPLIED 2026-07-27 on the founder's "run against production".
+--             Recorded in the cloud migration history as
+--             migrate_128_apple_review_accounts. Verified after the run: both
+--             rows email-confirmed, email identity present, tier/trial_state
+--             'pro'/'paid_pro' and 'free'/'free', first_run_complete true,
+--             health_data_consent true with exactly one consent_log row each.
+--             The hashes below were re-derived from the issued plaintexts
+--             during that run (the originals did not validate under crypt())
+--             and now match the credentials handed to the founder, so a replay
+--             reproduces working sign-ins rather than dead accounts.
 --
 -- SAFE TO RE-RUN
 --   YES. Every statement is guarded on the account e-mail already existing
@@ -89,10 +98,10 @@ BEGIN
       -- in-database password check and cost us a caught bug in local testing.
       -- $2a$ is understood by both, so the hash stays verifiable from SQL.
       (pro_id,  'appreview.pro@volyume.app',
-       '$2a$10$Lurx2nZN7/dLiEZeVLAcTeI4xanWkHMMbU5W1oTvEoVoUl9kkGbbq',
+       '$2a$10$yOjllftp3TPBKXAKGlUGTu7kOVbO8IssSf6jjZu0HGml3IYAG.MgC',
        'Review', 'pro',  'paid_pro'),
       (free_id, 'appreview.free@volyume.app',
-       '$2a$10$QyO92BLz95toS/IN9RmbjeGdzvkR8YTbvazX.jaClYbH8jSLpS2hq',
+       '$2a$10$8HaQpr8KVDUsihbA15JzVORd9mNYis/.OWJp3MpYYDG/ZZxfsUIAa',
        'Review', 'free', 'free')
     ) AS t(uid, email, pw_hash, first_name, tier, trial_state)
   LOOP

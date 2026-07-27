@@ -179,6 +179,42 @@ function _sentry() {
   try { return require('./sentry'); } catch (_) { return null; }
 }
 
+// Sentry flood guard (triage 2026-07-27, docs/audit/sentry-triage-2026-07-27.md).
+// A single locked phone produced 1,589 copies of one issue in thirteen days,
+// which buried every real defect underneath it. A repeating error tells us
+// nothing the first few copies did not, so each distinct scope+message pair is
+// forwarded at most SENTRY_BURST times per SENTRY_WINDOW_MS.
+//
+// Deliberately bounded to the WIRE to Sentry: the on-device ring buffer and the
+// console still receive every entry, so Settings -> Debug logs remains a
+// complete record and nothing is hidden from the user or from support.
+const SENTRY_WINDOW_MS = 5 * 60 * 1000;
+const SENTRY_BURST = 3;
+const _sentrySeen = new Map();
+
+function _shouldForwardToSentry(scope, message) {
+  const key = `${scope}|${String(message).slice(0, 120)}`;
+  const now = Date.now();
+  const rec = _sentrySeen.get(key);
+  if (!rec || now - rec.first > SENTRY_WINDOW_MS) {
+    _sentrySeen.set(key, { first: now, count: 1 });
+    // Bound the map so a long session with many distinct errors cannot grow it
+    // without limit. Oldest insertion order first, which Map preserves.
+    if (_sentrySeen.size > 200) {
+      const oldest = _sentrySeen.keys().next().value;
+      _sentrySeen.delete(oldest);
+    }
+    return true;
+  }
+  rec.count += 1;
+  return rec.count <= SENTRY_BURST;
+}
+
+// Test seam: suites that assert on Sentry forwarding need a clean slate.
+export function _resetSentryThrottleForTests() {
+  _sentrySeen.clear();
+}
+
 export function logError(scope, error, context) {
   const safeContext = redactPII(context);
   const entry = buildEntry('error', scope, error, safeContext);
@@ -191,7 +227,9 @@ export function logError(scope, error, context) {
   // PII_KEYS list defined here applies on both the local ring buffer
   // AND the wire to Sentry. Without this Sentry would receive the raw
   // tokens, body weights, and notes that the local buffer scrubs.
-  try { _sentry()?.captureError(error ?? new Error(entry.message), { scope, extra: { context: safeContext } }); } catch (_) {}
+  if (_shouldForwardToSentry(entry.scope, entry.message)) {
+    try { _sentry()?.captureError(error ?? new Error(entry.message), { scope, extra: { context: safeContext } }); } catch (_) {}
+  }
   return entry;
 }
 
@@ -202,7 +240,9 @@ export function logWarn(scope, message, context) {
     console.warn(`[${entry.scope}]`, entry.message, safeContext || '');
   }
   pushEntry(entry).catch(() => {});
-  try { _sentry()?.captureWarning(entry.message, { scope, extra: { context: safeContext } }); } catch (_) {}
+  if (_shouldForwardToSentry(entry.scope, entry.message)) {
+    try { _sentry()?.captureWarning(entry.message, { scope, extra: { context: safeContext } }); } catch (_) {}
+  }
   return entry;
 }
 

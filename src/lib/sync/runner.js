@@ -112,6 +112,28 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
       return { status: 'skipped', reason: 'health_consent_unresolved' };
     }
   }
+  // VOLYUME-2D/2F/2H: a signed-in user whose phone was locked could lose the
+  // Supabase session mid-background-run (the Keychain refuses the read). Every
+  // push then went out with no user JWT, auth.uid() was NULL, and RLS rejected
+  // it with 42501 -- the write was LOST, and reported as an error rather than
+  // retried. Refuse to run at all without a live access token: the queue is
+  // left untouched and the next foreground trigger syncs it properly. This is
+  // strictly narrower than the existing auth checks and never drops work.
+  //
+  // Fail OPEN, deliberately: only an explicit `false` (getSession answered and
+  // there was no access token) blocks the run. Anything else -- unavailable,
+  // threw, undefined -- proceeds exactly as before. "I could not check" must
+  // never be allowed to silently switch sync off for everybody.
+  if (userId) {
+    let live = null;
+    try {
+      // eslint-disable-next-line global-require
+      live = await require('../supabase').hasLiveSession();
+    } catch (_) { live = null; }
+    if (live === false) {
+      return { status: 'skipped', reason: 'no_live_session' };
+    }
+  }
   if (_runLock) {
     return { status: 'skipped', reason: 'already_running' };
   }
