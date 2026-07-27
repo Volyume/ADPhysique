@@ -42,6 +42,16 @@ get working connectors. Full context, including why the account seeding is
 shaped the way it is, in the 2026-07-23 resume block of
 `docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md`.
 
+- [ ] **R3-0 FIX THE MIGRATION DEPLOY SECRET (blocks R3-2 and all cloud
+  schema work).** `deploy-migrations.yml` has failed its last five runs at the
+  first step: `SUPABASE_DB_URL` is EMPTY (run id 28527653093, 2026-07-01).
+  The workflow comment claiming the secret is configured is wrong. Add it in
+  repo Settings -> Secrets and variables -> Actions. Separately, the session
+  token has Actions read but NOT write (`run_workflow` -> 403), so dispatch
+  needs either an `actions: write` scope or one founder click. Until this is
+  fixed, NOTHING can reach the production database from here and production
+  stays at migrate_116 with 117-128 pending.
+
 - [ ] **R3-1 Sentry triage, last two weeks.** Org `volyume`, region
   `https://de.sentry.io`. STILL BLOCKED: the Sentry MCP connector reports
   `connected: true` but `enabledInChat: false` and loads no tools, across

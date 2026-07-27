@@ -62,6 +62,41 @@ shaped this way:
   in this repo and must never be committed. If the founder did not save them,
   generate fresh ones. Disable both accounts once review completes.
 
+### ⚠ THE MIGRATION DEPLOY PATH IS BROKEN (diagnosed 2026-07-27, ACT ON THIS)
+
+The founder gave "run against production" for migrate_128. It was NOT applied.
+Two independent blockers, both proven, neither guessed:
+
+1. **The workflow secret is missing.** `.github/workflows/deploy-migrations.yml`
+   has failed on its last FIVE runs (run numbers 6-10, latest 2026-07-01, run
+   id 28527653093), every one at the very first step. Job log, verbatim:
+   `env: SUPABASE_DB_URL:` (empty) then
+   `##[error]SUPABASE_DB_URL is empty.` The workflow's own header comment
+   claims the secret was "already configured per founder, 2026-06-06" -- that
+   comment is WRONG, or the secret was removed since. This is why production
+   sits at migrate_116 while TWELVE files (117-128) are pending, and why every
+   migration to date had to be pasted in by hand.
+   FIX: repo Settings -> Secrets and variables -> Actions -> add
+   `SUPABASE_DB_URL` = the Supabase Postgres connection string (Project
+   Settings -> Database -> Connection string, URI form, INCLUDING the
+   password). Nothing else in the workflow needs changing.
+
+2. **The session token cannot dispatch workflows.** `run_workflow` on
+   deploy-migrations.yml returned `403 Resource not accessible by integration`.
+   Actions READ works (run history and job logs were both retrieved), so this
+   is a missing `actions: write` scope, not connectivity. Either grant that
+   scope or click "Run workflow" once in the GitHub UI after fixing the secret.
+
+WHEN IT RUNS, IT APPLIES ALL TWELVE PENDING FILES (117-128), not just 128 --
+the workflow loops every untracked `migrate_*.sql` (049/059 stay HELD). All
+are required to be additive and idempotent and each runs in a single
+transaction with ON_ERROR_STOP, so a re-apply is a no-op and a failure rolls
+back that file loudly. Check the run log afterwards: migrate_128 ends with a
+verification SELECT that prints the seeded account state.
+
+migrate_128 STATUS: written, reviewed, merged to main, NOT APPLIED. The two
+Apple review accounts DO NOT EXIST yet and will not sign in.
+
 ### WHAT SHIPPED THIS SESSION (all on main, all green)
 
 Device-reported fixes: `d96bec9` Log-button height; `674f98d` eight
