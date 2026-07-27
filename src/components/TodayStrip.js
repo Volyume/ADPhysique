@@ -129,8 +129,6 @@ export default function TodayStrip({
               placeholderTextColor={t.colors.textMuted}
               keyboardType="decimal-pad"
               maxLength={4}
-              returnKeyType="done"
-              onSubmitEditing={submitWeight}
             />
           </View>
         ) : (
@@ -145,8 +143,6 @@ export default function TodayStrip({
               placeholder={bwu}
               placeholderTextColor={t.colors.textMuted}
               keyboardType="decimal-pad"
-              returnKeyType="done"
-              onSubmitEditing={submitWeight}
             />
             <Text style={[styles.unit, live.unit]}>{bwu}</Text>
           </View>

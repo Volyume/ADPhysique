@@ -1,5 +1,5 @@
-import { forwardRef, useState, useContext } from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { forwardRef, useState, useContext, useId } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Keyboard, InputAccessoryView, Platform } from 'react-native';
 import { spacing, radius, withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
@@ -22,6 +22,16 @@ function buildSizes(fs) {
     md: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, fontSize: fs.md, minHeight: 50 },
     lg: { paddingHorizontal: spacing.md, paddingVertical: spacing.md, fontSize: fs.lg, minHeight: 54 },
   };
+}
+
+// Lazy-required so importing TextField -- the base component nearly every
+// screen uses -- does not drag expo-haptics into every test that renders a
+// field. Matches the lazy-require pattern used elsewhere in the codebase.
+function doneFeedback() {
+  try {
+    // eslint-disable-next-line global-require
+    require('../lib/haptics').selection();
+  } catch (_) { /* haptics are best-effort */ }
 }
 
 const TextField = forwardRef(function TextField({
@@ -55,6 +65,14 @@ const TextField = forwardRef(function TextField({
   multiline = false,
   onFocus,
   onBlur,
+  keyboardType,
+  // A1 (pre-release sweep 2026-07-27, LANE A): iOS number-pad/decimal-pad
+  // keyboards have no Return key, so a numeric TextField auto-grows a Done
+  // bar (InputAccessoryView) above the keyboard -- the fix SetEntry.js
+  // pioneered, centralised here so every numeric field in the app inherits
+  // it rather than being born broken. Opt out with noAccessory when a
+  // caller already renders its own bar (so a field never gets two).
+  noAccessory = false,
   ...inputProps
 }, ref) {
   const [focused, setFocused] = useState(false);
@@ -71,6 +89,15 @@ const TextField = forwardRef(function TextField({
   const surfaceColor = SURFACES[surface] || surface;
   const resolvedPlaceholderColor = placeholderTextColor ?? t.colors.textMuted;
   const disabled = editable === false;
+
+  // A1: iOS only (InputAccessoryView is a no-op on Android, which has its
+  // own back gesture -- Android behaviour is unchanged). Mirrors SetEntry's
+  // isIOS / accessoryID / numericAccessory shape exactly.
+  const isIOS = Platform.OS === 'ios';
+  const isNumericPad = keyboardType === 'number-pad' || keyboardType === 'decimal-pad';
+  const wantsAccessory = isIOS && isNumericPad && !noAccessory;
+  const accessoryID = 'volyume-textfield-done-' + useId().replace(/:/g, '');
+  const numericAccessory = wantsAccessory ? { inputAccessoryViewID: accessoryID } : null;
 
   function handleFocus(event) {
     setFocused(true);
@@ -126,10 +153,29 @@ const TextField = forwardRef(function TextField({
           multiline={multiline}
           onFocus={handleFocus}
           onBlur={handleBlur}
+          keyboardType={keyboardType}
+          {...numericAccessory}
           {...inputProps}
         />
         {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
       </View>
+      {/* A1: Done bar over the numeric keypad (iOS only; InputAccessoryView is
+          a no-op on Android). Gives number-pad/decimal-pad fields a one-tap
+          dismiss the OS keyboards do not provide, exactly as SetEntry.js. */}
+      {wantsAccessory && (
+        <InputAccessoryView nativeID={accessoryID}>
+          <View style={[styles.keyboardDoneBar, { backgroundColor: t.colors.surface2, borderTopColor: t.colors.border }]}>
+            <TouchableOpacity
+              onPress={() => { doneFeedback(); Keyboard.dismiss(); }}
+              style={styles.keyboardDoneBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Done, close keyboard"
+            >
+              <Text style={[styles.keyboardDoneText, { ...t.type.bodyStrong, color: t.colors.primary }]}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </InputAccessoryView>
+      )}
     </View>
   );
 });
@@ -169,4 +215,21 @@ const styles = StyleSheet.create({
     minHeight: 96,
     textAlignVertical: 'top',
   },
+  // A1: numeric-keypad Done bar (iOS InputAccessoryView), same shape as
+  // SetEntry.js's keyboardDoneBar/keyboardDoneBtn. Colours come from the
+  // inline live-theme override applied at the call site above.
+  keyboardDoneBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    borderTopWidth: 1,
+  },
+  keyboardDoneBtn: {
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  keyboardDoneText: {},
 });

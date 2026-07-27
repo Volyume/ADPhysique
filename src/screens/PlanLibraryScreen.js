@@ -591,7 +591,12 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   ) : null}
                 </View>
 
-                <Text style={[styles.planName, live.planName]}>{planHeadingName(plan.name)}</Text>
+                {/* D4 (pre-release sweep 2026-07-27, LANE D, ruling SPLIT): cap the
+                    Plan Library CARD at two lines so cards keep a uniform
+                    rhythm in the grid. The Plan Detail heading is a page
+                    title and stays uncapped, that ruling is deliberately
+                    NOT mirrored there. */}
+                <Text style={[styles.planName, live.planName]} numberOfLines={2}>{planHeadingName(plan.name)}</Text>
 
                 {plan.description ? (
                   <Text style={[styles.planDesc, live.planDesc]} numberOfLines={2}>{plan.description}</Text>

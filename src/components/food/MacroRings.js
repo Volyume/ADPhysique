@@ -10,6 +10,13 @@ import useAppStore from '../../store/useAppStore';
 
 const KCAL_SIZE = 132;
 const KCAL_STROKE = 14;
+// D1 (pre-release sweep 2026-07-27, LANE D): the kcal numerals sit inside this
+// hard-coded circle (or right next to it) with no wrap available, so at large
+// OS text sizes an uncapped RollingNumber spilled out of the ring on the
+// most-viewed screen in the app. RollingNumber's maxFontSizeMultiplier prop
+// exists for exactly this (see its header comment); it stayed optional
+// (D6) rather than becoming required, so it is capped here at the call sites.
+const KCAL_MAX_FONT_SCALE = 1.3;
 
 // Adherence-neutral ring colour (founder decision 2026-05-29, reversing the
 // earlier amber/green/amber three-band). The ring shows progress in the brand
@@ -308,12 +315,13 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
                   value={toEnergy(over ? Math.abs(remaining) : remaining, energyUnit)}
                   style={[styles.kcalValue, live.kcalValue]}
                   accessibilityLabel={`${toEnergy(over ? Math.abs(remaining) : remaining, energyUnit)} ${energyWord} ${over ? 'over' : 'left'}`}
+                  maxFontSizeMultiplier={KCAL_MAX_FONT_SCALE}
                 />
                 <Text style={[styles.kcalSubLabel, live.kcalSubLabel]} numberOfLines={1}>{over ? 'over' : 'left'}</Text>
               </>
             ) : (
               <>
-                <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalValue, live.kcalValue]} />
+                <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalValue, live.kcalValue]} maxFontSizeMultiplier={KCAL_MAX_FONT_SCALE} />
                 <Text style={[styles.kcalSubLabel, live.kcalSubLabel]} numberOfLines={1}>{energyUnitLabel(energyUnit)}</Text>
               </>
             )}
@@ -324,7 +332,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
         </View>
         {kcalTarget != null ? (
           <View style={styles.kcalEatenWrap}>
-            <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalEatenValue, live.kcalEatenValue]} />
+            <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalEatenValue, live.kcalEatenValue]} maxFontSizeMultiplier={KCAL_MAX_FONT_SCALE} />
             <Text style={[styles.kcalEatenLabel, live.kcalEatenLabel]}>{`of ${toEnergy(kcalTarget, energyUnit)} ${energyUnitLabel(energyUnit)}`}</Text>
           </View>
         ) : null}

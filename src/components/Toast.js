@@ -26,10 +26,20 @@
 
 import { createContext, useContext, useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, AccessibilityInfo } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { fontWeight, spacing, radius, motion, letterSpacing } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import useTheme from '../hooks/useTheme';
+
+// D2 (pre-release sweep 2026-07-27, LANE D): the real tab bar is a 49pt
+// content zone plus the safe-area bottom inset (VolyumeTabBar.js:127,
+// `49 + insets.bottom`), which is 83pt on every notched iPhone. The host
+// used to pin at a fixed `bottom: 80`, already inside the tab bar there, and
+// worse again on Android three-button navigation. Same treatment as
+// PRCelebration.js's top-inset fix: derive the offset from the real
+// safe-area inset instead of a guessed constant.
+const TAB_BAR_CONTENT_HEIGHT = 49;
 
 const ToastContext = createContext({ show: () => {} });
 
@@ -60,6 +70,7 @@ export function ToastProvider({ children }) {
   const [current, setCurrent] = useState(null);
   const [screenReaderEnabled, setScreenReaderEnabled] = useState(false);
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  const insets = useSafeAreaInsets();
   const t = useTheme();
   // Memoized on t.colors (itself stable across unrelated re-renders — see
   // useTheme.js) so `show`'s useCallback dep below stays stable too, and F7's
@@ -216,7 +227,13 @@ export function ToastProvider({ children }) {
       {current && (
         <Animated.View
           pointerEvents="box-none"
-          style={[styles.host, { opacity, transform: [{ translateY }] }]}
+          style={[
+            styles.host,
+            // D2: clear the real tab bar plus a small visible gap, rather
+            // than the fixed `bottom: 80` that used to sit inside it.
+            { bottom: TAB_BAR_CONTENT_HEIGHT + insets.bottom + spacing.sm },
+            { opacity, transform: [{ translateY }] },
+          ]}
         >
           <View
             style={[
@@ -282,7 +299,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 80, // above tab bar
+    // `bottom` is applied inline from the real tab bar height + safe-area
+    // inset (see render), a fixed value here previously sat inside the tab
+    // bar on notched iPhones and Android three-button nav (D2).
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     zIndex: 9999,

@@ -992,7 +992,6 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               keyboardType="decimal-pad"
               placeholder={`e.g. 100`}
               placeholderTextColor={t.colors.textMuted}
-              returnKeyType="done"
               accessibilityLabel={`Target weight in ${units}`}
             />
 

@@ -1220,7 +1220,11 @@ const styles = StyleSheet.create({
 
   // ── A5 dashboard: training-load hero + sparkline cards ──
   heroEyebrow:   { ...type.label, color: colors.textSecondary },
-  heroValueRow:  { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs, marginTop: spacing.xs },
+  // D3 (pre-release sweep 2026-07-27, LANE D): the numeral is a RollingNumber
+  // TextInput that cannot shrink, so a large tonnage figure (or a large OS
+  // text size) pushed the trailing unit off screen with no way to wrap.
+  // Matches PartnerScreen.js heroRow, which sets the same flexWrap.
+  heroValueRow:  { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
   heroValue:     { ...type.num('display'), color: colors.textPrimary },
   heroUnit:      { ...type.title, color: colors.textSecondary },
   heroSub:       { ...type.num('caption'), color: colors.textMuted, marginTop: spacing.xxs },

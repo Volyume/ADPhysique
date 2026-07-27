@@ -1689,7 +1689,11 @@ export function StatBox({ icon, value, label, tooltip, animateOrder = 0, hero = 
   // the mechanical styles.KEY->styles.KEY, live.KEY substitution elsewhere
   // in this file would otherwise have silently changed numeral's arity
   // without this fix.
-  const numeral = (frozenStyle, liveStyle) => (parsed ? (
+  // D1 (pre-release sweep 2026-07-27, LANE D): optional font-scale ceiling,
+  // passed only for the tonnage HERO numeral below. RollingNumber's
+  // maxFontSizeMultiplier stayed optional (D6) rather than required, this is
+  // the call site that needed capping, the compact statBox numerals did not.
+  const numeral = (frozenStyle, liveStyle, maxFontSizeMultiplier) => (parsed ? (
     <RollingNumber
       value={parsed.num}
       from={0}
@@ -1697,15 +1701,16 @@ export function StatBox({ icon, value, label, tooltip, animateOrder = 0, hero = 
       suffix={parsed.suffix}
       style={[frozenStyle, liveStyle]}
       accessibilityLabel={String(value)}
+      maxFontSizeMultiplier={maxFontSizeMultiplier}
     />
   ) : (
-    <Text style={[frozenStyle, liveStyle]}>{value}</Text>
+    <Text style={[frozenStyle, liveStyle]} maxFontSizeMultiplier={maxFontSizeMultiplier}>{value}</Text>
   ));
 
   if (hero) {
     return (
       <Animated.View style={[styles.heroValueWrap, { opacity, transform: [{ translateY }] }]}>
-        {numeral(styles.heroValue, live.heroValue)}
+        {numeral(styles.heroValue, live.heroValue, 1.3)}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
           <Text style={[styles.heroValueLabel, live.heroValueLabel]}>{label}</Text>
           {tooltip ? <InfoTooltip size={11} text={tooltip} /> : null}

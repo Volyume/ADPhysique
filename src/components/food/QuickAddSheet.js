@@ -92,7 +92,6 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
             placeholderTextColor={t.colors.textMuted}
             accessibilityLabel="Calories"
             autoFocus
-            returnKeyType="done"
             inputStyle={styles.calorieInput}
           />
 
@@ -111,7 +110,6 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
                 placeholder="0"
                 placeholderTextColor={t.colors.textMuted}
                 accessibilityLabel={a11y}
-                returnKeyType="done"
                 containerStyle={styles.macroField}
                 inputStyle={styles.macroInput}
               />

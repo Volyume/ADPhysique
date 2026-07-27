@@ -142,9 +142,13 @@ export async function generateAndSavePlan(userId, profile) {
   try {
     plan = generatePlan({ ...inputs, exerciseLibrary: allExercises });
   } catch (e) {
+    // C1 (pre-release sweep 2026-07-27, LANE C): the raw e.message used to be
+    // interpolated straight into a user-facing toast (PlanUpdateScreen). The
+    // diagnostic still survives here in logError, callers get a fixed calm
+    // code instead of the exception text.
     // eslint-disable-next-line global-require
     try { require('./errorLog').logError('plan.generateAndSave.engineFailed', e, { inputs }); } catch (_) {}
-    return { ok: false, error: `Plan engine failed: ${e?.message ?? 'unknown'}` };
+    return { ok: false, error: 'plan_engine_error' };
   }
   if (!plan?.workouts?.length) return { ok: false, error: 'Plan engine returned no workouts' };
 
@@ -278,7 +282,13 @@ export async function generatePlanDryRun(userId, profile) {
   try {
     plan = generatePlan({ ...inputs, exerciseLibrary: allExercises });
   } catch (e) {
-    return { ok: false, error: `Plan engine failed: ${e?.message ?? 'unknown'}` };
+    // C1 (pre-release sweep 2026-07-27, LANE C): same fix as
+    // generateAndSavePlan's engine-failure branch above, the read-only
+    // dry-run twin had the identical raw-message leak and no logError call
+    // at all, so the diagnostic was being lost outright on this path.
+    // eslint-disable-next-line global-require
+    try { require('./errorLog').logError('plan.dryRun.engineFailed', e, { inputs }); } catch (_) {}
+    return { ok: false, error: 'plan_engine_error' };
   }
   if (!plan?.workouts?.length) return { ok: false, error: 'Plan engine returned no workouts' };
 

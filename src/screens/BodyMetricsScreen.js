@@ -982,7 +982,14 @@ export default function BodyMetricsScreen() {
           reachable above the keyboard, for consistency, no fixed footer
           was found below this scroll. */}
       <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.content}
+        // A2 (pre-release sweep 2026-07-27, LANE A): without this, a tap on
+        // a button while a new-entry field is focused only dismisses the
+        // keyboard -- the user has to tap twice.
+        keyboardShouldPersistTaps="handled"
+      >
 
         {/* E10 read-only lapse views: say plainly what this state is, and keep
             the one honest way out. Calm voice, no shame. */}
@@ -1206,7 +1213,7 @@ export default function BodyMetricsScreen() {
           <View style={[styles.formCard, live.formCard]}>
             <Text style={[styles.formTitle, live.formTitle]}>{editingId ? 'Edit entry' : 'New entry'}</Text>
             <View style={styles.formRow}>
-              <Text style={[styles.formLabel, live.formLabel]} numberOfLines={1}>Date</Text>
+              <Text style={[styles.formLabel, live.formLabel]}>Date</Text>
               <TextField
                 containerStyle={styles.formFieldContainer}
                 fieldStyle={styles.formField}
@@ -1220,7 +1227,7 @@ export default function BodyMetricsScreen() {
             </View>
             {bwu === 'st' ? (
               <View style={styles.formRow}>
-                <Text style={[styles.formLabel, live.formLabel]} numberOfLines={1}>Body weight</Text>
+                <Text style={[styles.formLabel, live.formLabel]}>Body weight</Text>
                 <View style={{ flex: 1, flexDirection: 'row', gap: spacing.sm }}>
                   <TextField
                     containerStyle={styles.formSplitFieldContainer}
@@ -1250,7 +1257,7 @@ export default function BodyMetricsScreen() {
               </View>
             ) : (
               <View style={styles.formRow}>
-                <Text style={[styles.formLabel, live.formLabel]} numberOfLines={1}>Body weight ({bwu})</Text>
+                <Text style={[styles.formLabel, live.formLabel]}>Body weight ({bwu})</Text>
                 <TextField
                   containerStyle={styles.formFieldContainer}
                   fieldStyle={styles.formField}
@@ -1266,7 +1273,7 @@ export default function BodyMetricsScreen() {
             )}
 
             <View style={styles.formRow}>
-              <Text style={[styles.formLabel, live.formLabel]} numberOfLines={1}>Body fat (%)</Text>
+              <Text style={[styles.formLabel, live.formLabel]}>Body fat (%)</Text>
               <TextField
                 containerStyle={styles.formFieldContainer}
                 fieldStyle={styles.formField}
@@ -1301,7 +1308,7 @@ export default function BodyMetricsScreen() {
 
             {showMeasurements && MEASUREMENTS.map(m => (
               <View key={m.key} style={styles.formRow}>
-                <Text style={[styles.formLabel, live.formLabel]} numberOfLines={1}>{m.label} (cm)</Text>
+                <Text style={[styles.formLabel, live.formLabel]}>{m.label} (cm)</Text>
                 <TextField
                   containerStyle={styles.formFieldContainer}
                   fieldStyle={styles.formField}
@@ -1668,7 +1675,17 @@ const styles = StyleSheet.create({
   },
   formTitle: { ...type.title, color: colors.textPrimary },
   formRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  formLabel: { width: 140, fontSize: fontSize.sm, color: colors.textSecondary },
+  // D5 (pre-release sweep 2026-07-27, LANE D): was a fixed `width: 140` with
+  // numberOfLines={1} on the label Text below, so measurement labels like
+  // "Left forearm" truncated to "Left forea..." at large OS text sizes,
+  // right next to the field the user is about to type a measurement into.
+  // Legibility of the label beats the form's visual rhythm here, so the
+  // fixed width is gone and the label is free to wrap onto a second line.
+  // flexShrink is REQUIRED here: React Native defaults it to 0 (unlike the
+  // web), so a label with no width in a row would refuse to shrink and would
+  // squeeze the flex:1 input field towards zero instead of wrapping. maxWidth
+  // keeps the field usable when a label is unusually long.
+  formLabel: { flexShrink: 1, maxWidth: '45%', fontSize: fontSize.sm, color: colors.textSecondary },
   formFieldContainer: { flex: 1 },
   formSplitFieldContainer: { flex: 1 },
   formField: {

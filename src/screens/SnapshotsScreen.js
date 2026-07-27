@@ -82,8 +82,14 @@ export default function SnapshotsScreen() {
                 'Please fully close and reopen Volyume so every screen reloads from the restored data.',
               );
             } catch (e) {
+              // C2 (pre-release sweep 2026-07-27, LANE C): the raw native
+              // FileSystem error string used to be shown mid-way through this
+              // destructive "replaces ALL current data" restore. logError
+              // keeps the real diagnostic; the alert matches
+              // SettingsDataScreen's calm generic copy for the equivalent
+              // JSON-backup failure ("Could not read that backup file.").
               logError('SnapshotsScreen.restore', e);
-              appAlert('Restore failed', e?.message ?? 'Could not restore that snapshot.');
+              appAlert('Restore failed', 'Could not restore that snapshot. Please try again.');
             }
           },
         },

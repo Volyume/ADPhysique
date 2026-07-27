@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { appAlert } from '../AppAlert';
-import { View, Text, StyleSheet, Pressable, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
@@ -320,8 +320,6 @@ export default function FoodDetailSheet({
               onChangeText={v => setAmount(v.replace(/[^0-9.]/g, ''))}
               keyboardType="decimal-pad"
               selectTextOnFocus
-              returnKeyType="done"
-              onSubmitEditing={() => Keyboard.dismiss()}
               accessibilityLabel="Amount"
             />
             <Pressable

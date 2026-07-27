@@ -399,7 +399,6 @@ export default function ScanBarcodeScreen({ navigation, route }) {
           maxLength={14}
           autoFocus
           accessibilityLabel="Barcode number"
-          onSubmitEditing={submitManual}
         />
         {manualError ? <Text style={[styles.manualErrorText, live.manualErrorText]}>{manualError}</Text> : null}
         <Button

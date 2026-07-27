@@ -14,6 +14,7 @@ import Button from '../components/Button';
 import Chip from '../components/Chip';
 import SectionLabel from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
+import { logError, logWarn } from '../lib/errorLog';
 import {
   PHYSIQUE_GOALS,
   GOALS_WITH_WEAK_POINTS, WEAK_POINT_MUSCLES,
@@ -56,6 +57,13 @@ const RECOVERY_OPTIONS = [
   { value: 'average', label: 'Average', sub: 'Typical recovery between sessions' },
   { value: 'good',    label: 'Good',    sub: 'Sleeping well, low stress, nutrition on point' },
 ];
+
+// C1 (pre-release sweep 2026-07-27, LANE C): one calm, fixed message for
+// every rebuild-failure toast on this screen, regardless of which internal
+// error code or exception produced it, so no raw technical text ever reaches
+// the user here. The real reason is always logged via errorLog just before
+// this is shown, so the diagnostic survives, it is just never displayed.
+const REBUILD_FAILED_MESSAGE = "Couldn't rebuild your plan. Your training setup wasn't changed, try again.";
 
 // Training-only plan update for the Train tab. Changes training parameters and
 // rebuilds the plan around them. It deliberately does NOT touch calories or
@@ -149,7 +157,10 @@ export default function PlanUpdateScreen({ navigation }) {
     try {
       const dry = await generatePlanDryRun(user.id, updatedProfile);
       if (!dry.ok) {
-        toast.show(`Couldn't rebuild your plan (${dry.error}). Your training setup wasn't changed, try again.`, { variant: 'error', duration: 5000 });
+        // C1: the code is logged for diagnostics, never shown, see
+        // REBUILD_FAILED_MESSAGE above.
+        logWarn('PlanUpdateScreen.reviewRebuild', dry.error ?? 'unknown', { userId: user?.id });
+        toast.show(REBUILD_FAILED_MESSAGE, { variant: 'error', duration: 5000 });
         return;
       }
       const nowSummary = await readCurrentPlanSummary();
@@ -157,7 +168,8 @@ export default function PlanUpdateScreen({ navigation }) {
       setDiff(diffPlans(nowSummary, afterSummary));
       setStaged({ profile: updatedProfile, partial: !!dry.partial, missedCount: dry.missedCount ?? 0 });
     } catch (e) {
-      toast.show(`Couldn't rebuild your plan (${e?.message ?? 'unknown'}). Your training setup wasn't changed, try again.`, { variant: 'error', duration: 5000 });
+      logError('PlanUpdateScreen.reviewRebuild', e, { userId: user?.id });
+      toast.show(REBUILD_FAILED_MESSAGE, { variant: 'error', duration: 5000 });
     } finally {
       setPreviewing(false);
     }
@@ -178,12 +190,19 @@ export default function PlanUpdateScreen({ navigation }) {
     try {
       planResult = await generateAndSavePlan(user.id, updatedProfile);
     } catch (e) {
+      // C1: log the real exception here, the diagnostic must survive even
+      // though planResult.error below is never shown to the user.
+      logError('PlanUpdateScreen.confirmRebuild', e, { userId: user?.id });
       planResult = { ok: false, error: e?.message ?? 'unknown' };
     }
 
     if (!planResult.ok) {
       setSaving(false);
-      toast.show(`Couldn't rebuild your plan (${planResult.error}). Your training setup wasn't changed, try again.`, { variant: 'error', duration: 5000 });
+      // C1: a code from generateAndSavePlan (not necessarily a caught
+      // exception) still gets logged for diagnostics before the calm,
+      // fixed message is shown, see REBUILD_FAILED_MESSAGE above.
+      logWarn('PlanUpdateScreen.confirmRebuild', planResult.error ?? 'unknown', { userId: user?.id });
+      toast.show(REBUILD_FAILED_MESSAGE, { variant: 'error', duration: 5000 });
       return;
     }
 

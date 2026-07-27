@@ -1503,6 +1503,10 @@ export default function HomeScreen({ navigation, route }) {
         // the keyboard dropped after one keystroke (founder device report
         // 2026-07-13). Android has no 'interactive', so it keeps 'on-drag'.
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        // A2 (pre-release sweep 2026-07-27, LANE A): without this, a tap on
+        // a button while the daily weigh-in field is focused only dismisses
+        // the keyboard -- the user has to tap twice.
+        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={t.colors.primary} />}
       >
         {/* ── Branded header ── */}
