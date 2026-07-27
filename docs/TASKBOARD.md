@@ -43,24 +43,66 @@ shaped the way it is, in the 2026-07-23 resume block of
 `docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md`.
 
 - [ ] **R3-1 Sentry triage, last two weeks.** Org `volyume`, region
-  `https://de.sentry.io`. Loudest open issue is `VOLYUME-2E`
-  ("getValueWithKeyAsync failed", ~1,011 events / 3 users, secure-store) —
-  never investigated. Also open: `VOLYUME-2D/2C/2F` (anonymous, high count),
-  `VOLYUME-2H` (food_sync_pull not authenticated), `VOLYUME-2G` (SQLCipher key
-  unavailable). `VOLYUME-2N` is already fixed (`b312969`) and should
-  auto-resolve on deploy; if it reappears with a post-deploy timestamp it is a
-  NEW bug, not the old one.
-- [ ] **R3-2 Apple review test accounts (Pro + Free).** Do NOT hand-seed
-  `auth.users` via SQL — consent runs through the `record_health_consent` RPC
-  and a half-formed account fails App Review. Create both through the app's
-  own email/password sign-up, walk onboarding, then flip one:
-  `update users_profile set trial_state = 'paid_pro' where id = (select id
-  from auth.users where email = '<pro address>');` (`paid_pro`, never a trial
-  state — it must not expire mid-review; Free stays `free`). BLOCKED ON THE
-  FOUNDER for: the two email addresses, and whether Supabase email
-  confirmation is on. Passwords were given in chat on 2026-07-23 and are
-  deliberately NOT in this repo; regenerate if lost, and disable both accounts
-  after review.
+  `https://de.sentry.io`. STILL BLOCKED: the Sentry MCP connector reports
+  `connected: true` but `enabledInChat: false` and loads no tools, across
+  three separate checks on 2026-07-27. Unlike R3-2 there is no side route —
+  the issue data lives only in Sentry. Unblock by attaching the connector to a
+  NEW session, or by pasting the issue list (title, culprit, event/user
+  counts, first/last seen, and the release tag on the latest event).
+  CODE-SIDE ROOT CAUSE DONE 2026-07-27 (no connector needed, do not redo):
+  - `VOLYUME-2E` "getValueWithKeyAsync failed", ~1,011 events / 3 users. The
+    trigger is a SecureStore read failure; the VOLUME is a second, independent
+    defect — there are two unbounded log sites and no throttle anywhere.
+    `supabase.js:22` logs on EVERY failed session read, and supabase-js hits
+    its storage adapter on every `getSession`, token auto-refresh and auth
+    state change; `dbCrypto.js:70` logs on each of its 3 retry attempts.
+    `errorLog.js` (317 lines) has ZERO dedup or rate limiting, so one bad
+    device emits continuously. The accessibility fix for the trigger landed
+    2026-07-14 in `e9b8032` (its comment names VOLYUME-2E), so the release tag
+    on the latest event decides whether 2E is already fixed or still live.
+    The missing throttle is worth fixing either way — founder decision, not
+    yet approved.
+  - `VOLYUME-2G` "SQLCipher key unavailable…" is `dbCrypto.js:172`, the
+    fail-closed branch downstream of the same keychain failure, behaving as
+    designed. Expect it to fall away with 2E; do not treat as separate.
+  - `VOLYUME-2H` "food_sync_pull: not authenticated" is server-side:
+    `supabase/migrate_016_food_sync_rpcs.sql:55` raises it when `auth.uid()`
+    is null, surfaced via `sync/tables/foodDomain.js:358`. A food pull is
+    firing with no valid session — a sync-scheduling bug, not a Supabase one.
+  - `VOLYUME-2D/2C/2F` — nothing but "anonymous, high count" is known. Needs
+    the titles; cannot be triaged from the tree.
+  `VOLYUME-2N` is already fixed (`b312969`) and should auto-resolve on deploy;
+  if it reappears with a post-deploy timestamp it is a NEW bug, not the old one.
+- [x] **R3-2 Apple review test accounts (Pro + Free) — BUILT, awaiting the
+  production phrase.** The 2026-07-23 "create them through the app's own
+  sign-up" plan is SUPERSEDED (founder, 2026-07-27): it needed a device and a
+  mailbox, and the founder ordered generic accounts any reviewer can use. Both
+  accounts are now seeded server-side by
+  `supabase/migrate_128_apple_review_accounts.sql`:
+  `appreview.pro@volyume.app` (tier `pro`, trial_state `paid_pro` — never a
+  trial state, so it cannot expire mid-review) and
+  `appreview.free@volyume.app` (`free`/`free`). Created email-CONFIRMED, so
+  neither address needs to receive mail and Supabase's email-confirmation
+  setting is irrelevant. Onboarding state is written to match a completed
+  onboarding (`first_run_complete`, `health_data_consent` + `consent_log` row
+  exactly as `record_health_consent` writes it, `sex`), so a reviewer signing
+  in on a fresh install lands in the app, not the wizard.
+  ROUTE (the Supabase MCP connector was never attachable to the session): the
+  already-registered `deploy-migrations.yml` workflow, dispatched against this
+  branch, using the existing `SUPABASE_DB_URL` secret. No connector needed.
+  VERIFIED BEFORE DISPATCH on a local PostgreSQL 16 cluster against a fixture
+  carrying the real `users_profile_protect_tier` trigger: both passwords
+  bcrypt-verify, cross-check rejects, two consecutive runs stay 2/2/2/2 (no
+  duplicates), tier lands `pro` not `free`. That testing caught a real defect —
+  `$2b$` bcrypt (Python's `crypt`) is unverifiable by pgcrypto, so the hashes
+  are `$2a$`. It also proved the tier trigger is live and forces `free` on an
+  authenticated insert, which is why the migration sets the sanctioned
+  `app.allow_tier_change` bypass rather than relying on the absence of a JWT.
+  ONLY REPO-SAFE MATERIAL IS COMMITTED: bcrypt hashes, never plaintext.
+  Passwords were given to the founder in chat 2026-07-27; regenerate if lost.
+  REMAINING: founder says the exact phrase "run against production", then
+  dispatch. POST-REVIEW: run the rollback in the migration header to delete
+  both accounts.
 
 ## R2b. OPEN FROM THE 2026-07-23 AUDIT (D88) — founder decision needed, not approved
 
