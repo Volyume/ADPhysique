@@ -225,7 +225,15 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // R3 rebuild: the header's finish control and the bar's actions moved
     // to WorkoutHeader/WorkoutBottomBar, both on the shared Button/thumb
     // minimums.
-    expect(WORKOUT_HEADER).toMatch(/finishBtn: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
+    // RE-ANCHORED 2026-07-27 (founder order: "get rid of the Finish wording
+    // and just have the ticks so it matches the X on the other side"). Finish
+    // is no longer a labelled pill with its own `finishBtn` style -- it shares
+    // `iconBtn` with the cancel X. The GUARANTEE this test exists for is
+    // unchanged and still pinned: the control is a full thumb-sized target.
+    // iconBtn sets width AND height to the same token, so it is now pinned
+    // squarely rather than as a minHeight.
+    expect(WORKOUT_HEADER).toMatch(/iconBtn: \{[\s\S]*width: workoutLoggerSize\.primaryActionMinHeight,[\s\S]*height: workoutLoggerSize\.primaryActionMinHeight/);
+    expect(WORKOUT_HEADER).toContain('testID="volyume-workout-finish"');
     expect(BOTTOM_BAR).toContain('size="lg"');
     expect(ACTIVE_WORKOUT).toContain('inlineActionPill');
     // Re-pinned for D43 S1 extraction: addFirstBtn/addFirstBtnText moved to

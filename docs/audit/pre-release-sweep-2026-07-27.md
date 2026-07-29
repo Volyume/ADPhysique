@@ -329,3 +329,26 @@ separation, and by collapsing the `isSquare ? 162 : 250` expression -- which
 was DUPLICATED IN FIVE PLACES -- into one `footerHeight()` helper. That
 duplication is precisely why a footer-height assumption could go stale in one
 place and not the others. Verified by rendering square and story footers.
+
+---
+
+## FOUNDER ORDER 2026-07-27 (device note, build with the R3 logger header)
+
+Verbatim: "Ets get rid of the Finish wording and just have the ticks so it
+matches the X on the other side"
+
+The logger header's Finish control was a labelled pill: a `checkmark-done`
+glyph at `iconSize.sm` plus the word "Finish", on a row with horizontal
+padding. The cancel control on the opposite side is a 44dp square icon button
+at `iconSize.md`. Two different shapes doing the same job at the two ends of
+one bar.
+
+Ruled: make Finish an icon-only square on exactly the same chrome as the X -
+same `iconBtn` style, same icon size, same 44dp square, same surface2 fill,
+border and `radius.md`. The pill and its label style go.
+
+ACCESSIBILITY: with the visible word gone, `accessibilityLabel="Finish
+workout"` is the ONLY thing a screen-reader user has. It already exists and
+must never be removed or shortened to "Finish" - the label says what the button
+does, and the R4/D64 same-string rule keeps it matching the spoken name of the
+action elsewhere. Pinned by a new guard test.

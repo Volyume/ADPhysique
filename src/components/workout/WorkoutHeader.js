@@ -62,18 +62,25 @@ export default function WorkoutHeader({
 
       <View style={[styles.side, styles.sideRight]}>
         {showFinish ? (
+          // Icon only, on the SAME chrome as the cancel X opposite it (founder
+          // order 2026-07-27). It was a labelled pill -- a smaller glyph plus
+          // the word "Finish" on a padded row -- so the two ends of one bar
+          // were different shapes doing the same job.
+          //
+          // The visible word is gone, so accessibilityLabel is now the ONLY
+          // name a screen-reader user gets. It must stay "Finish workout",
+          // never shortened to "Finish": it names the action, and matches how
+          // the same action is spoken everywhere else (R4/D64 same-string
+          // rule). Pinned by loggerHeaderFinishIconOnly.guard.test.js.
           <TouchableOpacity
             testID="volyume-workout-finish"
-            style={[styles.finishBtn, { backgroundColor: t.colors.surface2, borderColor: t.colors.border }]}
+            style={[styles.iconBtn, { backgroundColor: t.colors.surface2, borderColor: t.colors.border }]}
             onPress={onFinish}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityRole="button"
             accessibilityLabel="Finish workout"
           >
-            <Ionicons name="checkmark-done" size={iconSize.sm} color={t.colors.textPrimary} />
-            <Text style={[styles.finishText, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
-              Finish
-            </Text>
+            <Ionicons name="checkmark-done" size={iconSize.md} color={t.colors.textPrimary} />
           </TouchableOpacity>
         ) : null}
       </View>
@@ -106,14 +113,6 @@ const styles = StyleSheet.create({
   elapsedLabel: {},
   elapsedValueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   elapsedValue: { fontVariant: ['tabular-nums'] },
-  finishBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    minHeight: workoutLoggerSize.primaryActionMinHeight,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-  },
-  finishText: {},
+  // finishBtn/finishText removed with the label: Finish now shares `iconBtn`
+  // with the cancel X so the two ends of the bar are one control, not two.
 });
