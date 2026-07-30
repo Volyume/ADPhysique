@@ -95,9 +95,27 @@ foreground suppression handler, push budget, categories
 
 ## 2. INVIOLABLE CONSTRAINTS — never change without explicit founder approval
 
-**Never touch main.** All work on feature branches. Merging to main happens
-only on explicit founder instruction (PR + squash-merge is the shipping path).
-If git status shows main, stop and switch.
+**Build on feature branches. MERGE TO MAIN CONTINUALLY.** (Founder order
+2026-07-30, AMENDING the previous "merge only on explicit founder instruction"
+rule. The old wording stood until now and is superseded.) Verbatim: "Stop
+leaving things on branches. Everything gets merged to main eventually and
+continually when needed. Leaving things on the branch thinking it's fine is
+what causes issues down the line."
+
+So: write code on a feature branch, but once a change is green
+(`npm run lint && npm test`) and lead-reviewed, merge it to main and push in
+the SAME working session. Do not accumulate landed-but-unmerged work, and never
+end a turn with a finished fix sitting on a branch. No separate permission is
+needed per merge; this order IS the permission.
+
+Why this rule exists, from the failure that produced it: an iOS build fix was
+committed to a feature branch and the founder was told to run the build. The
+workflow builds from MAIN, so the fix was never in the run, two build attempts
+failed identically, and the diagnosis was wasted. Anything CI, a workflow, or a
+build reads comes from main -- a fix that is not on main does not exist.
+
+Still true: do not develop ON main (write on a branch), and a merge always
+happens over a green tree with the diff reviewed first. Never force-push main.
 
 **The coaching engine is deterministic. No AI. Ever.** No LLM calls, no
 randomness, no rewrites that alter outputs for identical inputs. Engine
@@ -227,8 +245,10 @@ or a dated `docs/<topic>-audit-YYYY-MM-DD/` folder (existing convention).
 Handovers/resume notes must point to SOURCE FILES by full path and section,
 with current position and every decision + rationale — never to summaries.
 
-**Branches & shipping:** implementation on feature branches; PR to main;
-merge only on founder instruction. CI (`release:check`) is the final arbiter.
+**Branches & shipping:** implementation on feature branches, then merged to
+main CONTINUALLY as each change goes green -- see the merge rule in Section 2
+(founder order 2026-07-30). Never leave a finished change sitting on a branch.
+CI (`release:check`) is the final arbiter.
 
 **Testing on device (no simulator).** The founder works from a phone and
 cannot run a local simulator. EVERY shipped change includes a short manual
