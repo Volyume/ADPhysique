@@ -41,6 +41,53 @@ export function morningWeightToEntry(row) {
 // user-editable record for that day (body_metric_log, via
 // updateBodyMetric/deleteBodyMetric -- a merged-in morning_weights row has
 // no body_metric_log id for those to target).
+/**
+ * The canonical weigh-in series, in the `{ weightKg, loggedAt }` shape the
+ * coaching engine consumes.
+ *
+ * WHY THIS EXISTS (cross-surface audit 2026-07-30, finding X3). The ED-safety
+ * rapid-loss and max-safe-loss gates, and the FFM floor, evaluate whatever
+ * series `runWeeklyCoach` is handed. That series came from `getMorningWeights`
+ * ONLY -- so every weigh-in a user logged through BodyMetricsScreen's own "Log
+ * weight" form (which writes `body_metric_log`) was invisible to the gate,
+ * while the SAME readings were plotted in the trend the user reads on that
+ * screen. A user who logs exclusively from that form had the gate assessing an
+ * almost-empty series.
+ *
+ * The table split is accidental, not a measurement-conditions distinction:
+ * Home's quick weigh-in writes `morning_weights`, the Body Metrics form writes
+ * `body_metric_log`, and `getLatestBodyWeight` already reads BOTH for the
+ * current weight shown around the app. Both are the user weighing themselves.
+ *
+ * Dedupe is by calendar day, inherited from mergeMorningWeightsIntoHistory, so
+ * a day recorded in both tables contributes once. Non-positive and
+ * soft-deleted rows are dropped, matching computeEWMA's own guard.
+ *
+ * This changes the INPUT only. No floor, gate or threshold is altered -- the
+ * gates simply now see the readings the user can already see.
+ *
+ * @param {Array} bodyMetricEntries - rowToEntry-shaped, from getBodyMetricLog
+ * @param {Array} morningRows       - raw getMorningWeights() output
+ * @returns {Array} [{ weightKg, loggedAt }] oldest-first
+ */
+export function buildWeighInSeries(bodyMetricEntries, morningRows) {
+  const merged = mergeMorningWeightsIntoHistory(bodyMetricEntries, morningRows, Number.MAX_SAFE_INTEGER);
+  return merged
+    .map((e) => {
+      const weightKg = Number(e.body_weight);
+      if (!Number.isFinite(weightKg) || weightKg <= 0) return null;
+      // metric_date is a local day key; anchor at local midday so a timezone
+      // shift can never move a reading across a day boundary.
+      const [y, m, d] = String(e.metric_date || '').split('-').map(Number);
+      if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+      const loggedAt = new Date(y, m - 1, d, 12, 0, 0, 0).getTime();
+      if (!Number.isFinite(loggedAt)) return null;
+      return { weightKg, loggedAt };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.loggedAt - b.loggedAt);
+}
+
 export function mergeMorningWeightsIntoHistory(bodyMetricEntries, morningRows, limit = 50) {
   const daysWithBodyMetric = new Set(bodyMetricEntries.map(e => e.metric_date));
   const morningOnlyEntries = (morningRows || [])

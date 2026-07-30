@@ -65,6 +65,32 @@ export function energyUnitLabel(unit = 'kcal') {
   return unit === 'kj' ? 'kJ' : 'kcal';
 }
 
+// The INVERSE of toEnergy: a number the user TYPED in their chosen unit, back
+// to the kcal every stored value and the whole engine works in.
+//
+// The block comment above says these helpers only change how a number is
+// SHOWN. That was true until an input surface needed the same preference, and
+// the gap is exactly what caused the bug this exists to fix: Quick Add had no
+// unit awareness at all, so a kJ user's "2090" for a ~500 kcal snack was stored
+// as kcal: 2090 -- a ~4.18x inflation written straight into
+// daily_intake_rollups, the one source every kcal surface reads, and from there
+// into adherence and the intake figures ED-safety code consumes.
+//
+// Every input that accepts an energy figure MUST come through here. Do not
+// hand-roll the division at a call site: one place to be right, one place to
+// audit. Non-finite input returns NaN so callers validate rather than silently
+// storing a zero.
+export function fromEnergy(value, unit = 'kcal') {
+  // Number(null), Number(undefined via ''), and Number('') are 0, not NaN, so a
+  // bare Number() here would answer "0 kcal" for an empty field -- logging a
+  // real meal as nothing at all. Reject absent input explicitly, the same way
+  // parseDecimalInput does, so the caller is forced to validate.
+  if (value == null || value === '') return NaN;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return NaN;
+  return unit === 'kj' ? n / KJ_PER_KCAL : n;
+}
+
 // Format a kcal value for display in the chosen unit with en-GB grouping.
 // `opts.withUnit` appends the unit label ("7,029 kJ"); otherwise returns the
 // grouped number only so a caller can render the unit in its own styled node.

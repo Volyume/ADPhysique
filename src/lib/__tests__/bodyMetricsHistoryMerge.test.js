@@ -93,3 +93,71 @@ describe('mergeMorningWeightsIntoHistory (BUG-WEIGHT-HISTORY fix)', () => {
     expect(merged).toHaveLength(50);
   });
 });
+
+/**
+ * X3 (cross-surface audit 2026-07-30): buildWeighInSeries.
+ *
+ * The ED-safety rapid-loss / max-safe-loss gates and the FFM floor evaluate
+ * whatever weigh-in series they are handed. That series came from
+ * `getMorningWeights` ONLY, so every reading logged through BodyMetricsScreen's
+ * own form (which writes body_metric_log) was invisible to the gates -- while
+ * the SAME readings were plotted in the trend the user reads on that screen.
+ *
+ * These pin the input, not the gates: no floor or threshold is asserted here,
+ * only that the series is complete, deduped by day, and ordered.
+ */
+describe('buildWeighInSeries feeds the safety path every weigh-in (X3)', () => {
+  // eslint-disable-next-line global-require
+  const { buildWeighInSeries } = require('../bodyMetricsHistoryMerge');
+
+  const bodyLog = (date, kg) => ({ metric_date: date, body_weight: kg });
+  const morning = (date, kg) => ({
+    id: `m-${date}`,
+    loggedAt: new Date(`${date}T07:00:00`).getTime(),
+    weightKg: kg,
+    deletedAt: null,
+  });
+
+  test('form-logged weigh-ins are INCLUDED, not dropped', () => {
+    const s = buildWeighInSeries([bodyLog('2026-07-20', 82)], []);
+    expect(s).toHaveLength(1);
+    expect(s[0].weightKg) .toBe(82);
+  });
+
+  test('both tables combine into one series', () => {
+    const s = buildWeighInSeries(
+      [bodyLog('2026-07-20', 82), bodyLog('2026-07-22', 81.5)],
+      [morning('2026-07-21', 81.8)],
+    );
+    expect(s.map(e => e.weightKg)).toEqual([82, 81.8, 81.5]);
+  });
+
+  test('a day present in BOTH tables counts once, never twice', () => {
+    const s = buildWeighInSeries([bodyLog('2026-07-20', 82)], [morning('2026-07-20', 99)]);
+    expect(s).toHaveLength(1);
+    // body_metric_log is the richer, user-editable record and wins the day.
+    expect(s[0].weightKg).toBe(82);
+  });
+
+  test('oldest-first, which is what computeEWMA expects', () => {
+    const s = buildWeighInSeries(
+      [bodyLog('2026-07-25', 80), bodyLog('2026-07-20', 82)],
+      [],
+    );
+    expect(s[0].loggedAt).toBeLessThan(s[1].loggedAt);
+  });
+
+  test('non-positive, missing and malformed rows are dropped, never zero-filled', () => {
+    const s = buildWeighInSeries(
+      [bodyLog('2026-07-20', 0), bodyLog('2026-07-21', null), bodyLog('bad-date', 80), bodyLog('2026-07-22', 81)],
+      [],
+    );
+    expect(s).toHaveLength(1);
+    expect(s[0].weightKg).toBe(81);
+  });
+
+  test('a soft-deleted morning row never reaches the gates', () => {
+    const s = buildWeighInSeries([], [{ ...morning('2026-07-20', 82), deletedAt: Date.now() }]);
+    expect(s).toHaveLength(0);
+  });
+});

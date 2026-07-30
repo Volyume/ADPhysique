@@ -12,6 +12,7 @@ import Chip from '../Chip';
 import TextField from '../TextField';
 import { useToast } from '../Toast';
 import { pickerMealSlots } from '../../lib/food/mealSlots';
+import { fromEnergy, toEnergy, energyUnitLabel } from '../../lib/format';
 
 /**
  * Quick add: log a bare calorie figure (and optional protein, carbs, fat)
@@ -33,6 +34,14 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
   // fix): mirrors the DiaryScreen/MealPlanScreen "Around training" gate so
   // this sheet never offers a slot the diary itself keeps hidden.
   const periWorkoutSlots = useAppStore((s) => !!s.userProfile?.mealPlanPeriWorkout);
+  // The user's energy-unit preference. This sheet previously read NO unit at
+  // all and labelled its field a bare "Calories", so a kJ user typed a kJ
+  // figure and it was stored verbatim as kcal -- a ~4.18x inflation written
+  // into daily_intake_rollups, the single source every kcal surface reads,
+  // and from there into adherence and the intake figures ED-safety code
+  // consumes. Read the preference, say the unit out loud, and convert on save.
+  const energyUnit = useAppStore((s) => s.accessibility?.energyUnit ?? 'kcal');
+  const unitLabel = energyUnitLabel(energyUnit);
   const [kcal, setKcal] = useState('');
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
@@ -63,9 +72,18 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
   }
 
   async function handleSave() {
-    const k = parseFloat(kcal);
-    if (!Number.isFinite(k) || k <= 0 || k > 5000) {
-      toast.show('Enter calories between 1 and 5000.', { variant: 'warning' });
+    // The user typed in THEIR unit, so validate the bounds in that unit and
+    // convert once, here, through the shared inverse. The stored value is
+    // always kcal -- the engine and every rollup work in kcal only.
+    const typed = parseFloat(kcal);
+    const maxTyped = toEnergy(5000, energyUnit);
+    if (!Number.isFinite(typed) || typed <= 0 || typed > maxTyped) {
+      toast.show(`Enter energy between 1 and ${maxTyped} ${unitLabel}.`, { variant: 'warning' });
+      return;
+    }
+    const k = fromEnergy(typed, energyUnit);
+    if (!Number.isFinite(k) || k <= 0) {
+      toast.show(`Enter energy between 1 and ${maxTyped} ${unitLabel}.`, { variant: 'warning' });
       return;
     }
     setSubmitting(true);
@@ -81,16 +99,16 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
   return (
     <BottomSheet visible={visible} onClose={handleClose} keyboardAvoiding accessibilityLabel="Quick add">
           <Text style={[styles.title, live.title]}>Quick add</Text>
-          <Text style={[styles.subtitle, live.subtitle]}>Log calories now, with macros if you have them.</Text>
+          <Text style={[styles.subtitle, live.subtitle]}>Log energy now, with macros if you have them.</Text>
 
-          <Text style={[styles.fieldLabel, live.fieldLabel]}>Calories</Text>
+          <Text style={[styles.fieldLabel, live.fieldLabel]}>{`Energy (${unitLabel})`}</Text>
           <TextField
             value={kcal}
             onChangeText={setKcal}
             keyboardType="number-pad"
             placeholder="0"
             placeholderTextColor={t.colors.textMuted}
-            accessibilityLabel="Calories"
+            accessibilityLabel={`Energy in ${unitLabel}`}
             autoFocus
             inputStyle={styles.calorieInput}
           />
