@@ -32,7 +32,7 @@ import { resolveProgressScanCoachNote } from '../lib/progressScanCoachResolver';
 import { composeScanEvidencePacket } from '../lib/progressScanCheckInEvidence';
 import { recordScanClassification } from '../lib/progressScanClassificationHistory';
 import { confidenceChipLabel } from '../lib/progressScanResultsContract';
-import { localDayKey, localWeekStartMs } from '../lib/dayKey';
+import { localDayKey, localWeekStartMs, localWeekEndMs } from '../lib/dayKey';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import {
   formatWeekRange, hasLoggedToday, earliestWeightTs,
@@ -390,8 +390,16 @@ export default function WeeklyCheckInScreen({ navigation }) {
         const weights = await getMorningWeightsLast14Days(user.id);
         if (cancelled) return;
         setAlreadyLoggedToday(hasLoggedToday(weights));
-        const weekAgo = anchorMs - 7 * 86400000;
-        const thisWeek = weights.filter(w => (w.loggedAt ?? 0) >= weekAgo);
+        // X11 (cross-surface consistency audit 2026-07-30): this used to be a
+        // rolling trailing-7-day window ("weekAgo"), which could disagree with
+        // CoachOutputScreen's Monday-anchored weigh-in count for the same
+        // moment despite both being labelled "this week". weekStartMs is
+        // hoisted here (was computed again, identically, further down) so the
+        // weigh-in count, the session count and the PR count all anchor to
+        // the SAME calendar week.
+        const weekStartMs = localWeekStartMs(anchorMs);
+        const weekEndMs = localWeekEndMs(weekStartMs);
+        const thisWeek = weights.filter(w => (w.loggedAt ?? 0) >= weekStartMs && (w.loggedAt ?? 0) < weekEndMs);
         setWeekWeights(thisWeek);
         setWeighInsThisWeek(thisWeek.length);
 
@@ -409,13 +417,14 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
         // Auto-derive context. Loaded in parallel with the gate
         // evaluation so the screen is fully populated when it lands.
-        // weekStartMs is epoch milliseconds (local Monday 00:00), NOT a Date.
-        // getWeeklySessionStats / getWeeklyPRCount and localDayKey all require
-        // ms. Passing a Date (the old bug) made weekEnd a string and made
-        // localDayKey fall back to now, collapsing the week window to today,
-        // so sessions read 0 and the rollup range covered a single day and
-        // nothing was ever derived: the form showed only blind buttons.
-        const weekStartMs = localWeekStartMs(anchorMs);
+        // weekStartMs is epoch milliseconds (local Monday 00:00), NOT a Date
+        // (hoisted above, alongside the weigh-in count window, so every count
+        // on this screen shares one boundary). getWeeklySessionStats /
+        // getWeeklyPRCount and localDayKey all require ms. Passing a Date (the
+        // old bug) made weekEnd a string and made localDayKey fall back to
+        // now, collapsing the week window to today, so sessions read 0 and
+        // the rollup range covered a single day and nothing was ever derived:
+        // the form showed only blind buttons.
         const [sessions, prCount, targets] = await Promise.all([
           getWeeklySessionStats(user.id, weekStartMs).catch(() => ({ completed: 0, planned: 0 })),
           getWeeklyPRCount(user.id, weekStartMs).catch(() => 0),

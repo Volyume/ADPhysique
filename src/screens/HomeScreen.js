@@ -58,7 +58,7 @@ import { buildFreeCoachLine } from '../lib/coachResponse';
 import { activePlanLine, planHeadingName } from '../lib/planDisplay';
 import { resolveActivationNudge, activationBannerLine, NUDGE_STAGE, NUDGE_WINDOW_GRACE_MS } from '../lib/activationNudge';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
-import { localWeekStartMs, localDayKey } from '../lib/dayKey';
+import { localWeekStartMs, localWeekEndMs, localDayKey } from '../lib/dayKey';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 // NAV-4 (founder decision): the differential paywall re-homed here from the
 // Pro-guarded CoachOutput, where its only audience (free tier) could never
@@ -996,7 +996,14 @@ export default function HomeScreen({ navigation, route }) {
 
   async function loadWeekStats() {
     try {
-      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      // X5 (cross-surface consistency audit 2026-07-30): this used to use a
+      // rolling trailing-7-day window, which could show a different "sessions
+      // this week" figure than the free coach line on the SAME screen
+      // (loadFreeCoachLine, above), which is Monday-anchored. Every "this
+      // week" boundary now comes from the shared dayKey.js helpers so the two
+      // can never disagree.
+      const weekStartMs = localWeekStartMs();
+      const weekEndMs = localWeekEndMs(weekStartMs);
       const fourWeeksAgo = Date.now() - 28 * 24 * 60 * 60 * 1000;
       // LB-7: this card needs at most the last four weeks of sets (week
       // stats + the deload window below), not every set ever logged. Load
@@ -1005,7 +1012,9 @@ export default function HomeScreen({ navigation, route }) {
         getAllWorkouts(user.id),
         getWorkoutSetsSince(user.id, fourWeeksAgo),
       ]);
-      const thisWeek = allWorkouts.filter(w => w.startedAt >= weekAgo && w.isCompleted);
+      const thisWeek = allWorkouts.filter(
+        w => w.startedAt >= weekStartMs && w.startedAt < weekEndMs && w.isCompleted,
+      );
       const workoutIds = new Set(thisWeek.map(w => w.id));
       const weekSets = recentSets.filter(s => workoutIds.has(s.workoutId) && s.setType !== 'warmup');
       const totalVol = weekSets.reduce((t, s) => t + (s.weight || 0) * (s.actualReps || 0), 0);
