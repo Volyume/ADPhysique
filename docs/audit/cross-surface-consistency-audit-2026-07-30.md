@@ -222,3 +222,71 @@ tonnage and warm-up handling; unilateral sets (single row, no double count);
 routine exercise and session-day counts; "last session" ordering; water; steps
 (no user-facing figure); widgets/notifications never render weight or calorie
 figures by design.
+
+---
+
+# LEAD RULINGS — 2026-07-30, D33 delegation
+
+Founder: "that should have earned intelligence to decide which ones of these to
+put in and then do the work." Ruled on one criterion: the best result for the
+app and its users. Nothing below is deferred for effort.
+
+## ALL 21 GET FIXED. Sequenced by blast radius, not by size.
+
+### WAVE 1 — lead-owned, hands-on (data corruption + safety-adjacent)
+- **X1 QuickAdd kJ.** Corrupts `daily_intake_rollups` at the point of entry for
+  a live, selectable preference, and that rollup feeds ED-safety intake inputs.
+  Fixed at the sheet: read the energy-unit preference, label the field with the
+  real unit, and convert to kcal on save. Same discipline as the decimal-comma
+  fix: normalise the user's number, never reject it.
+- **X3 weight-trend input.** The rapid-loss / max-safe-loss gate must evaluate
+  the SAME readings the user sees. Unify the input so the safety path and Body
+  Metrics both read the merged history. NO threshold, floor or gate changes -
+  only the completeness of the input. Lead-owned because it is ED-adjacent.
+
+### WAVE 2 — one shared block/week resolver (the root cause)
+- **X2, X8, X15-X20** all collapse into this. ONE resolver answers "which week
+  of which block", date-based, and every one of the 32 consumers uses it. The
+  five competing implementations go, including the dead-but-correct
+  `getCurrentMesoWeek`.
+- `startWorkout`'s `ORDER BY week_index ASC LIMIT 1` is the defect at the centre
+  of it: it links every session to week 1 forever. It must resolve by date.
+- Cloud sync gap fixed in the same pass: `_pushMesocycles` must push
+  `planned_weeks`, or the next pull keeps overwriting local 6 with the cloud's
+  DEFAULT 5. Without this, every other fix is undone on session restore.
+- A repair step is required, not optional: existing rows already carry the
+  corrupted `planned_weeks`. Fixing reads alone leaves bad data in place.
+- **`planned_weeks` is authoritative for schedule length** (it seeds
+  `mesocycle_weeks` at `database.js:3846`). `duration_weeks` becomes derived or
+  is written in lockstep - never a second independent answer.
+
+### WAVE 3 — counting consistency
+- **X4 PR formula.** ONE 1RM function and ONE margin. `calculate1RM` (blended,
+  reps clamped, reps=1 special-cased) is the better model and is what the user
+  already sees live, so the weekly SQL tally conforms to it, not the reverse.
+- **X5, X6, X11.** Every "this week" count goes through the shared Monday-anchored
+  helper in `dayKey.js`; no surface computes its own boundary. Set counts COUNT
+  SETS - muscle credit is a volume metric and must never be displayed as a set
+  total.
+- **X7, X13.** The widget and partner snapshots are written on delete as well as
+  on finish. A snapshot that only refreshes on one path is a lie the rest of the
+  time.
+
+### WAVE 4 — targets, units, check-in
+- **X9, X12.** Effective targets everywhere or nowhere: the meal suggester and
+  the meal-plan header use the same resolved target as the ring.
+- **X10.** ONE check-in schedule resolver; the other two implementations go.
+- **X14 + the five hardcoded-kcal surfaces.** Every calorie figure renders through
+  the shared unit formatter.
+- **X21.** Delete the dead adaptive-TDEE read rather than leave a hardcoded 2500
+  baseline waiting to be wired up.
+
+## PERMANENT GUARD
+A test asserting that a user-visible fact has exactly ONE resolver. This class
+of bug returned because nothing stopped a second implementation being added. The
+guard is the only thing that makes the fix durable.
+
+## NOT CHANGED
+Coaching engine calculations, ED-safety floors/gates/thresholds, GDPR/Article 9,
+billing, product IDs, free/pro gating. Wave 1 and Wave 2 touch the INPUTS and
+the WIRING of engine-adjacent code; no formula, floor or gate is altered.
