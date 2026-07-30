@@ -7073,7 +7073,17 @@ export async function insertMesocycleFromCloud(userId, m) {
       m.rir_ladder ?? null,
       m.is_active ? 1 : 0,
       m.auto_regulation_enabled ? 1 : 0,
-      m.deload_week ?? null,
+      // The cloud has NO deload_week column (confirmed absent from every
+      // supabase/migrate_*.sql), so m.deload_week is always undefined here and
+      // a bare `?? null` would WIPE the locally-derived value on every session
+      // restore -- undoing both activatePlanWithBlock's write and the v68
+      // backfill, and re-killing the deload highlighting after one sync.
+      //
+      // No cloud migration is needed to fix that, because this value is
+      // DERIVABLE: generateMesocycleWeeks makes the LAST week the deload
+      // unconditionally, which is the same certain derivation v68 uses. Fall
+      // back to the schedule length rather than to null.
+      m.deload_week ?? m.planned_weeks ?? m.duration_weeks ?? null,
       now, now,
     ],
   );

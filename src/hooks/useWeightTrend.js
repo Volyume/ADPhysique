@@ -14,8 +14,7 @@
  */
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { getMorningWeights, getBodyMetricLog, getNutritionTargets, getOpenEdPatternFlag, getLatestCoachOutput } from '../lib/database';
-import { buildWeighInSeries } from '../lib/bodyMetricsHistoryMerge';
+import { getMorningWeights, getNutritionTargets, getOpenEdPatternFlag, getLatestCoachOutput } from '../lib/database';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { computeEWMA, computeWeeklyWeightChange, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
 import { deriveWeightTrend } from '../lib/weightTrend';
@@ -31,17 +30,8 @@ export default function useWeightTrend(userId) {
       return;
     }
     try {
-      const [weights, bodyLog, targets, recentIntake, edFlag, lastCoach] = await Promise.all([
+      const [weights, targets, recentIntake, edFlag, lastCoach] = await Promise.all([
         getMorningWeights(userId, 90),
-        // X3 (cross-surface audit 2026-07-30): the trend must be built from
-        // EVERY weigh-in the user logged, not just the ones Home's quick
-        // widget wrote. BodyMetricsScreen's own "Log weight" form writes
-        // body_metric_log, a different table, and this trend used to ignore it
-        // -- so the same readings the user could see plotted on Body Metrics
-        // were absent from the trend here and from the rate the ED-safety
-        // gates assess. Both tables are the user weighing themselves; the
-        // split is historical, and getLatestBodyWeight already reads both.
-        getBodyMetricLog(userId, 200).catch(() => []),
         getNutritionTargets(userId).catch(() => null),
         getRecentIntakeSummary(userId).catch(() => null),
         // ED-safety, fail CLOSED: a transient flag read maps to the truthy
@@ -51,9 +41,7 @@ export default function useWeightTrend(userId) {
         getLatestCoachOutput(userId).catch(() => null),
       ]);
 
-      // One canonical series, deduped by calendar day, oldest-first.
-      const series = buildWeighInSeries(bodyLog || [], weights || []);
-      const ewmaData = computeEWMA(series);
+      const ewmaData = computeEWMA(weights || []);
       const weeklyChange = computeWeeklyWeightChange(ewmaData);
 
       const prescribedKcal = targets?.targetKcal ?? null;
