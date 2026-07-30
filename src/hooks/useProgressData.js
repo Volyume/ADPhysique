@@ -225,7 +225,11 @@ export default function useProgressData() {
   async function loadBlockState(isCurrentRequest = () => true) {
     try {
       const week = await getCurrentMesocycleWeek(user.id).catch(() => null);
-      const progress = await getPlannedMuscleVolume(user.id).catch(() => []);
+      // X15 (cross-surface-consistency-audit-2026-07-30): this passed
+      // user.id, but getPlannedMuscleVolume filters
+      // `WHERE mesocycle_week_id = ?` -- so BlockProgressCard rendered null
+      // for every user, always. Pass the actual current week's row id.
+      const progress = week?.id ? await getPlannedMuscleVolume(week.id).catch(() => []) : [];
       if (!isCurrentRequest()) return;
       setCurrentMesoWeek(week);
       setBlockProgress(progress || []);
@@ -460,24 +464,22 @@ export default function useProgressData() {
     setRefreshing(false);
   }
 
-  // Mesocycle progress (0–1)
+  // Mesocycle progress (0–1) and current week -- both derived from
+  // currentMesoWeek (Wave 2, cross-surface-consistency-audit-2026-07-30):
+  // the SAME date-based resolver (getCurrentMesocycleWeek) every other
+  // block/week surface reads, not an independent date calculation. This
+  // used to floor/ceil raw ms against durationWeeks, its own competing
+  // answer for "which week" (X8: ConsistencyScreen rendered this alongside
+  // the resolver's own BlockShapeCard and showed two different weeks for
+  // the same block on the same screen).
   function mesoProgress() {
-    if (!activeMeso) return 0;
-    const total = activeMeso.durationWeeks ?? 0;
-    if (!total || !activeMeso.startDate) return 0;
-    const start = typeof activeMeso.startDate === 'string'
-      ? new Date(activeMeso.startDate).getTime()
-      : activeMeso.startDate;
-    const weeksSinceStart = Math.max(0, (Date.now() - start) / WEEK_MS);
-    return Math.min(1, weeksSinceStart / total);
+    if (!currentMesoWeek?.plannedWeeks) return 0;
+    const total = currentMesoWeek.plannedWeeks;
+    return Math.min(1, Math.max(0, (currentMesoWeek.weekIndex - 1) / Math.max(total - 1, 1)));
   }
 
   function mesoCurrentWeek() {
-    if (!activeMeso?.startDate) return 1;
-    const start = typeof activeMeso.startDate === 'string'
-      ? new Date(activeMeso.startDate).getTime()
-      : activeMeso.startDate;
-    return Math.max(1, Math.ceil((Date.now() - start) / WEEK_MS));
+    return currentMesoWeek?.weekIndex ?? 1;
   }
 
   // Has the user logged anything yet? Used to hide the always-on chart

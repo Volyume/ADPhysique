@@ -58,15 +58,17 @@ describe('QuickAddSheet', () => {
     await press(tree, 'Add to diary');
 
     expect(props.onSave).not.toHaveBeenCalled();
+    // X1: the copy names the unit the user is typing in. Default preference
+    // is kcal, so the bound is unchanged at 5000 for this case.
     expect(mockToastShow).toHaveBeenCalledWith(
-      'Enter calories between 1 and 5000.',
+      'Enter energy between 1 and 5000 kcal.',
       { variant: 'warning' },
     );
   });
 
   test('saves calories, macros and meal slot', async () => {
     const { tree, props } = render({ initialMealSlot: 'dinner' });
-    setInput(tree, 'Calories', '300');
+    setInput(tree, 'Energy in kcal', '300');
     setInput(tree, 'Protein in grams', '20');
     setInput(tree, 'Carbohydrates in grams', '31.5');
     setInput(tree, 'Fat in grams', '9');

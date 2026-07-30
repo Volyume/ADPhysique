@@ -9,9 +9,13 @@
  *  - failing that (a plateau week, or all first-time lifts with no prior best),
  *    the heaviest single set by e1RM, so the hero block always has content.
  *
- * e1RM uses plain Epley (weight * (1 + reps/30)) — the SAME formula as
- * getWeeklyPRCount (database.js) — so the featured "best lift" is consistent
- * with the PR count shown on the same card.
+ * e1RM defaults to plain Epley (weight * (1 + reps/30)), used by callers/tests
+ * that pass no e1rmFn. getBestLiftThisWeek (database.js) instead passes
+ * calculate1RM (algorithms.js) as the third argument: X4 (cross-surface
+ * consistency audit 2026-07-30) ruled that the weekly tally must conform to
+ * the SAME blended/clamped formula the live in-session PR detector
+ * (detectPR/calculate1RM) uses, not a separate plain-Epley formula, so the
+ * featured "best lift" agrees with the weekly PR count on the same card.
  *
  * ED-safety: a barbell lift is a competence signal about a behaviour performed,
  * not a bodyweight number. It is still suppressed entirely on the card under an
@@ -31,10 +35,13 @@ export function epleyE1rm(weight, reps) {
  * @param {Array<{exerciseId:*, exerciseName?:string, weight:number, reps:number}>} weekSets
  *        this week's completed working sets (warm-ups already excluded).
  * @param {Map<*,number>|object|null} priorBestByExercise
- *        exerciseId -> prior best e1RM (from all sets BEFORE this week).
+ *        exerciseId -> prior best e1RM (from all sets BEFORE this week, computed
+ *        with the SAME e1rmFn as below).
+ * @param {(weight:number, reps:number) => number} [e1rmFn] e1RM estimator,
+ *        defaults to the plain-Epley epleyE1rm above.
  * @returns {{exerciseName:string, weight:number, reps:number, isNewBest:boolean, gainKg:(number|null)}|null}
  */
-export function pickBestLift(weekSets, priorBestByExercise) {
+export function pickBestLift(weekSets, priorBestByExercise, e1rmFn = epleyE1rm) {
   if (!Array.isArray(weekSets) || weekSets.length === 0) return null;
 
   const priorOf = (id) => {
@@ -52,7 +59,7 @@ export function pickBestLift(weekSets, priorBestByExercise) {
     if (!Number.isFinite(w) || w <= 0) continue;
     const rRaw = Number(s.reps);
     const reps = Number.isFinite(rRaw) && rRaw >= 1 ? rRaw : 1;
-    const e = epleyE1rm(w, reps);
+    const e = e1rmFn(w, reps);
     const cur = topByEx.get(s.exerciseId);
     if (!cur || e > cur.wkE1rm) {
       topByEx.set(s.exerciseId, {

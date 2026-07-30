@@ -86,7 +86,13 @@ describe('P9: placeholder-only inputs now carry labels', () => {
   });
   test('quick add: all four macro inputs', () => {
     const src = read('src/components/food/QuickAddSheet.js');
-    expect(src).toMatch(/accessibilityLabel="Calories"/);
+    // RE-ANCHORED 2026-07-30 (cross-surface audit X1): the energy field's
+    // label is now unit-aware (`Energy in ${unitLabel}`) because a bare
+    // "Calories" label was part of how a kJ user's input was silently stored
+    // as kcal. The guard's INTENT is unchanged and still enforced: the field
+    // carries an explicit accessibility label rather than relying on its
+    // placeholder.
+    expect(src).toMatch(/accessibilityLabel=\{`Energy in \$\{unitLabel\}`\}/);
     expect(src).toMatch(/'Protein in grams'/);
     expect(src).toMatch(/'Carbohydrates in grams'/);
     expect(src).toMatch(/'Fat in grams'/);

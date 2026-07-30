@@ -27,7 +27,11 @@ export async function confirmPlanSwitchMidBlock(userId, opts = {}) {
 
   const status = getBlockStatus(
     block.startDate ?? block.createdAt ?? Date.now(),
-    block.plannedWeeks ?? 5,
+    // Wave 2 (2026-07-30): plannedWeeks is authoritative; durationWeeks is
+    // kept in lockstep as a fallback only, never a hardcoded default (see
+    // blockAdvisor.js's identical comment -- getBlockStatus no longer
+    // accepts one).
+    block.plannedWeeks ?? block.durationWeeks ?? 5,
   );
 
   if (status.currentWeek <= 1) return true;

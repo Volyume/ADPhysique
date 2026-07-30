@@ -49,7 +49,11 @@ describe('gatherWidgetInputs', () => {
   test('builds next session with a routine name + week-in-block, no body data', async () => {
     const inputs = await gatherWidgetInputs('u1');
     expect(inputs.nextSession.name).toBe('Push');
-    expect(inputs.nextSession.weekInBlock).toEqual({ week: 3, total: 5 });
+    // X17 (cross-surface-consistency-audit-2026-07-30): the widget added its
+    // own +1 on top of getCurrentMesocycleWeek's already 1-indexed
+    // weekIndex; re-anchored to the fixed, non-off-by-one value (weekIndex
+    // 2 from the mock above -> week 2, not 3).
+    expect(inputs.nextSession.weekInBlock).toEqual({ week: 2, total: 5 });
     expect(inputs.consistency).toEqual({ completed: 2, planned: 4, streakWeeks: 0 });
     // Privacy: the gathered object carries nothing weight/calorie/body-shaped.
     expect(JSON.stringify(inputs)).not.toMatch(/weight|kcal|calorie|macro|bodyfat/i);

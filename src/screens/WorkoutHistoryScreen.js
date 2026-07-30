@@ -234,6 +234,21 @@ export default function WorkoutHistoryScreen({ navigation }) {
                   .then((cloudOk) => { if (!cloudOk) return enqueueSyncOp('workout_delete', workout.id, supabaseUserId); })
                   .catch(() => enqueueSyncOp('workout_delete', workout.id, supabaseUserId));
               }
+              // X7/X13 (cross-surface consistency audit 2026-07-30): the
+              // home-screen widget and the partner's view of my week were
+              // only ever refreshed on workout FINISH (ActiveWorkoutScreen),
+              // never on delete, so deleting a duplicate left both reading a
+              // stale, too-high count. Same fire-and-forget, best-effort
+              // pattern as the finish path: neither can break a delete.
+              try {
+                // eslint-disable-next-line global-require
+                require('../lib/widgets/writer').writeWidgetSnapshot(user.id).catch(() => {});
+                // eslint-disable-next-line global-require
+                require('../lib/partners/weekSignalWriter').writeOwnWeekSignals(
+                  user.id,
+                  useAppStore.getState().userProfile?.scoffScore,
+                ).catch(() => {});
+              } catch (_) { /* best-effort, never blocks the delete */ }
               if (expandedId === workout.id) setExpandedId(null);
               toast.show('Workout deleted.', { variant: 'success' });
               loadWorkouts();

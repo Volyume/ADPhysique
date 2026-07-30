@@ -32,7 +32,7 @@ import { resolveProgressScanCoachNote } from '../lib/progressScanCoachResolver';
 import { composeScanEvidencePacket } from '../lib/progressScanCheckInEvidence';
 import { recordScanClassification } from '../lib/progressScanClassificationHistory';
 import { confidenceChipLabel } from '../lib/progressScanResultsContract';
-import { localDayKey, localWeekStartMs, localWeekEndMs } from '../lib/dayKey';
+import { localDayKey, localWeekStartMs } from '../lib/dayKey';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import {
   formatWeekRange, hasLoggedToday, earliestWeightTs,
@@ -390,18 +390,28 @@ export default function WeeklyCheckInScreen({ navigation }) {
         const weights = await getMorningWeightsLast14Days(user.id);
         if (cancelled) return;
         setAlreadyLoggedToday(hasLoggedToday(weights));
-        // X11 (cross-surface consistency audit 2026-07-30): this used to be a
-        // rolling trailing-7-day window ("weekAgo"), which could disagree with
-        // CoachOutputScreen's Monday-anchored weigh-in count for the same
-        // moment despite both being labelled "this week". weekStartMs is
-        // hoisted here (was computed again, identically, further down) so the
-        // weigh-in count, the session count and the PR count all anchor to
-        // the SAME calendar week.
-        const weekStartMs = localWeekStartMs(anchorMs);
-        const weekEndMs = localWeekEndMs(weekStartMs);
-        const thisWeek = weights.filter(w => (w.loggedAt ?? 0) >= weekStartMs && (w.loggedAt ?? 0) < weekEndMs);
-        setWeekWeights(thisWeek);
-        setWeighInsThisWeek(thisWeek.length);
+        // X11 (cross-surface audit 2026-07-30), RULED after review: this count
+        // stays a TRAILING 7-DAY window, deliberately.
+        //
+        // It is not a display figure. `thisWeek.length < MIN_WEIGH_INS` below
+        // is a real eligibility GATE (gateState 'need_weights') that blocks the
+        // check-in, and MIN_WEIGH_INS is defined as "weigh-ins required in the
+        // trailing 7 days" (trialActivation.js) -- that is the published
+        // contract. Monday-anchoring it would mean an established daily logger
+        // opening this screen on a Monday or Tuesday has only one or two
+        // readings inside the calendar week and is refused a check-in they have
+        // clearly earned. Tightening a gate to win a consistency argument would
+        // be a worse defect than the inconsistency.
+        //
+        // The real fault was the COPY: a trailing-7-day figure was labelled
+        // "this week". The label is what changed, not the window. The session
+        // and PR counts further down are genuinely weekly and stay
+        // Monday-anchored via weekStartMs; these are two different facts and no
+        // longer share one name.
+        const trailing7Ms = anchorMs - 7 * 86400000;
+        const last7Days = weights.filter(w => (w.loggedAt ?? 0) >= trailing7Ms);
+        setWeekWeights(last7Days);
+        setWeighInsThisWeek(last7Days.length);
 
         // Compute days since the user first logged a morning weight.
         // Stand-in for "days since they started using the coaching
@@ -417,6 +427,11 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
         // Auto-derive context. Loaded in parallel with the gate
         // evaluation so the screen is fully populated when it lands.
+        // The genuinely WEEKLY facts (sessions, PRs, the rollup range) anchor to
+        // the local Monday. Kept separate from the trailing-7-day weigh-in gate
+        // above on purpose: two different windows, two different names, so
+        // neither can be mistaken for the other again.
+        const weekStartMs = localWeekStartMs(anchorMs);
         // weekStartMs is epoch milliseconds (local Monday 00:00), NOT a Date
         // (hoisted above, alongside the weigh-in count window, so every count
         // on this screen shares one boundary). getWeeklySessionStats /
@@ -549,7 +564,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             hasStartedBaseline: !!earliestTs,
           });
           setGateState('too_soon');
-        } else if (thisWeek.length < MIN_WEIGH_INS) {
+        } else if (last7Days.length < MIN_WEIGH_INS) {
           setGateState('need_weights');
         } else if (dayLate) {
           // OB-7: the stricter data gates above still win; a day-late user
@@ -1486,7 +1501,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           </View>
           <Text style={[styles.gateTitle, live.gateTitle]}>A few more weight readings needed</Text>
           <Text style={[styles.gateBody, live.gateBody]}>
-            You've logged {weighInsThisWeek} {weighInsThisWeek === 1 ? 'reading' : 'readings'} this week. Your coach needs at least {MIN_WEIGH_INS} to calculate a reliable trend.
+            You've logged {weighInsThisWeek} {weighInsThisWeek === 1 ? 'reading' : 'readings'} in the last 7 days. Your coach needs at least {MIN_WEIGH_INS} to calculate a reliable trend.
             {'\n\n'}
             Body weight shifts naturally each day due to fluid, food, and hormones. Logging every other day gives enough readings to smooth out that noise and see what's actually changing. With fewer readings, the coaching adjustments won't be as accurate.
             {'\n\n'}

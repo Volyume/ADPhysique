@@ -5,8 +5,8 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { differenceInWeeks } from 'date-fns/differenceInWeeks';
 import { safeDate, safeFormatDate } from '../lib/safeFormat';
+import { getBlockStatus } from '../lib/mesocycle';
 import SvgBarSparkline from '../components/SvgBarSparkline';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -137,15 +137,22 @@ export default function MesocycleBuilderScreen({ navigation }) {
     }
   }
 
+  // Wave 2 (cross-surface-consistency-audit-2026-07-30): this used to be its
+  // own differenceInWeeks calculation -- one of FOUR independent date
+  // formulas the audit found answering "which week am I in" across the app.
+  // Now shares getBlockStatus's DST-safe day maths (mesocycle.js) so this
+  // screen can never disagree with Today/Train/Consistency about which week
+  // "now" falls in. getBlockStatus already falls back to week 1 for a
+  // malformed/unparseable startDate (EP-23/UI-11), so no separate NaN guard
+  // is needed. Clamped to totalWeeks for display, matching the previous
+  // behaviour (an overdue block still reads as its final week here rather
+  // than "Week 8 of 6"); getBlockStatus's own unclamped currentWeek/status is
+  // how overdue blocks are actually detected elsewhere (blockAdvisor).
   function getCurrentWeek(mesocycle) {
     if (!mesocycle?.startDate) return 1;
-    // A malformed/legacy startDate (restore/sync) makes differenceInWeeks
-    // return NaN, which would render "Week NaN of N" below (EP-23/UI-11);
-    // fall back to week 1, the same placeholder used for no startDate.
-    const start = safeDate(mesocycle.startDate);
-    if (!start) return 1;
-    const week = differenceInWeeks(new Date(), start) + 1;
-    return Math.min(Math.max(week, 1), mesocycle.durationWeeks || 4);
+    const totalWeeks = mesocycle.plannedWeeks || mesocycle.durationWeeks || 4;
+    const { currentWeek } = getBlockStatus(mesocycle.startDate, totalWeeks);
+    return Math.min(Math.max(currentWeek, 1), totalWeeks);
   }
 
   return (

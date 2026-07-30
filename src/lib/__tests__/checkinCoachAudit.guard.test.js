@@ -70,12 +70,26 @@ describe('ALGO-002: planned sessions come from the active plan', () => {
 
 describe('ALGO-003: PR detection uses estimated 1RM', () => {
   const body = fnBody(DB, 'export async function getWeeklyPRCount');
-  test('source guard: compares Epley e1RM, not just heavier load', () => {
-    expect(body).toMatch(/wk_e1rm/);
-    // Epley: weight * (1 + reps/30), using actual_reps.
-    expect(body).toMatch(/actual_reps/);
-    expect(body).toMatch(/1\.0 \+ COALESCE\(ws\.actual_reps, 1\) \/ 30\.0/);
-    // The old weight-only distinct-exercise count must be gone.
+  // RE-ANCHORED 2026-07-30 (cross-surface audit X4). This used to pin the
+  // raw Epley SQL (`wk_e1rm`, `1.0 + COALESCE(ws.actual_reps, 1) / 30.0`), but
+  // that formula was the DEFECT: it disagreed with the blended
+  // Epley/Brzycki `calculate1RM` the live in-session PR banner uses, and it
+  // compared with a zero margin where the live path requires 0.1%. A set could
+  // therefore celebrate a PR on finishing a workout and be reported as "0 PRs"
+  // by the weekly recap one screen away.
+  //
+  // The test's INTENT is unchanged and now stronger: PR detection must use an
+  // estimated 1RM rather than raw load, AND it must be the SAME estimate the
+  // user already sees. Pinning the shared function instead of an inlined
+  // formula is what makes a second divergent implementation impossible.
+  test('source guard: uses the SHARED blended e1RM and the same margin as the live path', () => {
+    expect(body).toMatch(/calculate1RM\(/);
+    expect(body).toMatch(/actual_reps|actualReps/);
+    // The 0.1% margin detectPR applies, so both paths agree on borderline sets.
+    expect(body).toMatch(/1\.001/);
+    // The superseded inline Epley must not come back.
+    expect(body).not.toMatch(/1\.0 \+ COALESCE\(ws\.actual_reps, 1\) \/ 30\.0/);
+    // The old weight-only distinct-exercise count must stay gone.
     expect(body).not.toMatch(/COUNT\(DISTINCT ws\.exercise_id\) AS pr_count/);
   });
 });

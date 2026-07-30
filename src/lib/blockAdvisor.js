@@ -221,7 +221,12 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
   const blockStatus = activeBlock
     ? getBlockStatus(
         activeBlock.startDate ?? activeBlock.createdAt ?? Date.now(),
-        activeBlock.plannedWeeks ?? 5,
+        // Wave 2 (2026-07-30): plannedWeeks is the authoritative schedule-
+        // length field; durationWeeks is kept in lockstep with it, so it is
+        // only a fallback here, never plannedWeeks' own hardcoded default
+        // (that was root cause #2 of the "Week 2 of 5" vs "of 6" bug --
+        // getBlockStatus no longer accepts a default at all).
+        activeBlock.plannedWeeks ?? activeBlock.durationWeeks ?? 5,
       )
     : null;
 

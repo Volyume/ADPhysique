@@ -524,8 +524,13 @@ export default function HomeScreen({ navigation, route }) {
       if (coachOut) { setTrialBanner(null); return; }
 
       const completedSessions = workouts.filter(w => w.isCompleted && (w.startedAt ?? 0) >= trialStart).length;
-      const weekAgo = Date.now() - 7 * 86400000;
-      const weighIns7d = weights.filter(w => (w.loggedAt ?? 0) >= weekAgo).length;
+      // X11 (cross-surface consistency audit 2026-07-30): was a rolling
+      // trailing-7-day window, which could show "3 of 3 morning weigh-ins
+      // this week" here while CoachOutputScreen's Monday-anchored count said
+      // something else for the same moment. Every "this week" weigh-in count
+      // now shares the same calendar-week boundary (dayKey.js).
+      const weekAgoMondayMs = localWeekStartMs();
+      const weighIns7d = weights.filter(w => (w.loggedAt ?? 0) >= weekAgoMondayMs).length;
       const firstWeightAt = weights.length ? Math.min(...weights.map(w => w.loggedAt ?? Infinity)) : null;
 
       let checkinDay = 0;
@@ -573,8 +578,10 @@ export default function HomeScreen({ navigation, route }) {
   // loadTrialBanner gathers, so the runway can never disagree with the
   // WeeklyCheckIn gate. Unlike the trial banner (trial-start-anchored, day
   // 0-14 only), this is meant to run for the whole Pro lifetime, so both
-  // counts use a rolling trailing-7-day window (matching the check-in
-  // screen's own MIN_WEIGH_INS window) rather than a trial-start anchor.
+  // counts use the calendar week (X11, cross-surface consistency audit
+  // 2026-07-30: dayKey.js's Monday-anchored helper, matching the check-in
+  // screen's own weigh-in window and every other "this week" count) rather
+  // than a trial-start anchor.
   async function loadCoachRunway() {
     try {
       if (!user?.id || tier !== 'pro') { setCoachRunway(null); return; }
@@ -584,7 +591,7 @@ export default function HomeScreen({ navigation, route }) {
         getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
         AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
       ]);
-      const weekAgo = Date.now() - 7 * 86400000;
+      const weekAgo = localWeekStartMs();
       const weighIns7d = weights.filter(w => (w.loggedAt ?? 0) >= weekAgo).length;
       const completedSessions = workouts.filter(w => w.isCompleted && (w.startedAt ?? 0) >= weekAgo).length;
       const firstWeightAt = weights.length ? Math.min(...weights.map(w => w.loggedAt ?? Infinity)) : null;

@@ -10,7 +10,7 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, fontSize, fontWeight, radius, type, withAlpha, circle, letterSpacing, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins } from '../lib/database';
-import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles } from '../lib/algorithms';
+import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles, summariseWorkoutSets } from '../lib/algorithms';
 import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -252,6 +252,12 @@ export default function CoachReviewScreen() {
   const [loading, setLoading] = useState(true);
   const [weeklyWorkouts, setWeeklyWorkouts] = useState([]);
   const [volumeByMuscle, setVolumeByMuscle] = useState({});
+  // X6 (cross-surface consistency audit 2026-07-30): a real set count, NOT
+  // derived from volumeByMuscle. allocateExerciseVolume credits secondary
+  // muscles at 0.5+ each, so summing workingSets across muscles double-counts
+  // a set for every secondary it trains (10 bench sets read as 20 "total
+  // sets"). Muscle credit is a volume metric; a set total must count sets.
+  const [weeklySetCount, setWeeklySetCount] = useState(0);
   const [progressionWins, setProgressionWins] = useState([]);
   const [deloadResult, setDeloadResult] = useState(null);
   const [checkins, setCheckins] = useState([]);
@@ -317,6 +323,10 @@ export default function CoachReviewScreen() {
       // Volume by muscle
       const volume = calculateWeeklyVolume(thisWeekSets, exerciseMap);
       setVolumeByMuscle(volume);
+      // X6: the set COUNT for the week, independent of muscle-credit volume
+      // (summariseWorkoutSets excludes warm-ups only, same basis every other
+      // "sets" figure in the app uses).
+      setWeeklySetCount(summariseWorkoutSets(thisWeekSets).workingSetCount);
 
       // Progressive overload wins
       const wins = detectProgressionWins(thisWeekSets, allSets, exerciseMap);
@@ -430,7 +440,11 @@ export default function CoachReviewScreen() {
     return status === 'over_mrv' || status === 'near_mrv' || status === 'below' || status === 'minimum';
   });
 
-  const totalSets = trainedMuscles.reduce((sum, [, data]) => sum + data.workingSets, 0);
+  // X6: was trainedMuscles.reduce(...data.workingSets), which sums muscle
+  // CREDIT (allocateExerciseVolume gives each secondary muscle 0.5+), not a
+  // set count -- ten bench sets displayed as 20 "total sets". weeklySetCount
+  // is a real count of this week's non-warm-up sets.
+  const totalSets = weeklySetCount;
 
   const topMuscle = trainedMuscles.length > 0
     ? (MUSCLE_DISPLAY_NAMES[trainedMuscles[0][0]] || trainedMuscles[0][0])

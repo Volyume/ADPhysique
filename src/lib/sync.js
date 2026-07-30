@@ -879,6 +879,22 @@ async function _pushMesocycles(sb, supabaseUserId, localUserId) {
         start_date: m.startDate ?? null,
         end_date: m.endDate ?? null,
         duration_weeks: m.durationWeeks ?? null,
+        // Wave 2 (cross-surface-consistency-audit-2026-07-30): planned_weeks
+        // is the authoritative schedule-length field and was never pushed,
+        // so the cloud column sat at its DEFAULT 5 and the next pull
+        // overwrote a genuine local 6+ back down to 5 -- the root cause of
+        // "Week 2 of 5" vs "of 6" on the same block. block_type and
+        // rir_ladder round-trip through the pull path too
+        // (insertMesocycleFromCloud) but were never pushed either, so they
+        // carried the same silent-overwrite risk; pushed here for the same
+        // reason. `status` is NOT pushed: it is set once at creation and
+        // never mutated anywhere in the app today (verified), so there is
+        // no local value at risk of being overwritten yet, and pulling it
+        // back would need insertMesocycleFromCloud's column list extended
+        // too -- left as a follow-up if/when something starts writing it.
+        planned_weeks: m.plannedWeeks ?? m.durationWeeks ?? null,
+        block_type: m.blockType ?? null,
+        rir_ladder: m.rirLadder ?? null,
         focus: m.focus ?? null,
         is_active: !!m.isActive,
         updated_at: new Date(m.updatedAt ?? m.createdAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time

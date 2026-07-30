@@ -80,6 +80,40 @@ export function getCurrentMesoWeek(startDateMs, experience = 'intermediate', now
 }
 
 /**
+ * Returns which week (1-indexed) of THIS BLOCK's own real schedule "now"
+ * falls in, clamped to its authoritative plannedWeeks.
+ *
+ * Wave 2 (cross-surface-consistency-audit-2026-07-30): the single date-based
+ * primitive database.js's getCurrentMesocycleWeek resolver uses to find the
+ * TRUE current mesocycle_weeks row (mesocycle_weeks only has rows for
+ * 1..plannedWeeks, so this clamps rather than growing past the schedule).
+ * Shares localDaysElapsed (F10, DST-safe) with getCurrentMesoWeek and
+ * getBlockStatus below, so all three can never disagree about which
+ * calendar week a date falls in -- they differ only in what they clamp/wrap
+ * for, because they answer different questions:
+ *   - getCurrentMesoWeek:  position in the generic 5/6-week autoregulation
+ *                          narrative (wraps by experience schedule length)
+ *   - getBlockStatus:      has THIS block's real schedule finished or run
+ *                          over (deliberately UNclamped so 'overdue' shows)
+ *   - getCurrentBlockWeekIndex: which mesocycle_weeks ROW exists right now
+ *                          for THIS block (clamped to plannedWeeks, since no
+ *                          row exists beyond it)
+ *
+ * @param {string|number} startDateMs - epoch ms (or ISO string) of block start
+ * @param {number} plannedWeeks - the block's authoritative total weeks
+ * @param {number} [nowMs] - epoch ms to treat as "now"
+ * @returns {number} 1-based week index, clamped to [1, plannedWeeks]
+ */
+export function getCurrentBlockWeekIndex(startDateMs, plannedWeeks, nowMs = Date.now()) {
+  const start = typeof startDateMs === 'string' ? new Date(startDateMs).getTime() : startDateMs;
+  const totalWeeks = Number.isFinite(plannedWeeks) && plannedWeeks > 0 ? Math.round(plannedWeeks) : 1;
+  if (!Number.isFinite(start)) return 1;
+  const daysElapsed = localDaysElapsed(start, nowMs);
+  const weekIndex = Math.floor(daysElapsed / 7) + 1;
+  return Math.min(Math.max(1, weekIndex), totalWeeks);
+}
+
+/**
  * Returns the full mesocycle schedule array for this experience level.
  *
  * @param {'beginner'|'intermediate'|'advanced'|'competitive'} experience
@@ -440,7 +474,7 @@ export function applyTimeCrunch(exercises, targetMinutes, estimateFn, options = 
  *   complete , recovery week just finished (0–13 days overdue)
  *   overdue  , block finished 2+ weeks ago, strongly prompt transition
  */
-export function getBlockStatus(startDateMs, plannedWeeks = 5, nowMs = Date.now()) {
+export function getBlockStatus(startDateMs, plannedWeeks, nowMs = Date.now()) {
   let start = typeof startDateMs === 'string' ? new Date(startDateMs).getTime() : (startDateMs ?? nowMs);
   // Wave-3 review: mirror getCurrentMesoWeek's CALC-8 guard. An unparseable
   // stored start date used to propagate NaN into currentWeek/weeksOverdue

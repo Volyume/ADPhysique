@@ -61,8 +61,12 @@ export async function gatherWidgetInputs(userId) {
       // routine rotation is a later refinement.
       name: routines[0]?.name || plan.name || 'Next session',
       dayLabel: nextTrainingDayLabel(days),
+      // X17 (cross-surface-consistency-audit-2026-07-30): weekIndex from
+      // getCurrentMesocycleWeek is already 1-indexed; this +1 was the
+      // widget's OWN off-by-one, independent of (and only masked by) the
+      // week-1 pin the resolver used to have.
       weekInBlock: (mesoWeek && Number.isFinite(mesoWeek.weekIndex) && Number.isFinite(mesoWeek.plannedWeeks))
-        ? { week: (mesoWeek.weekIndex ?? 0) + 1, total: mesoWeek.plannedWeeks }
+        ? { week: mesoWeek.weekIndex, total: mesoWeek.plannedWeeks }
         : null,
     };
   }

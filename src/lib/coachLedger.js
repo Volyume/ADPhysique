@@ -99,7 +99,12 @@ export function buildCoachLedger({
     {
       key: 'weighIns',
       done: weighIns7d >= MIN_WEIGH_INS,
-      label: `${Math.min(weighIns7d, MIN_WEIGH_INS)} of ${MIN_WEIGH_INS} morning weigh-ins this week`,
+      // X11 (cross-surface audit 2026-07-30): weighIns7d is a TRAILING 7-DAY
+      // count, which is the published MIN_WEIGH_INS contract, but the label
+      // read "this week" and so disagreed with every genuinely Monday-anchored
+      // weekly figure elsewhere. The window is correct and unchanged; the label
+      // now says what it actually measures.
+      label: `${Math.min(weighIns7d, MIN_WEIGH_INS)} of ${MIN_WEIGH_INS} morning weigh-ins in the last 7 days`,
     },
     {
       key: 'days',

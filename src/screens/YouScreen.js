@@ -37,6 +37,7 @@ import { trackPartnerSurfaceView } from '../lib/partners/telemetry';
 import { logError } from '../lib/errorLog';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { buildCoachLedger } from '../lib/coachLedger';
+import { localWeekStartMs } from '../lib/dayKey';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 
 function formatDate(ms) {
@@ -249,7 +250,10 @@ export default function YouScreen({ navigation }) {
         const wellbeing = wellbeingResult.status === 'fulfilled' ? (wellbeingResult.value || 'unspecified') : 'read_failed';
         const edFlag = edFlagResult.status === 'fulfilled' ? edFlagResult.value : 'read_failed';
         const completed = (workouts || []).filter(w => !!(w.isCompleted ?? w.is_completed));
-        const weekAgo = Date.now() - 7 * 86400000;
+        // X11 (cross-surface consistency audit 2026-07-30): was a rolling
+        // trailing-7-day window; every "this week" weigh-in count now shares
+        // the same Monday-anchored boundary (dayKey.js) as CoachOutputScreen.
+        const weekAgo = localWeekStartMs();
         const weighIns7d = (weights || []).filter(w => (w.loggedAt ?? w.logged_at ?? 0) >= weekAgo).length;
         const firstWeightAt = weights.length
           ? Math.min(...weights.map(w => w.loggedAt ?? w.logged_at ?? Infinity))

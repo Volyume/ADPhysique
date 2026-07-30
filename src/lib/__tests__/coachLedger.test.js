@@ -27,7 +27,7 @@ describe('buildCoachLedger: rows vs published thresholds', () => {
     expect(l.rows).toHaveLength(3);
     const byKey = Object.fromEntries(l.rows.map(r => [r.key, r]));
     expect(byKey.weighIns.done).toBe(false);
-    expect(byKey.weighIns.label).toBe(`0 of ${MIN_WEIGH_INS} morning weigh-ins this week`);
+    expect(byKey.weighIns.label).toBe(`0 of ${MIN_WEIGH_INS} morning weigh-ins in the last 7 days`);
     expect(byKey.days.done).toBe(false);
     expect(byKey.days.label).toBe('First morning weight starts the clock');
     expect(byKey.sessions.done).toBe(false);
@@ -57,7 +57,7 @@ describe('buildCoachLedger: rows vs published thresholds', () => {
   test('over-achievement never renders past the threshold (no "5 of 3")', () => {
     const l = buildCoachLedger({ weighIns7d: 7, now: WED });
     expect(l.rows.find(r => r.key === 'weighIns').label)
-      .toBe(`${MIN_WEIGH_INS} of ${MIN_WEIGH_INS} morning weigh-ins this week`);
+      .toBe(`${MIN_WEIGH_INS} of ${MIN_WEIGH_INS} morning weigh-ins in the last 7 days`);
   });
 
   test('day counter is 1-based for humans, capped at the threshold', () => {
