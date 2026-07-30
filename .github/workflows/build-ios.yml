@@ -79,6 +79,12 @@ jobs:
       - name: Setup EAS
         uses: expo/expo-github-action@v8
         with:
+          # UNPINNED, and that is a known fragility: this floats, so an EAS CLI
+          # release can break a release build with no commit of ours. It is what
+          # broke build 46 (see the capability-sync note in the build step). Not
+          # pinned yet ON PURPOSE -- we do not know which version last built
+          # green, and pinning to a guess would burn iOS build credits proving it
+          # wrong. Once a build passes, pin to the version its log reports.
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
@@ -153,6 +159,42 @@ jobs:
           EXPO_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           CI: "false"
           EAS_SKIP_AUTO_FINGERPRINT: "1"
+          # Build 46 (2026-07-27) died here, AFTER a clean prebuild and bundle-id
+          # registration, on EAS's automatic Apple capability sync:
+          #
+          #   Failed to patch capabilities: [ { capabilityType:
+          #   'PUSH_NOTIFICATIONS', option: 'ON' }, ... ]
+          #   Apple API error: The request entity is not a valid request document
+          #   object - Unexpected or invalid value at
+          #   'data.relationships.bundleIdCapabilities.data.[0].attributes'
+          #
+          # Index [0] is PUSH_NOTIFICATIONS. Apple rejected the SHAPE of the
+          # attributes EAS sent, so this is an EAS-CLI/Apple-API mismatch, not a
+          # problem with this repo or with the App ID. Nothing changed on the
+          # Apple side and nothing in the app config changed; what floats is
+          # `eas-version: latest` below, so a new CLI release can break a release
+          # build with zero commits.
+          #
+          # Skipping the sync is safe here, and deliberately so:
+          #   - The capabilities this app needs are Push Notifications
+          #     (expo-notifications + UIBackgroundModes remote-notification) and
+          #     Sign in with Apple (ios.usesAppleSignIn). Both are ALREADY enabled
+          #     on the App ID -- earlier builds shipped to TestFlight with working
+          #     push and Apple sign-in, which is only possible if they are on. So
+          #     there is nothing for the sync to add.
+          #   - The app uses NO HealthKit (health.js getIosModule() returns null,
+          #     no entitlement, no dependency) and NO Apple Pay. The 'OFF' entries
+          #     in that payload are EAS asserting a desired state, NOT evidence
+          #     they were ever enabled.
+          #   - Entitlements in the binary come from app.json and the config
+          #     plugins, never from this sync, so the built app is unchanged.
+          #
+          # The standing risk this leaves is the one already documented in the
+          # GOTCHA at the top of this file: if a NEW capability is ever added to
+          # the app config, it must be enabled on the App ID by hand and the
+          # provisioning profile deleted on expo.dev, because nothing will sync
+          # it automatically any more.
+          EXPO_NO_CAPABILITY_SYNC: "1"
         run: |
           sudo apt-get install -y expect -qq 2>/dev/null
           expect <<'EOF'
