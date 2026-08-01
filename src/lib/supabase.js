@@ -60,15 +60,26 @@ const secureAuthStorage = {
   setItem: async (key, value) => {
     try { await SecureStore.setItemAsync(key, value, KEY_OPTS); }
     catch (e) {
+      // Re-triage 2026-08-01: getItem classified locked-device reads as
+      // expected, but set/remove kept logging them as errors - the residual
+      // VOLYUME-2E events on build 48. Same device state, same classification.
       // eslint-disable-next-line global-require
-      try { require('./errorLog').logError('supabase.secureStore.setItem', e); } catch (_) {}
+      try {
+        const log = require('./errorLog');
+        if (_isKeychainLocked(e)) log.logInfo('supabase.secureStore.locked', 'keychain locked, deferring session write');
+        else log.logError('supabase.secureStore.setItem', e);
+      } catch (_) {}
     }
   },
   removeItem: async (key) => {
     try { await SecureStore.deleteItemAsync(key, KEY_OPTS); }
     catch (e) {
       // eslint-disable-next-line global-require
-      try { require('./errorLog').logError('supabase.secureStore.removeItem', e); } catch (_) {}
+      try {
+        const log = require('./errorLog');
+        if (_isKeychainLocked(e)) log.logInfo('supabase.secureStore.locked', 'keychain locked, deferring session removal');
+        else log.logError('supabase.secureStore.removeItem', e);
+      } catch (_) {}
     }
   },
 };

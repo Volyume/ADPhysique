@@ -61,18 +61,38 @@ function emitPlaintextFallback(stage) {
 // be treated as "no key", because that would mint a replacement and orphan an
 // existing encrypted DB (F-001). Returns { value, failed }: failed=true only
 // when every attempt threw.
+
+// Locked-device predicate, mirroring supabase.js's _isKeychainLocked (kept as
+// a local copy on purpose: this module opens the database and stays
+// dependency-light; importing supabase.js here would pull the whole client
+// into the DB-open path). "User interaction is not allowed" is the Keychain
+// refusing access before the device's first unlock since boot - an EXPECTED
+// state for AFTER_FIRST_UNLOCK items on a background wake, not a defect.
+function _isKeychainLocked(e) {
+  const msg = String(e?.message || e || '');
+  return msg.includes('User interaction is not allowed')
+    || msg.includes('errSecInteractionNotAllowed');
+}
+
 async function readStoredKey(attempts = 3) {
+  // Re-triage 2026-08-01 (VOLYUME-2G/2E residue): `locked` is true only when
+  // EVERY attempt failed AND every failure was the locked-device refusal, so a
+  // mixed or unknown failure is never softened. Classification changes the
+  // LOGGING ONLY - the { value, failed } contract, the retry cadence, and the
+  // F-001 never-mint-over-a-real-key rule are byte-identical.
+  let allLocked = true;
   for (let i = 0; i < attempts; i += 1) {
     try {
       // eslint-disable-next-line no-await-in-loop
-      return { value: await SecureStore.getItemAsync(KEY_ID, KEY_OPTS), failed: false };
+      return { value: await SecureStore.getItemAsync(KEY_ID, KEY_OPTS), failed: false, locked: false };
     } catch (e) {
-      logError('dbCrypto.getKey', e, { attempt: i });
+      if (_isKeychainLocked(e)) logInfo('dbCrypto.getKey.locked', 'keychain locked before first unlock, deferring', { attempt: i });
+      else { allLocked = false; logError('dbCrypto.getKey', e, { attempt: i }); }
       // eslint-disable-next-line no-await-in-loop
       if (i < attempts - 1) await new Promise((r) => setTimeout(r, 150 * (i + 1)));
     }
   }
-  return { value: null, failed: true };
+  return { value: null, failed: true, locked: allLocked };
 }
 
 /**
@@ -88,9 +108,9 @@ async function readStoredKey(attempts = 3) {
  *                   and the DB would be unreadable). key is null when unavailable.
  */
 export async function getOrCreateDbKey() {
-  const { value, failed } = await readStoredKey();
+  const { value, failed, locked } = await readStoredKey();
   // A read failure is NOT "no key" — never mint a replacement over a real one.
-  if (failed) return { key: null, status: 'unavailable' };
+  if (failed) return { key: null, status: 'unavailable', locked: !!locked };
   if (value && /^[0-9a-f]{64}$/.test(value)) return { key: value, status: 'existing' };
   // Genuinely no valid key stored → create one, but only report it as usable if
   // it actually persisted. An unpersisted key must never encrypt data.
@@ -151,7 +171,7 @@ async function keyed(SQLite, key) {
  * the safe plaintext fallback, so callers/telemetry can see the state.
  */
 export async function openEncryptedDb(SQLite) {
-  const { key, status } = await getOrCreateDbKey();
+  const { key, status, locked } = await getOrCreateDbKey();
 
   // Key unavailable (SecureStore read threw on every attempt, or a fresh key
   // could not be persisted). Do NOT open or migrate an encrypted DB with a
@@ -170,7 +190,12 @@ export async function openEncryptedDb(SQLite) {
     }
     await closeQuietly(fb, 'key_unavailable_probe');
     const err = new Error('SQLCipher key unavailable and existing DB is not plaintext-readable');
-    logError('dbCrypto.keyUnavailable', err, {});
+    // Locked-before-first-unlock is the EXPECTED background-wake state for an
+    // AFTER_FIRST_UNLOCK key: the next foreground launch opens normally. The
+    // throw is identical either way - only a genuinely unexplained key loss
+    // stays an error, because that one really is serious.
+    if (locked) logInfo('dbCrypto.keyUnavailable.locked', 'device not yet unlocked since boot, deferring DB open');
+    else logError('dbCrypto.keyUnavailable', err, {});
     throw err;
   }
 

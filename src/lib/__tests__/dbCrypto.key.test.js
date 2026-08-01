@@ -111,7 +111,26 @@ describe('getOrCreateDbKey', () => {
 
     const res = await getOrCreateDbKey();
 
-    expect(res).toEqual({ key: null, status: 'unavailable' });
+    // RE-ANCHORED 2026-08-01 (Sentry re-triage): the unavailable result now
+    // also carries `locked`, a LOGGING classification only (locked-device
+    // failures log at info instead of error). This mock's generic message is
+    // not the iOS locked-refusal, so locked is false. The F-001 contract this
+    // test exists for is asserted unchanged: key null, status unavailable,
+    // nothing minted, nothing written.
+    expect(res).toEqual({ key: null, status: 'unavailable', locked: false });
+    expect(Crypto.getRandomBytesAsync).not.toHaveBeenCalled();
+    expect(SecureStore.setItemAsync).not.toHaveBeenCalled();
+  });
+
+  // Sentry re-triage 2026-08-01: the LOCKED-device refusal (iOS before first
+  // unlock since boot) reports locked: true so callers log it as the expected
+  // deferral it is -- while every F-001 guarantee holds identically.
+  test('a locked-device read failure is still unavailable, flagged locked, and mints nothing', async () => {
+    SecureStore.getItemAsync.mockRejectedValue(new Error('User interaction is not allowed.'));
+
+    const res = await getOrCreateDbKey();
+
+    expect(res).toEqual({ key: null, status: 'unavailable', locked: true });
     expect(Crypto.getRandomBytesAsync).not.toHaveBeenCalled();
     expect(SecureStore.setItemAsync).not.toHaveBeenCalled();
   });

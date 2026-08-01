@@ -220,6 +220,9 @@ export async function fetchByIdsChunked(scope, table, column, ids, queryFactory)
 export async function syncExercises(supabaseUserId, _opts = {}) {
   const sb = getClient();
   if (!sb || !supabaseUserId) return;
+  // Re-triage 2026-08-01: covered wholesale by the next good syncAll's bulk
+  // push, so a dead session defers with no queue entry and no data loss.
+  if (await _blockedByDeadSession('sync.syncExercises')) return;
   try {
     // Migration 020 split per-user exercise rows out of the
     // mixed-ownership `exercises` table into `custom_exercises`.
@@ -278,6 +281,19 @@ export const syncCustomExercises = syncExercises;
 export async function syncWorkout(supabaseUserId, workoutId, { rethrow = false } = {}) {
   const sb = getClient();
   if (!sb || !supabaseUserId || !workoutId) return;
+  // Re-triage 2026-08-01: push-on-save can fire from a background notification
+  // action with an expired token. Firing anyway is a guaranteed 42501 plus a
+  // wasted queue retry later. Defer straight to the queue instead - identical
+  // data outcome to the failure path, zero doomed network calls, zero noise.
+  if (await _blockedByDeadSession('sync.syncWorkout')) {
+    if (rethrow) throw new Error('deferred: no usable session'); // queue owns retry accounting (F-003)
+    try {
+      // eslint-disable-next-line global-require
+      const { enqueueSyncOp } = require('./syncQueue');
+      await enqueueSyncOp('workout', workoutId, supabaseUserId);
+    } catch (_) { /* enqueue itself failed, nothing more we can do */ }
+    return;
+  }
   try {
     const w = await getWorkoutById(workoutId);
     if (!w) return;
@@ -316,6 +332,10 @@ export async function syncWorkout(supabaseUserId, workoutId, { rethrow = false }
 export async function deleteWorkoutFromCloud(supabaseUserId, workoutId) {
   const sb = getClient();
   if (!sb || !supabaseUserId || !workoutId) return false;
+  // Re-triage 2026-08-01: false is this function's existing "failed, please
+  // enqueue" signal - returning it early on a dead session reuses the caller's
+  // 'workout_delete' retry path without firing the doomed request first.
+  if (await _blockedByDeadSession('sync.deleteWorkoutFromCloud')) return false;
   try {
     const { error: setsErr } = await sb.from('workout_sets')
       .delete().eq('user_id', supabaseUserId).eq('workout_id', workoutId);
@@ -542,6 +562,16 @@ export function cancelScheduledSync() {
 export async function syncMorningWeight(supabaseUserId, entry, { rethrow = false } = {}) {
   const sb = getClient();
   if (!sb || !supabaseUserId || !entry) return;
+  // Re-triage 2026-08-01: same defer-to-queue contract as syncWorkout above.
+  if (await _blockedByDeadSession('sync.syncMorningWeight')) {
+    if (rethrow) throw new Error('deferred: no usable session'); // F-003
+    try {
+      // eslint-disable-next-line global-require
+      const { enqueueSyncOp } = require('./syncQueue');
+      await enqueueSyncOp('morning_weight', entry?.id ?? `mw-${Date.now()}`, supabaseUserId, entry);
+    } catch (_) {}
+    return;
+  }
   try {
     const { error } = await sb.from('morning_weights').upsert({
       id: entry.id,
@@ -1263,6 +1293,9 @@ export function shouldSyncPref(key) {
 export async function syncUserPref(supabaseUserId, key, value) {
   const sb = getClient();
   if (!sb || !supabaseUserId || !key || !shouldSyncPref(key)) return;
+  // Re-triage 2026-08-01: covered wholesale by the next good syncAll's bulk
+  // push, so a dead session defers with no queue entry and no data loss.
+  if (await _blockedByDeadSession('sync.syncUserPref')) return;
   try {
     const { error } = await sb.from('user_prefs').upsert({
       user_id: supabaseUserId, key,
@@ -1902,6 +1935,9 @@ async function _pullCoachOutputs(sb, supabaseUserId) {
 // transport handler in src/lib/sync/__tests__/sync.transport.test.js.
 export async function syncNutritionTargets(supabaseUserId, localUserId) {
   if (!supabaseUserId) return;
+  // Re-triage 2026-08-01: covered wholesale by the next good syncAll (the
+  // registry pushes nutrition_targets), so a dead session defers quietly.
+  if (await _blockedByDeadSession('sync.syncNutritionTargets')) return;
   // eslint-disable-next-line global-require
   const { pushTable } = require('./sync/transport');
   await pushTable('nutrition_targets', {

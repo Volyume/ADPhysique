@@ -65,7 +65,17 @@ export default function LoginScreen() {
         logInfo('LoginScreen.oauth.cancelled', `provider=${provider}`);
         toast.show('Sign-in was cancelled.', { variant: 'info' });
       } else if (result?.error) {
-        logError('LoginScreen.oauth.providerError', result.error, { provider });
+        // Re-triage 2026-08-01 (VOLYUME-2B residue): apple_device_state is a
+        // KNOWN device condition (iCloud not signed in / Apple ID needs
+        // attention) with its own remedy toast below - the user is told exactly
+        // what to do and nothing in our code failed. Logging it as an error
+        // kept a diagnosed, handled state open in Sentry. Real provider
+        // failures keep the error level.
+        if (result.error.code === 'apple_device_state') {
+          logInfo('LoginScreen.oauth.deviceState', `provider=${provider}`, { code: result.error.code });
+        } else {
+          logError('LoginScreen.oauth.providerError', result.error, { provider });
+        }
         // FR-2: never show raw provider/SDK error text at the user's very
         // first touchpoint. The real error is already captured above by
         // logError; the user only ever sees one calm fallback sentence

@@ -71,6 +71,24 @@ export async function enqueueSyncOp(opType, entityId, userId, payload = null) {
  */
 export async function drainSyncQueue(supabaseClient, userId) {
   if (!supabaseClient || !userId) return { drained: 0, failed: 0, skipped: 0 };
+  // Re-triage 2026-08-01: draining against a dead session burns every op's
+  // retry budget (MAX_RETRIES) on guaranteed 42501 rejections, after which the
+  // op is never retried again - silent data loss by attrition. Defer the whole
+  // drain; ops keep their retry counts untouched for the next live session.
+  //
+  // Local mirror of sync.js's _blockedByDeadSession (lazy-required there;
+  // required here directly to avoid a require cycle - sync.js lazy-requires
+  // THIS module for enqueueSyncOp). Same contract: FAIL OPEN, only an explicit
+  // false blocks, so an unanswerable check can never switch the drain off.
+  try {
+    // eslint-disable-next-line global-require
+    const live = await require('./supabase').hasLiveSession();
+    if (live === false) {
+      // eslint-disable-next-line global-require
+      try { require('./errorLog').logInfo('syncQueue.drain', 'no usable session, deferring drain'); } catch (_) {}
+      return { drained: 0, failed: 0, skipped: 0, deferred: true };
+    }
+  } catch (_) { /* undetermined: fail open */ }
   let drained = 0, failed = 0, skipped = 0;
   try {
     const d = await db();

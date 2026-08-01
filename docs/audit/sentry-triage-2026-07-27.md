@@ -129,3 +129,74 @@ fix is in the next build, then resolve.
 - RLS policies: **not** loosened. The policies are correct; the session was
   missing. Weakening `(auth.uid() = user_id)` to work around a client bug would
   be a security regression and is explicitly rejected.
+
+---
+
+# RE-TRIAGE 2026-08-01 — build 48 still failing; complete path enumeration
+
+Founder: "be extremely thorough and make sure all sentry issues are 100% fixed
+I don't want guesses and having to build as they cost me money every time."
+
+The first fix failed in the field (presence-vs-validity + a bypassable guard,
+corrected in 6840c654). This section is the exhaustive enumeration that should
+have been done first: EVERY code path that can produce an authenticated cloud
+call, verified by reading each, with its guard state.
+
+## Complete entry-point inventory (verified by grep + reading each site)
+
+GUARDED after 6840c654:
+- syncAll (runner.js) - all lifecycle/write/sign-in triggers route here;
+  RootNavigator, useAppStore, database._scheduleSync, BodyMetricsScreen,
+  Article9ConsentScreen, SettingsDataScreen all call syncAll.
+- syncTable (runner.js:383) - delegates to syncAll, so inherits its guard.
+- bulkUploadLocalData / pullFromCloud (sync.js) - self-guarded at the top;
+  covers the direct callers ImportScreen, HomeScreen restore, ProUpgradeScreen.
+- sync.push.legacy.errors (runner.js:239) is emitted INSIDE syncAll - it fired
+  on build 48 because the expired-token-passes-presence-check bug let the run
+  proceed, not because the path was unguarded. Closed by the validity fix.
+
+STILL UNGUARDED (the gap this re-triage closes):
+- syncWorkout (sync.js:278) - push-on-save after every workout save; can fire
+  from a background notification action with an expired token.
+- syncMorningWeight (sync.js:542) - push-on-save after every weigh-in.
+- syncUserPref (sync.js:1263), syncExercises (sync.js:220),
+  syncNutritionTargets (sync.js:1903) - push-on-save; all three are ALSO
+  covered wholesale by the next good syncAll, so on a dead session they can
+  simply defer with no queue entry and no data loss.
+- deleteWorkoutFromCloud (sync.js) - returns false on failure and the caller
+  enqueues 'workout_delete'; on a dead session it should return false without
+  firing the doomed request.
+- drainSyncQueue (syncQueue.js:72) - the retry driver itself; draining with a
+  dead session burns every op's retry budget against guaranteed 42501s.
+
+Guard semantics for the pushers: preserve the existing contract exactly.
+Direct-call mode defers to the queue (workout, morning weight) or defers to the
+next syncAll (prefs, exercises, targets) at logInfo. rethrow/queue-drain mode
+throws so the queue owns retry accounting (F-003) - belt-and-braces, since the
+guarded drain never runs the op on a dead session.
+
+## Residual noise paths (same three-day window, smaller counts)
+
+- VOLYUME-2E residue on build 48: supabase.js only classified GETITEM
+  keychain-locked reads as expected; setItem/removeItem still logError on a
+  locked device. Classify all three.
+- VOLYUME-2G (SQLCipher key unavailable): dbCrypto.readStoredKey logs every
+  locked-device read failure as an error, and openEncryptedDb logs
+  dbCrypto.keyUnavailable as an error even when the cause is a device that has
+  not been unlocked since boot (AFTER_FIRST_UNLOCK is unreadable before first
+  unlock; a background wake in that state is expected). Classify locked as
+  logInfo and KEEP the throw and the F-001 behaviour byte-identical: the
+  locked/lost distinction changes LOGGING ONLY, never whether a key is minted
+  or a DB opened.
+- VOLYUME-2B (Apple sign-in "unknown reason"): LoginScreen.js:68 logs every
+  provider error as logError BEFORE branching on apple_device_state at :77.
+  ERR_REQUEST_UNKNOWN is a known device state (iCloud not signed in) with its
+  own remedy UI; log that branch as info, keep real failures as errors.
+
+## What CANNOT be fixed from here (stated so it is not mistaken for a guess)
+
+- Events tagged dist 30 and dist 45 (VOLYUME-2K's 4 events, VOLYUME-2E's 6)
+  come from OLD BINARIES still installed on devices. No code change in this
+  repo reaches them until those devices update. They will trail off.
+- Sentry statuses cannot be updated this session (connector disconnected);
+  status housekeeping is cosmetic and waits for reconnection.
