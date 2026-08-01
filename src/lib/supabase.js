@@ -152,13 +152,47 @@ export function _resetAuthRefreshBindingForTests() {
 // silently disable sync for everyone the moment this call became unavailable,
 // which is a far worse failure than the RLS rejections it exists to prevent.
 // Only an answered getSession() with no access token returns false.
+// Treat a token expiring within this window as already expired, so a request
+// cannot be sent with a token that dies in flight.
+const TOKEN_SKEW_SECONDS = 60;
+
 export async function hasLiveSession() {
   const c = getSupabaseClient();
   if (!c) return null;
   try {
     const { data, error } = await c.auth.getSession();
     if (error) return null;
-    return !!data?.session?.access_token;
+    const session = data?.session;
+    if (!session?.access_token) return false;
+
+    // BUG FOUND IN THE FIRST VERSION OF THIS GUARD (build 48, 2026-08-01).
+    // It returned `!!session.access_token` -- PRESENCE, not validity.
+    // getSession() hands back the stored session even when the access token
+    // has already EXPIRED, so an expired token passed the guard, the request
+    // went out anyway, auth.uid() was NULL server-side, and every write came
+    // back 42501. The RLS rejections this guard exists to stop carried on.
+    //
+    // Worse, binding auto-refresh to the foreground (the other half of that
+    // fix) makes expiry MORE likely on a background run, so the two changes
+    // together left the hole wider than before.
+    const expiresAt = Number(session.expires_at); // seconds since epoch
+    if (Number.isFinite(expiresAt)) {
+      const stillValid = expiresAt - TOKEN_SKEW_SECONDS > Date.now() / 1000;
+      if (stillValid) return true;
+      // Expired, or about to be. Try once to refresh rather than either
+      // blocking a user who can be refreshed, or firing a doomed request.
+      try {
+        const { data: refreshed, error: refreshError } = await c.auth.refreshSession();
+        if (refreshError) return false;
+        return !!refreshed?.session?.access_token;
+      } catch (_) {
+        // Could not determine: fail OPEN, matching the runner's contract.
+        // Never let an unanswerable check switch sync off for everyone.
+        return null;
+      }
+    }
+    // No expiry on the session: cannot judge validity, so do not claim to.
+    return true;
   } catch (_) {
     return null;
   }

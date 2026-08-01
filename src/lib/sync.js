@@ -576,9 +576,40 @@ export async function syncMorningWeight(supabaseUserId, entry, { rethrow = false
  * Called once after the user creates a cloud account or signs in for the first time.
  * Runs in the background, never blocks UI.
  */
+
+// The one place a doomed cloud round trip is stopped.
+//
+// The first version of this guard lived in syncAll (sync/runner.js) only, and
+// FOUR screens call bulkUploadLocalData / pullFromCloud directly -- ImportScreen,
+// HomeScreen's session restore, and ProUpgradeScreen twice -- so they bypassed
+// it completely. `sync.push.legacy` was the top error on build 48 for exactly
+// that reason. Guarding one caller instead of the choke point is the same
+// mistake as five different answers to "which week am I in": put it where it
+// cannot be routed around.
+//
+// Fails OPEN by design, matching the runner: only an explicit `false` (the
+// session was checked and there is no usable token) blocks. Unavailable, threw,
+// or undetermined all proceed exactly as before, so a check that cannot answer
+// can never switch sync off for everyone.
+async function _blockedByDeadSession(scope) {
+  try {
+    // eslint-disable-next-line global-require
+    const live = await require('./supabase').hasLiveSession();
+    if (live === false) {
+      // Deliberately logInfo, not logError: this is the guard doing its job and
+      // leaving the work queued, not a failure. Logging it loudly would rebuild
+      // the noise the whole triage existed to remove.
+      try { require('./errorLog').logInfo(scope, 'no usable session, deferring sync'); } catch (_) {}
+      return true;
+    }
+  } catch (_) { /* undetermined: fail open */ }
+  return false;
+}
+
 export async function bulkUploadLocalData(supabaseUserId, localUserId) {
   const sb = getClient();
   if (!sb || !supabaseUserId || !localUserId) return { errors: 0 };
+  if (await _blockedByDeadSession('sync.bulkUploadLocalData')) return { errors: 0, skipped: 'no_live_session' };
 
   _bulkPushTracking = true;
   _bulkPushErrorCount = 0;
@@ -1273,6 +1304,7 @@ async function _pushAllUserPrefs(sb, supabaseUserId) {
 export async function pullFromCloud(supabaseUserId) {
   const sb = getClient();
   if (!sb || !supabaseUserId) return 0;
+  if (await _blockedByDeadSession('sync.pullFromCloud')) return 0;
   // F1 (audit SD-2): the sign-out wipe waits for sync idle with a 5s TIMEOUT.
   // If this pull is still mid-flight when that timeout expires, its inserts
   // would repopulate the DB being wiped and its watermark writes would land
