@@ -551,6 +551,17 @@ export default function WeeklyCheckInScreen({ navigation }) {
         // earned enough rhythm to check in yet.
         if (todayDay !== scheduledDay && !dayLate) {
           setGateState('wrong_day');
+        } else if (dayLate && alreadyDone) {
+          // Founder device report 2026-08-03 (audit X10): checked in on Sunday,
+          // opened this screen on Monday, and was told "You're one day late...
+          // Check in anyway". alreadyDone was computed above but the ladder
+          // never consulted it, so a completed cycle fell through to
+          // 'day_late' -- or even 'need_weights' -- for a review that already
+          // exists. Resolved BEFORE the data gates: none of them can apply to
+          // a check-in that has already been submitted. Same-day re-entry is
+          // untouched -- on the scheduled day this stays false for dayLate and
+          // the ladder still opens the form in edit mode.
+          setGateState('already_done');
         } else if (daysToWait > 0) {
           const firstCheckinDate = earliestTs
             ? firstReviewUnlockDate(earliestTs, scheduledDay, Date.now())
@@ -1414,6 +1425,42 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // OB-7: exactly one day late. The same week is still reviewable, so offer
   // the override with the same softer-accuracy framing the weights gate uses,
   // rather than costing the user a whole coaching cycle.
+  if (gateState === 'already_done') {
+    const dayName = DAYS_FULL[checkinDayNum];
+    return (
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
+        <View style={styles.gateHeader}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
+            <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={[styles.gateHeaderTitle, live.gateHeaderTitle]}>Weekly check-in</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <ScrollView contentContainerStyle={styles.gateScroll}>
+          <View style={[styles.gateCard, live.gateCard]}>
+            <Ionicons name="checkmark-circle-outline" size={40} color={t.colors.success} />
+            <Text style={[styles.gateTitle, live.gateTitle]}>You&apos;re all caught up</Text>
+            <Text style={[styles.gateBody, live.gateBody]}>
+              Your {dayName} check-in went in and your coach has reviewed the week. There&apos;s nothing you need to do here.
+            </Text>
+            <Text style={[styles.gateBody, live.gateBody]}>
+              Your next check-in lands on {dayName} as normal.
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.gateBtn, live.gateBtn]}
+            onPress={() => navigation.navigate('CoachOutput', { weekStart: localWeekStartMs(weekAnchorMs) })}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="View your coach review"
+          >
+            <Text style={[styles.gateBtnText, live.gateBtnText]}>View your coach review</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
   if (gateState === 'day_late') {
     const dayName = DAYS_FULL[checkinDayNum];
     return (

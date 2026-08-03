@@ -352,3 +352,32 @@ not diligence. I reviewed it afterwards (the migration is sound: documented,
 idempotent, derives rather than invents) and fixed a real gap it left, but the
 commit history misrepresents what landed and I am recording that rather than
 leaving it tidy-looking.
+
+---
+
+# X10 CONFIRMED IN THE FIELD — founder device report, 2026-08-03
+
+Founder, Monday morning, having submitted their check-in the day before
+(Sunday, their scheduled day): the Weekly check-in screen showed "Your check-in
+day was Sunday. You're one day late... Check in anyway / Wait for Sunday",
+while Home correctly showed "6 days to your next check-in". The screen calls
+the user LATE for a review they already submitted.
+
+Root cause, verified in WeeklyCheckInScreen.js: the loader correctly detects
+the existing submission — `alreadyDone` at :493 matches the day-late anchor
+week's `week_start`, and the comment even says "Has the user already completed
+THIS week's check-in?" — but the value is used ONLY to prefill the form for
+same-day edits. The gate ladder (wrong_day -> too_soon -> need_weights ->
+day_late -> open) never consults it, so a day-late opener who already checked
+in falls into 'day_late', and one whose weigh-ins dip would even hit
+'need_weights' for a check-in they have already submitted.
+
+FIX (this landing): a `dayLate && alreadyDone` branch ahead of the data gates,
+resolving to a new 'already_done' state: calm confirmation that the week is
+reviewed, the next check-in day, and a route to the coach review the
+submission produced. Same-day re-entry (the edit flow) is untouched: on the
+scheduled day the ladder still resolves to 'open' with the prefilled answers.
+
+The full X10 consolidation (one shared check-in schedule resolver replacing
+the three independent implementations) remains on the Wave 4 list; this closes
+the user-visible contradiction the founder hit.
