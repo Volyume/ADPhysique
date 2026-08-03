@@ -381,3 +381,23 @@ scheduled day the ladder still resolves to 'open' with the prefilled answers.
 The full X10 consolidation (one shared check-in schedule resolver replacing
 the three independent implementations) remains on the Wave 4 list; this closes
 the user-visible contradiction the founder hit.
+
+---
+
+# SAME FAMILY, FOUNDER REPORT 2026-08-03 (second of the day): the Today
+# banner prompts a training day the user has already trained
+
+Screenshot: 10:54, banner "Today is a training day" directly above a
+"Last session - Today" card for the session finished that morning. Two facts
+on one screen disagreeing, the defining shape of this audit.
+
+Root cause, verified: HomeScreen's `loadScheduleContext` derives the line
+purely from the SCHEDULED WEEKDAYS in `@volyume_schedule_v1` - if today's
+weekday is in the schedule, `daysUntil: 0`, banner says training day. It never
+consults whether a session was completed today, though the screen already
+holds that fact (`lastSession`, completed-only, rendered one card below).
+
+FIX: the banner's day-of case now branches on a completed session today
+(`lastSession` day-key equals today's) and reads "Training done for today"
+instead of prompting. An in-progress workout deliberately keeps the prompt -
+only a FINISHED session flips it. Scheduled-day detection itself is unchanged.

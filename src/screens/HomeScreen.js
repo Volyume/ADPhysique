@@ -367,6 +367,14 @@ export default function HomeScreen({ navigation, route }) {
 
   // Training schedule context
   const [scheduleContext, setScheduleContext] = useState(null); // null | { daysUntil, dayName }
+  // Founder report 2026-08-03: the schedule line said "Today is a training
+  // day" directly above a "Last session - Today" card for the session finished
+  // that morning. The line was derived purely from the scheduled weekdays and
+  // never consulted whether today's session already happened. lastSession is
+  // completed-only, so an IN-PROGRESS workout deliberately keeps the prompt --
+  // only a finished session flips the line to an acknowledgement.
+  const trainedToday = !!(lastSession?.startedAt
+    && localDayKey(lastSession.startedAt) === localDayKey(Date.now()));
 
   // Fatigue trend mini-graph
   const [fatigueSessions, setFatigueSessions] = useState([]); // array newest-first
@@ -1536,7 +1544,7 @@ export default function HomeScreen({ navigation, route }) {
             scheduleContext.daysUntil === 0 && [styles.scheduleContextLineToday, live.scheduleContextLineToday],
           ]}>
             {scheduleContext.daysUntil === 0
-              ? 'Today is a training day'
+              ? (trainedToday ? 'Training done for today' : 'Today is a training day')
               : scheduleContext.daysUntil === 1
                 ? 'Next session: tomorrow'
                 : `Next session: ${scheduleContext.dayName}`}
