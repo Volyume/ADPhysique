@@ -3,52 +3,30 @@
  * OTA-patchable writer; the pure shaping lives in snapshot.js).
  *
  * Gathers from existing local reads ONLY (offline-first, no network):
- *   - next session: active plan + the @volyume_schedule_v1 training weekdays +
- *     getCurrentMesocycleWeek for the week-in-block chip.
+ *   - next session: active plan + getCurrentMesocycleWeek for the
+ *     week-in-block chip.
  *   - consistency: this week's session count + the COMP-018 ED suppression rule.
  * Privacy: NEVER weight/calories/macros/body data — only a routine name + counts.
+ *
+ * The snapshot's dayLabel is always null (founder ruling 2026-08-03: the
+ * product has no scheduled training days; @volyume_schedule_v1 is a habit
+ * inference sanctioned only for soft reminder copy — D17. See
+ * docs/audit/cross-surface-consistency-audit-2026-07-30.md).
  *
  * Triggered (no polling) on: workout finish, plan/schedule change,
  * foreground→background, and the existing background-fetch date rollover.
  */
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getActivePlan, getRoutinesForPlan, getCurrentMesocycleWeek,
   getWeeklySessionStats, getOpenEdPatternFlag,
 } from '../database';
 import { localWeekStartMs } from '../dayKey';
-import { SCHEDULE_KEY } from '../notifications/trainingReminders';
 import { buildWidgetSnapshot, emptyWidgetSnapshot } from './snapshot';
 import { persistWidgetSnapshot } from './storage';
-
-const WEEKDAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-// The next training weekday from today, as a human label. days = weekday
-// indices (0=Sun..6=Sat); returns { dayLabel } or null when none scheduled.
-export function nextTrainingDayLabel(days, now = new Date()) {
-  if (!Array.isArray(days) || days.length === 0) return null;
-  const set = new Set(days.map((d) => ((Number(d) % 7) + 7) % 7));
-  const today = now.getDay();
-  for (let offset = 0; offset < 7; offset++) {
-    const d = (today + offset) % 7;
-    if (set.has(d)) {
-      if (offset === 0) return 'Today';
-      if (offset === 1) return 'Tomorrow';
-      return WEEKDAY[d];
-    }
-  }
-  return null;
-}
 
 /** Gather the widget inputs from local storage. Exposed for unit tests. */
 export async function gatherWidgetInputs(userId) {
   if (!userId) return null;
-
-  let days = [];
-  try {
-    const raw = await AsyncStorage.getItem(SCHEDULE_KEY);
-    if (raw) { const s = JSON.parse(raw); if (Array.isArray(s?.days)) days = s.days; }
-  } catch (_) { /* no schedule */ }
 
   const plan = await getActivePlan(userId).catch(() => null);
   const routines = plan?.id ? await getRoutinesForPlan(plan.id).catch(() => []) : [];
@@ -60,7 +38,8 @@ export async function gatherWidgetInputs(userId) {
       // A routine/plan name only — never body data. v1 names the plan; per-day
       // routine rotation is a later refinement.
       name: routines[0]?.name || plan.name || 'Next session',
-      dayLabel: nextTrainingDayLabel(days),
+      // Never a day claim: no scheduled training days exist (see header).
+      dayLabel: null,
       // X17 (cross-surface-consistency-audit-2026-07-30): weekIndex from
       // getCurrentMesocycleWeek is already 1-indexed; this +1 was the
       // widget's OWN off-by-one, independent of (and only masked by) the

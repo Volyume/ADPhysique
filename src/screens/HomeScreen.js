@@ -144,8 +144,6 @@ export default function HomeScreen({ navigation, route }) {
   const t = useTheme();
   const live = {
     safe: { backgroundColor: t.colors.background },
-    scheduleContextLine: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    scheduleContextLineToday: { color: t.colors.primary },
     continueCard: { backgroundColor: t.colors.success },
     continueIcon: { backgroundColor: withAlpha(t.colors.background, alpha.soft) },
     continueTitle: { ...t.type.bodyStrong, color: t.colors.onPrimary },
@@ -365,17 +363,6 @@ export default function HomeScreen({ navigation, route }) {
   const [phaseMismatch, setPhaseMismatch] = useState(null); // { currentPhase, targetPhase } | null
   const [phaseBannerDismissed, setPhaseBannerDismissed] = useState(false);
 
-  // Training schedule context
-  const [scheduleContext, setScheduleContext] = useState(null); // null | { daysUntil, dayName }
-  // Founder report 2026-08-03: the schedule line said "Today is a training
-  // day" directly above a "Last session - Today" card for the session finished
-  // that morning. The line was derived purely from the scheduled weekdays and
-  // never consulted whether today's session already happened. lastSession is
-  // completed-only, so an IN-PROGRESS workout deliberately keeps the prompt --
-  // only a finished session flips the line to an acknowledgement.
-  const trainedToday = !!(lastSession?.startedAt
-    && localDayKey(lastSession.startedAt) === localDayKey(Date.now()));
-
   // Fatigue trend mini-graph
   const [fatigueSessions, setFatigueSessions] = useState([]); // array newest-first
 
@@ -457,7 +444,6 @@ export default function HomeScreen({ navigation, route }) {
         loadPhaseBanner(),
         loadPlateauBanner(),
         loadFatigueTrend(),
-        loadScheduleContext(),
         loadBriefDismissal(),
         loadWelcome(),
         loadActivationNudge(), // S6: tier-blind, computes from workouts + account age + ED flag
@@ -719,36 +705,6 @@ export default function HomeScreen({ navigation, route }) {
     setWelcomeDismissed(true);
     if (welcomeKey) AsyncStorage.setItem(welcomeKey, 'true').catch(() => {});
   }, [welcomeKey]);
-
-  async function loadScheduleContext() {
-    try {
-      const raw = await AsyncStorage.getItem('@volyume_schedule_v1');
-      if (!raw) { setScheduleContext(null); return; }
-      const parsed = JSON.parse(raw);
-      const days = Array.isArray(parsed.days) ? parsed.days : [];
-      if (days.length === 0) { setScheduleContext(null); return; }
-
-      const todayIndex = new Date().getDay();
-      // Search the next 7 days (including today) for a scheduled day
-      for (let offset = 0; offset < 7; offset++) {
-        const candidate = (todayIndex + offset) % 7;
-        if (days.includes(candidate)) {
-          if (offset === 0) {
-            setScheduleContext({ daysUntil: 0, dayName: null });
-          } else if (offset === 1) {
-            setScheduleContext({ daysUntil: 1, dayName: null });
-          } else {
-            const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            setScheduleContext({ daysUntil: offset, dayName: DAY_NAMES[candidate] });
-          }
-          return;
-        }
-      }
-      setScheduleContext(null);
-    } catch (_) {
-      setScheduleContext(null);
-    }
-  }
 
   async function loadPhaseBanner() {
     try {
@@ -1536,20 +1492,12 @@ export default function HomeScreen({ navigation, route }) {
         {/* ── Branded header ── */}
         <ScreenHeader title="Today" subtitle={getGreeting(userProfile?.firstName)} />
 
-        {/* ── Training schedule context line ── */}
-        {scheduleContext && (
-          <Text style={[
-            styles.scheduleContextLine,
-            live.scheduleContextLine,
-            scheduleContext.daysUntil === 0 && [styles.scheduleContextLineToday, live.scheduleContextLineToday],
-          ]}>
-            {scheduleContext.daysUntil === 0
-              ? (trainedToday ? 'Training done for today' : 'Today is a training day')
-              : scheduleContext.daysUntil === 1
-                ? 'Next session: tomorrow'
-                : `Next session: ${scheduleContext.dayName}`}
-          </Text>
-        )}
+        {/* The training-schedule context line was REMOVED on founder ruling
+            2026-08-03: the product has no scheduled training days. The
+            schedule key is a habit inference (D17), sanctioned only for the
+            soft reminder copy in trainingReminders.js, never for schedule
+            assertions on screen. See
+            docs/audit/cross-surface-consistency-audit-2026-07-30.md. */}
 
         {/* ── Compact top start CTA (above-the-fold) ── */}
         {/* The single start surface is the hero card below. The old top
@@ -2296,17 +2244,6 @@ const styles = StyleSheet.create({
 
   // (Morning-weight card styles retired with COMP-027 Part B, the weight cell
   //  now lives in TodayStrip.)
-
-  // Training schedule context line
-  scheduleContextLine: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: -spacing.xs,
-  },
-  scheduleContextLineToday: {
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
-  },
 
   // Continue card
   continueCard: {

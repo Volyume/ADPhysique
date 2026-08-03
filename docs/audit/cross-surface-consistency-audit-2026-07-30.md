@@ -401,3 +401,35 @@ FIX: the banner's day-of case now branches on a completed session today
 (`lastSession` day-key equals today's) and reads "Training done for today"
 instead of prompting. An in-progress workout deliberately keeps the prompt -
 only a FINISHED session flips it. Scheduled-day detection itself is unchanged.
+
+---
+
+# SUPERSEDED SAME DAY — the premise itself was false (founder, 2026-08-03)
+
+Founder, on seeing the "fixed" banner: "There are no scheduled training days.
+The app isn't configured for days to be on a set schedule of specific rest or
+training days."
+
+That overturns the fix above at the root. The product has NO scheduled-days
+concept. What `@volyume_schedule_v1` actually holds is a HABIT inference:
+`trainingHabitSchedule.js` derives the user's usual weekdays from six weeks of
+trailing completed-workout history, under a prior founder steer recorded
+verbatim in that file's header ("Rest days are not strictly adhered to, user
+trains on the days they want and have lives" — D17). That inference is
+sanctioned for ONE use: soft reminder copy in trainingReminders.js ("You've
+got a session on for today. Enjoy it whenever it suits you.").
+
+The Home banner converted that soft inference into hard schedule assertions —
+"Today is a training day", "Next session: tomorrow", "Next session: Wednesday"
+— asserting a schedule the product does not have. Yesterday's fix polished
+the wording of a claim that should never have been made. The widget's
+`dayLabel` (writer.js reading the same key through `nextTrainingDayLabel`)
+makes the identical assertion on the home screen widget.
+
+RULING (D33): remove the schedule banner from HomeScreen entirely — all three
+variants, the loader, the state, and its styles. Stop the widget writer
+reading the schedule key, so the snapshot's `dayLabel` is null (snapshot.js
+already handles null; the widget shows the session name without a day claim).
+KEEP trainingHabitSchedule.js and the trainingReminders soft copy — those are
+the D17-sanctioned use and assert nothing. The banner guard test becomes an
+ABSENCE guard: Home must not assert scheduled training days.
