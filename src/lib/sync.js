@@ -956,6 +956,13 @@ async function _pushMesocycles(sb, supabaseUserId, localUserId) {
         planned_weeks: m.plannedWeeks ?? m.durationWeeks ?? null,
         block_type: m.blockType ?? null,
         rir_ladder: m.rirLadder ?? null,
+        // Founder GO 2026-08-06: cloud column added by migrate_129. ORDER
+        // MATTERS: that migration must run against production before a
+        // build carrying this line ships, or the whole mesocycles upsert
+        // batch rejects on the unknown column. The pull side
+        // (insertMesocycleFromCloud) already prefers deload_week when
+        // present, so this closes the round trip.
+        deload_week: m.deloadWeek ?? null,
         focus: m.focus ?? null,
         is_active: !!m.isActive,
         updated_at: new Date(m.updatedAt ?? m.createdAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time

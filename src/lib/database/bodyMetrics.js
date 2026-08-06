@@ -31,7 +31,26 @@ export function createBodyMetricsRepository({
   rowToCamel,
   scheduleSync = () => {},
   now = () => Date.now(),
+  // X3 write-through (founder GO 2026-08-06, multi-choice ruling): the
+  // morning-weight writer, injected by database.js. A weigh-in logged or
+  // edited through the Body Metrics form also lands in morning_weights, so
+  // the coach's weight trend and the rapid-loss safety gate see every
+  // weigh-in the user makes. logMorningWeight upserts per LOCAL DAY and
+  // fires its own cloud push, so same-day entries merge instead of
+  // duplicating. Deleting a body-metric entry deliberately does NOT
+  // retract the day's morning weight: the safety gate keeps its data
+  // (fail-safe direction), and the user may have logged that day on Today
+  // independently.
+  logMorningWeight = null,
 }) {
+  async function writeThroughMorningWeight(userId, data, fallbackMs) {
+    if (typeof logMorningWeight !== 'function') return;
+    const kg = data?.weightKg;
+    if (!Number.isFinite(kg) || kg <= 0) return;
+    try {
+      await logMorningWeight(userId, { weightKg: kg, loggedAt: data.loggedAt ?? fallbackMs });
+    } catch (_) { /* best-effort: the body-metric entry itself is saved */ }
+  }
   async function logBodyMetric(userId, data) {
     const d = await db();
     const id = uid();
@@ -51,6 +70,8 @@ export function createBodyMetricsRepository({
         data.calfCm ?? null, data.notes ?? null, createdAt,
       ],
     );
+    // X3 write-through: see the factory-level note.
+    await writeThroughMorningWeight(userId, data, createdAt);
     scheduleSync();
     return { id, userId, createdAt, ...data };
   }
@@ -215,6 +236,9 @@ export function createBodyMetricsRepository({
         id, userId,
       ],
     );
+    // X3 write-through: an EDITED weight also refreshes that day's morning
+    // weight (day-upsert), so a correction reaches the trend and the gate.
+    if ((result?.changes ?? 0) > 0) await writeThroughMorningWeight(userId, data, updatedAt);
     scheduleSync();
     return (result?.changes ?? 0) > 0;
   }

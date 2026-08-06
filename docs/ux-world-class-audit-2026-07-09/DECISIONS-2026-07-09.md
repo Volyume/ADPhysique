@@ -2196,3 +2196,25 @@ safety behaviour touched, flagged to founder for veto; "Show the science"
 toggle and the widget streak are wired to nothing and will be wired for
 real (W3); one deliberate NO CHANGE exception recorded
 (NotificationSettingsScreen layout).
+
+## D90 — Founder multi-choice rulings, 2026-08-06 evening
+
+Asked in the structured format the founder mandated the same evening
+("If you have questions for me ask them in multi answer format"). Answers:
+1. X3 weight stores: WRITE-THROUGH. The Body Metrics form (create and
+   edit) also writes morning_weights via the injected day-upsert writer,
+   so the coach trend and rapid-loss gate see every weigh-in. The gate's
+   input source is unchanged (morningWeightsSource guard stays green
+   untouched). Deletes deliberately do not retract the day's weigh-in
+   (fail-safe direction, recorded in code).
+2. Cloud deload_week: ADD COLUMN. migrate_129 written; push wired.
+   ORDERING: 129 must run against production BEFORE the next build ships.
+3. Adaptive volume bands: BUILD NOW, not queued — founder verbatim: "We
+   don't queue things... queuing things with Claude means they get lost
+   forever." Work begins immediately after this landing.
+4. Anon EXECUTE on SECURITY DEFINER functions: REVOKE. migrate_130
+   written (PUBLIC+anon revoked, authenticated+service_role re-granted —
+   a bare anon revoke is a no-op through the PUBLIC grant).
+Also this evening (recorded in the design audit addendum 2): widgets stay
+shipping with no further effort either way; paywall quiet links convert
+to Button outline.

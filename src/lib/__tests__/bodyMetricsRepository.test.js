@@ -41,6 +41,38 @@ function createHarness(overrides = {}) {
 }
 
 describe('bodyMetricsRepository', () => {
+  // X3 write-through (founder GO 2026-08-06): a weigh-in through the Body
+  // Metrics form must also reach morning_weights (the coach trend and the
+  // rapid-loss safety gate read ONLY that table - pinned by
+  // CoachOutputScreen.morningWeightsSource.guard.test.js, unchanged).
+  describe('X3 write-through to morning_weights', () => {
+    test('logBodyMetric with a weight also calls logMorningWeight for that day', async () => {
+      const logMorningWeight = jest.fn(async () => 'mw-1');
+      const { repo } = createHarness({ deps: { logMorningWeight } });
+      await repo.logBodyMetric('u1', { weightKg: 82.4, loggedAt: 111 });
+      expect(logMorningWeight).toHaveBeenCalledWith('u1', { weightKg: 82.4, loggedAt: 111 });
+    });
+
+    test('a measurements-only entry (no weight) never touches morning_weights', async () => {
+      const logMorningWeight = jest.fn(async () => 'mw-1');
+      const { repo } = createHarness({ deps: { logMorningWeight } });
+      await repo.logBodyMetric('u1', { waistCm: 81, loggedAt: 111 });
+      expect(logMorningWeight).not.toHaveBeenCalled();
+    });
+
+    test('an edit refreshes the day, and a write-through failure never loses the entry', async () => {
+      const logMorningWeight = jest.fn(async () => { throw new Error('down'); });
+      const { conn, repo } = createHarness({
+        deps: { logMorningWeight },
+        conn: { runAsync: jest.fn(async () => ({ changes: 1 })) },
+      });
+      await expect(repo.logBodyMetric('u1', { weightKg: 80, loggedAt: 5 })).resolves.toBeTruthy();
+      await expect(repo.updateBodyMetric('u1', 'metric-1', { weightKg: 79.5, loggedAt: 5 })).resolves.toBe(true);
+      expect(logMorningWeight).toHaveBeenCalledTimes(2);
+      expect(conn.runAsync).toHaveBeenCalled();
+    });
+  });
+
   test('logBodyMetric writes local body metrics and schedules sync', async () => {
     const { conn, repo, scheduleSync } = createHarness();
 

@@ -82,6 +82,10 @@ const bodyMetricsRepository = createBodyMetricsRepository({
   uid,
   rowToCamel,
   scheduleSync: _scheduleSync,
+  // X3 write-through (founder GO 2026-08-06): function declarations hoist,
+  // so passing the reference here is safe even though logMorningWeight is
+  // defined further down this file.
+  logMorningWeight: (userId, args) => logMorningWeight(userId, args),
 });
 
 const activityRepository = createActivityRepository({

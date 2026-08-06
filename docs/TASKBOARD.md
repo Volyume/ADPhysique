@@ -961,6 +961,12 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
+- **RUN MIGRATIONS 129 + 130 BEFORE THE NEXT BUILD** (2026-08-06):
+  migrate_129 (mesocycles.deload_week) MUST apply before a build carrying
+  the new push field ships, or the mesocycles upsert batch rejects.
+  migrate_130 (anon EXECUTE revocation) has no ordering constraint but is
+  founder-GO'd and ready. Both apply on your exact phrase per house rule.
+
 ### CLOSED (2026-07-27) - FULL migration sweep: production is COMPLETE
 
 Founder: "Run all non applied against production there might be more." Swept
