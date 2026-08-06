@@ -69,8 +69,12 @@ describe('share copy polish', () => {
 
     expect(upgrade).toContain('title="Skip for now"');
     expect(upgrade).toContain('variant="outline"');
-    expect(upgrade).toMatch(/policyLink: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(upgrade).toContain('policyLinkText: { ...type.caption, color: colors.textSecondary }');
+    // Founder ruling 2026-08-06 (design audit addendum 2): the restore and
+    // policy links became the shared <Button variant="outline"> - which IS
+    // the contained neutral chrome this test pins. Same rule, enforced
+    // through the variant choice instead of byte-pinned local pill styles.
+    expect(upgrade).toMatch(/variant="outline"[\s\S]{0,300}accessibilityLabel="Restore purchases"/);
+    expect(upgrade).toMatch(/variant="outline"[\s\S]{0,300}accessibilityLabel="Subscription terms"/);
     expect(upgrade).not.toContain('secondaryLinkText');
     expect(upgrade).not.toContain("textDecorationLine: 'underline'");
 
