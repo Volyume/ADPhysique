@@ -769,22 +769,22 @@ queue paused here for the founder review per D55.
 
 ## 1. IN FLIGHT
 
-### D89 comprehension-and-trust audit remediation (2026-08-06) — W1 LANDED, W2/W3 QUEUED
+### D89 comprehension-and-trust + design-consistency remediation (2026-08-06) — ALL WAVES LANDED to main (d251f50d)
 - Source of authority: `docs/audit/comprehension-trust-audit-2026-08-06.md`
   (all 61 findings, rulings, wave plan). Register entry: D89.
 - W1 (19 copy-truth fixes) LANDED to main this session with re-anchored
   shareWins/PartnerScreen copy pins. Founder veto point flagged: the
   Calmer-coaching "safer calorie floors" claim was corrected to truthful
   copy (T18/T19) — copy only, no safety behaviour touched.
-- W2 QUEUED (small code, ~21 items): tooltips/labels/units per doc §C.
-  Sonnet-dispatchable in pairs; every brief cites the doc + finding IDs;
-  recovery path = re-run the finding's file list against doc §A/§B.
-- W3 QUEUED (real code, 10 items): T1 widget streak, T3 repeat-as-is,
-  T7+O16 week-window convergence, T11 shared-streak filter, T13 reminders
-  badge, T15 show-the-science wiring (scope-check first; fork to founder if
-  term pairs missing), T16 tier-aware readiness copy, T17 quiet-hours for
-  training reminders (read NOTIFICATIONS_LOCKED.md first), O4 history
-  filter, O34 BackHeader. Lead-built or lead-reviewed per operating model.
+- W2 LANDED (lanes A1/A2/B + lead review corrections: time-based
+  detectPhase, Class B neutral phase chip). W3 LANDED (lane C + lead:
+  T1 widget streak via high-water mirror, T7+O16 calendar-week
+  convergence, T11, T13, T15 science layer wired + guard suite, T16,
+  T17 quiet hours + soft notification title, T3, T4, O4, O34 with the
+  wizard-header exception documented inline).
+- DESIGN lanes D1+D2 LANDED (111 of 113 deviations fixed or verified
+  already-resolved; recorded exceptions: EmptyExerciseView, YouScreen
+  error banner, O33 layout, CVD info-hue follow-up).
 - NO CHANGE recorded: O33 NotificationSettings layout (deliberate
   exception, revisit post-release).
 - DESIGN CONSISTENCY (founder push 2026-08-06, "ensure every page on the
