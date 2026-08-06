@@ -787,6 +787,15 @@ queue paused here for the founder review per D55.
   filter, O34 BackHeader. Lead-built or lead-reviewed per operating model.
 - NO CHANGE recorded: O33 NotificationSettings layout (deliberate
   exception, revisit post-release).
+- DESIGN CONSISTENCY (founder push 2026-08-06, "ensure every page on the
+  app has a consistent design"): full 9-agent per-screen audit COMPLETE,
+  89 surfaces matrixed, 113 deviations, all ruled — source of authority
+  `docs/audit/design-consistency-audit-2026-08-06.md`. Fix lanes D1
+  (screens A-M + components) and D2 (screens N-Z + settings) dispatch
+  after lane C lands; three C-owned files excluded from D lanes. One new
+  recorded exception: ActiveWorkoutScreen's EmptyExerciseView (twins the
+  live-session chrome). Recovery path: re-run the doc's deviation list
+  per lane.
 
 _Reconciled 2026-07-11 (D46 boundary): D42 AppAlert, logged-set row, D44
 auto-advance cues, summary footer, picker first-open, CP-10 batch F and the
