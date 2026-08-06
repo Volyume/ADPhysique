@@ -14,6 +14,13 @@
  * border + small checkmark, existing tokens only) and is paired with an
  * InfoTooltip that explains the acronym, matching how InfoTooltip sits
  * beside labels elsewhere (e.g. NutritionTargetsScreen).
+ *
+ * O18 (comprehension/trust audit 2026-08-06): every source now carries its
+ * own InfoTooltip, not just CoFID -- a code like 'OFF' or 'OCR' is
+ * unexplained jargon to a first-time user wherever it appears (this chip
+ * shows one tap from every food row, in FoodDetailSheet). CoFID keeps its
+ * existing verified visual treatment (checkmark + tinted border); the other
+ * sources gain only the InfoTooltip, no visual change to the chip itself.
  */
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -32,12 +39,24 @@ const LABELS = {
 export const COFID_TOOLTIP =
   "CoFID is the UK government's food composition dataset. Values for generic foods come from it directly.";
 
+// O18: one explanatory line per source, matching COFID_TOOLTIP's tone (plain,
+// factual, British English, no em dash). Every value in LABELS above has an
+// entry here so every source chip carries a tooltip.
+const TOOLTIPS = {
+  off: 'Open Food Facts, a community-maintained food database.',
+  usda: 'USDA, the United States food-composition database.',
+  cofid: COFID_TOOLTIP,
+  user_ocr: 'Read from a label photo you snapped. Check the numbers look right.',
+  custom: 'A food you created yourself.',
+};
+
 export default function SourceChip({ source }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
   const live = buildLiveStyles(t);
   const label = LABELS[source] ?? String(source ?? '').toUpperCase().slice(0, 6);
   const isCofid = source === 'cofid';
+  const tooltipText = TOOLTIPS[source] ?? null;
   const chip = (
     <View
       style={[styles.chip, live.chip, isCofid && [styles.chipVerified, live.chipVerified]]}
@@ -49,11 +68,11 @@ export default function SourceChip({ source }) {
       <Text style={[styles.text, live.text]} numberOfLines={1}>{label}</Text>
     </View>
   );
-  if (!isCofid) return chip;
+  if (!tooltipText) return chip;
   return (
     <View style={styles.verifiedRow}>
       {chip}
-      <InfoTooltip size={12} text={COFID_TOOLTIP} />
+      <InfoTooltip size={12} text={tooltipText} />
     </View>
   );
 }

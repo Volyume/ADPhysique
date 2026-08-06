@@ -32,6 +32,8 @@ import { useToast } from '../components/Toast';
 import ModalHeader from '../components/ModalHeader';
 import ExercisePickerModal from '../components/ExercisePickerModal';
 import BottomSheet from '../components/BottomSheet';
+import InfoTooltip from '../components/InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 import * as haptics from '../lib/haptics';
 
 // Compute muscle coverage: { [muscleKey]: count } sorted by count descending
@@ -89,10 +91,16 @@ function MuscleTagRow({ exercises }) {
             : count === 2
             ? [tagStyles.chipTextMid, tagLive.chipTextMid]
             : [tagStyles.chipTextLow, tagLive.chipTextLow];
+          // O5 (comprehension/trust audit 2026-08-06): 'Chest ×3' read as 3
+          // SETS on the look-alike Plan Balance chip (ManualBuilderScreen's
+          // '{sets}×' badge); this chip counts EXERCISES. Spelling it out
+          // (chips sit in a horizontal ScrollView, so the extra width just
+          // scrolls) removes the ambiguity outright rather than relying on
+          // an accessibility label a sighted user never hears.
           return (
             <View key={muscle} style={[tagStyles.chip, chipStyle]}>
               <Text style={[tagStyles.chipText, tagLive.chipText, textStyle]}>
-                {displayName} ×{count}
+                {displayName} · {count} {count === 1 ? 'exercise' : 'exercises'}
               </Text>
             </View>
           );
@@ -415,6 +423,11 @@ export default function RoutineDetailScreen({ navigation, route }) {
     const gid = routineExercise?.supersetGroupId;
     if (gid && !supersetGroupOrder.includes(gid)) supersetGroupOrder.push(gid);
   }
+  // O17 (comprehension/trust audit 2026-08-06): the FIRST superset chip in
+  // the list carries the "what is a superset" InfoTooltip, matching
+  // ManualBuilderScreen.js:1182's single-explanation-per-screen pattern
+  // (not every chip -- one is enough to teach the term).
+  const firstSupersetIndex = exercises.findIndex(({ routineExercise }) => !!routineExercise?.supersetGroupId);
 
   const reorderToggle = (
     <TouchableOpacity
@@ -500,12 +513,19 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   const gIdx = gid ? supersetGroupOrder.indexOf(gid) : -1;
                   if (gIdx < 0) return null;
                   return (
-                    <View style={[styles.supersetChip, live.supersetChip]}>
-                      <Ionicons name="link" size={11} color={t.colors.primary} />
-                      <Text style={[styles.supersetChipText, live.supersetChipText]}>
-                        Superset {String.fromCharCode(65 + gIdx)}
-                      </Text>
-                    </View>
+                    <>
+                      <View style={[styles.supersetChip, live.supersetChip]}>
+                        <Ionicons name="link" size={11} color={t.colors.primary} />
+                        <Text style={[styles.supersetChipText, live.supersetChipText]}>
+                          Superset {String.fromCharCode(65 + gIdx)}
+                        </Text>
+                      </View>
+                      {/* O17: only the first superset chip in the list carries
+                          the explanation -- see firstSupersetIndex above. */}
+                      {index === firstSupersetIndex ? (
+                        <InfoTooltip text={GLOSSARY.superset} size={14} />
+                      ) : null}
+                    </>
                   );
                 })()}
               </View>

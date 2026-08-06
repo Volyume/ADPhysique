@@ -464,7 +464,9 @@ describe('FoodRow', () => {
     expect(txt).toContain('Wholemeal bread');
     expect(txt).toContain('Hovis');
     expect(txt).toContain('1 slice');
-    expect(txt).toContain('OFF');
+    // O18 (comprehension/trust audit 2026-08-06): 'OFF' read as "food gone
+    // off" to a first-time user; renamed to the readable 'Food Facts'.
+    expect(txt).toContain('Food Facts');
   });
 
   test('names the favourite state when isFav', () => {
@@ -509,9 +511,12 @@ describe('kcalForServing', () => {
 });
 
 describe('SOURCE_LABEL', () => {
+  // O18 (comprehension/trust audit 2026-08-06): 'off' renamed 'OFF' ->
+  // 'Food Facts' (readable short form; 'OFF' read as "food gone off" to a
+  // first-time user). The other four sources were already plain language.
   test('matches the locked five sources', () => {
     expect(SOURCE_LABEL).toEqual({
-      off: 'OFF',
+      off: 'Food Facts',
       usda: 'USDA',
       cofid: 'CoFID',
       user_ocr: 'Snapped',

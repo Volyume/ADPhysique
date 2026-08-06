@@ -45,6 +45,7 @@ import Button from './Button';
 import SectionLabel from './SectionLabel';
 import useAppStore from '../store/useAppStore';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
+import InfoTooltip from './InfoTooltip';
 import { getPhotoMetaMap, upsertPhotoMeta } from '../lib/progressPhotoMeta';
 import { logError } from '../lib/errorLog';
 import { drawShareCard, cardHeight } from '../lib/shareCard/drawShareCard';
@@ -615,7 +616,13 @@ export default function BeforeAfterShareSheet({
               <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Two selected photos</Text>
               <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Dates and elapsed time</Text>
               {usingScans && !hideScanRange ? (
-                <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Visible Volyume Score</Text>
+                // O36 (comprehension/trust audit 2026-08-06): the receipt
+                // line named the score with no explanation of what it means
+                // or where it comes from.
+                <View style={styles.exportReceiptLineRow}>
+                  <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Visible Volyume Score</Text>
+                  <InfoTooltip text="The progress score from your scans, shown on the export itself." size={12} />
+                </View>
               ) : null}
               <Text style={[styles.exportReceiptLine, live.exportReceiptLine]}>Weight: {showWeight ? 'included' : 'off'}</Text>
             </View>
@@ -782,6 +789,9 @@ const styles = StyleSheet.create({
   exportReceiptCol: { flexGrow: 1, flexBasis: '48%', minWidth: 136, gap: spacing.xxs },
   exportReceiptTitle: { ...type.caption, color: colors.primary },
   exportReceiptLine: { ...type.captionTight, color: colors.textPrimary, lineHeight: 17 },
+  // O36: the one receipt line that carries an InfoTooltip (Visible Volyume
+  // Score) needs a row wrapper; every other line stays a plain Text.
+  exportReceiptLineRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   privacyNote: { ...type.captionTight, color: colors.textMuted },
   partnerBtn: { marginTop: spacing.md },
   galleryBtn: { marginTop: spacing.md },

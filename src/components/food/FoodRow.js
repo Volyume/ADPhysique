@@ -5,8 +5,11 @@ import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 
+// O18 (comprehension/trust audit 2026-08-06): 'OFF' read as "food gone off"
+// to a first-time user (it is the Open Food Facts source code). Readable
+// short form here; the rest were already plain-language.
 export const SOURCE_LABEL = {
-  off: 'OFF',
+  off: 'Food Facts',
   usda: 'USDA',
   cofid: 'CoFID',
   user_ocr: 'Snapped',

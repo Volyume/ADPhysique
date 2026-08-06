@@ -337,6 +337,15 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
           </View>
         ) : null}
       </View>
+      {/* O31 (comprehension/trust audit 2026-08-06): the "+Ng planned"
+          fragments (ring centre + macro bars below) previously had no
+          visible explanation, only an accessibility label. One quiet line,
+          shown only when a planned amount is showing anywhere on the card. */}
+      {hasPlanned ? (
+        <Text style={[styles.plannedHint, live.plannedHint]} numberOfLines={1}>
+          Planned means added ahead, it counts once you mark it eaten.
+        </Text>
+      ) : null}
       <View style={styles.macroRow}>
         <MacroBar
           label="Protein"
@@ -417,6 +426,13 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: fontSize.xs,
     marginTop: spacing.xxs,
+  },
+  // O31: quiet, one-line explanation of "planned", shown only when a planned
+  // amount is showing somewhere on the card. Adherence-neutral (textMuted).
+  plannedHint: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    textAlign: 'center',
   },
   dayTypeChip: {
     alignSelf: 'flex-start',
@@ -531,6 +547,7 @@ function buildLiveStyles(t) {
     kcalPlanned: { color: t.colors.primary, fontSize: t.fontSize.xs },
     kcalEatenValue: { color: t.colors.textSecondary, fontSize: t.fontSize.xl },
     kcalEatenLabel: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
+    plannedHint: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     dayTypeChip: { backgroundColor: t.colors.surface2 },
     dayTypeChipText: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
     macroBarLabel: { color: t.colors.textMuted, fontSize: t.fontSize.xs },

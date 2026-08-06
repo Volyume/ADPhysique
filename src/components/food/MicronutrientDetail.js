@@ -26,14 +26,24 @@
  * ED-safety register (item-16-micronutrients-scoping.md §5): value + unit
  * first, NRV% only as muted secondary text, no colour-coding by good/bad, no
  * progress bars, never a daily total, never a target to hit.
+ *
+ * O19 (comprehension/trust audit 2026-08-06): '% NRV' is never spelled out
+ * anywhere a user can read it. A quiet '% NRV' column label + InfoTooltip
+ * sits above the grid (CollapsibleSection's own title is a plain string with
+ * no room for an inline tooltip, so this is the "beside the first %NRV
+ * column label" placement); shown only when the grid itself renders.
  */
 import { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, type, letterSpacing } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import CollapsibleSection from '../CollapsibleSection';
+import InfoTooltip from '../InfoTooltip';
 import { MICRONUTRIENTS, nrvPercent } from '../../lib/food/micronutrients';
 import { scaleMicronutrients, knownMicronutrientCount } from '../../lib/food/micronutrientCoverage';
+
+export const NRV_TOOLTIP =
+  'NRV is the Nutrient Reference Value: the standard daily amount for an average adult in the UK and EU. 80% NRV means this gives you 80% of that.';
 
 const VITAMINS = MICRONUTRIENTS.filter((n) => n.group === 'vitamin');
 const MINERALS = MICRONUTRIENTS.filter((n) => n.group === 'mineral');
@@ -67,6 +77,10 @@ export default function MicronutrientDetail({ food, quantityG }) {
           <Text style={[styles.emptyText, live.emptyText]}>No vitamin and mineral data for this food yet.</Text>
         ) : (
           <>
+            <View style={styles.nrvHeaderRow}>
+              <Text style={[styles.nrvHeaderLabel, live.nrvHeaderLabel]}>% NRV</Text>
+              <InfoTooltip text={NRV_TOOLTIP} size={12} />
+            </View>
             {knownVitamins.length ? (
               <>
                 <Text style={[styles.groupLabel, live.groupLabel]}>Vitamins</Text>
@@ -116,6 +130,15 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center',
     paddingVertical: spacing.sm,
   },
+  // O19: the '% NRV' column label + its InfoTooltip, shown once above the
+  // grid (never per-row, the value stays the same explanation for every row).
+  nrvHeaderRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end',
+    gap: spacing.xxs, marginBottom: spacing.xs,
+  },
+  nrvHeaderLabel: {
+    fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted,
+  },
   groupLabel: {
     fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted,
     textTransform: 'uppercase', letterSpacing: letterSpacing.overline, marginBottom: spacing.xs,
@@ -138,6 +161,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     emptyText: { color: t.colors.textSecondary },
+    nrvHeaderLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     groupLabel: { color: t.colors.textMuted },
     rowLabel: { color: t.colors.textPrimary },
     rowAmount: { color: t.colors.textSecondary },

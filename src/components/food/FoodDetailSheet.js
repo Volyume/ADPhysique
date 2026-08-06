@@ -375,10 +375,13 @@ export default function FoodDetailSheet({
             accessibilityLiveRegion="polite"
             accessibilityLabel={`${toEnergy(macros.kcal, energyUnit)} ${energyWord}, protein ${macros.protein} grams, carbs ${macros.carbs} grams, fat ${macros.fat} grams`}
           >
+            {/* O35 (comprehension/trust audit 2026-08-06): full words on this
+                DETAIL surface (one tap from every food row); the bare-letter
+                compact rows elsewhere (EntryRow etc.) are unchanged. */}
             <MacroPill label={energyUnitLabel(energyUnit)} value={toEnergy(macros.kcal, energyUnit)} />
-            <MacroPill label="P"    value={`${macros.protein}g`} />
-            <MacroPill label="C"    value={`${macros.carbs}g`} />
-            <MacroPill label="F"    value={`${macros.fat}g`} />
+            <MacroPill label="Protein" value={`${macros.protein}g`} />
+            <MacroPill label="Carbs"   value={`${macros.carbs}g`} />
+            <MacroPill label="Fat"     value={`${macros.fat}g`} />
           </View>
 
           {extraNutrients.length ? (
