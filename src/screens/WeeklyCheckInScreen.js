@@ -1404,18 +1404,21 @@ export default function WeeklyCheckInScreen({ navigation }) {
               You can change the day in your coaching reminder settings. In the meantime, log your weight each morning from the Today tab. Every reading makes the trend more accurate.
             </Text>
           </View>
-          <TouchableOpacity
-            style={styles.gateDeferBtn}
+          <Button
+            title="Change check-in day"
+            variant="outline"
+            size="sm"
+            fullWidth={false}
             onPress={() => navigation.navigate('CoachingReminders')}
-            activeOpacity={0.75}
-            accessibilityRole="button"
             accessibilityLabel="Change check-in day"
-          >
-            <Text style={[styles.gateDeferBtnText, live.gateDeferBtnText]}>Change check-in day</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.gateBtn, live.gateBtn]} onPress={() => navigation.goBack()} activeOpacity={0.85} accessibilityRole="button">
-            <Text style={[styles.gateBtnText, live.gateBtnText]}>Got it</Text>
-          </TouchableOpacity>
+            style={styles.gateDefer}
+          />
+          <Button
+            title="Got it"
+            onPress={() => navigation.goBack()}
+            accessibilityLabel="Got it"
+            style={styles.gateCta}
+          />
         </ScrollView>
       </SafeAreaView>
     );
@@ -1446,15 +1449,12 @@ export default function WeeklyCheckInScreen({ navigation }) {
               Your next check-in lands on {dayName} as normal.
             </Text>
           </View>
-          <TouchableOpacity
-            style={[styles.gateBtn, live.gateBtn]}
+          <Button
+            title="View your coach review"
             onPress={() => navigation.navigate('CoachOutput', { weekStart: localWeekStartMs(weekAnchorMs) })}
-            activeOpacity={0.85}
-            accessibilityRole="button"
             accessibilityLabel="View your coach review"
-          >
-            <Text style={[styles.gateBtnText, live.gateBtnText]}>View your coach review</Text>
-          </TouchableOpacity>
+            style={styles.gateCta}
+          />
         </ScrollView>
       </SafeAreaView>
     );
@@ -1482,12 +1482,20 @@ export default function WeeklyCheckInScreen({ navigation }) {
               A day&apos;s delay makes the read slightly less accurate than checking in on {dayName}. Your next check-in lands back on {dayName} as normal.
             </Text>
           </View>
-          <TouchableOpacity style={[styles.gateBtn, live.gateBtn]} onPress={() => setGateState('open')} activeOpacity={0.85} accessibilityRole="button">
-            <Text style={[styles.gateBtnText, live.gateBtnText]}>Check in anyway</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.gateDeferBtn} onPress={() => navigation.goBack()} activeOpacity={0.75} accessibilityRole="button">
-            <Text style={[styles.gateDeferBtnText, live.gateDeferBtnText]}>Wait for {dayName}</Text>
-          </TouchableOpacity>
+          <Button
+            title="Check in anyway"
+            onPress={() => setGateState('open')}
+            accessibilityLabel="Check in anyway"
+            style={styles.gateCta}
+          />
+          <Button
+            title={`Wait for ${dayName}`}
+            variant="outline"
+            size="sm"
+            fullWidth={false}
+            onPress={() => navigation.goBack()}
+            style={styles.gateDefer}
+          />
         </ScrollView>
       </SafeAreaView>
     );
@@ -1522,9 +1530,12 @@ export default function WeeklyCheckInScreen({ navigation }) {
               Log your first morning weight from the Today tab to start the baseline. Once the baseline is ready, your first check-in opens on your scheduled day: {scheduledDayName}.
             </Text>
           )}
-          <TouchableOpacity style={[styles.gateBtn, live.gateBtn]} onPress={() => navigation.goBack()} activeOpacity={0.85} accessibilityRole="button">
-            <Text style={[styles.gateBtnText, live.gateBtnText]}>Got it</Text>
-          </TouchableOpacity>
+          <Button
+            title="Got it"
+            onPress={() => navigation.goBack()}
+            accessibilityLabel="Got it"
+            style={styles.gateCta}
+          />
         </ScrollView>
       </SafeAreaView>
     );
@@ -1557,17 +1568,21 @@ export default function WeeklyCheckInScreen({ navigation }) {
               would be silently dropped in production (the F4 bug class);
               route via the parent tab navigator. The fresh param value means
               a repeat visit re-opens the input. */}
-          <TouchableOpacity
-            style={[styles.gateBtn, live.gateBtn]}
+          <Button
+            title="Log my weight first"
             onPress={() => navigateCrossTab(navigation, 'HomeTab', 'Home', { openWeightLog: Date.now() })}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-          >
-            <Text style={[styles.gateBtnText, live.gateBtnText]}>Log my weight first</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.gateDeferBtn} onPress={() => setGateState('open')} activeOpacity={0.75} accessibilityRole="button">
-            <Text style={[styles.gateDeferBtnText, live.gateDeferBtnText]}>Check in anyway</Text>
-          </TouchableOpacity>
+            accessibilityLabel="Log my weight first"
+            style={styles.gateCta}
+          />
+          <Button
+            title="Check in anyway"
+            variant="outline"
+            size="sm"
+            fullWidth={false}
+            onPress={() => setGateState('open')}
+            accessibilityLabel="Check in anyway"
+            style={styles.gateDefer}
+          />
         </ScrollView>
       </SafeAreaView>
     );
@@ -1588,14 +1603,12 @@ export default function WeeklyCheckInScreen({ navigation }) {
           <Text style={[styles.gateBody, live.gateBody]}>
             We couldn't read this week's data, so the check-in is held to keep the coaching accurate.
           </Text>
-          <TouchableOpacity
-            style={[styles.gateBtn, live.gateBtn]}
+          <Button
+            title="Try again"
             onPress={() => { setLoading(true); setGateState('loading'); setReloadKey(k => k + 1); }}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-          >
-            <Text style={[styles.gateBtnText, live.gateBtnText]}>Try again</Text>
-          </TouchableOpacity>
+            accessibilityLabel="Try again"
+            style={styles.gateCta}
+          />
         </ScrollView>
       </SafeAreaView>
     );
@@ -1815,27 +1828,10 @@ const styles = StyleSheet.create({
     ...type.bodySm, color: colors.textMuted,
     textAlign: 'center',
   },
-  gateBtn: {
-    backgroundColor: colors.primaryFill, borderRadius: radius.lg,
-    minHeight: 52,
-    minWidth: 180,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  gateBtnText: {
-    fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary,
-  },
-  gateDeferBtn: {
-    minHeight: 44,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  gateDeferBtnText: {
-    fontSize: fontSize.sm, color: colors.textMuted,
-  },
+  // 2026-08-06 (founder device report, quiet-action convergence): the gate
+  // CTAs render the shared Button now; only layout crumbs stay local.
+  gateCta: { marginTop: spacing.md },
+  gateDefer: { alignSelf: 'center', marginTop: spacing.sm },
 
   headerBar: {
     flexDirection: 'row',
@@ -2129,9 +2125,6 @@ function buildLiveStyles(t) {
     gateCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     gateTitle: { ...t.type.title, color: t.colors.textSecondary },
     gateBody: { ...t.type.bodySm, color: t.colors.textMuted },
-    gateBtn: { backgroundColor: t.colors.primaryFill },
-    gateBtnText: { fontSize: t.fontSize.md, color: t.colors.onPrimary },
-    gateDeferBtnText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     headerBar: { borderBottomColor: t.colors.border, backgroundColor: t.colors.background },
     headerTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     stepDot: { backgroundColor: t.colors.surface3 },

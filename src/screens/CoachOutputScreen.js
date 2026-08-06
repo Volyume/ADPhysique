@@ -2640,16 +2640,23 @@ export default function CoachOutputScreen({ navigation, route }) {
           />
         )}
 
-        {/* S1c pre-commitment: the specific, checkable thing next week's read
-            will answer, named in advance. Sits with the forward-pull. */}
-        {coachResponse.preCommitment ? (
-          <Text style={[styles.preCommitmentLine, live.preCommitmentLine]}>{coachResponse.preCommitment}</Text>
-        ) : null}
-
-        {/* Coach response part 5: the forward-pull anchor closes the response
-            below the always-visible safety shelf. */}
-        {coachResponse.forward ? (
-          <Text style={[styles.forwardLine, live.forwardLine]}>{coachResponse.forward}</Text>
+        {/* S1c pre-commitment + coach response part 5 (the forward-pull).
+            Founder device report 2026-08-06: these rendered as two bare
+            floating Text lines between the safety shelf and the footer
+            links, reading as debris rather than the close of the coach's
+            response. Same content, same deliberate below-the-safety-shelf
+            position, now inside the screen's quiet card idiom with a label
+            so it reads as designed. */}
+        {(coachResponse.preCommitment || coachResponse.forward) ? (
+          <View style={[styles.nextReadCard, live.nextReadCard]}>
+            <SectionLabel tone="muted">Next check-in</SectionLabel>
+            {coachResponse.preCommitment ? (
+              <Text style={[styles.preCommitmentLine, live.preCommitmentLine]}>{coachResponse.preCommitment}</Text>
+            ) : null}
+            {coachResponse.forward ? (
+              <Text style={[styles.forwardLine, live.forwardLine]}>{coachResponse.forward}</Text>
+            ) : null}
+          </View>
         ) : null}
 
         {/* B4: contest countdown. Deliberately BELOW the safety shelf (rule 1:
@@ -2905,15 +2912,25 @@ const styles = StyleSheet.create({
   },
   // S1c: the forward pre-commitment. A touch stronger than the sign-off below
   // it (textPrimary vs the forward line's textSecondary), never amber.
+  // 2026-08-06: the edge padding came off when these moved inside the
+  // padded nextReadCard (it existed to keep the old floating lines off the
+  // screen edge).
+  nextReadCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    marginTop: spacing.md,
+    gap: spacing.xs,
+  },
   preCommitmentLine: {
     ...type.bodySm,
     color: colors.textPrimary,
-    paddingHorizontal: spacing.xs,
   },
   forwardLine: {
     ...type.bodySm,
     color: colors.textSecondary,
-    paddingHorizontal: spacing.xs,
   },
   focusCard: {
     backgroundColor: colors.primaryBg,
@@ -3321,6 +3338,7 @@ function buildLiveStyles(t) {
     coachLeadAck: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     coachLeadCommitment: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     coachLeadInterpretation: { ...t.type.body, color: t.colors.textSecondary },
+    nextReadCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     preCommitmentLine: { ...t.type.bodySm, color: t.colors.textPrimary },
     forwardLine: { ...t.type.bodySm, color: t.colors.textSecondary },
     focusCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
