@@ -941,3 +941,23 @@ the paywall where visual weight is conversion-sensitive and platform
 convention keeps legal/restore links quiet. Options: (a) leave as the
 paywall convention (recorded exception), (b) convert to Button outline sm
 like everywhere else. Not pre-decided.
+
+## ADDENDUM 2 — 2026-08-06 evening, founder screenshot + method order
+
+Founder screenshot of the coaching-decision tail (pre-aafcc8dd build)
+confirmed the text-link debris and caught one more: the coach response's
+pre-commitment + forward lines rendered as bare floating text. Now housed
+in a labelled "Next check-in" card (1ed1b26f). The same hands-on pass found
+the check-in GATE CTAs hand-rolling an amber Button-primary clone with bare
+muted defer links; all nine gate CTAs across six gates converted to the
+shared Button. Founder rulings recorded: widgets stay shipping but get NO
+further effort either way ("keep but deprioritise" - no retirement, no
+fixes); the paywall's restore/policy links CONVERT to Button outline
+(overriding C3/D71's text-level treatment; presentation only, restore path
+and billing logic untouched).
+
+METHOD ORDER (founder, verbatim intent): the remaining review is done BY
+THE LEAD, hands-on, page by page, judging each page as a whole - not
+dispatched. Order: Today flow, Train flow (Active/Summary/History),
+Nutrition flow, Progress flow, remaining Coach surfaces, Settings +
+onboarding. Fix-as-found, not list-and-return.

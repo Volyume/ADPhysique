@@ -587,34 +587,36 @@ export default function ProUpgradeScreen({ navigation, route }) {
               primary CTA. Billing-consequential, so like ProGate it carries no
               added haptic. Same read-only entitlement path (lib/payments/
               restore) as every other restore surface; no purchase is made. */}
+          {/* Founder ruling 2026-08-06: the paywall's quiet links convert to
+              the shared Button outline like every other quiet action
+              (overriding the earlier C3/D71 text-level treatment).
+              Presentation only: same read-only restore path, no purchase
+              logic touched, still no added haptic on the restore action. */}
           {hasAccount ? (
-            <TouchableOpacity
+            <Button
+              title="Restore purchases"
+              variant="outline"
+              size="sm"
+              icon="refresh-outline"
+              fullWidth={false}
+              loading={restoring}
+              disabled={restoring || busy}
               style={styles.restoreLink}
               onPress={handleRestore}
-              disabled={restoring || busy}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
               accessibilityLabel="Restore purchases"
-            >
-              <Ionicons name="refresh-outline" size={14} color={t.colors.textSecondary} />
-              <Text style={[styles.restoreLinkText, live.restoreLinkText]}>
-                {restoring ? 'Restoring...' : 'Restore purchases'}
-              </Text>
-            </TouchableOpacity>
+            />
           ) : null}
 
-          <TouchableOpacity
-            style={[styles.policyLink, live.policyLink]}
+          <Button
+            title="What stays if you switch back to Free later"
+            variant="outline"
+            size="sm"
+            icon="information-circle-outline"
+            fullWidth={false}
+            style={styles.policyLink}
             onPress={() => { haptics.selection(); navigation.navigate('SubscriptionPolicy'); }}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityRole="button"
             accessibilityLabel="Subscription terms"
-          >
-            <Ionicons name="information-circle-outline" size={14} color={t.colors.textSecondary} />
-            <Text style={[styles.policyLinkText, live.policyLinkText]}>
-              What stays if you switch back to Free later
-            </Text>
-          </TouchableOpacity>
+          />
 
           {/* Haptics completion pass (2026-07-10): "Maybe later" is neither a
               plan-comparison segment nor a navigation row (the campaign's
@@ -650,33 +652,8 @@ const styles = StyleSheet.create({
   },
 
   perks: { gap: spacing.md, marginBottom: spacing.md },
-  policyLink: {
-    minHeight: 40,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  policyLinkText: { ...type.caption, color: colors.textSecondary },
-  // C3 (D71): quiet text-level restore action (not the contained policyLink
-  // chrome) so it reads as a secondary affordance, not a second CTA.
-  restoreLink: {
-    minHeight: 40,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-  },
-  restoreLinkText: { ...type.caption, color: colors.textSecondary },
+  policyLink: { alignSelf: 'center', marginBottom: spacing.lg },
+  restoreLink: { alignSelf: 'center', marginTop: spacing.sm },
   perkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   perkIcon: {
     width: 32, height: 32, borderRadius: radius.md,
@@ -784,9 +761,6 @@ function buildLiveStyles(t) {
     iconWrap: { backgroundColor: t.colors.primaryBg },
     title: { fontSize: t.fontSize.xxxl, color: t.colors.textPrimary },
     subtitle: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
-    policyLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    policyLinkText: { ...t.type.caption, color: t.colors.textSecondary },
-    restoreLinkText: { ...t.type.caption, color: t.colors.textSecondary },
     reviewCard: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
     reviewQuote: { ...t.type.bodySm, color: t.colors.textPrimary },
     reviewMeta: { ...t.type.caption, color: t.colors.textMuted },
