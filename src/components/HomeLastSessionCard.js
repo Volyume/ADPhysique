@@ -28,9 +28,9 @@ function HomeLastSessionCard({ lastSession, lastSessionTonnage, relativeDay, onO
     lastSession.durationMinutes ? `${lastSession.durationMinutes}m` : null,
     lastSession.setCount ? `${lastSession.setCount} sets` : null,
     lastSession.totalVolume
-      ? `${Math.round(lastSession.totalVolume).toLocaleString('en-GB')} kg`
+      ? `${Math.round(lastSession.totalVolume).toLocaleString('en-GB')} kg lifted`
       : lastSessionTonnage
-        ? `${Math.round(lastSessionTonnage).toLocaleString('en-GB')} kg`
+        ? `${Math.round(lastSessionTonnage).toLocaleString('en-GB')} kg lifted`
         : null,
   ].filter(Boolean).join(' - ');
 

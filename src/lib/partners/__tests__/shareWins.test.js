@@ -116,8 +116,8 @@ describe('partner shareable wins policy', () => {
     });
     expect(progress.requiresExport).toBe(true);
     expect(progress.summary).toBe('Progress comparison, 5 Jan to 20 Jun.');
-    expect(progress.detail).toContain('Only the composed export can be sent');
-    expect(progress.detail).toContain('The visible Volyume Score is part of that export');
+    expect(progress.detail).toContain('Only this text summary is sent, never the image');
+    expect(progress.detail).toContain('The visible Volyume Score was part of your export');
     expect(progress.detail).toContain('Weight is off for this export');
     expect(progress.detail).toContain('body metrics and the photo library stay private');
     expect(progress.dateRange).toBe('5 Jan to 20 Jun');
@@ -166,8 +166,8 @@ describe('partner shareable wins policy', () => {
     });
     const progress = previews.find((preview) => preview.type === 'progress_card');
     expect(progress.draft.summary).toBe('Progress comparison, 1 Jan to 1 Apr.');
-    expect(progress.draft.detail).toContain('Scan details stay private unless they are visible on that export.');
-    expect(progress.draft.detail).toContain('Weight is included because it was switched on for that export.');
+    expect(progress.draft.detail).toContain('Scan details stay private unless they were visible on your export.');
+    expect(progress.draft.detail).toContain('Weight is mentioned because it was switched on for that export.');
     expect(progress.draft.format).toBe('Portrait');
     expect(Object.keys(progress.draft)).not.toContain('imageUri');
     expect(validateShareWinDraft(progress.draft)).toBe(true);

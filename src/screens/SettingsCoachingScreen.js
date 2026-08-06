@@ -128,7 +128,7 @@ export default function SettingsCoachingScreen() {
         <SettingRow
           icon="heart-outline"
           label="Calmer coaching"
-          sub="Uses safer calorie floors and quieter progress prompts."
+          sub="Quieter progress prompts, and coaching never pushes for more while it's on."
           showArrow={false}
           rightElement={
             <Switch

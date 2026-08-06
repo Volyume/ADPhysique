@@ -2178,3 +2178,21 @@ NOT swept, deliberately, and each verified in place:
 - ED check before sweeping the chart marker: only LiftProgressScreen passes
   highlightIndices, so bodyweight charts never carry a record marker. A
   bodyweight "record" would have been an ED-safety problem; there is none.
+
+## D89 — Comprehension and trust audit: rulings on all 61 findings (lead-ruled under D33, 2026-08-06)
+
+Founder ordered an extensive audit for confusion and trust-breaking
+information (claims vs code, unexplained numbers and averages, chart
+legibility, jargon vs the general population, design consistency). 12
+read-only auditors + adversarial verification of every trust finding: 24
+confirmed trust mismatches, 3 refuted, 37 comprehension/design findings.
+
+All rulings, rationale and the three-wave fix plan live in
+docs/audit/comprehension-trust-audit-2026-08-06.md (the source of authority
+for every fix landed under this decision). Notables: the "safer calorie
+floors" Calmer-coaching copy is FALSE (floors are always-on and mode-blind)
+and is being corrected to describe the real behaviour — copy only, no
+safety behaviour touched, flagged to founder for veto; "Show the science"
+toggle and the widget streak are wired to nothing and will be wired for
+real (W3); one deliberate NO CHANGE exception recorded
+(NotificationSettingsScreen layout).

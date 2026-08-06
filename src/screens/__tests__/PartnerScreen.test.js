@@ -403,10 +403,10 @@ describe('connected state: isolated pair cards', () => {
     const text = allText(tree).join(' ');
     expect(text).toContain('Progress comparison');
     expect(text).toContain('Progress comparison, 5 Jan to 20 Jun.');
-    expect(text).toContain('The visible Volyume Score is part of that export.');
+    expect(text).toContain('The visible Volyume Score was part of your export.');
     expect(text).toContain('Weight is off for this export.');
     expect(text).toContain('Raw photos, body metrics and the photo library stay private.');
-    expect(text).toContain('The composed progress image, with only the details shown before you send it.');
+    expect(text).toContain('A text summary of your comparison: the dates it covers and what you chose to include. The image itself is never sent.');
     await press(tree, 'Show what stays private');
     const expandedText = allText(tree).join(' ');
     expect(expandedText).toContain('Stays private');
@@ -429,7 +429,7 @@ describe('connected state: isolated pair cards', () => {
     const text = allText(tree).join(' ');
     expect(text).toContain('Share an update');
     expect(text).toContain('Progress comparison, 5 Jan 2026 to 20 Jun 2026.');
-    expect(text).toContain('The visible Volyume Score is part of that export.');
+    expect(text).toContain('The visible Volyume Score was part of your export.');
     expect(text).toContain('Weight is off for this export.');
   });
 
@@ -447,7 +447,7 @@ describe('connected state: isolated pair cards', () => {
     const text = allText(tree).join(' ');
     expect(text).toContain('Sam will see');
     expect(text).toContain('Progress comparison, 5 Jan 2026 to 20 Jun 2026.');
-    expect(text).toContain('The visible Volyume Score is part of that export.');
+    expect(text).toContain('The visible Volyume Score was part of your export.');
   });
 
   test('incoming progress-card route with multiple partners asks the user to choose', async () => {

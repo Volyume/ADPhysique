@@ -212,7 +212,7 @@ export default function ReadinessCards({ userId, tier }) {
       <View style={styles.section}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
           <SectionLabel>Recovery</SectionLabel>
-          <InfoTooltip text="Weighted 7-day average of your session check-ins. Scored 1-5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1-5 where 1 = comfortable. If scores are consistently high, consider a lighter week." />
+          <InfoTooltip text="A running average of your session check-ins, weighted so the last week counts most and older sessions fade out. Scored 1-5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1-5 where 1 = comfortable. If scores are consistently high, consider a lighter week." />
         </View>
         <View style={[styles.recoveryCard, live.recoveryCard]}>
           <View style={styles.recoveryGrid}>

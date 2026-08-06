@@ -499,7 +499,11 @@ function PairCard({
             <Text style={[styles.heroSub, live.heroSub]}>Counts towards each person's current plan. Rest weeks never break it.</Text>
           </View>
         ) : (
-          <Text style={[styles.heroFirst, live.heroFirst]}>Your first shared week is under way</Text>
+          <Text style={[styles.heroFirst, live.heroFirst]}>
+            {run === 1
+              ? 'You kept your first shared week. Week two is under way.'
+              : 'Your first shared week is under way'}
+          </Text>
         )}
 
         <View style={[styles.people, live.people]}>

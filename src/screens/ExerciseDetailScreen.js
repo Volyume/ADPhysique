@@ -606,7 +606,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               <Text style={[styles.sfrValue, live.sfrValue]}>{exercise.stimulusToFatigueRatio || 3}/5</Text>
               <View style={styles.sfrLabelRow}>
                 <Text style={[styles.sfrLabel, live.sfrLabel]}>Quality</Text>
-                <InfoTooltip text="Effort rating: how much growth this exercise produces relative to how tiring it is overall. 5/5 = great return for the fatigue cost. 3/5 = moderate. 1/5 = very demanding for what you get back." size={11} />
+                <InfoTooltip text="Quality: how much growth this exercise produces relative to how tiring it is overall. 5/5 = great return for the fatigue cost. 3/5 = moderate. 1/5 = very demanding for what you get back." size={11} />
               </View>
             </View>
             <View style={[styles.sfrDivider, live.sfrDivider]} />
@@ -805,7 +805,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             )}
             {chartMetric === 'e1rm' && (
               <Text style={[styles.e1rmNote, live.e1rmNote]}>
-                Estimated from top set using the Epley formula. Best for rep ranges 2 to 10.
+                Estimated from your top set using a blend of two standard formulas (Epley and Brzycki). Best for rep ranges 2 to 10.
               </Text>
             )}
           </View>

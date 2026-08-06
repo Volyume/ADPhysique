@@ -52,7 +52,7 @@ export const GLOSSARY = {
   macros:
     'Protein, carbs and fat: the three nutrients your daily calories are made of.',
   proteinTier:
-    'How high your protein target is set per kilo of bodyweight: Standard, Optimised (the recommended balance) or Advanced (higher, for harder cuts and competitors).',
+    'How high your protein target is set: Standard, Optimised (the recommended balance) or Advanced (higher, for harder cuts and competitors). Based on your bodyweight, or your lean mass if you have logged a measured body-fat reading.',
   recomposition:
     'Your weight held steady while your shape or strength kept improving. A sign fat and muscle are both changing, even though the scale is not moving.',
   // Footer credential line ("volume landmarks, autoregulation, and RED-S

@@ -345,7 +345,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
           planned={plannedP}
           primary
           tint={t.colors.macroProtein}
-          sub={proteinPerKgToday != null ? `${proteinPerKgToday} g/kg today` : null}
+          sub={proteinPerKgToday != null ? `${proteinPerKgToday} g/kg bodyweight today` : null}
         />
         <MacroBar label="Carbs"   value={c} target={cTarget} planned={plannedC} tint={t.colors.macroCarb} />
         <MacroBar label="Fat"     value={f} target={fTarget} planned={plannedF} tint={t.colors.macroFat} />

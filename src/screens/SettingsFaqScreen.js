@@ -99,7 +99,7 @@ export const FAQS = [
   {
     key: 'calmer-coaching',
     q: 'Can I make the coaching feel gentler?',
-    a: 'Yes. Turn on Calmer coaching in Settings > Coaching for safer calorie floors and quieter progress prompts. It sits alongside the safety checks Precision Coaching always runs, and you can turn it off again any time.',
+    a: 'Yes. Turn on Calmer coaching in Settings > Coaching for quieter progress prompts and coaching that never pushes for more while it is on. It sits alongside the safety checks Precision Coaching always runs for everyone, and you can turn it off again any time.',
   },
 ];
 

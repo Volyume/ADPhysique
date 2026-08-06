@@ -75,7 +75,7 @@ const STEP_OUTCOMES = {
   ],
   3: [
     { icon: 'analytics-outline', label: 'Body composition' },
-    { icon: 'barbell-outline', label: 'Protein target' },
+    { icon: 'body-outline', label: 'Body-fat baseline' },
   ],
   4: [
     { icon: 'calendar-outline', label: 'Training split' },

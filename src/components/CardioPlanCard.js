@@ -64,7 +64,8 @@ export default function CardioPlanCard({ userId, target, onPress, onHistory }) {
           state has nothing to double-count and stays clean. */}
       {done > 0 ? (
         <Text style={[styles.cardioFootnote, live.cardioFootnote]}>
-          Cardio is already counted in your calorie target. Nothing to add back.
+          This isn't added to your calorie target. Your target already adjusts
+          to your weight trend over time, so there's nothing to add back.
         </Text>
       ) : null}
     </View>

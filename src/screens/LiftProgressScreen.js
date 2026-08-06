@@ -285,7 +285,7 @@ export default function LiftProgressScreen({ navigation }) {
             <SectionLabel>Relative strength</SectionLabel>
             <InfoTooltip
               size={13}
-              text={'How your best estimated lifts compare to your own body weight.\n\n1.0x = you can lift your body weight\n1.5x = strong for most people\n2.0x = advanced\n\nBeginner > Novice > Intermediate > Advanced > Elite'}
+              text={'How your best estimated lifts compare to your own body weight.\n\nEach lift has its own thresholds: pressing movements sit lower, squats and deadlifts higher, so the same ratio can mean different levels on different lifts.\n\nBeginner > Novice > Intermediate > Advanced > Elite'}
             />
           </View>
           <Text style={[styles.sectionSub, live.sectionSub]}>Based on {bodyWeight} {units} body weight</Text>

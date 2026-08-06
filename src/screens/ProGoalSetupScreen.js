@@ -590,7 +590,7 @@ export default function ProGoalSetupScreen({ navigation }) {
           <View style={styles.footerNote}>
             <Ionicons name="scale-outline" size={15} color={t.colors.textMuted} />
             <Text style={[styles.footerNoteText, live.footerNoteText]}>
-              Targets use your latest weight, {formatBodyWeightShort(displayWeightKg, userProfile?.bodyWeightUnits ?? 'st')}. Log a new one on Today.
+              Targets use your recent weight trend, {formatBodyWeightShort(displayWeightKg, userProfile?.bodyWeightUnits ?? 'st')}. Log a new weigh-in on Today.
             </Text>
           </View>
         ) : null}

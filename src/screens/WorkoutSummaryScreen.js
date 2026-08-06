@@ -1100,7 +1100,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             icon="layers-outline"
             value={String(displayWorkingSets)}
             label="Working Sets"
-            tooltip={'Hard sets counted in your weekly totals. Warm-up sets are excluded.\n\nA working set is any set where you trained close to your limit, typically 0 to 3 reps from failure.'}
+            tooltip={'Hard sets counted in your weekly totals. Every set you log counts except warm-ups.\n\nTraining close to your limit, typically 0 to 3 reps from failure, is what makes a working set effective.'}
             animateOrder={1}
           />
           <StatBox icon="time-outline" value={`${durationMinutes || 0} min`} label="Duration" animateOrder={2} />
@@ -1293,7 +1293,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 'Yellow = Getting close: one more session and it may be too much\n' +
                 'Red = Too much: consider doing a little less next week\n' +
                 'Grey = Below minimum: not quite enough to drive growth yet\n\n' +
-                'These targets are personalised and adjust over time based on how your body responds.'
+                'These ranges are research-based starting points, the same for everyone. You can tune them to your own body with Edit volume targets on the Volume screen.'
               } />
             </View>
             {/* D3: one compressed card, hairline dividers between muscles,

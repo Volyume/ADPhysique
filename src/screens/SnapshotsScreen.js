@@ -116,8 +116,9 @@ export default function SnapshotsScreen() {
           </>
         ) : snapshots.length === 0 ? (
           <Text style={[localStyles.note, liveText.note]}>
-            No snapshots yet. Volyume saves an automatic safety copy before each
-            app update, so one will appear here the next time the app updates.
+            No snapshots yet. Volyume saves an automatic safety copy before any
+            update that changes how your data is stored, so one will appear
+            here after the next update of that kind.
           </Text>
         ) : (
           snapshots.map(snap => (

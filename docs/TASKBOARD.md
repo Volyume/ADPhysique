@@ -769,6 +769,25 @@ queue paused here for the founder review per D55.
 
 ## 1. IN FLIGHT
 
+### D89 comprehension-and-trust audit remediation (2026-08-06) — W1 LANDED, W2/W3 QUEUED
+- Source of authority: `docs/audit/comprehension-trust-audit-2026-08-06.md`
+  (all 61 findings, rulings, wave plan). Register entry: D89.
+- W1 (19 copy-truth fixes) LANDED to main this session with re-anchored
+  shareWins/PartnerScreen copy pins. Founder veto point flagged: the
+  Calmer-coaching "safer calorie floors" claim was corrected to truthful
+  copy (T18/T19) — copy only, no safety behaviour touched.
+- W2 QUEUED (small code, ~21 items): tooltips/labels/units per doc §C.
+  Sonnet-dispatchable in pairs; every brief cites the doc + finding IDs;
+  recovery path = re-run the finding's file list against doc §A/§B.
+- W3 QUEUED (real code, 10 items): T1 widget streak, T3 repeat-as-is,
+  T7+O16 week-window convergence, T11 shared-streak filter, T13 reminders
+  badge, T15 show-the-science wiring (scope-check first; fork to founder if
+  term pairs missing), T16 tier-aware readiness copy, T17 quiet-hours for
+  training reminders (read NOTIFICATIONS_LOCKED.md first), O4 history
+  filter, O34 BackHeader. Lead-built or lead-reviewed per operating model.
+- NO CHANGE recorded: O33 NotificationSettings layout (deliberate
+  exception, revisit post-release).
+
 _Reconciled 2026-07-11 (D46 boundary): D42 AppAlert, logged-set row, D44
 auto-advance cues, summary footer, picker first-open, CP-10 batch F and the
 leg-day engine work (D45 + D46) all LANDED - detail rolled to

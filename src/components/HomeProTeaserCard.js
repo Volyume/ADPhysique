@@ -31,7 +31,7 @@ function HomeProTeaserCard({ totalSessions, teaserInsight, onPress }) {
             {teaserInsight?.progressed && teaserInsight?.stalled
               ? `${teaserInsight.progressed} went up. ${teaserInsight.stalled} held. Pro tells you what to do next.`
               : teaserInsight?.progressed
-                ? `${teaserInsight.progressed} progressed this week. Pro builds on it.`
+                ? `${teaserInsight.progressed} progressed last session. Pro builds on it.`
                 : totalSessions >= 10
                   ? `${totalSessions} sessions logged. Pro coaching uses all of it.`
                   : 'Add a coach that adjusts your plan each week.'}

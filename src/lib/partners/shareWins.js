@@ -20,7 +20,7 @@ export const SHARE_WIN_TYPES = Object.freeze([
   Object.freeze({
     key: 'progress_card',
     title: 'Progress comparison',
-    shared: 'The composed progress image, with only the details shown before you send it.',
+    shared: 'A text summary of your comparison: the dates it covers and what you chose to include. The image itself is never sent.',
     private: 'Raw photos, the photo library, unexported scan details and body metrics stay private.',
   }),
 ]);
@@ -187,9 +187,9 @@ export function buildShareWinDraft(typeKey, payload = {}) {
     const includesWeight = safePayload.includesWeight === true;
     const summary = dateRange ? `${label}, ${dateRange}.` : `${label}.`;
     const detail = [
-      'Only the composed export can be sent.',
-      includesScanScore ? 'The visible Volyume Score is part of that export.' : 'Scan details stay private unless they are visible on that export.',
-      includesWeight ? 'Weight is included because it was switched on for that export.' : 'Weight is off for this export.',
+      'Only this text summary is sent, never the image.',
+      includesScanScore ? 'The visible Volyume Score was part of your export.' : 'Scan details stay private unless they were visible on your export.',
+      includesWeight ? 'Weight is mentioned because it was switched on for that export.' : 'Weight is off for this export.',
       'Raw photos, body metrics and the photo library stay private.',
     ].join(' ');
     return baseDraft(
