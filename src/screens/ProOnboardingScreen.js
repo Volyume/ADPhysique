@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView, Animated, AccessibilityInfo } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView, Animated, AccessibilityInfo, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion, hitSlop, shadow } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, motion, shadow } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { VolyumeIcon } from '../components/BrandMark';
 import SegmentedControl from '../components/SegmentedControl';
@@ -1929,16 +1929,13 @@ export default function ProOnboardingScreen({ navigation }) {
                       : 'Off. No cardio logging or library. Turn it on any time in Settings.'}
                   </Text>
                 </View>
-                <TouchableOpacity
-                  style={[styles.toggle, live.toggle, cardioOn && [styles.toggleOn, live.toggleOn]]}
-                  onPress={() => setCardioOn(v => !v)}
-                  hitSlop={hitSlop}
-                  accessibilityRole="switch"
-                  accessibilityState={{ checked: cardioOn }}
+                <Switch
+                  value={cardioOn}
+                  onValueChange={(v) => setCardioOn(v)}
+                  trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+                  thumbColor={cardioOn ? t.colors.primary : t.colors.textMuted}
                   accessibilityLabel="Make cardio available"
-                >
-                  <View style={[styles.toggleThumb, live.toggleThumb, cardioOn && [styles.toggleThumbOn, live.toggleThumbOn]]} />
-                </TouchableOpacity>
+                />
               </View>
             </View>
           </View>
@@ -1992,8 +1989,8 @@ const styles = StyleSheet.create({
 
   stepCount: { ...type.num('caption'), color: colors.textMuted, marginBottom: spacing.xs },
   stepTitle: {
-    fontSize: fontSize.xxl, fontWeight: fontWeight.bold,
-    color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 30,
+    ...type.h2,
+    color: colors.textPrimary, marginBottom: spacing.sm,
   },
   stepSub: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
   outcomeCard: {
@@ -2104,13 +2101,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   fieldLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
+    ...type.captionStrong,
     color: colors.textMuted, marginBottom: spacing.sm,
   },
-  fieldHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginBottom: spacing.sm },
+  fieldHint: { ...type.captionTight, color: colors.textMuted, marginBottom: spacing.sm },
   // A3: provisional energy line under the focus dropdown (step 5).
   provisionalKcal: {
-    fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18, marginTop: spacing.xs,
+    ...type.captionTight, color: colors.textSecondary, marginTop: spacing.xs,
   },
   measuredRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   // Protein target collapsible (step 3). Collapsed by default, the header
@@ -2140,16 +2137,16 @@ const styles = StyleSheet.create({
   // Weak-point selector (step 3). Chip grid, division-scoped options.
   wpSection: { marginTop: spacing.lg, marginBottom: spacing.sm },
   wpLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
+    ...type.captionStrong,
     color: colors.textMuted, marginBottom: spacing.xs,
   },
   wpOptional: { color: colors.textMuted, fontWeight: fontWeight.regular },
-  wpHint: { fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18, marginBottom: spacing.md },
+  wpHint: { ...type.captionTight, color: colors.textMuted, marginBottom: spacing.md },
   wpGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   inputField: { borderRadius: radius.md },
   input: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md + 2,
+    paddingVertical: spacing.md,
     fontSize: fontSize.md,
   },
   fieldWrap: {
@@ -2160,7 +2157,7 @@ const styles = StyleSheet.create({
   fieldWrapFocused: { borderColor: withAlpha(colors.primary, 0.502) },
   fieldInput: {
     flex: 1, paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md + 2,
+    paddingVertical: spacing.md,
     fontSize: fontSize.md, color: colors.textPrimary,
   },
   eyeBtn: {
@@ -2234,16 +2231,8 @@ const styles = StyleSheet.create({
   coachCardTitle: { ...type.bodyStrong, color: colors.textPrimary },
   coachCardBody: { ...type.bodySm, color: colors.textSecondary },
 
-  toggle: {
-    width: 48, height: 28, borderRadius: 14,
-    backgroundColor: colors.surface3, justifyContent: 'center', paddingHorizontal: 3,
-  },
-  toggleOn: { backgroundColor: colors.primaryFill },
-  toggleThumb: { width: 20, height: 20, borderRadius: radius.md, backgroundColor: colors.textMuted },
-  toggleThumbOn: { backgroundColor: colors.background, alignSelf: 'flex-end' },
-
   timeRow: { marginTop: spacing.md },
-  timeLabel: { fontSize: fontSize.xs, color: colors.textMuted, marginBottom: spacing.sm },
+  timeLabel: { ...type.caption, color: colors.textMuted, marginBottom: spacing.sm },
   hourScroll: { flexGrow: 0 },
   hourScrollContent: { gap: spacing.xs, paddingRight: spacing.sm },
   hourChip: {
@@ -2280,7 +2269,7 @@ const styles = StyleSheet.create({
   // Buttons
   primaryBtn: {
     borderRadius: radius.lg,
-    paddingVertical: spacing.lg + 2,
+    paddingVertical: spacing.lg,
     marginBottom: spacing.md,
   },
   primaryBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.onPrimary },
@@ -2314,7 +2303,7 @@ function buildLiveStyles(t) {
     progressTrack: { backgroundColor: t.colors.border },
     progressFill: { backgroundColor: t.colors.primary },
     stepCount: { ...t.type.num('caption'), color: t.colors.textMuted },
-    stepTitle: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
+    stepTitle: { ...t.type.h2, color: t.colors.textPrimary },
     stepSub: { ...t.type.bodySm, color: t.colors.textSecondary },
     outcomeEyebrow: { ...t.type.caption, color: t.colors.textMuted },
     outcomeChip: { backgroundColor: t.colors.primaryBg },
@@ -2329,9 +2318,9 @@ function buildLiveStyles(t) {
     questionGroupTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     questionGroupSub: { ...t.type.captionTight, color: t.colors.textSecondary },
     continueHint: { ...t.type.caption, color: t.colors.textSecondary },
-    fieldLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    fieldHint: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    provisionalKcal: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    fieldLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
+    fieldHint: { ...t.type.captionTight, color: t.colors.textMuted },
+    provisionalKcal: { ...t.type.captionTight, color: t.colors.textSecondary },
     proteinOpt: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     proteinOptActive: { borderColor: t.colors.primary },
     proteinOptLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
@@ -2339,9 +2328,9 @@ function buildLiveStyles(t) {
     proteinOptDesc: { ...t.type.captionTight, color: t.colors.textSecondary },
     recBadge: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.188) },
     recBadgeText: { fontSize: t.fontSize.micro, color: t.colors.primary },
-    wpLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    wpLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
     wpOptional: { color: t.colors.textMuted },
-    wpHint: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    wpHint: { ...t.type.captionTight, color: t.colors.textMuted },
     segmentRowSmall: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     segmentTextSmall: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     segmentActive: { backgroundColor: t.colors.primaryFill },
@@ -2355,11 +2344,7 @@ function buildLiveStyles(t) {
     coachCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     coachCardTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     coachCardBody: { ...t.type.bodySm, color: t.colors.textSecondary },
-    toggle: { backgroundColor: t.colors.surface3 },
-    toggleOn: { backgroundColor: t.colors.primaryFill },
-    toggleThumb: { backgroundColor: t.colors.textMuted },
-    toggleThumbOn: { backgroundColor: t.colors.background },
-    timeLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    timeLabel: { ...t.type.caption, color: t.colors.textMuted },
     hourChip: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     hourChipActive: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.primary },
     hourChipText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },

@@ -44,11 +44,11 @@ const SESSION_LENGTH_OPTIONS = [
 ];
 
 const EQUIPMENT_OPTIONS = [
-  { value: 'full_gym',        label: 'Full Gym',          sub: 'Barbells, cables, machines, dumbbells' },
-  { value: 'machines_cables', label: 'Machines & Cables', sub: 'No free barbells' },
-  { value: 'dumbbells_only',  label: 'Dumbbells Only',    sub: 'Adjustable or fixed dumbbells' },
-  { value: 'barbell_plates',  label: 'Barbell & Plates',  sub: 'Power rack or squat stand setup' },
-  { value: 'home_gym',        label: 'Home Gym',          sub: 'Mixed equipment at home' },
+  { value: 'full_gym',        label: 'Full gym',          sub: 'Barbells, cables, machines, dumbbells' },
+  { value: 'machines_cables', label: 'Machines and cables', sub: 'No free barbells' },
+  { value: 'dumbbells_only',  label: 'Dumbbells only',    sub: 'Adjustable or fixed dumbbells' },
+  { value: 'barbell_plates',  label: 'Barbell and plates', sub: 'Power rack or squat stand setup' },
+  { value: 'home_gym',        label: 'Home gym',          sub: 'Mixed equipment at home' },
   { value: 'bodyweight',      label: 'Bodyweight',        sub: 'No equipment needed' },
 ];
 

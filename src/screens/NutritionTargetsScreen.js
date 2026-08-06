@@ -43,7 +43,7 @@ const ACTIVITY_OPTIONS = [
   { key: 'light',        label: 'Light' },
   { key: 'moderate',     label: 'Moderate' },
   { key: 'active',       label: 'Active' },
-  { key: 'very_active',  label: 'Very Active' },
+  { key: 'very_active',  label: 'Very active' },
 ];
 
 

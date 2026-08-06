@@ -16,7 +16,7 @@ import { exportCoachReportPdf } from '../lib/coachReport';
 import { exportBackup, importBackup } from '../lib/dataBackup';
 import { getStatus as getSyncStatus, syncAll } from '../lib/sync';
 import { formatLastSynced } from '../lib/syncStatusLabel';
-import { withAlpha } from '../styles/theme';
+import { withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { SettingsPage, SettingRow, SectionHeader, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 
@@ -282,7 +282,7 @@ export default function SettingsDataScreen({ navigation }) {
               <Switch
                 value={scanSkipName}
                 onValueChange={toggleScanSkipName}
-                trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+                trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
                 thumbColor={scanSkipName ? t.colors.primary : t.colors.textMuted}
               />
             }

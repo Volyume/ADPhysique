@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
 
-  intro: { color: colors.textSecondary, fontSize: fontSize.md, lineHeight: 22 },
+  intro: { ...type.body, color: colors.textSecondary },
 
   section: { gap: spacing.md },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   sectionTitle: { ...type.title, color: colors.textPrimary, flex: 1 },
   sectionBody: { gap: spacing.sm },
 
-  body: { color: colors.textPrimary, fontSize: fontSize.sm, lineHeight: 21 },
+  body: { ...type.bodySm, color: colors.textPrimary },
   strong: { color: colors.textPrimary, fontWeight: fontWeight.bold },
 
   keypoint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.md, borderLeftWidth: 3, borderLeftColor: colors.primary, marginTop: spacing.xs },
@@ -334,9 +334,9 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    intro: { color: t.colors.textSecondary, fontSize: t.fontSize.md },
+    intro: { ...t.type.body, color: t.colors.textSecondary },
     sectionTitle: { ...t.type.title, color: t.colors.textPrimary },
-    body: { color: t.colors.textPrimary, fontSize: t.fontSize.sm },
+    body: { ...t.type.bodySm, color: t.colors.textPrimary },
     strong: { color: t.colors.textPrimary },
     keypoint: { backgroundColor: t.colors.primaryBg, borderLeftColor: t.colors.primary },
     keypointText: { ...t.type.bodySm, color: t.colors.textPrimary },

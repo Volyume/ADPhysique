@@ -334,6 +334,17 @@ export default function YouScreen({ navigation }) {
           )}
         />
 
+        {/* DD113 (design-consistency-audit-2026-08-06): documented exception,
+            not bespoke drift. Unlike AnalyticsScreen's blocking EmptyState
+            (the whole screen's content), this is a slim degrade-in-place
+            banner that sits ABOVE the rest of the screen, which keeps
+            rendering as normal underneath it (profile card, nav sections) --
+            a load failure here never blocks the athlete profile or coaching
+            nav the user still needs. Converting it to EmptyState would force
+            it to take over the screen, breaking that in-place-degrade
+            contract, so it stays a compact Card. Visual language (icon +
+            title + body, warning tone) still matches the app's other
+            failure states as closely as the inline layout allows. */}
         {loadError ? (
           <Card
             style={[styles.loadErrorCard, live.loadErrorCard]}

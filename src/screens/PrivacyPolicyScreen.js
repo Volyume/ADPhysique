@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, fontSize, spacing, type } from '../styles/theme';
+import { colors, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 
@@ -15,7 +15,7 @@ export default function PrivacyPolicyScreen() {
   const live = buildLiveStyles(t);
   return (
     <SafeAreaView style={[styles.safe, live.safe]}>
-      <BackHeader title="Privacy Policy" />
+      <BackHeader title="Privacy policy" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={[styles.updated, live.updated]}>Last updated {LAST_UPDATED}</Text>
@@ -165,9 +165,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   body: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 22,
     marginBottom: spacing.sm,
   },
   footer: { height: spacing.xl },
@@ -186,6 +185,6 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     updated: { ...t.type.caption, color: t.colors.textMuted },
     sectionTitle: { ...t.type.label, color: t.colors.textPrimary },
-    body: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    body: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
 }

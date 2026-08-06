@@ -13,7 +13,7 @@
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import { storeName } from '../lib/storeName';
@@ -149,7 +149,7 @@ function Section({ icon, tint, title, children }) {
   return (
     <View style={[styles.section, live.section]}>
       <View style={styles.sectionHeader}>
-        <View style={[styles.sectionIconWrap, { backgroundColor: withAlpha(tint, 0.125) }]}>
+        <View style={[styles.sectionIconWrap, { backgroundColor: withAlpha(tint, alpha.tint) }]}>
           <Ionicons name={icon} size={18} color={tint} />
         </View>
         <Text style={[styles.sectionTitle, live.sectionTitle]} accessibilityRole="header">{title}</Text>

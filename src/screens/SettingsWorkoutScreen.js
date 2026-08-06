@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, Switch, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, Switch, StyleSheet, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -7,7 +7,8 @@ import useAppStore from '../store/useAppStore';
 import { canScheduleExactAlarms, requestExactAlarmAccess } from '../lib/notifications/restForeground';
 import { SettingsPage, SettingRow, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 import NumericStepper from '../components/Stepper';
-import { colors, withAlpha, spacing, radius, fontWeight, type } from '../styles/theme';
+import Chip from '../components/Chip';
+import { colors, withAlpha, alpha, spacing, radius } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
 
@@ -84,9 +85,6 @@ export default function SettingsWorkoutScreen() {
   const live = useSettingsStyles();
   const liveLocal = {
     segment: { backgroundColor: t.colors.surface2 },
-    segBtnActive: { backgroundColor: t.colors.primaryFill },
-    segText: { ...t.type.label, color: t.colors.textSecondary },
-    segTextActive: { color: t.colors.onPrimary, fontWeight: fontWeight.semibold },
   };
 
   return (
@@ -105,16 +103,16 @@ export default function SettingsWorkoutScreen() {
               {BODY_WEIGHT_UNIT_OPTIONS.map((opt) => {
                 const active = (bodyWeightUnits ?? 'st') === opt.value;
                 return (
-                  <TouchableOpacity
+                  <Chip
                     key={opt.value}
-                    style={[local.segBtn, active && [local.segBtnActive, liveLocal.segBtnActive]]}
+                    label={opt.label}
+                    selected={active}
                     onPress={() => { if (!active) { haptics.selection(); setBodyWeightUnits(opt.value); } }}
                     accessibilityRole="radio"
-                    accessibilityState={{ selected: active }}
                     accessibilityLabel={opt.label}
-                  >
-                    <Text style={[local.segText, liveLocal.segText, active && [local.segTextActive, liveLocal.segTextActive]]}>{opt.label}</Text>
-                  </TouchableOpacity>
+                    style={local.segChip}
+                    labelStyle={local.segLabel}
+                  />
                 );
               })}
             </View>
@@ -152,7 +150,7 @@ export default function SettingsWorkoutScreen() {
             <Switch
               value={!!autoStartRestTimer}
               onValueChange={v => { haptics.selection(); setAutoStartRestTimer(v); }}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
               thumbColor={autoStartRestTimer ? t.colors.primary : t.colors.textMuted}
             />
           }
@@ -170,7 +168,7 @@ export default function SettingsWorkoutScreen() {
             <Switch
               value={!!restEndAlertEnabled}
               onValueChange={v => { haptics.selection(); setRestEndAlertEnabled(v); }}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
               thumbColor={restEndAlertEnabled ? t.colors.primary : t.colors.textMuted}
             />
           }
@@ -201,8 +199,10 @@ const local = StyleSheet.create({
     gap: spacing.xxs,
     marginTop: spacing.sm,
   },
-  segBtn: { flex: 1, minHeight: 44, paddingVertical: spacing.sm, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm },
-  segBtnActive: { backgroundColor: colors.primaryFill },
-  segText: { ...type.label, color: colors.textSecondary },
-  segTextActive: { color: colors.onPrimary, fontWeight: fontWeight.semibold },
+  // DD11 (design-consistency-audit-2026-08-06): body-weight-unit picker now
+  // routes through the shared Chip primitive, matching SettingsDisplayScreen's
+  // THEME_OPTIONS/ENERGY_OPTIONS segment; segChip/segLabel just keep the
+  // three chips flush across the row.
+  segChip: { flex: 1, alignSelf: 'stretch', justifyContent: 'center', borderRadius: radius.sm },
+  segLabel: { textAlign: 'center' },
 });

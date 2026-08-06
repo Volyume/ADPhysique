@@ -55,7 +55,7 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import NetInfo from '@react-native-community/netinfo';
 import { planReady as hapticScanSuccess, selection as hapticSelection } from '../lib/haptics';
-import { colors, fontSize, spacing, radius, type } from '../styles/theme';
+import { colors, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { resolveBarcode } from '../lib/food/waterfall';
 import { logError, logInfo } from '../lib/errorLog';
@@ -448,8 +448,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   permissionBody: {
-    color: colors.textMuted, fontSize: fontSize.md, textAlign: 'center',
-    marginTop: spacing.sm, marginBottom: spacing.xl, lineHeight: 22,
+    ...type.body,
+    color: colors.textMuted, textAlign: 'center',
+    marginTop: spacing.sm, marginBottom: spacing.xl,
   },
   permissionBtn: {
     backgroundColor: colors.primaryFill, paddingHorizontal: spacing.lg,
@@ -477,7 +478,7 @@ function buildLiveStyles(t) {
     manualBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     manualErrorText: { ...t.type.bodySm, color: t.colors.error },
     permissionTitle: { color: t.colors.textPrimary, ...t.type.title },
-    permissionBody: { color: t.colors.textMuted, fontSize: t.fontSize.md },
+    permissionBody: { ...t.type.body, color: t.colors.textMuted },
     permissionBtn: { backgroundColor: t.colors.primaryFill },
     permissionBtnText: { color: t.colors.onPrimary, ...t.type.bodyStrong },
   };

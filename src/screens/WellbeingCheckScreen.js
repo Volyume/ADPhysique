@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, spacing, radius, type } from '../styles/theme';
+import { colors, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
@@ -177,9 +177,8 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
 
   intro: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 22,
   },
 
   list: { gap: spacing.lg },
@@ -194,9 +193,8 @@ const styles = StyleSheet.create({
   },
 
   question: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textPrimary,
-    lineHeight: 22,
   },
 
   btnRow: { flexDirection: 'row', gap: spacing.md },
@@ -224,16 +222,14 @@ const styles = StyleSheet.create({
 
 
   saveHint: {
-    fontSize: fontSize.xs,
+    ...type.captionTight,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 18,
   },
   privacy: {
-    fontSize: fontSize.xs,
+    ...type.captionTight,
     color: colors.textMuted,
     textAlign: 'center',
-    lineHeight: 18,
   },
 });
 
@@ -250,14 +246,14 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    intro: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    intro: { ...t.type.bodySm, color: t.colors.textSecondary },
     item: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    question: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    question: { ...t.type.bodySm, color: t.colors.textPrimary },
     btn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     btnSelected: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
     btnText: { ...t.type.label, color: t.colors.textMuted },
     btnTextSelected: { color: t.colors.primary },
-    saveHint: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
-    privacy: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    saveHint: { ...t.type.captionTight, color: t.colors.textSecondary },
+    privacy: { ...t.type.captionTight, color: t.colors.textMuted },
   };
 }

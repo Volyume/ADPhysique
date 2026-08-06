@@ -69,8 +69,14 @@ describe('SettingsWorkoutScreen carries the moved block wholesale: same state, s
     expect(SETTINGS_WORKOUT).toMatch(/BODY_WEIGHT_UNIT_OPTIONS/);
     expect(SETTINGS_WORKOUT).toMatch(/setBodyWeightUnits/);
     expect(SETTINGS_WORKOUT).toMatch(/accessibilityRole="radiogroup"/);
+    // DD11 (design-consistency-audit-2026-08-06): the hand-rolled
+    // TouchableOpacity segmented control was replaced with the shared Chip
+    // primitive (accessibilityRole="radio", selected={active}); Chip computes
+    // accessibilityState={{ checked: selected }} itself, so the radio
+    // semantics are pinned via Chip's own props rather than a manually-set
+    // accessibilityState here.
     expect(SETTINGS_WORKOUT).toMatch(/accessibilityRole="radio"/);
-    expect(SETTINGS_WORKOUT).toMatch(/accessibilityState=\{\{ selected: active \}\}/);
+    expect(SETTINGS_WORKOUT).toMatch(/selected=\{active\}/);
   });
 
   test('default rest timer stepper, auto-start switch and rest-finished-alert switch all wired to the same store setters', () => {

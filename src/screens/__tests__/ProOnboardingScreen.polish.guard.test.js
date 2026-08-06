@@ -41,7 +41,13 @@ describe('ProOnboardingScreen premium polish guards', () => {
     expect(SOURCE).toMatch(/inputHalf: \{ flex: 1, minWidth: 140 \}/);
     expect(SOURCE).toMatch(/notifCopy: \{ flex: 1, minWidth: 0 \}/);
     expect(SOURCE).toMatch(/hourChip: \{\s*minHeight: 48/);
-    expect(SOURCE).toContain('hitSlop={hitSlop}');
+    // DD49 (design-consistency-audit-2026-08-06): the cardio toggle's
+    // hand-rolled TouchableOpacity+hitSlop pill was replaced with the native
+    // RN Switch (matching every Settings toggle app-wide), which carries its
+    // own adequate touch target, so the hitSlop token is no longer needed
+    // here.
+    expect(SOURCE).toContain('<Switch');
+    expect(SOURCE).toContain("accessibilityLabel=\"Make cardio available\"");
   });
 
   test('final step title is clean and the missing-recovery gate is visible', () => {

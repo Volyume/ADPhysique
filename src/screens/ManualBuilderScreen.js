@@ -18,7 +18,7 @@ import InfoTooltip from '../components/InfoTooltip';
 import DragReorderList from '../components/DragReorderList';
 import { useDragAutoScrollBridge } from '../components/DragReorderList';
 
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, hitSlop } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import {
   createProgramme, createRoutine, addExerciseToRoutine,
@@ -40,11 +40,11 @@ import * as haptics from '../lib/haptics';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const GOALS = [
-  { key: 'hypertrophy', label: 'Build Muscle' },
-  { key: 'balanced',    label: 'Balanced Bodybuilding' },
-  { key: 'aesthetic',   label: 'Aesthetic Focus' },
-  { key: 'strength',    label: 'Strength-Biased' },
-  { key: 'recomp',      label: 'Lose Fat, Keep Muscle' },
+  { key: 'hypertrophy', label: 'Build muscle' },
+  { key: 'balanced',    label: 'Balanced bodybuilding' },
+  { key: 'aesthetic',   label: 'Aesthetic focus' },
+  { key: 'strength',    label: 'Strength-biased' },
+  { key: 'recomp',      label: 'Lose fat, keep muscle' },
 ];
 
 // Selectable training-days-per-week. Default stays 4 (the prior hardcoded
@@ -997,7 +997,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
               />
               <TouchableOpacity
                 onPress={() => handleDuplicateDay(dayIdx)}
-                hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                hitSlop={hitSlop}
                 accessibilityRole="button"
                 accessibilityLabel={`Duplicate ${day.name}`}
               >
@@ -1005,7 +1005,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => handleRemoveDay(dayIdx)}
-                hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                hitSlop={hitSlop}
                 accessibilityRole="button"
                 accessibilityLabel={`Remove ${day.name}`}
               >
@@ -1461,8 +1461,8 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   reorderBtn: {
-    width: 26,
-    height: 26,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.sm,

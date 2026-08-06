@@ -36,7 +36,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera, useCameraDevice } from 'react-native-vision-camera';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, spacing, radius, type, circle } from '../styles/theme';
+import { colors, spacing, radius, type, circle } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Button from '../components/Button';
 import ModalHeader from '../components/ModalHeader';
@@ -476,8 +476,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   fallbackBody: {
-    color: colors.textMuted, fontSize: fontSize.md, textAlign: 'center',
-    marginTop: spacing.sm, marginBottom: spacing.xl, lineHeight: 22,
+    ...type.body,
+    color: colors.textMuted, textAlign: 'center',
+    marginTop: spacing.sm, marginBottom: spacing.xl,
   },
 });
 
@@ -505,6 +506,6 @@ function buildLiveStyles(t) {
     skipText: { ...t.type.body, color: t.colors.textPrimary, backgroundColor: t.colors.scrim },
     captureInner: { backgroundColor: t.colors.camera },
     fallbackTitle: { ...t.type.title, color: t.colors.textPrimary },
-    fallbackBody: { color: t.colors.textMuted, fontSize: t.fontSize.md },
+    fallbackBody: { ...t.type.body, color: t.colors.textMuted },
   };
 }

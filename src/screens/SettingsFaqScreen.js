@@ -135,7 +135,7 @@ export default function SettingsFaqScreen() {
 }
 
 const styles = StyleSheet.create({
-  intro: { ...type.body, color: colors.textPrimary, lineHeight: 22, marginBottom: spacing.md },
+  intro: { ...type.body, color: colors.textPrimary, marginBottom: spacing.md },
   list: { gap: spacing.sm },
 });
 

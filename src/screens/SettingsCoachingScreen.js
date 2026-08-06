@@ -1,16 +1,17 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Switch, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Switch } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
-import { colors, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
+import { colors, spacing, type, withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
 import { getUserBodyProfile } from '../lib/database';
 import { getWellbeingMode, setWellbeingMode } from '../lib/wellbeing';
 import { getCycleTracking, setCycleTracking } from '../lib/cyclePrefs';
 import { SettingsPage, SettingRow, settingsStyles, useSettingsStyles } from '../components/SettingsPrimitives';
+import Chip from '../components/Chip';
 
 // Coaching: the levers that shape what the coach asks for and adjusts.
 // Cardio is Pro-only; cycle tracking shows for users whose body profile
@@ -116,10 +117,6 @@ export default function SettingsCoachingScreen() {
     toneBlock: { borderBottomColor: t.colors.border },
     toneLabel: { ...t.type.body, color: t.colors.textPrimary },
     toneSub: { ...t.type.caption, color: t.colors.textMuted },
-    toneChip: { borderColor: t.colors.border },
-    toneChipOn: { borderColor: t.colors.primary, backgroundColor: withAlpha(t.colors.primary, alpha.tint) },
-    toneChipText: { ...t.type.caption, color: t.colors.textSecondary },
-    toneChipTextOn: { color: t.colors.primary },
   };
 
   return (
@@ -134,7 +131,7 @@ export default function SettingsCoachingScreen() {
             <Switch
               value={calmEnabled}
               onValueChange={toggleCalmMode}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
               thumbColor={calmEnabled ? t.colors.primary : t.colors.textMuted}
             />
           }
@@ -157,7 +154,7 @@ export default function SettingsCoachingScreen() {
             <Switch
               value={readinessAsk}
               onValueChange={toggleReadinessAsk}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
               thumbColor={readinessAsk ? t.colors.primary : t.colors.textMuted}
             />
           }
@@ -178,7 +175,7 @@ export default function SettingsCoachingScreen() {
                     setCardioEnabled(next);
                     if (user?.id) await saveLocalProfile(user.id, { ...(userProfile || {}), cardioEnabled: next });
                   }}
-                  trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+                  trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
                   thumbColor={cardioEnabled ? t.colors.primary : t.colors.textMuted}
                 />
               }
@@ -203,16 +200,16 @@ export default function SettingsCoachingScreen() {
                 ].map(({ key, label }) => {
                   const sel = coachTone === key;
                   return (
-                    <TouchableOpacity
+                    <Chip
                       key={key}
-                      style={[styles.toneChip, liveText.toneChip, sel && [styles.toneChipOn, liveText.toneChipOn]]}
+                      label={label}
+                      selected={sel}
                       onPress={() => setTone(key)}
                       accessibilityRole="radio"
-                      accessibilityState={{ checked: sel }}
                       accessibilityLabel={`Coaching tone ${label}`}
-                    >
-                      <Text style={[styles.toneChipText, liveText.toneChipText, sel && [styles.toneChipTextOn, liveText.toneChipTextOn]]}>{label}</Text>
-                    </TouchableOpacity>
+                      style={styles.toneChipFlex}
+                      labelStyle={styles.toneChipLabel}
+                    />
                   );
                 })}
               </View>
@@ -240,16 +237,16 @@ export default function SettingsCoachingScreen() {
                 ].map(({ key, label }) => {
                   const sel = coachAutonomy === key;
                   return (
-                    <TouchableOpacity
+                    <Chip
                       key={key}
-                      style={[styles.toneChip, liveText.toneChip, sel && [styles.toneChipOn, liveText.toneChipOn]]}
+                      label={label}
+                      selected={sel}
                       onPress={() => setAutonomy(key)}
                       accessibilityRole="radio"
-                      accessibilityState={{ checked: sel }}
                       accessibilityLabel={`Autonomy ${label}`}
-                    >
-                      <Text style={[styles.toneChipText, liveText.toneChipText, sel && [styles.toneChipTextOn, liveText.toneChipTextOn]]}>{label}</Text>
-                    </TouchableOpacity>
+                      style={styles.toneChipFlex}
+                      labelStyle={styles.toneChipLabel}
+                    />
                   );
                 })}
               </View>
@@ -268,7 +265,7 @@ export default function SettingsCoachingScreen() {
                 <Switch
                   value={showScience}
                   onValueChange={toggleScience}
-                  trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+                  trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
                   thumbColor={showScience ? t.colors.primary : t.colors.textMuted}
                 />
               }
@@ -285,7 +282,7 @@ export default function SettingsCoachingScreen() {
               <Switch
                 value={cycleEnabled}
                 onValueChange={toggleCycleTracking}
-                trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, 0.502) }}
+                trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
                 thumbColor={cycleEnabled ? t.colors.primary : t.colors.textMuted}
               />
             }
@@ -308,17 +305,10 @@ const styles = StyleSheet.create({
   toneLabel: { ...type.body, color: colors.textPrimary },
   toneSub: { ...type.caption, color: colors.textMuted },
   toneChips: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
-  toneChip: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  toneChipOn: { borderColor: colors.primary, backgroundColor: withAlpha(colors.primary, alpha.tint) },
-  toneChipText: { ...type.caption, color: colors.textSecondary },
-  toneChipTextOn: { color: colors.primary },
+  // DD10 (design-consistency-audit-2026-08-06): tone/autonomy pickers now
+  // route through the shared Chip primitive; these just keep the three
+  // chips flush across the row and their label centred, matching the old
+  // toneChip layout geometry.
+  toneChipFlex: { flex: 1, justifyContent: 'center' },
+  toneChipLabel: { textAlign: 'center' },
 });

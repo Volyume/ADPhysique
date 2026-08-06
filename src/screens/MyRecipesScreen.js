@@ -23,7 +23,7 @@ import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, spacing, type } from '../styles/theme';
+import { colors, fontSize, spacing, type, radius, circle } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { SkeletonRow } from '../components/Skeleton';
 import BackHeader from '../components/BackHeader';
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xxs,
-    borderRadius: 999,
+    borderRadius: radius.full,
     backgroundColor: colors.primaryBg,
     paddingHorizontal: spacing.sm,
     borderWidth: 1,
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 20,
+    borderRadius: circle(40),
   },
   // Servings picker bottom sheet (food audit F-4)
   servingsSheet: { alignItems: 'center' },

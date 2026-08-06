@@ -1457,7 +1457,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 <Ionicons name="images-outline" size={iconSize.md} color={t.colors.primary} />
               </View>
               <View style={styles.heroTitleCopy}>
-                <Text style={[styles.heroTextEyebrow, live.heroTextEyebrow]}>Progress Photos</Text>
+                <Text style={[styles.heroTextEyebrow, live.heroTextEyebrow]}>Progress photos</Text>
                 <Text style={[styles.heroTextTitle, live.heroTextTitle]}>Physique progress</Text>
               </View>
             </View>
@@ -1696,7 +1696,7 @@ export default function ProgressPhotosScreen({ navigation }) {
           rest of the app. The write actions live in the hero so capture and
           scoring are not duplicated in the header. */}
       <BackHeader
-        title="Progress Photos"
+        title="Progress photos"
         onBack={() => navigation.goBack()}
       />
 
@@ -2209,8 +2209,8 @@ const styles = StyleSheet.create({
   segmentTrack: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
-    padding: 3,
+    gap: spacing.xxs,
+    padding: spacing.xxs,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
@@ -2223,7 +2223,7 @@ const styles = StyleSheet.create({
     minHeight: 34,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.xs,
-    borderRadius: radius.sm - 1,
+    borderRadius: radius.xs,
   },
   segmentActive: {
     backgroundColor: colors.surfaceElevated,

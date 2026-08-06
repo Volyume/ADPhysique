@@ -526,8 +526,13 @@ export default function WorkoutHistoryScreen({ navigation }) {
                 ))}
               </View>
             ) : (
+              // DD111 (design-consistency-audit-2026-08-06, lead-landed): the
+              // expanded breakdown is a known row shape, so it takes
+              // SkeletonRow like the screen's own first load, not a plain
+              // "Loading exercises" text line.
               <View style={styles.exerciseBreakdown}>
-                <Text style={[styles.loadingText, live.loadingText]}>Loading exercises…</Text>
+                <SkeletonRow />
+                <SkeletonRow />
               </View>
             )}
 
@@ -1115,11 +1120,6 @@ const styles = StyleSheet.create({
     flex: 2,
     textAlign: 'right',
   },
-  loadingText: {
-    ...type.caption,
-    color: colors.textMuted,
-    fontStyle: 'italic',
-  },
   notesRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1241,7 +1241,6 @@ function buildLiveStyles(t) {
     statChipText: { ...t.type.captionStrong, color: t.colors.textSecondary, fontVariant: ['tabular-nums'] },
     exerciseBreakdownName: { ...t.type.label, color: t.colors.textPrimary },
     exerciseBreakdownSummary: { ...t.type.num('caption'), color: t.colors.textSecondary },
-    loadingText: { ...t.type.caption, color: t.colors.textMuted },
     notesRow: { backgroundColor: t.colors.surface2 },
     notesText: { ...t.type.captionTight, color: t.colors.textSecondary },
     fullSummaryBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },

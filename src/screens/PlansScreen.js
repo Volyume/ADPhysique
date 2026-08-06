@@ -15,6 +15,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import EmptyState from '../components/EmptyState';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
 import PressableCard from '../components/PressableCard';
@@ -790,24 +791,14 @@ export default function PlansScreen({ navigation }) {
           // keeps showing that plan card instead, per loadError being gated
           // on !activePlan here). A load failure must never be mistaken for
           // a confirmed "no active plan" account state.
-          <Card style={[styles.noPlanCard, live.noPlanCard]}>
-            <View style={styles.noPlanCardHeader}>
-              <View style={[styles.noPlanCardIcon, live.noPlanCardIcon]}>
-                <Ionicons name="cloud-offline-outline" size={20} color={t.colors.primary} />
-              </View>
-              <Text style={[styles.noPlanCardTitle, live.noPlanCardTitle]}>Couldn't load your plans</Text>
-            </View>
-            <Text style={[styles.noPlanCardBody, live.noPlanCardBody]}>
-              Check your connection and try again. Nothing has been lost.
-            </Text>
-            <View style={styles.noPlanCardActions}>
-              <Button
-                title="Retry"
-                onPress={loadData}
-                accessibilityLabel="Retry loading your plans"
-              />
-            </View>
-          </Card>
+          <EmptyState
+            icon="cloud-offline-outline"
+            title="Couldn't load your plans"
+            text="Check your connection and try again. Nothing has been lost."
+            actionLabel="Retry"
+            onAction={loadData}
+            actionAccessibilityLabel="Retry loading your plans"
+          />
         ) : activePlan ? (
           <View style={styles.section}>
             <Card style={[styles.activePlanCard, live.activePlanCard]}>
@@ -862,30 +853,17 @@ export default function PlansScreen({ navigation }) {
           /* B2: the free no-plan state is a proper card, sitting where the
              active plan card would be, so a new user never scrolls past
              empty sections looking for a way in. Quiz first, library second. */
-          <Card style={[styles.noPlanCard, live.noPlanCard]}>
-            <View style={styles.noPlanCardHeader}>
-              <View style={[styles.noPlanCardIcon, live.noPlanCardIcon]}>
-                <Ionicons name="compass-outline" size={20} color={t.colors.primary} />
-              </View>
-              <Text style={[styles.noPlanCardTitle, live.noPlanCardTitle]}>No active plan yet</Text>
-            </View>
-            <Text style={[styles.noPlanCardBody, live.noPlanCardBody]}>
-              Answer a few quick questions and we'll suggest a starter plan, or browse the library if you'd rather choose yourself.
-            </Text>
-            <View style={styles.noPlanCardActions}>
-              <Button
-                title="Start with a plan"
-                onPress={() => navigation.navigate('FreeStarter')}
-                accessibilityLabel="Answer three quick questions to start with a plan"
-              />
-              <Button
-                title="Browse plans"
-                variant="secondary"
-                onPress={() => navigation.navigate('PlanLibrary')}
-                accessibilityLabel="Browse the plan library"
-              />
-            </View>
-          </Card>
+          <EmptyState
+            icon="compass-outline"
+            title="No active plan yet"
+            text="Answer a few quick questions and we'll suggest a starter plan, or browse the library if you'd rather choose yourself."
+            actionLabel="Start with a plan"
+            onAction={() => navigation.navigate('FreeStarter')}
+            actionAccessibilityLabel="Answer three quick questions to start with a plan"
+            secondaryLabel="Browse plans"
+            onSecondary={() => navigation.navigate('PlanLibrary')}
+            secondaryAccessibilityLabel="Browse the plan library"
+          />
         ) : (
           <Card style={styles.noActivePlanRow}>
             <Ionicons name="calendar-outline" size={16} color={t.colors.textMuted} />
@@ -1289,27 +1267,13 @@ const styles = StyleSheet.create({
   },
   noActivePlanText: { ...type.bodySm, flex: 1, color: colors.textMuted },
 
-  // B2: free no-plan card. The on-ramp sits where the active plan would be.
-  noPlanCard: {
-    borderColor: withAlpha(colors.primary, alpha.edge), gap: spacing.md,
-  },
-  noPlanCardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  noPlanCardIcon: {
-    width: 36, height: 36, borderRadius: circle(36),
-    backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.mid),
-  },
-  noPlanCardTitle: { flex: 1, ...type.bodyStrong, color: colors.textPrimary },
-  noPlanCardBody: { ...type.bodySm, color: colors.textSecondary },
-  noPlanCardActions: { gap: spacing.sm },
-
   activePlanCard: {
     borderColor: withAlpha(colors.primary, alpha.edge), gap: spacing.md,
   },
   activePlanHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   activeBadge: {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
-    paddingHorizontal: spacing.sm, paddingVertical: 3,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.strong),
   },
   activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.black },
@@ -1377,7 +1341,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   actionCardBody: { flex: 1 },
-  actionCardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: 3 },
+  actionCardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxs },
   actionCardTitle: { ...type.bodyStrong, color: colors.textPrimary },
   actionCardBadge: {
     backgroundColor: colors.primaryBg, borderRadius: radius.full,
@@ -1501,10 +1465,6 @@ function buildLiveStyles(t) {
     trainingBlocksSub: { ...t.type.caption, color: t.colors.textMuted },
     proCoachNote: { fontSize: t.fontSize.xs, color: t.colors.textMuted, borderTopColor: t.colors.border },
     noActivePlanText: { ...t.type.bodySm, color: t.colors.textMuted },
-    noPlanCard: { borderColor: withAlpha(t.colors.primary, alpha.edge) },
-    noPlanCardIcon: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
-    noPlanCardTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    noPlanCardBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     activePlanCard: { borderColor: withAlpha(t.colors.primary, alpha.edge) },
     activeBadge: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.strong) },
     activeBadgeText: { fontSize: t.fontSize.xs, color: t.colors.primary },

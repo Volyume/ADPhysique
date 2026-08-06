@@ -1107,7 +1107,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           <StatBox
             icon="layers-outline"
             value={String(displayWorkingSets)}
-            label="Working Sets"
+            label="Working sets"
             tooltip={'Hard sets counted in your weekly totals. Every set you log counts except warm-ups.\n\nTraining close to your limit, typically 0 to 3 reps from failure, is what makes a working set effective.'}
             animateOrder={1}
           />
@@ -1523,7 +1523,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           <RevealSection delay={1700}>
           <View style={styles.secondaryActions}>
             <Button
-              title="Save as Workout Template"
+              title="Save as workout template"
               variant="secondary"
               icon="bookmark-outline"
               style={styles.templateBtn}
@@ -1600,7 +1600,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         keyboardAvoiding
         accessibilityLabel="Save as workout template"
       >
-        <Text style={[styles.templateModalTitle, live.templateModalTitle]}>Save as Workout Template</Text>
+        <Text style={[styles.templateModalTitle, live.templateModalTitle]}>Save as workout template</Text>
         <TextField accessibilityLabel="Workout template name"
           fieldStyle={styles.templateModalField}
           inputStyle={[styles.templateModalInput, live.templateModalInput]}
@@ -1773,7 +1773,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   milestoneTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  milestoneBody: { ...type.captionTight, color: colors.textSecondary, marginTop: 3 },
+  milestoneBody: { ...type.captionTight, color: colors.textSecondary, marginTop: spacing.xxs },
   milestoneShareBtn: {
     width: 36, height: 36, borderRadius: circle(36),
     alignItems: 'center', justifyContent: 'center',

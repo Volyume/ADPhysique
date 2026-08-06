@@ -323,7 +323,7 @@ export default function PlanDetailScreen({ navigation, route }) {
             )}
             {plan.tags && plan.tags.includes('featured') && (
               <View style={[styles.featuredBadge, live.featuredBadge]}>
-                <Ionicons name="star" size={9} color={t.colors.onPrimary} />
+                <Ionicons name="star" size={iconSize.sm} color={t.colors.onPrimary} />
                 <Text style={[styles.featuredBadgeText, live.featuredBadgeText]}>Featured</Text>
               </View>
             )}
@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
   },
   whyItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   whyItemGap: { marginBottom: spacing.xs },
-  whyBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.primary, marginTop: 7 },
+  whyBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.primary, marginTop: spacing.xs2 },
   whyText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 });
 

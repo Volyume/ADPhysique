@@ -649,7 +649,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             <Switch
               value={trainingEnabled}
               onValueChange={handleTrainingToggle}
-              trackColor={{ false: t.colors.surface2, true: t.colors.primaryDim }}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
               thumbColor={t.colors.primary}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Training reminder toggle"
@@ -694,7 +694,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             <Switch
               value={activationNudgeEnabled}
               onValueChange={handleActivationNudgeToggle}
-              trackColor={{ false: t.colors.surface2, true: t.colors.primaryDim }}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
               thumbColor={t.colors.primary}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Getting-started nudge toggle"
@@ -721,7 +721,7 @@ export default function NotificationSettingsScreen({ navigation }) {
                 <Switch
                   value={r.enabled}
                   onValueChange={(v) => toggleMealReminder(r.id, v)}
-                  trackColor={{ false: t.colors.surface2, true: t.colors.primaryDim }}
+                  trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
                   thumbColor={t.colors.primary}
                   ios_backgroundColor={t.colors.surface2}
                   accessibilityLabel={`${r.label} reminder toggle`}
@@ -761,7 +761,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             <Switch
               value={quietHours.enabled !== false}
               onValueChange={(v) => persistQuietHours({ enabled: v })}
-              trackColor={{ false: t.colors.surface2, true: t.colors.primaryDim }}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
               thumbColor={t.colors.primary}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Quiet hours toggle"

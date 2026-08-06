@@ -14,6 +14,7 @@ import { appAlert } from '../components/AppAlert';
 import { SettingsPage, SettingRow, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 import { colors, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import { SkeletonRow } from '../components/Skeleton';
 import { listSnapshots, restoreSnapshot } from '../lib/dbSnapshot';
 import { closeDatabase } from '../lib/database';
 import { logError } from '../lib/errorLog';
@@ -101,7 +102,11 @@ export default function SnapshotsScreen() {
     <SettingsPage title="Restore a snapshot">
       <View style={[styles.section, live.section]}>
         {snapshots === null ? (
-          <Text style={[localStyles.note, liveText.note]}>Loading…</Text>
+          <>
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </>
         ) : loadError ? (
           <>
             <Text style={[localStyles.note, liveText.note]}>

@@ -635,6 +635,7 @@ function SegmentBtn({ label, active, onPress, icon }) {
       // (accessibilityState={{ selected }}) and the Settings body-weight-unit
       // segmented control (SettingsWorkoutScreen.js).
       accessibilityState={{ selected: active }}
+      accessibilityLabel={label}
     >
       {icon}
       <Text style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{label}</Text>
@@ -671,7 +672,7 @@ const styles = StyleSheet.create({
   },
   segment: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, paddingVertical: spacing.sm + 1, borderRadius: radius.sm,
+    gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.sm,
   },
   segmentActive: { backgroundColor: colors.surface3 },
   segmentText: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: fontWeight.semibold },

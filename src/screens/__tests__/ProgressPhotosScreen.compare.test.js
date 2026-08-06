@@ -271,7 +271,9 @@ describe('ProgressPhotosScreen timeline', () => {
   test('empty state renders the explainer and an add affordance (mount safety)', async () => {
     const tree = await render([]);
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('Progress Photos');
+    // DD52 (design-consistency-audit-2026-08-06): sentence-cased to match
+    // every sibling BackHeader title in this screen group.
+    expect(text).toContain('Progress photos');
     expect(text).toContain('Private on this device');
     expect(text).toContain('Take clear front, back and side photos once a week.');
     expect(text).toContain('Volyume scores the set and saves it to your library.');

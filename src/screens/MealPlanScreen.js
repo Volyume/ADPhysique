@@ -1473,6 +1473,10 @@ export default function MealPlanScreen({ navigation, route }) {
   );
 }
 
+// DD92 (design-consistency-audit-2026-08-06): shared so preferencesHint's
+// indent can never drift apart from preferencesIcon's actual width.
+const PREFERENCES_ICON_SIZE = 34;
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.md },
@@ -1616,7 +1620,7 @@ const styles = StyleSheet.create({
   seasonIntro: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.sm },
   seasonWrap: {
     marginTop: spacing.sm, paddingTop: spacing.sm,
-    borderTopWidth: 1, borderTopColor: colors.border, gap: 3,
+    borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.xxs,
   },
   seasonLabel: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.bold, marginBottom: 2 },
   seasonLine: { ...type.bodySm, color: colors.textSecondary },
@@ -1656,8 +1660,8 @@ const styles = StyleSheet.create({
     minHeight: 42,
   },
   preferencesIcon: {
-    width: 34,
-    height: 34,
+    width: PREFERENCES_ICON_SIZE,
+    height: PREFERENCES_ICON_SIZE,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1666,7 +1670,7 @@ const styles = StyleSheet.create({
   prefsToggleCopy: { flex: 1, minWidth: 0 },
   prefsToggleText: { ...type.bodyStrong, color: colors.textPrimary },
   prefsToggleSub: { ...type.caption, color: colors.textSecondary, marginTop: 1 },
-  preferencesHint: { ...type.caption, color: colors.textMuted, lineHeight: 17, marginLeft: 34 + spacing.sm },
+  preferencesHint: { ...type.caption, color: colors.textMuted, marginLeft: PREFERENCES_ICON_SIZE + spacing.sm },
   prefsPanel: {
     alignSelf: 'stretch',
     gap: spacing.md,

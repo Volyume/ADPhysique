@@ -4,11 +4,12 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Platform }
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, iconSize, hitSlop } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import { Skeleton, SkeletonCard } from '../components/Skeleton';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
 import {
@@ -413,7 +414,24 @@ export default function RoutineDetailScreen({ navigation, route }) {
     }
   }
 
-  if (!routine) return null;
+  if (!routine) {
+    // DD9 (design-consistency-audit-2026-08-06): mirror the loaded layout
+    // (start button, muscle-tag row, a couple of exercise rows) instead of a
+    // blank first paint, the same pattern PlanDetailScreen.js's own `!plan`
+    // branch uses for the equivalent pushed-detail screen.
+    return (
+      <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
+        <BackHeader title="Edit workout" />
+        <View style={styles.list}>
+          <Skeleton width={'100%'} height={48} radius={radius.md} />
+          <Skeleton width={'60%'} height={14} style={{ marginTop: spacing.sm }} />
+          <SkeletonCard height={64} />
+          <SkeletonCard height={64} />
+          <SkeletonCard height={64} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   // Stable A/B/C labels for superset groups, in first-appearance order.
   // Read-only here: supersets are created/edited in the plan builder
@@ -586,7 +604,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
               <View style={styles.cardActions}>
                 <TouchableOpacity
                   onPress={() => openEdit(routineExercise, exercise)}
-                  hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                  hitSlop={hitSlop}
                   accessibilityRole="button"
                   accessibilityLabel={`Edit ${exercise.name}`}
                 >
@@ -594,7 +612,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => handleOpenSwap(routineExercise, exercise)}
-                  hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                  hitSlop={hitSlop}
                   accessibilityRole="button"
                   accessibilityLabel={`Swap ${exercise.name}`}
                 >
@@ -602,7 +620,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => removeExercise(routineExercise, exercise.name)}
-                  hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                  hitSlop={hitSlop}
                   accessibilityRole="button"
                   accessibilityLabel={`Remove ${exercise.name}`}
                 >

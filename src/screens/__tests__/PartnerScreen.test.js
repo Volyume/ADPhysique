@@ -761,9 +761,14 @@ describe('empty state', () => {
     );
     // The full receipt explains what pairing actually exposes before the
     // user invites anyone, not an abbreviated summary.
+    // D1 sweep (DD17): PartnerPrivacyReceipt's column headers now render via
+    // the shared SectionLabel primitive (sentence-case source, uppercase is
+    // applied visually by the component's own textTransform), so the
+    // rendered text node is 'They will see' / 'They never see', not the
+    // hand-typed ALL-CAPS string this test used to assert.
     expect(text).toContain('What your partner can see');
-    expect(text).toContain('THEY WILL SEE');
-    expect(text).toContain('THEY NEVER SEE');
+    expect(text).toContain('They will see');
+    expect(text).toContain('They never see');
     expect(text).toContain('Whether you trained this week');
     expect(text).toContain('One fixed cheer a day');
     // The word "signal" is gone from the pitch.
@@ -778,15 +783,15 @@ describe('empty state', () => {
     // L06-F2: the receipt is the pre-pairing pitch, so it is visible on
     // first mount, not only after stepping into the invite journey.
     const emptyStateText = allText(tree);
-    expect(emptyStateText).toContain('THEY WILL SEE');
-    expect(emptyStateText).toContain('THEY NEVER SEE');
+    expect(emptyStateText).toContain('They will see');
+    expect(emptyStateText).toContain('They never see');
 
     await press(tree, 'Invite someone you train with');
     await press(tree, 'Continue');
     const text = allText(tree);
     expect(text).toContain('What your partner can see');
-    expect(text).toContain('THEY WILL SEE');
-    expect(text).toContain('THEY NEVER SEE');
+    expect(text).toContain('They will see');
+    expect(text).toContain('They never see');
     // Left column (crosses), first line is the newly added first-name line.
     for (const line of [
       'Your first name',
@@ -1001,9 +1006,13 @@ describe('manage sheet: block confirm', () => {
   test('share-win utility rows use neutral contained chrome, not amber links', () => {
     expect(PARTNER_SCREEN_SOURCE).toMatch(/shareWinPrivacyToggle: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(PARTNER_SCREEN_SOURCE).toContain('shareWinPrivacyToggleText: { ...type.caption, color: colors.textPrimary');
-    expect(PARTNER_SCREEN_SOURCE).toContain('shareWinExampleConsent: { ...type.caption, color: colors.textSecondary');
+    // DD96 (design-consistency-audit-2026-08-06): this style's role moved
+    // caption -> captionTight (hand-rolled lineHeight:18 override absorbed
+    // into the named role); the neutral-colour contract this test pins is
+    // unchanged.
+    expect(PARTNER_SCREEN_SOURCE).toContain('shareWinExampleConsent: { ...type.captionTight, color: colors.textSecondary');
     expect(PARTNER_SCREEN_SOURCE).not.toContain('shareWinPrivacyToggleText: { ...type.caption, color: colors.primary');
-    expect(PARTNER_SCREEN_SOURCE).not.toContain('shareWinExampleConsent: { ...type.caption, color: colors.primary');
+    expect(PARTNER_SCREEN_SOURCE).not.toContain('shareWinExampleConsent: { ...type.captionTight, color: colors.primary');
   });
 
   test('invite channels keep secondary options neutral, with one filled primary', () => {
