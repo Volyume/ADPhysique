@@ -193,9 +193,8 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   whyText: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
-    lineHeight: 21,
     fontStyle: 'italic',
   },
   whyLearnMore: {
@@ -235,9 +234,8 @@ const styles = StyleSheet.create({
     color: colors.error,
   },
   rapidLossBody: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textPrimary,
-    lineHeight: 21,
   },
 });
 
@@ -257,7 +255,7 @@ function buildLiveStyles(t) {
     statChipLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     bulletText: { ...t.type.body, color: t.colors.textPrimary },
     whyLabel: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
-    whyText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    whyText: { ...t.type.bodySm, color: t.colors.textSecondary },
     whyLearnMore: { ...t.type.label, color: t.colors.textSecondary },
     link44: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     rapidLossCard: {
@@ -265,6 +263,6 @@ function buildLiveStyles(t) {
       borderColor: withAlpha(t.colors.error, alpha.mid),
     },
     rapidLossTitle: { fontSize: t.fontSize.sm, color: t.colors.error },
-    rapidLossBody: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    rapidLossBody: { ...t.type.bodySm, color: t.colors.textPrimary },
   };
 }

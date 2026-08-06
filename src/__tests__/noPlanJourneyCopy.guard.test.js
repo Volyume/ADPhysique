@@ -44,11 +44,13 @@ describe('no-plan / start-plan copy', () => {
   });
 
   test('PlansScreen free no-plan copy matches the shared verb', () => {
-    // CP-10 batch G: the noPlanCard anchor gained its live-theme override
-    // (style={[styles.noPlanCard, live.noPlanCard]}); the slice anchor
-    // tracks that spelling (noActivePlanRow carries no colour token, so it
-    // stays single-style). The pinned copy inside the block is unchanged.
-    const block = PLANS.slice(PLANS.indexOf('<Card style={[styles.noPlanCard, live.noPlanCard]}>'), PLANS.indexOf('<Card style={styles.noActivePlanRow}>'));
+    // DD8 (design-consistency-audit-2026-08-06): the bespoke noPlanCard
+    // became the shared EmptyState primitive, so the slice anchors moved to
+    // the EmptyState's icon prop. The pinned copy inside the block is
+    // unchanged -- that copy contract is what this guard exists for.
+    const start = PLANS.indexOf('icon="compass-outline"');
+    expect(start).toBeGreaterThan(-1);
+    const block = PLANS.slice(start, PLANS.indexOf('<Card style={styles.noActivePlanRow}>'));
     expect(block).toContain('No active plan yet');
     expect(block).toContain('Start with a plan');
     expect(block).toContain('Browse plans');

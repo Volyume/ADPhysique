@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, circle, withAlpha, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, circle, withAlpha, alpha, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Card from './Card';
 
@@ -31,7 +31,7 @@ function HomeWelcomeCard({ onDismiss }) {
     welcomeStepNum: { backgroundColor: withAlpha(t.colors.primary, alpha.tint) },
     welcomeStepNumText: { fontSize: t.fontSize.xs, color: t.colors.primary },
     welcomeStepTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
-    welcomeStepBody: { fontSize: t.fontSize.sm, color: t.colors.textSecondary, lineHeight: t.fontSize.sm + 5 },
+    welcomeStepBody: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
   return (
     <Card style={styles.welcomeCard}>
@@ -106,9 +106,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   welcomeStepBody: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
     marginTop: 2,
-    lineHeight: fontSize.sm + 5,
   },
 });

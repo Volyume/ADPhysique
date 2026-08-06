@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { safeDate, safeFormatDate, safeNumber, safeToFixed } from '../lib/safeFormat';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import AnimatedEntrance from '../components/AnimatedEntrance';
@@ -311,7 +311,7 @@ export default function LiftProgressScreen({ navigation }) {
                     : `${Math.round(lvl.ratio * 100)}% of your body weight`}
                 </Text>
               </View>
-              <View style={[styles.levelBadge, { backgroundColor: withAlpha(resolveLevelColor(lvl.label), 0.133) }]}>
+              <View style={[styles.levelBadge, { backgroundColor: withAlpha(resolveLevelColor(lvl.label), alpha.tint) }]}>
                 <Text style={[styles.levelBadgeText, live.levelBadgeText, { color: resolveLevelColor(lvl.label) }]}>{lvl.label}</Text>
               </View>
             </View>
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.267),
+    borderColor: withAlpha(colors.primary, alpha.edge),
     marginBottom: spacing.md,
   },
   bwPromptTitle: { ...type.bodyStrong, color: colors.textPrimary },
@@ -643,7 +643,7 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   name: { ...type.bodyStrong, color: colors.textPrimary, flexShrink: 1 },
   prTag: {
-    backgroundColor: withAlpha(colors.primary, 0.16),
+    backgroundColor: withAlpha(colors.primary, alpha.soft),
     // R2 (2026-07-11): badge class -> radius.full (FOOD-DESIGN-STANDARD.md
     // section 4). Was radius.sm.
     borderRadius: radius.full,
@@ -692,7 +692,7 @@ function buildLiveStyles(t) {
     strengthName: { ...t.type.label, color: t.colors.textPrimary },
     strengthNarrative: { ...t.type.num('caption'), color: t.colors.textMuted },
     levelBadgeText: { ...t.type.captionStrong },
-    bwPromptCard: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, 0.267) },
+    bwPromptCard: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     bwPromptTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     bwPromptText: { ...t.type.captionTight, color: t.colors.textSecondary },
     filterTab: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
@@ -705,7 +705,7 @@ function buildLiveStyles(t) {
     metricChipTextActive: { color: t.colors.primary },
     card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     name: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    prTag: { backgroundColor: withAlpha(t.colors.primary, 0.16) },
+    prTag: { backgroundColor: withAlpha(t.colors.primary, alpha.soft) },
     prTagText: { fontSize: t.fontSize.micro, color: t.colors.primary },
     meta: { ...t.type.caption, color: t.colors.textMuted },
     lastTime: { ...t.type.caption, color: t.colors.textSecondary },

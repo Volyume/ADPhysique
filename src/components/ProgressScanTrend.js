@@ -18,6 +18,7 @@ import { colors, spacing, radius, type, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
+import ModalHeader from './ModalHeader';
 import InfoTooltip from './InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import {
@@ -54,29 +55,25 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
   const [expandedId, setExpandedId] = useState(null);
   const ladderLabel = trendLadderLabel(comparableCount, totalCount);
 
+  // D1 sweep (DD3): routed through the shared ModalHeader (canon header
+  // trio) instead of a hand-rolled fourth header shape. The tooltip + the
+  // one-time meaning explainer now sit in a subheader row rendered directly
+  // below the header, in every branch (suppressed/empty/populated), rather
+  // than inside the chrome itself.
   function renderHeader() {
+    return <ModalHeader title="Score trend" onClose={onClose} />;
+  }
+
+  function renderSubheader() {
     return (
-      <View style={styles.header}>
-        <View style={styles.headerCopy}>
-          <View style={styles.titleRow}>
-            <Text style={[styles.title, live.title]}>Score trend</Text>
-            {/* O2: persistent explanation of the score itself and what the
-                marker shapes (filled/hollow/dashed) encode -- the one-time
-                meaning moment never comes back once dismissed. */}
-            <InfoTooltip text={GLOSSARY.volyumeScore} size={13} />
-          </View>
-          <Text style={[styles.subtitle, live.subtitle]}>
-            Comparable photo sets only. Gaps are shown, never smoothed over.
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={onClose}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Close score trend"
-        >
-          <Ionicons name="close" size={26} color={t.colors.textPrimary} />
-        </TouchableOpacity>
+      <View style={styles.subheaderRow}>
+        <Text style={[styles.subtitle, live.subtitle]}>
+          Comparable photo sets only. Gaps are shown, never smoothed over.
+        </Text>
+        {/* O2: persistent explanation of the score itself and what the
+            marker shapes (filled/hollow/dashed) encode -- the one-time
+            meaning moment never comes back once dismissed. */}
+        <InfoTooltip text={GLOSSARY.volyumeScore} size={13} />
       </View>
     );
   }
@@ -85,6 +82,7 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         {renderHeader()}
+        {renderSubheader()}
         <View style={styles.placeholder}>
           <Ionicons name="leaf-outline" size={32} color={t.colors.textMuted} />
           <Text style={[styles.placeholderText, live.placeholderText]}>Trend view is hidden for now.</Text>
@@ -97,6 +95,7 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
         {renderHeader()}
+        {renderSubheader()}
         <View style={styles.placeholder}>
           <Ionicons name="trending-up-outline" size={32} color={t.colors.textMuted} />
           <Text style={[styles.placeholderText, live.placeholderText]}>{TREND_EMPTY_STATE_TEXT}</Text>
@@ -108,6 +107,7 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       {renderHeader()}
+      {renderSubheader()}
       {ladderLabel ? (
         <View style={styles.ladderRow}>
           <Text style={[styles.ladderText, live.ladderText]}>{ladderLabel}</Text>
@@ -163,18 +163,14 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  header: {
+  subheaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
+    gap: spacing.xxs,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingBottom: spacing.sm,
   },
-  title: { ...type.h3, color: colors.textPrimary },
-  headerCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
-  subtitle: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
+  subtitle: { ...type.caption, color: colors.textMuted, lineHeight: 18, flex: 1 },
   ladderRow: { paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
   ladderText: { ...type.bodyStrong, color: colors.textPrimary },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
@@ -209,12 +205,13 @@ const styles = StyleSheet.create({
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the
 // frozen `styles` block above, same "frozen base + live override" pattern as
-// BillingPeriodSelector.js's buildLiveStyles. header/headerCopy/ladderRow/
+// BillingPeriodSelector.js's buildLiveStyles. subheaderRow/ladderRow/
 // content/placeholder/row/pointRow/marker/pointCopy have no colour tokens.
+// The header chrome itself is the shared ModalHeader component now (D1
+// sweep, DD3), not a local style pair.
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    title: { color: t.colors.textPrimary },
     subtitle: { color: t.colors.textMuted },
     ladderText: { color: t.colors.textPrimary },
     placeholderText: { color: t.colors.textPrimary },

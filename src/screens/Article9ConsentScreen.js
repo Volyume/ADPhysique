@@ -332,9 +332,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   body: {
-    fontSize: fontSize.md,
+    ...type.body,
     color: colors.textSecondary,
-    lineHeight: 22,
   },
   subhead: {
     ...type.bodyStrong,
@@ -350,10 +349,9 @@ const styles = StyleSheet.create({
     width: 12,
   },
   bulletText: {
+    ...type.bodySm,
     flex: 1,
     color: colors.textSecondary,
-    fontSize: fontSize.sm,
-    lineHeight: 22,
   },
   consentRow: {
     marginTop: spacing.lg,
@@ -450,10 +448,10 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     title: { ...t.type.h2, color: t.colors.textPrimary },
-    body: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
+    body: { ...t.type.body, color: t.colors.textSecondary },
     subhead: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     bulletDot: { color: t.colors.primary, fontSize: t.fontSize.md },
-    bulletText: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
+    bulletText: { ...t.type.bodySm, color: t.colors.textSecondary },
     withdrawNote: { ...t.type.bodySm, color: t.colors.textMuted },
     ctaPrimary: { backgroundColor: t.colors.primaryFill },
     ctaPrimaryText: { ...t.type.bodyStrong, color: t.colors.onPrimary },

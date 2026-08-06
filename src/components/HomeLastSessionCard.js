@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
+import { colors, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Card from './Card';
 import Button from './Button';
@@ -20,7 +20,7 @@ function HomeLastSessionCard({ lastSession, lastSessionTonnage, relativeDay, onO
   // keys only.
   const t = useTheme();
   const live = {
-    lastSessionLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    lastSessionLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
     lastSessionMeta: { ...t.type.caption, color: t.colors.textMuted },
     lastSessionName: { ...t.type.label, color: t.colors.textPrimary },
   };
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   lastSessionLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
+    ...type.captionStrong,
     color: colors.textMuted,
   },
   lastSessionMeta: {

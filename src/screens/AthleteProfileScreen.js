@@ -11,7 +11,7 @@ import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 import { ProBadge } from '../components/ProGate';
-import { Skeleton } from '../components/Skeleton';
+import { Skeleton, SkeletonCard, SkeletonRow } from '../components/Skeleton';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import EmptyState from '../components/EmptyState';
@@ -490,16 +490,37 @@ export default function AthleteProfileScreen({ navigation }) {
           </Card>
         ) : null}
 
-        <View style={styles.grid}>
-          <StatTile label="Body weight" value={weightText} sub={weightTileSub} />
-          <StatTile label={physiqueTile.label} value={physiqueTile.value} sub={physiqueTile.sub} tooltip={showPhysiqueScore ? GLOSSARY.volyumeScore : null} />
-          <StatTile label="Strength" value={summary.strength?.overallLabel || 'No baseline yet'} sub={summary.strength ? `${summary.strength.count} tracked lifts` : 'Add your main lifts'} />
-          <StatTile label={statusTile.label} value={statusTile.value} sub={statusTile.sub} />
-        </View>
+        {/* D1 sweep (DD23): the stat grid, strength baselines and freshness
+            rows all read from the async `summary` load, so they used to
+            render its all-null/empty defaults (fake-looking zero values)
+            for a beat before the real numbers arrived -- the only genuine
+            Skeleton was the hero session-count line. Full first-load
+            Skeleton now covers all of it, matching ConsistencyScreen's/
+            VolumeHeatmapScreen's SkeletonCard-gated first loads. */}
+        {loading ? (
+          <View style={styles.grid}>
+            <SkeletonCard height={112} style={styles.statTile} />
+            <SkeletonCard height={112} style={styles.statTile} />
+            <SkeletonCard height={112} style={styles.statTile} />
+            <SkeletonCard height={112} style={styles.statTile} />
+          </View>
+        ) : (
+          <View style={styles.grid}>
+            <StatTile label="Body weight" value={weightText} sub={weightTileSub} />
+            <StatTile label={physiqueTile.label} value={physiqueTile.value} sub={physiqueTile.sub} tooltip={showPhysiqueScore ? GLOSSARY.volyumeScore : null} />
+            <StatTile label="Strength" value={summary.strength?.overallLabel || 'No baseline yet'} sub={summary.strength ? `${summary.strength.count} tracked lifts` : 'Add your main lifts'} />
+            <StatTile label={statusTile.label} value={statusTile.value} sub={statusTile.sub} />
+          </View>
+        )}
 
         <View style={styles.section}>
           <SectionLabel>Strength baselines</SectionLabel>
-          {summary.keyLifts.length > 0 ? summary.keyLifts.map(({ row, level }) => (
+          {loading ? (
+            <>
+              <SkeletonCard height={64} />
+              <SkeletonCard height={64} />
+            </>
+          ) : summary.keyLifts.length > 0 ? summary.keyLifts.map(({ row, level }) => (
             <Card
               key={row.exerciseId}
               style={styles.liftRow}
@@ -529,35 +550,45 @@ export default function AthleteProfileScreen({ navigation }) {
 
         <View style={styles.section}>
           <SectionLabel>Keep profile current</SectionLabel>
-          <Row
-            t={t}
-            live={live}
-            icon="scale-outline"
-            label={freshness.bodyMetrics.label}
-            sub={freshness.bodyMetrics.sub}
-            status={freshnessTone(freshness.bodyMetrics.state)}
-            pro={!isPro}
-            onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'BodyMetrics')}
-          />
-          <Row
-            t={t}
-            live={live}
-            icon="camera-outline"
-            label={freshness.progressScan.label}
-            sub={freshness.progressScan.sub}
-            status={freshnessTone(freshness.progressScan.state)}
-            pro={!isPro}
-            onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'ProgressPhotos')}
-          />
-          <Row
-            t={t}
-            live={live}
-            icon="analytics-outline"
-            label={freshness.lifts.label}
-            sub={freshness.lifts.sub}
-            status={freshnessTone(freshness.lifts.state)}
-            onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'LiftProgress')}
-          />
+          {loading ? (
+            <>
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+            </>
+          ) : (
+            <>
+              <Row
+                t={t}
+                live={live}
+                icon="scale-outline"
+                label={freshness.bodyMetrics.label}
+                sub={freshness.bodyMetrics.sub}
+                status={freshnessTone(freshness.bodyMetrics.state)}
+                pro={!isPro}
+                onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'BodyMetrics')}
+              />
+              <Row
+                t={t}
+                live={live}
+                icon="camera-outline"
+                label={freshness.progressScan.label}
+                sub={freshness.progressScan.sub}
+                status={freshnessTone(freshness.progressScan.state)}
+                pro={!isPro}
+                onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'ProgressPhotos')}
+              />
+              <Row
+                t={t}
+                live={live}
+                icon="analytics-outline"
+                label={freshness.lifts.label}
+                sub={freshness.lifts.sub}
+                status={freshnessTone(freshness.lifts.state)}
+                onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'LiftProgress')}
+              />
+            </>
+          )}
         </View>
 
         <View style={styles.section}>

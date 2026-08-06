@@ -109,13 +109,13 @@ const styles = StyleSheet.create({
   barBg: {
     flex: 1,
     height: 6,
-    borderRadius: 3,
+    borderRadius: radius.xs,
     backgroundColor: colors.surface2,
     overflow: 'hidden',
   },
   barFill: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: radius.xs,
   },
   sets: {
     width: 44,

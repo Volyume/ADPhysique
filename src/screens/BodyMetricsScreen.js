@@ -42,6 +42,7 @@ import Button from '../components/Button';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
 import EmptyState from '../components/EmptyState';
+import { SkeletonCard } from '../components/Skeleton';
 import {
   TREND_WINDOWS, DEFAULT_WINDOW_KEY, windowByKey, filterByWindow,
   pickInitialWindowKey, weightTakeaway,
@@ -525,6 +526,9 @@ export default function BodyMetricsScreen() {
   // to []); this flag lets the render layer show a distinct, retryable error
   // instead of misreporting a read failure as "No body metrics yet".
   const [historyLoadError, setHistoryLoadError] = useState(false);
+  // D1 sweep (DD26): gates the snapshot card behind a Skeleton on the
+  // screen's first load; see loadHistory()'s finally block.
+  const [historyLoading, setHistoryLoading] = useState(true);
   // Lift data for the recomposition reframe's strength delta (ULTIMATE-RECOMP-01).
   const [liftSets, setLiftSets] = useState([]);
   const [exercises, setExercises] = useState([]);
@@ -681,7 +685,7 @@ export default function BodyMetricsScreen() {
   }
 
   async function loadHistory() {
-    if (!user?.id) return;
+    if (!user?.id) { setHistoryLoading(false); return; }
     try {
       let rows = await getBodyMetricLog(user.id, 50);
 
@@ -740,6 +744,12 @@ export default function BodyMetricsScreen() {
       // eslint-disable-next-line global-require
       try { require('../lib/errorLog').logError('BodyMetricsScreen.loadHistory', _e, { userId: user?.id }); } catch (_) {}
       setHistoryLoadError(true);
+    } finally {
+      // D1 sweep (DD26): only the FIRST load needs to gate the snapshot
+      // card behind a Skeleton; historyLoading starts true and only ever
+      // transitions to false, so later loadHistory() calls (after a save or
+      // edit) are inert no-op state updates here, never a skeleton flash.
+      setHistoryLoading(false);
     }
 
     // Lift data for the recomposition reframe's strength delta (read-only;
@@ -1061,7 +1071,13 @@ export default function BodyMetricsScreen() {
             Athlete Hub → Nutrition targets and Settings → Nutrition. */}
 
         {/* Weight trend + snapshot */}
-        {history.length > 0 ? (
+        {historyLoading ? (
+          // D1 sweep (DD26): the screen's first load of its known-shape
+          // snapshot card, gated behind a Skeleton so it never flashes "No
+          // body metrics yet" before the real history has had a chance to
+          // load, matching ConsistencyScreen/VolumeHeatmapScreen.
+          <SkeletonCard height={220} />
+        ) : history.length > 0 ? (
           <Card style={styles.snapshotCard}>
             {/* Header row with phase chip */}
             <View style={styles.snapshotHeader}>

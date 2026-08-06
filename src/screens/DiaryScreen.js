@@ -2386,7 +2386,7 @@ const styles = StyleSheet.create({
   },
   buildPlanCopy: { flex: 1, minWidth: 0 },
   buildPlanLabel: { ...type.bodyStrong, color: colors.textPrimary },
-  buildPlanSub: { ...type.caption, color: colors.textSecondary, marginTop: 2, lineHeight: 18 },
+  buildPlanSub: { ...type.caption, color: colors.textSecondary, marginTop: 2 },
   plannedBanner: {
     backgroundColor: colors.surface2,
     borderWidth: 1, borderColor: colors.primary,

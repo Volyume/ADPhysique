@@ -49,12 +49,12 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
       onPress={onPress}
       activeOpacity={0.85}
       accessibilityRole="button"
-      accessibilityLabel={`${meso.name ?? 'Training Block'}, ${mesoWeekText}`}
+      accessibilityLabel={`${meso.name ?? 'Training block'}, ${mesoWeekText}`}
       accessibilityHint="Opens training block"
     >
       <View style={styles.mesoTop}>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.mesoName, live.mesoName]} numberOfLines={1}>{meso.name ?? 'Training Block'}</Text>
+          <Text style={[styles.mesoName, live.mesoName]} numberOfLines={1}>{meso.name ?? 'Training block'}</Text>
           <Text style={[styles.mesoWeek, live.mesoWeek]}>
             {isPlan
               ? (meso.splitType ? meso.splitType : 'Active plan')

@@ -20,6 +20,7 @@ import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import EmptyState from '../components/EmptyState';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
 import { SkeletonCard } from '../components/Skeleton';
@@ -862,7 +863,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                       <Text key={j} style={[styles.historySetText, live.historySetText]}>
                         {s.weight}{units} x {s.actualReps}
                         {s.set_type === 'warmup' || s.setType === 'warmup' ? ' - Warm-up' : ''}
-                        {s.set_type === 'dropset' || s.setType === 'dropset' ? ' - Drop Set' : ''}
+                        {s.set_type === 'dropset' || s.setType === 'dropset' ? ' - Drop set' : ''}
                       </Text>
                     ))}
                   </View>
@@ -877,20 +878,15 @@ export default function ExerciseDetailScreen({ navigation, route }) {
 
         {/* History empty state */}
         {history.length === 0 && exercise && (
-          <Card radius="md" style={styles.historyEmpty}>
-            <Ionicons name="time-outline" size={20} color={t.colors.textMuted} />
-            <Text style={[styles.historyEmptyText, live.historyEmptyText]}>
-              You haven't logged this exercise yet. Add it to a session to start tracking your progress.
-            </Text>
-            <Button
-              title="Start workout"
-              variant="tertiary"
-              size="sm"
-              fullWidth={false}
-              onPress={() => navigateCrossTab(navigation, 'HomeTab', 'BuildWorkout')}
-              accessibilityLabel="Start a workout"
-            />
-          </Card>
+          <EmptyState
+            compact
+            icon="time-outline"
+            title="You haven't logged this exercise yet"
+            text="Add it to a session to start tracking your progress."
+            actionLabel="Start workout"
+            onAction={() => navigateCrossTab(navigation, 'HomeTab', 'BuildWorkout')}
+            actionAccessibilityLabel="Start a workout"
+          />
         )}
 
         {/* PRs */}
@@ -1115,8 +1111,7 @@ const styles = StyleSheet.create({
   chartTakeaway: { ...type.bodySm, color: colors.textSecondary },
   chartEmptyHint: { ...type.caption, color: colors.textMuted, fontStyle: 'italic', paddingVertical: spacing.md },
   chartLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+    ...type.captionStrong,
     color: colors.textMuted,
   },
   chartToggle: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignSelf: 'flex-start' },
@@ -1157,15 +1152,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
-  },
-  historyEmpty: {
-    flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.md,
-  },
-  historyEmptyText: {
-    ...type.bodySm,
-    flex: 1,
-    minWidth: 180,
-    color: colors.textMuted,
   },
   section: { gap: spacing.md },
   historyCard: {
@@ -1274,7 +1260,7 @@ const styles = StyleSheet.create({
   plateauBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: spacing.sm,
     backgroundColor: colors.warningBg,
     borderRadius: radius.md,
     borderLeftWidth: 3,
@@ -1423,7 +1409,7 @@ function buildLiveStyles(t) {
     sfrDivider: { backgroundColor: t.colors.border },
     chartTakeaway: { ...t.type.bodySm, color: t.colors.textSecondary },
     chartEmptyHint: { ...t.type.caption, color: t.colors.textMuted },
-    chartLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    chartLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
     loadErrorIcon: { backgroundColor: withAlpha(t.colors.warning, 0.12) },
     loadErrorTitle: { ...t.type.title, color: t.colors.textPrimary },
     loadErrorText: { ...t.type.bodySm, color: t.colors.textSecondary },
@@ -1433,7 +1419,6 @@ function buildLiveStyles(t) {
     chartToggleBtnTextActive: { color: t.colors.primary },
     e1rmNote: { ...t.type.caption, color: t.colors.textMuted },
     chartContainer: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    historyEmptyText: { ...t.type.bodySm, color: t.colors.textMuted },
     historyDate: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     historySetText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     historyEst: { ...t.type.num('caption'), color: t.colors.textMuted },

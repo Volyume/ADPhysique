@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import EngineLog from '../components/EngineLog';
@@ -294,8 +294,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   weekLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+    ...type.captionStrong,
     color: colors.textMuted,
     marginBottom: spacing.xs,
   },
@@ -326,7 +325,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   appliedPill: {
-    backgroundColor: withAlpha(colors.success, 0.15),
+    backgroundColor: withAlpha(colors.success, alpha.tint),
     borderRadius: radius.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
@@ -363,11 +362,11 @@ function buildLiveStyles(t) {
     intro: { ...t.type.bodySm, color: t.colors.textMuted },
     scorecard: { ...t.type.bodySm, color: t.colors.textPrimary },
     weekBlock: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    weekLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    weekLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
     decisionLabel: { ...t.type.label, color: t.colors.textMuted },
     decisionLabelChanged: { color: t.colors.success },
     decisionDetail: { ...t.type.bodySm, color: t.colors.textSecondary },
-    appliedPill: { backgroundColor: withAlpha(t.colors.success, 0.15) },
+    appliedPill: { backgroundColor: withAlpha(t.colors.success, alpha.tint) },
     appliedPillText: { ...t.type.label, color: t.colors.success },
     verdictText: { ...t.type.bodySm, color: t.colors.textSecondary },
     footer: { ...t.type.num('caption'), color: t.colors.textMuted },

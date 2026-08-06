@@ -115,11 +115,15 @@ describe('ProgressScanTrend', () => {
   });
 
   test('the close button fires onClose', async () => {
+    // DD3 (design-consistency-audit-2026-08-06): chrome now routes through
+    // the shared ModalHeader, whose close control carries the canonical
+    // "Close" label (same as every other full-screen modal) rather than a
+    // screen-specific one.
     usePhotoSuppression.mockReturnValue(false);
     const onClose = jest.fn();
     const tree = await render([scan('a', 1)], { onClose });
     const closeBtn = tree.root.findAllByType(TouchableOpacity)
-      .find((n) => n.props.accessibilityLabel === 'Close score trend');
+      .find((n) => n.props.accessibilityLabel === 'Close');
     await act(async () => { closeBtn.props.onPress(); });
     expect(onClose).toHaveBeenCalled();
   });

@@ -17,7 +17,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import useWeeklyStreak from '../hooks/useWeeklyStreak';
 import useTheme from '../hooks/useTheme';
 import InfoTooltip from './InfoTooltip';
@@ -33,7 +33,7 @@ export default function ConsistencyEcho({ userId, scoffScore = 0 }) {
   const t = useTheme();
   const live = {
     echoText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    explainer: { backgroundColor: withAlpha(t.colors.primary, 0.08) },
+    explainer: { backgroundColor: withAlpha(t.colors.primary, alpha.ghost) },
     explainerText: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
   const vm = useWeeklyStreak(userId, scoffScore);
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: withAlpha(colors.primary, 0.08),
+    backgroundColor: withAlpha(colors.primary, alpha.ghost),
     borderRadius: radius.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,

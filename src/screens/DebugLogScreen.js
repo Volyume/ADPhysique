@@ -6,6 +6,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
+import Chip from '../components/Chip';
+import EmptyState from '../components/EmptyState';
+import { SkeletonRow } from '../components/Skeleton';
 import { getRecentErrors, clearErrors, exportErrorsAsText, getCrashLog, clearCrashLog, logInfo } from '../lib/errorLog';
 import { diagnoseSyncConflicts } from '../lib/database';
 import useAppStore from '../store/useAppStore';
@@ -104,18 +107,14 @@ export default function DebugLogScreen() {
           const on = filter === level;
           const count = level === 'all' ? entries.length : (counts[level] || 0);
           return (
-            <TouchableOpacity
+            <Chip
               key={level}
-              style={[styles.chip, live.chip, on && [styles.chipOn, live.chipOn]]}
+              label={`${level} · ${count}`}
+              selected={on}
               onPress={() => setFilter(level)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: on }}
+              accessibilityRole="radio"
               accessibilityLabel={`${level}, ${count}`}
-            >
-              <Text style={[styles.chipLabel, live.chipLabel, on && [styles.chipLabelOn, live.chipLabelOn]]}>
-                {level} · {count}
-              </Text>
-            </TouchableOpacity>
+            />
           );
         })}
       </View>
@@ -147,12 +146,21 @@ export default function DebugLogScreen() {
           </View>
         )}
 
-        {!loading && filtered.length === 0 && (
-          <View style={styles.empty}>
-            <Ionicons name="checkmark-circle-outline" size={36} color={t.colors.success} />
-            <Text style={[styles.emptyText, live.emptyText]}>No {filter === 'all' ? '' : filter + ' '}entries.</Text>
-            <Text style={[styles.emptyHint, live.emptyHint]}>Errors caught by handlers will appear here.</Text>
+        {loading && (
+          <View style={styles.loadingStack}>
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
           </View>
+        )}
+
+        {!loading && filtered.length === 0 && (
+          <EmptyState
+            compact
+            icon="checkmark-circle-outline"
+            title={`No ${filter === 'all' ? '' : filter + ' '}entries.`}
+            text="Errors caught by handlers will appear here."
+          />
         )}
 
         {filtered.map((e, i) => (
@@ -200,10 +208,6 @@ function buildLevelLabelStyle(t, level) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   toolbar: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
-  chip: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  chipOn: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  chipLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
-  chipLabelOn: { color: colors.primary },
   actionsRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   actionBtnDanger: { borderColor: colors.error },
@@ -215,9 +219,7 @@ const styles = StyleSheet.create({
   crashWhen: { ...type.num('caption'), color: colors.textMuted },
   crashMsg: { ...type.label, color: colors.textPrimary },
   crashStack: { color: colors.textSecondary, fontSize: fontSize.xs, fontFamily: 'monospace' },
-  empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxxl, gap: spacing.sm },
-  emptyText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
-  emptyHint: { color: colors.textMuted, fontSize: fontSize.sm },
+  loadingStack: { gap: spacing.sm },
   entry: { backgroundColor: colors.surface, borderRadius: radius.md, borderLeftWidth: 3, padding: spacing.md, gap: spacing.xs },
   entryHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   entryLevel: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, textTransform: 'uppercase', minWidth: 44 },
@@ -238,10 +240,6 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    chip: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    chipOn: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
-    chipLabel: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
-    chipLabelOn: { color: t.colors.primary },
     actionBtn: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     actionBtnDanger: { borderColor: t.colors.error },
     actionLabel: { ...t.type.label, color: t.colors.textPrimary },
@@ -250,8 +248,6 @@ function buildLiveStyles(t) {
     crashWhen: { ...t.type.num('caption'), color: t.colors.textMuted },
     crashMsg: { ...t.type.label, color: t.colors.textPrimary },
     crashStack: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
-    emptyText: { color: t.colors.textPrimary, fontSize: t.fontSize.md },
-    emptyHint: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
     entry: { backgroundColor: t.colors.surface },
     entryLevel: { fontSize: t.fontSize.xs },
     entryScope: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },

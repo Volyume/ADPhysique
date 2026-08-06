@@ -1279,7 +1279,7 @@ const styles = StyleSheet.create({
   sessionLeft:  { flex: 1 },
   sessionName:  { ...type.bodyStrong, color: colors.textPrimary },
   sessionMeta:  { ...type.num('caption'), color: colors.textSecondary, marginTop: spacing.xxs },
-  diffChip:     { borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: 3 },
+  diffChip:     { borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: spacing.xxs },
   // R2 (cohesion sweep, 2026-07-11): the difficulty readout ("8/10") is a
   // data numeral, so it joins the screen's tabular-figure discipline like
   // every other numeral here (volSummaryCount/lifetimeValue). fontSize.xs +
@@ -1325,10 +1325,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   momentumText: {
+    ...type.bodySm,
     flex: 1,
-    fontSize: fontSize.sm,
     color: colors.textSecondary,
-    lineHeight: 22,
   },
 });
 
@@ -1374,6 +1373,6 @@ function buildLiveStyles(t) {
     navTileLabel: { ...t.type.captionStrong, color: t.colors.textSecondary },
     navTileLabelLocked: { color: t.colors.textMuted },
     navTileSub: { ...t.type.num('caption'), color: t.colors.textMuted },
-    momentumText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    momentumText: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
 }

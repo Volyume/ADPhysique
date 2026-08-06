@@ -241,7 +241,14 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(EMPTY_EXERCISE_VIEW).toMatch(/addFirstBtn: \{[\s\S]*minHeight: workoutLoggerSize\.addExerciseMinHeight,[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*paddingHorizontal: spacing\.lg,[\s\S]*paddingVertical: spacing\.sm/);
     expect(EMPTY_EXERCISE_VIEW).toContain('addFirstBtnText: { ...type.label, color: colors.onPrimary }');
     expect(EMPTY_EXERCISE_VIEW).not.toContain('addFirstBtnText: { fontSize: fontSize.lg');
-    expect(ACTIVE_WORKOUT).toMatch(/inlineActionPill: \{[\s\S]*minHeight: 44/);
+    // D1 sweep (design-consistency-audit-2026-08-06, DD62/DD63): this
+    // assertion's greedy [\s\S]* previously matched past inlineActionPill's
+    // own closing brace and was satisfied by an unrelated literal
+    // `minHeight: 44` further down the file (swapBrowseBtn, now converted to
+    // the workoutLoggerSize token). inlineActionPill itself has used
+    // workoutLoggerSize.primaryActionMinHeight since D43 S5 (see the comment
+    // on that style); scope the match to its own block.
+    expect(ACTIVE_WORKOUT).toMatch(/inlineActionPill: \{[\s\S]*?minHeight: workoutLoggerSize\.primaryActionMinHeight[\s\S]*?\n  \},/);
     // Re-pinned for D43 S2: notesChip's thumb-target contract moved to
     // StatusStrip's chip style (see the StatusStrip assertions above).
     expect(ACTIVE_WORKOUT).toMatch(/clusterCancel: \{[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);

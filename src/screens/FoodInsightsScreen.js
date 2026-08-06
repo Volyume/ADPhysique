@@ -723,12 +723,12 @@ const styles = StyleSheet.create({
   adherenceRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
   adherenceLabel: { color: colors.textSecondary, fontSize: fontSize.sm, width: 72 },
   adherenceTrack: {
-    flex: 1, height: 8, borderRadius: 4,
+    flex: 1, height: 8, borderRadius: radius.xs,
     backgroundColor: colors.surface2,
     overflow: 'hidden',
     marginHorizontal: spacing.sm,
   },
-  adherenceFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 4 },
+  adherenceFill: { height: '100%', backgroundColor: colors.primary, borderRadius: radius.xs },
   adherenceValue: { color: colors.textPrimary, fontSize: fontSize.sm, width: 44, textAlign: 'right' },
 
   // Nutrient averages (build gap #18): a plain two-column factual row, "Protein

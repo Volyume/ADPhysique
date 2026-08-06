@@ -42,6 +42,7 @@ import useTheme from '../hooks/useTheme';
 import { useToast } from './Toast';
 import { appAlert } from './AppAlert';
 import Button from './Button';
+import ModalHeader from './ModalHeader';
 import SectionLabel from './SectionLabel';
 import useAppStore from '../store/useAppStore';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
@@ -483,17 +484,11 @@ export default function BeforeAfterShareSheet({
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <View style={styles.headerCopy}>
-          <Text style={[styles.title, live.title]}>Private share image</Text>
-          <Text style={[styles.subtitle, live.subtitle]}>One composed image. No raw photo files. You choose share or save.</Text>
-        </View>
-        <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-          <Ionicons name="close" size={26} color={t.colors.textPrimary} />
-        </TouchableOpacity>
-      </View>
+      <ModalHeader title="Private share image" onClose={onClose} />
 
       <ScrollView contentContainerStyle={styles.content}>
+        <Text style={[styles.subtitle, live.subtitle]}>One composed image. No raw photo files. You choose share or save.</Text>
+
         <View style={[styles.privacyReceipt, live.privacyReceipt]}>
           <View style={styles.receiptRow}>
             <Ionicons name="image-outline" size={16} color={t.colors.primary} />
@@ -702,12 +697,6 @@ function SegmentBtn({ label, active, onPress, icon }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-  },
-  title: { ...type.h3, color: colors.textPrimary },
-  headerCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
   subtitle: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
   privacyReceipt: {
@@ -750,7 +739,7 @@ const styles = StyleSheet.create({
   },
   segment: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, paddingVertical: spacing.sm + 1, borderRadius: radius.sm,
+    gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.sm,
   },
   segmentActive: { backgroundColor: colors.surface3 },
   segmentText: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: fontWeight.semibold },
@@ -813,14 +802,14 @@ const styles = StyleSheet.create({
 // properties of the matching frozen style, at identical rest values;
 // fontWeight is theme-invariant (not part of useTheme()'s returned `t`), so
 // segmentText's/toggleLabel's fontWeight stays the static import, untouched.
-// `headerCopy`, `content`, `receiptRow`, `section`, `stripRow`,
-// `previewOuter`, `exportReceiptCol`, `partnerBtn`, `galleryBtn` have no
-// colour/fontSize tokens at all, so they stay untouched with no `live.*`
-// entry.
+// `content`, `receiptRow`, `section`, `stripRow`, `previewOuter`,
+// `exportReceiptCol`, `partnerBtn`, `galleryBtn` have no colour/fontSize
+// tokens at all, so they stay untouched with no `live.*` entry. The header
+// chrome itself is the shared ModalHeader component now (D1 sweep), not a
+// local style pair.
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    title: { ...t.type.h3, color: t.colors.textPrimary },
     subtitle: { ...t.type.caption, color: t.colors.textMuted },
     privacyReceipt: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     receiptText: { ...t.type.caption, color: t.colors.textPrimary },

@@ -1,17 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Modal, KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, iconSize, circle } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
-import SearchBar from '../components/SearchBar';
+import ExercisePickerModal from '../components/ExercisePickerModal';
 import Stepper from '../components/Stepper';
 import TextField from '../components/TextField';
 import BottomSheet from '../components/BottomSheet';
@@ -37,14 +36,13 @@ const DEFAULT_REST = 90;
 export default function BuildWorkoutScreen({ navigation }) {
   const toast = useToast();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, startWorkout, units, defaultRestSeconds, workoutPrefsLoaded, loadWorkoutPrefs, reduceMotion } = useAppStore(useShallow(s => ({
+  const { user, startWorkout, units, defaultRestSeconds, workoutPrefsLoaded, loadWorkoutPrefs } = useAppStore(useShallow(s => ({
     user: s.user,
     startWorkout: s.startWorkout,
     units: s.units,
     defaultRestSeconds: s.defaultRestSeconds,
     workoutPrefsLoaded: s.workoutPrefsLoaded,
     loadWorkoutPrefs: s.loadWorkoutPrefs,
-    reduceMotion: s.accessibility?.reduceMotion,
   })));
   // Hydrate the device-local workout prefs so a cold build started before
   // visiting Settings/ActiveWorkout still picks up the user's saved default rest.
@@ -53,23 +51,16 @@ export default function BuildWorkoutScreen({ navigation }) {
   }, [workoutPrefsLoaded, loadWorkoutPrefs]);
   const [exercises, setExercises] = useState([]);
   const [showPicker, setShowPicker] = useState(false);
-  const [query, setQuery] = useState('');
   const [allExercises, setAllExercises] = useState([]);
   const [starting, setStarting] = useState(false);
   const [showTravelModal, setShowTravelModal] = useState(false);
   const [travelEquipment, setTravelEquipment] = useState('bodyweight');
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js). Memoised
-  // because this screen renders a FlashList (the picker's renderItem runs
-  // once per row).
+  // to keep the exercise-row map below cheap to re-render.
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
 
-  async function openPicker() {
-    if (allExercises.length === 0) {
-      const all = await getAllExercises();
-      setAllExercises(all);
-    }
-    setQuery('');
+  function openPicker() {
     setShowPicker(true);
   }
 
@@ -79,7 +70,10 @@ export default function BuildWorkoutScreen({ navigation }) {
     // this exercise (compound 180s, isolation 90s) and label it "suggested".
     // A user-set default (anything other than 90) always wins, so nobody who
     // chose their own rest sees it change. Editable via the stepper as before.
-    haptics.selection();
+    // D1 sweep (DD4): the shared ExercisePickerModal already fires the
+    // selection haptic itself before calling onSelect, so the haptics.selection()
+    // call that used to live here was dropped to match ManualBuilderScreen's
+    // onSelect handler (no double-buzz on the same tap).
     const hasCustomDefault =
       Number.isFinite(defaultRestSeconds) && defaultRestSeconds !== DEFAULT_REST;
     setExercises(prev => [...prev, {
@@ -227,18 +221,6 @@ export default function BuildWorkoutScreen({ navigation }) {
     });
     setExercises(newItems);
   }
-
-  // Filtering (not truncation) decides what shows: search the whole library so
-  // no exercise is silently hidden. A render cap stays only as a list perf
-  // guard, and it now applies AFTER the search filter (not before it), with a
-  // visible "refine your search" hint when it bites, so the user is never left
-  // wondering where an exercise went.
-  const PICKER_RENDER_CAP = 80;
-  const matches = query.trim()
-    ? allExercises.filter(e => e.name.toLowerCase().includes(query.toLowerCase()))
-    : allExercises;
-  const filtered = matches.slice(0, PICKER_RENDER_CAP);
-  const filteredTruncated = matches.length > PICKER_RENDER_CAP;
 
   function formatRest(secs) {
     if (secs < 60) return `${secs}s`;
@@ -460,68 +442,17 @@ export default function BuildWorkoutScreen({ navigation }) {
         </View>
       </BottomSheet>
 
-      <Modal visible={showPicker} animationType={reduceMotion ? 'none' : 'slide'} onRequestClose={() => setShowPicker(false)}>
-        {/* Nested provider: a core RN <Modal> presents in its own window on iOS
-            and would otherwise read top:0, jamming the search field against the
-            status bar / Dynamic Island. */}
-        <SafeAreaProvider>
-        <SafeAreaView style={[styles.pickerSafe, live.pickerSafe]} edges={['top', 'bottom']}>
-          <View style={[styles.pickerHeader, live.pickerHeader]}>
-            <SearchBar
-              style={styles.pickerSearchBar}
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search exercises"
-              accessibilityLabel="Search exercises"
-              autoFocus
-            />
-            <TouchableOpacity onPress={() => setShowPicker(false)} style={styles.pickerClose} accessibilityRole="button" accessibilityLabel="Close exercise picker">
-              <Ionicons name="close" size={22} color={t.colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          <FlashList
-            data={filtered}
-            keyExtractor={e => e.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={styles.pickerItem} onPress={() => addExercise(item)} accessibilityRole="button" accessibilityLabel={`Add ${item.name}`}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.pickerItemName, live.pickerItemName]}>{item.name}</Text>
-                  <Text style={[styles.pickerItemMuscle, live.pickerItemMuscle]}>
-                    {(item.primaryMuscle || '').charAt(0).toUpperCase() + (item.primaryMuscle || '').slice(1)}
-                    {item.equipment ? ` - ${item.equipment}` : ''}
-                  </Text>
-                </View>
-                <Ionicons name="add-circle-outline" size={22} color={t.colors.primary} />
-              </TouchableOpacity>
-            )}
-            ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: t.colors.border }} />}
-            ListEmptyComponent={query.trim() ? (
-              <View style={styles.pickerEmpty}>
-                <Ionicons name="search-outline" size={24} color={t.colors.textMuted} />
-                <Text style={[styles.pickerEmptyTitle, live.pickerEmptyTitle]}>No matching exercises</Text>
-                <Text style={[styles.pickerEmptyText, live.pickerEmptyText]}>Try a shorter search, or clear it and browse the full library.</Text>
-                <Button
-                  title="Clear search"
-                  variant="outline"
-                  size="sm"
-                  fullWidth={false}
-                  onPress={() => setQuery('')}
-                  style={[styles.pickerEmptyBtn, live.pickerEmptyBtn]}
-                  textStyle={[styles.pickerEmptyBtnText, live.pickerEmptyBtnText]}
-                  accessibilityLabel="Clear exercise search"
-                />
-              </View>
-            ) : null}
-            ListFooterComponent={filteredTruncated ? (
-              <View style={styles.pickerHint}>
-                <Ionicons name="search-outline" size={16} color={t.colors.textMuted} />
-                <Text style={[styles.pickerHintText, live.pickerHintText]}>Showing the first {PICKER_RENDER_CAP}. Refine your search to see more.</Text>
-              </View>
-            ) : null}
-          />
-        </SafeAreaView>
-        </SafeAreaProvider>
-      </Modal>
+      {/* D1 sweep (DD4): the shared ExercisePickerModal replaces the local
+          hand-rolled Modal/SearchBar/close-button/FlashList clone -- same
+          component RoutineDetailScreen.js and ManualBuilderScreen.js already
+          use, bringing equipment/muscle filter chips and inline
+          custom-exercise creation this local clone lacked. */}
+      <ExercisePickerModal
+        visible={showPicker}
+        onClose={() => setShowPicker(false)}
+        onSelect={addExercise}
+        saveLabel="Add to workout"
+      />
     </SafeAreaView>
   );
 }
@@ -550,9 +481,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   indexBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.lg,
+    width: 32,
+    height: 32,
+    borderRadius: circle(32),
     backgroundColor: colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
@@ -649,56 +580,6 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     gap: spacing.sm,
   },
-  pickerSafe: { flex: 1, backgroundColor: colors.background },
-  pickerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  pickerSearchBar: { flex: 1 },
-  // UI-13 (end-user-polish audit, 2026-07-12): 44pt touch target, raised
-  // from 40x40 which fell below the project's touch-target contract.
-  pickerClose: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  pickerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.lg,
-  },
-  pickerItemName: {
-    ...type.bodyStrong,
-    color: colors.textPrimary,
-    marginBottom: spacing.xxs,
-  },
-  pickerItemMuscle: { fontSize: fontSize.sm, color: colors.textSecondary },
-  pickerHint: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-  },
-  pickerHintText: { fontSize: fontSize.sm, color: colors.textMuted, flex: 1 },
-  pickerEmpty: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xxxl,
-  },
-  pickerEmptyTitle: { ...type.bodyStrong, color: colors.textPrimary, textAlign: 'center' },
-  pickerEmptyText: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
-  pickerEmptyBtn: {
-    marginTop: spacing.xs,
-    minHeight: 44,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pickerEmptyBtnText: { ...type.label, color: colors.textPrimary },
 
   // Travel mode chip + modal
   travelChip: {
@@ -741,15 +622,6 @@ function buildLiveStyles(t) {
     addBtn: { borderColor: t.colors.primary },
     addBtnText: { fontSize: t.fontSize.md, color: t.colors.primary },
     footer: { borderTopColor: t.colors.border },
-    pickerSafe: { backgroundColor: t.colors.background },
-    pickerHeader: { borderBottomColor: t.colors.border },
-    pickerItemName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    pickerItemMuscle: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    pickerHintText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
-    pickerEmptyTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    pickerEmptyText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    pickerEmptyBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
-    pickerEmptyBtnText: { ...t.type.label, color: t.colors.textPrimary },
     travelChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
     travelChipText: { ...t.type.label, color: t.colors.textPrimary },
     travelTitle: { ...t.type.title, color: t.colors.textPrimary },

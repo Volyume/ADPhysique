@@ -483,7 +483,6 @@ const styles = StyleSheet.create({
     ...type.caption,
     color: colors.textMuted,
     marginTop: spacing.xs,
-    fontStyle: 'italic',
   },
 
   // backgroundColor/borderRadius/padding now come from Card (surface,

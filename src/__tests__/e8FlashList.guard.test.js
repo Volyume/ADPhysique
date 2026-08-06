@@ -30,7 +30,13 @@ const CONVERTED = [
   'src/screens/FoodSearchScreen.js',
   'src/screens/RoutineDetailScreen.js',
   'src/screens/ActiveWorkoutScreen.js',
-  'src/screens/BuildWorkoutScreen.js',
+  // BuildWorkoutScreen.js dropped (D1 sweep, design-consistency-audit-
+  // 2026-08-06 DD4): its local hand-rolled Modal/FlashList exercise picker
+  // was replaced with the shared <ExercisePickerModal>, so it no longer
+  // renders a list of its own at all -- the FlashList guarantee this test
+  // pins is now satisfied one level down, by ExercisePickerModal.js (still
+  // covered by its own entry above), the same component
+  // RoutineDetailScreen.js already delegates to.
 ];
 
 describe('E8: lists render through FlashList', () => {

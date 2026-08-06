@@ -28,7 +28,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, radius } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Button from '../components/Button';
 import BillingPeriodSelector from '../components/BillingPeriodSelector';
@@ -424,9 +424,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
   },
   title: {
+    ...type.h2,
     color: colors.textPrimary,
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.semibold,
     marginBottom: spacing.md,
   },
   subtitle: {
@@ -474,7 +473,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    title: { color: t.colors.textPrimary, fontSize: t.fontSize.xxl },
+    title: { ...t.type.h2, color: t.colors.textPrimary },
     subtitle: { color: t.colors.textSecondary, fontSize: t.fontSize.md },
     errorText: { color: t.colors.error },
     // C5 / D72: mirror only the colour/fontSize-bearing sub-properties of the

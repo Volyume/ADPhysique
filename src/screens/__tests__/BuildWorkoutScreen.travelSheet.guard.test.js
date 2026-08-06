@@ -28,7 +28,9 @@ describe('BuildWorkoutScreen travel equipment sheet guard', () => {
     expect(source).toMatch(/<Ionicons name="airplane-outline" size=\{15\} color=\{(?:t\.)?colors\.textSecondary\} \/>/);
     expect(source).toMatch(/travelChip: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface/);
     expect(source).toContain('travelChipText: { ...type.label, color: colors.textPrimary, flex: 1 }');
-    expect(source).toContain('pickerEmptyBtnText: { ...type.label, color: colors.textPrimary }');
+    // D1 sweep (DD4): the exercise picker's own empty-search state (formerly
+    // a local pickerEmptyBtnText style here) now lives in the shared
+    // ExercisePickerModal component, which this screen delegates to.
     expect(source).not.toMatch(/travelChipText: \{[\s\S]*color: colors\.primary/);
   });
 });

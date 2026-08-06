@@ -97,6 +97,7 @@ import { logError, logWarn } from '../lib/errorLog';
 import CollapsibleSection from '../components/CollapsibleSection';
 import Card from '../components/Card';
 import BackHeader from '../components/BackHeader';
+import EmptyState from '../components/EmptyState';
 // L04-11: the jargon-translation layer (InfoTooltip + the single static,
 // founder-signed-off glossary) already ships on 26 other files; this screen
 // carries the coach's own vocabulary (deload, refeed, macro cycle, training
@@ -111,7 +112,7 @@ import SectionLabel from '../components/SectionLabel';
 import Reanimated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { selectCoachOutputZones } from '../lib/coachOutputZones';
 import { isGreatWeek } from '../lib/shareCard/greatWeek';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type, motion, letterSpacing, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, motion, letterSpacing, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): NO haptics
 // import here. coachOutputApplyMorph.guard.test.js pins this screen as
@@ -896,37 +897,21 @@ function InsufficientDataView({ dataNote, receipt, onClose }) {
 // Distinct from InsufficientDataView so a transient error never masquerades as
 // "you haven't logged enough", it offers a retry instead of a dead end.
 function LoadErrorView({ onRetry, onClose }) {
-  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
-  // See buildLiveStyles' header comment (defined below the frozen `styles`
-  // block) for why.
-  const t = useTheme();
-  const live = buildLiveStyles(t);
+  // D1 sweep (DD5): routed through the shared EmptyState primitive, the
+  // same 'transient load failure, your data is safe' shape CoachReviewScreen.js
+  // and BlockReflectionScreen.js already use, instead of a hand-built
+  // Card/icon/title/body/Button/quiet-link layout.
   return (
     <ScrollView contentContainerStyle={styles.content}>
-      <Card style={styles.card}>
-        <View style={styles.insufficientIconRow}>
-          <Ionicons name="cloud-offline-outline" size={32} color={t.colors.textMuted} />
-        </View>
-        <Text style={[styles.insufficientTitle, live.insufficientTitle]}>Couldn't load your coach.</Text>
-        <Text style={[styles.insufficientBody, live.insufficientBody]}>
-          Something went wrong fetching this week&apos;s data, usually a
-          dropped connection. Your logs are safe. Try again in a moment.
-        </Text>
-      </Card>
-      <Button
-        title="Try again"
-        onPress={onRetry}
-        size="lg"
-        accessibilityLabel="Try again"
-        style={styles.doneBtn}
-        textStyle={[styles.doneBtnText, live.doneBtnText]}
+      <EmptyState
+        icon="cloud-offline-outline"
+        title="Couldn't load your coach."
+        text="Something went wrong fetching this week's data, usually a dropped connection. Your logs are safe. Try again in a moment."
+        actionLabel="Try again"
+        onAction={onRetry}
+        secondaryLabel="Close"
+        onSecondary={onClose}
       />
-      {/* No Button variant matches this plain borderless quiet-text action
-          (all variants carry either a fill or a border); left hand-rolled
-          rather than force a visual mismatch (see final report). */}
-      <TouchableOpacity style={styles.secondaryBtn} onPress={onClose} activeOpacity={0.8} accessibilityRole="button">
-        <Text style={[styles.secondaryBtnText, live.secondaryBtnText]}>Close</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -2788,7 +2773,7 @@ const styles = StyleSheet.create({
     minHeight: 44, // U-B-1 §5: WCAG/iOS touch target
     marginBottom: spacing.md,
     borderRadius: radius.full,
-    backgroundColor: withAlpha(colors.success, 0.125),
+    backgroundColor: withAlpha(colors.success, alpha.tint),
   },
   shareWeekText: {
     ...type.label,
@@ -2933,16 +2918,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.251),
+    borderColor: withAlpha(colors.primary, alpha.edge),
     padding: spacing.lg,
     gap: spacing.xs,
   },
   focusLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
+    ...type.overline,
     color: colors.primary,
-    letterSpacing: letterSpacing.overline,
-    textTransform: 'uppercase',
   },
   focusText: {
     ...type.bodyStrong,
@@ -2985,14 +2967,14 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   appliedChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs2,
     backgroundColor: colors.successBg ?? colors.surface2,
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: withAlpha(colors.success ?? colors.primary, 0.314),
+    borderWidth: 1, borderColor: withAlpha(colors.success ?? colors.primary, alpha.mid),
   },
   appliedChipText: {
-    fontSize: fontSize.micro, fontWeight: fontWeight.bold,
+    ...type.captionStrong,
     color: colors.success ?? colors.primary,
   },
   adjustmentNote: {
@@ -3152,17 +3134,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
     color: colors.textSecondary,
-  },
-  secondaryBtn: {
-    borderRadius: radius.lg,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.xs,
-  },
-  secondaryBtnText: {
-    ...type.bodyStrong,
-    color: colors.textMuted,
   },
   // B4 countdown: deliberately neutral (surface + border, no amber).
   countdownCard: {
@@ -3393,7 +3364,7 @@ function buildLiveStyles(t) {
     planEditLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     planEditLinkText: { ...t.type.label, color: t.colors.textPrimary },
     safe: { backgroundColor: t.colors.background },
-    shareWeekBtn: { backgroundColor: withAlpha(t.colors.success, 0.125) },
+    shareWeekBtn: { backgroundColor: withAlpha(t.colors.success, alpha.tint) },
     shareWeekText: { ...t.type.label, color: t.colors.textPrimary },
     insufficientTitle: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
     insufficientBody: { ...t.type.body, color: t.colors.textSecondary },
@@ -3411,17 +3382,17 @@ function buildLiveStyles(t) {
     coachLeadInterpretation: { ...t.type.body, color: t.colors.textSecondary },
     preCommitmentLine: { ...t.type.bodySm, color: t.colors.textPrimary },
     forwardLine: { ...t.type.bodySm, color: t.colors.textSecondary },
-    focusCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.251) },
-    focusLabel: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    focusCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    focusLabel: { color: t.colors.primary },
     focusText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     adjustmentIconWrap: { backgroundColor: t.colors.primaryBg },
     adjustmentLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     adjustmentLabelHero: { ...t.type.h3, color: t.colors.textPrimary },
     appliedChip: {
       backgroundColor: t.colors.successBg ?? t.colors.surface2,
-      borderColor: withAlpha(t.colors.success ?? t.colors.primary, 0.314),
+      borderColor: withAlpha(t.colors.success ?? t.colors.primary, alpha.mid),
     },
-    appliedChipText: { fontSize: t.fontSize.micro, color: t.colors.success ?? t.colors.primary },
+    appliedChipText: { ...t.type.captionStrong, color: t.colors.success ?? t.colors.primary },
     adjustmentNote: { ...t.type.bodySm, color: t.colors.textSecondary },
     adjustmentDetail: { ...t.type.bodySm, color: t.colors.textPrimary },
     adjustmentHold: { ...t.type.bodySm, color: t.colors.textPrimary },
@@ -3441,7 +3412,6 @@ function buildLiveStyles(t) {
     doneBtnText: { fontSize: t.fontSize.lg },
     doneQuietText: { ...t.type.bodyStrong, color: t.colors.textSecondary },
     historyQuietText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    secondaryBtnText: { ...t.type.bodyStrong, color: t.colors.textMuted },
     countdownCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     countdownLine: { ...t.type.h3, color: t.colors.textPrimary },
     countdownCheckpointTitle: { ...t.type.bodyStrong, color: t.colors.textSecondary },

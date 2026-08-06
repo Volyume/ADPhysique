@@ -15,9 +15,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Animated, { FadeInDown, Easing } from 'react-native-reanimated';
 import useAppStore from '../store/useAppStore';
 import {
-  colors, spacing, radius, type, iconSize, withAlpha, alpha, motion, letterSpacing,
+  colors, spacing, radius, type, iconSize, withAlpha, alpha, motion,
 } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import SectionLabel from './SectionLabel';
 
 // The two columns of the receipt. Copy is fixed (DESIGN-SPEC B4); it is echoed
 // into the consent record via PARTNER_PRIVACY_NOTICE_VERSION, so it changes
@@ -58,7 +59,7 @@ export default function PartnerPrivacyReceipt() {
 
       <View style={[styles.columns, stack && styles.columnsStack]}>
         <View style={styles.col}>
-          <Text style={[styles.colHeader, live.colHeader]}>THEY WILL SEE</Text>
+          <SectionLabel>They will see</SectionLabel>
           {CROSSES.map((line) => (
             <Text key={line} style={[styles.crossLine, live.crossLine]}>{line}</Text>
           ))}
@@ -67,7 +68,7 @@ export default function PartnerPrivacyReceipt() {
         {stack ? <View style={[styles.ruleH, live.ruleH]} /> : <View style={[styles.ruleV, live.ruleV]} />}
 
         <View style={styles.col}>
-          <Text style={[styles.colHeader, live.colHeader]}>THEY NEVER SEE</Text>
+          <SectionLabel>They never see</SectionLabel>
           {NEVER.map((line) => (
             <View key={line} style={styles.neverRow}>
               <Ionicons
@@ -120,12 +121,6 @@ const styles = StyleSheet.create({
   columns: { flexDirection: 'row', alignItems: 'flex-start' },
   columnsStack: { flexDirection: 'column' },
   col: { flex: 1, gap: spacing.md },
-  colHeader: {
-    ...type.caption,
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: letterSpacing.caption,
-  },
   // The vertical hairline between the two columns (side-by-side layout).
   ruleV: {
     width: StyleSheet.hairlineWidth,
@@ -154,7 +149,6 @@ function buildLiveStyles(t) {
   return {
     card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     heading: { ...t.type.title, color: t.colors.textPrimary },
-    colHeader: { ...t.type.caption, color: t.colors.textSecondary },
     ruleV: { backgroundColor: withAlpha(t.colors.border, alpha.strong) },
     ruleH: { backgroundColor: withAlpha(t.colors.border, alpha.strong) },
     crossLine: { ...t.type.body, color: t.colors.textPrimary },

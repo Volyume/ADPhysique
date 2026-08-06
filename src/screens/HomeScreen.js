@@ -14,6 +14,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import ConsistencyEcho from '../components/ConsistencyEcho';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import EmptyState from '../components/EmptyState';
 import PressableCard from '../components/PressableCard';
 import SectionLabel from '../components/SectionLabel';
 import WhatsNewSheet from '../components/WhatsNewSheet';
@@ -147,16 +148,12 @@ export default function HomeScreen({ navigation, route }) {
     continueCard: { backgroundColor: t.colors.success },
     continueIcon: { backgroundColor: withAlpha(t.colors.background, alpha.soft) },
     continueTitle: { ...t.type.bodyStrong, color: t.colors.onPrimary },
-    continueSub: { ...t.type.caption, color: withAlpha(t.colors.onPrimary, 0.8) },
+    continueSub: { ...t.type.caption, color: withAlpha(t.colors.onPrimary, alpha.half) },
     workoutName: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
     workoutMeta: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     mesoBriefChip: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     mesoBriefText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
     workoutOptionsText: { color: t.colors.textSecondary },
-    noPlanIconWrap: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
-    noPlanTitle: { ...t.type.h3, color: t.colors.textPrimary },
-    noPlanSub: { ...t.type.bodySm, color: t.colors.textSecondary },
-    starterCard: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     glanceTitle: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     // R9/D70 (design-cohesion sweep): raw fontSize.xl + black weight moved
     // onto the frozen numeral role that matches it in size (t.type.num('h3')
@@ -188,10 +185,10 @@ export default function HomeScreen({ navigation, route }) {
     intentOptOutSub: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     coachBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
     coachBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.primary },
-    coachBannerBody: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    coachBannerBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     deloadBanner: { backgroundColor: withAlpha(t.colors.primary, alpha.tint), borderColor: withAlpha(t.colors.primary, alpha.mid) },
     deloadBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.primary },
-    deloadBannerBody: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    deloadBannerBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     plateauBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     plateauBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },
     activationBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
@@ -1617,9 +1614,10 @@ export default function HomeScreen({ navigation, route }) {
             <TouchableOpacity
               onPress={dismissPhaseBanner}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
               accessibilityLabel="Dismiss nutrition phase banner"
             >
-              <Ionicons name="close" size={15} color={t.colors.textMuted} />
+              <Ionicons name="close" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
           </View>
         )}
@@ -1785,7 +1783,7 @@ export default function HomeScreen({ navigation, route }) {
                 <Text style={[styles.continueTitle, live.continueTitle]}>Workout in progress</Text>
                 <Text style={[styles.continueSub, live.continueSub]}>Tap to return to your workout</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={withAlpha(t.colors.onPrimary, 0.8)} />
+              <Ionicons name="chevron-forward" size={iconSize.md} color={withAlpha(t.colors.onPrimary, alpha.half)} />
             </View>
           </PressableCard>
         ) : activePlan && nextWorkout ? (
@@ -1861,62 +1859,46 @@ export default function HomeScreen({ navigation, route }) {
           </Card>
         ) : (
           <View style={styles.noPlanSection}>
+            {/* D1 sweep (DD40): both the Pro and Free no-plan branches route
+                through the shared EmptyState primitive instead of the
+                hand-rolled noPlanHero/noPlanIconWrap/noPlanTitle/noPlanSub/
+                starterCard local clone -- EmptyState already renders this
+                exact icon-circle + title + subtitle + action(s) shape,
+                including two CTAs via actionLabel/secondaryLabel for the
+                free branch. */}
             {tier === 'pro' ? (
-              <>
-                <View style={styles.noPlanHero}>
-                  <View style={[styles.noPlanIconWrap, live.noPlanIconWrap]}>
-                    <Ionicons name="barbell-outline" size={28} color={t.colors.primary} />
-                  </View>
-                  <Text style={[styles.noPlanTitle, live.noPlanTitle]}>No active plan yet</Text>
-                  <Text style={[styles.noPlanSub, live.noPlanSub]}>
-                    If you just signed in, we may still be pulling your data from the cloud. If nothing arrives, start with a plan and we'll rebuild it from your profile.
-                  </Text>
-                </View>
-                <Button
-                  variant="primary"
-                  title="Start with a plan"
-                  icon="clipboard-outline"
-                  accessibilityLabel="Start with a plan"
-                  onPress={async () => {
-                    const result = await generateAndSavePlan(user.id, userProfile);
-                    if (result.ok) {
-                      await loadData();
-                    } else {
-                      logError('HomeScreen.startWithPlan', new Error(result.error ?? 'plan_generation_failed'), { userId: user?.id });
-                      toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
-                    }
-                  }}
-                  style={styles.proRecoverBtn}
-                />
-              </>
+              <EmptyState
+                icon="barbell-outline"
+                title="No active plan yet"
+                text="If you just signed in, we may still be pulling your data from the cloud. If nothing arrives, start with a plan and we'll rebuild it from your profile."
+                actionLabel="Start with a plan"
+                onAction={async () => {
+                  const result = await generateAndSavePlan(user.id, userProfile);
+                  if (result.ok) {
+                    await loadData();
+                  } else {
+                    logError('HomeScreen.startWithPlan', new Error(result.error ?? 'plan_generation_failed'), { userId: user?.id });
+                    toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
+                  }
+                }}
+              />
             ) : (
               /* B2: the free "what do I do today" answer. One strong, calm
                  card: the micro-quiz first, the library second. Replaces the
                  old low-emphasis welcome + stacked builder cards. */
-              <View style={[styles.starterCard, live.starterCard]}>
-                <View style={[styles.noPlanIconWrap, live.noPlanIconWrap]}>
-                  <Ionicons name="compass-outline" size={28} color={t.colors.primary} />
-                </View>
-                <Text style={[styles.noPlanTitle, live.noPlanTitle]}>No active plan yet</Text>
-                <Text style={[styles.noPlanSub, live.noPlanSub]}>
-                  {lastSession == null
-                    ? "Answer three quick questions and we'll suggest a starter plan. You can also browse the library."
-                    : "You've been training without a set plan. Answer three quick questions and we'll suggest a starter plan, or browse the library."}
-                </Text>
-                <View style={styles.starterActions}>
-                  <Button
-                    title="Start with a plan"
-                    onPress={() => navigation.navigate('FreeStarter')}
-                    accessibilityLabel="Answer three quick questions to start with a plan"
-                  />
-                  <Button
-                    title="Browse plans"
-                    variant="secondary"
-                    onPress={() => navigation.navigate('PlansTab', { screen: 'PlanLibrary', initial: false })}
-                    accessibilityLabel="Browse the plan library"
-                  />
-                </View>
-              </View>
+              <EmptyState
+                icon="compass-outline"
+                title="No active plan yet"
+                text={lastSession == null
+                  ? "Answer three quick questions and we'll suggest a starter plan. You can also browse the library."
+                  : "You've been training without a set plan. Answer three quick questions and we'll suggest a starter plan, or browse the library."}
+                actionLabel="Start with a plan"
+                onAction={() => navigation.navigate('FreeStarter')}
+                actionAccessibilityLabel="Answer three quick questions to start with a plan"
+                secondaryLabel="Browse plans"
+                onSecondary={() => navigation.navigate('PlansTab', { screen: 'PlanLibrary', initial: false })}
+                secondaryAccessibilityLabel="Browse the plan library"
+              />
             )}
 
             {/* Progress at a glance, shown when there's history but no plan */}
@@ -2044,6 +2026,7 @@ export default function HomeScreen({ navigation, route }) {
             <TouchableOpacity
               onPress={dismissCoachingNudge}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
               accessibilityLabel="Dismiss coaching nudge"
             >
               <Ionicons name="close" size={16} color={t.colors.textMuted} />
@@ -2258,7 +2241,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   continueTitle: { ...type.bodyStrong, color: colors.onPrimary },
-  continueSub: { ...type.caption, color: withAlpha(colors.onPrimary, 0.8), marginTop: spacing.xxs },
+  continueSub: { ...type.caption, color: withAlpha(colors.onPrimary, alpha.half), marginTop: spacing.xxs },
 
   // Hero plan card. Restrained: one primary CTA, two discreet text links
   // underneath. Stat goes in the eyebrow line so we don't waste a row on a
@@ -2279,7 +2262,7 @@ const styles = StyleSheet.create({
   },
   workoutMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
   mesoBriefChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs2,
     alignSelf: 'flex-start',
     marginTop: spacing.xs,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
@@ -2311,49 +2294,10 @@ const styles = StyleSheet.create({
   // No plan, plan-first section
   noPlanSection: { gap: spacing.md },
   // R9/D70: box/fill/radius/padding/label now come from the shared <Button
-  // variant="primary">; only the layout margin survives.
-  proRecoverBtn: {
-    marginTop: spacing.sm,
-  },
-  noPlanHero: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.md,
-  },
-  noPlanIconWrap: {
-    width: 56, height: 56, borderRadius: circle(56),
-    backgroundColor: colors.primaryBg, borderWidth: 1.5, borderColor: withAlpha(colors.primary, alpha.mid),
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: spacing.xs,
-  },
-  noPlanTitle: {
-    ...type.h3,
-    color: colors.textPrimary, textAlign: 'center',
-  },
-  noPlanSub: {
-    ...type.bodySm, color: colors.textSecondary, textAlign: 'center',
-  },
-  // R9/D70: box/fill/radius/padding/label now come from the shared <Button
   // variant="secondary">; only the self-centering survives (this pill sits
   // alone under the starter card, not stretched full width).
   blankSessionLink: {
     alignSelf: 'center',
-  },
-
-  // B2: free no-plan starter card. One calm card, quiz first, library second.
-  starterCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
-    padding: spacing.lg,
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  starterActions: {
-    alignSelf: 'stretch',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
   },
 
   // Progress at a glance (no-plan + has history)
@@ -2556,7 +2500,7 @@ const styles = StyleSheet.create({
   // with their JSX (one card class, internal priority recorded there).
   coachBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
   coachBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
-  coachBannerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 17 },
+  coachBannerBody: { ...type.bodySm, color: colors.textSecondary },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: withAlpha(colors.primary, alpha.tint), borderRadius: radius.md,
@@ -2565,7 +2509,7 @@ const styles = StyleSheet.create({
   },
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
   deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
-  deloadBannerBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 17 },
+  deloadBannerBody: { ...type.bodySm, color: colors.textSecondary },
 
   // B3 lift plateau banner; one line plus tap-through, matches the banner
   // system's tokens (trial-banner top row shape).
@@ -2624,7 +2568,7 @@ const styles = StyleSheet.create({
   quickStartCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: spacing.md,
     backgroundColor: colors.primaryBg,
     borderRadius: radius.lg,
     borderWidth: 1,
@@ -2637,7 +2581,7 @@ const styles = StyleSheet.create({
   quickStartIcon: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: circle(48),
     backgroundColor: colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
@@ -2645,7 +2589,7 @@ const styles = StyleSheet.create({
   quickStartTitle: {
     ...type.bodyStrong,
     color: colors.textPrimary,
-    marginBottom: 3,
+    marginBottom: spacing.xs,
   },
   quickStartSub: {
     ...type.bodySm,

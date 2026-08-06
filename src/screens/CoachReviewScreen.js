@@ -7,7 +7,7 @@ import { endOfWeek } from 'date-fns/endOfWeek';
 import { format } from 'date-fns/format';
 import { isWithinInterval } from 'date-fns/isWithinInterval';
 import { useNavigation } from '@react-navigation/native';
-import { colors, spacing, fontSize, fontWeight, radius, type, withAlpha, circle, letterSpacing, alpha } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, radius, type, withAlpha, circle, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles, summariseWorkoutSets } from '../lib/algorithms';
@@ -726,11 +726,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardTitle: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+    ...type.overline,
     color: colors.textMuted,
-    letterSpacing: letterSpacing.overline,
-    textTransform: 'uppercase',
     marginBottom: spacing.md,
   },
 
@@ -881,7 +878,7 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     headerDate: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
-    cardTitle: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    cardTitle: { ...t.type.overline, color: t.colors.textMuted },
     statValue: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
     statLabel: { ...t.type.caption, color: t.colors.textSecondary },
     statDivider: { backgroundColor: t.colors.border },

@@ -329,8 +329,8 @@ const styles = StyleSheet.create({
   gaugeItem: { flex: 1, alignItems: 'center', gap: spacing.xs },
   gaugeDot: { width: 12, height: 12, borderRadius: radius.sm },
   gaugeValue: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
-  gaugeLabel: { fontSize: fontSize.micro, color: colors.textMuted, textAlign: 'center' },
-  gaugeScale: { fontSize: fontSize.micro, color: colors.textMuted, textAlign: 'center' },
+  gaugeLabel: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
+  gaugeScale: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
   recoveryNote: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
   cardioLoadNote: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
@@ -356,10 +356,10 @@ const styles = StyleSheet.create({
   mfTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   mfSub: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
   mfChipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  mfChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, borderWidth: 1 },
+  mfChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs2, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, borderWidth: 1 },
   mfDot: { width: 6, height: 6, borderRadius: circle(6), flexShrink: 0 },
   mfChipName: { ...type.captionStrong },
-  mfChipLabel: { fontSize: fontSize.micro, fontWeight: fontWeight.semibold },
+  mfChipLabel: { ...type.captionStrong },
 });
 
 // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
@@ -384,8 +384,8 @@ function buildLiveStyles(t) {
     recoveryCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     recoveryDivider: { backgroundColor: t.colors.border },
     gaugeValue: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
-    gaugeLabel: { fontSize: t.fontSize.micro, color: t.colors.textMuted },
-    gaugeScale: { fontSize: t.fontSize.micro, color: t.colors.textMuted },
+    gaugeLabel: { ...t.type.caption, color: t.colors.textMuted },
+    gaugeScale: { ...t.type.caption, color: t.colors.textMuted },
     recoveryNote: { ...t.type.caption, color: t.colors.textMuted },
     cardioLoadNote: { borderTopColor: t.colors.border },
     cardioLoadText: { ...t.type.captionTight, color: t.colors.textSecondary },
@@ -396,6 +396,6 @@ function buildLiveStyles(t) {
     mfTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     mfSub: { ...t.type.captionTight, color: t.colors.textMuted },
     mfChipName: { ...t.type.captionStrong },
-    mfChipLabel: { fontSize: t.fontSize.micro },
+    mfChipLabel: { ...t.type.captionStrong },
   };
 }

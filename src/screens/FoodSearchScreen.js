@@ -1147,8 +1147,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabLabel: {
-    color: colors.textMuted, fontSize: fontSize.sm, fontWeight: fontWeight.medium,
-    lineHeight: fontSize.sm + 6,
+    ...type.label,
+    color: colors.textMuted,
     paddingBottom: spacing.sm,
   },
   tabLabelActive: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
@@ -1194,7 +1194,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
   suggestName: { ...type.bodyStrong, color: colors.textPrimary },
-  suggestMacros: { ...type.caption, color: colors.textSecondary, marginTop: 3 },
+  suggestMacros: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
 
   footerBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -1266,7 +1266,7 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     tabBar: { borderBottomColor: t.colors.border },
-    tabLabel: { color: t.colors.textMuted, fontSize: t.fontSize.sm, lineHeight: t.fontSize.sm + 6 },
+    tabLabel: { ...t.type.label, color: t.colors.textMuted },
     tabLabelActive: { color: t.colors.textPrimary },
     tabUnderlineActive: { backgroundColor: t.colors.primary },
     provenanceNote: { ...t.type.captionTight, color: t.colors.textMuted },

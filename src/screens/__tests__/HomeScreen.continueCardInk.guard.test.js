@@ -21,6 +21,13 @@
  * inline `color` prop is one such call site, so its literal text moved from
  * `colors.onPrimary` to `t.colors.onPrimary`; the pinned RULE -- onPrimary,
  * never background, as the ink on the filled continue-card -- is unchanged.
+ *
+ * D1 sweep (design-consistency-audit-2026-08-06, DD36/DD37): the raw 0.8
+ * alpha literal (matching no named stop) and the raw icon size 18 (off the
+ * iconSize scale) were tokenised to alpha.half (the nearest named stop) and
+ * iconSize.md respectively -- a sub-pixel-level visual difference at most.
+ * The RULE this test pins (onPrimary ink, never background) is unchanged;
+ * only the literal-vs-token assertions below were re-anchored to match.
  */
 const fs = require('fs');
 const path = require('path');
@@ -28,15 +35,15 @@ const path = require('path');
 const HOME = fs.readFileSync(path.resolve(__dirname, '../HomeScreen.js'), 'utf8');
 
 describe('AC-3: Continue-workout card ink uses colors.onPrimary, not colors.background', () => {
-  test('the chevron ink is withAlpha(t.colors.onPrimary, 0.8)', () => {
+  test('the chevron ink is withAlpha(t.colors.onPrimary, alpha.half)', () => {
     expect(HOME).toMatch(
-      /<Ionicons name="chevron-forward" size=\{18\} color=\{withAlpha\(t\.colors\.onPrimary, 0\.8\)\} \/>/,
+      /<Ionicons name="chevron-forward" size=\{iconSize\.md\} color=\{withAlpha\(t\.colors\.onPrimary, alpha\.half\)\} \/>/,
     );
   });
 
-  test('the subtitle (continueSub) ink is withAlpha(colors.onPrimary, 0.8)', () => {
+  test('the subtitle (continueSub) ink is withAlpha(colors.onPrimary, alpha.half)', () => {
     expect(HOME).toMatch(
-      /continueSub: \{ \.\.\.type\.caption, color: withAlpha\(colors\.onPrimary, 0\.8\), marginTop: spacing\.xxs \},/,
+      /continueSub: \{ \.\.\.type\.caption, color: withAlpha\(colors\.onPrimary, alpha\.half\), marginTop: spacing\.xxs \},/,
     );
   });
 

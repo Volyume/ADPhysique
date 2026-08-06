@@ -14,7 +14,7 @@ import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, spacing, type, iconSize } from '../styles/theme';
+import { colors, fontSize, spacing, type, iconSize, hitSlop } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Button from '../components/Button';
 import Card from '../components/Card';
@@ -23,6 +23,7 @@ import SectionLabel from '../components/SectionLabel';
 import SegmentedControl from '../components/SegmentedControl';
 import SearchBar from '../components/SearchBar';
 import Stepper from '../components/Stepper';
+import EmptyState from '../components/EmptyState';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -30,6 +31,7 @@ import {
 } from '../lib/cardio/cardioActivities';
 import { estimateActivityKcal, metFor } from '../lib/cardio/cardioMath';
 import { insertCardioLog, getRecentCardioLog } from '../lib/database';
+import { toEnergy, energyUnitLabel } from '../lib/format';
 
 const CATEGORY_LABELS = {
   walking: 'Walking', running: 'Running', cycling: 'Cycling', rowing: 'Rowing',
@@ -53,8 +55,9 @@ const INTENSITY_OPTS = [
 ];
 
 export default function LogCardioScreen({ navigation, route }) {
-  const { user, userProfile, saveLocalProfile } = useAppStore(useShallow((s) => ({
+  const { user, userProfile, saveLocalProfile, energyUnit } = useAppStore(useShallow((s) => ({
     user: s.user, userProfile: s.userProfile, saveLocalProfile: s.saveLocalProfile,
+    energyUnit: s.accessibility?.energyUnit ?? 'kcal',
   })));
   // Campaign 2026-07-10 item 8 (history + cardio theme migration): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
@@ -169,7 +172,16 @@ export default function LogCardioScreen({ navigation, route }) {
           </View>
 
           {filtered ? (
-            <ActivityList items={filtered} onPick={pickActivity} />
+            filtered.length > 0 ? (
+              <ActivityList items={filtered} onPick={pickActivity} />
+            ) : (
+              <EmptyState
+                compact
+                icon="search-outline"
+                title="No matches"
+                text={`No matches for "${query.trim()}".`}
+              />
+            )
           ) : (
             <>
               {favourites.length > 0 && (
@@ -201,7 +213,7 @@ export default function LogCardioScreen({ navigation, route }) {
               <Text style={[styles.chosenName, live.chosenName]} numberOfLines={1} ellipsizeMode="tail">{activity.displayName}</Text>
               <Text style={[styles.chosenMeta, live.chosenMeta]}>{CATEGORY_LABELS[activity.category]} · tap to change</Text>
             </View>
-            <TouchableOpacity onPress={toggleFavourite} hitSlop={10} accessibilityRole="button" accessibilityState={{ selected: isFavourite }} accessibilityLabel={isFavourite ? 'Remove from your cardio' : 'Add to your cardio'}>
+            <TouchableOpacity onPress={toggleFavourite} hitSlop={hitSlop} accessibilityRole="button" accessibilityState={{ selected: isFavourite }} accessibilityLabel={isFavourite ? 'Remove from your cardio' : 'Add to your cardio'}>
               <Ionicons name={isFavourite ? 'star' : 'star-outline'} size={22} color={t.colors.primary} />
             </TouchableOpacity>
           </Card>
@@ -228,7 +240,7 @@ export default function LogCardioScreen({ navigation, route }) {
             <>
               <View style={styles.kcalRow}>
                 <Ionicons name="flame-outline" size={16} color={t.colors.textMuted} />
-                <Text style={[styles.kcalText, live.kcalText]}>Burned about {estKcal} kcal</Text>
+                <Text style={[styles.kcalText, live.kcalText]}>Burned about {toEnergy(estKcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
               </View>
               <Text style={[styles.footnote, live.footnote]}>
                 Already counted. This isn't added to your calorie target, your weight trend includes everything you burn.

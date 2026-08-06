@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, spacing, radius, type } from '../styles/theme';
+import { colors, spacing, radius, type, hitSlop } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Button from './Button';
 import { getCardioLogRange, activityDayKey } from '../lib/database';
@@ -45,7 +45,7 @@ export default function CardioPlanCard({ userId, target, onPress, onHistory }) {
         <Ionicons name="heart-outline" size={18} color={t.colors.primary} />
         <Text style={[styles.cardioTitle, live.cardioTitle]}>Cardio this week</Text>
         {done > 0 ? (
-          <TouchableOpacity style={[styles.cardioHistoryBtn, live.cardioHistoryBtn]} onPress={onHistory} hitSlop={8} accessibilityRole="button" accessibilityLabel="Cardio history">
+          <TouchableOpacity style={[styles.cardioHistoryBtn, live.cardioHistoryBtn]} onPress={onHistory} hitSlop={hitSlop} accessibilityRole="button" accessibilityLabel="Cardio history">
             <Ionicons name="time-outline" size={13} color={t.colors.textSecondary} />
             <Text style={[styles.cardioHistoryLink, live.cardioHistoryLink]}>History</Text>
           </TouchableOpacity>

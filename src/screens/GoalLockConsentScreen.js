@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Pressable,
+  View, Text, StyleSheet, ScrollView, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -10,6 +10,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { setGoalLockAdvanced, getGoalLockAdvanced, recordEngineTelemetry } from '../lib/database';
 import BackHeader from '../components/BackHeader';
+import Button from '../components/Button';
 
 /**
  * GoalLockConsentScreen (Move #2).
@@ -144,16 +145,15 @@ export default function GoalLockConsentScreen({ navigation, route }) {
           </Text>
         </View>
 
-        <TouchableOpacity
+        <Button
+          title={editMode ? 'Save' : 'Continue'}
           onPress={save}
-          disabled={!choice || busy}
-          style={[styles.cta, live.cta, (!choice || busy) && styles.ctaDisabled]}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !choice || busy }}
+          disabled={!choice}
+          loading={busy}
+          size="lg"
+          style={styles.cta}
           accessibilityLabel={editMode ? 'Save' : 'Continue'}
-        >
-          <Text style={[styles.ctaText, live.ctaText]}>{editMode ? 'Save' : 'Continue'}</Text>
-        </TouchableOpacity>
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -225,15 +225,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   noteText: { ...type.caption, color: colors.textMuted, flex: 1 },
-  cta: {
-    marginTop: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryFill,
-    alignItems: 'center',
-  },
-  ctaDisabled: { opacity: 0.5 },
-  ctaText: { ...type.bodyStrong, color: colors.onPrimary },
+  cta: { marginTop: spacing.lg },
 });
 
 // CP-10 batch F (2026-07-11): the frozen `styles` block above stays byte-
@@ -258,7 +250,5 @@ function buildLiveStyles(t) {
     radioActive: { borderColor: t.colors.primary },
     radioDot: { backgroundColor: t.colors.primary },
     noteText: { ...t.type.caption, color: t.colors.textMuted },
-    cta: { backgroundColor: t.colors.primaryFill },
-    ctaText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
   };
 }

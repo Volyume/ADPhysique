@@ -6,7 +6,7 @@ import useTheme from '../hooks/useTheme';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import SectionLabel from '../components/SectionLabel';
-import ModalHeader from '../components/ModalHeader';
+import BackHeader from '../components/BackHeader';
 import { useState, useEffect, useMemo } from 'react';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { PROTEIN_APPROACHES } from '../lib/nutritionEngine';
@@ -208,7 +208,12 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-      <ModalHeader title="Here's what changed" onClose={handleDone} />
+      {/* D1 sweep (DD34): plain-push registration (RootNavigator.js sets
+          headerShown:false only, no presentation:'modal'), and handleDone
+          pops/goes back rather than replacing -- so this matches its
+          sibling plain-push screens (GoalLockConsentScreen,
+          BlockReflectionScreen) via BackHeader, not a ModalHeader X-close. */}
+      <BackHeader title="Here's what changed" onBack={handleDone} />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Card tone="success" style={styles.heroCard}>
@@ -338,7 +343,7 @@ const styles = StyleSheet.create({
   cardUnchanged: { opacity: 0.65 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   cardTitle: { ...type.label, flex: 1, color: colors.textPrimary },
-  unchangedTag: { fontSize: fontSize.micro, color: colors.textMuted, fontStyle: 'italic' },
+  unchangedTag: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
 
   diffRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   diffPrev: { ...type.body, color: colors.textMuted, textDecorationLine: 'line-through' },
@@ -366,7 +371,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   nextRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
-  bullet: { marginTop: 7 },
+  bullet: { marginTop: spacing.xs2 },
   nextText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 
   doneBtn: { marginTop: spacing.md },
@@ -387,7 +392,7 @@ function buildLiveStyles(t) {
     heroTitle: { ...t.type.title, color: t.colors.textPrimary },
     heroBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     cardTitle: { ...t.type.label, color: t.colors.textPrimary },
-    unchangedTag: { fontSize: t.fontSize.micro, color: t.colors.textMuted },
+    unchangedTag: { ...t.type.caption, color: t.colors.textMuted },
     diffPrev: { ...t.type.body, color: t.colors.textMuted },
     diffNext: { ...t.type.bodyStrong, color: t.colors.primary },
     cardValue: { ...t.type.bodyStrong, color: t.colors.textPrimary },

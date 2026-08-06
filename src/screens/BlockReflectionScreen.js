@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
     padding: spacing.lg, gap: spacing.md,
   },
-  narrativeLine: { fontSize: fontSize.md, color: colors.textSecondary, lineHeight: 23 },
+  narrativeLine: { ...type.body, color: colors.textSecondary },
 
   section: {
     backgroundColor: colors.surface,
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.188),
+    borderColor: withAlpha(colors.primary, alpha.soft),
     padding: spacing.lg,
   },
   bestSessionInfo: { flex: 1, gap: spacing.xxs },
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg, gap: spacing.md,
   },
   nextTitle: { ...type.bodyStrong, color: colors.textPrimary },
-  nextBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 21 },
+  nextBody: { ...type.bodySm, color: colors.textSecondary },
 });
 
 // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): buildLiveStyles
@@ -390,18 +390,18 @@ function buildLiveStyles(t) {
     statValue: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
     statLabel: { ...t.type.caption, color: t.colors.textMuted },
     narrativeCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    narrativeLine: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
+    narrativeLine: { ...t.type.body, color: t.colors.textSecondary },
     section: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     prRow: { borderTopColor: t.colors.border },
     prExercise: { ...t.type.label, color: t.colors.textPrimary },
     prType: { ...t.type.caption, color: t.colors.textMuted },
     prValue: { ...t.type.num('bodyStrong'), color: t.colors.primary },
-    bestSessionCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.188) },
+    bestSessionCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.soft) },
     bestSessionLabel: { ...t.type.label, color: t.colors.textPrimary },
     bestSessionDate: { ...t.type.num('caption'), color: t.colors.textMuted },
     bestSessionVolume: { ...t.type.num('title'), color: t.colors.primary },
     nextSection: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     nextTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    nextBody: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    nextBody: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
 }
