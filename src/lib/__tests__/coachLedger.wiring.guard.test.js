@@ -68,26 +68,25 @@ describe('A3: CoachOutput hold renders as a full receipt', () => {
   });
 
   test('next-week meal planning actions render as contained neutral buttons', () => {
-    // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): the JSX
-    // call sites now read the live theme (color={t.colors.textSecondary})
-    // instead of the frozen static import; the frozen `styles` block asserted
-    // below (planEditLink/planEditLinkText) is byte-identical to before, so
-    // this is a mechanical update, not a weakening.
-    expect(COACH).toContain('Ionicons name="calendar-outline" size={14} color={t.colors.textSecondary}');
-    expect(COACH).toContain('Ionicons name="repeat-outline" size={14} color={t.colors.textSecondary}');
-    expect(COACH).toContain('Ionicons name="restaurant-outline" size={14} color={t.colors.textSecondary}');
-    expect(COACH).toMatch(/planEditLink: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(COACH).toContain('planEditLinkText: { ...type.label, color: colors.textPrimary }');
-    expect(COACH).not.toContain('planEditLinkText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary }');
+    // Founder device report 2026-08-06 ("random look and feel, text only
+    // links"): the hand-rolled planEditLink pills became the shared
+    // <Button variant="outline"> - which IS the contained neutral
+    // treatment, same re-anchor precedent as the AttentionCard test above.
+    // The pinned RULE is unchanged: contained neutral controls, never
+    // loose amber text links.
+    expect(COACH).toMatch(/icon="calendar-outline"[\s\S]{0,300}accessibilityLabel="Plan a fresh week of meals"/);
+    expect(COACH).toMatch(/icon="repeat-outline"[\s\S]{0,300}accessibilityLabel="Repeat last week's meals"/);
+    expect(COACH).toMatch(/variant="outline"[\s\S]{0,300}icon="restaurant-outline"/);
+    // The hand-rolled pill styles must not return.
+    expect(COACH).not.toMatch(/planEditLink: \{/);
   });
 
   test('held-decision explainer renders as a contained neutral control', () => {
-    // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): same
-    // mechanical live-theme JSX update as the meal-planning test above.
-    expect(COACH).toContain('Ionicons name="information-circle-outline" size={14} color={t.colors.textSecondary}');
-    expect(COACH).toMatch(/heldLearnMore: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(COACH).toContain('heldLearnMoreText: {\n    ...type.label,\n    color: colors.textPrimary,');
-    expect(COACH).not.toMatch(/heldLearnMoreText: \{[\s\S]*textDecorationLine: 'underline'/);
+    // Same 2026-08-06 Button-outline re-anchor as the meal-planning test.
+    expect(COACH).toMatch(/variant="outline"[\s\S]{0,300}icon="information-circle-outline"/);
+    expect(COACH).toMatch(/accessibilityLabel="See how Precision Coaching decides"/);
+    expect(COACH).not.toMatch(/heldLearnMore: \{/);
+    expect(COACH).not.toMatch(/textDecorationLine: 'underline'/);
   });
 });
 

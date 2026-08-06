@@ -708,15 +708,19 @@ export default function NutritionTargetsScreen({ navigation }) {
                 accessibilityLabel="Set my targets"
               />
 
-              <TouchableOpacity
+              {/* Founder device report 2026-08-06 (bare text links on the
+                  check-in flow): standalone quiet actions render the shared
+                  Button outline variant app-wide. */}
+              <Button
+                title="Fine-tune these numbers"
+                variant="outline"
+                size="sm"
+                icon="options-outline"
+                fullWidth={false}
                 style={styles.fineTuneLink}
                 onPress={() => { haptics.selection(); setFormCollapsed(false); }}
-                accessibilityRole="button"
                 accessibilityLabel="Fine-tune these numbers"
-              >
-                <Ionicons name="options-outline" size={14} color={t.colors.primary} />
-                <Text style={[styles.fineTuneText, live.fineTuneText]}>Fine-tune these numbers</Text>
-              </TouchableOpacity>
+              />
             </Card>
           ) : null}
 
@@ -1498,8 +1502,7 @@ const styles = StyleSheet.create({
   fastCard: { marginTop: spacing.md, gap: spacing.md },
   fastTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
   fastSubtitle: { ...type.bodySm, color: colors.textSecondary },
-  fineTuneLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, minHeight: 44 },
-  fineTuneText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  fineTuneLink: { alignSelf: 'center', marginTop: spacing.xs },
   eduIconWrap: { width: 32, height: 32, borderRadius: circle(32), backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
   eduTitle: { ...type.label, color: colors.textPrimary },
   eduBody: { ...type.captionTight, color: colors.textSecondary, marginTop: spacing.xxs },
@@ -2209,7 +2212,6 @@ function buildLiveStyles(t) {
     eduCard: { borderLeftColor: t.colors.border },
     fastTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
     fastSubtitle: { ...t.type.bodySm, color: t.colors.textSecondary },
-    fineTuneText: { fontSize: t.fontSize.sm, color: t.colors.primary },
     eduIconWrap: { backgroundColor: t.colors.primaryBg },
     eduTitle: { ...t.type.label, color: t.colors.textPrimary },
     eduBody: { ...t.type.captionTight, color: t.colors.textSecondary },

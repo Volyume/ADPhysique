@@ -906,3 +906,38 @@ Reference-quality screens to match against: AnalyticsScreen,
 WorkoutHistoryScreen, PlanLibraryScreen (correct header + Skeleton +
 EmptyState). WorkoutSummaryScreen's headerless live path and
 ActiveWorkoutScreen's custom chrome are justified and documented in-file.
+
+---
+
+## ADDENDUM — founder device report 2026-08-06: the check-in results screen
+
+Founder: "Did you check the weekly check in results? As it has very random
+look and feel. Text only links and things like that nothing like the rest
+of the app. I fear you didn't look nearly well enough."
+
+The founder was right, and the miss is instructive: CoachOutputScreen
+carried SIX coexisting tappable treatments (shared Button, two hand-rolled
+quiet pills, a success-tinted share chrome, and three bare text-only links:
+"See all weeks", "Coaching history", "Done"). Each instance passed the
+per-item canon checks because each carried an in-code justification (the
+one-amber rule, "quiet link" comments) - the audit judged items against
+rules, and nobody judged the PAGE as a whole. Screen-level gestalt is now a
+named check class for any future design audit.
+
+FIXED (lead, hands-on): every quiet action on CoachOutputScreen now renders
+the shared Button outline variant (amber remains exclusive to the hero
+Apply). The success-tinted share entry stays as the documented great-week
+framing; the ED-lockout CTA pair is untouched (Section 2). The CO-2 guard
+suite re-anchored to the new shared treatment, contract unchanged.
+App-wide sweep of the same class: most "link"-named styles are already the
+contained pill idiom; NutritionTargetsScreen's bare "Fine-tune these
+numbers" converted; ExerciseDetail's goal links were already converted in
+lane D1. Underlined links INSIDE running sentences (FoodInsights,
+PerDayTargets footnotes) are a legitimate inline-text idiom and stay.
+
+FOUNDER QUESTION (billing-adjacent, not landed): ProUpgradeScreen's quiet
+restore/policy caption links are standalone text links too, but they sit on
+the paywall where visual weight is conversion-sensitive and platform
+convention keeps legal/restore links quiet. Options: (a) leave as the
+paywall convention (recorded exception), (b) convert to Button outline sm
+like everywhere else. Not pre-decided.

@@ -64,15 +64,13 @@ describe('the training card links to the plan it changed once applied (CO-2)', (
     expect(cardBody).toMatch(
       /\{applied && output\.appliedAdjustments\?\.training\?\.musclesChanged && navigation \? \(/,
     );
-    // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): the
-    // frozen styles.planEditLink now carries a mechanical live-theme append
-    // (style={[styles.planEditLink, live.planEditLink]}), same pattern as
-    // every other themed screen; the style key/behaviour it names is
-    // unchanged.
-    expect(cardBody).toMatch(/style=\{\[styles\.planEditLink, live\.planEditLink\]\}/);
-    expect(cardBody).toMatch(/accessibilityRole="button"/);
+    // Founder device report 2026-08-06 ("text only links", random look):
+    // the hand-rolled planEditLink pill became the shared Button outline
+    // variant. The CO-2 contract this suite pins is unchanged: the link
+    // exists, is gated, and uses the SAME treatment as the nutrition
+    // sibling (asserted below).
+    expect(cardBody).toMatch(/<Button\n\s+title="See your updated plan"\n\s+variant="outline"/);
     expect(cardBody).toMatch(/accessibilityLabel="See your updated plan"/);
-    expect(cardBody).toMatch(/<Text style=\{\[styles\.planEditLinkText, live\.planEditLinkText\]\}>See your updated plan<\/Text>/);
   });
 
   test('navigates to the Plans tab landing screen (no specific routine/plan id is tracked on this screen)', () => {
@@ -86,16 +84,12 @@ describe('the training card links to the plan it changed once applied (CO-2)', (
   });
 
   test('reuses the exact same link component/style as the nutrition-side food-level-receipt deep link', () => {
-    // The nutrition sibling (planEditNote.deepLink) uses the same
-    // styles.planEditLink / styles.planEditLinkText pair and
-    // accessibilityRole="button" convention.
+    // The nutrition sibling (planEditNote.deepLink) uses the same shared
+    // Button outline treatment as the training card's link above.
     const siblingStart = SCREEN.indexOf('planEditNote?.deepLink ? (');
     expect(siblingStart).toBeGreaterThan(-1);
     const siblingBlock = SCREEN.slice(siblingStart, siblingStart + 600);
-    // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): same
-    // mechanical live-theme style-array append as the training card above.
-    expect(siblingBlock).toMatch(/style=\{\[styles\.planEditLink, live\.planEditLink\]\}/);
-    expect(siblingBlock).toMatch(/style=\{\[styles\.planEditLinkText, live\.planEditLinkText\]\}/);
-    expect(siblingBlock).toMatch(/accessibilityRole="button"/);
+    expect(siblingBlock).toMatch(/<Button\n\s+title=\{planEditNote\.deepLink\.label\}\n\s+variant="outline"/);
+    expect(siblingBlock).toMatch(/accessibilityLabel=\{planEditNote\.deepLink\.label\}/);
   });
 });

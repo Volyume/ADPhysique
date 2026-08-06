@@ -112,7 +112,7 @@ import SectionLabel from '../components/SectionLabel';
 import Reanimated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { selectCoachOutputZones } from '../lib/coachOutputZones';
 import { isGreatWeek } from '../lib/shareCard/greatWeek';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, motion, letterSpacing, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, motion, letterSpacing } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): NO haptics
 // import here. coachOutputApplyMorph.guard.test.js pins this screen as
@@ -414,15 +414,20 @@ function TrainingNextWeekCard({
               lines away (the food-level receipt's "See your meal plan" link,
               same component/style/a11y). Same pattern here, once applied. */}
           {applied && output.appliedAdjustments?.training?.musclesChanged && navigation ? (
-            <TouchableOpacity
-              style={[styles.planEditLink, live.planEditLink]}
+            // Founder device report 2026-08-06 ("random look and feel, text
+            // only links"): every quiet action on this screen converges on
+            // the shared Button outline variant. Amber stays reserved for
+            // the hero Apply (A1 one-amber rule).
+            <Button
+              title="See your updated plan"
+              variant="outline"
+              size="sm"
+              icon="barbell-outline"
+              fullWidth={false}
+              style={styles.quietActionSpace}
               onPress={() => navigation.navigate('PlansTab', { screen: 'Plans', initial: false })}
-              accessibilityRole="button"
               accessibilityLabel="See your updated plan"
-            >
-              <Ionicons name="barbell-outline" size={14} color={t.colors.textSecondary} />
-              <Text style={[styles.planEditLinkText, live.planEditLinkText]}>See your updated plan</Text>
-            </TouchableOpacity>
+            />
           ) : null}
         </>
       )}
@@ -653,16 +658,16 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUn
           {/* COMP-006: only on standard holds, never alongside the ED-pattern
               or rapid-loss blocks, whose own copy + CTAs must not be diluted. */}
           {onLearnMore ? (
-            <TouchableOpacity
-              style={[styles.heldLearnMore, live.heldLearnMore]}
+            <Button
+              title="See how Precision Coaching decides"
+              variant="outline"
+              size="sm"
+              icon="information-circle-outline"
+              fullWidth={false}
+              style={styles.quietActionSpace}
               onPress={onLearnMore}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-              accessibilityRole="button"
               accessibilityLabel="See how Precision Coaching decides"
-            >
-              <Ionicons name="information-circle-outline" size={14} color={t.colors.textSecondary} />
-              <Text style={[styles.heldLearnMoreText, live.heldLearnMoreText]}>See how Precision Coaching decides</Text>
-            </TouchableOpacity>
+            />
           ) : null}
         </>
       ) : null}
@@ -693,15 +698,16 @@ function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUn
         </View>
       )}
       {onSeeAll ? (
-        <TouchableOpacity
-          style={styles.heldSeeAll}
+        <Button
+          title="See all weeks"
+          variant="outline"
+          size="sm"
+          trailingIcon="chevron-forward"
+          fullWidth={false}
+          style={styles.quietActionSpaceMd}
           onPress={onSeeAll}
-          accessibilityRole="button"
           accessibilityLabel="See all coaching decisions"
-        >
-          <Text style={[styles.heldSeeAllText, live.heldSeeAllText]}>See all weeks</Text>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-        </TouchableOpacity>
+        />
       ) : null}
     </Card>
   );
@@ -2488,37 +2494,38 @@ export default function CoachOutputScreen({ navigation, route }) {
             Review it, swap meals if needed, then add it to your diary.
           </Text>
           <View style={styles.nextWeekRow}>
-            <TouchableOpacity
-              style={[styles.planEditLink, live.planEditLink]}
+            <Button
+              title={planningWeek ? 'Building' : 'Fresh week'}
+              variant="outline"
+              size="sm"
+              icon="calendar-outline"
+              fullWidth={false}
               onPress={() => handlePlanNextWeek(false)}
               disabled={planningWeek}
-              accessibilityRole="button"
               accessibilityLabel="Plan a fresh week of meals"
-            >
-              <Ionicons name="calendar-outline" size={14} color={t.colors.textSecondary} />
-              <Text style={[styles.planEditLinkText, live.planEditLinkText]}>{planningWeek ? 'Building' : 'Fresh week'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.planEditLink, live.planEditLink]}
+            />
+            <Button
+              title="Repeat last week"
+              variant="outline"
+              size="sm"
+              icon="repeat-outline"
+              fullWidth={false}
               onPress={() => handlePlanNextWeek(true)}
               disabled={planningWeek}
-              accessibilityRole="button"
               accessibilityLabel="Repeat last week's meals"
-            >
-              <Ionicons name="repeat-outline" size={14} color={t.colors.textSecondary} />
-              <Text style={[styles.planEditLinkText, live.planEditLinkText]}>Repeat last week</Text>
-            </TouchableOpacity>
+            />
           </View>
           {planEditNote?.deepLink ? (
-            <TouchableOpacity
-              style={[styles.planEditLink, live.planEditLink]}
+            <Button
+              title={planEditNote.deepLink.label}
+              variant="outline"
+              size="sm"
+              icon="restaurant-outline"
+              fullWidth={false}
+              style={styles.quietActionSpace}
               onPress={() => navigation.navigate('DiaryTab', { screen: 'MealPlan', initial: false })}
-              accessibilityRole="button"
               accessibilityLabel={planEditNote.deepLink.label}
-            >
-              <Ionicons name="restaurant-outline" size={14} color={t.colors.textSecondary} />
-              <Text style={[styles.planEditLinkText, live.planEditLinkText]}>{planEditNote.deepLink.label}</Text>
-            </TouchableOpacity>
+            />
           ) : null}
         </View>
 
@@ -2675,22 +2682,26 @@ export default function CoachOutputScreen({ navigation, route }) {
         {/* Wave A B6: the coaching history was only reachable through the
             held-decisions card, so a consistently on-target user never saw a
             route to it. One permanent quiet link. */}
-        <TouchableOpacity
-          style={styles.historyQuietBtn}
+        <Button
+          title="Coaching history"
+          variant="outline"
+          size="sm"
+          icon="time-outline"
+          fullWidth={false}
+          style={styles.quietActionCentred}
           onPress={() => navigation.navigate('CoachHeldHistory')}
-          activeOpacity={0.8}
-          accessibilityRole="link"
           accessibilityLabel="Coaching history"
-        >
-          <Ionicons name="time-outline" size={14} color={t.colors.textSecondary} />
-          <Text style={[styles.historyQuietText, live.historyQuietText]}>Coaching history</Text>
-        </TouchableOpacity>
+        />
 
         {/* Done: a quiet text action (A1 one-amber rule). The hero Apply is
             the screen's only amber fill. */}
-        <TouchableOpacity style={styles.doneQuietBtn} onPress={handleClose} activeOpacity={0.8} accessibilityRole="button">
-          <Text style={[styles.doneQuietText, live.doneQuietText]}>Done</Text>
-        </TouchableOpacity>
+        <Button
+          title="Done"
+          variant="outline"
+          style={styles.quietActionSpace}
+          onPress={handleClose}
+          accessibilityLabel="Done"
+        />
 
         {/* D86 (founder 2026-07-23): the credential jargon row (volume
             landmarks / autoregulation / RED-S with inline tooltips) is gone.
@@ -2727,22 +2738,12 @@ const styles = StyleSheet.create({
   // sub-block; the compact card renders headline via planEditBody and one
   // muted line via scanAssessmentDetail.
   scanAssessmentDetail: { ...type.caption, color: colors.textSecondary },
-  planEditLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'flex-start',
-    gap: spacing.xs,
-    minHeight: 40,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    marginTop: spacing.xs,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-  },
-  planEditLinkText: { ...type.label, color: colors.textPrimary },
+  // Founder device report 2026-08-06: the screen's quiet actions (formerly a
+  // mix of hand-rolled pills and bare text links) all render the shared
+  // Button outline variant now; only these layout crumbs remain local.
+  quietActionSpace: { marginTop: spacing.xs },
+  quietActionSpaceMd: { marginTop: spacing.md },
+  quietActionCentred: { marginTop: spacing.sm, alignSelf: 'center' },
   nextWeekRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm },
   safe: {
     flex: 1,
@@ -3051,25 +3052,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   // U-B-1 §5: ≥44px tap target for the quiet held-decision link.
-  heldLearnMore: {
-    marginTop: spacing.sm,
-    minHeight: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-  },
-  heldLearnMoreText: {
-    ...type.label,
-    color: colors.textPrimary,
-  },
 
 
   // Diet break card (box from <Card>; only the gap is a local extra)
@@ -3109,32 +3091,7 @@ const styles = StyleSheet.create({
   // A1 one-amber rule: Done on the main card is a quiet text action (03 gap
   // #1). The solid doneBtn above stays for the insufficient-data and error
   // views, where it is the only action on screen.
-  doneQuietBtn: {
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.sm,
-    minHeight: 44, // U-B-1 §5
-  },
-  doneQuietText: {
-    ...type.bodyStrong,
-    color: colors.textSecondary,
-  },
   // Wave A B6: the permanent quiet route to the coaching history.
-  historyQuietBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    minHeight: 44,
-  },
-  historyQuietText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.textSecondary,
-  },
   // B4 countdown: deliberately neutral (surface + border, no amber).
   countdownCard: {
     backgroundColor: colors.surface,
@@ -3318,20 +3275,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     lineHeight: 18,
   },
-  heldSeeAll: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xxs,
-    marginTop: spacing.md,
-    paddingVertical: spacing.sm,
-    minHeight: 44, // U-B-1 §5
-  },
-  heldSeeAllText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.primary,
-  },
 });
 
 // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): the shared
@@ -3361,8 +3304,6 @@ function buildLiveStyles(t) {
     planEditHead: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     planEditBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     scanAssessmentDetail: { ...t.type.caption, color: t.colors.textSecondary },
-    planEditLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    planEditLinkText: { ...t.type.label, color: t.colors.textPrimary },
     safe: { backgroundColor: t.colors.background },
     shareWeekBtn: { backgroundColor: withAlpha(t.colors.success, alpha.tint) },
     shareWeekText: { ...t.type.label, color: t.colors.textPrimary },
@@ -3403,15 +3344,11 @@ function buildLiveStyles(t) {
     planNote: { borderTopColor: t.colors.border },
     planNoteText: { ...t.type.caption, color: t.colors.textMuted },
     confidenceCaption: { ...t.type.caption, color: t.colors.textMuted },
-    heldLearnMore: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    heldLearnMoreText: { ...t.type.label, color: t.colors.textPrimary },
     dietBreakTitle: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     dietBreakTitleHero: { ...t.type.h3, color: t.colors.textPrimary },
     dietBreakBody: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     dietBreakFootnote: { ...t.type.caption, color: t.colors.textMuted },
     doneBtnText: { fontSize: t.fontSize.lg },
-    doneQuietText: { ...t.type.bodyStrong, color: t.colors.textSecondary },
-    historyQuietText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     countdownCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     countdownLine: { ...t.type.h3, color: t.colors.textPrimary },
     countdownCheckpointTitle: { ...t.type.bodyStrong, color: t.colors.textSecondary },
@@ -3439,6 +3376,5 @@ function buildLiveStyles(t) {
     heldHistoryDate: { ...t.type.caption, color: t.colors.textMuted },
     heldHistoryText: { ...t.type.bodySm, color: t.colors.textSecondary },
     heldHistoryEmptyText: { ...t.type.caption, color: t.colors.textMuted },
-    heldSeeAllText: { fontSize: t.fontSize.sm, color: t.colors.primary },
   };
 }
