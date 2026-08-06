@@ -489,13 +489,21 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
   async function loadVolumeAndHistory() {
     if (!user?.id) return;
-    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    // O16 (comprehension-trust audit 2026-08-06): "This week's volume" used a
+    // rolling trailing-7-days window from the moment of viewing; every other
+    // weekly surface (and this screen's own sleep check-in write) anchors to
+    // the Monday-start local week. Anchored to the SESSION's week, bounded
+    // both ends, so a history reopen shows that week's totals rather than a
+    // window trailing from today.
+    const weekMs = 7 * 24 * 60 * 60 * 1000;
+    const sessionWeekStart = localWeekStartMs(workoutDayMs({ startedAt, endedAt }));
+    const sessionWeekEnd = sessionWeekStart + weekMs;
     const [allSets, allExercises, allWorkouts] = await Promise.all([
       getCompletedWorkoutSets(user.id),
       getAllExercises(),
       getAllWorkouts(user.id),
     ]);
-    const recentSets = allSets.filter(s => s.createdAt >= weekAgo);
+    const recentSets = allSets.filter(s => s.createdAt >= sessionWeekStart && s.createdAt < sessionWeekEnd);
     const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
     const volume = calculateWeeklyVolume(recentSets, exerciseMap);
     setWeeklyVolume(volume);
@@ -1286,7 +1294,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           <RevealSection delay={1460}>
           <View style={styles.section}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Text style={[styles.sectionTitle, live.sectionTitle]}>This week's volume</Text>
+              {/* O16: a history reopen shows the SESSION's week, so the
+                  heading must not claim the current one. */}
+              <Text style={[styles.sectionTitle, live.sectionTitle]}>{readOnly ? "That week's volume" : "This week's volume"}</Text>
               {/* O1 (comprehension-trust-audit-2026-08-06): 'minimum' used
                   to share the warning yellow with 'near_mrv' -- one colour
                   giving two opposite instructions ("add more" vs "ease

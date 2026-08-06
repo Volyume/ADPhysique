@@ -13,7 +13,7 @@ import {
   calculate1RM, calculateTonnage, shouldDeload,
 } from '../lib/algorithms';
 import { logError } from '../lib/errorLog';
-import { localDayKey } from '../lib/dayKey';
+import { localDayKey, localWeekStartMs } from '../lib/dayKey';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -250,9 +250,13 @@ export default function useProgressData() {
 
   async function loadVolumeSnapshot(sets, exMap, isCurrentRequest = () => true) {
     if (!isCurrentRequest()) return;
-    const now = Date.now();
-    const weekAgo = now - WEEK_MS;
-    const recentSets = sets.filter(s => (s.createdAt ?? s.created_at ?? 0) >= weekAgo);
+    // T7 (comprehension-trust audit 2026-08-06): this used a rolling
+    // trailing-7-days window while the streak strip on the same screen used
+    // the Monday-anchored calendar week, so two "this week" numbers on one
+    // screen could disagree. dayKey.js's own rule: every "this week"
+    // boundary uses localWeekStartMs.
+    const weekStart = localWeekStartMs(Date.now());
+    const recentSets = sets.filter(s => (s.createdAt ?? s.created_at ?? 0) >= weekStart);
     const vol = calculateWeeklyVolume(recentSets, exMap);
     setWeeklyVolume(vol);
   }
@@ -403,9 +407,10 @@ export default function useProgressData() {
   function loadMuscleFrequency(sets, exMap, isCurrentRequest = () => true) {
     if (!isCurrentRequest()) return;
     try {
-      const now = Date.now();
-      const thisWeekStart = now - WEEK_MS;
-      const lastWeekStart = now - 2 * WEEK_MS;
+      // T7: calendar weeks (Monday-anchored), matching every other "this
+      // week vs last" surface; was a rolling now-minus-7-days pair.
+      const thisWeekStart = localWeekStartMs(Date.now());
+      const lastWeekStart = thisWeekStart - WEEK_MS;
 
       // Count distinct workout_ids per muscle per week-window
       // "session count" = number of unique workouts that included that muscle

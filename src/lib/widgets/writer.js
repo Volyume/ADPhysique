@@ -16,11 +16,14 @@
  * Triggered (no polling) on: workout finish, plan/schedule change,
  * foreground→background, and the existing background-fetch date rollover.
  */
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getActivePlan, getRoutinesForPlan, getCurrentMesocycleWeek,
   getWeeklySessionStats, getOpenEdPatternFlag,
 } from '../database';
 import { localWeekStartMs } from '../dayKey';
+import { loadStreakState } from '../streakState';
+import { isCalm, WELLBEING_KEY } from '../wellbeing';
 import { buildWidgetSnapshot, emptyWidgetSnapshot } from './snapshot';
 import { persistWidgetSnapshot } from './storage';
 
@@ -54,14 +57,30 @@ export async function gatherWidgetInputs(userId) {
   const stats = await getWeeklySessionStats(userId, weekStart).catch(() => ({ completed: 0, planned: 0 }));
   // ED-safety, fail CLOSED: a transient flag read maps to the truthy
   // 'read_failed' sentinel (edFlagOpen: !!edFlag below), so the persisted
-  // widget snapshot carries the suppressed bit on a read error.
+  // widget snapshot carries the suppressed bit on a read error. Calm mode is
+  // read the same fail-closed way and ORed in, matching useWeeklyStreak's
+  // suppression of the run number on the in-app surfaces.
   const edFlag = await getOpenEdPatternFlag(userId).catch(() => 'read_failed');
+  const wellbeing = await AsyncStorage.getItem(WELLBEING_KEY)
+    .then((v) => v || 'unspecified').catch(() => 'read_failed');
   const planned = (Array.isArray(routines) && routines.length) ? routines.length : (stats?.planned ?? 0);
+
+  // T1 (comprehension-trust audit 2026-08-06): streakWeeks was a hardcoded 0,
+  // so the widget's promised streak line could never render. The widget does
+  // NOT re-derive the run (forking useWeeklyStreak's rules -- plan target,
+  // manual goal, pauses, deloads, repairs -- is exactly the cross-surface
+  // divergence this audit exists to kill). It mirrors the persisted
+  // high-water instead: the run the user was actually SHOWN this week,
+  // written by the real computation. Until the run is seen in-app this week
+  // the widget shows its sessions fallback rather than a stale prior-week
+  // number that a lapse could have invalidated.
+  const streakState = await loadStreakState(userId).catch(() => null);
+  const shownRun = streakState?.highWater?.[String(weekStart)] ?? 0;
 
   return {
     nextSession,
-    consistency: { completed: stats?.completed ?? 0, planned, streakWeeks: 0 },
-    edFlagOpen: !!edFlag,
+    consistency: { completed: stats?.completed ?? 0, planned, streakWeeks: shownRun },
+    edFlagOpen: !!edFlag || wellbeing === 'read_failed' || isCalm(wellbeing),
   };
 }
 

@@ -16,10 +16,17 @@ jest.mock('../../database', () => ({
   getOpenEdPatternFlag: jest.fn(),
 }));
 jest.mock('../storage', () => ({ persistWidgetSnapshot: jest.fn().mockResolvedValue(true) }));
+jest.mock('../../streakState', () => ({ loadStreakState: jest.fn() }));
+jest.mock('@react-native-async-storage/async-storage', () => ({ getItem: jest.fn() }));
 
+const AsyncStorage = require('@react-native-async-storage/async-storage');
 const db = require('../../database');
+const { loadStreakState } = require('../../streakState');
+const { localWeekStartMs } = require('../../dayKey');
 const { persistWidgetSnapshot } = require('../storage');
 const { gatherWidgetInputs, writeWidgetSnapshot } = require('../writer');
+
+const CURRENT_WEEK_KEY = String(localWeekStartMs(Date.now()));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -28,6 +35,8 @@ beforeEach(() => {
   db.getCurrentMesocycleWeek.mockResolvedValue({ weekIndex: 2, plannedWeeks: 5 });
   db.getWeeklySessionStats.mockResolvedValue({ completed: 2, planned: 4 });
   db.getOpenEdPatternFlag.mockResolvedValue(null);
+  AsyncStorage.getItem.mockResolvedValue(null); // wellbeing unspecified
+  loadStreakState.mockResolvedValue({ highWater: { [CURRENT_WEEK_KEY]: 3 } });
 });
 
 describe('gatherWidgetInputs', () => {
@@ -39,7 +48,7 @@ describe('gatherWidgetInputs', () => {
     // weekIndex; re-anchored to the fixed, non-off-by-one value (weekIndex
     // 2 from the mock above -> week 2, not 3).
     expect(inputs.nextSession.weekInBlock).toEqual({ week: 2, total: 5 });
-    expect(inputs.consistency).toEqual({ completed: 2, planned: 4, streakWeeks: 0 });
+    expect(inputs.consistency).toEqual({ completed: 2, planned: 4, streakWeeks: 3 });
     // Privacy: the gathered object carries nothing weight/calorie/body-shaped.
     expect(JSON.stringify(inputs)).not.toMatch(/weight|kcal|calorie|macro|bodyfat/i);
   });
@@ -53,6 +62,28 @@ describe('gatherWidgetInputs', () => {
     db.getOpenEdPatternFlag.mockResolvedValue({ id: 'flag' });
     const inputs = await gatherWidgetInputs('u1');
     expect(inputs.edFlagOpen).toBe(true);
+  });
+
+  // T1 (comprehension-trust audit 2026-08-06): the streak the widget shows is
+  // the persisted high-water (the run the user was SHOWN this week), never a
+  // re-derivation and never a stale prior week.
+  test('streakWeeks mirrors this week\'s persisted high-water only', async () => {
+    loadStreakState.mockResolvedValue({ highWater: { '12345': 9 } }); // some other week
+    const inputs = await gatherWidgetInputs('u1');
+    expect(inputs.consistency.streakWeeks).toBe(0);
+  });
+
+  test('a failed streak-state read degrades to no streak, never throws', async () => {
+    loadStreakState.mockRejectedValue(new Error('fs down'));
+    const inputs = await gatherWidgetInputs('u1');
+    expect(inputs.consistency.streakWeeks).toBe(0);
+  });
+
+  test('calm mode suppresses like an open flag; a failed wellbeing read fails closed', async () => {
+    AsyncStorage.getItem.mockResolvedValue('calm');
+    expect((await gatherWidgetInputs('u1')).edFlagOpen).toBe(true);
+    AsyncStorage.getItem.mockRejectedValue(new Error('fs down'));
+    expect((await gatherWidgetInputs('u1')).edFlagOpen).toBe(true);
   });
 });
 
