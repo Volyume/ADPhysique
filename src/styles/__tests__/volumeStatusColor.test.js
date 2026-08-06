@@ -36,8 +36,13 @@ describe('volumeStatusColor', () => {
   test('maps the key statuses to the semantic tokens', () => {
     expect(volumeStatusColor('optimal')).toBe(colors.success);
     expect(volumeStatusColor('over_mrv')).toBe(colors.error);
-    expect(volumeStatusColor('minimum')).toBe(colors.warning);
+    // O1 (comprehension-trust-audit-2026-08-06): 'minimum' used to share
+    // colors.warning with 'near_mrv' -- one yellow, two opposite
+    // instructions ("add more" vs "ease off"). 'minimum' now gets its own
+    // distinct token; 'near_mrv' keeps the warning yellow.
+    expect(volumeStatusColor('minimum')).toBe(colors.macroCarb);
     expect(volumeStatusColor('near_mrv')).toBe(colors.warning);
+    expect(volumeStatusColor('minimum')).not.toBe(volumeStatusColor('near_mrv'));
     expect(volumeStatusColor('below')).toBe(colors.textMuted);
     expect(volumeStatusColor('unknown')).toBe(colors.textMuted);
   });
@@ -71,10 +76,17 @@ describe('stateColors grammar (COMP-027)', () => {
 
   test('volumeStatusColor resolves through the grammar (one system, no drift)', () => {
     expect(volumeStatusColor('optimal')).toBe(stateColors.onTrack);
-    expect(volumeStatusColor('minimum')).toBe(stateColors.watch);
+    // O1: 'minimum' resolves through the new `info` tone, not `watch`.
+    expect(volumeStatusColor('minimum')).toBe(stateColors.info);
     expect(volumeStatusColor('near_mrv')).toBe(stateColors.watch);
     expect(volumeStatusColor('over_mrv')).toBe(stateColors.act);
     expect(volumeStatusColor('below')).toBe(stateColors.neutral);
+  });
+
+  test('O1: info is a distinct token, not success-green or the warning yellow', () => {
+    expect(stateColors.info).toBe(colors.macroCarb);
+    expect(stateColors.info).not.toBe(stateColors.onTrack);
+    expect(stateColors.info).not.toBe(stateColors.watch);
   });
 
   test('CVD swap propagates to onTrack and act; watch stays Okabe-Ito yellow in both palettes', () => {

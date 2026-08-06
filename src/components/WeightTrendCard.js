@@ -5,6 +5,8 @@ import useTheme from '../hooks/useTheme';
 import VolyumeChart from './VolyumeChart';
 import { formatBodyWeight } from '../lib/units';
 import { formatNumber, formatWithUnit } from '../lib/format';
+import InfoTooltip from './InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 
 /**
  * "Your trend" card (COMP-004). Renders the calm, no-shame weight-trend
@@ -81,7 +83,14 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
 
   return (
     <View style={[styles.card, live.card]} accessible accessibilityLabel={a11y}>
-      <Text style={[styles.label, live.label]}>Your trend</Text>
+      {/* O6/O21 (comprehension-and-trust audit 2026-08-06): same EWMA gloss
+          BodyMetricsScreen's "Weight trend" card already shows, so the
+          identical smoothed value carries the same explanation everywhere
+          it appears. */}
+      <View style={styles.labelRow}>
+        <Text style={[styles.label, live.label]}>Your trend</Text>
+        <InfoTooltip text={GLOSSARY.ewma} size={13} />
+      </View>
 
       {hasSparkline && lineData.length >= 2 && (
         <View
@@ -159,6 +168,7 @@ const styles = StyleSheet.create({
   // textTransform exactly (no fontWeight override here), so this is a
   // like-for-like swap onto the named shared token.
   label: { ...type.overline, color: colors.textMuted },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   chartWrap: { width: '100%' },
   statRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   ewmaValue: { ...type.num('h3'), color: colors.textPrimary },

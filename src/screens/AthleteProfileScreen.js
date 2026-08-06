@@ -16,6 +16,8 @@ import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
+import InfoTooltip from '../components/InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 import BottomSheet from '../components/BottomSheet';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import useAppStore from '../store/useAppStore';
@@ -62,12 +64,19 @@ function formatDate(ms) {
 // (AthleteProfileScreen.physiqueTile.guard.test.js) stays untouched -- same
 // "sibling scope, own useTheme()" pattern as CardioHistoryScreen.js's
 // CardioTrend.
-function StatTile({ label, value, sub }) {
+// O2 (comprehension-and-trust audit 2026-08-06): optional `tooltip` prop adds
+// a persistent "how this works" InfoTooltip beside the tile's label -- used
+// only by the Volyume Score tile below, so the other tiles (body weight,
+// strength, freshness status) render exactly as before.
+function StatTile({ label, value, sub, tooltip = null }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <Card style={styles.statTile}>
-      <SectionLabel tone="muted">{label}</SectionLabel>
+      <View style={styles.statTileLabelRow}>
+        <SectionLabel tone="muted">{label}</SectionLabel>
+        {tooltip ? <InfoTooltip text={tooltip} size={13} /> : null}
+      </View>
       <Text style={[styles.statValue, live.statValue]} numberOfLines={2}>{value}</Text>
       {sub ? <Text style={[styles.statSub, live.statSub]}>{sub}</Text> : null}
     </Card>
@@ -483,7 +492,7 @@ export default function AthleteProfileScreen({ navigation }) {
 
         <View style={styles.grid}>
           <StatTile label="Body weight" value={weightText} sub={weightTileSub} />
-          <StatTile label={physiqueTile.label} value={physiqueTile.value} sub={physiqueTile.sub} />
+          <StatTile label={physiqueTile.label} value={physiqueTile.value} sub={physiqueTile.sub} tooltip={showPhysiqueScore ? GLOSSARY.volyumeScore : null} />
           <StatTile label="Strength" value={summary.strength?.overallLabel || 'No baseline yet'} sub={summary.strength ? `${summary.strength.count} tracked lifts` : 'Add your main lifts'} />
           <StatTile label={statusTile.label} value={statusTile.value} sub={statusTile.sub} />
         </View>
@@ -682,6 +691,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   // B-5: statLabel's typography now comes from SectionLabel (tone="muted").
+  statTileLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   statValue: { ...type.bodyStrong, color: colors.textPrimary },
   statSub: { ...type.captionTight, color: colors.textSecondary },
   section: { gap: spacing.md },

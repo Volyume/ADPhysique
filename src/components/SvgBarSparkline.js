@@ -11,7 +11,10 @@ import useTheme from '../hooks/useTheme';
  *
  * Props:
  *   data         array of points (left-to-right rendering)
- *   maxValue     value that fills the full chart height (defaults to max of data)
+ *   maxValue     value that fills the full chart height (defaults to max of data);
+ *                any point above it is clamped to a full-height bar rather
+ *                than overflowing (T20, 2026-08-06: a caller passing the
+ *                wrong scale must not silently clip the tallest values)
  *   width        chart width in px (default 220)
  *   height       chart height in px (default 64), does not include label row
  *   barWidth     px per bar (default 22)
@@ -72,7 +75,7 @@ export default function SvgBarSparkline({
       <Svg width={width} height={height + labelRow}>
       {data.map((point, i) => {
         const value = Math.max(0, point.value || 0);
-        const ratio = max > 0 ? value / max : 0;
+        const ratio = max > 0 ? Math.min(1, value / max) : 0;
         const barHeight = Math.max(minBarHeight, ratio * height);
         const x = startX + i * (barWidth + barGap);
         const y = height - barHeight;

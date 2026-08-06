@@ -78,17 +78,32 @@ function parseLooseDate(str) {
 // default ("Max weight"); 'e1rm' is the estimated max. Values come from
 // buildExerciseMetricSeries so distance/duration exercises (which reuse the
 // weight column) plot nothing rather than nonsense.
+// T24/O20 (comprehension-trust-audit-2026-08-06): 'volume' and
+// 'bestSetVolume' used to read "Volume"/"Best-set vol" -- but the app
+// already defines "Volume" app-wide as weekly hard sets (GLOSSARY.volume),
+// a different concept from a session's weight-times-reps total, and
+// colliding the two names misled users. Renamed to "Total lifted" language,
+// matching LiftProgressScreen's row lens rename; the two stay distinct
+// (session sum vs single best set).
 const CHART_METRICS = [
   { key: 'e1rm', label: 'Est. max' },
   { key: 'heaviest', label: 'Max weight' },
   { key: 'reps', label: 'Total reps' },
-  { key: 'volume', label: 'Volume' },
-  { key: 'bestSetVolume', label: 'Best-set vol' },
+  { key: 'volume', label: 'Total lifted' },
+  { key: 'bestSetVolume', label: 'Best-set lifted' },
 ];
 
 // Whether a metric's values are a weight in the display unit (so the tooltip
 // and takeaway append kg/lbs) or a bare count (reps) / derived load.
 const WEIGHT_METRICS = new Set(['e1rm', 'heaviest']);
+
+// T24/O20: 'volume' and 'bestSetVolume' are also weights (kg) in the
+// display unit, not bare counts -- but they stay OUT of WEIGHT_METRICS
+// because that set also gates e1rmTakeaway (the "best X kg, up Y kg" chart
+// summary), which is worded for a single best-set trend and would read
+// oddly applied to a summed session total. This set only controls the
+// tooltip's unit + thousands-separator formatting.
+const LOAD_TOTAL_METRICS = new Set(['volume', 'bestSetVolume']);
 
 // Build one dated chart point per session for every lens, oldest -> newest,
 // reusing buildExerciseMetricSeries for the e1rm/heaviest/reps/volume arrays so
@@ -753,7 +768,20 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {/* Strength trend chart */}
         {allChartPoints.length >= 2 && (
           <View style={styles.chartSection}>
-            <Text style={[styles.chartLabel, live.chartLabel]}>Strength trend</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Text style={[styles.chartLabel, live.chartLabel]}>Strength trend</Text>
+              {/* T24/O20: plain-English gloss for the total-lifted lenses.
+                  Not GLOSSARY.volume -- that entry describes the app's
+                  OTHER "Volume" (weekly hard sets), a different concept. */}
+              {LOAD_TOTAL_METRICS.has(chartMetric) && (
+                <InfoTooltip
+                  text={chartMetric === 'volume'
+                    ? "Total weight moved: each set's weight times reps, added up."
+                    : "Your single heaviest set that session: its weight times reps."}
+                  size={11}
+                />
+              )}
+            </View>
             <WindowChips windows={TREND_WINDOWS} selectedKey={chartWindowKey} onSelect={selectChartWindow}
               accessibilityPrefix="strength trend window" />
             {!!chartTakeaway && <Text style={[styles.chartTakeaway, live.chartTakeaway]}>{chartTakeaway}</Text>}
@@ -791,10 +819,18 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                   formatTooltip={(i) => {
                     const p = windowedPoints[i];
                     if (!p) return null;
+                    // T24/O20: volume/bestSetVolume are kg totals that can
+                    // run into five figures, so they get the unit AND an
+                    // en-GB thousands separator, same as the
+                    // LiftProgressScreen headline for the equivalent lens.
+                    const raw = p[activeYKey];
+                    const title = activeMetricIsWeight
+                      ? `${Math.round(raw)} ${units}`
+                      : LOAD_TOTAL_METRICS.has(chartMetric)
+                        ? `${Math.round(raw).toLocaleString('en-GB')} ${units}`
+                        : `${Math.round(raw)}`;
                     return {
-                      title: activeMetricIsWeight
-                        ? `${Math.round(p[activeYKey])} ${units}`
-                        : `${Math.round(p[activeYKey])}`,
+                      title,
                       sub: p.date ? safeFormatDate(p.date, 'MMM d', '') : '',
                     };
                   }}

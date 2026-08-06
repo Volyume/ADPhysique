@@ -29,7 +29,11 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).toMatch(/sub: physiqueScoreTileSub\(summary\.scan\)/);
     expect(source).not.toMatch(/const score = Number\(scan\?\.visualLeannessScore\)/);
     expect(source).not.toMatch(/progressSignal === 'baseline' \? 'baseline'/);
-    expect(source).toMatch(/<StatTile label=\{physiqueTile\.label\} value=\{physiqueTile\.value\} sub=\{physiqueTile\.sub\} \/>/);
+    // O2 (comprehension-and-trust audit 2026-08-06): StatTile grew an
+    // optional `tooltip` prop for the persistent Volyume Score explanation;
+    // re-anchored to accept it while still pinning the same label/value/sub
+    // binding to physiqueTile.
+    expect(source).toMatch(/<StatTile label=\{physiqueTile\.label\} value=\{physiqueTile\.value\} sub=\{physiqueTile\.sub\} tooltip=\{showPhysiqueScore \? GLOSSARY\.volyumeScore : null\} \/>/);
     expect(source).toMatch(/weightLoggedAt/);
     expect(source).toMatch(/Open Progress to add body weight/);
     expect(source).toMatch(/Add your main lifts/);

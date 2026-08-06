@@ -301,20 +301,25 @@ describe('LiftProgressScreen — metric-switcher headline (item 7, campaign 2026
     expect(text).toContain('most reps');
   });
 
-  test('switching to Volume tracks the headline to the best session\'s volume, no unit suffix', async () => {
+  // T24/O20 (comprehension-trust-audit-2026-08-06): renamed from "Volume" to
+  // "Total lifted" (the app already defines "Volume" elsewhere as weekly
+  // hard sets; colliding the two names misled users), and the headline now
+  // carries the kg unit + en-GB thousands separator instead of a bare
+  // unitless number.
+  test('switching to Total lifted tracks the headline to the best session\'s total, with unit and separator', async () => {
     await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
     await flush();
 
     let headerTree;
     act(() => { headerTree = create(capturedListProps.ListHeaderComponent); });
-    const chip = findMetricChip(headerTree, 'Volume');
+    const chip = findMetricChip(headerTree, 'Total lifted');
     act(() => { chip.props.onPress(); });
 
     const row = capturedListProps.data.find(r => r.name === 'Barbell Bench Press');
     const text = renderedText(capturedListProps.renderItem({ item: row, index: 0 }));
     // Session volumes: 60*8=480, 97*3=291, 73*11=803 -> best is 803.
-    expect(text).toContain('803');
-    expect(text).toContain('best volume');
+    expect(text).toContain('803kg');
+    expect(text).toContain('total lifted');
   });
 });
 

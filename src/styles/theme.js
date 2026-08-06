@@ -750,6 +750,16 @@ export const stateColors = {
   get watch()   { return colors.warning; },
   get act()     { return colors.error; },
   get neutral() { return colors.textMuted; },
+  // O1 (comprehension-trust-audit-2026-08-06): a low-key "worth noting, no
+  // action needed" tone, distinct from `watch` (worth a look) and `act`
+  // (do something). Reuses macroCarb, the app's one existing blue/info-
+  // family token -- no separate info palette exists. CAVEAT: macroCarb is
+  // deliberately kept OUT of the colour-blind-safe modifier tables (see its
+  // own comment above), and CVD-dark's `success` swap already lands on the
+  // same hex (#56B4E9); under colour-blind-safe mode this token and
+  // `onTrack` can render identically. No CVD-safe blue exists yet in the
+  // palette to avoid that -- flagged here rather than silently shipped.
+  get info() { return colors.macroCarb; },
 };
 
 // Lazy getters so that swapping colors.success / colors.error (color-blind
@@ -771,10 +781,15 @@ export const volumeColors = {
 // capacity surface, so they are the first consumer of the shared grammar
 // rather than a parallel mapping. Resolves identically (stateColors aliases
 // the same semantic tokens), so no visual change.
+//
+// O1 (comprehension-trust-audit-2026-08-06): 'minimum' (under-trained, "add
+// more") and 'near_mrv' (near the ceiling, "ease off") used to share the
+// same warning yellow -- one colour, two opposite instructions. 'minimum'
+// now gets its own tone (stateColors.info); 'near_mrv' keeps 'watch'.
 const volumeStatusColors = {
   get unknown()  { return stateColors.neutral; },
   get below()    { return stateColors.neutral; },
-  get minimum()  { return stateColors.watch; },
+  get minimum()  { return stateColors.info; },
   get optimal()  { return stateColors.onTrack; },
   get near_mrv() { return stateColors.watch; },
   get over_mrv() { return stateColors.act; },
@@ -793,9 +808,9 @@ export function volumeStatusColor(status) {
 // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live variant for a
 // migrated screen's `const t = useTheme();` object. Resolves the SAME
 // status -> tone mapping as volumeStatusColors above (unknown/below ->
-// neutral, minimum/near_mrv -> watch, optimal -> onTrack, over_mrv -> act)
-// but reads it off the passed-in live `t.colors` instead of the frozen
-// singleton, so it stays in step with WorkoutSummaryScreen.js's own theme
+// neutral, minimum -> info, near_mrv -> watch, optimal -> onTrack,
+// over_mrv -> act) but reads it off the passed-in live `t.colors` instead of
+// the frozen singleton, so it stays in step with WorkoutSummaryScreen.js's own theme
 // generation. Returns a resolver function, not a precomputed map, so it can
 // be called directly as `buildVolumeStatusColor(t.colors)(status)`.
 export function buildVolumeStatusColor(c) {
@@ -803,10 +818,12 @@ export function buildVolumeStatusColor(c) {
   const watch = c.warning;
   const onTrack = c.success;
   const act = c.error;
+  // O1: distinct tone for 'minimum', see volumeStatusColors above.
+  const info = c.macroCarb;
   const map = {
     unknown: neutral,
     below: neutral,
-    minimum: watch,
+    minimum: info,
     optimal: onTrack,
     near_mrv: watch,
     over_mrv: act,

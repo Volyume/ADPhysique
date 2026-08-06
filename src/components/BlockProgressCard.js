@@ -1,6 +1,8 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import InfoTooltip from './InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 
 /**
  * Planned vs actual weekly volume per muscle for the current training block.
@@ -24,12 +26,20 @@ export default function BlockProgressCard({ blockProgress, currentMesoWeek }) {
       <View style={styles.header}>
         <Text style={[styles.title, live.title]}>This week's plan</Text>
         {currentMesoWeek && (
-          <Text style={[styles.week, live.week]}>
-            Week {currentMesoWeek.weekIndex}/{currentMesoWeek.plannedWeeks}
-            {currentMesoWeek.isDeload
-              ? ' · Recovery week'
-              : ` · Effort ${currentMesoWeek.rirTarget != null ? `${5 - currentMesoWeek.rirTarget}/5` : '–'}`}
-          </Text>
+          <View style={styles.weekGroup}>
+            <Text style={[styles.week, live.week]}>
+              Week {currentMesoWeek.weekIndex}/{currentMesoWeek.plannedWeeks}
+              {currentMesoWeek.isDeload
+                ? ' · Recovery week'
+                : ` · Effort ${currentMesoWeek.rirTarget != null ? `${5 - currentMesoWeek.rirTarget}/5` : '–'}`}
+            </Text>
+            {/* O15: GLOSSARY.effort, same term already defined for the app's
+                other effort chips (pattern: HomeBlockShapeSheet.js's GLOSSARY
+                use beside the block-shape chip it explains). */}
+            {!currentMesoWeek.isDeload && currentMesoWeek.rirTarget != null && (
+              <InfoTooltip text={GLOSSARY.effort} size={12} />
+            )}
+          </View>
         )}
       </View>
       {blockProgress.map(p => {
@@ -76,6 +86,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
+  },
+  weekGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
   },
   week: {
     ...type.caption,

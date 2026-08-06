@@ -1287,12 +1287,18 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           <View style={styles.section}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
               <Text style={[styles.sectionTitle, live.sectionTitle]}>This week's volume</Text>
+              {/* O1 (comprehension-trust-audit-2026-08-06): 'minimum' used
+                  to share the warning yellow with 'near_mrv' -- one colour
+                  giving two opposite instructions ("add more" vs "ease
+                  off"). 'minimum' now has its own line and its own colour
+                  (theme.js's stateColors.info). */}
               <InfoTooltip size={11} text={
                 'How much you\'ve trained each muscle group this week.\n\n' +
                 'Green = Good range: enough training to grow without overdoing it\n' +
                 'Yellow = Getting close: one more session and it may be too much\n' +
                 'Red = Too much: consider doing a little less next week\n' +
-                'Grey = Below minimum: not quite enough to drive growth yet\n\n' +
+                'Blue = Just enough: right at the floor, one or two more sets would be stronger\n' +
+                'Grey = Below target: not enough logged yet to drive growth\n\n' +
                 'These ranges are research-based starting points, the same for everyone. You can tune them to your own body with Edit volume targets on the Volume screen.'
               } />
             </View>

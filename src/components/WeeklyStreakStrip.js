@@ -1,6 +1,8 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import InfoTooltip from './InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 
 /**
  * "This week" strip (COMP-018), the first section of the Progress tab.
@@ -67,7 +69,15 @@ export default function WeeklyStreakStrip({ vm }) {
         <Text style={[styles.count, live.count]}>{left}</Text>
         <Text style={[styles.countSub, live.countSub]}>{leftSub}</Text>
       </View>
-      {right ? <Text style={[styles.run, live.run]}>{right}</Text> : null}
+      {right ? (
+        <View style={styles.runGroup}>
+          <Text style={[styles.run, live.run]}>{right}</Text>
+          {/* O24: persistent explanation of the streak criterion, matching
+              ConsistencyEcho's tooltip via the shared GLOSSARY entry so the
+              wording can never diverge between the two surfaces. */}
+          <InfoTooltip text={GLOSSARY.streakWeeks} size={13} />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -88,6 +98,7 @@ const styles = StyleSheet.create({
     minHeight: 56,
   },
   left: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs },
+  runGroup: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs, flexShrink: 1 },
   count: { ...type.num('h3'), color: colors.textPrimary },
   countSub: { fontSize: fontSize.sm, color: colors.textMuted },
   run: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.semibold, flexShrink: 1, textAlign: 'right' },

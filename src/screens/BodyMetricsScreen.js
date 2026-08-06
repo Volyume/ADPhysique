@@ -139,30 +139,60 @@ const NUTRITION_KEY = '@volyume_nutrition_targets';
 // (t.colors) on the buildVolumeStatusColor(t.colors) precedent -- the
 // weight-trend -> label + tone mapping is byte-identical in meaning, only
 // the token SOURCE moved from the frozen import to the live theme.
-function detectPhase(entries, c = colors) {
+// T23/O8 (comprehension-and-trust audit 2026-08-06): the chip used to
+// regress over the last 8 logged ENTRIES regardless of when they were
+// logged, so a sporadic logger could see a verdict computed from months-old
+// weigh-ins presented as current. Bound the window to the last 42 days
+// (six weeks, matching the tooltip copy below) and require at least 3
+// entries inside that window; otherwise there isn't enough recent signal
+// and the chip stays hidden rather than showing a stale one. The regression
+// method itself (least-squares slope, index-based x within the window) is
+// unchanged.
+const PHASE_WINDOW_DAYS = 42;
+
+function detectPhase(entries, c = colors, now = Date.now()) {
   // DATA-001: require a real positive weight, not just non-null. A stray 0 kg
   // or negative row (legacy import artefact) must not skew the slope.
   const withWeight = entries.filter(e => Number(e.body_weight) > 0);
   if (withWeight.length < 3) return null;
 
-  // Use most recent 8 entries (sorted oldest first)
-  const sorted = [...withWeight]
-    .sort((a, b) => a.metric_date.localeCompare(b.metric_date))
-    .slice(-8);
+  const cutoff = now - PHASE_WINDOW_DAYS * 86400000;
+  const recent = withWeight.filter((e) => {
+    const t = new Date(e.metric_date).getTime();
+    return Number.isFinite(t) && t >= cutoff;
+  });
+  if (recent.length < 3) return null;
 
+  // Sorted oldest first within the recent window.
+  const sorted = [...recent]
+    .sort((a, b) => a.metric_date.localeCompare(b.metric_date));
+
+  // Lead review on T23: regress against elapsed DAYS, not entry index. The
+  // old kg-per-entry slope changed meaning with logging density (a daily
+  // logger needed over 1 kg a week of real change to move the ±0.15
+  // per-entry threshold), and bounding the window without fixing that would
+  // have made dense logs read "Maintaining" through genuine trends. kg/day
+  // against a ±0.2 kg/week band is density-independent.
   const n = sorted.length;
-  const xMean = (n - 1) / 2;
+  const t0 = new Date(sorted[0].metric_date).getTime();
+  const xs = sorted.map((e) => (new Date(e.metric_date).getTime() - t0) / 86400000);
+  const xMean = xs.reduce((s, x) => s + x, 0) / n;
   const yMean = sorted.reduce((s, e) => s + e.body_weight, 0) / n;
 
   let num = 0, den = 0;
   sorted.forEach((e, i) => {
-    num += (i - xMean) * (e.body_weight - yMean);
-    den += (i - xMean) ** 2;
+    num += (xs[i] - xMean) * (e.body_weight - yMean);
+    den += (xs[i] - xMean) ** 2;
   });
-  const slope = den === 0 ? 0 : num / den; // kg per entry
+  const slopePerDay = den === 0 ? 0 : num / den; // kg per day
+  const perWeek = slopePerDay * 7;
 
-  if (slope > 0.15)       return { label: 'Gaining',     color: c.success,  icon: 'trending-up' };
-  if (slope < -0.15)      return { label: 'Losing weight', color: c.warning,  icon: 'trending-down' };
+  // Class B (docs/rules/styling.md, ED-safety presentation): body-weight
+  // trends are NEVER valence-coloured. The old chip painted Gaining green
+  // and Losing amber; all three directions now wear the same neutral chip
+  // colour, direction is carried by the icon and the word alone.
+  if (perWeek > 0.2)  return { label: 'Gaining',       color: c.primary, icon: 'trending-up' };
+  if (perWeek < -0.2) return { label: 'Losing weight', color: c.primary, icon: 'trending-down' };
   return { label: 'Maintaining', color: c.primary, icon: 'remove-outline' };
 }
 
@@ -1042,6 +1072,10 @@ export default function BodyMetricsScreen() {
                 <View style={[styles.phaseChip, { borderColor: phase.color }]}>
                   <Ionicons name={phase.icon} size={12} color={phase.color} />
                   <Text style={[styles.phaseLabel, live.phaseLabel, { color: phase.color }]}>{phase.label}</Text>
+                  {/* T23/O8: the chip's basis is invisible without this -- and it is a
+                      DIFFERENT calculation from the EWMA "Weekly change" figure below,
+                      so the copy names its own window rather than reusing GLOSSARY.ewma. */}
+                  <InfoTooltip text="Based on the direction of your weigh-ins over the last six weeks." size={12} />
                 </View>
               )}
             </View>
@@ -1116,8 +1150,8 @@ export default function BodyMetricsScreen() {
                 ) : (
                   <>
                     <View style={styles.burnRow}>
-                      <Text style={[styles.burnValue, live.burnValue]}>{adaptiveBurn.adjustedTDEE}</Text>
-                      <Text style={[styles.burnUnit, live.burnUnit]}>kcal/day</Text>
+                      <Text style={[styles.burnValue, live.burnValue]}>{toEnergy(adaptiveBurn.adjustedTDEE, energyUnit)}</Text>
+                      <Text style={[styles.burnUnit, live.burnUnit]}>{energyUnitLabel(energyUnit)}/day</Text>
                     </View>
                     {adaptiveBurn.insight ? (
                       <Text style={[styles.burnMuted, live.burnMuted]}>{adaptiveBurn.insight}</Text>

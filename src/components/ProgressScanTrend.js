@@ -18,6 +18,8 @@ import { colors, spacing, radius, type, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
+import InfoTooltip from './InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 import {
   buildTrendPoints,
   trendLadderLabel,
@@ -56,7 +58,13 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
     return (
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text style={[styles.title, live.title]}>Score trend</Text>
+          <View style={styles.titleRow}>
+            <Text style={[styles.title, live.title]}>Score trend</Text>
+            {/* O2: persistent explanation of the score itself and what the
+                marker shapes (filled/hollow/dashed) encode -- the one-time
+                meaning moment never comes back once dismissed. */}
+            <InfoTooltip text={GLOSSARY.volyumeScore} size={13} />
+          </View>
           <Text style={[styles.subtitle, live.subtitle]}>
             Comparable photo sets only. Gaps are shown, never smoothed over.
           </Text>
@@ -165,6 +173,7 @@ const styles = StyleSheet.create({
   },
   title: { ...type.h3, color: colors.textPrimary },
   headerCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   subtitle: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   ladderRow: { paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
   ladderText: { ...type.bodyStrong, color: colors.textPrimary },

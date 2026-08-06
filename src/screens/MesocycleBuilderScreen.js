@@ -412,25 +412,36 @@ function ActiveMesoDashboard({ stats, currentWeek }) {
 
       {/* Recovery row */}
       {(recovery.soreness != null || recovery.fatigue != null) && (
-        <View style={styles.recovRow}>
-          {recovery.soreness != null && (
-            <View style={styles.recovItem}>
-              <Text style={[styles.recovValue, live.recovValue]}>{recovery.soreness.toFixed(1)}</Text>
-              <Text style={[styles.recovLabel, live.recovLabel]}>Soreness</Text>
-            </View>
-          )}
-          {recovery.fatigue != null && (
-            <View style={styles.recovItem}>
-              <Text style={[styles.recovValue, live.recovValue]}>{recovery.fatigue.toFixed(1)}</Text>
-              <Text style={[styles.recovLabel, live.recovLabel]}>Fatigue</Text>
-            </View>
-          )}
-          {recovery.joint != null && (
-            <View style={styles.recovItem}>
-              <Text style={[styles.recovValue, live.recovValue]}>{recovery.joint.toFixed(1)}</Text>
-              <Text style={[styles.recovLabel, live.recovLabel]}>Joints</Text>
-            </View>
-          )}
+        <View style={styles.recovWrap}>
+          <View style={styles.recovHeaderRow}>
+            <Text style={[styles.tonnageLabel, live.tonnageLabel]}>Recovery</Text>
+            {/* O25: bare decimals with no scale or direction; wording aligned
+                with ReadinessCards.js's own corrected tooltip (T21/O9 fix). */}
+            <InfoTooltip
+              size={13}
+              text="Scored 1-5, where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore or tired). Joints is the same scale, where 1 = comfortable. It is a running average weighted so your most recent week counts most, older sessions fade out."
+            />
+          </View>
+          <View style={styles.recovRow}>
+            {recovery.soreness != null && (
+              <View style={styles.recovItem}>
+                <Text style={[styles.recovValue, live.recovValue]}>{recovery.soreness.toFixed(1)}</Text>
+                <Text style={[styles.recovLabel, live.recovLabel]}>Soreness</Text>
+              </View>
+            )}
+            {recovery.fatigue != null && (
+              <View style={styles.recovItem}>
+                <Text style={[styles.recovValue, live.recovValue]}>{recovery.fatigue.toFixed(1)}</Text>
+                <Text style={[styles.recovLabel, live.recovLabel]}>Fatigue</Text>
+              </View>
+            )}
+            {recovery.joint != null && (
+              <View style={styles.recovItem}>
+                <Text style={[styles.recovValue, live.recovValue]}>{recovery.joint.toFixed(1)}</Text>
+                <Text style={[styles.recovLabel, live.recovLabel]}>Joints</Text>
+              </View>
+            )}
+          </View>
         </View>
       )}
 
@@ -474,6 +485,8 @@ const styles = StyleSheet.create({
   progFill:   { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   tonnageWrap: { gap: spacing.xs },
   tonnageLabel: { ...type.caption, color: colors.textMuted },
+  recovWrap: { gap: spacing.xs },
+  recovHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   recovRow:   { flexDirection: 'row', gap: spacing.lg },
   recovItem:  { alignItems: 'center', gap: spacing.xxs },
   recovValue: { ...type.num('bodyStrong'), color: colors.textPrimary },

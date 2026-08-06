@@ -14,6 +14,8 @@ import { getBlockReflectionData } from '../lib/database';
 import { safeDate, safeToFixed } from '../lib/safeFormat';
 import { SkeletonCard } from '../components/Skeleton';
 import { selection as hapticSelection } from '../lib/haptics';
+import InfoTooltip from '../components/InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 
 const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -29,7 +31,9 @@ function fmtDate(ms) {
   return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-function StatBlock({ icon, value, label }) {
+// O22: optional `tooltip` prop -- only Sets and Volume pass one (Sessions and
+// Avg session need no gloss), so the other stat blocks render unchanged.
+function StatBlock({ icon, value, label, tooltip = null }) {
   // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
   // See buildLiveStyles' header comment (defined below the frozen `styles`
   // block) for why.
@@ -39,7 +43,10 @@ function StatBlock({ icon, value, label }) {
     <View style={styles.statBlock}>
       <Ionicons name={icon} size={20} color={t.colors.primary} style={styles.statIcon} />
       <Text style={[styles.statValue, live.statValue]}>{value}</Text>
-      <Text style={[styles.statLabel, live.statLabel]}>{label}</Text>
+      <View style={styles.statLabelRow}>
+        <Text style={[styles.statLabel, live.statLabel]}>{label}</Text>
+        {tooltip ? <InfoTooltip text={tooltip} size={11} /> : null}
+      </View>
     </View>
   );
 }
@@ -204,11 +211,12 @@ export default function BlockReflectionScreen({ navigation, route }) {
             {/* 4-stat row */}
             <View style={[styles.statsRow, live.statsRow]}>
               <StatBlock icon="barbell-outline" value={String(data.totalSessions)} label="Sessions" />
-              <StatBlock icon="layers-outline" value={data.totalSets.toLocaleString('en-GB')} label="Sets" />
+              <StatBlock icon="layers-outline" value={data.totalSets.toLocaleString('en-GB')} label="Sets" tooltip={GLOSSARY.workingSets} />
               <StatBlock
                 icon="trending-up-outline"
                 value={`${data.tonnage.toLocaleString('en-GB')} kg`}
                 label="Volume"
+                tooltip={GLOSSARY.tonnage}
               />
               {data.avgDuration > 0 && (
                 <StatBlock icon="time-outline" value={`${data.avgDuration}m`} label="Avg session" />
@@ -229,15 +237,23 @@ export default function BlockReflectionScreen({ navigation, route }) {
                   <Ionicons name="trophy-outline" size={16} color={t.colors.primary} />
                   <SectionLabel accessibilityRole="header">Records set this block</SectionLabel>
                 </View>
-                {data.prs.map((pr, i) => (
-                  <View key={i} style={[styles.prRow, live.prRow]}>
-                    <View style={styles.prInfo}>
-                      <Text style={[styles.prExercise, live.prExercise]}>{pr.exerciseName ?? pr.exercise_name}</Text>
-                      <Text style={[styles.prType, live.prType]}>{PR_TYPE_LABELS[pr.recordType ?? pr.record_type] ?? pr.recordType}</Text>
+                {data.prs.map((pr, i) => {
+                  const recordType = pr.recordType ?? pr.record_type;
+                  return (
+                    <View key={i} style={[styles.prRow, live.prRow]}>
+                      <View style={styles.prInfo}>
+                        <Text style={[styles.prExercise, live.prExercise]}>{pr.exerciseName ?? pr.exercise_name}</Text>
+                        <View style={styles.prTypeRow}>
+                          <Text style={[styles.prType, live.prType]}>{PR_TYPE_LABELS[recordType] ?? recordType}</Text>
+                          {/* O22: GLOSSARY.estMax, reused rather than a new entry -- the
+                              estimate concept is identical everywhere it appears. */}
+                          {recordType === '1rm_estimate' && <InfoTooltip text={GLOSSARY.estMax} size={11} />}
+                        </View>
+                      </View>
+                      <Text style={[styles.prValue, live.prValue]}>{safeToFixed(pr.value, 1)}{units}</Text>
                     </View>
-                    <Text style={[styles.prValue, live.prValue]}>{safeToFixed(pr.value, 1)}{units}</Text>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             )}
 
@@ -308,6 +324,7 @@ const styles = StyleSheet.create({
   },
   statIcon: { marginBottom: spacing.xxs },
   statValue: { fontSize: fontSize.lg, fontWeight: fontWeight.black, color: colors.textPrimary },
+  statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   statLabel: { ...type.caption, color: colors.textMuted },
 
   narrativeCard: {
@@ -331,6 +348,7 @@ const styles = StyleSheet.create({
   },
   prInfo: { flex: 1, gap: spacing.xxs },
   prExercise: { ...type.label, color: colors.textPrimary },
+  prTypeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   prType: { ...type.caption, color: colors.textMuted },
   prValue: { ...type.num('bodyStrong'), color: colors.primary },
 

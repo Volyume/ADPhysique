@@ -261,7 +261,7 @@ export function WorkloadCard({ data }) {
   const live = buildLiveStyles(t);
   if (!data || data.ratio === null) return null;
 
-  const { acute, chronic, ratio } = data;
+  const { acute, chronic, ratio, weeksOfData } = data;
 
   let statusColor = t.colors.textMuted;
   let statusText = 'Below your recent average (under 0.8). Room for more volume if you feel fresh.';
@@ -279,7 +279,7 @@ export function WorkloadCard({ data }) {
   // Simple visual bar: fill proportional to ratio, capped at 2.0
   const fillPct = Math.min(ratio / 2.0, 1);
 
-  const takeaway = workloadTakeaway(ratio, acute, chronic);
+  const takeaway = workloadTakeaway(ratio, acute, chronic, weeksOfData);
 
   return (
     <View style={[styles.workloadCard, live.workloadCard]}>
@@ -303,7 +303,7 @@ export function WorkloadCard({ data }) {
         </View>
         <View style={styles.workloadStat}>
           <Text style={[styles.workloadStatValue, live.workloadStatValue]}>{chronic.toLocaleString('en-GB')}</Text>
-          <Text style={[styles.workloadStatLabel, live.workloadStatLabel]}>4-wk avg (kg)</Text>
+          <Text style={[styles.workloadStatLabel, live.workloadStatLabel]}>{Number.isFinite(weeksOfData) && weeksOfData > 0 ? weeksOfData : 4}-wk avg (kg)</Text>
         </View>
       </View>
 

@@ -2,8 +2,16 @@ import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import SvgBarSparkline from './SvgBarSparkline';
+import HintCaption from './HintCaption';
 
 const DAY_ABBRS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// T20 (comprehension-trust-audit-2026-08-06): fatigueLevel is rated 1-5
+// (WorkoutSummaryScreen.js's RATING_LABELS.fatigueLevel: Fresh/Mild/
+// Moderate/High/Exhausted), not 1-4. The sparkline's maxValue must match
+// this scale or level-5 ("Exhausted") sessions render identically to
+// level-4 ("High") ones.
+const FATIGUE_SCALE_MAX = 5;
 
 // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
 // variant of the frozen fatigueBarColor(level) this file used to define
@@ -59,21 +67,29 @@ export default function FatigueTrendCard({ sessions }) {
 
   return (
     <View style={[styles.card, live.card]}>
-      <Text style={[styles.title, live.title]}>Training trend</Text>
+      <Text style={[styles.title, live.title]}>Fatigue trend</Text>
       <View style={styles.chartWrap}>
         <SvgBarSparkline
           data={data}
-          maxValue={4}
+          maxValue={FATIGUE_SCALE_MAX}
           width={240}
           height={64}
           barWidth={22}
           barGap={8}
           alignRight
-          accessibilityLabel={`Training fatigue trend, oldest to newest: ${data
-            .map(d => `${d.label || 'session'} level ${d.value} of 4`)
+          accessibilityLabel={`Fatigue trend, oldest to newest: ${data
+            .map(d => `${d.label || 'session'} level ${d.value} of ${FATIGUE_SCALE_MAX}`)
             .join(', ')}`}
         />
       </View>
+      {/* Permanent scale caption, not a one-time discovery hint: the "Got
+          it" tap has no dismiss handler, so the caption never disappears
+          (O23: the scale must stay visible, not exist only in the
+          screen-reader label). */}
+      <HintCaption
+        text="Self-rated fatigue after each session, 1 (fresh) to 5 (exhausted)."
+        onDismiss={() => {}}
+      />
       <Text style={[styles.coachLine, live.coachLine]}>{coachingLine(sessions)}</Text>
     </View>
   );

@@ -133,4 +133,20 @@ describe('chartWindows: workloadTakeaway', () => {
     expect(workloadTakeaway(1.1, 4000, undefined)).toBe('');
     expect(workloadTakeaway(1.1, NaN, 4000)).toBe('');
   });
+
+  // T22 (comprehension-trust-audit-2026-08-06): getAcuteChronicWorkload can
+  // average as few as 2 past weeks (it drops zero-tonnage weeks); the label
+  // must say the real count, not always claim 4.
+  test('a 2-week average reads "2-week", not a hardcoded 4', () => {
+    expect(workloadTakeaway(1.22, 12450, 10200, 2))
+      .toBe('This week: 12,450 kg against a 2-week average of 10,200 kg.');
+  });
+  test('a 3-week average reads "3-week"', () => {
+    expect(workloadTakeaway(0.9, 9000, 10000, 3))
+      .toBe('This week: 9,000 kg against a 3-week average of 10,000 kg.');
+  });
+  test('weeksOfData omitted defaults to 4 (back-compat for older callers)', () => {
+    expect(workloadTakeaway(1.22, 12450, 10200))
+      .toBe('This week: 12,450 kg against a 4-week average of 10,200 kg.');
+  });
 });

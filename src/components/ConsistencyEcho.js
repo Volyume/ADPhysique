@@ -20,6 +20,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
 import useWeeklyStreak from '../hooks/useWeeklyStreak';
 import useTheme from '../hooks/useTheme';
+import InfoTooltip from './InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 
 const EXPLAINER_SEEN_KEY = '@volyume_consistency_explainer_seen';
 
@@ -67,9 +69,15 @@ export default function ConsistencyEcho({ userId, scoffScore = 0 }) {
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.echoRow} accessible accessibilityLabel={line}>
-        <Ionicons name="ellipse" size={9} color={t.colors.primary} />
-        <Text style={[styles.echoText, live.echoText]}>{line}</Text>
+      <View style={styles.echoRow}>
+        <View style={styles.echoLabelGroup} accessible accessibilityLabel={line}>
+          <Ionicons name="ellipse" size={9} color={t.colors.primary} />
+          <Text style={[styles.echoText, live.echoText]}>{line}</Text>
+        </View>
+        {/* O24: persistent explanation of the streak criterion -- the one-time
+            explainer below is dismissable and never comes back, so this is the
+            only reachable place to relearn what keeps the run alive. */}
+        <InfoTooltip text={GLOSSARY.streakWeeks} size={13} />
       </View>
       {!explainerSeen ? (
         <View style={[styles.explainer, live.explainer]}>
@@ -92,7 +100,8 @@ export default function ConsistencyEcho({ userId, scoffScore = 0 }) {
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.xs, marginTop: spacing.sm },
-  echoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, justifyContent: 'center' },
+  echoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs, justifyContent: 'center' },
+  echoLabelGroup: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   echoText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
   explainer: {
     flexDirection: 'row',

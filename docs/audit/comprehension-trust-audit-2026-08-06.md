@@ -279,3 +279,33 @@ user benefit. Recorded here as a deliberate exception; revisit post-release.
 Every W2/W3 item lands with lint + full suite + guard tests where a founder
 rule is being pinned; briefs for dispatched work cite this document and its
 finding IDs as authority.
+
+---
+
+## D. Wave-2 landing notes (lead review, 2026-08-06)
+
+**T23 corrected in lead review.** The dispatched fix bounded detectPhase to
+42 days as ruled, but kept the kg-per-ENTRY slope; with a time window that
+threshold changes meaning with logging density (a daily logger needed over
+1 kg/week to move it). Re-built as a time-based regression (kg/day against
+a plus/minus 0.2 kg/week band), density-independent. Also caught in the
+same review: the phase chip valence-coloured a body-weight trend (Gaining =
+success green, Losing = warning amber), a live Class B breach of the
+styling canon's ED-safety presentation law that both audits missed. All
+three directions now wear the neutral chip colour.
+
+**O1 CVD caveat (recorded limitation).** 'minimum' now renders
+stateColors.info (macroCarb sky blue) for everyone; under colour-blind-safe
+mode that hex equals the CVD success swap, so 'minimum' and 'optimal' can
+render identically there. The obvious fix (Okabe-Ito #0072B2 as a CVD info
+override) VERIFIES AT ONLY 3.73:1 on the dark background and would fail
+WCAG for the chip label, so it was not shipped. The collision is between
+adjacent meanings (both no-alarm states), the status words and the new
+per-line legend disambiguate, and the pre-fix state was worse for every
+user (opposite meanings shared one yellow). FOLLOW-UP: design a
+contrast-verified CVD info hue through theme.test.js's WCAG harness.
+
+**T17 extension.** The training reminder's notification TITLE ("Today's a
+training day") asserted the scheduled-days premise the founder struck down
+on 2026-08-03; retitled to soft habit framing alongside the quiet-hours
+wiring.

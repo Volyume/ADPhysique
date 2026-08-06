@@ -86,6 +86,8 @@ import PhotoDetailsSheet from '../components/PhotoDetailsSheet';
 import HintCaption from '../components/HintCaption';
 import PhotoDateRangeSheet from '../components/PhotoDateRangeSheet';
 import PhotoDatePicker from '../components/PhotoDatePicker';
+import InfoTooltip from '../components/InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 import {
   formatVolyumeScore,
   progressScanAssessmentForDisplay,
@@ -1545,6 +1547,10 @@ export default function ProgressPhotosScreen({ navigation }) {
           <View style={[styles.libraryControls, live.libraryControls]}>
             <View style={styles.libraryHeader}>
               <Text style={[styles.libraryTitle, live.libraryTitle]}>Photo library</Text>
+              {/* O2: persistent "how this works" explanation for the Volyume
+                  Score shown on every card below (the one-time meaning moment
+                  is never reachable again once dismissed). */}
+              <InfoTooltip text={GLOSSARY.volyumeScore} size={13} />
             </View>
             <View
               style={[styles.segmentTrack, live.segmentTrack]}

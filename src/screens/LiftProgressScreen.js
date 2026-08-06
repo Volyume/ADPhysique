@@ -64,11 +64,18 @@ function isRecentBest(row) {
 // except totalReps/volume which sum the session. Mirrors Hevy's bestSet /
 // heaviestWeight / totalReps / bestSetVolume enum, framed as the user's own
 // progress (no comparison, no rank). Reuses already-loaded sets, no new query.
+// T24/O20 (comprehension-trust-audit-2026-08-06): this lens used to be
+// labelled "Volume", but the app already defines "Volume" app-wide as
+// weekly hard sets for a muscle (GLOSSARY.volume) -- a session's
+// weight-times-reps total is a different thing and colliding the two names
+// misled users. Renamed to plain "Total lifted" language; same underlying
+// series (see buildExerciseMetricSeries's 'volume' key), only the copy
+// changed.
 const METRICS = [
   { key: 'e1rm', label: 'Best set' },
   { key: 'heaviest', label: 'Heaviest' },
   { key: 'reps', label: 'Total reps' },
-  { key: 'volume', label: 'Volume' },
+  { key: 'volume', label: 'Total lifted' },
 ];
 
 // Item 7 (campaign 2026-07-10): the row's headline numeral used to stay
@@ -77,11 +84,16 @@ const METRICS = [
 // the headline label for its lens and whether the value is a weight in the
 // display unit (kg/lbs suffix) or a bare count, mirroring ExerciseDetail's
 // WEIGHT_METRICS split.
+//
+// T24/O20: 'volume' is a weight (kg), not a bare count -- isWeight flips to
+// true so the headline renders the unit and (session totals can run into
+// five figures) an en-GB thousands separator, instead of a bare unitless
+// number.
 const METRIC_HEADLINE = {
   e1rm: { label: 'est. max', isWeight: true },
   heaviest: { label: 'heaviest', isWeight: true },
   reps: { label: 'most reps', isWeight: false },
-  volume: { label: 'best volume', isWeight: false },
+  volume: { label: 'total lifted', isWeight: true },
 };
 
 export default function LiftProgressScreen({ navigation }) {
@@ -417,7 +429,7 @@ export default function LiftProgressScreen({ navigation }) {
                 item.name,
                 `${item.bestE1rm}${units} estimated max`,
                 (item.deltaPct != null && item.sessions > 1)
-                  ? `${item.deltaPct > 0 ? 'up' : item.deltaPct < 0 ? 'down' : 'no change'} ${Math.abs(item.deltaPct)} percent`
+                  ? `${item.deltaPct > 0 ? 'up' : item.deltaPct < 0 ? 'down' : 'no change'} ${Math.abs(item.deltaPct)} percent since your first logged session`
                   : null,
                 best ? 'recent best' : null,
               ].filter(Boolean).join(', ')}
@@ -426,9 +438,11 @@ export default function LiftProgressScreen({ navigation }) {
               <View style={styles.cardMain}>
                 <View style={styles.nameRow}>
                   <Text style={[styles.name, live.name]} numberOfLines={1}>{item.name}</Text>
+                  {/* O37: "PR" chip renamed to "Best", matching the app's
+                      own "New bests" language elsewhere. Styles unchanged. */}
                   {best && (
                     <View style={[styles.prTag, live.prTag]}>
-                      <Text style={[styles.prTagText, live.prTagText]}>PR</Text>
+                      <Text style={[styles.prTagText, live.prTagText]}>Best</Text>
                     </View>
                   )}
                 </View>
@@ -443,17 +457,33 @@ export default function LiftProgressScreen({ navigation }) {
                   Last time: {item.latestWeight}{units} - est. max {item.latestE1rm}{units}
                 </Text>
                 <View style={styles.statRow}>
-                  <Text style={[styles.statValue, live.statValue]}>{headlineValue}{headlineMeta.isWeight ? units : ''}</Text>
+                  <Text style={[styles.statValue, live.statValue]}>
+                    {/* T24/O20: the total-lifted lens can run into five
+                        figures (kg), so it gets an en-GB thousands
+                        separator; the other lenses are unaffected. */}
+                    {headlineMetric === 'volume' ? Math.round(headlineValue).toLocaleString('en-GB') : headlineValue}
+                    {headlineMeta.isWeight ? units : ''}
+                  </Text>
                   <Text style={[styles.statLabel, live.statLabel]}>{headlineMeta.label}</Text>
                   {/* U-D-3: plain-English gloss for estimated 1RM on the row.
                       Only meaningful for the e1RM lens itself. */}
                   {headlineMetric === 'e1rm' && <InfoTooltip text={GLOSSARY.estMax} size={11} />}
+                  {/* T24/O20: plain-English gloss for the total-lifted lens.
+                      Kept as an inline string, not GLOSSARY.volume -- that
+                      entry describes the app's OTHER "Volume" (weekly hard
+                      sets), a different concept from a session total. */}
+                  {headlineMetric === 'volume' && (
+                    <InfoTooltip text="Total weight moved: each set's weight times reps, added up." size={11} />
+                  )}
                   {item.deltaPct != null && item.sessions > 1 && (
                     <Text style={[styles.delta, live.delta, { color: trendColor(item.deltaPct) }]}>
                       {item.deltaPct > 0 ? '+' : ''}{item.deltaPct}%
                     </Text>
                   )}
                 </View>
+                {item.deltaPct != null && item.sessions > 1 && (
+                  <Text style={[styles.deltaCaption, live.deltaCaption]}>since first log</Text>
+                )}
               </View>
               <View style={styles.cardRight}>
                 {/* U-D-4: with only 1 to 2 points a sparkline reads as a near-flat
@@ -630,6 +660,9 @@ const styles = StyleSheet.create({
   statValue: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   statLabel: { ...type.caption, color: colors.textMuted },
   delta: { ...type.num('label'), marginLeft: spacing.xs },
+  // O29: the since-first-log clarifier under the +N% badge, in the same
+  // quiet caption register as `meta`/`lastTime` above.
+  deltaCaption: { ...type.captionTight, color: colors.textMuted },
   cardRight: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   trendBuilding: { width: 84, textAlign: 'center', fontSize: fontSize.xs, color: colors.textMuted },
   emptyStateWrap: { paddingTop: spacing.xxl },
@@ -679,6 +712,7 @@ function buildLiveStyles(t) {
     statValue: { fontSize: t.fontSize.lg, color: t.colors.textPrimary, fontVariant: ['tabular-nums'] },
     statLabel: { ...t.type.caption, color: t.colors.textMuted },
     delta: { ...t.type.num('label') },
+    deltaCaption: { ...t.type.captionTight, color: t.colors.textMuted },
     trendBuilding: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     emptyTitle: { ...t.type.title, color: t.colors.textPrimary },
     emptyText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
