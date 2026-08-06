@@ -41,6 +41,7 @@ import {
 // M4: the submit haptic now rides the Button primitive's success beat
 // (audit 03b §3.3b), so this screen no longer calls the vocabulary itself.
 import Button from '../components/Button';
+import BackHeader from '../components/BackHeader';
 import Chip from '../components/Chip';
 import TextField from '../components/TextField';
 import { summariseWeekCardio, cardioComplianceFromLog } from '../lib/cardio/cardioEngine';
@@ -1384,16 +1385,14 @@ export default function WeeklyCheckInScreen({ navigation }) {
     const dayName = DAYS_FULL[checkinDayNum];
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-        {/* Header bar matches the rest of the app: single chevron back,
-            screen title in line. Empty card style below mirrors the
+        {/* O34 (comprehension-trust-audit-2026-08-06): the shared BackHeader
+            replaces the hand-rolled back-chevron header this gate used to
+            draw locally (styling.md "Header trio" - no fourth hand-rolled
+            shape). onBack is explicit so this keeps calling the SAME
+            navigation prop the old handler used, not whatever BackHeader's
+            own useNavigation() resolves. Empty card style below mirrors the
             BodyMetrics empty state for visual consistency. */}
-        <View style={styles.gateHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
-            <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={[styles.gateHeaderTitle, live.gateHeaderTitle]}>Weekly check-in</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        <BackHeader title="Weekly check-in" onBack={() => navigation.goBack()} />
         <ScrollView contentContainerStyle={styles.gateScroll}>
           <View style={[styles.gateCard, live.gateCard]}>
             <Ionicons name="calendar-outline" size={40} color={t.colors.surface3} />
@@ -1429,13 +1428,13 @@ export default function WeeklyCheckInScreen({ navigation }) {
     const dayName = DAYS_FULL[checkinDayNum];
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-        <View style={styles.gateHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
-            <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={[styles.gateHeaderTitle, live.gateHeaderTitle]}>Weekly check-in</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        {/* O34 (comprehension-trust-audit-2026-08-06): the shared BackHeader
+            replaces the hand-rolled back-chevron header this gate used to
+            draw locally (styling.md "Header trio" - no fourth hand-rolled
+            shape). onBack is explicit so this keeps calling the SAME
+            navigation prop the old handler used, not whatever BackHeader's
+            own useNavigation() resolves. */}
+        <BackHeader title="Weekly check-in" onBack={() => navigation.goBack()} />
         <ScrollView contentContainerStyle={styles.gateScroll}>
           <View style={[styles.gateCard, live.gateCard]}>
             <Ionicons name="checkmark-circle-outline" size={40} color={t.colors.success} />
@@ -1465,13 +1464,13 @@ export default function WeeklyCheckInScreen({ navigation }) {
     const dayName = DAYS_FULL[checkinDayNum];
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-        <View style={styles.gateHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
-            <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={[styles.gateHeaderTitle, live.gateHeaderTitle]}>Weekly check-in</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        {/* O34 (comprehension-trust-audit-2026-08-06): the shared BackHeader
+            replaces the hand-rolled back-chevron header this gate used to
+            draw locally (styling.md "Header trio" - no fourth hand-rolled
+            shape). onBack is explicit so this keeps calling the SAME
+            navigation prop the old handler used, not whatever BackHeader's
+            own useNavigation() resolves. */}
+        <BackHeader title="Weekly check-in" onBack={() => navigation.goBack()} />
         <ScrollView contentContainerStyle={styles.gateScroll}>
           <View style={[styles.gateCard, live.gateCard]}>
             <Ionicons name="calendar-outline" size={40} color={t.colors.surface3} />
@@ -1501,11 +1500,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
       : `your next ${scheduledDayName}`;
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-        <View style={styles.gateHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
-            <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
-          </TouchableOpacity>
-        </View>
+        {/* O34: same BackHeader swap as the header above - these gates never
+            showed a title, so this keeps the same "Weekly check-in" title
+            the other gate states now carry, per the audit ruling. */}
+        <BackHeader title="Weekly check-in" onBack={() => navigation.goBack()} />
         <ScrollView contentContainerStyle={styles.gateCenterScroll}>
           <View style={[styles.gateIconWrap, live.gateIconWrap]}>
             <Ionicons name="time-outline" size={32} color={t.colors.primary} />
@@ -1537,11 +1535,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
     const remaining = MIN_WEIGH_INS - weighInsThisWeek;
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-        <View style={styles.gateHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
-            <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
-          </TouchableOpacity>
-        </View>
+        {/* O34: same BackHeader swap as the header above - these gates never
+            showed a title, so this keeps the same "Weekly check-in" title
+            the other gate states now carry, per the audit ruling. */}
+        <BackHeader title="Weekly check-in" onBack={() => navigation.goBack()} />
         <ScrollView contentContainerStyle={styles.gateCenterScroll}>
           <View style={[styles.gateIconWrap, live.gateIconWrap]}>
             <Ionicons name="scale-outline" size={32} color={t.colors.warning} />
@@ -1579,11 +1576,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
   if (gateState === 'load_error') {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-        <View style={styles.gateHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close">
-            <Ionicons name="chevron-back" size={24} color={t.colors.textPrimary} />
-          </TouchableOpacity>
-        </View>
+        {/* O34: same BackHeader swap as the header above - these gates never
+            showed a title, so this keeps the same "Weekly check-in" title
+            the other gate states now carry, per the audit ruling. */}
+        <BackHeader title="Weekly check-in" onBack={() => navigation.goBack()} />
         <ScrollView contentContainerStyle={styles.gateCenterScroll}>
           <View style={[styles.gateIconWrap, live.gateIconWrap]}>
             <Ionicons name="cloud-offline-outline" size={32} color={t.colors.warning} />
@@ -1613,7 +1609,15 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-      {/* Header */}
+      {/* Header. O34 (comprehension-trust-audit-2026-08-06) reviewed this
+          site too: NOT migrated to BackHeader, a justified wizard exception
+          (styling.md "Header trio") rather than an oversight. BackHeader
+          only takes a plain title, no room for the StepBar/"Quick check-in"
+          tag under it, and its back action has no disabled/busy slot -
+          this one locks navigation mid-submit-beat (busy || submitSuccess,
+          see M4 comment below) and steps back through the wizard before
+          it ever calls navigation.goBack(). The six gate screens above
+          carried none of that and are the real drift this finding fixes. */}
       <View style={[styles.headerBar, live.headerBar]}>
         <TouchableOpacity
           onPress={() => (!fastEligible && step > 0) ? setStep(s => s - 1) : navigation.goBack()}
@@ -1772,13 +1776,9 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
 
   // -- Gate screens ------------------------------------------------------------
-  gateHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-  },
-  gateHeaderTitle: {
-    ...type.title, color: colors.textPrimary,
-  },
+  // gateHeader/gateHeaderTitle removed (O34, comprehension-trust-audit-
+  // 2026-08-06): the six gate states now render the shared BackHeader
+  // instead of a hand-rolled back-chevron header.
   // Centred wrapper kept for the other gate states (loading / etc.) that
   // still use it elsewhere on this screen.
   gateCenter: {
@@ -2125,7 +2125,6 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    gateHeaderTitle: { ...t.type.title, color: t.colors.textPrimary },
     gateIconWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     gateCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     gateTitle: { ...t.type.title, color: t.colors.textSecondary },

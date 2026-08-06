@@ -39,8 +39,16 @@ describe('format.js exposes the central NBSP unit-display helper', () => {
 describe('Workout History tonnage chip uses the central formatter (P-15)', () => {
   test('routes through formatNumber + formatWithUnit, not a bare toLocaleString + no-space "kg"', () => {
     expect(WORKOUT_HISTORY).toMatch(/import \{ formatNumber, formatWithUnit \} from '\.\.\/lib\/format';/);
+    // T4 (comprehension-trust-audit-2026-08-06): the second argument was a
+    // hardcoded 'kg' literal (a latent lie - gym units are kg-only today by
+    // founder design, so this was never visible, but the code claimed a
+    // unit it wasn't actually reading). Re-anchored to the real `units`
+    // variable this screen already threads through everywhere else on the
+    // card (search line ~82/298), zero visual change. The real intent this
+    // guard pins - central formatter, not a raw toLocaleString - is
+    // unchanged and still asserted below.
     expect(WORKOUT_HISTORY).toMatch(
-      /\{formatWithUnit\(formatNumber\(Math\.round\(tonnage\)\), 'kg'\)\} lifted/,
+      /\{formatWithUnit\(formatNumber\(Math\.round\(tonnage\)\), units\)\} lifted/,
     );
     expect(WORKOUT_HISTORY).not.toMatch(/\{Math\.round\(tonnage\)\.toLocaleString\('en-GB'\)\}kg lifted/);
   });

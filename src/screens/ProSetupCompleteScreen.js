@@ -18,6 +18,7 @@ import { toEnergy, energyUnitLabel } from '../lib/format';
 import { GOAL_LABELS, PHASE_LABELS, isCompetitionGoal } from '../lib/coachingGoals';
 import { getSplitRationale, getSetupReceiptLine } from '../lib/whyThisTemplates';
 import { getActivePlan, getRoutinesForPlan, getMorningWeightsLast14Days, getOpenEdPatternFlag } from '../lib/database';
+import { getNotificationPermissionStatus } from '../lib/notifications/permissions';
 import { firstReviewUnlockDate } from '../lib/trialActivation';
 import { formatUnlockDate } from '../lib/coachLedger';
 import { planNextWeek } from '../lib/food/mealPlanService';
@@ -73,6 +74,21 @@ export default function ProSetupCompleteScreen({ navigation }) {
   // the header stages at least motion.micro later, which is margin enough
   // for the read below (local SQLite + AsyncStorage) to land first.
   const [motionSuppressed, setMotionSuppressed] = useState(false);
+  // T13 (comprehension-trust-audit-2026-08-06): the "Coach reminders set"
+  // row used to render unconditionally, even when the user had declined the
+  // OS notification permission (nothing was actually scheduled in that
+  // case). Read-only status check on mount, same idiom as the hasPlan row
+  // below - default false (pessimistic) until the real status resolves, no
+  // re-request here.
+  const [notifPermissionGranted, setNotifPermissionGranted] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getNotificationPermissionStatus()
+      .then((status) => { if (!cancelled) setNotifPermissionGranted(status === 'granted'); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -247,10 +263,19 @@ export default function ProSetupCompleteScreen({ navigation }) {
               <Ionicons name="barbell-outline" size={15} color={t.colors.primary} />
               <Text style={[styles.readyText, live.readyText]}>{hasPlan ? 'Plan ready' : 'Plan pending'}</Text>
             </View>
-            <View style={[styles.readyItem, live.readyItem]}>
+            <TouchableOpacity
+              style={[styles.readyItem, live.readyItem]}
+              onPress={notifPermissionGranted ? undefined : () => navigation.navigate('NotificationSettings')}
+              activeOpacity={notifPermissionGranted ? 1 : 0.7}
+              disabled={notifPermissionGranted}
+              accessibilityRole={notifPermissionGranted ? undefined : 'button'}
+              accessibilityLabel={notifPermissionGranted ? undefined : 'Reminders off. Enable them any time in Settings.'}
+            >
               <Ionicons name="calendar-outline" size={15} color={t.colors.primary} />
-              <Text style={[styles.readyText, live.readyText]}>Coach reminders set</Text>
-            </View>
+              <Text style={[styles.readyText, live.readyText]}>
+                {notifPermissionGranted ? 'Coach reminders set' : 'Reminders off. Enable them any time in Settings.'}
+              </Text>
+            </TouchableOpacity>
           </View>
           </Animated.View>
 

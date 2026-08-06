@@ -39,6 +39,12 @@ jest.mock('../../lib/trialActivation', () => ({ firstReviewUnlockDate: jest.fn((
 jest.mock('../../lib/coachLedger', () => ({ formatUnlockDate: jest.fn(() => 'Sunday 12 July') }));
 jest.mock('../../lib/food/mealPlanService', () => ({ planNextWeek: jest.fn() }));
 jest.mock('../../lib/haptics', () => ({ planReady: jest.fn() }));
+// T13 (comprehension-trust-audit-2026-08-06): permissions.js imports the
+// real expo-notifications module, which throws in this test's bare node
+// environment (no native module bootstrap). Mocked at the same boundary
+// as every other lib dependency above rather than pulling expo-notifications
+// itself into this hermetic suite.
+jest.mock('../../lib/notifications/permissions', () => ({ getNotificationPermissionStatus: jest.fn(async () => 'granted') }));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../../store/useAppStore';

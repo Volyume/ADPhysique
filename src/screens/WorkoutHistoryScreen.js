@@ -43,6 +43,25 @@ const FILTERS = [
   { key: 'full', label: 'Full body' },
 ];
 
+// O4 (comprehension-trust-audit-2026-08-06): the Upper/Lower/Full body chips
+// used to substring-match workout/exercise NAMES, so a user who named a
+// session "Push"/"Pull"/"Legs" got empty results. Classified on the
+// session's actual logged muscle groups instead (real primaryMuscle keys
+// from algorithms.js's VOLUME_LANDMARKS/MUSCLE_DISPLAY_NAMES). A session
+// with muscles in both sets is "full"; one with neither (or no resolvable
+// muscle at all) matches only "All", same as before.
+const UPPER_MUSCLES = new Set(['chest', 'back', 'front_delts', 'side_delts', 'rear_delts', 'biceps', 'triceps', 'forearms']);
+const LOWER_MUSCLES = new Set(['quads', 'hamstrings', 'glutes', 'calves']);
+
+function classifyMuscleGroup(primaryMuscles) {
+  const hasUpper = primaryMuscles.some(m => UPPER_MUSCLES.has(m));
+  const hasLower = primaryMuscles.some(m => LOWER_MUSCLES.has(m));
+  if (hasUpper && hasLower) return 'full';
+  if (hasUpper) return 'upper';
+  if (hasLower) return 'lower';
+  return null;
+}
+
 const DAY_HEADERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 function hasSetValue(value) {
@@ -149,6 +168,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
         // line, unchanged from before.
         const allExerciseNames = exerciseIds.map(id => exerciseMap[id]?.name).filter(Boolean);
         const exerciseNames = allExerciseNames.slice(0, 4);
+        // O4: derived from the same exerciseMap lookup, no extra query.
+        const primaryMuscles = [...new Set(exerciseIds.map(id => exerciseMap[id]?.primaryMuscle).filter(Boolean))];
         return {
           workout: w,
           setCount: mySets.length,
@@ -157,6 +178,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
           tonnage: calculateTonnage(mySets),
           exerciseNames,
           allExerciseNames,
+          muscleGroup: classifyMuscleGroup(primaryMuscles),
         };
       });
       setWorkouts(withSets);
@@ -183,6 +205,46 @@ export default function WorkoutHistoryScreen({ navigation }) {
           exercise, routineExercise, sets: [],
           supersetGroupId: routineExercise?.supersetGroupId ?? null,
         }));
+      } else {
+        // T3 (comprehension-trust-audit-2026-08-06): no routine to read a
+        // plan from, so rebuild the exercise list from the ORIGINAL
+        // session's logged sets instead - the same grouping the expanded
+        // card breakdown already does in handleToggleExpand above. Each
+        // entry matches the shape startWorkout/withSetsArrays consumes
+        // ({ exercise, routineExercise, sets: [] }, the same contract the
+        // routine branch above produces and mid-workout "Add exercise"
+        // already uses with routineExercise: null elsewhere) - here
+        // routineExercise carries a synthetic recommendedSets so
+        // ActiveWorkoutScreen's "Target: N sets" line still reflects what
+        // was actually done last time, per routineExercise.recommendedSets
+        // (ActiveWorkoutScreen.js targetSets chain).
+        const [originalSets, allExercises] = await Promise.all([
+          getWorkoutSetsForWorkout(workout.id),
+          getAllExercises(),
+        ]);
+        const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
+        const order = [];
+        const groups = {};
+        for (const s of originalSets) {
+          if (!groups[s.exerciseId]) { groups[s.exerciseId] = []; order.push(s.exerciseId); }
+          groups[s.exerciseId].push(s);
+        }
+        initialExercises = order
+          .map((exerciseId) => {
+            const exercise = exerciseMap[exerciseId];
+            // Exercise since deleted (custom exercise, hard-deleted) -
+            // nothing to open a set-logging row against, so skip it rather
+            // than open a broken entry.
+            if (!exercise) return null;
+            const exSets = groups[exerciseId];
+            const workingCount = exSets.filter(s => (s.setType ?? s.set_type ?? 'straight') !== 'warmup').length;
+            return {
+              exercise,
+              routineExercise: { recommendedSets: workingCount || exSets.length || 3 },
+              sets: [],
+            };
+          })
+          .filter(Boolean);
       }
       startWorkout(newWorkout, initialExercises);
       navigateCrossTab(navigation, 'HomeTab', 'ActiveWorkout');
@@ -334,22 +396,13 @@ export default function WorkoutHistoryScreen({ navigation }) {
         result = result.filter(item => new Date(workoutDayMs(item.workout)) >= monthStart);
         break;
       case 'upper':
-        result = result.filter(item =>
-          item.workout.name?.toLowerCase().includes('upper') ||
-          item.exerciseNames.some(n => n.toLowerCase().includes('upper'))
-        );
+        result = result.filter(item => item.muscleGroup === 'upper');
         break;
       case 'lower':
-        result = result.filter(item =>
-          item.workout.name?.toLowerCase().includes('lower') ||
-          item.exerciseNames.some(n => n.toLowerCase().includes('lower'))
-        );
+        result = result.filter(item => item.muscleGroup === 'lower');
         break;
       case 'full':
-        result = result.filter(item =>
-          item.workout.name?.toLowerCase().includes('full') ||
-          item.exerciseNames.some(n => n.toLowerCase().includes('full'))
-        );
+        result = result.filter(item => item.muscleGroup === 'full');
         break;
       default:
         break;
@@ -446,7 +499,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
               </View>
               {tonnage > 0 && (
                 <View style={[styles.statChip, live.statChip]}>
-                  <Text style={[styles.statChipText, live.statChipText]}>{formatWithUnit(formatNumber(Math.round(tonnage)), 'kg')} lifted</Text>
+                  <Text style={[styles.statChipText, live.statChipText]}>{formatWithUnit(formatNumber(Math.round(tonnage)), units)} lifted</Text>
                 </View>
               )}
             </View>

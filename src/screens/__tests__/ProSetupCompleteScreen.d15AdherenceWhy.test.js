@@ -43,6 +43,10 @@ jest.mock('../../lib/trialActivation', () => ({ firstReviewUnlockDate: jest.fn((
 jest.mock('../../lib/coachLedger', () => ({ formatUnlockDate: jest.fn(() => 'Sunday 12 July') }));
 jest.mock('../../lib/food/mealPlanService', () => ({ planNextWeek: jest.fn() }));
 jest.mock('../../lib/haptics', () => ({ planReady: jest.fn() }));
+// T13 (comprehension-trust-audit-2026-08-06): same boundary mock as
+// ProSetupCompleteScreen.edSafety.test.js - permissions.js's real
+// expo-notifications import throws in this bare node test environment.
+jest.mock('../../lib/notifications/permissions', () => ({ getNotificationPermissionStatus: jest.fn(async () => 'granted') }));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../../store/useAppStore';
