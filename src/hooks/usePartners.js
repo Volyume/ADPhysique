@@ -218,8 +218,14 @@ async function enrichPair(partnership, userId) {
     optionalPartnerRead(() => getPartnerWeeklyIntention(partnership.id, partnerId, lastWeek), null),
     optionalPartnerRead(() => getPartnerWinCards(partnership.id, { limit: 5 }), []),
   ]);
+  // sharedStreak.js's contract: "The current in-progress week is never judged
+  // and must be excluded by the caller (pass finished weeks only)." The raw
+  // signals table includes the live week (signals push as people train), so
+  // without this filter the hero count could increment midweek
+  // (comprehension-trust audit 2026-08-06, T11).
+  const finishedSignals = pairSignals.filter((s) => Number(s.weekStart) < Number(thisWeek));
   const sharedStreak = partnership.streakEnabled
-    ? computeSharedStreak({ enabled: true, weeks: buildSharedWeeks(pairSignals, userId, partnerId) })
+    ? computeSharedStreak({ enabled: true, weeks: buildSharedWeeks(finishedSignals, userId, partnerId) })
     : null;
   // Rest-safe kept-moment for the closed week: both met their OWN aim, neither
   // rested. A miss simply yields false (HOLD) — never a red, never attribution.

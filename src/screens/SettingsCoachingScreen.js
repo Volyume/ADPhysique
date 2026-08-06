@@ -143,8 +143,15 @@ export default function SettingsCoachingScreen() {
           icon="pulse-outline"
           label="Session readiness check"
           sub={readinessAsk
-            ? 'Asks how you are feeling before each session, so sessions can adjust to it.'
-            : 'Off. Sessions start straight away and are never adjusted to how you are feeling.'}
+            // Session adjustment from the answers is Pro-only
+            // (ActiveWorkoutScreen readinessTweak), so the Free copy must not
+            // promise it (comprehension-trust audit 2026-08-06, T16). Free
+            // answers ARE kept: they write to the workout row and feed the
+            // Home readiness line.
+            ? (tier === 'pro'
+              ? 'Asks how you are feeling before each session, so sessions can adjust to it.'
+              : 'Asks how you are feeling before each session and keeps it with your training history.')
+            : 'Off. Sessions start straight away.'}
           showArrow={false}
           rightElement={
             <Switch

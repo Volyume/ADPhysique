@@ -8,6 +8,7 @@ import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { colors } from '../../styles/theme';
+import { getQuietHours, shiftHourMinuteOutOfQuietHours } from './quietHours';
 
 export const SCHEDULE_KEY = '@volyume_schedule_v1';
 export const REMINDER_PREF_KEY = '@volyume_reminder_enabled_v1';
@@ -169,6 +170,18 @@ export async function scheduleTrainingReminders(planNameArg) {
       }
     } catch {}
 
+    // 4b. Quiet hours always win (NOTIFICATIONS_LOCKED.md). This was the one
+    // scheduler that fired at the picked time even inside the window, making
+    // the settings screen's "applies to every reminder" claim false
+    // (comprehension-trust audit 2026-08-06, T17). Same shift rule as the
+    // weight/check-in/meal schedulers.
+    try {
+      const quiet = await getQuietHours();
+      const shifted = shiftHourMinuteOutOfQuietHours(hour, minute, quiet);
+      hour = shifted.hour;
+      minute = shifted.minute;
+    } catch (_) { /* best-effort: an unreadable pref never blocks scheduling */ }
+
     // 5. Ensure the Android channel exists
     await ensureTrainingReminderChannel();
 
@@ -189,7 +202,11 @@ export async function scheduleTrainingReminders(planNameArg) {
         return Notifications.scheduleNotificationAsync({
           identifier,
           content: {
-            title: 'Today\'s a training day',
+            // D17: the schedule key is HABIT-derived, not a set timetable, and
+            // the founder ruled (2026-08-03, Home banner removal) that the app
+            // never asserts scheduled training days. The title matches the
+            // body's soft framing; never "Today's a training day".
+            title: 'One of your usual training days',
             body,
             sound: true,
             data: { type: 'training_reminder', channelId: TRAINING_REMINDER_CHANNEL },

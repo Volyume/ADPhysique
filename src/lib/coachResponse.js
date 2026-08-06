@@ -148,7 +148,25 @@ function onTargetStreak(currentOnTarget, history) {
  * is dropped entirely and the copy goes direction-only, mirroring the
  * COMP-004 "Your trend" card's flagged branch.
  */
-function buildInterpretation({ output, history, units, suppress }) {
+// C2 opt-in science layer (moved here from coachRegister.js, see the
+// re-export there): render a plain term with its technical term bracketed
+// after it, only on an explicit science opt-in. The plain term always
+// leads; the technical term never appears alone. Preference off (the
+// default) passes the plain term through untouched.
+//
+// withScience('weekly target range', 'MEV to MRV', true)
+//   -> 'weekly target range (MEV to MRV)'
+export function withScience(plainTerm, technicalTerm, showScience = false) {
+  const plain = String(plainTerm ?? '').trim();
+  // No plain term means no output at all: the technical term may never
+  // appear alone, even on an opted-in surface.
+  if (!plain || !showScience) return plain;
+  const tech = String(technicalTerm ?? '').trim();
+  if (!tech) return plain;
+  return `${plain} (${tech})`;
+}
+
+function buildInterpretation({ output, history, units, suppress, showScience = false }) {
   const trend = output?.trend ?? null;
   const delta = Number.isFinite(trend?.delta) ? trend.delta : null;
 
@@ -165,9 +183,12 @@ function buildInterpretation({ output, history, units, suppress }) {
 
   const u = units === 'lbs' ? 'lbs' : 'kg';
   const abs = Math.abs(delta);
+  // T15: the "Show the science" opt-in brackets the technical name after the
+  // plain one, exactly as the Settings toggle promises. Off by default.
+  const avgTerm = withScience('7-day average', 'EWMA', showScience);
   const lead = abs <= 0.01
-    ? 'Your 7-day average is level with last week.'
-    : `Your 7-day average is ${delta > 0 ? 'up' : 'down'} ${abs} ${u} on last week.`;
+    ? `Your ${avgTerm} is level with last week.`
+    : `Your ${avgTerm} is ${delta > 0 ? 'up' : 'down'} ${abs} ${u} on last week.`;
 
   let verdict;
   if (trend?.onTarget) {
@@ -414,6 +435,10 @@ export function buildCoachResponse({
   calmMode = false,
   checkinDayName = null,
   weekStartMs = null,
+  // T15 (comprehension-trust audit 2026-08-06): the Settings "Show the
+  // science" opt-in. Notation only: same facts, same decisions, the plain
+  // term always leads and the technical term appears bracketed after it.
+  showScience = false,
 } = {}) {
   const suppress = !!edFlagOpen || !!calmMode;
 
@@ -461,7 +486,7 @@ export function buildCoachResponse({
 
   return {
     acknowledgement,
-    interpretation: buildInterpretation({ output, history, units, suppress }),
+    interpretation: buildInterpretation({ output, history, units, suppress, showScience }),
     decision: buildDecision({ output }),
     cue: buildCue({ output, checkin, weighInsThisWeek, suppress }),
     forward: buildForward({ output, weighInsThisWeek, checkinDayName, suppress }),

@@ -86,7 +86,7 @@ import {
 import { formatEnergy, energyUnitLabel } from '../lib/format';
 import { applyCoachAdjustmentToActivePlan, planNextWeek } from '../lib/food/mealPlanService';
 import { buildPlanEditNarration } from '../lib/food/planExplain';
-import { buildRegisteredCoachResponse, resolveRegister } from '../lib/coachRegister';
+import { buildRegisteredCoachResponse, resolveRegister, withScience } from '../lib/coachRegister';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import {
   cancelMorningNotification,
@@ -2136,6 +2136,9 @@ export default function CoachOutputScreen({ navigation, route }) {
     coachTone: userProfile?.coachTone ?? 'automatic',
     experienceLevel: userProfile?.experienceLevel ?? null,
     trainingAgeYears: userProfile?.trainingAgeYears ?? null,
+    // T15 (comprehension-trust audit 2026-08-06): the "Show the science"
+    // toggle finally reaches the copy it always claimed to change.
+    showScience: !!userProfile?.showScience,
   });
   const coachResponse = applyProgressScanCoachContext(baseCoachResponse, canShowProgressScanCoachContext ? progressScanCoachContext : null);
 
@@ -2407,7 +2410,8 @@ export default function CoachOutputScreen({ navigation, route }) {
             value={weightChipValue}
             // NU-5: the number is a 7-day smoothed trend, the same vocabulary
             // the check-in uses. Never labelled as a plain weekly change.
-            label={trend.delta !== null ? '7-day trend' : null}
+            // T15: the science opt-in brackets the technical name after it.
+            label={trend.delta !== null ? withScience('7-day trend', 'EWMA', !!userProfile?.showScience) : null}
             // Class B: no colour on a body-weight numeral, ever.
             valueColor={t.colors.textPrimary}
             // L04-11: the same EWMA gloss BodyMetricsScreen already ships,

@@ -38,7 +38,7 @@
  */
 
 import { checkJargon } from './whyThisTemplates';
-import { buildCoachResponse, preCommitmentFacts, commitmentOutcomeFacts } from './coachResponse';
+import { buildCoachResponse, preCommitmentFacts, commitmentOutcomeFacts, withScience } from './coachResponse';
 
 // ---------------------------------------------------------------------------
 // Guards (same pattern as coachResponse.clean)
@@ -151,7 +151,7 @@ function onTargetStreak(currentOnTarget, history) {
   return streak;
 }
 
-function preciseInterpretation({ output, history, units }) {
+function preciseInterpretation({ output, history, units, showScience = false }) {
   const trend = output?.trend ?? null;
   const delta = Number.isFinite(trend?.delta) ? trend.delta : null;
 
@@ -161,9 +161,11 @@ function preciseInterpretation({ output, history, units }) {
 
   const u = units === 'lbs' ? 'lbs' : 'kg';
   const abs = Math.abs(delta);
+  // T15: same science opt-in as the supportive register's interpretation.
+  const avgTerm = withScience('7-day average', 'EWMA', showScience);
   const lead = abs <= 0.01
-    ? '7-day average: level with last week.'
-    : `7-day average: ${delta > 0 ? 'up' : 'down'} ${abs} ${u} on last week.`;
+    ? `${avgTerm}: level with last week.`
+    : `${avgTerm}: ${delta > 0 ? 'up' : 'down'} ${abs} ${u} on last week.`;
 
   let verdict;
   if (trend?.onTarget) {
@@ -291,7 +293,7 @@ export function buildRegisteredCoachResponse({
     return { ...base, register: 'supportive' };
   }
 
-  const { output, checkin = null, history = [], weighInsThisWeek = null, units = 'kg', checkinDayName = null, weekStartMs = null } = args;
+  const { output, checkin = null, history = [], weighInsThisWeek = null, units = 'kg', checkinDayName = null, weekStartMs = null, showScience = false } = args;
 
   return {
     acknowledgement: base.acknowledgement != null
@@ -304,7 +306,7 @@ export function buildRegisteredCoachResponse({
       })
       : null,
     interpretation: base.interpretation != null
-      ? preciseInterpretation({ output, history, units })
+      ? preciseInterpretation({ output, history, units, showScience })
       : null,
     decision: base.decision, // register-blind always (locked reason strings)
     cue: base.cue != null
@@ -329,23 +331,13 @@ export function buildRegisteredCoachResponse({
 // ---------------------------------------------------------------------------
 
 /**
- * Render a plain term with its technical term bracketed after it, only on
- * an explicit science opt-in. The plain term always leads; the technical
- * term never appears alone. With the preference off (the default) the
- * plain term passes through untouched, so nothing changes anywhere.
- *
- * withScience('weekly target range', 'MEV to MRV', true)
- *   -> 'weekly target range (MEV to MRV)'
+ * withScience moved to coachResponse.js (T15, comprehension-trust audit
+ * 2026-08-06): the interpretation composers there are its first real call
+ * sites, and coachRegister already imports coachResponse, so defining it
+ * here would have forced an import cycle. Re-exported so every existing
+ * import path (and coachRegister.test.js) keeps working.
  */
-export function withScience(plainTerm, technicalTerm, showScience = false) {
-  const plain = String(plainTerm ?? '').trim();
-  // No plain term means no output at all: the technical term may never
-  // appear alone, even on an opted-in surface.
-  if (!plain || !showScience) return plain;
-  const tech = String(technicalTerm ?? '').trim();
-  if (!tech) return plain;
-  return `${plain} (${tech})`;
-}
+export { withScience };
 
 /**
  * The parallel allowance path for science-ON copy: every character OUTSIDE
