@@ -961,11 +961,12 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
-- **RUN MIGRATIONS 129 + 130 BEFORE THE NEXT BUILD** (2026-08-06):
-  migrate_129 (mesocycles.deload_week) MUST apply before a build carrying
-  the new push field ships, or the mesocycles upsert batch rejects.
-  migrate_130 (anon EXECUTE revocation) has no ordering constraint but is
-  founder-GO'd and ready. Both apply on your exact phrase per house rule.
+- ~~RUN MIGRATIONS 129 + 130~~ DONE 2026-08-06: both applied to
+  EU-Dublin by Claude on founder GO and verified (deload_week column +
+  comment present -- pre-flight showed the column already existed, the
+  Wave-2 "no cloud column" note was stale, so no build-ordering risk ever
+  existed; anon-executable SECURITY DEFINER functions 34 -> 0 with
+  authenticated access preserved). Nothing blocks the next build.
 
 ### CLOSED (2026-07-27) - FULL migration sweep: production is COMPLETE
 

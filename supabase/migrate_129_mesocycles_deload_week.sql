@@ -17,7 +17,9 @@
 --   fails the whole mesocycles upsert batch.
 --
 -- Applied locally:  n/a (cloud-only; the local column exists since v68)
--- Applied remotely: NO - awaiting the founder's "run against production"
+-- Applied remotely: YES 2026-08-06 (founder GO "you can run migrations";
+--   pre-flight showed the column ALREADY existed on production, so the
+--   apply recorded the migration + comment; push wiring has no ordering risk)
 -- Safe to re-run:   yes (ADD COLUMN IF NOT EXISTS)
 -- Rollback:         ALTER TABLE public.mesocycles DROP COLUMN IF EXISTS deload_week;
 --                   (client tolerates absence only BEFORE the push wiring

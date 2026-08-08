@@ -20,7 +20,10 @@
 --   and worker while closing only the anonymous path.
 --
 -- Applied locally:  n/a (grants are environment state; nothing local)
--- Applied remotely: NO - awaiting the founder's "run against production"
+-- Applied remotely: YES 2026-08-06 (founder GO). Verified: 34 -> 0
+--   anon-executable SECURITY DEFINER functions; authenticated lost nothing;
+--   the service-role-only trio (record_account_deletion_*, 
+--   upgrade_tier_for_user) unchanged as intended.
 -- Safe to re-run:   yes (second run finds nothing anon-executable; the
 --                   re-grants are idempotent)
 -- Rollback:         GRANT EXECUTE ON FUNCTION public.<name>(<args>) TO PUBLIC;
