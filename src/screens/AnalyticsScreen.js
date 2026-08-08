@@ -36,6 +36,7 @@ import { formatNumber } from '../lib/format';
 import { track } from '../lib/engineTelemetry';
 import { trackPartnerSurfaceView } from '../lib/partners/telemetry';
 import { VOLUME_LANDMARKS, getVolumeStatus, calculateTonnage } from '../lib/algorithms';
+import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
 import { buildWeeklyLoadSeries, buildWeeklySessionCounts } from '../lib/progressSeries';
 
 // COMP-018 milestone copy (§4.6.8). Weeks of showing up against your own plan,
@@ -210,6 +211,17 @@ export default function AnalyticsScreen({ navigation, route }) {
   // training-volume win, so it is never ED-gated. Re-checked whenever the
   // completed-workout count changes; fires once per threshold.
   const [tonnageLandmark, setTonnageLandmark] = useState(null);
+  // D90 #3 (2026-08-06): the resolved landmark table for the volume strip
+  // (manual > adapted(Pro) > research), loaded on focus below.
+  const [landmarkResolution, setLandmarkResolution] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) { setLandmarkResolution(null); return undefined; }
+    getEffectiveLandmarks(user.id, { tier })
+      .then((r) => { if (!cancelled) setLandmarkResolution(r); })
+      .catch(() => { if (!cancelled) setLandmarkResolution(null); });
+    return () => { cancelled = true; };
+  }, [user?.id, tier]);
   // R3 lifetime-stats panel: the all-time tonnage total (not just a pending
   // milestone threshold). Read from the same getLifetimeTonnage query as the
   // landmark below, so the panel and the share card never disagree.
@@ -727,6 +739,7 @@ export default function AnalyticsScreen({ navigation, route }) {
           </View>
           <VolumeSummaryStrip
             volume={weeklyVolume}
+            landmarksTable={landmarkResolution?.table}
             loading={loading}
             onPress={() => navigation.navigate('VolumeHeatmap')}
           />
@@ -897,7 +910,7 @@ const MUSCLES = Object.keys(VOLUME_LANDMARKS);
 // CP-10 batch G (2026-07-11): sibling function-component scope, own
 // useTheme() call (same reasoning as InsightRow above), same shared
 // buildLiveStyles(t).
-function VolumeSummaryStrip({ volume, loading, onPress }) {
+function VolumeSummaryStrip({ volume, loading, onPress, landmarksTable = null }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const trained = MUSCLES.filter(m => (volume[m]?.workingSets ?? 0) > 0);
@@ -919,7 +932,7 @@ function VolumeSummaryStrip({ volume, loading, onPress }) {
   let over = 0;
   for (const m of trained) {
     const ws = volume[m]?.workingSets ?? 0;
-    const lm = VOLUME_LANDMARKS[m];
+    const lm = landmarksTable?.[m] ?? VOLUME_LANDMARKS[m];
     if (!lm) continue;
     if (ws < lm.mev) below += 1;
     else if (ws > lm.mrv) over += 1;
@@ -933,7 +946,7 @@ function VolumeSummaryStrip({ volume, loading, onPress }) {
   const segments = trained
     .map(m => {
       const ws = volume[m]?.workingSets ?? 0;
-      return { muscle: m, sets: ws, color: resolveVolumeStatusColor(getVolumeStatus(ws, m).status) };
+      return { muscle: m, sets: ws, color: resolveVolumeStatusColor(getVolumeStatus(ws, m, landmarksTable).status) };
     })
     .sort((a, b) => b.sets - a.sets);
   return (

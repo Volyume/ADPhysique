@@ -43,6 +43,7 @@ import usePartners from '../hooks/usePartners';
 import { ticksLabel } from '../lib/partners/signals';
 import { getVisibleMoments, markMomentSeen } from '../lib/partners/moments';
 import { calculateWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine } from '../lib/algorithms';
+import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
 import { getVolumeInsight, getVolumeWhy } from '../lib/volumeInsightCopy';
 import { topSetFromExerciseData, intensityTier, shareSessionName } from '../lib/sessionShareData';
 import useAppStore from '../store/useAppStore';
@@ -229,6 +230,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [expandedVolumeWhy, setExpandedVolumeWhy] = useState(null);
   const [adaptiveDecisions, setAdaptiveDecisions] = useState({});
   const [readOnlyExerciseData, setReadOnlyExerciseData] = useState([]);
+  // D90 #3 (2026-08-06): the ONE landmark precedence (manual > adapted(Pro)
+  // > research) resolved once per load; both getVolumeStatus call sites and
+  // the tooltip copy read it. { table, source } from effectiveLandmarks.js.
+  const [landmarkResolution, setLandmarkResolution] = useState(null);
   const [templateModalVisible, setTemplateModalVisible] = useState(false);
   const [templateName, setTemplateName] = useState('');
 
@@ -446,7 +451,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const muscleFeedback = {};
     for (const [muscle, volData] of Object.entries(weeklyVolume)) {
       const { mev = 6, mav = 14, mrv = 22 } = (typeof getVolumeStatus === 'function'
-        ? (getVolumeStatus(volData.workingSets, muscle)?.landmarks || {})
+        ? (getVolumeStatus(volData.workingSets, muscle, landmarkResolution?.table)?.landmarks || {})
         : {});
       muscleFeedback[muscle] = {
         soreness,
@@ -503,6 +508,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       getAllExercises(),
       getAllWorkouts(user.id),
     ]);
+    const resolved = await getEffectiveLandmarks(user.id, { tier }).catch(() => null);
+    setLandmarkResolution(resolved);
     const recentSets = allSets.filter(s => s.createdAt >= sessionWeekStart && s.createdAt < sessionWeekEnd);
     const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
     const volume = calculateWeeklyVolume(recentSets, exerciseMap);
@@ -1309,7 +1316,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 'Red = Too much: consider doing a little less next week\n' +
                 'Blue = Just enough: right at the floor, one or two more sets would be stronger\n' +
                 'Grey = Below target: not enough logged yet to drive growth\n\n' +
-                'These ranges are research-based starting points, the same for everyone. You can tune them to your own body with Edit volume targets on the Volume screen.'
+                (landmarkResolution && Object.values(landmarkResolution.source ?? {}).includes('adapted')
+                  ? 'These ranges start from research values and have adjusted to your own logged response. You can also set them by hand with Edit volume targets on the Volume screen, your edits always win.'
+                  : 'These ranges are research-based starting points. With enough logged sessions they adjust to your response, and you can set them by hand with Edit volume targets on the Volume screen.')
               } />
             </View>
             {/* D3: one compressed card, hairline dividers between muscles,
@@ -1317,7 +1326,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <Card padding="none" style={styles.volumeCard}>
             {musclesWorked.map((muscle, mi) => {
               const data = weeklyVolume[muscle];
-              const { label, status } = getVolumeStatus(data.workingSets, muscle);
+              const { label, status } = getVolumeStatus(data.workingSets, muscle, landmarkResolution?.table);
               // CP-10 stage 3 (theming FINAL batch, 2026-07-10): live
               // variant of volumeStatusColor (src/styles/theme.js), fed by
               // this screen's own t.colors so the muscle-volume tone stays in

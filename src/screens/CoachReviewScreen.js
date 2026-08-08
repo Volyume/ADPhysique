@@ -13,6 +13,7 @@ import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentChec
 import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles, summariseWorkoutSets } from '../lib/algorithms';
 import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
+import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
 import { useShallow } from 'zustand/react/shallow';
 import Card from '../components/Card';
 import BackHeader from '../components/BackHeader';
@@ -97,6 +98,12 @@ function detectProgressionWins(thisWeekSets, allSets, exerciseMap) {
 }
 
 // Build up to 3 plain-English recommendations for next week
+// D90 #3 (2026-08-06): the screen-resolved landmark table (manual >
+// adapted(Pro) > research, effectiveLandmarks.js). Module-scoped so the
+// leaf VolumeRow and the pure recommendation builder read the same table
+// the screen resolved; loadData writes it before any row renders.
+let _resolvedLandmarks = null;
+
 function buildRecommendations({ volumeByMuscle, deloadResult, checkins, laggingMuscles = [] }) {
   const recs = [];
 
@@ -110,7 +117,7 @@ function buildRecommendations({ volumeByMuscle, deloadResult, checkins, laggingM
   // 2. Muscles that are over volume
   const overMuscles = Object.entries(volumeByMuscle)
     .filter(([muscle, data]) => {
-      const { status } = getVolumeStatus(data.workingSets, muscle);
+      const { status } = getVolumeStatus(data.workingSets, muscle, _resolvedLandmarks);
       return status === 'over_mrv';
     })
     .map(([muscle]) => MUSCLE_DISPLAY_NAMES[muscle] || muscle);
@@ -125,7 +132,7 @@ function buildRecommendations({ volumeByMuscle, deloadResult, checkins, laggingM
   // 3. Muscles that are under minimum
   const underMuscles = Object.entries(volumeByMuscle)
     .filter(([muscle, data]) => {
-      const { status } = getVolumeStatus(data.workingSets, muscle);
+      const { status } = getVolumeStatus(data.workingSets, muscle, _resolvedLandmarks);
       return status === 'below';
     })
     .map(([muscle]) => MUSCLE_DISPLAY_NAMES[muscle] || muscle);
@@ -188,7 +195,7 @@ function VolumeRow({ muscle, data }) {
   // block) for why.
   const t = useTheme();
   const live = buildLiveStyles(t);
-  const { status } = getVolumeStatus(data.workingSets, muscle);
+  const { status } = getVolumeStatus(data.workingSets, muscle, _resolvedLandmarks);
   const dot = statusDotColor(status, t.colors);
   const label = volumeStatusLabel(status);
   const displayName = MUSCLE_DISPLAY_NAMES[muscle] || muscle;
@@ -245,8 +252,9 @@ export default function CoachReviewScreen() {
   const t = useTheme();
   const live = buildLiveStyles(t);
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user } = useAppStore(useShallow(s => ({
+  const { user, tier } = useAppStore(useShallow(s => ({
     user: s.user,
+    tier: s.tier,
   })));
 
   const [loading, setLoading] = useState(true);
@@ -272,6 +280,7 @@ export default function CoachReviewScreen() {
   }, [user?.id]);
 
   async function loadData() {
+    _resolvedLandmarks = await getEffectiveLandmarks(user?.id, { tier }).then(r => r?.table ?? null).catch(() => null);
     const requestId = loadRequestRef.current + 1;
     loadRequestRef.current = requestId;
     const isCurrentRequest = () => loadRequestRef.current === requestId;
@@ -431,12 +440,12 @@ export default function CoachReviewScreen() {
     .sort(([, a], [, b]) => b.workingSets - a.workingSets);
 
   const optimalMuscles = trainedMuscles.filter(([muscle, data]) => {
-    const { status } = getVolumeStatus(data.workingSets, muscle);
+    const { status } = getVolumeStatus(data.workingSets, muscle, _resolvedLandmarks);
     return status === 'optimal';
   });
 
   const watchMuscles = trainedMuscles.filter(([muscle, data]) => {
-    const { status } = getVolumeStatus(data.workingSets, muscle);
+    const { status } = getVolumeStatus(data.workingSets, muscle, _resolvedLandmarks);
     return status === 'over_mrv' || status === 'near_mrv' || status === 'below' || status === 'minimum';
   });
 
@@ -625,7 +634,7 @@ export default function CoachReviewScreen() {
               ) : (
                 <Card style={styles.insightCard}>
                   {watchMuscles.map(([muscle, data]) => {
-                    const { status } = getVolumeStatus(data.workingSets, muscle);
+                    const { status } = getVolumeStatus(data.workingSets, muscle, _resolvedLandmarks);
                     const isOver = status === 'over_mrv';
                     const isNear = status === 'near_mrv';
                     const icon = isOver

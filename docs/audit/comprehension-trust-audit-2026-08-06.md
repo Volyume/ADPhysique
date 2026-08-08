@@ -309,3 +309,21 @@ contrast-verified CVD info hue through theme.test.js's WCAG harness.
 training day") asserted the scheduled-days premise the founder struck down
 on 2026-08-03; retitled to soft habit framing alongside the quiet-hours
 wiring.
+
+## E. T5 follow-on LANDED (D90 #3, 2026-08-06): adaptive bands wired for real
+
+Discovery during the build: the adaptive engine ALREADY existed
+(algorithms.computeAdaptiveLandmarks, fed by
+database.getAdaptiveLandmarkHistory, consuming session feedback, used by
+the Pro session-adjustment path since COMP-015). The genuine gap was that
+no display surface consumed it, which is what made T5's tooltip a lie.
+Fix: one shared resolver (src/lib/effectiveLandmarks.js) defines the ONE
+precedence - manual Edit-volume-targets > adapted (Pro, 3+ data points) >
+research table - and all four volume-status surfaces now read it:
+WorkoutSummaryScreen (both call sites), CoachReviewScreen (all six),
+AnalyticsScreen's volume strip, and VolumeHeatmapScreen's display (its
+edit form still seeds from the manual layer; a saved manual value beats
+adaptation permanently). The WorkoutSummary tooltip now states the true
+basis and switches wording once any muscle is genuinely adapted. Free
+tier sees research + manual, exactly as before. Behavioural tests pin the
+precedence against the real engine and the fail-open reads.

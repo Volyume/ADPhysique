@@ -6,6 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, buildVolumeStatusColor, circle } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
 import BackHeader from '../components/BackHeader';
 import InfoTooltip from '../components/InfoTooltip';
 import Card from '../components/Card';
@@ -64,9 +65,10 @@ const WINDOW_OPTIONS = [
 
 export default function VolumeHeatmapScreen() {
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, userProfile } = useAppStore(useShallow(s => ({
+  const { user, userProfile, tier } = useAppStore(useShallow(s => ({
     user: s.user,
     userProfile: s.userProfile,
+    tier: s.tier,
   })));
   const toast = useToast();
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js). Memoised
@@ -83,6 +85,11 @@ export default function VolumeHeatmapScreen() {
   const [previousVolume, setPreviousVolume] = useState({});
   const [windowWeeks, setWindowWeeks] = useState(1);
   const [customLandmarks, setCustomLandmarks] = useState(null);
+  // D90 #3 (2026-08-06): display statuses read the ONE resolved precedence
+  // (manual > adapted(Pro) > research, effectiveLandmarks.js). The edit form
+  // still seeds from the MANUAL layer only: editing starts from what the
+  // user set, and a saved manual value beats adaptation from then on.
+  const [resolvedLandmarks, setResolvedLandmarks] = useState(null);
   const [editing, setEditing] = useState(false);
   const [editValues, setEditValues] = useState({});
   const [trendData, setTrendData] = useState([]);
@@ -202,6 +209,9 @@ export default function VolumeHeatmapScreen() {
       if (stored) {
         try { parsed = JSON.parse(stored); } catch (_) {}
       }
+      getEffectiveLandmarks(user.id, { tier })
+        .then((r) => { if (isCurrentRequest()) setResolvedLandmarks(r?.table ?? null); })
+        .catch(() => { if (isCurrentRequest()) setResolvedLandmarks(null); });
       if (parsed) {
         setCustomLandmarks(parsed);
         setEditValues(parsed);
@@ -274,7 +284,7 @@ export default function VolumeHeatmapScreen() {
     ]);
   }
 
-  const effectiveLandmarks = customLandmarks || null;
+  const effectiveLandmarks = resolvedLandmarks ?? customLandmarks ?? null;
   const muscles = Object.keys(VOLUME_LANDMARKS);
 
   // ScrollView + per-row refs so the body diagram can scroll the user to a
