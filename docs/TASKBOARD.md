@@ -977,6 +977,31 @@ queue paused here for the founder review per D55.
   PRESERVES a local ledger when the cloud row carries none (the
   INSERT OR REPLACE wipe hazard). FOUNDER ACTION QUEUED: "run against
   production" for migrate_131 before the next EAS build.
+- Stage 5 REVIEW REMEDIATION LANDED (2026-08-09; review executed the
+  module + 5000-case fuzz + mutation run; both blockers + all defects
+  fixed): the research-MEV anchor now OUT-RANKS every cap (52 real
+  profile x muscle combinations could drag the floor beneath research
+  MEV via a profile-shrunk prior; the cap now yields to the anchor);
+  the ceiling learns the HIGHEST handled volume (running max - a later
+  good lower-volume block no longer erases proven capacity at 2 sets a
+  block, and the RESPONSIVE/STRAINED oscillation resolves); the floor
+  is MONOTONE DOWNWARD only (not trying lower volumes is not evidence
+  they fail; a rising floor was upward volume pressure - the old
+  behaviour was pinned and is reversed); interBlock echoes NULL for
+  absent observed inputs (landmark fallbacks could fabricate
+  "measurements" the user never performed) and carries a suppressed
+  marker; string-coercion parity with interBlock (a stringly
+  confidence no longer erases the range); empty observed objects are
+  not evidence and cannot mark the range learned; degenerate priors
+  fail closed to null bounds; optional muscle guard against blended
+  ledgers. Suite 19 -> 33 incl. anchor-vs-cap, running-max, boundary
+  0.6 and real prior-MRV cap pins.
+- D91 rulings 11-12 added (see register): (11) s3.8's no-upward-carry
+  BINDS THE MEMORY - a block trained under calm/ED never raises the
+  learned ceiling, its downward evidence still counts; (12) manual-
+  override blocks never teach the engine - a valid ledger entry with
+  deferredToManual is skipped by the replay, so removed overrides
+  cannot launder user-chosen numbers into "learned from your history".
 - Stage 1 REVIEW REMEDIATION LANDED (2026-08-09, adversarial review vs
   blueprint; all 12 findings fixed, none parked): partner block-finished
   milestone re-keyed to awaitingDecision && weeksOverdue===0 (was dead on

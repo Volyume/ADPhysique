@@ -126,9 +126,9 @@ describe('the floor learns the lowest progressing start, one set a block', () =>
     expect(out.floor).toBe(8);
   });
 
-  test('progressing only from HIGHER starts nudges the floor up toward the lowest proven one', () => {
+  test('progressing only from HIGHER starts never raises the floor: absence of evidence is not evidence (review #4)', () => {
     const out = range([entry(BLOCK_CLASS.RESPONSIVE, { observed: { startSets: 12 } })]);
-    expect(out.floor).toBe(11);
+    expect(out.floor).toBe(10);
   });
 
   test('non-RESPONSIVE blocks never move the floor', () => {
@@ -161,12 +161,20 @@ describe('clamps: research MEV anchors, adapted MRV caps, 30 backstops', () => {
     expect(out.ceiling).toBe(15);
   });
 
-  test('without an adapted MRV the prior MRV caps it, and 30 always does', () => {
+  test('without an adapted MRV the prior MRV caps it', () => {
     const capped = range(
-      Array.from({ length: 6 }, () => entry(BLOCK_CLASS.RESPONSIVE, { observed: { achievedPeak: 40 } })),
+      Array.from({ length: 4 }, () => entry(BLOCK_CLASS.RESPONSIVE, { observed: { achievedPeak: 24 } })),
+      { prior: { mev: 10, mav: 14, mrv: 18 } },
+    );
+    expect(capped.ceiling).toBe(18);
+  });
+
+  test('the 30-set backstop always caps', () => {
+    const capped = range(
+      Array.from({ length: 10 }, () => entry(BLOCK_CLASS.RESPONSIVE, { observed: { achievedPeak: 40 } })),
       { prior: { mev: 10, mav: 26, mrv: 40 } },
     );
-    expect(capped.ceiling).toBeLessThanOrEqual(30);
+    expect(capped.ceiling).toBe(30);
   });
 
   test('floor always sits at least two below the ceiling', () => {
@@ -189,7 +197,117 @@ describe('the interBlock entry carries the observed numbers the replay feeds on'
       performance: { e1rmSlopePct: 4, prDensity: 0.5, rawPrCount: 6, eligibleExposures: 12, confidence: 0.9, discontinuity: false, doseResponse: null },
       recovery: { sorenessLateAvg: 2, jointDiscomfortAvg: 1, readinessSlope: 0.1, sleepFlaggedWeeks: 0, deloadFlagFired: false, deloadFlagMidBlock: false, dataPoints: 10 },
     }, { suppressed: false, weeksSinceBlockEnd: 0 });
-    expect(e.observed).toEqual({ startSets: 10, achievedPeak: 17, plannedPeak: 16 });
+    expect(e.observed).toEqual({ startSets: 10, achievedPeak: 17, plannedPeak: 16, suppressed: false });
+  });
+});
+
+// -- Stage 5 adversarial-review remediation pins (2026-08-09) --------------
+
+describe('the research MEV anchor out-ranks every cap (review #1)', () => {
+  test('a profile-shrunk prior below the anchor cannot drag the floor beneath research MEV', () => {
+    const out = range([], { prior: { mev: 5, mav: 7, mrv: 7 }, researchMev: 8 });
+    expect(out.floor).toBeGreaterThanOrEqual(8);
+    expect(out.ceiling).toBeGreaterThanOrEqual(10);
+    expect(out.floor).toBeLessThanOrEqual(out.ceiling - 2);
+  });
+
+  test('an adapted MRV below the anchor yields to it too', () => {
+    const out = range([entry(BLOCK_CLASS.RESPONSIVE)], { adaptedMrv: 6 });
+    expect(out.floor).toBeGreaterThanOrEqual(8);
+    expect(out.ceiling).toBeGreaterThanOrEqual(10);
+  });
+});
+
+describe('the ceiling remembers the HIGHEST handled volume (review #2)', () => {
+  test('a later good lower-volume block cannot erase proven capacity', () => {
+    const out = range([
+      entry(BLOCK_CLASS.RESPONSIVE, { observed: { achievedPeak: 20 } }),
+      entry(BLOCK_CLASS.RESPONSIVE, { observed: { achievedPeak: 20 } }),
+      entry(BLOCK_CLASS.RESPONSIVE, { observed: { achievedPeak: 20 } }),
+      entry(BLOCK_CLASS.RESPONSIVE, { observed: { achievedPeak: 14 } }),
+      entry(BLOCK_CLASS.RESPONSIVE, { observed: { achievedPeak: 14 } }),
+    ]);
+    expect(out.ceiling).toBe(20);
+  });
+
+  test('strain evidence still pulls proven capacity down (only success is sticky)', () => {
+    const out = range([
+      entry(BLOCK_CLASS.RESPONSIVE, { observed: { achievedPeak: 20 } }),
+      entry(BLOCK_CLASS.RESPONSIVE, { observed: { achievedPeak: 20 } }),
+      entry(BLOCK_CLASS.RESPONSIVE, { observed: { achievedPeak: 20 } }),
+      entry(BLOCK_CLASS.STRAINED, { observed: { startSets: 10 } }),
+    ]);
+    expect(out.ceiling).toBe(18); // 20 stepped down by 2 toward 10
+  });
+});
+
+describe('suppressed blocks never raise the memory (review #6, s3.8 binds it)', () => {
+  test('a flagged block cannot lift the ceiling however well it went', () => {
+    const out = range([
+      entry(BLOCK_CLASS.RESPONSIVE, { observed: { achievedPeak: 22, suppressed: true } }),
+      entry(BLOCK_CLASS.RESPONSIVE, { observed: { achievedPeak: 22, suppressed: true } }),
+    ]);
+    expect(out.ceiling).toBe(14); // prior mav, untouched
+    expect(out.evidenceBlocks).toBe(2); // still evidence, just not upward
+  });
+
+  test('a flagged STRAINED block still reduces (the safe direction passes)', () => {
+    const out = range([entry(BLOCK_CLASS.STRAINED, { observed: { startSets: 10, suppressed: true } })]);
+    expect(out.ceiling).toBe(12);
+  });
+});
+
+describe('evidence hygiene (reviews #5, #7, #9, #14, #16)', () => {
+  test('a JSON round-tripped string confidence still folds', () => {
+    const out = range([entry(BLOCK_CLASS.RESPONSIVE, { top: { confidence: '0.9' }, observed: { achievedPeak: 17 } })]);
+    expect(out.ceiling).toBe(16);
+    expect(out.isLearned).toBe(true);
+  });
+
+  test('confidence exactly 0.6 folds; just below does not', () => {
+    expect(range([entry(BLOCK_CLASS.STALE, { top: { confidence: 0.6 } })]).evidenceBlocks).toBe(1);
+    expect(range([entry(BLOCK_CLASS.STALE, { top: { confidence: 0.59 } })]).evidenceBlocks).toBe(0);
+  });
+
+  test('an entry with NO usable observed numbers is not evidence and cannot mark the range learned', () => {
+    const out = range([entry(BLOCK_CLASS.RESPONSIVE, { observed: { startSets: null, achievedPeak: null, plannedPeak: null } })]);
+    expect(out.isLearned).toBe(false);
+    expect(out.evidenceBlocks).toBe(0);
+  });
+
+  test('manual-override blocks do not teach the engine', () => {
+    const out = range([
+      entry(BLOCK_CLASS.RESPONSIVE, {
+        observed: { achievedPeak: 24 },
+        top: { proposal: { startSets: null, peakSets: null, stimulusChange: null, deferredToManual: true } },
+      }),
+    ]);
+    expect(out.ceiling).toBe(14);
+    expect(out.isLearned).toBe(false);
+  });
+
+  test('a degenerate prior fails closed to null bounds', () => {
+    expect(range([], { prior: null })).toEqual({ floor: null, ceiling: null, isLearned: false, evidenceBlocks: 0 });
+    expect(range([], { prior: { mev: -5, mav: -3, mrv: -1 } }).floor).toBeNull();
+  });
+
+  test('entries for another muscle are skipped, never blended', () => {
+    const out = range(
+      [entry(BLOCK_CLASS.RESPONSIVE, { observed: { achievedPeak: 20 }, top: { muscle: 'quads' } })],
+      { muscle: 'chest' },
+    );
+    expect(out.evidenceBlocks).toBe(0);
+  });
+
+  test('interBlock echoes NULL for absent inputs, never a landmark-derived stand-in (review #8)', () => {
+    const e = classifyMuscleBlock({
+      muscle: 'chest',
+      landmarks: { mev: 8, mav: 14, mrv: 22 },
+      adherence: { completedSets: 180, plannedSets: 200 },
+      performance: { e1rmSlopePct: 4, prDensity: 0.5, rawPrCount: 6, eligibleExposures: 12, confidence: 0.9, discontinuity: false, doseResponse: null },
+      recovery: { sorenessLateAvg: 2, jointDiscomfortAvg: 1, readinessSlope: 0.1, sleepFlaggedWeeks: 0, deloadFlagFired: false, deloadFlagMidBlock: false, dataPoints: 10 },
+    }, { suppressed: false, weeksSinceBlockEnd: 0 });
+    expect(e.observed).toEqual({ startSets: null, achievedPeak: null, plannedPeak: null, suppressed: false });
   });
 });
 

@@ -2277,3 +2277,14 @@ building Stages 1-2 (all criterion-ruled: best for end users, never effort):
    volume delta into a recovery week's planned rows (pre-existing hazard;
    the peak-week push made fixing it non-optional). Reductions and the
    dedicated deload apply are untouched. The card explains the refusal.
+
+11. (Stage 5 review fork, safety-adjacent, ruled most-protective per
+   D15 precedent) §3.8's "no upward carry-over anywhere" binds the
+   learned MEMORY, not just live proposals: a block trained under calm
+   mode or an open ED flag never raises the learned ceiling - even
+   after the flag clears - while its downward evidence still folds.
+   interBlock entries carry observed.suppressed for this.
+12. (Stage 5 review fork) "Manual edits still beat everything" extends
+   to teaching: manual-override blocks are skipped by the learned-range
+   replay entirely, so removing an override can never surface the
+   user's own old numbers dressed up as coach learning.

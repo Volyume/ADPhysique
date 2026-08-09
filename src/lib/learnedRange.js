@@ -1,7 +1,15 @@
 /**
  * learnedRange.js — the learned working range (Stage 5 of the adaptive
  * mesocycle build; authority docs/blueprint-adaptive-mesocycle-2026-08-09.md
- * §3.2 + the founder's Stage 5 spec).
+ * §3.2 + the founder's Stage 5 spec). Hardened after the Stage 5
+ * adversarial review (2026-08-09): the research-MEV anchor now beats
+ * every other clamp, the ceiling learns the HIGHEST volume handled (a
+ * later good lower-volume block cannot erase proven capacity), the
+ * floor is monotone downward (absence of evidence about lower starts is
+ * never treated as evidence they fail, and no upward volume pressure
+ * can come from the floor), suppressed blocks cannot raise the ceiling,
+ * manual-override blocks do not teach the engine, and degenerate priors
+ * fail closed.
  *
  * Pure replay, no parallel store: the per-muscle Block Ledger history the
  * Stage 6 hook persists is the ONE record, and this function folds it over
@@ -12,22 +20,29 @@
  *
  * Fold rules (slow and conservative by design — one block NUDGES, never
  * overwrites):
- * - ceiling: starts at the prior's MAV; moves toward the highest weekly
- *   volume the muscle actually HANDLED (recovery ok, performance up):
- *   RESPONSIVE moves toward its achieved peak, capped at 2 sets per
- *   block in either direction; OVERREACHED (progress at excessive cost)
- *   moves only DOWN, toward achievedPeak - 2; STRAINED moves only DOWN,
- *   toward the start the block began at; STALE moves nothing, because a
- *   flat block says the stimulus, not the volume, was the problem.
- * - floor: starts at the prior's MEV; nudges 1 set per block toward the
- *   lowest start that still produced progress (RESPONSIVE blocks only).
- * - clamps, applied after every step: research MEV is the absolute floor
- *   anchor (§3.8); the ceiling never exceeds the session-grain adapted
- *   MRV when one exists, the prior MRV otherwise, nor the 30-set
- *   backstop; the floor always sits at least 2 below the ceiling.
+ * - ceiling: starts at the prior's MAV; moves (2 sets per block at most)
+ *   toward the HIGHEST weekly volume any RESPONSIVE block actually
+ *   handled (a running maximum, not the latest block's number).
+ *   OVERREACHED (progress at excessive cost) moves only DOWN, toward
+ *   achievedPeak - 2; STRAINED moves only DOWN, toward the start the
+ *   block began at; STALE moves nothing (a flat block indicts the
+ *   stimulus, not the volume). Entries from blocks trained under
+ *   calm mode or an open ED flag (observed.suppressed) NEVER move the
+ *   ceiling upward — §3.8's no-upward-carry binds the memory too, not
+ *   just the proposal — though their downward evidence still counts.
+ * - floor: starts at the prior's MEV and only ever moves DOWN, 1 set per
+ *   block, toward the lowest start that produced progress (RESPONSIVE
+ *   blocks only). Never up: not trying lower volumes is not evidence
+ *   they fail, and a rising floor would be upward volume pressure.
+ * - clamps, applied after every step: research MEV is the ABSOLUTE floor
+ *   anchor and out-ranks every cap (§3.8); the ceiling never exceeds the
+ *   session-grain adapted MRV when one exists, the prior MRV otherwise,
+ *   nor the 30-set backstop — except where that would breach the anchor,
+ *   in which case the anchor wins; the floor always sits at least 2
+ *   below the ceiling.
  * - min evidence: only entries with confidence >= 0.6, a real
- *   classification and observed numbers fold; the range is only
- *   isLearned once at least one block qualified.
+ *   classification, usable observed numbers, and no manual override
+ *   fold; the range is only isLearned once at least one block qualified.
  */
 import { ABSOLUTE_WEEKLY_SET_CEILING } from './coachApply';
 import { BLOCK_CLASS } from './interBlock';
@@ -36,7 +51,15 @@ const MIN_ENTRY_CONFIDENCE = 0.6;
 const CEILING_STEP_MAX = 2;
 const FLOOR_STEP_MAX = 1;
 
-const num = (v, fallback) => (Number.isFinite(v) ? v : fallback);
+// JSON-round-trip tolerant coercion, matching interBlock's guard: a
+// numeric string ('12') computes as its number; anything non-finite
+// becomes the fallback (Stage 5 review #5 — a stringly confidence must
+// not silently erase the whole learned range).
+const num = (v, fallback) => {
+  const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
+  return Number.isFinite(n) ? n : fallback;
+};
+
 const stepToward = (current, target, maxStep) =>
   current + Math.max(-maxStep, Math.min(maxStep, target - current));
 
@@ -45,37 +68,55 @@ const stepToward = (current, target, maxStep) =>
  *
  * @param {object} input
  * @param {{mev:number, mav:number, mrv:number}} input.prior - the
- *   profile-adjusted research landmarks (planEngine's computeLandmarks
- *   output, normalised to lowercase by the caller): the range's prior.
+ *   profile-adjusted research landmarks as the range's prior. From
+ *   planEngine's computeLandmarks the caller maps MEV -> mev,
+ *   MAVhigh -> mav (the working-ceiling analogue; MAVlow is the ramp's
+ *   entry point, not a capacity bound) and MRV -> mrv.
  * @param {number} input.researchMev - the RAW research-table MEV, the
- *   absolute floor anchor.
+ *   absolute floor anchor. Out-ranks every other clamp.
  * @param {number|null} [input.adaptedMrv] - the session-grain adapted MRV
  *   when computeAdaptiveLandmarks has one (isAdapted); ceiling clamp.
  * @param {Array} [input.ledgerHistory] - oldest -> newest ledger entries
- *   for THIS muscle: { classification, confidence, observed: { startSets,
- *   achievedPeak, plannedPeak } } (classifyMuscleBlock echoes observed).
- * @returns {{floor:number, ceiling:number, isLearned:boolean, evidenceBlocks:number}}
+ *   for THIS muscle: { classification, confidence, proposal, observed:
+ *   { startSets, achievedPeak, plannedPeak, suppressed } }
+ *   (classifyMuscleBlock echoes observed; entries for other muscles are
+ *   skipped when input.muscle is provided).
+ * @param {string} [input.muscle] - optional guard: entries whose .muscle
+ *   differs are skipped instead of silently blending muscles.
+ * @returns {{floor:number|null, ceiling:number|null, isLearned:boolean,
+ *   evidenceBlocks:number}} - null bounds when the prior is unusable
+ *   (fail closed; callers gate on isLearned).
  */
 export function computeLearnedRange({
   prior,
   researchMev,
   adaptedMrv = null,
   ledgerHistory = [],
+  muscle = null,
 } = {}) {
-  const priorMev = num(prior?.mev, 0);
-  const priorMav = num(prior?.mav, priorMev + 2);
-  const priorMrv = num(prior?.mrv, priorMav);
-  const floorAnchor = num(researchMev, priorMev);
-  const ceilingCap = Math.min(
-    num(adaptedMrv, priorMrv),
-    ABSOLUTE_WEEKLY_SET_CEILING,
+  const priorMev = num(prior?.mev, null);
+  const priorMav = num(prior?.mav, null);
+  // Degenerate priors fail CLOSED (review #14): no invented ranges.
+  if (priorMev == null || priorMav == null || priorMev < 0 || priorMav <= 0) {
+    return { floor: null, ceiling: null, isLearned: false, evidenceBlocks: 0 };
+  }
+  const priorMrv = Math.max(num(prior?.mrv, priorMav), priorMav);
+  const floorAnchor = Math.max(num(researchMev, priorMev), 0);
+  // The anchor out-ranks every cap (review #1): a profile-shrunk or
+  // adapted ceiling below researchMev + 2 yields to the anchor rather
+  // than dragging the floor beneath it.
+  const ceilingCap = Math.max(
+    Math.min(num(adaptedMrv, priorMrv), ABSOLUTE_WEEKLY_SET_CEILING),
+    floorAnchor + 2,
   );
 
   let floor = priorMev;
   let ceiling = priorMav;
   let evidenceBlocks = 0;
-  // The lowest start that has actually produced progress so far in the
-  // replay; the floor targets it once it exists.
+  // Running extremes over qualifying evidence (review #2/#3): the ceiling
+  // targets the HIGHEST handled peak ever seen; the floor targets the
+  // lowest progressing start, and only ever moves down toward it.
+  let highestHandledPeak = null;
   let lowestProgressingStart = null;
 
   const clampAll = () => {
@@ -87,9 +128,14 @@ export function computeLearnedRange({
   for (const raw of Array.isArray(ledgerHistory) ? ledgerHistory : []) {
     if (!raw || typeof raw !== 'object') continue;
     const { classification, observed } = raw;
-    if (!observed || typeof observed !== 'object') continue;
+    if (!observed || typeof observed !== 'object' || Array.isArray(observed)) continue;
+    if (muscle != null && raw.muscle != null && raw.muscle !== muscle) continue;
     if (num(raw.confidence, 0) < MIN_ENTRY_CONFIDENCE) continue;
     if (classification === BLOCK_CLASS.INSUFFICIENT_DATA) continue;
+    // Manual-override blocks do not teach the engine (review #9): the
+    // user's chosen numbers must not launder into "learned from your
+    // history" once the override is removed.
+    if (raw.proposal?.deferredToManual) continue;
     if (classification !== BLOCK_CLASS.RESPONSIVE
       && classification !== BLOCK_CLASS.OVERREACHED
       && classification !== BLOCK_CLASS.STALE
@@ -97,10 +143,22 @@ export function computeLearnedRange({
 
     const startSets = num(observed.startSets, null);
     const achievedPeak = num(observed.achievedPeak, null);
+    const entrySuppressed = !!observed.suppressed;
+    // Only entries carrying a usable measurement count as evidence
+    // (review #7): an empty observed object teaches nothing and must not
+    // flag the range as learned.
+    if (startSets == null && achievedPeak == null) continue;
     evidenceBlocks += 1;
 
     if (classification === BLOCK_CLASS.RESPONSIVE && achievedPeak != null) {
-      ceiling = stepToward(ceiling, achievedPeak, CEILING_STEP_MAX);
+      // §3.8 binds the memory too: a block trained under calm mode or an
+      // open ED flag never raises the learned ceiling (review #6).
+      if (!entrySuppressed) {
+        highestHandledPeak = highestHandledPeak == null
+          ? achievedPeak
+          : Math.max(highestHandledPeak, achievedPeak);
+        ceiling = stepToward(ceiling, highestHandledPeak, CEILING_STEP_MAX);
+      }
     } else if (classification === BLOCK_CLASS.OVERREACHED && achievedPeak != null) {
       const target = achievedPeak - 2;
       if (target < ceiling) ceiling = stepToward(ceiling, target, CEILING_STEP_MAX);
@@ -113,7 +171,10 @@ export function computeLearnedRange({
       lowestProgressingStart = lowestProgressingStart == null
         ? startSets
         : Math.min(lowestProgressingStart, startSets);
-      floor = stepToward(floor, lowestProgressingStart, FLOOR_STEP_MAX);
+      // Monotone downward only (reviews #3/#4).
+      if (lowestProgressingStart < floor) {
+        floor = stepToward(floor, lowestProgressingStart, FLOOR_STEP_MAX);
+      }
     }
 
     clampAll();

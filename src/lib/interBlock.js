@@ -246,7 +246,17 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
       // Stage 5: the block's own observed numbers, echoed so a persisted
       // ledger can be replayed into the learned working range
       // (learnedRange.computeLearnedRange) without re-deriving anything.
-      observed: { startSets: previousStart, achievedPeak, plannedPeak },
+      // RAW measurements only (Stage 5 review #8): an absent input echoes
+      // null rather than its landmark-derived fallback, so the fold can
+      // never mistake a table default for something the user performed.
+      // The suppressed marker travels with the entry so the replay can
+      // refuse upward learning from a flagged block (§3.8, review #6).
+      observed: {
+        startSets: num(input.previousStart, null),
+        achievedPeak: num(input.achievedPeak, null),
+        plannedPeak: num(input.plannedPeak, null),
+        suppressed,
+      },
       proposal: {
         startSets: deferredToManual ? null : start,
         peakSets: deferredToManual ? null : peak,
