@@ -149,10 +149,15 @@ function detectSignals(checkins) {
  * @param {Array}  checkins    - recent weekly check-ins
  * @param {Object} userProfile - { experience, goal }
  * @param {Array}  signals     - detected signals
+ * @param {string} phase       - 'recovery' while the recovery week is still
+ *   ahead or live; 'finished' once the block is completed_awaiting_decision
+ *   (Stage 1: the wording must never place the recovery week in the future
+ *   when it has already passed).
  * @returns {{ recommendation, headline, body, actionLabel, secondaryLabel }}
  */
-function buildNextBlockRecommendation(checkins, userProfile, signals) {
+function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'recovery') {
   const highSignals = signals.filter(s => s.severity === 'high');
+  const finished = phase === 'finished';
 
   // Count persistent performance/fatigue signals
   // Simplified: if this block had consistently poor readiness, suggest minor adjustment
@@ -164,7 +169,9 @@ function buildNextBlockRecommendation(checkins, userProfile, signals) {
     return {
       recommendation: 'repeat',
       headline: 'Go again: same programme',
-      body: "Your recovery week does its job, then you pick up where you left off. Same exercises, same structure. You'll come back a little stronger each block.",
+      body: finished
+        ? "Pick up where you left off. Same exercises, same structure. You'll come back a little stronger each block."
+        : "Your recovery week does its job, then you pick up where you left off. Same exercises, same structure. You'll come back a little stronger each block.",
       actionLabel: 'Continue this programme',
       secondaryLabel: 'Build a new programme',
     };
@@ -177,10 +184,15 @@ function buildNextBlockRecommendation(checkins, userProfile, signals) {
       headline: 'Same programme, slightly adjusted',
       // Stage 1 honesty (2026-08-09): this body used to promise "a small
       // volume or load adjustment based on how this block went" with no
-      // code behind it. Until the Stage 6 ledger makes that true, the copy
-      // names what the user can actually do.
-      body: "The structure is working. After your recovery week, restart the same programme, and trim a set from anything that felt heavy in the final weeks.",
-      actionLabel: 'Continue with adjustments',
+      // code behind it, under a "Continue with adjustments" button making
+      // the same false claim. Until the Stage 6 ledger makes an app-side
+      // adjustment true, the copy and the button name what the user can
+      // actually do; Stage 6 restores "Continue with adjustments" together
+      // with the behaviour.
+      body: finished
+        ? "The structure is working. Restart the same programme, and trim a set from anything that felt heavy in the final weeks."
+        : "The structure is working. After your recovery week, restart the same programme, and trim a set from anything that felt heavy in the final weeks.",
+      actionLabel: 'Restart this programme',
       secondaryLabel: 'Build a new programme',
     };
   }
@@ -189,7 +201,9 @@ function buildNextBlockRecommendation(checkins, userProfile, signals) {
   return {
     recommendation: 'consider_rebuild',
     headline: 'Might be worth a fresh look',
-    body: "Fatigue has been consistently high this block. After your recovery week, it's worth reviewing whether the programme volume or exercise selection still fits where you are. The coach can help rebuild it.",
+    body: finished
+      ? "Fatigue ran consistently high this block. It's worth reviewing whether the programme volume or exercise selection still fits where you are. The coach can help rebuild it."
+      : "Fatigue has been consistently high this block. After your recovery week, it's worth reviewing whether the programme volume or exercise selection still fits where you are. The coach can help rebuild it.",
     actionLabel: 'Continue this programme',
     secondaryLabel: 'Review with coach',
   };
@@ -214,7 +228,9 @@ function buildNextBlockRecommendation(checkins, userProfile, signals) {
  *   body:      string, plain English, uses user's own data
  *   signals:   [{ type, severity, label }]
  *   nextBlock: null | { recommendation, headline, body, actionLabel, secondaryLabel }
- *   blockStatus: null | { status, currentWeek, totalWeeks, ... }
+ *   blockStatus: null | { status: 'active' | 'recovery' |
+ *     'completed_awaiting_decision', awaitingDecision, currentWeek,
+ *     totalWeeks, weeksOverdue, ... }
  * }
  */
 export async function getBlockAdvice(userId, activeBlock, userProfile) {
@@ -251,9 +267,9 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
     };
   }
 
-  // ── Block complete / overdue ──────────────────────────────────────────────
+  // ── Block finished, awaiting the user's next-block decision ──────────────
   if (blockStatus?.status === 'completed_awaiting_decision') {
-    const nextBlock = buildNextBlockRecommendation(checkins, userProfile, signals);
+    const nextBlock = buildNextBlockRecommendation(checkins, userProfile, signals, 'finished');
     const overdueWeeks = blockStatus.weeksOverdue;
     return {
       action: 'post_recovery',

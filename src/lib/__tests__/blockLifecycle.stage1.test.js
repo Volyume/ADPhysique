@@ -52,10 +52,13 @@ describe('the week index never wraps or resets while awaiting a decision', () =>
     expect(getBlockStatus(START, 5, START + 11 * WEEK).currentWeek).toBe(12);
   });
 
-  test('the generic narrative resolver refuses to wrap for a block-bound caller', () => {
-    // getCurrentMesoWeek keeps its generic wrapping contract, but gains an
-    // opt-in that block-bound consumers use: with wrap disabled it clamps
-    // at the schedule end instead of calling week 7 "week 2".
+  test('the generic narrative resolver can refuse to wrap', () => {
+    // getCurrentMesoWeek keeps its generic wrapping contract, plus a
+    // { wrap: false } clamp at the EXPERIENCE SCHEDULE's end (5 weeks for
+    // intermediate). This is NOT a block week: block-bound code resolves
+    // through getCurrentBlockWeekIndex + getBlockStatus (see the db
+    // resolver test below), never through this narrative layer, which has
+    // no production callers.
     expect(getCurrentMesoWeek(START, 'intermediate', START + 6 * WEEK)).toBe(2); // legacy wrap intact
     expect(getCurrentMesoWeek(START, 'intermediate', START + 6 * WEEK, { wrap: false })).toBe(5);
   });
@@ -104,13 +107,17 @@ describe('no silent mesocycle creation', () => {
     expect((dbSrc.match(/createMesocycle\(/g) || []).length).toBe(1);
   });
 
-  test('INSERT INTO mesocycles exists only inside database.js', () => {
-    expect(filesMatching(/INSERT INTO mesocycles/)).toEqual(['lib/database.js']);
-    // Exactly two sites there: activatePlanWithBlock (live, user-initiated
-    // plan activation) and createMesocycle (dead, Stage 6). A third site
+  test('every INSERT variant into mesocycles lives only inside database.js', () => {
+    // OR REPLACE / OR IGNORE variants count too, or a future silent-creation
+    // path could walk straight past this pin.
+    expect(filesMatching(/INSERT (OR \w+ )?INTO mesocycles/)).toEqual(['lib/database.js']);
+    // Exactly three sites there: activatePlanWithBlock (live, user-initiated
+    // plan activation), createMesocycle (dead, Stage 6), and
+    // insertMesocycleFromCloud (the sync pull, which only mirrors a block
+    // the same user explicitly created on another device). A fourth site
     // appearing means a new creation path bypassed this review.
     const dbSrc = fs.readFileSync(path.join(SRC_ROOT, 'lib', 'database.js'), 'utf8');
-    expect((dbSrc.match(/INSERT INTO mesocycles/g) || []).length).toBe(2);
+    expect((dbSrc.match(/INSERT (OR \w+ )?INTO mesocycles/g) || []).length).toBe(3);
   });
 });
 

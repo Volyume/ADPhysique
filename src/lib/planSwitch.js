@@ -13,7 +13,8 @@ import { getBlockStatus } from './mesocycle';
 //   - no userId
 //   - getActiveBlock throws or returns null
 //   - the block is in week 1 (no real progress yet)
-//   - the block is in recovery, complete, or overdue (about to roll over anyway)
+//   - the block is in recovery or completed_awaiting_decision (about to roll
+//     over anyway; anything not 'active' passes)
 //
 // Otherwise shows an Alert and resolves to the user's choice.
 export async function confirmPlanSwitchMidBlock(userId, opts = {}) {

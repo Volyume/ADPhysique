@@ -14,6 +14,10 @@ jest.mock('../../store/useAppStore', () => {
   const fn = (selector) => selector({ accessibility: { reduceMotion: true } });
   return { __esModule: true, default: fn };
 });
+// Stage 1 (2026-08-09): the sheet now renders the shared Button for the
+// finished-state CTA, which pulls in the haptics module (same mock
+// convention as CancelReasonSheet.test.js).
+jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn() }));
 
 import HomeBlockShapeSheet from '../HomeBlockShapeSheet';
 import { GLOSSARY } from '../../lib/coachGlossary';
@@ -67,5 +71,24 @@ describe('HomeBlockShapeSheet', () => {
     const { tree, props } = render();
     pressByLabel(tree, 'Close');
     expect(props.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // Stage 1 (2026-08-09): a finished block's chip line names a decision, so
+  // the sheet it opens must offer the route to it - and only then.
+  test('a finished block offers the Choose your next block CTA and it closes then navigates', () => {
+    const onChooseNext = jest.fn();
+    const { tree, props } = render({
+      currentMesoWeek: { mesoName: 'Hypertrophy block', weekIndex: 5, plannedWeeks: 5, isDeload: true, awaitingDecision: true },
+      onChooseNext,
+    });
+    pressByLabel(tree, 'Choose your next block');
+    expect(props.onClose).toHaveBeenCalledTimes(1);
+    expect(onChooseNext).toHaveBeenCalledTimes(1);
+  });
+
+  test('a live block shows no next-block CTA', () => {
+    const { tree } = render({ onChooseNext: jest.fn() });
+    const cta = tree.root.findAll((n) => n.props.accessibilityLabel === 'Choose your next block');
+    expect(cta.length).toBe(0);
   });
 });

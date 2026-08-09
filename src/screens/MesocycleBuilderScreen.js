@@ -155,6 +155,16 @@ export default function MesocycleBuilderScreen({ navigation }) {
     return Math.min(Math.max(currentWeek, 1), totalWeeks);
   }
 
+  // Stage 1 (2026-08-09): a block past its recovery week is finished and
+  // awaiting the user's next-block decision; this screen must not read
+  // "Week 6 of 6 · recovery week" for ever (the same honesty rule as
+  // BlockShapeCard's finished state).
+  function isBlockFinished(mesocycle) {
+    if (!mesocycle?.startDate) return false;
+    const totalWeeks = mesocycle.plannedWeeks || mesocycle.durationWeeks || 4;
+    return !!getBlockStatus(mesocycle.startDate, totalWeeks).awaitingDecision;
+  }
+
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Training blocks" />
@@ -195,11 +205,12 @@ export default function MesocycleBuilderScreen({ navigation }) {
                   const activeMeso = activeStats.active;
                   const currentWeek = getCurrentWeek(activeMeso);
                   const totalWeeks = activeMeso.durationWeeks || 4;
-                  const isDeload = activeMeso.deloadWeek != null && currentWeek === activeMeso.deloadWeek;
+                  const finished = isBlockFinished(activeMeso);
+                  const isDeload = !finished && activeMeso.deloadWeek != null && currentWeek === activeMeso.deloadWeek;
                   return (
                     <View style={styles.planWeekRow}>
                       <Text style={[styles.planWeekLabel, live.planWeekLabel, isDeload && [styles.planWeekLabelDeload, live.planWeekLabelDeload]]}>
-                        Week {currentWeek} of {totalWeeks}{isDeload ? ' · recovery week' : ''}
+                        {finished ? 'Block finished · choose your next block' : `Week ${currentWeek} of ${totalWeeks}${isDeload ? ' · recovery week' : ''}`}
                       </Text>
                       <View style={styles.planWeekBar}>
                         {Array.from({ length: totalWeeks }, (_, i) => (
@@ -232,6 +243,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
               <ActiveMesoDashboard
                 stats={activeStats}
                 currentWeek={getCurrentWeek(activeStats.active)}
+                finished={isBlockFinished(activeStats.active)}
               />
             )}
 
@@ -341,7 +353,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
 // cleaner than threading two extra props through. Same shared
 // buildLiveStyles(t) as the parent screen (CardioHistoryScreen/CardioTrend
 // precedent, batch preceding this one).
-function ActiveMesoDashboard({ stats, currentWeek }) {
+function ActiveMesoDashboard({ stats, currentWeek, finished = false }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const { tonnageBars, recovery, autoReg, deloadPrediction, active } = stats;
@@ -370,7 +382,7 @@ function ActiveMesoDashboard({ stats, currentWeek }) {
       </View>
       <Text style={[styles.dashName, live.dashName]} numberOfLines={1}>{active.name}</Text>
       <Text style={[styles.dashWeek, live.dashWeek]}>
-        Week {currentWeek} of {totalWeeks}
+        {finished ? 'Block finished' : `Week ${currentWeek} of ${totalWeeks}`}
         {active.focus ? `  ·  ${active.focus}` : ''}
       </Text>
 

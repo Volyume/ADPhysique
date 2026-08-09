@@ -342,6 +342,7 @@ function NextWeekCard({
 function TrainingNextWeekCard({
   output, onApply, canApply, applyStateFor, onApplySettled,
   deloadSuggested, deloadNote, onApplyDeload, hero, navigation,
+  blockFinished = false,
 }) {
   // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
   // See buildLiveStyles' header comment (defined below the frozen `styles`
@@ -384,7 +385,9 @@ function TrainingNextWeekCard({
             <View style={[styles.planNote, live.planNote]}>
               <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
               <Text style={[styles.planNoteText, live.planNoteText]}>
-                Start your next training week to bring the recovery week forward.
+                {blockFinished
+                  ? 'This block has finished, so there is no upcoming week to change. Choose your next block on the Train tab.'
+                  : 'Start your next training week to bring the recovery week forward.'}
               </Text>
             </View>
           )}
@@ -406,7 +409,9 @@ function TrainingNextWeekCard({
           <View style={[styles.planNote, live.planNote]}>
             <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
             <Text style={[styles.planNoteText, live.planNoteText]}>
-              This is next week's starting point. Each session still fine-tunes as you train.
+              {blockFinished
+                ? 'This block has finished, so volume changes have nowhere to land yet. Choose your next block on the Train tab first.'
+                : "This is next week's starting point. Each session still fine-tunes as you train."}
             </Text>
           </View>
           {/* CO-2: this card said what changed ("N updated") but never linked
@@ -1011,6 +1016,12 @@ export default function CoachOutputScreen({ navigation, route }) {
   // Loaded once on mount; null when there's no active block or the
   // current week is the last one (nothing to push volume into).
   const [nextTrainingWeekId, setNextTrainingWeekId] = useState(null);
+  // Stage 1 (2026-08-09): when the active block is finished
+  // (awaitingDecision) there is no upcoming week, so training applies
+  // rightly disable; this flag lets the card SAY so instead of the apply
+  // path dying silently (blueprint §3.5: the coach output carries the
+  // block-finished state, not a mystery).
+  const [blockAwaitingDecision, setBlockAwaitingDecision] = useState(false);
   // Five-part coach response inputs (Theme A): weigh-ins inside the
   // displayed week, the calm-mode preference, and the check-in day name
   // for the forward-pull anchor. All best-effort; the response renders
@@ -1864,8 +1875,10 @@ export default function CoachOutputScreen({ navigation, route }) {
         const cur = await getCurrentMesocycleWeek(user.id);
         const next = cur?.id ? await getNextMesocycleWeek(cur.id) : null;
         setNextTrainingWeekId(next?.id ?? null);
+        setBlockAwaitingDecision(!!cur?.awaitingDecision);
       } catch (_e) {
         setNextTrainingWeekId(null);
+        setBlockAwaitingDecision(false);
       }
 
       // Load the last 5 outputs; skip the first (current week) for the history shelf
@@ -2194,6 +2207,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       output={output}
       onApply={applyDisabled ? undefined : handleApplyTraining}
       canApply={!!nextTrainingWeekId}
+      blockFinished={blockAwaitingDecision}
       applyStateFor={applyStateFor}
       onApplySettled={onApplySettled}
       deloadSuggested={deloadSuggested}

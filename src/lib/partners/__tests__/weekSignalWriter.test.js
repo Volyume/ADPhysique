@@ -18,7 +18,7 @@ jest.mock('../../streakState', () => ({
   loadStreakState: jest.fn().mockResolvedValue({ manualGoal: null, pauses: [] }),
   pausedWeekKeys: jest.fn(() => new Set()),
 }));
-jest.mock('../../mesocycle', () => ({ getBlockStatus: jest.fn(() => ({ status: 'active' })) }));
+jest.mock('../../mesocycle', () => ({ getBlockStatus: jest.fn(() => ({ status: 'active', awaitingDecision: false, weeksOverdue: 0 })) }));
 jest.mock('../service', () => ({ pushWeekSignal: jest.fn().mockResolvedValue({ ok: true }) }));
 jest.mock('../tierGate', () => ({ isLapsedPartner: jest.fn(() => false) }));
 jest.mock('../telemetry', () => ({ trackPairWeekActive: jest.fn() }));
@@ -37,7 +37,7 @@ beforeEach(() => {
   db.getOpenEdPatternFlag.mockResolvedValue(null);
   db.getActiveBlock.mockResolvedValue(null);
   db.getWeeklyPRCount.mockResolvedValue(0);
-  meso.getBlockStatus.mockReturnValue({ status: 'active' });
+  meso.getBlockStatus.mockReturnValue({ status: 'active', awaitingDecision: false, weeksOverdue: 0 });
   isLapsedPartner.mockReturnValue(false);
 });
 
@@ -59,17 +59,26 @@ describe('computeCurrentWeekState', () => {
   test('derives milestone booleans from local data in a training week', async () => {
     db.getWeeklySessionStats.mockResolvedValue({ completed: 4, planned: 4 });
     db.getActiveBlock.mockResolvedValue({ startDate: '2026-05-01', plannedWeeks: 5 });
-    meso.getBlockStatus.mockReturnValue({ status: 'complete' });
+    meso.getBlockStatus.mockReturnValue({ status: 'completed_awaiting_decision', awaitingDecision: true, weeksOverdue: 0 });
     db.getWeeklyPRCount.mockResolvedValue(2);
     const ws = await computeCurrentWeekState('u1');
     expect(ws.completedBlock).toBe(true);
     expect(ws.hitPb).toBe(true);
   });
 
+  test('an ignored finished block (weeksOverdue >= 1) is NOT a fresh completion milestone', async () => {
+    db.getWeeklySessionStats.mockResolvedValue({ completed: 4, planned: 4 });
+    db.getActiveBlock.mockResolvedValue({ startDate: '2026-05-01', plannedWeeks: 5 });
+    meso.getBlockStatus.mockReturnValue({ status: 'completed_awaiting_decision', awaitingDecision: true, weeksOverdue: 2 });
+    db.getWeeklyPRCount.mockResolvedValue(0);
+    const ws = await computeCurrentWeekState('u1');
+    expect(ws.completedBlock).toBe(false);
+  });
+
   test('SCOFF >= 2 with NO open flag freezes outbound to resting, both booleans false', async () => {
     db.getWeeklySessionStats.mockResolvedValue({ completed: 4, planned: 4 }); // live training
     db.getActiveBlock.mockResolvedValue({ startDate: '2026-05-01', plannedWeeks: 5 });
-    meso.getBlockStatus.mockReturnValue({ status: 'complete' }); // would be true
+    meso.getBlockStatus.mockReturnValue({ status: 'completed_awaiting_decision', awaitingDecision: true, weeksOverdue: 0 }); // would be true
     db.getWeeklyPRCount.mockResolvedValue(3); // would be true
     db.getOpenEdPatternFlag.mockResolvedValue(null); // NO open flag
     const ws = await computeCurrentWeekState('u1', 2); // SCOFF >= 2 is the only lever
@@ -88,7 +97,7 @@ describe('computeCurrentWeekState', () => {
   test('ED FREEZE forces BOTH milestone booleans false, even with a block + PB', async () => {
     db.getWeeklySessionStats.mockResolvedValue({ completed: 4, planned: 4 });
     db.getActiveBlock.mockResolvedValue({ startDate: '2026-05-01', plannedWeeks: 5 });
-    meso.getBlockStatus.mockReturnValue({ status: 'complete' }); // would be true
+    meso.getBlockStatus.mockReturnValue({ status: 'completed_awaiting_decision', awaitingDecision: true, weeksOverdue: 0 }); // would be true
     db.getWeeklyPRCount.mockResolvedValue(3); // would be true
     db.getOpenEdPatternFlag.mockResolvedValue({ id: 'flag' }); // freeze -> resting
     const ws = await computeCurrentWeekState('u1');
@@ -114,7 +123,7 @@ describe('writeOwnWeekSignals', () => {
     db.getPartnershipsLocal.mockResolvedValue([{ id: 'p1', status: 'active' }]);
     db.getWeeklySessionStats.mockResolvedValue({ completed: 4, planned: 4 });
     db.getActiveBlock.mockResolvedValue({ startDate: '2026-05-01', plannedWeeks: 5 });
-    meso.getBlockStatus.mockReturnValue({ status: 'complete' });
+    meso.getBlockStatus.mockReturnValue({ status: 'completed_awaiting_decision', awaitingDecision: true, weeksOverdue: 0 });
     db.getWeeklyPRCount.mockResolvedValue(1);
     await writeOwnWeekSignals('u1');
     expect(pushWeekSignal).toHaveBeenCalledWith('u1', expect.objectContaining({
@@ -127,7 +136,7 @@ describe('writeOwnWeekSignals', () => {
     db.getPartnershipsLocal.mockResolvedValue([{ id: 'p1', status: 'active' }]);
     db.getWeeklySessionStats.mockResolvedValue({ completed: 4, planned: 4 }); // live training
     db.getActiveBlock.mockResolvedValue({ startDate: '2026-05-01', plannedWeeks: 5 });
-    meso.getBlockStatus.mockReturnValue({ status: 'complete' });
+    meso.getBlockStatus.mockReturnValue({ status: 'completed_awaiting_decision', awaitingDecision: true, weeksOverdue: 0 });
     db.getWeeklyPRCount.mockResolvedValue(2);
     await writeOwnWeekSignals('u1');
     expect(pushWeekSignal).toHaveBeenCalledWith('u1', expect.objectContaining({

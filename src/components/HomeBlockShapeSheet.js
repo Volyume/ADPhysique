@@ -3,6 +3,7 @@ import { Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, fontSize, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BlockShapeCard from './BlockShapeCard';
+import Button from './Button';
 import { GLOSSARY } from '../lib/coachGlossary';
 import BottomSheet from './BottomSheet';
 
@@ -18,7 +19,11 @@ import BottomSheet from './BottomSheet';
 // threaded in from HomeScreen's useSafeAreaInsets) and `reduceMotion`
 // (BottomSheet reads it from the store itself) are no longer accepted --
 // see HomeScreen.js's call site, which now omits both.
-function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek }) {
+// Stage 1 (2026-08-09): when the block is finished (awaitingDecision) the
+// chip's honest line names a decision, so the sheet it opens must offer a
+// route to that decision rather than dead-ending (onChooseNext, wired by
+// HomeScreen to the Train tab's next-block card).
+function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek, onChooseNext }) {
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
   // keys only.
@@ -43,6 +48,15 @@ function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek }) {
             definitions of its terms live here, in the sheet it opens. */}
         <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.deload}</Text>
         <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.rir}</Text>
+        {currentMesoWeek?.awaitingDecision && onChooseNext ? (
+          <Button
+            variant="primary"
+            title="Choose your next block"
+            onPress={() => { onClose?.(); onChooseNext(); }}
+            accessibilityLabel="Choose your next block"
+            style={styles.chooseNextBtn}
+          />
+        ) : null}
         <TouchableOpacity style={styles.sheetCancel} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close">
           <Text style={[styles.sheetCancelText, live.sheetCancelText]}>Close</Text>
         </TouchableOpacity>
@@ -61,6 +75,7 @@ const styles = StyleSheet.create({
   },
   sheetSub: { fontSize: fontSize.sm, color: colors.textMuted, marginBottom: spacing.lg },
   sheetDefn: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.sm },
+  chooseNextBtn: { marginTop: spacing.md },
   sheetCancel: { marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.md },
   sheetCancelText: { ...type.body, color: colors.textSecondary },
 });

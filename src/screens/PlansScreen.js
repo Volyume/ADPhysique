@@ -34,7 +34,7 @@ import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
-import { logError } from '../lib/errorLog';
+import { logError, logInfo } from '../lib/errorLog';
 import * as haptics from '../lib/haptics';
 
 const BLOCK_SNOOZE_KEY = '@volyume_block_snooze';
@@ -234,7 +234,14 @@ export default function PlansScreen({ navigation }) {
     setRefreshing(false);
   }
 
-  async function handleRestartPlan() {
+  // Stage 1 seam (2026-08-09, blueprint §3.5): `intent` is the advisor
+  // recommendation the user tapped ('repeat' | 'adjust' |
+  // 'consider_rebuild'). Stage 6 branches here to build the Block Ledger
+  // ('repeat' = carry-over forced to true repeat, 'adjust' = full ledger)
+  // and passes it through activatePlanWithBlock's { ledger } option;
+  // until then ledger stays null and the intent is recorded for
+  // observability so the seam is live, not decorative.
+  async function handleRestartPlan(intent = null) {
     if (!activePlan) return;
     appAlert(
       'Restart this plan?',
@@ -245,11 +252,12 @@ export default function PlansScreen({ navigation }) {
           text: 'Start new block',
           onPress: async () => {
             try {
-              await activatePlanWithBlock(user.id, activePlan.id, planHeadingName(activePlan.name));
+              logInfo('PlansScreen.blockRestart', { intent });
+              await activatePlanWithBlock(user.id, activePlan.id, planHeadingName(activePlan.name), { ledger: null });
               await AsyncStorage.removeItem(BLOCK_SNOOZE_KEY).catch(() => {});
               await loadData();
             } catch (e) {
-              logError('PlansScreen.handleRestartPlan', e, { userId: user?.id, planId: activePlan?.id });
+              logError('PlansScreen.handleRestartPlan', e, { userId: user?.id, planId: activePlan?.id, intent });
               toast.show("Couldn't restart plan, try again", { variant: 'error' });
             }
           },
@@ -711,7 +719,7 @@ export default function PlansScreen({ navigation }) {
                       variant="primary"
                       icon="refresh-outline"
                       title={blockAdvice.nextBlock.actionLabel}
-                      onPress={handleRestartPlan}
+                      onPress={() => handleRestartPlan(blockAdvice.nextBlock.recommendation)}
                       accessibilityLabel={blockAdvice.nextBlock.actionLabel}
                       style={styles.blockCtaButton}
                     />

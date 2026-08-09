@@ -39,9 +39,11 @@ async function deriveMilestones(userId, weekStartMs) {
     const block = await getActiveBlock(userId);
     if (block && block.startDate != null) {
       const plannedWeeks = block.plannedWeeks ?? block.durationWeeks ?? 5;
-      // 'complete' holds only for the single week just after the block's final
-      // recovery week, so this is true exactly on the week a block finishes.
-      completedBlock = getBlockStatus(block.startDate, plannedWeeks).status === 'complete';
+      // True exactly on the single week just after the block's final recovery
+      // week (weeksOverdue 0), preserving the retired 'complete' status's
+      // semantics after Stage 1 merged it into completed_awaiting_decision.
+      const bs = getBlockStatus(block.startDate, plannedWeeks);
+      completedBlock = bs.awaitingDecision && bs.weeksOverdue === 0;
     }
   } catch (_) { completedBlock = false; }
 

@@ -77,9 +77,13 @@ export function getCurrentMesoWeek(startDateMs, experience = 'intermediate', now
   const daysElapsed = localDaysElapsed(start, nowMs);
   const weeksElapsed = Math.floor(daysElapsed / 7);
   // Stage 1 (2026-08-09): wrap stays the default for the generic
-  // autoregulation narrative, but a BLOCK-BOUND caller passes
-  // { wrap: false } so a finished block clamps at its final week instead
-  // of dressing week 7 up as "Introduction week" again.
+  // autoregulation narrative; { wrap: false } clamps at the end of the
+  // EXPERIENCE SCHEDULE (5 or 6 weeks) instead of dressing week 7 up as
+  // "Introduction week" again. NOTE: this is the schedule's length, not a
+  // block's plannedWeeks. Block-bound code must not use this function at
+  // all: the honest block week comes from getCurrentBlockWeekIndex +
+  // getBlockStatus (which is what the database resolver uses). This
+  // narrative layer currently has no production callers.
   if (!wrap) return Math.min(weeksElapsed + 1, schedule.length);
   return (weeksElapsed % schedule.length) + 1;
 }
@@ -98,8 +102,8 @@ export function getCurrentMesoWeek(startDateMs, experience = 'intermediate', now
  * for, because they answer different questions:
  *   - getCurrentMesoWeek:  position in the generic 5/6-week autoregulation
  *                          narrative (wraps by experience schedule length)
- *   - getBlockStatus:      has THIS block's real schedule finished or run
- *                          over (deliberately UNclamped so 'overdue' shows)
+ *   - getBlockStatus:      has THIS block's real schedule finished
+ *                          (deliberately UNclamped so weeksOverdue counts)
  *   - getCurrentBlockWeekIndex: which mesocycle_weeks ROW exists right now
  *                          for THIS block (clamped to plannedWeeks, since no
  *                          row exists beyond it)
@@ -466,18 +470,22 @@ export function applyTimeCrunch(exercises, targetMinutes, estimateFn, options = 
  * @param {string|number} startDateMs - ISO date string or epoch ms of block start
  * @param {number} plannedWeeks - total weeks in the block (includes recovery week)
  * @returns {{
- *   status: 'active' | 'recovery' | 'complete' | 'overdue',
+ *   status: 'active' | 'recovery' | 'completed_awaiting_decision',
+ *   awaitingDecision: boolean,
  *   currentWeek: number,
  *   totalWeeks: number,
  *   weeksOverdue: number,
  *   recoveryWeek: number,
  * }}
  *
- * Status meaning:
+ * Status meaning (Stage 1, 2026-08-09):
  *   active   , still in the accumulation phase, keep training
  *   recovery , currently in the final (lighter) week of the block
- *   complete , recovery week just finished (0–13 days overdue)
- *   overdue  , block finished 2+ weeks ago, strongly prompt transition
+ *   completed_awaiting_decision , the block (recovery week included) is
+ *     finished; the user's explicit next-block decision is pending, however
+ *     long that takes. awaitingDecision mirrors it as a boolean and
+ *     weeksOverdue counts full weeks since the state began (0 in the first
+ *     post-recovery week), so copy can say how long the decision has waited.
  */
 export function getBlockStatus(startDateMs, plannedWeeks, nowMs = Date.now()) {
   let start = typeof startDateMs === 'string' ? new Date(startDateMs).getTime() : (startDateMs ?? nowMs);

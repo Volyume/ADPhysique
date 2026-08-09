@@ -428,7 +428,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         const wk = await getCurrentMesocycleWeek(user.id);
         if (cancelled || !wk) return;
         setMesoWeek(wk);
-        if (wk.mesocycleId && wk.plannedWeeks > 0 && wk.weekIndex >= wk.plannedWeeks) {
+        // Stage 1 (2026-08-09): celebrate the completion moment (the final
+        // week's sessions) once. A finished block awaiting the next-block
+        // decision must not re-fire the gold card after every session in
+        // limbo; that state is carried by the BlockShapeCard strip below.
+        if (wk.mesocycleId && wk.plannedWeeks > 0 && wk.weekIndex >= wk.plannedWeeks && !wk.awaitingDecision) {
           setBlockStory({ mesocycleId: wk.mesocycleId, name: wk.mesoName });
         }
       } catch (_e) {}
@@ -891,8 +895,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const weeks = mesoWeek?.plannedWeeks;
     navigation.navigate('ShareCard', {
       milestoneData: {
-        eyebrow: 'Block complete',
-        title: blockStory.name || 'Training block complete',
+        eyebrow: 'Block finished',
+        title: blockStory.name || 'Training block finished',
         heroValue: Number.isFinite(weeks) ? String(weeks) : '',
         heroUnit: Number.isFinite(weeks) ? 'weeks trained' : '',
         caption: 'A full training block completed.',
@@ -1411,7 +1415,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <Card tone="gold" style={styles.phaseCard}>
               <View style={styles.phaseHeaderRow}>
                 <Ionicons name="flag" size={18} color={t.colors.gold} />
-                <Text style={[styles.phaseTitle, live.phaseTitle]}>Block complete</Text>
+                <Text style={[styles.phaseTitle, live.phaseTitle]}>Block finished</Text>
               </View>
               {blockStory.name ? (
                 <Text style={[styles.phaseName, live.phaseName]}>{blockStory.name}</Text>
@@ -1421,8 +1425,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   ? `${mesoWeek.plannedWeeks} weeks completed, including your recovery week.`
                   : 'A full training block completed.'}
               </Text>
+              {/* Stage 1 honesty (2026-08-09): the old line promised
+                  "sensible progressions from this one" which the app does
+                  not make yet (seeding is a fresh ramp until the Stage 6
+                  ledger); point to the real decision instead. */}
               <Text style={[styles.phaseNext, live.phaseNext]}>
-                What's next: start the next block with sensible progressions from this one.
+                What's next: choose your next block from the Train tab when you're ready.
               </Text>
               <View style={styles.phaseActions}>
                 <Button

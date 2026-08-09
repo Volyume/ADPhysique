@@ -814,6 +814,30 @@ queue paused here for the founder review per D55.
   Next: Stage 3 performance metric (per stable exercise, never average
   raw e1RM across exercises; rebound/new-lift discounting; PR density
   over eligible exposures) feeding interBlock's performance input.
+- Stage 1 REVIEW REMEDIATION LANDED (2026-08-09, adversarial review vs
+  blueprint; all 12 findings fixed, none parked): partner block-finished
+  milestone re-keyed to awaitingDecision && weeksOverdue===0 (was dead on
+  the retired 'complete' string; mock re-anchored + overdue regression
+  pin); ActiveWorkoutScreen banner/targetReason say "Block finished" not
+  a live "Recovery week" (prescription behaviour unchanged);
+  MesocycleBuilderScreen plan card + ActiveMesoDashboard gain finished
+  state; blockAdvisor buildNextBlockRecommendation is phase-aware (no
+  "After your recovery week" once it has passed) and the 'adjust' CTA is
+  honestly "Restart this programme" until Stage 6 restores "Continue
+  with adjustments" WITH the behaviour; PlansScreen threads the tapped
+  recommendation (intent) into handleRestartPlan -> activatePlanWithBlock
+  ({ ledger: null }) with logInfo observability (the live Stage 6 seam);
+  INSERT pin widened to OR-variants (3 sites incl. insertMesocycleFromCloud,
+  sync mirror of the user's own action); { wrap:false } documented as
+  schedule-bound (no production callers; block code uses getBlockStatus);
+  stale JSDoc/comments updated (mesocycle, planSwitch, blockAdvisor);
+  WorkoutSummary celebration fires only at the completion moment (not
+  every limbo session), drops the false "sensible progressions" promise,
+  and aligns naming to "Block finished"; CoachOutput training card
+  explains WHY applies are unavailable when the block is finished;
+  HomeBlockShapeSheet gains a "Choose your next block" CTA (routes to
+  Plans). New pins: BlockShapeCard.finished render+call-site suite,
+  widget gatherWidgetInputs behavioural pin, sheet CTA tests.
 
 ### D89 comprehension-and-trust + design-consistency remediation (2026-08-06) — ALL WAVES LANDED to main (d251f50d)
 - Source of authority: `docs/audit/comprehension-trust-audit-2026-08-06.md`

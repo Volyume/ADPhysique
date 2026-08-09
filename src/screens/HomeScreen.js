@@ -2059,6 +2059,7 @@ export default function HomeScreen({ navigation, route }) {
         visible={showBlockShape}
         onClose={closeBlockShape}
         currentMesoWeek={currentMesoWeek}
+        onChooseNext={() => navigateCrossTab(navigation, 'PlansTab', 'Plans')}
       />
 
       <HomeChangeWorkoutSheet

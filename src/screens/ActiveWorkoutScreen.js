@@ -369,6 +369,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [starterActive, setStarterActive] = useState(false);
   const starterAppliedRef = useRef(false);
   const [isDeloadWeek, setIsDeloadWeek] = useState(false);
+  // Stage 1 (2026-08-09): a finished block clamps to its deload row, so
+  // isDeloadWeek alone would claim a live "Recovery week" for ever. The
+  // targets legitimately hold at that row's volume; only the copy changes.
+  const [blockFinished, setBlockFinished] = useState(false);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
   // B2 (Wave-3 review): the session-wide dismissal of the readiness tweak
   // lives ON the active workout (store action dismissReadinessTweak) so it
@@ -1271,6 +1275,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const currentWeek = await getCurrentMesocycleWeek(user?.id);
         if (currentWeek) {
           setIsDeloadWeek(!!currentWeek.isDeload);
+          setBlockFinished(!!currentWeek.awaitingDecision);
 
           // If this is a deload week, generate deload prescription from week-1 sets
           if (currentWeek.isDeload && currentWeek.mesocycleId && exercise?.id) {
@@ -1294,7 +1299,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   action: 'deload',
                   isDeload: true,
                 })));
-                setTargetReason('Recovery week: very easy effort, full recovery focus.');
+                setTargetReason(currentWeek.awaitingDecision
+                  ? 'Block finished: targets hold at recovery-week volume until you choose your next block.'
+                  : 'Recovery week: very easy effort, full recovery focus.');
               }
             }
           }
@@ -2664,8 +2671,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     <View style={styles.deloadBannerLeft}>
                       <Ionicons name="battery-charging-outline" size={18} color={t.colors.warning} />
                       <View>
-                        <Text style={[styles.deloadBannerTitle, live.deloadBannerTitle]}>Recovery week</Text>
-                        <Text style={[styles.deloadBannerSub, live.deloadBannerSub]}>Light loads - full recovery - no PRs</Text>
+                        <Text style={[styles.deloadBannerTitle, live.deloadBannerTitle]}>{blockFinished ? 'Block finished' : 'Recovery week'}</Text>
+                        <Text style={[styles.deloadBannerSub, live.deloadBannerSub]}>{blockFinished ? 'Holding at recovery-week volume until you choose your next block' : 'Light loads - full recovery - no PRs'}</Text>
                       </View>
                     </View>
                     <TouchableOpacity

@@ -58,6 +58,14 @@ describe('gatherWidgetInputs', () => {
     expect(inputs.nextSession.dayLabel).toBeNull();
   });
 
+  test('a finished block (awaitingDecision) never claims a live week-in-block (Stage 1, 2026-08-09)', async () => {
+    db.getCurrentMesocycleWeek.mockResolvedValue({ weekIndex: 5, plannedWeeks: 5, awaitingDecision: true });
+    const inputs = await gatherWidgetInputs('u1');
+    expect(inputs.nextSession.weekInBlock).toBeNull();
+    // The rest of the session card is unaffected: name still renders.
+    expect(inputs.nextSession.name).toBe('Push');
+  });
+
   test('an open ED flag sets edFlagOpen (snapshot then suppresses consistency)', async () => {
     db.getOpenEdPatternFlag.mockResolvedValue({ id: 'flag' });
     const inputs = await gatherWidgetInputs('u1');
