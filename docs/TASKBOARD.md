@@ -1116,6 +1116,17 @@ queue paused here for the founder review per D55.
   FUTURE (recorded, founder order - do NOT build yet): training-epoch /
   learned-ceiling freshness for long layoffs, detraining and profile
   change; no arbitrary weekly decay (D91-25).
+- FULL PRODUCT MAP CAMPAIGN (2026-08-09, founder order, IN FLIGHT):
+  discovery/documentation ONLY - no code, copy, test, schema or
+  behaviour changes. Deliverables docs/_FULL-APP-PRODUCT-MAP.md +
+  docs/_FULL-APP-PRODUCT-MAP-HANDOVER.md, built by paired Opus read
+  agents (navigation/screens, training+adaptive, nutrition+food,
+  settings+tier, data+sync, notifications+platform+social,
+  progress+checkins+education, docs+boundaries+legacy), lead-assembled,
+  then fresh-eyes adversarial review with findings actioned. RECOVERY:
+  agent outputs land in the session scratchpad map/ folder; if the
+  session dies, relaunch any missing domain read from this list - the
+  map is assembled only from those files plus lead verification.
 - Stage 1 REVIEW REMEDIATION LANDED (2026-08-09, adversarial review vs
   blueprint; all 12 findings fixed, none parked): partner block-finished
   milestone re-keyed to awaitingDecision && weeksOverdue===0 (was dead on
