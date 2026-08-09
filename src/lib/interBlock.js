@@ -184,6 +184,7 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
       classification: BLOCK_CLASS.INSUFFICIENT_DATA,
       confidence,
       evidence,
+      observed: null, // no landmark frame: the raw numbers cannot be trusted either
       proposal: { startSets: null, peakSets: null, stimulusChange: null, deferredToManual },
       rationale: `No volume landmarks are available for ${lower}, so no volume proposal is made for it.`,
     };
@@ -242,6 +243,10 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
       classification,
       confidence,
       evidence,
+      // Stage 5: the block's own observed numbers, echoed so a persisted
+      // ledger can be replayed into the learned working range
+      // (learnedRange.computeLearnedRange) without re-deriving anything.
+      observed: { startSets: previousStart, achievedPeak, plannedPeak },
       proposal: {
         startSets: deferredToManual ? null : start,
         peakSets: deferredToManual ? null : peak,

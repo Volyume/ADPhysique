@@ -880,6 +880,47 @@ queue paused here for the founder review per D55.
   effectiveLandmarks precedence; block-grain ceiling/floor updates;
   slow conservative moves, min evidence, one block nudges never
   overwrites).
+- Stage 3 REVIEW REMEDIATION LANDED (2026-08-09; review executed the
+  module with real-shaped rows and adversarial series; both blockers +
+  ten defects fixed, none parked): rows read actual_reps (the schema
+  column - `reps` does not exist; the old code silently zeroed every
+  real row, which would have reseeded every muscle from research);
+  per-session weeks now share mesocycle.localDaysElapsed (exported) so
+  the block-activation clock time and DST can never flip a verdict;
+  slope is a robust Theil-Sen fit clamped +/-25% (one mistyped set no
+  longer swings +/-100 points); unusable fits EXCLUDE the exercise
+  (weight 0) instead of shipping a false 0% at full confidence, and
+  confidence only credits exercises with a usable loaded series;
+  deloadWeekIndex null = last week; zero-load bodyweight work counts as
+  exposures (e1RM path still needs load); muscle attribution goes
+  through allocateExerciseVolume (legacy 'shoulders' etc. normalise);
+  new/rep-shift discounts now reach PR density; rep-SHIFT means the
+  early and late halves' target pairs are disjoint (a heavy/volume-day
+  split is not a shift); newness needs >= 4 usable prior rows; missing
+  joint answers and self-selected feedback scraps (< half the late
+  sessions) never read as recovered; finite-number guards throughout.
+  Suite 29 -> 42. Lead rulings recorded in module docs: rep-count
+  progression raising e1RM is the app's single strength model (X4);
+  PR density stays corroborating evidence, classification runs on the
+  slope.
+- Stage 5 LANDED (2026-08-09): pure src/lib/learnedRange.js
+  (computeLearnedRange) - the block-grain learned working range as a
+  REPLAY of persisted Block Ledger history over the profile-adjusted
+  prior (no parallel store; session-grain adaptive bands untouched).
+  Ceiling: prior MAV moving toward the highest volume HANDLED
+  (RESPONSIVE -> achievedPeak, +/-2 per block; OVERREACHED ->
+  achievedPeak-2 downward only; STRAINED -> block start downward only;
+  STALE no move). Floor: prior MEV nudging 1/block toward the lowest
+  progressing start (RESPONSIVE only). Clamps: research MEV anchor,
+  adapted MRV / prior MRV / 30 ceiling cap, floor <= ceiling-2.
+  Min evidence: confidence >= 0.6 + real classification + observed
+  numbers; isLearned only after >= 1 qualifying block. interBlock
+  entries now echo observed {startSets, achievedPeak, plannedPeak} for
+  the replay. Pins: learnedRange.stage5.test.js (19, written first).
+  Next: Stage 6 seeding refactor (fallback order manual -> valid ledger
+  -> learned band -> profile-adjusted research -> raw research; ledger
+  persistence + block-end computation hook; advisor buttons map to the
+  ledger; createMesocycle deadness resolved).
 - Stage 1 REVIEW REMEDIATION LANDED (2026-08-09, adversarial review vs
   blueprint; all 12 findings fixed, none parked): partner block-finished
   milestone re-keyed to awaitingDecision && weeksOverdue===0 (was dead on
