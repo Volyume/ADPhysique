@@ -2218,3 +2218,43 @@ Asked in the structured format the founder mandated the same evening
 Also this evening (recorded in the design audit addendum 2): widgets stay
 shipping with no further effort either way; paywall quiet links convert
 to Button outline.
+
+## D91 — Adaptive mesocycle build, Stage 1-2 lead rulings (D33, 2026-08-09)
+
+Campaign authority: docs/blueprint-adaptive-mesocycle-2026-08-09.md §3.9 +
+the founder's 8-stage test-first order. Rulings made under delegation while
+building Stages 1-2 (all criterion-ruled: best for end users, never effort):
+
+1. One finished-block name everywhere: "Block finished" (chip, sheet,
+   Plans, ActiveWorkout banner, Training blocks, CoachOutput note,
+   WorkoutSummary celebration + share eyebrow). The old 'complete' /
+   'overdue' split and the mixed "Block complete" labels read as two
+   states and two products; one state, one name.
+2. Interim advisor CTA honesty: 'adjust' recommendation's button reads
+   "Restart this programme" until Stage 6 makes an app-side adjustment
+   real, at which point "Continue with adjustments" returns WITH the
+   behaviour. A button must not promise what the app does not do.
+3. interBlock INSUFFICIENT_DATA splits by what was proven: an
+   UNDELIVERED dose (adherence < 0.6 or exposures < 4) reseeds from the
+   research table (the app's standard start, stated honestly); a broken
+   MEASUREMENT over a delivered, tolerated dose (no recovery data,
+   exercise-swap discontinuity, low confidence) RETAINS the previous
+   volume and never guesses upwards. Retention follows the founder's
+   dose-retention principle; blind upgrades are impossible.
+4. OVERREACHED "-1 if a deload flag fired mid-block" (blueprint §3.1)
+   interpreted as: mid-block = before the peak week. A flag in the peak
+   week itself (the §3.7 shoulders example, week 4 of 5) holds the start
+   rather than cutting it, which is what makes the worked example
+   self-consistent.
+5. Longer recovery (10 days) is proposed only when a STRAINED muscle is
+   corroborated by >= 2 persistent systemic signals (readiness slope,
+   sleep-flag weeks, advisor deload flag) — one struggling muscle never
+   stretches the deload alone; 7 days otherwise; always user-confirmed
+   (founder Stage 7 language: "multiple persistent signals").
+6. STALE first flat block holds quietly; the stimulus-change proposal
+   (variant swap primary, rep-range shift alternative) appears from the
+   second consecutive flat block, or immediately when performance FELL
+   with good recovery and a trusted measurement.
+7. A finished block >= 4 weeks old (overdue limbo) keeps its
+   classification but its evidence is stale: upward proposals suppress,
+   reductions stand (detraining makes an increase unsafe to infer).
