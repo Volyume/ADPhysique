@@ -96,7 +96,11 @@ function ageMultipliers(age) {
   return          { MEV: 1.10, MRV: 0.75 };
 }
 
-function computeLandmarks(experience, recoveryRating, nutritionPhase, age) {
+// Exported (Stage 6, 2026-08-09): the seeding fallback chain's
+// "profile-adjusted research" layer (blockSeed.resolveSeedRange) reads
+// THIS table rather than forking the multipliers. Callers map
+// MEV -> mev, MAVhigh -> mav (the working-ceiling analogue), MRV -> mrv.
+export function computeLandmarks(experience, recoveryRating, nutritionPhase, age) {
   const mExp = EXP_MULT[experience]    ?? EXP_MULT.intermediate;
   const mRec = REC_MULT[recoveryRating] ?? REC_MULT.average;
   const mNut = NUT_MULT[nutritionPhase] ?? { MEV: 1.00, MRV: 1.00 };

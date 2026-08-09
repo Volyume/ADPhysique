@@ -4083,7 +4083,7 @@ export async function getNextMesocycleWeek(currentWeekId) {
 // ranges from the Block Ledger replace the static ramp when evidence
 // exists; the underscore drops when it is consumed). Default behaviour is
 // byte-identical until then.
-export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks, _ledger = null) {
+export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks, ledger = null) {
   try {
     const d = await db();
     const weeks = await d.getAllAsync(
@@ -4097,19 +4097,43 @@ export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks,
     const totalAcc = accWeeks.length;
     const now = Date.now();
 
+    // Stage 6 (2026-08-09): `ledger` is blockLedgerRunner's resolved seed
+    // map ({ ranges: { [muscle]: { startSets, peakSets, source } } }, one
+    // entry per muscle the fallback chain resolved). A seeded muscle ramps
+    // its own start -> peak (blockLedgerGather.buildSeededWeeklyTargets);
+    // anything unresolved keeps the static MEV -> MAV template ramp, and
+    // the row's `source` records which path wrote it so the Stage 8
+    // explanation can never claim a personalisation that is not there.
+    // Lazy require: keeps the pure gather module out of database.js's
+    // import graph for consumers that never seed.
+    const seedRanges = ledger?.ranges && typeof ledger.ranges === 'object' ? ledger.ranges : null;
+    // eslint-disable-next-line global-require
+    const { buildSeededWeeklyTargets } = seedRanges ? require('./blockLedgerGather') : {};
+
     await runInTransaction(d, async () => {
       for (const [muscle, landmarks] of Object.entries(volumeLandmarks)) {
         const { mev, mav, mrv } = landmarks;
+        const seed = seedRanges?.[muscle];
+        const seeded = seed && Number.isFinite(seed.startSets) && Number.isFinite(seed.peakSets);
+        const targets = seeded
+          ? buildSeededWeeklyTargets({
+            startSets: seed.startSets,
+            peakSets: seed.peakSets,
+            accumWeeks: Math.max(1, totalAcc),
+            deloadSets: mev,
+          })
+          : null;
+        const source = seeded ? `seed_${seed.source}` : 'template';
         for (let i = 0; i < accWeeks.length; i++) {
           const week = accWeeks[i];
           const progress = totalAcc <= 1 ? 1 : i / (totalAcc - 1);
-          const planned = Math.round(mev + (mav - mev) * progress);
+          const planned = seeded ? targets[i] : Math.round(mev + (mav - mev) * progress);
           const id = `pmv_${week.id}_${muscle}`;
           await d.runAsync(
             `INSERT OR IGNORE INTO planned_muscle_volume
                (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 'template', ?, ?)`,
-            [id, week.id, muscle, planned, mev, mav, mrv, now, now],
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [id, week.id, muscle, planned, mev, mav, mrv, source, now, now],
           );
         }
         if (deloadWeek) {
@@ -4117,8 +4141,8 @@ export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks,
           await d.runAsync(
             `INSERT OR IGNORE INTO planned_muscle_volume
                (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 'template', ?, ?)`,
-            [id, deloadWeek.id, muscle, mev, mev, mav, mrv, now, now],
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [id, deloadWeek.id, muscle, mev, mev, mav, mrv, source, now, now],
           );
         }
       }
@@ -4140,6 +4164,122 @@ export async function getMesocycleWeeks(mesocycleId) {
   } catch (_e) {
     return [];
   }
+}
+
+// ── Stage 6, Block Ledger readers (adaptive mesocycle build, 2026-08-09) ──
+// Thin row fetchers for blockLedgerRunner; ALL judgement lives in the pure
+// blockLedgerGather/blockMetrics/interBlock modules. Raw snake_case rows on
+// purpose: allocateExerciseVolume parses secondary_muscles (the snake JSON
+// column), and blockMetrics tolerates both shapes.
+
+/** The block's completed training: workout feedback rows + their sets. */
+export async function getBlockTrainingData(userId, mesocycleId) {
+  try {
+    const d = await db();
+    const workouts = await d.getAllAsync(
+      'SELECT * FROM workouts WHERE user_id = ? AND mesocycle_id = ? AND is_completed = 1',
+      [userId, mesocycleId],
+    );
+    const sets = await d.getAllAsync(
+      `SELECT ws.* FROM workout_sets ws
+       JOIN workouts w ON w.id = ws.workout_id
+       WHERE w.user_id = ? AND w.mesocycle_id = ? AND w.is_completed = 1`,
+      [userId, mesocycleId],
+    );
+    return { workouts, sets };
+  } catch (_e) {
+    return { workouts: [], sets: [] };
+  }
+}
+
+/** Completed sets before the block (prior bests + the newness check). */
+export async function getPriorCompletedSets(userId, beforeMs, sinceMs) {
+  try {
+    const d = await db();
+    return await d.getAllAsync(
+      `SELECT ws.* FROM workout_sets ws
+       JOIN workouts w ON w.id = ws.workout_id
+       WHERE w.user_id = ? AND w.is_completed = 1
+         AND ws.created_at < ? AND ws.created_at >= ?`,
+      [userId, beforeMs, sinceMs],
+    );
+  } catch (_e) {
+    return [];
+  }
+}
+
+/** Every planned_muscle_volume row across the block's weeks (+week_index). */
+export async function getPlannedMuscleVolumeForBlock(mesocycleId) {
+  try {
+    const d = await db();
+    return await d.getAllAsync(
+      `SELECT pmv.*, mw.week_index FROM planned_muscle_volume pmv
+       JOIN mesocycle_weeks mw ON mw.id = pmv.mesocycle_week_id
+       WHERE mw.mesocycle_id = ?`,
+      [mesocycleId],
+    );
+  } catch (_e) {
+    return [];
+  }
+}
+
+/** Week starts of coach outputs whose recovery read suggested a deload. */
+export async function getDeloadSuggestedWeekStarts(userId, fromMs, toMs) {
+  try {
+    const d = await db();
+    const rows = await d.getAllAsync(
+      `SELECT week_start FROM coach_outputs
+       WHERE user_id = ? AND recovery_flag = 'deload_suggested'
+         AND week_start >= ? AND week_start < ?`,
+      [userId, fromMs, toMs],
+    );
+    return rows.map((r) => r.week_start).filter((v) => v != null);
+  } catch (_e) {
+    return [];
+  }
+}
+
+/** Exercise rows (seeded + this user's custom), raw, keyed by id. */
+export async function getExerciseRowsById(userId) {
+  try {
+    const d = await db();
+    const seeded = await d.getAllAsync('SELECT * FROM exercises');
+    const custom = await d.getAllAsync(
+      'SELECT * FROM custom_exercises WHERE user_id = ?', [userId],
+    ).catch(() => []);
+    const map = new Map();
+    for (const row of seeded) map.set(row.id, row);
+    for (const row of custom ?? []) map.set(row.id, row);
+    return map;
+  } catch (_e) {
+    return new Map();
+  }
+}
+
+/** Weekly check-ins inside a window, oldest first (readiness/sleep reads). */
+export async function getCheckinsInRange(userId, fromMs, toMs) {
+  try {
+    const d = await db();
+    const rows = await d.getAllAsync(
+      `SELECT * FROM weekly_checkins
+       WHERE user_id = ? AND week_start >= ? AND week_start < ?
+       ORDER BY week_start ASC`,
+      [userId, fromMs, toMs],
+    );
+    return rows.map(rowToCamel);
+  } catch (_e) {
+    return [];
+  }
+}
+
+/** Persist a computed Block Ledger on its finished block's row. */
+export async function storeBlockLedger(mesocycleId, ledgerJson) {
+  const d = await db();
+  await d.runAsync(
+    'UPDATE mesocycles SET block_ledger = ?, updated_at = ? WHERE id = ?',
+    [ledgerJson, Date.now(), mesocycleId],
+  );
+  _scheduleSync();
 }
 
 // Write an adaptation event (engine decision log)
@@ -4237,46 +4377,12 @@ export async function upsertPlannedMuscleVolume({ mesocycleWeekId, muscle, plann
   } catch (_e) {}
 }
 
-export async function createMesocycle(data) {
-  const d = await db();
-  const id = uid();
-  const now = Date.now();
-  // Wave 2 (cross-surface-consistency-audit-2026-07-30): planned_weeks is
-  // the authoritative schedule-length field (it seeds generateMesocycleWeeks
-  // below), so it must never be left to the column's own DEFAULT 5 while
-  // duration_weeks holds a different explicit value -- the exact corruption
-  // pattern the audit found in the sync path, reproduced here at creation
-  // time if left unfixed. Written in lockstep from the same input.
-  const plannedWeeks = data.plannedWeeks ?? data.durationWeeks ?? null;
-  await d.runAsync(
-    `INSERT INTO mesocycles
-      (id, user_id, name, start_date, end_date, duration_weeks, planned_weeks, focus,
-       is_active, deload_week, auto_regulation_enabled, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      id,
-      data.userId,
-      data.name,
-      data.startDate || null,
-      data.endDate || null,
-      data.durationWeeks || null,
-      plannedWeeks,
-      data.focus || null,
-      data.isActive ? 1 : 0,
-      data.deloadWeek || null,
-      data.autoRegulationEnabled ? 1 : 0,
-      now,
-      now,
-    ],
-  );
-  // Auto-generate week schedule
-  await generateMesocycleWeeks(id);
-  // Seed planned volume from default landmarks
-  const { VOLUME_LANDMARKS } = await import('./algorithms');
-  await generateInitialPlannedVolume(id, VOLUME_LANDMARKS);
-  _scheduleSync();
-  return { id, ...data, createdAt: now, updatedAt: now };
-}
+// Stage 6 (2026-08-09): the dead createMesocycle function is DELETED. It
+// had zero callers (proven by the Stage 1 caller-walk pin) and duplicated
+// activatePlanWithBlock's inline INSERT — the ONLY live block-creation
+// path, reached solely from explicit user plan activation. Any future
+// creation path goes through activatePlanWithBlock so the Block Ledger
+// seeding and the no-silent-creation invariant hold.
 
 // ─── Nutrition Targets ────────────────────────────────────
 

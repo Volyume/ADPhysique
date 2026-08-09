@@ -253,7 +253,19 @@ export default function PlansScreen({ navigation }) {
           onPress: async () => {
             try {
               logInfo('PlansScreen.blockRestart', { intent });
-              await activatePlanWithBlock(user.id, activePlan.id, planHeadingName(activePlan.name), { ledger: null });
+              // Stage 6 (2026-08-09): the ledger seam goes live. The
+              // finished block's ledger is computed (and persisted) and the
+              // founder's fallback chain resolves each muscle's next-block
+              // range; 'repeat' forces a true repeat, 'adjust' takes the
+              // full proposals. A null result (no data, first block, any
+              // failure) falls back to the template ramp unchanged.
+              // eslint-disable-next-line global-require
+              const { buildSeedRangesForNextBlock } = require('../lib/blockLedgerRunner');
+              const seedRanges = await buildSeedRangesForNextBlock(user.id, {
+                intent: intent === 'repeat' ? 'repeat' : 'adjust',
+                userProfile,
+              }).catch(() => null);
+              await activatePlanWithBlock(user.id, activePlan.id, planHeadingName(activePlan.name), { ledger: seedRanges });
               await AsyncStorage.removeItem(BLOCK_SNOOZE_KEY).catch(() => {});
               await loadData();
             } catch (e) {

@@ -97,27 +97,27 @@ describe('no silent mesocycle creation', () => {
     return hits.sort();
   };
 
-  test('createMesocycle has zero callers (dead until Stage 6 resolves it)', () => {
+  test('createMesocycle stays deleted (Stage 6 resolved the dead code)', () => {
     const offenders = filesMatching(/[^a-zA-Z]createMesocycle\(/)
       .filter((rel) => rel !== path.join('lib', 'database.js'));
     expect(offenders).toEqual([]);
-    // Inside database.js itself the name appears exactly once: the (dead)
-    // definition. A second occurrence would be a new internal caller.
+    // Stage 6 deleted the dead definition outright; the name reappearing
+    // as a call would be a new creation path bypassing this review.
     const dbSrc = fs.readFileSync(path.join(SRC_ROOT, 'lib', 'database.js'), 'utf8');
-    expect((dbSrc.match(/createMesocycle\(/g) || []).length).toBe(1);
+    expect((dbSrc.match(/createMesocycle\(/g) || []).length).toBe(0);
   });
 
   test('every INSERT variant into mesocycles lives only inside database.js', () => {
     // OR REPLACE / OR IGNORE variants count too, or a future silent-creation
     // path could walk straight past this pin.
     expect(filesMatching(/INSERT (OR \w+ )?INTO mesocycles/)).toEqual(['lib/database.js']);
-    // Exactly three sites there: activatePlanWithBlock (live, user-initiated
-    // plan activation), createMesocycle (dead, Stage 6), and
-    // insertMesocycleFromCloud (the sync pull, which only mirrors a block
-    // the same user explicitly created on another device). A fourth site
-    // appearing means a new creation path bypassed this review.
+    // Exactly two sites there: activatePlanWithBlock (live, user-initiated
+    // plan activation) and insertMesocycleFromCloud (the sync pull, which
+    // only mirrors a block the same user explicitly created on another
+    // device). createMesocycle was dead code and Stage 6 deleted it. A
+    // third site appearing means a new creation path bypassed this review.
     const dbSrc = fs.readFileSync(path.join(SRC_ROOT, 'lib', 'database.js'), 'utf8');
-    expect((dbSrc.match(/INSERT (OR \w+ )?INTO mesocycles/g) || []).length).toBe(3);
+    expect((dbSrc.match(/INSERT (OR \w+ )?INTO mesocycles/g) || []).length).toBe(2);
   });
 });
 
@@ -150,10 +150,12 @@ describe("the 'Continue with adjustments' seam exists for the Stage 6 ledger", (
     expect(fn).toMatch(/generateInitialPlannedVolume\([^)]*ledger/);
   });
 
-  test('generateInitialPlannedVolume accepts per-muscle ranges without changing default behaviour yet', () => {
+  test('generateInitialPlannedVolume consumes the resolved seed map (Stage 6)', () => {
     const SRC = read('lib/database.js');
-    // _ledger: the underscore is the lint-mandated unused-arg marker until
-    // Stage 6 consumes it.
-    expect(SRC).toMatch(/export async function generateInitialPlannedVolume\(mesocycleId, volumeLandmarks, _ledger = null\)/);
+    expect(SRC).toMatch(/export async function generateInitialPlannedVolume\(mesocycleId, volumeLandmarks, ledger = null\)/);
+    // The seeded write records its source per row so the explanation
+    // layer can never claim a personalisation that is not there.
+    expect(SRC).toMatch(/seed_\$\{seed\.source\}/);
+    expect(SRC).toMatch(/buildSeededWeeklyTargets/);
   });
 });

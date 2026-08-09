@@ -1002,6 +1002,38 @@ queue paused here for the founder review per D55.
   override blocks never teach the engine - a valid ledger entry with
   deferredToManual is skipped by the replay, so removed overrides
   cannot launder user-chosen numbers into "learned from your history".
+- Stage 6 COMPLETE (2026-08-09, founder GO "proceed with the next
+  stages"): the ledger goes live end to end. Pure gather transforms
+  (blockLedgerGather.js: soreness 1-3 -> 1-5 remap per the adaptive-
+  history precedent; readinessSlope = normalised total change;
+  sleep-flag weeks; deload flags from the persisted substitutes
+  (coach_outputs recovery_flag + applied early deloads, mid-block =
+  before the peak week per D91#4); rebound windows (14-day gap rule);
+  allocator-attributed adherence sums; primary-role session rows;
+  achieved weekly peak; the seeded linear ramp) - 22 pins written
+  first. Impure runner (blockLedgerRunner.js): computeAndStoreBlockLedger
+  (idempotent by LEDGER_VERSION, fail-closed suppression read, persists
+  via storeBlockLedger + sync) and buildSeedRangesForNextBlock (full
+  fallback chain per muscle via resolveSeedRange; learned range replays
+  prior stored ledgers incl. the just-finished block). Thin database.js
+  readers added (block training data, prior sets, planned-for-block
+  +week_index, deload-suggested week starts, exercise rows map,
+  checkins-in-range, storeBlockLedger). generateInitialPlannedVolume
+  consumes the seed map (per-muscle start->peak ramp via
+  buildSeededWeeklyTargets; row source records seed_<source> vs
+  template so Stage 8 can never claim a personalisation that is not
+  there). PlansScreen builds+passes the seed ranges with the tapped
+  intent; blockAdvisor's "Continue with adjustments" label RETURNS with
+  the behaviour behind it. createMesocycle DELETED (dead; pins updated:
+  0 occurrences, 2 INSERT sites). Exports added for reuse-not-fork:
+  mesocycle.localDaysElapsed (earlier), blockAdvisor.checkinReadiness,
+  planEngine.computeLandmarks, effectiveLandmarks getManualLandmarks/
+  getAdaptedLandmarks (getEffectiveLandmarks refactored through them,
+  behaviour identical).
+  Next: Stage 7 strain-aware deload (computeDeloadVolume % of achieved
+  peak scaled by strain, seeded deload week likewise; 10-day window
+  stays a proposal and its COPY lands with Stage 8's explanation
+  surfaces).
 - Stage 1 REVIEW REMEDIATION LANDED (2026-08-09, adversarial review vs
   blueprint; all 12 findings fixed, none parked): partner block-finished
   milestone re-keyed to awaitingDecision && weeksOverdue===0 (was dead on

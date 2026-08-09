@@ -67,25 +67,39 @@ export function mergeLandmarkPrecedence({ manual = null, adapted = null, researc
  */
 export async function getEffectiveLandmarks(userId, { tier = 'free' } = {}) {
   if (!userId) return mergeLandmarkPrecedence({});
+  const manual = await getManualLandmarks(userId);
+  const adapted = await getAdaptedLandmarks(userId, { tier });
+  return mergeLandmarkPrecedence({ manual, adapted });
+}
 
-  let manual = null;
+/**
+ * The user's hand-set manual landmark table, or null. Exported (Stage 6,
+ * 2026-08-09) so blockLedgerRunner can read the manual layer on its own —
+ * a manual entry both wins the seeding fallback chain and marks the
+ * muscle's ledger entry deferredToManual.
+ */
+export async function getManualLandmarks(userId) {
+  if (!userId) return null;
   try {
     const raw = await AsyncStorage.getItem(`@volyume_landmarks_${userId}`);
-    if (raw) manual = JSON.parse(raw);
-  } catch (_) { /* manual layer absent */ }
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) { return null; /* manual layer absent */ }
+}
 
-  let adapted = null;
-  if (tier === 'pro') {
-    try {
-      // Lazy require: database.js requires heavy native modules; keeping it
-      // out of module scope lets pure consumers (tests, the merge) import
-      // this file without the DB graph.
-      // eslint-disable-next-line global-require
-      const { getAdaptiveLandmarkHistory } = require('./database');
-      const history = await getAdaptiveLandmarkHistory(userId);
-      if (history?.length) adapted = computeAdaptiveLandmarks(history);
-    } catch (_) { /* adapted layer absent */ }
-  }
-
-  return mergeLandmarkPrecedence({ manual, adapted });
+/**
+ * The session-grain adapted table (Pro only), or null. Exported (Stage 6)
+ * for the runner's adaptedMrv ceiling clamp — same lazy require, same
+ * fail-open posture as before.
+ */
+export async function getAdaptedLandmarks(userId, { tier = 'free' } = {}) {
+  if (!userId || tier !== 'pro') return null;
+  try {
+    // Lazy require: database.js requires heavy native modules; keeping it
+    // out of module scope lets pure consumers (tests, the merge) import
+    // this file without the DB graph.
+    // eslint-disable-next-line global-require
+    const { getAdaptiveLandmarkHistory } = require('./database');
+    const history = await getAdaptiveLandmarkHistory(userId);
+    return history?.length ? computeAdaptiveLandmarks(history) : null;
+  } catch (_) { return null; /* adapted layer absent */ }
 }

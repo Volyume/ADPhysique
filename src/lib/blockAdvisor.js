@@ -42,7 +42,9 @@ import { getBlockStatus } from './mesocycle';
  * soreness_score: 1–5  (1=none, 5=very high), inverted
  * sleep_hours:    real, clipped 4–9h range
  */
-function checkinReadiness(c) {
+// Exported (Stage 6, 2026-08-09): blockLedgerRunner computes the block's
+// readiness values through THIS formula rather than forking its own.
+export function checkinReadiness(c) {
   if (!c) return null;
   const energy  = (((c.energyScore  ?? 3) - 1) / 4) * 100;           // 0–100
   const soreness = (1 - ((c.sorenessScore ?? 3) - 1) / 4) * 100;     // inverted 0–100
@@ -182,17 +184,16 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
     return {
       recommendation: 'adjust',
       headline: 'Same programme, slightly adjusted',
-      // Stage 1 honesty (2026-08-09): this body used to promise "a small
-      // volume or load adjustment based on how this block went" with no
-      // code behind it, under a "Continue with adjustments" button making
-      // the same false claim. Until the Stage 6 ledger makes an app-side
-      // adjustment true, the copy and the button name what the user can
-      // actually do; Stage 6 restores "Continue with adjustments" together
-      // with the behaviour.
+      // Stage 6 (2026-08-09): the promise is finally TRUE. The restart
+      // path builds the Block Ledger and seeds each muscle's next-block
+      // volume from how this block actually went (PlansScreen ->
+      // buildSeedRangesForNextBlock -> resolveSeedRange), so "Continue
+      // with adjustments" returns together with the behaviour Stage 1
+      // stripped it of.
       body: finished
-        ? "The structure is working. Restart the same programme, and trim a set from anything that felt heavy in the final weeks."
-        : "The structure is working. After your recovery week, restart the same programme, and trim a set from anything that felt heavy in the final weeks.",
-      actionLabel: 'Restart this programme',
+        ? "The structure is working. Your next block starts from what this block showed, muscle by muscle."
+        : "The structure is working. After your recovery week, your next block starts from what this block showed, muscle by muscle.",
+      actionLabel: 'Continue with adjustments',
       secondaryLabel: 'Build a new programme',
     };
   }
