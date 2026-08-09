@@ -285,6 +285,8 @@ export default function HomeScreen({ navigation, route }) {
   const [lastSessionTonnage, setLastSessionTonnage] = useState(null);
   const [blockProgress, setBlockProgress] = useState([]);
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null);
+  // Stage 8: block-start seed lines for the block sheet (written-plan truth).
+  const [blockSeedLines, setBlockSeedLines] = useState([]);
   const [showBlockShape, setShowBlockShape] = useState(false); // COMP-010 meso chip tap-through
   const [latestCoachOutput, setLatestCoachOutput] = useState(null);
   // COMP-023: day-3 trial value banner. { line, variant } when in-window, else
@@ -1102,6 +1104,20 @@ export default function HomeScreen({ navigation, route }) {
       const week = await getCurrentMesocycleWeek(user.id);
       setCurrentMesoWeek(week);
       if (!week) return;
+
+      // Stage 8 (§3.6): the block-start explanation, derived from the
+      // WRITTEN plan rows so it can never claim a personalisation the
+      // plan does not contain. Personalised sources only; [] renders
+      // nothing. Best-effort: the sheet must open even if this fails.
+      try {
+        // eslint-disable-next-line global-require
+        const { getPlannedMuscleVolumeForBlock } = require('../lib/database');
+        // eslint-disable-next-line global-require
+        const { summariseSeededPlan, buildBlockStartLines } = require('../lib/blockExplain');
+        const blockRows = await getPlannedMuscleVolumeForBlock(week.mesocycleId);
+        const summary = summariseSeededPlan(blockRows, week.plannedWeeks);
+        setBlockSeedLines(buildBlockStartLines({ summary }));
+      } catch (_e) { setBlockSeedLines([]); }
 
       const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
       // LB-7: fetch only the last week of sets rather than the whole
@@ -2059,6 +2075,7 @@ export default function HomeScreen({ navigation, route }) {
         visible={showBlockShape}
         onClose={closeBlockShape}
         currentMesoWeek={currentMesoWeek}
+        seedLines={blockSeedLines}
         onChooseNext={() => navigateCrossTab(navigation, 'PlansTab', 'Plans')}
       />
 

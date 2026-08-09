@@ -109,6 +109,8 @@ export default function BlockReflectionScreen({ navigation, route }) {
     units: s.units,
   })));
   const [data, setData] = useState(null);
+  // Stage 8: the stored Block Ledger's per-muscle story.
+  const [ledgerRows, setLedgerRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const loadRequestRef = useRef(0);
@@ -135,6 +137,19 @@ export default function BlockReflectionScreen({ navigation, route }) {
       const d = await getBlockReflectionData(user.id, mesocycleId);
       if (!isCurrentRequest()) return;
       setData(d);
+      // Stage 8 (§3.6): the block's stored ledger, muscle by muscle, in
+      // the coach's own delta-composed words. Best-effort: the summary
+      // renders without it.
+      try {
+        // eslint-disable-next-line global-require
+        const { getAllMesocyclesForUser } = require('../lib/database');
+        // eslint-disable-next-line global-require
+        const { buildLedgerReflectionRows } = require('../lib/blockExplain');
+        const mesos = await getAllMesocyclesForUser(user.id);
+        const meso = mesos.find((m) => m.id === mesocycleId);
+        const ledger = meso?.blockLedger ? JSON.parse(meso.blockLedger) : null;
+        if (isCurrentRequest()) setLedgerRows(buildLedgerReflectionRows(ledger));
+      } catch (_e) { if (isCurrentRequest()) setLedgerRows([]); }
     } catch (_) {
       if (!isCurrentRequest()) return;
       setData(null);
@@ -257,6 +272,22 @@ export default function BlockReflectionScreen({ navigation, route }) {
               </View>
             )}
 
+            {/* Stage 8 (§3.6): what each muscle's block showed and what the
+                next block does differently, in the coach's own words. */}
+            {ledgerRows.length > 0 && (
+              <View style={[styles.section, live.section]}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="analytics-outline" size={16} color={t.colors.primary} />
+                  <SectionLabel accessibilityRole="header">What this block showed</SectionLabel>
+                </View>
+                {ledgerRows.map((row) => (
+                  <Text key={row.muscle} style={[styles.ledgerLine, live.ledgerLine]}>
+                    {row.rationale}
+                  </Text>
+                ))}
+              </View>
+            )}
+
             {/* Best session */}
             {data.bestSession?.volume > 0 && (
               <View style={[styles.bestSessionCard, live.bestSessionCard]}>
@@ -341,6 +372,8 @@ const styles = StyleSheet.create({
   },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
 
+  // Stage 8: the ledger's per-muscle story lines.
+  ledgerLine: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xs },
   prRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: spacing.xs,
@@ -393,6 +426,7 @@ function buildLiveStyles(t) {
     narrativeLine: { ...t.type.body, color: t.colors.textSecondary },
     section: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     prRow: { borderTopColor: t.colors.border },
+    ledgerLine: { ...t.type.bodySm, color: t.colors.textSecondary },
     prExercise: { ...t.type.label, color: t.colors.textPrimary },
     prType: { ...t.type.caption, color: t.colors.textMuted },
     prValue: { ...t.type.num('bodyStrong'), color: t.colors.primary },

@@ -1055,6 +1055,24 @@ queue paused here for the founder review per D55.
   WRITTEN plan rows, BlockReflection ledger section, PlansScreen
   decision rationales + 10-day proposal line, CoachOutput ramp
   position; never claim an adjustment unless the plan contains it).
+- Stage 8 LANDED (2026-08-09) - ALL EIGHT STAGES BUILT. Pure builders
+  (blockExplain.js, 17 pins written first): summariseSeededPlan reads
+  the WRITTEN planned rows (never the requested seed map - a skipped
+  insert can never be narrated); buildBlockStartLines speaks only for
+  personalised sources (seed_ledger/learned/manual; template and
+  profile ramps earn no claim); buildLedgerReflectionRows reuses each
+  entry's delta-composed rationale verbatim, STRAINED first,
+  INSUFFICIENT_DATA last; recoveryProposalLine renders ONLY when the
+  ledger proposed 10 days, always "your call" (Stage 7's deferred
+  copy); buildRampPositionLine claims a coach adjustment only for an
+  APPLIED delta. Surfaces: HomeBlockShapeSheet seed lines (loaded from
+  plan rows by HomeScreen); PlansScreen decision card ledger story (4
+  rows) + recovery proposal; BlockReflection "What this block showed"
+  section from the stored ledger; CoachOutput training-card note gains
+  the ramp position.
+  CAMPAIGN REMAINING: Stage 6 adversarial review findings (agent out),
+  Stage 7+8 review agent, founder device walk, migrate_131 apply
+  (founder phrase) BEFORE next build.
 - Stage 1 REVIEW REMEDIATION LANDED (2026-08-09, adversarial review vs
   blueprint; all 12 findings fixed, none parked): partner block-finished
   milestone re-keyed to awaitingDecision && weeksOverdue===0 (was dead on

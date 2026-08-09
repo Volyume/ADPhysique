@@ -132,6 +132,8 @@ export default function PlansScreen({ navigation }) {
   const [exerciseCounts, setExerciseCounts] = useState({});
   const [refreshing, setRefreshing] = useState(false);
   const [blockAdvice, setBlockAdvice] = useState(null);
+  // Stage 8: the finished block's ledger story for the decision card.
+  const [ledgerStory, setLedgerStory] = useState(null);
   const [blockSnoozed, setBlockSnoozed] = useState(false);
   const [loaded, setLoaded] = useState(false);
   // EP-09/P-06 (Codex end-user-polish audit): whether the most recent
@@ -196,6 +198,27 @@ export default function PlansScreen({ navigation }) {
       if (block) {
         const advice = await getBlockAdvice(user.id, block, userProfile).catch(() => null);
         setBlockAdvice(advice);
+
+        // Stage 8 (§3.6): the block-end story on the decision card. The
+        // ledger is computed once (idempotent by version) and its
+        // delta-composed rationales render verbatim, plus the
+        // user-confirmed longer-recovery proposal when the ledger made
+        // one. Best-effort: the card renders without it.
+        if (advice?.action === 'post_recovery') {
+          try {
+            // eslint-disable-next-line global-require
+            const { computeAndStoreBlockLedger } = require('../lib/blockLedgerRunner');
+            // eslint-disable-next-line global-require
+            const { buildLedgerReflectionRows, recoveryProposalLine } = require('../lib/blockExplain');
+            const ledger = await computeAndStoreBlockLedger(user.id, block.id, { userProfile });
+            setLedgerStory({
+              rows: buildLedgerReflectionRows(ledger).slice(0, 4),
+              recoveryLine: recoveryProposalLine(ledger),
+            });
+          } catch (_e) { setLedgerStory(null); }
+        } else {
+          setLedgerStory(null);
+        }
 
         // Any non-continue advice, heads_up included, respects the 7-day
         // snooze so tapping "Got it" keeps the card dismissed across tab
@@ -719,6 +742,23 @@ export default function PlansScreen({ navigation }) {
                 )}
                 <Text style={[styles.nextBlockHeadline, live.nextBlockHeadline]}>{blockAdvice.nextBlock.headline}</Text>
                 <Text style={[styles.nextBlockBody, live.nextBlockBody]}>{blockAdvice.nextBlock.body}</Text>
+
+                {/* Stage 8 (§3.6): the block-end story, muscle by muscle,
+                    each line the ledger's own delta-composed rationale. */}
+                {blockAdvice.action === 'post_recovery' && ledgerStory?.rows?.length ? (
+                  <View style={styles.ledgerStory}>
+                    {ledgerStory.rows.map((row) => (
+                      <Text key={row.muscle} style={[styles.ledgerStoryLine, live.nextBlockBody]}>
+                        {row.rationale}
+                      </Text>
+                    ))}
+                    {ledgerStory.recoveryLine ? (
+                      <Text style={[styles.ledgerStoryLine, live.nextBlockBody]}>
+                        {ledgerStory.recoveryLine}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
 
                 {/* CTAs only shown when block is complete and recovery is done */}
                 {blockAdvice.action === 'post_recovery' && (
@@ -1448,6 +1488,9 @@ const styles = StyleSheet.create({
   nextBlockBody: {
     ...type.bodySm, color: colors.textSecondary,
   },
+  // Stage 8: the block-end ledger story under the decision body.
+  ledgerStory: { marginTop: spacing.sm, gap: spacing.xs },
+  ledgerStoryLine: { ...type.bodySm, color: colors.textSecondary },
 
   // Block card action buttons
   blockCardActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.xs },

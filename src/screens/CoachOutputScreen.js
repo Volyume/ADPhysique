@@ -7,6 +7,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { runWeeklyCoach, mapCalsAdherence, corroborateConfidenceLevel } from '../lib/weeklyCoach';
+import { buildRampPositionLine } from '../lib/blockExplain';
 import { buildHoldReceipt } from '../lib/coachLedger';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -344,6 +345,7 @@ function TrainingNextWeekCard({
   deloadSuggested, deloadNote, onApplyDeload, hero, navigation,
   blockFinished = false,
   nextWeekIsDeload = false,
+  rampLine = null,
 }) {
   // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
   // See buildLiveStyles' header comment (defined below the frozen `styles`
@@ -418,7 +420,9 @@ function TrainingNextWeekCard({
                 ? 'This block has finished, so volume changes have nowhere to land yet. Choose your next block on the Train tab first.'
                 : upwardBlocked
                   ? 'Next week is your recovery week, so the coach will not add sets to it. Recovery weeks stay light on purpose.'
-                  : "This is next week's starting point. Each session still fine-tunes as you train."}
+                  : rampLine
+                    ? `${rampLine} This is next week's starting point; each session still fine-tunes as you train.`
+                    : "This is next week's starting point. Each session still fine-tunes as you train."}
             </Text>
           </View>
           {/* CO-2: this card said what changed ("N updated") but never linked
@@ -1033,6 +1037,8 @@ export default function CoachOutputScreen({ navigation, route }) {
   // recovery week's rows — a deload is light on purpose, and the peak-week
   // push would otherwise write extra sets straight into it.
   const [nextWeekIsDeload, setNextWeekIsDeload] = useState(false);
+  // Stage 8: the live block position for the training card's ramp line.
+  const [blockWeekForRamp, setBlockWeekForRamp] = useState(null);
   // Five-part coach response inputs (Theme A): weigh-ins inside the
   // displayed week, the calm-mode preference, and the check-in day name
   // for the forward-pull anchor. All best-effort; the response renders
@@ -1652,6 +1658,10 @@ export default function CoachOutputScreen({ navigation, route }) {
       // passes null and the engine runs context-free.
       const mesoWkForCoach = await getCurrentMesocycleWeek(user.id).catch(() => null);
       const liveBlockWeek = mesoWkForCoach && !mesoWkForCoach.awaitingDecision ? mesoWkForCoach : null;
+      // Stage 8 (§3.6): the ramp position for the training card's note.
+      setBlockWeekForRamp(liveBlockWeek
+        ? { weekIndex: liveBlockWeek.weekIndex, plannedWeeks: liveBlockWeek.plannedWeeks }
+        : null);
 
       const result = runWeeklyCoach({
         checkin: engineCheckin,
@@ -2268,6 +2278,13 @@ export default function CoachOutputScreen({ navigation, route }) {
       canApply={!!nextTrainingWeekId}
       blockFinished={blockAwaitingDecision}
       nextWeekIsDeload={nextWeekIsDeload}
+      // Stage 8 (§3.6): ramp position; the coach clause appears only for
+      // an APPLIED delta, never the suggestion alone.
+      rampLine={buildRampPositionLine({
+        weekIndex: blockWeekForRamp?.weekIndex,
+        plannedWeeks: blockWeekForRamp?.plannedWeeks,
+        appliedDelta: output?.appliedAdjustments?.training?.volumeDelta ?? null,
+      })}
       applyStateFor={applyStateFor}
       onApplySettled={onApplySettled}
       deloadSuggested={deloadSuggested}

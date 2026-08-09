@@ -23,7 +23,10 @@ import BottomSheet from './BottomSheet';
 // chip's honest line names a decision, so the sheet it opens must offer a
 // route to that decision rather than dead-ending (onChooseNext, wired by
 // HomeScreen to the Train tab's next-block card).
-function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek, onChooseNext }) {
+// Stage 8 (§3.6): `seedLines` are the block-start explanation, built from
+// the WRITTEN plan rows (blockExplain.buildBlockStartLines) — personalised
+// seeding only, so nothing here can over-claim.
+function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek, onChooseNext, seedLines = [] }) {
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
   // keys only.
@@ -44,6 +47,9 @@ function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek, onChooseNext }
           isDeload={currentMesoWeek?.isDeload}
           finished={!!currentMesoWeek?.awaitingDecision}
         />
+        {seedLines.length > 0 ? seedLines.map((line) => (
+          <Text key={line} style={[styles.sheetDefn, live.sheetDefn]}>{line}</Text>
+        )) : null}
         {/* U-E-1/U-D-3: the chip is whole-tappable, so the plain-English
             definitions of its terms live here, in the sheet it opens. */}
         <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.deload}</Text>
