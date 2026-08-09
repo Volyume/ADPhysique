@@ -54,13 +54,14 @@ docs/ (340 files classified) + root-level docs, and the test tree
 ## Final inventory counts
 
 See Part 32 of the map for the full table. Headlines: 83 screens / 116
-route registrations / 9 navigators; 96 settings; 42 coaching cards
-(8 proposal, 5 automatic, 1 requires-confirmation, 2 manual-only,
-26 informational); 23 notification categories; 6 widget/live surfaces
-(iOS set parked); 21 persisted entities (56 local tables; 22 registry +
-~19 legacy synced, ~13 local-only); 58 progress metrics (14 dark, 12
-decorative); 19 hard safety rules; 42 recorded product boundaries;
-15 doc-vs-code contradictions; 74 recorded uncertainties.
+route registrations / 9 navigators; 98 settings tabulated (93 live);
+42 coaching cards (8 proposal, 5 automatic, 1 requires-confirmation,
+2 manual-only, 26 informational); 23 notification categories plus the
+server-side email loop; 6 widget/live surfaces (iOS set parked);
+21 persisted entities (56 local tables; 22 registry + ~19 legacy synced,
+~13 local-only); 58 progress metrics (14 dark, 12 decorative); 26 hard
+safety rules; 42 recorded product boundaries; 15 doc-vs-code
+contradictions; 84 recorded lane uncertainties.
 
 ## Uncertainties and unprovable areas
 
@@ -79,7 +80,35 @@ Migration 049 remains genuinely unapplied by design.
 
 ## Fresh-eyes review findings
 
-[COMPLETED AFTER REVIEW — see section below]
+The adversarial reviewer (fresh Opus agent, your 16-point brief, repo
+access, most effort spent in the repository) returned **21 findings:
+6 blockers, 8 defects, 5 gaps, 3 nits — all documentation corrections,
+all actioned** in the map (full disposition: map Part 34 §K; the raw
+findings file is preserved in the session scratchpad). The blockers:
+
+1. Plate calculator described as LIVE in six places — it is
+   LEGACY-UNREACHABLE (`calculatePlates` uncalled; dropped by D57).
+2. Part 19 overstated the rapid-loss rule ("forces maintenance"); the
+   code caps the deficit at 1.5%/week and the observed-rate path adds
+   +125-300 kcal behind a four-part gate. Restated precisely.
+3. Supersets/giant sets are shipped and test-pinned but were absent from
+   the catalogue and listed as "do not build" (stale D14 note annotated
+   as superseded by campaign item 21/D44).
+4. Partner cap is free 1 / Pro 3, not "one partner".
+5. The health-integration screen and its five settings are permanently
+   dark (`isHealthAvailable()` always false) — reclassified.
+
+Notable defects/gaps also fixed: five share-card types (session is the
+default), "learned check-in hour" replaced with the real learned quantity
+(habit-derived reminder weekdays), warm-up ramp is pull-only, workout
+history loads 50 sessions maximum, SnapshotsScreen and RecapStory
+uncertainties resolved, six Part 19 safety rules added (including SCOFF
+≥ 2 as a third suppression input), the Your-data feature set and the
+server-side lifecycle email loop added, two unmentioned lib modules
+named, and internal counts corrected (84 lane uncertainties; 26 safety
+rows; 98 settings tabulated / 93 live). Three review categories yielded
+nothing after a genuine hunt: screens missing from A1 §5, sync/local
+mislabelling, and Part 22 dependency omissions.
 
 ## Confirmation
 

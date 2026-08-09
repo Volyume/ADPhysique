@@ -79,10 +79,11 @@ with hard safety rails that no personalisation is allowed to cross.
 There is **no AI/LLM anywhere in the product**. Every prescription, adjustment
 and explanation is produced by pure deterministic functions (same inputs, same
 outputs, for every user, every time) - a recorded, inviolable product decision
-(CLAUDE.md §2; CHAPTER D2 Part A). The only machine learning in the app is an
-on-device TFLite/ML Kit vision model for the optional Pro progress scan
-(body-composition estimate from a photo; no network, no cloud inference;
-CHAPTER D1 Part B).
+(CLAUDE.md §2; CHAPTER D2 Part A). The only machine learning is on-device and
+never makes a coaching decision: the progress-scan segmentation/estimation
+models (optional Pro body-composition read from a photo; no network, no cloud
+inference; CHAPTER D1 Part B) and the ML Kit text/barcode recognisers used by
+the food label and barcode scanners (CHAPTER B1 Part D).
 
 ## Who it is for
 
@@ -130,8 +131,11 @@ ONBOARD (auth → Article 9 consent → profile; sex gate blocks progression)
 ## Product pillars
 
 1. **Training** - plans, builder, exercise library (seeded + custom), session
-   logger with rest timer, warm-up ramps, plate maths, substitutions,
-   unilateral logging, PR detection, e1RM trends. (CHAPTERS A1, A2)
+   logger with rest timer, on-demand warm-up ramps, supersets and giant sets,
+   substitutions, unilateral logging, PR detection, e1RM trends. (CHAPTERS A1,
+   A2. The plate calculator is NOT part of this list: the module survives but
+   `calculatePlates` has no caller and the feature was dropped by founder
+   ruling D57 - LEGACY-UNREACHABLE.)
 2. **Adaptive coaching** - the weekly coach (volume, deload, calories) and the
    inter-block adaptive mesocycle engine (Block Ledger, learned ranges,
    seeded next blocks, strain-scaled recovery weeks). All deterministic,
@@ -146,9 +150,9 @@ ONBOARD (auth → Article 9 consent → profile; sex gate blocks progression)
 5. **Recovery & safety** - readiness summaries, muscle recovery display,
    ED-pattern detection with fail-closed suppression, calm mode, Beat UK
    signposting, calorie floors, rate-of-loss gates. (Spine Part 19)
-6. **Partner support** (Pro) - one training partner: weekly signals, shared
-   streak, milestones, cheers. Accountability, not a social network.
-   (CHAPTER C2 Part E)
+6. **Partner support** - training partners (one on free, up to three on Pro;
+   `maxPartnersForTier`): weekly signals, shared streak, milestones, cheers.
+   Accountability, not a social network. (CHAPTER C2 Part E)
 
 ## What makes it more than a workout logger
 
@@ -211,8 +215,14 @@ automatic vs user behaviour, safeguards, edge states, implementation refs).
 14. Plan builder (manual + auto-generation from pools) — LIVE — A2 §A1
 15. Exercise library (seeded + custom + fuzzy search + metadata) — LIVE — A2 §A2
 16. Workout templates & routines — LIVE — A2 §A1
-17. Session logger (sets/reps/load/RIR-by-engine, warm-up ramps, plate maths,
-    rest timer + sounds, cluster sets, unilateral left/right) — LIVE — A2 §A4-A5
+17. Session logger (sets/reps/load/RIR-by-engine, on-demand warm-up ramps,
+    rest timer + sounds, cluster sets, supersets and giant sets (user-built
+    3+ members; auto-generation stays pairs-only), unilateral left/right) —
+    LIVE — A2 §A4-A5; giant-set pins ActiveWorkoutScreen.giantSet.guard,
+    ManualBuilderScreen.supersetCap.guard, giantSetVolumeAttribution tests.
+    (Plate calculator: LEGACY-UNREACHABLE — `calculatePlates` uncalled,
+    dropped by ruling D57; only DEFAULT_BAR_KG survives as the warm-up
+    ramp's bar-weight fallback.)
 18. Exercise substitution (swap engine) — LIVE — A2 §A6
 19. Session adjustments (readiness-based pre-session tweaks) — LIVE — A2 §A4
 20. Abandoned/resumed workout handling — LIVE — A2 §A4
@@ -264,7 +274,16 @@ automatic vs user behaviour, safeguards, edge states, implementation refs).
 54. Water + steps logging (steps coaching path dark) — LIVE / INTERNAL — B1, D2
 55. Menstrual-cycle awareness (opt-in question + reassurance copy) —
     LIVE-CONDITIONAL (opt-in, female profile) — B1 §C
-56. Food CSV export — LIVE — B2 §D.6
+56. Food diary CSV and PDF export (exportDiaryCsv + exportDiaryPdf, wired
+    from FoodInsights) — LIVE — B2 §D.6, B1 §D
+
+## Your data (Settings > Data; all LIVE — B2 §A.1.7)
+56a. Import from Hevy/Strong (lib/importExternal)
+56b. JSON backup + restore (lib/dataBackup)
+56c. Snapshot restore (user action over dbSnapshot)
+56d. Workout CSV export (database.buildWorkoutCSV)
+56e. Coach handover PDF (lib/coachReport)
+56f. Clear workout history
 
 ## Body & progress
 57. Morning weigh-ins + EWMA/robust trends — LIVE — B1 §E, D1 §A
@@ -294,9 +313,15 @@ automatic vs user behaviour, safeguards, edge states, implementation refs).
     withheld under calm/ED) — C2 §F
 
 ## Notifications & widgets
-74. Local notification suite (18 surfaces: training reminders, habit schedule,
-    weigh-in reminders, rest-end, missed check-in, meal confirm, partner
-    beats, winback, recaps) — LIVE (per-category opt-outs) — C2 §A.9
+74. Local notification suite (17 live surfaces + 1 legacy-unreachable
+    (active-workout session notification): training reminders, habit
+    schedule, weigh-in reminders, rest-end, missed check-in, meal confirm,
+    partner beats, winback, recaps) — LIVE (per-category opt-outs) — C2 §A.9
+74a. Server-side lifecycle EMAIL loop (3 automated kinds: feedback_thanks,
+    day12_active, day12_quiet; permanent opt-out table; can grant a free
+    Pro week via Play promo codes) — LIVE-CONDITIONAL (server-side, keyed
+    off in-app state; not app code) — migrate_123_retention_email_loop.sql,
+    marketing/hq/playbooks/retention-email-loop.md
 75. Remote push (payment failure, partner cheer) — LIVE — C2 §A.10
 76. Quiet hours + push budget + Android channels — LIVE — C2 §A.3-A.4
 77. Android home widgets (2) — LIVE — C2 §B.2
@@ -366,7 +391,7 @@ ratios; EWMA + robust weight trends; adaptive TDEE delta; strain score.
 | Block Ledger (`mesocycles.block_ledger`, synced) | Per-muscle classification, observed start/peak, proposal, suppression marker, seed outcome | Anything from a manual-override block (deferredToManual skipped); nothing under INSUFFICIENT_DATA |
 | Learned range (replayed from ledgers, not stored) | Ceiling = highest handled peak (running max, strain pulls down); floor = monotone-down toward lowest progressing start | Ceiling never raised by a suppressed block; floor never moves up; never below research MEV anchor |
 | Coach ledger receipts | What was proposed/applied/held and why | - |
-| Learned check-in hour, notification budget history | Scheduling niceties | - |
+| Habit-derived training-reminder weekdays (trainingHabitSchedule, 6-week trailing window of completed workouts), notification budget history | Scheduling niceties (the check-in HOUR is a plain user setting, not learned) | - |
 
 ## CONTEXTUAL
 Week-in-block (fatigue expectation, peak-week softening), block state
@@ -431,12 +456,13 @@ activatePlanWithBlock creates mesocycle (6 planned weeks incl. recovery
 week), mesocycle_weeks, planned_muscle_volume rows source `template` from
 landmark ramps → Today shows block chip week 1. (A2 §A1, §C)
 
-**4. First workout.** Opens session from Today/Train → warm-up ramp +
-plate maths shown per exercise → logs sets (weight × reps; actual_reps
-recorded) → rest timer (sound + optional notification; Android chronometer)
-→ finish → summary with tonnage/PRs → post-session feedback chips →
-workout + sets written, streak updated, widgets refreshed, push-on-save
-sync queued. (A2 §A4-A5, C2 §B)
+**4. First workout.** Opens session from Today/Train → logs sets (weight ×
+reps; actual_reps recorded); a warm-up ramp is available ON DEMAND from the
+exercise overflow sheet (pull, never push — pinned by gymBasics.guard — and
+only for weight-based non-cluster exercises) → rest timer (sound + optional
+notification; Android chronometer) → finish → summary with tonnage/PRs →
+post-session feedback chips → workout + sets written, streak updated,
+widgets refreshed, push-on-save sync queued. (A2 §A4-A5, C2 §B)
 
 **5. First completed week.** Sessions accumulate → week 1 rows complete →
 Home block chip advances; weekly story builds; adherence recorded →
@@ -539,9 +565,14 @@ NUT multiplier changes next computation; goal-lock prompt if competition
 goal. (B1 §A-B, B2)
 
 **24. Rapid or slow weight change.** Robust trend outside phase band →
-calorie ladder proposes a step (sized by adherence + confidence); rapid
-loss beyond 1.5% BW/week HARD-gates to maintenance + caution copy; floors
-re-clamp every output; explanation states the trend it acted on. (B1 §A-B)
+calorie ladder proposes a step (sized by adherence + confidence). Rapid
+loss protection is two-sided and does NOT force maintenance: target
+computation caps the prescribed deficit so estimated loss cannot exceed
+1.5% BW/week (target stays below maintenance at that cap), and the
+observed-rate coach path adds +125 to +300 kcal on a sliding scale — and
+only when ALL of: phase is a cut, no cycle override, observed rate
+≤ −1.5%/week, AND check-in energy ≤ 2. Caution copy accompanies; floors
+re-clamp every output. (B1 §A.7, §B.5, §H)
 
 **25. Returning after time away.** Overdue finished block: evidence ≥4
 weeks old = stale → upward proposals suppress, reductions stand; rebound
@@ -622,9 +653,14 @@ error → benign-skip taxonomy for known-absent cloud objects.
 |---|---|---|
 | Calorie floors 1,500 kcal (male) / 1,200 kcal (female) | Every target computation re-clamps; coachApply re-enforces on apply | nutritionEngine, coachApply |
 | FFM energy floor (30 kcal/kg fat-free mass) | Target clamp + weekly-coach second evaluation | nutritionEngine |
-| Rapid-loss gate (>1.5% BW/week observed) | Forces maintenance + caution copy | nutritionEngine |
+| Rapid-loss protection, two-sided: target computation CAPS the deficit so estimated loss cannot exceed 1.5% BW/week (does NOT force maintenance); the observed-rate coach path adds +125 to +300 kcal, gated on the four-part condition (cut phase AND no cycle override AND observed rate ≤ −1.5%/week AND energy score ≤ 2), then the ±5% step cap | nutritionEngine :889-899; weeklyCoach :931-936, :1044-1053 | B1 §A.7, §B.5, §H |
 | Max-safe-loss sizing (0.8% BW/week cap) | Deficit sizing clamp | nutritionEngine |
-| Suppression = calm mode OR open ED flag, reads fail CLOSED | Caller ORs; 'read_failed' sentinel is truthy | blockLedgerRunner, CoachOutputScreen |
+| Suppression = calm mode OR open ED flag OR (per consumer) SCOFF score ≥ 2, all reads fail CLOSED | Caller ORs; 'read_failed' sentinel is truthy; streak surfaces and the coach auto-apply hold include the SCOFF input | blockLedgerRunner, CoachOutputScreen, useWeeklyStreak :112-120, weeklyCoach :1496-1506 |
+| Streak/run surfaces withheld entirely under suppression (incl. SCOFF ≥ 2) | StreakWeeksSection returns null | useWeeklyStreak, StreakWeeksSection :67 |
+| Calorie bank disabled when the target was floored, during macro-cycle/refeed days, or under an open ED flag (fail-closed read) | bankingAvailable gate | DiaryScreen :422-423, B1 §C |
+| Per-day calorie offsets hard-clamped to the sex floor and FFM floor | perDayTargets clamp | food/perDayTargets :11-14 |
+| ed_pattern_lockout and ffm_floor_hold are in-app-only categories: they can NEVER push (locked) | channel matrix pins [CHANNEL.IN_APP] only | notifications/categories :109-110, C2 §A.1 |
+| Onboarding height gate: progression blocked until a valid height (targets must never compute on an unconfirmed height) | pinned by proOnboarding.heightGate test | B2 §B |
 | No upward carry-over under suppression: live proposals hold at previous start / research MEV; ledger holds recorded (upwardCarryPrevented); learned ceiling never raised by a suppressed block; seeded deloadSets withheld (flat MEV week) | interBlock finish() hold; learnedRange skip; blockSeed gates | A2 §D3, §D6, §D7 |
 | Stale evidence (≥4 weeks) treated as suppression for upward carry | interBlock | A2 §D3 |
 | Weight/food-adjacent notifications suppress under an open ED flag / calm mode | notification scheduler gates | C2 §A |
@@ -670,7 +706,7 @@ notification suppression and photo withholding release when flags close.
 | Decision | USER CONTROLS | APP PROPOSES | APP AUTO-CHANGES | APP LEARNS | APP CANNOT OVERRIDE |
 |---|---|---|---|---|---|
 | Exercise choice | ✔ (library, swaps) | swap suggestions | – | – | – |
-| Sets logged / load / reps | ✔ | warm-up ramp, plate maths, progression hints | – | feeds e1RM/PRs | – |
+| Sets logged / load / reps | ✔ | warm-up ramp (on demand only, pull never push), progression hints | – | feeds e1RM/PRs | – |
 | RIR | – (engine-set targets; deload RIR 4) | – | ✔ per week type | – | – |
 | Weekly working volume (in block) | ✔ (edit rows) | weekly coach ±sets | only on user Apply | – | never above rowMrv/30-set backstop |
 | Deload (mid-block) | ✔ accept/ignore | ✔ (2+ triggers) | – | strain informs share | can only reduce rows |
@@ -680,7 +716,7 @@ notification suppression and photo withholding release when flags close.
 | Calorie target | ✔ (goal, manual expectations) | weekly ± ladder, diet break, refeed, macro cycle | adaptive TDEE only via applied targets | TDEE correction from trend | floors, loss gates ALWAYS |
 | Goal / phase | ✔ | goal-lock prompt | – | – | – |
 | Programme schedule | ✔ | auto-generation | – | – | – |
-| Notifications | ✔ per category | – | budget/quiet-hours trimming | learned check-in hour | ED-flag suppression not user-disableable |
+| Notifications | ✔ per category | – | budget/quiet-hours trimming | habit-derived training-reminder weekdays | ED-flag suppression not user-disableable |
 | Progress photos/scan | ✔ capture | retake guidance | – | calibration | withheld under calm/ED |
 | Partner interactions | ✔ | – | weekly signals automated once linked | – | consent required both sides |
 | Data sync | sign-in implies | – | ✔ continuous | – | sign-out guard pushes first |
@@ -741,10 +777,13 @@ mute setting (only the OS-notification toggle).
 chip long-press tooltips).
 
 **Screens users may never discover:** BlockReflection (through the old
-block's summary), CoachHeldHistory, NutritionEducation, SnapshotsScreen
-(no traced route - see Part 33), strength-standards detail, glossary
-entries reachable only via info icons; six glossary entries are orphaned
-entirely (D1 §E).
+block's summary), CoachHeldHistory, NutritionEducation, Snapshots (a row
+inside Settings > Data), strength-standards detail, glossary entries
+reachable only via info icons; six glossary entries are orphaned entirely
+(D1 §E). Also on the Consistency screen: the manual weekly session goal
+(six chips; the streak target becomes min(plan target, manual goal)) and
+the streak pause sheet (1/2/4/8 weeks) — two behaviour-changing controls
+that live on a Progress sub-screen, not in Settings.
 
 ---
 
@@ -795,14 +834,14 @@ benign-skip taxonomy, snapshot recovery). Highlights the founder asked for:
 | "The app learns muscle-specific volume ranges." | TRUE | learnedRange replays stored ledgers per muscle: running-max ceiling, monotone-down floor, MEV anchor. Limitation: needs ≥1 qualifying (confident, non-manual, unsuppressed) block; range is re-derived, not itself stored. | A2 §D6 |
 | "The app adjusts nutrition from weight trends." | TRUE | Robust trend + adherence + confidence drive a deterministic calorie ladder; adaptive TDEE corrects maintenance. Limitation: proposals require the user's Apply; floors clamp everything. | B1 §A-B |
 | "The app works offline." | TRUE | Local SQLite is source of truth for every core loop (train, log, coach, diary); sync is additive. Limitation: auth, sync, remote food lookups, push need network. | C1 §E |
-| "Coaching is deterministic; no AI decides anything." | TRUE | Pure engines, pinned by tests; recorded product law. The only ML is the on-device progress-scan vision model, which never makes coaching decisions alone (weight+intake outrank it). | D2 §A; D1 §B |
+| "Coaching is deterministic; no AI decides anything." | TRUE | Pure engines, pinned by tests; recorded product law. The only ML is on-device and non-deciding: the progress-scan vision model (weight+intake outrank it) and the ML Kit text/barcode recognisers in the food scanners. | D2 §A; D1 §B; B1 §D |
 | "Every coaching change is explained." | PARTIALLY TRUE | Applied changes carry receipts, rationales and plain-English notes; but D1 Part E lists 20 decisions made without explanation (e.g. display-trend vs decision-trend divergence is undisclosed). | D1 §E |
 | "The app protects vulnerable users." | TRUE (as designed) | Calorie floors, loss gates, ED detection, calm mode, fail-closed reads, suppression of upward carry and weight-adjacent surfaces, tier-blind. Limitation: detector coverage is pattern-based, not clinical. | Part 19 |
 | "Your data syncs across devices." | PARTIALLY TRUE | 22 registry + ~19 legacy tables sync; but planned_muscle_volume detail (sources/landmark bounds) does not restore into the primary table on a new device, and photos/scans are local-only. | C1 §C, §G |
 | "The recovery week is personalised to how hard the block ran." | TRUE | Strain-scaled 60→40% of achieved peak, per muscle, floored at half-MEV, clamped to the block's lightest week and 30 sets; monotonicity pinned. Limitation: withheld (flat MEV) under calm/ED and for true repeats. | A2 §C5, §D7 |
 | "Free users get full training logging; Pro adds coaching + nutrition." | TRUE | 24 guarded routes match the recorded tier scope; guardrails are tier-blind; lapse keeps data readable (3 read-only guards). | B2 §E, §H |
 | "The app never moves you to a new block by itself." | TRUE | completed_awaiting_decision is terminal until a user tap; pinned across surfaces. | A2 §C3 |
-| "Partner features keep you accountable." | TRUE (scoped) | One partner, signals/streaks/cheers; no feed, no followers, no comparison of prescriptions. | C2 §E |
+| "Partner features keep you accountable." | TRUE (scoped) | One partner on free, up to three on Pro (maxPartnersForTier, pinned by usePartners.redeemCap test); signals/streaks/cheers; no feed, no followers, no comparison of prescriptions. | C2 §E |
 | "Your privacy is protected." | TRUE (with one open finding) | EU-Dublin residency, PII-scrubbed telemetry, share-card PII ban, Article 9 gate. Open finding: the analytics opt-out preference itself appears to ride the bulk pref sync contrary to its module contract (Part 33 F-3). | B2 §D; C2 §H |
 | "iOS has feature parity with Android." | FALSE today | iOS ships via TestFlight without home widgets or Live Activity (parked), no FGS rest chronometer; several Android-channel behaviours differ. | C2 §B-D |
 | "Cardio is part of the product." | FALSE today (UI) | The logging/history screens exist but the only entry navigates to an unregistered route (dead tap); the engine and sync remain live underneath. | A1 §8 R-1 |
@@ -891,7 +930,7 @@ research-MEV anchor, the 30-set backstop, tier-blindness, voice rules.
 | Route registrations / navigators | 116 across 9 navigators; 89 unique names | A1 |
 | Component-level sheets/modals | ~45 (+14 modal-presentation routes) | A1 |
 | Conditional/state-gated surfaces | 20+ (Part 23 list) | A1/B2/D1 |
-| User-configurable settings | 96 (14 hard-to-find) | B2 |
+| User-configurable settings | 98 tabulated (96 in B2 §A.1 + 2 Consistency-screen streak controls added by review); 5 of the 96 are the health-integration rows, LEGACY-UNREACHABLE since the platform modules were removed, so 93 are live; 14 hard-to-find | B2, review findings 5/15 |
 | Training features (catalogue) | 23 (items 13-35) | Part 3 |
 | Nutrition features | 16 (items 41-56) | Part 3 |
 | Progress features | 10 (items 57-66) | Part 3 |
@@ -899,12 +938,12 @@ research-MEV anchor, the 30-set backstop, tier-blindness, voice rules.
 | Coaching cards | 42 total: 8 PROPOSAL, 5 AUTOMATIC, 1 REQUIRES-CONFIRMATION, 2 MANUAL-ONLY, 26 INFORMATIONAL | D1 §D |
 | Adaptive decision rules (training) | 31 documented INPUTS→…→EXPLANATION rules | A2 |
 | Nutrition decision rules | ~55 | B1 |
-| Notification types | 23 categories: 18 local + 3 remote + 2 enum-only; 5 Android channels | C2 §A |
+| Notification types | 23 categories: 17 live local + 1 legacy-unreachable + 3 remote + 2 enum-only; 5 Android channels; plus the server-side lifecycle email loop (3 kinds) | C2 §A; migrate_123 |
 | Widgets / live surfaces | 6 (2 Android widgets LIVE; iOS set parked) | C2 §B |
-| Deep links | 6 config + 4 out-of-config + 2 quick actions; 13 notification tap destinations | A1/C2 |
+| Deep links | 6 config + 4 out-of-config + 2 quick actions; 11 mapped notification tap types (13 distinct destinations counting the checkin_missed and trial_day3 variants) | A1/C2 |
 | Major persisted entities | 21 conceptual (56 local tables + 2 FTS; 22 registry-synced + ~19 legacy-synced + ~13 local-only) | C1 |
 | Learned/derived metric register | 58 metrics (14 never surfaced; 12 surfaced, consumed by no decision) | D1 §A |
-| Hard safety rules | 19 (Part 19 table) + 11 nutrition-lane HARD rules within them | Part 19/B1 |
+| Hard safety rules | 26 rows in the Part 19 table (post-review; includes the SCOFF suppression input, streak withholding, calorie-bank gate, per-day-offset clamps, in-app-only ED categories, height gate) + 11 nutrition-lane HARD rules within them | Part 19/B1 |
 | Help/education surfaces | 42; glossary 31 entries (6 orphaned); 20 unexplained decisions | D1 §E |
 | Known legacy/unreachable | 4 dead-tap sites, 11 sourceless registrations, 10 dead engine functions, 7 dead copy generators, 5 dead modules, 2 dark routes, 2 stale SQL snapshots | A1 §8, D2 §B |
 | Explicit product boundaries | 42 recorded; 14 planned-only items | D2 §A |
@@ -913,7 +952,7 @@ research-MEV anchor, the 30-set backstop, tier-blindness, voice rules.
 
 # PART 33 — UNCERTAINTIES / CONTRADICTIONS
 
-The lanes recorded 74 uncertainties in full (A1: 9, A2: 8, B1: 9, B2: 8,
+The lanes recorded 84 uncertainties in full (A1: 9, A2: 8, B1: 9, B2: 8,
 C1: 10, C2: 12, D1: 18, D2: 10 - each lane chapter ends with its list).
 This section carries the reconciliations and the highest-stakes items.
 
@@ -928,6 +967,11 @@ This section carries the reconciliations and the highest-stakes items.
 - **R2. Migration ceiling.** "Applied through migrate_116" (CLAUDE.md) is
   stale; the 2026-07-27 sweep found ZERO missing objects and 131 was
   applied + verified 2026-08-09. (High.)
+- **R3. SnapshotsScreen (D1 uncertainty 11).** RESOLVED: it is registered
+  in ProfileStack (RootNavigator :553) and navigated from
+  SettingsDataScreen :313. Reachable, same stack. (High.)
+- **R4. RecapStory (D1 uncertainty 10).** RESOLVED: it is
+  YearOfLiftsScreen, per A1 §8.4. (High.)
 
 ## Highest-stakes open items (verify on device/production, not by code read)
 - **F-1. Cardio dead tap (A1 R-1).** The only cardio entry navigates to a
@@ -1013,7 +1057,30 @@ J. **Implementation file index (the load-bearing modules):**
    blockMetrics.js; blockLedgerGather.js; blockLedgerRunner.js;
    blockSeed.js; learnedRange.js; blockExplain.js; edPatternDetector.js;
    wellbeing.js; proGate.js; payments/*; sync.js + sync/*; notifications/*;
-   partners/*; food/*; progressScan*; shareCard/*; widgets/*.
+   partners/*; food/*; progressScan*; shareCard/*; widgets/*. Small shared
+   utilities called out by the review as otherwise unmentioned:
+   calendarDateValidate.js (impossible-date rejection for body-metric and
+   prep-countdown dates) and weekWindows.js (trailing-week window builder
+   consumed by database.js).
+
+## K. Fresh-eyes review disposition
+
+An adversarial review (16-point brief) returned 21 findings: 6 blockers,
+8 defects, 5 gaps, 3 nits - every one a documentation correction, all
+actioned in this document (plate calculator reclassified
+LEGACY-UNREACHABLE per D57; rapid-loss rule restated with its true cap
+and four-part gate; supersets/giant sets added as LIVE and the stale D14
+"do not build" note annotated; partner cap corrected to free 1 / Pro 3;
+health-integration screen and settings reclassified LEGACY-UNREACHABLE;
+five share-card types incl. the default session card; learned check-in
+hour replaced with habit-derived reminder weekdays; warm-up ramp marked
+pull-only; workout history 50-session cap recorded; Snapshots/RecapStory
+uncertainties resolved; ML claim widened to include the food scanners'
+ML Kit recognisers; counts corrected; Part 19 widened by six rules incl.
+the SCOFF suppression input; Consistency-screen streak controls, the
+data-feature set and the lifecycle email loop added). Three review
+categories yielded nothing after a genuine hunt: screens missing from
+A1 §5, sync/local mislabelling, and Part 22 dependency omissions.
 
 
 ---
@@ -1381,7 +1448,7 @@ Entries are alphabetical by file name.
 - **Purpose:** The set-by-set workout logger — the app's largest surface (4,601 lines).
 - **Primary content:** `WorkoutHeader`, `StatusStrip`, `ExerciseNav`, `NowCard`, per-exercise `LoggedSetRow` list in a `FlashList`, `RestTimer`, `WorkoutBottomBar`.
 - **Primary actions:** log/edit/delete a set, advance exercise, start/extend/skip rest, finish session (`navigation.replace('WorkoutSummary')`).
-- **Secondary actions:** add exercise (`ExercisePickerModal`), reorder blocks (`DragReorderList` + `swapAdjacentBlocks`), swap exercise (`rankSwaps` from `swapEngine`), cluster sets (`clusterSet`), warm-up ramp, plate maths, notes for next time, time-crunch adjustment (`applyTimeCrunch`), readiness tweak (`sessionAdjustments`).
+- **Secondary actions:** add exercise (`ExercisePickerModal`), reorder blocks (`DragReorderList` + `swapAdjacentBlocks`), swap exercise (`rankSwaps` from `swapEngine`), cluster sets (`clusterSet`), warm-up ramp (on demand from the overflow sheet; pull never push, pinned by gymBasics.guard), notes for next time, time-crunch adjustment (`applyTimeCrunch`), readiness tweak (`sessionAdjustments`). (Review correction: plate maths removed from this list — `calculatePlates` has no caller, dropped by D57.)
 - **Conditional content:** `starterSession` / `starterRoutineName` params drive the first-session copy (`getStarterSessionMessage`); readiness prompts; cluster/warm-up blocks by exercise type; keep-awake; Android FGS notification (`notifications/activeWorkout`); iOS Live Activity module.
 - **Empty state:** `EmptyExerciseView` per exercise with no sets yet (`components/workout/EmptyExerciseView`).
 - **Loading state:** no skeleton — the screen is entered with the session already in the store.
@@ -1652,7 +1719,7 @@ Entries are alphabetical by file name.
 - **Entry points:** `AnalyticsScreen.js:439` and `:799` (NavTile "Consistency"); `partner_cheer` notification tap (`notificationRoute.js:53`).
 - **Purpose:** Training-frequency, block-shape and readiness consistency, plus the partner row.
 - **Primary content:** `StreakWeeksSection`, `BlockProgressCard`, `BlockShapeCard`, `FatigueTrendCard`, `ReadinessCards`, `ProgressSections`, session-length trend, "Lighter week recommended" advisory.
-- **Primary actions:** cross-tab to `PlansTab` → `PlanLibrary` and `PlansTab` → `MesocycleBuilder`.
+- **Primary actions:** cross-tab to `PlansTab` → `PlanLibrary` and `PlansTab` → `MesocycleBuilder`. Review addition — two behaviour-changing controls inside `StreakWeeksSection`: the manual weekly session goal (six chips, "How many sessions a week are you aiming for?", `setManualGoal`; the streak target becomes min(plan target, manual goal), or the manual goal alone with no plan) and the streak pause sheet (1/2/4/8 weeks, `addPause`, emits `streak_paused` telemetry). Both persist via `lib/streakState` (local-first) and neither appears in Settings.
 - **Secondary actions:** pull-to-refresh; `InfoTooltip` glossary.
 - **Conditional content:** partner cheer caption + reciprocity row when a pairing exists (this is the `partner_cheer` landing).
 - **Empty state:** `EmptyState` "No consistency data yet".
@@ -2612,7 +2679,14 @@ Entries are alphabetical by file name.
 
 ## SettingsHealthScreen
 - **Route/key + navigator:** `SettingsHealth` in `ProfileStack`.
-- **Status:** LIVE-CONDITIONAL — several rows are Pro (5 `isPro` reads, 1 `tier === 'pro'`, 1 `withProGuard` reference).
+- **Status:** LEGACY-UNREACHABLE (review correction). The health-platform
+  modules were removed entirely (founder 2026-06-30): `lib/health.js`
+  returns null for both platform modules, so `isHealthAvailable()` is
+  always false and `SettingsScreen.js:22` hides the only entry row on it.
+  The screen is registered but has no reachable entry point, and its
+  five settings rows in CHAPTER B2 §A.1.8 are unreachable with it
+  (see C2 §C.3 for the full evidence). Tier notes below describe the
+  code as written, not a reachable surface.
 - **Entry points:** `SettingsScreen.js` "Health".
 - **Purpose:** Platform health-store integration.
 - **Primary content:** rows — "Read morning weight", "Read cardio sessions", "Write workouts", "Open Health settings".
@@ -2852,7 +2926,12 @@ Entries are alphabetical by file name.
 - **Route/key + navigator:** `WorkoutHistory` in `HomeStack` and `ProgressStack`. 1,255 lines.
 - **Status:** LIVE (free).
 - **Entry points:** `HomeScreen.js:1501` (`goToWorkoutHistory`, "Last session" card); `AnalyticsScreen.js:690` and `:810` ("Full History" NavTile).
-- **Purpose:** The full session log with search and repeat.
+- **Purpose:** The session log with search and repeat. Review correction:
+  it loads only the 50 most recent completed sessions
+  (`getRecentCompletedWorkouts(user.id, 50)`, `database.js:2509-2521`
+  `LIMIT`), with no pagination beyond that page; "Show all sessions"
+  resets filters WITHIN the loaded 50 (pinned by
+  `workoutHistoryLimit.guard.test.js`).
 - **Primary content:** searchable session list ("Search by exercise or workout name"), `PressableCard` rows, month grouping ("Show all this month"), `Chip` filters.
 - **Primary actions:** "View summary" → `navigate('WorkoutSummary')`; "Repeat" → `navigateCrossTab(..., 'HomeTab', 'ActiveWorkout')`.
 - **Secondary actions:** `PeekMenu` long-press (delete/edit); open an exercise → cross-tab `ProgressTab` → `ExerciseDetail`; "Show all sessions"; pull-to-refresh; writes the widget snapshot (`lib/widgets/writer`) and partner week signals (`lib/partners/weekSignalWriter`).
@@ -3372,7 +3451,7 @@ here.
   `DiaryTab`, `ProgressTab`, `ProfileTab` — kept stable for deep links and push routing).
 - **4 gates before the tabs:** boot splash → auth → Article 9 health consent (un-skippable, fails
   closed) → first run (free or Pro branch). Plus an optional biometric app lock over MainTabs.
-- **Pro gating:** 24 routes carry `withProGuard`; 3 carry `withReadOnlyProGuard` (Diary, BodyMetrics,
+- **Pro gating (both bases, review correction):** 21 distinct `withProGuard` components across 24 registrations; 3 distinct `withReadOnlyProGuard` components across 5 registrations (Diary,  BodyMetrics,
   ProgressPhotos — "view yes, log no" for lapsed users). `ProUpgrade` is registered in all five stacks
   so no gate can dead-end.
 - **~45 component-level sheets and modals** wired from screens, all presenting through the single
@@ -3613,7 +3692,7 @@ reminders (`src/lib/notifications/trainingReminders.js`, out of lane).
 | Helper | Symbol | Rule | Status |
 | --- | --- | --- | --- |
 | Warm-up ramp | `src/lib/warmupRamp.js` → `warmupRamp(workingKg, {isBarbell, barKg=20, roundKg=2.5})`, `WARMUP_STEPS = [{0.4,5},{0.6,3},{0.8,2}]` | Optional empty-bar row (10 reps) when `isBarbell && working > bar`; each step rounded to `roundKg`, floored at bar weight when barbell; rows at/below the previous row, at/above working, or zero are dropped; junk options fall back to defaults rather than emitting NaN. | **LIVE** |
-| Plate maths | `src/lib/plateMath.js` → `calculatePlates(targetKg, barKg=20, plateSet=PLATE_SET_KG)`, `PLATE_SET_KG=[25,20,15,10,5,2.5,1.25]`, `DEFAULT_BAR_KG=20` | **LIVE** |
+| Plate maths | `src/lib/plateMath.js` → `calculatePlates(targetKg, barKg=20, plateSet=PLATE_SET_KG)`, `PLATE_SET_KG=[25,20,15,10,5,2.5,1.25]`, `DEFAULT_BAR_KG=20` | **LEGACY-UNREACHABLE** (review correction: `calculatePlates` has no production caller; the feature was dropped by founder ruling D57 "ABSOLUTELY DROPPED, never revisit"; only `DEFAULT_BAR_KG` is imported, as the warm-up ramp's bar-weight fallback, `ActiveWorkoutScreen.js:73`, `:3393-3395`) |
 | Rest suggestion | `src/lib/restSuggest.js` → `suggestRestSeconds({exercise, setType})`, `REST_SUGGESTION_TABLE`, `FALLBACK_REST_SECONDS = 90` | Fixed table only; compound vs isolation via `exercises.compound_isolation`; untagged/custom exercises read as **not** compound (90s). straight/amrap/dropset 180/90; warmup 60/60; myo_reps & rest_pause 20/20. | **LIVE** (consumed at build time by `ManualBuilderScreen`, `BuildWorkoutScreen`) |
 | Rest timer arithmetic | `src/lib/restTimerMath.js` → `clampRestDelta(delta, remaining)` | **LIVE** |
 | Rest sound | `src/lib/restSound.js` | **LIVE** |
@@ -8910,6 +8989,13 @@ athlete profile (avatar). These are flagged in §A.3.
 
 ## A.1 MASTER SETTINGS TABLE
 
+> **Review addendum (fresh-eyes findings 5 and 15).** Two controls are
+> ADDED to this inventory: the Consistency screen's manual weekly session
+> goal and streak pause (both `lib/streakState`, local-first, documented at
+> the ConsistencyScreen entry in CHAPTER A1). The five §A.1.8 health rows
+> are RECLASSIFIED LEGACY-UNREACHABLE (`isHealthAvailable()` is permanently
+> false). Net live settings: 93 of 98 tabulated.
+
 Columns, as ordered: SETTING | LOCATION | TYPE | DEFAULT | ALLOWED VALUES | WHAT
 IT CHANGES | ENGINE EFFECT | UI EFFECT | SYNCED? | LOCAL ONLY? | SAFETY
 IMPLICATION | DEPENDENCIES | IMPLEMENTATION.
@@ -9011,7 +9097,15 @@ note at `:257-259`).
 
 ### A.1.8 Health provider (Settings > Apple Health / Health Connect, `src/screens/SettingsHealthScreen.js`)
 
-Whole screen is **LIVE-CONDITIONAL on `isHealthAvailable()`**. Each scope is an
+**REVIEW CORRECTION: this whole group is LEGACY-UNREACHABLE, not
+LIVE-CONDITIONAL.** The platform health modules were removed entirely
+(founder 2026-06-30; `lib/health.js:100-119` returns null modules, so
+`isHealthAvailable()` is permanently false and the Settings entry row is
+hidden). The five rows below document the code as written; none is
+reachable, and the live settings count nets them out (Part 32).
+
+Original lane text (condition can never be true): whole screen is
+**LIVE-CONDITIONAL on `isHealthAvailable()`**. Each scope is an
 OS permission, not an app preference: turning a scope OFF is not possible from
 the app (neither HealthKit nor Health Connect exposes a revoke API), so the OFF
 path shows a toast and opens the system settings (`:71-77`).
@@ -12832,7 +12926,12 @@ Additional guards in `src/lib/partners/__tests__/`: `partnerNames.guard.test.js`
 
 ## F.1 The renderer
 `src/lib/shareCard/drawShareCard.js` (923 lines) is a **single pure Skia draw routine used for BOTH the on-screen preview and the exported PNG** — "what you see is exactly what you share". Header (`:4-8`) records the bug it replaced: the preview (RN views) and the export (a hand-coded HTML canvas in a hidden WebView) were two independent renderers that drifted. Written against the JsiSk* API so `scripts/render-share-card.cjs` renders the identical code path under CanvasKit in Node. 1080-wide design space scaled by `s = W/1080`; text is measured with the active font.
-Four card types (`:917-920`): `pr`, `milestone`, `weekly`, `beforeAfter`.
+Five card types (review correction): `pr`, `milestone`, `weekly`,
+`beforeAfter` (`:917-920`) plus the `session` card in the trailing `else`
+(`drawShareCard.js:921` → `drawSession`, working sets/duration/tonnage/
+exercise list/top set/intensity tier/units) — and `session` is the FIRST
+segment and the default on ShareCardScreen (`:422`, `cardType: 'session'`
+built at `:224`).
 Palette is a documented DESIGN_SYSTEM whitelist exception (an offline canvas, not a screen), tracking `theme.js` values; `border` was corrected from a fill colour to `#6E6E6E` for WCAG 1.4.11 3:1 because outlines vanished under platform re-compression.
 
 ## F.2 Surfaces
@@ -13355,7 +13454,7 @@ never-list, each with its decision citation:
 | **Flat timeline food diary** | *"built and REVERTED on the founder's device verdict; meal cards are canonical. NEVER re-propose"* | `TASKBOARD.md:1499`; D37 item 15 (`DECISIONS:641-647`) |
 | **Supabase migrations 049 / 059** | HELD; *"Do not apply."* | `TASKBOARD.md:1500`; `CLAUDE.md` status banner; `supabase/README.md` |
 | **AI-assisted food input (photo meal-scan / voice)** | HELD by founder order, not rejected and not approved | `TASKBOARD.md:1501`; D27 addendum |
-| **Billing default reconciliation, apply-all, giant sets** | *"Not ruled on. Do not build; do not re-surface unprompted."* | `DECISIONS:20` (D14 assessment) |
+| **Billing default reconciliation, apply-all, giant sets** | *"Not ruled on. Do not build; do not re-surface unprompted."* | `DECISIONS:20` (D14 assessment). **REVIEW ANNOTATION: the giant-sets entry of this D14 line was SUPERSEDED and the feature is now SHIPPED** (campaign item 21 / D44): `ActiveWorkoutScreen` cycles every member of a shared `supersetGroupId` (3+), pinned by `ActiveWorkoutScreen.giantSet.guard`, `ManualBuilderScreen.supersetCap.guard` ("the old cap is GONE by design") and `giantSetVolumeAttribution` tests; the auto-generation engine stays pairs-only. The other two items of the row stand. |
 | **iOS Live Activities wiring** | *"HOLD."* (D14 assessment). Note: the code is written; only App-Group provisioning is outstanding — see `TASKBOARD.md` founder-actions, *"The Live Activity is ALREADY fully wired in code (item 19)"* | `DECISIONS:14`; `TASKBOARD.md` §3 |
 | **Manrope brand typeface** | D50 ruled Manrope; **D53 vetoed it on sight and restored Inter**. `DECISIONS:1048`: *"D50 is REVERSED - do not re-propose"* | `DECISIONS:1044-1056`; `TASKBOARD.md:1341` |
 | **First-food prompt replacing MacroRings (L05-D2)** | **REVERTED, never re-propose** (D75). Rationale verbatim: *"On the founder's own fresh-install walk that meant NO ring, NO macro targets and NO visibility of what to eat, on the exact day a new user plans their first food … The audit optimised for less noise; the device verdict is that the numbers ARE the product on that surface."* A never-re-propose comment sits at the MacroRings call site | `DECISIONS:1635-1659` |

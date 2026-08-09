@@ -1116,17 +1116,23 @@ queue paused here for the founder review per D55.
   FUTURE (recorded, founder order - do NOT build yet): training-epoch /
   learned-ceiling freshness for long layoffs, detraining and profile
   change; no arbitrary weekly decay (D91-25).
-- FULL PRODUCT MAP CAMPAIGN (2026-08-09, founder order, IN FLIGHT):
-  discovery/documentation ONLY - no code, copy, test, schema or
-  behaviour changes. Deliverables docs/_FULL-APP-PRODUCT-MAP.md +
-  docs/_FULL-APP-PRODUCT-MAP-HANDOVER.md, built by paired Opus read
-  agents (navigation/screens, training+adaptive, nutrition+food,
-  settings+tier, data+sync, notifications+platform+social,
-  progress+checkins+education, docs+boundaries+legacy), lead-assembled,
-  then fresh-eyes adversarial review with findings actioned. RECOVERY:
-  agent outputs land in the session scratchpad map/ folder; if the
-  session dies, relaunch any missing domain read from this list - the
-  map is assembled only from those files plus lead verification.
+- FULL PRODUCT MAP CAMPAIGN (2026-08-09, founder order) - COMPLETE.
+  Discovery/documentation ONLY; zero code/copy/test/schema/behaviour
+  changes (verified: lint clean + full suite green over the delivered
+  tree). Deliverables: docs/_FULL-APP-PRODUCT-MAP.md (15,249 lines:
+  lead-written spine for the cross-cutting parts + eight lane chapters
+  from paired Opus read agents) and
+  docs/_FULL-APP-PRODUCT-MAP-HANDOVER.md (method, counts,
+  uncertainties, review disposition, reading order). Fresh-eyes
+  adversarial review returned 21 findings (6 blockers incl. plate
+  calculator wrongly LIVE, giant sets wrongly "do not build", partner
+  cap, health screens dark, rapid-loss rule overstated) - ALL actioned
+  in the document. 84 lane uncertainties recorded; highest-stakes open
+  items for founder/device verification are in map Part 33 (cardio
+  dead-tap, planned_muscle_volume restore gap, privacy-pref sync,
+  allergen stamp drop, meal-reminder re-lay). Doc-vs-code
+  contradictions (15, incl. stale CLAUDE.md facts) listed in Part 33 /
+  D2 E.7 - NOT fixed, per the discovery-only order.
 - Stage 1 REVIEW REMEDIATION LANDED (2026-08-09, adversarial review vs
   blueprint; all 12 findings fixed, none parked): partner block-finished
   milestone re-keyed to awaitingDecision && weeksOverdue===0 (was dead on
