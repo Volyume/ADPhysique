@@ -50,7 +50,10 @@ const MESO_SCHEDULE = {
  * @param {number} endMs - epoch ms
  * @returns {number} whole calendar days elapsed (>= 0)
  */
-function localDaysElapsed(startMs, endMs) {
+// Exported (Stage 3 remediation, 2026-08-09): blockMetrics' per-session
+// week attribution must share THIS day-counting, not fork its own raw-ms
+// division (the exact F10/EN-11 divergence class this function removed).
+export function localDaysElapsed(startMs, endMs) {
   const startDayMs = (() => { const d = new Date(startMs); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); })();
   const endDayMs   = (() => { const d = new Date(endMs); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); })();
   // Math.round: local midnights across a DST boundary sit 23 or 25 raw hours
