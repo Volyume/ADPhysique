@@ -343,6 +343,7 @@ function TrainingNextWeekCard({
   output, onApply, canApply, applyStateFor, onApplySettled,
   deloadSuggested, deloadNote, onApplyDeload, hero, navigation,
   blockFinished = false,
+  nextWeekIsDeload = false,
 }) {
   // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
   // See buildLiveStyles' header comment (defined below the frozen `styles`
@@ -358,7 +359,9 @@ function TrainingNextWeekCard({
     signal > 0 ? `Add ${mag} ${setWord} to each muscle group`
     : signal < 0 ? `Pull back ${mag} ${setWord} per muscle group`
     : 'Hold your current volume';
-  const applyable = canApply && signal !== 0 && !applied;
+  // Stage 4: an upward apply never targets a recovery week's rows.
+  const upwardBlocked = signal > 0 && nextWeekIsDeload;
+  const applyable = canApply && signal !== 0 && !applied && !upwardBlocked;
 
   // When the coach calls a deload, the recovery week IS the training
   // decision, so it replaces the incremental volume row. Applying brings
@@ -411,7 +414,9 @@ function TrainingNextWeekCard({
             <Text style={[styles.planNoteText, live.planNoteText]}>
               {blockFinished
                 ? 'This block has finished, so volume changes have nowhere to land yet. Choose your next block on the Train tab first.'
-                : "This is next week's starting point. Each session still fine-tunes as you train."}
+                : upwardBlocked
+                  ? 'Next week is your recovery week, so the coach will not add sets to it. Recovery weeks stay light on purpose.'
+                  : "This is next week's starting point. Each session still fine-tunes as you train."}
             </Text>
           </View>
           {/* CO-2: this card said what changed ("N updated") but never linked
@@ -1022,6 +1027,10 @@ export default function CoachOutputScreen({ navigation, route }) {
   // path dying silently (blueprint §3.5: the coach output carries the
   // block-finished state, not a mystery).
   const [blockAwaitingDecision, setBlockAwaitingDecision] = useState(false);
+  // Stage 4 (2026-08-09): a positive volume apply must never land on a
+  // recovery week's rows — a deload is light on purpose, and the peak-week
+  // push would otherwise write extra sets straight into it.
+  const [nextWeekIsDeload, setNextWeekIsDeload] = useState(false);
   // Five-part coach response inputs (Theme A): weigh-ins inside the
   // displayed week, the calm-mode preference, and the check-in day name
   // for the forward-pull anchor. All best-effort; the response renders
@@ -1199,6 +1208,9 @@ export default function CoachOutputScreen({ navigation, route }) {
     if (isApplied(output, 'training')) return;
     const delta = output.volumeSignal ?? 0;
     if (!delta || !nextTrainingWeekId) return;
+    // Stage 4: never add sets to a recovery week (the card explains this
+    // instead of offering the button; this guard is the backstop).
+    if (delta > 0 && nextWeekIsDeload) return;
     setApplyingKey('training');
     try {
       const rows = await getPlannedMuscleVolume(nextTrainingWeekId);
@@ -1606,12 +1618,22 @@ export default function CoachOutputScreen({ navigation, route }) {
         cardioSessionsLogged = cardioWeekSummary.sessions;
       } catch (_) { /* cardio optional; coach runs without it */ }
 
+      // Stage 4 (2026-08-09): week-in-block fatigue context. A finished
+      // block awaiting the user's decision is NOT a live week, so it
+      // passes null and the engine runs context-free.
+      const mesoWkForCoach = await getCurrentMesocycleWeek(user.id).catch(() => null);
+      const liveBlockWeek = mesoWkForCoach && !mesoWkForCoach.awaitingDecision ? mesoWkForCoach : null;
+
       const result = runWeeklyCoach({
         checkin: engineCheckin,
         morningWeights: weights,
         sessionsCompleted: sessionStats.completed,
         sessionsPlanned: sessionStats.planned,
         prsThisWeek: prs,
+        blockWeekIndex: mesoWkForCoach?.awaitingDecision ? null : (mesoWkForCoach?.weekIndex ?? null),
+        blockAccumWeeks: liveBlockWeek && Number.isFinite(liveBlockWeek.plannedWeeks) && liveBlockWeek.plannedWeeks > 1
+          ? liveBlockWeek.plannedWeeks - 1
+          : null,
         // Calorie safety + adherence sizing inputs (food log + body comp).
         recentIntakeAvgKcal: intake.avgKcal,
         recentIntakeDaysLogged: intake.daysLogged,
@@ -1876,9 +1898,12 @@ export default function CoachOutputScreen({ navigation, route }) {
         const next = cur?.id ? await getNextMesocycleWeek(cur.id) : null;
         setNextTrainingWeekId(next?.id ?? null);
         setBlockAwaitingDecision(!!cur?.awaitingDecision);
+        // getNextMesocycleWeek returns the raw row (snake_case is_deload).
+        setNextWeekIsDeload(next?.is_deload === 1);
       } catch (_e) {
         setNextTrainingWeekId(null);
         setBlockAwaitingDecision(false);
+        setNextWeekIsDeload(false);
       }
 
       // Load the last 5 outputs; skip the first (current week) for the history shelf
@@ -2208,6 +2233,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       onApply={applyDisabled ? undefined : handleApplyTraining}
       canApply={!!nextTrainingWeekId}
       blockFinished={blockAwaitingDecision}
+      nextWeekIsDeload={nextWeekIsDeload}
       applyStateFor={applyStateFor}
       onApplySettled={onApplySettled}
       deloadSuggested={deloadSuggested}

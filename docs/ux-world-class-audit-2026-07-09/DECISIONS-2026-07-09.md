@@ -2258,3 +2258,22 @@ building Stages 1-2 (all criterion-ruled: best for end users, never effort):
 7. A finished block >= 4 weeks old (overdue limbo) keeps its
    classification but its evidence is stale: upward proposals suppress,
    reductions stand (detraining makes an increase unsafe to infer).
+
+## D91 addendum — Stage 4 lead rulings (D33, 2026-08-09)
+
+8. Peak-week softening semantics: only an observed recovery grade 3, only
+   in the final accumulation week, only in blocks with >= 3 accumulation
+   weeks, and only when consecutivePoorRecoveryWeeks is 0 (persistence
+   means the fatigue predates the peak). The deload branch of the matrix
+   always reads the raw grade; grade 4 is never touched. safetyHold's cap
+   runs after the matrix, unchanged, so no context ever outranks pain or
+   illness.
+9. PR density threshold 0.3 (roughly one all-time PR per three completed
+   sessions) for the top performance grade, with a caller-supplied block
+   e1RM slope >= 1.5% as the alternative route (wired in Stage 6) and the
+   check-in's own 'exceeded' verdict unchanged. Legacy binary retained
+   only when no session count is supplied (older callers).
+10. Deload-row apply guard: the coach screen never applies a POSITIVE
+   volume delta into a recovery week's planned rows (pre-existing hazard;
+   the peak-week push made fixing it non-optional). Reductions and the
+   dedicated deload apply are untouched. The card explains the refusal.

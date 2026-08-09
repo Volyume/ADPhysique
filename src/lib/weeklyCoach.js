@@ -218,12 +218,30 @@ function getRecoveryScore(energyScore, sorenessScore, stressScore = null) {
   return score;
 }
 
+// Stage 4 (§3.3, founder order 2026-08-09): strong PR evidence is DENSITY,
+// not a binary. Roughly one all-time PR per three completed sessions.
+const PR_DENSITY_STRONG = 0.3;
+// A caller-supplied block e1RM slope at or above this reads as strong
+// performance even without all-time PRs (returning users progress for
+// weeks below old bests; the binary missed them entirely).
+const BLOCK_SLOPE_STRONG_PCT = 1.5;
+
 /**
  * Maps training data to a performance score 1–4.
  * trainingPerformance: 'exceeded' | 'hit' | 'struggled' | 'dropped' | null
+ *
+ * Stage 4 (§3.3): the old top-grade route "any PR + adherence" over-
+ * rewarded a single cheap PR every time. With the completed-session count
+ * available the top grade needs PR DENSITY (or a real block e1RM slope,
+ * caller-supplied); without a session count the legacy binary stands so
+ * older callers are unchanged.
  */
-function getPerformanceScore(sessionAdherence, prsThisWeek, trainingPerformance) {
-  if (trainingPerformance === 'exceeded' || (prsThisWeek > 0 && sessionAdherence >= 0.9)) return 1;
+function getPerformanceScore(sessionAdherence, prsThisWeek, trainingPerformance, sessionsCompleted = null, blockE1rmSlopePct = null) {
+  const prStrong = sessionsCompleted != null && sessionsCompleted > 0
+    ? prsThisWeek / sessionsCompleted >= PR_DENSITY_STRONG
+    : prsThisWeek > 0;
+  const slopeStrong = blockE1rmSlopePct != null && blockE1rmSlopePct >= BLOCK_SLOPE_STRONG_PCT;
+  if (trainingPerformance === 'exceeded' || ((prStrong || slopeStrong) && sessionAdherence >= 0.9)) return 1;
   if (trainingPerformance === 'dropped' || sessionAdherence < 0.5) return 4;
   if (trainingPerformance === 'struggled' || sessionAdherence < 0.75) return 3;
   if (trainingPerformance === 'hit' || sessionAdherence >= 0.75) return 2;
@@ -231,23 +249,50 @@ function getPerformanceScore(sessionAdherence, prsThisWeek, trainingPerformance)
 }
 
 /**
+ * Stage 4 (founder order 2026-08-09, blueprint §3.3): week-in-block
+ * fatigue context. An observed recovery grade 3 in the block's PEAK week
+ * (the final accumulation week) is the ramp doing its job — expected
+ * accumulating fatigue — so the push/hold branch reads it as a 2. It is
+ * NEVER softened when: the grade is 4 (deload thresholds untouched), the
+ * week is anything but the peak (an early grade 3 is a genuine early
+ * warning), or the fatigue is persistent (consecutivePoorRecoveryWeeks
+ * >= 1 means it predates the peak, so it is not the ramp talking).
+ * Blocks shorter than 3 accumulation weeks have no meaningful ramp to
+ * accumulate fatigue from, so no softening there either.
+ */
+function contextAdjustedRecovery(recoveryScore, {
+  blockWeekIndex = null,
+  blockAccumWeeks = null,
+  consecutivePoorRecoveryWeeks = 0,
+} = {}) {
+  const isPeakWeek = Number.isFinite(blockWeekIndex) && Number.isFinite(blockAccumWeeks)
+    && blockAccumWeeks >= 3 && blockWeekIndex === blockAccumWeeks;
+  if (recoveryScore === 3 && isPeakWeek && consecutivePoorRecoveryWeeks < 1) return 2;
+  return recoveryScore;
+}
+
+/**
  * Autoregulation matrix: recovery (1–4) × performance (1–4) → volume signal.
  * Returns: { volumeDelta: -2|-1|0|1|2|3, trainingSignal: 'reduce'|'hold'|'push', deloadFlag: boolean }
+ *
+ * Stage 4: `recoveryForPush` is the week-context-adjusted recovery grade
+ * used ONLY by the hold/push branches; the deload branch always reads the
+ * RAW grade (the founder red line: deload thresholds unchanged).
  */
-function autoregulationMatrix(recoveryScore, performanceScore) {
-  // Deload: recovery 4 regardless of performance, or both 3+4
+function autoregulationMatrix(recoveryScore, performanceScore, recoveryForPush = recoveryScore) {
+  // Deload: recovery 4 regardless of performance, or both 3+4 — RAW grade.
   if (recoveryScore === 4 || (recoveryScore >= 3 && performanceScore >= 4)) {
     return { volumeDelta: -2, trainingSignal: 'reduce', deloadFlag: true };
   }
   // Hold: either dimension is 3 (but not both at extreme)
-  if (recoveryScore === 3 || performanceScore === 3) {
+  if (recoveryForPush === 3 || performanceScore === 3) {
     return { volumeDelta: 0, trainingSignal: 'hold', deloadFlag: false };
   }
   // Push: both at 1 or 2
-  if (recoveryScore === 1 && performanceScore === 1) {
+  if (recoveryForPush === 1 && performanceScore === 1) {
     return { volumeDelta: 3, trainingSignal: 'push', deloadFlag: false };
   }
-  if (recoveryScore === 1 || performanceScore === 1) {
+  if (recoveryForPush === 1 || performanceScore === 1) {
     return { volumeDelta: 2, trainingSignal: 'push', deloadFlag: false };
   }
   // Both 2
@@ -437,6 +482,11 @@ export function mapCalsAdherence(raw, avgKcal = null, targetKcal = null) {
  * @param {boolean}       inputs.calmMode                   - D15: wellbeing calm-mode read. Gates ONLY
  *   the sustained over-performance escalation (never the base weekly push signal, which stays
  *   unsuppressed like every other training-only surface in this file).
+ * @param {number|null}   inputs.blockWeekIndex             - Stage 4: live block week (1-based); null when
+ *   no live block (including completed_awaiting_decision).
+ * @param {number|null}   inputs.blockAccumWeeks            - Stage 4: accumulation weeks (plannedWeeks - 1).
+ * @param {number|null}   inputs.blockE1rmSlopePct          - Stage 4 seam: block-so-far e1RM slope from
+ *   blockMetrics (Stage 6 wires it); an alternative strong-performance route to PR density.
  * @param {string|null}   inputs.lastCalAdjustmentDirection - 'up'|'down'|null
  * @param {number}        inputs.lastCalAdjustmentWeeksAgo  - weeks since last cal change (cooldown)
  * @param {number|null}   inputs.currentCalTarget           - kcal/day, or null if not set
@@ -477,6 +527,17 @@ export function runWeeklyCoach(inputs) {
     // ED-SAFETY note above the escalation block below for why this is the
     // one training-only signal in this file that IS calm-mode-gated.
     calmMode = false,
+    // Stage 4 (2026-08-09, blueprint §3.3): week-in-block fatigue context.
+    // blockWeekIndex is the live block week (1-based); blockAccumWeeks the
+    // number of accumulation weeks (plannedWeeks - 1). Callers pass null
+    // when no live block exists (including a finished block awaiting its
+    // decision), which keeps the engine byte-identical to before.
+    blockWeekIndex = null,
+    blockAccumWeeks = null,
+    // Stage 4 seam: a caller-supplied block-so-far e1RM slope (%) from
+    // blockMetrics.computeBlockPerformance; Stage 6 wires it. Null keeps
+    // the legacy PR-only performance read.
+    blockE1rmSlopePct = null,
     // D18 (founder decision 2026-07-09, plan-F §4.4): optional caller-supplied
     // photo-corroboration signal, { eligible: boolean, direction: 'supports' |
     // 'conflicts' | null }. Defaults null so every existing caller is
@@ -785,8 +846,14 @@ export function runWeeklyCoach(inputs) {
 
   const trainingPerformance = checkin?.trainingPerformance ?? null;
   const recoveryScore   = getRecoveryScore(energyScore, sorenessScore, stressScore);
-  const performanceScore = getPerformanceScore(sessionAdherence, prsThisWeek, trainingPerformance);
-  const matrix = autoregulationMatrix(recoveryScore, performanceScore);
+  const performanceScore = getPerformanceScore(sessionAdherence, prsThisWeek, trainingPerformance, sessionsCompleted, blockE1rmSlopePct);
+  // Stage 4: the deload branch inside the matrix always reads the RAW
+  // recovery grade; only hold/push read the week-context adjustment.
+  const recoveryForPush = contextAdjustedRecovery(recoveryScore, {
+    blockWeekIndex, blockAccumWeeks, consecutivePoorRecoveryWeeks,
+  });
+  const peakWeekContextApplied = recoveryForPush !== recoveryScore;
+  const matrix = autoregulationMatrix(recoveryScore, performanceScore, recoveryForPush);
 
   let volumeSignal = matrix.volumeDelta;
   let trainingSignal = matrix.trainingSignal;
@@ -1678,6 +1745,10 @@ export function runWeeklyCoach(inputs) {
     // above) and lets the caller persist it into the saved output (so next
     // run's consecutiveExceededWeeks derivation and telemetry both have it).
     exceededEscalationApplied,
+    // Stage 4: true only when the peak-week fatigue context actually
+    // softened this week's recovery read for the push/hold branch (the
+    // Stage 8 explanation layer names it; deload paths never set it).
+    peakWeekContextApplied,
     // PIPE-002 / PIPE-003: surface the safety context so the caller and
     // telemetry can see why progression was held this week.
     jointPainFlagged,
@@ -1714,6 +1785,7 @@ function _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, we
       cardio: null,
     },
     whyThisWeek: pickWhy(['building_baseline'], weekSeed),
+    peakWeekContextApplied: false,
     deloadSuggested: false,
     deloadNote: null,
     dietBreakSuggested: false,
@@ -1754,6 +1826,7 @@ function _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, w
     // U-B-1 §2: this path has no applyable adjustment to hero — the lead/holding
     // state shows instead (domain null), reasonKey mirrors whyThisWeek.
     primary: { domain: null, reasonKey: 'stabilise_sessions' },
+    peakWeekContextApplied: false,
     deloadSuggested: false,
     deloadNote: null,
     dietBreakSuggested: false,

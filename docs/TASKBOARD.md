@@ -856,6 +856,30 @@ queue paused here for the founder review per D55.
   blocks have no plan FK (previous block = recency).
   Next: Stage 4 fatigue context in weeklyCoach (week-in-block expected
   fatigue; PR-binary replacement with density+slope per §3.3).
+- Stage 4 LANDED (2026-08-09): week-in-block fatigue context + PR density
+  in weeklyCoach (§3.3). contextAdjustedRecovery: an observed recovery
+  grade 3 in the PEAK week (final accumulation week, blocks >= 3 accum
+  weeks) reads as 2 for the push/hold branch ONLY - deload thresholds
+  read the RAW grade (founder red line), grade 4 never softens, weeks
+  1..n-1 never soften (early warning preserved), persistent fatigue
+  (consecutivePoorRecoveryWeeks >= 1) never softens; safetyHold still
+  caps any push (order unchanged); output carries
+  peakWeekContextApplied. getPerformanceScore: top grade now needs PR
+  DENSITY >= 0.3 (prs / completed sessions) or caller-supplied
+  blockE1rmSlopePct >= 1.5 (Stage 6 wires blockMetrics into it) or the
+  check-in's own 'exceeded' verdict; legacy binary preserved when no
+  session count supplied. New engine inputs blockWeekIndex /
+  blockAccumWeeks / blockE1rmSlopePct all default null = byte-identical
+  legacy. CoachOutputScreen threads the context (null for a finished
+  block) AND gains the deload-row apply guard: a positive volume apply
+  never writes into a recovery week's rows (pre-existing hazard the
+  peak-week push would have amplified; card explains, handler backstops).
+  Pins: weeklyCoach.stage4.fatigueContext.test.js (17, written first).
+  Full suite green (9406), no collateral re-anchors needed.
+  Next: Stage 5 learned working range (reuse computeAdaptiveLandmarks /
+  effectiveLandmarks precedence; block-grain ceiling/floor updates;
+  slow conservative moves, min evidence, one block nudges never
+  overwrites).
 - Stage 1 REVIEW REMEDIATION LANDED (2026-08-09, adversarial review vs
   blueprint; all 12 findings fixed, none parked): partner block-finished
   milestone re-keyed to awaitingDecision && weeksOverdue===0 (was dead on
