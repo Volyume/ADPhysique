@@ -18,10 +18,6 @@ import ModalHeader from '../ModalHeader';
 import EmptyState from '../EmptyState';
 import { colors } from '../../styles/theme';
 
-const CARDIO_PLAN_CARD = require('fs').readFileSync(
-  require('path').resolve(__dirname, '../CardioPlanCard.js'),
-  'utf8',
-);
 const BUTTON = require('fs').readFileSync(
   require('path').resolve(__dirname, '../Button.js'),
   'utf8',
@@ -76,20 +72,11 @@ describe('shared chrome polish', () => {
     expect(flatten(title.props.style).color).toBe(colors.textPrimary);
   });
 
-  test('Cardio history is a contained neutral header action', () => {
-    // CP-10 theming batch (2026-07-10): pin extended, mechanical only.
-    // CardioPlanCard moved to the live useTheme() hook (frozen StyleSheet +
-    // buildLiveStyles override, same pattern as BottomSheet.js), so the
-    // style prop now carries a live override array and the icon colour
-    // reads t.colors.textSecondary instead of the frozen colors singleton.
-    // The frozen `cardioHistoryBtn`/`cardioHistoryLink` StyleSheet entries
-    // this test also pins are untouched (byte-identical).
-    expect(CARDIO_PLAN_CARD).toContain('style={[styles.cardioHistoryBtn, live.cardioHistoryBtn]}');
-    expect(CARDIO_PLAN_CARD).toContain('Ionicons name="time-outline" size={13} color={t.colors.textSecondary}');
-    expect(CARDIO_PLAN_CARD).toMatch(/cardioHistoryBtn: \{[\s\S]*minHeight: 36,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(CARDIO_PLAN_CARD).toContain('cardioHistoryLink: { ...type.caption, color: colors.textPrimary }');
-    expect(CARDIO_PLAN_CARD).not.toMatch(/cardioHistoryLink: \{[\s\S]*color: colors\.primary/);
-  });
+  // 'Cardio history is a contained neutral header action' removed
+  // 2026-08-06: CardioPlanCard was deleted with the founder's ruling that
+  // cardio logging is not a Progress surface; the history action now lives
+  // in Log cardio's ModalHeader (pinned by
+  // progressAndBrief.founderRulings.guard.test.js).
 
   test('core chrome uses bundled type roles instead of synthetic Android weights', () => {
     expect(BUTTON).toContain('fontFamily: fontFamily.semibold');

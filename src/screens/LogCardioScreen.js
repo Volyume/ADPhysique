@@ -163,7 +163,24 @@ export default function LogCardioScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
-      <ModalHeader title={activity ? 'Log cardio' : 'Pick activity'} onClose={() => navigation.goBack()} />
+      <ModalHeader
+        title={activity ? 'Log cardio' : 'Pick activity'}
+        onClose={() => navigation.goBack()}
+        // 2026-08-06: with the Progress-tab cardio card gone, this header is
+        // the one route to past cardio. Canonical accessory pattern: close
+        // shifts left so the action renders right (styling.md header trio).
+        closePosition="left"
+        rightAccessory={(
+          <TouchableOpacity
+            onPress={() => navigation.navigate('CardioHistory')}
+            hitSlop={hitSlop}
+            accessibilityRole="button"
+            accessibilityLabel="Cardio history"
+          >
+            <Ionicons name="time-outline" size={22} color={t.colors.textPrimary} />
+          </TouchableOpacity>
+        )}
+      />
 
       {!activity ? (
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">

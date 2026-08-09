@@ -1,5 +1,3 @@
-import { VOLUME_LANDMARKS } from './algorithms';
-
 // Extracted verbatim from HomeScreen.js (behaviour-preserving decomposition).
 // Pure function, no I/O; unchanged logic, just relocated.
 
@@ -7,7 +5,9 @@ import { VOLUME_LANDMARKS } from './algorithms';
  * Derive a 1-3 sentence coaching brief from available training data.
  * Returns { headline, body, type } where type is 'go' | 'caution' | 'recover'.
  */
-export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutDaysAgo, blockProgress }) {
+// blockProgress is still ACCEPTED (callers pass it) but unused since Rule 4's
+// removal -- kept in the signature so no call site changes, prefixed per lint.
+export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutDaysAgo, blockProgress: _blockProgress }) {
   // Rule 1, deload suggested
   if (deloadSuggestion) {
     return {
@@ -39,27 +39,12 @@ export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutD
     };
   }
 
-  // Rule 4, 2+ muscles below MEV this week (only meaningful if the user has
-  // actually been training). For brand-new users with zero workouts every
-  // muscle reads as below-MEV at 0 sets, so this rule used to fire on the
-  // very first launch with "Several muscle groups are below their weekly
-  // minimum", which is technically true but useless advice. Require the
-  // user to have logged something so we're commenting on real adherence.
-  if (blockProgress && blockProgress.length > 0) {
-    const totalSetsThisWeek = blockProgress.reduce((s, p) => s + (p.actual ?? 0), 0);
-    const belowMev = blockProgress.filter(p => {
-      const landmarks = VOLUME_LANDMARKS[p.muscle];
-      return landmarks && landmarks.mev > 0 && p.actual < landmarks.mev;
-    });
-    if (totalSetsThisWeek > 0 && belowMev.length >= 2) {
-      const muscleName = belowMev[0].label;
-      return {
-        headline: 'Muscle groups need attention',
-        body: `A few muscle groups haven't had much work this week. Today's a good day to give ${muscleName} some attention.`,
-        type: 'go',
-      };
-    }
-  }
+  // Rule 4 REMOVED (founder ruling 2026-08-06): "Muscle groups need
+  // attention" fired whenever 2+ muscles sat below their weekly minimum
+  // mid-week -- which is the GUARANTEED state mid-plan (the plan spreads
+  // muscles across the week), so the brief was telling users to override
+  // their own plan's rotation. The plan owns weekly allocation; the brief
+  // never second-guesses it per muscle.
 
   // Rule 5, volume on track, low fatigue
   if (fatigueHistory.length >= 1) {

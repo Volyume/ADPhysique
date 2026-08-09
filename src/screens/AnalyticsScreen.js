@@ -22,7 +22,6 @@ import VolyumeChart from '../components/VolyumeChart';
 import { ProBadge } from '../components/ProGate';
 import EmptyState from '../components/EmptyState';
 import InfoTooltip from '../components/InfoTooltip';
-import CardioPlanCard from '../components/CardioPlanCard';
 import useAppStore from '../store/useAppStore';
 import useProgressData from '../hooks/useProgressData';
 import useWeightTrend from '../hooks/useWeightTrend';
@@ -746,18 +745,9 @@ export default function AnalyticsScreen({ navigation, route }) {
         </View>
         )}
 
-        {/* ── Cardio this week (Pro, available not allocated). Moved here from
-            Plans: it is a tracking surface. ── */}
-        {tier === 'pro' && user?.id && userProfile?.cardioEnabled !== false && (
-          <View style={styles.section}>
-            <CardioPlanCard
-              userId={user.id}
-              target={userProfile?.cardioTarget}
-              onPress={() => navigation.navigate('LogCardio')}
-              onHistory={() => navigation.navigate('CardioHistory')}
-            />
-          </View>
-        )}
+        {/* Cardio card REMOVED from Progress (founder ruling 2026-08-06:
+            "that's not progress"). Logging entry lives on the Coach tab
+            (YouScreen NavRow); history via Log cardio's header. */}
 
         {/* The old full-width "New personal records" sparkline section moved
             into the half-width New bests card at the top of the dashboard
