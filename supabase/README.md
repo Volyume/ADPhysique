@@ -24,6 +24,18 @@ unless the file header says otherwise.
 > green; the prior founder-run state had stopped after 100/102's DDL, and
 > the deployed telemetry allow-list predated 101). **049 and 059 remain
 > HELD** and are excluded from any batch until the founder unholds them.
+>
+> **2026-08-09: migrate_131 (mesocycles.block_ledger jsonb) applied to
+> EU-Dublin and verified** under the founder's staged order ("1. Let
+> both adversarial reviews finish … 5. Only then run migrate_131 against
+> production. 6. Verify production migration/schema"), after the four
+> preconditions were re-verified in-session (both adversarial reviews
+> remediated; lint + full suite green on main; strain→deload
+> monotonicity executed around the MEV floor; mixed-muscle e2e
+> regression green). Verification: column present (jsonb, nullable, no
+> default), 11 mesocycle rows untouched (0 ledgers), migration ledger
+> ordered after migrate_129/130 (both already applied 2026-08-08).
+> Additive + idempotent; rollback `DROP COLUMN block_ledger`.
 
 ## Application order and verification playbook (migrations 037-057)
 

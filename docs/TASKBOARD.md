@@ -975,14 +975,16 @@ queue paused here for the founder review per D55.
   the TEXT ledger to an object for jsonb (unparseable -> null, never
   poisons the batch); pull stringifies jsonb back to TEXT and
   PRESERVES a local ledger when the cloud row carries none (the
-  INSERT OR REPLACE wipe hazard). FOUNDER ACTION QUEUED: "run against
-  production" for migrate_131 before the next EAS build. GATE, precise
-  wording: build-android.yml builds on every push to main, so artefacts
-  BUILT from main at/after 30fb2f53 (the block_ledger push line) exist
-  regardless - the gate is DO NOT UPLOAD/SHIP any such artefact until
-  the founder confirms migrate_131 ran successfully against production.
-  Claude must NOT run migrate_131 itself (founder final order,
-  verbatim: "DO NOT run migrate_131 against production yourself").
+  INSERT OR REPLACE wipe hazard). GATE LIFTED 2026-08-09: migrate_131
+  APPLIED to EU-Dublin production and VERIFIED (column jsonb/nullable/
+  no default; 11 rows untouched, 0 ledgers; migration ledger ordered
+  after 129/130) under the founder's staged follow-up order ("1. Let
+  both adversarial reviews finish ... 5. Only then run migrate_131
+  against production. 6. Verify production migration/schema"), with
+  all four preconditions re-verified first (reviews remediated; lint +
+  9,586 tests green on main; strain->deload monotonicity executed
+  around the MEV floor; mixed-muscle e2e regression green). Artefacts
+  built from main at/after 30fb2f53 are now clear to ship.
 - Stage 5 REVIEW REMEDIATION LANDED (2026-08-09; review executed the
   module + 5000-case fuzz + mutation run; both blockers + all defects
   fixed): the research-MEV anchor now OUT-RANKS every cap (52 real

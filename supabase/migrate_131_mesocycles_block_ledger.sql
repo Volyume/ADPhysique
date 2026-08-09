@@ -10,8 +10,13 @@
 -- cloud row carries none).
 --
 -- Applied locally: YES (database.js SCHEMA_MIGRATIONS user_version bump,
--- same build). Applied remotely: NO — awaiting the founder's explicit
--- "run against production" for this batch.
+-- same build). Applied remotely: YES — applied to EU-Dublin production
+-- 2026-08-09 under the founder's staged order ("Only then run
+-- migrate_131 against production"), after the four preconditions were
+-- re-verified (reviews remediated, full suite + lint green on main,
+-- strain monotonicity executed, e2e regression green). Verified:
+-- column present (jsonb, nullable, no default), 11 mesocycle rows
+-- untouched (0 ledgers), migration ledger ordered after migrate_129/130.
 -- ORDER MATTERS (migrate_129 precedent): this must run against
 -- production BEFORE a build carrying the sync push of block_ledger
 -- ships, or every mesocycles upsert batch rejects on the unknown column.
