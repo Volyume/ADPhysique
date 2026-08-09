@@ -182,6 +182,44 @@ verification SELECT that prints the seeded account state.
 migrate_128 STATUS: written, reviewed, merged to main, NOT APPLIED. The two
 Apple review accounts DO NOT EXIST yet and will not sign in.
 
+### ADAPTIVE MESOCYCLE BUILD — LIVE CAMPAIGN (2026-08-09, founder GO)
+
+Authority: `docs/blueprint-adaptive-mesocycle-2026-08-09.md` §3.9 + the
+founder's staged order (8 stages, test-first). LIVE STATE AND PER-STAGE
+DETAIL: `docs/TASKBOARD.md`, "ADAPTIVE MESOCYCLE BUILD" entry — that entry
+is the resume point, not this file.
+
+- Stage 1 LANDED (`6d0d59c6`): completed_awaiting_decision block state,
+  no week wrap, honest "Block finished" copy across surfaces, ledger seam.
+- Stage 1 review remediation LANDED (`5193dd87`): all 12 adversarial-review
+  findings fixed (partner milestone, ActiveWorkout/MesocycleBuilder/
+  CoachOutput honesty, advisor phase-aware copy, live PlansScreen intent
+  seam, widened creation pin, strengthened test pins).
+- Stage 2 LANDED (`1b6fd27a`): pure Block Ledger `src/lib/interBlock.js`
+  (36 tests written first; founder retention rule enforced).
+- Stage 3 (performance metric) IN FLIGHT next; Stages 4-8 queued.
+
+DEVICE CHECKLIST for the lifecycle changes (single EAS build, physical
+Android; run with a block whose start date is set 6+ weeks back so it is
+finished): 1) Home chip reads "Block finished. Targets hold at
+recovery-week volume until you choose what comes next." — never "Deload
+week" or a wrapped "Week 1". 2) Tapping the chip opens the block sheet:
+all dots done, "Block finished" line, and a "Choose your next block"
+button that lands on the Train tab's decision card. 3) That card's body
+never says "After your recovery week"; its primary button reads "Restart
+this programme" (adjust) or "Continue this programme" (repeat). 4) Start
+a workout: the banner says "Block finished" with the holding line, NOT
+"Recovery week"; targets still show the light recovery numbers.
+5) Training blocks screen: plan card and dashboard read "Block finished",
+no "Week 6 of 6 · recovery week". 6) Finish a session: no gold "Block
+complete" celebration re-fires; the block strip shows the finished line.
+7) Coach tab weekly review: the training card explains volume changes
+have nowhere to land and points at the Train tab (no silent dead Apply).
+8) Progress tab: "This week's plan" header reads "Block finished";
+pulse card reads "Block finished", not "Week 5 of 5 · 100% complete".
+9) ED-safety spot-check: enable calm mode — widget and streak surfaces
+unchanged from before (suppression untouched by this campaign).
+
 ### WHAT SHIPPED THIS SESSION (all on main, all green)
 
 Device-reported fixes: `d96bec9` Log-button height; `674f98d` eight
