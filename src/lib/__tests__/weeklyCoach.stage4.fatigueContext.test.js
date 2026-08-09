@@ -80,11 +80,71 @@ describe('peak-week fatigue context (expected accumulating fatigue)', () => {
     expect(out.peakWeekContextApplied).toBe(true);
   });
 
-  test('WITHOUT block context the same week holds — existing callers are byte-identical', () => {
+  test('WITHOUT block context the same week holds (the no-context grade path is unchanged)', () => {
+    // NOTE the honest scope: the PR-DENSITY change below DOES alter live
+    // behaviour for 1-PR weeks (that is what §3.3 ordered); this pins only
+    // that the week-context softening needs the context inputs.
     const out = runWeeklyCoach(peakFatigueInputs());
     expect(out.volumeSignal).toBe(0);
     expect(out.adjustments.training.signal).toBe('hold');
     expect(out.peakWeekContextApplied).toBe(false);
+  });
+
+  test('a grade 3 from HIGH STRESS is never softened (stress can only worsen the read, PIPE-001)', () => {
+    const out = runWeeklyCoach(peakFatigueInputs({
+      checkin: { energyScore: 4, sorenessScore: 1, stressScore: 5 },
+      top: PEAK,
+    }));
+    expect(out.volumeSignal).toBe(0);
+    expect(out.peakWeekContextApplied).toBe(false);
+  });
+
+  test('a grade 3 from LOW ENERGY is never softened (that is not the ramp talking)', () => {
+    const out = runWeeklyCoach(peakFatigueInputs({
+      checkin: { energyScore: 2, sorenessScore: 1 },
+      top: PEAK,
+    }));
+    expect(out.volumeSignal).toBe(0);
+    expect(out.peakWeekContextApplied).toBe(false);
+  });
+
+  test('weeks already sore before the peak (grade-3 counter) block the softening', () => {
+    const out = runWeeklyCoach(peakFatigueInputs({
+      top: { ...PEAK, consecutiveGrade3RecoveryWeeks: 1 },
+    }));
+    expect(out.volumeSignal).toBe(0);
+    expect(out.peakWeekContextApplied).toBe(false);
+  });
+
+  test('the deload week itself is never softened (index past the peak)', () => {
+    const out = runWeeklyCoach(peakFatigueInputs({
+      top: { blockWeekIndex: 5, blockAccumWeeks: 4 },
+    }));
+    expect(out.volumeSignal).toBe(0);
+    expect(out.peakWeekContextApplied).toBe(false);
+  });
+
+  test('a short block (2 accumulation weeks) has no ramp to accumulate from: no softening', () => {
+    const out = runWeeklyCoach(peakFatigueInputs({
+      top: { blockWeekIndex: 2, blockAccumWeeks: 2 },
+    }));
+    expect(out.volumeSignal).toBe(0);
+    expect(out.peakWeekContextApplied).toBe(false);
+  });
+
+  test('a softened push is not D15 escalation evidence: the exceeded counter cannot stack on it', () => {
+    const out = runWeeklyCoach(peakFatigueInputs({
+      top: { ...PEAK, consecutiveExceededWeeks: 3 },
+    }));
+    expect(out.volumeSignal).toBe(2); // softened push, NOT escalated to 3
+    expect(out.exceededEscalationApplied).toBe(false);
+    expect(out.peakWeekContextApplied).toBe(true);
+  });
+
+  test('the softened note names the mechanism and never claims excellent recovery', () => {
+    const out = runWeeklyCoach(peakFatigueInputs({ top: PEAK }));
+    expect(out.adjustments.training.note).toContain('Peak-week fatigue');
+    expect(out.adjustments.training.note.toLowerCase()).not.toContain('excellent');
   });
 
   test('the same grade-3 read in week 1 is an early warning: hold, no context', () => {
@@ -166,6 +226,11 @@ describe('§3.3: PR density replaces the PR binary in the performance grade', ()
 
   test('one PR in three sessions clears the density bar', () => {
     const out = runWeeklyCoach(prInputs(1, { top: { sessionsCompleted: 3, sessionsPlanned: 3 } }));
+    expect(out.volumeSignal).toBe(2);
+  });
+
+  test('exactly the 0.3 boundary passes: three PRs across ten sessions', () => {
+    const out = runWeeklyCoach(prInputs(3, { top: { sessionsCompleted: 10, sessionsPlanned: 10 } }));
     expect(out.volumeSignal).toBe(2);
   });
 

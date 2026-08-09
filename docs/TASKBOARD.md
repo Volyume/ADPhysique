@@ -921,6 +921,51 @@ queue paused here for the founder review per D55.
   -> learned band -> profile-adjusted research -> raw research; ledger
   persistence + block-end computation hook; advisor buttons map to the
   ledger; createMesocycle deadness resolved).
+- Stage 4 REVIEW REMEDIATION LANDED (2026-08-09; review swept 9,000
+  inputs old-vs-new engine; all findings fixed or honestly recorded):
+  softening now CAUSE-GATED (soreness >= 3 AND energy >= 3 AND stress
+  < 4 - a grade 3 from low energy or high stress never softens;
+  PIPE-001 restored) and double persistence-gated (new
+  consecutiveGrade3RecoveryWeeks input, caller-derived from PRIOR
+  weeks' soreness >= 3, so a user sore every week is never softened);
+  D15 escalation gains !peakWeekContextApplied (a softened push is not
+  escalation evidence); the softened training note names the mechanism
+  ("Peak-week fatigue is part of the plan") and never claims excellent
+  recovery; D16 Coached walk mirrors the deload-row guard (it used to
+  STALL for ever in the final accumulation week, silently skipping all
+  nutrition applies); the training card reads "Hold through your
+  recovery week" instead of an unappliable "Add N sets";
+  nextWeekIsDeload refreshes after an applied early deload; data_hold
+  output gains peakWeekContextApplied parity. RECORD CORRECTIONS
+  (review #6/#7): (a) the deload BRANCH reads the raw recovery grade,
+  but the PERFORMANCE grade feeding it did change - ~45/9000 legacy
+  inputs now deload where they held (conservative direction, intended
+  per §3.3); (b) the PR-density change ALTERS LIVE BEHAVIOUR for
+  existing users (the caller always passes a session count): a 1-PR
+  4-session adherent week grades 2 not 1 (~495/9000 inputs shift
+  volumeSignal) - this IS §3.3's ordered replacement of the binary,
+  stated here plainly. Known limits recorded: weekly PR density
+  normalises by total sessions (blockMetrics' block-grain density is
+  the exposure-normalised one); blockAccumWeeks derives from
+  plannedWeeks (an applied early deload shifts the true peak by one -
+  Stage 6's gather counts is_deload rows). Suite 17 -> 27 + d16 guard.
+- Stage 6 PART 1 LANDED (2026-08-09): pure src/lib/blockSeed.js
+  (resolveSeedRange) - the per-muscle fallback chain exactly as
+  ordered (manual -> valid ledger -> learned band -> profile-adjusted
+  -> raw research), source named for the explanation layer; 'repeat'
+  = true repeat from observed numbers, 'adjust' = full proposal;
+  suppression degrades ledger seeds to repeat (reductions pass),
+  skips the learned band, never touches manual; research MEV + 30-set
+  clamps. Pins: blockSeed.stage6.test.js (20, written first).
+  Stage 6 REMAINING: local migration (mesocycles.block_ledger TEXT) +
+  cloud migrate_131 (write only - founder-gated apply, ORDER: before
+  next build) + sync push/pull round-trip; the block-end gather hook
+  (computeAndStoreBlockLedger: sets/feedback/checkins/coach_outputs
+  recovery_flag -> buildBlockLedger, fail-closed suppression read);
+  generateInitialPlannedVolume consumes the ledger via resolveSeedRange
+  per muscle; PlansScreen builds+passes the ledger with intent;
+  advisor 'Continue with adjustments' label returns WITH behaviour;
+  createMesocycle deleted (test pin update).
 - Stage 1 REVIEW REMEDIATION LANDED (2026-08-09, adversarial review vs
   blueprint; all 12 findings fixed, none parked): partner block-finished
   milestone re-keyed to awaitingDecision && weeksOverdue===0 (was dead on

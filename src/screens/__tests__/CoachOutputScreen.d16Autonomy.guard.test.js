@@ -113,7 +113,15 @@ describe('D16: the Coached auto-apply effect', () => {
     const body = effectBody();
     expect(body).toMatch(/if \(output\.deloadSuggested\) \{/);
     expect(body).toMatch(/handleApplyDeload\(\);/);
-    expect(body).toMatch(/if \(output\.volumeSignal && !isApplied\(output, 'training'\) && nextTrainingWeekId\)/);
+    expect(body).toMatch(/if \(output\.volumeSignal && !isApplied\(output, 'training'\) && nextTrainingWeekId/);
+  });
+
+  test('Stage 4: the walk mirrors the deload-row guard so it falls through to nutrition instead of stalling', () => {
+    // handleApplyTraining returns without changing state when the target
+    // week is a deload row; without this mirrored condition the effect
+    // would re-select the training branch for ever and silently skip
+    // every apply below it.
+    expect(effectBody()).toMatch(/!\(output\.volumeSignal > 0 && nextWeekIsDeload\)/);
   });
 
   test('invokes the SAME apply handlers Collaborative uses, not a parallel compute path', () => {

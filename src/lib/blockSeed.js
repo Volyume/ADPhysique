@@ -1,0 +1,124 @@
+/**
+ * blockSeed.js — the per-muscle seeding fallback resolver (Stage 6 of
+ * the adaptive mesocycle build; authority
+ * docs/blueprint-adaptive-mesocycle-2026-08-09.md §3.5/§3.9 + the
+ * founder's Stage 6 order, verbatim fallback chain: "1 manual override
+ * -> 2 valid ledger -> 3 learned band -> 4 profile-adjusted research ->
+ * 5 raw research; Never silently discard a valid previous-block
+ * recommendation").
+ *
+ * Pure and deterministic. resolveSeedRange picks ONE muscle's next-block
+ * start/peak and NAMES its source, so the seeding write
+ * (generateInitialPlannedVolume) and the Stage 8 explanation can never
+ * disagree about where a number came from.
+ *
+ * Advisor button semantics (§3.5): intent 'repeat' = ledger carry-over
+ * forced to a TRUE repeat (the finished block's own observed start and
+ * planned peak); intent 'adjust' = the full ledger proposal.
+ *
+ * Suppression (§3.8/D15, calm mode OR an open ED flag, caller-ORed):
+ * no upward carry-over anywhere. A ledger seed degrades to the repeat
+ * numbers (a valid recommendation is used, never discarded — it just
+ * cannot climb); a ledger REDUCTION passes untouched; the learned band
+ * is skipped for the conservative profile/research default; a manual
+ * override is the user's own explicit numbers and stands.
+ */
+import { ABSOLUTE_WEEKLY_SET_CEILING } from './coachApply';
+
+const num = (v, fallback) => {
+  const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
+  return Number.isFinite(n) ? n : fallback;
+};
+
+/**
+ * @param {object} input
+ * @param {{mev:number, mav:number}|null} input.manual - the user's manual
+ *   landmarks entry for this muscle, when one exists.
+ * @param {object|null} input.ledgerEntry - the finished block's ledger
+ *   entry for this muscle (classifyMuscleBlock's shape). Valid when its
+ *   proposal carries numbers and is not deferredToManual.
+ * @param {{floor:number, ceiling:number, isLearned:boolean}|null}
+ *   input.learnedRange - computeLearnedRange's output.
+ * @param {{mev:number, mav:number}|null} input.profileAdjusted -
+ *   planEngine's profile-adjusted landmarks (lowercase-normalised).
+ * @param {{mev:number, mav:number}|null} input.research - the raw
+ *   research table entry; also the absolute floor/ceiling anchor.
+ * @param {boolean} input.suppressed - calm mode OR open ED flag.
+ * @param {'repeat'|'adjust'} input.intent - the advisor button tapped.
+ * @returns {{startSets:number, peakSets:number, source:'manual'|'ledger'|'learned'|'profile'|'research'}}
+ */
+export function resolveSeedRange({
+  manual = null,
+  ledgerEntry = null,
+  learnedRange = null,
+  profileAdjusted = null,
+  research = null,
+  suppressed = false,
+  intent = 'adjust',
+} = {}) {
+  const researchMev = num(research?.mev, null);
+  const clamp = (start, peak) => {
+    const floor = researchMev ?? 0;
+    let s = Math.round(Math.min(Math.max(num(start, floor), floor), ABSOLUTE_WEEKLY_SET_CEILING));
+    let p = Math.round(Math.min(Math.max(num(peak, s), s), ABSOLUTE_WEEKLY_SET_CEILING));
+    return { s, p };
+  };
+
+  // 1. Manual override: the user's explicit numbers, suppression-proof.
+  const manualMev = num(manual?.mev, null);
+  const manualMav = num(manual?.mav, null);
+  if (manualMev != null && manualMav != null && manualMev > 0 && manualMav > 0) {
+    const { s, p } = clamp(manualMev, Math.max(manualMav, manualMev));
+    return { startSets: s, peakSets: p, source: 'manual' };
+  }
+
+  // 2. A valid ledger entry is NEVER silently discarded (founder order).
+  const proposal = ledgerEntry?.proposal;
+  const observed = ledgerEntry?.observed;
+  const ledgerValid = proposal
+    && !proposal.deferredToManual
+    && num(proposal.startSets, null) != null
+    && num(proposal.peakSets, null) != null;
+  if (ledgerValid) {
+    let start = num(proposal.startSets, 0);
+    let peak = num(proposal.peakSets, start);
+    const repeatStart = num(observed?.startSets, start);
+    const repeatPeak = num(observed?.plannedPeak, peak);
+    if (intent === 'repeat') {
+      // §3.5: a true repeat — the block the user just ran, unchanged.
+      start = repeatStart;
+      peak = repeatPeak;
+    } else if (suppressed) {
+      // No upward carry: degrade to the repeat numbers where the proposal
+      // climbs; keep it where it reduces.
+      start = Math.min(start, repeatStart);
+      peak = Math.min(peak, repeatPeak);
+    }
+    const { s, p } = clamp(start, peak);
+    return { startSets: s, peakSets: p, source: 'ledger' };
+  }
+
+  // 3. The learned band — skipped under suppression (its ceiling may sit
+  // above the research default, and a flagged user gets the conservative
+  // ramp; the band itself is memory and survives untouched).
+  if (!suppressed && learnedRange?.isLearned) {
+    const floor = num(learnedRange.floor, null);
+    const ceiling = num(learnedRange.ceiling, null);
+    if (floor != null && ceiling != null) {
+      const { s, p } = clamp(floor, ceiling);
+      return { startSets: s, peakSets: p, source: 'learned' };
+    }
+  }
+
+  // 4. Profile-adjusted research.
+  const profMev = num(profileAdjusted?.mev, null);
+  const profMav = num(profileAdjusted?.mav, null);
+  if (profMev != null && profMav != null) {
+    const { s, p } = clamp(profMev, profMav);
+    return { startSets: s, peakSets: p, source: 'profile' };
+  }
+
+  // 5. Raw research, the last resort.
+  const { s, p } = clamp(num(research?.mev, 0), num(research?.mav, num(research?.mev, 0)));
+  return { startSets: s, peakSets: p, source: 'research' };
+}

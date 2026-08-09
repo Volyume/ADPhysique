@@ -355,12 +355,14 @@ function TrainingNextWeekCard({
   const note = output.adjustments?.training?.note;
   const mag = Math.abs(signal);
   const setWord = mag === 1 ? 'set' : 'sets';
+  // Stage 4: an upward apply never targets a recovery week's rows, and
+  // the row must not read as an addable "+N sets" when it cannot be.
+  const upwardBlocked = signal > 0 && nextWeekIsDeload;
   const label =
-    signal > 0 ? `Add ${mag} ${setWord} to each muscle group`
+    upwardBlocked ? 'Hold through your recovery week'
+    : signal > 0 ? `Add ${mag} ${setWord} to each muscle group`
     : signal < 0 ? `Pull back ${mag} ${setWord} per muscle group`
     : 'Hold your current volume';
-  // Stage 4: an upward apply never targets a recovery week's rows.
-  const upwardBlocked = signal > 0 && nextWeekIsDeload;
   const applyable = canApply && signal !== 0 && !applied && !upwardBlocked;
 
   // When the coach calls a deload, the recovery week IS the training
@@ -1284,6 +1286,9 @@ export default function CoachOutputScreen({ navigation, route }) {
     setApplyingKey('deload');
     try {
       await setMesocycleWeekDeload(nextTrainingWeekId);
+      // Stage 4: the target week IS a deload row from this moment; keep
+      // the upward-apply guard's premise fresh for the rest of the session.
+      setNextWeekIsDeload(true);
       const rows = await getPlannedMuscleVolume(nextTrainingWeekId);
       const changes = computeDeloadVolume(rows);
       for (const c of changes) {
@@ -1531,6 +1536,21 @@ export default function CoachOutputScreen({ navigation, route }) {
         return count;
       })();
 
+      // Stage 4 review remediation: consecutive PRIOR weeks already in
+      // grade-3 soreness territory (the poor-recovery counter above only
+      // sees energy <= 2 / soreness >= 4). Same unbroken-run derivation,
+      // but the current week's own check-in is excluded — it is the week
+      // being judged, not its history.
+      const consecutiveGrade3RecoveryWeeks = (() => {
+        let count = 0;
+        for (const ci of recentCheckins) {
+          if ((ci.weekStart ?? 0) >= weekStart) continue; // this week's row
+          if ((ci.sorenessScore ?? 2) >= 3) count++;
+          else break;
+        }
+        return count;
+      })();
+
       // Compute consecutiveOffTargetWeeks from recent coach outputs
       const lastOutput = await getLatestCoachOutput(user.id);
       const consecutiveOffTargetWeeks = lastOutput?.trend?.onTarget === false
@@ -1634,6 +1654,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         blockAccumWeeks: liveBlockWeek && Number.isFinite(liveBlockWeek.plannedWeeks) && liveBlockWeek.plannedWeeks > 1
           ? liveBlockWeek.plannedWeeks - 1
           : null,
+        consecutiveGrade3RecoveryWeeks,
         // Calorie safety + adherence sizing inputs (food log + body comp).
         recentIntakeAvgKcal: intake.avgKcal,
         recentIntakeDaysLogged: intake.daysLogged,
@@ -1984,7 +2005,11 @@ export default function CoachOutputScreen({ navigation, route }) {
       }
       return;
     }
-    if (output.volumeSignal && !isApplied(output, 'training') && nextTrainingWeekId) {
+    // Stage 4: mirror handleApplyTraining's deload-row guard, or the walk
+    // would call a handler that returns without changing state and stall
+    // here for ever — silently skipping every nutrition apply below.
+    if (output.volumeSignal && !isApplied(output, 'training') && nextTrainingWeekId
+      && !(output.volumeSignal > 0 && nextWeekIsDeload)) {
       handleApplyTraining();
       return;
     }

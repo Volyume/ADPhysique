@@ -249,14 +249,19 @@ function getPerformanceScore(sessionAdherence, prsThisWeek, trainingPerformance,
 }
 
 /**
- * Stage 4 (founder order 2026-08-09, blueprint §3.3): week-in-block
- * fatigue context. An observed recovery grade 3 in the block's PEAK week
- * (the final accumulation week) is the ramp doing its job — expected
- * accumulating fatigue — so the push/hold branch reads it as a 2. It is
- * NEVER softened when: the grade is 4 (deload thresholds untouched), the
- * week is anything but the peak (an early grade 3 is a genuine early
- * warning), or the fatigue is persistent (consecutivePoorRecoveryWeeks
- * >= 1 means it predates the peak, so it is not the ramp talking).
+ * Stage 4 (founder order 2026-08-09, blueprint §3.3; cause-gating from
+ * the Stage 4 adversarial review): week-in-block fatigue context. An
+ * observed recovery grade 3 in the block's PEAK week (the final
+ * accumulation week) is the ramp doing its job — expected accumulating
+ * fatigue — so the push/hold branch reads it as a 2. The softening is
+ * STRICTLY cause-gated: only a grade 3 caused by SORENESS with decent
+ * energy and no high life stress is the ramp talking. A grade 3 from
+ * low energy or high stress (PIPE-001: stress can only worsen the read,
+ * never improve it) is never softened. It is also NEVER softened when:
+ * the grade is 4 (deload thresholds untouched), the week is anything
+ * but the peak (an early grade 3 is a genuine early warning), or the
+ * fatigue is persistent — EITHER counter (>= 1 prior poor-recovery week
+ * or >= 1 prior grade-3 soreness week) means it predates the peak.
  * Blocks shorter than 3 accumulation weeks have no meaningful ramp to
  * accumulate fatigue from, so no softening there either.
  */
@@ -264,10 +269,18 @@ function contextAdjustedRecovery(recoveryScore, {
   blockWeekIndex = null,
   blockAccumWeeks = null,
   consecutivePoorRecoveryWeeks = 0,
+  consecutiveGrade3RecoveryWeeks = 0,
+  sorenessScore = null,
+  energyScore = null,
+  stressScore = null,
 } = {}) {
   const isPeakWeek = Number.isFinite(blockWeekIndex) && Number.isFinite(blockAccumWeeks)
     && blockAccumWeeks >= 3 && blockWeekIndex === blockAccumWeeks;
-  if (recoveryScore === 3 && isPeakWeek && consecutivePoorRecoveryWeeks < 1) return 2;
+  const sorenessDriven = sorenessScore != null && sorenessScore >= 3
+    && (energyScore == null || energyScore >= 3)
+    && (stressScore == null || stressScore < 4);
+  if (recoveryScore === 3 && isPeakWeek && sorenessDriven
+    && consecutivePoorRecoveryWeeks < 1 && consecutiveGrade3RecoveryWeeks < 1) return 2;
   return recoveryScore;
 }
 
@@ -538,6 +551,12 @@ export function runWeeklyCoach(inputs) {
     // blockMetrics.computeBlockPerformance; Stage 6 wires it. Null keeps
     // the legacy PR-only performance read.
     blockE1rmSlopePct = null,
+    // Stage 4 review remediation: consecutive prior weeks whose check-in
+    // soreness was already grade-3 territory (sorenessScore >= 3),
+    // caller-derived like the sibling counters. The poor-recovery counter
+    // only sees energy <= 2 / soreness >= 4, so without this a user sore
+    // every single week would still read as "expected peak fatigue".
+    consecutiveGrade3RecoveryWeeks = 0,
     // D18 (founder decision 2026-07-09, plan-F §4.4): optional caller-supplied
     // photo-corroboration signal, { eligible: boolean, direction: 'supports' |
     // 'conflicts' | null }. Defaults null so every existing caller is
@@ -702,6 +721,7 @@ export function runWeeklyCoach(inputs) {
       adherenceNote: null, prsThisWeek, sessionsCompleted, sessionsPlanned,
       volumeSignal: 0, loadSignal: 'hold', recoveryFlag: 'normal', goalPhase,
       exceededEscalationApplied: false,
+      peakWeekContextApplied: false,
       // D16: no adjustments exist on this path (all null above), so there is
       // nothing an autonomous mode could auto-apply either way.
       autoApplyHoldActive: false,
@@ -848,9 +868,11 @@ export function runWeeklyCoach(inputs) {
   const recoveryScore   = getRecoveryScore(energyScore, sorenessScore, stressScore);
   const performanceScore = getPerformanceScore(sessionAdherence, prsThisWeek, trainingPerformance, sessionsCompleted, blockE1rmSlopePct);
   // Stage 4: the deload branch inside the matrix always reads the RAW
-  // recovery grade; only hold/push read the week-context adjustment.
+  // recovery grade; only hold/push read the week-context adjustment,
+  // which is cause-gated (soreness-driven only) and persistence-gated.
   const recoveryForPush = contextAdjustedRecovery(recoveryScore, {
     blockWeekIndex, blockAccumWeeks, consecutivePoorRecoveryWeeks,
+    consecutiveGrade3RecoveryWeeks, sorenessScore, energyScore, stressScore,
   });
   const peakWeekContextApplied = recoveryForPush !== recoveryScore;
   const matrix = autoregulationMatrix(recoveryScore, performanceScore, recoveryForPush);
@@ -879,7 +901,12 @@ export function runWeeklyCoach(inputs) {
   const recoveryFlag = matrixDeload ? 'deload_suggested' : ((poorRecovery || safetyHold) ? 'concerned' : 'normal');
   const loadSignal = trainingSignal === 'push' ? 'progress' : trainingSignal;
 
-  const baseTrainingNote = getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matrixDeload);
+  // Stage 4 review remediation: a context-softened push must never borrow
+  // the generic "recovery is excellent" push copy — the user just reported
+  // real (expected) fatigue. Name the actual mechanism instead.
+  const baseTrainingNote = peakWeekContextApplied && trainingSignal === 'push'
+    ? 'Peak-week fatigue is part of the plan, not a warning. Strong work; your recovery week lands next.'
+    : getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matrixDeload);
   // D15: reassignable. The sustained-escalation block below only ever
   // overwrites this AFTER confirming safetyHold is false (so safetyHoldNote
   // is guaranteed null at that point) and recomputes it from the same
@@ -1497,6 +1524,9 @@ export function runWeeklyCoach(inputs) {
   const exceededEscalationEligible = (
     consecutiveExceededWeeks >= EXCEEDED_ESCALATION_WEEKS &&
     trainingSignal === 'push' &&
+    // Stage 4 review remediation: a push manufactured by the peak-week
+    // softening is not the raw-matrix evidence D15 was built on.
+    !peakWeekContextApplied &&
     !deloadSuggested &&
     !matrixDeload &&
     !poorRecovery &&
