@@ -35,19 +35,38 @@ const plannedRow = (muscle, weekIndex, planned, source) => ({
 });
 
 describe('summariseSeededPlan (the plan as written, never the request)', () => {
-  test('groups the written rows into week-1, peak and deload per muscle with the source', () => {
-    const rows = [
+  const rows = [
+    plannedRow('chest', 1, 11, 'seed_ledger'),
+    plannedRow('chest', 2, 13, 'seed_ledger'),
+    plannedRow('chest', 4, 17, 'seed_ledger'),
+    plannedRow('chest', 5, 10, 'seed_ledger'),
+    plannedRow('back', 1, 10, 'template'),
+    plannedRow('back', 4, 20, 'template'),
+    plannedRow('back', 5, 10, 'template'),
+  ];
+
+  test('groups the written rows into week-1, peak (with its week) and deload per muscle with the source', () => {
+    const summary = summariseSeededPlan(rows, 5);
+    expect(summary.chest).toEqual({ week1: 11, peak: 17, peakWeek: 4, deload: 10, source: 'seed_ledger' });
+    expect(summary.back).toEqual({ week1: 10, peak: 20, peakWeek: 4, deload: 10, source: 'template' });
+  });
+
+  test('REVIEW #9: row order never changes the result — the source is the week-1 row, explicitly', () => {
+    const reversed = [...rows].reverse();
+    expect(summariseSeededPlan(reversed, 5)).toEqual(summariseSeededPlan(rows, 5));
+  });
+
+  test('REVIEW #10: a week the coach has since raised is not attributed to the seed', () => {
+    const withCoach = [
       plannedRow('chest', 1, 11, 'seed_ledger'),
       plannedRow('chest', 2, 13, 'seed_ledger'),
-      plannedRow('chest', 4, 17, 'seed_ledger'),
+      plannedRow('chest', 3, 16, 'coach'), // coach volume apply rewrote this week
       plannedRow('chest', 5, 10, 'seed_ledger'),
-      plannedRow('back', 1, 10, 'template'),
-      plannedRow('back', 4, 20, 'template'),
-      plannedRow('back', 5, 10, 'template'),
     ];
-    const summary = summariseSeededPlan(rows, 5);
-    expect(summary.chest).toEqual({ week1: 11, peak: 17, deload: 10, source: 'seed_ledger' });
-    expect(summary.back).toEqual({ week1: 10, peak: 20, deload: 10, source: 'template' });
+    const summary = summariseSeededPlan(withCoach, 5);
+    expect(summary.chest.peak).toBe(13); // the seed's own peak, not the coach's 16
+    expect(summary.chest.peakWeek).toBe(2);
+    expect(summary.chest.source).toBe('seed_ledger');
   });
 
   test('empty rows summarise to an empty object', () => {
@@ -57,17 +76,17 @@ describe('summariseSeededPlan (the plan as written, never the request)', () => {
 
 describe('block-start lines (§3.6): personalised sources only', () => {
   const summary = {
-    chest: { week1: 11, peak: 17, deload: 10, source: 'seed_ledger' },
-    back: { week1: 12, peak: 18, deload: 10, source: 'seed_learned' },
-    quads: { week1: 8, peak: 14, deload: 8, source: 'seed_profile' },
-    biceps: { week1: 8, peak: 14, deload: 8, source: 'template' },
-    calves: { week1: 6, peak: 10, deload: 6, source: 'seed_manual' },
+    chest: { week1: 11, peak: 17, peakWeek: 4, deload: 10, source: 'seed_ledger' },
+    back: { week1: 12, peak: 18, peakWeek: 4, deload: 10, source: 'seed_learned' },
+    quads: { week1: 8, peak: 14, peakWeek: 4, deload: 8, source: 'seed_profile' },
+    biceps: { week1: 8, peak: 14, peakWeek: 4, deload: 8, source: 'template' },
+    calves: { week1: 6, peak: 10, peakWeek: 4, deload: 6, source: 'seed_manual' },
   };
 
   test('speaks for ledger, learned and manual seeds; never for template or profile ramps', () => {
     const lines = buildBlockStartLines({ summary, limit: 5 });
     const joined = lines.join(' | ');
-    expect(joined).toContain('Chest starts at 11 sets, climbing to 17');
+    expect(joined).toContain('Chest: 11 sets in week 1, building to 17 by week 4');
     expect(joined).toContain('set by how your last block went');
     expect(joined).toContain('Back');
     expect(joined).toContain('what past blocks have shown');
@@ -75,6 +94,28 @@ describe('block-start lines (§3.6): personalised sources only', () => {
     expect(joined).toContain('your own setting');
     expect(joined).not.toContain('Quads');
     expect(joined).not.toContain('Biceps');
+  });
+
+  test('REVIEW #8: the peak week is NAMED — never "the final week", which is the recovery week', () => {
+    for (const line of buildBlockStartLines({ summary, limit: 5 })) {
+      expect(line).not.toContain('final week');
+      expect(line).toContain('then a recovery week');
+    }
+  });
+
+  test('REVIEW #8: a flat retention seed is never called a climb', () => {
+    const flat = { hamstrings: { week1: 10, peak: 10, peakWeek: 1, deload: 5, source: 'seed_ledger' } };
+    const [line] = buildBlockStartLines({ summary: flat });
+    expect(line).toContain('Hamstrings: 10 sets a week, held steady');
+    expect(line).not.toContain('building');
+    expect(line).not.toContain('climb');
+  });
+
+  test('REVIEW #18: plural display names take no mismatched verb ("Quads starts")', () => {
+    const plural = { quads: { week1: 10, peak: 14, peakWeek: 4, deload: 6, source: 'seed_ledger' } };
+    const [line] = buildBlockStartLines({ summary: plural });
+    expect(line).toContain('Quads: 10 sets in week 1');
+    expect(line).not.toMatch(/Quads starts/);
   });
 
   test('respects the limit, largest peaks first, and returns [] with nothing personalised', () => {
@@ -126,23 +167,51 @@ describe('block-end reflection rows', () => {
 });
 
 describe('the weekly ramp position line', () => {
-  test('names the position and the planned direction', () => {
-    const line = buildRampPositionLine({ weekIndex: 3, plannedWeeks: 5 });
-    expect(line).toBe('Week 3 of 5 in your block. The plan climbs next week.');
+  test('REVIEW #7: the climb claim derives from the WRITTEN totals and names the magnitude (§3.6)', () => {
+    const line = buildRampPositionLine({
+      weekIndex: 3, plannedWeeks: 5, thisWeekSets: 60, nextWeekSets: 63,
+    });
+    expect(line).toBe('Week 3 of 5 in your block. The planned climb adds 3 sets next week.');
+    const one = buildRampPositionLine({
+      weekIndex: 2, plannedWeeks: 5, thisWeekSets: 60, nextWeekSets: 61,
+    });
+    expect(one).toContain('adds 1 set next week');
   });
 
-  test('the final accumulation week points at the recovery week', () => {
+  test('REVIEW #7: a flat or reduced next week, or missing totals, earns NO climb claim', () => {
+    expect(buildRampPositionLine({ weekIndex: 3, plannedWeeks: 5, thisWeekSets: 60, nextWeekSets: 60 }))
+      .toBe('Week 3 of 5 in your block.');
+    expect(buildRampPositionLine({ weekIndex: 3, plannedWeeks: 5, thisWeekSets: 60, nextWeekSets: 40 }))
+      .toBe('Week 3 of 5 in your block.'); // e.g. an early deload applied to next week
+    expect(buildRampPositionLine({ weekIndex: 3, plannedWeeks: 5 }))
+      .toBe('Week 3 of 5 in your block.'); // totals unavailable: silent, never asserted
+  });
+
+  test('the final accumulation week points at the recovery week (structural, always true)', () => {
     expect(buildRampPositionLine({ weekIndex: 4, plannedWeeks: 5 }))
       .toBe('Week 4 of 5 in your block. Your recovery week is next.');
   });
 
-  test('claims a coach adjustment ONLY when one was actually applied', () => {
-    const applied = buildRampPositionLine({ weekIndex: 3, plannedWeeks: 5, appliedDelta: 1 });
+  test('claims a coach adjustment ONLY when one was actually applied to real rows', () => {
+    const applied = buildRampPositionLine({
+      weekIndex: 3, plannedWeeks: 5, appliedDelta: 1, musclesChanged: 3,
+    });
     expect(applied).toContain('the coach added 1 set on top');
     const none = buildRampPositionLine({ weekIndex: 3, plannedWeeks: 5, appliedDelta: null });
     expect(none).not.toContain('coach');
-    const down = buildRampPositionLine({ weekIndex: 3, plannedWeeks: 5, appliedDelta: -2 });
+    const down = buildRampPositionLine({
+      weekIndex: 3, plannedWeeks: 5, appliedDelta: -2, musclesChanged: 2,
+    });
     expect(down).toContain('the coach pulled 2 sets back');
+  });
+
+  test('REVIEW #6: an applied delta that changed ZERO rows earns no coach claim', () => {
+    // computeVolumeApply returns [] when every muscle already sits at
+    // MRV; the recorded delta alone must not narrate an adjustment.
+    const line = buildRampPositionLine({
+      weekIndex: 3, plannedWeeks: 5, appliedDelta: 2, musclesChanged: 0,
+    });
+    expect(line).not.toContain('coach');
   });
 
   test('no block context, no line', () => {

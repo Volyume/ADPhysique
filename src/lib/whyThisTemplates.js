@@ -211,7 +211,9 @@ export function getAutoRegMessage(action, weeksInBlock = 1) {
     continue:      `Your recovery's holding. The plan stays as written.`,
     hold_volume:   `Your recovery scores dipped this week, so your session content stays the same. Sleep and protein are the levers.`,
     reduce_volume: `Your recovery's dropped. Next week loses 1-2 sets per exercise, so the next block starts fresher.`,
-    deload_now:    `${weeksInBlock >= 4 ? `Good timing: you've been building for ${weeksInBlock} weeks.` : 'Your recovery is dropping.'} Next week is lighter: shorter sessions, same exercises, half the sets.`,
+    // Stage 7-8 review #5: the applied cut is strain-scaled per muscle
+    // now, so "half the sets" over-promised. Qualitative here.
+    deload_now:    `${weeksInBlock >= 4 ? `Good timing: you've been building for ${weeksInBlock} weeks.` : 'Your recovery is dropping.'} Next week is lighter: shorter sessions, same exercises, fewer sets.`,
   };
   return clean(messages[action] ?? `Continue as planned.`);
 }
@@ -232,7 +234,9 @@ export function getWeekPhaseDescription(phase, week) {
     intro:    `Week ${week}: Settle in. Focus on technique and finding the right weights. Don't push to your limit yet. The real work starts next week.`,
     build:    `Week ${week}: Time to push. You should finish most sets feeling like you could do 1 to 2 more reps but chose not to. That's the zone.`,
     peak:     `Week ${week}: Best effort. Give every set your full attention. This is the week where the most progress happens before the recovery week.`,
-    recovery: `Week ${week}: Lighter week. Cut sets roughly in half, keep the same exercises and weights. Your muscles are rebuilding. Ease off and let them.`,
+    // Review #5: seeded blocks size their recovery week from how the
+    // block actually ran, so the copy stays qualitative, not "half".
+    recovery: `Week ${week}: Lighter week. Ease your sets back, keep the same exercises and weights. Your muscles are rebuilding. Ease off and let them.`,
   };
   return clean(descriptions[phase] ?? `Week ${week}: Continue your training block.`);
 }

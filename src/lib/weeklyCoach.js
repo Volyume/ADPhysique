@@ -1277,7 +1277,11 @@ export function runWeeklyCoach(inputs) {
 
   if (deloadTriggers >= 2) {
     deloadSuggested = true;
-    deloadNote = 'Reduce sets by around half this week, keep the same exercises and weights. Your body is asking for a breather. One lighter week sets you up for a stronger run after.';
+    // Stage 7-8 review #5: the applied cut is now the strain-scaled
+    // share of each muscle's own recent volume (computeDeloadVolume),
+    // so "around half" over-promised. The note stays qualitative; the
+    // apply row states the exact share once it is applied.
+    deloadNote = 'Ease your sets right back this week, keep the same exercises and weights. Your body is asking for a breather. One lighter week sets you up for a stronger run after.';
   }
 
   // ── DIET BREAK SUGGESTION ─────────────────────────────────────────────────

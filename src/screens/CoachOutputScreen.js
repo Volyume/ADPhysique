@@ -70,7 +70,7 @@ import { track as trackEngineEvent } from '../lib/engineTelemetry';
 // screen, so the render was dead. It now lives in HomeScreen's banner stack.
 import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
-import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, computeDietBreakTargets, computeMacroCycle, computeRefeedDay, markApplied, isApplied } from '../lib/coachApply';
+import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, deloadShare, computeDietBreakTargets, computeMacroCycle, computeRefeedDay, markApplied, isApplied } from '../lib/coachApply';
 // A1 (NU-3/4/6): pure display classifiers + row strings for honest Apply rows.
 // They only CALL coachApply's real policy functions; nothing is recomputed.
 import {
@@ -380,7 +380,13 @@ function TrainingNextWeekCard({
           <AdjustmentRow
             iconName="bed-outline"
             label={deloadApplied ? 'Recovery week set for next week' : 'Take a recovery week'}
-            note={deloadNote}
+            note={deloadApplied && output.appliedAdjustments?.deload?.sharePct
+              // Review #4/#5 honesty: the target is the share of the
+              // muscle's achieved peak CAPPED at its current row, so
+              // "recent working volume" is the claim the maths supports,
+              // not "heaviest completed week".
+              ? `Recovery volume eased to about ${output.appliedAdjustments.deload.sharePct}% of each muscle's recent working volume.`
+              : deloadNote}
             tooltip={GLOSSARY.deload}
             applied={deloadApplied}
             onApply={canApply && !deloadApplied ? onApplyDeload : undefined}
@@ -1317,6 +1323,10 @@ export default function CoachOutputScreen({ navigation, route }) {
       }
       const updated = markApplied(output, 'deload', {
         weekId: nextTrainingWeekId, musclesChanged: changes.length,
+        // Stage 8 (§3.6): the applied share, so the card can explain the
+        // recovery dose from what actually happened — null when the
+        // legacy flat cut ran (no peaks available).
+        sharePct: peaks ? Math.round(deloadShare(strainScore) * 100) : null,
       });
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
@@ -1659,9 +1669,28 @@ export default function CoachOutputScreen({ navigation, route }) {
       const mesoWkForCoach = await getCurrentMesocycleWeek(user.id).catch(() => null);
       const liveBlockWeek = mesoWkForCoach && !mesoWkForCoach.awaitingDecision ? mesoWkForCoach : null;
       // Stage 8 (§3.6): the ramp position for the training card's note.
-      setBlockWeekForRamp(liveBlockWeek
-        ? { weekIndex: liveBlockWeek.weekIndex, plannedWeeks: liveBlockWeek.plannedWeeks }
-        : null);
+      // Only for the CURRENT week (review #11: the block position is
+      // always live, so attaching it to a past week's output mismatched
+      // the two), and carrying the WRITTEN planned totals for this and
+      // next week so the climb claim derives from the plan, not the
+      // week index (review #7). Totals are best-effort: without them the
+      // line simply makes no climb claim.
+      const viewingCurrentWeek = weekStart === localWeekStartMs();
+      let rampWeek = null;
+      if (viewingCurrentWeek && liveBlockWeek) {
+        rampWeek = { weekIndex: liveBlockWeek.weekIndex, plannedWeeks: liveBlockWeek.plannedWeeks };
+        try {
+          // eslint-disable-next-line global-require
+          const { getPlannedMuscleVolumeForBlock } = require('../lib/database');
+          const planRows = await getPlannedMuscleVolumeForBlock(liveBlockWeek.mesocycleId);
+          const weekTotal = (wk) => planRows
+            .filter(r => (r.week_index ?? r.weekIndex) === wk)
+            .reduce((acc, r) => acc + (r.planned_sets ?? 0), 0);
+          rampWeek.thisWeekSets = weekTotal(liveBlockWeek.weekIndex);
+          rampWeek.nextWeekSets = weekTotal(liveBlockWeek.weekIndex + 1);
+        } catch (_e) { /* climb claim simply stays silent */ }
+      }
+      setBlockWeekForRamp(rampWeek);
 
       const result = runWeeklyCoach({
         checkin: engineCheckin,
@@ -2279,11 +2308,15 @@ export default function CoachOutputScreen({ navigation, route }) {
       blockFinished={blockAwaitingDecision}
       nextWeekIsDeload={nextWeekIsDeload}
       // Stage 8 (§3.6): ramp position; the coach clause appears only for
-      // an APPLIED delta, never the suggestion alone.
+      // an APPLIED delta that actually changed rows (review #6), and the
+      // climb claim only from the written weekly totals (review #7).
       rampLine={buildRampPositionLine({
         weekIndex: blockWeekForRamp?.weekIndex,
         plannedWeeks: blockWeekForRamp?.plannedWeeks,
         appliedDelta: output?.appliedAdjustments?.training?.volumeDelta ?? null,
+        musclesChanged: output?.appliedAdjustments?.training?.musclesChanged ?? null,
+        thisWeekSets: blockWeekForRamp?.thisWeekSets ?? null,
+        nextWeekSets: blockWeekForRamp?.nextWeekSets ?? null,
       })}
       applyStateFor={applyStateFor}
       onApplySettled={onApplySettled}

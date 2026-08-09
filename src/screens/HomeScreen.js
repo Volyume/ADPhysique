@@ -1109,15 +1109,23 @@ export default function HomeScreen({ navigation, route }) {
       // WRITTEN plan rows so it can never claim a personalisation the
       // plan does not contain. Personalised sources only; [] renders
       // nothing. Best-effort: the sheet must open even if this fails.
-      try {
-        // eslint-disable-next-line global-require
-        const { getPlannedMuscleVolumeForBlock } = require('../lib/database');
-        // eslint-disable-next-line global-require
-        const { summariseSeededPlan, buildBlockStartLines } = require('../lib/blockExplain');
-        const blockRows = await getPlannedMuscleVolumeForBlock(week.mesocycleId);
-        const summary = summariseSeededPlan(blockRows, week.plannedWeeks);
-        setBlockSeedLines(buildBlockStartLines({ summary }));
-      } catch (_e) { setBlockSeedLines([]); }
+      // Review #12: a FINISHED block awaiting the user's decision is not
+      // a live plan; narrating it in the present tense ("starts at 11
+      // sets, building to 17") contradicts the sheet's own finished
+      // state. The sheet already renders the finished copy instead.
+      if (week.awaitingDecision) {
+        setBlockSeedLines([]);
+      } else {
+        try {
+          // eslint-disable-next-line global-require
+          const { getPlannedMuscleVolumeForBlock } = require('../lib/database');
+          // eslint-disable-next-line global-require
+          const { summariseSeededPlan, buildBlockStartLines } = require('../lib/blockExplain');
+          const blockRows = await getPlannedMuscleVolumeForBlock(week.mesocycleId);
+          const summary = summariseSeededPlan(blockRows, week.plannedWeeks);
+          setBlockSeedLines(buildBlockStartLines({ summary }));
+        } catch (_e) { setBlockSeedLines([]); }
+      }
 
       const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
       // LB-7: fetch only the last week of sets rather than the whole
