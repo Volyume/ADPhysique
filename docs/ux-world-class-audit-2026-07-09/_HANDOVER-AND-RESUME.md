@@ -238,13 +238,14 @@ ADDITIONAL DEVICE CHECKS for Stages 6-8 (same single EAS build):
 15) Calm-mode spot-check on the new block: seed lines never propose
    more than the last block ran (suppression degrades to repeat).
 
-FOUNDER ACTION BEFORE THE BUILD (HARD RELEASE GATE): apply
-supabase/migrate_131 (say "run against production") - the sync push of
-block_ledger rejects without it. Claude will NOT run it (founder
-order). build-android.yml builds every push to main, so artefacts
-built from main at/after 30fb2f53 already carry the block_ledger push:
-do not UPLOAD/SHIP any of them until the founder confirms migrate_131
-ran successfully. Ordering: after migrate_129, per the numbering.
+RELEASE GATE LIFTED (2026-08-09): migrate_131 was applied to EU-Dublin
+production and verified (column present jsonb/nullable, 11 rows
+untouched, ledger ordered after 129/130) under the founder's staged
+order, after re-verifying all four preconditions (reviews remediated;
+lint + full suite green on main; strain monotonicity executed; e2e
+regression green). Artefacts built from main at/after 30fb2f53 are
+clear to ship. The next EAS build can go whenever the founder is ready
+to device-walk the checklist above.
 16) Calm-mode / open-ED-flag deload spot-check: with calm mode on,
    restarting with adjustments never sizes the recovery week above the
    flat MEV week, and no seed starts above the last block's own
