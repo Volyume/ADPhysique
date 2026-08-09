@@ -2288,3 +2288,15 @@ building Stages 1-2 (all criterion-ruled: best for end users, never effort):
    to teaching: manual-override blocks are skipped by the learned-range
    replay entirely, so removing an override can never surface the
    user's own old numbers dressed up as coach learning.
+
+13. (Stages 6-8 lead rulings, D33, 2026-08-09) The seeded plan's rows
+   record their source (seed_ledger/learned/manual/profile/research or
+   template) and every explanation surface reads the WRITTEN rows, so
+   no narration can outrun the plan. The block-start card lives on the
+   Home block sheet; the block-end story on the Plans decision card
+   (four rows) and Block summary. The 10-day recovery window renders
+   only when the ledger proposed it and always as the user's call. The
+   mid-block deload apply maps strain from the persisted weekly
+   recovery read (deload_suggested -> 4, concerned -> 2, else 0). The
+   weekly ramp line claims a coach adjustment only when one was
+   actually applied.

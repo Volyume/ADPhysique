@@ -197,7 +197,40 @@ is the resume point, not this file.
   seam, widened creation pin, strengthened test pins).
 - Stage 2 LANDED (`1b6fd27a`): pure Block Ledger `src/lib/interBlock.js`
   (36 tests written first; founder retention rule enforced).
-- Stage 3 (performance metric) IN FLIGHT next; Stages 4-8 queued.
+- Stages 3-8 LANDED (see the taskboard entry for per-stage detail and
+  commits): performance metric (blockMetrics), fatigue context + PR
+  density (weeklyCoach), learned working range (learnedRange), the full
+  ledger wiring (gather/runner/seeding/PlansScreen, createMesocycle
+  deleted), strain-aware deload, and the explanation layer
+  (blockExplain + four surfaces). Reviews: Stages 1-5 reviewed and
+  remediated; Stage 6 and Stage 7+8 review agents in flight at handover
+  time - land their findings before the build.
+
+ADDITIONAL DEVICE CHECKS for Stages 6-8 (same single EAS build):
+10) Finish a block (start date 6+ weeks back), open Train: the decision
+   card now reads "Continue with adjustments" and shows up to four
+   muscle-by-muscle lines in the coach's words (e.g. "Chest responded
+   well, so the next block starts 1 set higher."). If several strain
+   signals ran together, a 10-day recovery line appears, ending "Your
+   call."
+11) Tap "Continue with adjustments": a new block starts; open the Home
+   block sheet - up to three lines like "Chest starts at 11 sets,
+   climbing to 17 by the final week... (set by how your last block
+   went)". A first-ever block shows NO such lines (nothing to claim).
+12) Open the old block's Block summary: a "What this block showed"
+   section lists each muscle's verdict.
+13) Weekly coach, mid-block: the training note opens "Week N of M in
+   your block." and only mentions the coach adding sets AFTER you
+   tapped Apply.
+14) Coach deload apply mid-block: the recovery week's targets now sit
+   at roughly half your heaviest week (not a flat floor), lower when
+   the week's recovery read was concerned.
+15) Calm-mode spot-check on the new block: seed lines never propose
+   more than the last block ran (suppression degrades to repeat).
+
+FOUNDER ACTION BEFORE THE BUILD: apply supabase/migrate_131 (say "run
+against production") - the sync push of block_ledger rejects without
+it.
 
 DEVICE CHECKLIST for the lifecycle changes (single EAS build, physical
 Android; run with a block whose start date is set 6+ weeks back so it is
