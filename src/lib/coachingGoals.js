@@ -653,14 +653,14 @@ export function getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matr
   if (volumeSignal >= 2) {
     const pushHighNotes = {
       general:          'Recovery is excellent and performance is climbing. A great window to add a set where you feel strong.',
-      mens_physique:    'Recovery is on your side. Add volume or effort to shoulder and back sessions this week.',
-      classic_physique: 'Good recovery. Calves, shoulders and back should take any extra sets this week.',
-      bodybuilding:     'Everything is looking good. Push volume across all groups while recovery supports it.',
+      mens_physique:    'Recovery is on your side. Push your shoulder and back sessions a bit harder this week.',
+      classic_physique: 'Recovery looks good. Put any extra sets into calves, shoulders and back this week.',
+      bodybuilding:     'Everything\'s looking good. Push a bit more across the board while recovery is this strong.',
       bikini:           'Recovery is strong. This is the week to push your glute and hamstring sessions harder.',
-      wellness:         'Energy and recovery are good. Add effort to lower body, especially glutes and quads.',
-      figure:           'Great recovery window. Shoulders, back and glutes should get the extra effort this week.',
-      womens_physique:  'Recovery is solid. Push across all groups with a focus on back and shoulder development.',
-      womens_bodybuilding: 'Everything is looking good. Push volume across every group while recovery supports it.',
+      wellness:         'Energy and recovery are good. Push the lower-body work, especially glutes and quads.',
+      figure:           'A strong recovery week. Give shoulders, back and glutes the extra effort.',
+      womens_physique:  'Recovery is solid. Push everywhere, with back and shoulders leading.',
+      womens_bodybuilding: 'Everything\'s looking good. Push a bit more across every group while recovery holds.',
     };
     return pushHighNotes[trainingGoal] ?? pushHighNotes.general;
   }

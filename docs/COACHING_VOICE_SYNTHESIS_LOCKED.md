@@ -914,3 +914,28 @@ Surface 6 change (old locked text -> new canonical text, verified against
 `NOTIFICATIONS_LOCKED.md` already carries this string verbatim and required
 no change — the drift, as with D15's two items, was isolated to Surface 6 of
 this document. No code was changed under this ruling.
+
+## Founder amendment 2026-08-07: humanise the coaching-decision cadence
+
+Founder order (with screenshot of the Week 4 decision screen): "make the
+language in coaches decision much better. More like a human coach would
+talk and British English. No ai style language and things."
+
+Scope of the amendment: CADENCE ONLY. Every locked principle stands
+unchanged (honesty test, numbers before narrative, mirror-not-infer, no
+false collaboration, no motivational filler, plain mechanism, no
+fake-autonomy, the register system). What changed is the sentence rhythm
+of the Stage-2 conversational strings: contractions, natural verb
+choices, British idiom ("spot on", "off the pace"), no stiff copular
+constructions ("That is off the set rate for this phase" became "That's
+off the pace this phase is set for").
+
+Touched: coachResponse.js supportive acknowledgement + interpretation
+lines and the free coach line; weeklyCoach.js push_volume takeaway and
+the untracked-adherence hold reason; coachingGoals.js division push
+notes; CoachOutputScreen's starting-volume caption.
+
+Deliberately NOT touched: every Stage-3 safety-cold string (ED lockout,
+FFM floor, rapid-loss - clinical by design), the D15
+exceeded_escalation string (founder-ruled verbatim 2026-07-09), and the
+precise register's terse composers (a chosen register, C1).

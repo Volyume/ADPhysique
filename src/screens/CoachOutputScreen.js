@@ -406,7 +406,7 @@ function TrainingNextWeekCard({
           <View style={[styles.planNote, live.planNote]}>
             <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
             <Text style={[styles.planNoteText, live.planNoteText]}>
-              This sets next week's starting volume. Your plan still fine-tunes each session as you train.
+              This is next week's starting point. Each session still fine-tunes as you train.
             </Text>
           </View>
           {/* CO-2: this card said what changed ("N updated") but never linked

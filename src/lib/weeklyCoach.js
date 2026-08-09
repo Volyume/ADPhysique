@@ -349,7 +349,7 @@ const WHY_LIBRARY = {
     "You've been in a deficit a long stretch. A short break at maintenance will help the next one.",
   ],
   push_volume: [
-    "Recovery and performance both look clean, so there's more work in the plan.",
+    "Recovery's good and your lifts are moving, so there's a bit more work in the plan this week.",
   ],
   // D15 (founder ruling 2026-07-09): fires only when exceededEscalationApplied
   // is true, i.e. only on the week the bounded one-step escalation actually
@@ -1374,7 +1374,7 @@ export function runWeeklyCoach(inputs) {
       const weeksLeft = offTargetWeeksRequired - consecutiveOffTargetWeeks;
       heldDecisions.push({ type: 'calories', reason: `Calories held. ${weeksLeft} more week${weeksLeft !== 1 ? 's' : ''} of the same trend needed before adjusting.` });
     } else if (calsAdherence === 'untracked') {
-      heldDecisions.push({ type: 'calories', reason: "Calories held. Adherence wasn't tracked, so adjusting now would be a guess." });
+      heldDecisions.push({ type: 'calories', reason: "Calories stay where they are. Food wasn't tracked this week, so any change would be a guess." });
     }
   }
 

@@ -84,12 +84,12 @@ function buildAcknowledgement({ sessionsCompleted, sessionsPlanned, prsThisWeek,
   let sessionSentence = null;
   if (planned > 0 && completed >= planned) {
     sessionSentence = planned === 1
-      ? `Your planned session is in the log this week${prClause}.`
-      : `All ${planned} sessions trained this week${prClause}.`;
+      ? `Your session for the week is in${prClause}.`
+      : `All ${planned} sessions in this week${prClause}.`;
   } else if (completed >= 1 && planned > 0) {
-    sessionSentence = `${completed} of ${planned} sessions trained this week${prClause}.`;
+    sessionSentence = `${completed} of your ${planned} sessions in this week${prClause}.`;
   } else if (completed >= 1) {
-    sessionSentence = `${plural(completed, 'session')} trained this week${prClause}.`;
+    sessionSentence = `${plural(completed, 'session')} in the log this week${prClause}.`;
   }
 
   // Weigh-ins ride along when the logging week was strong, or carry the
@@ -97,7 +97,7 @@ function buildAcknowledgement({ sessionsCompleted, sessionsPlanned, prsThisWeek,
   // suppression: no weigh-in counts on top of an open flag.
   if (sessionSentence) {
     if (!suppress && weighIns != null && weighIns >= 5) {
-      return clean(`${sessionSentence} ${weighIns} weigh-ins logged too.`);
+      return clean(`${sessionSentence} And ${weighIns} weigh-ins, so the trend has plenty to go on.`);
     }
     return clean(sessionSentence);
   }
@@ -178,7 +178,7 @@ function buildInterpretation({ output, history, units, suppress, showScience = f
   }
 
   if (delta == null) {
-    return clean('Not enough weigh-ins for a weekly trend read yet. The trend sharpens with daily logs.');
+    return clean('Not enough weigh-ins for a proper trend read yet. A few more mornings on the scales will sharpen it.');
   }
 
   const u = units === 'lbs' ? 'lbs' : 'kg';
@@ -194,14 +194,14 @@ function buildInterpretation({ output, history, units, suppress, showScience = f
   if (trend?.onTarget) {
     const streak = onTargetStreak(true, history);
     if (streak >= 2 && streak <= 6) {
-      verdict = `That is the ${ORDINAL_WORDS[streak]} week running at the right rate.`;
+      verdict = `That's the ${ORDINAL_WORDS[streak]} week running at the right rate.`;
     } else if (streak > 6) {
-      verdict = `That is ${streak} weeks running at the right rate.`;
+      verdict = `That's ${streak} weeks running at the right rate now.`;
     } else {
-      verdict = 'That is the rate this phase is set for.';
+      verdict = "That's spot on for this phase.";
     }
   } else {
-    verdict = 'That is off the set rate for this phase.';
+    verdict = "That's off the pace this phase is set for.";
   }
 
   return clean(`${lead} ${verdict}`);
@@ -552,7 +552,7 @@ export function buildFreeCoachLine({
   }
   if (weightSentence) return clean(weightSentence);
   if (sessionSentence) {
-    return clean(`${plural(sessions, 'session')} trained this week.`);
+    return clean(`${plural(sessions, 'session')} in the log this week.`);
   }
   return null;
 }

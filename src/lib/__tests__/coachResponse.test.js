@@ -79,12 +79,12 @@ function build(overrides = {}) {
 describe('part 1: specific data-referenced acknowledgement', () => {
   test('full sessions name the count', () => {
     const r = build({ weighInsThisWeek: 4 });
-    expect(r.acknowledgement).toBe('All 4 sessions trained this week.');
+    expect(r.acknowledgement).toBe("All 4 sessions in this week.");
   });
 
   test('full sessions plus PRs name both', () => {
     const r = build({ output: fakeOutput({ prsThisWeek: 2 }), weighInsThisWeek: 4 });
-    expect(r.acknowledgement).toBe('All 4 sessions trained this week, with 2 new PRs.');
+    expect(r.acknowledgement).toBe("All 4 sessions in this week, with 2 new PRs.");
   });
 
   test('a single PR stays singular', () => {
@@ -97,7 +97,7 @@ describe('part 1: specific data-referenced acknowledgement', () => {
       output: fakeOutput({ sessionsCompleted: 1, sessionsPlanned: 1 }),
       weighInsThisWeek: 4,
     });
-    expect(r.acknowledgement).toBe('Your planned session is in the log this week.');
+    expect(r.acknowledgement).toBe("Your session for the week is in.");
   });
 
   test('partial sessions are mirrored without judgement', () => {
@@ -105,7 +105,7 @@ describe('part 1: specific data-referenced acknowledgement', () => {
       output: fakeOutput({ sessionsCompleted: 2, sessionsPlanned: 4 }),
       weighInsThisWeek: 4,
     });
-    expect(r.acknowledgement).toBe('2 of 4 sessions trained this week.');
+    expect(r.acknowledgement).toBe("2 of your 4 sessions in this week.");
   });
 
   test('unplanned training still gets named', () => {
@@ -113,12 +113,12 @@ describe('part 1: specific data-referenced acknowledgement', () => {
       output: fakeOutput({ sessionsCompleted: 2, sessionsPlanned: 0 }),
       weighInsThisWeek: 4,
     });
-    expect(r.acknowledgement).toBe('2 sessions trained this week.');
+    expect(r.acknowledgement).toBe("2 sessions in the log this week.");
   });
 
   test('a strong logging week rides along (5+ weigh-ins)', () => {
     const r = build({ weighInsThisWeek: 6 });
-    expect(r.acknowledgement).toBe('All 4 sessions trained this week. 6 weigh-ins logged too.');
+    expect(r.acknowledgement).toBe("All 4 sessions in this week. And 6 weigh-ins, so the trend has plenty to go on.");
   });
 
   test('weigh-in counts are never surfaced under an open ED flag', () => {
@@ -180,7 +180,7 @@ describe('part 2: plain-language trend interpretation', () => {
     const r = build({
       history: [{ trend: { onTarget: true } }, { trend: { onTarget: true } }],
     });
-    expect(r.interpretation).toBe('Your 7-day average is down 0.4 kg on last week. That is the third week running at the right rate.');
+    expect(r.interpretation).toBe("Your 7-day average is down 0.4 kg on last week. That's the third week running at the right rate.");
   });
 
   test('streak counting stops at the first off-target week', () => {
@@ -196,21 +196,21 @@ describe('part 2: plain-language trend interpretation', () => {
 
   test('first on-target week states the rate is the set one', () => {
     const r = build({ history: [] });
-    expect(r.interpretation).toBe('Your 7-day average is down 0.4 kg on last week. That is the rate this phase is set for.');
+    expect(r.interpretation).toBe("Your 7-day average is down 0.4 kg on last week. That's spot on for this phase.");
   });
 
   test('long streaks fall back to the numeric form', () => {
     const r = build({
       history: Array.from({ length: 8 }, () => ({ trend: { onTarget: true } })),
     });
-    expect(r.interpretation).toContain('That is 9 weeks running at the right rate.');
+    expect(r.interpretation).toContain("That's 9 weeks running at the right rate now.");
   });
 
   test('off target reads plainly, no verdict colour', () => {
     const r = build({
       output: fakeOutput({ trend: { ewma7: 82.1, delta: -0.9, onTarget: false } }),
     });
-    expect(r.interpretation).toBe('Your 7-day average is down 0.9 kg on last week. That is off the set rate for this phase.');
+    expect(r.interpretation).toBe("Your 7-day average is down 0.9 kg on last week. That's off the pace this phase is set for.");
   });
 
   test('rising trend reads up', () => {
@@ -236,7 +236,7 @@ describe('part 2: plain-language trend interpretation', () => {
     const r = build({
       output: fakeOutput({ trend: { ewma7: null, delta: null, onTarget: false } }),
     });
-    expect(r.interpretation).toBe('Not enough weigh-ins for a weekly trend read yet. The trend sharpens with daily logs.');
+    expect(r.interpretation).toBe("Not enough weigh-ins for a proper trend read yet. A few more mornings on the scales will sharpen it.");
   });
 
   describe('suppression (open ED flag or calm mode): direction only, no rate', () => {
@@ -528,7 +528,7 @@ describe('missing-data fallbacks', () => {
     });
     expect(r.interpretation).toBeNull();
     expect(r.decision).toBeNull();
-    expect(r.acknowledgement).toBe('2 of 3 sessions trained this week.');
+    expect(r.acknowledgement).toBe("2 of your 3 sessions in this week.");
     expect(r.cue).toBe('Log your morning weight each day this week. Every log sharpens the read.');
     expect(r.forward).toBeTruthy();
   });
@@ -567,7 +567,7 @@ describe('buildFreeCoachLine', () => {
 
   test('training-only line when weight data is too thin', () => {
     const line = buildFreeCoachLine({ sessionsThisWeek: 3, morningWeights: weights(-0.5, 3) });
-    expect(line).toBe('3 sessions trained this week.');
+    expect(line).toBe("3 sessions in the log this week.");
   });
 
   test('nothing logged: null, no card', () => {
@@ -576,12 +576,12 @@ describe('buildFreeCoachLine', () => {
 
   test('open ED flag: training-only, weight never mentioned', () => {
     const line = buildFreeCoachLine({ sessionsThisWeek: 2, morningWeights: weights(-0.8), edFlagOpen: true });
-    expect(line).toBe('2 sessions trained this week.');
+    expect(line).toBe("2 sessions in the log this week.");
   });
 
   test('calm mode: training-only, weight never mentioned', () => {
     const line = buildFreeCoachLine({ sessionsThisWeek: 2, morningWeights: weights(-0.8), calmMode: true });
-    expect(line).toBe('2 sessions trained this week.');
+    expect(line).toBe("2 sessions in the log this week.");
   });
 
   test('open ED flag with no training: null rather than a weight line', () => {
