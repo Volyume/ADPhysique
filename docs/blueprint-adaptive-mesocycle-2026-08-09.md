@@ -185,6 +185,14 @@ Classify into the founder's four quadrants, independently per muscle:
 | STALE | perf flat 2+ consecutive blocks, recovery good | volume HOLDS; propose a stimulus change first: variant swap from the muscle's pool (poolGenerator), rep-range shift, or frequency change |
 | STRAINED | perf down, recovery poor | max(MEV, prev start - 2); peak capped at MAV; consider the longer deload (3.4) |
 
+> **AMENDED by the founder's Stage 2 order (2026-08-09), which
+> supersedes the RESPONSIVE row above:** retention is the default — a
+> successful dose is normally KEPT, and the start rises by AT MOST +1,
+> only when late-block dose-response evidence shows higher volume kept
+> producing progression without excessive recovery cost. The "+2 max"
+> cap above is dead; the learned-ceiling-minus-2 and MAV caps stand.
+> Implemented in src/lib/interBlock.js; pinned by interBlock.stage2.
+
 Low-data muscles (insufficient exposure) default to the current behaviour
 - research-table seed - stated honestly.
 

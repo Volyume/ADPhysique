@@ -171,10 +171,18 @@ describe('RESPONSIVE retains the successful dose by default', () => {
 // ── The founder's twelve scenarios ─────────────────────────────────────────
 
 describe('founder scenario matrix', () => {
-  test('1. first-ever block: no previous ledger, still classifies without crashing', () => {
-    const e = classifyMuscleBlock(muscle({ priorFlatBlocks: 0, performance: { confidence: 0.7 } }), CTX);
+  test('1. first-ever block: no previous block fields at all, defaults resolve from the landmarks', () => {
+    const e = classifyMuscleBlock(muscle({
+      priorFlatBlocks: 0,
+      previousStart: undefined, plannedPeak: undefined, achievedPeak: undefined,
+      performance: { confidence: 0.7 },
+    }), CTX);
     expect(e.classification).toBe(BLOCK_CLASS.RESPONSIVE);
-    expect(e.confidence).toBeLessThanOrEqual(0.7);
+    // previousStart defaults to MEV (8); the earned +1 applies; peak ramps
+    // to MAV.
+    expect(e.proposal.startSets).toBe(9);
+    expect(e.proposal.peakSets).toBe(14);
+    expect(e.confidence).toBeCloseTo(0.7, 5);
     expect(typeof e.rationale).toBe('string');
   });
 
@@ -212,13 +220,16 @@ describe('founder scenario matrix', () => {
     expect(b.proposal).toEqual(a.proposal);
   });
 
-  test('5. strong progress at an unchanged low volume: RESPONSIVE, dose retained (no evidence higher volume helps)', () => {
+  test('5. strong progress at an unchanged low volume: RESPONSIVE retains the WHOLE dose, start AND peak (review #3)', () => {
     const e = classifyMuscleBlock(muscle({
       previousStart: 8, plannedPeak: 8, achievedPeak: 8,
       performance: { e1rmSlopePct: 6, doseResponse: { lateProgression: false, lateRecoveryOk: true } },
     }), CTX);
     expect(e.classification).toBe(BLOCK_CLASS.RESPONSIVE);
     expect(e.proposal.startSets).toBe(8);
+    // Without the dose-response pair the ramp top must NOT silently reset
+    // to MAV (14): that would nearly double total volume with no evidence.
+    expect(e.proposal.peakSets).toBe(8);
   });
 
   test('6. strong progress but deteriorating recovery -> OVERREACHED, no increase', () => {
@@ -355,7 +366,7 @@ describe('caps and clamps', () => {
     const e = classifyMuscleBlock(muscle({
       learnedCeiling: 40, landmarks: { mev: 8, mav: 34, mrv: 36 },
     }), CTX);
-    expect(e.proposal.peakSets).toBeLessThanOrEqual(30);
+    expect(e.proposal.peakSets).toBe(30); // exactly the ceiling, not merely under it
   });
 
   test('OVERREACHED with the flag fired mid-block starts one lower', () => {
@@ -407,6 +418,227 @@ describe('evidence and voice', () => {
       expect(e.rationale.length).toBeGreaterThan(10);
       expect(e.rationale).not.toMatch(/—/);
     }
+  });
+});
+
+// ── Stage 2 adversarial-review remediation pins (2026-08-09) ───────────────
+// Every finding from the review that survived verification gets a pin here,
+// plus at-boundary cases for every gate constant (the review's mutation run
+// showed 24 constant mutations passing the original suite).
+
+describe('rationale always matches the final clamped numbers (review #1)', () => {
+  test('STRAINED already at its floors says "carries over unchanged", never "starts lower"', () => {
+    const e = classifyMuscleBlock(muscle({
+      previousStart: 8, plannedPeak: 14, achievedPeak: 14,
+      performance: { e1rmSlopePct: -3, doseResponse: null },
+      recovery: { sorenessLateAvg: 4.5, readinessSlope: -0.5 },
+    }), CTX);
+    expect(e.proposal.startSets).toBe(8);
+    expect(e.proposal.peakSets).toBe(14);
+    expect(e.rationale).toContain('carries over unchanged');
+    expect(e.rationale).not.toContain('lower');
+  });
+
+  test('a RESPONSIVE +1 nullified by a low learned ceiling never claims "higher"', () => {
+    const e = classifyMuscleBlock(muscle({ previousStart: 12, learnedCeiling: 9 }), CTX);
+    expect(e.proposal.startSets).toBe(8); // clamped to ceiling - 2, floored at MEV
+    expect(e.rationale).toContain('lower');
+    expect(e.rationale).not.toContain('higher');
+  });
+
+  test('manual override rationale describes a note, not a change', () => {
+    const e = classifyMuscleBlock(muscle({
+      manualOverride: true,
+      performance: { e1rmSlopePct: -3, doseResponse: null },
+      recovery: { sorenessLateAvg: 4.5, readinessSlope: -0.5 },
+    }), CTX);
+    expect(e.rationale).toContain('manual volume settings');
+    expect(e.rationale).not.toMatch(/starts \d+ set/);
+  });
+
+  test('every branch rationale agrees with its own numbers', () => {
+    const inputs = [
+      muscle({ learnedCeiling: 17 }),
+      muscle({ performance: { e1rmSlopePct: 6, doseResponse: null } }),
+      muscle({ muscle: 'shoulders', previousStart: 12, plannedPeak: 18, achievedPeak: 18, landmarks: { mev: 8, mav: 20, mrv: 26 }, performance: { e1rmSlopePct: 2 }, recovery: { sorenessLateAvg: 4.2, deloadFlagFired: true } }),
+      muscle({ recovery: { sorenessLateAvg: 4.2, deloadFlagFired: true, deloadFlagMidBlock: true }, performance: { e1rmSlopePct: 2 } }),
+      muscle({ muscle: 'quads', performance: { e1rmSlopePct: -3, doseResponse: null }, recovery: { readinessSlope: -0.5, sleepFlaggedWeeks: 2 } }),
+      muscle({ performance: { e1rmSlopePct: 0.2, doseResponse: null }, recovery: { sorenessLateAvg: 4.4, readinessSlope: -0.5 } }),
+      muscle({ performance: { e1rmSlopePct: 0.3, doseResponse: null } }),
+      muscle({ priorFlatBlocks: 1, performance: { e1rmSlopePct: 0.3, doseResponse: null } }),
+      muscle({ performance: { e1rmSlopePct: -3, doseResponse: null } }),
+      muscle({ adherence: { completedSets: 60, plannedSets: 200 } }),
+      muscle({ performance: { eligibleExposures: 2 } }),
+      muscle({ recovery: { dataPoints: 0 } }),
+      muscle({ performance: { discontinuity: true } }),
+      muscle({ performance: { confidence: 0.4 } }),
+      muscle({ landmarks: {} }),
+    ];
+    for (const input of inputs) {
+      const e = classifyMuscleBlock(input, CTX);
+      expect(typeof e.rationale).toBe('string');
+      expect(e.rationale.length).toBeGreaterThan(10);
+      expect(e.rationale).not.toMatch(/—/);
+      const { startSets } = e.proposal;
+      const prev = input.previousStart ?? input.landmarks?.mev ?? null;
+      if (startSets != null && prev != null) {
+        if (startSets > prev) expect(e.rationale).toMatch(/higher/);
+        if (startSets < prev) expect(e.rationale).toMatch(/lower/);
+        if (startSets === prev) expect(e.rationale).not.toMatch(/starts \d+ set/);
+      }
+    }
+  });
+});
+
+describe('peak honesty (reviews #2, #3, #10)', () => {
+  test('OVERREACHED never offers more than the PLAN even when the achieved peak overran it', () => {
+    const e = classifyMuscleBlock(muscle({
+      previousStart: 12, plannedPeak: 16, achievedPeak: 22,
+      landmarks: { mev: 8, mav: 20, mrv: 26 },
+      performance: { e1rmSlopePct: 2 },
+      recovery: { sorenessLateAvg: 4.2, deloadFlagFired: true },
+    }), CTX);
+    expect(e.classification).toBe(BLOCK_CLASS.OVERREACHED);
+    expect(e.proposal.peakSets).toBe(14); // min(22, 16) - 2, never 20
+  });
+
+  test('a STRAINED start reduction can never sit above MAV', () => {
+    const e = classifyMuscleBlock(muscle({
+      previousStart: 20, plannedPeak: 20, achievedPeak: 20,
+      landmarks: { mev: 8, mav: 14, mrv: 22 },
+      performance: { e1rmSlopePct: -3, doseResponse: null },
+      recovery: { sorenessLateAvg: 4.5, readinessSlope: -0.5 },
+    }), CTX);
+    expect(e.proposal.startSets).toBeLessThanOrEqual(14);
+    expect(e.proposal.peakSets).toBeLessThanOrEqual(14);
+  });
+});
+
+describe('suppression holds at the previous dose, not the adapted floor (review #4)', () => {
+  test('an adapted MEV above the trained dose cannot raise volume under suppression', () => {
+    const sup = { suppressed: true, weeksSinceBlockEnd: 0 };
+    const withResearch = classifyMuscleBlock(muscle({
+      previousStart: 8, landmarks: { mev: 12, mav: 16, mrv: 22 }, researchMev: 8,
+    }), sup);
+    expect(withResearch.proposal.startSets).toBe(8);
+    const withoutResearch = classifyMuscleBlock(muscle({
+      previousStart: 8, landmarks: { mev: 12, mav: 16, mrv: 22 },
+    }), sup);
+    expect(withoutResearch.proposal.startSets).toBe(8);
+  });
+
+  test('unsuppressed, the effective MEV floor still applies', () => {
+    const e = classifyMuscleBlock(muscle({
+      previousStart: 8, landmarks: { mev: 12, mav: 16, mrv: 22 },
+      performance: { doseResponse: null },
+    }), CTX);
+    expect(e.proposal.startSets).toBe(12);
+  });
+});
+
+describe('malformed numeric inputs (reviews #5, #6, #11)', () => {
+  test('a JSON round-tripped string previousStart behaves as its number, never concatenates', () => {
+    const e = classifyMuscleBlock(muscle({ previousStart: '12', landmarks: { mev: 8, mav: 20, mrv: 26 } }), CTX);
+    expect(e.proposal.startSets).toBe(13);
+  });
+
+  test('NaN inputs fall back to safe defaults, and nothing non-finite ever ships', () => {
+    const e = classifyMuscleBlock(muscle({ previousStart: NaN, plannedPeak: NaN, achievedPeak: NaN }), CTX);
+    expect(Number.isFinite(e.proposal.startSets)).toBe(true);
+    expect(Number.isFinite(e.proposal.peakSets)).toBe(true);
+  });
+
+  test('missing landmarks are INSUFFICIENT_DATA with a null proposal, never a 30-set target', () => {
+    const e = classifyMuscleBlock(muscle({ landmarks: {} }), CTX);
+    expect(e.classification).toBe(BLOCK_CLASS.INSUFFICIENT_DATA);
+    expect(e.proposal.startSets).toBeNull();
+    expect(e.proposal.peakSets).toBeNull();
+  });
+
+  test('inverted bands are re-ordered so no proposal lands below the floor', () => {
+    const e = classifyMuscleBlock(muscle({ landmarks: { mev: 14, mav: 8, mrv: 10 } }), CTX);
+    expect(e.proposal.startSets).toBeGreaterThanOrEqual(14);
+    expect(e.proposal.peakSets).toBeGreaterThanOrEqual(e.proposal.startSets);
+  });
+});
+
+describe('gate boundaries (review #7: every constant pinned at its edge)', () => {
+  const flatWith = (over) => muscle({ performance: { e1rmSlopePct: 0.3, doseResponse: null }, ...over });
+
+  test('slope 1.5 is up; 1.49 is flat', () => {
+    expect(classifyMuscleBlock(muscle({ performance: { e1rmSlopePct: 1.5, doseResponse: null } }), CTX).classification).toBe(BLOCK_CLASS.RESPONSIVE);
+    expect(classifyMuscleBlock(muscle({ performance: { e1rmSlopePct: 1.49, doseResponse: null } }), CTX).classification).toBe(BLOCK_CLASS.STALE);
+  });
+
+  test('slope -1.5 is down (immediate stimulus proposal); -1.49 is flat (quiet hold)', () => {
+    const down = classifyMuscleBlock(muscle({ performance: { e1rmSlopePct: -1.5, doseResponse: null } }), CTX);
+    expect(down.classification).toBe(BLOCK_CLASS.STALE);
+    expect(down.proposal.stimulusChange).not.toBeNull();
+    const flat = classifyMuscleBlock(muscle({ performance: { e1rmSlopePct: -1.49, doseResponse: null } }), CTX);
+    expect(flat.proposal.stimulusChange).toBeNull();
+  });
+
+  test('a single soreness signal (weight 1) stays RESPONSIVE; the lone deload flag (weight 2) reads OVERREACHED', () => {
+    expect(classifyMuscleBlock(muscle({ recovery: { sorenessLateAvg: 4.5 } }), CTX).classification).toBe(BLOCK_CLASS.RESPONSIVE);
+    expect(classifyMuscleBlock(muscle({ recovery: { deloadFlagFired: true } }), CTX).classification).toBe(BLOCK_CLASS.OVERREACHED);
+  });
+
+  test('joint 3 + readiness -0.3 = excessive; just inside both = fine', () => {
+    expect(classifyMuscleBlock(muscle({ recovery: { jointDiscomfortAvg: 3, readinessSlope: -0.3 } }), CTX).classification).toBe(BLOCK_CLASS.OVERREACHED);
+    expect(classifyMuscleBlock(muscle({ recovery: { jointDiscomfortAvg: 2.9, readinessSlope: -0.29 } }), CTX).classification).toBe(BLOCK_CLASS.RESPONSIVE);
+  });
+
+  test('two flagged sleep weeks + readiness slope = excessive; one sleep week is not', () => {
+    expect(classifyMuscleBlock(muscle({ recovery: { sleepFlaggedWeeks: 2, readinessSlope: -0.3 } }), CTX).classification).toBe(BLOCK_CLASS.OVERREACHED);
+    expect(classifyMuscleBlock(muscle({ recovery: { sleepFlaggedWeeks: 1, readinessSlope: -0.3 } }), CTX).classification).toBe(BLOCK_CLASS.RESPONSIVE);
+  });
+
+  test('adherence exactly 0.6 passes; just below reseeds from research', () => {
+    expect(classifyMuscleBlock(muscle({ adherence: { completedSets: 120, plannedSets: 200 } }), CTX).classification).toBe(BLOCK_CLASS.RESPONSIVE);
+    expect(classifyMuscleBlock(muscle({ adherence: { completedSets: 118, plannedSets: 200 } }), CTX).classification).toBe(BLOCK_CLASS.INSUFFICIENT_DATA);
+  });
+
+  test('exposures exactly 4 pass; 3 do not', () => {
+    expect(classifyMuscleBlock(flatWith({ performance: { e1rmSlopePct: 0.3, doseResponse: null, eligibleExposures: 4 } }), CTX).classification).toBe(BLOCK_CLASS.STALE);
+    expect(classifyMuscleBlock(flatWith({ performance: { e1rmSlopePct: 0.3, doseResponse: null, eligibleExposures: 3 } }), CTX).classification).toBe(BLOCK_CLASS.INSUFFICIENT_DATA);
+  });
+
+  test('recovery dataPoints exactly 4 pass the gate but halve composite confidence, blocking the +1 (review #9)', () => {
+    const e = classifyMuscleBlock(muscle({ recovery: { dataPoints: 4 } }), CTX);
+    expect(e.classification).toBe(BLOCK_CLASS.RESPONSIVE);
+    expect(e.confidence).toBeCloseTo(0.5, 5);
+    expect(e.proposal.startSets).toBe(10); // full dose-response pair present, +1 still refused
+    expect(classifyMuscleBlock(muscle({ recovery: { dataPoints: 3 } }), CTX).classification).toBe(BLOCK_CLASS.INSUFFICIENT_DATA);
+  });
+
+  test('performance confidence exactly 0.6 passes; just below does not', () => {
+    expect(classifyMuscleBlock(muscle({ performance: { confidence: 0.6 } }), CTX).classification).toBe(BLOCK_CLASS.RESPONSIVE);
+    expect(classifyMuscleBlock(muscle({ performance: { confidence: 0.59 } }), CTX).classification).toBe(BLOCK_CLASS.INSUFFICIENT_DATA);
+  });
+
+  test('evidence 3 weeks old still earns the +1; 4 weeks blocks it', () => {
+    expect(classifyMuscleBlock(muscle({ learnedCeiling: 17 }), { suppressed: false, weeksSinceBlockEnd: 3 }).proposal.startSets).toBe(11);
+    expect(classifyMuscleBlock(muscle({ learnedCeiling: 17 }), { suppressed: false, weeksSinceBlockEnd: 4 }).proposal.startSets).toBe(10);
+  });
+
+  test('the MAV start cap holds: an earned +1 at MAV goes nowhere', () => {
+    const e = classifyMuscleBlock(muscle({ previousStart: 14, plannedPeak: 14, achievedPeak: 14 }), CTX);
+    expect(e.proposal.startSets).toBe(14);
+    expect(e.rationale).toContain('carries over unchanged');
+  });
+});
+
+describe('ledger-level guards and naming (reviews #8, #16)', () => {
+  test('buildBlockLedger tolerates null and junk muscle entries', () => {
+    expect(buildBlockLedger({ muscles: null }).entries).toEqual([]);
+    const ledger = buildBlockLedger({ muscles: [null, muscle(), 42] });
+    expect(ledger.entries.length).toBe(1);
+  });
+
+  test('snake_case muscle keys read as display names in the rationale', () => {
+    const e = classifyMuscleBlock(muscle({ muscle: 'front_delts' }), CTX);
+    expect(e.rationale).toContain('Front delts');
+    expect(e.rationale).not.toContain('Front_delts');
   });
 });
 
