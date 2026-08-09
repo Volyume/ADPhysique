@@ -28,10 +28,14 @@ export default function BlockProgressCard({ blockProgress, currentMesoWeek }) {
         {currentMesoWeek && (
           <View style={styles.weekGroup}>
             <Text style={[styles.week, live.week]}>
-              Week {currentMesoWeek.weekIndex}/{currentMesoWeek.plannedWeeks}
-              {currentMesoWeek.isDeload
-                ? ' · Recovery week'
-                : ` · Effort ${currentMesoWeek.rirTarget != null ? `${5 - currentMesoWeek.rirTarget}/5` : '–'}`}
+              {/* Stage 1 (2026-08-09): a finished block never claims a live
+                  recovery week; targets genuinely hold at the final row's
+                  volume, so the bars stay honest either way. */}
+              {currentMesoWeek.awaitingDecision
+                ? 'Block finished'
+                : `Week ${currentMesoWeek.weekIndex}/${currentMesoWeek.plannedWeeks}${currentMesoWeek.isDeload
+                  ? ' · Recovery week'
+                  : ` · Effort ${currentMesoWeek.rirTarget != null ? `${5 - currentMesoWeek.rirTarget}/5` : '–'}`}`}
             </Text>
             {/* O15: GLOSSARY.effort, same term already defined for the app's
                 other effort chips (pattern: HomeBlockShapeSheet.js's GLOSSARY

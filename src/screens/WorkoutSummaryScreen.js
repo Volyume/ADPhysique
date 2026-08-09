@@ -1190,6 +1190,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 weekIndex={mesoWeek.weekIndex}
                 plannedWeeks={mesoWeek.plannedWeeks}
                 isDeload={mesoWeek.isDeload}
+                finished={!!mesoWeek.awaitingDecision}
                 compact
               />
             </Card>

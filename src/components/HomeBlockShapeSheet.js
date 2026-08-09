@@ -37,6 +37,7 @@ function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek }) {
           weekIndex={currentMesoWeek?.weekIndex}
           plannedWeeks={currentMesoWeek?.plannedWeeks}
           isDeload={currentMesoWeek?.isDeload}
+          finished={!!currentMesoWeek?.awaitingDecision}
         />
         {/* U-E-1/U-D-3: the chip is whole-tappable, so the plain-English
             definitions of its terms live here, in the sheet it opens. */}

@@ -111,9 +111,13 @@ export default function ConsistencyScreen({ navigation }) {
         <View style={styles.section}>
           <View style={styles.labelRow}>
             <SectionLabel>Training block</SectionLabel>
+            {/* Stage 1 (2026-08-09): the old wording promised "a new block
+                starts slightly heavier" automatically; no block is ever
+                created without the user choosing, and the next block's
+                starting volume is not an automatic increase. */}
             <InfoTooltip text={
               'Training gets harder each week across the block, then a lighter recovery week lets your body catch up.\n\n' +
-              'After the recovery week, a new block starts slightly heavier than the last. That is how you keep improving over months, not just weeks.'
+              'After the recovery week you choose your next block. Building on what the last one showed is how you keep improving over months, not just weeks.'
             } />
           </View>
           {/* D2: programme-arc visibility, "Week N of M" dots + effort word,
@@ -125,6 +129,7 @@ export default function ConsistencyScreen({ navigation }) {
               weekIndex={currentMesoWeek.weekIndex}
               plannedWeeks={currentMesoWeek.plannedWeeks}
               isDeload={currentMesoWeek.isDeload}
+              finished={!!currentMesoWeek.awaitingDecision}
             />
           ) : null}
           <MesocyclePulseCard
@@ -132,6 +137,7 @@ export default function ConsistencyScreen({ navigation }) {
             currentWeek={mesoCurrentWeek()}
             progress={mesoProgress()}
             tonnageBars={mesoTonnage}
+            finished={!!currentMesoWeek?.awaitingDecision}
             onPress={() => navigateCrossTab(navigation, 'PlansTab', 'MesocycleBuilder')}
             onBuild={() => navigateCrossTab(navigation, 'PlansTab', 'PlanLibrary')}
           />

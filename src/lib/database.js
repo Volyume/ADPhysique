@@ -10,7 +10,7 @@ import { createActivityRepository } from './database/activity';
 import { createBodyMetricsRepository } from './database/bodyMetrics';
 import { createPlanFoldersRepository } from './database/planFolders';
 import { MICRO_COLUMNS, microColumnsCreateFragment } from './food/micronutrients';
-import { getCurrentBlockWeekIndex } from './mesocycle';
+import { getCurrentBlockWeekIndex, getBlockStatus } from './mesocycle';
 
 export function weekWindowsEndingAt(anchorMs, weeksBack = 4) {
   return buildWeekWindowsEndingAt(anchorMs, weeksBack);
@@ -3651,7 +3651,10 @@ export async function setActivePlan(userId, planId) {
 
 // Sets a plan active AND creates a matching training block so the Analytics
 // card is populated immediately. Deactivates any existing active mesocycle first.
-export async function activatePlanWithBlock(userId, planId, planName) {
+// Stage 1 seam (2026-08-09): `ledger` is the Block Ledger result the Stage 6
+// build threads into seeding. Accepted now so the "Continue with
+// adjustments" path has a real parameter to carry it; unused until Stage 6.
+export async function activatePlanWithBlock(userId, planId, planName, { ledger = null } = {}) {
   await setActivePlan(userId, planId);
 
   const d = await db();
@@ -3683,7 +3686,7 @@ export async function activatePlanWithBlock(userId, planId, planName) {
 
   await generateMesocycleWeeks(id);
   const { VOLUME_LANDMARKS } = await import('./algorithms');
-  await generateInitialPlannedVolume(id, VOLUME_LANDMARKS);
+  await generateInitialPlannedVolume(id, VOLUME_LANDMARKS, ledger);
 
   // C12: refresh the weekly training reminders so their copy names the plan
   // that just became active. Read the name back from the persisted active plan
@@ -3986,6 +3989,10 @@ export async function getCurrentMesocycleWeek(userId) {
 
     const plannedWeeks = meso.plannedWeeks || meso.durationWeeks || 5;
     const weekIndex = getCurrentBlockWeekIndex(meso.startDate, plannedWeeks);
+    // Stage 1 (2026-08-09): a finished block clamps to its final row (the
+    // deload week) by construction; awaitingDecision tells every consumer
+    // the honest state so none renders "Week N of N" as if still live.
+    const { awaitingDecision } = getBlockStatus(meso.startDate, plannedWeeks);
 
     const d = await db();
     const row = await d.getFirstAsync(
@@ -4002,6 +4009,7 @@ export async function getCurrentMesocycleWeek(userId) {
       mesocycleId: meso.id,
       blockId: meso.id,
       weekIndex: row.week_index,
+      awaitingDecision,
       isDeload: row.is_deload === 1,
       rirTarget: row.rir_target,
       mesoName: meso.name,
@@ -4054,7 +4062,11 @@ export async function getNextMesocycleWeek(currentWeekId) {
 // Wrapped in a transaction so the ~70 INSERTs commit atomically (was a
 // multi-second blocking write on slow Android devices; an interrupted call
 // used to leave a half-seeded mesocycle that the UI couldn't recover).
-export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks) {
+// Stage 1 seam (2026-08-09): `_ledger` reserved for Stage 6 (per-muscle
+// ranges from the Block Ledger replace the static ramp when evidence
+// exists; the underscore drops when it is consumed). Default behaviour is
+// byte-identical until then.
+export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks, _ledger = null) {
   try {
     const d = await db();
     const weeks = await d.getAllAsync(

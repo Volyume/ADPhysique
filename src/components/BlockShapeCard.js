@@ -23,7 +23,7 @@ const PHASE_WORD = (i, n) => {
   return 'Build';
 };
 
-export default function BlockShapeCard({ weekIndex, plannedWeeks, isDeload = false, compact = false }) {
+export default function BlockShapeCard({ weekIndex, plannedWeeks, isDeload = false, finished = false, compact = false }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
   // (defined further down this file, after the frozen `styles` block).
@@ -33,12 +33,17 @@ export default function BlockShapeCard({ weekIndex, plannedWeeks, isDeload = fal
   if (!n) return null;
 
   // Current dot: the deload always lands on the recovery (last) dot.
-  const current = isDeload ? n - 1 : Math.min(Math.max((weekIndex || 1) - 1, 0), n - 1);
+  // A finished block (awaitingDecision) has no current dot at all: every
+  // week including recovery is done, and claiming a live week here is the
+  // dishonesty Stage 1 (blueprint-adaptive-mesocycle §3.5) removes.
+  const current = finished ? n : (isDeload ? n - 1 : Math.min(Math.max((weekIndex || 1) - 1, 0), n - 1));
   const word = PHASE_WORD(current, n);
   const weeksToRecovery = (n - 1) - current; // dots from here to the recovery dot
 
   let line;
-  if (isDeload || current === n - 1) {
+  if (finished) {
+    line = 'Block finished. Targets hold at recovery-week volume until you choose what comes next.';
+  } else if (isDeload || current === n - 1) {
     line = 'Recovery week. Lighter on purpose. This is where the work pays off, and you lose nothing by easing back.';
   } else if (current === n - 2) {
     line = `Week ${current + 1} of ${n} · Push. Your hardest week of the block. Recovery week next.`;

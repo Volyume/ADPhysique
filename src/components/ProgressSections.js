@@ -14,7 +14,7 @@ import { workloadTakeaway } from '../lib/chartWindows';
 // landing and the Consistency surface draw the same cards from one place.
 const FREQ_MAX_DISPLAY = 8;
 
-export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, onPress, onBuild }) {
+export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, onPress, onBuild, finished = false }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
   const live = buildLiveStyles(t);
@@ -39,9 +39,13 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
 
   const isPlan = meso._isPlan;
 
+  // Stage 1 (2026-08-09): a block past its recovery week is finished and
+  // awaiting the user's next-block decision; it never claims a live week.
   const mesoWeekText = isPlan
     ? (meso.splitType ? meso.splitType : 'Active plan')
-    : `Week ${currentWeek}${meso.durationWeeks ? ` of ${meso.durationWeeks}` : ''}${meso.focus ? `, ${meso.focus}` : ''}`;
+    : finished
+      ? 'Block finished'
+      : `Week ${currentWeek}${meso.durationWeeks ? ` of ${meso.durationWeeks}` : ''}${meso.focus ? `, ${meso.focus}` : ''}`;
 
   return (
     <TouchableOpacity
@@ -58,7 +62,9 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
           <Text style={[styles.mesoWeek, live.mesoWeek]}>
             {isPlan
               ? (meso.splitType ? meso.splitType : 'Active plan')
-              : `Week ${currentWeek}${meso.durationWeeks ? ` of ${meso.durationWeeks}` : ''}${meso.focus ? `  ·  ${meso.focus}` : ''}`
+              : finished
+                ? 'Block finished'
+                : `Week ${currentWeek}${meso.durationWeeks ? ` of ${meso.durationWeeks}` : ''}${meso.focus ? `  ·  ${meso.focus}` : ''}`
             }
           </Text>
         </View>

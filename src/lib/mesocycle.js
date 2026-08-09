@@ -68,7 +68,7 @@ function localDaysElapsed(startMs, endMs) {
  *   Injectable so tests can pin the clock without monkey-patching Date.
  * @returns {number} 1-based week number
  */
-export function getCurrentMesoWeek(startDateMs, experience = 'intermediate', nowMs = Date.now()) {
+export function getCurrentMesoWeek(startDateMs, experience = 'intermediate', nowMs = Date.now(), { wrap = true } = {}) {
   const schedule = getMesoSchedule(experience);
   const start = typeof startDateMs === 'string' ? new Date(startDateMs).getTime() : startDateMs;
   // CALC-8: an invalid start (NaN / undefined) used to propagate NaN out as the
@@ -76,6 +76,11 @@ export function getCurrentMesoWeek(startDateMs, experience = 'intermediate', now
   if (!Number.isFinite(start)) return 1;
   const daysElapsed = localDaysElapsed(start, nowMs);
   const weeksElapsed = Math.floor(daysElapsed / 7);
+  // Stage 1 (2026-08-09): wrap stays the default for the generic
+  // autoregulation narrative, but a BLOCK-BOUND caller passes
+  // { wrap: false } so a finished block clamps at its final week instead
+  // of dressing week 7 up as "Introduction week" again.
+  if (!wrap) return Math.min(weeksElapsed + 1, schedule.length);
   return (weeksElapsed % schedule.length) + 1;
 }
 
@@ -489,19 +494,25 @@ export function getBlockStatus(startDateMs, plannedWeeks, nowMs = Date.now()) {
   const currentWeek = Math.floor(daysElapsed / 7) + 1;
   const recoveryWeek = plannedWeeks; // last week is always recovery
 
+  // Stage 1 (adaptive mesocycle build, founder order 2026-08-09; blueprint
+  // §1.8/§3.5): a finished block is ONE explicit state, however long it is
+  // ignored. The old 'complete' -> 'overdue' split let consumers treat the
+  // first post-recovery week differently from the fifth while the user
+  // silently trained the deload row's targets under a wrapping narrative.
+  // weeksOverdue still counts so copy can say how long the decision has
+  // been waiting.
   let status;
   if (currentWeek < recoveryWeek) {
     status = 'active';
   } else if (currentWeek === recoveryWeek) {
     status = 'recovery';
-  } else if (currentWeek <= recoveryWeek + 1) {
-    status = 'complete';
   } else {
-    status = 'overdue';
+    status = 'completed_awaiting_decision';
   }
 
   return {
     status,
+    awaitingDecision: status === 'completed_awaiting_decision',
     currentWeek,
     totalWeeks: plannedWeeks,
     weeksOverdue: Math.max(0, currentWeek - recoveryWeek - 1),

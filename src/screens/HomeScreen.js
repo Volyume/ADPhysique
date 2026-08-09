@@ -1365,12 +1365,21 @@ export default function HomeScreen({ navigation, route }) {
   // composed from signals HomeScreen already loads (block phase, the
   // shouldDeload signal, last session's soreness/sleep/energy facts, recent
   // fatigue trend) rather than the phase-only text it showed before.
-  const readinessSummary = buildReadinessSummary({
-    currentMesoWeek,
-    deloadSuggestion,
-    fatigueHistory: fatigueSessions,
-    lastSession,
-  });
+  // Stage 1 (2026-08-09, blueprint-adaptive-mesocycle §3.5): a block past
+  // its recovery week is finished and awaiting the user's next-block
+  // decision. That state outranks every readiness read, because the week
+  // resolver clamps to the final (deload) row and the composer would
+  // otherwise claim a live "Deload week" that has already passed. Honest
+  // maintenance language instead: targets hold at recovery-week volume
+  // until the user chooses.
+  const readinessSummary = currentMesoWeek?.awaitingDecision
+    ? { tone: 'go', line: 'Block finished. Targets hold at recovery-week volume until you choose what comes next.' }
+    : buildReadinessSummary({
+      currentMesoWeek,
+      deloadSuggestion,
+      fatigueHistory: fatigueSessions,
+      lastSession,
+    });
 
   // Banner priority (D14, DECISIONS-2026-07-09.md, Home banner cap ruling
   // delegated to the lead): keep the primary "Start" action prominent by

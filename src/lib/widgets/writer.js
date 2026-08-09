@@ -47,7 +47,9 @@ export async function gatherWidgetInputs(userId) {
       // getCurrentMesocycleWeek is already 1-indexed; this +1 was the
       // widget's OWN off-by-one, independent of (and only masked by) the
       // week-1 pin the resolver used to have.
-      weekInBlock: (mesoWeek && Number.isFinite(mesoWeek.weekIndex) && Number.isFinite(mesoWeek.plannedWeeks))
+      // Stage 1 (2026-08-09): a finished block awaiting the user's next-block
+      // decision must not claim a live week on the home screen.
+      weekInBlock: (mesoWeek && !mesoWeek.awaitingDecision && Number.isFinite(mesoWeek.weekIndex) && Number.isFinite(mesoWeek.plannedWeeks))
         ? { week: mesoWeek.weekIndex, total: mesoWeek.plannedWeeks }
         : null,
     };

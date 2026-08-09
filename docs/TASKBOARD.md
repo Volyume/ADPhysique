@@ -769,6 +769,34 @@ queue paused here for the founder review per D55.
 
 ## 1. IN FLIGHT
 
+### ADAPTIVE MESOCYCLE BUILD (founder GO 2026-08-09) — 8 stages, test-first
+- Authority: docs/blueprint-adaptive-mesocycle-2026-08-09.md §3.9 + the
+  founder's staged order (verbatim in session 2026-08-09): Stage 1
+  lifecycle/trust (COMPLETED_AWAITING_DECISION), 2 pure Block Ledger,
+  3 performance metric, 4 fatigue context, 5 learned range (reuse adaptive
+  bands), 6 seeding fallback chain, 7 strain-aware deload, 8 explanation
+  layer. Sixteen named test scenarios written BEFORE implementation.
+  RESPONSIVE retains the successful dose by default; +start only on
+  in-block dose-response evidence. Engine spine = lead hands-on; each
+  landed stage gets an adversarial review agent vs the blueprint.
+- Recovery path: stages land individually green to main; board updated per
+  stage; a dead session resumes at the first unlanded stage from the
+  blueprint + this entry.
+- Stage 1 LANDED (2026-08-09): getBlockStatus merges complete/overdue into
+  completed_awaiting_decision (+awaitingDecision, weeksOverdue);
+  getCurrentMesoWeek gains { wrap: false } clamp; the db week resolver
+  returns awaitingDecision; honest "Block finished" copy on the Home chip,
+  BlockShapeCard (finished prop, all three consumers), BlockProgressCard,
+  MesocyclePulseCard; widget writer drops the live-week claim; blockAdvisor
+  reads the merged state, loses the false "automatic adjustment" promise
+  and the stale "take your recovery week" line; Consistency tooltip stops
+  promising an automatic heavier next block. Ledger seam threaded through
+  activatePlanWithBlock -> generateInitialPlannedVolume (unused until
+  Stage 6). createMesocycle confirmed DEAD (zero callers; resolve in
+  Stage 6). Pins: src/lib/__tests__/blockLifecycle.stage1.test.js (14).
+  Next: Stage 2 test matrix (4 worked examples + 12 founder scenarios)
+  against pure src/lib/interBlock.js, tests before implementation.
+
 ### D89 comprehension-and-trust + design-consistency remediation (2026-08-06) — ALL WAVES LANDED to main (d251f50d)
 - Source of authority: `docs/audit/comprehension-trust-audit-2026-08-06.md`
   (all 61 findings, rulings, wave plan). Register entry: D89.

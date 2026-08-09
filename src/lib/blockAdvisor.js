@@ -175,7 +175,11 @@ function buildNextBlockRecommendation(checkins, userProfile, signals) {
     return {
       recommendation: 'adjust',
       headline: 'Same programme, slightly adjusted',
-      body: "The structure is working. After your recovery week, you'll restart the same programme with a small volume or load adjustment based on how this block went.",
+      // Stage 1 honesty (2026-08-09): this body used to promise "a small
+      // volume or load adjustment based on how this block went" with no
+      // code behind it. Until the Stage 6 ledger makes that true, the copy
+      // names what the user can actually do.
+      body: "The structure is working. After your recovery week, restart the same programme, and trim a set from anything that felt heavy in the final weeks.",
       actionLabel: 'Continue with adjustments',
       secondaryLabel: 'Build a new programme',
     };
@@ -248,17 +252,20 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
   }
 
   // ── Block complete / overdue ──────────────────────────────────────────────
-  if (blockStatus?.status === 'complete' || blockStatus?.status === 'overdue') {
+  if (blockStatus?.status === 'completed_awaiting_decision') {
     const nextBlock = buildNextBlockRecommendation(checkins, userProfile, signals);
     const overdueWeeks = blockStatus.weeksOverdue;
     return {
       action: 'post_recovery',
       headline: overdueWeeks > 0
         ? `Recovery week passed ${overdueWeeks} week${overdueWeeks > 1 ? 's' : ''} ago`
-        : 'Block complete',
+        : 'Block finished',
+      // Stage 1 honesty (2026-08-09): this state begins the week AFTER the
+      // recovery week, so the old "take your recovery week" line described
+      // a week that had already passed.
       body: overdueWeeks > 0
         ? `Your recovery week has been and gone. The sooner you start the next block the better. Your body's ready.`
-        : `You've finished this block. Take your recovery week, then pick up the plan again.`,
+        : `You've finished this block, recovery week included. The next step is choosing your next block.`,
       signals,
       nextBlock,
       blockStatus,
