@@ -794,8 +794,26 @@ queue paused here for the founder review per D55.
   activatePlanWithBlock -> generateInitialPlannedVolume (unused until
   Stage 6). createMesocycle confirmed DEAD (zero callers; resolve in
   Stage 6). Pins: src/lib/__tests__/blockLifecycle.stage1.test.js (14).
-  Next: Stage 2 test matrix (4 worked examples + 12 founder scenarios)
-  against pure src/lib/interBlock.js, tests before implementation.
+- Stage 2 LANDED (2026-08-09): pure src/lib/interBlock.js (Block Ledger).
+  classifyMuscleBlock + buildBlockLedger; classes RESPONSIVE/OVERREACHED/
+  STALE/STRAINED/INSUFFICIENT_DATA; founder retention rule enforced (+1
+  only on doseResponse.lateProgression && lateRecoveryOk, never more);
+  blueprint caps (learnedCeiling-2, MAV start cap, achievedPeak-2
+  OVERREACHED peak, MAV STRAINED peak, MRV+30-set peak ceiling, MEV
+  floor); INSUFFICIENT_DATA split: undelivered dose (adherence<0.6 or
+  exposures<4) -> research seed, broken measurement with dose tolerated
+  (no recovery data / discontinuity / confidence<0.6) -> retention;
+  suppression (calm/ED, caller-ORed, tier-blind) blocks all upward
+  carry, reductions pass; stale evidence >=4 weeks blocks increases;
+  STALE stimulus proposal (variant_swap primary / rep_range alt) only
+  when entrenched (priorFlatBlocks>=1) or perf down; block-level
+  proposedRecoveryDays 10 only with a STRAINED entry AND >=2 persistent
+  systemic signals, else 7 (proposal only). Pins:
+  src/lib/__tests__/interBlock.stage2.test.js (36: 4 worked examples,
+  12 founder scenarios, quadrant gaps, caps, purity/tier-blind).
+  Next: Stage 3 performance metric (per stable exercise, never average
+  raw e1RM across exercises; rebound/new-lift discounting; PR density
+  over eligible exposures) feeding interBlock's performance input.
 
 ### D89 comprehension-and-trust + design-consistency remediation (2026-08-06) — ALL WAVES LANDED to main (d251f50d)
 - Source of authority: `docs/audit/comprehension-trust-audit-2026-08-06.md`
