@@ -814,6 +814,48 @@ queue paused here for the founder review per D55.
   Next: Stage 3 performance metric (per stable exercise, never average
   raw e1RM across exercises; rebound/new-lift discounting; PR density
   over eligible exposures) feeding interBlock's performance input.
+- Stage 2 REVIEW REMEDIATION LANDED (2026-08-09; adversarial review
+  executed the module and ran a 41-case mutation sweep; all 17 findings
+  fixed, none parked): rationale now composed from the FINAL clamped
+  numbers (the blocker: copy could claim "starts lower" while proposing
+  identical numbers, guaranteed for every existing user whose block
+  seeds MEV->MAV); OVERREACHED peak = min(achieved, planned) - 2;
+  unearned RESPONSIVE peak holds the block's plan (no silent ramp-top
+  reset to MAV); suppression hold cap = previous start / researchMev
+  (adapted MEV can no longer raise volume under calm/ED); finite-number
+  coercion (string '12' concatenation and NaN proposals killed);
+  missing/inverted landmarks fail closed to a null proposal;
+  +1 gated on COMPOSITE confidence; STRAINED capped at MAV;
+  MUSCLE_DISPLAY_NAMES in copy; ledger tolerates junk entries;
+  blueprint §3.1 carries the founder's +1 amendment note. Suite
+  36 -> 61 tests incl. at-boundary pins for every gate constant the
+  mutation sweep showed unpinned, and a rationale-vs-numbers
+  consistency sweep across all 15 branches.
+- Stage 3 LANDED (2026-08-09): pure src/lib/blockMetrics.js
+  (computeBlockPerformance) computes interBlock's performance input
+  from raw workout_sets rows: per-exercise least-squares e1RM slopes
+  (fitted-start normalised, weighted mean of SLOPES, raw e1RM never
+  pooled across exercises); stable = >=3 sessions spanning both
+  accumulation halves; x0.5 weights for new-this-block lifts and
+  mid-block rep-range shifts (null targets = unknown); confidence =
+  weighted stable share; discontinuity = stable raw share < 0.5
+  (exercise-swap case); PR replay per exercise vs prior-history best
+  (calculate1RM + the 1.001 detectPR margin, first-ever never a PR),
+  rebound-window PRs weigh 0.25; eligible exposures = distinct
+  primary-role sessions, deload week excluded everywhere; doseResponse
+  = late half beats early by >=1% (or late PR) + POSITIVE late feedback
+  evidence (absent feedback is false - no evidence, no increase).
+  Pins: blockMetrics.stage3.test.js (29, written first). Recon notes
+  (agent, 2026-08-09): no PR table exists (replay is the only route);
+  advisor deload-flag firings are NOT persisted - Stage 4/6 must read
+  coach_outputs.recovery_flag (dated) and mesocycle_weeks.is_deload on
+  non-final weeks (applied early deloads) as the persisted substitutes;
+  getAdaptiveLandmarkHistory is primary-only/undated (Stage 6 gathers
+  its own block-windowed recovery rows); mesocycle_weeks
+  started_at/completed_at are dead columns (weeks are calendar-derived);
+  blocks have no plan FK (previous block = recency).
+  Next: Stage 4 fatigue context in weeklyCoach (week-in-block expected
+  fatigue; PR-binary replacement with density+slope per §3.3).
 - Stage 1 REVIEW REMEDIATION LANDED (2026-08-09, adversarial review vs
   blueprint; all 12 findings fixed, none parked): partner block-finished
   milestone re-keyed to awaitingDecision && weeksOverdue===0 (was dead on
