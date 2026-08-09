@@ -214,7 +214,14 @@ export default function VolumeHeatmapScreen() {
         .catch(() => { if (isCurrentRequest()) setResolvedLandmarks(null); });
       if (parsed) {
         setCustomLandmarks(parsed);
-        setEditValues(parsed);
+        // The stored table now holds ONLY edited muscles (Stage 6 review
+        // blocker #1); the editor still shows every muscle, so merge the
+        // edits over the research defaults.
+        const merged = {};
+        for (const [m, v] of Object.entries(VOLUME_LANDMARKS)) {
+          merged[m] = { mev: v.mev, mav: v.mav, mrv: v.mrv, ...(parsed[m] ?? {}) };
+        }
+        setEditValues(merged);
       } else {
         const defaults = {};
         for (const [m, v] of Object.entries(VOLUME_LANDMARKS)) {
@@ -240,15 +247,34 @@ export default function VolumeHeatmapScreen() {
 
   async function saveLandmarks() {
     if (!user?.id) return;
+    // Stage 6 review blocker #1: persist ONLY muscles the user actually
+    // changed from the research defaults. Saving all seventeen marked
+    // every muscle "manual" downstream, which silently disabled the
+    // adaptive Block Ledger for the whole body. Untouched defaults are
+    // not overrides. (The read side is also hardened via isManualEdit,
+    // so historical full-table saves are neutralised too.)
     const map = {};
     for (const [muscle, vals] of Object.entries(editValues)) {
-      map[muscle] = {
+      const entry = {
         mev: parseInt(vals.mev) || 0,
         mav: parseInt(vals.mav) || 0,
         mrv: parseInt(vals.mrv) || 0,
       };
+      const research = VOLUME_LANDMARKS[muscle];
+      const edited = !research
+        || entry.mev !== research.mev || entry.mav !== research.mav || entry.mrv !== research.mrv;
+      if (edited) map[muscle] = entry;
     }
     const key = `@volyume_landmarks_${user.id}`;
+    if (Object.keys(map).length === 0) {
+      // Everything back at defaults: same semantics as a reset.
+      await AsyncStorage.removeItem(key);
+      syncUserPref(user.id, key, '').catch(() => {});
+      setCustomLandmarks(null);
+      setEditing(false);
+      toast.show('Volume targets saved', { variant: 'success' });
+      return;
+    }
     const json = JSON.stringify(map);
     await AsyncStorage.setItem(key, json);
     // Push straight to cloud so the targets survive a reinstall even if no

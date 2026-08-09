@@ -49,6 +49,11 @@ import { ABSOLUTE_WEEKLY_SET_CEILING } from './coachApply';
 import { MUSCLE_DISPLAY_NAMES } from './algorithms';
 
 export const LEDGER_VERSION = 1;
+// Provenance (founder Stage 6 order B): the schema version above gates
+// idempotent reuse of a stored ledger; the algorithm version records
+// WHICH rules produced it, so a future rule change can be told apart
+// from a schema change when debugging an old block's decisions.
+export const LEDGER_ALGORITHM_VERSION = 1;
 
 export const BLOCK_CLASS = Object.freeze({
   RESPONSIVE: 'RESPONSIVE',
@@ -185,6 +190,7 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
       confidence,
       evidence,
       observed: null, // no landmark frame: the raw numbers cannot be trusted either
+      upwardCarryPrevented: false,
       proposal: { startSets: null, peakSets: null, stimulusChange: null, deferredToManual },
       rationale: `No volume landmarks are available for ${lower}, so no volume proposal is made for it.`,
     };
@@ -233,10 +239,17 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
     // the previous start — or research MEV when it is higher, because
     // research MEV stays the absolute floor anchor; the EFFECTIVE
     // (possibly adapted) mev never out-ranks the hold (review #4).
+    // upwardCarryPrevented (founder Stage 6 order B): true only when the
+    // hold actually pulled a number down — provenance for "why did this
+    // block not climb", never inferred by the narrative layer.
+    const preHoldStart = start;
+    const preHoldPeak = peak;
+    let upwardCarryPrevented = false;
     if (suppressed || weeksSinceBlockEnd >= STALE_EVIDENCE_WEEKS) {
       const holdCap = Math.max(previousStart, researchMev ?? 0);
       start = Math.min(start, holdCap);
       peak = Math.max(Math.min(peak, Math.max(plannedPeak, start)), start);
+      upwardCarryPrevented = start < preHoldStart || peak < preHoldPeak;
     }
     return {
       muscle: input.muscle,
@@ -257,6 +270,7 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
         plannedPeak: num(input.plannedPeak, null),
         suppressed,
       },
+      upwardCarryPrevented,
       proposal: {
         startSets: deferredToManual ? null : start,
         peakSets: deferredToManual ? null : peak,
@@ -399,6 +413,7 @@ export function buildBlockLedger({
 
   return {
     version: LEDGER_VERSION,
+    algorithmVersion: LEDGER_ALGORITHM_VERSION,
     entries,
     proposedRecoveryDays,
     suppressed: !!suppressed,

@@ -25,8 +25,10 @@
  *   deload (mesocycle_weeks.is_deload on a non-final week). Mid-block
  *   means before the peak week (D91 ruling 4).
  */
-import { allocateExerciseVolume } from './algorithms';
+import { allocateExerciseVolume, VOLUME_LANDMARKS } from './algorithms';
 import { localDaysElapsed } from './mesocycle';
+import { computeLandmarks } from './planEngine';
+import { phaseToNutritionKey } from './coachingGoals';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -278,18 +280,103 @@ export function computeAchievedWeeklyPeak({
   deloadWeekIndex = blockWeeks,
 } = {}) {
   const accumSet = new Set(accumulationWeeks(blockWeeks, deloadWeekIndex));
+  const lookup = (id) => (exercisesById instanceof Map
+    ? exercisesById.get(id)
+    : (Object.prototype.hasOwnProperty.call(exercisesById ?? {}, id) ? exercisesById[id] : undefined));
+  // Per-exercise credit memo (Stage 6 review #11): re-running the
+  // allocator (a JSON parse) once per ROW was the gather's hot spot.
+  const creditByExercise = new Map();
+  const creditFor = (exId) => {
+    if (creditByExercise.has(exId)) return creditByExercise.get(exId);
+    let credit = 0;
+    const ex = lookup(exId);
+    if (ex) {
+      try {
+        for (const a of allocateExerciseVolume(ex)) if (a.muscle === muscle) credit += a.sets;
+      } catch (_e) { /* unallocatable exercise: no credit */ }
+    }
+    creditByExercise.set(exId, credit);
+    return credit;
+  };
   const byWeek = new Map();
   for (const row of sets) {
     const at = num(row?.createdAt ?? row?.created_at, null);
     if (at == null) continue;
     const w = weekOf(blockStart, at);
     if (!accumSet.has(w)) continue;
-    const credit = sumCompletedSets([row], exercisesById, muscle);
+    if ((row?.setType ?? row?.set_type) === 'warmup') continue;
+    const reps = num(row?.actualReps ?? row?.actual_reps ?? row?.reps, 0);
+    if (!(reps > 0)) continue;
+    const credit = creditFor(row?.exerciseId ?? row?.exercise_id);
     if (credit > 0) byWeek.set(w, (byWeek.get(w) ?? 0) + credit);
   }
   let peak = 0;
   for (const total of byWeek.values()) peak = Math.max(peak, total);
   return Math.round(peak);
+}
+
+/**
+ * Profile-adjusted prior for a muscle, lowercase-normalised (MEV -> mev,
+ * MAVhigh -> mav, MRV -> mrv), falling back to the raw research row on
+ * any gap. NOTE the vocabulary (Stage 6 review #4): computeLandmarks'
+ * nutritionPhase parameter speaks phaseToNutritionKey's vocabulary
+ * (lean_gain/build/maintain/...), NOT the coaching keys
+ * (mild_bulk/bulk/...) — passing goalPhase silently missed NUT_MULT for
+ * the modal (bulking) user. The user-facing trainingPhase maps through
+ * phaseToNutritionKey here, exactly as planAutoGen does.
+ */
+export function profileAdjustedPrior(muscle, userProfile) {
+  const research = VOLUME_LANDMARKS[muscle];
+  try {
+    if (userProfile?.experience) {
+      const adjusted = computeLandmarks(
+        userProfile.experience,
+        userProfile.recoveryRating ?? 'average',
+        phaseToNutritionKey(userProfile.trainingPhase ?? userProfile.goal ?? null),
+        userProfile.age ?? null,
+      )[muscle];
+      if (adjusted) return { mev: adjusted.MEV, mav: adjusted.MAVhigh, mrv: adjusted.MRV };
+    }
+  } catch (_e) { /* research fallback below */ }
+  return research ? { mev: research.mev, mav: research.mav, mrv: research.mrv } : null;
+}
+
+/**
+ * Prior finished blocks' ledger entries for a muscle, oldest first, from
+ * the mesocycle rows' persisted block_ledger JSON. Unparseable ledgers
+ * are no evidence; a missing ledger is not a failed block.
+ */
+export function priorLedgerEntries(mesos = [], beforeStartMs, muscle) {
+  const entries = [];
+  const toMs = (v) => {
+    if (v == null) return null;
+    const n = typeof v === 'number' ? v : new Date(v).getTime();
+    return Number.isFinite(n) ? n : null;
+  };
+  const prior = (Array.isArray(mesos) ? mesos : [])
+    .filter((m) => {
+      const start = toMs(m?.startDate);
+      return start != null && start < beforeStartMs && m.blockLedger;
+    })
+    .sort((a, b) => toMs(a.startDate) - toMs(b.startDate));
+  for (const m of prior) {
+    try {
+      const ledger = JSON.parse(m.blockLedger);
+      const entry = ledger?.entries?.find?.((e) => e.muscle === muscle);
+      if (entry) entries.push(entry);
+    } catch (_e) { /* unparseable prior ledger: no evidence */ }
+  }
+  return entries;
+}
+
+/** Consecutive trailing STALE classifications (interBlock's priorFlatBlocks). */
+export function trailingStaleCount(entries = []) {
+  let count = 0;
+  for (let i = entries.length - 1; i >= 0; i -= 1) {
+    if (entries[i]?.classification === 'STALE') count += 1;
+    else break;
+  }
+  return count;
 }
 
 /**

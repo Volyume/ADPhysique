@@ -211,33 +211,70 @@ export function computeRefeedDay(nutrition) {
 // share. 60% of the achieved peak on a fresh block, stepping down five
 // points per strain point to a 40% floor at strain >= 4. The strain
 // score is interBlock's recovery_cost_weight (or the persisted weekly
-// recovery read mapped by the caller).
+// recovery read mapped by the caller). MONOTONIC by construction:
+// greater strain can only make the recovery dose easier or equal, never
+// harder (pinned in deload.stage7). An UNREADABLE strain fails CLOSED
+// to heavy (Stage 7-8 review #13): the unknown case takes the smallest,
+// most protective recovery dose, mirroring the runner's fail-closed
+// suppression read — never the lightest cut.
+const clampStrainPoints = (strainScore) => {
+  const n = typeof strainScore === 'string' && strainScore.trim() !== ''
+    ? Number(strainScore) : strainScore;
+  const strain = Number.isFinite(n) ? Math.max(0, n) : 4;
+  return Math.min(strain, 4);
+};
+
+// The share as integer percentage points, so set targets are computed in
+// integer maths (review NIT #14: 0.6 - 0.05*3 floats to 0.44999…, which
+// rounded a half-set DOWN; peak x pct / 100 keeps round-half-up exact).
+export function deloadSharePct(strainScore) {
+  return 60 - 5 * clampStrainPoints(strainScore);
+}
+
 export function deloadShare(strainScore) {
-  const strain = Number.isFinite(strainScore) ? Math.max(0, strainScore) : 0;
-  return Math.max(0.4, 0.6 - 0.05 * Math.min(strain, 4));
+  return deloadSharePct(strainScore) / 100;
+}
+
+// Founder ruling (Stage 7 refinement, 2026-08-09): MEV is a
+// productive-training landmark, NOT automatically a recovery-week
+// minimum — it must never force a deload UPWARD past the percentage
+// dose. The recovery-week floor is half of MEV, never below one set.
+export function deloadFloor(mev) {
+  return Math.max(1, Math.round((Number.isFinite(mev) ? mev : 0) * 0.5));
 }
 
 /**
  * Compute the planned-volume changes for a deload apply. With a context
- * ({ peaks: { [muscle]: achievedWeeklyPeak }, strainScore }) each muscle
- * lands at max(MEV, achieved peak x the strain-scaled share) — §3.4's
- * personalised deload, anchored to what the muscle actually DID this
- * block rather than a flat floor. Without context (or for a muscle with
- * no recorded peak) the legacy flat-MEV cut is byte-identical. A deload
- * can only ever reduce a row; rows that would not move are omitted.
+ * ({ peaks: { [muscle]: achievedWeeklyPeak }, strainScore, strains }) —
+ * `strains` optionally per muscle, falling back to the block-level
+ * strainScore — each muscle lands at max(deloadFloor, achieved peak x
+ * the strain-scaled share): §3.4's personalised deload, anchored to
+ * what the muscle actually DID this block rather than a flat floor, and
+ * never forced upward by MEV (founder ruling above). The achieved peak
+ * is capped at the row's own planned sets before the share applies
+ * (review #4): achieved peaks carry half-credit for secondary work
+ * while planned rows count direct sets only, so an uncapped peak let a
+ * heavily-pressed muscle keep its full row and turn the recovery week
+ * into a no-op. Capped, every deload is a genuine cut of the row it
+ * lands on. Without context (or for a muscle with no recorded peak)
+ * the legacy flat-MEV cut is byte-identical. A deload can only ever
+ * reduce a row; rows that would not move are omitted.
  *
  * @returns {Array<{ muscle, plannedSets, mev, mav, mrv }>}
  */
 export function computeDeloadVolume(plannedRows, context = null) {
   if (!Array.isArray(plannedRows)) return [];
-  const share = deloadShare(context?.strainScore);
   const changes = [];
   for (const row of plannedRows) {
     const mev = row.mev ?? 0;
     const current = row.planned_sets ?? 0;
     const peak = context?.peaks?.[row.muscle];
+    const strain = context?.strains?.[row.muscle] ?? context?.strainScore;
     const target = Number.isFinite(peak) && peak > 0
-      ? Math.max(mev, Math.round(peak * share))
+      ? Math.max(
+        deloadFloor(mev),
+        Math.round((Math.min(peak, current) * deloadSharePct(strain)) / 100),
+      )
       : mev;
     if (current > target) {
       changes.push({

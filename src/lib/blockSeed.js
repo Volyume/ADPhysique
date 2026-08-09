@@ -23,7 +23,9 @@
  * is skipped for the conservative profile/research default; a manual
  * override is the user's own explicit numbers and stands.
  */
-import { ABSOLUTE_WEEKLY_SET_CEILING, deloadShare } from './coachApply';
+import { ABSOLUTE_WEEKLY_SET_CEILING, deloadSharePct, deloadFloor } from './coachApply';
+import { BLOCK_CLASS } from './interBlock';
+import { isManualEdit } from './effectiveLandmarks';
 
 const num = (v, fallback) => {
   const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
@@ -65,18 +67,27 @@ export function resolveSeedRange({
   };
 
   // 1. Manual override: the user's explicit numbers, suppression-proof.
+  // Only a REAL edit counts (Stage 6 review blocker #1): the editor used
+  // to save untouched research defaults for every muscle, and treating
+  // those as overrides silently disabled the whole adaptive layer.
   const manualMev = num(manual?.mev, null);
   const manualMav = num(manual?.mav, null);
-  if (manualMev != null && manualMav != null && manualMev > 0 && manualMav > 0) {
+  if (manualMev != null && manualMav != null && manualMev > 0 && manualMav > 0
+    && isManualEdit(manual, research)) {
     const { s, p } = clamp(manualMev, Math.max(manualMav, manualMev));
     return { startSets: s, peakSets: p, source: 'manual' };
   }
 
   // 2. A valid ledger entry is NEVER silently discarded (founder order).
+  // INSUFFICIENT_DATA is not a recommendation — the block could not be
+  // judged, so the richer learned band (built from prior blocks) speaks
+  // next instead of the entry's fallback numbers (founder e2e ruling:
+  // a muscle with useful learned history falls back to it).
   const proposal = ledgerEntry?.proposal;
   const observed = ledgerEntry?.observed;
   const ledgerValid = proposal
     && !proposal.deferredToManual
+    && ledgerEntry?.classification !== BLOCK_CLASS.INSUFFICIENT_DATA
     && num(proposal.startSets, null) != null
     && num(proposal.peakSets, null) != null;
   if (ledgerValid) {
@@ -97,17 +108,42 @@ export function resolveSeedRange({
     const { s, p } = clamp(start, peak);
     // Stage 7 (§3.4): only a ledger seed carries an achieved peak plus
     // strain evidence, so only it can size its own deload week — the
-    // strain-scaled share of what the muscle actually did, floored at
-    // research MEV. Other sources leave the seeded deload at MEV.
+    // strain-scaled share of what the muscle actually did. Other sources
+    // (and the cases below) leave the seeded deload at research MEV.
+    //
+    // Three gates from the Stage 7-8 review:
+    // - Not under suppression (BLOCKER #2, §3.8 "no upward carry-over
+    //   anywhere" on the most-protective reading, D91 ruling 11's
+    //   precedent): a flagged user's recovery week stays the flat MEV
+    //   week — block carry-over must never raise it.
+    // - Not for a true repeat (NIT #17): "the block the user just ran,
+    //   unchanged" includes its recovery week.
+    // - Clamped to min(startSets, ABSOLUTE_WEEKLY_SET_CEILING)
+    //   (BLOCKER #1): a recovery week can never exceed the block's own
+    //   lightest training week, nor the absolute backstop.
     const achievedPeak = num(observed?.achievedPeak, null);
     const out = { startSets: s, peakSets: p, source: 'ledger' };
-    if (achievedPeak != null && achievedPeak > 0) {
-      const strain = num(
-        ledgerEntry?.evidence?.find?.((e) => e?.signal === 'recovery_cost_weight')?.value, 0,
+    if (intent !== 'repeat' && !suppressed && achievedPeak != null && achievedPeak > 0) {
+      // Raw evidence value: coachApply coerces it and fails CLOSED to
+      // heavy strain (the smallest dose) when unreadable (review #13).
+      const strainRaw = ledgerEntry?.evidence?.find?.(
+        (e) => e?.signal === 'recovery_cost_weight',
+      )?.value;
+      // Founder ruling (Stage 7 refinement): MEV is a productive-training
+      // landmark, not a recovery-week minimum — it must never force a
+      // deload UPWARD past the percentage dose. The recovery floor is
+      // deloadFloor (half of research MEV, at least one set). The share
+      // base is capped at the seeded peak (review #4: achieved peaks
+      // carry secondary half-credit; the planned week they recover from
+      // does not), keeping recovery <= start <= peak coherent.
+      const dose = Math.round(
+        (Math.min(achievedPeak, p) * deloadSharePct(strainRaw)) / 100,
       );
-      out.deloadSets = Math.round(Math.max(
-        researchMev ?? 0, achievedPeak * deloadShare(strain),
-      ));
+      out.deloadSets = Math.min(
+        Math.max(deloadFloor(researchMev), dose),
+        s,
+        ABSOLUTE_WEEKLY_SET_CEILING,
+      );
     }
     return out;
   }

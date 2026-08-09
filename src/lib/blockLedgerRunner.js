@@ -2,14 +2,22 @@
  * blockLedgerRunner.js — the impure Block Ledger assembly (Stage 6 of
  * the adaptive mesocycle build; authority
  * docs/blueprint-adaptive-mesocycle-2026-08-09.md §3.9 items 2-3 + the
- * founder's Stage 6 order).
+ * founder's Stage 6 order). Hardened after the Stage 6 adversarial
+ * review (2026-08-09): the ledger only computes for a FINISHED block
+ * (awaitingDecision — a mid-block caller can never freeze a premature
+ * ledger); check-in/coach-output windows align to local week starts so
+ * block week 1's rows are never dropped; the real tier threads through
+ * (the adapted layer stays Pro-gated); the profile prior speaks the
+ * nutrition-phase vocabulary; the learned-range replay sees the
+ * just-finished block; and manual overrides only count when the user
+ * actually EDITED the muscle (untouched editor defaults are not
+ * overrides).
  *
  * This is the THIN layer: it fetches rows through database.js and hands
  * every judgement to the pure modules (blockMetrics -> performance,
- * blockLedgerGather -> recovery/systemic/windows/ramps, interBlock ->
- * classification, learnedRange -> block-grain memory, blockSeed -> the
- * seeding fallback chain). Nothing here decides anything; it only
- * plumbs.
+ * blockLedgerGather -> recovery/systemic/windows/ramps/priors,
+ * interBlock -> classification, learnedRange -> block-grain memory,
+ * blockSeed -> the seeding fallback chain).
  *
  * Suppression is read fail-CLOSED (the widget writer's pattern): a
  * transient ED-flag or wellbeing read failure counts as suppressed, so
@@ -41,18 +49,24 @@ import {
   sumCompletedSets,
   collectMuscleSessionRows,
   computeAchievedWeeklyPeak,
+  profileAdjustedPrior,
+  priorLedgerEntries,
+  trailingStaleCount,
 } from './blockLedgerGather';
 import { computeLearnedRange } from './learnedRange';
 import { resolveSeedRange } from './blockSeed';
-import { computeLandmarks } from './planEngine';
 import { checkinReadiness } from './blockAdvisor';
-import { getManualLandmarks, getAdaptedLandmarks, mergeLandmarkPrecedence } from './effectiveLandmarks';
+import { getManualLandmarks, getAdaptedLandmarks, mergeLandmarkPrecedence, isManualEdit } from './effectiveLandmarks';
 import { getBlockStatus } from './mesocycle';
 import { VOLUME_LANDMARKS } from './algorithms';
+import { localWeekStartMs } from './dayKey';
 import { isCalm, WELLBEING_KEY } from './wellbeing';
 import { logError } from './errorLog';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+// §3.1 speaks of "the SAME lifts' previous-block bests"; a bounded prior
+// window keeps the read cheap while comfortably covering the previous
+// two blocks (documented narrowing, Stage 6 review NIT).
 const PRIOR_WINDOW_DAYS = 180;
 
 const toMs = (v) => {
@@ -69,58 +83,15 @@ async function readSuppression(userId) {
   return !!edFlag || wellbeing === 'read_failed' || isCalm(wellbeing);
 }
 
-/** Profile-adjusted prior for a muscle, lowercase-normalised; research on any gap. */
-function profilePrior(muscle, userProfile) {
-  const research = VOLUME_LANDMARKS[muscle];
-  try {
-    if (userProfile?.experience) {
-      const adjusted = computeLandmarks(
-        userProfile.experience,
-        userProfile.recoveryRating ?? 'average',
-        userProfile.goalPhase ?? 'maint',
-        userProfile.age ?? null,
-      )[muscle];
-      if (adjusted) return { mev: adjusted.MEV, mav: adjusted.MAVhigh, mrv: adjusted.MRV };
-    }
-  } catch (_e) { /* research fallback below */ }
-  return research ? { mev: research.mev, mav: research.mav, mrv: research.mrv } : null;
-}
-
-/** Prior finished blocks' ledger entries for a muscle, oldest first. */
-function priorLedgerEntries(mesos, beforeStartMs, muscle) {
-  const entries = [];
-  const prior = mesos
-    .filter((m) => {
-      const start = toMs(m.startDate);
-      return start != null && start < beforeStartMs && m.blockLedger;
-    })
-    .sort((a, b) => toMs(a.startDate) - toMs(b.startDate));
-  for (const m of prior) {
-    try {
-      const ledger = JSON.parse(m.blockLedger);
-      const entry = ledger?.entries?.find?.((e) => e.muscle === muscle);
-      if (entry) entries.push(entry);
-    } catch (_e) { /* unparseable prior ledger: no evidence */ }
-  }
-  return entries;
-}
-
-function trailingStaleCount(entries) {
-  let count = 0;
-  for (let i = entries.length - 1; i >= 0; i -= 1) {
-    if (entries[i]?.classification === 'STALE') count += 1;
-    else break;
-  }
-  return count;
-}
-
 /**
  * Compute the finished block's ledger and persist it on the mesocycle
  * row. Idempotent: an already-stored ledger at the current version is
- * returned as-is (pass { force: true } to rebuild). Returns the parsed
- * ledger, or null when the block cannot be judged at all.
+ * returned as-is (pass { force: true } to rebuild), so a reopened
+ * completion screen, a sync retry or an app restart can never learn
+ * twice. Returns the parsed ledger, or null when the block is not
+ * finished (awaitingDecision) or cannot be judged.
  */
-export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = false, userProfile = null } = {}) {
+export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = false, userProfile = null, tier = 'free' } = {}) {
   try {
     const mesos = await getAllMesocyclesForUser(userId);
     const meso = mesos.find((m) => m.id === mesocycleId);
@@ -130,6 +101,12 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
     if (blockStart == null || !(blockWeeks >= 2)) return null;
     const deloadWeekIndex = meso.deloadWeek ?? blockWeeks;
 
+    // A ledger is BLOCK-END evidence. A mid-block computation would be
+    // premature AND, because of the idempotency above, frozen for ever —
+    // so the finished state is a hard precondition (review #14).
+    const status = getBlockStatus(blockStart, blockWeeks);
+    if (!status.awaitingDecision) return null;
+
     if (!force && meso.blockLedger) {
       try {
         const stored = JSON.parse(meso.blockLedger);
@@ -138,13 +115,19 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
     }
 
     const blockEnd = blockStart + blockWeeks * WEEK_MS;
+    // Week-keyed rows (weekly_checkins, coach_outputs) carry LOCAL MONDAY
+    // week_start stamps while blocks start on any weekday; aligning the
+    // window to week starts keeps block week 1's rows in and the
+    // post-block week's out (review #5).
+    const checkinFrom = localWeekStartMs(blockStart);
+    const checkinTo = localWeekStartMs(blockEnd);
     const [training, priorSets, planned, exercisesById, checkins, flagWeeks, weekRows, suppressed] = await Promise.all([
       getBlockTrainingData(userId, mesocycleId),
       getPriorCompletedSets(userId, blockStart, blockStart - PRIOR_WINDOW_DAYS * 24 * 60 * 60 * 1000),
       getPlannedMuscleVolumeForBlock(mesocycleId),
       getExerciseRowsById(userId),
-      getCheckinsInRange(userId, blockStart, blockEnd),
-      getDeloadSuggestedWeekStarts(userId, blockStart, blockEnd),
+      getCheckinsInRange(userId, checkinFrom, checkinTo),
+      getDeloadSuggestedWeekStarts(userId, checkinFrom, checkinTo),
       getMesocycleWeeks(mesocycleId),
       readSuppression(userId),
     ]);
@@ -173,7 +156,9 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
     const systemic = { readinessSlope, sleepFlaggedWeeks, deloadFlagFired };
 
     const manualTable = await getManualLandmarks(userId);
-    const adaptedTable = await getAdaptedLandmarks(userId, { tier: 'pro' }).catch(() => null);
+    // The adapted layer stays Pro-gated: the REAL tier threads through
+    // (review #6); default 'free' fails closed to no adapted layer.
+    const adaptedTable = await getAdaptedLandmarks(userId, { tier }).catch(() => null);
     const effective = mergeLandmarkPrecedence({ manual: manualTable, adapted: adaptedTable }).table;
 
     const workoutsById = new Map(training.workouts.map((w) => [w.id, w]));
@@ -212,7 +197,7 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
       });
       const history = priorLedgerEntries(mesos, blockStart, muscle);
       const learned = computeLearnedRange({
-        prior: profilePrior(muscle, userProfile),
+        prior: profileAdjustedPrior(muscle, userProfile),
         researchMev: VOLUME_LANDMARKS[muscle]?.mev ?? 0,
         adaptedMrv: adaptedTable?.[muscle]?.isAdapted ? adaptedTable[muscle].mrv : null,
         ledgerHistory: history,
@@ -224,7 +209,9 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
         landmarks: effective[muscle] ?? VOLUME_LANDMARKS[muscle],
         researchMev: VOLUME_LANDMARKS[muscle]?.mev ?? null,
         learnedCeiling: learned.isLearned ? learned.ceiling : null,
-        manualOverride: !!manualTable?.[muscle],
+        // An untouched editor default is NOT an override (review
+        // blocker #1): only a genuine edit defers the ledger to manual.
+        manualOverride: isManualEdit(manualTable?.[muscle], VOLUME_LANDMARKS[muscle]),
         previousStart: week1Planned > 0 ? week1Planned : null,
         plannedPeak: plannedPeak > 0 ? plannedPeak : null,
         achievedPeak: achievedPeak > 0 ? achievedPeak : null,
@@ -246,14 +233,22 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
       };
     });
 
-    const { weeksOverdue } = getBlockStatus(blockStart, blockWeeks);
     const ledger = buildBlockLedger({
       muscles: muscleInputs,
       systemic,
       suppressed,
-      weeksSinceBlockEnd: weeksOverdue,
+      weeksSinceBlockEnd: status.weeksOverdue,
     });
-    const record = { ...ledger, mesocycleId, computedAt: Date.now() };
+    // Provenance (founder Stage 6 order B): enough to answer "why did
+    // back start at 14 sets in this new block" from the stored record.
+    const record = {
+      ...ledger,
+      mesocycleId,
+      mesocycleName: meso.name ?? null,
+      blockStartDate: meso.startDate ?? null,
+      blockEndDate: new Date(blockEnd).toISOString().slice(0, 10),
+      computedAt: Date.now(),
+    };
     await storeBlockLedger(mesocycleId, JSON.stringify(record));
     return record;
   } catch (e) {
@@ -270,7 +265,12 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
 export async function getAchievedWeeklyPeaks(userId) {
   try {
     const mesos = await getAllMesocyclesForUser(userId);
-    const active = mesos.find((m) => m.isActive === 1 || m.isActive === true) ?? null;
+    // Review #15: match the canonical active-block getter — skip
+    // soft-deleted rows and, should a sync ever leave two actives,
+    // take the newest rather than SQL row order.
+    const active = mesos
+      .filter((m) => !m.deletedAt && (m.isActive === 1 || m.isActive === true))
+      .sort((a, b) => (toMs(b.createdAt) ?? 0) - (toMs(a.createdAt) ?? 0))[0] ?? null;
     const blockStart = toMs(active?.startDate);
     if (!active || blockStart == null) return null;
     const blockWeeks = active.plannedWeeks ?? active.durationWeeks ?? 5;
@@ -298,23 +298,34 @@ export async function getAchievedWeeklyPeaks(userId) {
  * fallback chain (blockSeed.resolveSeedRange). `intent` is the advisor
  * button the user tapped ('repeat' | 'adjust'); the finished block's
  * ledger is computed (and persisted) on demand. Returns
- * { version, intent, ranges: { [muscle]: { startSets, peakSets, source } } }
- * or null when nothing beyond the template ramp is known.
+ * { version, intent, sourceMesocycleId, ranges } or null on failure.
  */
-export async function buildSeedRangesForNextBlock(userId, { intent = 'adjust', userProfile = null } = {}) {
+export async function buildSeedRangesForNextBlock(userId, { intent = 'adjust', userProfile = null, tier = 'free' } = {}) {
   try {
     const mesos = await getAllMesocyclesForUser(userId);
-    // The block being decided on: the most recent one with a start date.
+    // The block being decided on: the most recent one with a start date,
+    // and only when it is genuinely FINISHED (awaitingDecision) — a
+    // mid-block restart seeds without a ledger (review #14).
     const current = mesos
       .filter((m) => toMs(m.startDate) != null)
       .sort((a, b) => toMs(b.startDate) - toMs(a.startDate))[0] ?? null;
+    const currentFinished = current
+      ? getBlockStatus(toMs(current.startDate), current.plannedWeeks ?? current.durationWeeks ?? 5).awaitingDecision
+      : false;
 
-    const ledger = current
-      ? await computeAndStoreBlockLedger(userId, current.id, { userProfile })
+    const ledger = current && currentFinished
+      ? await computeAndStoreBlockLedger(userId, current.id, { userProfile, tier })
       : null;
 
+    // The just-finished block's ledger IS history now: splice the fresh
+    // record into the local view so the learned-range replay sees it
+    // (review #3 — the stale read left the memory one block behind).
+    const mesosForReplay = ledger
+      ? mesos.map((m) => (m.id === current.id ? { ...m, blockLedger: JSON.stringify(ledger) } : m))
+      : mesos;
+
     const manualTable = await getManualLandmarks(userId);
-    const adaptedTable = await getAdaptedLandmarks(userId, { tier: 'pro' }).catch(() => null);
+    const adaptedTable = await getAdaptedLandmarks(userId, { tier }).catch(() => null);
     const suppressed = await readSuppression(userId);
     const nextStart = toMs(current?.startDate) != null
       ? toMs(current.startDate) + (current.plannedWeeks ?? current.durationWeeks ?? 5) * WEEK_MS
@@ -323,30 +334,55 @@ export async function buildSeedRangesForNextBlock(userId, { intent = 'adjust', u
     const ranges = {};
     for (const muscle of Object.keys(VOLUME_LANDMARKS)) {
       const research = VOLUME_LANDMARKS[muscle];
-      const history = nextStart != null ? priorLedgerEntries(
-        // Include the just-finished block: its stored ledger is history now.
-        mesos, nextStart, muscle,
-      ) : [];
+      const history = nextStart != null
+        ? priorLedgerEntries(mesosForReplay, nextStart, muscle)
+        : [];
       const learned = computeLearnedRange({
-        prior: profilePrior(muscle, userProfile),
+        prior: profileAdjustedPrior(muscle, userProfile),
         researchMev: research?.mev ?? 0,
         adaptedMrv: adaptedTable?.[muscle]?.isAdapted ? adaptedTable[muscle].mrv : null,
         ledgerHistory: history,
         muscle,
       });
+      const manualEntry = manualTable?.[muscle] ?? null;
       ranges[muscle] = resolveSeedRange({
-        manual: manualTable?.[muscle] ?? null,
+        manual: isManualEdit(manualEntry, research) ? manualEntry : null,
         ledgerEntry: ledger?.entries?.find?.((e) => e.muscle === muscle) ?? null,
         learnedRange: learned.isLearned ? learned : null,
-        profileAdjusted: profilePrior(muscle, userProfile),
+        profileAdjusted: profileAdjustedPrior(muscle, userProfile),
         research,
         suppressed,
         intent,
       });
     }
-    return { version: 1, intent, ranges };
+    return { version: 1, intent, sourceMesocycleId: ledger ? current.id : null, ranges };
   } catch (e) {
     logError('blockLedgerRunner.buildSeedRangesForNextBlock', e, { userId });
     return null;
+  }
+}
+
+/**
+ * Record how the finished block's recommendation was actually USED
+ * (founder Stage 6 order B: used, overridden or bypassed) onto its
+ * stored ledger — the provenance that answers "did the user take the
+ * coach's numbers". Best-effort and last-write-wins: it records the
+ * decision that actually created the next block.
+ */
+export async function recordSeedOutcome(userId, sourceMesocycleId, { intent = null, ranges = null } = {}) {
+  try {
+    if (!sourceMesocycleId) return;
+    const mesos = await getAllMesocyclesForUser(userId);
+    const meso = mesos.find((m) => m.id === sourceMesocycleId);
+    if (!meso?.blockLedger) return;
+    const record = JSON.parse(meso.blockLedger);
+    const perMuscle = {};
+    for (const [muscle, r] of Object.entries(ranges ?? {})) {
+      perMuscle[muscle] = { source: r.source, startSets: r.startSets, peakSets: r.peakSets };
+    }
+    record.seedOutcome = { intent, recordedAt: Date.now(), perMuscle };
+    await storeBlockLedger(sourceMesocycleId, JSON.stringify(record));
+  } catch (e) {
+    logError('blockLedgerRunner.recordSeedOutcome', e, { userId, sourceMesocycleId });
   }
 }
