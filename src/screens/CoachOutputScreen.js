@@ -1290,7 +1290,16 @@ export default function CoachOutputScreen({ navigation, route }) {
       // the upward-apply guard's premise fresh for the rest of the session.
       setNextWeekIsDeload(true);
       const rows = await getPlannedMuscleVolume(nextTrainingWeekId);
-      const changes = computeDeloadVolume(rows);
+      // Stage 7 (§3.4): the deload lands at the strain-scaled share of
+      // each muscle's ACHIEVED peak this block rather than a flat MEV
+      // cut. Strain maps from the persisted weekly recovery read; a
+      // failed peak load degrades to the legacy flat cut, never blocks.
+      // eslint-disable-next-line global-require
+      const { getAchievedWeeklyPeaks } = require('../lib/blockLedgerRunner');
+      const peaks = await getAchievedWeeklyPeaks(user.id).catch(() => null);
+      const strainScore = output.recoveryFlag === 'deload_suggested' ? 4
+        : output.recoveryFlag === 'concerned' ? 2 : 0;
+      const changes = computeDeloadVolume(rows, peaks ? { peaks, strainScore } : null);
       for (const c of changes) {
         await upsertPlannedMuscleVolume({
           mesocycleWeekId: nextTrainingWeekId,

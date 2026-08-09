@@ -4137,12 +4137,16 @@ export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks,
           );
         }
         if (deloadWeek) {
+          // Stage 7 (§3.4): a ledger-sourced seed sizes its own deload
+          // week (strain-scaled share of the achieved peak, floored at
+          // MEV); every other source keeps the flat MEV recovery week.
+          const deloadPlanned = seeded ? (seed.deloadSets ?? mev) : mev;
           const id = `pmv_${deloadWeek.id}_${muscle}`;
           await d.runAsync(
             `INSERT OR IGNORE INTO planned_muscle_volume
                (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [id, deloadWeek.id, muscle, mev, mev, mav, mrv, source, now, now],
+            [id, deloadWeek.id, muscle, deloadPlanned, mev, mav, mrv, source, now, now],
           );
         }
       }

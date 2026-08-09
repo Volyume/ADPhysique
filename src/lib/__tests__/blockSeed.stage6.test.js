@@ -60,7 +60,7 @@ describe('the fallback order, exactly as ordered', () => {
       ledgerEntry: LEDGER_ENTRY,
       learnedRange: { floor: 9, ceiling: 16, isLearned: true },
     });
-    expect(out).toEqual({ startSets: 11, peakSets: 17, source: 'ledger' });
+    expect(out).toEqual({ startSets: 11, peakSets: 17, source: 'ledger', deloadSets: 10 });
   });
 
   test('3. the learned band seeds when no ledger exists', () => {
@@ -102,7 +102,7 @@ describe('what makes a ledger entry valid', () => {
 describe('advisor button semantics (§3.5)', () => {
   test("'repeat' forces a TRUE repeat from the ledger's observed numbers, not the proposal", () => {
     const out = seed({ ledgerEntry: LEDGER_ENTRY, intent: 'repeat' });
-    expect(out).toEqual({ startSets: 10, peakSets: 16, source: 'ledger' });
+    expect(out).toEqual({ startSets: 10, peakSets: 16, source: 'ledger', deloadSets: 10 });
   });
 
   test("'adjust' takes the full ledger proposal", () => {
@@ -115,7 +115,7 @@ describe('advisor button semantics (§3.5)', () => {
 describe('suppression posture (§3.8/D15: no upward carry anywhere)', () => {
   test('a suppressed ledger seed degrades to the repeat numbers', () => {
     const out = seed({ ledgerEntry: LEDGER_ENTRY, suppressed: true });
-    expect(out).toEqual({ startSets: 10, peakSets: 16, source: 'ledger' });
+    expect(out).toEqual({ startSets: 10, peakSets: 16, source: 'ledger', deloadSets: 10 });
   });
 
   test('a suppressed ledger REDUCTION still passes untouched', () => {
@@ -125,7 +125,7 @@ describe('suppression posture (§3.8/D15: no upward carry anywhere)', () => {
       proposal: { startSets: 8, peakSets: 14, stimulusChange: null, deferredToManual: false },
     };
     const out = seed({ ledgerEntry: strained, suppressed: true });
-    expect(out).toEqual({ startSets: 8, peakSets: 14, source: 'ledger' });
+    expect(out).toEqual({ startSets: 8, peakSets: 14, source: 'ledger', deloadSets: 10 });
   });
 
   test('suppression skips the learned band for the conservative default', () => {

@@ -1034,6 +1034,27 @@ queue paused here for the founder review per D55.
   peak scaled by strain, seeded deload week likewise; 10-day window
   stays a proposal and its COPY lands with Stage 8's explanation
   surfaces).
+- Stage 7 LANDED (2026-08-09): strain-aware deload (§3.4).
+  deloadShare: 60% of the achieved peak at strain 0 stepping five
+  points per strain point to the 40% floor at strain >= 4.
+  computeDeloadVolume(rows, { peaks, strainScore }): each muscle lands
+  at max(MEV, achieved peak x share), only ever reducing, legacy
+  flat-MEV byte-identical without context. The coach deload apply
+  passes the active block's achieved weekly peaks
+  (blockLedgerRunner.getAchievedWeeklyPeaks) with strain mapped from
+  the persisted weekly recovery read (deload_suggested -> 4,
+  concerned -> 2, else 0); a failed peak load degrades to the legacy
+  cut, never blocks. Ledger-sourced seeds carry deloadSets (share of
+  the entry's achieved peak using its recovery_cost_weight), and the
+  seeded deload week consumes it; non-ledger sources keep flat MEV.
+  RIR 4 untouched. The 10-day window stays a PROPOSAL
+  (ledger.proposedRecoveryDays); its user-facing copy lands in Stage 8.
+  Pins: deload.stage7.test.js (15, written first); blockSeed exact-
+  shape pins re-anchored (+deloadSets).
+  Next: Stage 8 explanation layer (block-start seed lines from the
+  WRITTEN plan rows, BlockReflection ledger section, PlansScreen
+  decision rationales + 10-day proposal line, CoachOutput ramp
+  position; never claim an adjustment unless the plan contains it).
 - Stage 1 REVIEW REMEDIATION LANDED (2026-08-09, adversarial review vs
   blueprint; all 12 findings fixed, none parked): partner block-finished
   milestone re-keyed to awaitingDecision && weeksOverdue===0 (was dead on

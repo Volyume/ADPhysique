@@ -207,24 +207,42 @@ export function computeRefeedDay(nutrition) {
   };
 }
 
+// Stage 7 (§3.4, founder order 2026-08-09): the strain-scaled deload
+// share. 60% of the achieved peak on a fresh block, stepping down five
+// points per strain point to a 40% floor at strain >= 4. The strain
+// score is interBlock's recovery_cost_weight (or the persisted weekly
+// recovery read mapped by the caller).
+export function deloadShare(strainScore) {
+  const strain = Number.isFinite(strainScore) ? Math.max(0, strainScore) : 0;
+  return Math.max(0.4, 0.6 - 0.05 * Math.min(strain, 4));
+}
+
 /**
- * Compute the planned-volume changes for a deload apply: cut every
- * muscle to its floor (mev) for the week, the same level the scheduled
- * recovery week is seeded at. Returns only the muscles that actually
- * move, shaped for upsertPlannedMuscleVolume.
+ * Compute the planned-volume changes for a deload apply. With a context
+ * ({ peaks: { [muscle]: achievedWeeklyPeak }, strainScore }) each muscle
+ * lands at max(MEV, achieved peak x the strain-scaled share) — §3.4's
+ * personalised deload, anchored to what the muscle actually DID this
+ * block rather than a flat floor. Without context (or for a muscle with
+ * no recorded peak) the legacy flat-MEV cut is byte-identical. A deload
+ * can only ever reduce a row; rows that would not move are omitted.
  *
  * @returns {Array<{ muscle, plannedSets, mev, mav, mrv }>}
  */
-export function computeDeloadVolume(plannedRows) {
+export function computeDeloadVolume(plannedRows, context = null) {
   if (!Array.isArray(plannedRows)) return [];
+  const share = deloadShare(context?.strainScore);
   const changes = [];
   for (const row of plannedRows) {
     const mev = row.mev ?? 0;
     const current = row.planned_sets ?? 0;
-    if (current > mev) {
+    const peak = context?.peaks?.[row.muscle];
+    const target = Number.isFinite(peak) && peak > 0
+      ? Math.max(mev, Math.round(peak * share))
+      : mev;
+    if (current > target) {
       changes.push({
         muscle: row.muscle,
-        plannedSets: mev,
+        plannedSets: target,
         mev: row.mev ?? null,
         mav: row.mav ?? null,
         mrv: row.mrv ?? null,

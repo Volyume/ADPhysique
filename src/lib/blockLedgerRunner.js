@@ -263,6 +263,37 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
 }
 
 /**
+ * The ACTIVE block's achieved weekly peak per muscle so far — the
+ * strain-aware deload apply's anchor (Stage 7, §3.4). Returns
+ * { [muscle]: peakSets } or null when no live block exists.
+ */
+export async function getAchievedWeeklyPeaks(userId) {
+  try {
+    const mesos = await getAllMesocyclesForUser(userId);
+    const active = mesos.find((m) => m.isActive === 1 || m.isActive === true) ?? null;
+    const blockStart = toMs(active?.startDate);
+    if (!active || blockStart == null) return null;
+    const blockWeeks = active.plannedWeeks ?? active.durationWeeks ?? 5;
+    const deloadWeekIndex = active.deloadWeek ?? blockWeeks;
+    const [training, exercisesById] = await Promise.all([
+      getBlockTrainingData(userId, active.id),
+      getExerciseRowsById(userId),
+    ]);
+    const peaks = {};
+    for (const muscle of Object.keys(VOLUME_LANDMARKS)) {
+      const peak = computeAchievedWeeklyPeak({
+        sets: training.sets, exercisesById, muscle, blockStart, blockWeeks, deloadWeekIndex,
+      });
+      if (peak > 0) peaks[muscle] = peak;
+    }
+    return peaks;
+  } catch (e) {
+    logError('blockLedgerRunner.getAchievedWeeklyPeaks', e, { userId });
+    return null;
+  }
+}
+
+/**
  * Resolve the next block's per-muscle seed ranges through the founder's
  * fallback chain (blockSeed.resolveSeedRange). `intent` is the advisor
  * button the user tapped ('repeat' | 'adjust'); the finished block's

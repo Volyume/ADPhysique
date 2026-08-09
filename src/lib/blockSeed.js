@@ -23,7 +23,7 @@
  * is skipped for the conservative profile/research default; a manual
  * override is the user's own explicit numbers and stands.
  */
-import { ABSOLUTE_WEEKLY_SET_CEILING } from './coachApply';
+import { ABSOLUTE_WEEKLY_SET_CEILING, deloadShare } from './coachApply';
 
 const num = (v, fallback) => {
   const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
@@ -95,7 +95,21 @@ export function resolveSeedRange({
       peak = Math.min(peak, repeatPeak);
     }
     const { s, p } = clamp(start, peak);
-    return { startSets: s, peakSets: p, source: 'ledger' };
+    // Stage 7 (§3.4): only a ledger seed carries an achieved peak plus
+    // strain evidence, so only it can size its own deload week — the
+    // strain-scaled share of what the muscle actually did, floored at
+    // research MEV. Other sources leave the seeded deload at MEV.
+    const achievedPeak = num(observed?.achievedPeak, null);
+    const out = { startSets: s, peakSets: p, source: 'ledger' };
+    if (achievedPeak != null && achievedPeak > 0) {
+      const strain = num(
+        ledgerEntry?.evidence?.find?.((e) => e?.signal === 'recovery_cost_weight')?.value, 0,
+      );
+      out.deloadSets = Math.round(Math.max(
+        researchMev ?? 0, achievedPeak * deloadShare(strain),
+      ));
+    }
+    return out;
   }
 
   // 3. The learned band — skipped under suppression (its ceiling may sit
