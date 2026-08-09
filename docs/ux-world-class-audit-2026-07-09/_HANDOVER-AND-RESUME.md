@@ -202,9 +202,11 @@ is the resume point, not this file.
   density (weeklyCoach), learned working range (learnedRange), the full
   ledger wiring (gather/runner/seeding/PlansScreen, createMesocycle
   deleted), strain-aware deload, and the explanation layer
-  (blockExplain + four surfaces). Reviews: Stages 1-5 reviewed and
-  remediated; Stage 6 and Stage 7+8 review agents in flight at handover
-  time - land their findings before the build.
+  (blockExplain + four surfaces). Reviews: ALL EIGHT stages adversarially
+  reviewed and remediated (Stage 6 review + the founder's final delta +
+  the Stage 7-8 review landed 2026-08-09 as the FINAL REMEDIATION BATCH -
+  see the taskboard record and D91 rulings 14-25; one explicit deferral,
+  D91-24; e2e synthetic-athlete suite adaptiveBlock.e2e.test.js).
 
 ADDITIONAL DEVICE CHECKS for Stages 6-8 (same single EAS build):
 10) Finish a block (start date 6+ weeks back), open Train: the decision
@@ -214,23 +216,39 @@ ADDITIONAL DEVICE CHECKS for Stages 6-8 (same single EAS build):
    signals ran together, a 10-day recovery line appears, ending "Your
    call."
 11) Tap "Continue with adjustments": a new block starts; open the Home
-   block sheet - up to three lines like "Chest starts at 11 sets,
-   climbing to 17 by the final week... (set by how your last block
-   went)". A first-ever block shows NO such lines (nothing to claim).
+   block sheet - up to three lines like "Chest: 11 sets in week 1,
+   building to 17 by week 4, then a recovery week (set by how your last
+   block went)". A first-ever block shows NO such lines (nothing to
+   claim). If the card instead offered "Continue this programme" (a
+   true repeat), the muscle-by-muscle rationale lines do NOT appear on
+   it (they would promise changes that button does not make); the full
+   story still shows on the old block's Block summary.
 12) Open the old block's Block summary: a "What this block showed"
    section lists each muscle's verdict.
 13) Weekly coach, mid-block: the training note opens "Week N of M in
-   your block." and only mentions the coach adding sets AFTER you
-   tapped Apply.
-14) Coach deload apply mid-block: the recovery week's targets now sit
-   at roughly half your heaviest week (not a flat floor), lower when
-   the week's recovery read was concerned.
+   your block.", names the climb only when next week's written plan is
+   genuinely higher ("The planned climb adds N sets next week."), and
+   only mentions the coach adding sets AFTER you tapped Apply AND it
+   changed at least one muscle.
+14) Coach deload apply mid-block: every muscle's recovery target drops
+   below its current row (never a no-op), scaled 60% down to 40% of its
+   recent working volume as the week's recovery read worsens; the
+   applied row states the share. The dose can sit below MEV now
+   (founder ruling: MEV is not a recovery-week minimum).
 15) Calm-mode spot-check on the new block: seed lines never propose
    more than the last block ran (suppression degrades to repeat).
 
-FOUNDER ACTION BEFORE THE BUILD: apply supabase/migrate_131 (say "run
-against production") - the sync push of block_ledger rejects without
-it.
+FOUNDER ACTION BEFORE THE BUILD (HARD RELEASE GATE): apply
+supabase/migrate_131 (say "run against production") - the sync push of
+block_ledger rejects without it. Claude will NOT run it (founder
+order). build-android.yml builds every push to main, so artefacts
+built from main at/after 30fb2f53 already carry the block_ledger push:
+do not UPLOAD/SHIP any of them until the founder confirms migrate_131
+ran successfully. Ordering: after migrate_129, per the numbering.
+16) Calm-mode / open-ED-flag deload spot-check: with calm mode on,
+   restarting with adjustments never sizes the recovery week above the
+   flat MEV week, and no seed starts above the last block's own
+   numbers.
 
 DEVICE CHECKLIST for the lifecycle changes (single EAS build, physical
 Android; run with a block whose start date is set 6+ weeks back so it is

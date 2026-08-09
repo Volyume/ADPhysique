@@ -4120,10 +4120,17 @@ export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks,
             startSets: seed.startSets,
             peakSets: seed.peakSets,
             accumWeeks: Math.max(1, totalAcc),
-            deloadSets: mev,
+            deloadSets: seed.deloadSets ?? mev,
           })
           : null;
         const source = seeded ? `seed_${seed.source}` : 'template';
+        // Stage 6 review #7: the row's [mev, mrv] is computeVolumeApply's
+        // clamp band. A seed can legitimately sit above the research MRV
+        // (its ceiling is the learned/adapted band, capped at 30), so the
+        // row's mrv must accommodate the seeded peak or the coach's next
+        // "add sets" apply would CLAMP the muscle back down. mev stays
+        // the research floor anchor, untouched.
+        const rowMrv = seeded ? Math.max(mrv, seed.peakSets) : mrv;
         for (let i = 0; i < accWeeks.length; i++) {
           const week = accWeeks[i];
           const progress = totalAcc <= 1 ? 1 : i / (totalAcc - 1);
@@ -4133,20 +4140,22 @@ export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks,
             `INSERT OR IGNORE INTO planned_muscle_volume
                (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [id, week.id, muscle, planned, mev, mav, mrv, source, now, now],
+            [id, week.id, muscle, planned, mev, mav, rowMrv, source, now, now],
           );
         }
         if (deloadWeek) {
           // Stage 7 (§3.4): a ledger-sourced seed sizes its own deload
           // week (strain-scaled share of the achieved peak, floored at
-          // MEV); every other source keeps the flat MEV recovery week.
-          const deloadPlanned = seeded ? (seed.deloadSets ?? mev) : mev;
+          // deloadFloor); every other source keeps the flat MEV recovery
+          // week. The value is the ramp's own tail so the two can never
+          // diverge (review #13).
+          const deloadPlanned = seeded ? targets[targets.length - 1] : mev;
           const id = `pmv_${deloadWeek.id}_${muscle}`;
           await d.runAsync(
             `INSERT OR IGNORE INTO planned_muscle_volume
                (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [id, deloadWeek.id, muscle, deloadPlanned, mev, mav, mrv, source, now, now],
+            [id, deloadWeek.id, muscle, deloadPlanned, mev, mav, rowMrv, source, now, now],
           );
         }
       }
@@ -4219,7 +4228,8 @@ export async function getPlannedMuscleVolumeForBlock(mesocycleId) {
     return await d.getAllAsync(
       `SELECT pmv.*, mw.week_index FROM planned_muscle_volume pmv
        JOIN mesocycle_weeks mw ON mw.id = pmv.mesocycle_week_id
-       WHERE mw.mesocycle_id = ?`,
+       WHERE mw.mesocycle_id = ?
+       ORDER BY mw.week_index ASC, pmv.muscle ASC`,
       [mesocycleId],
     );
   } catch (_e) {

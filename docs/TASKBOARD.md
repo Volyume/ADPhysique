@@ -976,7 +976,13 @@ queue paused here for the founder review per D55.
   poisons the batch); pull stringifies jsonb back to TEXT and
   PRESERVES a local ledger when the cloud row carries none (the
   INSERT OR REPLACE wipe hazard). FOUNDER ACTION QUEUED: "run against
-  production" for migrate_131 before the next EAS build.
+  production" for migrate_131 before the next EAS build. GATE, precise
+  wording: build-android.yml builds on every push to main, so artefacts
+  BUILT from main at/after 30fb2f53 (the block_ledger push line) exist
+  regardless - the gate is DO NOT UPLOAD/SHIP any such artefact until
+  the founder confirms migrate_131 ran successfully against production.
+  Claude must NOT run migrate_131 itself (founder final order,
+  verbatim: "DO NOT run migrate_131 against production yourself").
 - Stage 5 REVIEW REMEDIATION LANDED (2026-08-09; review executed the
   module + 5000-case fuzz + mutation run; both blockers + all defects
   fixed): the research-MEV anchor now OUT-RANKS every cap (52 real
@@ -1070,9 +1076,44 @@ queue paused here for the founder review per D55.
   rows) + recovery proposal; BlockReflection "What this block showed"
   section from the stored ledger; CoachOutput training-card note gains
   the ramp position.
-  CAMPAIGN REMAINING: Stage 6 adversarial review findings (agent out),
-  Stage 7+8 review agent, founder device walk, migrate_131 apply
-  (founder phrase) BEFORE next build.
+  CAMPAIGN REMAINING: founder device walk (checklist in the handover),
+  migrate_131 apply (founder phrase "run against production") BEFORE
+  the next EAS build ships.
+- FINAL REMEDIATION BATCH LANDED (2026-08-09; founder final order +
+  Stage 6 review + Stage 7-8 adversarial review; every finding fixed,
+  ONE explicit deferral recorded as D91-24, nothing silently parked).
+  Founder Stage 7 refinement built: deloadFloor = MEV/2 min 1
+  (coachApply) - MEV never forces a recovery week UPWARD (D91-14);
+  strain muscle-specific (per-muscle strains map + per-entry
+  recovery_cost_weight, D91-15); founder monotonicity sentence pinned
+  verbatim (deload.stage7). Review blockers: deloadSets clamped to
+  min(startSets, 30) (D91-18); suppression withholds deloadSets - flat
+  MEV recovery week for flagged users (D91-19, ED-safety); Plans card
+  rationale rows render only above the 'adjust' button that applies
+  them, recovery-proposal line stays for all post_recovery (D91-22).
+  Defects: share applies to peak CAPPED at the row/seeded peak so a
+  deload is never a no-op (D91-17); strain fails CLOSED to heavy
+  (D91-16); integer share maths (no float half-loss); repeat carries no
+  deloadSets (D91-20); ramp line derives its climb from WRITTEN weekly
+  totals + names the magnitude, coach clause needs musclesChanged>0,
+  only rendered for the CURRENT week; block-start lines name the peak
+  week (never "final week"), flat seeds "held steady", colon phrasing
+  (plural names), source taken from the week-1 row with ORDER BY
+  week_index (row-order bug), coach-raised weeks excluded from the seed
+  peak; Home sheet skips seed lines when awaitingDecision; deload copy
+  made qualitative ("fewer sets"; 2 snapshots re-anchored, D91-23);
+  getAchievedWeeklyPeaks skips deleted rows + newest-active;
+  PlansScreen ledger-story request guard. INSUFFICIENT_DATA never
+  seeds as 'ledger' (D91-21). Tests: deload.stage7 rebuilt (30 pins),
+  blockExplain.stage8 re-anchored + review pins, blockSeed.stage6
+  re-anchored (4), NEW adaptiveBlock.e2e.test.js - the founder's
+  synthetic athlete campaign (six muscles/six outcomes, repeat-vs-
+  adjust PERMANENT regression, suppression/stale/manual/null-ledger
+  variants, gather-extraction pins, sync-authority + provenance
+  source pins, chain purity).
+  FUTURE (recorded, founder order - do NOT build yet): training-epoch /
+  learned-ceiling freshness for long layoffs, detraining and profile
+  change; no arbitrary weekly decay (D91-25).
 - Stage 1 REVIEW REMEDIATION LANDED (2026-08-09, adversarial review vs
   blueprint; all 12 findings fixed, none parked): partner block-finished
   milestone re-keyed to awaitingDecision && weeksOverdue===0 (was dead on

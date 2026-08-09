@@ -2300,3 +2300,66 @@ building Stages 1-2 (all criterion-ruled: best for end users, never effort):
    recovery read (deload_suggested -> 4, concerned -> 2, else 0). The
    weekly ramp line claims a coach adjustment only when one was
    actually applied.
+
+## D91 addendum — founder final order + Stage 7-8 review rulings (D33, 2026-08-09)
+
+14. (FOUNDER RULING, verbatim authority) "Research MEV remains a safety
+   reference but should not force a deload UPWARD when a
+   percentage-based recovery dose is appropriately lower … MEV is a
+   productive-training landmark, not automatically a recovery-week
+   minimum." The recovery-week lower clamp is deloadFloor = half of
+   research MEV, never below one set (coachApply.deloadFloor). MEV keeps
+   its full rank everywhere else (§3.8 floor anchor in seeding and the
+   learned range is untouched). Pinned with the founder's sentence:
+   "Greater strain can only make a recovery prescription easier or
+   longer; it can never make it harder or shorter" (deload.stage7).
+15. (FOUNDER RULING) Deload strain is muscle-specific: computeDeloadVolume
+   takes per-muscle strains with the block-level score as fallback, and
+   the seeded deload reads each ledger entry's own recovery_cost_weight.
+16. (Lead ruling, review #13, safety posture) An UNREADABLE strain fails
+   CLOSED to heavy — the smallest recovery dose — mirroring the
+   runner's fail-closed suppression read. Never the lightest cut.
+17. (Lead ruling, review #4) The deload share applies to the muscle's
+   peak CAPPED at the row it cuts (and, for seeds, at the seeded peak):
+   achieved peaks carry secondary half-credit while planned rows count
+   direct sets, so the uncapped share could make the recovery week a
+   no-op. Capped, every deload is a genuine cut.
+18. (Lead ruling, review BLOCKER #1) deloadSets clamps to
+   min(startSets, ABSOLUTE_WEEKLY_SET_CEILING): a recovery week never
+   exceeds the block's own lightest training week nor the backstop.
+19. (Lead ruling, review BLOCKER #2, most-protective per D15/D91-11
+   precedent) Suppression (calm mode OR open ED flag) withholds
+   deloadSets entirely: a flagged user's recovery week stays the flat
+   research-MEV week. Block carry-over never raises a recovery week.
+20. (Lead ruling, review NIT #17) A true repeat carries no deloadSets:
+   "the block the user just ran, unchanged" includes its recovery week.
+21. (Lead ruling, founder e2e expectation) INSUFFICIENT_DATA is not a
+   recommendation: resolveSeedRange skips it so the learned band (real
+   prior evidence) speaks next, and the learned replay already ignores
+   it. Pinned in adaptiveBlock.e2e ("never seeds as ledger").
+22. (Lead ruling, review BLOCKER #3 vs the informed-autonomy ruling)
+   The Plans decision card renders the per-muscle rationale rows ONLY
+   above the 'adjust' button that actually applies them; 'repeat' and
+   'consider_rebuild' run a TRUE repeat, so forward-claiming rows would
+   lie there. The full reflection stays one tap away on BlockReflection
+   for every intent; the 10-day recovery proposal line (a user-call
+   statement, honest under any button) renders for all post_recovery.
+23. (Lead ruling, review #5) Deload copy is qualitative ("fewer sets",
+   "ease your sets right back") because the cut is now strain-scaled
+   per muscle; the applied row states the exact share after the fact
+   ("about N% of each muscle's recent working volume"). Two
+   whyThisTemplates snapshots re-anchored deliberately for this.
+24. (Explicit deferral, Stage 6 review #15, recorded per the no-silent-
+   parking rule) Weeks under an applied EARLY deload still count toward
+   the block's accumulation-week maths in the gather layer. The +2
+   deload-flag weight already forces those blocks down the protective
+   classification path, so the residual error is conservative
+   (downward); a structural fix would re-thread week semantics through
+   several pinned suites. Surfaced for founder review, not silently
+   parked: say the word and it gets built in full.
+25. (Recorded FUTURE task, founder order — do NOT build now) A
+   training-epoch / learned-ceiling freshness rule for long layoffs,
+   detraining and profile changes (the learned ceiling currently ages
+   only through new block evidence; stale-evidence holds cover overdue
+   blocks, not multi-month absences). No arbitrary weekly decay. On
+   docs/TASKBOARD.md as a future item.

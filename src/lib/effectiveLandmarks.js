@@ -73,10 +73,33 @@ export async function getEffectiveLandmarks(userId, { tier = 'free' } = {}) {
 }
 
 /**
+ * Whether a stored manual entry is a REAL user edit rather than an
+ * untouched research default. The volume-targets editor historically
+ * saved ALL muscles (defaults included) on any save, so a table entry's
+ * mere existence is not evidence the user chose that number — treating
+ * it as one silently disabled the whole adaptive layer for every muscle
+ * (Stage 6 review blocker #1). An entry counts as an edit only when at
+ * least one band differs from the research default; with no research
+ * row to compare against, the user's explicit table wins.
+ */
+export function isManualEdit(entry, research) {
+  if (!entry) return false;
+  if (!research) return true;
+  const n = (v) => {
+    const x = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
+    return Number.isFinite(x) ? x : null;
+  };
+  return ['mev', 'mav', 'mrv'].some((k) => {
+    const value = n(entry[k]);
+    return value != null && value !== research[k];
+  });
+}
+
+/**
  * The user's hand-set manual landmark table, or null. Exported (Stage 6,
  * 2026-08-09) so blockLedgerRunner can read the manual layer on its own —
  * a manual entry both wins the seeding fallback chain and marks the
- * muscle's ledger entry deferredToManual.
+ * muscle's ledger entry deferredToManual (via isManualEdit above).
  */
 export async function getManualLandmarks(userId) {
   if (!userId) return null;

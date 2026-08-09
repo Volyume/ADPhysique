@@ -148,6 +148,13 @@ export default function PlansScreen({ navigation }) {
 
   const scrollRef = useRef(null);
   const peekRef = useRef(null);
+  // Stage 6: re-entry guard for the block restart (the seed build is
+  // real work; a re-confirmed alert must never run two activations).
+  const restartingRef = useRef(false);
+  // Stage 7-8 review #21: monotonic request counter so a stale loadData
+  // (two rapid focuses racing across the ledger await) cannot overwrite
+  // the newest request's block-end story.
+  const ledgerLoadRef = useRef(0);
   useScrollToTop(scrollRef);
 
   useEffect(() => {
@@ -176,6 +183,7 @@ export default function PlansScreen({ navigation }) {
 
   async function loadData() {
     if (!user?.id) return;
+    const req = ++ledgerLoadRef.current;
     try {
       const [active, all, archived, tmpl, pwc, exc, block, folderRows] = await Promise.all([
         getActivePlan(user.id),
@@ -204,15 +212,29 @@ export default function PlansScreen({ navigation }) {
         // delta-composed rationales render verbatim, plus the
         // user-confirmed longer-recovery proposal when the ledger made
         // one. Best-effort: the card renders without it.
+        //
+        // Review blocker #3: the rationale rows make forward claims
+        // ("the next block starts 1 set higher") that only the 'adjust'
+        // recommendation's button actually applies — 'repeat' and
+        // 'consider_rebuild' both run a TRUE repeat. So the rows render
+        // only above the button that honours them; the full reflection
+        // stays one tap away on BlockReflection for every intent. The
+        // longer-recovery line is a user-call proposal, honest under any
+        // button, so it renders for all post_recovery cards.
         if (advice?.action === 'post_recovery') {
           try {
             // eslint-disable-next-line global-require
             const { computeAndStoreBlockLedger } = require('../lib/blockLedgerRunner');
             // eslint-disable-next-line global-require
             const { buildLedgerReflectionRows, recoveryProposalLine } = require('../lib/blockExplain');
-            const ledger = await computeAndStoreBlockLedger(user.id, block.id, { userProfile });
+            const ledger = await computeAndStoreBlockLedger(user.id, block.id, { userProfile, tier });
+            // Review #21: this await widens the race window between two
+            // rapid focuses; only the newest request may set the story.
+            if (req !== ledgerLoadRef.current) return;
             setLedgerStory({
-              rows: buildLedgerReflectionRows(ledger).slice(0, 4),
+              rows: advice?.nextBlock?.recommendation === 'adjust'
+                ? buildLedgerReflectionRows(ledger).slice(0, 4)
+                : [],
               recoveryLine: recoveryProposalLine(ledger),
             });
           } catch (_e) { setLedgerStory(null); }
@@ -274,26 +296,44 @@ export default function PlansScreen({ navigation }) {
         {
           text: 'Start new block',
           onPress: async () => {
+            // Stage 6 review #11: the seed build is real work; a
+            // re-confirmed alert must never run two activations.
+            if (restartingRef.current) return;
+            restartingRef.current = true;
             try {
-              logInfo('PlansScreen.blockRestart', { intent });
+              logInfo('PlansScreen.blockRestart', `intent=${intent}`);
               // Stage 6 (2026-08-09): the ledger seam goes live. The
               // finished block's ledger is computed (and persisted) and the
               // founder's fallback chain resolves each muscle's next-block
-              // range; 'repeat' forces a true repeat, 'adjust' takes the
-              // full proposals. A null result (no data, first block, any
-              // failure) falls back to the template ramp unchanged.
+              // range. Intent maps from the LABEL semantics (review
+              // blocker #2): only the 'adjust' recommendation — the
+              // "Continue with adjustments" button — applies the full
+              // ledger; 'repeat' AND 'consider_rebuild' (both labelled
+              // "Continue this programme") are true repeats. A null seed
+              // result falls back to the template ramp unchanged.
               // eslint-disable-next-line global-require
-              const { buildSeedRangesForNextBlock } = require('../lib/blockLedgerRunner');
+              const { buildSeedRangesForNextBlock, recordSeedOutcome } = require('../lib/blockLedgerRunner');
+              const seedIntent = intent === 'adjust' ? 'adjust' : 'repeat';
               const seedRanges = await buildSeedRangesForNextBlock(user.id, {
-                intent: intent === 'repeat' ? 'repeat' : 'adjust',
+                intent: seedIntent,
                 userProfile,
+                tier,
               }).catch(() => null);
               await activatePlanWithBlock(user.id, activePlan.id, planHeadingName(activePlan.name), { ledger: seedRanges });
+              // Provenance: record on the finished block's ledger how its
+              // recommendation was actually used (best-effort).
+              if (seedRanges?.sourceMesocycleId) {
+                recordSeedOutcome(user.id, seedRanges.sourceMesocycleId, {
+                  intent: seedIntent, ranges: seedRanges.ranges,
+                }).catch(() => {});
+              }
               await AsyncStorage.removeItem(BLOCK_SNOOZE_KEY).catch(() => {});
               await loadData();
             } catch (e) {
               logError('PlansScreen.handleRestartPlan', e, { userId: user?.id, planId: activePlan?.id, intent });
               toast.show("Couldn't restart plan, try again", { variant: 'error' });
+            } finally {
+              restartingRef.current = false;
             }
           },
         },
@@ -744,21 +784,26 @@ export default function PlansScreen({ navigation }) {
                 <Text style={[styles.nextBlockBody, live.nextBlockBody]}>{blockAdvice.nextBlock.body}</Text>
 
                 {/* Stage 8 (§3.6): the block-end story, muscle by muscle,
-                    each line the ledger's own delta-composed rationale. */}
-                {blockAdvice.action === 'post_recovery' && ledgerStory?.rows?.length ? (
-                  <View style={styles.ledgerStory}>
-                    {ledgerStory.rows.map((row) => (
-                      <Text key={row.muscle} style={[styles.ledgerStoryLine, live.nextBlockBody]}>
-                        {row.rationale}
-                      </Text>
-                    ))}
-                    {ledgerStory.recoveryLine ? (
-                      <Text style={[styles.ledgerStoryLine, live.nextBlockBody]}>
-                        {ledgerStory.recoveryLine}
-                      </Text>
-                    ) : null}
-                  </View>
-                ) : null}
+                    each line the ledger's own delta-composed rationale.
+                    Rows are pre-gated to the 'adjust' recommendation in
+                    loadData (review blocker #3); the recovery proposal
+                    line is a user-call statement and renders for any
+                    post_recovery card. */}
+                {blockAdvice.action === 'post_recovery'
+                  && (ledgerStory?.rows?.length || ledgerStory?.recoveryLine) ? (
+                    <View style={styles.ledgerStory}>
+                      {(ledgerStory.rows || []).map((row) => (
+                        <Text key={row.muscle} style={[styles.ledgerStoryLine, live.nextBlockBody]}>
+                          {row.rationale}
+                        </Text>
+                      ))}
+                      {ledgerStory.recoveryLine ? (
+                        <Text style={[styles.ledgerStoryLine, live.nextBlockBody]}>
+                          {ledgerStory.recoveryLine}
+                        </Text>
+                      ) : null}
+                    </View>
+                  ) : null}
 
                 {/* CTAs only shown when block is complete and recovery is done */}
                 {blockAdvice.action === 'post_recovery' && (
