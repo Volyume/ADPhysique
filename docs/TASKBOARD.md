@@ -966,6 +966,17 @@ queue paused here for the founder review per D55.
   per muscle; PlansScreen builds+passes the ledger with intent;
   advisor 'Continue with adjustments' label returns WITH behaviour;
   createMesocycle deleted (test pin update).
+- Stage 6 PART 2 LANDED (2026-08-09): ledger persistence.
+  Local migration v69 (mesocycles.block_ledger TEXT, additive,
+  snapshot-guarded, benign on re-run; frontDelt/biceps last-N test
+  windows re-anchored +1). Cloud migrate_131 WRITTEN, NOT APPLIED
+  (founder-gated; ORDER: must run against production BEFORE the next
+  build ships, migrate_129 precedent). Sync round trip: push parses
+  the TEXT ledger to an object for jsonb (unparseable -> null, never
+  poisons the batch); pull stringifies jsonb back to TEXT and
+  PRESERVES a local ledger when the cloud row carries none (the
+  INSERT OR REPLACE wipe hazard). FOUNDER ACTION QUEUED: "run against
+  production" for migrate_131 before the next EAS build.
 - Stage 1 REVIEW REMEDIATION LANDED (2026-08-09, adversarial review vs
   blueprint; all 12 findings fixed, none parked): partner block-finished
   milestone re-keyed to awaitingDecision && weeksOverdue===0 (was dead on

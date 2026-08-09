@@ -2045,6 +2045,23 @@ const SCHEMA_MIGRATIONS = [
       );
     },
   ],
+
+  // ── Stage 6, adaptive mesocycle build (2026-08-09) ──────────────────────
+  // Purpose: persist the Block Ledger (interBlock.buildBlockLedger's JSON,
+  // LEDGER_VERSION-stamped) on the finished mesocycle row, so the next
+  // block's seeding (blockSeed.resolveSeedRange) and the learned working
+  // range (learnedRange.computeLearnedRange, a replay over these rows)
+  // have one store and one store only.
+  // Applied: LOCALLY via this user_version bump. Cloud counterpart is
+  // supabase/migrate_131_mesocycles_block_ledger.sql — founder-gated,
+  // and it must run against production BEFORE a build carrying the
+  // sync push of this column ships (migrate_129 precedent).
+  // Additive: yes (single nullable column). Safe to re-run: yes
+  // (isBenignMigrationError swallows duplicate-column). Rollback: drop
+  // nothing — a null column is inert to every reader.
+  [
+    'ALTER TABLE mesocycles ADD COLUMN block_ledger TEXT',
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {
@@ -7075,12 +7092,19 @@ export async function insertWorkoutFromCloud(userId, w) {
 export async function insertMesocycleFromCloud(userId, m) {
   const d = await db();
   const now = Date.now();
+  // Stage 6 (2026-08-09): INSERT OR REPLACE would WIPE a locally-computed
+  // Block Ledger whenever the cloud row predates migrate_131 (or was
+  // pushed by an older build). The ledger is NOT derivable, so preserve
+  // the local value when the cloud carries none.
+  const existing = await d.getFirstAsync(
+    'SELECT block_ledger FROM mesocycles WHERE id = ?', [m.id],
+  ).catch(() => null);
   await d.runAsync(
     `INSERT OR REPLACE INTO mesocycles
       (id, user_id, name, start_date, end_date, duration_weeks, planned_weeks,
        focus, block_type, rir_ladder, is_active, auto_regulation_enabled,
-       deload_week, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       deload_week, block_ledger, created_at, updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
       m.id, userId, m.name ?? null,
       m.start_date ?? null, m.end_date ?? null,
@@ -7100,6 +7124,11 @@ export async function insertMesocycleFromCloud(userId, m) {
       // unconditionally, which is the same certain derivation v68 uses. Fall
       // back to the schedule length rather than to null.
       m.deload_week ?? m.planned_weeks ?? m.duration_weeks ?? null,
+      // jsonb arrives as an OBJECT from supabase-js; the local column is
+      // TEXT, so stringify on the way in (and keep a plain string as-is).
+      m.block_ledger != null
+        ? (typeof m.block_ledger === 'string' ? m.block_ledger : JSON.stringify(m.block_ledger))
+        : (existing?.block_ledger ?? null),
       now, now,
     ],
   );

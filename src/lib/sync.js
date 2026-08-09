@@ -963,6 +963,16 @@ async function _pushMesocycles(sb, supabaseUserId, localUserId) {
         // (insertMesocycleFromCloud) already prefers deload_week when
         // present, so this closes the round trip.
         deload_week: m.deloadWeek ?? null,
+        // Stage 6 (2026-08-09): the Block Ledger JSON. Cloud column added by
+        // migrate_131 — ORDER MATTERS exactly like deload_week above: that
+        // migration must run against production before a build carrying
+        // this line ships, or the whole mesocycles upsert batch rejects.
+        // The pull side (insertMesocycleFromCloud) preserves a local ledger
+        // when the cloud row carries none, so the round trip cannot wipe.
+        // Parsed to an OBJECT for the jsonb column — a raw string would
+        // store double-encoded; unparseable local text pushes null rather
+        // than poisoning the batch.
+        block_ledger: (() => { try { return m.blockLedger ? JSON.parse(m.blockLedger) : null; } catch (_) { return null; } })(),
         focus: m.focus ?? null,
         is_active: !!m.isActive,
         updated_at: new Date(m.updatedAt ?? m.createdAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time
