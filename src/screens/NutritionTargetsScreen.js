@@ -579,7 +579,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 '• Fat: set by phase (0.7 to 1.0 g/kg bodyweight). Surplus phases use a lower fat target so carbs stay high for training performance. Deficit phases hold fat constant while carbs reduce first. Minimum 0.5 g/kg (never below 40 g) for hormonal health.\n' +
                 '• Carbs: all remaining calories after protein and fat are set.\n\n' +
                 'These are estimates. Adjust based on real-world progress over 2 to 4 weeks.\n\n' +
-                'The estimated range under your daily target is a plus or minus 10% band showing normal uncertainty in the estimate. Aim for the single target, not the edges of the range.'
+                'The estimated range under your daily target is a plus or minus 10% range showing normal uncertainty in the estimate. Aim for the single target, not the edges of the range.'
               }
             />
           </View>

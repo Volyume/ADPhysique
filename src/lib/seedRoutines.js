@@ -35,7 +35,7 @@ const LIBRARY_PLANS = [
   // ── 1. Aesthetic Upper Rotation ──────────────────────────────────────────
   {
     name: 'Aesthetic Upper Rotation',
-    description: 'Two-day upper-body rotation built around physique priorities: lat width, capped side delts, upper-chest fullness, and rear-delt health. Day 1 targets the back and posterior shoulder; Day 2 develops upper chest and lateral delt detail. Add a rep each session; once you hit the top of the rep range, add a little weight and start again. Stop 1 to 2 reps before failure on each set. Pair with any lower-body plan for a complete programme.',
+    description: 'Two-day upper-body rotation built around physique priorities: lat width, capped side delts, upper-chest fullness, and rear-delt health. Day 1 targets the back and posterior shoulder; Day 2 develops upper chest and lateral delt detail. Add a rep each session; once you hit the top of the rep range, add a little weight and start again. Stop 1 to 2 reps before failure on each set. Pair with any lower-body plan to cover the whole body.',
     tags: 'aesthetic upper bodybuilding gender:men goal:build_muscle days:2 featured',
     difficulty: 1,
     workouts: [
@@ -437,7 +437,7 @@ const LIBRARY_PLANS = [
   // ── 10. Chest & Shoulder Specialisation ──────────────────────────────────
   {
     name: 'Chest & Shoulder Specialisation',
-    description: 'A specialisation phase for lifters who want to prioritise chest and shoulder development. Sets for these muscles are increased well above what a balanced programme provides; all other muscle groups are maintained with enough work to hold what you have. Run for 6–8 weeks, then return to a balanced programme. Add reps, then weight, on all chest and shoulder work. Expect visible improvement in shoulder roundness and upper-chest fullness within 8–10 weeks. Stop 1 to 2 reps before failure on each set.',
+    description: 'A specialisation phase for lifters who want to prioritise chest and shoulder development. Sets for these muscles are increased well above what a balanced plan provides; all other muscle groups are maintained with enough work to hold what you have. Run for 6–8 weeks, then return to a balanced plan. Add reps, then weight, on all chest and shoulder work. Expect visible improvement in shoulder roundness and upper-chest fullness within 8–10 weeks. Stop 1 to 2 reps before failure on each set.',
     tags: 'weak_point bodybuilding chest shoulders aesthetic gender:all goal:build_muscle days:2',
     difficulty: 1,
     workouts: [
@@ -525,7 +525,7 @@ const LIBRARY_PLANS = [
   // ── 12. Leg Development Priority ─────────────────────────────────────────
   {
     name: 'Leg Development Priority',
-    description: 'For lifters whose legs are noticeably behind their upper body. Quad and hamstring sessions are increased above what a balanced programme provides; upper body is maintained at a lower frequency. Two leg sessions per week (one quad-focused, one glute and hamstring-focused), plus an upper-body maintenance day, produce consistent lower-body growth. Run for 8–12 weeks, then reassess. Add reps each session, then add weight when you reach the top of the range. Push leg compound movements close to failure. Leave 2 reps in the tank on isolation exercises.',
+    description: 'For lifters whose legs are noticeably behind their upper body. Quad and hamstring sessions are increased above what a balanced plan provides; upper body is maintained at a lower frequency. Two leg sessions per week (one quad-focused, one glute and hamstring-focused), plus an upper-body maintenance day, produce consistent lower-body growth. Run for 8–12 weeks, then reassess. Add reps each session, then add weight when you reach the top of the range. Push leg compound movements close to failure. Leave 2 reps in the tank on isolation exercises.',
     tags: 'weak_point legs quads hamstrings gender:all goal:build_muscle days:2',
     difficulty: 1,
     workouts: [
@@ -595,7 +595,7 @@ const LIBRARY_PLANS = [
   // ── 14. V-Taper Aesthetic (Lats + Side Delts) ────────────────────────────
   {
     name: 'V-Taper Aesthetic',
-    description: 'Building a tapered physique: wide upper back and capped side delts over a narrow waist. Back width and side delt work are both elevated above what a balanced programme provides; exercises that build waist width are excluded. Sessions are structured so the muscles that create visual width are trained first, when freshest. Run as a 6–8 week specialisation phase. Add reps each session, then add weight when you reach the top of the range. Stop 1 to 2 reps before failure on each set.',
+    description: 'Building a tapered physique: wide upper back and capped side delts over a narrow waist. Back width and side delt work are both elevated above what a balanced plan provides; exercises that build waist width are excluded. Sessions are structured so the muscles that create visual width are trained first, when freshest. Run as a 6–8 week specialisation phase. Add reps each session, then add weight when you reach the top of the range. Stop 1 to 2 reps before failure on each set.',
     tags: 'aesthetic v_taper bodybuilding back shoulders gender:men goal:build_muscle days:2',
     difficulty: 1,
     workouts: [
@@ -626,7 +626,7 @@ const LIBRARY_PLANS = [
   // ── 15. 2-Day Minimalist (Busy Schedule) ─────────────────────────────────
   {
     name: 'Minimalist 2×/Week',
-    description: 'Two full-body sessions per week, covering every major muscle group in around 60 minutes each. Suitable for maintenance periods, very busy schedules, or as a bridge between more demanding programmes. Sets are kept low: enough to preserve muscle and strength, but not enough for significant growth. Prioritises the highest-value compound movements. Add reps, then weight. Progress will be slower than with higher-frequency plans. Leave 2 reps in the tank on each set.',
+    description: 'Two full-body sessions per week, covering every major muscle group in around 60 minutes each. Suitable for maintenance periods, very busy schedules, or as a bridge between more demanding plans. Sets are kept low: enough to preserve muscle and strength, but not enough for significant growth. Prioritises the highest-value compound movements. Add reps, then weight. Progress will be slower than with higher-frequency plans. Leave 2 reps in the tank on each set.',
     tags: 'minimalist full_body gender:all goal:build_muscle days:2 short',
     difficulty: 1,
     workouts: [
@@ -694,7 +694,7 @@ const LIBRARY_PLANS = [
   // ── 17. Arms & Upper Body Aesthetic ──────────────────────────────────────
   {
     name: 'Arms & Upper Body Aesthetic',
-    description: 'Built for lifters who want to prioritise arm development alongside overall upper-body aesthetics. Bicep and tricep sets are increased well beyond what a balanced programme provides; chest, shoulders, and back are maintained with enough work to hold what you have. Three upper sessions per week, each with a different focus. Run for 6–8 weeks. Add reps, then weight, on every exercise. Stop 1 to 2 reps before failure on your last set.',
+    description: 'Built for lifters who want to prioritise arm development alongside overall upper-body aesthetics. Bicep and tricep sets are increased well beyond what a balanced plan provides; chest, shoulders, and back are maintained with enough work to hold what you have. Three upper sessions per week, each with a different focus. Run for 6–8 weeks. Add reps, then weight, on every exercise. Stop 1 to 2 reps before failure on your last set.',
     tags: 'aesthetic bodybuilding arms gender:all goal:build_muscle days:2 weak_point',
     difficulty: 1,
     workouts: [
@@ -736,7 +736,7 @@ const LIBRARY_PLANS = [
   // ── 18. Female Bodybuilding Foundation ───────────────────────────────────
   {
     name: 'Female Bodybuilding Foundation',
-    description: 'A physique-focused programme structured around the muscle groups most impactful for female bodybuilding and fitness: glutes, hamstrings, upper-body detail, and shoulder width. Two lower-body sessions per week give glutes and hamstrings the frequency needed for visible development; an upper-body session balances the physique. Add reps session by session, then add weight when you reach the top of the rep range. Stop 1 to 2 reps before failure on each set. Suitable for female lifters with 6 months or more of consistent resistance training.',
+    description: 'A physique-focused plan structured around the muscle groups most impactful for female bodybuilding and fitness: glutes, hamstrings, upper-body detail, and shoulder width. Two lower-body sessions per week give glutes and hamstrings the frequency needed for visible development; an upper-body session balances the physique. Add reps session by session, then add weight when you reach the top of the rep range. Stop 1 to 2 reps before failure on each set. Suitable for female lifters with 6 months or more of consistent resistance training.',
     tags: 'bodybuilding glutes hamstrings gender:women goal:build_muscle days:3 intermediate',
     difficulty: 1,
     workouts: [
@@ -776,7 +776,7 @@ const LIBRARY_PLANS = [
   // ── 19. Women's Full Body Foundation ──────────────────────────────────────
   {
     name: 'Women\'s Full Body Foundation',
-    description: 'Three full-body sessions per week covering every major muscle group with an emphasis on the lower body and glutes. Designed as a first programme for anyone starting out, or returning after a break. Each session covers a squat, a hinge, a push, and a pull: the four movements you need to build strength from scratch. Add small amounts of weight each week and focus on technique before chasing numbers. Leave 2 to 3 reps in the tank on every set.',
+    description: 'Three full-body sessions per week covering every major muscle group with an emphasis on the lower body and glutes. Designed as a first plan for anyone starting out, or returning after a break. Each session covers a squat, a hinge, a push, and a pull: the four movements you need to build strength from scratch. Add small amounts of weight each week and focus on technique before chasing numbers. Leave 2 to 3 reps in the tank on every set.',
     tags: 'beginner full_body gender:women goal:build_muscle days:3 audience:beginner featured',
     difficulty: 0,
     workouts: [
@@ -816,7 +816,7 @@ const LIBRARY_PLANS = [
   // ── 20. Women's Glute & Strength ──────────────────────────────────────────
   {
     name: 'Women\'s Glute & Strength',
-    description: 'A four-day programme built around glute and hamstring development, with upper-body strength work to balance proportions. Days one and three focus on the lower body with a different emphasis each session: one heavier and compound-led, the other detail-oriented. Days two and four train the upper body with enough sets to build visible strength in the shoulders, back, and arms. Progress by adding weight when all reps are completed with good technique.',
+    description: 'A four-day plan built around glute and hamstring development, with upper-body strength work to balance proportions. Days one and three focus on the lower body with a different emphasis each session: one heavier and compound-led, the other detail-oriented. Days two and four train the upper body with enough sets to build visible strength in the shoulders, back, and arms. Progress by adding weight when all reps are completed with good technique.',
     tags: 'intermediate upper_lower gender:women goal:build_muscle days:4 glutes featured',
     difficulty: 1,
     workouts: [
@@ -866,7 +866,7 @@ const LIBRARY_PLANS = [
   // ── 21. Dumbbell Only, Full Body ─────────────────────────────────────────
   {
     name: 'Dumbbell Only: Full Body',
-    description: 'A three-day full-body programme that requires nothing but a set of dumbbells. Every major muscle group is trained each session using dumbbell-friendly movement patterns: squat, hinge, press, and row. Great for home training, travel, or gyms with limited equipment. Progress by adding reps first. Once you hit the top of the rep range, move up to the next dumbbell weight.',
+    description: 'A three-day full-body plan that requires nothing but a set of dumbbells. Every major muscle group is trained each session using dumbbell-friendly movement patterns: squat, hinge, press, and row. Great for home training, travel, or gyms with limited equipment. Progress by adding reps first. Once you hit the top of the rep range, move up to the next dumbbell weight.',
     tags: 'full_body equipment:dumbbell gender:all goal:build_muscle days:3 beginner intermediate featured',
     difficulty: 0,
     workouts: [
@@ -947,7 +947,7 @@ const LIBRARY_PLANS = [
   // ── 23. Men's Physique, Off-Season ──────────────────────────────────────
   {
     name: "Men's Physique",
-    description: "Five-day programme built around the Men's Physique division. Judged from the waist up in board shorts, the division rewards a broad back, capped shoulders, full chest, and defined arms over a lean midsection. Legs are trained once per week to maintain health and proportion. The programme runs for 8 to 12 weeks, prioritising shoulder width, upper-chest development, lat width, and rear-delt health. Progress conservatively. This is a muscle-building phase, not a strength-testing phase.",
+    description: "Five-day plan built around the Men's Physique division. Judged from the waist up in board shorts, the division rewards a broad back, capped shoulders, full chest, and defined arms over a lean midsection. Legs are trained once per week to maintain health and proportion. The plan runs for 8 to 12 weeks, prioritising shoulder width, upper-chest development, lat width, and rear-delt health. Progress conservatively. This is a muscle-building phase, not a strength-testing phase.",
     tags: 'bodybuilding category:division division:mens_physique gender:men goal:stage_prep days:5 advanced intermediate featured',
     difficulty: 2,
     workouts: [
@@ -1008,7 +1008,7 @@ const LIBRARY_PLANS = [
   // ── 24. Bikini, Off-Season ───────────────────────────────────────────────
   {
     name: 'Bikini',
-    description: "Four-day programme built around the Bikini division. Bikini rewards a lean, athletic physique with developed glutes, balanced shoulders, and a soft overall appearance, not extreme muscle mass. This programme trains glutes and hamstrings twice per week with a mix of heavy compound work and detail isolation, while upper body sessions build proportional shoulder width and a strong back. Progress on the compound movements week to week. The focus is building muscle and strength.",
+    description: "Four-day plan built around the Bikini division. Bikini rewards a lean, athletic physique with developed glutes, balanced shoulders, and a soft overall appearance, not extreme muscle mass. This plan trains glutes and hamstrings twice per week with a mix of heavy compound work and detail isolation, while upper body sessions build proportional shoulder width and a strong back. Progress on the compound movements week to week. The focus is building muscle and strength.",
     tags: 'bodybuilding category:division division:bikini gender:women goal:stage_prep days:4 intermediate featured',
     difficulty: 1,
     workouts: [
@@ -1058,7 +1058,7 @@ const LIBRARY_PLANS = [
   // ── 25. Wellness, Off-Season ─────────────────────────────────────────────
   {
     name: 'Wellness',
-    description: "Four to five days per week built around the Wellness division, the most lower-body-forward division in women's physique sport. Wellness rewards a heavily developed lower body (glutes, quads, and hamstrings) relative to a smaller, more moderate upper body. This programme trains the lower body four times per week with two different emphasis days, and upper body twice with a lower set count to keep it proportional. Progress on lower-body compounds is the priority.",
+    description: "Four to five days per week built around the Wellness division, the most lower-body-forward division in women's physique sport. Wellness rewards a heavily developed lower body (glutes, quads, and hamstrings) relative to a smaller, more moderate upper body. This plan trains the lower body four times per week with two different emphasis days, and upper body twice with a lower set count to keep it proportional. Progress on lower-body compounds is the priority.",
     tags: 'bodybuilding category:division division:wellness gender:women goal:stage_prep days:5 advanced intermediate',
     difficulty: 2,
     workouts: [
@@ -1118,7 +1118,7 @@ const LIBRARY_PLANS = [
   // ── 26. Classic Physique, Off-Season ─────────────────────────────────────
   {
     name: 'Classic Physique',
-    description: "Five-day programme for the Classic Physique division. Classic Physique is judged on balanced, symmetrical development: a wide back, capped shoulders, full chest, narrow waist, well-developed legs, and a V-taper reminiscent of the golden era of bodybuilding. Unlike Men's Physique, legs are displayed and are a significant judging criterion. This programme gives equal attention to both upper and lower body with a slight emphasis on the key visual areas: back width, shoulder caps, and upper-chest fullness.",
+    description: "Five-day plan for the Classic Physique division. Classic Physique is judged on balanced, symmetrical development: a wide back, capped shoulders, full chest, narrow waist, well-developed legs, and a V-taper reminiscent of the golden era of bodybuilding. Unlike Men's Physique, legs are displayed and are a significant judging criterion. This plan gives equal attention to both upper and lower body with a slight emphasis on the key visual areas: back width, shoulder caps, and upper-chest fullness.",
     tags: 'bodybuilding category:division division:classic_physique gender:men goal:stage_prep days:5 advanced',
     difficulty: 2,
     workouts: [
@@ -1180,7 +1180,7 @@ const LIBRARY_PLANS = [
   // ── 27. Figure, Off-Season ───────────────────────────────────────────────
   {
     name: 'Figure',
-    description: "Five-day programme for the Figure division. Figure sits between Bikini and Women's Physique in muscularity: athletic and muscular with visible shoulders, a strong and wide back, and proportional leg development. Shoulders and back are the priority visual features judged in Figure. This programme dedicates significant sets to back width, rear-delt development, and shoulder capping while maintaining balanced lower-body strength.",
+    description: "Five-day plan for the Figure division. Figure sits between Bikini and Women's Physique in muscularity: athletic and muscular with visible shoulders, a strong and wide back, and proportional leg development. Shoulders and back are the priority visual features judged in Figure. This plan dedicates significant sets to back width, rear-delt development, and shoulder capping while maintaining balanced lower-body strength.",
     tags: 'bodybuilding category:division division:figure gender:women goal:stage_prep days:5 advanced',
     difficulty: 2,
     workouts: [
@@ -1240,7 +1240,7 @@ const LIBRARY_PLANS = [
   // ── 28. Women's Physique, Off-Season ────────────────────────────────────────
   {
     name: "Women's Physique",
-    description: "A five-day programme for Women's Physique competitors, built around the division's aesthetic priorities: broad, capped shoulders, a detailed and wide back, proportionate arms, and a lean lower body without extreme size. Day 1 develops shoulder width and rear-delt health; Day 2 builds back thickness and lat spread; Day 3 trains lower body with glute and quad emphasis; Day 4 develops chest and triceps with upper-chest focus; Day 5 adds arm detail and a second rear-delt session to complete the week. Stop 1 to 2 reps before failure on most sets. Progress by adding reps first, then weight once the top of the range is reached on all sets.",
+    description: "A five-day plan for Women's Physique competitors, built around the division's aesthetic priorities: broad, capped shoulders, a detailed and wide back, proportionate arms, and a lean lower body without extreme size. Day 1 develops shoulder width and rear-delt health; Day 2 builds back thickness and lat spread; Day 3 trains lower body with glute and quad emphasis; Day 4 develops chest and triceps with upper-chest focus; Day 5 adds arm detail and a second rear-delt session to complete the week. Stop 1 to 2 reps before failure on most sets. Progress by adding reps first, then weight once the top of the range is reached on all sets.",
     tags: 'bodybuilding aesthetic gender:women goal:build_muscle days:5 advanced division:womens_physique',
     difficulty: 2,
     workouts: [
@@ -1302,7 +1302,7 @@ const LIBRARY_PLANS = [
   // ── 29. Women's Bodybuilding, Off-Season ────────────────────────────────────
   {
     name: "Women's Bodybuilding",
-    description: "A five-day programme for Women's Bodybuilding competitors, built around maximum muscular development across every group. This is the most demanding of the women's divisions and requires serious, focused training across every major muscle group. Day 1 prioritises quads and calves; Day 2 builds back width and thickness; Day 3 develops chest, shoulders, and triceps; Day 4 targets hamstrings, glutes, and calves; Day 5 finishes the week with arms and shoulder detail. Eat in a moderate surplus throughout the muscle-building phase. Stop 1 to 2 reps before failure on most sets. Progress by adding reps first, then weight.",
+    description: "A five-day plan for Women's Bodybuilding competitors, built around maximum muscular development across every group. This is the most demanding of the women's divisions and requires serious, focused training across every major muscle group. Day 1 prioritises quads and calves; Day 2 builds back width and thickness; Day 3 develops chest, shoulders, and triceps; Day 4 targets hamstrings, glutes, and calves; Day 5 finishes the week with arms and shoulder detail. Eat in a moderate surplus throughout the muscle-building phase. Stop 1 to 2 reps before failure on most sets. Progress by adding reps first, then weight.",
     tags: 'bodybuilding gender:women goal:build_muscle days:5 advanced division:womens_bodybuilding',
     difficulty: 2,
     workouts: [
@@ -1368,7 +1368,7 @@ const LIBRARY_PLANS = [
   // ── 30. Men's Bodybuilding, Off-Season ──────────────────────────────────────
   {
     name: "Men's Bodybuilding",
-    description: "A five-day programme for Men's Bodybuilding competitors, built around maximum muscular size and complete development across every group. This is the plan with the most sets per week in the library and suits experienced lifters with at least three years of consistent training. Day 1 builds chest and triceps; Day 2 develops back width and thickness; Day 3 builds legs with quad emphasis; Day 4 targets shoulders and arms; Day 5 finishes the week with hamstrings, glutes, and posterior-chain detail. Eat in a moderate calorie surplus throughout the muscle-building phase. Stop 1 to 2 reps before failure on compound movements. On isolation exercises, push to 1 rep from failure on the final set of each exercise.",
+    description: "A five-day plan for Men's Bodybuilding competitors, built around maximum muscular size and complete development across every group. This is the plan with the most sets per week in the library and suits experienced lifters with at least three years of consistent training. Day 1 builds chest and triceps; Day 2 develops back width and thickness; Day 3 builds legs with quad emphasis; Day 4 targets shoulders and arms; Day 5 finishes the week with hamstrings, glutes, and posterior-chain detail. Eat in a moderate calorie surplus throughout the muscle-building phase. Stop 1 to 2 reps before failure on compound movements. On isolation exercises, push to 1 rep from failure on the final set of each exercise.",
     tags: 'bodybuilding gender:men goal:build_muscle days:5 advanced division:mens_bodybuilding featured',
     difficulty: 2,
     workouts: [

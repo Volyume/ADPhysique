@@ -82,7 +82,7 @@ export function computeRecoveryTrendInsight(checkins) {
   const lowSleepWeeks = recentSleep.filter(s => s <= 2).length;
 
   if (lowEnergyWeeks >= 3) {
-    return { type: 'warning', text: `Energy has been low for ${lowEnergyWeeks} check-ins in a row, which is worth paying attention to.` };
+    return { type: 'warning', text: `Energy has been low for ${lowEnergyWeeks} weekly check-ins in a row, which is worth paying attention to.` };
   }
   if (highSorenessWeeks >= 3) {
     return { type: 'warning', text: `High soreness has been reported ${highSorenessWeeks} weeks running, so your recovery may need more attention.` };
@@ -91,10 +91,10 @@ export function computeRecoveryTrendInsight(checkins) {
   // it in the same insight slot rather than on a card of its own, so the
   // leaned Consistency surface doesn't grow another chart.
   if (lowSleepWeeks >= 3) {
-    return { type: 'warning', text: `Sleep has been rated low for ${lowSleepWeeks} check-ins in a row, which is worth paying attention to.` };
+    return { type: 'warning', text: `Sleep has been rated low for ${lowSleepWeeks} weekly check-ins in a row, which is worth paying attention to.` };
   }
   if (highEnergyWeeks >= 3) {
-    return { type: 'good', text: `Energy has been consistently high across the last ${highEnergyWeeks} check-ins, which is a good sign.` };
+    return { type: 'good', text: `Energy has been consistently high across the last ${highEnergyWeeks} weekly check-ins, which is a good sign.` };
   }
   if (energies.length >= 4) {
     const older = energies.slice(2, 4);
@@ -212,7 +212,7 @@ export default function ReadinessCards({ userId, tier }) {
       <View style={styles.section}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
           <SectionLabel>Recovery</SectionLabel>
-          <InfoTooltip text="A running average of your session check-ins, weighted so the last week counts most and older sessions fade out. Scored 1-5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1-5 where 1 = comfortable. If scores are consistently high, consider a lighter week." />
+          <InfoTooltip text="A running average of your session feedback after each workout, weighted so the last week counts most and older sessions fade out. Scored 1-5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1-5 where 1 = comfortable. If scores are consistently high, consider a lighter week." />
         </View>
         <View style={[styles.recoveryCard, live.recoveryCard]}>
           <View style={styles.recoveryGrid}>
@@ -238,7 +238,7 @@ export default function ReadinessCards({ userId, tier }) {
                   <Ionicons name="flash-outline" size={20} color={t.colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.mfTitle, live.mfTitle]}>Muscle readiness</Text>
+                  <Text style={[styles.mfTitle, live.mfTitle]}>Muscle recovery</Text>
                   <Text style={[styles.mfSub, live.mfSub]}>How recovered your muscles are based on your recent training.</Text>
                 </View>
               </View>

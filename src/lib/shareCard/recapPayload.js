@@ -83,7 +83,7 @@ export function buildRecapMilestoneData(data, {
       });
     }
     return {
-      eyebrow: 'BLOCK COMPLETE',
+      eyebrow: 'BLOCK FINISHED',
       title: data.meso?.name || blockName || 'Training block',
       heroValue: formatCount(data.totalSessions),
       heroUnit: data.totalSessions === 1 ? 'session' : 'sessions',

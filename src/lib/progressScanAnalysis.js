@@ -340,7 +340,7 @@ export function compareScanEstimates(current, previous) {
     return {
       direction: 'steady',
       magnitudePctPoints: Math.abs(delta),
-      explanation: 'The legacy uncertainty bands overlap, so treat this as steady rather than a clear directional change.',
+      explanation: 'The legacy uncertainty ranges overlap, so treat this as steady rather than a clear directional change.',
     };
   }
   if (!hasRanges) {
@@ -351,7 +351,7 @@ export function compareScanEstimates(current, previous) {
       return {
         direction: 'steady',
         magnitudePctPoints: Math.abs(delta),
-        explanation: 'The legacy estimate moved, but it is still inside the uncertainty band. Treat this as steady.',
+        explanation: 'The legacy estimate moved, but it is still inside the uncertainty range. Treat this as steady.',
       };
     }
   }
@@ -359,8 +359,8 @@ export function compareScanEstimates(current, previous) {
     direction: delta < 0 ? 'down' : 'up',
     magnitudePctPoints: Math.abs(delta),
     explanation: delta < 0
-      ? 'The legacy uncertainty bands do not overlap and support a lower visual trend.'
-      : 'The legacy uncertainty bands do not overlap and support a higher visual trend.',
+      ? 'The legacy uncertainty ranges do not overlap and support a lower visual trend.'
+      : 'The legacy uncertainty ranges do not overlap and support a higher visual trend.',
   };
 }
 

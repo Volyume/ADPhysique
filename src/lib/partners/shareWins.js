@@ -15,7 +15,7 @@ export const SHARE_WIN_TYPES = Object.freeze([
     key: 'block_milestone',
     title: 'Training phase milestone',
     shared: 'The phase name and milestone you choose to share.',
-    private: 'Programme contents, exercise selection and loading stay private.',
+    private: 'Plan contents, exercise selection and loading stay private.',
   }),
   Object.freeze({
     key: 'progress_card',
@@ -101,7 +101,7 @@ const EXAMPLE_PAYLOADS = Object.freeze({
   }),
   block_milestone: Object.freeze({
     blockName: 'Strength block',
-    milestone: 'Block complete',
+    milestone: 'Block finished',
   }),
   progress_card: Object.freeze({
     label: 'Exported progress photo image',
@@ -175,7 +175,7 @@ export function buildShareWinDraft(typeKey, payload = {}) {
       typeKey,
       'Training phase milestone',
       `${blockName}: ${milestone}.`,
-      'Programme contents, exercise selection and loading stay private.',
+      'Plan contents, exercise selection and loading stay private.',
     );
   }
 

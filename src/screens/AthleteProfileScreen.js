@@ -174,7 +174,7 @@ function currentFocusTile(profile = {}) {
   ].filter(Boolean).join(' - ');
 
   return {
-    label: 'Current goal',
+    label: 'Current focus',
     value: phaseLabel,
     sub: detail || 'Add your goal details',
   };
@@ -190,20 +190,20 @@ function profileStatusTile(freshness) {
   const soon = states.filter((state) => state === 'soon').length;
   if (attention > 0) {
     return {
-      label: 'Profile readiness',
+      label: 'Profile status',
       value: 'Needs updates',
       sub: `${attention} item${attention === 1 ? '' : 's'} need${attention === 1 ? 's' : ''} an update`,
     };
   }
   if (soon > 0) {
     return {
-      label: 'Profile readiness',
+      label: 'Profile status',
       value: 'Update soon',
       sub: `${soon} item${soon === 1 ? '' : 's'} coming due`,
     };
   }
   return {
-    label: 'Profile readiness',
+    label: 'Profile status',
     value: 'Ready',
     sub: 'Weight, photos and lifts are current',
   };
