@@ -45,7 +45,72 @@ this folder are the ruled foundations.
   P1 stop-and-report contradiction and E.8 item 9's copy gap.
   REMAINING: displayed-EWMA vs decision-trend disclosure; phase-label
   unification (canon concept 10); WHAT/WHY/NEXT sweep.
-- **P3-P5, P7-P9, P11-P21 — NOT STARTED.**
+- **P3 PR — DONE.** GLOSSARY.pr added (one meaning: any of the three
+  record kinds, never requiring a max-out); reachable from both
+  ExerciseDetail records sections and BlockReflection's records list;
+  celebration toast deliberately untouched (its labels already speak
+  plain English; a 2.2s toast is no place for education).
+- **P4 training block — DONE.** Block sheet now defines a training
+  block (GLOSSARY.mesocycle wired to its natural surface, orphan
+  resolved), states why workload climbs and that finished blocks teach
+  the next one; consider_rebuild's primary CTA renamed 'Repeat this
+  plan anyway' (was sharing 'Continue this plan' with the repeat
+  recommendation).
+- **P5 effort model — DONE.** GLOSSARY.rir rewritten in the founder's
+  register with the provable why (the block's effort ladder: a
+  prescription, never a user report - per-set RIR entry is
+  settled-removed); no in-session clutter added since the phrase never
+  renders in-session.
+- **P6 readiness purpose — DONE** (see above; WorkoutSummary purpose
+  line + joint discriminator landed).
+- **P7 learned personalisation — DONE.** Research-start line added to
+  buildBlockStartLines (only when every written row carries a known
+  research-family source; legacy/unknown stays silent); manual
+  override's learning-pause disclosed on the volume-target editor;
+  interBlock rationale strings verified to already match the founder's
+  retain/increase/reduce/insufficient semantics.
+- **P8 recovery/deload — DONE.** Methodology gains a Recovery weeks
+  section stating both sizing states (per-muscle scaling from completed
+  work; simpler protective week in calmer coaching or under a safety
+  hold) and that longer recovery is only ever proposed. The shared
+  deload gloss deliberately does NOT carry the scaling claim (false
+  under suppression); the post-apply receipt already states the exact
+  share (D91-23).
+- **P9 coach decisions — DONE (ruled).** All twenty E.8 decisions
+  classified in PHASE9-15-RULINGS.md: two were FIXED this campaign
+  (trend disclosure, distinct-morning counts), one served by the new
+  Methodology section, the keep-hidden set ruled with rationale.
+- **P10 nutrition — DONE.** Weigh-in honesty landed; the coach trend
+  chip now discloses the sturdier decision trend (scoped to that
+  surface); phase-label unification VERIFIED NO-CHANGE (the calculator
+  displays its own selection; label-inversion coupling documented) with
+  the harmonisation residual recorded for the founder.
+- **P11 — DONE (ruled).** One insufficient-evidence register verified;
+  not-changing-is-a-decision pinned via Methodology line.
+- **P12 — DONE.** consider_rebuild CTA renamed 'Repeat this plan
+  anyway'; Coached mode discloses safety waits for confirmation (D16
+  user-visible); Campaign 1 proposal/applied pins stay green.
+- **P13 — folded into P2/P9 rulings** (Total lifted informational
+  labels; PR density code-only; no informational metric claims to
+  drive coaching).
+- **P14 — DONE (audited in passing).** No safety copy weakened; floors
+  unpublished (pinned); ED/calm branches untouched except the
+  calm-gate retitle.
+- **P15-P19 — DONE (ruled)** in PHASE9-15-RULINGS.md.
+- **P20 — DONE.** src/__tests__/campaign2.comprehension.test.js: 20
+  pins across training/effort/PR/readiness/nutrition/recovery/
+  automation. Full suite 9,706 passing, lint clean.
+- **P21 — DONE.** Review A (novice): 4/9 PASS, nine findings, all
+  genuine ones actioned (one status vocabulary across legends, Manual
+  mode ownership note, helpful-range wording, formula surnames
+  removed, glossary/setpicker alignment); anatomy vocabulary recorded
+  for a later content pass. Review B (truth): 3/10 PASS outright incl.
+  no-behaviour-change; findings 1-9 all actioned (distinct-morning
+  counts at all four ledger callers, RIR gloss matches the ladder,
+  purpose lines scoped to active coaching, research line drops the
+  profile claim, provenance gate judges every entry, effort-builds
+  phrasing, precise manual-override precedence). Full suite 9,706
+  passing, lint clean, after remediation.
 
 ## Landed commits (this campaign)
 

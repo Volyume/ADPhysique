@@ -37,7 +37,7 @@ import { trackPartnerSurfaceView } from '../lib/partners/telemetry';
 import { logError } from '../lib/errorLog';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { buildCoachLedger } from '../lib/coachLedger';
-import { localWeekStartMs } from '../lib/dayKey';
+import { localWeekStartMs, localDayKey } from '../lib/dayKey';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 
 function formatDate(ms) {
@@ -254,7 +254,13 @@ export default function YouScreen({ navigation }) {
         // trailing-7-day window; every "this week" weigh-in count now shares
         // the same Monday-anchored boundary (dayKey.js) as CoachOutputScreen.
         const weekAgo = localWeekStartMs();
-        const weighIns7d = (weights || []).filter(w => (w.loggedAt ?? w.logged_at ?? 0) >= weekAgo).length;
+        // D93 (review B finding 1): distinct mornings, matching the engine's
+        // per-day credit and the ledger label.
+        const weighIns7d = new Set(
+          (weights || [])
+            .filter(w => Number.isFinite(Number(w.loggedAt ?? w.logged_at)) && Number(w.loggedAt ?? w.logged_at) >= weekAgo)
+            .map(w => localDayKey(Number(w.loggedAt ?? w.logged_at)))
+        ).size;
         const firstWeightAt = weights.length
           ? Math.min(...weights.map(w => w.loggedAt ?? w.logged_at ?? Infinity))
           : null;

@@ -95,7 +95,7 @@ function partnerCheerFailureMessage(error) {
 }
 
 
-function RatingRow({ label, field, value, max, onChange }) {
+function RatingRow({ label, field, value, max, onChange, hint }) {
   // CP-10 stage 3 (theming FINAL batch): live theme (src/hooks/useTheme.js).
   // See buildLiveStyles' header comment (defined further down this
   // file, after the frozen `styles` block -- see the comment there for why).
@@ -111,6 +111,7 @@ function RatingRow({ label, field, value, max, onChange }) {
         <Text style={[styles.ratingLabel, live.ratingLabel]}>{label}</Text>
         {labels?.[value] ? <Text style={[styles.ratingValueLabel, live.ratingValueLabel]}>{labels[value]}</Text> : null}
       </View>
+      {hint ? <Text style={[styles.ratingHint, live.ratingHint]}>{hint}</Text> : null}
       <View style={styles.ratingBtns} accessibilityRole="radiogroup" accessibilityLabel={label}>
         {values.map((i) => (
           <TouchableOpacity
@@ -1569,9 +1570,16 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                     pre-workout intent prompt. The block keeps the three session
                     responses you can only judge once the work is done, plus
                     fatigue. */}
+                {/* D93 (Campaign 2, Phase 6): purpose at the point of asking,
+                    no direction taught. "Skip anything you're not sure about"
+                    is load-bearing: unanswered saves as null and the engine
+                    holds on insufficient feedback rather than guessing. */}
+                <Text style={[styles.feedbackPurpose, live.feedbackPurpose]}>
+                  Your answers shape how your recovery is read and, when coaching is active, whether next session's workload still makes sense. Skip anything you're not sure about.
+                </Text>
                 <RatingRow label="Difficulty" field="sessionDifficulty" value={feedback.sessionDifficulty} max={5} onChange={rateFeedback('sessionDifficulty')} />
                 <RatingRow label="Muscle engagement" field="overallPump" value={feedback.overallPump} max={3} onChange={rateFeedback('overallPump')} />
-                <RatingRow label="Joint discomfort" field="jointDiscomfort" value={feedback.jointDiscomfort} max={3} onChange={rateFeedback('jointDiscomfort')} />
+                <RatingRow label="Joint discomfort" field="jointDiscomfort" value={feedback.jointDiscomfort} max={3} onChange={rateFeedback('jointDiscomfort')} hint="Joints and tendons, not normal muscle soreness" />
                 <RatingRow label="Fatigue" field="fatigueLevel" value={feedback.fatigueLevel} max={5} onChange={rateFeedback('fatigueLevel')} />
                 <TextField accessibilityLabel="Workout feedback notes"
                   fieldStyle={styles.notesField}
@@ -2030,6 +2038,8 @@ const styles = StyleSheet.create({
   ratingRow: { gap: spacing.xs2 },
   ratingLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   ratingLabel: { ...type.label, color: colors.textSecondary },
+  ratingHint: { ...type.caption, color: colors.textMuted },
+  feedbackPurpose: { ...type.caption, color: colors.textMuted },
   ratingBtns: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, minHeight: 44 },
   ratingBtn: {
     width: 44, height: 44, minWidth: 44, borderRadius: radius.md, backgroundColor: colors.surface,
@@ -2250,6 +2260,8 @@ function buildLiveStyles(t) {
     blockRecapRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     blockRecapText: { ...t.type.label, color: t.colors.textPrimary },
     ratingLabel: { ...t.type.label, color: t.colors.textSecondary },
+    ratingHint: { ...t.type.caption, color: t.colors.textMuted },
+    feedbackPurpose: { ...t.type.caption, color: t.colors.textMuted },
     ratingBtn: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     ratingBtnActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
     ratingBtnText: { fontSize: t.fontSize.md, color: t.colors.textSecondary },

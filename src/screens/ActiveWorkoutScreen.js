@@ -123,8 +123,8 @@ const BARBELL_EQUIPMENT = /barbell/i;
 
 
 const SET_TYPE_OPTIONS = [
-  { value: 'straight', label: 'Working', description: 'Counts towards your weekly totals and progress tracking.' },
-  { value: 'warmup', label: 'Warm-up', description: 'Lighter sets before your main work. Not counted in your weekly totals.' },
+  { value: 'straight', label: 'Working', description: 'Counts towards your weekly volume and progress tracking.' },
+  { value: 'warmup', label: 'Warm-up', description: 'Lighter sets before your main work. Not counted in your weekly volume.' },
   { value: 'dropset', label: 'Drop set', description: 'Reduce the weight at failure and keep going. Counts towards weekly volume, not the set-target counter.' },
   { value: 'myo_reps', label: 'Myo-reps', description: 'A heavy activation set, then short mini-sets with a few breaths between. Counts towards volume and progress.' },
   { value: 'rest_pause', label: 'Rest-pause', description: 'Hit failure, rest 10 to 20 seconds, then squeeze out more reps. Counts towards volume and progress.' },

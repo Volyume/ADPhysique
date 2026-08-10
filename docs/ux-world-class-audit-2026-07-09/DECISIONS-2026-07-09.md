@@ -2510,3 +2510,37 @@ scope (D92-1), Campaign 1 pins stay green.
    "1RM" considered for the blocklist and declined (single leak fixed
    directly). Engine symbols, DB fields, routes and storage keys are
    never renamed.
+
+## D93 addendum — Phases 3-21 rulings and reviews (lead, 2026-08-10)
+
+3. Phases 9-17 ruled in docs/comprehension-audit-2026-08-10/
+   PHASE9-15-RULINGS.md: all twenty unexplained decisions classified
+   (two fixed, one served by the new Methodology recovery-weeks
+   section, keep-hidden set with rationale incl. free-text parsing and
+   photo corroboration); phase-label unification VERIFIED NO-CHANGE
+   (the calculator displays its own selection; label-string inversion
+   coupling documented); glossary classification settled (pr added;
+   mesocycle wired to the block sheet; macros/strengthLevel/
+   autoregulation/redS orphaned-but-harmless; set/rep a11y-only with
+   a recorded novice-pass residual; none removed; no banned entries
+   added).
+4. Both Phase 21 adversarial reviews ran and every genuine finding was
+   actioned (evidence: scratchpad c2/REVIEW-A-novice.md,
+   REVIEW-B-truth.md). Notables: one status vocabulary across both
+   volume legends; Manual mode now states above the coaching cards
+   that recommendations are the user's to make; distinct-morning
+   weigh-in counting reached ALL four ledger callers; the RIR gloss,
+   readiness purpose lines, research-start line, block-sheet climb
+   line and manual-override disclosure were each corrected to claim
+   exactly what the engine proves (review B findings 1-9).
+5. RECORDED RESIDUALS (not silently parked - founder's list):
+   (a) three phase-label vocabularies (harmonisation needs a
+   migration-aware pass; persisted label inversion);
+   (b) anatomy/technique vocabulary in formTips and plan descriptions
+   (a content-education pass, out of this campaign's concept scope);
+   (c) glossary set/rep reachable only via screen reader (novice
+   pass); (d) the confidence caption's weigh-in addendum counts the
+   displayed calendar week while confidence uses a latest-anchored
+   window (edge-case divergence, both statements individually true);
+   (e) review-deferred dead code and naming items listed in the
+   review files for the dead-code campaign.

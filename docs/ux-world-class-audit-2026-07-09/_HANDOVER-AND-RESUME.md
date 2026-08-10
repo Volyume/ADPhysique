@@ -16,7 +16,7 @@ handover); Campaign 1 (Product Integrity, D92) landed and merged to main
 at `0a552cc4` with 9,681 tests passing, lint clean, and migrations
 132-135 written but NOT applied (founder-gated).
 
-**NOW IN FLIGHT: Campaign 2 — comprehension, explanation, terminology**
+**COMPLETE: Campaign 2 — comprehension, explanation, terminology** (merged to main 2026-08-10; record in docs/comprehension-audit-2026-08-10/ + D93; STOPPED after Campaign 2 per the order)
 on branch `claude/campaign2-comprehension`. The founder's full order is
 preserved verbatim in the session scratchpad
 (`c2/CAMPAIGN2-ORDER.txt`) and summarised on the taskboard. Hard

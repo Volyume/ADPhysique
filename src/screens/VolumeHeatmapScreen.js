@@ -499,8 +499,8 @@ export default function VolumeHeatmapScreen() {
 
         {/* Legend */}
         <Card padding="md" radius="md" style={styles.legendRow}>
-          <LegendItem color={t.colors.textMuted} label="Below minimum" />
-          <LegendItem color={t.colors.success} label="Optimal" />
+          <LegendItem color={t.colors.textMuted} label="Below target" />
+          <LegendItem color={t.colors.success} label="Good range" />
           <LegendItem color={t.colors.warning} label="Getting close" />
           <LegendItem color={t.colors.error} label="Too much" />
           <InfoTooltip size={11} text={
@@ -653,6 +653,13 @@ export default function VolumeHeatmapScreen() {
           <Card style={styles.editSection}>
             <Text style={[styles.editTitle, live.editTitle]}>Edit volume targets</Text>
             <Text style={[styles.editSubtitle, live.editSubtitle]}>Weekly sets per muscle - minimum / target / ceiling</Text>
+            {/* D93 (Campaign 2, Phase 7): the second consequence of a manual
+                override was disclosed nowhere - a manually-set block is also
+                skipped by the learned-range replay (learnedRange.js min
+                evidence, D91-12), so hand-set targets pause learning too. */}
+            <Text style={[styles.editSubtitle, live.editSubtitle]}>
+              Your numbers set the targets from here; a block already underway keeps its written plan. While your own settings are in place, finished blocks don't teach the ranges the app learns for you.
+            </Text>
             {muscles.map(muscle => (
               <View key={muscle} style={[styles.editRow, live.editRow]}>
                 <Text style={[styles.editMuscleName, live.editMuscleName]}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>

@@ -117,7 +117,7 @@ describe('VolumeHeatmapScreen states', () => {
     expect(text).toContain("Couldn't load this on your device. Try again.");
     expect(text).not.toContain('Check your connection');
     expect(text).toContain('Try again');
-    expect(text).not.toContain('Below minimum');
+    expect(text).not.toContain('Below target');
   });
 
   test('shows first-workout guidance instead of an unexplained zero heatmap', async () => {
@@ -128,7 +128,7 @@ describe('VolumeHeatmapScreen states', () => {
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Volume appears after your first workout');
     expect(text).toContain('Finish a workout and this screen will show weekly set volume');
-    expect(text).toContain('Below minimum');
+    expect(text).toContain('Below target');
   });
 
   test('explains when saved training exists outside the selected volume window', async () => {

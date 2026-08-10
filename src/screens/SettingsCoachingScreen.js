@@ -224,7 +224,10 @@ export default function SettingsCoachingScreen() {
               <Text style={[styles.toneLabel, liveText.toneLabel]}>Autonomy</Text>
               <Text style={[styles.toneSub, liveText.toneSub]}>
                 {coachAutonomy === 'coached'
-                  ? "The coach applies each week's changes for you."
+                  // D93 (Campaign 2, Phase 12): the D16 rule was a source
+                  // comment only - a Coached user whose week reverted to
+                  // confirm-first was told nothing. One honest sentence.
+                  ? "The coach applies each week's changes for you. Anything safety-related still waits for your confirmation."
                   : coachAutonomy === 'manual'
                     ? 'The coach shows each change and the reason. You make the change yourself.'
                     : 'The coach suggests each change. You tap to apply it.'}

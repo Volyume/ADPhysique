@@ -523,7 +523,14 @@ export default function HomeScreen({ navigation, route }) {
       // something else for the same moment. Every "this week" weigh-in count
       // now shares the same calendar-week boundary (dayKey.js).
       const weekAgoMondayMs = localWeekStartMs();
-      const weighIns7d = weights.filter(w => (w.loggedAt ?? 0) >= weekAgoMondayMs).length;
+      // D93 (Campaign 2, review B finding 1): DISTINCT mornings, never raw
+      // rows - the ledger label promises mornings and the engine credits
+      // one weigh-in per local day (weeklyCoach weighInDayCount).
+      const weighIns7d = new Set(
+        weights
+          .filter(w => Number.isFinite(Number(w.loggedAt)) && Number(w.loggedAt) >= weekAgoMondayMs)
+          .map(w => localDayKey(Number(w.loggedAt)))
+      ).size;
       const firstWeightAt = weights.length ? Math.min(...weights.map(w => w.loggedAt ?? Infinity)) : null;
 
       let checkinDay = 0;
@@ -585,7 +592,13 @@ export default function HomeScreen({ navigation, route }) {
         AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
       ]);
       const weekAgo = localWeekStartMs();
-      const weighIns7d = weights.filter(w => (w.loggedAt ?? 0) >= weekAgo).length;
+      // D93 (review B finding 1): distinct mornings, matching the engine's
+      // per-day credit and the ledger label.
+      const weighIns7d = new Set(
+        weights
+          .filter(w => Number.isFinite(Number(w.loggedAt)) && Number(w.loggedAt) >= weekAgo)
+          .map(w => localDayKey(Number(w.loggedAt)))
+      ).size;
       const completedSessions = workouts.filter(w => w.isCompleted && (w.startedAt ?? 0) >= weekAgo).length;
       const firstWeightAt = weights.length ? Math.min(...weights.map(w => w.loggedAt ?? Infinity)) : null;
 
@@ -2140,7 +2153,7 @@ export default function HomeScreen({ navigation, route }) {
         scroll
       >
         <Text style={[styles.intentTitle, live.intentTitle]}>How are you feeling today?</Text>
-        <Text style={[styles.intentSub, live.intentSub]}>Takes a second. It helps decide whether today's planned workload still makes sense, and builds a picture of your recovery over time.</Text>
+        <Text style={[styles.intentSub, live.intentSub]}>Takes a second. Your answers shape how your sessions are read and, when coaching is active, whether today's planned workload still makes sense.</Text>
         {/* R2-10 (founder decision "Reorder", 2026-07-11): the optional
             readiness rows sit ABOVE the intent options, compacted to one
             aligned line each, because the intent tap below starts the

@@ -77,6 +77,22 @@ const SECTIONS = [
       'together. If recovery is low, volume holds or drops. If recovery is strong ' +
       'and you hit your sessions, it adds. The same checks run every week.',
   },
+  // D93 (Campaign 2, Phase 8): the level-3 statement of how recovery
+  // weeks are sized. Describes BOTH states (personalised scaling and the
+  // simpler protective week) as product behaviour, so it stays true for
+  // every reader without revealing which state applies to them, and the
+  // strain maths stays internal.
+  {
+    key: 'recovery',
+    title: 'Recovery weeks',
+    body:
+      'A recovery week plans fewer sets at an easier effort on purpose. When ' +
+      'personalisation is active, each muscle\'s recovery sets are scaled from ' +
+      'the work it actually completed recently, so harder-worked muscles can ' +
+      'ease back further than fresher ones. In calmer coaching or under a ' +
+      'safety hold, the app uses a simpler protective week instead. A longer ' +
+      'recovery window is only ever proposed, never started for you.',
+  },
   {
     key: 'safety',
     title: 'Safety floors',

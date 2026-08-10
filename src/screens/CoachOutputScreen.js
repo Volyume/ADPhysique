@@ -2549,6 +2549,15 @@ export default function CoachOutputScreen({ navigation, route }) {
         {heroCardEl ? (
           <Reanimated.View entering={stage(2, motion.hero)} style={styles.heroZone}>
             <SectionLabel tone="primary" style={styles.heroLabel}>This week&apos;s main move</SectionLabel>
+            {/* D93 (Campaign 2, Phase 12 / review A finding 5): Manual mode
+                strips the Apply pills, which left a proposal row identical
+                to an informational one. One line above the cards makes the
+                ownership unmistakable without re-threading three cards. */}
+            {applyDisabled ? (
+              <Text style={[styles.manualModeNote, live.manualModeNote]}>
+                Manual mode: these are recommendations. The coach applies nothing; any change is yours to make.
+              </Text>
+            ) : null}
             {heroCardEl}
             {/* Wave A B6: the WHY never sits a scroll away from the WHAT. One
                 line here; the full WhyBlock further down keeps the detail. */}
@@ -2595,7 +2604,15 @@ export default function CoachOutputScreen({ navigation, route }) {
             // L04-11: the same EWMA gloss BodyMetricsScreen already ships,
             // reused here so the "7-day trend" number is explained the same
             // way everywhere it appears. Only shown once there is a trend to explain.
-            tooltip={trend.delta !== null ? GLOSSARY.ewma : undefined}
+            // D93 (Campaign 2, Phase 10): ON THIS SURFACE ONLY, the gloss
+            // carries the decision-trend disclosure - the weekly verdict
+            // reads direction from robust tracking, not this exact number,
+            // and beside the decision the bare gloss would imply otherwise.
+            // The free-tier trend surfaces keep the plain gloss (no coach
+            // claim belongs there), and no smoother is named.
+            tooltip={trend.delta !== null
+              ? `${GLOSSARY.ewma} The weekly decision reads direction from a sturdier version of this trend that ignores one-off spikes, so its verdict can differ slightly from this exact number.`
+              : undefined}
           />
           <StatChip
             icon="barbell-outline"
@@ -3050,6 +3067,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   // Wave A B6: the one-line why beneath the hero decision.
+  manualModeNote: { ...type.caption, color: colors.textMuted, marginBottom: spacing.sm },
   heroWhy: {
     ...type.bodySm,
     color: colors.textSecondary,
@@ -3518,6 +3536,7 @@ function buildLiveStyles(t) {
     receiptUnlock: { ...t.type.caption, color: t.colors.textPrimary },
     weekLabel: { fontSize: t.fontSize.xxl, color: t.colors.primary },
     weekRange: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    manualModeNote: { ...t.type.caption, color: t.colors.textMuted },
     heroWhy: { ...t.type.bodySm, color: t.colors.textSecondary },
     holdHeroCard: { backgroundColor: t.colors.surfaceElevated, borderColor: t.colors.border },
     holdHeroText: { ...t.type.h3, color: t.colors.textPrimary },

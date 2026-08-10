@@ -61,6 +61,20 @@ describe('HomeBlockShapeSheet', () => {
     expect(text).toContain(GLOSSARY.rir);
   });
 
+  // D93 (Campaign 2, Phase 4): the sheet is the block's education surface.
+  // It must define what a block IS (the authored gloss, whose only call
+  // site is here) and state WHY workload climbs plus what the block
+  // teaches the next one - the mental model
+  // build -> work harder -> recover -> review -> start from what was learned.
+  test('teaches the block mental model: definition, the climb why, and next-block learning', () => {
+    const { tree } = render();
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain(GLOSSARY.mesocycle);
+    expect(text).toMatch(/Effort builds a little each week so your body keeps adapting/);
+    expect(text).toMatch(/recovery week lets it catch up/);
+    expect(text).toMatch(/How each muscle responds can shape where your next block starts/);
+  });
+
   test('stays unreachable while not visible', () => {
     const { tree } = render({ visible: false });
     const text = flattenText(tree.toJSON());
