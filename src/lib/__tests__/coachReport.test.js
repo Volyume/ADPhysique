@@ -61,7 +61,6 @@ function fixture(overrides = {}) {
         adjustments: {
           training: { signal: 'push', note: 'SENTINEL-TRAINING recovery looked strong.' },
           calories: { change: -137, note: 'SENTINEL-CAL losing faster than the planned rate.' },
-          cardio: { prescribed: true, type: 'Steady cardio', note: 'SENTINEL-CARDIO two sessions, your choice of activity.' },
         },
         deloadSuggested: true,
         deloadNote: 'SENTINEL-DELOAD four hard weeks in a row.',
@@ -96,7 +95,7 @@ describe('full variant: every decision and its written why', () => {
   });
 
   test('the persisted written reasons appear verbatim', () => {
-    for (const s of ['SENTINEL-WHY', 'SENTINEL-TRAINING', 'SENTINEL-CAL', 'SENTINEL-DELOAD', 'SENTINEL-CARDIO', 'SENTINEL-BREAK', 'SENTINEL-HELD']) {
+    for (const s of ['SENTINEL-WHY', 'SENTINEL-TRAINING', 'SENTINEL-CAL', 'SENTINEL-DELOAD', 'SENTINEL-BREAK', 'SENTINEL-HELD']) {
       expect(html).toContain(s);
     }
     expect(html).not.toContain('SENTINEL-STEPS');
@@ -191,14 +190,19 @@ describe('disclosure rule: the FULL variant never reveals screening or safety st
     expect(html).toContain('SENTINEL-TRAINING');
   });
 
-  test("'cycling' in cardio prose is not collateral of the cycle redaction", () => {
-    const cardio = buildCoachReportHtml(fixture({
+  test("'cycling' in persisted prose is not collateral of the cycle redaction", () => {
+    // D95 (Campaign 4): re-anchored off the retired cardio row onto the
+    // deload note, another redaction-filtered prose field, so the law
+    // survives the feature it used to be demonstrated through (E6a).
+    const html = buildCoachReportHtml(fixture({
       weeks: [{
         weekStart: T0,
-        adjustments: { cardio: { prescribed: true, type: 'Steady cardio', note: 'SENTINEL-SPIN two easy cycling sessions.' } },
+        adjustments: { training: { signal: 'hold', note: null } },
+        deloadSuggested: true,
+        deloadNote: 'SENTINEL-SPIN a lighter week after two easy cycling sessions.',
       }],
     }));
-    expect(cardio).toContain('SENTINEL-SPIN');
+    expect(html).toContain('SENTINEL-SPIN');
   });
 
   // The filter is only as good as its match against the ENGINE's actual
@@ -213,7 +217,7 @@ describe('disclosure rule: the FULL variant never reveals screening or safety st
       'Calories held. Trend is on target.',
       'Calories held. Last adjustment needs more weeks to show in the trend.',
       "Calories held. Adherence wasn't tracked, so adjusting now would be a guess.",
-      'Cardio paused this week. Recovery takes priority.',
+      'Training volume held this week. Recovery takes priority.',
     ]) {
       expect(DISCLOSURE_PROSE.test(benign)).toBe(false);
     }
@@ -250,7 +254,7 @@ describe('neutral variant: no rate or weight emphasis, no prose, no disclosure',
   });
 
   test('ALL persisted prose notes are absent (prose can embed rate language)', () => {
-    for (const s of ['SENTINEL-WHY', 'SENTINEL-TRAINING', 'SENTINEL-CAL', 'SENTINEL-STEPS', 'SENTINEL-DELOAD', 'SENTINEL-CARDIO', 'SENTINEL-BREAK', 'SENTINEL-HELD']) {
+    for (const s of ['SENTINEL-WHY', 'SENTINEL-TRAINING', 'SENTINEL-CAL', 'SENTINEL-STEPS', 'SENTINEL-DELOAD', 'SENTINEL-BREAK', 'SENTINEL-HELD']) {
       expect(html).not.toContain(s);
     }
     expect(html).not.toContain('Held back');
@@ -261,7 +265,6 @@ describe('neutral variant: no rate or weight emphasis, no prose, no disclosure',
     expect(html).not.toContain('Bench Press');
     expect(html).toContain('Sessions completed');
     expect(html).toContain('More work added');
-    expect(html).toContain('Steady cardio');
     expect(html).toContain('2,350');
     expect(html).not.toContain('Daily steps');
   });

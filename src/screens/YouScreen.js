@@ -487,18 +487,6 @@ export default function YouScreen({ navigation }) {
               sub="Training, eating, weighing in and the coach's decision, in one place."
               onPress={() => navigation.navigate('WeeklyStory')}
             />
-            {/* Founder ruling 2026-08-06: cardio logging is coach-domain, not
-                a Progress surface. The Progress-tab card is gone; this row is
-                the entry (history via the header inside). Same gate the old
-                card used: hidden when the user switched cardio off. */}
-            {userProfile?.cardioEnabled !== false ? (
-              <NavRow
-                icon="heart-outline"
-                label="Log cardio"
-                sub="Any cardio you do. The coach sets a target only if a cut stalls."
-                onPress={() => navigation.navigate('LogCardio')}
-              />
-            ) : null}
           </View>
         ) : hasCoachHistory ? (
           <View style={styles.section}>

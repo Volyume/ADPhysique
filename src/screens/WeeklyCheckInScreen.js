@@ -19,8 +19,6 @@ import {
   getWeeklyVolumeByMuscle,
   getNutritionTargets,
   getUserBodyProfile,
-  getCardioLogRange,
-  activityDayKey,
   getLatestCoachOutput,
 } from '../lib/database';
 // Integration wave (integration-plan.md §5): optional progress-scan evidence
@@ -44,7 +42,6 @@ import Button from '../components/Button';
 import BackHeader from '../components/BackHeader';
 import Chip from '../components/Chip';
 import TextField from '../components/TextField';
-import { summariseWeekCardio, cardioComplianceFromLog } from '../lib/cardio/cardioEngine';
 import { getRollupsForRange, getPlannedDaysInRange, confirmPlannedDay } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, alpha } from '../styles/theme';
@@ -200,9 +197,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const live = buildLiveStyles(t);
   const toast = useToast();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, userProfile, bodyWeightUnits, energyUnit } = useAppStore(useShallow(s => ({
+  const { user, bodyWeightUnits, energyUnit } = useAppStore(useShallow(s => ({
     user: s.user,
-    userProfile: s.userProfile,
     bodyWeightUnits: s.bodyWeightUnits,
     // NU-6: kJ display preference, same read as the food-domain screens.
     energyUnit: s.accessibility?.energyUnit ?? 'kcal',
@@ -266,31 +262,6 @@ export default function WeeklyCheckInScreen({ navigation }) {
     getNutritionTargets(user.id).then(t => setNutritionTargets(t ?? null)).catch(() => {});
     getUserBodyProfile(user.id).then(p => setBioSex(p?.sex ?? null)).catch(() => {});
     getCycleTracking().then(setCycleEnabled).catch(() => {});
-    const toDate = activityDayKey(weekAnchorMs);
-    const fromDate = activityDayKey(weekAnchorMs - 6 * 24 * 60 * 60 * 1000);
-    // Cardio compliance: prefill the adherence verdict from the actual log
-    // (sessions done vs the coach target) so the user usually just confirms.
-    // The engine returns the same hit/mostly/missed values the question uses.
-    const cardioTarget = userProfile?.cardioTarget;
-    if (userProfile?.cardioPrescription || cardioTarget) {
-      getCardioLogRange(user.id, fromDate, toDate)
-        .then(rows => {
-          const s = summariseWeekCardio(rows);
-          const target = cardioTarget || { sessionsPerWeek: 3 };
-          const derived = cardioComplianceFromLog(s.sessions, target);
-          // Only fill when nothing is set yet, so this log-derived prefill can't
-          // race with (and clobber) a saved override loaded by the re-entry
-          // prefill in load(). Functional setter avoids a stale-closure read.
-          setCardioAdherence(prev => prev ?? derived);
-          // A7 provenance: keep the counts so the question can say which log
-          // the pre-selected answer came from (mirrors the diary/training notes).
-          setCardioMeta({
-            sessions: s.sessions,
-            targetSessions: Number(target?.sessionsPerWeek) || 0,
-          });
-        })
-        .catch(() => {});
-    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, weekAnchorMs]);
 
@@ -328,10 +299,6 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [unconfirmedPlannedDays, setUnconfirmedPlannedDays] = useState([]);
   const [confirmingPlanned, setConfirmingPlanned] = useState(false);
   const [stepsAdherence] = useState(null); // legacy field, no longer collected; steps_avg replaces it
-  const [cardioAdherence, setCardioAdherence] = useState(null);
-  // A7 provenance for the cardio prefill: { sessions, targetSessions } from
-  // the week's cardio log, so the pre-selected answer names its source.
-  const [cardioMeta, setCardioMeta] = useState(null);
 
   // Step 3, Recovery
   const [sorenessScore, setSorenessScore] = useState(null); // 1-5
@@ -344,7 +311,6 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   const showCycle = shouldShowCycleQuestion(bioSex, cycleEnabled);
   const hasNutritionTarget = Boolean(nutritionTargets?.targetKcal);
-  const hasCardioPrescription = Boolean(userProfile?.cardioPrescription ?? userProfile?.cardio_prescription);
 
   useEffect(() => {
     let cancelled = false;
@@ -533,7 +499,6 @@ export default function WeeklyCheckInScreen({ navigation }) {
             const VALID_PERF = ['exceeded', 'hit', 'struggled', 'dropped'];
             setCalsAdherence(VALID_CALS.includes(existingCheckin.calsAdherence)
               ? existingCheckin.calsAdherence : (calsAdh ?? null));
-            setCardioAdherence(existingCheckin.cardioAdherence ?? null);
             // Legacy rows (pre-fix) could hold a session-difficulty string in
             // training_performance, which matches no card. Fall back to the
             // derived verdict so the user never sees a stuck non-selection or
@@ -696,8 +661,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
     gateState === 'open' &&
     !forceFullWizard &&
     trainingPerformance != null &&
-    (!hasNutritionTarget || calsAdherence != null) &&
-    (!hasCardioPrescription || cardioAdherence != null);
+    (!hasNutritionTarget || calsAdherence != null);
 
   // The fast card's only required inputs: the two we never derive.
   const fastCanSubmit = energyScore !== null && sorenessScore !== null;
@@ -778,7 +742,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         calsAdherence: calsAdherence ?? null,
         stepsAdherence: stepsAdherence ?? null,
         stepsAvg: null,
-        cardioAdherence: cardioAdherence ?? null,
+        cardioAdherence: null,
         cycleOverride: showCycle && cycle === 'yes',
         trainingPerformance: trainingPerformance ?? null,
         // Campaign 1 P0-4 tri-state: unanswered persists as null, never as
@@ -878,7 +842,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     busy, submitSuccess, user?.id, energyScore, sorenessScore, stressScore, sleepHours,
-    calsAdherence, stepsAdherence, cardioAdherence, trainingPerformance, jointPain, notes, weekStart, navigation,
+    calsAdherence, stepsAdherence, trainingPerformance, jointPain, notes, weekStart, navigation,
   ]);
 
   // M4: the Button's success beat finished; run the stashed outcome.
@@ -1087,33 +1051,6 @@ export default function WeeklyCheckInScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         )}
-
-        {/* Cardio, shown once a cardio prescription has been applied. */}
-        {hasCardioPrescription && (
-          <View style={styles.section}>
-            <SectionLabel>Prescribed cardio</SectionLabel>
-            {/* A7 provenance: the pre-selected answer names its source, matching
-                the diary and logged-sessions notes above. */}
-            {cardioMeta ? (
-              <Text style={[styles.autoDerivedNote, live.autoDerivedNote]}>
-                {cardioMeta.sessions > 0 && cardioMeta.targetSessions > 0
-                  ? `From your cardio log: ${cardioMeta.sessions} of ${cardioMeta.targetSessions} prescribed session${cardioMeta.targetSessions === 1 ? '' : 's'} this week. Adjust below only if you did cardio that isn't logged here.`
-                  : cardioMeta.sessions > 0
-                    ? `From your cardio log: ${cardioMeta.sessions} session${cardioMeta.sessions === 1 ? '' : 's'} this week. Adjust below only if you did cardio that isn't logged here.`
-                    : "No cardio logged this week. If you did yours elsewhere, set it below."}
-              </Text>
-            ) : null}
-            <OptionRow
-              options={[
-                { value: 'hit', label: 'Did it' },
-                { value: 'mostly', label: 'Mostly' },
-                { value: 'missed', label: 'Not this week' },
-              ]}
-              selected={cardioAdherence}
-              onSelect={setCardioAdherence}
-            />
-          </View>
-        )}
       </>
     );
   }
@@ -1276,7 +1213,6 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // recovery questions.
   function renderFastCheckIn() {
     const CALS_TEXT = { yes: 'Hit your target', no: 'Off your target', untracked: "Didn't track" };
-    const CARDIO_TEXT = { hit: 'Did it', mostly: 'Mostly done', missed: 'Not this week' };
     const summaryRows = [
       {
         key: 'training',
@@ -1289,12 +1225,6 @@ export default function WeeklyCheckInScreen({ navigation }) {
         icon: 'restaurant-outline',
         label: 'Nutrition',
         value: calsAdherence ? CALS_TEXT[calsAdherence] : null,
-      },
-      hasCardioPrescription && {
-        key: 'cardio',
-        icon: 'heart-outline',
-        label: 'Cardio',
-        value: cardioAdherence ? CARDIO_TEXT[cardioAdherence] : null,
       },
       {
         key: 'weight',

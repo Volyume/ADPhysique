@@ -3,7 +3,8 @@
  *
  * The top Home strip is the morning-weight card. It does one job well:
  * show today's weigh-in state and let the user log or edit it quickly.
- * Cardio and meal logging live in their own flows, not in this premium slot.
+ * Meal logging lives in its own flow, not in this premium slot (cardio
+ * logging itself is retired, D95).
  *
  * Weight data and persistence stay owned by HomeScreen. This component owns
  * only the draft input, parsing, and the compact visual states.

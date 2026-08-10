@@ -7,7 +7,7 @@
  *   1. EXACTLY three routes use the history-aware guard (Diary, BodyMetrics,
  *      ProgressPhotos). Spreading it to any other route would hand a free
  *      user a Pro surface with live write affordances.
- *   2. Every food/cardio MUTATION route stays behind the plain hard guard
+ *   2. Every food MUTATION route stays behind the plain hard guard
  *      (withProGuard), so the read-only diary cannot leak into a write
  *      surface via deep link or stale nav state.
  *   3. Each of the three screens derives its readOnly flag from the STORE
@@ -33,14 +33,14 @@ describe('E10 read-only lapse views: gating posture', () => {
     expect(screens).toEqual(['BodyMetricsScreen', 'DiaryScreen', 'ProgressPhotosScreen']);
   });
 
-  test('every food/cardio mutation route stays behind the plain hard guard', () => {
+  test('every food mutation route stays behind the plain hard guard', () => {
     // These screens WRITE (log, scan, build, plan). If any moves to the
     // history-aware guard, a lapsed user gets a live write surface.
     const hardLocked = [
       'FoodSearchScreen', 'AddCustomFoodScreen', 'ScanBarcodeScreen',
       'ScanLabelScreen', 'MealPlanScreen', 'MyRecipesScreen', 'MyMealsScreen',
-      'RecipeBuilderScreen', 'FoodInsightsScreen', 'LogCardioScreen',
-      'CardioHistoryScreen', 'WeeklyCheckInScreen', 'NutritionTargetsScreen',
+      'RecipeBuilderScreen', 'FoodInsightsScreen',
+      'WeeklyCheckInScreen', 'NutritionTargetsScreen',
       'MealNamesScreen', 'PerDayTargetsScreen',
     ];
     for (const screen of hardLocked) {

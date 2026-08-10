@@ -214,7 +214,7 @@ const GatedPerDayTargets = lazyScreen(() => withProGuard(require('../screens/Per
 // screen in its view-only state (the screen itself hides every write affordance
 // when tier !== 'pro'); a free user with NO data keeps the plain ProLocked gate.
 // Every other Pro route below stays hard-locked, so no mutation surface
-// (FoodSearch, ScanBarcode, MealPlan, cardio, recipes...) leaks via deep link.
+// (FoodSearch, ScanBarcode, MealPlan, recipes...) leaks via deep link.
 const GatedBodyMetrics      = lazyScreen(() => withReadOnlyProGuard(require('../screens/BodyMetricsScreen').default, 'Body metrics', (userId) => require('../lib/database').getBodyMetricLog(userId, 1).then((rows) => (rows ?? []).length > 0)));
 const GatedProgressPhotos   = lazyScreen(() => withReadOnlyProGuard(require('../screens/ProgressPhotosScreen').default, 'Progress photos and Volyume Score', (userId) => require('../lib/progressPhotos').photosViewableBy(userId)));
 // NEW-002 partner is a PRO domain (blueprint §5 gating: free sees the upgrade
@@ -230,12 +230,9 @@ const GatedProGoalSetup     = lazyScreen(() => withProGuard(require('../screens/
 const GatedPlanUpdate       = lazyScreen(() => withProGuard(require('../screens/PlanUpdateScreen').default, 'Adjust training'));
 const GatedCoachingReminders = lazyScreen(() => withProGuard(require('../screens/CoachingRemindersScreen').default, 'Coaching reminders'));
 // Diary domain is Pro (free is Plan Library, custom training, Progress, You).
-// Gating the Nutrition tab root covers the food sub-screens, which are only reached
-// from it; cardio screens are gated directly because they are also registered in
-// the Home and Progress stacks, so they need the guard at every entry point.
+// Gating the Nutrition tab root covers the food sub-screens, which are only
+// reached from it.
 const GatedDiary            = lazyScreen(() => withReadOnlyProGuard(require('../screens/DiaryScreen').default, 'Nutrition', (userId) => require('../lib/food/db').hasAnyFoodEntries(userId)));
-const GatedLogCardio        = lazyScreen(() => withProGuard(require('../screens/LogCardioScreen').default, 'Cardio'));
-const GatedCardioHistory    = lazyScreen(() => withProGuard(require('../screens/CardioHistoryScreen').default, 'Cardio'));
 // Defence-in-depth (food review U-M1): the Nutrition tab root is gated and these
 // sub-screens are only reached from it today, but a stray deep-link, push
 // notification route, or a second registration elsewhere would otherwise expose
@@ -397,16 +394,6 @@ function DiaryStack({ navigation }) {
         options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
-        name="LogCardio"
-        component={GatedLogCardio}
-        options={{ headerShown: false, presentation: 'modal' }}
-      />
-      <Stack.Screen
-        name="CardioHistory"
-        component={GatedCardioHistory}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
         name="FoodInsights"
         component={GatedFoodInsights}
         options={{ headerShown: false }}
@@ -455,9 +442,6 @@ function HomeStack({ navigation }) {
       <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ headerShown: false }} />
-      {/* Cardio is launched from the Today tab's CardioCard. Registering it here
-          keeps the modal in this stack so saving returns to Today, not Nutrition. */}
-      <Stack.Screen name="LogCardio" component={GatedLogCardio} options={{ headerShown: false, presentation: 'modal' }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
       {/* B2: the free starter micro-quiz, reached from the no-plan card. */}
       <Stack.Screen name="FreeStarter" component={FreeStarterScreen} options={{ headerShown: false }} />
@@ -518,10 +502,6 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="RecapStory" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />
-      {/* Cardio is launched from the Progress tab (AnalyticsScreen). Registering
-          both here keeps them in this stack so save/back return to Progress. */}
-      <Stack.Screen name="LogCardio" component={GatedLogCardio} options={{ headerShown: false, presentation: 'modal' }} />
-      <Stack.Screen name="CardioHistory" component={GatedCardioHistory} options={{ headerShown: false }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
     </Stack.Navigator>
   );

@@ -1805,8 +1805,9 @@ export default function HomeScreen({ navigation, route }) {
             utilities). The dismissal key and gating are reused there. */}
 
         {/* Today strip (COMP-027 Part B): the morning-weight card sits above
-            the session hero. Meal planning/logging and cardio stay in their
-            own flows so this premium slot does one job clearly. */}
+            the session hero. Meal planning/logging stays in its own flow
+            so this premium slot does one job clearly (cardio logging itself
+            is retired, D95). */}
         {tier === 'pro' && user?.id && (
           <TodayStrip
             bwu={bwu}

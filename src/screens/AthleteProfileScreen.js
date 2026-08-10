@@ -61,9 +61,9 @@ function formatDate(ms) {
 // CP-10 batch G (2026-07-11): rendered directly by the parent (not a list
 // row), but its own useTheme() call rather than a `live` prop, so the
 // pinned `<StatTile label=... value=... sub=... />` call-site guard
-// (AthleteProfileScreen.physiqueTile.guard.test.js) stays untouched -- same
-// "sibling scope, own useTheme()" pattern as CardioHistoryScreen.js's
-// CardioTrend.
+// (AthleteProfileScreen.physiqueTile.guard.test.js) stays untouched -- the
+// "sibling scope, own useTheme()" pattern used across the app's
+// sub-components.
 // O2 (comprehension-and-trust audit 2026-08-06): optional `tooltip` prop adds
 // a persistent "how this works" InfoTooltip beside the tile's label -- used
 // only by the Volyume Score tile below, so the other tiles (body weight,

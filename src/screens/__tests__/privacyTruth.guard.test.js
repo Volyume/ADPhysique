@@ -34,7 +34,11 @@ describe('privacy, consent, export and store-copy truth', () => {
 
   // P-08 (Codex end-user-polish audit): the in-app privacy policy exposed the
   // founder's personal Gmail address rather than the branded support address
-  // the public policy and src/lib/links.js already use.
+  // the public policy and the app's other hard-coded support-address sites
+  // (App.js crash boundary, CreditsScreen.js) already use. src/lib/links.js
+  // was deleted (Campaign 4, coherence-cleanup-2026-08-10): it claimed to be
+  // the single source of truth for this address but nothing ever imported
+  // it -- every real site hard-codes 'support@volyume.app' independently.
   test('in-app privacy policy uses the branded support address, not a personal Gmail', () => {
     const privacy = readRepoFile('src', 'screens', 'PrivacyPolicyScreen.js');
 

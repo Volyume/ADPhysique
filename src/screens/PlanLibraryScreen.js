@@ -182,7 +182,7 @@ const DIFFICULTY_LABELS = ['Beginner', 'Intermediate', 'Advanced'];
 // CP-10 batch G (2026-07-11): sibling function-component scope (not
 // prop-drilled `live`/`t` from PlanLibraryScreen), so its own useTheme() call
 // is cleaner than threading two extra props through. Same shared
-// buildLiveStyles(t) as the parent screen (CardioTrend precedent).
+// buildLiveStyles(t) as the parent screen.
 function PlanBadge({ label, amber }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);

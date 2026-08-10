@@ -40,7 +40,7 @@ import {
 } from './tables/recipeIngredients';
 import { pushWeightLog, pullWeightLog } from './tables/weightLog';
 import { pushDailySteps, pullDailySteps } from './tables/dailySteps';
-import { pushCardioLog, pullCardioLog } from './tables/cardioLog';
+import { pullCardioLog } from './tables/cardioLog';
 import { pushProfiles, pullProfiles } from './tables/profiles';
 import { pushPartners, pullPartners } from './tables/partners';
 import { pushMealPlans, pullMealPlans } from './tables/mealPlans';
@@ -106,14 +106,14 @@ const PUSH_HANDLERS = {
   profiles: pushProfiles,
   recipe_ingredients: pushRecipeIngredients,
   daily_steps: pushDailySteps,
-  cardio_log: pushCardioLog,
   partner_signals: pushPartners,
   meal_plans: pushMealPlans,
   plan_folders: pushPlanFolders,
   perday_target_offsets: pushPerDayTargetOffsets,
   // Pull-only tables intentionally absent, pushTable returns
   // skipped:'pull_only' before reaching this map:
-  //   ed_pattern_flags, tier_history, daily_intake_rollups.
+  //   ed_pattern_flags, tier_history, daily_intake_rollups, cardio_log
+  //   (D95 H1: cardio logging retired, push removed, pull retained).
   // Food-domain bidirectional tables share the coordinator:
   food_entries: foodPushFor('food_entries'),
   custom_foods: foodPushFor('custom_foods'),

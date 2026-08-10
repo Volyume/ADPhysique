@@ -157,8 +157,7 @@ export function TrainingCalendar({ values }) {
 }
 
 // CP-10 theming batch (component sweep, 2026-07-10): live colour resolver
-// replacing the frozen barColor() function, same "build" pattern as
-// CardioHistoryScreen's buildMarkStyle(c) -- resolves the same avgMin ->
+// replacing the frozen barColor() function -- resolves the same avgMin ->
 // colour mapping off the passed-in live t.colors instead of the frozen
 // colors singleton.
 function buildBarColor(c) {

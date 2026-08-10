@@ -851,8 +851,8 @@ const trendStyles = StyleSheet.create({
 // MuscleTrendRow carries no static island under a live theme toggle. Pure
 // layout keys (flex/gap/padding/width, no token) are correctly omitted --
 // there is nothing to unfreeze for them. Own function since MuscleTrendRow
-// has its own separate style block (CardioHistoryScreen precedent shares one
-// buildLiveStyles because its sub-component reuses the SAME style block).
+// has its own separate style block, unlike sibling components elsewhere
+// that reuse the SAME style block as their parent.
 function buildTrendLiveStyles(t) {
   return {
     muscleName: { ...t.type.caption, color: t.colors.textMuted },

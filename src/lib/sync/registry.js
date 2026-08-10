@@ -116,15 +116,20 @@ export const SYNC_REGISTRY = [
     direction: 'bidirectional',
   },
   {
-    // Cardio session log (cardio-integration audit). Many rows per day, so
-    // pk (user_id, id) not (user_id, entry_date). Soft delete + LWW, same
-    // contract as recipe_ingredients. Cloud migration 064.
+    // Cardio session log (cardio-integration audit). Cardio logging itself
+    // is retired (D92-1/D95 founder boundary, Campaign 4): no local writer
+    // remains, so push is removed. Pull stays LEGACY-LOAD-BEARING (D95 H1)
+    // so a user's existing cloud-resident history, and any cross-device
+    // history, is never stranded by a sign-out local wipe. Soft delete via
+    // deleted_at still applies to whatever the cloud sends down. Many rows
+    // per day, so pk (user_id, id) not (user_id, entry_date). Cloud
+    // migration 064.
     table: 'cardio_log',
     pk: ['user_id', 'id'],
-    conflictStrategy: 'last_write_wins',
-    serverAuthoritative: false,
+    conflictStrategy: 'server_wins',
+    serverAuthoritative: true,
     softDelete: true,
-    direction: 'bidirectional',
+    direction: 'pull_only',
   },
   {
     table: 'ed_pattern_flags',

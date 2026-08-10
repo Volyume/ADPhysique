@@ -35,7 +35,6 @@ const FEATURE_BENEFIT = {
   'Saved meals': 'Save your own recipes and meals so logging the foods you eat often takes one tap.',
   'Meal names': 'Rename your meals to match how you actually eat, so the diary reads in your own words.',
   'Per-day targets': 'Give each day of the week its own calorie target, so weekends and midweek can carry different plans.',
-  Cardio: 'Log cardio so your sessions and the energy they burn feed into your weekly plan.',
   'Body metrics': 'Track your weight and measurements so coaching can read the trend and adjust your plan.',
   'Progress photos': 'Keep private progress photos with your stats, so you can see the changes the scales miss.',
   'Progress photos and Volyume Score': 'Keep private progress photos with your stats, with a Volyume Score when the photo read is strong enough.',

@@ -746,8 +746,8 @@ export default function AnalyticsScreen({ navigation, route }) {
         )}
 
         {/* Cardio card REMOVED from Progress (founder ruling 2026-08-06:
-            "that's not progress"). Logging entry lives on the Coach tab
-            (YouScreen NavRow); history via Log cardio's header. */}
+            "that's not progress"). Cardio logging itself was later retired
+            outright as a product boundary (D92-1/D95, Campaign 4). */}
 
         {/* The old full-width "New personal records" sparkline section moved
             into the half-width New bests card at the top of the dashboard
@@ -864,7 +864,7 @@ export default function AnalyticsScreen({ navigation, route }) {
 // CP-10 batch G (2026-07-11): sibling function-component scope (not
 // prop-drilled `live`/`t` from AnalyticsScreen), so its own useTheme() call
 // is cleaner than threading two extra props through. Same shared
-// buildLiveStyles(t) as the parent screen (CardioTrend precedent).
+// buildLiveStyles(t) as the parent screen.
 function InsightRow({ insight, onDismiss }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
@@ -1342,7 +1342,6 @@ const styles = StyleSheet.create({
 // SessionCard/NavTile) so they can never drift out of step with each other
 // or the frozen block. Pure layout keys (flex/gap/padding/width/borderWidth,
 // no token) are correctly omitted -- there is nothing to unfreeze for them.
-// Same pattern as CardioHistoryScreen.js's buildLiveStyles.
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },

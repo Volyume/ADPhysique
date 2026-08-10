@@ -138,7 +138,7 @@ describe('D16: the Coached auto-apply effect', () => {
 
   test('checks isApplied before every handler call (idempotent against re-renders)', () => {
     const body = effectBody();
-    expect(body.match(/!isApplied\(output, '(deload|training|calories|cardio|dietBreak|macroCycle|refeed)'\)/g).length).toBe(6);
+    expect(body.match(/!isApplied\(output, '(deload|training|calories|dietBreak|macroCycle|refeed)'\)/g).length).toBe(6);
   });
 });
 

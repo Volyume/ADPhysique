@@ -503,8 +503,7 @@ const styles = StyleSheet.create({
 // by this file's three function-component scopes (AddCustomFoodScreen,
 // Field, NumField) so they can never drift out of step with each other or
 // the frozen block. Pure layout keys (flex/gap/padding/width, no token) are
-// correctly omitted -- there is nothing to unfreeze for them. Same pattern
-// as LogCardioScreen.js's buildLiveStyles.
+// correctly omitted -- there is nothing to unfreeze for them.
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },

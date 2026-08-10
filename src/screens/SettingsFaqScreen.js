@@ -44,7 +44,7 @@ export const FAQS = [
   {
     key: 'free-vs-pro',
     q: "What's free, and what needs Pro?",
-    a: 'Free covers the Plan Library, the workout builder, workout logging, the exercise library, personal records and progress stats. Pro adds everything nutrition and coaching related: the food diary, barcode and label scanning, meal suggestions, calorie and macro targets, cardio logging, weekly check-ins, Precision Coaching, and division-style plans.',
+    a: 'Free covers the Plan Library, the workout builder, workout logging, the exercise library, personal records and progress stats. Pro adds everything nutrition and coaching related: the food diary, barcode and label scanning, meal suggestions, calorie and macro targets, weekly check-ins, Precision Coaching, and division-style plans.',
   },
   {
     key: 'food-diary',

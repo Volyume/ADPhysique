@@ -14,8 +14,7 @@ import { SettingsPage, SettingRow, settingsStyles, useSettingsStyles } from '../
 import Chip from '../components/Chip';
 
 // Coaching: the levers that shape what the coach asks for and adjusts.
-// Cardio is Pro-only; cycle tracking shows for users whose body profile
-// records a female sex.
+// Cycle tracking shows for users whose body profile records a female sex.
 export default function SettingsCoachingScreen() {
   const { user, userProfile, saveLocalProfile, tier } = useAppStore(
     useShallow(s => ({
@@ -28,9 +27,6 @@ export default function SettingsCoachingScreen() {
 
   const [calmEnabled, setCalmEnabled] = useState(false);
   const [cycleEnabled, setCycleEnabled] = useState(false);
-  // Cardio available by default (undefined reads as on). Toggling off hides the
-  // cardio surfaces; logged history is kept, just not shown.
-  const [cardioEnabled, setCardioEnabled] = useState(userProfile?.cardioEnabled !== false);
   const [bioSex, setBioSex] = useState(null);
   // C1/C2 (founder decision #2): coaching tone register + the opt-in science
   // layer. Both are LOCAL-ONLY profile fields (no synced column; the pull
@@ -161,25 +157,6 @@ export default function SettingsCoachingScreen() {
         />
         {tier === 'pro' && (
           <>
-            <SettingRow
-              icon="heart-outline"
-              label="Cardio logging"
-              sub={cardioEnabled
-                ? 'On. Log any cardio you do, your choice of activity. The coach only suggests cardio if a cut stalls.'
-                : 'Off. No cardio logging or library.'}
-              showArrow={false}
-              rightElement={
-                <Switch
-                  value={cardioEnabled}
-                  onValueChange={async (next) => {
-                    setCardioEnabled(next);
-                    if (user?.id) await saveLocalProfile(user.id, { ...(userProfile || {}), cardioEnabled: next });
-                  }}
-                  trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-                  thumbColor={cardioEnabled ? t.colors.primary : t.colors.textMuted}
-                />
-              }
-            />
             {/* C1: coaching tone register. Same facts, same decisions, same
                 honesty rules in every tone; only the prose shape changes.
                 Safety copy is identical whatever is chosen. */}

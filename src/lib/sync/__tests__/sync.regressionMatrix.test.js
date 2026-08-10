@@ -219,8 +219,8 @@ describe('Matrix coverage', () => {
       // daily_steps (activity store): push/pull covered in the dedicated
       // sync.dailySteps.test.js.
       'daily_steps',
-      // cardio_log (cardio session store): push/pull covered in the
-      // dedicated sync.cardioLog.test.js.
+      // cardio_log (cardio session store, retired D95 H1): pull_only,
+      // covered in the dedicated sync.cardioLog.test.js.
       'cardio_log',
       // partner_signals (NEW-002 pair-scoped shape): push own week signals,
       // pull both members + cheers, prune on unpair-while-offline — covered in

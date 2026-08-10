@@ -7,9 +7,9 @@
  * actionable thing: retry the on-device save.
  *
  * Source guard: WorkoutSummaryScreen has no existing colocated render-test
- * harness (unlike WorkoutHistoryScreen/CardioHistoryScreen etc.), and
- * standing one up just for this string is out of scope for this fix, so this
- * pins the exact corrected source instead.
+ * harness (unlike WorkoutHistoryScreen etc.), and standing one up just for
+ * this string is out of scope for this fix, so this pins the exact
+ * corrected source instead.
  */
 const fs = require('fs');
 const path = require('path');

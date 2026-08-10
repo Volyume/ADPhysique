@@ -7,7 +7,7 @@
 // the zoning is unit-tested directly (no screen mount needed).
 //
 // Card kinds: 'training' (TrainingNextWeekCard — volume or deload row),
-// 'nutrition' (NextWeekCard — calories/steps/cardio rows), 'macro'
+// 'nutrition' (NextWeekCard — calories/steps rows), 'macro'
 // (MacroCycleCard), 'refeed' (RefeedCard), 'dietBreak' (DietBreakCard).
 //
 // DietBreakCard is founder-confirmed as a safety block: it is the hero ONLY when

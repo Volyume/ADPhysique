@@ -46,8 +46,6 @@ jest.mock('../../lib/database', () => ({
   getWeeklyVolumeByMuscle: jest.fn(async () => []),
   getNutritionTargets: jest.fn(async () => null),
   getUserBodyProfile: jest.fn(async () => ({ sex: 'male' })),
-  getCardioLogRange: jest.fn(async () => []),
-  activityDayKey: jest.fn((ms) => new Date(ms ?? Date.now()).toISOString().slice(0, 10)),
   getLatestCoachOutput: jest.fn(async () => null),
 }));
 

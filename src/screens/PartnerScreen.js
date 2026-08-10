@@ -2232,8 +2232,7 @@ const styles = StyleSheet.create({
 // same literal is re-applied AFTER the live type spread below, so the fixed
 // override cannot be clobbered by the live spread's own computed value --
 // dropping it would silently change the rendered line height/letter
-// spacing on the very first render, not just under a theme toggle. Same
-// overall pattern as CardioHistoryScreen.js's buildLiveStyles.
+// spacing on the very first render, not just under a theme toggle.
 //
 // dotResting: stateColors.watch (src/styles/theme.js) is a lazy getter
 // aliasing colors.warning (documented at its definition: "get watch() {
