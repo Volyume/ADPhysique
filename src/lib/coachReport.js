@@ -110,7 +110,7 @@ export function buildCoachReportHtml({ startMs, endMs, generatedAt, neutral, rec
       `<tr><td>Sessions completed</td><td class="n">${fmtInt(recap.totalSessions)}</td></tr>`,
       `<tr><td>Average sessions per week</td><td class="n">${htmlEscape(recap.avgSessionsPerWeek ?? '')}</td></tr>`,
       `<tr><td>Working sets</td><td class="n">${fmtInt(recap.totalSets)}</td></tr>`,
-      `<tr><td>Total tonnage</td><td class="n">${fmtInt(recap.tonnage)} kg</td></tr>`,
+      `<tr><td>Total lifted (kg)</td><td class="n">${fmtInt(recap.tonnage)} kg</td></tr>`,
       `<tr><td>Different exercises trained</td><td class="n">${fmtInt(recap.uniqueExercises)}</td></tr>`,
     ].join('');
     const top = (recap.topExercises ?? [])
@@ -122,7 +122,7 @@ export function buildCoachReportHtml({ startMs, endMs, generatedAt, neutral, rec
     sections.push(
       `<h2>Training</h2><table>${lines}</table>`
       + (top ? `<h3>Most trained</h3><ul>${top}</ul>` : '')
-      + (prs ? `<h3>Best lifts (estimated 1RM basis)</h3><ul>${prs}</ul>` : '')
+      + (prs ? `<h3>Best lifts (estimated max basis)</h3><ul>${prs}</ul>` : '')
     );
   } else {
     sections.push('<h2>Training</h2><p>No completed sessions in this period.</p>');
@@ -193,7 +193,7 @@ export function buildCoachReportHtml({ startMs, endMs, generatedAt, neutral, rec
       rows.push(`<tr><td>Cardio</td><td>${htmlEscape(withProse(fact, adj.cardio.note))}</td></tr>`);
     }
     if (!neutral && w.deloadSuggested && prose(w.deloadNote)) {
-      rows.push(`<tr><td>Deload</td><td>${htmlEscape(prose(w.deloadNote))}</td></tr>`);
+      rows.push(`<tr><td>Recovery week</td><td>${htmlEscape(prose(w.deloadNote))}</td></tr>`);
     }
     if (!neutral && w.dietBreakSuggested && prose(w.dietBreakNote)) {
       rows.push(`<tr><td>Diet break</td><td>${htmlEscape(prose(w.dietBreakNote))}</td></tr>`);

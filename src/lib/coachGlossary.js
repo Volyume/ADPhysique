@@ -88,7 +88,7 @@ export const GLOSSARY = {
   // Shared by ConsistencyEcho and WeeklyStreakStrip so the wording can never
   // diverge between the two surfaces.
   streakWeeks:
-    'Your run counts weeks where you hit your weekly session target, from your plan or your own goal. Deload weeks always count, since recovery is part of training. Miss a week and bounce back, and it is forgiven once every six weeks, so one off week never breaks your run.',
+    'Your run counts weeks where you hit your weekly session target, from your plan or your own goal. Recovery weeks always count, since recovery is part of training. Miss a week and bounce back, and it is forgiven once every six weeks, so one off week never breaks your run.',
   // O2 (comprehension-and-trust audit 2026-08-06): the Volyume Score's
   // one-time meaning moment (ProgressScanMeaningMoment.js, exact copy in
   // progressScanResultsContract.js's MEANING_MOMENT_BODY) is shown once ever

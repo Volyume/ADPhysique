@@ -218,21 +218,21 @@ describe('buildBlockCards', () => {
 
   test('climb slide surfaces a positive tonnageDelta', () => {
     const cards = buildBlockCards(block, 'kg');
-    const climb = find(cards, c => c.unit === 'weekly volume');
+    const climb = find(cards, c => c.unit === 'weekly total lifted');
     expect(climb.value).toBe('+18%');
     expect(climb.caption).toMatch(/climb is the block working/);
   });
 
   test('deload-ending (negative delta) reads rest-positive', () => {
     const cards = buildBlockCards({ ...block, tonnageDelta: -12 }, 'kg');
-    const climb = find(cards, c => c.unit === 'weekly volume');
+    const climb = find(cards, c => c.unit === 'weekly total lifted');
     expect(climb.value).toBe('-12%');
     expect(climb.caption).toMatch(/plan working/);
   });
 
   test('null tonnageDelta drops the climb slide', () => {
     const cards = buildBlockCards({ ...block, tonnageDelta: null }, 'kg');
-    expect(find(cards, c => c.unit === 'weekly volume')).toBeUndefined();
+    expect(find(cards, c => c.unit === 'weekly total lifted')).toBeUndefined();
   });
 
   test('intro shape line + totals + outro present', () => {

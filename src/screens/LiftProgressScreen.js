@@ -72,8 +72,8 @@ function isRecentBest(row) {
 // series (see buildExerciseMetricSeries's 'volume' key), only the copy
 // changed.
 const METRICS = [
-  { key: 'e1rm', label: 'Best set' },
-  { key: 'heaviest', label: 'Heaviest' },
+  { key: 'e1rm', label: 'Est. max' },
+  { key: 'heaviest', label: 'Heaviest weight' },
   { key: 'reps', label: 'Total reps' },
   { key: 'volume', label: 'Total lifted' },
 ];
@@ -90,7 +90,7 @@ const METRICS = [
 // five figures) an en-GB thousands separator, instead of a bare unitless
 // number.
 const METRIC_HEADLINE = {
-  e1rm: { label: 'est. max', isWeight: true },
+  e1rm: { label: 'Est. max', isWeight: true },
   heaviest: { label: 'heaviest', isWeight: true },
   reps: { label: 'most reps', isWeight: false },
   volume: { label: 'total lifted', isWeight: true },
@@ -454,7 +454,7 @@ export default function LiftProgressScreen({ navigation }) {
                     session's top weight and its e1RM only (no rep count is
                     computed per session), so the line reports those two. */}
                 <Text style={[styles.lastTime, live.lastTime]}>
-                  Last time: {item.latestWeight}{units} - est. max {item.latestE1rm}{units}
+                  Last time: {item.latestWeight}{units} - Est. max {item.latestE1rm}{units}
                 </Text>
                 <View style={styles.statRow}>
                   <Text style={[styles.statValue, live.statValue]}>

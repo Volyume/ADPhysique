@@ -38,7 +38,7 @@ describe('buildReadinessSummary', () => {
       fatigueHistory: [{ fatigueLevel: 5 }, { fatigueLevel: 5 }],
       lastSession: { soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
     });
-    expect(result).toEqual({ tone: 'recover', line: 'Deload week, pull effort back.' });
+    expect(result).toEqual({ tone: 'recover', line: 'Recovery week, pull effort back.' });
   });
 
   test('the shouldDeload training signal wins over readiness facts and fatigue', () => {

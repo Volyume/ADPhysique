@@ -253,7 +253,7 @@ describe('LiftProgressScreen — metric-switcher headline (item 7, campaign 2026
     getAllExercises.mockResolvedValue(METRIC_EXERCISES);
   });
 
-  test('defaults to the e1RM headline ("est. max") for the e1rm lens', async () => {
+  test('defaults to the e1RM headline ("Est. max") for the e1rm lens', async () => {
     await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
     await flush();
 
@@ -264,7 +264,7 @@ describe('LiftProgressScreen — metric-switcher headline (item 7, campaign 2026
     const bestE1rm = Math.round(Math.max(s1, s2, s3) * 10) / 10;
 
     const text = renderedText(capturedListProps.renderItem({ item: row, index: 0 }));
-    expect(text).toContain('est. max');
+    expect(text).toContain('Est. max');
     expect(text).toContain(`${bestE1rm}kg`);
   });
 
@@ -274,7 +274,7 @@ describe('LiftProgressScreen — metric-switcher headline (item 7, campaign 2026
 
     let headerTree;
     act(() => { headerTree = create(capturedListProps.ListHeaderComponent); });
-    const chip = findMetricChip(headerTree, 'Heaviest');
+    const chip = findMetricChip(headerTree, 'Heaviest weight');
     expect(chip).toBeTruthy();
     act(() => { chip.props.onPress(); });
 
@@ -371,13 +371,15 @@ describe('LiftProgressScreen — last-time line (C1)', () => {
     expect(benchRow.latestWeight).toBe(60);
     expect(squatRow.latestWeight).toBe(100);
 
-    // Copy sweep replaced the "e1RM" jargon with plain "est. max" (D4-adjacent
-    // no-jargon pass); the underlying value is unchanged.
+    // Copy sweep replaced the "e1RM" jargon with plain "Est. max" (D4-adjacent
+    // no-jargon pass; capitalised under D93-2's Phase 2 terminology canon so
+    // the label matches every other "Est. max" surface); the underlying
+    // value is unchanged.
     const benchText = renderedText(capturedListProps.renderItem({ item: benchRow, index: 0 }));
-    expect(benchText).toContain(`Last time: 60kg - est. max ${benchE1rm}kg`);
+    expect(benchText).toContain(`Last time: 60kg - Est. max ${benchE1rm}kg`);
 
     const squatText = renderedText(capturedListProps.renderItem({ item: squatRow, index: 0 }));
-    expect(squatText).toContain(`Last time: 100kg - est. max ${squatE1rm}kg`);
+    expect(squatText).toContain(`Last time: 100kg - Est. max ${squatE1rm}kg`);
   });
 });
 

@@ -177,7 +177,7 @@ export default function AnalyticsScreen({ navigation, route }) {
     navigation.navigate('ShareCard', {
       milestoneData: {
         eyebrow: 'Longest run',
-        title: 'A new personal best.',
+        title: 'A new personal record.',
         heroValue: String(longestRunPb),
         heroUnit: longestRunPb === 1 ? 'week' : 'weeks',
         caption: 'Your longest run of weeks yet. It carries on.',
@@ -440,7 +440,7 @@ export default function AnalyticsScreen({ navigation, route }) {
                   accessibilityLabel={`Sessions. ${sessionSpark.total} in the last 30 days. Opens consistency.`}
                 />
                 <SparkCard
-                  label="New bests"
+                  label="New PRs"
                   value={prSpark.total}
                   sub="Last 30 days"
                   bars={prSpark.bars}
@@ -495,7 +495,7 @@ export default function AnalyticsScreen({ navigation, route }) {
               <View style={styles.milestoneRow}>
                 <Ionicons name="ribbon-outline" size={16} color={t.colors.primary} />
                 <Text style={[styles.milestoneText, live.milestoneText]}>
-                  {`A new personal best. ${longestRunPb} ${longestRunPb === 1 ? 'week' : 'weeks'} running, your longest yet.`}
+                  {`A new personal record. ${longestRunPb} ${longestRunPb === 1 ? 'week' : 'weeks'} running, your longest yet.`}
                 </Text>
                 {/* R9 (D70): milestoneCtaButton -> shared Button outline sm. */}
                 <Button

@@ -46,6 +46,8 @@ const JARGON_PATTERNS = [
   { name: 'RPE', re: /\bRPE\b/ },
   { name: 'mesocycle', re: /\bmesocycle\b/i },
   { name: 'junk volume', re: /\bjunk volume\b/i },
+  { name: 'deload', re: /\bdeload\b/i },
+  { name: 'tonnage', re: /\btonnage\b/i },
   // Science jargon
   { name: 'metabolic adaptation', re: /\bmetabolic adaptation\b/i },
   { name: 'training stimulus', re: /\btraining stimulus\b/i },

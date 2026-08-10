@@ -16,6 +16,8 @@ describe('JARGON_BLOCKLIST: existing gym abbreviations (regression)', () => {
     ['stay at 7 RPE'],
     ['this mesocycle ends Sunday'],
     ['junk volume'],
+    ['next week is a deload'],
+    ['total tonnage this block'],
   ])('blocks "%s"', (input) => {
     expect(checkJargon(input).clean).toBe(false);
   });

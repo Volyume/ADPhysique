@@ -269,16 +269,19 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(NOW_CARD).toContain('accessibilityLabel="Add a note for this set"');
     expect(NOW_CARD).toContain('accessibilityLabel="Remove this note"');
     // Re-pinned for D43 S2: the U-A-1 "N notes"/"N cues" count wording is
-    // retired entirely -- StatusStrip labels every chip by content (Deload,
+    // retired entirely -- StatusStrip labels every chip by content (Recovery,
     // Superset, Coach note, Starter session, Target met), never a count.
     // This assertion now pins the ABSENCE of the count pattern plus the
     // presence of the content-labelled chip items StatusStrip receives.
+    // Re-pinned for D93-2 (Phase 2 terminology canon, concept 3): the
+    // "Deload" chip leak is renamed "Recovery" so it never shows a second
+    // name for the same "Recovery week" banner it expands into.
     expect(ACTIVE_WORKOUT).not.toContain('noteCount');
     expect(ACTIVE_WORKOUT).not.toMatch(/note\{.*!== 1 \? 's' : ''\}/);
     expect(ACTIVE_WORKOUT).toContain("label: 'Starter session'");
     expect(ACTIVE_WORKOUT).toContain("label: 'Superset'");
     expect(ACTIVE_WORKOUT).toContain("label: 'Coach note'");
-    expect(ACTIVE_WORKOUT).toContain("label: 'Deload'");
+    expect(ACTIVE_WORKOUT).toContain("label: 'Recovery'");
     expect(ACTIVE_WORKOUT).toContain("label: 'Target met'");
     expect(ACTIVE_WORKOUT).toContain('<StatusStrip items={items} />');
     expect(ACTIVE_WORKOUT).not.toContain('testID="volyume-btn-add-mid-workout"');

@@ -2663,7 +2663,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             if (isDeloadWeek && !deloadDismissed) {
               items.push({
                 key: 'deload',
-                label: 'Deload',
+                label: 'Recovery',
                 icon: 'battery-charging-outline',
                 iconColor: t.colors.warning,
                 content: (
@@ -2679,7 +2679,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       style={[styles.inlineActionPill, live.inlineActionPill]}
                       onPress={() => setDeloadDismissed(true)}
                       accessibilityRole="button"
-                      accessibilityLabel="Dismiss deload banner"
+                      accessibilityLabel="Dismiss recovery week banner"
                     >
                       <Text style={[styles.inlineActionPillText, live.inlineActionPillText]}>Skip</Text>
                     </TouchableOpacity>
