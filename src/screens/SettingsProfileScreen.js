@@ -16,6 +16,7 @@ import { ageYearsFromDateOfBirth, dateOfBirthFromAgeYears } from '../lib/profile
 import { logError } from '../lib/errorLog';
 import * as haptics from '../lib/haptics';
 import { useToast } from '../components/Toast';
+import { DIETS } from '../lib/food/curatedMeals';
 
 // AC-08 (Codex adversarial audit, 2026-07-12): height/age feed BMR and
 // calorie-floor maths same as weight/body fat, but saveHeight/saveAge below
@@ -29,11 +30,25 @@ const HEIGHT_MAX_CM = 250;
 const AGE_MIN_YEARS = 13;
 const AGE_MAX_YEARS = 100;
 
-const DIET_OPTIONS = [
-  { value: 'omnivore', label: 'Omnivore' },
-  { value: 'vegetarian', label: 'Vegetarian' },
-  { value: 'vegan', label: 'Vegan' },
-];
+// Campaign 3 discoverability audit, finding #2 (docs/discoverability-audit-
+// 2026-08-10/SETTINGS-INVENTORY.md §4 #2): this screen used to hardcode a
+// 3-option list (omnivore/vegetarian/vegan) while the canonical DIETS list
+// (lib/food/curatedMeals.js, also used by DietaryPreferencesEditor.js) has a
+// 4th option, pescatarian. A pescatarian user saw no chip selected here and
+// any tap silently changed their diet, because both surfaces write the same
+// setDietPreference action against the same userProfile.dietPreference field
+// (verified: SettingsProfileScreen.js and DietaryPreferencesEditor.js both
+// call s.setDietPreference, which single-writes dietPreference,
+// useAppStore.js:1796-1808). Rendering from the shared DIETS list, with the
+// same labels DietaryPreferencesEditor uses, makes the two writers exactly
+// equivalent rather than just landing on the same field with different UIs.
+const DIET_LABELS = {
+  omnivore: 'Omnivore',
+  pescatarian: 'Pescatarian',
+  vegetarian: 'Vegetarian',
+  vegan: 'Vegan',
+};
+const DIET_OPTIONS = DIETS.map((value) => ({ value, label: DIET_LABELS[value] || value }));
 
 const SEX_OPTIONS = [
   { value: 'male', label: 'Male' },
@@ -283,7 +298,7 @@ export default function SettingsProfileScreen() {
               <Text style={[settingsStyles.settingSub, live.settingSub]}>Filters the meals Volyume suggests.</Text>
             </View>
           </View>
-          <View style={styles.dietChips}>
+          <View style={styles.dietChipsWrap}>
             {DIET_OPTIONS.map(opt => {
               const active = diet === opt.value;
               return (
@@ -294,7 +309,7 @@ export default function SettingsProfileScreen() {
                   onPress={() => { haptics.selection(); setDiet(opt.value); setDietPreference(opt.value); }}
                   accessibilityRole="radio"
                   accessibilityLabel={`Diet preference ${opt.label}`}
-                  style={styles.dietChip}
+                  style={styles.dietChipWrap}
                   labelStyle={[styles.dietChipText, liveText.dietChipText]}
                 />
               );
@@ -336,6 +351,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignSelf: 'stretch',
     minHeight: 44,
+  },
+  // Diet preference now renders 4 options (finding #2 fix) instead of the
+  // 2/3-option rows above that share dietChips/dietChip with equal-width
+  // flex:1 chips. Wraps to a second line rather than squashing 4 chips into
+  // one row, matching DietaryPreferencesEditor.js's chipGrid pattern.
+  dietChipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  dietChipWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
   },
   dietChipText: {
     ...type.label,

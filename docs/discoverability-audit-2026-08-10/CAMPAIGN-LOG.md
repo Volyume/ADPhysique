@@ -29,8 +29,21 @@ consequence, cardio permanently out, D92-11 untouched, migrations
   actions (ManualBuilder exercise remove, Diary move/copy selection
   mode, MyMeals creation path); 0 unlabelled icon touchables;
   tabLongPress inert (Campaign 4 list).
-- NEXT: await P1 inventory (lane 1 still running); then D94 rulings,
-  ownership/IA phases, implementation waves.
+- P1 inventory — LANDED (91 live settings; 16 writer issues; 7 G
+  questions; map delta 14 stale + 14 new rows).
+- P2 ownership — RULED (SETTINGS-OWNERSHIP.md, D94-1): fixes assigned
+  to two agent lanes (A: partnerCheer toggle, checkinHour 18, blob
+  merge, mirror verify-then-fix; B: shared DIETS list, meals-per-day
+  reader-verified relabel, protein-writer evidence); finding 16 STALE
+  (per-side off switch exists, inventory corrected); #5 documented as
+  D93-intentional; four FOUNDER RULINGS recorded (FR-1 sex fields,
+  FR-2 dormant meal prefs, FR-3 hide-exact control, FR-4 rest beep).
+  LEAD LANDED: the false "as you chose" scan copy is gone (resolver
+  now states the fact without claiming choice).
+- NEXT: agent lanes in flight; then P3 IA, P5-P7 discoverability
+  waves, P9 shortcuts (landmark editor from Coach tab, per-day
+  offsets from Diary), P10 gesture fixes, P11 state-gated audit incl.
+  finding 15 dismissals, P23 pins, P24 reviews.
 - P2-P25 — NOT STARTED.
 
 ## Landed commits (this campaign)

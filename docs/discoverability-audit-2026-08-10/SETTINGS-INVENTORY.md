@@ -499,7 +499,7 @@ here (Phase 2 owns the fixes).
     to Phase 11's "does not disappear forever because of one accidental
     dismissal".
 
-16. **Per-side logging cannot be turned off once accepted.**
+16. **[CORRECTED BY LEAD REVIEW - STALE]** ~~Per-side logging cannot be turned off once accepted.~~ A manual toggle EXISTS in the exercise options sheet (`ActiveWorkoutScreen.js:3523-3547`), laterality-gated, with an honest off path. The original claim below is preserved for the record but is WRONG:
     `setUnilateralExercise(id, false)` exists (`unilateral.js:94-105`) but the
     only caller is the one-time prompt, and `markUnilateralAsked`
     (`:126-136`) guarantees that prompt never re-fires for that exercise. The
