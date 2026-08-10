@@ -22,6 +22,11 @@ export const GLOSSARY = {
     'Alternating higher- and lower-carb days across the week.',
   estMax:
     'An estimate of the most you could lift once, worked out from your recent sets. You never have to test it.',
+  // D93 (Campaign 2, Phase 3): the app's most-repeated achievement term
+  // finally gets its definition. One meaning everywhere: a PR is any of
+  // the three record kinds, and never requires a max-out attempt.
+  pr:
+    'A personal record: a new best for you on an exercise. It can be your heaviest weight, your most reps at a weight, or a new estimated max. Any of the three counts, and it never needs a one-rep max attempt. PRs are the clearest sign your training is working.',
   effort:
     'How close to failure the set should feel: 5 = leave nothing, 0 = very easy.',
   volumeBands:
@@ -34,8 +39,11 @@ export const GLOSSARY = {
     'A smoothed version of your weight that ignores day-to-day noise.',
   mesocycle:
     'A training block: a few weeks that ease in, build, push, then recover.',
+  // D93 (Campaign 2, Phase 5): the why is the block's effort ladder - a
+  // PRESCRIPTION, not a user report (per-set RIR entry is settled-removed),
+  // so the gloss claims planning, never measurement.
   rir:
-    "Reps in reserve: how many reps you'd have left; “stop 2 short” means leave 2 in the tank.",
+    "Reps in reserve: how many reps you'd have left; “stop 2 short” means finish the set when you believe you could still do about 2 good reps. The block plans your effort this way so work gets harder week by week without every set going to failure.",
   strengthLevel:
     'Where your estimated max sits against typical lifters at your bodyweight.',
   // U-E-1 onboarding term (drafted 2026-06-13, grounded in the methods themselves;

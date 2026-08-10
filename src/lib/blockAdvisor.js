@@ -215,7 +215,13 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
     body: finished
       ? "Fatigue ran consistently high this block. It's worth reviewing whether the plan's volume or exercise selection still fits where you are. The coach can help rebuild it."
       : "Fatigue has been consistently high this block. After your recovery week, it's worth reviewing whether the plan's volume or exercise selection still fits where you are. The coach can help rebuild it.",
-    actionLabel: 'Continue this plan',
+    // D93 (Campaign 2, Phase 12): this card RECOMMENDS a fresh look, so
+    // its primary button cannot share 'Continue this plan' with the card
+    // that recommends continuing - two opposite recommendations, one CTA
+    // label. 'Repeat this plan anyway' states the true behaviour (a true
+    // repeat, PlansScreen seedIntent 'repeat') and owns that it goes
+    // against the headline, per the D91-2 button-honesty precedent.
+    actionLabel: 'Repeat this plan anyway',
     secondaryLabel: 'Review with coach',
   };
 }

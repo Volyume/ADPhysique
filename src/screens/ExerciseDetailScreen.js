@@ -23,6 +23,7 @@ import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
+import { GLOSSARY } from '../lib/coachGlossary';
 import { SkeletonCard } from '../components/Skeleton';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
@@ -654,6 +655,9 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               <View style={styles.prHighlightHeader}>
                 <Ionicons name="trophy" size={18} color={t.colors.primary} />
                 <SectionLabel tone="muted">Personal records</SectionLabel>
+                {/* D93 (Campaign 2, Phase 3): the records surfaces carry the
+                    PR definition; the celebration toast stays clean. */}
+                <InfoTooltip text={GLOSSARY.pr} size={12} />
               </View>
               <View style={styles.prHighlightRow}>
                 {displayPR && (
@@ -893,8 +897,12 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {prs.length > 0 && (
           <View style={styles.section}>
             {/* D88: was "All-time bests" beside a "Personal records" card on
-                the same screen, for one list. One name. */}
-            <SectionLabel>Personal records</SectionLabel>
+                the same screen, for one list. One name. D93 (Phase 3): both
+                records sections carry the same PR definition. */}
+            <View style={styles.prListHeader}>
+              <SectionLabel>Personal records</SectionLabel>
+              <InfoTooltip text={GLOSSARY.pr} size={12} />
+            </View>
             {prs.slice(0, 5).map((pr) => (
               <Card radius="md" style={styles.prRow} key={pr.id}>
                 <Ionicons
@@ -1201,6 +1209,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   prHighlightHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  prListHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,

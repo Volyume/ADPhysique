@@ -251,6 +251,9 @@ export default function BlockReflectionScreen({ navigation, route }) {
                 <View style={styles.sectionHeader}>
                   <Ionicons name="trophy-outline" size={16} color={t.colors.primary} />
                   <SectionLabel accessibilityRole="header">Records set this block</SectionLabel>
+                  {/* D93 (Phase 3): same PR definition as the exercise
+                      records surfaces - one meaning everywhere. */}
+                  <InfoTooltip text={GLOSSARY.pr} size={12} />
                 </View>
                 {data.prs.map((pr, i) => {
                   const recordType = pr.recordType ?? pr.record_type;

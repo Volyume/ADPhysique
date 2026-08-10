@@ -51,7 +51,17 @@ function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek, onChooseNext, 
           <Text key={line} style={[styles.sheetDefn, live.sheetDefn]}>{line}</Text>
         )) : null}
         {/* U-E-1/U-D-3: the chip is whole-tappable, so the plain-English
-            definitions of its terms live here, in the sheet it opens. */}
+            definitions of its terms live here, in the sheet it opens.
+            D93 (Campaign 2, Phase 4): this sheet is the block's education
+            surface, so it also carries the block definition (giving the
+            authored gloss its call site) and the one place the climb's WHY
+            is stated. The next-block claim is the system's standing
+            behaviour (ledger review runs on every finished block), not a
+            promise about any one muscle's data. */}
+        <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.mesocycle}</Text>
+        <Text style={[styles.sheetDefn, live.sheetDefn]}>
+          Workload climbs a little each week so your body keeps adapting, then the recovery week lets it catch up. How each muscle responds shapes where the next block starts.
+        </Text>
         <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.deload}</Text>
         <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.rir}</Text>
         {currentMesoWeek?.awaitingDecision && onChooseNext ? (
