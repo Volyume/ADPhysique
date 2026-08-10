@@ -83,13 +83,15 @@ describe('ED-safety: getOpenEdPatternFlag reads on safety surfaces fail CLOSED',
     expect(body).not.toMatch(/catch \(_\) \{\s*return false;\s*\}/);
   });
 
-  test('scheduler: all six ED-gated push reads use the read_failed sentinel', () => {
+  test('scheduler: all seven ED-gated push reads use the read_failed sentinel', () => {
     // trial-day-3, win-back, missed-checkin, activation-nudge, planned-meal,
-    // partner-beats — each gates a weight/food/notification push.
+    // partner-beats — each gates a weight/food/notification push — plus the
+    // meal-log reminders (Campaign 1 adversarial review blocker 2: they
+    // were the ONE food-adjacent category with no ED gate).
     const matches = FILES.scheduler.match(
       /getOpenEdPatternFlag\([^)]*\)\.catch\(\(\)\s*=>\s*'read_failed'\)/g,
     ) || [];
-    expect(matches.length).toBe(6);
+    expect(matches.length).toBe(7);
   });
 
   // 3. DiaryScreen — the banking carve-out feed.

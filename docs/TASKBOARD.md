@@ -1562,6 +1562,20 @@ workflow survives as a fallback.
   ed_pattern_flags never pushed - open flag does not reach a second
   device; wiring the recorded raise-only design transmits Article 9
   data, so founder's call). Residuals recorded in D92-10, never
-  silently parked. Suite 9,667 passing / lint clean at landing.
+  silently parked. ADVERSARIAL REVIEW (fresh eyes, the founder's ten
+  questions): 17 findings - 3 blockers (engine-layer permissive
+  defaults defeating the D7 fix; the meal-log reminder as the one
+  food-adjacent notification with no ED gate, now gated at schedule AND
+  delivery; the planned-volume restore truncating at PostgREST's
+  1000-row cap) + 6 defects + 5 gaps + 3 nits - ALL ACTIONED, incl.
+  the calm ratchet failing closed on read errors, honest edit-time
+  provenance for guarded prefs carried through pulls, the week applier
+  LWW gate (D92-10(c) withdrawn as wrong), one canonical sex-floor
+  statement across all three restatements, deterministic one-row-per-
+  week coach-output identity (local v71 + migrate_135 written,
+  founder-gated), and the diet axis in the meal-plan staleness notice.
+  Q3 (privacy) and Q10 (cardio scope) passed outright. Final pins:
+  campaign1.integrity 51 + campaign1.syncConflict 41. Suite 9,681
+  passing / lint clean at landing.
   RECOVERY: reports in session scratchpad map/ (C1P07/C1P08/
   C1REVIEW); code on claude/campaign1-integrity; D92 is the spec.

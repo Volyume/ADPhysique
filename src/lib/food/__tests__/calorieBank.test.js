@@ -215,7 +215,10 @@ describe('safeDayFloorKcal (FFM floor must bind when higher — review fix #1)',
   test('sex floor is the baseline', () => {
     expect(sexFloorKcal('male')).toBe(1500);
     expect(sexFloorKcal('female')).toBe(1200);
-    expect(sexFloorKcal(null)).toBe(1200);
+    // Campaign 1 review finding 6 re-anchor (D92-8): unknown sex takes
+    // the HIGHER floor everywhere - this suite's old 1200 pin was the
+    // last restatement of the permissive default.
+    expect(sexFloorKcal(null)).toBe(1500);
   });
   test('uses the FFM floor when it exceeds the sex floor (heavy/lean user)', () => {
     // 100kg male @15% BF -> ~85kg FFM -> well above 1500.

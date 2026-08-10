@@ -115,6 +115,9 @@ export const CATEGORY_CHANNELS = Object.freeze({
   // weight is logged and under an open ED flag (handler), scheduled ED-gated.
   [CATEGORY.EVENING_WEIGHT]: [CHANNEL.PUSH],
   [CATEGORY.TRAINING_REMINDER]: [CHANNEL.PUSH],
+  // Campaign 1 review blocker 2: food-adjacent, ED-flag suppressed at
+  // schedule time (scheduleMealReminders fails closed) AND at delivery
+  // (handler), like its weight-prompt siblings.
   [CATEGORY.MEAL_LOG_REMINDER]: [CHANNEL.PUSH],
   [CATEGORY.YEAR_OF_LIFTS_UNLOCK]: [CHANNEL.PUSH],
   [CATEGORY.MONTHLY_RECAP]: [CHANNEL.PUSH],

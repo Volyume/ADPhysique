@@ -35,6 +35,7 @@ import { applyMacroDeltaToPlan } from './planEdit';
 import { bankedPlanDayEdits } from './calorieBank';
 import { normalisePreferences } from './planPreferences';
 import { foodExcluded } from './foodRoles';
+import { CURATED_MEALS, dietAllows } from './curatedMeals';
 import { todayLocalKey, parseLocalDay, localDayKey } from '../dayKey';
 import { track } from '../engineTelemetry';
 
@@ -399,12 +400,24 @@ export async function loadActiveMealPlan(userId) {
  * the plan/exclusions are empty.
  */
 export function planConflictsWithExclusions(plan, exclude = {}) {
+  // Campaign 1 review finding 11: the DIET axis is part of "dietary
+  // needs" too - a switch to vegan must flag a stored plan full of meat
+  // just as an allergen change flags its foods. Meals carry the diet
+  // (curatedMeals schema); foods carry the tags.
+  const diet = typeof exclude?.diet === 'string' && exclude.diet ? exclude.diet : null;
   const hasAny = (exclude?.excludeTags?.length || 0) > 0
-    || (exclude?.excludeFoodKeys?.length || 0) > 0;
+    || (exclude?.excludeFoodKeys?.length || 0) > 0
+    || diet != null;
   if (!plan || !hasAny) return [];
   const conflicts = new Set();
   for (const dayPlan of plan?.days || []) {
     for (const slot of dayPlan?.slots || []) {
+      if (diet && slot?.mealId) {
+        const meal = CURATED_MEALS.find((m) => m.id === slot.mealId);
+        if (meal && !dietAllows(diet, meal.diet)) {
+          conflicts.add(slot?.name || meal.name || slot.mealId);
+        }
+      }
       for (const it of slot?.items || []) {
         const ref = typeof it?.foodRef === 'string' ? it.foodRef : '';
         if (!ref.startsWith('curated:')) continue;

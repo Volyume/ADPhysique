@@ -2444,9 +2444,12 @@ building Stages 1-2 (all criterion-ruled: best for end users, never effort):
    (b) user_prefs has no cloud stale-write trigger: the calm ratchet
    protects every device's local state, but a device that set calm
    cannot teach an offline device that calm was set elsewhere.
-   (c) insertMesocycleWeekFromCloud still stamps pull-time timestamps
-   (weeks carry no user edits; the parent mesocycle row is the
-   guarded authority).
+   (c) CORRECTED by the adversarial review (finding 9): weeks DO carry
+   a user edit (the confirm-then-apply early deload writes
+   is_deload/rir_target), so insertMesocycleWeekFromCloud now has the
+   same LWW gate and timestamp preservation as its siblings - the
+   original "weeks carry no user edits" justification was wrong and is
+   withdrawn.
 11. (FOUNDER DECISION REQUIRED - flagged, no code touched, per the
    CLAUDE.md ED-safety stop-and-ask rule) P0-8 D12: ed_pattern_flags
    is registered pull_only + server_wins but NOTHING pushes it - an

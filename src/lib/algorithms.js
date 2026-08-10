@@ -885,6 +885,28 @@ function buildSubstituteReason(sub, target, targetStretch = 'medium') {
 // recommend an increase. soreness 3 / performance 3 routes to hold; real
 // callers always pass recorded values.
 export function computeAdaptiveDecision({ soreness = 3, performance = 3, pump = 3, joint = 0 } = {}) {
+  // Campaign 1 review BLOCKER 1: a missing REQUIRED signal holds. An
+  // explicit null (as runAdaptiveEngine now passes for unanswered
+  // feedback) is not a rating and must never route through the
+  // good-recovery branch. The joint override below still runs first -
+  // real reported pain always wins regardless of what else is missing.
+  if (joint >= 3) {
+    return {
+      decision: 'rotate_exercise',
+      delta: 0,
+      reasonCode: 'joint_high',
+      reasonText: 'High joint discomfort. Rotating to a lower-risk exercise next session.',
+    };
+  }
+  if (soreness == null || performance == null) {
+    return {
+      decision: 'hold',
+      delta: 0,
+      reasonCode: 'insufficient_feedback',
+      reasonText: 'Not enough session feedback to judge. Holding your current sets.',
+    };
+  }
+  if (pump == null) pump = 3;
   // Joint pain overrides everything, rotate the exercise
   if (joint >= 3) {
     return {
@@ -979,10 +1001,18 @@ export function runAdaptiveEngine(weekFeedback = {}) {
   const results = {};
 
   for (const [muscle, data] of Object.entries(weekFeedback)) {
+    // Campaign 1 review BLOCKER 1: pass absence THROUGH. The old
+    // `?? 2 / ?? 2 / ?? 3` re-manufactured exactly the permissive
+    // defaults the P0-7 D7/D9 fix removed one layer up, so a session
+    // with no feedback at all still returned add_set +1. Missing
+    // required signals now hold (computeAdaptiveDecision's
+    // insufficient_feedback early return); joint stays 0-when-missing
+    // because absence of a joint answer adds no pain signal, and the
+    // joint HOLD path only ever restricts.
     const decision = computeAdaptiveDecision({
-      soreness: data.soreness ?? 2,
-      performance: data.performance ?? 2,
-      pump: data.pump ?? 3,
+      soreness: data.soreness ?? null,
+      performance: data.performance ?? null,
+      pump: data.pump ?? null,
       joint: data.joint ?? 0,
     });
 

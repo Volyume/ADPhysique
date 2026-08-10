@@ -26,6 +26,7 @@
  */
 
 import { applyMacroDeltaToPlan } from './planEdit';
+import { kcalFloorForSex } from '../nutritionEngine';
 
 // A bump below this is presentation noise, not a banked day — refuse rather than
 // show a fake "bigger day" (mirrors MIN_MEANINGFUL_CYCLE_KCAL in the assembler).
@@ -145,9 +146,15 @@ export function bankedDeltaForDay(calorieBank, dayKey) {
   return isFinite(v) ? v : 0;
 }
 
-/** The per-day sex floor: 1500 kcal male, 1200 otherwise (nutritionEngine.js:792). */
+/**
+ * The per-day sex floor, delegating to THE canonical statement
+ * (nutritionEngine.kcalFloorForSex). Campaign 1 review finding 6: this
+ * used to restate the rule with the pre-D4 unknown-sex fallback (1200),
+ * so a user whose sex failed to read was shown a 1500 floor by the
+ * coach while banking trimmed their day to 1200.
+ */
 export function sexFloorKcal(sex) {
-  return sex === 'male' ? 1500 : 1200;
+  return kcalFloorForSex(sex);
 }
 
 /**

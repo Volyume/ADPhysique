@@ -55,11 +55,20 @@
 -- behind would find its real edits silently refused. As of
 -- Campaign 1 every push path for these nine tables ships the
 -- row's own timestamp:
---   mesocycles / mesocycle_weeks / programmes / routines /
+--   mesocycles / programmes / routines /
 --   routine_exercises / planned_muscle_volume
 --                       src/lib/sync.js - already honest (F5
 --                       Phase A: `new Date(x.updatedAt ??
 --                       x.createdAt ?? Date.now())`)
+--   mesocycle_weeks     honest as of the Campaign 1 adversarial
+--                       review (finding 9): the applier used to
+--                       restamp pulled rows with Date.now(),
+--                       which would have laundered pull time as
+--                       edit time through the F5 push. The
+--                       applier now preserves cloud timestamps
+--                       and gates on strictly-newer updated_at
+--                       (weeks DO carry a user edit: the
+--                       confirm-then-apply early deload).
 --   coach_outputs       honest as of P0-8 D7: saveCoachOutput now
 --                       writes the local updated_at column on
 --                       both branches, so _pushCoachOutputs no

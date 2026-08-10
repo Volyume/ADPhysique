@@ -55,7 +55,6 @@ import {
 } from './blockLedgerGather';
 import { computeLearnedRange } from './learnedRange';
 import { resolveSeedRange } from './blockSeed';
-import { checkinReadiness } from './blockAdvisor';
 import { getManualLandmarks, getAdaptedLandmarks, mergeLandmarkPrecedence, isManualEdit } from './effectiveLandmarks';
 import { getBlockStatus } from './mesocycle';
 import { VOLUME_LANDMARKS } from './algorithms';
@@ -147,7 +146,21 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
       previousBlockEndMs, blockStart, blockWeeks, deloadWeekIndex, appliedEarlyDeloadWeekIndices,
     });
 
-    const readinessSlope = computeReadinessSlope(checkins.map((c) => checkinReadiness(c)));
+    // Campaign 1 review finding 8: the SLOPE input must be on ONE scale
+    // for every week. checkinReadiness renormalises to energy/soreness
+    // 0.5/0.5 when sleep is unanswered (correct for absolute reads), but
+    // a slope across weeks that mix answered and unanswered sleep would
+    // then measure the scale change, not the user - and could lose the
+    // readinessSlope <= -0.3 strain point in a genuinely deteriorating
+    // block. The slope therefore uses the sleep-free score for EVERY
+    // week; the advisor's absolute thresholds keep the full formula.
+    const sleepFreeReadiness = (c) => {
+      if (!c) return null;
+      const energy = (((c.energyScore ?? 3) - 1) / 4) * 100;
+      const soreness = (1 - ((c.sorenessScore ?? 3) - 1) / 4) * 100;
+      return energy * 0.5 + soreness * 0.5;
+    };
+    const readinessSlope = computeReadinessSlope(checkins.map((c) => sleepFreeReadiness(c)));
     const sleepFlaggedWeeks = countSleepFlaggedWeeks(checkins);
     const { deloadFlagFired, deloadFlagMidBlock } = deriveDeloadFlags({
       recoveryFlagWeekStarts: flagWeeks, appliedEarlyDeloadWeekIndices,

@@ -985,6 +985,11 @@ async function _pushMesocycles(sb, supabaseUserId, localUserId) {
         })()),
         focus: m.focus ?? null,
         is_active: !!m.isActive,
+        // Campaign 1 review finding 12: ship the block's REAL creation
+        // time. Without it the cloud column defaulted to first-push time,
+        // and created_at is the tiebreak both getActiveBlock and
+        // getAchievedWeeklyPeaks order by after a restore.
+        created_at: new Date(m.createdAt ?? Date.now()).toISOString(),
         updated_at: new Date(m.updatedAt ?? m.createdAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time
       })).filter(r => r.start_date && r.end_date);
       if (rows.length) {
@@ -1023,6 +1028,9 @@ async function _pushMorningWeights(sb, supabaseUserId, localUserId) {
       weight_kg: w.weightKg,
       logged_at: msToISO(w.loggedAt),
       notes: w.notes ?? null,
+      // Campaign 1 review findings 9/12: real creation time rides too, so
+      // the pull-side preservation has something honest to preserve.
+      created_at: new Date(w.createdAt ?? Date.now()).toISOString(),
       updated_at: new Date(w.updatedAt ?? w.loggedAt ?? Date.now()).toISOString(), // F5 Phase A
     })).filter(r => r.logged_at && r.weight_kg != null);
     for (let i = 0; i < rows.length; i += 200) {
@@ -1401,6 +1409,27 @@ export async function notePrefWrite(key) {
 }
 
 /**
+ * Campaign 1 review finding 5: the cloud updated_at for a guarded pref
+ * must be the VALUE's edit time, not the push time. Both push paths used
+ * to stamp now(), so a stale device's routine sync made its old blob
+ * look freshest and the pull-side stamp rule was reading laundered
+ * timestamps. The stamp (notePrefWrite on local edits; the cloud row's
+ * updated_at recorded at pull time for values learned from another
+ * device) is the value's provenance and travels with it. A guarded key
+ * with no stamp at all (legacy value, never edited post-fix) seeds with
+ * now() once - after which the stamp cycle keeps it honest.
+ */
+async function _guardedPrefUpdatedAt(key) {
+  if (!isGuardedPref(key)) return new Date().toISOString();
+  try {
+    const raw = await AsyncStorage.getItem(PREF_WRITE_STAMP_PREFIX + key);
+    const ms = Number(raw);
+    if (Number.isFinite(ms) && ms > 0) return new Date(ms).toISOString();
+  } catch (_) { /* fall through */ }
+  return new Date().toISOString();
+}
+
+/**
  * Push one preference key to the cloud. Idempotent, upsert on
  * (user_id, key). Called from the store whenever a synced
  * preference changes so the cloud copy stays current.
@@ -1415,7 +1444,8 @@ export async function syncUserPref(supabaseUserId, key, value) {
     const { error } = await sb.from('user_prefs').upsert({
       user_id: supabaseUserId, key,
       value: value == null ? '' : String(value),
-      updated_at: new Date().toISOString(),
+      // Finding 5: honest edit time for guarded keys, push time otherwise.
+      updated_at: await _guardedPrefUpdatedAt(key),
     }, { onConflict: 'user_id,key' });
     if (error) logPgErr('sync.syncUserPref', error);
   } catch (e) { logWarn('sync.syncUserPref', e?.message, { key }); }
@@ -1428,11 +1458,14 @@ async function _pushAllUserPrefs(sb, supabaseUserId) {
     const keys = allKeys.filter(shouldSyncPref);
     if (!keys.length) return;
     const pairs = await AsyncStorage.multiGet(keys);
-    const rows = pairs.map(([k, v]) => ({
+    // Finding 5: guarded keys carry the value's honest edit time so a
+    // stale device's routine bulk push can no longer make its old blob
+    // look freshest and defeat the pull-side stamp rule.
+    const rows = await Promise.all(pairs.map(async ([k, v]) => ({
       user_id: supabaseUserId, key: k,
       value: v == null ? '' : String(v),
-      updated_at: new Date().toISOString(),
-    }));
+      updated_at: await _guardedPrefUpdatedAt(k),
+    })));
     for (let i = 0; i < rows.length; i += 200) {
       const { error } = await sb.from('user_prefs').upsert(
         rows.slice(i, i + 200), { onConflict: 'user_id,key' },
@@ -1819,9 +1852,15 @@ async function _pullPeakWeekPlans(sb, supabaseUserId) {
 
 async function _pullPlannedMuscleVolume(sb, supabaseUserId) {
   try {
-    const { data, error } = await sb.from('planned_muscle_volume')
-      .select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
-    if (error) { logPgErr('sync._pullPlannedMuscleVolume', error); return 0; }
+    // Campaign 1 review finding 3: paginate. A bare select caps at
+    // PostgREST's 1000 rows (~9 blocks of planned volume), and since
+    // P0-1 made this pull the restore path for the PRIMARY table, a
+    // long-tenured user's most recent blocks - including the active one -
+    // silently failed to restore.
+    const data = await fetchAllRows(
+      'sync._pullPlannedMuscleVolume',
+      () => sb.from('planned_muscle_volume').select('*').eq('user_id', supabaseUserId).is('deleted_at', null),
+    );
     if (!data?.length) return 0;
     // eslint-disable-next-line global-require
     const { insertOrUpdatePlannedMuscleVolumeFromCloud } = require('./database');
@@ -1895,21 +1934,34 @@ async function _pullAdaptationEvents(sb, supabaseUserId) {
 export async function filterGuardedPulledPrefs(Storage, rows) {
   const guarded = rows.filter(r => isGuardedPref(r.key));
   if (!guarded.length) return rows;
+  // Campaign 1 review findings 4 + 13: the guard itself FAILS CLOSED. A
+  // failed stamp lookup, a failed local wellbeing read, or a cloud row
+  // whose updated_at cannot be parsed all DROP the guarded rows rather
+  // than applying them - a missed pull costs nothing (the next pull
+  // retries); a mis-applied one silently reverts calm mode or hand-set
+  // landmarks. This matches the campaign's posture everywhere else.
   let stamps = {};
+  let stampsReadFailed = false;
   try {
     const pairs = await Storage.multiGet(guarded.map(r => PREF_WRITE_STAMP_PREFIX + r.key));
     stamps = Object.fromEntries(pairs);
-  } catch (_) { stamps = {}; }
+  } catch (_) { stamps = {}; stampsReadFailed = true; }
   let localWellbeing = null;
+  let wellbeingReadFailed = false;
   if (guarded.some(r => r.key === WELLBEING_PREF_KEY)) {
-    try { localWellbeing = await Storage.getItem(WELLBEING_PREF_KEY); } catch (_) { localWellbeing = null; }
+    try { localWellbeing = await Storage.getItem(WELLBEING_PREF_KEY); } catch (_) { wellbeingReadFailed = true; }
   }
   return rows.filter((r) => {
     if (!isGuardedPref(r.key)) return true;
-    const localStamp = Number(stamps[PREF_WRITE_STAMP_PREFIX + r.key] ?? NaN);
+    if (stampsReadFailed) return false;
     const cloudMs = timeToMs(r.updated_at);
-    if (Number.isFinite(localStamp) && cloudMs && localStamp >= cloudMs) return false;
-    if (r.key === WELLBEING_PREF_KEY && localWellbeing === 'calm' && r.value !== 'calm') return false;
+    if (!Number.isFinite(cloudMs) || cloudMs <= 0) return false;
+    const localStamp = Number(stamps[PREF_WRITE_STAMP_PREFIX + r.key] ?? NaN);
+    if (Number.isFinite(localStamp) && localStamp >= cloudMs) return false;
+    if (r.key === WELLBEING_PREF_KEY) {
+      if (wellbeingReadFailed) return false;
+      if (localWellbeing === 'calm' && r.value !== 'calm') return false;
+    }
     return true;
   });
 }
@@ -1938,6 +1990,20 @@ async function _pullUserPrefs(sb, supabaseUserId) {
     const entries = kept.map(r => [r.key, r.value == null ? '' : String(r.value)]);
     if (!entries.length) return 0;
     try { await AsyncStorage.multiSet(entries); } catch (_) {}
+    // Finding 5: an applied guarded value carries its cloud edit time into
+    // THIS device's stamp, so when this device later bulk-pushes the value
+    // it ships the honest provenance rather than re-laundering it as new.
+    try {
+      const stampEntries = kept
+        .filter(r => isGuardedPref(r.key))
+        .map(r => {
+          const ms = timeToMs(r.updated_at);
+          return Number.isFinite(ms) && ms > 0
+            ? [PREF_WRITE_STAMP_PREFIX + r.key, String(ms)] : null;
+        })
+        .filter(Boolean);
+      if (stampEntries.length) await AsyncStorage.multiSet(stampEntries);
+    } catch (_) { /* best-effort: the pull guard fails closed without it */ }
     return entries.length;
   } catch (e) { logWarn('sync._pullUserPrefs', e?.message); return 0; }
 }

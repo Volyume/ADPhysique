@@ -373,6 +373,14 @@ export default function MealPlanScreen({ navigation, route }) {
         });
         return;
       }
+      // Campaign 1 review finding 7: the D14 refusal must not fall through
+      // to the success toast - "Your day is ready" over a plan that was
+      // never written is exactly the false confidence this campaign
+      // exists to remove.
+      if (res?.error === 'no_profile') {
+        toast.show('Your profile has not loaded yet. Try again in a moment.', { variant: 'info' });
+        return;
+      }
       await load();
       toast.show(okMsg, { variant: 'success' });
     } catch (_) {
@@ -389,7 +397,12 @@ export default function MealPlanScreen({ navigation, route }) {
     if (!user?.id || busy) return;
     setBusy(true);
     try {
-      await regenerateActiveMealPlan(user.id, userProfile);
+      const res = await regenerateActiveMealPlan(user.id, userProfile);
+      // Campaign 1 review finding 7: never toast success over a refusal.
+      if (res?.error === 'no_profile') {
+        toast.show('Your profile has not loaded yet. Try again in a moment.', { variant: 'info' });
+        return;
+      }
       await load();
       toast.show('Meals rebuilt. Your targets are unchanged.', { variant: 'success' });
     } catch (_) {
@@ -795,7 +808,9 @@ export default function MealPlanScreen({ navigation, route }) {
   const exclusionConflicts = useMemo(() => planConflictsWithExclusions(plan, {
     excludeTags: Array.isArray(userProfile?.mealPlanExcludeTags) ? userProfile.mealPlanExcludeTags : [],
     excludeFoodKeys: Array.isArray(userProfile?.mealPlanExcludeFoods) ? userProfile.mealPlanExcludeFoods : [],
-  }), [plan, userProfile?.mealPlanExcludeTags, userProfile?.mealPlanExcludeFoods]);
+    // Review finding 11: the diet axis flags too (vegan vs a meat plan).
+    diet: userProfile?.dietPreference || null,
+  }), [plan, userProfile?.mealPlanExcludeTags, userProfile?.mealPlanExcludeFoods, userProfile?.dietPreference]);
   // Founder ask 2026-07-10 (defect report): this used to navigateCrossTab to
   // SettingsDietary, which stranded the user on a different tab with no
   // path back to the meal builder. The selection now opens INLINE in this

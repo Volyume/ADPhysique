@@ -48,6 +48,14 @@ export function configureNotificationHandler() {
             && (await _checkedInRecently() || await _edFlagOpen())) {
           return { shouldShowAlert: false, shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false };
         }
+        // Campaign 1 review BLOCKER 2 (ED-safety): meal-log reminders are
+        // food-adjacent and must stay silent under an open ED flag - a
+        // flag can open AFTER the daily trigger was laid, so the
+        // schedule-time gate alone is not enough. Suppression consumed
+        // here, never altered.
+        if (dataType === 'meal_log_reminder' && await _edFlagOpen()) {
+          return { shouldShowAlert: false, shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false };
+        }
         // S6: the activation nudge stands down if the user has progressed past
         // the stage it was laid for (they trained since), or an ED flag has
         // opened — schedule-time state can go stale before delivery. Suppression

@@ -288,9 +288,30 @@ export async function scheduleMealReminders(reminders = []) {
   if (Platform.OS === 'web') return;
   try {
     await cancelMealReminders();
+    // Campaign 1 review BLOCKER 2 (ED-safety): meal-log reminders are
+    // weight/food-adjacent and were the ONE such category with no ED-flag
+    // gate - largely masked while the launch wipe kept them from firing,
+    // which the P0-5 re-lay fixed. Fail CLOSED like every sibling
+    // scheduler (schedulePlannedMealConfirm): an open flag, or a failed
+    // read, schedules nothing (the reminders are already cancelled above,
+    // so a flag raised after scheduling also goes quiet on next launch;
+    // the delivery handler is the second line of defence).
+    try {
+      // eslint-disable-next-line global-require
+      const store = require('../../store/useAppStore').default;
+      const uid = store.getState().user?.id ?? null;
+      if (uid) {
+        // eslint-disable-next-line global-require
+        const { getOpenEdPatternFlag } = require('../database');
+        const flag = await getOpenEdPatternFlag(uid).catch(() => 'read_failed');
+        if (flag) return;
+      }
+    } catch (_) { return; /* cannot verify the flag: stay silent */ }
     const quiet = await getQuietHours();
     for (const r of reminders) {
-      if (!r || r.enabled === false || r.id == null) continue;
+      // Campaign 1 review NIT 16: explicit-true only, matching the
+      // re-lay gate's semantics (stored shapes always carry the boolean).
+      if (!r || r.enabled !== true || r.id == null) continue;
       const hr = Math.max(0, Math.min(23, r.hour | 0));
       const mn = Math.max(0, Math.min(59, r.minute | 0));
       const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hr, mn, quiet);
@@ -1289,7 +1310,7 @@ export async function restoreNotifications(prefs, userId = null) {
   try {
     const rawMeals = await AsyncStorage.getItem(MEAL_REMINDERS_KEY);
     const reminders = rawMeals ? JSON.parse(rawMeals) : null;
-    if (Array.isArray(reminders) && reminders.some((r) => r?.enabled)) {
+    if (Array.isArray(reminders) && reminders.some((r) => r?.enabled === true)) {
       await scheduleMealReminders(reminders);
     }
   } catch (_) { /* meal-reminder re-lay is best-effort */ }

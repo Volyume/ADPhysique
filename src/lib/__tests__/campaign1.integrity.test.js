@@ -243,8 +243,8 @@ describe('P0-5: restoreNotifications re-lays the opt-in meal reminders', () => {
     const body = restore.slice(0, restore.indexOf('\n// ─'));
     expect(body).toMatch(/MEAL_REMINDERS_KEY/);
     expect(body).toMatch(/scheduleMealReminders\(reminders\)/);
-    // Disabled/absent prefs restore nothing.
-    expect(body).toMatch(/reminders\.some\(\(r\) => r\?\.enabled\)/);
+    // Disabled/absent prefs restore nothing (explicit-true, F16).
+    expect(body).toMatch(/reminders\.some\(\(r\) => r\?\.enabled === true\)/);
   });
 
   test('the key has a single owner and the settings screen imports it', () => {
@@ -473,5 +473,173 @@ describe('P0-7: permissive-default defects are closed', () => {
     const home = read('screens/HomeScreen.js');
     expect(home).not.toMatch(/avgJointDiscomfort: 0,\s*\/\/ not tracked/);
     expect(home).toMatch(/jointRated\.length/);
+  });
+});
+
+// ─── Adversarial-review remediations (findings 1-16) ────────────────────
+
+describe('adversarial review: every genuine finding is closed', () => {
+  test('F1: a session with NO feedback can never produce an increase through the REAL entry point', () => {
+    // eslint-disable-next-line global-require
+    const { runAdaptiveEngine } = require('../algorithms');
+    const out = runAdaptiveEngine({ chest: { currentSets: 10, mev: 6, mav: 14, mrv: 22 } });
+    expect(out.chest.decision).toBe('hold');
+    expect(out.chest.reasonCode).toBe('insufficient_feedback');
+    expect(out.chest.delta).toBe(0);
+    // A genuinely rated session still works.
+    const rated = runAdaptiveEngine({
+      chest: { soreness: 2, performance: 1, pump: 4, joint: 0, currentSets: 10, mev: 6, mav: 14, mrv: 22 },
+    });
+    expect(rated.chest.reasonCode).not.toBe('insufficient_feedback');
+    // Real reported pain outranks missing everything else.
+    const pain = runAdaptiveEngine({ chest: { joint: 3, currentSets: 10 } });
+    expect(pain.chest.decision).toBe('rotate_exercise');
+  });
+
+  test('F1: insufficient-feedback holds are never persisted as adaptation events', () => {
+    expect(read('screens/WorkoutSummaryScreen.js'))
+      .toMatch(/reasonCode === 'insufficient_feedback'\) continue;/);
+  });
+
+  test('F2 (ED-safety): meal reminders fail closed at schedule AND delivery', () => {
+    const sched = read('lib/notifications/scheduler.js');
+    const fn = sched.slice(sched.indexOf('export async function scheduleMealReminders'));
+    expect(fn.slice(0, 1600)).toMatch(/getOpenEdPatternFlag/);
+    expect(fn.slice(0, 1600)).toMatch(/'read_failed'/);
+    expect(read('lib/notifications/handler.js'))
+      .toMatch(/dataType === 'meal_log_reminder' && await _edFlagOpen\(\)/);
+  });
+
+  test('F3: the planned-volume restore paginates past the 1000-row cap', () => {
+    const SRC = read('lib/sync.js');
+    const fn = SRC.slice(SRC.indexOf('async function _pullPlannedMuscleVolume'));
+    expect(fn.slice(0, 900)).toMatch(/fetchAllRows\(/);
+  });
+
+  test('F4/F13: the pulled-pref guard fails CLOSED on every read failure', async () => {
+    // eslint-disable-next-line global-require
+    const { filterGuardedPulledPrefs } = require('../sync');
+    const row = (key, value, updated_at) => ({ key, value, updated_at });
+    const throwingStorage = {
+      multiGet: async () => { throw new Error('io'); },
+      getItem: async () => { throw new Error('io'); },
+    };
+    // Stamp lookup failed: guarded rows dropped, others untouched.
+    const kept = await filterGuardedPulledPrefs(throwingStorage, [
+      row('@volyume_landmarks_u1', '{}', new Date().toISOString()),
+      row('@volyume_wellbeing_mode', 'normal', new Date().toISOString()),
+      row('@volyume_quiet_hours_v1', 'x', new Date().toISOString()),
+    ]);
+    expect(kept.map((r) => r.key)).toEqual(['@volyume_quiet_hours_v1']);
+    // Unparseable cloud updated_at: dropped.
+    const okStorage = { multiGet: async (ks) => ks.map((k) => [k, null]), getItem: async () => null };
+    const kept2 = await filterGuardedPulledPrefs(okStorage, [
+      row('@volyume_landmarks_u1', '{}', null),
+    ]);
+    expect(kept2).toEqual([]);
+    // The calm ratchet: a pulled non-calm never replaces a local calm.
+    const calmStorage = { multiGet: async (ks) => ks.map((k) => [k, null]), getItem: async () => 'calm' };
+    const kept3 = await filterGuardedPulledPrefs(calmStorage, [
+      row('@volyume_wellbeing_mode', 'normal', new Date().toISOString()),
+    ]);
+    expect(kept3).toEqual([]);
+    // A local wellbeing read failure also drops the row (never un-calms).
+    const wbFail = {
+      multiGet: async (ks) => ks.map((k) => [k, null]),
+      getItem: async () => { throw new Error('io'); },
+    };
+    const kept4 = await filterGuardedPulledPrefs(wbFail, [
+      row('@volyume_wellbeing_mode', 'normal', new Date().toISOString()),
+    ]);
+    expect(kept4).toEqual([]);
+  });
+
+  test('F5: guarded prefs push their honest edit time and pulls carry it forward', () => {
+    const SRC = read('lib/sync.js');
+    expect(SRC).toMatch(/_guardedPrefUpdatedAt\(key\)/);
+    expect(SRC).toMatch(/_guardedPrefUpdatedAt\(k\)/);
+    // The pull records the applied value's cloud edit time as this
+    // device's stamp, so its own next push does not re-launder.
+    expect(SRC).toMatch(/PREF_WRITE_STAMP_PREFIX \+ r\.key, String\(ms\)/);
+    // The stamp family itself never syncs.
+    // eslint-disable-next-line global-require
+    const { shouldSyncPref } = require('../sync');
+    expect(shouldSyncPref('@volyume_pref_written_at_@volyume_wellbeing_mode')).toBe(false);
+  });
+
+  test('F6/F14: ONE canonical sex-floor statement, everywhere', () => {
+    // eslint-disable-next-line global-require
+    const { kcalFloorForSex } = require('../nutritionEngine');
+    // eslint-disable-next-line global-require
+    const { kcalFloorForSex: applyFloor } = require('../coachApply');
+    // eslint-disable-next-line global-require
+    const { sexFloorKcal } = require('../food/calorieBank');
+    for (const sex of ['male', 'female', null, undefined]) {
+      expect(applyFloor(sex)).toBe(kcalFloorForSex(sex));
+      expect(sexFloorKcal(sex)).toBe(kcalFloorForSex(sex));
+    }
+    expect(kcalFloorForSex(null)).toBe(1500);
+    // No stray restatement of the old unknown-permissive rule survives.
+    expect(read('lib/nutritionEngine.js')).not.toMatch(/sex === 'male' \? 1500 : 1200/);
+    expect(read('lib/food/calorieBank.js')).not.toMatch(/sex === 'male' \? 1500 : 1200/);
+  });
+
+  test('F7: the no_profile refusal reaches the user instead of a false success toast', () => {
+    const SRC = read('screens/MealPlanScreen.js');
+    expect((SRC.match(/error === 'no_profile'/g) || []).length).toBe(2);
+    expect(SRC).toMatch(/Your profile has not loaded yet/);
+  });
+
+  test('F8: the readiness SLOPE input is scale-consistent across mixed-sleep weeks', () => {
+    const SRC = read('lib/blockLedgerRunner.js');
+    expect(SRC).toMatch(/sleepFreeReadiness/);
+    expect(SRC).toMatch(/computeReadinessSlope\(checkins\.map\(\(c\) => sleepFreeReadiness\(c\)\)\)/);
+  });
+
+  test('F9: the week applier is LWW-gated and preserves cloud timestamps', () => {
+    const SRC = read('lib/database.js');
+    const fn = SRC.slice(SRC.indexOf('export async function insertMesocycleWeekFromCloud'));
+    const body = fn.slice(0, fn.indexOf('\nexport async function', 10));
+    expect(body).toMatch(/Number\(existingWeek\.updated_at \?\? 0\) >= cloudUpdatedW\) return;/);
+    expect(body).toMatch(/createdAtW, updatedAtW,/);
+    expect(body).not.toMatch(/Date\.now\(\), Date\.now\(\)/);
+  });
+
+  test('F10: coach outputs have deterministic per-week identity', () => {
+    const SRC = read('lib/database.js');
+    expect(SRC).toMatch(/const id = `co_\$\{data\.weekStart\}_\$\{userId\}`/);
+    expect(SRC).toMatch(/CREATE UNIQUE INDEX IF NOT EXISTS idx_coach_outputs_user_week/);
+    const SQL = fs.readFileSync(
+      path.resolve(__dirname, '..', '..', '..', 'supabase', 'migrate_135_coach_outputs_week_unique.sql'),
+      'utf8',
+    );
+    expect(SQL).toMatch(/CREATE UNIQUE INDEX IF NOT EXISTS idx_coach_outputs_user_week/);
+    expect(SQL).toMatch(/run against production/);
+  });
+
+  test('F11: a diet change flags a stored plan (vegan vs a meat plan)', () => {
+    // eslint-disable-next-line global-require
+    const { CURATED_MEALS } = require('../food/curatedMeals');
+    const meatMeal = CURATED_MEALS.find((m) => m.diet === 'omnivore');
+    expect(meatMeal).toBeTruthy();
+    const plan = {
+      kind: 'week',
+      days: [{ slots: [{ slot: 'meal_1', mealId: meatMeal.id, name: meatMeal.name, items: [] }] }],
+    };
+    expect(planConflictsWithExclusions(plan, { diet: 'vegan' })).toEqual([meatMeal.name]);
+    // The meal's own diet cascade still passes for a compatible user.
+    expect(planConflictsWithExclusions(plan, { diet: 'omnivore' })).toEqual([]);
+  });
+
+  test('F12: block and week pushes carry real creation times', () => {
+    const SRC = read('lib/sync.js');
+    expect((SRC.match(/created_at: new Date\(m\.createdAt \?\? Date\.now\(\)\)\.toISOString\(\)/g) || []).length).toBeGreaterThanOrEqual(1);
+    expect((SRC.match(/created_at: new Date\(w\.createdAt \?\? Date\.now\(\)\)\.toISOString\(\)/g) || []).length).toBeGreaterThanOrEqual(1);
+  });
+
+  test('F16: the enabled semantics agree between the re-lay gate and the scheduler', () => {
+    const SRC = read('lib/notifications/scheduler.js');
+    expect(SRC).toMatch(/r\?\.enabled === true\)\) \{/);
+    expect(SRC).toMatch(/r\.enabled !== true \|\| r\.id == null\) continue;/);
   });
 });

@@ -2062,6 +2062,27 @@ const SCHEMA_MIGRATIONS = [
   [
     'ALTER TABLE mesocycles ADD COLUMN block_ledger TEXT',
   ],
+  [
+    // v71 (Campaign 1 review finding 10): one coach output per week.
+    // saveCoachOutput minted a fresh uid() per device, so two devices
+    // that each generated the week's output before syncing held two
+    // rows for the same week and getLatestCoachOutput picked between
+    // them arbitrarily - reviving the Apply button after the change had
+    // already been applied on the other device. Dedup keeps the row
+    // with the newest honest timestamp (applied wins a tie), then the
+    // unique index makes the identity structural; new rows also derive
+    // a deterministic id from (weekStart, userId) so both devices mint
+    // the SAME row and cloud upserts converge.
+    `DELETE FROM coach_outputs WHERE rowid NOT IN (
+       SELECT rowid FROM (
+         SELECT rowid, ROW_NUMBER() OVER (
+           PARTITION BY user_id, week_start
+           ORDER BY COALESCE(updated_at, created_at, 0) DESC, applied DESC, rowid DESC
+         ) AS rn FROM coach_outputs
+       ) WHERE rn = 1
+     )`,
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_coach_outputs_user_week ON coach_outputs(user_id, week_start)',
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {
@@ -6705,7 +6726,13 @@ export async function saveCoachOutput(userId, data) {
     return existing.id;
   }
   const json = JSON.stringify(data);
-  const id = uid();
+  // Campaign 1 review finding 10: deterministic identity. Every device
+  // mints the SAME id for the same user-week, so cloud upserts on
+  // (user_id, id) converge on one row and the LWW applier's receipt
+  // propagation actually meets the other device's row. Legacy uid() rows
+  // are found by the (user_id, week_start) lookup above and deduped by
+  // local migration v71's unique index.
+  const id = `co_${data.weekStart}_${userId}`;
   await d.runAsync(
     `INSERT INTO coach_outputs
       (id, user_id, week_start, goal_phase, volume_signal, load_signal, recovery_flag,
@@ -7483,6 +7510,28 @@ export async function insertMesocycleFromCloud(userId, m) {
 
 export async function insertMesocycleWeekFromCloud(w) {
   const d = await db();
+  // Campaign 1 review finding 9: weeks DO carry a user edit - the
+  // confirm-then-apply early deload writes is_deload/rir_target through
+  // setMesocycleWeekDeload - so this applier gets the same LWW gate and
+  // timestamp preservation as its siblings. A stale cloud week can no
+  // longer revert an applied early deload, and a pulled row keeps the
+  // cloud's timestamps instead of masquerading as freshly edited on the
+  // next push.
+  const tsMsW = (v) => {
+    if (v == null) return null;
+    const n = typeof v === 'number' ? v : new Date(v).getTime();
+    return Number.isFinite(n) ? n : null;
+  };
+  const cloudUpdatedW = tsMsW(w.updated_at);
+  const existingWeek = await d.getFirstAsync(
+    'SELECT updated_at, created_at FROM mesocycle_weeks WHERE id = ?', [w.id],
+  ).catch(() => null);
+  if (existingWeek) {
+    if (cloudUpdatedW == null) return;
+    if (Number(existingWeek.updated_at ?? 0) >= cloudUpdatedW) return;
+  }
+  const createdAtW = tsMsW(w.created_at) ?? (Number(existingWeek?.created_at) || Date.now());
+  const updatedAtW = cloudUpdatedW ?? Date.now();
   // Cloud uses week_number, local uses week_index. rir_target is
   // NOT NULL locally but isn't on the cloud schema.
   const weekIdx = w.week_number ?? w.week_index ?? 1;
@@ -7523,7 +7572,7 @@ export async function insertMesocycleWeekFromCloud(w) {
       w.is_deload ? 1 : 0,
       rirTarget,
       w.notes ?? null,
-      Date.now(), Date.now(),
+      createdAtW, updatedAtW,
     ],
   );
 }

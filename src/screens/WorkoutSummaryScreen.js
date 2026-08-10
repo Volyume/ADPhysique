@@ -184,9 +184,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // adaptive engine only runs on a rated session (D7).
   const feedbackDirtyRef = useRef(new Set());
   const notesDirtyRef = useRef(false);
+  // Campaign 1 review blocker 1: the set of fields carrying a REAL answer
+  // (touched this visit, or stored from a previous one). The engine
+  // mapping passes null for anything not in this set, so a default can
+  // never masquerade as a rating.
+  const realFieldsRef = useRef(new Set());
   const [feedbackTouched, setFeedbackTouched] = useState(false);
   const rateFeedback = (field) => (v) => {
     feedbackDirtyRef.current.add(field);
+    realFieldsRef.current.add(field);
     setFeedbackTouched(true);
     setFeedback((f) => ({ ...f, [field]: v }));
   };
@@ -434,6 +440,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           if (w.fatigueLevel != null) stored.fatigueLevel = w.fatigueLevel;
           if (Object.keys(stored).length) {
             setFeedback((f) => ({ ...f, ...stored }));
+            for (const k of Object.keys(stored)) realFieldsRef.current.add(k);
             setFeedbackTouched(true);
           }
         }
@@ -484,10 +491,20 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     // sessionDifficulty: 1=veryEasy→1(exceeded), 2=easy→1, 3=moderate→2(met), 4=hard→3(struggled), 5=brutal→4(failed)
     // overallPump: 1=none→1, 2=mild→2, 3=good→4
     // jointDiscomfort: 0=none→0, 1=slight→1, 2=moderate→2, 3=significant→3
-    const soreness = [0, 2, 3, 4][preWorkoutReadiness.soreness24hBefore - 1] ?? 2;
-    const performance = [0, 1, 1, 2, 3, 4][feedback.sessionDifficulty] ?? 2;
-    const pump = [1, 1, 2, 4][feedback.overallPump - 1] ?? 3;
-    const joint = feedback.jointDiscomfort ?? 0;
+    // Campaign 1 review blocker 1: unanswered maps to NULL, never to a
+    // default rating - the engine holds on missing required signals.
+    const soreness = preWorkoutReadiness.soreness24hBefore == null
+      ? null
+      : ([0, 2, 3, 4][preWorkoutReadiness.soreness24hBefore - 1] ?? null);
+    const performance = realFieldsRef.current.has('sessionDifficulty')
+      ? ([0, 1, 1, 2, 3, 4][feedback.sessionDifficulty] ?? null)
+      : null;
+    const pump = realFieldsRef.current.has('overallPump')
+      ? ([1, 1, 2, 4][feedback.overallPump - 1] ?? null)
+      : null;
+    const joint = realFieldsRef.current.has('jointDiscomfort')
+      ? (feedback.jointDiscomfort ?? 0)
+      : 0;
 
     // Build per-muscle feedback using the weekly volume
     const muscleFeedback = {};
@@ -731,6 +748,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       const currentWeek = await getCurrentMesocycleWeek(user?.id);
       if (currentWeek?.id && Object.keys(adaptiveDecisions).length > 0) {
         for (const [muscle, dec] of Object.entries(adaptiveDecisions)) {
+          // Campaign 1 review blocker 1: an insufficient-feedback hold is
+          // the absence of evidence, not evidence - it is never persisted
+          // as an adaptation event.
+          if (dec?.reasonCode === 'insufficient_feedback') continue;
           await createAdaptationEvent({
             mesocycleWeekId: currentWeek.id,
             muscle,

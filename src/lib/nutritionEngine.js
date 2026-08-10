@@ -657,6 +657,19 @@ export function computeFFMFloor(weightKg, { bodyFatPercent = null, bodyFatSource
 }
 
 /**
+ * THE single statement of the sex-aware calorie floor (Campaign 1
+ * review findings 6/14): 1,500 kcal for men, 1,200 for women (founder
+ * floors, never lower), and the HIGHER floor for unknown sex - sex is
+ * onboarding-enforced, so null only occurs in failure states, and a
+ * floor that is too high errs protective. coachApply and
+ * food/calorieBank re-export/delegate to this so the rule can never
+ * again be restated three slightly different ways.
+ */
+export function kcalFloorForSex(sex) {
+  return sex === 'female' ? 1200 : 1500;
+}
+
+/**
  * THE canonical weight resolution for every FFM-floor / energy-
  * availability evaluation (Campaign 1 P0-6, 2026-08-10). Two call sites
  * in weeklyCoach used to resolve the fallback weight differently
@@ -716,7 +729,8 @@ export function energyAvailabilityCaution(targetKcal, maintenanceKcal, { weightK
   // profile with missing sex was warned about under-fuelling ~12% later.
   const line = sex === 'male' ? EA_CAUTION_KCAL_PER_KG.male : EA_CAUTION_KCAL_PER_KG.female;
   if (proxyEA >= line) return null;
-  const sexFloor = sex === 'male' ? 1500 : 1200;
+  // Campaign 1 review finding 14: the one canonical floor statement.
+  const sexFloor = kcalFloorForSex(sex);
   // Ease the deficit up to the caution line, but never above maintenance and
   // never below the sex floor. Since proxyEA < line implies targetKcal <
   // line * ffmKg, this is always >= targetKcal (in a deficit), so it only raises.
@@ -910,11 +924,8 @@ export function calculateNutritionTargets(inputs) {
   // floored target) gate on this flag, never on warning-string matching.
   let floorApplied = false;
   // Campaign 1 P0-7 D4: UNKNOWN sex takes the HIGHER floor (1500), never
-  // the lower one - a floor that is too high errs protective; the old
-  // `sex === 'male' ? 1500 : 1200` gave an unknown-sex failure state the
-  // 1200 floor. Female stays 1200 exactly as before (the founder floors
-  // are untouched: 1,500 men / 1,200 women, never lower).
-  const kcalFloor = sex === 'female' ? 1200 : 1500;
+  // the lower one - the one canonical statement (kcalFloorForSex above).
+  const kcalFloor = kcalFloorForSex(sex);
   if (targetKcal < kcalFloor) {
     warnings.push(
       `Target calories (${targetKcal} kcal) below safe minimum (${kcalFloor} kcal). Raising to floor.`,
