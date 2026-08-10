@@ -20,7 +20,7 @@
 -- the one new name.
 --
 -- Applied locally:  NO (pending)
--- Applied remotely: NO (pending founder apply; STAGING per docs/rules/supabase.md)
+-- Applied remotely: YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4). (The old line's 'STAGING' note was false: there is no staging project.)
 -- Safe to re-run:   YES. CREATE OR REPLACE; no schema change.
 -- Rollback:         re-apply migration 079 to drop the new name.
 -- App dependency:   apply before a build that emits the event reaches

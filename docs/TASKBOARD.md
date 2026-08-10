@@ -1366,7 +1366,8 @@ conditional on the decision; recorded here so they are visible, not lost._
     gaps · FR-C4-7 progress-photo capture-weight gating
     (ED/privacy-adjacent) · FR-C4-8 check-in reminders have no off
     switch despite the locked unsubscribe ledger · FR-C4-9 root
-    billing.md/styling.md/watermelon.md misnamed hook scripts (rename
+    billing.md/styling.md/watermelon.md and settings.json misnamed
+    rules files presenting stale law under config names (rename
     needs founder knowledge of local hook wiring) · FR-C4-10 the
     public/app-map pages are a stale June audit report still published
     (refresh or unpublish) · FR-C4-11 activitySteps.js and the engine's

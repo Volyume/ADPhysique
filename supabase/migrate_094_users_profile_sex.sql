@@ -16,7 +16,12 @@
 -- absent on a not-yet-migrated project).
 --
 -- Applied locally:  NO (pending)
--- Applied remotely: NO (auto-applies on merge to main via deploy-migrations.yml)
+-- Applied remotely: YES - EU-Dublin production (2026-07-27 full sweep;
+--                   supabase/README.md § CURRENT STATUS). Corrected
+--                   2026-08-10 (Campaign 4 review) from "NO (auto-applies on
+--                   merge to main via deploy-migrations.yml)". NOTHING
+--                   AUTO-APPLIES: the push trigger was retired at E0 and the
+--                   workflow is manual-dispatch only.
 -- Safe to re-run:   YES. ADD COLUMN IF NOT EXISTS; CHECK added idempotently.
 -- Rollback:         ALTER TABLE users_profile DROP COLUMN IF EXISTS sex;
 -- App dependency:   apply BEFORE a build that writes/reads users_profile.sex

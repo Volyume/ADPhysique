@@ -17,7 +17,7 @@
 --   reproduced verbatim from migration 033 with one guard added.
 --
 -- Applied locally (dev Supabase):   NO  (pending)
--- Applied remotely (prod/closed):   NO  (pending)
+-- Applied remotely (prod/closed):   YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4)
 -- Safe to re-run:                    YES (CREATE OR REPLACE, idempotent)
 -- Rollback:                          re-apply migration 033's upgrade_tier body
 -- App-code dependency:               ships WITH the client change that makes a

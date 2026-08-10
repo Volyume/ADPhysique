@@ -1,16 +1,26 @@
 name: Apply Supabase migrations
 
-# Auto-applies the supabase/migrate_*.sql files to the cloud database so
-# migrations never need pasting into the SQL Editor by hand (founder direction
-# 2026-06-06: "I do not deploy anything"). Safe by construction:
+# MANUAL DISPATCH ONLY. Nothing here runs on a push or a merge. (Header
+# corrected 2026-08-10, Campaign 4 review: it used to open "Auto-applies the
+# supabase/migrate_*.sql files ... so migrations never need pasting into the
+# SQL Editor by hand", written under the 2026-06-06 founder direction "I do
+# not deploy anything". That trigger was retired at E0 - see the note above
+# `on:` below - and CLAUDE.md § 2 now states cloud migrations are applied
+# deliberately, gated on the founder's exact phrase "run against production".
+# Merging a migration to main does NOT apply it.)
+#
+# What the job does WHEN A HUMAN DISPATCHES IT:
 #
 #   * A tracking table (claude_schema_migrations) records what has run, so each
 #     file applies at most once. Re-running the workflow is a no-op.
 #   * A baseline seed marks every migration numbered <= 058 as already applied
 #     (they were applied historically, per supabase/README.md), so they are
 #     never re-run against the live DB.
-#   * A HELD list (049, 059) is never auto-applied: those ship WITH an app build
-#     by deliberate policy, not ahead of it.
+#   * A skip list (049, 059) is never applied by this workflow. 049 is still
+#     HELD and destructive - do not apply it by any route. 059 is NO LONGER
+#     held: it was applied to production in the 2026-07-27 sweep, so its
+#     presence in the list is now only belt-and-braces (supabase/README.md
+#     § CURRENT STATUS).
 #   * Each file runs in a single transaction with ON_ERROR_STOP, so a failure
 #     rolls back and fails the run loudly rather than half-applying.
 #

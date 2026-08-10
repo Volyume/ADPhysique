@@ -1,5 +1,26 @@
 -- Migration 064: cardio_log session store (cardio-integration audit)
 --
+-- ⚠ STATUS 2026-08-10 (Campaign 4 review; text only, the SQL below is
+-- unchanged). APPLIED (2026-06-06, founder) and the table is RETAINED, but
+-- the feature this migration backed NO LONGER EXISTS. Cardio logging was
+-- removed from the product under the founder boundary D92-1/D95 (commit
+-- 3e8ab0c6): LogCardioScreen, CardioHistoryScreen, their routes, the
+-- Settings toggle, the in-code activity library and the passive Health
+-- import are all gone, and there is no local writer left. Consequently:
+--   * sync is now PULL-ONLY, not bidirectional. The push handler was
+--     removed (D95 H1); `src/lib/sync/registry.js` carries
+--     `direction: 'pull_only'` for cardio_log and
+--     `src/lib/sync/tables/cardioLog.js` only pulls.
+--   * the pull is retained so a user's existing cloud-resident history is
+--     never stranded by a sign-out local wipe. No product surface reads
+--     the rows.
+--   * `deleteCardioLog` survives for account-deletion compatibility only;
+--     it is local-only now that push is gone (Review A F5).
+--   * DO NOT read the "Apply 064 to turn on cardio cloud sync" framing
+--     below, or anything describing screens and cards, as current. Do not
+--     drop the table: it holds real user history.
+-- Everything below is kept verbatim as the record of why the table exists.
+--
 -- Backs the user-led cardio logging from
 -- docs/audit/volyume-cardio-integration-2026-06-03. One row per logged
 -- cardio session, so unlike daily_steps (one row per day) the primary key
@@ -38,7 +59,7 @@
 --                              cardio survives reinstall + syncs across
 --                              devices.
 --   - Applied locally:         no (no local dev Supabase project)
---   - Applied remotely:        pending founder apply
+--   - Applied remotely:        YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4)
 --   - Safe to re-run:          yes (CREATE TABLE IF NOT EXISTS, CREATE OR
 --                              REPLACE FUNCTION, DROP/CREATE TRIGGER, DROP
 --                              POLICY IF EXISTS then CREATE, all idempotent)

@@ -1,5 +1,16 @@
 -- Migration 087: cardio_log.ext_id for passive cardio import (ULTIMATE-CUX-PCI)
 --
+-- ⚠ STATUS 2026-08-10 (Campaign 4 review; text only, the SQL below is
+-- unchanged). APPLIED to EU-Dublin production and the column is RETAINED,
+-- but PASSIVE CARDIO IMPORT NO LONGER EXISTS. Cardio was removed from the
+-- product under the founder boundary D92-1/D95 (commit 3e8ab0c6):
+-- `importNewCardio` is gone from `src/lib/health.js`, the cardio_log push
+-- handler is gone (registry `direction: 'pull_only'`), and nothing writes
+-- ext_id. The column and its partial unique index stay for existing rows.
+-- Read the "App-code dependencies" list below as historical: only
+-- `src/lib/database.js` (retained schema + insertCardioLogFromCloud) and
+-- the pull side of `src/lib/sync/tables/cardioLog.js` still exist.
+--
 -- Passive cardio import (read-only Apple Health / Health Connect sessions, audit
 -- docs/ultimate-audit-2026-06-13/pass4-blueprints-cardio-ux.md ITEM 1) needs a
 -- stable per-session key from the source platform (HealthKit UUID / Health
@@ -23,7 +34,12 @@
 --   - Environment:             production EU-Dublin (apply via Dashboard SQL
 --                              editor or supabase db push; NEVER run from app).
 --   - Applied locally:         no (no local dev Supabase project)
---   - Applied remotely:        pending founder apply
+--   - Applied remotely:        YES - EU-Dublin production, confirmed by the
+--                              2026-07-27 full sweep (supabase/README.md
+--                              § CURRENT STATUS and the 087 tracker row).
+--                              Corrected 2026-08-10 (Campaign 4 review)
+--                              from "pending founder apply", which
+--                              contradicted the tracker.
 --   - Safe to re-run:          yes (ADD COLUMN IF NOT EXISTS, CREATE UNIQUE
 --                              INDEX IF NOT EXISTS — both idempotent)
 --   - Rollback:                DROP INDEX IF EXISTS idx_cardio_log_user_extid;

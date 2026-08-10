@@ -31,7 +31,7 @@
 --   bare sha256(email). Disclosed in the privacy policy (section on deletion).
 --
 -- Applied locally (dev Supabase):   NO  (pending)
--- Applied remotely (prod/closed):   UNCONFIRMED. Header originally said
+-- Applied remotely (prod/closed):   YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4). Header originally said
 --   "NO (pending founder apply)", but on 2026-06-10 the founder reported that
 --   delete-account + re-signup with the SAME email now lands on FREE
 --   (trial_state='cascade_expired') instead of a fresh 14-day trial. That is

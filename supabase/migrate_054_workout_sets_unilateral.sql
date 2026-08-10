@@ -19,7 +19,7 @@
 --   - Migration number:        054
 --   - Purpose:                 left_reps + right_reps on workout_sets
 --   - Applied locally:         no (no local dev Supabase project at v1)
---   - Applied remotely:        pending founder apply
+--   - Applied remotely:        YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4)
 --   - Safe to re-run:          yes (ADD COLUMN IF NOT EXISTS)
 --   - Rollback:                ALTER TABLE workout_sets
 --                                DROP COLUMN left_reps, DROP COLUMN right_reps;

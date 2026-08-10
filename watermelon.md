@@ -12,6 +12,27 @@ paths:
   - *play-billing*
 ---
 
+> ⚠ **STATUS (2026-08-10, Campaign 4 review): SUPERSEDED AND FACTUALLY
+> WRONG - DO NOT FOLLOW THIS FILE.** The live billing rules are
+> `docs/rules/billing.md`. Everything below is an early draft that was
+> corrected there on 2026-06-11 and never corrected here. Specifically:
+> - **The product IDs below are WRONG.** The live ids are `pro_monthly`
+>   and `pro_annual` (`src/lib/payments/catalogue.js`), founder-confirmed.
+>   `volyume_pro_monthly` / `volyume_pro_annual` are not used anywhere.
+> - **RevenueCat was never adopted.** There is no RevenueCat entitlement,
+>   no offering, and no `Purchases` SDK in this app. Billing is direct
+>   `react-native-iap` + Google Play Billing / StoreKit, wrapped by
+>   `src/lib/payments/` (`playBilling.js`, `catalogue.js`, `restore.js`,
+>   `cascade.js`). Every `Purchases.*` code sample below is fiction.
+> - **Entitlement resolution is `src/lib/proGate.js`**, from real
+>   trial/subscription state, not a RevenueCat entitlement key.
+>
+> The file is kept, unrenamed and undeleted, because whether it is wired
+> into the founder's local (out-of-repo) Claude settings is unknowable
+> from inside the repo - founder item FR-C4-9. The trial structure,
+> pricing and "never change without instruction" disciplines below remain
+> true and are stated properly in `docs/rules/billing.md`.
+
 # VOLYUME — BILLING RULES
 
 Billing is live in production. Real users are being charged.

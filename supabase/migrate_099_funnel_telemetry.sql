@@ -28,7 +28,7 @@
 -- five new names.
 --
 -- Applied locally:  NO (pending)
--- Applied remotely: NO — founder-applied manually. The deploy-migrations
+-- Applied remotely: YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4) — founder-applied manually. The deploy-migrations
 --                   workflow is retired (E0); cloud migrations are run by the
 --                   founder per CLAUDE.md. Apply this BEFORE shipping a client
 --                   build that emits these events, or those pushes are rejected

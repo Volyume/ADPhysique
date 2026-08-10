@@ -583,10 +583,18 @@ export function runWeeklyCoach(inputs) {
     currentMaintenanceKcal = null,
     lastRefeedAt = null,
     currentStepsTarget = 8000,
-    // Whether the user keeps a daily step target. Defaults true so existing
-    // users and every prior caller are unchanged. When false (the user opted
-    // out at setup or in Settings) the coach makes no step prescription;
-    // any further deficit change then comes from the calorie side.
+    // Whether a daily step target is in play. DORMANT IN PRODUCTION
+    // (comment corrected 2026-08-10, Campaign 4 review; behaviour
+    // unchanged). It used to say the user opts out "at setup or in
+    // Settings" - there is no such control, and there never is one today:
+    // the ONLY production call site (CoachOutputScreen: "Step targets are
+    // not part of the shipped coaching product") passes stepsEnabled:false
+    // with currentStepsTarget:0, so every branch below that needs a step
+    // target is unreachable in the shipped app. The default stays true so
+    // prior callers and the engine's own tests are unchanged. Whether to
+    // revive or retire the steps lever is an open product call, recorded
+    // as founder item FR-C4-11. When false the coach makes no step
+    // prescription; any deficit change comes from the calorie side.
     stepsEnabled = true,
     bodyweightKg = null,
     units = 'kg',
@@ -1181,7 +1189,10 @@ export function runWeeklyCoach(inputs) {
   const band = stepsBand(goalPhase, bwRef);
 
   if (!stepsEnabled) {
-    // User opted out of step targets. No step prescription at all.
+    // No step target in play, so no step prescription at all. THIS IS THE
+    // BRANCH PRODUCTION TAKES: the only call site passes stepsEnabled:false
+    // (see the parameter note above and FR-C4-11). There is no user-facing
+    // opt-out control; the branches below are retained-dormant code.
     stepsAdjustment = null;
   } else if (phase.isCut && !onTarget && offTargetDirection > 0 && !poorRecovery) {
     if (stepsAvg != null && currentStepsTarget > 0 && stepsAvg < currentStepsTarget * 0.9) {

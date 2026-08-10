@@ -153,7 +153,12 @@ before opening the test group up wider:
 - [ ] Discard workout halfway — confirm SQLite row + sets removed
 - [ ] Weekly check-in submits and produces a coach card
 - [ ] Body metrics: log a weight, see chart update
-- [ ] Plate calculator: tap "Plates" pill on the weight row, sheet opens pre-filled
+- ~~Plate calculator: tap "Plates" pill on the weight row, sheet opens pre-filled~~
+      **REMOVED FROM THIS CHECKLIST 2026-08-10 (Campaign 4 review): there is no
+      plate calculator.** It is a REJECTED feature (D14/D57, never to be
+      re-proposed) and `src/lib/plateMath.js` was deleted under D95-2. There is
+      no "Plates" pill on the weight row. Do not test for it and do not raise
+      its absence as a defect.
 - [ ] Repeat-last quick chip pre-fills correctly
 - [ ] Sign out, sign back in — workouts + plans restore from cloud
 - [ ] Delete account — confirm row + auth user wiped

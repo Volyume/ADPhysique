@@ -22,7 +22,7 @@
 -- AAB are unaffected (release policy 2026-05-24).
 --
 -- Applied locally:  NO (pending)
--- Applied remotely: NO (pending founder apply)
+-- Applied remotely: YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4)
 -- Safe to re-run:   YES. ALTER FUNCTION ... SET search_path is idempotent;
 --                   re-running re-sets the same value.
 -- Rollback:         ALTER FUNCTION <sig> RESET search_path; per function

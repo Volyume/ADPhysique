@@ -35,7 +35,7 @@
 --   - Migration number:  100
 --   - Purpose:           pair-scoped shared training block (Wave 5 C5 A1).
 --   - Applied locally:   NO (no local dev Supabase project)
---   - Applied remotely:  NO — FOUNDER-RUN, manual (deploy-migrations.yml is
+--   - Applied remotely:  YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4) — FOUNDER-RUN, manual (deploy-migrations.yml is
 --                        workflow_dispatch-only; never applied by the app)
 --   - Safe to re-run:    YES (IF NOT EXISTS / OR REPLACE / DROP POLICY IF
 --                        EXISTS throughout — idempotent)

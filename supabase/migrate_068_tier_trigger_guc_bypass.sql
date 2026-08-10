@@ -40,7 +40,7 @@
 --   pricing change.
 --
 -- Applied locally (dev Supabase):   NO  (pending)
--- Applied remotely (prod/closed):   NO  (pending)
+-- Applied remotely (prod/closed):   YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4)
 -- Safe to re-run:                    YES (CREATE OR REPLACE, idempotent)
 -- Rollback:                          re-apply migrations 065/067/042/033 and
 --                                    setup_complete.sql's trigger function.

@@ -15,6 +15,14 @@ commit 3e8ab0c6). The cardio lines that stood here have been deleted so no
 copy lane, including the autonomous web lane, can source a cardio claim from
 this file. Steps and general activity remain; strength logging is unchanged.
 
+**CORRECTION (2026-08-10, Campaign 4 / D95 review): there is no plate
+calculator.** The training inventory used to claim "plate maths and warm-up
+ramp helpers". Plate maths is a REJECTED feature (D14/D57, never to be
+re-proposed) and `src/lib/plateMath.js` was deleted under D95-2; no plate
+calculator or plate breakdown has ever shipped to users. The claim is
+deleted so no copy lane can source it. The warm-up ramp half is true and
+kept (`src/lib/warmupRamp.js`).
+
 **ACCURACY RULING (enforced throughout): barcode scanning is Pro-gated, not
 free.** The shipped route is `withProGuard(..., 'Barcode scanning')`. Any
 "free barcode" line came from a proposal document (next-level-proposal P2), not
@@ -66,7 +74,7 @@ nutrition/coaching domain is Pro.
 - Weight and reps carry forward, so the next set is effectively one tap. (Free)
 - Warm-up sets, excluded from tonnage, working-set counts and PR detection. (Free)
 - Supersets in-session (pairs), alternating in the live session. (Free)
-- Plate maths and warm-up ramp helpers, computed on device. (Free)
+- Warm-up ramp helpers, computed on device. (Free)
 - Plan Library, browsable ready-made plans started in a couple of taps. (Free)
 - 31 built-in training plans spanning beginner to division off-season. (Free)
 - Manual workout builder: multi-day plans, steppers, duplicate, reorder, pair
@@ -312,7 +320,11 @@ person." (Note: barcode scanning is a Pro feature here; do not claim it is free.
 - No exercise demo videos or animations; coaching is text cues only.
 - No velocity-based training / bar-path / VBT.
 - No wearable / smartwatch app (Wear OS or watchOS); Health Connect / HealthKit
-  is read-only and scoped to weight and steps, not lifting.
+  reads only weight and steps, and can write finished strength workouts
+  back to Health when the user turns that on (Settings, off by default);
+  it never reads lifting data. (Corrected 2026-08-10: this line said
+  "read-only", which missed the live write-workouts toggle -
+  src/lib/health.js writeWorkoutToHealth, SettingsHealthScreen.)
 - iOS is TestFlight-only; no public App Store listing yet.
 - No restaurant / menu / takeaway database; food data is packaged-product (OFF)
   and generic-food (CoFID) only.

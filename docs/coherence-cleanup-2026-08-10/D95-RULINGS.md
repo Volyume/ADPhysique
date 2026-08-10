@@ -299,6 +299,39 @@ updates. FR-1..FR-5 carried unchanged.
   `notifHeaderToggle` style and its five-line comment removed (its
   only consumer was the deleted cardio switch row).
 
+## Adversarial Review C rulings (D95-3 continued)
+
+Review C fixed eleven truthful-documentation findings itself (text-only,
+lead-reviewed and landed): the watermelon.md and root settings.json
+SUPERSEDED banners, the plate-maths claim deleted from FACT-BASE and
+part 1, the deploy-migrations workflow header rewritten to
+MANUAL-DISPATCH-ONLY with eight migration headers corrected, dated
+STATUS blocks on the three cardio migrations, the weeklyCoach steps
+dormancy comments (FR-C4-11 cited), the database.js cardio-loop comment,
+banners on RELEASE_READINESS_PLAY, the SUBMISSION_CHECKLIST plate step
+struck, and the campaign3 test title. Lead rulings on its reported
+items:
+- **R1 (web/ cardio consumer): RECORDED, kept.** The web review page
+  parses adjustments.cardio/cardioFlag off stored coach_outputs; the
+  engine no longer emits them, so new outputs render nothing, and for
+  HISTORICAL weeks rendering the stored prescription is truthful. web/
+  was never in D95 scope; its fate belongs to a web campaign.
+- **R2 (stale applied-status migration headers): EXECUTED by the lead**
+  - all 39 remaining headers in the applied ranges corrected to YES
+  with the 2026-07-27 sweep citation, formats preserved, warnings
+  (never-run-from-an-agent) and historical narratives kept. 049 (HELD),
+  072 (superseded, never applied) and 132-135 (awaiting the phrase)
+  untouched - their NO is true.
+- **R3 (FACT-BASE health line): EXECUTED** - "read-only" missed the
+  live write-workouts toggle; corrected to name reads (weight, steps)
+  and the opt-in workout write, still no lifting reads.
+- **R4: EXECUTED** - root settings.json added to FR-C4-9's misnamed-
+  file cluster (fourth member; same out-of-repo hook unknown).
+- **R5 (steps have no user surface): RECORDED under FR-C4-11** - the
+  marketing fact base's "steps remain" line is downstream of that
+  ruling; whatever the founder decides there must flow to the
+  marketing lane.
+
 - **Cross-lane dead taps (actioned)**: AUDIT-ROUTES §6 rows 7-9 and 11
   were live MED inert taps the D95-2 ruling under-scoped (it took only
   the six HIGH rows). Rows 7-9: WorkoutSummaryScreen's ProgressPhotos/

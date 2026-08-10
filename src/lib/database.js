@@ -1183,10 +1183,16 @@ const SCHEMA_MIGRATIONS = [
     "ALTER TABLE food_favourites ADD COLUMN kind TEXT NOT NULL DEFAULT 'fav'",
   ],
   // Cardio adherence on weekly check-ins. Mirrors cloud migration 050.
-  // Destination for the coach's confirm-then-apply cardio prescription
-  // (GAP row 4): once a prescription is applied (userProfile.cardioPrescription
-  // set), the weekly check-in shows a "did you do the cardio?" question
-  // and saves the answer here -- same pattern as steps_adherence. Additive
+  // HISTORICAL, RETAINED (note added 2026-08-10, Campaign 4 review; the
+  // migration itself is unchanged and still runs). It was added as the
+  // destination for the coach's confirm-then-apply cardio prescription
+  // (GAP row 4): a prescription set userProfile.cardioPrescription, which
+  // gated a "did you do the cardio?" question on the weekly check-in.
+  // NONE of that loop exists any more - cardio logging and the cardio
+  // prescription were removed under the founder boundary D92-1/D95. The
+  // check-in asks no cardio question and WeeklyCheckInScreen deliberately
+  // OMITS the key on save so stored answers are preserved, not cleared
+  // (D95 H5). The column is kept for that retained history. Additive
   // + nullable so the frozen closed-test build is unaffected.
   [
     'ALTER TABLE weekly_checkins ADD COLUMN cardio_adherence TEXT',
