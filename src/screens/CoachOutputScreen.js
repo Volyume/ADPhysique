@@ -2595,7 +2595,15 @@ export default function CoachOutputScreen({ navigation, route }) {
             // L04-11: the same EWMA gloss BodyMetricsScreen already ships,
             // reused here so the "7-day trend" number is explained the same
             // way everywhere it appears. Only shown once there is a trend to explain.
-            tooltip={trend.delta !== null ? GLOSSARY.ewma : undefined}
+            // D93 (Campaign 2, Phase 10): ON THIS SURFACE ONLY, the gloss
+            // carries the decision-trend disclosure - the weekly verdict
+            // reads direction from robust tracking, not this exact number,
+            // and beside the decision the bare gloss would imply otherwise.
+            // The free-tier trend surfaces keep the plain gloss (no coach
+            // claim belongs there), and no smoother is named.
+            tooltip={trend.delta !== null
+              ? `${GLOSSARY.ewma} The weekly decision reads direction from a sturdier version of this trend that ignores one-off spikes, so its verdict can differ slightly from this exact number.`
+              : undefined}
           />
           <StatChip
             icon="barbell-outline"
