@@ -1428,6 +1428,22 @@ export default function DiaryScreen({ navigation, route }) {
             dayTypeLabel={dayTypeChip}
             onPress={viewEntries.length ? () => setBreakdownVisible(true) : undefined}
           />
+          {/* D94 (Campaign 3, Phase 9): a per-day offset silently reshapes
+              today's target; the point of consequence must disclose it and
+              link to the one canonical editor. Renders only when an offset
+              is actually applied to the day in view - zero-clutter default. */}
+          {!readOnly && perDayOffsetKcal !== 0 ? (
+            <TouchableOpacity
+              style={styles.targetModeRow}
+              onPress={() => navigation.navigate('PerDayTargets')}
+              accessibilityRole="button"
+              accessibilityLabel={`Today's target includes your ${perDayOffsetKcal > 0 ? 'plus' : 'minus'} ${Math.abs(perDayOffsetKcal)} calorie day adjustment. Edit per-day targets.`}
+            >
+              <Text style={[styles.targetModeText, live.targetModeText]}>
+                {`Includes your ${perDayOffsetKcal > 0 ? '+' : '-'}${Math.abs(perDayOffsetKcal)} kcal day adjustment. Edit`}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
           {/* NU-2: the applied split/refeed always shows its exit. One quiet
               row each; the confirm dialogs own the consequence copy.
               Haptics completion pass (2026-07-10): both rows write straight
