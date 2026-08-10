@@ -251,7 +251,10 @@ export default function MyMealsScreen({ navigation, route }) {
           <EmptyState
             icon="restaurant-outline"
             title="Save your go-to meals"
-            text={'Select foods in your diary and tap "Save as meal".'}
+            // D94 (Campaign 3, Phase 10): the only creation path is the
+            // diary long-press, and this line never said so - the one
+            // instruction for a gesture-only flow must name the gesture.
+            text={'Press and hold any entry in your diary to start selecting foods, then tap "Save as meal".'}
             actionLabel="Back to diary"
             onAction={() => navigation.goBack()}
           />
