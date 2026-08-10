@@ -387,7 +387,7 @@ export function buildBlockCards(data, units) {
     const up = data.tonnageDelta >= 0;
     cards.push({
       type: 'stat', icon: 'trending-up', tone: 'success',
-      value: `${up ? '+' : ''}${data.tonnageDelta}%`, unit: 'weekly volume',
+      value: `${up ? '+' : ''}${data.tonnageDelta}%`, unit: 'weekly total lifted',
       caption: up ? 'From the first week to the last, that climb is the block working.' : 'Your final week was lighter, and that\'s the plan working.',
     });
   }

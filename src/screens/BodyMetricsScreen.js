@@ -981,7 +981,7 @@ export default function BodyMetricsScreen() {
         <ScrollView contentContainerStyle={styles.optInContent}>
           <View style={[styles.confirmCard, live.confirmCard]}>
             <Ionicons name="leaf-outline" size={32} color={t.colors.primary} />
-            <Text style={[styles.confirmTitle, live.confirmTitle]}>A gentle check-in</Text>
+            <Text style={[styles.confirmTitle, live.confirmTitle]}>A gentle pause</Text>
             <Text style={[styles.confirmBody, live.confirmBody]}>
               You asked for a calmer experience. Body measurements can be a
               sensitive space. Open it only if it feels right for you today.

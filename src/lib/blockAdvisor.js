@@ -180,12 +180,12 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
   if (highSignals.length === 0 && avgReadiness >= 60) {
     return {
       recommendation: 'repeat',
-      headline: 'Go again: same programme',
+      headline: 'Go again: same plan',
       body: finished
         ? "Pick up where you left off. Same exercises, same structure. You'll come back a little stronger each block."
         : "Your recovery week does its job, then you pick up where you left off. Same exercises, same structure. You'll come back a little stronger each block.",
-      actionLabel: 'Continue this programme',
-      secondaryLabel: 'Build a new programme',
+      actionLabel: 'Continue this plan',
+      secondaryLabel: 'Build a new plan',
     };
   }
 
@@ -193,7 +193,7 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
   if (highSignals.length <= 1 || avgReadiness >= 50) {
     return {
       recommendation: 'adjust',
-      headline: 'Same programme, slightly adjusted',
+      headline: 'Same plan, slightly adjusted',
       // Stage 6 (2026-08-09): the promise is finally TRUE. The restart
       // path builds the Block Ledger and seeds each muscle's next-block
       // volume from how this block actually went (PlansScreen ->
@@ -204,7 +204,7 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
         ? "The structure is working. Your next block starts from what this block showed, muscle by muscle."
         : "The structure is working. After your recovery week, your next block starts from what this block showed, muscle by muscle.",
       actionLabel: 'Continue with adjustments',
-      secondaryLabel: 'Build a new programme',
+      secondaryLabel: 'Build a new plan',
     };
   }
 
@@ -213,9 +213,9 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
     recommendation: 'consider_rebuild',
     headline: 'Might be worth a fresh look',
     body: finished
-      ? "Fatigue ran consistently high this block. It's worth reviewing whether the programme volume or exercise selection still fits where you are. The coach can help rebuild it."
-      : "Fatigue has been consistently high this block. After your recovery week, it's worth reviewing whether the programme volume or exercise selection still fits where you are. The coach can help rebuild it.",
-    actionLabel: 'Continue this programme',
+      ? "Fatigue ran consistently high this block. It's worth reviewing whether the plan's volume or exercise selection still fits where you are. The coach can help rebuild it."
+      : "Fatigue has been consistently high this block. After your recovery week, it's worth reviewing whether the plan's volume or exercise selection still fits where you are. The coach can help rebuild it.",
+    actionLabel: 'Continue this plan',
     secondaryLabel: 'Review with coach',
   };
 }

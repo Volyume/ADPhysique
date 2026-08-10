@@ -2332,7 +2332,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
 
   // weakPoints (conditional)
   if (weakPointUILabels.length > 0) {
-    result.weakPoints = `${weakPointUILabels.join(' and ')} ${weakPointUILabels.length === 1 ? 'receives' : 'receive'} more weekly sets than the rest of the plan. Consistently giving extra attention to an area that's behind, over several weeks, while the rest of the programme stays balanced, is the most reliable way to close the gap.`;
+    result.weakPoints = `${weakPointUILabels.join(' and ')} ${weakPointUILabels.length === 1 ? 'receives' : 'receive'} more weekly sets than the rest of the plan. Consistently giving extra attention to an area that's behind, over several weeks, while the rest of the plan stays balanced, is the most reliable way to close the gap.`;
   }
 
   return result;
@@ -2348,7 +2348,7 @@ function buildWarnings(inputs, effectiveDays, weakPointUILabels) {
 
   if (experience === 'beginner' && daysPerWeek > 4) {
     warnings.push(
-      `A ${daysPerWeek}-day programme exceeds typical beginner recovery capacity. Your plan has been reduced to ${effectiveDays} days to protect recovery and reinforce movement quality before adding frequency.`,
+      `A ${daysPerWeek}-day plan exceeds typical beginner recovery capacity. Your plan has been reduced to ${effectiveDays} days to protect recovery and reinforce movement quality before adding frequency.`,
     );
   }
   if (recoveryRating === 'poor' && effectiveDays >= 5) {

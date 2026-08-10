@@ -1487,10 +1487,17 @@ export default function CoachOutputScreen({ navigation, route }) {
       const weights = await getMorningWeights(user.id, 60);
       // Weigh-ins inside the displayed week feed the five-part response's
       // acknowledgement and cue. Counted here so the pure builder never
-      // needs a DB read.
+      // needs a DB read. Counted as DISTINCT local days, never raw rows:
+      // the engine's hold and confidence credit one weigh-in per morning
+      // (weeklyCoach weighInDayCount), so a same-morning double log must
+      // not show the user more credit than the engine gave.
       try {
         const weekEnd = weekStart + 7 * 86400000;
-        setWeighInsThisWeek(weights.filter(w => (w.loggedAt ?? 0) >= weekStart && (w.loggedAt ?? 0) < weekEnd).length);
+        setWeighInsThisWeek(new Set(
+          weights
+            .filter(w => Number.isFinite(Number(w.loggedAt)) && Number(w.loggedAt) >= weekStart && Number(w.loggedAt) < weekEnd)
+            .map(w => localDayKey(Number(w.loggedAt)))
+        ).size);
       } catch (_) { setWeighInsThisWeek(null); }
       // Calm mode tightens the response the same way an open ED flag does
       // (no rate language, no weigh-in counts), per the COMP-004 rules.
@@ -1982,8 +1989,24 @@ export default function CoachOutputScreen({ navigation, route }) {
       // Neutral (no weigh-in counts) under an open ED flag.
       if (!result.hasEnoughData) {
         try {
-          const weekAgoMs = Date.now() - 7 * 86400000;
-          const weighIns7d = weights.filter(w => (w.loggedAt ?? 0) >= weekAgoMs).length;
+          // Mirror the engine's weighInDayCount exactly (weeklyCoach: a
+          // 7-day window anchored at the LATEST weigh-in, distinct local
+          // days, untimed rows counting one each) so the receipt can never
+          // show more credit than the hold it explains was computed from.
+          const timedRows = weights.filter(w => Number.isFinite(Number(w.loggedAt)));
+          const untimedRows = weights.length - timedRows.length;
+          let weighIns7d;
+          if (!timedRows.length) {
+            weighIns7d = untimedRows;
+          } else {
+            const latestMs = Math.max(...timedRows.map(w => Number(w.loggedAt)));
+            const windowStartMs = latestMs - 7 * 86400000;
+            weighIns7d = new Set(
+              timedRows
+                .filter(w => Number(w.loggedAt) >= windowStartMs)
+                .map(w => localDayKey(Number(w.loggedAt)))
+            ).size + untimedRows;
+          }
           const earliest = weights.length ? Math.min(...weights.map(w => w.loggedAt ?? Infinity)) : null;
           setHoldReceipt(buildHoldReceipt({
             dataNote: result.dataNote ?? null,
@@ -2738,7 +2761,7 @@ export default function CoachOutputScreen({ navigation, route }) {
                 genuine thin-weigh-in disclosure, per D18's "only the caption
                 moves" bound. */}
             {confidence !== 'high' && weighInsThisWeek != null && weighInsThisWeek < 4
-              ? ` Only ${weighInsThisWeek} weigh-in${weighInsThisWeek === 1 ? '' : 's'} landed this week.`
+              ? ` Only ${weighInsThisWeek} morning weigh-in${weighInsThisWeek === 1 ? '' : 's'} landed this week.`
               : ''}
           </Text>
         ) : null}

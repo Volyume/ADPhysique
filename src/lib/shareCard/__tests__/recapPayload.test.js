@@ -70,7 +70,7 @@ describe('buildRecapMilestoneData', () => {
     }, { variant: 'block', blockName: 'Fallback block' });
 
     expect(payload).toEqual({
-      eyebrow: 'BLOCK COMPLETE',
+      eyebrow: 'BLOCK FINISHED',
       title: 'Hypertrophy Block',
       heroValue: '18',
       heroUnit: 'sessions',

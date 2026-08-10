@@ -52,7 +52,7 @@ export const PROCESS_CHECKPOINTS = [
   {
     fromWeeks: 8, toWeeks: 11,
     title: 'Posing cadence',
-    detail: 'Practise posing on most training days. If you work with a coach, book your check-ins for the final eight weeks.',
+    detail: 'Practise posing on most training days. If you work with a coach, book time with them for the final eight weeks.',
   },
   {
     fromWeeks: 5, toWeeks: 7,

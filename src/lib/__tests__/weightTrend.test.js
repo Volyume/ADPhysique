@@ -67,7 +67,7 @@ describe('deriveWeightTrend', () => {
     });
     expect(vm.state).toBe(3);
     expect(vm.dot).toBe('onTrack');
-    expect(vm.insight).toMatch(/inside your band/i);
+    expect(vm.insight).toMatch(/inside your target range/i);
     expect(vm.showRate).toBe(true);
     expect(vm.weeklyChange).toBe(-0.45);
     expect(vm.maintenance.kcal).toBe(2450);
@@ -85,7 +85,7 @@ describe('deriveWeightTrend', () => {
     });
     expect(vm.dot).toBe('watch');
     expect(vm.dot).not.toBe('act');
-    expect(vm.insight).toMatch(/above your band/i);
+    expect(vm.insight).toMatch(/above your target range/i);
     expect(vm.insight).toMatch(/nothing to change yet/i);
   });
 

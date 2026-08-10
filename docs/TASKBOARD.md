@@ -1526,7 +1526,8 @@ workflow survives as a fallback.
 - `docs/design-usability-audit-2026-07-09/`: D7 programme complete; only
   `coverage-00-SYNTHESIS.md` survives as a cited reference. Residual IDs are
   tracked in the live campaign, not re-mined from that folder.
-- CAMPAIGN 1: PRODUCT INTEGRITY (2026-08-10, founder order) - IN FLIGHT.
+- CAMPAIGN 1: PRODUCT INTEGRITY (2026-08-10, founder order) - COMPLETE,
+  merged to main at 0a552cc4 the same day; 11-item handover delivered.
   Scope: integrity/safety/privacy/state ONLY; cardio permanently out of
   scope (D92-1). P0 verification vs main: P0-1 planned-volume restore
   gap CONFIRMED+FIXED (pull now lands in the PRIMARY table, LWW by
@@ -1579,3 +1580,36 @@ workflow survives as a fallback.
   passing / lint clean at landing.
   RECOVERY: reports in session scratchpad map/ (C1P07/C1P08/
   C1REVIEW); code on claude/campaign1-integrity; D92 is the spec.
+- CAMPAIGN 2: COMPREHENSION, EXPLANATION AND TERMINOLOGY (2026-08-10,
+  founder order) - IN FLIGHT on branch claude/campaign2-comprehension
+  (from main 0a552cc4). Objective: an ordinary user understands what is
+  happening, why, what it means for them, what happens next, and whether
+  it is automatic / a proposal / their choice - without jargon, internal
+  classifier names, matrices or thresholds. Three design laws: explain
+  the CONSEQUENCE not the algorithm; never explain more than the engine
+  can prove (degrade honestly, silence beats invention); progressive
+  disclosure (surface line / optional why / methodology). 21 phases:
+  comprehension audit (A-H classification of ~40 concepts vs map D1
+  Part E), terminology canon (19 collisions incl. the four "volume"
+  senses - UI vocabulary only, no engine/DB symbol renames), PR
+  definition + first encounter, training-block mental model (no
+  "mesocycle" in prose), reps-short-of-failure effort model, readiness
+  purpose-at-point-of-asking, learned-personalisation copy from real
+  provenance (never "optimal volume"; never MEV/MAV/MRV/Block Ledger),
+  recovery/deload explanation (exact sets useful, no strain maths),
+  ~20 unexplained coach decisions classified, nutrition WHAT/WHY/NEXT
+  incl. the displayed-EWMA-vs-decision-trend honesty fix, consistent
+  "we don't know yet" language + the not-changing-is-a-decision
+  principle, automatic-vs-proposal-vs-choice audit, progress-metric
+  honesty, safety copy audit (language only), glossary classification
+  (31 entries, 6 orphaned), first-encounter rule, accessibility
+  comprehension, voice/jargon-blocklist audit, reuse of the existing
+  explanation architecture (one rationale source of truth), test-driven
+  comprehension pins, two adversarial reviews (novice + truth). HARD
+  CONSTRAINTS: migrations 132-135 stay UNRUN; no EAS builds; D92-11
+  behaviour unaltered; no new cross-device sensitive-data paths; cardio
+  permanently out of scope (D92-1); Campaign 1 pins stay green; STOP
+  after Campaign 2.
+  RECOVERY: campaign evidence in session scratchpad c2/ ; spec is the
+  founder's Campaign 2 order (2026-08-10 chat) + this block; code on
+  claude/campaign2-comprehension; rulings go to the D-register as D93.

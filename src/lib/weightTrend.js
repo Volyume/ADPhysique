@@ -146,9 +146,9 @@ export function deriveWeightTrend({ ewmaData, weeklyChange, adaptiveBurn, edFlag
 
   let insight;
   if (!diverging) {
-    insight = 'Trending inside your band. Calories hold.';
+    insight = 'Trending inside your target range. Calories hold.';
   } else if (above) {
-    insight = 'Drifting a little above your band. Nothing to change yet.';
+    insight = 'Drifting a little above your target range. Nothing to change yet.';
   } else {
     insight = 'Trending a little under your target. Nothing to change yet.';
   }

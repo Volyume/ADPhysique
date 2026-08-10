@@ -22,9 +22,9 @@ export function getVolumeInsight(muscle, sets, status) {
   const { mev, mrv } = landmarks;
   const n = Math.round(sets);
   const range = `${mev}–${mrv} sets/week`;
-  if (status === 'optimal') return `${n} sets · on track for hypertrophy (target: ${range})`;
-  if (status === 'minimum') return `${n} sets · at minimum effective volume (target: ${range})`;
-  if (status === 'below') return `${n} sets · below minimum effective volume (target: ${range})`;
+  if (status === 'optimal') return `${n} sets · on track for muscle growth (target: ${range})`;
+  if (status === 'minimum') return `${n} sets · at the minimum for growth (target: ${range})`;
+  if (status === 'below') return `${n} sets · below the minimum for growth (target: ${range})`;
   if (status === 'near_mrv') return `${n} sets · approaching upper limit (target: ${range})`;
   if (status === 'over_mrv') return `${n} sets · over your recovery limit (aim for ${range} next week)`;
   return `${n} sets (target: ${range})`;

@@ -120,7 +120,7 @@ export function assessDataConfidence({ weigh_ins, adherenceKnown, weeksInPhase, 
     return {
       level: 'data_hold',
       reasons: ['Fewer than 3 weigh-ins this week'],
-      holdMessage: "Need at least 3 morning weights for a reliable trend. Calories held this week. Log daily and the next check-in has clean data to act on.",
+      holdMessage: "Need morning weights from at least 3 different days for a reliable trend. Calories held this week. Log daily and the next check-in has clean data to act on.",
     };
   }
 

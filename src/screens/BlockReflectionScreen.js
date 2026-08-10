@@ -62,7 +62,7 @@ function buildNarrative(data) {
   }
 
   if (totalSets > 0) {
-    lines.push(`That's ${totalSets.toLocaleString('en-GB')} working sets and ${tonnage.toLocaleString('en-GB')} kg of total volume.`);
+    lines.push(`That's ${totalSets.toLocaleString('en-GB')} working sets and ${tonnage.toLocaleString('en-GB')} kg lifted in total.`);
   }
 
   if (avgDuration > 0) {
@@ -71,11 +71,11 @@ function buildNarrative(data) {
 
   if (tonnageDelta !== null) {
     if (tonnageDelta > 5) {
-      lines.push(`Weekly volume climbed ${tonnageDelta}% from the first to the last week.`);
+      lines.push(`The weight you lifted each week climbed ${tonnageDelta}% from the first week to the last.`);
     } else if (tonnageDelta < -5) {
-      lines.push(`Volume was lower in the final week than the first, likely a recovery week.`);
+      lines.push(`You lifted less in the final week than the first, likely a recovery week.`);
     } else {
-      lines.push(`Volume was consistent across the block.`);
+      lines.push(`Total lifted stayed consistent across the block.`);
     }
   }
 
@@ -84,15 +84,15 @@ function buildNarrative(data) {
   }
 
   if (lines.length === 0) {
-    lines.push(`Block "${name}" is complete.`);
+    lines.push(`Block "${name}" is finished.`);
   }
 
   return lines;
 }
 
 const PR_TYPE_LABELS = {
-  '1rm_estimate': 'Est. 1RM',
-  heaviest_weight: 'Heaviest set',
+  '1rm_estimate': 'Est. max',
+  heaviest_weight: 'Heaviest weight',
   most_reps: 'Most reps',
 };
 
@@ -213,7 +213,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
           <>
             {/* Block title and dates */}
             <View style={styles.blockTitle}>
-              <Text style={[styles.blockName, live.blockName]} accessibilityRole="header">{data.meso?.name ?? 'Training Block'}</Text>
+              <Text style={[styles.blockName, live.blockName]} accessibilityRole="header">{data.meso?.name ?? 'Training block'}</Text>
               {data.startDate ? (
                 <Text style={[styles.blockDates, live.blockDates]}>
                   {fmtDate(data.startDate)}
@@ -230,7 +230,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
               <StatBlock
                 icon="trending-up-outline"
                 value={`${data.tonnage.toLocaleString('en-GB')} kg`}
-                label="Volume"
+                label="Total lifted"
                 tooltip={GLOSSARY.tonnage}
               />
               {data.avgDuration > 0 && (

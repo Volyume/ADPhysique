@@ -1,7 +1,38 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ FRESH SESSION START HERE (2026-07-27, final pre-release sweep) ★
+## ★ FRESH SESSION START HERE (2026-08-10, Campaign 2: comprehension) ★
+===============================================================================
+
+**Read this block, then `docs/TASKBOARD.md` (the Campaign 2 entry in the
+appendix is the live spec pointer), then `CLAUDE.md`, then `git status`.
+Every block below this one is SUPERSEDED and kept as history.**
+
+Since the 2026-07-27 block below: the adaptive-mesocycle campaign landed
+(D91, blueprint `docs/blueprint-adaptive-mesocycle-2026-08-09.md`, incl.
+migrate_129-131; 131 applied to production on the founder's phrase); the
+full product map was built (`docs/_FULL-APP-PRODUCT-MAP.md` + its
+handover); Campaign 1 (Product Integrity, D92) landed and merged to main
+at `0a552cc4` with 9,681 tests passing, lint clean, and migrations
+132-135 written but NOT applied (founder-gated).
+
+**NOW IN FLIGHT: Campaign 2 — comprehension, explanation, terminology**
+on branch `claude/campaign2-comprehension`. The founder's full order is
+preserved verbatim in the session scratchpad
+(`c2/CAMPAIGN2-ORDER.txt`) and summarised on the taskboard. Hard
+constraints: migrations 132-135 stay unrun, no EAS builds, D92-11
+(ED-flag propagation) unaltered, no new cross-device sensitive-data
+paths, cardio permanently out of scope (D92-1), Campaign 1 pins stay
+green, STOP after Campaign 2. Rulings go to the register as D93.
+
+**Recovery path if this session dies:** read the Campaign 2 block on the
+taskboard, the D93 register entries made so far, and the phase evidence
+files in the scratchpad `c2/` directory; verify `git status`; uncommitted
+work is lead-reviewed against the order before landing, never discarded,
+never blindly committed.
+
+===============================================================================
+## SUPERSEDED — (2026-07-27, final pre-release sweep) ★
 ===============================================================================
 
 **Read this block, then `docs/TASKBOARD.md`, then `CLAUDE.md`, then

@@ -898,7 +898,7 @@ describe('Progress Scan uncertainty and abstention', () => {
       { estimateBodyFatPercent: 20.0, estimateRangeHigh: 23.5, estimateRangeLow: 16.5 },
     );
     expect(trend.direction).toBe('steady');
-    expect(trend.explanation).toMatch(/uncertainty bands overlap/i);
+    expect(trend.explanation).toMatch(/uncertainty ranges overlap/i);
   });
 
   test('overlapping wide ranges stay steady even when midpoint movement looks large', () => {
@@ -907,7 +907,7 @@ describe('Progress Scan uncertainty and abstention', () => {
       { estimateBodyFatPercent: 30, estimateRangeLow: 26, estimateRangeHigh: 34 },
     );
     expect(trend.direction).toBe('steady');
-    expect(trend.explanation).toMatch(/uncertainty bands overlap/i);
+    expect(trend.explanation).toMatch(/uncertainty ranges overlap/i);
   });
 
   test('untrusted numeric estimates cannot be persisted as photo_scan estimate fields', () => {

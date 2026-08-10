@@ -58,7 +58,7 @@ export function buildReadinessSummary({
   // Priority 1: the plan itself has scheduled a deload this week. The most
   // concrete signal there is, since it does not depend on interpreting data.
   if (currentMesoWeek.isDeload) {
-    return { tone: 'recover', line: 'Deload week, pull effort back.' };
+    return { tone: 'recover', line: 'Recovery week, pull effort back.' };
   }
 
   // Priority 2: the training-data-driven suggestion (shouldDeload). Worded

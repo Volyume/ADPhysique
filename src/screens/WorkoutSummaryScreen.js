@@ -1181,7 +1181,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             icon="layers-outline"
             value={String(displayWorkingSets)}
             label="Working sets"
-            tooltip={'Hard sets counted in your weekly totals. Every set you log counts except warm-ups.\n\nTraining close to your limit, typically 0 to 3 reps from failure, is what makes a working set effective.'}
+            tooltip={'The sets counted in your weekly totals. Warm-ups are left out; every other logged set counts, however it felt.'}
             animateOrder={1}
           />
           <StatBox icon="time-outline" value={`${durationMinutes || 0} min`} label="Duration" animateOrder={2} />
@@ -1510,7 +1510,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   activeOpacity={0.85}
                   onPress={handleShareBlock}
                   accessibilityRole="button"
-                  accessibilityLabel="Share block complete"
+                  accessibilityLabel="Share block finished"
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Ionicons name="share-social-outline" size={18} color={t.colors.primary} />

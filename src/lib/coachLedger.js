@@ -104,7 +104,10 @@ export function buildCoachLedger({
       // read "this week" and so disagreed with every genuinely Monday-anchored
       // weekly figure elsewhere. The window is correct and unchanged; the label
       // now says what it actually measures.
-      label: `${Math.min(weighIns7d, MIN_WEIGH_INS)} of ${MIN_WEIGH_INS} morning weigh-ins in the last 7 days`,
+      // Campaign 2 (D93): the count is DISTINCT mornings, mirroring the
+      // engine's per-day credit, so the label names days rather than
+      // readings - two logs on one morning are one morning.
+      label: `${Math.min(weighIns7d, MIN_WEIGH_INS)} of ${MIN_WEIGH_INS} mornings with a weigh-in in the last 7 days`,
     },
     {
       key: 'days',

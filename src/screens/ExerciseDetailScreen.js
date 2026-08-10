@@ -662,7 +662,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                       {safeToFixed(displayPR.value, 1)}{units}
                     </Text>
                     <Text style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>
-                      {displayPR.record_type === '1rm_estimate' ? 'Est. max' : 'Heaviest set'}
+                      {displayPR.record_type === '1rm_estimate' ? 'Est. max' : 'Heaviest weight'}
                     </Text>
                   </View>
                 )}
@@ -671,7 +671,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                     <Text style={[styles.prHighlightStatValue, live.prHighlightStatValue]}>
                       {finiteOr(prHeavy.value, '-')}{units} x {finiteOr(prHeavy.reps, '-')}
                     </Text>
-                    <Text style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>Best set</Text>
+                    <Text style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>Heaviest weight</Text>
                   </View>
                 )}
                 {prReps && (
@@ -905,7 +905,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 />
                 <View style={styles.prInfo}>
                   <Text style={[styles.prLabel, live.prLabel]}>
-                    {pr.record_type === '1rm_estimate' ? 'Estimated max' :
+                    {pr.record_type === '1rm_estimate' ? 'Est. max' :
                      pr.record_type === 'heaviest_weight' ? 'Heaviest weight' : 'Most reps'}
                   </Text>
                   <Text style={[styles.prValue, live.prValue]}>
