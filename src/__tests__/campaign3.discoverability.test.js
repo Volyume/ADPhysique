@@ -52,15 +52,15 @@ describe('CONTEXTUAL shortcuts navigate to the canonical owner', () => {
   test('the Diary offset row links to PerDayTargets and renders only when an offset applies', () => {
     const src = read('screens/DiaryScreen.js');
     expect(src).toMatch(/perDayOffsetKcal !== 0 \?/);
-    expect(src).toMatch(/navigate\('PerDayTargets'\)/);
+    expect(src).toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'PerDayTargets'\)/);
   });
 
   test('the Coach tab routes to the volume-target editor', () => {
-    expect(read('screens/YouScreen.js')).toMatch(/navigate\('VolumeHeatmap'\)/);
+    expect(read('screens/YouScreen.js')).toMatch(/navigateCrossTab\(navigation, 'ProgressTab', 'VolumeHeatmap'\)/);
   });
 
   test('Body metrics links its displayed unit to the Workout and units editor', () => {
-    expect(read('screens/BodyMetricsScreen.js')).toMatch(/navigate\('SettingsWorkout'\)/);
+    expect(read('screens/BodyMetricsScreen.js')).toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'SettingsWorkout'\)/);
   });
 });
 

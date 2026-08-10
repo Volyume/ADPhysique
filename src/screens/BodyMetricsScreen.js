@@ -24,6 +24,7 @@ function safeFormatDate(value, fmt) {
   }
 }
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import VolyumeChart from '../components/VolyumeChart';
 import Card from '../components/Card';
 import BackHeader from '../components/BackHeader';
@@ -1110,7 +1111,9 @@ export default function BodyMetricsScreen() {
                 commentary (calm-safe). */}
             <TouchableOpacity
               style={styles.unitLinkRow}
-              onPress={() => navigation.navigate('SettingsWorkout')}
+              // Review A finding 2: SettingsWorkout lives in ProfileTab; bare
+              // navigate from ProgressTab is the F4 dead-tap class.
+              onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'SettingsWorkout')}
               accessibilityRole="button"
               accessibilityLabel="Change display units in workout and units settings"
             >

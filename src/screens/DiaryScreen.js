@@ -1435,12 +1435,15 @@ export default function DiaryScreen({ navigation, route }) {
           {!readOnly && perDayOffsetKcal !== 0 ? (
             <TouchableOpacity
               style={styles.targetModeRow}
-              onPress={() => navigation.navigate('PerDayTargets')}
+              // Review A finding 1: PerDayTargets lives in the ProfileTab
+              // stack; a bare navigate from DiaryTab is the F4 dead-tap
+              // class. The one sanctioned cross-tab route is the helper.
+              onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'PerDayTargets')}
               accessibilityRole="button"
-              accessibilityLabel={`Today's target includes your ${perDayOffsetKcal > 0 ? 'plus' : 'minus'} ${Math.abs(perDayOffsetKcal)} calorie day adjustment. Edit per-day targets.`}
+              accessibilityLabel={`Today's target includes your ${perDayOffsetKcal > 0 ? 'plus' : 'minus'} ${toEnergy(Math.abs(perDayOffsetKcal), energyUnit)} ${energyUnitLabel(energyUnit)} day adjustment. Edit per-day targets.`}
             >
               <Text style={[styles.targetModeText, live.targetModeText]}>
-                {`Includes your ${perDayOffsetKcal > 0 ? '+' : '-'}${Math.abs(perDayOffsetKcal)} kcal day adjustment. Edit`}
+                {`Includes your ${perDayOffsetKcal > 0 ? '+' : '-'}${toEnergy(Math.abs(perDayOffsetKcal), energyUnit)} ${energyUnitLabel(energyUnit)} day adjustment. Edit`}
               </Text>
             </TouchableOpacity>
           ) : null}

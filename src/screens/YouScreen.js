@@ -545,7 +545,9 @@ export default function YouScreen({ navigation }) {
               icon="stats-chart-outline"
               label="Volume targets"
               sub="Weekly set ranges per muscle. Your own numbers take precedence."
-              onPress={() => navigation.navigate('VolumeHeatmap')}
+              // Review A finding 3: VolumeHeatmap lives in the Home and Progress
+              // stacks, not ProfileTab; cross-tab helper or the tap is dead.
+              onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'VolumeHeatmap')}
             />
           </View>
         ) : null}
