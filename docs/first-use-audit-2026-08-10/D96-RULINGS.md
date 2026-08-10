@@ -468,6 +468,15 @@ COACHING. PRO owns adaptive coaching and Continue-with-adjustments.**
   advanced/beginner modes, no hidden required inputs, rollback
   architecture untouched. Reopen only on funnel/device evidence.
 
+**Wording approval (founder, 2026-08-10, "Approve wording"):** the
+ruling-embedded lines are approved as the actual copy — the FQ-1 calm
+pointer ("Prefer gentler coaching? You can switch to Calm anytime"),
+FQ-3's top-of-range hold line ("You've topped the range. Add weight
+when you're ready."), and FQ-6.4's "Manage subscription" CTA. Each
+lands with its work item under the normal voice rules; no further
+wording gate stands anywhere in this campaign. (FQ-5's six items were
+separately approved in full and are landed.)
+
 Implementation discipline (founder): focused tests + affected
 campaign 1-4 suites + full gate before merging each ruling's work; no
 migrations, no EAS, no cardio, no AI/social, no D92-11 change, no ED
