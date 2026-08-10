@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView, Linking } from 'react-native';
+import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -826,7 +826,7 @@ export default function NotificationSettingsScreen({ navigation }) {
         {/* Bottom note */}
         <View style={styles.bottomNote}>
           <Text style={[styles.bottomNoteText, live.bottomNoteText]}>
-            Volyume never sends marketing notifications. These are local reminders with no server involved. You can disable them any time from your device settings. To stay unobtrusive, Volyume also caps how many nudges it sends in a week, so an expected one can occasionally be skipped. On Android, your device groups these into notification channels you can tune in system settings.
+            {`Volyume never sends marketing notifications. These are local reminders with no server involved. You can disable them any time from your device settings. To stay unobtrusive, Volyume also caps how many nudges it sends in a week, so an expected one can occasionally be skipped.${Platform.OS === 'android' ? ' Your device groups these into notification channels you can tune in system settings.' : ''}`}
           </Text>
         </View>
 

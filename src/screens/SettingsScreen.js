@@ -42,7 +42,7 @@ export default function SettingsScreen({ navigation }) {
         <SettingRow
           icon="barbell-outline"
           label="Coaching"
-          sub="Calmer coaching, who applies changes, and cycle tracking where shown"
+          sub="Calmer coaching, session readiness and coaching preferences"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsCoaching'); }}
         />
         {/* CP-6 (2026-07-09 UX audit): this used to render inline on this

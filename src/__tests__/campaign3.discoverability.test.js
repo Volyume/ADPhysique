@@ -31,7 +31,7 @@ describe('SETTINGS ownership', () => {
 
   test('cycle tracking is gated to the tier of its only reader', () => {
     expect(stripComments(read('screens/SettingsCoachingScreen.js')))
-      .toMatch(/tier === 'pro' && bioSex === 'female'/);
+      .toMatch(/\(tier === 'pro' \|\| cycleEnabled\) && bioSex === 'female'/);
   });
 
   test('partner cheers has a reachable toggle writing the flag the sender reads', () => {
@@ -51,7 +51,7 @@ describe('SETTINGS ownership', () => {
 describe('CONTEXTUAL shortcuts navigate to the canonical owner', () => {
   test('the Diary offset row links to PerDayTargets and renders only when an offset applies', () => {
     const src = read('screens/DiaryScreen.js');
-    expect(src).toMatch(/perDayOffsetKcal !== 0 \?/);
+    expect(src).toMatch(/appliedOffsetKcal !== 0 \?/);
     expect(src).toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'PerDayTargets'\)/);
   });
 
@@ -77,7 +77,7 @@ describe('GESTURES: no important action is gesture-only', () => {
   });
 
   test('the saved-meals empty state names its gesture', () => {
-    expect(read('screens/MyMealsScreen.js')).toMatch(/Press and hold any entry in your diary/);
+    expect(read('screens/MyMealsScreen.js')).toMatch(/choose Select entries, or press and hold/);
   });
 });
 
