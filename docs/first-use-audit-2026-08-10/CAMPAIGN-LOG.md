@@ -58,8 +58,30 @@ redesign. FR-1..5, FR-C4-1..11, FR-PW-1, H4 carried unresolved
   density/hierarchy); then the Phase 40 test matrix + Phase 41
   synthetic journey; then Reviews A/B/C; then the release-truth
   audit, gates, close, 64-item handover.
-- FOUNDER QUESTIONS FQ-1..FQ-8 open in D96-RULINGS.md - work continues
-  on unblocked lanes.
+- FOUNDER RULINGS FQ-1..FQ-8 RECEIVED and recorded (D96-RULINGS.md
+  founder-rulings block + D96 interim block in DECISIONS-2026-07-09.md
+  with the FQ-2 tier law: FREE DOES NOT HAVE COACHING; PRO owns
+  adaptive coaching and Continue-with-adjustments). Integration plan,
+  in sequence after Waves B/C land (side rulings; no re-scope):
+  - FQ-2 wave (block-decision architecture: both options for Pro,
+    advisor recommends-never-gates, ledger consumed, placeholder-row
+    entitlement removed, Free truthfully Pro-gated) - dedicated lane
+    over blockAdvisor/PlansScreen + tests, lead-reviewed.
+  - FQ-3 + FQ-7 (session-difficulty as coarse effort evidence +
+    per-exercise PR baseline) - LEAD HANDS-ON engine work with the
+    dedicated test plans the rulings demand; resolves FR-C4-4.
+  - FQ-4 (wire Apply end-to-end to session prescriptions; unapplied
+    proposals change nothing) - LEAD HANDS-ON with the full pinned
+    law and scenario matrix; the campaign's largest single item.
+  - FQ-6.1/6.2/6.4 (trial-grant retry, trial end date, truthful
+    Manage subscription) - LEAD HANDS-ON billing changes, each with
+    its written test plan per billing discipline. FQ-6.3 HELD on the
+    founder console check (now on TASKBOARD §3 beside H4).
+  - FQ-1(c) (hand-off calm pointer + the three doc corrections) -
+    lead, after Wave B lands (shares ProSetupCompleteScreen).
+  - FQ-5: wording proposal PREPARED at
+    FQ5-CONSENT-WORDING-PROPOSAL.md - AWAITING FOUNDER WORDING
+    REVIEW; nothing lands until approved. FQ-8(b): no work.
 
 ## Wave recovery paths
 

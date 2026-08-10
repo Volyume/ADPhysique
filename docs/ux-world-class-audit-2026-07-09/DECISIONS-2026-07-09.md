@@ -2652,3 +2652,32 @@ per setting, controls at the point of consequence.
    carried unresolved; FR-2/FR-3/FR-5 recommendations updated on this
    campaign's evidence (PHASE-30-GATES.md Phase 29 section).
    STOPPED after Campaign 4 per the order.
+
+## D96 interim — Campaign 5 founder rulings FQ-1..FQ-8 (2026-08-10)
+
+Recorded mid-campaign on founder order (full text and per-ruling
+detail: docs/first-use-audit-2026-08-10/D96-RULINGS.md, founder-rulings
+block). Side rulings only; Campaign 5 continues as commissioned.
+
+TIER LAW (founder, verbatim in substance, binding everywhere):
+**FREE DOES NOT HAVE COACHING. PRO owns adaptive coaching and
+Continue-with-adjustments.** The Block Ledger may remain tier-blind
+internally (workout evidence is not a Pro data type); the adaptive
+coaching decision built on that evidence is Pro. Accidental
+entitlement via placeholder rows or incidental check-in data is
+removed; tier eligibility comes from the real entitlement system.
+
+Summary: FQ-1(c) hand-off calm pointer, no new screen, three docs
+corrected · FQ-2(a) Pro sees BOTH Repeat and Continue-with-adjustments
+side by side, advisor recommends never gates, adjustments consume the
+ledger; Free truthfully Pro-gated · FQ-3(b) session difficulty as
+separate coarse effort evidence, never fabricated per-set RIR,
+conservative fallback, resolves FR-C4-4 · FQ-4(a) Apply wired
+end-to-end to session prescriptions; unapplied proposals change
+nothing · FQ-5 approved in principle, exact locked-copy wording gated
+on founder review · FQ-6.1 approved (idempotent trial-grant retry),
+6.2 approved (authoritative trial end date), 6.3 HELD pending store-
+console verification (beside H4), 6.4 approved (truthful platform
+subscription management replaces the fake local switch) · FQ-7(a)
+first qualifying exposure per exercise is baseline, PRs from later
+comparable exposures · FQ-8(b) wizard structure unchanged.

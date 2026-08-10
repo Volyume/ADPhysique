@@ -349,7 +349,124 @@ RECORD — recorded here / on the taskboard; no code change.
 - E-7 why-an-account line: EXECUTE(wave E) — the approved sentence
   (already written, currently unrendered) surfaces on the live form.
 
-## FOUNDER QUESTIONS (open; no execution)
+## FOUNDER RULINGS on FQ-1..FQ-8 (received 2026-08-10 — the questions
+## below are CLOSED; this block is the operative record)
+
+Side rulings only: Campaign 5 continues exactly as commissioned; each
+ruling integrates into its existing workstream; no re-scope. Tier law
+restated by the founder and binding everywhere: **FREE DOES NOT HAVE
+COACHING. PRO owns adaptive coaching and Continue-with-adjustments.**
+
+- **FQ-1 = (c).** No new first-run wellbeing screen; calm stays edited
+  in Settings → Coaching. ADD: a light neutral pointer on the existing
+  setup-complete/hand-off surface ("Prefer gentler coaching? You can
+  switch to Calm anytime"-equivalent), linking to the canonical
+  setting if it fits without navigation awkwardness. Standard remains
+  the default; nothing medicalising; no suggestion Standard is unsafe.
+  CORRECT the three documents claiming a dedicated first-run wellbeing
+  question exists (wellbeing.js header, ONBOARDING_SEQUENCE_LOCKED,
+  PRIVACY_CONSENT_LOCKED's line) to describe actual behaviour. ED
+  detection/SCOFF/floors/thresholds/D92-11 untouched.
+- **FQ-2 = (a) WITH PRO-ONLY ADAPTIVE COACHING.** At block completion
+  PRO always sees BOTH Repeat and Continue-with-adjustments as
+  side-by-side legitimate choices; the advisor may recommend and
+  explain but never hides, gates or forces; Continue-with-adjustments
+  consumes the Block Ledger (a successful block never silently
+  discards it). FREE does not receive adaptive next-block coaching;
+  if the option renders for Free at all it is truthfully Pro-gated
+  through the existing entitlement UX. The accidental entitlement
+  logic MUST GO: no placeholder DB row, no incidental presence/absence
+  of Pro check-in data may decide the branch — tier eligibility comes
+  from the real Free/Pro entitlement system. The ledger may stay
+  tier-blind internally (workout evidence is not a Pro data type);
+  the coaching decision built on it is Pro. Preserve explicit
+  confirmation, true Repeat, no auto-transition, Stage 6-8
+  invariants. Tests pinned both sides (Pro: both reachable, advisor
+  recommends-not-gates, adjustments consume ledger; Free: no adaptive
+  coaching, explicit entitlement, no placeholder-row gating).
+- **FQ-3 = (b) WITH CONSTRAINT.** Post-session difficulty becomes a
+  SEPARATE session-level coarse effort signal the progression engine
+  may consume deterministically and conservatively. NEVER converted
+  into fabricated per-set RIR; the silent rir:2 stamp stops counting
+  as genuine effort evidence; the picker stays removed. Rep
+  progression continues from performance evidence; top-of-band load
+  progression may use real session difficulty as corroboration
+  ("very hard" session → do not aggressively add load); skipped
+  difficulty → effort unknown → conservative hold with honest copy
+  ("You've topped the range. Add weight when you're ready."-
+  equivalent, voice rules apply; never an instruction to log RIR).
+  This ruling also properly resolves FR-C4-4: bodyweight exercises
+  must not receive micro-load instructions through the
+  fabricated-effort path. Dedicated test plan; determinism pinned.
+- **FQ-4 = (a). WIRE IT.** Confirm-then-apply becomes true
+  end-to-end: coach proposal → Apply → persisted applied target →
+  plan/volume allocation → workout generation/set targets → the
+  actual next session. Includes weekly per-muscle changes (both
+  directions) and applied recovery-week per-muscle reductions.
+  Unapplied ordinary proposals must NOT alter session prescriptions
+  (explicitly-automatic hard safety behaviour may stay automatic, but
+  no normal proposal may masquerade as safety). Pinned law: UNAPPLIED
+  = no coaching change to session prescription; APPLIED = the change
+  reaches session prescription; WRITE FAILURE = no success receipt
+  and no partial change. Test restart/sync/retry/double-tap/recovery
+  week/per-muscle divergence/Manual mode/Repeat/adjustments/stale-
+  device conflicts. Adaptive mesocycle architecture unweakened.
+- **FQ-5 = APPROVED 1-6 IN PRINCIPLE, WORDING GATED.** Exact
+  proposed wording for all six consent/privacy corrections is
+  prepared and PRESENTED FOR FOUNDER REVIEW BEFORE LANDING (see
+  FQ5-CONSENT-WORDING-PROPOSAL.md in this folder). Directions:
+  withdrawal-consequence disclosed pre-consent; canonical consent
+  content established then record and screen reconciled to identical
+  substance (the three extra shipped blocks documented, not assumed
+  correct either way); scan-calibration upload disclosed with
+  technically accurate language ("anonymous" only if genuinely
+  unlinkable, else the accurate term); data-leaving-device
+  disclosures placed under sharing/transmission; progressive
+  disclosure allowed with no substance removed or hidden
+  pre-consent; wellbeing storage claim corrected (raw answers local,
+  derived score synced) without publishing detector mechanics. No
+  behaviour change rides this ruling.
+- **FQ-6.1 = APPROVED.** Idempotent trial-grant retry consistent
+  with the cascade architecture: never pretend the trial is active
+  before authoritative confirmation; calm "will retry" state; no
+  duplicate grant, no extension abuse, no repeated trial creation;
+  failure distinguishable from ineligibility; abuse controls intact;
+  no locally-invented Pro entitlement. Dedicated billing test plan.
+- **FQ-6.2 = APPROVED.** The authoritative trial end date surfaces on
+  Account/subscription status and the active trial banner, from ONE
+  entitlement source; no derived conflicting dates; no notification
+  additions.
+- **FQ-6.3 = HOLD.** The "store adds a further 7 days" claim is
+  neither made nor strengthened until the founder verifies the intro
+  offers in both consoles (checklist item beside H4). Both stores →
+  platform-appropriate copy may remain; one → platform-specific;
+  neither/uncertain → withhold. OPEN until verification supplied.
+- **FQ-6.4 = APPROVED, truthful semantics.** The fake local "Switch
+  to Free" is replaced by truthful platform subscription management
+  ("Manage subscription"-equivalent): cancellation stops renewal via
+  the store, Pro remains until the paid/trial entitlement expires,
+  Free follows the authoritative expiry. Never locally forge Free;
+  product IDs/pricing/trial length/provider untouched; billing
+  invariants pinned.
+- **FQ-7 = (a), PER EXERCISE.** First qualifying completed exposure
+  to an exercise establishes the BASELINE; records begin from the
+  next comparable exposure — even for a veteran account meeting a
+  brand-new exercise. Set 2 beating set 1 inside the first exposure
+  is not a PR. The three record types stay (Est. max / Heaviest /
+  Most reps); exercise identity follows existing semantics (no fuzzy
+  matching); substitution inherits no unrelated baseline; historical
+  users keep legitimate records. Test matrix per the ruling.
+- **FQ-8 = (b).** Wizard structure stays; no experienced branch, no
+  advanced/beginner modes, no hidden required inputs, rollback
+  architecture untouched. Reopen only on funnel/device evidence.
+
+Implementation discipline (founder): focused tests + affected
+campaign 1-4 suites + full gate before merging each ruling's work; no
+migrations, no EAS, no cardio, no AI/social, no D92-11 change, no ED
+threshold change, no billing price/product change. FQ-5 stops at
+wording; FQ-6.3 stays open.
+
+## FOUNDER QUESTIONS (RESOLVED ABOVE — kept for the evidence trail)
 
 **FQ-1 — First-run wellbeing choice (W-1).** Three documents
 (including wellbeing.js's own header) say first run asks the wellbeing

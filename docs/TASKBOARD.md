@@ -1372,6 +1372,13 @@ conditional on the decision; recorded here so they are visible, not lost._
     (and any live marketing copy sourced from them) need the cardio
     lines removed. The repo source docs now carry STALE-ON-CARDIO
     banners; only the founder can edit the consoles.
+  - **FQ-6.3 console check (beside H4, same visit — Campaign 5
+    ruling):** verify whether the 7-day introductory offer actually
+    exists in BOTH Play Console and App Store Connect. The in-app
+    "your store adds a further 7 days free" claim is HELD until this
+    verification: both stores → copy may remain; one →
+    platform-specific copy; neither/uncertain → the promise is
+    withheld. Report the result and the copy follows.
   - FR-C4-1 cardio export coverage · FR-C4-2 notification-pref
     dual-family drift · FR-C4-3 adaptation_events restore path ·
     FR-C4-4 CALC-5 law vs live computeSetTargets · FR-C4-5 partner
