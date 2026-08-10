@@ -77,8 +77,16 @@ redesign. FR-1..5, FR-C4-1..11, FR-PW-1, H4 carried unresolved
     Manage subscription) - LEAD HANDS-ON billing changes, each with
     its written test plan per billing discipline. FQ-6.3 HELD on the
     founder console check (now on TASKBOARD §3 beside H4).
-  - FQ-1(c) (hand-off calm pointer + the three doc corrections) -
-    lead, after Wave B lands (shares ProSetupCompleteScreen).
+  - FQ-1(c) - LANDED by the lead (abca7fad): hand-off calm pointer in
+    the approved wording (named, not navigated - no tabs exist yet in
+    that stack) + wellbeing.js header + ONBOARDING_SEQUENCE_LOCKED
+    status banner; PRIVACY_CONSENT_LOCKED's line was corrected in the
+    FQ-5 landing.
+  - Wave B (entry/account) - COMPLETE, lead diff review PASSED
+    (failsafe fail-closed, idempotent build record, auth copy module);
+    LANDING HELD until Wave C reports because both waves extend the
+    shared campaign5.firstUse.test.js - B and C land in sequence over
+    the settled tree.
   - FQ-5: APPROVED IN FULL by the founder ("Approve all") and LANDED
     by the lead - all six items as proposed, item 3 Option A, consent
     version stamp 2026-08-10 (stamp-only, no re-gating), locked
