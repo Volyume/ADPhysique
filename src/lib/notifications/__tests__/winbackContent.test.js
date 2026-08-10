@@ -39,7 +39,7 @@ describe('winbackPush', () => {
   test('no data at all uses the held-seat line, not a zero', () => {
     const { title, body } = winbackPush({ sessionsSince: 0, totalSessions: 0 });
     expect(title).toBe('Your training is saved.');
-    expect(body).toBe('Everything you logged is saved. Pro picks up where it left off.');
+    expect(body).toBe('Everything you logged is saved, ready whenever you are.');
   });
 
   test('a stated break opens by acknowledging it', () => {

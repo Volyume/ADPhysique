@@ -2555,7 +2555,7 @@ export default function CoachOutputScreen({ navigation, route }) {
                 ownership unmistakable without re-threading three cards. */}
             {applyDisabled ? (
               <Text style={[styles.manualModeNote, live.manualModeNote]}>
-                Manual mode: these are recommendations. The coach applies nothing; any change is yours to make.
+                Manual mode: these are recommendations. The coach applies nothing; any change is yours to make. Change modes in Settings, under Coaching.
               </Text>
             ) : null}
             {heroCardEl}

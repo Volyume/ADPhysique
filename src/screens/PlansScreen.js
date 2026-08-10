@@ -823,7 +823,20 @@ export default function PlansScreen({ navigation }) {
                     <Button
                       variant="secondary"
                       title={blockAdvice.nextBlock.secondaryLabel}
-                      onPress={() => navigation.navigate(tier === 'pro' ? 'PlanUpdate' : 'ProUpgrade')}
+                      // D94 (Campaign 3, F1): a free user tapping "Build a
+                      // new plan" was sent to the paywall for a feature the
+                      // same screen offers free. Building a plan routes to
+                      // the free plan library; only "Review with coach"
+                      // (consider_rebuild's secondary, a genuinely Pro
+                      // flow) keeps the upgrade route for free users.
+                      onPress={() => {
+                        if (tier === 'pro') { navigation.navigate('PlanUpdate'); return; }
+                        navigation.navigate(
+                          blockAdvice.nextBlock.recommendation === 'consider_rebuild'
+                            ? 'ProUpgrade'
+                            : 'PlanLibrary',
+                        );
+                      }}
                       accessibilityLabel={blockAdvice.nextBlock.secondaryLabel}
                       style={styles.blockCtaButton}
                     />
