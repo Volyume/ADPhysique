@@ -1104,6 +1104,18 @@ export default function BodyMetricsScreen() {
                 )}
               </View>
             )}
+            {/* D94 (Campaign 3, F4): the display unit shown above is set on
+                a screen no weight surface linked to. One quiet visible row
+                to the canonical editor; neutral wording, no weight
+                commentary (calm-safe). */}
+            <TouchableOpacity
+              style={styles.unitLinkRow}
+              onPress={() => navigation.navigate('SettingsWorkout')}
+              accessibilityRole="button"
+              accessibilityLabel="Change display units in workout and units settings"
+            >
+              <Text style={[styles.unitLinkText, live.unitLinkText]}>{`Shown in ${bwu === 'st' ? 'stones and pounds' : bwu}. Change units`}</Text>
+            </TouchableOpacity>
 
             {/* Weight trend chart */}
             <WeightTrendChart entries={history} units={units} bodyWeightUnits={bwu} edFlagOpen={calm || edFlagOpen} userId={user?.id} />
@@ -1683,6 +1695,8 @@ const styles = StyleSheet.create({
   },
   phaseLabel: { ...type.captionStrong },
   weightRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  unitLinkRow: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
+  unitLinkText: { ...type.caption, color: colors.textMuted },
   weightValue: { fontSize: fontSize.xxxl, fontWeight: fontWeight.black, color: colors.textPrimary },
   trendHint: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
   bodyFatBlock: { gap: spacing.xs, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md },
@@ -1835,6 +1849,7 @@ const styles = StyleSheet.create({
 // gate and every safety threshold are untouched -- colours only.
 function buildLiveStyles(t) {
   return {
+    unitLinkText: { ...t.type.caption, color: t.colors.textMuted },
     safe: { backgroundColor: t.colors.background },
     photosRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     photosRowText: { color: t.colors.textPrimary, fontSize: t.fontSize.md },
