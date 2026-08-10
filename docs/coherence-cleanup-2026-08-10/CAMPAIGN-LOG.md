@@ -45,15 +45,20 @@ after Campaign 4.
 - Phase 28 (migrations) — VERIFIED: no new migration written or run;
   132-135 unapplied on disk; 049 HELD with corrected header; only
   text-only header/README changes under supabase/.
-- IN FLIGHT: Review C (repository truth, Phase 27) — fixes
-  truthful-documentation findings itself (text-only), reports
-  anything needing a ruling; barred from the campaign folder,
-  taskboard and handover. Recovery: its edits are uncommitted
-  doc/comment text; re-derive from its report against the Phase 27
-  spec.
-- Then: land Review C, Phase 29 FR-1..5 evidence pass, Phase 30 gates
-  + before/after censuses, register/taskboard/handover close, merge to
-  main, 40-item handover, STOP.
+- Review C (repository truth) — COMPLETE and LANDED at 0ece5dd7
+  (11 findings fixed by the reviewer, lead rulings R1-R5 in D95-3:
+  39-header applied-status sweep executed, fact-base health line
+  corrected, settings.json joins FR-C4-9, web/ legacy parser and
+  steps-marketing edge recorded).
+- Phase 30 — COMPLETE: PHASE-30-GATES.md (all gates green; route
+  census 116→105 registrations / dead taps 16→0 / sourceless 1→0 /
+  remnants 2→0; settings + dead-code censuses; Phase 29 FR evidence
+  pass included).
+- CAMPAIGN CLOSED: register block D95 appended to
+  DECISIONS-2026-07-09.md; taskboard Campaign 4 block marked COMPLETE;
+  handover fresh-session block updated; merged to main 2026-08-10.
+  STOPPED per the order - no onboarding restructuring, no
+  long-term-user work, no migrations, no builds.
 
 ## Landed commits (this campaign)
 

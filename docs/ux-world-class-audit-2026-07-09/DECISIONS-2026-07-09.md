@@ -2598,3 +2598,57 @@ per setting, controls at the point of consequence.
 5. Boundary review clean (cardio/AI/social/auto-transition/safety/
    engines/migrations/builds). Campaign closed; five founder rulings
    (FR-1..FR-5) remain open by design.
+
+## D95 — Campaign 4: Whole-product coherence, legacy/dead-code cleanup and product-boundary closure (founder order + lead rulings, 2026-08-10)
+
+1. Founder order (verbatim in the session scratchpad, summarised on the
+   taskboard): make the shipping product and the repository agree. Three
+   laws - delete only what is PROVEN dead or out of scope (A-I classes,
+   zero callers never sufficient); never delete historical user data
+   because a feature is gone; a removed feature leaves no product
+   promise behind. Cardio logging ruled NOT part of Volyume; steps/
+   general activity and strength-to-health are different concepts and
+   survive. Peak week legacy-load-bearing, 049 HELD.
+2. Evidence: eight Opus audit lanes (docs/coherence-cleanup-2026-08-10/
+   AUDIT-*.md). Rulings register: D95-RULINGS.md in the same folder
+   (H1-H6 cardio postures, keep/delete rulings per lane, wave rulings
+   D95-2, review rulings D95-3). Order-premise corrections ruled
+   honestly: cardio was fully LIVE (removed as real surgery with a
+   behavioural invariance pin - calories and steps coached identically
+   on the exact fixture that used to fire cardio); peak_week_plans is
+   CLASS A LIVE behind the B4 contest countdown (nothing removed,
+   049's false header corrected, FR-PW-1 opened).
+3. Landed (all merged in order): D95 rulings; engine/coach-screen
+   cardio removal; peak-week deleted_at carry (record later corrected -
+   defect latent, not closed); dead functions/copy/modules with every
+   invariant moved to live code FIRST; campaign4.boundaries suite;
+   full cardio closure (76 files, sync converted pull_only per H1,
+   deleteCardioLog kept per H3, H5 fully non-destructive); routes/
+   deferred/duplicates wave (dead registrations, six+ inert cross-tab
+   taps fixed via navigateCrossTab, epleyE1rm consolidated under an
+   equivalence test, muscleDisplayName single export); docs-truth wave
+   (CLAUDE.md facts, supabase/README 072-135 tracker rebuild, locked-
+   doc records, SUPERSEDED banners, U14 public cardio promises gone,
+   EU-Dublin residency corrected on the public page).
+4. Three adversarial reviews run and actioned (D95-3): A reachability
+   (three more inert taps fixed + pinned; the lead's own over-trimmed
+   stepsTarget law restored; migrate_059 header; H1/H3 limitations
+   recorded), B product boundaries (the check-in save was CLEARING
+   retained cardio answers via an explicit null against the
+   preserving-write contract - fixed by omitting the key; store-listing
+   sources and marketing fact base closed as promise leaks; boundary
+   suite re-anchored off dormant steps code), C repository truth
+   (watermelon.md/settings.json banners, plate-maths claim deleted
+   from the fact base, deploy-migrations header MANUAL-DISPATCH-ONLY,
+   39 applied-range migration headers swept from "pending" to YES with
+   the 2026-07-27 sweep citation).
+5. Phase 28: no new migration written or run; 132-135 unapplied; 049
+   HELD. Phase 30: all gates green (PHASE-30-GATES.md - full suite
+   9,626 passing, lint clean, campaign 1-4 suites, jargon, identity
+   invariant; route census 116→105 registrations, dead taps 16→0,
+   sourceless 1→0, boundary remnants 2→0).
+6. Founder items opened: FR-C4-1..11 + FR-PW-1 + H4 listing updates
+   (all on TASKBOARD §3 with detail in D95-RULINGS.md). FR-1..FR-5
+   carried unresolved; FR-2/FR-3/FR-5 recommendations updated on this
+   campaign's evidence (PHASE-30-GATES.md Phase 29 section).
+   STOPPED after Campaign 4 per the order.

@@ -1627,7 +1627,12 @@ workflow survives as a fallback.
   Originally: IN FLIGHT on claude/campaign3-discoverability (from
   main 9aae57cb).
 - CAMPAIGN 4: WHOLE-PRODUCT COHERENCE, LEGACY/DEAD-CODE CLEANUP AND
-  PRODUCT-BOUNDARY CLOSURE (2026-08-10, founder order) - IN FLIGHT on
+  PRODUCT-BOUNDARY CLOSURE (2026-08-10, founder order) - **COMPLETE,
+  merged to main 2026-08-10** (record:
+  docs/coherence-cleanup-2026-08-10/ - CAMPAIGN-LOG.md,
+  D95-RULINGS.md, PHASE-30-GATES.md, eight AUDIT files; register D95;
+  founder-side items in §3 above; STOPPED after Campaign 4 per the
+  order). Originally: IN FLIGHT on
   claude/campaign4-coherence (from main 92b9644e). Purpose: make the
   shipping product and the live repository agree. Core law: DELETE
   ONLY WHAT YOU CAN PROVE IS DEAD OR OUT OF SCOPE (A-I classes; zero

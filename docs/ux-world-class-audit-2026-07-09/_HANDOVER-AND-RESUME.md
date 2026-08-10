@@ -1,7 +1,19 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ FRESH SESSION START HERE (2026-08-10, Campaign 4: coherence/cleanup) ★
+## ★ FRESH SESSION START HERE (2026-08-10, after Campaign 4) ★
+
+**Campaigns 1-4 are ALL COMPLETE and merged to main (D92/D93/D94/D95).
+Campaign 4 (whole-product coherence, legacy/dead-code cleanup,
+product-boundary closure) closed 2026-08-10: record in
+docs/coherence-cleanup-2026-08-10/ (CAMPAIGN-LOG.md, D95-RULINGS.md,
+PHASE-30-GATES.md, eight AUDIT files), register block D95 in
+DECISIONS-2026-07-09.md. Cardio logging is NOT part of Volyume
+(boundary pinned by src/__tests__/campaign4.boundaries.test.js).
+WORK IS STOPPED per the founder's order - no onboarding restructuring,
+no long-term-user work, no migrations (132-135 unapplied, 049 HELD),
+no builds. Founder-side actions + FR items: docs/TASKBOARD.md §3.
+The block below is the superseded Campaign 4 in-flight record.**
 
 **Campaign 4 (whole-product coherence, legacy/dead-code cleanup,
 product-boundary closure) is IN FLIGHT on `claude/campaign4-coherence`
