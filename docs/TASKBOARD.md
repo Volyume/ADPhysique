@@ -1587,7 +1587,41 @@ workflow survives as a fallback.
   PHASE2-TERMINOLOGY-CANON, PHASE9-15-RULINGS) + D93 in the register.
   Residuals for later campaigns recorded in D93 addendum item 5.
   Originally opened as: IN FLIGHT on branch claude/campaign2-comprehension
-  (from main 0a552cc4). Objective: an ordinary user understands what is
+  (from main 0a552cc4).
+- CAMPAIGN 3: DISCOVERABILITY, SETTINGS AND EXISTING-FEATURE UX
+  (2026-08-10, founder order) - IN FLIGHT on branch
+  claude/campaign3-discoverability (from main 9aae57cb). Objective:
+  every EXISTING meaningful feature and behaviour-changing control
+  discoverable at the moment of need, WITHOUT clutter, a settings
+  dumping ground, duplicated controls, new scope, AI search/chat, or
+  permanent visibility for contextual features. Three laws:
+  discoverability is not visibility (A-G classification per control);
+  ONE OWNER PER SETTING (one canonical editor; contextual shortcuts
+  link, never fork state); surface controls at the point of
+  consequence. 25 phases: rebuild the live settings inventory (do not
+  trust the map's 98/93/14 counts), ownership audit (writers/readers/
+  stale state), settings IA, re-audit the 14 hard-to-find controls,
+  training/nutrition/notification discoverability, control-gap
+  rulings (A fix / B document / C defer / D founder), contextual
+  shortcuts with navigation pins, hidden-gesture audit (no important
+  action gesture-only), state-gated feature audit, advanced controls,
+  searchability-without-search, units/display, partner, privacy/data,
+  tier discoverability, empty states as discovery, first-time vs
+  experienced, setting side-effect truth pins, no duplicated control
+  state, dead-code recorded for Campaign 4 (surgical fixes only for
+  visible defects), campaign3.discoverability.test.js, two
+  adversarial reviews (normal user + power user/state truth),
+  product-boundary review. HARD CONSTRAINTS: migrations 132-135
+  unrun; no EAS; D92-11 unaltered; cardio permanently out (its
+  absence is NOT a discoverability problem); Campaign 1 integrity +
+  Campaign 2 comprehension suites stay green; D93 terminology canon
+  binding; founder rulings recorded, never inferred from residue;
+  STOP after Campaign 3 (no Campaign 4, no broad dead-code cleanup).
+  36-item final handover required.
+  RECOVERY: order verbatim in session scratchpad
+  c3-CAMPAIGN3-ORDER.txt; campaign docs in
+  docs/discoverability-audit-2026-08-10/ (CAMPAIGN-LOG.md is the
+  running state); rulings go to the register as D94. Objective: an ordinary user understands what is
   happening, why, what it means for them, what happens next, and whether
   it is automatic / a proposal / their choice - without jargon, internal
   classifier names, matrices or thresholds. Three design laws: explain
