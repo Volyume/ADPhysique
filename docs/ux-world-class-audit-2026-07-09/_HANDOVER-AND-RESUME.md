@@ -1,7 +1,14 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ FRESH SESSION START HERE (2026-08-10, Campaign 2: comprehension) ★
+## ★ FRESH SESSION START HERE (2026-08-10, Campaign 3: discoverability) ★
+
+**Campaign 3 (discoverability/settings/existing-feature UX) is IN FLIGHT
+on `claude/campaign3-discoverability` from main `9aae57cb`. Live state:
+docs/discoverability-audit-2026-08-10/CAMPAIGN-LOG.md + the taskboard
+Campaign 3 block. Campaign 2 is COMPLETE (D93). The block below is the
+superseded Campaign 2 session-start record.**
+
 ===============================================================================
 
 **Read this block, then `docs/TASKBOARD.md` (the Campaign 2 entry in the

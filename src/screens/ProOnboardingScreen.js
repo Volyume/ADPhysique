@@ -809,13 +809,33 @@ export default function ProOnboardingScreen({ navigation }) {
         // all read these top-level keys. The coaching loop needs both
         // reminders, so onboarding matches Settings > Coaching reminders:
         // users pick times, not on/off switches.
+        //
+        // #13: checkinHour is fixed at 18 (not user-picked here, only the
+        // day is), matching CoachingRemindersScreen's own picker default
+        // (CoachingRemindersScreen.js:177/202). It used to be 12, which
+        // sits outside that screen's HOURS_EVENING range [14..21], so a
+        // normally-onboarded user opened Coaching reminders and saw no
+        // hour chip selected even though the reminder really was scheduled
+        // for 12:00 (finding 13).
+        //
+        // #14: read-merge-write, matching every other writer of this blob
+        // (NotificationSettingsScreen, CoachingRemindersScreen). This was
+        // previously a wholesale replace; blast radius was low (onboarding
+        // is normally the first write to this key) but it was the one
+        // non-merging writer of a key several screens share (finding 14).
+        let existingPrefs = {};
+        try {
+          const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+          if (raw) existingPrefs = JSON.parse(raw) ?? {};
+        } catch (_) {}
         const prefs = {
+          ...existingPrefs,
           morningEnabled: true,
           checkinEnabled: true,
           morningHour,
           morningMinute: 0,
           checkinDay,
-          checkinHour: 12,
+          checkinHour: 18,
           checkinMinute: 0,
         };
         // OB-2: the chosen check-in day is a preference, not a notification,
@@ -831,7 +851,7 @@ export default function ProOnboardingScreen({ navigation }) {
           // after FIRST_CHECKIN_MIN_DAYS of data, so the first reminder must
           // never fire before then -- a day-0 schedule could invite a brand
           // new user into a locked "wait a few days" screen.
-          await scheduleCheckinReminder(checkinDay, 12, 0, {
+          await scheduleCheckinReminder(checkinDay, 18, 0, {
             earliestMs: Date.now() + FIRST_CHECKIN_MIN_DAYS * 86400000,
           });
           // OPP-C03: pre-lay the missed check-in follow-up pair for the

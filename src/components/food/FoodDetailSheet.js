@@ -67,12 +67,21 @@ function macrosFor(food, qtyG) {
  *                    (eatenAt is only ever sent in edit mode; add-mode
  *                    callers can ignore it, it is undefined)
  *   onDelete         () => Promise<void>  (edit mode only)
+ *   onSelectEntries  () => void  (edit mode only; optional). Discoverability
+ *                    audit 2026-08-10, Phase 10 finding #2: multi-select
+ *                    (move to another meal / copy to today / save as a meal)
+ *                    was reachable only through an undisclosed long press on
+ *                    a diary row. This gives a visible route into the same
+ *                    selection mode from the sheet a normal tap already
+ *                    opens, with this entry pre-selected. The caller owns
+ *                    entering selection state (DiaryScreen's enterSelection);
+ *                    this sheet only asks for it.
  *   onClose          () => void
  */
 export default function FoodDetailSheet({
   visible, food, mode = 'add',
   initialQuantityG, initialMealSlot = 'snack', initialEntryDate, initialWeightState, initialEatenAt = null,
-  onSave, onDelete, onClose,
+  onSave, onDelete, onSelectEntries, onClose,
 }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
@@ -451,6 +460,24 @@ export default function FoodDetailSheet({
           </View>
 
           <View style={styles.actions}>
+            {/* Phase 10 finding #2 (discoverability audit 2026-08-10): the
+                only other way into multi-select is an undisclosed long
+                press on the diary row. This gives a visible route from the
+                sheet a normal tap already opens, entering the SAME
+                selection mode with this entry pre-selected (DiaryScreen
+                wires onSelectEntries to enterSelection(editSheet.entry) --
+                no new state, no second selection mechanism). */}
+            {mode === 'edit' && onSelectEntries ? (
+              <Pressable
+                onPress={() => { haptics.selection(); onSelectEntries(); }}
+                style={({ pressed }) => [styles.deleteBtn, live.selectBtn, pressed && { opacity: 0.7 }]}
+                accessibilityRole="button"
+                accessibilityLabel="Select entries"
+                accessibilityHint="Choose this and other entries to move to a meal, copy to today or save as a meal"
+              >
+                <Ionicons name="checkbox-outline" size={18} color={t.colors.textSecondary} />
+              </Pressable>
+            ) : null}
             {mode === 'edit' && onDelete ? (
               <Pressable onPress={handleDelete} style={({ pressed }) => [styles.deleteBtn, live.deleteBtn, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel="Remove entry">
                 <Ionicons name="trash-outline" size={18} color={t.colors.error} />
@@ -627,6 +654,7 @@ function buildLiveStyles(t) {
     mealBtnText: { color: t.colors.textSecondary },
     mealBtnTextActive: { color: t.colors.primary },
     deleteBtn: { borderColor: t.colors.border },
+    selectBtn: { borderColor: t.colors.border },
     cancelText: { color: t.colors.textSecondary },
     saveBtn: { backgroundColor: t.colors.primaryFill },
     saveText: { color: t.colors.onPrimary },

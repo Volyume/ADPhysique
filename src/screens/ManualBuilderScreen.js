@@ -1159,6 +1159,20 @@ export default function ManualBuilderScreen({ navigation, route }) {
                             <Ionicons name="close-circle-outline" size={16} color={t.colors.textMuted} />
                           </TouchableOpacity>
                         )}
+                        {/* Phase 10 finding #1 (discoverability audit
+                            2026-08-10): removal was long-press-only with a
+                            screen-reader-only disclosure. Visible remove
+                            control, mirroring the day-level trash icon at
+                            :1006-1013. Reuses the same handler/undo-toast
+                            path as the long press below - no new state. */}
+                        <TouchableOpacity
+                          onPress={() => handleLongPressExercise(dayIdx, ex.localId, ex.name)}
+                          hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Remove ${ex.name}`}
+                        >
+                          <Ionicons name="trash-outline" size={16} color={t.colors.error} />
+                        </TouchableOpacity>
                       </TouchableOpacity>
                     );
                     }}

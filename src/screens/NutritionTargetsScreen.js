@@ -1084,6 +1084,26 @@ export default function NutritionTargetsScreen({ navigation }) {
                       ))}
                     </View>
 
+                    {/* Campaign 3 discoverability audit, finding #4 (docs/
+                        discoverability-audit-2026-08-10/SETTINGS-INVENTORY.md
+                        §4 #4): this control and MealPlanScreen's "Meals per
+                        day" row used to share an identical label while
+                        writing different keys with different effects, so a
+                        user who set one and checked the other saw an
+                        unexplained mismatch. Traced every reader of
+                        @volyume_meals_per_day: it is not display-only here.
+                        DiaryScreen.js reads it to size the diary's numbered
+                        meal-slot ladder, MealNamesScreen.js reads it for the
+                        same slot count when renaming meals, and
+                        FoodSearchScreen.js reads it to split what is left
+                        today across the Suggested tab. MealPlanScreen's
+                        mealPlanMealsPerDay only sizes the separate
+                        auto-generated Meal Plan and is untouched by this
+                        fix. Label and sub below name the true, wider
+                        consequence instead of promising only the protein
+                        split shown on this card. */}
+                    <Text style={[styles.mealCountSectionLabel, live.mealCountSectionLabel]}>Diary meals per day</Text>
+                    <Text style={[styles.mealCountSectionSub, live.mealCountSectionSub]}>Sets how many meal slots your diary shows and how suggestions split what is left today. Also splits the protein target above.</Text>
                     <View style={styles.mealCountRow}>
                       <Text style={[styles.mealCountLabel, live.mealCountLabel]}>Across</Text>
                       <View style={styles.mealCountChips}>
@@ -1741,6 +1761,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryFill,
     opacity: 0.7,
   },
+  // Campaign 3 discoverability audit finding #4: honest, distinct label +
+  // one-line consequence sub for this control (see the JSX comment above
+  // where it renders).
+  mealCountSectionLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.black,
+    color: colors.textMuted,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+  },
+  mealCountSectionSub: {
+    ...type.caption,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
   mealCountRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2242,6 +2278,8 @@ function buildLiveStyles(t) {
     perMealUnit: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
     mealDot: { backgroundColor: t.colors.primaryFill },
     mealCountLabel: { ...t.type.caption, color: t.colors.textMuted },
+    mealCountSectionLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    mealCountSectionSub: { ...t.type.caption, color: t.colors.textMuted },
     mealCountChip: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     mealCountChipActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
     mealCountChipText: { ...t.type.num('bodyStrong'), color: t.colors.textSecondary },

@@ -108,7 +108,11 @@ export function resolveProgressScanCoachNote({
     trendLine(scan, label, trendOnly),
     // D86: the "This is photo context from repeatable progress photos." filler
     // sentence is gone; the trend line and the targets line carry everything.
-    trendOnly && label ? 'Detailed scores are hidden, as you chose.' : null,
+    // D94 (Campaign 3): "as you chose" was FALSE - the hide-exact
+    // preference has no UI writer and defaults on for everyone, so no
+    // user ever chose it. State the fact, claim no choice. Whether a
+    // control should exist is a recorded founder ruling (CONTROL-GAPS).
+    trendOnly && label ? 'Detailed scores stay hidden here; the trend is the steadier read.' : null,
     decisionLine(output),
   ].filter(Boolean).join(' '));
 

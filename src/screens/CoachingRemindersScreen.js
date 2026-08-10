@@ -131,6 +131,31 @@ async function applyScheduled(prefs, permissionStatus) {
     morningEnabled: true,
     checkinEnabled: true,
   }));
+  // Mirror into the per-category SQLite rows so the registry-driven sync
+  // push (src/lib/sync/tables/notificationPreferences.js) has a fresh
+  // row to ship to the cloud notification_preferences table (migration
+  // 044). This is the live writer for morning_weight / weekly_checkin_
+  // reminder: NotificationSettingsScreen.applyNotifications used to do
+  // this mirroring but is dead code (unreachable, see :363-380), which
+  // left the cloud rows frozen at whatever migrateFromLegacyBlob first
+  // back-filled. Same shape the dead code wrote.
+  try {
+    const userId = useAppStore.getState().user?.id;
+    if (userId) {
+      const morningTime =
+        (prefs.morningHour ?? 8).toString().padStart(2, '0')
+        + ':' + (prefs.morningMinute ?? 0).toString().padStart(2, '0');
+      const dow = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][prefs.checkinDay ?? 0];
+      const checkinTime =
+        (prefs.checkinHour ?? 18).toString().padStart(2, '0')
+        + ':' + (prefs.checkinMinute ?? 0).toString().padStart(2, '0');
+      await setPrefRow(userId, 'morning_weight', { enabled: true, time_pref: morningTime });
+      await setPrefRow(userId, 'weekly_checkin_reminder', {
+        enabled: true,
+        time_pref: `${dow}_${checkinTime}`,
+      });
+    }
+  } catch (_) { /* tolerate; AsyncStorage write already succeeded */ }
   // OPP-C03: the check-in day/time may have changed, so re-lay the
   // missed-check-in follow-up pair against the freshly saved schedule
   // (the helper self-cancels its own pair and self-guards on tier,
@@ -181,6 +206,12 @@ export default function CoachingRemindersScreen() {
   // unlike the two coaching reminders above.
   const [missedEnabled, setMissedEnabled] = useState(true);
   const [plannedConfirmEnabled, setPlannedConfirmEnabled] = useState(true);
+  // #12: partner-cheer pushes (cheer received, shared streak kept, partner
+  // joined) read prefs.partnerCheerEnabled at send time (scheduler.js:1448)
+  // and only suppress when it is explicitly false, so default ON here
+  // preserves current behaviour for every existing user (an absent flag
+  // already reads as enabled).
+  const [partnerCheerEnabled, setPartnerCheerEnabled] = useState(true);
   const [permissionStatus, setPermissionStatus] = useState(null);
   const [saved, setSaved] = useState(false);
   const debounceTimer = useRef(null);
@@ -202,6 +233,9 @@ export default function CoachingRemindersScreen() {
           }
           if (prefs.plannedMealConfirmEnabled !== undefined) {
             setPlannedConfirmEnabled(prefs.plannedMealConfirmEnabled !== false);
+          }
+          if (prefs.partnerCheerEnabled !== undefined) {
+            setPartnerCheerEnabled(prefs.partnerCheerEnabled !== false);
           }
         }
       } catch (_) {}
@@ -308,6 +342,32 @@ export default function CoachingRemindersScreen() {
         await cancelPlannedMealConfirm();
       }
       toast.show(value ? 'Meal-plan reminder on' : 'Meal-plan reminder off', { variant: 'success' });
+    } catch (_) {
+      toast.show('Could not save that change', { variant: 'error' });
+    }
+  }
+
+  // #12: partner cheers have no persistent scheduled notification to lay or
+  // cancel (schedulePartnerBeats fires them near-instantly off a live
+  // partner-sync event and reads this flag at that moment, scheduler.js:1448),
+  // so unlike the two toggles above there is no schedule/cancel call here.
+  async function handlePartnerCheerToggle(value) {
+    setPartnerCheerEnabled(value);
+    try {
+      let blob = {};
+      try {
+        const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+        if (raw) blob = JSON.parse(raw) ?? {};
+      } catch (_) {}
+      await AsyncStorage.setItem(
+        NOTIF_PREFS_KEY,
+        JSON.stringify({ ...blob, partnerCheerEnabled: value }),
+      );
+      const userId = useAppStore.getState().user?.id;
+      if (userId) {
+        await setPrefRow(userId, 'partner_cheer', { enabled: value, time_pref: null });
+      }
+      toast.show(value ? 'Partner cheers on' : 'Partner cheers off', { variant: 'success' });
     } catch (_) {
       toast.show('Could not save that change', { variant: 'error' });
     }
@@ -441,6 +501,30 @@ export default function CoachingRemindersScreen() {
           <View style={[styles.helperBlock, live.helperBlock]}>
             <Text style={[styles.helperText, live.helperText]}>
               If you have planned meals you've not marked as eaten, we'll send one gentle nudge in the evening so you can confirm them and keep your coach accurate.
+            </Text>
+          </View>
+        </Card>
+
+        {/* #12: partner-cheer pushes. Optional, default on, Pro. */}
+        <SectionLabel style={styles.sectionLabelSpacing}>Partner cheers</SectionLabel>
+        <Card style={[styles.card, live.card]} padding="md">
+          <View style={styles.cardHeader}>
+            <View style={[styles.iconWrap, live.iconWrap]}>
+              <Ionicons name="heart-outline" size={18} color={t.colors.primary} />
+            </View>
+            <Text style={[styles.cardTitle, styles.toggleTitle]}>Partner cheers</Text>
+            <Switch
+              value={partnerCheerEnabled}
+              onValueChange={handlePartnerCheerToggle}
+              trackColor={{ false: t.colors.surface3, true: t.colors.primaryBg }}
+              thumbColor={t.colors.primary}
+              ios_backgroundColor={t.colors.surface3}
+              accessibilityLabel="Partner cheers toggle"
+            />
+          </View>
+          <View style={[styles.helperBlock, live.helperBlock]}>
+            <Text style={[styles.helperText, live.helperText]}>
+              A nudge when your partner cheers you on, keeps a shared training streak going, or joins you as a training partner.
             </Text>
           </View>
         </Card>
