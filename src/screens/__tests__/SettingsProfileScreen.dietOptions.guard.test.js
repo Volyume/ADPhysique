@@ -110,10 +110,10 @@ describe('SettingsProfileScreen diet options: render pin', () => {
     const chips = dietChips(tree);
     const pescatarianChip = chips.find((c) => c.props.accessibilityLabel === 'Diet preference Pescatarian');
     expect(pescatarianChip).toBeTruthy();
-    expect(pescatarianChip.props.accessibilityState.checked).toBe(true);
+    expect(pescatarianChip.props.selected).toBe(true);
 
     const others = chips.filter((c) => c.props.accessibilityLabel !== 'Diet preference Pescatarian');
-    others.forEach((c) => expect(c.props.accessibilityState.checked).toBe(false));
+    others.forEach((c) => expect(c.props.selected).toBe(false));
   });
 
   test('tapping a chip writes through setDietPreference with the tapped value, no silent downgrade', async () => {

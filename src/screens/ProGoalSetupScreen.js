@@ -28,8 +28,8 @@ import {
 import { parseShowDate } from '../lib/contestCountdown';
 import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
 import {
-  saveNutritionTargets, getMorningWeightsLast14Days, getLatestBodyComposition,
-  getActivePeakWeekPlan, setPeakWeekShowDate,
+  saveNutritionTargets, getNutritionTargets, getMorningWeightsLast14Days,
+  getLatestBodyComposition, getActivePeakWeekPlan, setPeakWeekShowDate,
 } from '../lib/database';
 import { computeEWMA } from '../lib/weeklyCoach';
 import { formatBodyWeightShort } from '../lib/units';
@@ -110,6 +110,29 @@ export default function ProGoalSetupScreen({ navigation }) {
     userProfile?.proteinApproach
     ?? (ADVANCED_PROTEIN_GOALS.includes(userProfile?.trainingGoal) ? 'advanced' : 'optimised')
   );
+  // D94 (Campaign 3, ownership finding 6): every live consumer reads the
+  // nutrition_targets row, and NutritionTargetsScreen writes ONLY that row.
+  // Seeding this picker from the profile copy alone meant a save here
+  // recalculated targets with a STALE approach and silently reverted a
+  // choice the user made on Nutrition Targets. The saved row is the live
+  // truth, so it takes precedence over the profile mirror at seed time;
+  // the save path (which writes both stores) is unchanged and now cannot
+  // regress an untouched picker.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const userId = useAppStore.getState().user?.id;
+        if (!userId) return;
+        const t = await getNutritionTargets(userId);
+        const saved = t?.proteinApproach ?? t?.protein_approach;
+        if (!cancelled && saved && PROTEIN_APPROACHES[saved]) {
+          setProteinApproach(saved);
+        }
+      } catch (_) { /* profile-seeded default stands */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   // Weak points, only meaningful for goals that bias volume towards priority
   // muscles. Hidden in the UI otherwise but the value is preserved across edits.
   const [planWeakPoints, setPlanWeakPoints] = useState(userProfile?.planWeakPoints ?? []);
