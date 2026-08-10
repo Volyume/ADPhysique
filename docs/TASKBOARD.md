@@ -1581,7 +1581,12 @@ workflow survives as a fallback.
   RECOVERY: reports in session scratchpad map/ (C1P07/C1P08/
   C1REVIEW); code on claude/campaign1-integrity; D92 is the spec.
 - CAMPAIGN 2: COMPREHENSION, EXPLANATION AND TERMINOLOGY (2026-08-10,
-  founder order) - IN FLIGHT on branch claude/campaign2-comprehension
+  founder order) - COMPLETE, merged to main the same day; final
+  handover delivered in chat. Full record: docs/
+  comprehension-audit-2026-08-10/ (CAMPAIGN-LOG, PHASE1-CLASSIFICATION,
+  PHASE2-TERMINOLOGY-CANON, PHASE9-15-RULINGS) + D93 in the register.
+  Residuals for later campaigns recorded in D93 addendum item 5.
+  Originally opened as: IN FLIGHT on branch claude/campaign2-comprehension
   (from main 0a552cc4). Objective: an ordinary user understands what is
   happening, why, what it means for them, what happens next, and whether
   it is automatic / a proposal / their choice - without jargon, internal

@@ -100,9 +100,17 @@ this folder are the ruled foundations.
 - **P20 — DONE.** src/__tests__/campaign2.comprehension.test.js: 20
   pins across training/effort/PR/readiness/nutrition/recovery/
   automation. Full suite 9,706 passing, lint clean.
-- **P21 — IN FLIGHT.** Two Opus fresh-eyes reviews dispatched (A
-  novice, B truth/consistency); findings will be actioned before the
-  final gates.
+- **P21 — DONE.** Review A (novice): 4/9 PASS, nine findings, all
+  genuine ones actioned (one status vocabulary across legends, Manual
+  mode ownership note, helpful-range wording, formula surnames
+  removed, glossary/setpicker alignment); anatomy vocabulary recorded
+  for a later content pass. Review B (truth): 3/10 PASS outright incl.
+  no-behaviour-change; findings 1-9 all actioned (distinct-morning
+  counts at all four ledger callers, RIR gloss matches the ladder,
+  purpose lines scoped to active coaching, research line drops the
+  profile claim, provenance gate judges every entry, effort-builds
+  phrasing, precise manual-override precedence). Full suite 9,706
+  passing, lint clean, after remediation.
 
 ## Landed commits (this campaign)
 

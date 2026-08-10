@@ -1,5 +1,19 @@
 # VOLYUME — FULL PRODUCT + SYSTEM MAP
 
+> **CAMPAIGN 2 ADDENDUM (2026-08-10).** Wording/reachability truth has
+> materially changed since this map was built: the D93 terminology canon
+> renamed rendered vocabulary (volume=sets everywhere, Total lifted for kg,
+> recovery week for all five former Deload leaks, Est. max canonical,
+> plan over programme, Profile status, Muscle recovery, session feedback,
+> range for statistical spans); GLOSSARY gained `pr` and wired `mesocycle`
+> (block sheet); the comprehension matrix rows for readiness purpose,
+> MEV/MAV/MRV unnamed definition, deload share, jointPain tri-state and
+> held-decision reasons are stale as recorded in
+> docs/comprehension-audit-2026-08-10/PHASE1-CLASSIFICATION.md (map
+> corrections section) and the two verification reports referenced there.
+> Read this map WITH those documents for current truth.
+
+
 **Document type:** discovery/documentation only. Nothing in the product was
 changed to produce it.
 **Repository commit inspected:** `9cdc5fc5` (branch `claude/codebase-audit-docs-pv6mjd`,
