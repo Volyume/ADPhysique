@@ -250,13 +250,12 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-export default function PlanLibraryScreen({ navigation, route }) {
+export default function PlanLibraryScreen({ navigation }) {
   const toast = useToast();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const { user } = useAppStore(useShallow(s => ({
     user: s.user,
   })));
-  const fromFirstRun = route?.params?.fromFirstRun ?? false;
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js). Memoised
   // because this screen renders a plan list (FlashList) and a chip list
   // (FlatList).
@@ -287,8 +286,8 @@ export default function PlanLibraryScreen({ navigation, route }) {
   );
 
   // Re-load when user.id becomes available, handles the case where the user
-  // reaches this screen (e.g. via "fromFirstRun") before initLocalUser has
-  // finished, so seedRoutinesIfNeeded was skipped on first mount.
+  // reaches this screen before the profile is ready, so seedRoutinesIfNeeded
+  // was skipped on first mount.
   useEffect(() => {
     if (user?.id) loadData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -334,11 +333,16 @@ export default function PlanLibraryScreen({ navigation, route }) {
     // C4: one decision, one dialog. Both choices copy the plan; only what
     // happens after the copy differs, so each button owns its own copy call
     // and error handling (matches the copy-failure toast either way).
+    //
+    // The `fromFirstRun` variants that stood here (different alert body,
+    // "Start training" instead of "Add and start this plan", a skipped
+    // mid-block confirm, and a navigate to ProSetupComplete) were dead: no
+    // caller anywhere passed the param, and the two onboarding stacks that
+    // registered this screen never reached it. Removed under D95
+    // (AUDIT-ROUTES 5.7); the surviving path is the one that always ran.
     appAlert(
       'Add this plan?',
-      fromFirstRun
-        ? `"${planHeadingName(plan.name)}" will be added to your plans. Start training now, or just add it for later.`
-        : `Copy "${planHeadingName(plan.name)}" into your plans. Make it active now, or just add it for later.`,
+      `Copy "${planHeadingName(plan.name)}" into your plans. Make it active now, or just add it for later.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -347,15 +351,14 @@ export default function PlanLibraryScreen({ navigation, route }) {
             try {
               const copy = await copyPlanFromLibrary(plan.id, user.id);
               if (!copy?.id) throw new Error('Copy failed.');
-              if (fromFirstRun) navigation.navigate('ProSetupComplete');
-              else navigation.goBack();
+              navigation.goBack();
             } catch (_e) {
               toast.show("Couldn't copy plan, try again", { variant: 'error' });
             }
           },
         },
         {
-          text: fromFirstRun ? 'Start training' : 'Add and start this plan',
+          text: 'Add and start this plan',
           onPress: async () => {
             let copy;
             try {
@@ -365,15 +368,10 @@ export default function PlanLibraryScreen({ navigation, route }) {
               toast.show("Couldn't copy plan, try again", { variant: 'error' });
               return;
             }
-            // Skip the mid-block confirm during first-run, there's no
-            // prior block to disrupt (this IS their first plan).
-            if (!fromFirstRun) {
-              const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: planHeadingName(plan.name) });
-              if (!ok) { navigation.goBack(); return; }
-            }
+            const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: planHeadingName(plan.name) });
+            if (!ok) { navigation.goBack(); return; }
             await activatePlanWithBlock(user.id, copy.id, planHeadingName(plan.name));
-            if (fromFirstRun) navigation.navigate('ProSetupComplete');
-            else navigation.goBack();
+            navigation.goBack();
           },
         },
       ],

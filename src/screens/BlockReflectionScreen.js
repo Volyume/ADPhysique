@@ -14,6 +14,7 @@ import { getBlockReflectionData } from '../lib/database';
 import { safeDate, safeToFixed } from '../lib/safeFormat';
 import { SkeletonCard } from '../components/Skeleton';
 import { selection as hapticSelection } from '../lib/haptics';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 
@@ -167,8 +168,11 @@ export default function BlockReflectionScreen({ navigation, route }) {
         title="Block summary"
         right={data ? (
           // COMP-005: this analytic screen gains the story as its front door.
+          // RecapStory is a ProgressStack route and this screen is
+          // ProfileStack-only, so the bare navigate was silently dropped and
+          // the block recap was inert (D95, AUDIT-ROUTES 6 row 2).
           <TouchableOpacity
-            onPress={() => { hapticSelection(); navigation.navigate('RecapStory', { variant: 'block', mesocycleId, blockName: data.meso?.name }); }}
+            onPress={() => { hapticSelection(); navigateCrossTab(navigation, 'ProgressTab', 'RecapStory', { variant: 'block', mesocycleId, blockName: data.meso?.name }); }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
             accessibilityLabel="Play block story"
@@ -204,7 +208,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
             title="No data found"
             text="This block doesn't have any logged sessions yet."
             actionLabel="Start a new block"
-            onAction={() => navigation.navigate('MesocycleBuilder')}
+            onAction={() => navigateCrossTab(navigation, 'PlansTab', 'MesocycleBuilder')}
             compact
           />
         )}
@@ -318,7 +322,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
                 fullWidth={false}
                 onPress={() => {
                   navigation.goBack();
-                  setTimeout(() => navigation.navigate('MesocycleBuilder'), 300);
+                  setTimeout(() => navigateCrossTab(navigation, 'PlansTab', 'MesocycleBuilder'), 300);
                 }}
                 accessibilityLabel="Start a new block"
               />

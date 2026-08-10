@@ -1,6 +1,9 @@
+import fs from 'fs';
+import path from 'path';
 import {
   VOLUME_LANDMARKS,
   MUSCLE_DISPLAY_NAMES,
+  muscleDisplayName,
   calculateWeeklyVolume,
   getVolumeStatus,
   detectLaggingMuscles,
@@ -563,5 +566,81 @@ describe('bestPRPerExercise (one PR per exercise per session)', () => {
     ]);
     expect(out).toHaveLength(1);
     expect(out[0].type).toBe('heaviest_weight');
+  });
+});
+
+// ─── muscleDisplayName (D95, AUDIT-DUPLICATES D-4) ─────────────────────────────
+//
+// interBlock.js, blockExplain.js and divisionDiff.js each carried a private
+// copy of this body. They are reproduced VERBATIM below as fixtures so the
+// consolidation is provably output-preserving rather than merely plausible.
+//
+// Premise note, recorded because the audit's T-4.1 assumed otherwise: the three
+// bodies agreed on every real muscle key but NOT on an empty/nullish key, where
+// they returned 'Muscle', '' and a throw respectively. No call site can reach
+// that input (interBlock already guarded it, blockExplain's keys come from
+// Object.entries and a truthy filter, divisionDiff's from an internally-built
+// diff), and the shared helper takes the most defensive of the three, so the
+// equivalence fixture below covers the whole reachable key domain.
+
+// interBlock.js:109-115 (deleted)
+function fixtureInterBlock(muscleKey) {
+  const key = String(muscleKey || 'muscle');
+  const known = MUSCLE_DISPLAY_NAMES[key];
+  if (known) return known;
+  const spaced = key.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+// blockExplain.js:35-40 (deleted)
+const fixtureBlockExplain = (key) => {
+  const known = MUSCLE_DISPLAY_NAMES[String(key)];
+  if (known) return known;
+  const spaced = String(key ?? '').replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+};
+
+// divisionDiff.js:138-139 (deleted) — capitalise-then-replace
+const fixtureDivisionDiff = (m) => MUSCLE_DISPLAY_NAMES[m]
+  ?? m.charAt(0).toUpperCase() + m.slice(1).replace(/_/g, ' ');
+
+describe('D-4: one muscleDisplayName, three converged call sites', () => {
+  const REACHABLE_KEYS = [
+    ...Object.keys(MUSCLE_DISPLAY_NAMES),
+    'shoulders',        // normalised away before any lookup, but legal input
+    'made_up_muscle',   // a custom_exercises primary_muscle from a foreign client
+    'x',
+  ];
+
+  test.each(REACHABLE_KEYS)('%s: matches all three deleted implementations', (key) => {
+    expect(muscleDisplayName(key)).toBe(fixtureInterBlock(key));
+    expect(muscleDisplayName(key)).toBe(fixtureBlockExplain(key));
+    expect(muscleDisplayName(key)).toBe(fixtureDivisionDiff(key));
+  });
+
+  test('an unknown key is humanised, never leaked raw', () => {
+    expect(muscleDisplayName('rear_delts_extra')).toBe('Rear delts extra');
+    expect(muscleDisplayName('made_up_muscle')).not.toContain('_');
+  });
+
+  test('a missing key falls back to the calm generic word, and never throws', () => {
+    for (const bad of [null, undefined, '', 0]) {
+      expect(muscleDisplayName(bad)).toBe('Muscle');
+    }
+  });
+
+  // T-4.2: the invariant that makes the humanising fallback unreachable in
+  // normal operation. If a landmark gains a muscle without a display name, the
+  // heatmap and every coaching line start speaking snake_case.
+  test('every landmark muscle has a display name, and vice versa', () => {
+    expect(Object.keys(MUSCLE_DISPLAY_NAMES)).toEqual(Object.keys(VOLUME_LANDMARKS));
+  });
+
+  test('source guard: no module keeps a private copy of the body', () => {
+    for (const rel of ['../interBlock.js', '../blockExplain.js', '../divisionDiff.js']) {
+      const source = fs.readFileSync(path.resolve(__dirname, rel), 'utf8');
+      expect(source).not.toMatch(/charAt\(0\)\.toUpperCase\(\)/);
+      expect(source).toMatch(/muscleDisplayName/);
+    }
   });
 });

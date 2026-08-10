@@ -557,7 +557,13 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   function selectChartMetric(key) {
     setChartMetric(key);
     AsyncStorage.setItem('@volyume_chart_metric_detail', key).catch(() => {});
-    try { track(user?.id, 'chart_metric_changed', { chart_id: 'exercise_detail', metric: key })?.catch?.(() => {}); } catch (_) {}
+    // No telemetry here on purpose. This used to emit 'chart_metric_changed',
+    // a name on no allow-list: neither the client catalogue nor any
+    // record_engine_telemetry CHECK list carried it, so every metric switch
+    // was dropped at transport.js and logged a telemetry.transport.unknownEvent
+    // warning. Cataloguing it would have started NEW transmission, which is
+    // forbidden, so the emitter was removed instead (D95, T-2). The sibling
+    // control's chart_window_changed above IS catalogued and still sends.
   }
 
   return (

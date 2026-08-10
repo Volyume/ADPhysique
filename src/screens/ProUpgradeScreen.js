@@ -25,6 +25,7 @@ import { skuFor } from '../lib/payments/catalogue';
 import { restorePurchases } from '../lib/payments/restore';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
 import { pickPaywallExcerpt } from './paywallExcerpts';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 
 const PRO_PERKS = [
   { icon: 'barbell-outline', text: 'A plan built around your schedule, goals, and experience level' },
@@ -607,6 +608,12 @@ export default function ProUpgradeScreen({ navigation, route }) {
             />
           ) : null}
 
+          {/* SubscriptionPolicy is a ProfileStack route while this paywall is
+              registered in all five tab stacks, so the bare navigate used here
+              was silently dropped in four of the five entries: the link only
+              worked when the paywall was opened from the Coach tab (D95,
+              AUDIT-ROUTES 6 row 6). Navigation only, through the one sanctioned
+              cross-tab idiom: no copy, price, product ID or billing change. */}
           <Button
             title="What stays if you switch back to Free later"
             variant="outline"
@@ -614,7 +621,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
             icon="information-circle-outline"
             fullWidth={false}
             style={styles.policyLink}
-            onPress={() => { haptics.selection(); navigation.navigate('SubscriptionPolicy'); }}
+            onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'SubscriptionPolicy'); }}
             accessibilityLabel="Subscription terms"
           />
 

@@ -28,6 +28,7 @@ import { predictDeloadWeek, evaluateAutoReg } from '../lib/mesocycle';
 import { planHeadingName } from '../lib/planDisplay';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -280,7 +281,10 @@ export default function MesocycleBuilderScreen({ navigation }) {
                   variant="tertiary"
                   size="sm"
                   fullWidth={false}
-                  onPress={() => navigation.navigate('BlockReflection', { mesocycleId: meso.id })}
+                  // BlockReflection is a ProfileStack route and this screen is
+                  // PlansStack-only, so the bare navigate was silently dropped
+                  // and this button did nothing (D95, AUDIT-ROUTES 5.6 / 6).
+                  onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'BlockReflection', { mesocycleId: meso.id })}
                   style={[styles.summaryBtn, live.summaryBtn]}
                   textStyle={[styles.summaryBtnText, live.summaryBtnText]}
                   accessibilityLabel={`View summary of ${meso.name}`}

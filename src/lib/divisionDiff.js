@@ -17,7 +17,7 @@
 
 import { generatePlan } from './planEngine';
 import { GOAL_OVERLAYS, GOAL_LABELS } from './coachingGoals';
-import { MUSCLE_DISPLAY_NAMES } from './algorithms';
+import { muscleDisplayName } from './algorithms';
 
 // Rounding and the systemic-volume cap can move an un-emphasised muscle by a
 // set either way between two runs of the engine with different goals. A
@@ -135,8 +135,7 @@ export function fingerprintMarkers(diff, minDelta = FINGERPRINT_MIN_DELTA) {
 export function divisionFingerprintLine(goal, diff, maxEach = 2) {
   if (!hasDivisionOverlay(goal) || !Array.isArray(diff)) return null;
   const label = GOAL_LABELS[goal] ?? goal;
-  const name = d => MUSCLE_DISPLAY_NAMES[d.muscle]
-    ?? d.muscle.charAt(0).toUpperCase() + d.muscle.slice(1).replace(/_/g, ' ');
+  const name = d => muscleDisplayName(d.muscle);
   const elevated = diff
     .filter(d => d.direction === 'elevated' && d.delta >= FINGERPRINT_MIN_DELTA)
     .sort((a, b) => b.delta - a.delta)

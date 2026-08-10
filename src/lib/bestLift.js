@@ -9,27 +9,23 @@
  *  - failing that (a plateau week, or all first-time lifts with no prior best),
  *    the heaviest single set by e1RM, so the hero block always has content.
  *
- * e1RM defaults to plain Epley (weight * (1 + reps/30)), used by callers/tests
- * that pass no e1rmFn. getBestLiftThisWeek (database.js) instead passes
- * calculate1RM (algorithms.js) as the third argument: X4 (cross-surface
- * consistency audit 2026-07-30) ruled that the weekly tally must conform to
- * the SAME blended/clamped formula the live in-session PR detector
- * (detectPR/calculate1RM) uses, not a separate plain-Epley formula, so the
- * featured "best lift" agrees with the weekly PR count on the same card.
+ * e1RM defaults to calculate1RM (algorithms.js), the canonical blended and
+ * rep-clamped estimate. X4 (cross-surface consistency audit 2026-07-30) ruled
+ * that the weekly tally must conform to the SAME formula the live in-session PR
+ * detector (detectPR/calculate1RM) uses, so the featured "best lift" agrees with
+ * the weekly PR count on the same card. This module used to default to a private
+ * plain-Epley function instead, which any two-argument caller would silently have
+ * got; that default was removed under Campaign 4 (D95, AUDIT-DUPLICATES D-2) so
+ * the canonical formula is now unavoidable rather than merely preferred.
+ * getBestLiftThisWeek (database.js) still passes it explicitly, which is
+ * identical either way.
  *
  * ED-safety: a barbell lift is a competence signal about a behaviour performed,
  * not a bodyweight number. It is still suppressed entirely on the card under an
  * open ED flag / calm mode (handled in greatWeek.js), never ranked against other
  * users, and framed as the user's own strongest set.
  */
-
-export function epleyE1rm(weight, reps) {
-  const w = Number(weight);
-  if (!Number.isFinite(w) || w <= 0) return 0;
-  const r = Number(reps);
-  const reps0 = Number.isFinite(r) && r >= 1 ? r : 1;
-  return w * (1 + reps0 / 30);
-}
+import { calculate1RM } from './algorithms';
 
 /**
  * @param {Array<{exerciseId:*, exerciseName?:string, weight:number, reps:number}>} weekSets
@@ -38,10 +34,10 @@ export function epleyE1rm(weight, reps) {
  *        exerciseId -> prior best e1RM (from all sets BEFORE this week, computed
  *        with the SAME e1rmFn as below).
  * @param {(weight:number, reps:number) => number} [e1rmFn] e1RM estimator,
- *        defaults to the plain-Epley epleyE1rm above.
+ *        defaults to the canonical calculate1RM.
  * @returns {{exerciseName:string, weight:number, reps:number, isNewBest:boolean, gainKg:(number|null)}|null}
  */
-export function pickBestLift(weekSets, priorBestByExercise, e1rmFn = epleyE1rm) {
+export function pickBestLift(weekSets, priorBestByExercise, e1rmFn = calculate1RM) {
   if (!Array.isArray(weekSets) || weekSets.length === 0) return null;
 
   const priorOf = (id) => {

@@ -439,7 +439,6 @@ function HomeStack({ navigation }) {
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
@@ -492,7 +491,6 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ headerShown: false }} />
       <Stack.Screen name="ProgressPhotos" component={GatedProgressPhotos} options={{ headerShown: false }} />
       <Stack.Screen name="LiftProgress" component={LiftProgressScreen} options={{ headerShown: false }} />
@@ -535,6 +533,10 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="SettingsAbout" component={SettingsAboutScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsFaq" component={SettingsFaqScreen} options={{ headerShown: false }} />
       <Stack.Screen name="NutritionTargets" component={GatedNutritionTargets} options={{ headerShown: false }} />
+      {/* Retained by founder order 2026-07-13 and deliberately unreachable:
+          the "Meal names" settings row was removed (SettingsScreen.js:67-70),
+          the screen and route stay registered in case meal renaming returns.
+          Not a stale registration - do not "clean it up" (D95). */}
       <Stack.Screen name="MealNames" component={GatedMealNames} options={{ headerShown: false }} />
       <Stack.Screen name="PerDayTargets" component={GatedPerDayTargets} options={{ headerShown: false }} />
       <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} options={{ headerShown: false }} />
@@ -672,12 +674,12 @@ function FirstRunStack() {
           starter plan, so the new free user lands on Home with today's
           session already answered. Skipping completes first run as before. */}
       <Stack.Screen name="FreeStarter" component={FreeStarterScreen} />
-      <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
-      {/* headerShown: false is already the navigator-level default here;
-          stated explicitly only so this registration reads identically to
-          its Home-stack twin (no behaviour change). */}
-      <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={{ headerShown: false, ...heroZoomTransition }} />
+      {/* PlanLibrary / PlanDetail / ActiveWorkout were registered here for a
+          pre-B2 onboarding shape that no longer exists: FreeStarter binds its
+          browse handler only when NOT in first run, so nothing in this stack
+          could reach them. Removed under D95 (AUDIT-ROUTES 5.7). If a "browse
+          the library during onboarding" step ever returns, it needs a
+          navigator, not these registrations. */}
     </Stack.Navigator>
   );
 }
@@ -702,9 +704,9 @@ function ProOnboardingStack() {
   return (
     <Stack.Navigator screenOptions={{ ...useStackOptions(), headerShown: false, ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="ProOnboarding" component={ProOnboardingScreen} />
-      <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
-      <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={heroZoomTransition} />
+      {/* Same pre-B2 residue as FirstRunStack (D95, AUDIT-ROUTES 5.7):
+          ProOnboarding only ever replaces into ProSetupComplete, so the
+          library / plan / workout registrations were unreachable here. */}
       <Stack.Screen name="ProSetupComplete" component={ProSetupCompleteScreen} />
       {/* Registered here too so the onboarding hand-off screen can link
           straight into the nutrition guide without leaving the flow. */}
@@ -1313,13 +1315,14 @@ export default function RootNavigator() {
                 // the source of the 42501 cascade. A real account A's
                 // local rows were being re-stamped to a real account
                 // B's user_id on sign-in, then push failed because
-                // cloud still owned them under A. The legitimate
-                // anonymous-to-account migration is now handled
-                // ONCE per account in LoginScreen.handleEmailAuth
-                // under the signup branch only. Sign-out wipes local
-                // SQLite (clearAuthStateForSignOut), so cross-user
-                // sign-in finds local already empty and has nothing
-                // to migrate.
+                // cloud still owned them under A. There is no
+                // legitimate migration to move it to: the app has no
+                // anonymous mode and no local-user migration path at
+                // all (IDENTITY_AND_OWNERSHIP_LOCKED.md, enforced by
+                // scripts/check-identity-invariant.sh). Sign-out wipes
+                // local SQLite (clearAuthStateForSignOut), so
+                // cross-user sign-in finds local already empty and has
+                // nothing to migrate.
                 //
                 // Cross-user safety net: if a different supabase
                 // account previously signed in on this device AND

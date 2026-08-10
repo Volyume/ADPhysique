@@ -73,6 +73,25 @@ export const MUSCLE_DISPLAY_NAMES = {
   tibialis: 'Tibialis',
 };
 
+// One statement of how a muscle key is SPOKEN (D95, AUDIT-DUPLICATES D-4).
+// interBlock.js, blockExplain.js and divisionDiff.js each carried a private
+// copy of this body; all three returned the same string for every canonical
+// key, for 'shoulders', and for any other snake_case key, so this is their
+// behaviour rather than a new one. An unknown key is humanised rather than
+// leaked raw, because a custom_exercises row synced from an older or foreign
+// client can carry an arbitrary primary_muscle string. A missing key falls
+// back to the calm generic word, which was the most defensive of the three
+// bodies (the other two returned an empty label or threw). Note this is NOT
+// the `MUSCLE_DISPLAY_NAMES[m] || m` convention used elsewhere in this file
+// and in the insights/copy modules, which deliberately leaks the raw key.
+export function muscleDisplayName(muscleKey) {
+  const key = String(muscleKey || 'muscle');
+  const known = MUSCLE_DISPLAY_NAMES[key];
+  if (known) return known;
+  const spaced = key.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
 // Algorithm 4: 1RM Ensemble Calculator
 export function calculate1RM(weight, reps) {
   // CALC-2: coerce first so a NUMERIC string ("5") still computes, while a

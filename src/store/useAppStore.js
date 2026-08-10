@@ -237,7 +237,7 @@ const useAppStore = create((set, get) => ({
   setUserProfile: (userProfile) => {
     // Stamp every editable field in the incoming profile with
     // "now" so the per-field map matches the bulk write. Per-
-    // field setters (setUnits, setBarWeight, etc.) stamp only
+    // field setters (setUnits, setAllergenExcludes, etc.) stamp only
     // their own field via _stampProfileFields below.
     const now = Date.now();
     const stamped = {};
@@ -1832,8 +1832,10 @@ const useAppStore = create((set, get) => ({
   },
 
   // Meal-plan food exclusions ("never show me this", deep-audit Theme G
-  // R1). A local profile field (the meal plan is local-only for now, so no
-  // cloud column / pushPrefSoon); the generator + swaps read it via
+  // R1). A profile field with no cloud column and no pushPrefSoon (the meal
+  // plan has no dedicated cloud table yet). It is still carried to the cloud
+  // inside the profile blob by the bulk pref push (sync.js:1455); the
+  // generator + swaps read it via
   // preferencesFromProfile. Idempotent append.
   addMealPlanExcludedFood: async (foodKey) => {
     const { user, userProfile } = get();
@@ -1848,8 +1850,9 @@ const useAppStore = create((set, get) => ({
   },
 
   // Meal-plan preference controls (deep-audit Theme G R4): meals/day,
-  // variety dial, fat convention, peri-workout slots. Local profile
-  // fields (plan is local-only); merged + persisted, read by
+  // variety dial, fat convention, peri-workout slots. Profile fields with no
+  // cloud column of their own (they still ride the profile blob into
+  // user_prefs); merged + persisted, read by
   // preferencesFromProfile. `partial` carries any of the mealPlan* keys.
   setMealPlanPrefs: async (partial) => {
     const { user, userProfile } = get();
@@ -1869,8 +1872,9 @@ const useAppStore = create((set, get) => ({
     set({ userProfile: updated });
   },
 
-  // Calorie banking (CB-1, "Plan a bigger day"): a local profile field like the
-  // meal-plan prefs (plan/banking are local-only). `bank` is the
+  // Calorie banking (CB-1, "Plan a bigger day"): a profile field like the
+  // meal-plan prefs - no cloud column, but still shipped inside the profile
+  // blob by pref sync. `bank` is the
   // { weekStartKey, bigDayKey, perDayDeltaKcal, appliedAt } record, or null to
   // clear. The diary reads it to show each day's banked target. The safe
   // redistribution + floor checks happen in food/calorieBank before this is
@@ -1884,22 +1888,16 @@ const useAppStore = create((set, get) => ({
     set({ userProfile: updated });
   },
 
-  // Bar weight for plate calculator, persisted alongside units
+  // Bar weight, persisted alongside units and hydrated from the synced
+  // bar_weight column. READ-ONLY at runtime: the Settings row that edited it
+  // was removed at founder request (SettingsProfileScreen.js:227-231) and its
+  // setter was deleted under D95 (AUDIT-DEFERRED-TELEMETRY S-1) as a dead
+  // runtime control. The VALUE stays live - ActiveWorkoutScreen reads it as
+  // the warm-up ramp's bar weight - and so do the column, the
+  // PROFILE_FIELDS_TRACKED entry and every hydration path. Restoring a
+  // control means restoring a setter, not resurrecting a plate calculator
+  // (D57: the plate calculator never reappears).
   barWeight: 20,
-  setBarWeight: async (w) => {
-    set({ barWeight: w });
-    const { user, userProfile, _stampProfileFields } = get();
-    if (user?.id) {
-      const updated = { ...(userProfile || {}), barWeight: w };
-      const key = PROFILE_KEY_PFX + user.id;
-      const value = JSON.stringify(updated);
-      try { await AsyncStorage.setItem(key, value); } catch (_) {}
-      set({ userProfile: updated });
-      _stampProfileFields(['barWeight']);
-      await _persistProfileTimestamps(user.id, get().userProfileFieldUpdatedAt);
-      pushPrefSoon(user.id, key, value);
-    }
-  },
 
   // ── Accessibility preferences ─────────────────────────────────────────
   // Loaded from AsyncStorage on first read via initAccessibility(). Each

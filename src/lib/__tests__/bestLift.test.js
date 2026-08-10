@@ -1,17 +1,79 @@
-import { pickBestLift, epleyE1rm } from '../bestLift';
+import fs from 'fs';
+import path from 'path';
+import { pickBestLift } from '../bestLift';
+import { calculate1RM } from '../algorithms';
 
 const set = (exerciseId, exerciseName, weight, reps) => ({ exerciseId, exerciseName, weight, reps });
 
-describe('epleyE1rm', () => {
-  test('matches plain Epley (weight * (1 + reps/30))', () => {
-    expect(epleyE1rm(100, 5)).toBeCloseTo(100 * (1 + 5 / 30), 5);
-    expect(epleyE1rm(60, 1)).toBeCloseTo(60 * (1 + 1 / 30), 5); // matches getWeeklyPRCount
+// The epleyE1rm suite that stood here protected ONLY the deleted plain-Epley
+// implementation, so it goes with it (D95, AUDIT-DUPLICATES D-2). Its junk-input
+// law is re-anchored here, unchanged in meaning, on the live selection path.
+describe('junk input is guarded (re-anchored from the deleted epleyE1rm suite)', () => {
+  test('a 0 kg, negative or non-numeric set never becomes the hero lift', () => {
+    expect(pickBestLift([set('a', 'Zero', 0, 5)], new Map())).toBeNull();
+    expect(pickBestLift([set('a', 'Negative', -10, 5)], new Map())).toBeNull();
+    expect(pickBestLift([set('a', 'Junk', 'abc', 5)], new Map())).toBeNull();
   });
-  test('guards junk input', () => {
-    expect(epleyE1rm(0, 5)).toBe(0);
-    expect(epleyE1rm(-10, 5)).toBe(0);
-    expect(epleyE1rm('abc', 5)).toBe(0);
-    expect(epleyE1rm(100, 0)).toBe(epleyE1rm(100, 1)); // reps<1 floored to 1
+
+  test('reps below 1 are floored to 1', () => {
+    expect(pickBestLift([set('a', 'Single', 100, 0)], new Map()))
+      .toEqual(pickBestLift([set('a', 'Single', 100, 1)], new Map()));
+  });
+});
+
+// D95 duplicates ruling (D-2, AUDIT-DUPLICATES.md): the plain-Epley default
+// was the one dangerous default in this family. X4 already ruled that the
+// weekly tally must use the SAME blended/clamped calculate1RM the live
+// in-session PR detector uses, and the only production caller
+// (database.getBestLiftThisWeek) injects it. These three suites are the
+// equivalence/regression evidence the ruling requires before the default is
+// removed: T-2.2 pins the LIVE path (unchanged either side of the change),
+// T-2.1 pins that the default now IS the live path, T-2.3 stops the
+// superseded formula returning.
+describe('D-2 e1RM consolidation', () => {
+  // T-2.1 (equivalence). The pairs span every divergence the audit worked:
+  // the 20-rep clamp, past the clamp, the reps === 1 special case, an
+  // ordinary mid-rep set, and the two junk-input guards.
+  const PAIRS = [[60, 20], [60, 30], [100, 1], [100, 5], [0, 5], [100, 0]];
+
+  test.each(PAIRS)('the default e1rmFn agrees with the injected calculate1RM (%p kg x %p)', (weight, reps) => {
+    const sets = [set('bench', 'Bench Press', weight, reps)];
+    const prior = new Map([['bench', 50]]);
+    expect(pickBestLift(sets, prior)).toEqual(pickBestLift(sets, prior, calculate1RM));
+  });
+
+  // T-2.2 (regression on the live path). This fixture is chosen so the two
+  // formulas pick DIFFERENT hero lifts: under the blended/clamped estimate a
+  // 60 kg x 20 set (113.6) beats a 100 kg single (100.0); under plain Epley
+  // the single (103.3) beats the high-rep set (100.0). The live path must
+  // keep picking the blended winner.
+  const DIVERGENT_SETS = [
+    set('squat', 'Back Squat', 60, 20),
+    set('bench', 'Bench Press', 100, 1),
+  ];
+
+  test('the live path (calculate1RM injected) features the blended winner', () => {
+    const best = pickBestLift(DIVERGENT_SETS, new Map(), calculate1RM);
+    expect(best.exerciseName).toBe('Back Squat');
+    expect(best.weight).toBe(60);
+    expect(best.reps).toBe(20);
+  });
+
+  test('the default picks the same hero lift as the live path', () => {
+    expect(pickBestLift(DIVERGENT_SETS, new Map()))
+      .toEqual(pickBestLift(DIVERGENT_SETS, new Map(), calculate1RM));
+  });
+
+  // T-2.3 (tombstone). A plain-Epley e1RM never returns to this module: a
+  // second implementation here forks the product truth X4 unified, and the
+  // symptom is a PR celebrated in-session and reported as "0 PRs" one screen
+  // away in the recap.
+  test('source guard: no plain-Epley e1RM survives in bestLift.js', () => {
+    const source = fs.readFileSync(path.resolve(__dirname, '..', 'bestLift.js'), 'utf8');
+    expect(source).not.toMatch(/1 \+ reps0? \/ 30/);
+    expect(source).not.toMatch(/epleyE1rm/);
+    // And the canonical estimator is what the module reaches for.
+    expect(source).toMatch(/import \{ calculate1RM \} from '\.\/algorithms';/);
   });
 });
 

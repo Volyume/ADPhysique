@@ -43,7 +43,13 @@ function flattenText(node) {
 
 async function render() {
   let tree;
-  const navigation = { navigate: jest.fn() };
+  // D95 (AUDIT-ROUTES 6 rows 3-4): MesocycleBuilder is a PlansStack route and
+  // this screen is ProfileStack-only, so its CTAs now go through
+  // navigateCrossTab, which dispatches on the TAB navigator. The mock gains a
+  // parent so the assertion below can pin the same law it always pinned: the
+  // "Start a new block" CTA reaches the mesocycle builder.
+  const parent = { navigate: jest.fn() };
+  const navigation = { navigate: jest.fn(), getParent: () => parent };
   await act(async () => {
     tree = create(
       <BlockReflectionScreen
@@ -53,7 +59,7 @@ async function render() {
     );
   });
   await flush();
-  return { tree, navigation };
+  return { tree, navigation, parent };
 }
 
 describe('BlockReflectionScreen load states', () => {
@@ -82,14 +88,17 @@ describe('BlockReflectionScreen load states', () => {
   });
 
   test('keeps the genuine no-data state after a successful empty read', async () => {
-    const { tree, navigation } = await render();
+    const { tree, navigation, parent } = await render();
 
     const text = flattenText(tree.toJSON());
     expect(text).toContain('No data found');
     expect(text).toContain('Start a new block');
     const start = tree.root.findByProps({ accessibilityLabel: 'Start a new block' });
     await act(async () => { start.props.onPress(); });
-    expect(navigation.navigate).toHaveBeenCalledWith('MesocycleBuilder');
+    expect(parent.navigate).toHaveBeenCalledWith('PlansTab', { screen: 'MesocycleBuilder', initial: false });
+    // The bare in-stack form is the dead tap this replaced: it resolved
+    // against ProfileStack, where MesocycleBuilder is not registered.
+    expect(navigation.navigate).not.toHaveBeenCalled();
     expect(text).not.toContain("Couldn't load block summary");
   });
 });

@@ -25,18 +25,11 @@
  * Voice: British, calm, plain, no em dash
  * (COACHING_VOICE_SYNTHESIS_LOCKED).
  */
-import { MUSCLE_DISPLAY_NAMES } from './algorithms';
+import { muscleDisplayName } from './algorithms';
 
 const num = (v, fallback) => {
   const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
   return Number.isFinite(n) ? n : fallback;
-};
-
-const displayName = (key) => {
-  const known = MUSCLE_DISPLAY_NAMES[String(key)];
-  if (known) return known;
-  const spaced = String(key ?? '').replace(/_/g, ' ');
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 };
 
 const SOURCE_CLAUSE = Object.freeze({
@@ -130,9 +123,9 @@ export function buildBlockStartLines({ summary = {}, limit = 3 } = {}) {
   return rows.map(([muscle, v]) => {
     const clause = SOURCE_CLAUSE[v.source];
     if (v.peak > v.week1 && v.peakWeek != null) {
-      return `${displayName(muscle)}: ${v.week1} sets in week 1, building to ${v.peak} by week ${v.peakWeek}, then a recovery week (${clause}).`;
+      return `${muscleDisplayName(muscle)}: ${v.week1} sets in week 1, building to ${v.peak} by week ${v.peakWeek}, then a recovery week (${clause}).`;
     }
-    return `${displayName(muscle)}: ${v.week1} sets a week, held steady, then a recovery week (${clause}).`;
+    return `${muscleDisplayName(muscle)}: ${v.week1} sets a week, held steady, then a recovery week (${clause}).`;
   });
 }
 
@@ -154,7 +147,7 @@ export function buildLedgerReflectionRows(ledger) {
     .filter((e) => e && e.muscle && typeof e.rationale === 'string')
     .map((e) => ({
       muscle: e.muscle,
-      label: displayName(e.muscle),
+      label: muscleDisplayName(e.muscle),
       classification: e.classification ?? null,
       rationale: e.rationale,
     }))
