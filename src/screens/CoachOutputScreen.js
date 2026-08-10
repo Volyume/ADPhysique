@@ -32,8 +32,6 @@ import {
   getPlannedMuscleVolume,
   upsertPlannedMuscleVolume,
   setMesocycleWeekDeload,
-  getCardioLogRange,
-  activityDayKey,
   getActivePeakWeekPlan,
 } from '../lib/database';
 import { getProgressScanCoachSummary } from '../lib/progressScanStore';
@@ -61,7 +59,6 @@ import { confidenceChipLabel } from '../lib/progressScanResultsContract';
 import { isPhotoSuppressed } from '../hooks/usePhotoSuppression';
 import { isCompetitionGoal } from '../lib/coachingGoals';
 import { contestCountdown, parseShowDate } from '../lib/contestCountdown';
-import { summariseWeekCardio, cardioVerdictLabel } from '../lib/cardio/cardioEngine';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { localWeekStartMs, localDayKey } from '../lib/dayKey';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
@@ -257,12 +254,11 @@ function AdjustmentRow({
 // the calorie row states the post-tap absolute and honest duration BEFORE the
 // tap. NU-3: a floor-held computation renders its reason instead of a button.
 function NextWeekCard({
-  adjustments, onApplyCalories, onApplyCardio,
+  adjustments, onApplyCalories,
   applyStateFor, onApplySettled,
   energyUnit, caloriePreview, calorieNotice, hero, heroRow,
-  cardioVerdict,
 }) {
-  const { calories, cardio } = adjustments;
+  const { calories } = adjustments;
 
   const calLabel =
     calories === null
@@ -312,22 +308,6 @@ function NextWeekCard({
           iconName="flame-outline"
           label="Calories held"
           note="No change needed this week."
-        />
-      )}
-      {cardio !== null && (
-        <AdjustmentRow
-          iconName="bicycle-outline"
-          label={cardio.type ?? 'Cardio'}
-          // Wave A B9: last week's compliance verdict (an existing pure
-          // helper, previously computed and never rendered) leads the note,
-          // so the dose visibly follows from what actually happened.
-          note={cardioVerdict
-            ? `Last week: ${cardioVerdictLabel(cardioVerdict)}. ${cardio.note ?? ''}`.trim()
-            : cardio.note}
-          applied={!!cardio.applied}
-          onApply={!cardio.applied ? onApplyCardio : undefined}
-          applyState={applyStateFor('cardio')}
-          onApplySettled={() => onApplySettled('cardio')}
         />
       )}
     </Card>
@@ -1259,37 +1239,6 @@ export default function CoachOutputScreen({ navigation, route }) {
     }
   }
 
-  // Confirm-then-apply for the cardio prescription. Writes
-  // userProfile.cardioPrescription (the prescription label), which
-  // gates the cardio-adherence question on the weekly check-in
-  // (WeeklyCheckInScreen). cardio_adherence lands via migration 050.
-  async function handleApplyCardio() {
-    if (applyingKey || !user?.id || !output) return;
-    if (isApplied(output, 'cardio')) return;
-    const cardio = output.adjustments?.cardio;
-    if (!cardio) return;
-    setApplyingKey('cardio');
-    try {
-      const prescription = cardio.type ?? cardio.note ?? 'prescribed';
-      // Keep the string for back-compat (gates the check-in question) and
-      // store the structured target so check-in compliance can read the
-      // session goal. cardio.target is present from the cardio engine.
-      await saveLocalProfile(user.id, {
-        ...latestProfile(),
-        cardioPrescription: prescription,
-        ...(cardio.target ? { cardioTarget: cardio.target } : {}),
-      });
-      const updated = markApplied(output, 'cardio', {});
-      await saveCoachOutput(user.id, { weekStart, ...updated });
-      setOutput(updated);
-      setApplySettling(s => ({ ...s, cardio: true }));
-    } catch (e) {
-      logError('CoachOutputScreen.handleApplyCardio', e, { userId: user?.id });
-    } finally {
-      setApplyingKey(null);
-    }
-  }
-
   // Confirm-then-apply for an early deload (founder decision 2026-05-28:
   // "what's done in real life"). Applying brings the recovery week
   // forward: next mesocycle week is flipped to a deload (is_deload, RIR
@@ -1387,8 +1336,8 @@ export default function CoachOutputScreen({ navigation, route }) {
   }
 
   // Confirm-then-apply for the high-day / low-day macro cycle (GAP row
-  // 6). Applying stores the split on userProfile.macroCycle, the same
-  // local-profile destination cardio writes to. The Diary
+  // 6). Applying stores the split on userProfile.macroCycle, a
+  // local-profile field. The Diary
   // reads it and shows the training-day or rest-day target for the day
   // being viewed. Re-reads current targets at tap time and recomputes
   // so the persisted split never scales from a stale snapshot.
@@ -1688,17 +1637,6 @@ export default function CoachOutputScreen({ navigation, route }) {
         suppressed: isPhotoSuppressed(calmNow, edPatternOpen),
       }).catch(() => null);
 
-      // Cardio (QA P2/P3/D1): the week's logged sessions vs the applied target,
-      // so the coach can escalate/hold from real compliance, flag high load,
-      // and acknowledge cardio outside a cut.
-      let cardioWeekSummary = null;
-      let cardioSessionsLogged = 0;
-      try {
-        const cardioTo = activityDayKey();
-        const cardioFrom = activityDayKey(Date.now() - 6 * 86400000);
-        cardioWeekSummary = summariseWeekCardio(await getCardioLogRange(user.id, cardioFrom, cardioTo));
-        cardioSessionsLogged = cardioWeekSummary.sessions;
-      } catch (_) { /* cardio optional; coach runs without it */ }
 
       // Stage 4 (2026-08-09): week-in-block fatigue context. A finished
       // block awaiting the user's decision is NOT a live week, so it
@@ -1754,9 +1692,6 @@ export default function CoachOutputScreen({ navigation, route }) {
         // profile's onboarding-enforced value, as the display path already
         // does.
         sex: bodyProfile?.sex ?? userProfile?.sex ?? null,
-        // Cardio compliance from the check-in (pre-filled from the log,
-        // user-overridable) so the coach acts on it, not just the raw count.
-        cardioCompliance: checkin?.cardioAdherence ?? null,
         // Step targets are not part of the shipped coaching product.
         dailyStepsSeries: null,
         stepsTodayKey: null,
@@ -1804,10 +1739,6 @@ export default function CoachOutputScreen({ navigation, route }) {
         // isPaidTier is the fallback before the store tier has hydrated.
         userTier: storeTier ?? require('../lib/proGate').isPaidTier(userProfile),
         hasUsedTrial: !require('../lib/payments/cascade').canStillTrial(userProfile),
-        currentCardioTarget: userProfile?.cardioTarget ?? null,
-        cardioSessionsLogged,
-        cardioWeekSummary,
-        cardioEnabled: userProfile?.cardioEnabled !== false,
       });
       const resultEdPatternOpen = edPatternOpen
         || !!result.edPatternFired
@@ -2128,10 +2059,6 @@ export default function CoachOutputScreen({ navigation, route }) {
       handleApplyCalories();
       return;
     }
-    if (output.adjustments?.cardio && !isApplied(output, 'cardio')) {
-      handleApplyCardio();
-      return;
-    }
     if (output.dietBreakSuggested && !isApplied(output, 'dietBreak')) {
       handleApplyDietBreak();
       return;
@@ -2196,8 +2123,6 @@ export default function CoachOutputScreen({ navigation, route }) {
     trend,
     whatWorking,
     adjustments,
-    cardioFlag,
-    cardioAcknowledgement,
     cyclePhaseNote,
     whyThisWeek,
     deloadSuggested,
@@ -2394,10 +2319,8 @@ export default function CoachOutputScreen({ navigation, route }) {
     <NextWeekCard
       adjustments={adjustments}
       onApplyCalories={applyDisabled ? undefined : handleApplyCalories}
-      onApplyCardio={applyDisabled ? undefined : handleApplyCardio}
       applyStateFor={applyStateFor}
       onApplySettled={onApplySettled}
-      cardioVerdict={checkin?.cardioAdherence ?? null}
       energyUnit={energyUnit}
       caloriePreview={caloriePreview}
       calorieNotice={applyNotice.calories ?? null}
@@ -2733,22 +2656,6 @@ export default function CoachOutputScreen({ navigation, route }) {
           ) : null}
         </View>
 
-        {/* P3: cardio recovery caution (one line, advisory, no Apply).
-            Wave A B9: caution and acknowledgement no longer share an icon,
-            distinguishable at a glance, same quiet register. */}
-        {cardioFlag ? (
-          <View style={styles.cardioNoteRow}>
-            <Ionicons name="alert-circle-outline" size={14} color={t.colors.warning} />
-            <Text style={[styles.cardioNoteText, live.cardioNoteText]}>{cardioFlag}</Text>
-          </View>
-        ) : null}
-        {/* D1: light acknowledgement of cardio logged outside a cut. */}
-        {cardioAcknowledgement ? (
-          <View style={styles.cardioNoteRow}>
-            <Ionicons name="checkmark-circle-outline" size={14} color={t.colors.success} />
-            <Text style={[styles.cardioNoteText, live.cardioNoteText]}>{cardioAcknowledgement}</Text>
-          </View>
-        ) : null}
         {/* U4: cycle-phase reassurance for a small period-week water rise
             (advisory, no Apply; only present for a female user who flagged
             their period and shows a water-plausible rise). */}

@@ -9,7 +9,6 @@
  */
 
 import { getTrainingNote, isCompetitionGoal, dayCalorieCyclingAllowed } from './coachingGoals';
-import { cutCardioTarget, nextCardioTarget, cardioRecoveryFlag } from './cardio/cardioEngine';
 import {
   shouldSuggestDietBreak,
   computeFFMFloor,
@@ -586,9 +585,8 @@ export function runWeeklyCoach(inputs) {
     currentStepsTarget = 8000,
     // Whether the user keeps a daily step target. Defaults true so existing
     // users and every prior caller are unchanged. When false (the user opted
-    // out at setup or in Settings) the coach makes no step prescription and
-    // treats the step lever as unavailable, so cardio becomes the next lever
-    // straight away instead of waiting for steps to reach the band ceiling.
+    // out at setup or in Settings) the coach makes no step prescription;
+    // any further deficit change then comes from the calorie side.
     stepsEnabled = true,
     bodyweightKg = null,
     units = 'kg',
@@ -638,21 +636,6 @@ export function runWeeklyCoach(inputs) {
     weeksLiftStalled = null,
     missingTdeeSignal = false,
     blockEnded = false,
-    // Cardio integration (QA P2/P3/D1). Optional; defaults make every prior
-    // caller a no-op. currentCardioTarget is the applied target from last week;
-    // cardioSessionsLogged + cardioWeekSummary come from the week's cardio_log;
-    // cardioEnabled gates the non-cut acknowledgement.
-    currentCardioTarget = null,
-    cardioSessionsLogged = 0,
-    cardioWeekSummary = null,
-    cardioEnabled = true,
-    // The week's cardio compliance verdict from the check-in ('hit' | 'mostly'
-    // | 'missed'). It is pre-filled from the cardio_log and the user can
-    // override it (cardio done but not logged here). When present it drives the
-    // next cardio dose instead of recomputing compliance from the raw logged
-    // count, so the coach acts on the check-in answer. Null leaves the prior
-    // log-only behaviour unchanged for every other caller.
-    cardioCompliance = null,
     // COMP-026 (B) step-trend modifier inputs. Optional; null/absent leaves
     // every prior caller byte-identical (no modifier, update gain stays 0.50).
     // dailyStepsSeries is getDailyStepsRange output over ~42 days
@@ -717,7 +700,7 @@ export function runWeeklyCoach(inputs) {
       weekLabel: `Week ${Number.isFinite(weeksInPhase) ? Math.round(weeksInPhase) : 1} · ${phaseConfig(goalPhase).label}`,
       trend: { ewma7: ewmaNow, delta: null, onTarget: false, deltaLabel: 'Log morning weight', rateLabel: null },
       whatWorking: ['Check-in saved.'],
-      adjustments: { training: { signal: 'hold', note: 'Plan unchanged. A few more weigh-ins needed to act on.' }, calories: null, steps: null, cardio: null },
+      adjustments: { training: { signal: 'hold', note: 'Plan unchanged. A few more weigh-ins needed to act on.' }, calories: null, steps: null },
       whyThisWeek: confidence.holdMessage,
       deloadSuggested: false, deloadNote: null, dietBreakSuggested: false, dietBreakNote: null,
       heldDecisions: [],
@@ -1198,8 +1181,7 @@ export function runWeeklyCoach(inputs) {
   const band = stepsBand(goalPhase, bwRef);
 
   if (!stepsEnabled) {
-    // User opted out of step targets. No step prescription at all; the
-    // cardio block below sees the step lever as unavailable and can fire.
+    // User opted out of step targets. No step prescription at all.
     stepsAdjustment = null;
   } else if (phase.isCut && !onTarget && offTargetDirection > 0 && !poorRecovery) {
     if (stepsAvg != null && currentStepsTarget > 0 && stepsAvg < currentStepsTarget * 0.9) {
@@ -1223,7 +1205,7 @@ export function runWeeklyCoach(inputs) {
         stepsAdjustment = {
           target: currentStepsTarget,
           change: 0,
-          note: "Steps are already near the upper limit. If more deficit is needed, light cardio is the next lever.",
+          note: "Steps are already near the upper limit, so this lever holds. Any further change comes from the calorie side.",
         };
       }
     }
@@ -1238,60 +1220,9 @@ export function runWeeklyCoach(inputs) {
     };
   }
 
-  // ── CARDIO PRESCRIPTION ───────────────────────────────────────────────────
-  // Cardio fires for cut + off-target high + steps already maxed.
-  // Poor recovery overrides the prescription with a "pause" message instead
-  // of letting cardio compound the recovery deficit.
-  let cardioAdjustment = null;
-  // When steps are disabled the step lever is unavailable, so treat it as
-  // already maxed and let cardio be the next lever the coach reaches for.
-  const stepsAtUpperBand = !stepsEnabled || currentStepsTarget >= band.upper;
-  const cardioConditionsMet = phase.isCut && !onTarget && offTargetDirection > 0 && stepsAtUpperBand;
-
-  if (cardioConditionsMet && poorRecovery) {
-    cardioAdjustment = {
-      prescribed: false,
-      type: null,
-      note: 'Cardio paused this week. Recovery takes priority.',
-    };
-  } else if (cardioConditionsMet) {
-    // Structured target from the cardio engine (tested). P2: when a target was
-    // already applied, the next dose reflects actual logged compliance
-    // (escalate on hit + still off-trend, hold + explain on miss, capped, never
-    // spiral). First time, derive the base cut target. poorRecovery is handled
-    // by the branch above, so it is false here. The user still picks the
-    // activity (note says "your choice").
-    const target = currentCardioTarget
-      ? nextCardioTarget({
-        currentTarget: currentCardioTarget,
-        sessionsLogged: cardioSessionsLogged,
-        stillOffTrendInCut: true,
-        poorRecovery: false,
-        complianceOverride: cardioCompliance,
-      })
-      : cutCardioTarget();
-    cardioAdjustment = {
-      prescribed: !target.paused,
-      type: target.includesInterval ? 'Cardio boost' : 'Steady cardio',
-      note: target.note,
-      target,
-    };
-  }
-
-  // D1 (founder: light acknowledgement): outside a cut the coach sets no cardio
-  // target (available, not allocated) but acknowledges cardio the user logged.
-  // Factual, non-escalating, no Apply. Null when there is nothing to say.
-  let cardioAcknowledgement = null;
-  if (!phase.isCut && cardioEnabled && cardioSessionsLogged > 0) {
-    const n = cardioSessionsLogged;
-    cardioAcknowledgement = `${n} cardio session${n === 1 ? '' : 's'} logged this week. No cardio target in this phase, it stays your call.`;
-  }
-
-  // P3: a one-line recovery caution when hard cardio is stacking up, using the
-  // week's high-impact count + the recovery signal the coach already has.
-  const cardioFlag = cardioWeekSummary
-    ? cardioRecoveryFlag({ weekSummary: cardioWeekSummary, recoveryTrendDown: poorRecovery })
-    : null;
+  // D95 (Campaign 4): the cardio prescription/acknowledgement block is
+  // removed under the founder's cardio boundary ruling. Calories and steps
+  // settle above this point, so no other prescription changes.
 
   // ── RAPID WEIGHT LOSS SAFETY FLAG ────────────────────────────────────────
   // F3 (EN-9): `<=` so this flag agrees with the correction gate above
@@ -1790,14 +1721,9 @@ export function runWeeklyCoach(inputs) {
       training: { signal: trainingSignal, note: trainingNote },
       calories: calorieAdjustment,
       steps: stepsAdjustment,
-      cardio: cardioAdjustment,
     },
     // U-B-1 §2: the engine's top decision, derived from whyKeys[0] above.
     primary,
-    // P3 cardio recovery caution (one line or null); D1 non-cut acknowledgement
-    // (one line or null). Both plain notes, no Apply.
-    cardioFlag,
-    cardioAcknowledgement,
     whyThisWeek,
     deloadSuggested,
     deloadNote,
@@ -1864,7 +1790,6 @@ function _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, we
       training: { signal: 'hold', note: 'Continue your plan as written.' },
       calories: null,
       steps: null,
-      cardio: null,
     },
     whyThisWeek: pickWhy(['building_baseline'], weekSeed),
     peakWeekContextApplied: false,
@@ -1902,7 +1827,6 @@ function _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, w
       training: { signal: 'hold', note: 'Get back to your full plan before changing anything.' },
       calories: null,
       steps: null,
-      cardio: null,
     },
     whyThisWeek: pickWhy(['stabilise_sessions'], weekSeed),
     // U-B-1 §2: this path has no applyable adjustment to hero — the lead/holding

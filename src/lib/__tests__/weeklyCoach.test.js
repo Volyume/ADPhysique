@@ -389,93 +389,10 @@ describe('guardrails', () => {
 
 // ── Cardio prescription (the dead-else-if fix) ─────────────────────────────
 
-describe('cardio prescription', () => {
-  test('cut + off-target + steps at upper band + good recovery → prescribes cardio', () => {
-    const out = runWeeklyCoach(baseInputs({
-      morningWeights: trend(85, 0),
-      consecutiveOffTargetWeeks: 2,
-      currentStepsTarget: 15000, // assume above band.upper
-      consecutivePoorRecoveryWeeks: 0,
-      checkin: checkin({ energyScore: 4, sorenessScore: 2 }),
-    }));
-    // Either steady or boost, both have prescribed: true
-    if (out.adjustments.cardio) {
-      expect(typeof out.adjustments.cardio.prescribed).toBe('boolean');
-    }
-  });
-
-  test('cut conditions met but poor recovery → cardio paused, not prescribed', () => {
-    const out = runWeeklyCoach(baseInputs({
-      morningWeights: trend(85, 0),
-      consecutiveOffTargetWeeks: 2,
-      currentStepsTarget: 15000,
-      consecutivePoorRecoveryWeeks: 2,
-      checkin: checkin({ energyScore: 1, sorenessScore: 5 }),
-    }));
-    // With the fix in this branch the "paused" message can fire instead of
-    // being unreachable. We just assert no positive prescription comes back
-    // when poor recovery is the dominant signal.
-    if (out.adjustments.cardio?.prescribed === true) {
-      // Acceptable only if the engine considers recovery good enough; the
-      // critical regression is the OLD code where this branch was dead and
-      // ALWAYS prescribed cardio on top of poor recovery.
-      expect(out.adjustments.cardio.note).toBeDefined();
-    }
-  });
-
-  // QA P2: the coach escalates/holds the cardio dose from logged compliance.
-  const cutCardioConditions = (over = {}) => baseInputs({
-    morningWeights: trend(85, 0),
-    consecutiveOffTargetWeeks: 2,
-    currentStepsTarget: 15000,
-    consecutivePoorRecoveryWeeks: 0,
-    checkin: checkin({ energyScore: 4, sorenessScore: 2 }),
-    ...over,
-  });
-  const priorTarget = { mode: 'deficit', sessionsPerWeek: 3, minMinutes: 20, maxMinutes: 30, intensity: 'low', includesInterval: false, paused: false };
-
-  test('P2: hit the target + still off-trend → next cardio adds a session', () => {
-    const out = runWeeklyCoach(cutCardioConditions({
-      currentCardioTarget: priorTarget,
-      cardioSessionsLogged: 3,
-    }));
-    expect(out.adjustments.cardio).not.toBeNull();
-    expect(out.adjustments.cardio.target.sessionsPerWeek).toBe(4);
-    expect(out.adjustments.cardio.note).toMatch(/add one more/i);
-  });
-
-  test('P2: missed the target → holds and says hit it first', () => {
-    const out = runWeeklyCoach(cutCardioConditions({
-      currentCardioTarget: priorTarget,
-      cardioSessionsLogged: 1,
-    }));
-    expect(out.adjustments.cardio.target.sessionsPerWeek).toBe(3);
-    expect(out.adjustments.cardio.note).toMatch(/before adding more/i);
-  });
-
-  test('P3: lots of hard cardio → coach surfaces a recovery flag', () => {
-    const out = runWeeklyCoach(cutCardioConditions({
-      cardioWeekSummary: { sessions: 5, totalMinutes: 150, totalKcal: 1500, highImpactSessions: 4 },
-    }));
-    expect(out.cardioFlag).toMatch(/hard cardio|low-impact/i);
-  });
-
-  test('D1: outside a cut, cardio logged → light acknowledgement, no target', () => {
-    const out = runWeeklyCoach(baseInputs({
-      goalPhase: 'bulk',
-      morningWeights: trend(85, 0.3),
-      cardioEnabled: true,
-      cardioSessionsLogged: 2,
-    }));
-    expect(out.adjustments.cardio).toBeNull();
-    expect(out.cardioAcknowledgement).toMatch(/2 cardio sessions logged/i);
-  });
-
-  test('D1: no acknowledgement when no cardio logged outside a cut', () => {
-    const out = runWeeklyCoach(baseInputs({ goalPhase: 'bulk', morningWeights: trend(85, 0.3), cardioEnabled: true, cardioSessionsLogged: 0 }));
-    expect(out.cardioAcknowledgement).toBeNull();
-  });
-});
+// D95 (Campaign 4): the cardio-prescription behaviour tests died with the
+// feature under the founder's cardio boundary ruling; the inverse pins live
+// in campaign4.boundaries.test.js (no cardio key in adjustments, calories
+// and steps unchanged on the same fixtures).
 
 // ── Step opt-out (stepsEnabled) ────────────────────────────────────────────
 
@@ -499,13 +416,6 @@ describe('stepsEnabled opt-out', () => {
     expect(out.adjustments.steps).toBeNull();
   });
 
-  test('opted out: cardio becomes the lever without steps needing to be maxed', () => {
-    // Steps target is mid-band, which would normally block cardio. With
-    // steps disabled the lever is treated as unavailable so cardio can fire.
-    const out = runWeeklyCoach(baseInputs({ ...losingSlowly, stepsEnabled: false }));
-    expect(out.adjustments.cardio).not.toBeNull();
-    expect(out.adjustments.cardio.prescribed).toBe(true);
-  });
 
   test('opted out: the week reason is not the step-bump message', () => {
     const out = runWeeklyCoach(baseInputs({ ...losingSlowly, stepsEnabled: false }));
