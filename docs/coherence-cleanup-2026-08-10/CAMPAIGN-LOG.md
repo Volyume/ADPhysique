@@ -35,13 +35,25 @@ after Campaign 4.
   072-135 tracker rebuild, 049 header, locked-doc records, SUPERSEDED
   banners, U14 public cardio promises gone, EU-Dublin residency fix).
   Wave rulings + FR-C4-8/9/10 recorded in D95-RULINGS.md.
-- IN FLIGHT: adversarial Review A (reachability) + Review B (product
-  boundaries) — Phases 25/26, ten questions each verbatim from the
-  order. Findings are actioned by the lead, not the reviewers.
-- Then: Review C (repository truth), Phase 28 migration statement,
-  Phase 29 FR-1..5 evidence pass, Phase 30 gates + before/after
-  censuses, register/taskboard/handover close, merge to main, 40-item
-  handover, STOP.
+- Reviews A (reachability) + B (product boundaries) — COMPLETE and
+  ACTIONED at f486ea7f (D95-3 blocks in the register). Headline: B-F1
+  check-in save was clearing retained cardio answers (H5 breach,
+  fixed); A found three more inert cross-tab taps (fixed + pinned) and
+  the over-trimmed stepsTarget law (restored); promise-leak closure on
+  the store-listing sources, FACT-BASE and taskboard; H1/H3
+  limitations and FR-C4-11 recorded.
+- Phase 28 (migrations) — VERIFIED: no new migration written or run;
+  132-135 unapplied on disk; 049 HELD with corrected header; only
+  text-only header/README changes under supabase/.
+- IN FLIGHT: Review C (repository truth, Phase 27) — fixes
+  truthful-documentation findings itself (text-only), reports
+  anything needing a ruling; barred from the campaign folder,
+  taskboard and handover. Recovery: its edits are uncommitted
+  doc/comment text; re-derive from its report against the Phase 27
+  spec.
+- Then: land Review C, Phase 29 FR-1..5 evidence pass, Phase 30 gates
+  + before/after censuses, register/taskboard/handover close, merge to
+  main, 40-item handover, STOP.
 
 ## Landed commits (this campaign)
 
