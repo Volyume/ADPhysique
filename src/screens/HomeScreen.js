@@ -2140,7 +2140,7 @@ export default function HomeScreen({ navigation, route }) {
         scroll
       >
         <Text style={[styles.intentTitle, live.intentTitle]}>How are you feeling today?</Text>
-        <Text style={[styles.intentSub, live.intentSub]}>Takes a second. Helps us read your sessions better over time.</Text>
+        <Text style={[styles.intentSub, live.intentSub]}>Takes a second. It helps decide whether today's planned workload still makes sense, and builds a picture of your recovery over time.</Text>
         {/* R2-10 (founder decision "Reorder", 2026-07-11): the optional
             readiness rows sit ABOVE the intent options, compacted to one
             aligned line each, because the intent tap below starts the
