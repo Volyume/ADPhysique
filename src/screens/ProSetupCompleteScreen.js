@@ -522,6 +522,17 @@ export default function ProSetupCompleteScreen({ navigation }) {
 
         </View>
 
+        {/* FQ-1(c) (D96, founder-approved wording): the one first-run mention
+            of calm coaching. A quiet pointer, not a step: no choice is asked,
+            Standard stays the normal default, and the canonical editor
+            remains Settings → Coaching (named, not navigated - this stack has
+            no tabs yet, so a live link would be the silent-drop class C5
+            closed). Neutral by design: it must never imply Standard is
+            unsafe or that safety rules differ between modes. */}
+        <Text style={[styles.calmPointer, live.calmPointer]}>
+          Prefer gentler coaching? You can switch to Calm anytime in Settings, under Coaching.
+        </Text>
+
         <Animated.View entering={(reduceMotion || motionSuppressed) ? undefined : FadeInUp.duration(motion.enter).delay(5 * motion.micro)}>
           <Button
             title="Start training"
@@ -687,6 +698,12 @@ const styles = StyleSheet.create({
   whyPlanText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 
   startBtn: { marginTop: spacing.md },
+
+  // FQ-1(c): the quiet calm-coaching pointer above the start button.
+  calmPointer: {
+    ...type.bodySm, color: colors.textSecondary,
+    textAlign: 'center', marginTop: spacing.md, paddingHorizontal: spacing.md,
+  },
 });
 
 // CP-10 batch G lane 1 (2026-07-11): the frozen `styles` block above stays
@@ -741,5 +758,6 @@ function buildLiveStyles(t) {
     whyPlanWrap: { borderTopColor: t.colors.border },
     whyPlanBullet: { backgroundColor: t.colors.primary },
     whyPlanText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    calmPointer: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
 }
