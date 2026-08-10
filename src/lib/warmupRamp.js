@@ -46,6 +46,12 @@ const roundTo = (kg, inc) => Math.round(kg / inc) * inc;
  *   light-to-heavy; empty when the working weight is invalid or already
  *   light enough that no ramp row fits below it
  */
+// Standard Olympic barbell (kg-only by design, UK). D95 (Campaign 4):
+// relocated from plateMath.js when the D14/D57-rejected plate calculator's
+// module was deleted - this constant was its one genuinely live export,
+// consumed by the warm-up ramp's bar floor below.
+export const DEFAULT_BAR_KG = 20;
+
 export function warmupRamp(workingKg, { isBarbell = false, barKg = 20, roundKg = 2.5 } = {}) {
   const working = Number(workingKg);
   if (!Number.isFinite(working) || working <= 0) return [];

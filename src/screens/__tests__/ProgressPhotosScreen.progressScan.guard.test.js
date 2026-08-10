@@ -2,8 +2,15 @@ const fs = require('fs');
 const path = require('path');
 
 const SCREEN = fs.readFileSync(path.resolve(__dirname, '../ProgressPhotosScreen.js'), 'utf8');
-const SCAN_COPY = fs.readFileSync(path.resolve(__dirname, '../../lib/progressScanCopy.js'), 'utf8');
 const CONTROLLER = fs.readFileSync(path.resolve(__dirname, '../../lib/progressPhotosController.js'), 'utf8');
+// Weight-privacy law re-anchor (Campaign 4, coherence-cleanup-2026-08-10,
+// AUDIT-MODULES-FLAGS.md §1.4): the dead src/lib/progressScanCopy.js used to
+// carry this law alone (`!suppressed && !hideExact && Number.isFinite(stats.weightKg)`
+// in its scanStatsCopy). That module is deleted; the four live sites below
+// are read directly so the law stays pinned on the code that actually ships.
+const COMPARE = fs.readFileSync(path.resolve(__dirname, '../../components/ProgressScanCompare.js'), 'utf8');
+const HISTORY_CARD = fs.readFileSync(path.resolve(__dirname, '../../components/ProgressScanHistoryCard.js'), 'utf8');
+const BEFORE_AFTER_PARAMS = fs.readFileSync(path.resolve(__dirname, '../../lib/shareCard/beforeAfterParams.js'), 'utf8');
 
 describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   test('uses enriched scan entries, not a bare latest scan row', () => {
@@ -65,7 +72,37 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
   test('suppression gates scan deltas while scores stay visible otherwise', () => {
     expect(SCREEN).toMatch(/const scoreValue = suppressed \? 'Hidden'/);
     expect(SCREEN).toMatch(/assessment\?\.progressSignalLabel \|\| scan\?\.deltaExplanation\?\.trendSummary/);
-    expect(SCAN_COPY).toMatch(/!suppressed && !hideExact && Number\.isFinite\(stats\.weightKg\)/);
+  });
+
+  // Weight-privacy law (moved from the deleted src/lib/progressScanCopy.js,
+  // see the file header): a scan's bodyweight is never rendered once the
+  // caller has flagged it suppressed (photoSuppressed || calm) or the user
+  // has hideExact on. FR-3 (whether hideExact ever gets a user-facing
+  // control) is a separate, still-open founder ruling -- this pin does not
+  // resolve it either way, it only locks today's rendering law.
+  test('scan-set weight is withheld under suppression or hideExact on every live rendering site', () => {
+    // ProgressScanCompare.scanWeightLabel: hideExact alone withholds it (the
+    // screen never opens this modal while suppressed -- see the
+    // "it self-suppresses too" contract at the call site).
+    expect(COMPARE).toMatch(/export function scanWeightLabel\(scan, \{ hideExact = false \} = \{\}\) \{\s*\n\s*if \(hideExact\) return null;/);
+
+    // ProgressScanHistoryCard.weightLabel: both suppressed and hideExact
+    // withhold it directly.
+    expect(HISTORY_CARD).toMatch(/function weightLabel\(scan, \{ suppressed = false, hideExact = false \} = \{\}\) \{\s*\n\s*if \(suppressed \|\| hideExact\) return 'Hidden';/);
+
+    // beforeAfterParams.buildBeforeAfterParams: showWeight is the founder-
+    // approved Pro before/after exception's own gate; a suppressed caller
+    // never reaches this builder at all (the whole card withholds).
+    expect(BEFORE_AFTER_PARAMS).toMatch(/const wt = \(kg\) => \(showWeight && kg != null && Number\.isFinite\(kg\)/);
+
+    // ProgressPhotosScreen's own check-in card meta line reads a per-photo
+    // logged weight (item.weightKg from photo capture metadata, not the
+    // scan's AI-derived stats.weightKg) and is not itself suppression-gated
+    // at this line -- pinned as-is so a refactor cannot silently change this
+    // shape unnoticed. See AUDIT-MODULES-FLAGS.md §1.4 for the distinction
+    // between this self-logged capture weight and the scan-stats weight the
+    // other three sites gate.
+    expect(SCREEN).toMatch(/const weightText = Number\.isFinite\(item\.weightKg\) \? `\$\{item\.weightKg\.toFixed\(1\)\} kg` : null;/);
   });
 
   test('capture and deletion lifecycle cleans up scan assets', () => {

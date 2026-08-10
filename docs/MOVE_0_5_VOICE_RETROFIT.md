@@ -1,5 +1,15 @@
 ⚠ STATUS (2026-07-10): PRE-CAMPAIGN BLUEPRINT/SPEC - GATED. Do not build from this document. Any item here requires the D37 triage (verify against today's tree + the decision register) and the D38 elevation test before consideration. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md.
 
+⚠ SUPERSEDED (2026-08-10, Campaign 4, coherence-cleanup-2026-08-10,
+AUDIT-DEAD-FUNCTIONS.md §5.4/§3): `getVolumeStatusMessage`,
+`getProgressionMessage`, `getAutoRegMessage`, `getWeekPhaseDescription`,
+`getDeloadPredictionMessage`, `getTravelModeMessage` and
+`getPosingConditioningMessage` (listed below as retrofitted voice surfaces)
+were confirmed zero-caller and deleted from `src/lib/whyThisTemplates.js` per
+D95-RULINGS.md. Their voice laws survive on live copy (see the audit for the
+live replacement named per function); this document is left unedited below
+as a historical record and must not be rewritten to pretend otherwise.
+
 # Move #0.5: Voice retrofit (locked)
 
 Mechanical pass through every user-facing string in the live app

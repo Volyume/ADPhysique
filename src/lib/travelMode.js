@@ -283,13 +283,3 @@ function buildPPLTravel(pool, daysPerWeek, _sessionLengthMins) {
   }
   return sessions;
 }
-
-// ---------------------------------------------------------------------------
-// Equipment labels
-// ---------------------------------------------------------------------------
-
-export const TRAVEL_EQUIPMENT_OPTIONS = [
-  { key: 'bodyweight', label: 'Bodyweight only' },
-  { key: 'dumbbells',  label: 'Dumbbells' },
-  { key: 'hotel_gym',  label: 'Hotel gym (dumbbells + cables)' },
-];

@@ -21,8 +21,6 @@ import {
   calculate1RM,
   calculateTonnage,
   calculateWeeklyVolume,
-  calculateEffectiveSets,
-  getSetEffectivenessWeight,
   detectLaggingMuscles,
   computeSessionAdjustments,
 } from '../algorithms';
@@ -384,18 +382,6 @@ describe('algorithms: fuzz invariants', () => {
     expect(calculateTonnage([{ weight: 100, actualReps: null }])).toBe(0);
   });
 
-  test('getSetEffectivenessWeight monotone in RIR', () => {
-    let prev = Infinity;
-    for (let rir = 0; rir <= 10; rir++) {
-      const w = getSetEffectivenessWeight(rir);
-      expect(typeof w).toBe('number');
-      expect(w).toBeGreaterThanOrEqual(0);
-      expect(w).toBeLessThanOrEqual(1);
-      expect(w).toBeLessThanOrEqual(prev + 1e-9);
-      prev = w;
-    }
-  });
-
   test('calculateWeeklyVolume tolerates 300 randomised sets without throwing', () => {
     const muscles = ['chest', 'back', 'side_delts', 'quads', 'hamstrings', 'biceps', 'triceps'];
     const exerciseMap = {};
@@ -415,20 +401,6 @@ describe('algorithms: fuzz invariants', () => {
     expect(() => calculateWeeklyVolume(sets, exerciseMap)).not.toThrow();
     const out = calculateWeeklyVolume(sets, exerciseMap);
     assertNoBadNumbers('weeklyVolume', out);
-  });
-
-  test('calculateEffectiveSets effectiveSets always finite', () => {
-    const exerciseMap = { ex1: { primary_muscle: 'chest', secondary_muscles: '[]' } };
-    for (let i = 0; i < 200; i++) {
-      const sets = [{
-        exerciseId: 'ex1', setType: 'straight',
-        weight: rfloat(0, 200), actualReps: rint(1, 20),
-        rir: rmaybe(0.5, () => rint(0, 10)),
-        rpe: rmaybe(0.5, () => rint(0, 10)),
-      }];
-      const out = calculateEffectiveSets(sets, exerciseMap);
-      assertNoBadNumbers(`fuzz ${i}`, out);
-    }
   });
 
   test('detectLaggingMuscles: empty input → empty output', () => {

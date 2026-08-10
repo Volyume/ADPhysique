@@ -467,8 +467,10 @@ function _stepMedian(nums) {
 //
 // stepRows       : getDailyStepsRange output over the last ~42 days,
 //                  [{ entryDate: 'YYYY-MM-DD', steps, source }], any order.
-//                  steps <= 0 or a missing day is "unlogged" (matches
-//                  summariseWeekSteps semantics).
+//                  steps <= 0 or a missing day is "unlogged" (this engine's
+//                  own rule; independent of the retired check-in weekly-
+//                  average collection helper, which is gone -- see
+//                  weeklyCheckInCopy.guard.test.js).
 // todayKey       : local day-key anchoring the windows. recent = last 14 days
 //                  (ages 0..13), baseline = the 28 days before that (14..41).
 // adjustmentSign : sign of the raw energy-balance adjustment the weight trend

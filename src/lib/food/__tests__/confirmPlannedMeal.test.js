@@ -13,11 +13,11 @@
  * eaten_at split: a per-meal confirm (mealSlot given) is a genuine single
  * action at a real moment and gets eaten_at = now; the whole-day bulk
  * confirm (mealSlot omitted) leaves eaten_at NULL rather than stamping
- * every meal with one false clumped instant (the flat timeline groups those
- * rows under their meal tag instead -- src/lib/food/diaryTimeline.js). And
- * confirmPlannedEntry, the per-ENTRY confirm the flat timeline uses in place
- * of MealSection's retired per-meal button, which also gets an honest
- * eaten_at = now for the one row it confirms.
+ * every meal with one false clumped instant (bulk-confirmed rows carry no
+ * displayed time on the live meal-card row, src/components/food/EntryRow.js
+ * -- the flat timeline diary that used to carry this rule was reverted,
+ * D37). And confirmPlannedEntry, the per-ENTRY confirm, which also gets an
+ * honest eaten_at = now for the one row it confirms.
  *
  * It also pins the constitution ban (CLAUDE.md sec.2): nothing in this
  * flow computes or returns an adherence score, a streak, or any

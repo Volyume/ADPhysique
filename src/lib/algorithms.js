@@ -283,15 +283,19 @@ export function defaultIncrement(weight, units = 'kg', category = 'compound') {
 
 // Algorithm 2: Double Progression Suggestion.
 //
-// The live in-set hint. It shares the same progression CONTRACT as
-// computeSetTargets (the end-of-session per-set engine) so the two never give
-// opposite advice on the same data:
-//   - load only increases when RIR was actually LOGGED and showed headroom
-//     (>= 1). Unlogged RIR holds and prompts for it -- novices under-estimate
-//     RIR, so an optimistic increase on missing data drives premature overload.
-//   - rep band defaults are 6-12 (matching computeSetTargets), so an exercise
-//     with no configured min/max can still progress instead of maintaining
-//     forever, and the decrease branch can actually fire.
+// CORRECTED (Campaign 4, coherence-cleanup-2026-08-10, AUDIT-DEAD-FUNCTIONS.md
+// §5.1/§2.1): this function has ZERO production callers -- it is NOT the live
+// in-set hint (that is computeSetTargets, the end-of-session per-set engine,
+// live at ActiveWorkoutScreen.js). The two do NOT always agree on identical
+// data: on a bodyweight/unloaded exercise (prevAvgWeight <= 0) this function
+// correctly withholds a load increase (its CALC-5 guard below), while live
+// computeSetTargets prescribes a spurious +0.25 kg (no such guard exists
+// there). That CALC-5 pin (algorithms.test.js) is the only test in the repo
+// protecting the bodyweight-progression rule; deleting this function without
+// first fixing computeSetTargets would silently unpin a live defect. KEPT as
+// Class I pending a lead/founder ruling on making computeSetTargets honour
+// this contract, tracked as founder item FR-C4-4 (D95-RULINGS.md). Do not
+// delete this function or its CALC-5 test until that ruling lands.
 export function getProgressionSuggestion(currentSets, prevWorkoutSets, targetRepsMin, targetRepsMax, units = 'kg') {
   if (!prevWorkoutSets || prevWorkoutSets.length === 0) {
     return { action: 'baseline', message: 'First time logging this exercise. Any weight is a great starting point.' };
@@ -651,96 +655,6 @@ export function bestPRPerExercise(prs) {
   return order.map(k => bestByKey.get(k));
 }
 
-// Algorithm 6: Auto-Regulation
-// perMuscleStimulusRatings: optional array of { primaryMuscle, pump, connection } from
-// post-exercise ratings. When present, per-muscle pump overrides the session-level overallPump
-// for muscle-specific volume suggestions, enabling targeted recommendations.
-export function getAutoRegSuggestion(workoutFeedback, weeklyVolumeByMuscle, customLandmarks = null, perMuscleStimulusRatings = null) {
-  const suggestions = [];
-  const {
-    sessionDifficulty = 3,
-    overallPump = 2,
-    soreness24hBefore = 1,
-    fatigueLevel = 2,
-    jointDiscomfort = 0,
-  } = workoutFeedback || {};
-
-  // Build per-muscle pump map from exercise ratings when available.
-  // Falls back to session-level overallPump for muscles with no rating.
-  const musclePumpMap = {};
-  if (perMuscleStimulusRatings?.length) {
-    for (const r of perMuscleStimulusRatings) {
-      if (r.primaryMuscle) {
-        musclePumpMap[r.primaryMuscle] = r.pump ?? overallPump;
-      }
-    }
-  }
-
-  if (sessionDifficulty >= 4 && soreness24hBefore >= 2) {
-    suggestions.push({
-      type: 'reduce_volume',
-      message: 'Your body is showing fatigue. Drop 1 or 2 sets next week and let it catch up.',
-    });
-  } else if (sessionDifficulty <= 2 && soreness24hBefore === 0 && fatigueLevel >= 4) {
-    suggestions.push({
-      type: 'add_volume',
-      message: "You're recovering well. You can add a set or two next week if you want to push things forward.",
-    });
-  }
-
-  if (jointDiscomfort >= 2) {
-    suggestions.push({
-      type: 'reduce_weight',
-      message: 'Joint discomfort noted. Keep the same number of sets but ease off the weight slightly next session.',
-    });
-  }
-
-  if (overallPump === 3 && sessionDifficulty <= 3 && !perMuscleStimulusRatings?.length) {
-    suggestions.push({
-      type: 'increase_load',
-      message: 'Good session. You can push a little harder next time: try adding weight or an extra set.',
-    });
-  }
-
-  for (const [muscle, data] of Object.entries(weeklyVolumeByMuscle || {})) {
-    const landmarks = customLandmarks?.[muscle] || VOLUME_LANDMARKS[muscle];
-    if (!landmarks) continue;
-
-    if (data.workingSets > landmarks.mrv) {
-      suggestions.push({
-        type: 'deload_muscle',
-        muscle,
-        message: `${MUSCLE_DISPLAY_NAMES[muscle] || muscle}: over target this week (${Math.round(data.workingSets)} sets). Consider doing a little less next session.`,
-      });
-      continue;
-    }
-
-    // Per-muscle pump signal: low pump (1-2) on a well-recovered muscle may indicate
-    // poor exercise selection or need for technique adjustment, not necessarily volume issue.
-    // High pump (4-5) with volume near MAV suggests the current exercise selection is working.
-    const musclePump = musclePumpMap[muscle] ?? overallPump;
-    if (musclePump <= 2 && data.workingSets >= (landmarks.mev || 2)) {
-      suggestions.push({
-        type: 'swap_exercise',
-        muscle,
-        message: `${MUSCLE_DISPLAY_NAMES[muscle] || muscle}: pump was low this session. Try a different exercise or check your technique before adding volume.`,
-      });
-    } else if (musclePump >= 4 && data.workingSets < (landmarks.mav || landmarks.mrv)) {
-      suggestions.push({
-        type: 'add_muscle_volume',
-        muscle,
-        message: `${MUSCLE_DISPLAY_NAMES[muscle] || muscle}: working hard. You have room to add a set or push harder next week.`,
-      });
-    }
-  }
-
-  if (suggestions.length === 0) {
-    suggestions.push({ type: 'maintain', message: "Training is on track. Keep doing what you're doing." });
-  }
-
-  return suggestions;
-}
-
 // Algorithm 7: Deload Detection
 // Signal weighting: performance 50%, wellness composite 30%, soreness 20%.
 // Rationale: Coleman et al. (2024, PeerJ) found soreness is an unreliable deload trigger
@@ -803,73 +717,6 @@ export function shouldDeload(last4WeeksData) {
   }
 
   return { deload: score >= 50, reasons };
-}
-
-// Stretch position score, Maeo et al. (2023), Pedrosa et al. (2022), Wolf et al. (2023)
-// confirm that exercises training the target muscle at long length produce measurably
-// greater hypertrophy per set. Prefer high-stretch alternatives when substituting.
-const STRETCH_SCORE = { high: 2, medium: 1, low: 0 };
-
-// Algorithm 8: Exercise Substitutes
-export function getExerciseSubstitutes(targetExercise, allExercises, userEquipment = []) {
-  const primaryMuscle = (
-    targetExercise.primaryMuscle ||
-    targetExercise.primary_muscle ||
-    ''
-  ).toLowerCase();
-  const targetFatigue = targetExercise.fatigueCost || targetExercise.fatigue_cost || 3;
-  const targetStretch = targetExercise.tension_at_stretch || targetExercise.tensionAtStretch || 'medium';
-  const targetId = targetExercise.id;
-
-  const candidates = allExercises.filter(ex => {
-    if (ex.id === targetId) return false;
-    const exMuscle = (ex.primaryMuscle || ex.primary_muscle || '').toLowerCase();
-    if (exMuscle !== primaryMuscle) return false;
-    const exFatigue = ex.fatigueCost || ex.fatigue_cost || 3;
-    if (exFatigue > targetFatigue + 1) return false;
-    if (userEquipment.length > 0) {
-      const exEquipment = (ex.equipment || '').toLowerCase();
-      const hasEquipment = userEquipment.some(e =>
-        exEquipment.includes(e.toLowerCase()) || exEquipment === 'bodyweight',
-      );
-      if (!hasEquipment) return false;
-    }
-    return true;
-  });
-
-  candidates.sort((a, b) => {
-    const sfrA = a.stimulusToFatigueRatio || a.stimulus_to_fatigue_ratio || 3;
-    const sfrB = b.stimulusToFatigueRatio || b.stimulus_to_fatigue_ratio || 3;
-    const fatigueA = a.fatigueCost || a.fatigue_cost || 3;
-    const fatigueB = b.fatigueCost || b.fatigue_cost || 3;
-    const stretchA = STRETCH_SCORE[a.tension_at_stretch || a.tensionAtStretch || 'medium'] ?? 1;
-    const stretchB = STRETCH_SCORE[b.tension_at_stretch || b.tensionAtStretch || 'medium'] ?? 1;
-    // Composite: SFR primary, stretch bonus secondary (scaled to 0–0.6 so it doesn't override SFR),
-    // fatigue tiebreaker
-    const scoreA = sfrA + stretchA * 0.3;
-    const scoreB = sfrB + stretchB * 0.3;
-    return scoreB - scoreA || fatigueA - fatigueB;
-  });
-
-  return candidates.slice(0, 3).map(ex => ({
-    exercise: ex,
-    reason: buildSubstituteReason(ex, targetExercise, targetStretch),
-  }));
-}
-
-function buildSubstituteReason(sub, target, targetStretch = 'medium') {
-  const subSFR = sub.stimulusToFatigueRatio || sub.stimulus_to_fatigue_ratio || 3;
-  const targetSFR = target.stimulusToFatigueRatio || target.stimulus_to_fatigue_ratio || 3;
-  const subFatigue = sub.fatigueCost || sub.fatigue_cost || 3;
-  const targetFatigue = target.fatigueCost || target.fatigue_cost || 3;
-  const subStretch = sub.tension_at_stretch || sub.tensionAtStretch || 'medium';
-
-  if (subStretch === 'high' && targetStretch !== 'high') {
-    return 'Trains this muscle at a longer length. Evidence suggests this produces slightly more growth per set.';
-  }
-  if (subSFR > targetSFR) return 'Better match for this muscle with less overall fatigue.';
-  if (subFatigue < targetFatigue) return 'Less demanding overall. Good for busy or high-volume weeks.';
-  return 'Same muscles, different movement. Good for mixing things up over a training block.';
 }
 
 // RP-style soreness × performance → volume decision
@@ -1389,59 +1236,6 @@ export function buildSessionAdjustmentInput({
   };
 }
 
-// Effective set weighting by RIR proximity, continuous curve per Robinson et al. (2024,
-// Sports Medicine 54:2209–2231). The dose-response is monotonic with no discontinuity at
-// RIR 2: "marginal slopes for estimated RIR were negative and their confidence intervals did
-// not contain a null point estimate." RIR 0–2 are functionally equivalent (full credit);
-// credit decreases continuously above RIR 2 down to zero at RIR 8+.
-// Null RIR: treated as RIR ~2 (conservative, novices routinely over-estimate headroom).
-export function getSetEffectivenessWeight(rir) {
-  if (rir === null || rir === undefined) return 0.9;
-  if (rir <= 2) return 1.0;
-  if (rir === 3) return 0.85;
-  if (rir === 4) return 0.70;
-  if (rir === 5) return 0.50;
-  if (rir <= 7) return 0.25;
-  return 0.0; // RIR 8+, insufficient stimulus
-}
-
-// Weighted effective sets per muscle, accounts for proximity to failure.
-// Returns { [muscle]: { workingSets, effectiveSets, reps, tonnage } }
-export function calculateEffectiveSets(sets, exerciseMap = {}) {
-  const volumeByMuscle = {};
-
-  for (const set of sets) {
-    const setType = set.setType || set.set_type || 'straight';
-    if (setType === 'warmup') continue;
-
-    const exerciseId = set.exerciseId || set.exercise_id;
-    const exercise = exerciseMap[exerciseId];
-    if (!exercise) continue;
-
-    let primaryMuscle = (exercise.primaryMuscle || exercise.primary_muscle || '').toLowerCase();
-    if (primaryMuscle === 'shoulders') primaryMuscle = 'side_delts';
-
-    // Effective-volume weight: prefer logged RIR; fall back to RPE-derived RIR
-    // (RIR ≈ 10 − RPE); null when neither is present.
-    let rirForWeight = null;
-    if (set.rir != null) rirForWeight = set.rir;
-    else if (set.rpe != null) rirForWeight = 10 - set.rpe;
-    const weight = getSetEffectivenessWeight(rirForWeight);
-
-    if (primaryMuscle) {
-      if (!volumeByMuscle[primaryMuscle]) {
-        volumeByMuscle[primaryMuscle] = { workingSets: 0, effectiveSets: 0, reps: 0, tonnage: 0 };
-      }
-      volumeByMuscle[primaryMuscle].workingSets += 1;
-      volumeByMuscle[primaryMuscle].effectiveSets += weight;
-      volumeByMuscle[primaryMuscle].reps += set.actualReps || set.actual_reps || 0;
-      volumeByMuscle[primaryMuscle].tonnage += (set.weight || 0) * (set.actualReps || set.actual_reps || 0);
-    }
-  }
-
-  return volumeByMuscle;
-}
-
 // Plateau detection for a specific exercise across sessions.
 // exerciseSessions: array of sessions newest-first, each an array of sets for that exercise.
 // Returns { plateau, consecutiveStalls, resolution }
@@ -1488,14 +1282,6 @@ export function detectPlateau(exerciseSessions = [], _repMin = 6, _repMax = 12) 
       ? 'No progress for 3 sessions in a row. Try a different exercise for this muscle for the next 4-6 weeks, then revisit.'
       : 'No progress for 2 sessions. Try shifting to a higher rep range (15-20) for 3 weeks, then return to this weight.',
   };
-}
-
-// Volume confidence, how much to trust the adaptive landmark estimate for a muscle.
-// Based on number of feedback data points collected.
-export function getVolumeConfidence(dataPoints) {
-  if (dataPoints < 3)  return { level: 'low',    label: 'Estimated', description: 'Starting range. Not yet personalised to you.' };
-  if (dataPoints < 6)  return { level: 'medium',  label: 'Learning',  description: 'Based on limited data. Adjust after each check-in.' };
-  return                      { level: 'high',    label: 'Personalised', description: 'Based on your logged response data.' };
 }
 
 // RP-classic deload prescription
@@ -1563,30 +1349,4 @@ export function detectLaggingMuscles(weeklyVolumeHistory = [], minWeeks = 3) {
     (b.mev - b.avgSets) - (a.mev - a.avgSets),
   );
   return results;
-}
-
-// Check if a deload is recommended based on adaptation events from the current week
-// events: array of adaptation_event objects
-// Returns { shouldDeload, triggeredMuscles, reason }
-export function evaluateDeloadTriggers(events = []) {
-  const triggers = events.filter(e => e.decision === 'deload_trigger');
-  const triggeredMuscles = [...new Set(triggers.map(e => e.muscle).filter(Boolean))];
-
-  if (triggeredMuscles.length >= 2) {
-    return {
-      shouldDeload: true,
-      triggeredMuscles,
-      reason: `${triggeredMuscles.length} muscle groups exceeded their weekly limit. A lighter week is recommended.`,
-    };
-  }
-
-  if (triggeredMuscles.length === 1) {
-    return {
-      shouldDeload: false,
-      triggeredMuscles,
-      reason: `${MUSCLE_DISPLAY_NAMES[triggeredMuscles[0]] || triggeredMuscles[0]} is close to its weekly limit. Keep an eye on it next session.`,
-    };
-  }
-
-  return { shouldDeload: false, triggeredMuscles: [], reason: null };
 }

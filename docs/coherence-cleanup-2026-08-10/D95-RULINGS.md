@@ -137,3 +137,19 @@ live computeSetTargets · FR-C4-5 partner telemetry catalogue ·
 FR-C4-6 notification category derivation gaps · FR-PW-1 peak-week
 retirement design · plus H4 listing updates. FR-1..FR-5 carried
 unchanged.
+
+## Wave rulings (D95-2, during implementation)
+
+- **plateMath.js**: the dead-functions lane's re-proof found ONE live
+  export (DEFAULT_BAR_KG, the warm-up ramp's bar floor). Ruled:
+  constant relocated to warmupRamp.js (its live consumer's home), the
+  D14/D57-rejected calculator module and its test deleted, the
+  boundary tombstone now passes honestly.
+- **FR-C4-7 (new founder item, ED/privacy-adjacent)**: the
+  progress-photos gallery renders each photo's self-logged capture
+  weight (ProgressPhotosScreen.js:1263 area) without the per-item
+  suppressed/hideExact gate the three scan-stats sites carry.
+  Whether screen-level suppression already covers every reachable
+  path needs its own evidence pass; a unilateral gate change on a
+  body-image surface is not the lead's call. Flagged by the wave,
+  recorded, untouched.
