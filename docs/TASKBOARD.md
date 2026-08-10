@@ -1350,6 +1350,19 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
+- **H4 IS NOW A PRODUCT-TRUTH RELEASE BLOCKER (elevated by the
+  Campaign 5 order, 2026-08-10).** The published Play/App Store
+  listings still promise cardio logging, which no longer exists. The
+  repo does not own the authoritative listing source; only the founder
+  can clear this. EXACT ACTION BEFORE ANY RELEASE: in Play Console
+  (Store presence → Main store listing) and App Store Connect (App
+  Information / version metadata), remove every cardio-logging claim -
+  the stale lines are enumerated in docs/PLAY_STORE_LISTING.md
+  (:41,:44,:56,:149,:202-203 area) and
+  docs/APP_STORE_CONNECT_LISTING.md (:326 area) - and BOTH Data
+  Safety / privacy declarations must drop cardio as a collected data
+  type. The in-repo source docs carry STALE-ON-CARDIO banners and must
+  be refreshed before pasting.
 - **CAMPAIGN 4 (2026-08-10) — update the published listings and rule on
   the FR-C4 items.** Full detail per item:
   `docs/coherence-cleanup-2026-08-10/D95-RULINGS.md` (founder-items
@@ -1664,6 +1677,45 @@ workflow survives as a fallback.
   untouched; deterministic no-AI coaching intact; STOP after
   Campaign 4 (no onboarding restructuring, no long-term-user work).
   40-item final handover.
+- CAMPAIGN 5: FIRST-USE, ONBOARDING AND FIRST-BLOCK JOURNEY
+  (2026-08-10, founder order) - IN FLIGHT on claude/campaign5-first-use
+  (from main 1665f4ba). NOT a feature campaign: make INSTALL → ACCOUNT
+  → CONSENT → SETUP → FIRST PLAN → FIRST WORKOUT → FIRST WEEK → FIRST
+  CHECK-IN → FIRST RECOVERY WEEK → FIRST BLOCK COMPLETION → FIRST
+  PERSONALISED NEXT BLOCK exceptionally clear. Three first-use laws:
+  MINIMUM REQUIRED INFORMATION MAXIMUM EARLY VALUE (every input
+  classified A-H: A required-before-safe-use, B before training
+  prescription, C before nutrition prescription, D deferrable
+  personalisation, E optional, F state-gated, G advanced-never-first-
+  use, H legacy); DO NOT TEACH THE PRODUCT BEFORE USE (do → see
+  result → explain when relevant); NO FALSE PERSONALISATION (research
+  + profile day 1; learning claimed only when history exists -
+  Campaign 2 provenance laws). 45 phases: journey map from code,
+  entry/account, Article 9 comprehension (never weakened), wellbeing/
+  calm first-run, profile input necessity matrix, goal-vs-phase
+  comprehension, Free/Pro paths + trial/paywall comprehension (billing
+  LOCKED - copy conflicts STOP for founder), units timing, first plan/
+  block/home/workout/progression/PR/summary/feedback, first week +
+  missed week, first check-in, first Pro nutrition week, weigh-in
+  habit, first recovery week, block completion, personalised next
+  block, repeat-vs-adjust, permissions timing, notifications, 
+  interrupted onboarding, back navigation, Free/Pro first month,
+  experienced + novice lenses, empty states, copy density, visual
+  hierarchy (no redesign), onboarding analytics (NO new telemetry by
+  default), ONBOARDING_QUIZ_FIRST stays off with rollback infra
+  intact, campaign5.firstUse.test.js matrix, synthetic end-to-end
+  first user + variants, THREE adversarial reviews (brand-new user /
+  interruption-state / experienced user), release-truth audit (H4
+  stays tracked until founder action). HARD CONSTRAINTS: no AI, no
+  cardio, no new social/gamification/training/nutrition scope, no
+  advanced controls in first use, Article 9 + ED safety + D92-11
+  untouched, billing untouched, no auto block creation, migrations
+  132-135 + 049 unrun, no EAS, STOP after Campaign 5 (no
+  returning-user work). 64-item final handover.
+  RECOVERY: order verbatim in session scratchpad
+  c5-CAMPAIGN5-ORDER.txt; campaign docs in
+  docs/first-use-audit-2026-08-10/ (CAMPAIGN-LOG.md = running state);
+  rulings register as D96.
   RECOVERY: order verbatim in session scratchpad
   c4-CAMPAIGN4-ORDER.txt; campaign docs in
   docs/coherence-cleanup-2026-08-10/ (CAMPAIGN-LOG.md = running

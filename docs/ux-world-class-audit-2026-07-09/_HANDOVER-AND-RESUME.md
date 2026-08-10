@@ -1,7 +1,23 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ FRESH SESSION START HERE (2026-08-10, after Campaign 4) ★
+## ★ FRESH SESSION START HERE (2026-08-10, Campaign 5: first use) ★
+
+**Campaign 5 (first-use, onboarding and first-block journey) is IN
+FLIGHT on `claude/campaign5-first-use` from main `1665f4ba`. Live
+state: docs/first-use-audit-2026-08-10/CAMPAIGN-LOG.md + the taskboard
+Campaign 5 block. Order verbatim in the session scratchpad
+(c5-CAMPAIGN5-ORDER.txt). Rulings register as D96. NOT a feature
+campaign: three first-use laws (minimum required information /
+don't teach before use / no false personalisation), A-H input
+classification, 45 phases, three adversarial reviews, 64-item
+handover. H4 is now a PRODUCT-TRUTH RELEASE BLOCKER (taskboard §3).
+Peak-week wording reconciled in D95-RULINGS.md (dated block).
+Campaigns 1-4 COMPLETE (D92-D95). The block below is the superseded
+post-Campaign-4 record.**
+
+===============================================================================
+## ★ SUPERSEDED (2026-08-10, after Campaign 4) ★
 
 **Campaigns 1-4 are ALL COMPLETE and merged to main (D92/D93/D94/D95).
 Campaign 4 (whole-product coherence, legacy/dead-code cleanup,
