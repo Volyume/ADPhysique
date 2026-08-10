@@ -67,9 +67,20 @@ consequence, cardio permanently out, D92-11 untouched, migrations
   SETTINGS-OWNERSHIP.md + review files.
 - P23 pins — campaign3.discoverability.test.js (15 pins). Full suite
   9,756 passing, lint clean at ba120bd5.
-- P24 — IN FLIGHT: two Opus reviews (A normal user, B power
-  user/state truth). Findings will be actioned, then final gates,
-  merge, register close, 36-item handover.
+- P24 — DONE. Review A: 6/10 PASS, 4 findings ALL FIXED (three
+  cross-tab dead taps in the campaign's own shortcuts, now through
+  navigateCrossTab; offset row energy units). Review B: 11 findings -
+  9 FIXED (offset row applied-delta truth, goal-change summary source,
+  tier-safe hub sub, onboarding morning hours, Android-only channel
+  copy, Article 9 revocation after lapse, read-only hint, both-routes
+  empty state, canary guard extended), 2 RULED pre-existing mirror
+  architecture (documented for Campaign 4). Full suite 9,757 passing,
+  lint clean.
+- P25 boundary — VERIFIED: no cardio entry/setting/education added
+  (pinned); no AI chat; social scope unchanged; no automatic block
+  transition; safety thresholds, ED logic, privacy contracts, engines
+  untouched; no migration run; no build shipped.
+- CAMPAIGN COMPLETE - merged to main; 36-item handover in chat.
 - P2-P25 — NOT STARTED.
 
 ## Landed commits (this campaign)

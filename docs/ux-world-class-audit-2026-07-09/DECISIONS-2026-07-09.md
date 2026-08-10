@@ -2583,3 +2583,18 @@ per setting, controls at the point of consequence.
    exercise removal and diary multi-select (same handlers, no new
    state); the saved-meals empty state names its gesture; entry rows
    disclose the hold shortcut to screen readers.
+
+## D94 addendum — reviews and campaign close (lead, 2026-08-10)
+
+4. Both Phase 24 reviews ran; every genuine finding actioned
+   (evidence: REVIEW-A-normal-user.md, REVIEW-B-power-user.md +
+   D94-3 in SETTINGS-OWNERSHIP.md). Notables: the campaign's own
+   three contextual shortcuts were cross-tab dead taps, fixed through
+   navigateCrossTab with the canary guard extended; the Diary offset
+   disclosure now states the APPLIED delta only; the goal-change
+   summary reads the live protein source; Article 9 cycle revocation
+   survives a lapse. Two mirror findings ruled pre-existing
+   architecture, documented for Campaign 4.
+5. Boundary review clean (cardio/AI/social/auto-transition/safety/
+   engines/migrations/builds). Campaign closed; five founder rulings
+   (FR-1..FR-5) remain open by design.

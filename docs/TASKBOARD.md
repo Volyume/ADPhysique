@@ -1589,8 +1589,13 @@ workflow survives as a fallback.
   Originally opened as: IN FLIGHT on branch claude/campaign2-comprehension
   (from main 0a552cc4).
 - CAMPAIGN 3: DISCOVERABILITY, SETTINGS AND EXISTING-FEATURE UX
-  (2026-08-10, founder order) - IN FLIGHT on branch
-  claude/campaign3-discoverability (from main 9aae57cb). Objective:
+  (2026-08-10, founder order) - COMPLETE, merged to main the same day;
+  36-item handover delivered in chat. Full record:
+  docs/discoverability-audit-2026-08-10/ (seven files) + D94 in the
+  register. FIVE FOUNDER RULINGS OPEN (FR-1..FR-5 in
+  SETTINGS-OWNERSHIP.md). Campaign 4 list carried in the same folder.
+  Originally: IN FLIGHT on claude/campaign3-discoverability (from
+  main 9aae57cb). Objective:
   every EXISTING meaningful feature and behaviour-changing control
   discoverable at the moment of need, WITHOUT clutter, a settings
   dumping ground, duplicated controls, new scope, AI search/chat, or
