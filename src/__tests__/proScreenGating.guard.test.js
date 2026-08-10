@@ -10,7 +10,7 @@
  * HOCs). That fenced block is the app's single canonical enumeration of every
  * Pro screen: nothing outside it declares a `Gated*` constant. If a future
  * Pro feature (food diary, barcode, meal suggestions, targets, macros,
- * cardio, check-ins, Precision Coaching, division plans, training partners,
+ * check-ins, Precision Coaching, division plans, training partners,
  * progress-photos/body-metrics history, ...) is added to that block without
  * a guard call, a free user would reach it with no paywall -- silently
  * breaking the binary free/pro constitution. This guard would fail.
@@ -103,7 +103,7 @@ describe('Pro-only screens block (RootNavigator.js): self-maintaining sweep', ()
 
 // Today's known-critical Pro routes, lifted from the CLAUDE.md binary
 // free/pro constitution: food diary, barcode/label scanning, meal
-// suggestions/plan/recipes, nutrition targets/macros, cardio, check-ins,
+// suggestions/plan/recipes, nutrition targets/macros, check-ins,
 // Precision Coaching, division/plan updates, and training partners, plus the
 // read-only lapse views (body metrics, progress photos). Each entry pairs
 // the `Gated<Name>` wrapper constant with every navigator route `name` it is
@@ -122,13 +122,11 @@ const CRITICAL_PRO_SCREENS = [
   { gated: 'GatedNutritionTargets', routes: ['NutritionTargets'] },
   { gated: 'GatedMealNames', routes: ['MealNames'] },
   { gated: 'GatedPerDayTargets', routes: ['PerDayTargets'] },
-  // LogCardio, BodyMetrics and ProgressPhotos are each registered in more
-  // than one tab stack (Diary/Home, and Progress) so free deep-linking
-  // cannot bypass the guard via either entry point -- the regex below
-  // matches every occurrence of the route name across the whole file, so one
-  // list entry still checks ALL of a route's registrations.
-  { gated: 'GatedLogCardio', routes: ['LogCardio'] },
-  { gated: 'GatedCardioHistory', routes: ['CardioHistory'] },
+  // BodyMetrics and ProgressPhotos are each registered in more than one tab
+  // stack (Home and Progress) so free deep-linking cannot bypass the guard
+  // via either entry point -- the regex below matches every occurrence of
+  // the route name across the whole file, so one list entry still checks
+  // ALL of a route's registrations.
   { gated: 'GatedWeeklyCheckIn', routes: ['WeeklyCheckIn'] },
   { gated: 'GatedCoachOutput', routes: ['CoachOutput'] },
   { gated: 'GatedProGoalSetup', routes: ['ProGoalSetup'] },

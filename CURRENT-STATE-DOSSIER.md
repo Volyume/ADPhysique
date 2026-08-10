@@ -1,3 +1,5 @@
+⚠ STATUS (2026-08-10): SUPERSEDED SNAPSHOT - do not build from this document. Compiled 2026-07-02 and never refreshed; despite the name it does NOT describe the current state. It predates the flat-diary revert (D75), the adaptive mesocycle build (D91) and Campaigns 1-4. Kept for history. The current whole-product map is docs/_FULL-APP-PRODUCT-MAP.md; current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md.
+
 # VOLYUME — CURRENT-STATE DOSSIER
 
 Compiled 2026-07-02 from direct code inspection of the repository at that date. Facts only: everything below describes what IS in the codebase. Claims that could not be verified against code are marked UNVERIFIED. File paths are repo-relative; citations are kept only where load-bearing or surprising.

@@ -1,8 +1,10 @@
 # Supabase migrations — application + verification guide
 
-> **Migration tracking is mandatory** per `CLAUDE.md` §
-> "Permanent engineering rules" Rule 6. This document is the
-> authoritative tracker for: migration number, purpose, applied
+> **Migration tracking is mandatory** per `CLAUDE.md` § 2 INVIOLABLE
+> CONSTRAINTS, "Database schema" (the older citation to a
+> "Permanent engineering rules Rule 6" section was dangling: `CLAUDE.md`
+> has sections 1-4 plus DETAILED RULES, and no Rule 6). This document is
+> the authoritative tracker for: migration number, purpose, applied
 > locally, applied remotely, safe to re-run, rollback notes, and
 > app-code dependencies. Keep this file current when adding any
 > migration; an undocumented migration is not considered complete.
@@ -22,8 +24,11 @@ unless the file header says otherwise.
 > batch should have created. On 2026-07-10, under this model, **migrations
 > 101-116 were applied to EU-Dublin and verified** (17/17 object checks
 > green; the prior founder-run state had stopped after 100/102's DDL, and
-> the deployed telemetry allow-list predated 101). **049 and 059 remain
-> HELD** and are excluded from any batch until the founder unholds them.
+> the deployed telemetry allow-list predated 101). 049 and 059 were both
+> excluded from that batch. **059 has since been applied** (see the
+> 2026-08-10 status block and the 059 row below); **only 049 is still
+> HELD**, and it stays excluded from every batch until the founder
+> unholds it.
 >
 > **2026-08-09: migrate_131 (mesocycles.block_ledger jsonb) applied to
 > EU-Dublin and verified** under the founder's staged order ("1. Let
@@ -37,24 +42,63 @@ unless the file header says otherwise.
 > ordered after migrate_129/130 (both already applied 2026-08-08).
 > Additive + idempotent; rollback `DROP COLUMN block_ledger`.
 
-## Application order and verification playbook (migrations 037-057)
+## CURRENT STATUS (re-derived 2026-08-10)
 
-> Authoritative applied-vs-pending status lives in `docs/CURRENT_STATUS.md`
-> § 3. This table is the apply-order and verification playbook for every
-> migration from 037 onward; a row appearing here does not by itself mean
-> the migration is still unapplied. Per CURRENT_STATUS § 3, migrations
+This is the authoritative applied-vs-pending statement for the repository.
+It replaces the old pointer to `docs/CURRENT_STATUS.md` § 3, which has
+carried a SUPERSEDED/CLOSED banner since 2026-07-10: a current locked
+contract must not delegate its authority to a superseded audit.
+
+- **Files in this folder: 132** (`ls supabase/migrate_*.sql | wc -l`).
+  Numbering runs 001-135 with 011, 026, 082 and 083 never used and two
+  files sharing the number 085 (`migrate_085_food_quality_telemetry.sql`
+  and `migrate_085_notification_preferences_checkin_missed.sql`).
+- **Applied to EU-Dublin production: 001-048, 050-071 and 073-131** (072 is
+  the one exception below, deliberately never applied). The full sweep
+  of 2026-07-27 (`docs/TASKBOARD.md`, "CLOSED (2026-07-27) - FULL
+  migration sweep") checked every object each migration creates against
+  the live schema and found zero missing, plus the constraint-only cases
+  separately. 129 and 130 followed on the founder's 2026-08-06 GO and
+  131 on 2026-08-09.
+- **HELD: 049 only.** `migrate_049_drop_peak_week_plans.sql` is
+  destructive and its client-side prerequisites have not landed. It must
+  not be applied. See its own header and the row below.
+- **Written but NOT applied: 132, 133, 134, 135.** All four are awaiting
+  the founder's exact phrase "run against production" and say so in their
+  own headers. They are Campaign 1 items and ship with their client-side
+  counterparts.
+- **059 IS APPLIED.** Every "059 is drafted / pending / held" line that
+  survives further down this file is stale and is corrected in place. The
+  live CHECK on `food_entries.meal_slot` carries the `meal_[0-9]+`
+  pattern, and the client has written numbered slots since
+  `src/lib/food/mealSlots.js`, `mealPlanAssembler.js` and
+  `MealNamesScreen.js` shipped; were 059 unapplied, every diary push would
+  fail the old fixed-list CHECK.
+- **072 was never applied and never will be.** Its content was delivered
+  by `migrate_118_workouts_recipes_sync_schema_fix.sql` on 2026-07-11; the
+  file is kept for history only (its own header says so).
+
+Per-migration detail lives in two tables below: the original apply-order and
+verification playbook covers 037-071, and the rebuilt tracker
+("Migrations 072-135") covers everything after it.
+
+## Application order and verification playbook (migrations 037-071)
+
+> This table is the apply-order and verification playbook for every
+> migration from 037 to 071; a row appearing here does not by itself mean
+> the migration is still unapplied. Migrations
 > 037-048, 050-058 are applied (the 048, 050-055, 058 set was applied by the
-> founder on 2026-06-01); 049 remains held until the next AAB ships; 059
-> (numbered meal slots) is DRAFTED and pending founder apply, to ship with the
-> diary flexible-meal change; and **060-067 were APPLIED by the founder on
+> founder on 2026-06-01); 049 remains held (destructive, client cleanup
+> outstanding); 059 (numbered meal slots) is APPLIED and its
+> `meal_[0-9]+` CHECK is live; and **060-067 were APPLIED by the founder on
 > 2026-06-06** (060 morning-weights reconcile / SYNC-6, 061 search_path pinning /
 > HP-1, 062 delete-fallback erasure gap / HP-3, 063 engagement telemetry / LB-8,
 > 064 cardio_log table, 065 trial 21→14 days, 066 users_profile.billing_period,
 > 067 client-pro self-grant fix / subscriptions audit C-1); **068 (tier-RPC
 > GUC bypass) and 069 (auth.users FK cascade) were APPLIED by the founder on
 > 2026-06-07** (068 still needs its verification query run to confirm the tier
-> RPCs no longer throw). Only **049 and 059 remain held** until the next AAB
-> ships. **070 (protect trial/entitlement columns from client writes / trial-subscription
+> RPCs no longer throw). Only **049 remains held**.
+> **070 (protect trial/entitlement columns from client writes / trial-subscription
 audit C-1) and 071 (trial ledger / delete-and-restart abuse guard) were APPLIED by the
 founder on 2026-06-08**, closing the trial extend/reset and delete-and-restart holes.
 Apply any future migration in numeric order in the SQL Editor.
@@ -73,7 +117,7 @@ Apply any future migration in numeric order in the SQL Editor.
 | 046 | `migrate_046_recipe_ingredients_soft_delete.sql` | Adds `updated_at` + `deleted_at` columns to `recipe_ingredients`, plus a BEFORE UPDATE touch trigger and a partial index over live rows. Required for the registry's softDelete:true + LWW contract on recipe_ingredients; without it the per-table push raises PGRST204 on every sync. | See § Verify recipe_ingredients soft-delete |
 | 047 | `migrate_047_body_metrics_weekly_checkins_lww.sql` | Adds `updated_at` to both `body_metrics` and `weekly_checkins_v2` (+ touch triggers refusing stale writes), plus `deleted_at` and a partial live index to `body_metrics`. Closes the locked LWW + soft-delete gaps for `body_composition_log` and `weekly_checkins_v2` registry entries. | See § Verify body_metrics + weekly_checkins_v2 LWW |
 | 048 | `migrate_048_food_preferences_kind.sql` | Adds `kind text NOT NULL DEFAULT 'fav'` + a CHECK constraint to `food_favourites` so the same table holds both "user likes this" (fav) and "user excluded this" (dislike). Backs the food-dislike feature added 2026-05-27. Old AAB sends rows without `kind`; DEFAULT covers them. | See § Verify food_favourites.kind |
-| 050 | `migrate_050_weekly_checkins_cardio_adherence.sql` | Adds nullable `cardio_adherence text` to `weekly_checkins_v2`. Destination for the coach's confirm-then-apply cardio prescription (GAP row 4): once applied, the check-in shows a cardio-adherence question and the answer ships in the per-table push. Additive + nullable; the frozen +4 AAB omits it (left NULL), no behaviour change. | See § Verify weekly_checkins_v2.cardio_adherence |
+| 050 | `migrate_050_weekly_checkins_cardio_adherence.sql` | Adds nullable `cardio_adherence text` to `weekly_checkins_v2`. Applied; column retained. **Historical: cardio logging and the coach's cardio prescription were removed from the product on 2026-08-10 (D92-1/D95).** The check-in asks no cardio question and the save deliberately omits the key so stored answers are preserved (D95 H5). The column now holds history only; do not drop it. Additive + nullable. | See § Verify weekly_checkins_v2.cardio_adherence |
 | 051 | `migrate_051_food_frequents.sql` | Creates `food_frequents` cache table (RLS read-own) + `refresh_food_frequents()` nightly pg_cron worker (top-20 foods over 30 days, all users) + `food_frequents_pull()` RPC the client calls. Backs the Frequents search tab (GAP row 28). Fully additive: the frozen AAB never references it, and it sits outside the food_sync_pull/push cycle, so existing sync is untouched. Requires `pg_cron` (already enabled by migration 031). | See § Verify food_frequents |
 | 052 | `migrate_052_daily_water_reconcile.sql` | **Apply ASAP: fixes the live "Sync error" badge.** The live `daily_water` table is missing `entry_date` (drifted from migrate_015), so `food_sync_push` throws 42703 and fails the whole food push + the entire sync run. This recreates `daily_water` to the canonical shape, but only when `entry_date` is missing (no-op + safe to re-run otherwise). No data loss: daily_water never synced successfully, so the cloud table is empty; clients re-push local water on next sync. | See § Verify daily_water reconcile |
 | 053 | `migrate_053_device_push_tokens.sql` | Creates `device_push_tokens(user_id, expo_push_token, platform, ...)` with composite PK + RLS + touch trigger. Backs the Expo remote-push pipeline (NOTIFICATIONS_LOCKED.md provider stack). The client registers its token after sign-in; the `send-push` Edge Function reads rows (service role) to fan out; the Play Billing RTDN webhook calls it on payment failure. Fully additive; the frozen AAB has no writer for this table. **Also requires `extra.eas.projectId` in app.json before any token can be obtained (see founder-action queue).** | See § Verify device_push_tokens |
@@ -82,11 +126,11 @@ Apply any future migration in numeric order in the SQL Editor.
 | 056 | `migrate_056_daily_steps.sql` | Creates `daily_steps(user_id, entry_date, steps, source, updated_at)` with composite PK + RLS + a BEFORE UPDATE touch trigger (last-write-wins), same per-day shape as `daily_water`. The activity store for the cardio/steps audit: the manual step log writes here and the coach's step target checks against it. Bidirectional sync via the `daily_steps` registry entry + `src/lib/sync/tables/dailySteps.js`. `user_id` FK is ON DELETE CASCADE so account deletion clears it; `delete_user_data` is not rewritten here (fold a `daily_steps` DELETE in at its next revision). Fully additive: the frozen AAB has no writer. Safe to apply any time. | See § Verify daily_steps |
 | 057 | `migrate_057_meal_slots_periworkout.sql` | Relaxes the `food_entries.meal_slot` CHECK (set by migration 015) to also allow `'preworkout'` and `'postworkout'`, backing the new Pre-workout and Post-workout diary sections and the curated peri-workout meals. Purely additive: the four original slots still pass, so nothing stored changes and the frozen AAB (which only sends the original four) keeps syncing. Local SQLite `meal_slot` has no CHECK, so logging works before this is applied; only cloud sync of the new slots needs it. Apply before a build that writes the new slots reaches production sync. | See § Verify peri-workout meal slots |
 | 058 | `migrate_058_weekly_checkins_steps_avg.sql` | Adds nullable `steps_avg integer` to `weekly_checkins_v2`. The persistent home for the week's average steps the Precision Coach reads as a secondary signal: the check-in saves the auto average when 4+ days of `daily_steps` are registered, otherwise the user's typed average. Additive + nullable, mirrors migration 050; the frozen AAB omits it (left NULL). The per-table weekly-checkins push ships `steps_avg`, so without the column that push is rejected. | See § Verify weekly_checkins_v2.steps_avg |
-| 059 | `migrate_059_meal_slots_numbered.sql` | **Numbered meal slots. Pending founder apply.** Replaces the fixed `food_entries.meal_slot` CHECK (six legacy values, set by 015 + 057) with a pattern CHECK allowing `meal_[0-9]+` plus the legacy values, backing the flexible "Meal 1..N" diary model (founder direction 2026-06-01). Purely additive: the six legacy values still match, so the frozen AAB keeps syncing; a `meal_N` row synced down to the old build is just not displayed, no crash. Apply before a client that writes `meal_N` slots reaches production sync, otherwise those pushes fail the old CHECK (caught per-table, row stays local, wider run still succeeds). | `SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname LIKE '%meal_slot%';` shows the `meal_[0-9]+` pattern. |
+| 059 | `migrate_059_meal_slots_numbered.sql` | **Numbered meal slots. APPLIED** (verified 2026-07-27: the live CHECK carries the `meal_[0-9]+` pattern). Replaces the fixed `food_entries.meal_slot` CHECK (six legacy values, set by 015 + 057) with a pattern CHECK allowing `meal_[0-9]+` plus the legacy values, backing the flexible "Meal 1..N" diary model (founder direction 2026-06-01). Purely additive: the six legacy values still match, so the frozen AAB keeps syncing; a `meal_N` row synced down to the old build is just not displayed, no crash. Apply before a client that writes `meal_N` slots reaches production sync, otherwise those pushes fail the old CHECK (caught per-table, row stays local, wider run still succeeds). | `SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname LIKE '%meal_slot%';` shows the `meal_[0-9]+` pattern. |
 | 060 | `migrate_060_morning_weights_updated_at.sql` | **SYNC-6. Applied 2026-06-06 (founder).** Adds `updated_at timestamptz NOT NULL DEFAULT now()` + a BEFORE UPDATE touch trigger to `morning_weights` (mirrors 047; no `deleted_at`, the table is hard-delete). The cloud table never had `updated_at`, so the client pull's `.gte('updated_at', cursor)` watermark could never advance and the local applier's `INSERT OR IGNORE` never updated an existing row: a weight edited on another device never reconciled. The client commit switches `insertMorningWeightFromCloud` to a last-write-wins upsert. Additive: the frozen AAB pushes without `updated_at` (DEFAULT + trigger fill it) and its pull starts working rather than breaking. `_pushMorningWeights` does NOT send `updated_at`; the trigger manages it. Apply before a build that relies on cross-device weight reconcile. | `SELECT column_name FROM information_schema.columns WHERE table_name='morning_weights' AND column_name='updated_at';` returns 1 row; `SELECT tgname FROM pg_trigger WHERE tgname='morning_weights_touch_updated_at';` returns 1 row. |
 | 061 | `migrate_061_pin_securitydefiner_search_path.sql` | **HP-1. Applied 2026-06-06 (founder).** Pins `search_path = public` on the last three SECURITY DEFINER functions that never set it: `recompute_daily_intake_rollup(uuid, date)` (migration 015), `clear_goal_lock()` (017), `record_health_consent(boolean, text, text)` (019). Every other SECURITY DEFINER function already pins it. Uses `ALTER FUNCTION ... SET search_path`, so bodies and signatures are unchanged and the RPC contract is identical: the app and the frozen AAB are unaffected. Safe to apply any time; idempotent. | `SELECT proname, proconfig FROM pg_proc WHERE proname IN ('recompute_daily_intake_rollup','clear_goal_lock','record_health_consent');` returns 3 rows, each `proconfig` containing `search_path=public`. |
 | 063 | `migrate_063_engagement_telemetry_events.sql` | **LB-8. Applied 2026-06-06 (founder).** Adds `workout_started`, `workout_completed`, `plan_activated` to the `record_engine_telemetry` allow-list (the core activation/retention loop the dashboards were missing). Reproduces the migration 043 list verbatim plus the three names; payloads carry counts/flags only and flow through the LB-9 opt-out gate. Apply before a build that emits them reaches production sync; until then those three pushes are rejected and retried, nothing else affected. Idempotent. | `SELECT pg_get_functiondef('record_engine_telemetry(text,jsonb,timestamptz)'::regprocedure)` contains `workout_started`, `workout_completed` and `plan_activated`. |
-| 064 | `migrate_064_cardio_log.sql` | **Cardio integration. Applied 2026-06-06 (founder).** New `cardio_log` table (one row per logged cardio session, PK `(user_id, id)`, soft delete + LWW, RLS own-rows, BEFORE UPDATE touch trigger). Backs user-led cardio logging so cardio survives reinstall and syncs across devices via the `cardio_log` registry entry + `src/lib/sync/tables/cardioLog.js`. `est_kcal` is feedback only. Fully additive; the frozen AAB has no writer or reader. Safe to apply any time; idempotent. **Until this is applied, the `cardio_log` push/pull handlers treat the "table not in schema cache" (PGRST205 / 42P01) response as a benign skip (errors:0), so the missing cloud table does not raise `sync.push.cardio_log.errors` in Sentry or block sign-out (sign-out is push-first and aborts on any errored table). Apply 064 to turn on cardio cloud sync.** Separately, the LOCAL SQLite `cardio_log` schema was first added in the middle of `SCHEMA_MIGRATIONS` instead of appended, so existing installs never created the table; a corrective trailing migration (database.js, 2026-06-03) now creates it on next launch. | `SELECT to_regclass('public.cardio_log');` is non-null; `SELECT tgname FROM pg_trigger WHERE tgname='cardio_log_touch_updated_at';` returns 1 row; an own-row insert succeeds and a cross-user insert is rejected by RLS. |
+| 064 | `migrate_064_cardio_log.sql` | **Applied 2026-06-06 (founder). Table RETAINED, feature RETIRED.** Created the `cardio_log` table (one row per logged cardio session, PK `(user_id, id)`, soft delete + LWW, RLS own-rows, BEFORE UPDATE touch trigger). **Historical: cardio logging was removed from the product on 2026-08-10 (D92-1/D95, commit `3e8ab0c6`)** - the screens, routes, Settings toggle, activity library and passive Health import are gone and no local writer remains. Sync is now **pull-only**, not bidirectional (`direction: 'pull_only'` in `src/lib/sync/registry.js`; push handler removed, D95 H1), retained so existing cloud history is never stranded by a sign-out local wipe. No product surface reads the rows. Do not drop the table: it holds real user history. The old "apply 064 to turn on cardio cloud sync" instruction and the PGRST205 benign-skip note are both spent (the table exists). Separately, the LOCAL SQLite `cardio_log` schema was first added in the middle of `SCHEMA_MIGRATIONS` instead of appended, so existing installs never created the table; a corrective trailing migration (database.js, 2026-06-03) now creates it on next launch. | `SELECT to_regclass('public.cardio_log');` is non-null; `SELECT tgname FROM pg_trigger WHERE tgname='cardio_log_touch_updated_at';` returns 1 row; an own-row insert succeeds and a cross-user insert is rejected by RLS. |
 | 065 | `migrate_065_trial_14_days.sql` | **Trial 21→14 days. Applied 2026-06-06 (founder).** `CREATE OR REPLACE start_cascade` with the in-app cardless reverse-trial window changed from `interval '21 days'` to `interval '14 days'` (founder direction 2026-06-06: 14 cardless days + a 7-day Play intro free trial = 21 days free total). Only the interval changes; signature, return keys and the `tier_history` insert are identical to migration 033. The `cascade_advance_due_users` worker is unchanged (it expires on `pro_trial_ends_at <= now()`, so a 14-day window auto-expires at day 14). Safe during beta: `PRO_BETA_ACTIVE` masks trial_state, so no one loses Pro on the current build. The frozen AAB reads `pro_trial_ends_at` with no hardcoded 21-day break (its paywall string still shows "21 days", cosmetic only). Idempotent; safe to re-run. Rollback = re-apply 033's body. Apply alongside the real Play Billing path + the Play Console 7-day offer. | `SELECT pg_get_functiondef('start_cascade()'::regprocedure)` contains `interval '14 days'` and not `interval '21 days'`. |
 | 066 | `migrate_066_users_profile_billing_period.sql` | **Billing period. Applied 2026-06-06 (founder).** Adds nullable `billing_period text` to `users_profile` so the Subscription screen shows the right price for monthly vs annual subscribers (flat pricing, 2026-06-06). The Play RTDN webhook (`play-billing-rtdn`) sets it from the purchased product id (`pro_monthly`→'monthly', `pro_annual`→'annual') via a service-role PATCH; not guarded by the `protect_users_profile_tier` trigger (that guards `tier` only). Client reads it via `refreshTierFromCloud`→`store.billingPeriod`→SubscriptionScreen; NULL shows the monthly price, so the frozen AAB and pre-webhook rows are fine. Additive, idempotent (`ADD COLUMN IF NOT EXISTS`). **Redeploy the play-billing-rtdn edge function after applying so it writes the column.** Rollback = `DROP COLUMN billing_period`. | `SELECT column_name FROM information_schema.columns WHERE table_name='users_profile' AND column_name='billing_period';` returns 1 row. |
 | 067 | `migrate_067_upgrade_tier_block_client_pro.sql` | **C-1 self-grant fix. Applied 2026-06-06 (founder).** `CREATE OR REPLACE upgrade_tier` (the authenticated function) so it may only downgrade toward `free`: it now raises on `_target_tier <> 'free'` and on `_reason IN ('user_paid','admin')`. Closes the hole where any signed-in caller could grant itself `paid_pro` with a fabricated `_payment_ref` and no receipt check. Real Pro grants come only from the Google Play RTDN via the service-role `upgrade_tier_for_user` (042) after Play API verification; the trial grant is `start_cascade` (both unchanged). Body is migration 033's verbatim plus the guard. Ships WITH the client change (paid purchase = optimistic local unlock reconciled by the RTDN-written tier: `cascade.payAt` + `store.setOptimisticPaid`). Frozen-AAB safe (it never calls `upgrade_tier('pro')`). Idempotent; safe to re-run. Rollback = re-apply 033's `upgrade_tier`. **Apply alongside deploying play-billing-rtdn, or new purchases won't grant Pro server-side.** | `SELECT upgrade_tier('pro','user_paid',NULL,'x');` raises; `SELECT upgrade_tier('free','user_skip','t',NULL);` succeeds with `tier=free`. |
@@ -96,14 +140,95 @@ Apply any future migration in numeric order in the SQL Editor.
 | 071 | `migrate_071_trial_ledger.sql` | **Trial ledger: stop delete-and-restart trial abuse. Applied 2026-06-08 (founder).** The 14-day cardless trial was anchored to `users_profile.trial_state` (keyed by `auth.uid()`), which account-delete wipes, so a delete + re-signup (even same email) got a fresh 14-day trial with no guard. Adds `private.trial_ledger` (a salted SHA-256 of the email, no user_id, in the `private` schema so it is not exposed via PostgREST, and NOT in `delete_user_data`'s list, so it deliberately survives deletion) plus `private.trial_salt` (one per-deployment random salt) and `private.email_trial_hash()`. `CREATE OR REPLACE start_cascade()` reproduces the 068 body (the **GUC** `app.allow_tier_change` bypass, NOT `session_replication_role`) and adds: for an `unstarted` account, hash the email; if it is in the ledger, move straight to `cascade_expired`/`free` (no second trial); otherwise grant the 14 days and record the hash. Privacy: hash retention after deletion is a documented legitimate-interest (fraud-prevention) exception to "delete wipes everything" (IDENTITY doc §E + privacy policy updated). Idempotent (`IF NOT EXISTS` + `CREATE OR REPLACE`; salt is `ON CONFLICT DO NOTHING` so it is generated once). Rollback = re-apply 068's `start_cascade` and drop the private objects (re-opens the abuse). | Fresh account: `SELECT start_cascade();` -> `pro_trial_active` and `private.trial_ledger` gains one row. Then delete + re-signup with the same email and run to Article 9: `SELECT start_cascade();` -> `already_trialled=true`, `trial_state='cascade_expired'`, `tier='free'` (no new 14 days). |
 | 062 | `migrate_062_delete_user_data_post025_tables.sql` | **HP-3. Applied 2026-06-06 (founder).** Extends the `delete_user_data` fallback RPC (last completed in migration 025) to the five user-scoped tables added since: `tier_history` (030), `notification_preferences` (044), `food_frequents` (051), `device_push_tokens` (053), `daily_steps` (056). The primary delete path (Edge Function -> `auth.admin.deleteUser` -> ON DELETE CASCADE) already wiped these; the gap was only the fallback used when the Edge Function is un-deployed. `account_deletions_log` is deliberately NOT wiped (it is the surviving deletion audit trail). Reproduces the 025 body verbatim plus the new section; every delete stays wrapped in `EXCEPTION WHEN undefined_table`. Identical signature, so old builds and the frozen AAB keep working. Safe to apply any time; idempotent. | `SELECT pg_get_functiondef('delete_user_data()'::regprocedure)` contains `tier_history`, `notification_preferences`, `food_frequents`, `device_push_tokens` and `daily_steps`, and still contains `account_deletions_log` nowhere. |
 
-> Migration 049 (`migrate_049_drop_peak_week_plans.sql`) is **drafted but held** — do NOT apply until the next AAB ships, so the frozen closed-test build keeps working against the table. Apply 050 before 049 if 050 is ready first; they're independent.
+> Migration 049 (`migrate_049_drop_peak_week_plans.sql`) is **drafted and HELD** - do NOT apply. It drops `peak_week_plans`, which is still live product state: `getActivePeakWeekPlan` is read by `src/screens/ProGoalSetupScreen.js` and `src/screens/CoachOutputScreen.js` (the B4 contest countdown), and the push and pull paths in `src/lib/sync.js` still carry the table. Applying it would break sync and remove a shipped surface. See the migration's own header for the full client-side prerequisite list.
 
 > Migration 051 is independent of 049/050 and safe to apply any time. Until it's applied, the Frequents tab simply shows its empty state (the `food_frequents_pull` RPC call fails quietly and the cache stays empty); nothing else is affected.
 
+## Migrations 072-135
+
+Rebuilt 2026-08-10: every migration after 071 was previously undocumented
+here, so a reader of the authoritative tracker could not learn that
+unapplied migrations exist at all. Status below is taken from each file's
+own header, cross-checked against the 2026-07-27 production sweep recorded
+in `docs/TASKBOARD.md`. Verification queries live in the migration files
+themselves; add a row here whenever a migration is added.
+
+| # | File | What it adds | Applied to production |
+|---|---|---|---|
+| 072 | `migrate_072_workouts_readiness_columns.sql` | `workouts.sleep_quality` + `energy_score` (COMP-008 pre-workout readiness). | **NEVER APPLIED, SUPERSEDED.** Its content shipped inside 118 on 2026-07-11. Kept for history; do not run. |
+| 073 | `migrate_073_session_adjustment_telemetry.sql` | Telemetry allow-list: `session_adjustment_shown`, `session_adjustment_reverted` (COMP-015). | YES (2026-07-27 sweep) |
+| 074 | `migrate_074_methodology_telemetry.sql` | Telemetry allow-list: `methodology_opened` (COMP-006). | YES (2026-07-27 sweep) |
+| 075 | `migrate_075_recap_telemetry.sql` | Telemetry allow-list: `recap_opened` (COMP-005). | YES (2026-07-27 sweep) |
+| 076 | `migrate_076_first_session_choice_telemetry.sql` | Telemetry allow-list: `first_session_choice` (COMP-013). | YES (2026-07-27 sweep) |
+| 077 | `migrate_077_chart_window_telemetry.sql` | Telemetry allow-list: `chart_window_changed` (COMP-019). | YES (2026-07-27 sweep) |
+| 078 | `migrate_078_streak_telemetry.sql` | Telemetry allow-list: `streak_week_resolved`, `streak_milestone_reached`, `streak_paused` (COMP-018). | YES (2026-07-27 sweep) |
+| 079 | `migrate_079_cancel_reason_telemetry.sql` | Telemetry allow-list: `cancel_reason_captured` (COMP-025-A, enum values only). | YES (2026-07-27 sweep) |
+| 080 | `migrate_080_step_tdee_telemetry.sql` | Telemetry allow-list: `step_tdee_modifier_evaluated` (COMP-026). | YES (2026-07-27 sweep) |
+| 081 | `migrate_081_training_partners.sql` | The four training-partner tables (`partnerships`, week signals, cheers, invites) with RLS (NEW-002). | YES (2026-07-27 sweep) |
+| 084 | `migrate_084_watch_telemetry.sql` | Telemetry allow-list: the four Apple Watch events (COMP-020). | YES (2026-07-27 sweep) |
+| 085a | `migrate_085_food_quality_telemetry.sql` | Telemetry allow-list: `meal_plan_assembled`, `food_promote_failed`, `ocr_low_confidence_saved`, `food_sanity_check_failed`. | YES (2026-07-27 sweep) |
+| 085b | `migrate_085_notification_preferences_checkin_missed.sql` | Widens the `notification_preferences` category CHECK to admit `checkin_missed` (OPP-C03). Superseded in scope by 125. | YES (2026-07-27 sweep) |
+| 086 | `migrate_086_meal_plans.sql` | `meal_plans` cloud mirror (epoch-ms timestamps, `plan_json` jsonb). | YES (2026-07-27 sweep) |
+| 087 | `migrate_087_cardio_log_ext_id.sql` | `cardio_log.ext_id` + partial unique index for passive import de-duplication. Historical: cardio logging was removed from the product 2026-08-10 (D92-1/D95); the table and column are retained, unread by any writer. | YES (2026-07-27 sweep) |
+| 088 | `migrate_088_drop_debug_log_open_insert.sql` | Drops the open INSERT policy on `debug_log_uploads` (audit F-013). | YES (2026-07-27 sweep) |
+| 089 | `migrate_089_plan_folders.sql` | `plan_folders` table + RLS + `programmes.folder_id` (free feature, never Pro-gated). | YES (2026-07-27 sweep) |
+| 090 | `migrate_090_food_delete_tombstones.sql` | `deleted_at` tombstones on `food_favourites` + `daily_water`, and the bulk pull/push RPCs taught to carry them. | YES (2026-07-27 sweep) |
+| 091 | `migrate_091_exercise_type.sql` | `exercises.exercise_type` + `custom_exercises.exercise_type` with a five-value CHECK; `weight_reps` stays the default. | YES (2026-07-27 sweep) |
+| 092 | `migrate_092_partner_end_purge.sql` | `end_partnership(_pair_id)` so unpair actually deletes the pair's shared signals and cheers (the in-app promise / GDPR). | YES (2026-07-27 sweep) |
+| 093 | `migrate_093_landmark_telemetry.sql` | Telemetry allow-list: `tonnage_milestone_reached`, `perfect_month_reached`. | YES (2026-07-27 sweep) |
+| 094 | `migrate_094_users_profile_sex.sql` | `users_profile.sex` (nullable + CHECK) so biological sex survives a cloud restore alongside the rest of the profile. | YES (2026-07-27 sweep) |
+| 095 | `migrate_095_trial_resume_within_window.sql` | `start_cascade` resumes an unspent trial inside its original 14-day window after account deletion. | YES (2026-07-27 sweep) |
+| 096 | `migrate_096_delete_user_data_completeness2.sql` | Extends the `delete_user_data` fallback RPC to every table added since 062 (Article 17 completeness). | YES (2026-07-27 sweep) |
+| 097 | `migrate_097_deletion_log_anonymise.sql` | Replaces plaintext `account_deletions_log.user_email` with a salted hash (Article 5(1)(e)). | YES (2026-07-27 sweep) |
+| 098 | `migrate_098_deletion_sweeper.sql` | Server-side deletion sweeper that finishes a deletion the Edge Function could not complete. | YES (2026-07-27 sweep) |
+| 099 | `migrate_099_funnel_telemetry.sql` | Telemetry allow-list: the activation-funnel events (`onboarding_step_completed`, the three firsts, `trial_lapse_day1_return`). | YES (2026-07-27 sweep) |
+| 100 | `migrate_100_partner_shared_blocks.sql` | `partner_shared_blocks` (one shared block per pair) + RLS + LWW trigger + purge-path extension. | YES (2026-07-27 sweep) |
+| 101 | `migrate_101_longest_run_pb_telemetry.sql` | Telemetry allow-list: `longest_run_pb_reached`. | YES 2026-07-10 (Claude-run, founder-authorised) |
+| 102 | `migrate_102_partner_safety_consent.sql` | Partner STEP A: `partner_sharing` consent type + notice version, single-mint invites, and the rest of the safety foundation. | YES 2026-07-10 |
+| 103 | `migrate_103_feature_locked_telemetry.sql` | Telemetry allow-list: `feature_locked_viewed` (the Pro lock view half of the funnel). | YES 2026-07-10 |
+| 104 | `migrate_104_photo_prompt_telemetry.sql` | Telemetry allow-list: `photo_prompt_shown`, `photo_prompt_accepted`. | YES 2026-07-10 |
+| 105 | `migrate_105_partner_weekly_intention.sql` | Partner D5-A: the mutual weekly session aim (a small integer per member per week). | YES 2026-07-10 |
+| 106 | `migrate_106_partner_cheer_kind.sql` | Partner D5-B1: the acknowledgement enum column on `partner_cheers`. | YES 2026-07-10 |
+| 107 | `migrate_107_partner_win_cards.sql` | Consent-gated partner win cards (no raw sets, food, coach notes, metrics or images). | YES 2026-07-10 |
+| 108 | `migrate_108_founder_pro_ledger.sql` | Private founder Pro ledger so founder test accounts stay Pro across delete/re-signup. | YES 2026-07-10 |
+| 109 | `migrate_109_micronutrient_columns.sql` | The 27 UK-NRV micronutrient columns on `foods` + `custom_foods` (MN-1). | YES 2026-07-10 |
+| 110 | `migrate_110_perday_target_offsets.sql` | `perday_target_offsets` cloud mirror for the per-day-of-week calorie offsets (L05-PDT1). | YES 2026-07-10 |
+| 111 | `migrate_111_nutrition_targets_goal_protein.sql` | `nutrition_targets.goal` + `protein_approach` (L05-NT1). | YES 2026-07-10 |
+| 112 | `migrate_112_allergen_excludes.sql` | `users_profile.allergen_excludes` so an FSA allergen set survives a device change. | YES 2026-07-10 |
+| 113 | `migrate_113_routine_position.sql` | `routines.position` for day-level plan reordering. | YES 2026-07-10 |
+| 114 | `migrate_114_food_entry_weight_state.sql` | `food_entries.weight_state` (`as_weighed`/`raw`/`cooked`), a stored label with no conversion. | YES 2026-07-10 |
+| 115 | `migrate_115_food_entry_eaten_at.sql` | `food_entries.eaten_at`, the optional editable time eaten (D22). | YES 2026-07-10 |
+| 116 | `migrate_116_food_library_pull_micros.sql` | Re-issues `food_library_pull` to select the micronutrient columns 109 added. | YES 2026-07-10 |
+| 117 | `migrate_117_telemetry_view_grants.sql` | Revokes anon/authenticated SELECT on `engine_telemetry_daily` (security-advisor ERROR). | YES 2026-07-11 |
+| 118 | `migrate_118_workouts_recipes_sync_schema_fix.sql` | Four cloud/client drift fixes, including 072's `workouts.energy_score` + `sleep_quality` and the recipes/saved_meals sync shape. | YES 2026-07-11 |
+| 119 | `migrate_119_lock_direct_client_writes.sql` | Closes four trust-boundary holes where a permissive RLS write policy let `authenticated` bypass a SECURITY DEFINER RPC (Codex adversarial audit). | YES - first run 2026-07-12 outside the runner, re-applied through it 2026-07-27 |
+| 120 | `migrate_120_marketing_waitlist.sql` | `marketing_waitlist` (public, GDPR-consented signups). Renumbered from a historical 119. | YES 2026-07-12 |
+| 121 | `migrate_121_marketing_hq_tables.sql` | `marketing_admins` + the four Marketing HQ tables. Renumbered from a historical 120. | YES 2026-07-12 |
+| 122 | `migrate_122_marketing_admins_self_read.sql` | Own-row read policy on `marketing_admins`. Renumbered from a historical 121. | YES 2026-07-12 |
+| 123 | `migrate_123_retention_email_loop.sql` | The four retention-email tables (log, opt-out, survey responses, schedule). Renumbered from a historical 122. | YES 2026-07-12 |
+| 124 | `migrate_124_marketing_email_optout_anon_insert.sql` | Anon INSERT-only policy on `marketing_email_optout` so the public unsubscribe page works. | YES 2026-07-12 |
+| 125 | `migrate_125_notification_preferences_category_full_enum.sql` | Widens the `notification_preferences` category CHECK to the full 23-value client enum (Sentry VOLYUME-20/21/22). | YES 2026-07-27 (founder: "Yes run 119 and 125 against production") |
+| 126 | `migrate_126_scan_calibration_events.sql` | `scan_calibration_events`, anonymous by construction, client INSERT only (D81). | YES 2026-07-13 |
+| 127 | `migrate_127_scan_calibration_vision_debug.sql` | Founder-account-only diagnostic columns on `scan_calibration_events` (D83). | YES 2026-07-13 |
+| 128 | `migrate_128_apple_review_accounts.sql` | Seeds the two App Review sign-in accounts (Pro + Free). | YES 2026-07-27 |
+| 129 | `migrate_129_mesocycles_deload_week.sql` | `mesocycles.deload_week` so the user's real deload placement can sync. | YES (file header: 2026-08-06, founder GO) |
+| 130 | `migrate_130_revoke_anon_execute_security_definer.sql` | Revokes anon EXECUTE on 34 SECURITY DEFINER functions; authenticated and service_role keep theirs. | YES (file header: 2026-08-06, founder GO) |
+| 131 | `migrate_131_mesocycles_block_ledger.sql` | `mesocycles.block_ledger` jsonb (adaptive mesocycle Stage 6). | YES 2026-08-09, verified |
+| 132 | `migrate_132_planned_muscle_volume_provenance.sql` | Landmark bounds + seed provenance on `planned_muscle_volume` (Campaign 1 P0-1). | **NO - awaiting "run against production"** |
+| 133 | `migrate_133_delete_privacy_pref_rows.sql` | Deletes `@volyume_privacy_prefs` rows that should never have been transmitted (Campaign 1 P0-2). | **NO - awaiting "run against production"** |
+| 134 | `migrate_134_stale_write_triggers.sql` | Refuse-stale-write triggers on the nine unguarded coaching-state tables (Campaign 1 P0-8). | **NO - awaiting "run against production"** |
+| 135 | `migrate_135_coach_outputs_week_unique.sql` | De-duplicates `coach_outputs` per user-week, then a unique index (Campaign 1 review finding 10). | **NO - awaiting "run against production"** |
+
+> Date note: the 2026-08-09 block near the top of this file describes 129 and
+> 130 as "already applied 2026-08-08", while both migration headers record
+> 2026-08-06. The applied fact is not in doubt; the exact date is not
+> resolvable from the repository, so both readings are left visible rather
+> than one being silently picked.
+
 ## How to apply
 
-Migrations 037-048 and 050-058 are applied (founder applied the 048,
-050-055, 058 set on 2026-06-01). 049 is held until the next AAB ships. This
+Migrations 037-048 and 050-059 are applied (founder applied the 048,
+050-055, 058 set on 2026-06-01). 049 is HELD and must not be applied. This
 playbook stands for any future migration; apply in numeric order in the SQL
 Editor. After applying 051, `SELECT refresh_food_frequents();` was run once
 to seed the cache.
@@ -628,11 +753,10 @@ WHERE conrelid = 'public.food_entries'::regclass
 -- Expected: CHECK ((meal_slot ~ '^(breakfast|lunch|dinner|snack|preworkout|postworkout|meal_[0-9]+)$'::text))
 ```
 
-Until this is applied, any 'meal_N' entry from a build using the flexible
-meal model fails the old fixed-list CHECK on push (caught per-table; the row
-stays local, the wider sync run still succeeds). The six legacy values still
-match the new pattern, so the frozen AAB is unaffected. DRAFTED, pending
-founder apply; ship the app-side flexible-meal change with it, not before.
+This is APPLIED. Before it was, any 'meal_N' entry from a build using the
+flexible meal model failed the old fixed-list CHECK on push (caught
+per-table; the row stayed local, the wider sync run still succeeded). The six
+legacy values still match the pattern, so the frozen AAB is unaffected.
 
 ## Cloud schema drift audit
 
@@ -659,4 +783,6 @@ How to use:
 The expected column set is hand-maintained inside the audit file;
 when you add a column to a sync handler, add a row to the
 matching VALUES section in the audit. CI does not catch this
-omission yet; tracked as a follow-up in CURRENT_STATUS § 8 LATER.
+omission yet; the follow-up lives on `docs/TASKBOARD.md` (the old pointer
+here was to `docs/CURRENT_STATUS.md` § 8, which has been SUPERSEDED/CLOSED
+since 2026-07-10).

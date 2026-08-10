@@ -1,4 +1,4 @@
-⚠ STATUS (2026-07-10): STALE OPS REFERENCE - email/password auth was removed 2026-07-01 (Apple + Google OAuth only). Kept for history; do not action. Current work runs from docs/TASKBOARD.md.
+⚠ STATUS (corrected 2026-08-10): CURRENT OPS REFERENCE. The previous banner said email/password auth "was removed 2026-07-01 (Apple + Google OAuth only)" and told readers not to action this file. That banner was itself the falsehood: email/password sign-in was RE-ADDED on 2026-07-21 on founder order (App Review demo accounts plus users who prefer email) and is live and ungated - see CLAUDE.md § 1 "Auth", `handleEmailAuth` in src/screens/LoginScreen.js, and `signInWithPassword`/`signUp` in src/lib/supabase.js. Auth emails therefore still ship, so the deliverability configuration below is live ops, not history. Console details may have drifted; verify before changing anything. Current work runs from docs/TASKBOARD.md.
 
 # Email and auth-email deliverability
 

@@ -1,3 +1,15 @@
+> ⚠ STATUS (2026-08-10, Campaign 4 review): SUPERSEDED SNAPSHOT - do not
+> build or release from this document, and do NOT read its "single source of
+> truth" line as still true. It is a 2026-06-06 point-in-time readiness
+> report: it states `versionCode` 11 (long since moved on), and its "Gating
+> verified, no leaks" line names **cardio** as a correctly Pro-gated surface.
+> Cardio logging was removed from the product on 2026-08-10 (founder boundary
+> D92-1/D95, commit `3e8ab0c6`), so that gating claim no longer describes
+> anything. Current work runs from
+> docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and
+> docs/TASKBOARD.md; the live cloud-schema authority is supabase/README.md.
+> Kept for history.
+
 # Volyume — Play production release readiness
 
 Date 2026-06-06. The single source of truth for getting to a paid Play

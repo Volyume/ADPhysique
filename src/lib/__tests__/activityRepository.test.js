@@ -18,7 +18,6 @@ function makeRepo({ firstRows = [], allRows = [], now = 1700000000000 } = {}) {
   const scheduleSync = jest.fn();
   const repo = createActivityRepository({
     db: jest.fn(() => Promise.resolve(dbHandle)),
-    uid: () => '00000000-0000-4000-8000-000000000001',
     rowToCamel,
     scheduleSync,
     dayKey: (ms) => `day-${ms}`,
@@ -50,47 +49,9 @@ describe('activity database repository', () => {
     expect(scheduleSync).toHaveBeenCalledTimes(1);
   });
 
-  test('cardio insert clamps session fields, returns camelCase and schedules sync', async () => {
-    const { repo, dbHandle, scheduleSync } = makeRepo();
-
-    const row = await repo.insertCardioLog('u1', {
-      durationMin: 2000,
-      estKcal: -10,
-      avgHr: 122.7,
-      extId: 'health:1',
-    });
-
-    expect(row).toEqual(expect.objectContaining({
-      id: '00000000-0000-4000-8000-000000000001',
-      userId: 'u1',
-      entryDate: 'day-1700000000000',
-      activityName: 'Cardio',
-      durationMin: 1440,
-      estKcal: 0,
-      avgHr: 123,
-      extId: 'health:1',
-    }));
-    expect(dbHandle.runAsync).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO cardio_log'), expect.arrayContaining([
-      'u1',
-      '00000000-0000-4000-8000-000000000001',
-      'day-1700000000000',
-      1440,
-      0,
-      123,
-      'health:1',
-    ]));
-    expect(scheduleSync).toHaveBeenCalledTimes(1);
-  });
-
-  test('cardio update with no fields is inert and does not schedule sync', async () => {
-    const { repo, dbHandle, scheduleSync } = makeRepo();
-
-    await expect(repo.updateCardioLog('u1', 'c1', {})).resolves.toBeNull();
-
-    expect(dbHandle.runAsync).not.toHaveBeenCalled();
-    expect(scheduleSync).not.toHaveBeenCalled();
-  });
-
+  // insertCardioLog/updateCardioLog were removed with the cardio-logging
+  // product boundary (D95, Campaign 4): no local writer remains. deleteCardioLog
+  // stays (D95 H3, erasure affordance) and keeps its coverage below.
   test('cardio delete writes deleted_at and updated_at with the same timestamp', async () => {
     const { repo, dbHandle, scheduleSync } = makeRepo({ now: 1700000000999 });
 

@@ -29,9 +29,10 @@
 --   - Purpose:                 extend notification_preferences category
 --                              CHECK with 'checkin_missed'
 --   - Applied locally:         no (no local dev Supabase project at v1)
---   - Applied remotely:        pending founder apply -- NEVER run from
---                              an agent; production requires the exact
---                              phrase "run against production"
+--   - Applied remotely:        YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4).
+--                              Still NEVER run from an agent; production
+--                              requires the exact phrase "run against
+--                              production"
 --   - Safe to re-run:          yes (DROP CONSTRAINT IF EXISTS + ADD)
 --   - Rollback:                re-run with 'checkin_missed' removed from
 --                              the list below. Any synced

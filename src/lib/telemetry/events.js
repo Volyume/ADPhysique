@@ -177,7 +177,8 @@ export const TELEMETRY_EVENTS = Object.freeze([
   // flags only (active/direction/gain bucket, agreement, logged-day counts,
   // adjustment magnitudes at 0.50 vs the applied gain); no PII, no step counts,
   // no weight. Server allow-list: supabase/migrate_080_step_tdee_telemetry.sql.
-  { name: 'step_tdee_modifier_evaluated',    deferred: false, panel: 2 },
+  { name: 'step_tdee_modifier_evaluated',    deferred: true,  panel: 2,
+    deferralReason: 'the only runWeeklyCoach call site supplies dailyStepsSeries: null (CoachOutputScreen.js:1696), so stepModifier.reason is always not_evaluated and the emit is unreachable' },
 
   // NEW-002: training partners. Counts and booleans ONLY, NEVER partner
   // identity. invite_sent -> invite_accepted is the pairing-rate funnel;

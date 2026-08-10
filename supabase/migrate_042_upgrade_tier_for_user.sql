@@ -32,7 +32,7 @@
 --   - Migration number:        042
 --   - Purpose:                 service-role-only upgrade_tier_for_user RPC
 --   - Applied locally:         no (no local dev Supabase project at v1)
---   - Applied remotely:        pending founder apply (supabase/README.md)
+--   - Applied remotely:        YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4)
 --   - Safe to re-run:          yes (CREATE OR REPLACE FUNCTION)
 --   - Rollback:                DROP FUNCTION upgrade_tier_for_user(uuid, text, text, text, text)
 --   - App-code dependencies:   supabase/functions/play-billing-rtdn/index.ts

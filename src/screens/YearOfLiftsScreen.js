@@ -423,7 +423,7 @@ function StoryCard({ card, width }) {
   // renderItem (a sibling function-component scope, not prop-drilled
   // `live`/`t` from YearOfLiftsScreen), so its own useTheme() call is
   // cleaner than threading two extra props through every card. Same shared
-  // buildLiveStyles(t) as the parent screen (CardioHistoryScreen precedent).
+  // buildLiveStyles(t) as the parent screen.
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
@@ -947,8 +947,7 @@ const styles = StyleSheet.create({
 // StoryCard) so they can never drift out of step with each other or the
 // frozen block. Pure layout keys (flex/gap/padding/width/position, no
 // colour/fontSize/type token) are correctly omitted -- there is nothing to
-// unfreeze for them. Same pattern as CardioHistoryScreen.js's
-// buildLiveStyles.
+// unfreeze for them.
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },

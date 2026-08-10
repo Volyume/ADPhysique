@@ -24,7 +24,7 @@
 -- not abort the rest of the RPC.
 --
 -- Applied locally:  NO (pending)
--- Applied remotely: NO (pending founder apply)
+-- Applied remotely: YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4)
 -- Safe to re-run:   YES. CREATE OR REPLACE; the body is idempotent (deleting
 --                   already-absent rows is a no-op).
 -- Rollback:         re-apply migration 025 to drop the five extra deletes.

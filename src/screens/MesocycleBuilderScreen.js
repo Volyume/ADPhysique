@@ -28,6 +28,7 @@ import { predictDeloadWeek, evaluateAutoReg } from '../lib/mesocycle';
 import { planHeadingName } from '../lib/planDisplay';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -280,7 +281,10 @@ export default function MesocycleBuilderScreen({ navigation }) {
                   variant="tertiary"
                   size="sm"
                   fullWidth={false}
-                  onPress={() => navigation.navigate('BlockReflection', { mesocycleId: meso.id })}
+                  // BlockReflection is a ProfileStack route and this screen is
+                  // PlansStack-only, so the bare navigate was silently dropped
+                  // and this button did nothing (D95, AUDIT-ROUTES 5.6 / 6).
+                  onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'BlockReflection', { mesocycleId: meso.id })}
                   style={[styles.summaryBtn, live.summaryBtn]}
                   textStyle={[styles.summaryBtnText, live.summaryBtnText]}
                   accessibilityLabel={`View summary of ${meso.name}`}
@@ -351,8 +355,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
 // component scope (rendered via ListHeaderComponent, not prop-drilled
 // `live`/`t` from MesocycleBuilderScreen), so its own useTheme() call is
 // cleaner than threading two extra props through. Same shared
-// buildLiveStyles(t) as the parent screen (CardioHistoryScreen/CardioTrend
-// precedent, batch preceding this one).
+// buildLiveStyles(t) as the parent screen.
 function ActiveMesoDashboard({ stats, currentWeek, finished = false }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
@@ -400,10 +403,9 @@ function ActiveMesoDashboard({ stats, currentWeek, finished = false }) {
               mapping loadActiveStats() bakes into frontColor (left in place
               but unused), the same wk+1 indexing, and the same
               getCurrentWeek(active) value (the parent passes it from the
-              identical stats.active object). buildMarkStyle precedent
-              (CardioHistoryScreen): the mapping is byte-identical, only
-              WHERE the colour resolves changes, so a theme flip recolours
-              the chart without waiting for a data reload. */}
+              identical stats.active object). The mapping is byte-identical,
+              only WHERE the colour resolves changes, so a theme flip
+              recolours the chart without waiting for a data reload. */}
           <SvgBarSparkline
             data={tonnageBars.map((b, i) => ({
               value: b.value,
@@ -581,17 +583,15 @@ const styles = StyleSheet.create({
 // and ActiveMesoDashboard) so they can never drift out of step with each
 // other or the frozen block. Pure layout keys (flex/gap/padding/height/
 // borderRadius/borderWidth/fontWeight, no colour/fontSize/type token) are
-// correctly omitted -- there is nothing to unfreeze for them. Same pattern
-// as CardioHistoryScreen.js's buildLiveStyles.
+// correctly omitted -- there is nothing to unfreeze for them.
 //
 // NOTE (flag resolved at lead review, batch G): loadActiveStats() above
 // bakes colors.warning/colors.primary/colors.primaryDim into each
 // tonnageBars[].frontColor at DATA-LOAD time. Converting those literals in
 // place would have left the chart on stale colours until the next screen
 // focus, so instead the SvgBarSparkline call site in ActiveMesoDashboard
-// resolves the identical ternary at RENDER time from t.colors (the
-// buildMarkStyle precedent, CardioHistoryScreen); frontColor stays baked
-// (byte-identical loader) but is no longer read.
+// resolves the identical ternary at RENDER time from t.colors; frontColor
+// stays baked (byte-identical loader) but is no longer read.
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },

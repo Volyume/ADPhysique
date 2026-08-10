@@ -70,7 +70,7 @@ import { GLOSSARY } from '../lib/coachGlossary';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage, getStarterSessionMessage } from '../lib/whyThisTemplates';
 import { getReadinessTweak, applyReadinessToSets, applyReadinessToTargets } from '../lib/sessionAdjustments';
-import { DEFAULT_BAR_KG } from '../lib/plateMath';
+import { DEFAULT_BAR_KG } from '../lib/warmupRamp';
 import { warmupRamp } from '../lib/warmupRamp';
 import { shareSessionName } from '../lib/sessionShareData';
 

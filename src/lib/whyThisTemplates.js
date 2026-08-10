@@ -151,99 +151,6 @@ export function getExerciseWhyThis(exerciseName, subregion) {
 }
 
 // ---------------------------------------------------------------------------
-// Volume status templates (replaces MEV/MRV language)
-// ---------------------------------------------------------------------------
-
-/**
- * Returns a plain-English volume status message for a muscle group.
- *
- * @param {'below_minimum'|'optimal'|'approaching_limit'|'over_limit'} status
- * @param {string} muscleDisplayName  - e.g. 'Chest', 'Back'
- * @param {number} currentSets
- * @returns {string}
- */
-export function getVolumeStatusMessage(status, muscleDisplayName, currentSets) {
-  const messages = {
-    below_minimum:     `${muscleDisplayName}: ${currentSets} sets this week. You can add a session or two if you want this muscle growing faster.`,
-    optimal:           `${muscleDisplayName}: ${currentSets} sets this week, right in the range where muscle adapts best.`,
-    approaching_limit: `${muscleDisplayName}: ${currentSets} sets this week, near the upper end. Good, but watch recovery. Volume pulls back if you get sore.`,
-    over_limit:        `${muscleDisplayName}: ${currentSets} sets this week, more than your body can likely recover from. Next week's plan drops 2-3 sets.`,
-  };
-  return clean(messages[status] ?? `${muscleDisplayName}: ${currentSets} sets this week.`);
-}
-
-// ---------------------------------------------------------------------------
-// Progression message templates
-// ---------------------------------------------------------------------------
-
-/**
- * Returns a plain-English progression suggestion message.
- *
- * @param {'add_weight'|'add_rep'|'hold'|'reduce'} action
- * @param {number|null} currentWeight
- * @param {number|null} suggestedWeight
- * @param {string} units  - 'kg' | 'lbs'
- * @returns {string}
- */
-export function getProgressionMessage(action, currentWeight, suggestedWeight, units = 'kg') {
-  const messages = {
-    add_weight: suggestedWeight
-      ? `Your next session moves to ${suggestedWeight}${units}. You completed every working set at the current weight.`
-      : `Target weight goes up next session. Your current load is no longer challenging enough.`,
-    add_rep:    `Weight stays the same, aim for one more rep next time.`,
-    hold:       `Weight and reps stay steady. Match this performance before going heavier.`,
-    reduce:     `Weight drops slightly to rebuild. Quality sets beat grinding reps.`,
-  };
-  return clean(messages[action] ?? `Continue as planned.`);
-}
-
-// ---------------------------------------------------------------------------
-// Autoregulation message templates
-// ---------------------------------------------------------------------------
-
-/**
- * Returns a contextual plain-English message based on autoregulation action.
- *
- * @param {'continue'|'hold_volume'|'reduce_volume'|'deload_now'} action
- * @param {number} weeksInBlock - how many weeks into the current training block
- * @returns {string}
- */
-export function getAutoRegMessage(action, weeksInBlock = 1) {
-  const messages = {
-    continue:      `Your recovery's holding. The plan stays as written.`,
-    hold_volume:   `Your recovery scores dipped this week, so your session content stays the same. Sleep and protein are the levers.`,
-    reduce_volume: `Your recovery's dropped. Next week loses 1-2 sets per exercise, so the next block starts fresher.`,
-    // Stage 7-8 review #5: the applied cut is strain-scaled per muscle
-    // now, so "half the sets" over-promised. Qualitative here.
-    deload_now:    `${weeksInBlock >= 4 ? `Good timing: you've been building for ${weeksInBlock} weeks.` : 'Your recovery is dropping.'} Next week is lighter: shorter sessions, same exercises, fewer sets.`,
-  };
-  return clean(messages[action] ?? `Continue as planned.`);
-}
-
-// ---------------------------------------------------------------------------
-// Week phase templates
-// ---------------------------------------------------------------------------
-
-/**
- * Returns a plain-language description of the current week's purpose.
- *
- * @param {'intro'|'build'|'peak'|'recovery'} phase
- * @param {number} week - 1-indexed
- * @returns {string}
- */
-export function getWeekPhaseDescription(phase, week) {
-  const descriptions = {
-    intro:    `Week ${week}: Settle in. Focus on technique and finding the right weights. Don't push to your limit yet. The real work starts next week.`,
-    build:    `Week ${week}: Time to push. You should finish most sets feeling like you could do 1 to 2 more reps but chose not to. That's the zone.`,
-    peak:     `Week ${week}: Best effort. Give every set your full attention. This is the week where the most progress happens before the recovery week.`,
-    // Review #5: seeded blocks size their recovery week from how the
-    // block actually ran, so the copy stays qualitative, not "half".
-    recovery: `Week ${week}: Lighter week. Ease your sets back, keep the same exercises and weights. Your muscles are rebuilding. Ease off and let them.`,
-  };
-  return clean(descriptions[phase] ?? `Week ${week}: Continue your training block.`);
-}
-
-// ---------------------------------------------------------------------------
 // Split rationale templates
 // ---------------------------------------------------------------------------
 
@@ -318,30 +225,6 @@ export function getSetupReceiptLine({ trainingGoal, weakPointLabels = [], daysPe
 }
 
 // ---------------------------------------------------------------------------
-// Deload prediction message
-// ---------------------------------------------------------------------------
-
-/**
- * Returns a plain-English deload prediction message.
- *
- * @param {number|null} weeksUntilDeload - null if unknown
- * @param {string}      reason
- * @returns {string}
- */
-export function getDeloadPredictionMessage(weeksUntilDeload, reason) {
-  if (weeksUntilDeload === 0) {
-    return clean(`A lighter week is scheduled. ${reason}`);
-  }
-  if (weeksUntilDeload === 1) {
-    return clean(`A lighter week is coming up next. ${reason}`);
-  }
-  if (weeksUntilDeload != null) {
-    return clean(`Your next lighter week is about ${weeksUntilDeload} weeks away. ${reason}`);
-  }
-  return clean(reason ?? `Keep building. A lighter week gets scheduled when your recovery calls for it.`);
-}
-
-// ---------------------------------------------------------------------------
 // Time crunch message
 // ---------------------------------------------------------------------------
 
@@ -381,49 +264,6 @@ export function getStarterSessionMessage(routineName, exerciseCount, setsEach = 
   const name = routineName || 'your plan';
   const ex = `${exerciseCount} exercise${exerciseCount === 1 ? '' : 's'}`;
   return clean(`Short version of ${name}: ${ex}, ${setsEach} sets each. The full session starts next time.`);
-}
-
-// ---------------------------------------------------------------------------
-// Travel mode message
-// ---------------------------------------------------------------------------
-
-/**
- * Generates a user-facing message explaining the travel plan.
- *
- * @param {string}   equipmentLabel  - e.g. 'Bodyweight only', 'Dumbbells only'
- * @param {number}   weeks           - duration of travel plan
- * @returns {string}
- */
-export function getTravelModeMessage(equipmentLabel, weeks = 1) {
-  return clean(
-    `${weeks === 1 ? 'One-week' : `${weeks}-week`} travel plan built around ${equipmentLabel}. ` +
-    `Higher reps and shorter rest periods maintain your muscle while you're away from the gym.`
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Posing / conditioning message
-// ---------------------------------------------------------------------------
-
-/**
- * Returns a plain-English description of a posing or conditioning block addition.
- *
- * @param {'posing'|'conditioning'} type
- * @param {number}                  minutesPerSession
- * @param {number}                  weeksToComp - weeks until competition
- * @returns {string}
- */
-export function getPosingConditioningMessage(type, minutesPerSession, weeksToComp) {
-  if (type === 'posing') {
-    return clean(
-      `${minutesPerSession}-minute posing practice added after each session. ` +
-      `With ${weeksToComp} weeks to the show, posing practice is non-negotiable. It is a skill that takes time to groove.`
-    );
-  }
-  return clean(
-    `${minutesPerSession}-minute low-impact cardio added after each session. ` +
-    `This keeps you active and supports body-composition goals without eating into muscle recovery.`
-  );
 }
 
 // ---------------------------------------------------------------------------

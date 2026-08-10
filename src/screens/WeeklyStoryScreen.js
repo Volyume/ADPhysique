@@ -185,8 +185,7 @@ const styles = StyleSheet.create({
 // sub-properties of the matching frozen style, at identical rest values, so
 // this screen's tokens stay live under a theme/accessibility toggle. Pure
 // layout keys (flex/gap/padding/width, no token) are correctly omitted --
-// there is nothing to unfreeze for them. Same pattern as
-// LogCardioScreen.js's buildLiveStyles.
+// there is nothing to unfreeze for them.
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },

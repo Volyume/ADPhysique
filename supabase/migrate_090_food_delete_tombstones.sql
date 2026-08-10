@@ -28,8 +28,16 @@
 --                        tombstones; food_sync_pull/push carry a `deleted`
 --                        slice for both tables so deletes propagate cross-device.
 --   - Applied locally:   NO (no local dev Supabase project)
---   - Applied remotely:  NO (auto-applies on merge to main via
---                        deploy-migrations.yml; STAGING per docs/rules/supabase.md)
+--   - Applied remotely:  YES - EU-Dublin production (confirmed by the
+--                        2026-07-27 full sweep; supabase/README.md
+--                        § CURRENT STATUS). Status line corrected
+--                        2026-08-10 (Campaign 4 review): it used to read
+--                        "NO (auto-applies on merge to main ...; STAGING)".
+--                        NOTHING AUTO-APPLIES - the push trigger was
+--                        retired at E0, deploy-migrations.yml is
+--                        manual-dispatch only, and there is no staging
+--                        project. Production needs the founder's exact
+--                        phrase "run against production".
 --   - Safe to re-run:    YES (ADD COLUMN IF NOT EXISTS + CREATE OR REPLACE
 --                        FUNCTION + CREATE INDEX IF NOT EXISTS — idempotent)
 --   - Rollback:          ALTER TABLE food_favourites DROP COLUMN IF EXISTS deleted_at;

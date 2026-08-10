@@ -33,7 +33,7 @@
 --                              food_entries.meal_slot so the new diary
 --                              sections sync.
 --   - Applied locally:         no (no local dev Supabase project)
---   - Applied remotely:        pending founder apply
+--   - Applied remotely:        YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4)
 --   - Safe to re-run:          yes (DROP CONSTRAINT IF EXISTS then ADD;
 --                              each run rebuilds the same constraint).
 --   - Rollback:                only if no peri-workout rows exist yet, or

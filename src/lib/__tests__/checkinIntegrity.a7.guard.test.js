@@ -12,7 +12,7 @@
  *   NU-8  computed weekly confidence is rendered
  *   OB-7  one-day-late check-in override (same review week)
  *   OB-2  reminder prefs persist regardless of the permission outcome
- *   04§4  provenance label on the cardio prefill
+ *   04§4  provenance label on pre-filled check-in answers
  */
 const fs = require('fs');
 const path = require('path');
@@ -110,10 +110,10 @@ describe('OB-2: reminder prefs persist regardless of the permission outcome', ()
 });
 
 describe('04 §4: pre-filled answers name their source log', () => {
-  test('cardio prefill carries a provenance note like the diary/training ones', () => {
-    expect(CHECKIN).toMatch(/From your cardio log:/);
-    expect(CHECKIN).toMatch(/setCardioMeta\(\{/);
-  });
+  // The cardio prefill this section originally covered ('From your cardio
+  // log:', setCardioMeta) was removed with the cardio-logging product
+  // boundary (D92-1/D95, Campaign 4); the law survives on the prefills
+  // below, which is what this section actually pins now.
   test('the calorie and training notes it mirrors are still present', () => {
     expect(CHECKIN).toMatch(/From your diary:/);
     expect(CHECKIN).toMatch(/From your logged sessions:/);

@@ -32,7 +32,7 @@
 --   - Purpose:                 notification_preferences table +
 --                              composite PK + RLS + updated_at trigger
 --   - Applied locally:         no (no local dev Supabase project at v1)
---   - Applied remotely:        pending founder apply
+--   - Applied remotely:        YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4)
 --   - Safe to re-run:          yes (CREATE TABLE IF NOT EXISTS +
 --                              CREATE OR REPLACE FUNCTION + DROP/CREATE
 --                              policies + DROP/CREATE trigger)

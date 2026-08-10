@@ -78,9 +78,13 @@ be skipped. Locked copy:
 > [ Continue ]   [ Read the full privacy policy ]
 
 The Continue button is disabled until the box is ticked. Tapping the
-policy link opens a webview to volyume.app/privacy. The user can revoke
-this consent at any time from You → Privacy, which signs them out and
-queues account deletion.
+policy link opens the in-app native `PrivacyPolicyScreen`
+(`src/screens/PrivacyPolicyScreen.js`), registered twice in
+`RootNavigator.js` (once per stack); the user is never bounced to a
+browser mid-consent (corrected 2026-08-10, Campaign 4
+coherence-cleanup-2026-08-10, AUDIT-MODULES-FLAGS.md §1.5). The user
+can revoke this consent at any time from You → Privacy, which signs
+them out and queues account deletion.
 
 ## The privacy policy
 
@@ -256,7 +260,10 @@ refunded any active subscription.
 
 A single Privacy section in You tab, with:
 
-- "Read the privacy policy" → webview to volyume.app/privacy
+- "Read the privacy policy" → opens the in-app native
+  `PrivacyPolicyScreen` (`SettingsPrivacyScreen.js`), same as the
+  Article 9 consent link above; never a webview (corrected 2026-08-10,
+  Campaign 4 coherence-cleanup-2026-08-10, AUDIT-MODULES-FLAGS.md §1.5)
 - "Manage health and nutrition consent" → reopens the Article 9
   screen; tapping "Withdraw consent" queues account deletion (with
   confirmation)
@@ -290,9 +297,14 @@ A single Privacy section in You tab, with:
 - The consent screen is `src/screens/Article9ConsentScreen.js`,
   registered as the third onboarding step per
   `ONBOARDING_SEQUENCE_LOCKED.md`.
-- The privacy policy URL is hardcoded as `https://volyume.app/privacy`
-  in `src/lib/links.js`. Update both the marketing site and the
-  in-app link together if the URL changes.
+- The public policy page is `public/privacy/index.html` (the store-
+  listing URL, `https://volyume.app/privacy`; pinned by
+  `privacyTruth.guard.test.js:46-52`). The in-app policy is native
+  text, `src/screens/PrivacyPolicyScreen.js`, not a URL. `src/lib/
+  links.js` was deleted (Campaign 4, coherence-cleanup-2026-08-10,
+  AUDIT-MODULES-FLAGS.md §1.5): nothing ever imported it, so it was
+  not in fact the single source of truth it claimed to be. Update the
+  public page and the in-app screen together if the policy changes.
 - Sentry scrub rules live in `src/lib/observability/sentryScrub.js`.
   Tested against a fixture event list in
   `tests/observability/sentryScrub.test.js`.

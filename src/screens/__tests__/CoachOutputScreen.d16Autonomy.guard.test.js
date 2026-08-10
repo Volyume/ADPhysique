@@ -61,7 +61,6 @@ describe('D16: Manual strips every onApply* prop; Coached/Collaborative keep the
       'onApply={applyDisabled ? undefined : handleApplyTraining}',
       'onApplyDeload={applyDisabled ? undefined : handleApplyDeload}',
       'onApplyCalories={applyDisabled ? undefined : handleApplyCalories}',
-      'onApplyCardio={applyDisabled ? undefined : handleApplyCardio}',
       'onApply={applyDisabled ? undefined : handleApplyMacroCycle}',
       'onApply={applyDisabled ? undefined : handleApplyRefeed}',
       'onApply={applyDisabled ? undefined : handleApplyDietBreak}',
@@ -76,7 +75,6 @@ describe('D16: Manual strips every onApply* prop; Coached/Collaborative keep the
       'onApply={handleApplyTraining}',
       'onApplyDeload={handleApplyDeload}',
       'onApplyCalories={handleApplyCalories}',
-      'onApplyCardio={handleApplyCardio}',
       'onApply={handleApplyMacroCycle}',
       'onApply={handleApplyRefeed}',
       'onApply={handleApplyDietBreak}',
@@ -130,7 +128,6 @@ describe('D16: the Coached auto-apply effect', () => {
       'handleApplyDeload();',
       'handleApplyTraining();',
       'handleApplyCalories();',
-      'handleApplyCardio();',
       'handleApplyDietBreak();',
       'handleApplyMacroCycle();',
       'handleApplyRefeed();',
@@ -141,7 +138,7 @@ describe('D16: the Coached auto-apply effect', () => {
 
   test('checks isApplied before every handler call (idempotent against re-renders)', () => {
     const body = effectBody();
-    expect(body.match(/!isApplied\(output, '(deload|training|calories|cardio|dietBreak|macroCycle|refeed)'\)/g).length).toBe(7);
+    expect(body.match(/!isApplied\(output, '(deload|training|calories|dietBreak|macroCycle|refeed)'\)/g).length).toBe(6);
   });
 });
 

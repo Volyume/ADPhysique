@@ -40,7 +40,7 @@
 --   unaffected. So no legitimate write is blocked by this change.
 --
 -- Applied locally (dev Supabase):   NO  (pending)
--- Applied remotely (prod/closed):   NO  (pending founder apply)
+-- Applied remotely (prod/closed):   YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4)
 -- Safe to re-run:                    YES (CREATE OR REPLACE, idempotent)
 -- Rollback:                          re-apply migration 068's
 --                                    protect_users_profile_tier body

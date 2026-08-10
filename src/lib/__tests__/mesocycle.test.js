@@ -5,9 +5,6 @@
 import {
   getCurrentMesoWeek,
   getMesoSchedule,
-  getWeekSetsMultiplier,
-  isRecoveryWeek,
-  buildWeeklyProgression,
   evaluateAutoReg,
   applyTimeCrunch,
   getBlockStatus,
@@ -46,57 +43,6 @@ describe('getMesoSchedule', () => {
     const s = getMesoSchedule('intermediate');
     const hasRecovery = s.some(e => e.phase === 'recovery' || e.phase === 'deload');
     expect(hasRecovery).toBe(true);
-  });
-});
-
-describe('isRecoveryWeek', () => {
-  test('returns true for the deload week index', () => {
-    const schedule = getMesoSchedule('intermediate');
-    const recoveryIdx = schedule.find(s => s.phase === 'recovery')?.week;
-    if (recoveryIdx != null) {
-      expect(isRecoveryWeek(recoveryIdx, 'intermediate')).toBe(true);
-    }
-  });
-
-  test('returns false for non-recovery weeks', () => {
-    expect(isRecoveryWeek(1, 'intermediate')).toBe(false);
-  });
-
-  test('returns false (not undefined) for unknown week index', () => {
-    expect(isRecoveryWeek(999, 'intermediate')).toBe(false);
-  });
-});
-
-describe('getWeekSetsMultiplier', () => {
-  test('returns a positive multiplier for known weeks', () => {
-    const m = getWeekSetsMultiplier(1, 'intermediate');
-    expect(m).toBeGreaterThan(0);
-  });
-
-  test('non-existent week falls back without throwing', () => {
-    expect(() => getWeekSetsMultiplier(999, 'intermediate')).not.toThrow();
-  });
-});
-
-describe('buildWeeklyProgression', () => {
-  test('returns one entry per scheduled week', () => {
-    const out = buildWeeklyProgression(10, 18, 'intermediate');
-    const schedule = getMesoSchedule('intermediate');
-    expect(out.length).toBe(schedule.length);
-  });
-
-  test('every step has a non-negative sets value', () => {
-    const out = buildWeeklyProgression(10, 18, 'intermediate');
-    for (const step of out) {
-      // Step shape may vary; assert any numeric field present is non-negative
-      // and the entry is at minimum a plain object.
-      expect(step).toBeDefined();
-      for (const v of Object.values(step)) {
-        if (typeof v === 'number') {
-          expect(v).toBeGreaterThanOrEqual(0);
-        }
-      }
-    }
   });
 });
 
@@ -252,27 +198,38 @@ describe('getBlockStatus', () => {
 
 // CALC-8: out-of-range / NaN week numbers must be handled, not silently swallowed.
 describe('mesocycle helpers handle bad week numbers (CALC-8)', () => {
-  const { getWeekSetsMultiplier, getCurrentMesoWeek, getVolumeTargetsForWeek } = require('../mesocycle');
+  const {
+    getCurrentMesoWeek, getCurrentBlockWeekIndex,
+  } = require('../mesocycle');
+
+  test('getCurrentBlockWeekIndex(NaN start) falls back to week 1, not NaN', () => {
+    expect(getCurrentBlockWeekIndex(NaN, 6)).toBe(1);
+    expect(getCurrentBlockWeekIndex(undefined, 6)).toBe(1);
+  });
+
+  test('getCurrentBlockWeekIndex is finite for a NaN/zero/negative plannedWeeks', () => {
+    const start = Date.now() - 30 * 86_400_000;
+    for (const bad of [NaN, 0, -5, undefined]) {
+      const out = getCurrentBlockWeekIndex(start, bad);
+      expect(Number.isFinite(out)).toBe(true);
+      expect(out).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  test('getCurrentBlockWeekIndex clamps into [1, plannedWeeks] for a wildly out-of-range now', () => {
+    const start = Date.now();
+    const farFuture = start + 999 * 86_400_000;
+    const farPast = start - 999 * 86_400_000;
+    for (const now of [farFuture, farPast]) {
+      const out = getCurrentBlockWeekIndex(start, 6, now);
+      expect(Number.isFinite(out)).toBe(true);
+      expect(out).toBeGreaterThanOrEqual(1);
+      expect(out).toBeLessThanOrEqual(6);
+    }
+  });
 
   test('getCurrentMesoWeek(NaN) falls back to week 1, not NaN', () => {
     expect(getCurrentMesoWeek(NaN)).toBe(1);
     expect(getCurrentMesoWeek(undefined)).toBe(1);
-  });
-
-  test('getWeekSetsMultiplier wraps an out-of-range week instead of NaN/undefined', () => {
-    const m = getWeekSetsMultiplier(99);
-    expect(Number.isFinite(m)).toBe(true);
-    expect(m).toBeGreaterThan(0);
-    // In-range weeks are unchanged
-    expect(getWeekSetsMultiplier(1)).toBe(getWeekSetsMultiplier(1));
-  });
-
-  test('getWeekSetsMultiplier(NaN) is finite (defaults to week 1)', () => {
-    expect(Number.isFinite(getWeekSetsMultiplier(NaN))).toBe(true);
-  });
-
-  test('getVolumeTargetsForWeek scales with a finite multiplier even for a bad week', () => {
-    const out = getVolumeTargetsForWeek({ chest: 10 }, 99);
-    expect(Number.isFinite(out.chest)).toBe(true);
   });
 });

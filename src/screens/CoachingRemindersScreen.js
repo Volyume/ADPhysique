@@ -134,11 +134,12 @@ async function applyScheduled(prefs, permissionStatus) {
   // Mirror into the per-category SQLite rows so the registry-driven sync
   // push (src/lib/sync/tables/notificationPreferences.js) has a fresh
   // row to ship to the cloud notification_preferences table (migration
-  // 044). This is the live writer for morning_weight / weekly_checkin_
-  // reminder: NotificationSettingsScreen.applyNotifications used to do
-  // this mirroring but is dead code (unreachable, see :363-380), which
-  // left the cloud rows frozen at whatever migrateFromLegacyBlob first
-  // back-filled. Same shape the dead code wrote.
+  // 044). This is the LIVE and only writer for morning_weight /
+  // weekly_checkin_reminder. NotificationSettingsScreen.applyNotifications
+  // used to do this mirroring, but it was unreachable and left the cloud rows
+  // frozen at whatever migrateFromLegacyBlob first back-filled; the mirror
+  // moved here under D94-1 and the dead path was deleted under D95. Same
+  // shape that path wrote.
   try {
     const userId = useAppStore.getState().user?.id;
     if (userId) {

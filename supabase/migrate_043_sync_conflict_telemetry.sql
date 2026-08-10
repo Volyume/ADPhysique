@@ -26,7 +26,7 @@
 --   - Purpose:                 extend record_engine_telemetry allow-list
 --                              with sync_conflict_resolved
 --   - Applied locally:         no (no local dev Supabase project at v1)
---   - Applied remotely:        pending founder apply
+--   - Applied remotely:        YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4)
 --   - Safe to re-run:          yes (CREATE OR REPLACE FUNCTION); each
 --                              re-run replaces the function definition
 --                              wholesale, so the IN-list always

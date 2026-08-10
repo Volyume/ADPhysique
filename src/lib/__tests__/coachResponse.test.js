@@ -23,7 +23,6 @@ function fakeOutput(overrides = {}) {
       training: { signal: 'hold', note: 'Plan unchanged.' },
       calories: null,
       steps: null,
-      cardio: null,
     },
     whyThisWeek: 'Weight is tracking the target rate. No change needed this week.',
     heldDecisions: [{ type: 'calories', reason: 'Calories held. Trend is on target.' }],
@@ -285,7 +284,6 @@ describe('part 3: decision and reason (reuses existing decision data)', () => {
           training: { signal: 'hold', note: '' },
           calories: { change: 125, note: 'Weight is dropping faster than the target rate. Slowing it down protects muscle.' },
           steps: null,
-          cardio: null,
         },
         heldDecisions: [],
       }),
@@ -300,7 +298,6 @@ describe('part 3: decision and reason (reuses existing decision data)', () => {
           training: { signal: 'hold', note: '' },
           calories: { change: -150, note: 'Weight is coming down slower than the target rate.' },
           steps: null,
-          cardio: null,
         },
         heldDecisions: [],
       }),
@@ -329,7 +326,6 @@ describe('part 3: decision and reason (reuses existing decision data)', () => {
           training: { signal: 'hold', note: '' },
           calories: { change: 150, note: 'x' },
           steps: null,
-          cardio: null,
         },
         heldDecisions: [{ type: 'ed_pattern_lockout', reason: lockoutReason }],
       }),
@@ -470,7 +466,6 @@ describe('part 5: forward pull', () => {
           training: { signal: 'hold', note: '' },
           calories: { change: -150, note: 'x' },
           steps: null,
-          cardio: null,
         },
         heldDecisions: [],
       }),
@@ -610,7 +605,7 @@ describe('voice rules', () => {
     build({ calmMode: true, weighInsThisWeek: 2 }),
     build({
       output: fakeOutput({
-        adjustments: { training: { signal: 'hold', note: '' }, calories: { change: 125, note: 'Weight is dropping faster than the target rate.' }, steps: null, cardio: null },
+        adjustments: { training: { signal: 'hold', note: '' }, calories: { change: 125, note: 'Weight is dropping faster than the target rate.' }, steps: null },
         heldDecisions: [],
       }),
     }),
@@ -658,7 +653,7 @@ describe('voice rules', () => {
 
   test('no false collaboration or fake autonomy', () => {
     for (const s of allStrings) {
-      expect(s).not.toMatch(/we('|')ll work|let('|')s decide|your call|it('|')s up to you|you could consider/i);
+      expect(s).not.toMatch(/we('|')ll work|let('|')s decide|your call|it('|')s up to you|you (could|might|may) consider|you decide/i);
     }
   });
 

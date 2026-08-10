@@ -37,7 +37,6 @@ function fakeOutput(overrides = {}) {
       training: { signal: 'hold', note: 'Plan unchanged.' },
       calories: null,
       steps: null,
-      cardio: null,
     },
     whyThisWeek: 'Weight is tracking the target rate. No change needed this week.',
     heldDecisions: [{ type: 'calories', reason: 'Calories held. Trend is on target.' }],
@@ -153,7 +152,7 @@ describe('register-blind suppression', () => {
 describe('decision parity', () => {
   test('the calorie call is byte-identical in both registers', () => {
     const out = fakeOutput({
-      adjustments: { training: null, calories: { change: -150, note: 'Trend has stalled for two weeks.' }, steps: null, cardio: null },
+      adjustments: { training: null, calories: { change: -150, note: 'Trend has stalled for two weeks.' }, steps: null },
       heldDecisions: [],
     });
     expect(precise({ output: out }).decision).toBe(supportive({ output: out }).decision);
@@ -270,7 +269,7 @@ describe('voice rules in the precise register', () => {
     baseArgs({ checkin: fakeCheckin({ sleepHours: 5, calsAdherence: 'over', jointPain: true }) }),
     baseArgs({ output: fakeOutput({ trend: { delta: 0.3, onTarget: false } }) }),
     baseArgs({ output: fakeOutput({ sessionsCompleted: 0, sessionsPlanned: 0 }), checkin: null, weighInsThisWeek: 5 }),
-    baseArgs({ output: fakeOutput({ adjustments: { training: null, calories: { change: 100, note: null }, steps: null, cardio: null }, heldDecisions: [] }) }),
+    baseArgs({ output: fakeOutput({ adjustments: { training: null, calories: { change: 100, note: null }, steps: null }, heldDecisions: [] }) }),
   ];
 
   test('every string passes the jargon blocklist and carries no em or en dash', () => {

@@ -9,8 +9,11 @@
  *
  * Absence guards: the Home coach brief never second-guesses the plan's
  * per-muscle allocation, and the Progress tab carries no cardio logging
- * surface. The cardio ENTRY lives on the Coach tab (YouScreen) with
- * history reachable from Log cardio's header, so the feature survives.
+ * surface. Ruling 2 originally kept the cardio ENTRY alive on the Coach tab
+ * (YouScreen); cardio logging was later retired outright as a product
+ * boundary (D92-1/D95, Campaign 4), so this suite re-anchors from pinning
+ * that entry's existence to pinning cardio's absence everywhere, Progress
+ * included -- the D92-1 authority for ruling 2 stands regardless.
  */
 import fs from 'fs';
 import path from 'path';
@@ -26,7 +29,7 @@ describe('the coach brief never tells users to override their plan (ruling 1)', 
   });
 });
 
-describe('cardio logging is not a Progress surface (ruling 2)', () => {
+describe('cardio logging is not a Progress surface (ruling 2), and is now retired everywhere (D95)', () => {
   test('AnalyticsScreen renders no cardio card', () => {
     const ANALYTICS = read('screens/AnalyticsScreen.js');
     expect(ANALYTICS).not.toContain('CardioPlanCard');
@@ -35,10 +38,10 @@ describe('cardio logging is not a Progress surface (ruling 2)', () => {
   test('the component itself is deleted', () => {
     expect(fs.existsSync(path.resolve(__dirname, '..', '..', 'components', 'CardioPlanCard.js'))).toBe(false);
   });
-  test('the entry survives on the Coach tab, history via the log header', () => {
+  test('the Coach-tab entry and the screens it led to are gone too (D95)', () => {
     const YOU = read('screens/YouScreen.js');
-    expect(YOU).toContain("navigation.navigate('LogCardio')");
-    const LOG = read('screens/LogCardioScreen.js');
-    expect(LOG).toContain("navigation.navigate('CardioHistory')");
+    expect(YOU).not.toContain("navigation.navigate('LogCardio')");
+    expect(fs.existsSync(path.resolve(__dirname, '..', '..', 'screens', 'LogCardioScreen.js'))).toBe(false);
+    expect(fs.existsSync(path.resolve(__dirname, '..', '..', 'screens', 'CardioHistoryScreen.js'))).toBe(false);
   });
 });

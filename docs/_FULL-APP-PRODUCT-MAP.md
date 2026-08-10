@@ -13,6 +13,52 @@
 > corrections section) and the two verification reports referenced there.
 > Read this map WITH those documents for current truth.
 
+> **CAMPAIGN 3-4 ADDENDUM (2026-08-10).** The body below is NOT regenerated;
+> this block names what Campaigns 3 and 4 changed and points at the newer
+> authorities.
+>
+> 1. **Authority.** Campaign 3 is D94 plus the D94 addendum
+>    (`docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md:2548-2600`);
+>    the campaign is closed and FR-1..FR-5 remain open by design (`:2598-2600`).
+>    Campaign 4 is D95 and the wave rulings D95-1/D95-2, recorded in
+>    `docs/coherence-cleanup-2026-08-10/D95-RULINGS.md` with its eight
+>    AUDIT-*.md evidence files.
+> 2. **Three corrections Campaign 3 flagged for this map's next touch**
+>    (`docs/discoverability-audit-2026-08-10/CONTROL-GAPS-EVIDENCE.md:765-768`),
+>    all re-verified on 2026-08-10:
+>    - **U6 travel mode is LIVE and reachable, not unreachable.** This map at
+>      `:10505-10509` says no screen, route or Settings row invokes
+>      `src/lib/travelMode.js`. It does:
+>      `src/screens/BuildWorkoutScreen.js:246` renders a "Travel or hotel gym"
+>      chip that opens the travel modal, and `:200` calls `generateTravelPlan`.
+>      Read U6 as LIVE.
+>    - **The quiet-hours entry point is stale wherever this map repeats the
+>      "You -> Diary preferences" location.** The live editor is
+>      Settings -> Notifications and reminders
+>      (`src/screens/NotificationSettingsScreen.js`, "Quiet hours" section).
+>      `docs/NOTIFICATIONS_LOCKED.md` was corrected on 2026-08-10.
+>    - **Cycle opt-in has a live writer.**
+>      `src/screens/SettingsCoachingScreen.js:80-84` `toggleCycleTracking`
+>      calls `setCycleTracking`.
+> 3. **Counts in PART 32 (`:939-965`) are to be re-derived, never trusted.**
+>    Screen modules are now **82** `.js` files under `src/screens/`
+>    (`ls src/screens/*.js | wc -l`, 2026-08-10) after the cardio closure
+>    removed two. The "Known legacy/unreachable" row at `:962` is superseded
+>    wholesale by Campaign 4's route, dead-function and module lanes: read
+>    `docs/coherence-cleanup-2026-08-10/` rather than that row.
+> 4. **PART 33 items resolved or moved by Campaign 3.** F-12's three control
+>    gaps became FR-3 and FR-4 plus a landed partner-cheer toggle (D94-1);
+>    the F-3/F-4 preference-sync items were ruled in `SETTINGS-OWNERSHIP.md`.
+> 5. **The PART 33 doc-vs-code list (`:1032-1046`) was 15 of 15 still open**
+>    when Campaign 4 opened. It was handed to Campaign 4's docs-truth wave,
+>    not cleared by Campaigns 2 or 3.
+> 6. **The product-boundary register (`:963`, `:13469`) gains the Campaign 4
+>    cardio ruling.** Cardio logging is a CURRENT founder boundary
+>    (D92-1/D95): permanently out of scope, every user-facing surface removed
+>    2026-08-10. That is a different class from Peak Week, which stays
+>    legacy-load-bearing (`peak_week_plans` is live behind the B4 contest
+>    countdown; migration 049 stays HELD).
+
 
 **Document type:** discovery/documentation only. Nothing in the product was
 changed to produce it.

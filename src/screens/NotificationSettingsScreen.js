@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,14 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
-import {
-  scheduleMorningWeightNotification,
-  scheduleEveningWeightReminder,
-  scheduleCheckinReminder,
-  cancelMorningNotification,
-  cancelCheckinNotification,
-  requestNotificationPermissions,
-} from '../lib/notifications';
+import { requestNotificationPermissions } from '../lib/notifications';
 import {
   scheduleTrainingReminders,
   cancelTrainingReminders,
@@ -61,75 +54,15 @@ const QUIET_END_PRESETS = ['05:00', '06:00', '06:30', '07:00', '07:30', '08:00',
 
 
 
-async function applyNotifications(prefs, permissionStatus) {
-  // Cancel ONLY the two notifications this screen owns (morning weight +
-  // weekly check-in), then re-lay them if enabled. Previously this called
-  // cancelAllNotifications(), which wiped every scheduled notification
-  // including ones managed elsewhere (cascade-gate day 19/21, weekly
-  // coach-ready, year-of-lifts), so saving any notification setting
-  // silently destroyed them with nothing to re-lay. Each schedule* helper
-  // self-cancels its own ID too, so the explicit cancels here only matter
-  // for the disabled case.
-  await cancelMorningNotification();
-  await cancelCheckinNotification();
-  if (prefs.morningEnabled && permissionStatus === 'granted') {
-    await scheduleMorningWeightNotification(prefs.morningHour, prefs.morningMinute);
-    // Q1: evening weigh-in backstop rides the same toggle (self-gates on ED flag).
-    await scheduleEveningWeightReminder();
-  }
-  if (prefs.checkinEnabled && permissionStatus === 'granted') {
-    // Pass the last-check-in timestamp + a 7-day minimum gap so that
-    // switching check-in day mid-cycle doesn't reschedule the reminder
-    // to fire only 2-3 days after the last check-in (the coach needs a
-    // full week of data for a meaningful trend read).
-    await scheduleCheckinReminder(
-      prefs.checkinDay, prefs.checkinHour, prefs.checkinMinute,
-      { lastCheckinMs: prefs.lastCheckinMs ?? 0, minGapDays: 7 },
-    );
-  }
-  await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs));
-
-  // Mirror into per-category SQLite rows so the registry-driven
-  // sync push has something to send to the cloud
-  // notification_preferences table (migration 044). SQLite is read
-  // first on mount; the AsyncStorage blob is kept as legacy fallback.
-  try {
-    const userId = useAppStore.getState().user?.id;
-    if (userId) {
-      const morningTime =
-        (prefs.morningHour ?? 8).toString().padStart(2, '0')
-        + ':' + (prefs.morningMinute ?? 0).toString().padStart(2, '0');
-      const dow = ['sun','mon','tue','wed','thu','fri','sat'][prefs.checkinDay ?? 0];
-      const checkinTime =
-        (prefs.checkinHour ?? 18).toString().padStart(2, '0')
-        + ':' + (prefs.checkinMinute ?? 0).toString().padStart(2, '0');
-      await setPrefRow(userId, 'morning_weight', {
-        enabled: !!prefs.morningEnabled,
-        time_pref: morningTime,
-      });
-      await setPrefRow(userId, 'weekly_checkin_reminder', {
-        enabled: !!prefs.checkinEnabled,
-        time_pref: `${dow}_${checkinTime}`,
-      });
-      // training_reminder mirror per Codex re-audit 2026-05-26
-      // finding #2: migration 044 includes the category but the
-      // screen wasn't mirroring it. The per-day schedule lives in
-      // AsyncStorage under REMINDER_TIME_KEY / SCHEDULE_KEY (read
-      // by trainingReminders.js); the cloud row tracks the
-      // enabled flag + default time so cross-device restore
-      // honours the user's intent.
-      const trainingTime =
-        (prefs.trainingHour ?? 8).toString().padStart(2, '0')
-        + ':' + (prefs.trainingMinute ?? 0).toString().padStart(2, '0');
-      await setPrefRow(userId, 'training_reminder', {
-        enabled: !!prefs.trainingEnabled,
-        time_pref: trainingTime,
-      });
-    }
-  } catch (_) { /* tolerate; AsyncStorage write already succeeded */ }
-}
-
-
+// applyNotifications and its debounced scheduleApply wrapper lived here,
+// unreachable since a half-finished refactor removed their handlers. Every
+// responsibility they held has a live owner (D94-1, SETTINGS-OWNERSHIP.md
+// ruling #3): CoachingRemindersScreen.applyScheduled re-lays the morning
+// weight, evening backstop and weekly check-in reminders and writes both the
+// blob and the SQLite rows, and persistTrainingPreference below owns the
+// training_reminder mirror. Deleted under D95 (AUDIT-DEFERRED-TELEMETRY P3-1);
+// the dead path also wrote the prefs blob WHOLESALE, so re-wiring it would
+// have silently dropped every key it did not know about.
 
 export default function NotificationSettingsScreen({ navigation }) {
   // Morning weight + weekly check-in reminders are Pro coaching inputs;
@@ -170,11 +103,6 @@ export default function NotificationSettingsScreen({ navigation }) {
   const [trainingMinute, setTrainingMinute] = useState(0);
   const [mealReminders, setMealReminders] = useState(DEFAULT_MEAL_REMINDERS);
   const [permissionStatus, setPermissionStatus] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const savedTimer = useRef(null);
-
-  const debounceTimer = useRef(null);
 
   // Load saved prefs on mount and request permissions.
   //
@@ -351,34 +279,6 @@ export default function NotificationSettingsScreen({ navigation }) {
     }
     init();
   }, []);
-
-  // Clear any pending debounce / saved-flag timers on unmount so they
-  // don't fire setSaved/setSaving on an unmounted component (React warning
-  // and potential leak if the user backed out mid-save).
-  useEffect(() => () => {
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    if (savedTimer.current) clearTimeout(savedTimer.current);
-  }, []);
-
-  // Retained deliberately: this debounced save wrapper (and applyNotifications,
-  // which schedules the morning-weight + weekly-check-in reminders) is currently
-  // only reachable via handlers removed in a half-finished refactor of this
-  // screen. Not deleting notification-scheduling code on a guess. See audit note.
-  // eslint-disable-next-line no-unused-vars
-  function scheduleApply(nextPrefs) {
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(async () => {
-      setSaving(true);
-      setSaved(false);
-      try {
-        await applyNotifications(nextPrefs, permissionStatus);
-        setSaved(true);
-        if (savedTimer.current) clearTimeout(savedTimer.current);
-        savedTimer.current = setTimeout(() => setSaved(false), 2000);
-      } catch (_) {}
-      setSaving(false);
-    }, 600);
-  }
 
   function getPrefs({
     me = morningEnabled,
@@ -829,10 +729,6 @@ export default function NotificationSettingsScreen({ navigation }) {
             {`Volyume never sends marketing notifications. These are local reminders with no server involved. You can disable them any time from your device settings. To stay unobtrusive, Volyume also caps how many nudges it sends in a week, so an expected one can occasionally be skipped.${Platform.OS === 'android' ? ' Your device groups these into notification channels you can tune in system settings.' : ''}`}
           </Text>
         </View>
-
-        {/* Save status */}
-        {saving && <Text style={[styles.savingText, live.savingText]}>Saving...</Text>}
-        {!saving && saved && <Text style={[styles.savedText, live.savedText]}>Saved</Text>}
       </ScrollView>
     </SafeAreaView>
   );
@@ -989,12 +885,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  savingText: {
-    ...type.caption,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-  },
   crossLink: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1014,13 +904,6 @@ const styles = StyleSheet.create({
     ...type.captionTight,
     color: colors.textMuted,
     marginTop: spacing.xxs,
-  },
-  savedText: {
-    fontSize: fontSize.xs,
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
-    textAlign: 'center',
-    marginTop: spacing.sm,
   },
 });
 
@@ -1046,10 +929,8 @@ function buildLiveStyles(t) {
     timePickerLabel: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     timePickerValue: { ...t.type.num('bodyStrong'), color: t.colors.primary },
     bottomNoteText: { ...t.type.bodySm, color: t.colors.textMuted },
-    savingText: { ...t.type.caption, color: t.colors.textMuted },
     crossLink: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     crossLinkTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     crossLinkSub: { ...t.type.captionTight, color: t.colors.textMuted },
-    savedText: { fontSize: t.fontSize.xs, color: t.colors.primary },
   };
 }

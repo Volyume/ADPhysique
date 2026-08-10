@@ -40,7 +40,7 @@ import {
 } from './tables/recipeIngredients';
 import { pushWeightLog, pullWeightLog } from './tables/weightLog';
 import { pushDailySteps, pullDailySteps } from './tables/dailySteps';
-import { pushCardioLog, pullCardioLog } from './tables/cardioLog';
+import { pullCardioLog } from './tables/cardioLog';
 import { pushProfiles, pullProfiles } from './tables/profiles';
 import { pushPartners, pullPartners } from './tables/partners';
 import { pushMealPlans, pullMealPlans } from './tables/mealPlans';
@@ -72,7 +72,10 @@ function _getSupabaseClient() {
  * under tables/, (b) remove its call from the legacy bulk helpers,
  * and (c) extend the regression tests under __tests__/.
  */
-// All 16 locked tables now flow through transport. The seven
+// All 22 locked tables now flow through transport (count corrected
+// 2026-08-10: the comment said 16 and had not tracked the entries added
+// since; MIGRATED_TABLES and PULL_HANDLERS both carry 22 today, PUSH_HANDLERS
+// 18 because four tables are pull-only). The seven
 // food-domain tables share one bulk RPC pair via
 // src/lib/sync/tables/foodDomain.js; the others have dedicated
 // handlers under tables/.
@@ -106,14 +109,14 @@ const PUSH_HANDLERS = {
   profiles: pushProfiles,
   recipe_ingredients: pushRecipeIngredients,
   daily_steps: pushDailySteps,
-  cardio_log: pushCardioLog,
   partner_signals: pushPartners,
   meal_plans: pushMealPlans,
   plan_folders: pushPlanFolders,
   perday_target_offsets: pushPerDayTargetOffsets,
   // Pull-only tables intentionally absent, pushTable returns
   // skipped:'pull_only' before reaching this map:
-  //   ed_pattern_flags, tier_history, daily_intake_rollups.
+  //   ed_pattern_flags, tier_history, daily_intake_rollups, cardio_log
+  //   (D95 H1: cardio logging retired, push removed, pull retained).
   // Food-domain bidirectional tables share the coordinator:
   food_entries: foodPushFor('food_entries'),
   custom_foods: foodPushFor('custom_foods'),

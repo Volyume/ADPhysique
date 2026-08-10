@@ -97,7 +97,12 @@ describe('NOTIFICATIONS promise-keeping', () => {
 });
 
 describe('BOUNDARIES', () => {
-  test('no cardio entry point or setting was added by this campaign (the pre-existing toggle is recorded for Campaign 4)', () => {
+  // Title corrected 2026-08-10 (Campaign 4 review): it used to end "the
+  // pre-existing toggle is recorded for Campaign 4", which now reads as if a
+  // cardio-logging toggle still exists somewhere. It does not - Campaign 4
+  // removed cardio logging entirely (D92-1/D95). The absence pins below are
+  // unchanged; the permanent boundary lives in campaign4.boundaries.test.js.
+  test('no cardio entry point or setting was added by this campaign (and Campaign 4 later removed cardio logging outright)', () => {
     for (const p of ['screens/YouScreen.js', 'screens/DiaryScreen.js', 'screens/BodyMetricsScreen.js', 'screens/PlansScreen.js']) {
       expect(stripComments(read(p))).not.toMatch(/[Cc]ardio logging/);
     }

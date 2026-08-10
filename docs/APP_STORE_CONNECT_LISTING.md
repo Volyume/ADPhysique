@@ -1,5 +1,15 @@
 # Volyume — App Store Connect Listing
 
+> **STATUS 2026-08-10 (Campaign 4, D95): STALE ON CARDIO - DO NOT
+> PASTE OR CONSUME UNTIL REFRESHED.** Cardio logging was removed from
+> the product (founder boundary D92-1, executed under D95; commit
+> 3e8ab0c6). Every cardio claim in this file (logging, history,
+> prescriptions, the activity library) describes a feature that no
+> longer exists. Refreshing this copy and the published listings is a
+> FOUNDER-SIDE action (H4, docs/coherence-cleanup-2026-08-10/
+> D95-RULINGS.md); this banner marks the staleness without rewriting
+> listing copy.
+
 > **Status 2026-07-08: CURRENT iOS listing/setup copy.** Volyume now has
 > StoreKit/App Store purchase wiring alongside Google Play Billing. Product
 > IDs must match the shared in-app catalogue: `pro_monthly` and `pro_annual`.

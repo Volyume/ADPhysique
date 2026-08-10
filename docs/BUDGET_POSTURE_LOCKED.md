@@ -41,6 +41,12 @@ Locked posture per service.
 | **Open beta waitlist** | Email capture form on volyume.app + Supabase row | No paid waitlist service |
 | **Coach dashboard hosting** | Static site (Netlify/Vercel free tier) + Supabase API | No paid hosting until coach revenue justifies |
 
+Correction (2026-08-10, Campaign 4 docs-truth): RevenueCat was never
+adopted. Billing shipped direct on react-native-iap + Google Play
+Billing (`src/lib/payments/`), so no MRR-percentage cost exists and no
+$2.5k trigger applies. The RevenueCat row above records the superseded
+v1 plan; the free-tier-first principle it expressed still stands.
+
 ## Feature scope deferrals from v1 to v1.x
 
 To keep v1 lean, the following Complete-tier surfaces can defer

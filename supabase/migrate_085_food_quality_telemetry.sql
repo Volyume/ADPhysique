@@ -20,7 +20,12 @@
 -- four new names.
 --
 -- Applied locally:  NO (pending)
--- Applied remotely: NO (auto-applies on merge to main via deploy-migrations.yml)
+-- Applied remotely: YES - EU-Dublin production (2026-07-27 full sweep;
+--                   supabase/README.md § CURRENT STATUS). Corrected
+--                   2026-08-10 (Campaign 4 review) from "NO (auto-applies on
+--                   merge to main via deploy-migrations.yml)". NOTHING
+--                   AUTO-APPLIES: the push trigger was retired at E0 and the
+--                   workflow is manual-dispatch only.
 -- Safe to re-run:   YES. CREATE OR REPLACE; no schema change.
 -- Rollback:         re-apply migration 084 to drop the four names.
 -- App dependency:   apply before a build that emits the events reaches

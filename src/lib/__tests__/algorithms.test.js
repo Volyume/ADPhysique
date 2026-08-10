@@ -1,6 +1,9 @@
+import fs from 'fs';
+import path from 'path';
 import {
   VOLUME_LANDMARKS,
   MUSCLE_DISPLAY_NAMES,
+  muscleDisplayName,
   calculateWeeklyVolume,
   getVolumeStatus,
   detectLaggingMuscles,
@@ -179,80 +182,6 @@ describe('calculateWeeklyVolume, legacy normalisation', () => {
     expect(result.side_delts.workingSets).toBeCloseTo(4.5);
     expect(result.front_delts.workingSets).toBe(3);
     expect(result.rear_delts.workingSets).toBe(3);
-  });
-});
-
-// ─── calculateEffectiveSets, RIR/RPE math ─────────────────────────────────
-//
-// Locks in the operator-precedence fix on line 965 (was 950 before edit).
-// The old code was:
-//   getSetEffectivenessWeight(set.rir ?? set.rpe != null ? 10 - set.rpe : null)
-// which parsed as (set.rir ?? (set.rpe != null)) ? 10 - set.rpe : null
-// any non-null rir>0 evaluated 10 - rpe (NaN when rpe was null), rir===0
-// returned null, and effective-volume was silently corrupted.
-
-describe('calculateEffectiveSets, RIR/RPE precedence fix', () => {
-  // Need access to the function, import it.
-  // eslint-disable-next-line global-require
-  const { calculateEffectiveSets, getSetEffectivenessWeight } = require('../algorithms');
-
-  const makeSetWith = (props) => ({
-    exerciseId: 'ex1',
-    setType: 'straight',
-    weight: 80,
-    actualReps: 10,
-    ...props,
-  });
-
-  test('set with rir=2 and no rpe produces a numeric effectiveSets', () => {
-    const exerciseMap = { ex1: { primary_muscle: 'chest', secondary_muscles: '[]' } };
-    const result = calculateEffectiveSets([makeSetWith({ rir: 2 })], exerciseMap);
-    expect(result.chest).toBeDefined();
-    expect(result.chest.workingSets).toBe(1);
-    expect(Number.isFinite(result.chest.effectiveSets)).toBe(true);
-    expect(result.chest.effectiveSets).toBeGreaterThan(0);
-    // RIR 2 → full credit (weight 1.0)
-    expect(result.chest.effectiveSets).toBeCloseTo(1.0, 3);
-  });
-
-  test('set with rir=0 (failure set) gets full effective credit', () => {
-    const exerciseMap = { ex1: { primary_muscle: 'chest', secondary_muscles: '[]' } };
-    const result = calculateEffectiveSets([makeSetWith({ rir: 0 })], exerciseMap);
-    expect(result.chest.workingSets).toBe(1);
-    expect(Number.isFinite(result.chest.effectiveSets)).toBe(true);
-    expect(result.chest.effectiveSets).toBeCloseTo(1.0, 3);
-  });
-
-  test('set with rpe=8 (no rir) translates to rir=2 internally → full credit', () => {
-    const exerciseMap = { ex1: { primary_muscle: 'chest', secondary_muscles: '[]' } };
-    const rirOnly = calculateEffectiveSets([makeSetWith({ rir: 2 })], exerciseMap);
-    const rpeOnly = calculateEffectiveSets([makeSetWith({ rpe: 8 })], exerciseMap);
-    expect(rpeOnly.chest.effectiveSets).toBeCloseTo(rirOnly.chest.effectiveSets, 3);
-  });
-
-  test('set with neither rir nor rpe still computes (null → 0.9 default weight)', () => {
-    const exerciseMap = { ex1: { primary_muscle: 'chest', secondary_muscles: '[]' } };
-    const result = calculateEffectiveSets([makeSetWith({})], exerciseMap);
-    expect(result.chest.workingSets).toBe(1);
-    expect(Number.isFinite(result.chest.effectiveSets)).toBe(true);
-    // null RIR → treated as ~RIR 2 (conservative) → 0.9 weight
-    expect(result.chest.effectiveSets).toBeCloseTo(0.9, 3);
-  });
-
-  test('high RIR (5+) reduces effective credit', () => {
-    const exerciseMap = { ex1: { primary_muscle: 'chest', secondary_muscles: '[]' } };
-    const lowRIR = calculateEffectiveSets([makeSetWith({ rir: 1 })], exerciseMap);
-    const highRIR = calculateEffectiveSets([makeSetWith({ rir: 5 })], exerciseMap);
-    expect(highRIR.chest.effectiveSets).toBeLessThan(lowRIR.chest.effectiveSets);
-  });
-
-  test('getSetEffectivenessWeight returns expected values for known RIR', () => {
-    expect(getSetEffectivenessWeight(0)).toBe(1.0);
-    expect(getSetEffectivenessWeight(2)).toBe(1.0);
-    expect(getSetEffectivenessWeight(3)).toBe(0.85);
-    expect(getSetEffectivenessWeight(5)).toBe(0.5);
-    expect(getSetEffectivenessWeight(8)).toBe(0.0);
-    expect(getSetEffectivenessWeight(null)).toBe(0.9); // conservative null default
   });
 });
 
@@ -637,5 +566,81 @@ describe('bestPRPerExercise (one PR per exercise per session)', () => {
     ]);
     expect(out).toHaveLength(1);
     expect(out[0].type).toBe('heaviest_weight');
+  });
+});
+
+// ─── muscleDisplayName (D95, AUDIT-DUPLICATES D-4) ─────────────────────────────
+//
+// interBlock.js, blockExplain.js and divisionDiff.js each carried a private
+// copy of this body. They are reproduced VERBATIM below as fixtures so the
+// consolidation is provably output-preserving rather than merely plausible.
+//
+// Premise note, recorded because the audit's T-4.1 assumed otherwise: the three
+// bodies agreed on every real muscle key but NOT on an empty/nullish key, where
+// they returned 'Muscle', '' and a throw respectively. No call site can reach
+// that input (interBlock already guarded it, blockExplain's keys come from
+// Object.entries and a truthy filter, divisionDiff's from an internally-built
+// diff), and the shared helper takes the most defensive of the three, so the
+// equivalence fixture below covers the whole reachable key domain.
+
+// interBlock.js:109-115 (deleted)
+function fixtureInterBlock(muscleKey) {
+  const key = String(muscleKey || 'muscle');
+  const known = MUSCLE_DISPLAY_NAMES[key];
+  if (known) return known;
+  const spaced = key.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+// blockExplain.js:35-40 (deleted)
+const fixtureBlockExplain = (key) => {
+  const known = MUSCLE_DISPLAY_NAMES[String(key)];
+  if (known) return known;
+  const spaced = String(key ?? '').replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+};
+
+// divisionDiff.js:138-139 (deleted) — capitalise-then-replace
+const fixtureDivisionDiff = (m) => MUSCLE_DISPLAY_NAMES[m]
+  ?? m.charAt(0).toUpperCase() + m.slice(1).replace(/_/g, ' ');
+
+describe('D-4: one muscleDisplayName, three converged call sites', () => {
+  const REACHABLE_KEYS = [
+    ...Object.keys(MUSCLE_DISPLAY_NAMES),
+    'shoulders',        // normalised away before any lookup, but legal input
+    'made_up_muscle',   // a custom_exercises primary_muscle from a foreign client
+    'x',
+  ];
+
+  test.each(REACHABLE_KEYS)('%s: matches all three deleted implementations', (key) => {
+    expect(muscleDisplayName(key)).toBe(fixtureInterBlock(key));
+    expect(muscleDisplayName(key)).toBe(fixtureBlockExplain(key));
+    expect(muscleDisplayName(key)).toBe(fixtureDivisionDiff(key));
+  });
+
+  test('an unknown key is humanised, never leaked raw', () => {
+    expect(muscleDisplayName('rear_delts_extra')).toBe('Rear delts extra');
+    expect(muscleDisplayName('made_up_muscle')).not.toContain('_');
+  });
+
+  test('a missing key falls back to the calm generic word, and never throws', () => {
+    for (const bad of [null, undefined, '', 0]) {
+      expect(muscleDisplayName(bad)).toBe('Muscle');
+    }
+  });
+
+  // T-4.2: the invariant that makes the humanising fallback unreachable in
+  // normal operation. If a landmark gains a muscle without a display name, the
+  // heatmap and every coaching line start speaking snake_case.
+  test('every landmark muscle has a display name, and vice versa', () => {
+    expect(Object.keys(MUSCLE_DISPLAY_NAMES)).toEqual(Object.keys(VOLUME_LANDMARKS));
+  });
+
+  test('source guard: no module keeps a private copy of the body', () => {
+    for (const rel of ['../interBlock.js', '../blockExplain.js', '../divisionDiff.js']) {
+      const source = fs.readFileSync(path.resolve(__dirname, rel), 'utf8');
+      expect(source).not.toMatch(/charAt\(0\)\.toUpperCase\(\)/);
+      expect(source).toMatch(/muscleDisplayName/);
+    }
   });
 });

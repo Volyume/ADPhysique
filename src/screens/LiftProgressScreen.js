@@ -34,10 +34,9 @@ import { logError } from '../lib/errorLog';
 // with a marker on lifts whose latest session set an all-time best. Tap a lift
 // for its full chart, PRs and goal on ExerciseDetail.
 // CP-10 batch G (2026-07-11): converted to accept the live colour table `c`
-// on the buildMarkStyle(c) precedent (CardioHistoryScreen, batch cardio
-// theme migration) -- the label -> colour mapping is byte-identical in
-// meaning, only the token SOURCE moved from the frozen import to the live
-// theme. Returns a resolver function, same call shape as before.
+// -- the label -> colour mapping is byte-identical in meaning, only the
+// token SOURCE moved from the frozen import to the live theme. Returns a
+// resolver function, same call shape as before.
 function buildLevelColor(c) {
   return function getLevelColor(label) {
     const map = {
@@ -677,8 +676,7 @@ const styles = StyleSheet.create({
 // screen carries no static island under a live theme toggle. Pure layout
 // keys (flex/gap/padding/borderWidth/borderRadius, no token) and fontWeight/
 // lineHeight/fontVariant (not part of the live theme table) are correctly
-// omitted -- there is nothing to unfreeze for them. Same pattern as
-// CardioHistoryScreen.js's buildLiveStyles.
+// omitted -- there is nothing to unfreeze for them.
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },

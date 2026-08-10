@@ -42,7 +42,7 @@
 -- set shifts to 099+ when written.
 --
 -- Applied locally (dev Supabase):   NO (pending)
--- Applied remotely (prod):          NO — founder-run, manual, like every
+-- Applied remotely (prod):          YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4) — founder-run, manual, like every
 --                                   cloud migration. Apply via Supabase
 --                                   Dashboard → SQL Editor → Run.
 -- Safe to re-run:                   YES (CREATE OR REPLACE throughout;

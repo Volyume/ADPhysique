@@ -34,7 +34,11 @@
 --                              food_entries.meal_slot for the flexible meal
 --                              model, keeping the legacy values valid.
 --   - Applied locally:         no (no local dev Supabase project)
---   - Applied remotely:        pending founder apply
+--   - Applied remotely:        YES (verified in the 2026-07-27 production
+--                              sweep: the meal_[0-9]+ CHECK is live -
+--                              docs/TASKBOARD.md, "FULL migration sweep".
+--                              Header corrected 2026-08-10; it said
+--                              "pending founder apply" long after the fact.)
 --   - Safe to re-run:          yes (DROP CONSTRAINT IF EXISTS then ADD;
 --                              each run rebuilds the same constraint).
 --   - Rollback:                only if no 'meal_N' rows exist yet, or they are

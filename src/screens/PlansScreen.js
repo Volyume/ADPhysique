@@ -94,9 +94,6 @@ const BLOCK_ICON = {
   post_recovery: 'checkmark-circle-outline',
 };
 
-// Weekly cardio card on Plans. Shows the coach target (if one is applied) and
-// this week's progress, or just the week's count when cardio is available but
-// not allocated. Tap to log. Reads cardio_log for the trailing seven days.
 export default function PlansScreen({ navigation }) {
   const toast = useToast();
   // Selector-scoped subscription: only re-render when these specific
@@ -1240,8 +1237,6 @@ export default function PlansScreen({ navigation }) {
           </>
         ) : null}
 
-        {/* "Cardio this week" moved to the Progress tab (founder 2026-06-03):
-            it is a tracking surface, not a plan. */}
       </ScrollView>
       <PeekMenu ref={peekRef} />
 

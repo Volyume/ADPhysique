@@ -29,7 +29,16 @@ export function buildTimeline(list = []) {
   return out;
 }
 
-function localDayKey(ms) {
+// A PRIVATE grouping token for "photos taken on the same local calendar day".
+// It is NOT a dayKey.js key and must not be compared with one: the month is
+// 0-indexed and neither part is padded, so this produces "2026-7-9" where the
+// canonical helper produces "2026-08-09". Renamed from localDayKey under D95
+// (AUDIT-DUPLICATES D-19) because shadowing the canonical name invited exactly
+// that mistake. The value escapes this module as the `dayKey` / `key` fields on
+// a checkin node, so the FORMAT must not be "fixed" without tracing every
+// reader of those fields: changing the string changes React keys and any
+// persisted selection.
+function photoDayGroupKey(ms) {
   const d = new Date(ms);
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
@@ -107,7 +116,7 @@ export function buildCheckInTimeline(list = []) {
   for (const p of source) {
     const d = new Date(p.takenAt);
     const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
-    const dayKey = localDayKey(p.takenAt);
+    const dayKey = photoDayGroupKey(p.takenAt);
     if (monthKey !== curMonthKey) {
       flushBucket();
       curMonthKey = monthKey;

@@ -37,10 +37,17 @@ docs/hooks/           Protection scripts that enforce rules automatically.
 
 ## PROJECT REFERENCE DOCS
 
-This README only covers the Claude Code config. For the app itself:
+This README only covers the Claude Code config. For the app itself, the
+live authorities are (corrected 2026-08-10, Campaign 4):
 
-  INFRASTRUCTURE.md       Runtime config, schema, billing, security, build/CI.
-  ARCHITECTURE.md         Deep technical map (data model, business logic, screens).
-  APPMAP.md               Navigation tree + screen inventory (5 tabs, 77 screens).
-  VOLYUME_DEEPMAP.md      Feature inventory.
-  docs/CURRENT_STATUS.md  Current build/feature status.
+  CLAUDE.md                Project constitution: architecture facts,
+                           inviolable constraints, conventions, workflow.
+  docs/TASKBOARD.md        The single live task source.
+  docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md
+                           Current campaign position and history.
+  supabase/README.md       Migration tracker and cloud-schema authority.
+
+The old root reference docs (INFRASTRUCTURE.md, ARCHITECTURE.md,
+APPMAP.md, VOLYUME_DEEPMAP.md, docs/CURRENT_STATUS.md) are point-in-time
+snapshots that each now carry a SUPERSEDED banner - useful history, not
+current truth.

@@ -117,7 +117,8 @@ function _parseItemsJson(raw) {
 // reads here match what production rows actually look like.
 
 // Exported for the schema round-trip test (Ultimate-Audit item 15,
-// diaryTimeline sync-mapper suite), same convention as _recipeToCloud below.
+// eaten_at sync-mapper coverage, src/lib/food/__tests__/eatenAt.test.js),
+// same convention as _recipeToCloud below.
 export function _foodEntryToCloud(row, userId) {
   return {
     id: row.id,

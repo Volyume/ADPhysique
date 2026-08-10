@@ -56,6 +56,58 @@ describe('cross-stack navigation guard (F4 / NAV-1/2/3)', () => {
       .toMatch(/navigateCrossTab\(navigation,\s*'ProfileTab',\s*'SettingsPrivacy'/);
   });
 
+  // D95 (AUDIT-ROUTES §6 rows 1-4, 6): five live, visible controls were inert
+  // for exactly this reason. BlockReflection was SOURCELESS because of row 1 --
+  // its only navigator was a dropped tap -- while DECISIONS-2026-07-09.md:2344
+  // requires the surface to stay one tap away, so the fix is the navigation,
+  // never the registration.
+  test('the block-reflection cluster and the paywall policy link use the cross-tab form', () => {
+    // Row 1: MesocycleBuilder (PlansStack) -> BlockReflection (ProfileStack).
+    const meso = read('src/screens/MesocycleBuilderScreen.js');
+    expect(meso).toMatch(/navigateCrossTab\(navigation,\s*'ProfileTab',\s*'BlockReflection'/);
+    expect(meso).not.toMatch(/navigation\.navigate\(\s*['"]BlockReflection['"]/);
+
+    // Rows 2-4: BlockReflection (ProfileStack) -> RecapStory (ProgressStack)
+    // and MesocycleBuilder (PlansStack), twice.
+    const reflection = read('src/screens/BlockReflectionScreen.js');
+    expect(reflection).toMatch(/navigateCrossTab\(navigation,\s*'ProgressTab',\s*'RecapStory'/);
+    expect(reflection).not.toMatch(/navigation\.navigate\(\s*['"]RecapStory['"]/);
+    expect(reflection.match(/navigateCrossTab\(navigation,\s*'PlansTab',\s*'MesocycleBuilder'\)/g) ?? [])
+      .toHaveLength(2);
+    expect(reflection).not.toMatch(/navigation\.navigate\(\s*['"]MesocycleBuilder['"]/);
+
+    // Row 6: ProUpgrade is registered in all five tab stacks, SubscriptionPolicy
+    // in ProfileStack only, so the policy link died in four of five entries.
+    const paywall = read('src/screens/ProUpgradeScreen.js');
+    expect(paywall).toMatch(/navigateCrossTab\(navigation,\s*'ProfileTab',\s*'SubscriptionPolicy'\)/);
+    expect(paywall).not.toMatch(/navigation\.navigate\(\s*['"]SubscriptionPolicy['"]/);
+  });
+
+  // Review A F1/F2 (AUDIT-ROUTES §6 rows 7-9): WorkoutSummary is registered
+  // in Home AND Progress, but ProgressPhotos/RecapStory live in ProgressStack
+  // only - so the post-workout photo prompt and both "Watch your block story"
+  // controls were inert on the Today-tab path, the app's main workout flow.
+  test('the post-workout photo prompt and block-story links use the cross-tab form', () => {
+    const summary = read('src/screens/WorkoutSummaryScreen.js');
+    expect(summary).toMatch(/navigateCrossTab\(navigation,\s*'ProgressTab',\s*'ProgressPhotos'\)/);
+    expect(summary.match(/navigateCrossTab\(navigation,\s*'ProgressTab',\s*'RecapStory'/g) ?? [])
+      .toHaveLength(2);
+    expect(summary).not.toMatch(/navigation\.navigate\(\s*['"](ProgressPhotos|RecapStory)['"]/);
+  });
+
+  // Review A F3 (row 11): the Pro-onboarding hand-off screen's "Reminders
+  // off" tile targets NotificationSettings, which must stay registered in
+  // ProOnboardingStack (the NutritionEducation precedent) or the tap is
+  // silently dropped - onboarding stacks cannot cross-tab.
+  test('ProOnboardingStack registers NotificationSettings for the hand-off tile', () => {
+    const nav = read('src/navigation/RootNavigator.js');
+    const start = nav.indexOf('function ProOnboardingStack');
+    const end = nav.indexOf('</Stack.Navigator>', start);
+    expect(start).toBeGreaterThan(-1);
+    const proOnboardingStack = nav.slice(start, end);
+    expect(proOnboardingStack).toMatch(/name="NotificationSettings"/);
+  });
+
   test("OB-8: the check-in's 'Log my weight first' CTA deep-links to the Today tab weight logger", () => {
     const src = read('src/screens/WeeklyCheckInScreen.js');
     // WeeklyCheckIn lives in ProfileStack; Home lives in HomeStack, so the

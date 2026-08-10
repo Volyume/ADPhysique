@@ -4,7 +4,8 @@
  * A physique athlete runs four to eight structured meals a day, not the
  * three-meals-and-a-snack wellness frame. So the diary uses numbered meals
  * ("Meal 1", "Meal 2", ...) plus, when the user opts in
- * (userProfile.mealPlanPeriWorkout, "Around training" on MealPlanScreen),
+ * (userProfile.mealPlanPeriWorkout, an internal preference with no control
+ * on MealPlanScreen today - see FR-2),
  * Pre-workout and Post-workout as named meals the user places around
  * training whenever they train (no training-day detection). The peri-workout
  * pair is OFF BY DEFAULT and fully hidden until opted in (2026-07-11 fix: was
@@ -131,8 +132,11 @@ export function slotOrder(key) {
 // 2026-07-11: half-built and confusing when every user sees two permanently
 // empty peri-workout cards regardless of whether they train around them).
 // They are the same opt-in the meal-plan generator already gates on
-// (userProfile.mealPlanPeriWorkout, surfaced as "Around training" on
-// MealPlanScreen) so enabling it in one place turns them on everywhere.
+// (userProfile.mealPlanPeriWorkout). That preference currently has NO user
+// control anywhere: MealPlanScreen's preferences sheet renders only Meals per
+// day and Variety (MealPlanScreen.js:209-246), so the flag is permanently
+// false unless FR-2 rules otherwise. Every reader honours it, so a control
+// added later turns the slots on everywhere at once.
 // `periWorkoutSlots` defaults to false so every existing call site that does
 // not yet thread the preference through keeps the slots hidden rather than
 // silently keeping the old always-on behaviour. Back-compat is preserved

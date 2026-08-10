@@ -7,6 +7,29 @@ paths:
   - src/constants/colors*
 ---
 
+> ⚠ **STATUS (2026-08-10, Campaign 4 review): SUPERSEDED AND FACTUALLY
+> WRONG - DO NOT FOLLOW THIS FILE.** Despite the `.json` name this is an
+> early styling-rules draft, not configuration. The live styling rules are
+> `docs/rules/styling.md`, and the single source of visual truth is
+> `src/styles/theme.js` (CLAUDE.md § 3: "All colours/spacing/type from
+> `src/styles/theme.js` tokens - never hard-code"). Specifically wrong
+> below:
+> - **Typography.** "Font family: System default (San Francisco on iOS,
+>   Roboto on Android)" is false. The app ships Inter and Inter Display
+>   (`src/styles/fontFamily.js`). Manrope was evaluated and NOT adopted.
+> - **Palette.** The hex list is drifted (the live `primary` is `#F5A623`,
+>   not `#F59E0B`) and it describes a dark-only app. There is a full light
+>   theme in `theme.js` with its own token set.
+> - **"Never introduce colours, fonts, or patterns that are not in this
+>   file"** now points at the wrong file: hard-coding any hex from this
+>   list breaks the token rule it was written to protect.
+> - **`paths:`** scopes this to `*.tsx`/`*.ts`; the app is JavaScript.
+>
+> The file is kept, unrenamed and undeleted, because whether it is wired
+> into the founder's local (out-of-repo) Claude settings is unknowable from
+> inside the repo - the same unknown as founder item FR-C4-9
+> (billing.md / styling.md / watermelon.md).
+
 # VOLYUME — STYLING AND VISUAL RULES
 
 Volyume has a precise, premium dark aesthetic.

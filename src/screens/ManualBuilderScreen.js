@@ -98,9 +98,8 @@ function muscleStatus(muscle, totalSets) {
 }
 
 // CP-10 batch G (2026-07-11): converted to accept the live colour table `c`
-// on the buildMarkStyle(c) precedent (CardioHistoryScreen) -- the status ->
-// colour mapping is byte-identical in meaning, only the token SOURCE moved
-// from the frozen import to the live theme.
+// -- the status -> colour mapping is byte-identical in meaning, only the
+// token SOURCE moved from the frozen import to the live theme.
 function buildStatusColor(c) {
   return {
     none: c.textMuted,
@@ -120,8 +119,7 @@ const STATUS_DOT = {
 
 // CP-10 batch G (2026-07-11): rendered once per screen render (not a list
 // row), but with its own separate `balanceStyles` block, so it takes its own
-// useTheme() call rather than prop-drilling `t`/`live` from the parent, same
-// pattern as CardioHistoryScreen.js's CardioTrend sibling component.
+// useTheme() call rather than prop-drilling `t`/`live` from the parent.
 function PlanBalanceCard({ days }) {
   const t = useTheme();
   const live = useMemo(() => buildBalanceLiveStyles(t), [t]);
@@ -206,9 +204,8 @@ function PlanBalanceCard({ days }) {
 // training-specific clamp/coherence rules.
 // CP-10 batch G (2026-07-11): called many times per row (once per target),
 // so its own useTheme() call rather than prop-drilling `t`/`live` through
-// every TargetStepper call site, same "sibling scope, own useTheme()"
-// pattern as CardioHistoryScreen.js's CardioTrend. Shares the parent's
-// `buildLiveStyles(t)` since both read the same `styles` block.
+// every TargetStepper call site. Shares the parent's `buildLiveStyles(t)`
+// since both read the same `styles` block.
 function TargetStepper({
   label,
   value,

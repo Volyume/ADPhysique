@@ -39,7 +39,7 @@ const { buildPlanInputs } = require('../lib/planAutoGen');
 const { runWeeklyCoach } = require('../lib/weeklyCoach');
 const {
   predictDeloadWeek,
-  isRecoveryWeek,
+  getMesoSchedule,
 } = require('../lib/mesocycle');
 const { detectPR } = require('../lib/algorithms');
 const { computeRecoveryEMAs } = require('../lib/recoveryEMA');
@@ -139,7 +139,12 @@ describe('12-week coaching simulation', () => {
     for (let week = 1; week <= 12; week++) {
       const weekStartMs = startOfWeek1 + (week - 1) * WEEK_MS;
       const mesoWeek = ((week - 1) % 6) + 1;
-      const isDeload = isRecoveryWeek(mesoWeek, profile.experience);
+      // isRecoveryWeek (mesocycle.js) was deleted as dead product code
+      // (Campaign 4, coherence-cleanup-2026-08-10, AUDIT-DEAD-FUNCTIONS.md
+      // §2.10); this simulation fixture only ever used it as a phase lookup,
+      // never as a subject under test, so it is inlined here unchanged
+      // against the still-live getMesoSchedule.
+      const isDeload = getMesoSchedule(profile.experience).find(s => s.week === mesoWeek)?.phase === 'recovery';
 
       // ── Daily morning weights with realistic drift + noise ─────────────
       // Cut: -0.4 kg/wk. Maintenance: ~0. Bulk: +0.25 kg/wk.

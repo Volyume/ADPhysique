@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView, Animated, AccessibilityInfo, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView, Animated, AccessibilityInfo } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, motion, shadow } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion, shadow } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { VolyumeIcon } from '../components/BrandMark';
 import SegmentedControl from '../components/SegmentedControl';
@@ -90,7 +90,6 @@ const STEP_OUTCOMES = {
   6: [
     { icon: 'pulse-outline', label: 'Recovery guardrails' },
     { icon: 'notifications-outline', label: 'Check-in rhythm' },
-    { icon: 'heart-outline', label: 'Cardio setting' },
   ],
 };
 
@@ -434,11 +433,6 @@ export default function ProOnboardingScreen({ navigation }) {
   const [recoveryRating, setRecoveryRating] = useState(null);
   const [morningHour, setMorningHour] = useState(7);
   const [checkinDay, setCheckinDay] = useState(0);
-  // Cardio available by default. On means the cardio library + logging are
-  // available to the user; it does NOT allocate cardio. The coach only ever
-  // brings cardio in as a lever when it is genuinely needed (a stalling cut),
-  // never as a scheduled session. The user chooses what they do.
-  const [cardioOn, setCardioOn] = useState(true);
 
   // Step 1, account. OAuth only (Apple/Google), the email + password path was
   // removed (founder 2026-07-01) because email confirmation was flaky. OAuth
@@ -507,7 +501,6 @@ export default function ProOnboardingScreen({ navigation }) {
       if (!draft) return;
       const a = draft.answers || {};
       const str = (v, set) => { if (typeof v === 'string') set(v); };
-      const bool = (v, set) => { if (typeof v === 'boolean') set(v); };
       const num = (v, set) => { if (Number.isFinite(v)) set(v); };
       str(a.firstName, setFirstName);
       if (a.localBWUnits === 'st' || a.localBWUnits === 'kg' || a.localBWUnits === 'lbs') setLocalBWUnits(a.localBWUnits);
@@ -535,7 +528,6 @@ export default function ProOnboardingScreen({ navigation }) {
       str(a.recoveryRating, setRecoveryRating);
       num(a.morningHour, setMorningHour);
       num(a.checkinDay, setCheckinDay);
-      bool(a.cardioOn, setCardioOn);
       // The account step is behind a restored draft by definition.
       setAccountCreated(true);
       // F11 seam: a draft persisted past step 2 whose sex is not an accepted
@@ -561,7 +553,6 @@ export default function ProOnboardingScreen({ navigation }) {
       heightIn, experience, sessionLengthMinutes, daysPerWeek, equipment,
       trainingGoal, trainingPhase, planWeakPoints, proteinOverride,
       recoveryRating, morningHour, checkinDay,
-      cardioOn,
     };
     if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
     draftTimerRef.current = setTimeout(() => {
@@ -574,7 +565,6 @@ export default function ProOnboardingScreen({ navigation }) {
     heightFt, heightIn, experience, sessionLengthMinutes, daysPerWeek,
     equipment, trainingGoal, trainingPhase, planWeakPoints, proteinOverride,
     recoveryRating, morningHour, checkinDay,
-    cardioOn,
   ]);
 
   // ── Step transition helpers ──────────────────────────────────────────────────
@@ -949,7 +939,6 @@ export default function ProOnboardingScreen({ navigation }) {
         goalPhase,
         phaseStartedAt: Date.now(),
         goalStartDate: isDeficit ? new Date().toISOString() : null,
-        cardioEnabled: cardioOn,
         trainingFreq: trainingFreqBucket,
         trainingFreqBucket,
         daysPerWeek,
@@ -1936,34 +1925,6 @@ export default function ProOnboardingScreen({ navigation }) {
             </View>
           </View>
 
-          <View style={styles.section}>
-            <Text style={[styles.fieldLabel, live.fieldLabel]}>Cardio</Text>
-            <Text style={[styles.fieldHint, live.fieldHint]}>Make cardio available as a logging option. It is not added to your plan by default.</Text>
-
-            <View style={[styles.notifSection, live.notifSection]}>
-              <View style={[styles.notifHeader, styles.notifHeaderToggle]}>
-                <View style={[styles.notifIconWrap, live.notifIconWrap]}>
-                  <Ionicons name="heart-outline" size={18} color={t.colors.primary} />
-                </View>
-                <View style={styles.notifCopy}>
-                  <Text style={[styles.notifTitle, live.notifTitle]}>Cardio</Text>
-                  <Text style={[styles.notifSub, live.notifSub]}>
-                    {cardioOn
-                      ? 'On. You can log cardio if you do it. The plan only uses it when it is genuinely needed.'
-                      : 'Off. No cardio logging or library. Turn it on any time in Settings.'}
-                  </Text>
-                </View>
-                <Switch
-                  value={cardioOn}
-                  onValueChange={(v) => setCardioOn(v)}
-                  trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-                  thumbColor={cardioOn ? t.colors.primary : t.colors.textMuted}
-                  accessibilityLabel="Make cardio available"
-                />
-              </View>
-            </View>
-          </View>
-
           {!canContinue ? (
             <Text style={[styles.continueHint, live.continueHint]}>Choose your recovery rating to finish setup.</Text>
           ) : null}
@@ -2221,12 +2182,6 @@ const styles = StyleSheet.create({
     padding: spacing.md, marginBottom: spacing.md,
   },
   notifHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  // The two coaching-reminder rows carry a static "Part of your coaching"
-  // pill, where top-alignment reads fine as a badge. The cardio row instead
-  // ends in an interactive switch, which should sit centred against the icon
-  // and the two-line copy block like every other toggle row in the app
-  // (all the Settings toggles centre via the shared SettingRow).
-  notifHeaderToggle: { alignItems: 'center' },
   notifCopy: { flex: 1, minWidth: 0 },
   notifIconWrap: {
     width: 36, height: 36, borderRadius: radius.md,

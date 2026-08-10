@@ -33,7 +33,7 @@
 --   (NO ACTION / RESTRICT) are converted.
 --
 -- Applied locally (dev Supabase):   NO  (pending)
--- Applied remotely (prod/closed):   NO  (pending)
+-- Applied remotely (prod/closed):   YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4)
 -- Safe to re-run:                    YES (skips FKs already CASCADE)
 -- Rollback:                          recreate the specific constraints
 --                                    without ON DELETE CASCADE (not advised;

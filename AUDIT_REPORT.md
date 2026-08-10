@@ -1,3 +1,5 @@
+⚠ STATUS (2026-08-10): SUPERSEDED AUDIT - closed, do not action from this document. Dated 2026-07-05, against a worktree that no longer exists. Every finding either landed or was superseded by Campaigns 1-4; any residual item needs the D37 triage (verify against today's tree + the decision register) and the D38 elevation test before consideration. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md.
+
 # Volyume Audit And Hardening Report
 
 Date: 2026-07-05

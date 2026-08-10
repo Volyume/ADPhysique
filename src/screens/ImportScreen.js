@@ -334,7 +334,7 @@ export default function ImportScreen({ navigation }) {
 // CP-10 batch G (2026-07-11): sibling function-component scope (not
 // prop-drilled `live`/`t` from ImportScreen), so its own useTheme() call is
 // cleaner than threading two extra props through. Same shared
-// buildLiveStyles(t) as the parent screen (CardioTrend precedent).
+// buildLiveStyles(t) as the parent screen.
 function Stat({ label, value }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);

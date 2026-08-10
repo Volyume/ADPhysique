@@ -1,5 +1,22 @@
 -- Migration 050: weekly_checkins_v2.cardio_adherence
 --
+-- ⚠ STATUS 2026-08-10 (Campaign 4 review; text only, the SQL below is
+-- unchanged). APPLIED to EU-Dublin production and RETAINED, but every
+-- present-tense sentence below now describes a RETIRED product loop.
+-- Cardio logging and the coach's cardio prescription were removed under
+-- the founder boundary D92-1/D95 (commit 3e8ab0c6 and the engine change
+-- at 21252dbe). Today:
+--   * the weekly coach emits no cardio prescription and no cardio key;
+--   * `users_profile.cardio_prescription` has no writer;
+--   * the weekly check-in asks NO cardio question, and
+--     WeeklyCheckInScreen deliberately OMITS the key on save so retained
+--     historical answers are preserved rather than cleared (D95 H5 /
+--     Review B F1);
+--   * the column stays for historical answers already stored. Do not
+--     drop it, and do not read this header as a live specification.
+-- The paragraphs below are kept verbatim as the record of why the column
+-- exists.
+--
 -- Destination for the weekly coach's confirm-then-apply cardio
 -- prescription (GAP_ANALYSIS row 4, founder decision 2026-05-28:
 -- "check-in adherence" approach, mirroring steps).

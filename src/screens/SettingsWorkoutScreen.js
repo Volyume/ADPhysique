@@ -31,8 +31,10 @@ function formatRestSeconds(seconds) {
 // Settings root, breaking that screen's own "tap for a sub-page" contract.
 // Moved wholesale into its own sub-page; the JSX, state and persistence keys
 // are unchanged from the original inline block (Hevy teardown 2026-06-29,
-// R1/R2): body-weight unit, barbell weight, global default rest timer, and
-// auto-start rest. These wire over existing/new store setters so a user who
+// R1/R2): body-weight unit, global default rest timer, auto-start rest and
+// the rest-finished alert (the bar-weight row named in the original R1/R2
+// scope was removed at founder request, see SettingsProfileScreen.js:227-231).
+// These wire over existing/new store setters so a user who
 // picked the wrong unit in onboarding, or wants a non-90s default rest, is
 // no longer stuck.
 export default function SettingsWorkoutScreen() {

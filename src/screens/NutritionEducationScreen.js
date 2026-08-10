@@ -50,8 +50,8 @@ export default function NutritionEducationScreen() {
           </Body>
           <KeyPoint>Trend over weeks &gt; perfection on any day.</KeyPoint>
           <Body>
-            Cardio and steps are part of that maintenance number. When you log
-            a session, the calorie estimate is feedback, not extra food budget.
+            Cardio and steps are part of that maintenance number already,
+            whether or not you track them elsewhere.
           </Body>
           <KeyPoint>
             Other apps add exercise calories back on top. Volyume never does.

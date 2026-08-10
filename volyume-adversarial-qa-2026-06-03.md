@@ -1,3 +1,5 @@
+⚠ STATUS (2026-08-10): SUPERSEDED AUDIT - closed, do not action from this document. Dated 2026-06-03; it predates the logger rebuild (D43/D57-D66), the flat-diary revert (D75), the adaptive mesocycle build (D91), the Coach merge (D68) and Campaigns 1-4. Any residual item needs the D37 triage (verify against today's tree + the decision register) and the D38 elevation test before consideration. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md.
+
 # Volyume adversarial QA — failure-path report (2026-06-03)
 
 Method: static execution-path analysis of the working tree (no device/emulator

@@ -46,7 +46,7 @@
  * deload scaling.
  */
 import { ABSOLUTE_WEEKLY_SET_CEILING } from './coachApply';
-import { MUSCLE_DISPLAY_NAMES } from './algorithms';
+import { muscleDisplayName } from './algorithms';
 
 export const LEDGER_VERSION = 1;
 // Provenance (founder Stage 6 order B): the schema version above gates
@@ -106,14 +106,6 @@ function recoveryCostWeight(recovery) {
   return weight;
 }
 
-function displayName(muscleKey) {
-  const key = String(muscleKey || 'muscle');
-  const known = MUSCLE_DISPLAY_NAMES[key];
-  if (known) return known;
-  const spaced = key.replace(/_/g, ' ');
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
-}
-
 /**
  * Classify one muscle's response to a finished block and propose the next
  * block's start/peak for it. Pure.
@@ -140,7 +132,7 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
   const suppressed = !!ctx.suppressed;
   const weeksSinceBlockEnd = num(ctx.weeksSinceBlockEnd, 0);
 
-  const name = displayName(input.muscle);
+  const name = muscleDisplayName(input.muscle);
   const lower = name.toLowerCase();
   const landmarks = input.landmarks || {};
   const performance = input.performance || {};

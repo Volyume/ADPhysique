@@ -74,9 +74,11 @@ describe('shared chrome polish', () => {
 
   // 'Cardio history is a contained neutral header action' removed
   // 2026-08-06: CardioPlanCard was deleted with the founder's ruling that
-  // cardio logging is not a Progress surface; the history action now lives
-  // in Log cardio's ModalHeader (pinned by
-  // progressAndBrief.founderRulings.guard.test.js).
+  // cardio logging is not a Progress surface. Cardio logging itself was
+  // later retired outright (D95, Campaign 4) — LogCardioScreen and its
+  // ModalHeader are gone; the boundary is pinned by
+  // campaign4.boundaries.test.js and
+  // progressAndBrief.founderRulings.guard.test.js.
 
   test('core chrome uses bundled type roles instead of synthetic Android weights', () => {
     expect(BUTTON).toContain('fontFamily: fontFamily.semibold');

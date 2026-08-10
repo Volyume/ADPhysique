@@ -65,6 +65,21 @@ export function localDaysElapsed(startMs, endMs) {
  * Returns which week of the current mesocycle we are in (1-indexed).
  * Wraps back to 1 after the schedule length.
  *
+ * RETAINED DESPITE ZERO PRODUCTION CALLERS (Campaign 4,
+ * coherence-cleanup-2026-08-10, AUDIT-DEAD-FUNCTIONS.md §2.9, Class D):
+ * this is a deliberate seam, not dead code, for two independent reasons:
+ *   1. DST oracle -- mesocycle.f10.dst.test.js asserts this function and the
+ *      LIVE getBlockStatus never disagree across a UK DST fall-back, so
+ *      deleting it would remove the only cross-check that proves the live
+ *      block-week maths is DST-safe.
+ *   2. Single-resolver guard family -- blockWeekResolver.test.js pins that no
+ *      screen/hook re-implements block/week date maths independently of this
+ *      shared resolver family (getCurrentMesoWeek / getBlockStatus /
+ *      getCurrentBlockWeekIndex, all in this file). Block-bound code always
+ *      resolves through getCurrentBlockWeekIndex + getBlockStatus, never
+ *      through this narrative layer (see blockLifecycle.stage1.test.js).
+ * A future dead-code sweep must not delete this on a naive zero-caller read.
+ *
  * @param {string|number} startDateMs - epoch ms (or ISO string) of mesocycle start
  * @param {'beginner'|'intermediate'|'advanced'|'competitive'} experience
  * @param {number} [nowMs] - epoch ms to treat as "now"; defaults to Date.now().
@@ -135,74 +150,6 @@ export function getMesoSchedule(experience) {
   return (experience === 'advanced' || experience === 'competitive')
     ? MESO_SCHEDULE.advanced
     : MESO_SCHEDULE.standard;
-}
-
-/**
- * Returns the sets multiplier for a given mesocycle week.
- *
- * @param {number} mesoWeek - 1-indexed
- * @param {'beginner'|'intermediate'|'advanced'|'competitive'} experience
- * @returns {number}
- */
-export function getWeekSetsMultiplier(mesoWeek, experience = 'intermediate') {
-  const schedule = getMesoSchedule(experience);
-  // CALC-8: wrap an out-of-range or non-finite week into the schedule (same
-  // wrap getCurrentMesoWeek uses) instead of silently returning week 1. In-range
-  // weeks map to themselves, so valid callers are unchanged.
-  const wk = Number.isFinite(mesoWeek) ? Math.max(1, Math.round(mesoWeek)) : 1;
-  const normalized = ((wk - 1) % schedule.length) + 1;
-  const entry = schedule.find(s => s.week === normalized) ?? schedule[0];
-  return entry.setsMultiplier;
-}
-
-/**
- * Returns whether the current week is a recovery (deload) week.
- *
- * @param {number} mesoWeek - 1-indexed
- * @param {'beginner'|'intermediate'|'advanced'|'competitive'} experience
- * @returns {boolean}
- */
-export function isRecoveryWeek(mesoWeek, experience = 'intermediate') {
-  const schedule = getMesoSchedule(experience);
-  const entry = schedule.find(s => s.week === mesoWeek);
-  return entry?.phase === 'recovery';
-}
-
-// ---------------------------------------------------------------------------
-// Weekly set targets with mesocycle progression
-// ---------------------------------------------------------------------------
-
-/**
- * Applies the mesocycle multiplier to a set of base targets (MEV-start values).
- *
- * @param {Object.<string, number>} baseSets - { muscle: weeklySetCount }
- * @param {number} mesoWeek - 1-indexed
- * @param {'beginner'|'intermediate'|'advanced'|'competitive'} experience
- * @returns {Object.<string, number>} adjusted set counts (rounded to nearest integer)
- */
-export function getVolumeTargetsForWeek(baseSets, mesoWeek, experience = 'intermediate') {
-  const multiplier = getWeekSetsMultiplier(mesoWeek, experience);
-  const out = {};
-  for (const [muscle, sets] of Object.entries(baseSets)) {
-    out[muscle] = Math.round(sets * multiplier);
-  }
-  return out;
-}
-
-/**
- * Builds the complete week-by-week set progression table for one muscle.
- *
- * @param {number} baseSets - MEV start-of-block set count for this muscle
- * @param {number} mrvSets - MRV ceiling for this muscle (caps peak week)
- * @param {'beginner'|'intermediate'|'advanced'|'competitive'} experience
- * @returns {Array<{week, phase, setsMultiplier, plannedSets, label}>}
- */
-export function buildWeeklyProgression(baseSets, mrvSets, experience = 'intermediate') {
-  const schedule = getMesoSchedule(experience);
-  return schedule.map(entry => ({
-    ...entry,
-    plannedSets: Math.min(mrvSets, Math.round(baseSets * entry.setsMultiplier)),
-  }));
 }
 
 // ---------------------------------------------------------------------------

@@ -18,7 +18,6 @@
  * diet break, macro cycling), whatever entitlements the user holds.
  */
 import { runWeeklyCoach } from '../weeklyCoach';
-import { cutCardioTarget } from '../cardio/cardioEngine';
 import { isCutPhase, phaseToCoachingKey, dayCalorieCyclingAllowed } from '../coachingGoals';
 
 const DAY = 86400000;
@@ -160,13 +159,13 @@ describe('EN-4 replay — dead vocabulary deleted (founder ruling b)', () => {
     expect(out.weekLabel).toBe('Week 5 · Maintenance'); // [changed in phase 2: unknown key falls back to maintenance]
   });
 
-  test('V12 cardio: the agg_cut interval boost is gone; the base dose never drifts', () => {
-    // [changed in phase 2] the unreachable agg_cut boost branch was deleted
-    // with the vocabulary; cutCardioTarget() now takes no arguments.
-    const base = cutCardioTarget();
-    expect(base.includesInterval).toBe(false);   // [must never drift]
-    expect(base.sessionsPerWeek).toBe(3);        // [must never drift]
-  });
+  // V12 (cardio: the agg_cut interval boost is gone) is retired, not
+  // dropped silently: it pinned cutCardioTarget() in src/lib/cardio/
+  // cardioEngine.js, which was deleted whole under the cardio-logging
+  // product boundary (D92-1/D95, Campaign 4) -- there is no cardio dose to
+  // drift any more. The law it shared with V10/V11/V13 (dead phase
+  // vocabulary can never resurrect old behaviour) still lives in full in
+  // those three, which are engine-wide, not cardio-specific.
 
   test('V13 cut-phase truth table: mild_cut is a cut [must never drift]; recomp NEVER becomes one', () => {
     expect(isCutPhase('mild_cut')).toBe(true);                          // [must never drift]

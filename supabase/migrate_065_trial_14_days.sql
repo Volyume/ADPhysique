@@ -21,7 +21,7 @@
 --   auto-expires at day 14 with no worker edit.
 --
 -- Applied locally (dev Supabase project):   NO  (pending)
--- Applied remotely (closed-test project):    NO  (pending founder apply)
+-- Applied remotely (closed-test project):    YES - EU-Dublin production (2026-07-27 full sweep; supabase/README.md § CURRENT STATUS; status line corrected 2026-08-10, Campaign 4)
 --
 -- Safe to re-run
 --   Yes. CREATE OR REPLACE FUNCTION; no data writes, no schema change.

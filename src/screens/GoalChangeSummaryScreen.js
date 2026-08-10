@@ -384,8 +384,7 @@ const styles = StyleSheet.create({
 // ChangeCard and MacroRow) so they can never drift out of step with each
 // other or the frozen block. Pure layout keys (flex/gap/padding/opacity/
 // fontWeight, no colour/fontSize/type token) are correctly omitted -- there
-// is nothing to unfreeze for them. Same pattern as CardioHistoryScreen.js's
-// buildLiveStyles (batch preceding this one).
+// is nothing to unfreeze for them.
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },

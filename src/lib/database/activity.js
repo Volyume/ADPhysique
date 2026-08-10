@@ -1,6 +1,5 @@
 export function createActivityRepository({
   db,
-  uid,
   rowToCamel,
   scheduleSync = () => {},
   dayKey,
@@ -56,85 +55,6 @@ export function createActivityRepository({
     return rows.map(rowToCamel);
   }
 
-  async function insertCardioLog(userId, session = {}) {
-    if (!userId) return null;
-    const d = await db();
-    const id = session.id || uid();
-    const createdAt = now();
-    const day = session.entryDate || activityDayKey();
-    const durationMin = Math.max(0, Math.min(1440, Math.round(Number(session.durationMin) || 0)));
-    const row = {
-      user_id: userId,
-      id,
-      entry_date: day,
-      activity_id: session.activityId ?? null,
-      activity_name: String(session.activityName || 'Cardio'),
-      category: session.category ?? null,
-      duration_min: durationMin,
-      intensity: session.intensity || 'moderate',
-      met: session.met != null ? Number(session.met) : null,
-      est_kcal: session.estKcal != null ? Math.max(0, Math.round(Number(session.estKcal))) : null,
-      recovery_impact: session.recoveryImpact ?? null,
-      impact_type: session.impactType ?? null,
-      distance: session.distance != null ? Number(session.distance) : null,
-      avg_hr: session.avgHr != null ? Math.round(Number(session.avgHr)) : null,
-      source: session.source || 'manual',
-      notes: session.notes ?? null,
-      created_at: createdAt,
-      updated_at: createdAt,
-      deleted_at: null,
-      ext_id: session.extId ?? null,
-    };
-    await d.runAsync(
-      `INSERT INTO cardio_log (user_id, id, entry_date, activity_id, activity_name,
-         category, duration_min, intensity, met, est_kcal, recovery_impact,
-         impact_type, distance, avg_hr, source, notes, created_at, updated_at, deleted_at, ext_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [row.user_id, row.id, row.entry_date, row.activity_id, row.activity_name,
-        row.category, row.duration_min, row.intensity, row.met, row.est_kcal,
-        row.recovery_impact, row.impact_type, row.distance, row.avg_hr, row.source,
-        row.notes, row.created_at, row.updated_at, row.deleted_at, row.ext_id],
-    );
-    scheduleSync();
-    return rowToCamel(row);
-  }
-
-  async function cardioExtIdExists(userId, extId) {
-    if (!userId || !extId) return false;
-    const d = await db();
-    const row = await d.getFirstAsync(
-      'SELECT 1 AS hit FROM cardio_log WHERE user_id = ? AND ext_id = ? LIMIT 1',
-      [userId, extId],
-    );
-    return !!row;
-  }
-
-  async function updateCardioLog(userId, id, fields = {}) {
-    if (!userId || !id) return null;
-    const d = await db();
-    const updatedAt = now();
-    const allowed = {
-      entry_date: fields.entryDate, activity_id: fields.activityId,
-      activity_name: fields.activityName, category: fields.category,
-      duration_min: fields.durationMin != null ? Math.max(0, Math.round(Number(fields.durationMin))) : undefined,
-      intensity: fields.intensity, met: fields.met,
-      est_kcal: fields.estKcal != null ? Math.max(0, Math.round(Number(fields.estKcal))) : undefined,
-      recovery_impact: fields.recoveryImpact, impact_type: fields.impactType,
-      distance: fields.distance, avg_hr: fields.avgHr, source: fields.source, notes: fields.notes,
-    };
-    const sets = [];
-    const args = [];
-    for (const [col, val] of Object.entries(allowed)) {
-      if (val !== undefined) { sets.push(`${col} = ?`); args.push(val); }
-    }
-    if (!sets.length) return null;
-    sets.push('updated_at = ?'); args.push(updatedAt);
-    args.push(userId, id);
-    await d.runAsync(`UPDATE cardio_log SET ${sets.join(', ')} WHERE user_id = ? AND id = ?`, args);
-    scheduleSync();
-    return getCardioLogById(userId, id);
-  }
-
   async function deleteCardioLog(userId, id) {
     if (!userId || !id) return false;
     const d = await db();
@@ -145,60 +65,6 @@ export function createActivityRepository({
     );
     scheduleSync();
     return true;
-  }
-
-  async function getCardioLogById(userId, id) {
-    if (!userId || !id) return null;
-    const d = await db();
-    const row = await d.getFirstAsync(
-      'SELECT * FROM cardio_log WHERE user_id = ? AND id = ?',
-      [userId, id],
-    );
-    return row ? rowToCamel(row) : null;
-  }
-
-  async function getCardioLogForDate(userId, entryDate) {
-    if (!userId) return [];
-    const d = await db();
-    const day = entryDate || activityDayKey();
-    const rows = await d.getAllAsync(
-      'SELECT * FROM cardio_log WHERE user_id = ? AND entry_date = ? AND deleted_at IS NULL ORDER BY created_at DESC',
-      [userId, day],
-    );
-    return rows.map(rowToCamel);
-  }
-
-  async function getCardioLogRange(userId, fromDate, toDate) {
-    if (!userId) return [];
-    const d = await db();
-    const rows = await d.getAllAsync(
-      `SELECT * FROM cardio_log
-       WHERE user_id = ? AND entry_date >= ? AND entry_date <= ? AND deleted_at IS NULL
-       ORDER BY entry_date DESC, created_at DESC`,
-      [userId, fromDate, toDate],
-    );
-    return rows.map(rowToCamel);
-  }
-
-  async function getRecentCardioLog(userId, limit = 50) {
-    if (!userId) return [];
-    const d = await db();
-    const rows = await d.getAllAsync(
-      'SELECT * FROM cardio_log WHERE user_id = ? AND deleted_at IS NULL ORDER BY entry_date DESC, created_at DESC LIMIT ?',
-      [userId, Math.max(1, Math.min(500, limit | 0))],
-    );
-    return rows.map(rowToCamel);
-  }
-
-  async function getCardioLogForPush(userId, days = 400) {
-    if (!userId) return [];
-    const d = await db();
-    const cutoff = now() - days * 86400000;
-    const rows = await d.getAllAsync(
-      'SELECT * FROM cardio_log WHERE user_id = ? AND updated_at >= ? ORDER BY updated_at ASC',
-      [userId, cutoff],
-    );
-    return rows.map(rowToCamel);
   }
 
   async function getCardioLogUpdatedAt(userId, id) {
@@ -290,23 +156,15 @@ export function createActivityRepository({
 
   return {
     activityDayKey,
-    cardioExtIdExists,
     deleteCardioLog,
-    getCardioLogById,
-    getCardioLogForDate,
-    getCardioLogForPush,
-    getCardioLogRange,
     getCardioLogUpdatedAt,
     getDailySteps,
     getDailyStepsForPush,
     getDailyStepsRange,
     getDailyStepsToday,
     getDailyStepsUpdatedAt,
-    getRecentCardioLog,
-    insertCardioLog,
     insertCardioLogFromCloud,
     insertDailyStepsFromCloud,
     setDailySteps,
-    updateCardioLog,
   };
 }

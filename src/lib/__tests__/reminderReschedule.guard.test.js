@@ -17,7 +17,8 @@ describe('CoachingRemindersScreen cancels only the notifications it owns', () =>
   // applyScheduled used to call cancelAllNotifications(), silently wiping
   // the cascade-gate / trial day-3 / win-back / weekly coach-ready pushes
   // until the next launch re-laid them (the historic wipe-bug class, same
-  // fix as NotificationSettingsScreen.applyNotifications).
+  // fix that NotificationSettingsScreen.applyNotifications carried before it
+  // was deleted as dead code under D95).
   test('source guard: the blanket cancelAllNotifications call is gone', () => {
     expect(REMINDERS).not.toMatch(/await cancelAllNotifications/);
     expect(REMINDERS).not.toMatch(/cancelAllNotifications,/); // not imported

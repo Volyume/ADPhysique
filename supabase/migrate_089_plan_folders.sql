@@ -19,10 +19,16 @@
 --   - Purpose:           plan_folders table + RLS (own-row) + deleted_at
 --                        tombstone + programmes.folder_id
 --   - Applied locally:   NO (no local dev Supabase project)
---   - Applied remotely:  NO (auto-applies on merge to main via
---                        deploy-migrations.yml, which targets the LIVE
---                        EU-Dublin production project — there is no separate
---                        staging gate; the migration is additive + idempotent)
+--   - Applied remotely:  YES - EU-Dublin production (confirmed by the
+--                        2026-07-27 full sweep; supabase/README.md
+--                        § CURRENT STATUS). Status line corrected
+--                        2026-08-10 (Campaign 4 review): it used to read
+--                        "NO (auto-applies on merge to main via
+--                        deploy-migrations.yml ...)". NOTHING AUTO-APPLIES.
+--                        The push trigger was retired at E0;
+--                        deploy-migrations.yml is manual-dispatch only.
+--                        The "targets the LIVE EU-Dublin project, no
+--                        separate staging gate" half was and remains true.
 --   - Safe to re-run:    YES (CREATE TABLE IF NOT EXISTS, ADD COLUMN IF NOT
 --                        EXISTS, CREATE INDEX IF NOT EXISTS, DROP POLICY IF
 --                        EXISTS then CREATE — idempotent)

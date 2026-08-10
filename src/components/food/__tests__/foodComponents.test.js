@@ -216,6 +216,24 @@ describe('EntryRow', () => {
     expect(txt).toContain('170g');
   });
 
+  // ED-safety non-goal (Ultimate-Audit item 15, D22 15a/15b timeline food
+  // logging). Re-anchored here (Campaign 4, coherence-cleanup-2026-08-10,
+  // AUDIT-MODULES-FLAGS.md §1.1) from the deleted src/lib/food/diaryTimeline.js
+  // suite onto EntryRow, the LIVE meal-card row that actually renders entries:
+  // a bulk-confirmed entry with no eaten_at never gets an invented displayed
+  // time, and no derived "time since"/gap/hour judgement text is ever shown
+  // for it -- only its meal tag and quantity, same as any other row.
+  test('an untimed (bulk-confirmed) entry shows no invented time and no derived time-since/gap judgement', () => {
+    const tree = create(
+      <EntryRow entry={{ ...baseEntry, eaten_at: null }} onEdit={() => {}} mealLabel="Lunch" />,
+    ).toJSON();
+    const txt = JSON.stringify(tree);
+    expect(txt).toContain('170g');
+    expect(txt).toContain('Lunch');
+    expect(txt).not.toMatch(/\d{1,2}:\d{2}/); // no clock time rendered
+    expect(txt).not.toMatch(/ago|since|time since|hours? (ago|since)/i);
+  });
+
   test('renders resolved name and brand', () => {
     const tree = create(<EntryRow entry={baseEntry} onEdit={() => {}} />).toJSON();
     const txt = JSON.stringify(tree);

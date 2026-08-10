@@ -487,8 +487,7 @@ const styles = StyleSheet.create({
 // properties of the matching frozen style, at identical rest values, so a
 // theme/accessibility toggle applies without an app restart. Pure layout
 // keys (flex/gap/padding/width/position, no token) are correctly omitted --
-// there is nothing to unfreeze for them. Same pattern as LogCardioScreen.js's
-// buildLiveStyles.
+// there is nothing to unfreeze for them.
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },

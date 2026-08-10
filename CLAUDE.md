@@ -12,7 +12,9 @@ are paying. Every change affects them. Work accordingly.
 > was REVERTED on the founder's device verdict — never re-propose it.
 > Cloud migrations are CLAUDE-RUN, gated on the founder's exact phrase
 > "run against production" per batch (`supabase/README`); applied through
-> `migrate_116`; 049/059 HELD. Decision delegation (D33) and the full
+> `migrate_131`, with 132-135 written and awaiting the phrase. Only
+> **049** is HELD (059 is applied; its `meal_[0-9]+` CHECK is live).
+> Decision delegation (D33) and the full
 > operating model are PERMANENT law — Section 4, D40 block. The decisions
 > register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md`.
 > Founder-side outstanding actions: TASKBOARD.md section 3.
@@ -23,7 +25,9 @@ are paying. Every change affects them. Work accordingly.
 
 **Stack.** React Native 0.81.5 + Expo SDK 54 (managed workflow, never eject;
 native modules only via Expo config plugins — see `modules/live-activity`,
-`modules/rest-timer-live`). React 19.1. JavaScript, not TypeScript
+`modules/rest-timer-live`, `modules/progress-scan-image`, and the home-screen
+widget surface `plugins/withVolyumeWidget.js` + `src/widgets/`). React 19.1.
+JavaScript, not TypeScript
 (`tsc --noEmit` runs over JSDoc for checking only).
 
 **Storage: offline-first.** `expo-sqlite` encrypted with SQLCipher
@@ -36,17 +40,17 @@ database is the source of truth on device. Local migrations run via
 **Backend: Supabase EU-Dublin** (`@supabase/supabase-js`). EU data residency
 is absolute — all user data stays in Dublin. Components NEVER query Supabase
 directly; everything flows through the sync layer. Cloud schema lives in
-`supabase/migrate_NNN_*.sql` (96 files; migrations are canonical,
+`supabase/migrate_NNN_*.sql` (132 files, highest `migrate_135`; migrations are canonical,
 `schema.sql`/`setup_complete.sql` are stale snapshots).
 
 **Sync layer.** Registry-driven engine in `src/lib/sync/` (`registry.js`,
 `transport.js`, `runner.js`, `tables/`, `watermark.js`, `conflict.js`,
-`queue.js`, `signOutGuard.js`) plus legacy per-entity functions in
+`signOutGuard.js`, `telemetry.js`) plus legacy per-entity functions in
 `src/lib/sync.js` that are being migrated table-by-table (`MIGRATED_TABLES`).
 Push on save + queued retry (`syncQueue.js`); pull on session restore
 (`pullFromCloud`, last-write-wins with local as device truth).
 
-**State: Zustand 4** — one store, `src/store/useAppStore.js` (~1,700 lines):
+**State: Zustand 4** — one store, `src/store/useAppStore.js` (~2,000 lines):
 session/auth, tier, userProfile, units, consent flags, sync status. Screens
 select with `useShallow`. Persistent prefs go to AsyncStorage or SQLite, not
 the store alone.
@@ -64,7 +68,7 @@ Article 9 consent, first-run, and tier.
 - `src/lib/weeklyCoach.js` — the weekly coaching run (`runWeeklyCoach`)
 - `src/lib/coachApply.js` — applying adjustments (floors re-enforced here)
 - `src/lib/coachingGoals.js`, `mesocycle.js`, `planAutoGen.js`,
-  `poolGenerator.js`, `cardio/cardioEngine.js`
+  `poolGenerator.js`
 - Safety: `edPatternDetector.js`, `wellbeing.js` (Beat UK + calm mode)
 
 **Payments.** `react-native-iap` 15.3.1 wrapped by `src/lib/payments/`
@@ -160,7 +164,7 @@ production".
 **Free/Pro gating is absolute and binary.** Free: Plan Library, builder,
 workout logging, exercise library, PRs, progress stats. Pro: everything
 nutrition/coaching (food diary, barcode, meal suggestions, targets, macros,
-cardio, check-ins, Precision Coaching, division plans, wearables). Never
+check-ins, Precision Coaching, division plans, wearables). Never
 expose Pro to free; never gate a free feature. When in doubt: ask.
 
 **Identity.** No anonymous mode, no local-user migration paths
@@ -181,7 +185,7 @@ yes.
 - **Files:** screens `src/screens/NameScreen.js` (PascalCase); components
   `src/components/Name.js`; logic modules `src/lib/camelCase.js`; domain
   folders under lib (`food/`, `payments/`, `notifications/`, `sync/`,
-  `partners/`, `cardio/`, `consent/`).
+  `partners/`, `consent/`).
 - **Components:** function components only, hooks, no classes.
   `StyleSheet.create` at the bottom of the file. All colours/spacing/type from
   `src/styles/theme.js` tokens — never hard-code (see `docs/rules/styling.md`).

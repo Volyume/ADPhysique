@@ -28,9 +28,10 @@ const SCREEN = fs.readFileSync(
   'utf8',
 );
 
-// The seven apply keys with a committing button on this screen.
+// The six apply keys with a committing button on this screen. The cardio
+// key was removed with the cardio-prescription feature (D95, Campaign 4).
 const APPLY_KEYS = [
-  'calories', 'training', 'cardio',
+  'calories', 'training',
   'deload', 'dietBreak', 'macroCycle', 'refeed',
 ];
 
@@ -86,7 +87,7 @@ describe('M4 data-first order (fit rule 5)', () => {
     // isApplied(output, key) stays the gate in every handler; the morph
     // never becomes the thing standing between a double tap and a write.
     const gates = SCREEN.match(/if \(isApplied\(output, '/g) || [];
-    expect(gates.length).toBeGreaterThanOrEqual(7);
+    expect(gates.length).toBeGreaterThanOrEqual(6);
   });
 });
 

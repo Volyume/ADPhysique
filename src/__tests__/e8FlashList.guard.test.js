@@ -2,8 +2,9 @@
  * E8 perf (founder decisions 2026-07-02, see
  * docs/decisions-2026-07-02-e15-e8-e9.md): FIRST pass converted the measured
  * long lists; the SECOND decision batch extended scope to everything —
- * ProgressPhotos grid, CardioHistory (flattened SectionList) and the small
- * bounded lists. Pins, so a refactor cannot quietly regress a surface back
+ * ProgressPhotos grid and the small bounded lists (CardioHistory's own
+ * FlashList conversion was retired with the screen itself, D95). Pins, so a
+ * refactor cannot quietly regress a surface back
  * to an unrecycled FlatList:
  *   - every converted surface renders FlashList and no FlatList/SectionList;
  *   - PlanLibrary keeps exactly one FlatList (the tiny horizontal category
@@ -45,13 +46,6 @@ describe('E8: lists render through FlashList', () => {
     expect(src).toMatch(/from '@shopify\/flash-list'/);
     expect(src).toMatch(/<FlashList/);
     expect(src).not.toMatch(/FlatList/);
-  });
-
-  test('CardioHistory: sections flattened, no SectionList remains', () => {
-    const src = read('src/screens/CardioHistoryScreen.js');
-    expect(src).toMatch(/<FlashList/);
-    expect(src).not.toMatch(/SectionList/);
-    expect(src).toMatch(/getItemType/);
   });
 
   test('PlanLibrary: plans list is FlashList, only the chip row stays FlatList', () => {

@@ -1350,6 +1350,36 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
+- **CAMPAIGN 4 (2026-08-10) — update the published listings and rule on
+  the FR-C4 items.** Full detail per item:
+  `docs/coherence-cleanup-2026-08-10/D95-RULINGS.md` (founder-items
+  section).
+  - **H4 — published listings still promise cardio.** Cardio logging is
+    removed from the app; the Play Store / App Store Connect listings
+    (and any live marketing copy sourced from them) need the cardio
+    lines removed. The repo source docs now carry STALE-ON-CARDIO
+    banners; only the founder can edit the consoles.
+  - FR-C4-1 cardio export coverage · FR-C4-2 notification-pref
+    dual-family drift · FR-C4-3 adaptation_events restore path ·
+    FR-C4-4 CALC-5 law vs live computeSetTargets · FR-C4-5 partner
+    telemetry catalogue · FR-C4-6 notification category derivation
+    gaps · FR-C4-7 progress-photo capture-weight gating
+    (ED/privacy-adjacent) · FR-C4-8 check-in reminders have no off
+    switch despite the locked unsubscribe ledger · FR-C4-9 root
+    billing.md/styling.md/watermelon.md and settings.json misnamed
+    rules files presenting stale law under config names (rename
+    needs founder knowledge of local hook wiring) · FR-C4-10 the
+    public/app-map pages are a stale June audit report still published
+    (refresh or unpublish) · FR-C4-11 activitySteps.js and the engine's
+    steps lever are retained-dormant (zero production callers /
+    stepsEnabled:false at the only call site) - revive or retire is a
+    product call · FR-PW-1 peak-week retirement design.
+  - Data note for FR-C4-1's cluster (Review A): with cardio push
+    removed, a cardio row logged offline and never synced before the
+    app update cannot reach the cloud and is lost at sign-out (rare;
+    recorded on H1). A one-shot drain is a small follow-up if wanted.
+  - FR-1..FR-5 (Campaign 3) remain open and unchanged.
+
 - ~~RUN MIGRATIONS 129 + 130~~ DONE 2026-08-06: both applied to
   EU-Dublin by Claude on founder GO and verified (deload_week column +
   comment present -- pre-flight showed the column already existed, the
@@ -1595,7 +1625,49 @@ workflow survives as a fallback.
   register. FIVE FOUNDER RULINGS OPEN (FR-1..FR-5 in
   SETTINGS-OWNERSHIP.md). Campaign 4 list carried in the same folder.
   Originally: IN FLIGHT on claude/campaign3-discoverability (from
-  main 9aae57cb). Objective:
+  main 9aae57cb).
+- CAMPAIGN 4: WHOLE-PRODUCT COHERENCE, LEGACY/DEAD-CODE CLEANUP AND
+  PRODUCT-BOUNDARY CLOSURE (2026-08-10, founder order) - **COMPLETE,
+  merged to main 2026-08-10** (record:
+  docs/coherence-cleanup-2026-08-10/ - CAMPAIGN-LOG.md,
+  D95-RULINGS.md, PHASE-30-GATES.md, eight AUDIT files; register D95;
+  founder-side items in §3 above; STOPPED after Campaign 4 per the
+  order). Originally: IN FLIGHT on
+  claude/campaign4-coherence (from main 92b9644e). Purpose: make the
+  shipping product and the live repository agree. Core law: DELETE
+  ONLY WHAT YOU CAN PROVE IS DEAD OR OUT OF SCOPE (A-I classes; zero
+  callers alone is never sufficient); never delete historical user
+  data because a feature is gone; a removed feature must leave no
+  product promise behind. CARDIO LOGGING: current founder ruling, NOT
+  part of Volyume - complete boundary closure (UI/routes/toggle/copy/
+  engine deps removed non-destructively; historical data preserved
+  under export/delete contracts; permanent boundary guard) while
+  steps/general-activity and strength-to-health integrations are
+  DIFFERENT live concepts and must survive. PEAK WEEK: legacy-load-
+  bearing, migration 049 stays HELD, no casual cleanup. 30 phases:
+  reachability map, cardio closure (2A-2D), Campaign 3 deferred items,
+  dead engine functions / copy generators / modules (behavioural laws
+  move to live code BEFORE dead tests die), dark flags/rollback seams
+  (ONBOARDING_QUIZ_FIRST + PRO_BETA_ACTIVE + USE_FOREGROUND_SERVICE
+  presumed intentional), travel mode, peak week, two-family sync
+  (no wholesale consolidation), stale routes, dead pref keys,
+  FR-1..FR-5 carried NOT resolved, duplicated calculations (one
+  mathematical truth), comment/doc truth with authority chain, stale
+  SQL snapshots, test truthfulness, telemetry catalogue, subscription
+  truth, export/delete coverage for retired data, deep links/
+  notification destinations, cross-feature coherence,
+  campaign4.boundaries.test.js, tombstone guards, THREE adversarial
+  reviews (reachability / boundaries / repository truth), quality
+  gates with before/after censuses. HARD CONSTRAINTS: migrations
+  132-135 unrun + 049 held; no destructive migration without founder
+  ruling; no EAS; D92-11 unaltered; billing untouched; ED semantics
+  untouched; deterministic no-AI coaching intact; STOP after
+  Campaign 4 (no onboarding restructuring, no long-term-user work).
+  40-item final handover.
+  RECOVERY: order verbatim in session scratchpad
+  c4-CAMPAIGN4-ORDER.txt; campaign docs in
+  docs/coherence-cleanup-2026-08-10/ (CAMPAIGN-LOG.md = running
+  state); rulings register as D95. Objective:
   every EXISTING meaningful feature and behaviour-changing control
   discoverable at the moment of need, WITHOUT clutter, a settings
   dumping ground, duplicated controls, new scope, AI search/chat, or

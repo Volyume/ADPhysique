@@ -14,8 +14,7 @@ import { SettingsPage, SettingRow, settingsStyles, useSettingsStyles } from '../
 import Chip from '../components/Chip';
 
 // Coaching: the levers that shape what the coach asks for and adjusts.
-// Cardio is Pro-only; cycle tracking shows for users whose body profile
-// records a female sex.
+// Cycle tracking shows for users whose body profile records a female sex.
 export default function SettingsCoachingScreen() {
   const { user, userProfile, saveLocalProfile, tier } = useAppStore(
     useShallow(s => ({
@@ -28,21 +27,22 @@ export default function SettingsCoachingScreen() {
 
   const [calmEnabled, setCalmEnabled] = useState(false);
   const [cycleEnabled, setCycleEnabled] = useState(false);
-  // Cardio available by default (undefined reads as on). Toggling off hides the
-  // cardio surfaces; logged history is kept, just not shown.
-  const [cardioEnabled, setCardioEnabled] = useState(userProfile?.cardioEnabled !== false);
   const [bioSex, setBioSex] = useState(null);
   // C1/C2 (founder decision #2): coaching tone register + the opt-in science
-  // layer. Both are LOCAL-ONLY profile fields (no synced column; the pull
-  // merge in sync/tables/profiles.js spreads local first, so they survive).
+  // layer. Both are profile fields with NO dedicated cloud column (the
+  // profiles pull merge spreads local first, so they survive it). They are
+  // NOT device-only: they ride @volyume_user_profile_<uid> into user_prefs
+  // via the bulk pref push (sync.js:1362 shouldSyncPref, :1455
+  // _pushAllUserPrefs) and come back on a pull. Never build a user-facing
+  // "stays on this device" claim on this comment.
   const [coachTone, setCoachToneState] = useState(userProfile?.coachTone ?? 'automatic');
   const [showScience, setShowScience] = useState(userProfile?.showScience === true);
   // Ultimate-Audit item 11 (D16, founder ruling 2026-07-10,
   // pass3-v2-founder-decisions.md:166): named autonomy modes governing
   // apply-control (WHO confirms an adjustment), orthogonal to Coaching
-  // tone above (which is voice register only). Same local-only field
-  // pattern as coachTone/showScience: no synced column, survives the pull
-  // merge (sync/tables/profiles.js spreads local first). Default
+  // tone above (which is voice register only). Same field pattern as
+  // coachTone/showScience: no dedicated cloud column, survives the profiles
+  // pull merge, still shipped inside the profile blob by pref sync. Default
   // 'collaborative' so existing users see no behaviour change.
   const [coachAutonomy, setCoachAutonomyState] = useState(userProfile?.coachAutonomy ?? 'collaborative');
 
@@ -161,25 +161,6 @@ export default function SettingsCoachingScreen() {
         />
         {tier === 'pro' && (
           <>
-            <SettingRow
-              icon="heart-outline"
-              label="Cardio logging"
-              sub={cardioEnabled
-                ? 'On. Log any cardio you do, your choice of activity. The coach only suggests cardio if a cut stalls.'
-                : 'Off. No cardio logging or library.'}
-              showArrow={false}
-              rightElement={
-                <Switch
-                  value={cardioEnabled}
-                  onValueChange={async (next) => {
-                    setCardioEnabled(next);
-                    if (user?.id) await saveLocalProfile(user.id, { ...(userProfile || {}), cardioEnabled: next });
-                  }}
-                  trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-                  thumbColor={cardioEnabled ? t.colors.primary : t.colors.textMuted}
-                />
-              }
-            />
             {/* C1: coaching tone register. Same facts, same decisions, same
                 honesty rules in every tone; only the prose shape changes.
                 Safety copy is identical whatever is chosen. */}
