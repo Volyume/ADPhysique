@@ -45,6 +45,13 @@ const SOURCE_CLAUSE = Object.freeze({
   seed_manual: 'your own setting',
 });
 
+// D93 (Campaign 2, Phase 7): the honest not-personalised-yet state. The
+// sources that may claim "profile and research" - anything else (legacy
+// null, coach) proves nothing and stays silent.
+const RESEARCH_SOURCES = new Set(['template', 'seed_profile', 'seed_research']);
+const RESEARCH_START_LINE =
+  'Not enough personal history yet, so this block starts from your profile and research-based guidance. As blocks finish, each muscle\'s starting point comes from how it actually responded.';
+
 /**
  * Group written planned rows into { [muscle]: { week1, peak, peakWeek,
  * deload, source } }. `peak` is the highest planned accumulation week
@@ -99,8 +106,21 @@ export function summariseSeededPlan(plannedRows = [], deloadWeekIndex = null) {
  * colon, not a verb (review #18: most display names are plural).
  */
 export function buildBlockStartLines({ summary = {}, limit = 3 } = {}) {
-  const rows = Object.entries(summary)
-    .filter(([, v]) => v && SOURCE_CLAUSE[v.source] && v.week1 != null && v.peak != null)
+  const personalised = Object.entries(summary)
+    .filter(([, v]) => v && SOURCE_CLAUSE[v.source] && v.week1 != null && v.peak != null);
+  // D93 (Campaign 2, Phase 7): a fully research/profile-seeded block used
+  // to render NOTHING here. Silence was right for a learned claim, but the
+  // honest state deserves its own line: not personalised YET, and why.
+  // Emitted only when every written entry carries a known research-family
+  // source - an unknown/legacy source still earns silence, because we
+  // cannot prove where it came from.
+  if (personalised.length === 0) {
+    const entries = Object.values(summary).filter((v) => v && v.week1 != null);
+    const allResearch = entries.length > 0
+      && entries.every((v) => RESEARCH_SOURCES.has(v.source));
+    return allResearch ? [RESEARCH_START_LINE] : [];
+  }
+  const rows = personalised
     .sort((a, b) => (b[1].peak ?? 0) - (a[1].peak ?? 0))
     .slice(0, Math.max(0, limit));
   return rows.map(([muscle, v]) => {

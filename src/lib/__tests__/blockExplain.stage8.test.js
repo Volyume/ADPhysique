@@ -118,11 +118,32 @@ describe('block-start lines (§3.6): personalised sources only', () => {
     expect(line).not.toMatch(/Quads starts/);
   });
 
-  test('respects the limit, largest peaks first, and returns [] with nothing personalised', () => {
+  test('respects the limit, largest peaks first', () => {
     const lines = buildBlockStartLines({ summary, limit: 1 });
     expect(lines.length).toBe(1);
     expect(lines[0]).toContain('Back'); // peak 18 outranks chest 17
-    expect(buildBlockStartLines({ summary: { quads: summary.quads } })).toEqual([]);
+  });
+
+  // D93 (Campaign 2, Phase 7): re-anchored from "returns [] with nothing
+  // personalised". The original pin's intent - no LEARNED claim for a
+  // research ramp - is preserved and extended: the research state now gets
+  // its own honest line, which must claim profile-and-research and must
+  // NOT claim personal history.
+  test('a fully research/profile-seeded block states the honest research start, claiming no learning', () => {
+    const [line, ...rest] = buildBlockStartLines({ summary: { quads: summary.quads } });
+    expect(rest).toEqual([]);
+    expect(line).toContain('Not enough personal history yet');
+    expect(line).toContain('profile and research-based guidance');
+    expect(line).not.toMatch(/last block|past blocks|your own setting/);
+  });
+
+  test('the research line never renders beside personalised lines, and unknown sources stay silent', () => {
+    // Mixed summary: personalised lines only, no research line.
+    const mixed = buildBlockStartLines({ summary, limit: 5 }).join(' | ');
+    expect(mixed).not.toContain('Not enough personal history');
+    // A legacy null source proves nothing and earns nothing.
+    const unknown = { chest: { week1: 10, peak: 14, peakWeek: 4, deload: 6, source: null } };
+    expect(buildBlockStartLines({ summary: unknown })).toEqual([]);
   });
 
   test('no em dash, British voice', () => {
