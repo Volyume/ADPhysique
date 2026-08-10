@@ -279,7 +279,7 @@ export function WorkloadCard({ data }) {
     statusText = 'Load is elevated (above 1.3). Monitor how you feel.';
   } else if (ratio >= 0.8) {
     statusColor = t.colors.success;
-    statusText = 'In your optimal range (0.8 to 1.3).';
+    statusText = 'In your helpful range (0.8 to 1.3).';
   }
 
   // Simple visual bar: fill proportional to ratio, capped at 2.0

@@ -11,7 +11,7 @@ export const GLOSSARY = {
   precisionCoaching:
     'Every week it reads your weight trend, check-in and training, compares what happened to what was expected, and explains the decision. Nothing is random.',
   volume:
-    'The total work for a muscle: the hard sets you do for it in a week.',
+    'The total work for a muscle: the working sets you do for it in a week.',
   deload:
     'A lighter planned week so you recover: lighter loads, full recovery, no PRs.',
   maintenanceCalories:
@@ -30,7 +30,7 @@ export const GLOSSARY = {
   effort:
     'How close to failure the set should feel: 5 = leave nothing, 0 = very easy.',
   volumeBands:
-    "How much you've trained a muscle this week vs the helpful range. “Over limit” = past the point of extra benefit, not dangerous.",
+    "How much you've trained a muscle this week vs the helpful range. “Too much” = past the point of extra benefit, not dangerous.",
   repRegression:
     'Your average reps for a lift have trended down over recent weeks.',
   adaptiveTdee:

@@ -499,8 +499,8 @@ export default function VolumeHeatmapScreen() {
 
         {/* Legend */}
         <Card padding="md" radius="md" style={styles.legendRow}>
-          <LegendItem color={t.colors.textMuted} label="Below minimum" />
-          <LegendItem color={t.colors.success} label="Optimal" />
+          <LegendItem color={t.colors.textMuted} label="Below target" />
+          <LegendItem color={t.colors.success} label="Good range" />
           <LegendItem color={t.colors.warning} label="Getting close" />
           <LegendItem color={t.colors.error} label="Too much" />
           <InfoTooltip size={11} text={

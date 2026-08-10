@@ -846,7 +846,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             )}
             {chartMetric === 'e1rm' && (
               <Text style={[styles.e1rmNote, live.e1rmNote]}>
-                Estimated from your top set using a blend of two standard formulas (Epley and Brzycki). Best for rep ranges 2 to 10.
+                Estimated from your top set using standard strength formulas. Best for rep ranges 2 to 10.
               </Text>
             )}
           </View>

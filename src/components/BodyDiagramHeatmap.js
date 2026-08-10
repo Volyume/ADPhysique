@@ -364,9 +364,9 @@ export default function BodyDiagramHeatmap({
       {/* Legend */}
       <View style={[styles.legend, live.legend]}>
         <LegendSwatch color={t.colors.textMuted} label="Below target" borderColor={t.colors.border} textStyle={live.legendText} />
-        <LegendSwatch color={t.colors.success} label="Optimal" borderColor={t.colors.border} textStyle={live.legendText} />
-        <LegendSwatch color={t.colors.warning} label="Near limit" borderColor={t.colors.border} textStyle={live.legendText} />
-        <LegendSwatch color={t.colors.error} label="Over limit" borderColor={t.colors.border} textStyle={live.legendText} />
+        <LegendSwatch color={t.colors.success} label="Good range" borderColor={t.colors.border} textStyle={live.legendText} />
+        <LegendSwatch color={t.colors.warning} label="Getting close" borderColor={t.colors.border} textStyle={live.legendText} />
+        <LegendSwatch color={t.colors.error} label="Too much" borderColor={t.colors.border} textStyle={live.legendText} />
         <LegendSwatch color={t.colors.surface2} label="No data" bordered borderColor={t.colors.border} textStyle={live.legendText} />
         {/* U-F-5: plain-English gloss for the volume bands / "Over limit" jargon. */}
         <InfoTooltip text={GLOSSARY.volumeBands} size={14} />

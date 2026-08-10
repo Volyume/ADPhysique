@@ -44,7 +44,7 @@ export function getVolumeWhy(muscle, sets, status) {
     return `${name}'s productive range sits between ${mev} and ${mrv} sets per week, and you landed inside it. Next week, look for an extra rep on at least one exercise rather than piling on more sets.${closing}`;
   }
   if (status === 'minimum') {
-    return `You're right at the floor for ${name}. ${mev} sets is enough to grow, but only just. One or two more sets across the week, or a slower eccentric on one exercise, moves you into a stronger range.${closing}`;
+    return `You're right at the floor for ${name}. ${mev} sets is enough to grow, but only just. One or two more sets across the week, or a slower lowering phase on one exercise, moves you into a stronger range.${closing}`;
   }
   if (status === 'below') {
     return `Below the ${mev}-set floor where reliable growth signals start to appear in research. Two routes next week: add a couple of sets to an existing exercise, or sneak in one extra movement that hits ${name}.${closing}`;
@@ -53,7 +53,7 @@ export function getVolumeWhy(muscle, sets, status) {
     return `Close to the recovery ceiling for ${name} (${mrv} sets per week). One more session and recovery costs start to outweigh the gains. Hold here next week. If your reps are still climbing session to session, you're managing the load well.${closing}`;
   }
   if (status === 'over_mrv') {
-    return `Past the recovery ceiling for ${name} (${mrv} sets per week). Soreness, performance drops and joint chatter usually follow. Drop a few sets next week to land back in the green band. Backing off here is how you come back stronger.${closing}`;
+    return `Past the recovery ceiling for ${name} (${mrv} sets per week). Soreness, performance drops and joint aches usually follow. Drop a few sets next week to land back in the helpful range. Backing off here is how you come back stronger.${closing}`;
   }
   return null;
 }
