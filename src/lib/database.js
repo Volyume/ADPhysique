@@ -1297,6 +1297,13 @@ const SCHEMA_MIGRATIONS = [
   // the check-in saves the auto average here; otherwise the user types a
   // single average on the check-in and that lands here. Additive + nullable,
   // so the frozen closed-test build is unaffected.
+  // SUPERSEDED (Campaign 4, coherence-cleanup-2026-08-10): the auto-average
+  // COLLECTION path described above is retired -- the shipped check-in
+  // hard-writes stepsAvg: null, see weeklyCheckInCopy.guard.test.js. The
+  // column itself stays live: weeklyCoach.js still reads checkin.stepsAvg
+  // as a coach signal (currently always null from new check-ins under the
+  // retired UI), the sync push/restore handlers and column map are
+  // unchanged, and schema/wipe coverage is unaffected either way.
   [
     'ALTER TABLE weekly_checkins ADD COLUMN steps_avg INTEGER',
   ],
@@ -1965,10 +1972,12 @@ const SCHEMA_MIGRATIONS = [
   // Cloud counterpart: migrate_115_food_entry_eaten_at.sql (founder-run,
   // EU-Dublin; per CLAUDE.md the app never runs cloud migrations).
   // ED-safety note: this column IS the item-15 honesty-test fix itself
-  // (no meal-timing judgement is ever rendered from it -- see
-  // src/lib/food/diaryTimeline.js). No calorie floor, macro total, or
-  // adherence value reads this column; MacroRings and the rollup read
-  // kcal/protein/carbs/fat/fibre only, unaffected by presentation order.
+  // (no meal-timing judgement is ever rendered from it -- pinned on the
+  // live meal-card row, src/components/food/EntryRow.js, since the flat
+  // timeline diary that used to carry this law was reverted, D37). No
+  // calorie floor, macro total, or adherence value reads this column;
+  // MacroRings and the rollup read kcal/protein/carbs/fat/fibre only,
+  // unaffected by presentation order.
   // Safe to re-run: yes (duplicate-column errors are tolerated by the
   // runner; the backfill UPDATE only touches rows still NULL, a no-op once
   // it has run).
@@ -5508,61 +5517,18 @@ export async function getDailyStepsRange(userId, fromDate, toDate) {
 }
 
 // ─── Cardio log (audit volyume-cardio-integration-2026-06-03) ──────────────
-// One row per logged cardio session. est_kcal is session feedback only; it is
-// never added to the calorie target (the energy-balance model absorbs cardio
-// via the weight trend). Soft delete via deleted_at so a delete syncs; LWW on
+// Cardio logging is retired (D92-1/D95 founder boundary, Campaign 4): no
+// local writer remains, so only the erasure affordance and the retained
+// pull path (D95 H1) still touch this table. est_kcal, where present in
+// legacy/pulled rows, is session feedback only; it is never added to the
+// calorie target. Soft delete via deleted_at so a delete syncs; LWW on
 // updated_at.
 
-// Write a new cardio session. Returns the stored row (camelCase). The caller
-// has already resolved the activity + computed met/est_kcal (cardioMath), so
-// this layer just persists what it is given, clamped.
-export async function insertCardioLog(userId, session = {}) {
-  return activityRepository.insertCardioLog(userId, session);
-}
-
-// True if an imported cardio session with this platform sample id already
-// exists for the user (ULTIMATE-CUX-PCI de-dup; NA-cux-4). Manual rows have a
-// NULL ext_id and are never matched here.
-export async function cardioExtIdExists(userId, extId) {
-  return activityRepository.cardioExtIdExists(userId, extId);
-}
-
-// Patch an existing session (duration/intensity/notes etc.). Recompute of
-// est_kcal is the caller's job (pass the new value). Bumps updated_at.
-export async function updateCardioLog(userId, id, fields = {}) {
-  return activityRepository.updateCardioLog(userId, id, fields);
-}
-
 // Soft delete: mark deleted_at + bump updated_at so the deletion syncs.
+// Kept as an erasure affordance (D95 H3) though no UI currently calls it;
+// account deletion and any future data-retirement design may still use it.
 export async function deleteCardioLog(userId, id) {
   return activityRepository.deleteCardioLog(userId, id);
-}
-
-export async function getCardioLogById(userId, id) {
-  return activityRepository.getCardioLogById(userId, id);
-}
-
-// Live sessions for a day (deleted rows excluded), newest first.
-export async function getCardioLogForDate(userId, entryDate) {
-  return activityRepository.getCardioLogForDate(userId, entryDate);
-}
-
-// Inclusive date-range read (deleted excluded), newest first. Backs the Plans
-// weekly card, the check-in compliance prefill, and the coach week summary.
-export async function getCardioLogRange(userId, fromDate, toDate) {
-  return activityRepository.getCardioLogRange(userId, fromDate, toDate);
-}
-
-// Recent history for the Progress surface (deleted excluded), newest first.
-export async function getRecentCardioLog(userId, limit = 50) {
-  return activityRepository.getRecentCardioLog(userId, limit);
-}
-
-// Rows for the sync push window (anything inserted/edited/deleted in the last
-// N days, by updated_at). Includes soft-deleted rows so a delete propagates.
-// Used by the cardio_log per-table push handler.
-export async function getCardioLogForPush(userId, days = 400) {
-  return activityRepository.getCardioLogForPush(userId, days);
 }
 
 // Local updated_at (ms) for one row id, or null. The pull handler's LWW gate.
