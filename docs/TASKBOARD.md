@@ -1545,9 +1545,23 @@ workflow survives as a fallback.
   campaign1.integrity.test.js (30) + syncPrefExclusions extension.
   MIGRATIONS WRITTEN, NOT RUN (founder-gated): migrate_132 (provenance
   columns; not a hard release gate - push is column-tolerant),
-  migrate_133 (privacy row cleanup; hygiene). IN FLIGHT: P0-7
-  fail-closed sweep agent + P0-8 sync-conflict audit agent, then
-  adversarial review. RECOVERY: agent reports land in the session
-  scratchpad map/ folder (C1P07/C1P08/REVIEW files); all code changes
-  are on branch claude/campaign1-integrity with the D92 register block
-  as the spec.
+  migrate_133 (privacy row cleanup; hygiene), migrate_134 (stale-write
+  triggers on the nine unguarded coaching-state tables; client pushes
+  are honest-timestamp as of this campaign, so safe to add).
+  P0-7 SWEEP: 61 paths inspected, 14 permissive-default defects ALL
+  FIXED (workout-summary default-writing root cause; intake-read floor
+  bypass; unknown-sex floor; check-in counter resets; deload-signal
+  dilution; scoff/profile fail-closed; session-adjustment and advisor
+  read failures; null-profile meal planning refusal; 7 defect-encoding
+  test pins re-anchored with rulings named). P0-8 AUDIT: 15 defects -
+  14 FIXED (mesocycle/programme/routine/coach-output/nutrition-target/
+  body-profile LWW appliers, honest push timestamps, null-ledger push
+  omission, RIR-ladder-preserving week pulls, goal-lock round-trip,
+  landmark + wellbeing pull guards with the CALM RATCHET D92-7, 41
+  two-device applier simulations), 1 FOUNDER QUESTION (D92-11:
+  ed_pattern_flags never pushed - open flag does not reach a second
+  device; wiring the recorded raise-only design transmits Article 9
+  data, so founder's call). Residuals recorded in D92-10, never
+  silently parked. Suite 9,667 passing / lint clean at landing.
+  RECOVERY: reports in session scratchpad map/ (C1P07/C1P08/
+  C1REVIEW); code on claude/campaign1-integrity; D92 is the spec.
