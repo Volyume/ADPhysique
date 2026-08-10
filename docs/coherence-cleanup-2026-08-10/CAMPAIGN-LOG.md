@@ -23,12 +23,20 @@ after Campaign 4.
   public/app-map) go to the docs-truth wave or founder; H4 store
   listings stay founder-side; the d16 guard's dead `|cardio` regex
   branch was fixed at landing.
-- NEXT: routes/deferred/duplicates wave + docs-truth wave (the next
-  two-agent pair, briefs from D95-RULINGS.md sections "Routes /
-  deferred / duplicates" and "Docs truth").
-- Then: Phase 30 censuses, three adversarial reviews (A reachability,
-  B product boundaries, C repository truth), quality gates, register/
-  taskboard/handover close, merge to main, 40-item handover, STOP.
+- Routes/deferred/duplicates wave — LANDED at 98d6686b (24 files; five
+  inert cross-tab taps fixed, dead registrations and duplicates gone,
+  epleyE1rm consolidated with the equivalence test, KEEP list held).
+- Docs-truth wave — LANDED at 60857767 (30 files; CLAUDE.md facts,
+  072-135 tracker rebuild, 049 header, locked-doc records, SUPERSEDED
+  banners, U14 public cardio promises gone, EU-Dublin residency fix).
+  Wave rulings + FR-C4-8/9/10 recorded in D95-RULINGS.md.
+- IN FLIGHT: adversarial Review A (reachability) + Review B (product
+  boundaries) — Phases 25/26, ten questions each verbatim from the
+  order. Findings are actioned by the lead, not the reviewers.
+- Then: Review C (repository truth), Phase 28 migration statement,
+  Phase 29 FR-1..5 evidence pass, Phase 30 gates + before/after
+  censuses, register/taskboard/handover close, merge to main, 40-item
+  handover, STOP.
 
 ## Landed commits (this campaign)
 
