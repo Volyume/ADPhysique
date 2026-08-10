@@ -50,7 +50,7 @@ const SOURCE_CLAUSE = Object.freeze({
 // null, coach) proves nothing and stays silent.
 const RESEARCH_SOURCES = new Set(['template', 'seed_profile', 'seed_research']);
 const RESEARCH_START_LINE =
-  'Not enough personal history yet, so this block starts from your profile and research-based guidance. As blocks finish, each muscle\'s starting point comes from how it actually responded.';
+  'Not enough personal history yet, so this block starts from research-based guidance. As blocks finish, each muscle\'s starting point comes from how it actually responded.';
 
 /**
  * Group written planned rows into { [muscle]: { week1, peak, peakWeek,
@@ -115,8 +115,12 @@ export function buildBlockStartLines({ summary = {}, limit = 3 } = {}) {
   // source - an unknown/legacy source still earns silence, because we
   // cannot prove where it came from.
   if (personalised.length === 0) {
-    const entries = Object.values(summary).filter((v) => v && v.week1 != null);
-    const allResearch = entries.length > 0
+    // Review B finding 9: judge EVERY entry, not just those with a usable
+    // week-1 row - a personalised source whose week-1 row is missing must
+    // still block the research claim, because part of this block was not
+    // research-seeded.
+    const entries = Object.values(summary).filter(Boolean);
+    const allResearch = entries.some((v) => v.week1 != null)
       && entries.every((v) => RESEARCH_SOURCES.has(v.source));
     return allResearch ? [RESEARCH_START_LINE] : [];
   }

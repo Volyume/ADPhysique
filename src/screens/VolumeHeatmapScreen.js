@@ -658,7 +658,7 @@ export default function VolumeHeatmapScreen() {
                 skipped by the learned-range replay (learnedRange.js min
                 evidence, D91-12), so hand-set targets pause learning too. */}
             <Text style={[styles.editSubtitle, live.editSubtitle]}>
-              Your numbers always win over the coach's. Blocks trained under your own settings don't feed the ranges the app learns for you.
+              Your numbers set the targets from here; a block already underway keeps its written plan. While your own settings are in place, finished blocks don't teach the ranges the app learns for you.
             </Text>
             {muscles.map(muscle => (
               <View key={muscle} style={[styles.editRow, live.editRow]}>

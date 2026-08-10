@@ -127,13 +127,14 @@ describe('block-start lines (§3.6): personalised sources only', () => {
   // D93 (Campaign 2, Phase 7): re-anchored from "returns [] with nothing
   // personalised". The original pin's intent - no LEARNED claim for a
   // research ramp - is preserved and extended: the research state now gets
-  // its own honest line, which must claim profile-and-research and must
-  // NOT claim personal history.
+  // its own honest line, which must claim research-based guidance and must
+  // NOT claim personal history (review B: no profile claim for template or
+  // pure-research seeds).
   test('a fully research/profile-seeded block states the honest research start, claiming no learning', () => {
     const [line, ...rest] = buildBlockStartLines({ summary: { quads: summary.quads } });
     expect(rest).toEqual([]);
     expect(line).toContain('Not enough personal history yet');
-    expect(line).toContain('profile and research-based guidance');
+    expect(line).toContain('research-based guidance');
     expect(line).not.toMatch(/last block|past blocks|your own setting/);
   });
 

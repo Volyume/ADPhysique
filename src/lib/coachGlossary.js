@@ -43,7 +43,7 @@ export const GLOSSARY = {
   // PRESCRIPTION, not a user report (per-set RIR entry is settled-removed),
   // so the gloss claims planning, never measurement.
   rir:
-    "Reps in reserve: how many reps you'd have left; “stop 2 short” means finish the set when you believe you could still do about 2 good reps. The block plans your effort this way so work gets harder week by week without every set going to failure.",
+    "Reps in reserve: how many reps you'd have left; “stop 2 short” means finish the set when you believe you could still do about 2 good reps. Most weeks leave reps in reserve, building effort as the block goes on, so progress never depends on taking every set to failure.",
   strengthLevel:
     'Where your estimated max sits against typical lifters at your bodyweight.',
   // U-E-1 onboarding term (drafted 2026-06-13, grounded in the methods themselves;

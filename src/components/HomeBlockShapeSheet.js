@@ -60,7 +60,7 @@ function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek, onChooseNext, 
             promise about any one muscle's data. */}
         <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.mesocycle}</Text>
         <Text style={[styles.sheetDefn, live.sheetDefn]}>
-          Workload climbs a little each week so your body keeps adapting, then the recovery week lets it catch up. How each muscle responds shapes where the next block starts.
+          Effort builds a little each week so your body keeps adapting, then the recovery week lets it catch up. How each muscle responds can shape where your next block starts.
         </Text>
         <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.deload}</Text>
         <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.rir}</Text>

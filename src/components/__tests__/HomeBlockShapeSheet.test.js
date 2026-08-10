@@ -70,9 +70,9 @@ describe('HomeBlockShapeSheet', () => {
     const { tree } = render();
     const text = flattenText(tree.toJSON());
     expect(text).toContain(GLOSSARY.mesocycle);
-    expect(text).toMatch(/Workload climbs a little each week so your body keeps adapting/);
+    expect(text).toMatch(/Effort builds a little each week so your body keeps adapting/);
     expect(text).toMatch(/recovery week lets it catch up/);
-    expect(text).toMatch(/How each muscle responds shapes where the next block starts/);
+    expect(text).toMatch(/How each muscle responds can shape where your next block starts/);
   });
 
   test('stays unreachable while not visible', () => {

@@ -1575,7 +1575,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                     is load-bearing: unanswered saves as null and the engine
                     holds on insufficient feedback rather than guessing. */}
                 <Text style={[styles.feedbackPurpose, live.feedbackPurpose]}>
-                  Your answers help decide whether next session's workload still makes sense. Skip anything you're not sure about.
+                  Your answers shape how your recovery is read and, when coaching is active, whether next session's workload still makes sense. Skip anything you're not sure about.
                 </Text>
                 <RatingRow label="Difficulty" field="sessionDifficulty" value={feedback.sessionDifficulty} max={5} onChange={rateFeedback('sessionDifficulty')} />
                 <RatingRow label="Muscle engagement" field="overallPump" value={feedback.overallPump} max={3} onChange={rateFeedback('overallPump')} />

@@ -29,8 +29,8 @@ describe('TRAINING comprehension', () => {
   test('the block sheet teaches the mental model: definition, climb why, next-block learning', () => {
     const src = read('components/HomeBlockShapeSheet.js');
     expect(src).toContain('GLOSSARY.mesocycle');
-    expect(src).toMatch(/Workload climbs a little each week so your body keeps adapting/);
-    expect(src).toMatch(/How each muscle responds shapes where the next block starts/);
+    expect(src).toMatch(/Effort builds a little each week so your body keeps adapting/);
+    expect(src).toMatch(/How each muscle responds can shape where your next block starts/);
   });
 
   test('peak week explains expected fatigue without pretending recovery is excellent', () => {
@@ -61,7 +61,7 @@ describe('TRAINING comprehension', () => {
     expect(src).toMatch(/kept progressing in the higher-volume weeks with recovery to spare/);
   });
 
-  test('insufficient data never claims learning; the research start claims profile and research only', () => {
+  test('insufficient data never claims learning; the research start claims research-based guidance only', () => {
     const src = read('lib/interBlock.js');
     expect(src).toMatch(/too little to judge the response/);
     expect(src).toMatch(/too rarely this block to judge/);
@@ -89,7 +89,7 @@ describe('TRAINING comprehension', () => {
 describe('EFFORT comprehension', () => {
   test('the reps-short instruction is explained in the founder\'s register, without failure worship', () => {
     expect(GLOSSARY.rir).toMatch(/finish the set when you believe you could still do about 2 good reps/);
-    expect(GLOSSARY.rir).toMatch(/without every set going to failure/);
+    expect(GLOSSARY.rir).toMatch(/never depends on taking every set to failure/);
   });
 
   test('the working-sets count is by set type, never by how the set felt', () => {
@@ -122,13 +122,13 @@ describe('PR comprehension', () => {
 
 describe('READINESS comprehension', () => {
   test('both subjective-input surfaces state their purpose', () => {
-    expect(read('screens/HomeScreen.js')).toMatch(/It helps decide whether today's planned workload still makes sense/);
-    expect(read('screens/WorkoutSummaryScreen.js')).toMatch(/Your answers help decide whether next session's workload still makes sense/);
+    expect(read('screens/HomeScreen.js')).toMatch(/when coaching is active, whether today's planned workload still makes sense/);
+    expect(read('screens/WorkoutSummaryScreen.js')).toMatch(/when coaching is active, whether next session's workload still makes sense/);
   });
 
   test('the purpose lines never teach direction (no set-count rewards revealed)', () => {
-    const home = read('screens/HomeScreen.js').match(/It helps decide[^<]*/)[0];
-    const summary = read('screens/WorkoutSummaryScreen.js').match(/Your answers help decide[^<]*/)[0];
+    const home = read('screens/HomeScreen.js').match(/Your answers shape how your sessions[^<]*/)[0];
+    const summary = read('screens/WorkoutSummaryScreen.js').match(/Your answers shape how your recovery[^<]*/)[0];
     for (const s of [home, summary]) {
       expect(s).not.toMatch(/fewer sets|more sets|adds? a set|extra set/i);
     }
