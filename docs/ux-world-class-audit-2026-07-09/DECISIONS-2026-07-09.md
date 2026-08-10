@@ -2463,3 +2463,50 @@ building Stages 1-2 (all criterion-ruled: best for end users, never effort):
    it is the founder's call, not the lead's. Options: (A) wire the
    raise-only push per the recorded design; (B) keep flags per-device
    deliberately and correct the registry/comment; (C) something else.
+
+## D93 — Campaign 2: Comprehension, explanation and terminology (founder order + lead rulings, 2026-08-10)
+
+Campaign authority: the founder's Campaign 2 order (verbatim in the
+session scratchpad `c2/CAMPAIGN2-ORDER.txt`; summarised on
+docs/TASKBOARD.md). Branch claude/campaign2-comprehension from main
+0a552cc4. Hard constraints: migrations 132-135 unrun, no EAS, D92-11
+unaltered, no new cross-device sensitive-data paths, cardio out of
+scope (D92-1), Campaign 1 pins stay green.
+
+1. (Lead ruling) Phase 1 comprehension classification of all forty
+   ordered concepts, ruled on the verified current tree, recorded in
+   full in docs/comprehension-audit-2026-08-10/PHASE1-CLASSIFICATION.md.
+   Headlines: class E (over-explained) is EMPTY - the product's failure
+   mode is under-explanation and inconsistency, so no copy is removed
+   for length; a binding keep-internal list (grades, matrices, band
+   widths, smoother identities, strain maths, note-parsing keywords,
+   detector thresholds and mechanics) constrains every later phase to
+   resulting-reason copy; the two stop-and-report audit findings are
+   accepted as in-scope copy defects (the WorkoutSummary working-sets
+   tooltip's effort framing contradicting the type-based count, and
+   the coach screen's raw weigh-in row counts contradicting the
+   engine's distinct-morning hold).
+2. (Lead ruling) Phase 2 terminology canon, recorded in full in
+   docs/comprehension-audit-2026-08-10/PHASE2-TERMINOLOGY-CANON.md.
+   Headlines: "volume" always means sets - every kg quantity is
+   "Total lifted"/"total weight moved" (BlockReflection, YearOfLifts,
+   ProgressSections, coach report to fix); "recovery week" is the noun
+   and the five rendered "Deload" leaks are fixed, with "deload" and
+   "tonnage" ADDED to JARGON_PATTERNS (explicit Phase 18 ruling - a
+   strengthening; verified no generated copy emits either); "Est. max"
+   canonical (LiftProgress "Best set" chip renamed - it collided with
+   ExerciseDetail's heaviest-weight "Best set"); PR/personal record
+   two-register canon with record types Est. max / Heaviest weight /
+   Most reps; "plan" canonical over "programme" (blockAdvisor,
+   seedRoutines, planEngine receipt); "Block finished" residue aligned
+   to D91-1; "readiness" reserved for the self-report sense ("Profile
+   readiness" tile becomes "Profile status", "Muscle readiness" becomes
+   "Muscle recovery"); post-workout ratings are "session feedback",
+   never "check-ins"; profile-phase labels display as the label the
+   user picked (coachingGoals PHASE_LABELS) everywhere the value is the
+   profile phase; statistical spans are "ranges" - "band" reserved for
+   equipment and the scan leanness band; "hypertrophy" and spelled-out
+   "minimum effective volume" replaced with plain growth phrasing;
+   "1RM" considered for the blocklist and declined (single leak fixed
+   directly). Engine symbols, DB fields, routes and storage keys are
+   never renamed.
