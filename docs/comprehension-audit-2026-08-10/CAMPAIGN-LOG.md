@@ -76,8 +76,33 @@ this folder are the ruled foundations.
   deload gloss deliberately does NOT carry the scaling claim (false
   under suppression); the post-apply receipt already states the exact
   share (D91-23).
-- **P9-P21 — NOT STARTED** (P10 partially: weigh-in honesty landed;
-  P12 partially: consider_rebuild CTA).**
+- **P9 coach decisions — DONE (ruled).** All twenty E.8 decisions
+  classified in PHASE9-15-RULINGS.md: two were FIXED this campaign
+  (trend disclosure, distinct-morning counts), one served by the new
+  Methodology section, the keep-hidden set ruled with rationale.
+- **P10 nutrition — DONE.** Weigh-in honesty landed; the coach trend
+  chip now discloses the sturdier decision trend (scoped to that
+  surface); phase-label unification VERIFIED NO-CHANGE (the calculator
+  displays its own selection; label-inversion coupling documented) with
+  the harmonisation residual recorded for the founder.
+- **P11 — DONE (ruled).** One insufficient-evidence register verified;
+  not-changing-is-a-decision pinned via Methodology line.
+- **P12 — DONE.** consider_rebuild CTA renamed 'Repeat this plan
+  anyway'; Coached mode discloses safety waits for confirmation (D16
+  user-visible); Campaign 1 proposal/applied pins stay green.
+- **P13 — folded into P2/P9 rulings** (Total lifted informational
+  labels; PR density code-only; no informational metric claims to
+  drive coaching).
+- **P14 — DONE (audited in passing).** No safety copy weakened; floors
+  unpublished (pinned); ED/calm branches untouched except the
+  calm-gate retitle.
+- **P15-P19 — DONE (ruled)** in PHASE9-15-RULINGS.md.
+- **P20 — DONE.** src/__tests__/campaign2.comprehension.test.js: 20
+  pins across training/effort/PR/readiness/nutrition/recovery/
+  automation. Full suite 9,706 passing, lint clean.
+- **P21 — IN FLIGHT.** Two Opus fresh-eyes reviews dispatched (A
+  novice, B truth/consistency); findings will be actioned before the
+  final gates.
 
 ## Landed commits (this campaign)
 
