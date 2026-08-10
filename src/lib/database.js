@@ -7892,10 +7892,14 @@ export async function insertOrUpdatePeakWeekPlanFromCloud(userId, row) {
   if (!row?.id) return;
   const d = await db();
   await d.runAsync(
+    // D95 (Campaign 4, AUDIT-PEAKWEEK-SYNC): carry deleted_at through the
+    // applier like the sibling appliers do - INSERT OR REPLACE without it
+    // resurrected a locally soft-deleted row on every pull. Latent today
+    // (no writer sets cloud deleted_at) but the column exists both sides.
     `INSERT OR REPLACE INTO peak_week_plans
       (id, user_id, show_date, federation, current_bodyweight, lean_estimate,
-       prep_carbs_per_kg, prep_sodium_mg, prep_water_l, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       prep_carbs_per_kg, prep_sodium_mg, prep_water_l, status, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       row.id, userId,
       row.show_date ?? null, row.federation ?? null,
@@ -7905,6 +7909,7 @@ export async function insertOrUpdatePeakWeekPlanFromCloud(userId, row) {
       row.status ?? 'active',
       _tsToMs(row.created_at) ?? Date.now(),
       _tsToMs(row.updated_at) ?? Date.now(),
+      row.deleted_at ? _tsToMs(row.deleted_at) : null,
     ],
   );
 }
