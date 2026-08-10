@@ -436,11 +436,15 @@ COACHING. PRO owns adaptive coaching and Continue-with-adjustments.**
   Account/subscription status and the active trial banner, from ONE
   entitlement source; no derived conflicting dates; no notification
   additions.
-- **FQ-6.3 = HOLD.** The "store adds a further 7 days" claim is
-  neither made nor strengthened until the founder verifies the intro
-  offers in both consoles (checklist item beside H4). Both stores →
-  platform-appropriate copy may remain; one → platform-specific;
-  neither/uncertain → withhold. OPEN until verification supplied.
+- **FQ-6.3 = RESOLVED (founder verification supplied 2026-08-10).**
+  The founder confirmed, with emphasis that this is a repeated
+  confirmation: the trial is 14 days free in-app, then the FIRST 7
+  DAYS of a store subscription are free through BOTH Apple and
+  Google. Per the ruling's own branch ("both stores → copy may
+  remain"), the existing in-app claim stands unchanged. The
+  verification is permanently recorded in docs/rules/billing.md so
+  no future audit or review re-raises it; the console-check row
+  beside H4 on the taskboard is closed.
 - **FQ-6.4 = APPROVED, truthful semantics.** The fake local "Switch
   to Free" is replaced by truthful platform subscription management
   ("Manage subscription"-equivalent): cancellation stops renewal via
