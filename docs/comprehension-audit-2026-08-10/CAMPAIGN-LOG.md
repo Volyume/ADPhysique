@@ -45,7 +45,39 @@ this folder are the ruled foundations.
   P1 stop-and-report contradiction and E.8 item 9's copy gap.
   REMAINING: displayed-EWMA vs decision-trend disclosure; phase-label
   unification (canon concept 10); WHAT/WHY/NEXT sweep.
-- **P3-P5, P7-P9, P11-P21 — NOT STARTED.**
+- **P3 PR — DONE.** GLOSSARY.pr added (one meaning: any of the three
+  record kinds, never requiring a max-out); reachable from both
+  ExerciseDetail records sections and BlockReflection's records list;
+  celebration toast deliberately untouched (its labels already speak
+  plain English; a 2.2s toast is no place for education).
+- **P4 training block — DONE.** Block sheet now defines a training
+  block (GLOSSARY.mesocycle wired to its natural surface, orphan
+  resolved), states why workload climbs and that finished blocks teach
+  the next one; consider_rebuild's primary CTA renamed 'Repeat this
+  plan anyway' (was sharing 'Continue this plan' with the repeat
+  recommendation).
+- **P5 effort model — DONE.** GLOSSARY.rir rewritten in the founder's
+  register with the provable why (the block's effort ladder: a
+  prescription, never a user report - per-set RIR entry is
+  settled-removed); no in-session clutter added since the phrase never
+  renders in-session.
+- **P6 readiness purpose — DONE** (see above; WorkoutSummary purpose
+  line + joint discriminator landed).
+- **P7 learned personalisation — DONE.** Research-start line added to
+  buildBlockStartLines (only when every written row carries a known
+  research-family source; legacy/unknown stays silent); manual
+  override's learning-pause disclosed on the volume-target editor;
+  interBlock rationale strings verified to already match the founder's
+  retain/increase/reduce/insufficient semantics.
+- **P8 recovery/deload — DONE.** Methodology gains a Recovery weeks
+  section stating both sizing states (per-muscle scaling from completed
+  work; simpler protective week in calmer coaching or under a safety
+  hold) and that longer recovery is only ever proposed. The shared
+  deload gloss deliberately does NOT carry the scaling claim (false
+  under suppression); the post-apply receipt already states the exact
+  share (D91-23).
+- **P9-P21 — NOT STARTED** (P10 partially: weigh-in honesty landed;
+  P12 partially: consider_rebuild CTA).**
 
 ## Landed commits (this campaign)
 
