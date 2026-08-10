@@ -21,7 +21,7 @@ describe('computeRecoveryTrendInsight', () => {
     ];
     const out = computeRecoveryTrendInsight(checkins);
     expect(out?.type).toBe('warning');
-    expect(out?.text).toMatch(/Sleep has been rated low for 3 check-ins/);
+    expect(out?.text).toMatch(/Sleep has been rated low for 3 weekly check-ins/);
   });
 
   test('low energy outranks poor sleep (energy is the primary read)', () => {
