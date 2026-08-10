@@ -1,5 +1,15 @@
 # VOLYUME Marketing Fact-Base — Part 1: Training & Progress
 
+> **STATUS 2026-08-10 (Campaign 4, D95): STALE ON CARDIO - DO NOT
+> PASTE OR CONSUME UNTIL REFRESHED.** Cardio logging was removed from
+> the product (founder boundary D92-1, executed under D95; commit
+> 3e8ab0c6). Every cardio claim in this file (logging, history,
+> prescriptions, the activity library) describes a feature that no
+> longer exists. Refreshing this copy and the published listings is a
+> FOUNDER-SIDE action (H4, docs/coherence-cleanup-2026-08-10/
+> D95-RULINGS.md); this banner marks the staleness without rewriting
+> listing copy.
+
 Read-only extraction. Every feature line below is TRUE-AS-SHIPPED and traced to
 real code. Roadmap / partial / unverified items are quarantined in their own
 sections at the foot of the document. British English. No em dash.

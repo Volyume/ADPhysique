@@ -52,6 +52,11 @@ Execute all F/G removals. H rulings:
   (destructive to drop) - listed as retained legacy storage.
 - `insertOrUpdatePeakWeekPlanFromCloud` missing `deleted_at`: latent
   resurrect-on-pull defect, additive one-line fix - EXECUTE.
+  (Corrected at Review B, F4: the landed line carries the cloud value
+  through, but the legacy push never sends deleted_at and no local
+  writer sets it, so the defect is not CLOSED - it stays fully latent
+  with no producer either side. Real delete semantics are FR-PW-1
+  territory; do not re-describe this as a fixed defect.)
 - Notification-prefs dual-family drift (blob cloud-wins vs per-category
   rows): REAL but architectural - recorded as future sync
   consolidation work + founder visibility (FR-C4-2). No refactor now,
@@ -141,7 +146,9 @@ unsubscribe principle · FR-C4-9 root misnamed hook scripts
 knowledge of local hook wiring) · FR-C4-10 public/app-map is a dated
 June audit report still published on the public site (stale billing
 "pending" claims, internal bug lists) - refresh or unpublish is the
-founder's call · FR-PW-1 peak-week retirement design · plus H4 listing
+founder's call · FR-C4-11 activitySteps.js + the engine's steps lever
+are retained-dormant, revive or retire is a product call · FR-PW-1
+peak-week retirement design · plus H4 listing
 updates. FR-1..FR-5 carried unchanged.
 
 ## Wave rulings (D95-2, during implementation)
@@ -209,3 +216,94 @@ updates. FR-1..FR-5 carried unchanged.
 - **129/130 applied-date conflict** (README 2026-08-08 vs headers
   2026-08-06): unresolvable from the repo; both dates recorded
   side-by-side in the README rather than one invented.
+
+## Adversarial Review B rulings (D95-3)
+
+- **F1 (BREAKS-BOUNDARY, actioned): check-in save cleared retained
+  cardio answers.** `WeeklyCheckInScreen.js:745` wrote an explicit
+  `cardioAdherence: null`; the preserving-write contract
+  (database.js: explicit null CLEARS, only undefined preserves) meant
+  a same-day re-entry re-save destroyed the stored answer locally and
+  on push - violating H5. FIX: the key is omitted entirely (undefined
+  preserves on UPDATE; the INSERT branch writes NULL for absent keys,
+  so new rows are identical). The lead's landing review ratified the
+  `stepsAvg: null` idiom without checking its clearing semantics -
+  the idiom itself was the defect. Pre-existing siblings
+  (stepsAdherence/stepsAvg) keep their long-standing behaviour: both
+  stopped being collected long before this campaign, so there is no
+  retained answer left to clear.
+- **F2 (PROMISE-LEAK, actioned)**: STALE-ON-CARDIO banners on
+  PLAY_STORE_LISTING, APP_STORE_CONNECT_LISTING, marketing/parts/1
+  and /3; the three false cardio lines DELETED from
+  marketing/FACT-BASE.md (it feeds an autonomous publish lane - a
+  banner alone leaves a machine-readable false fact); H4 + all FR-C4
+  items now on TASKBOARD §3; README front door repointed at the live
+  authorities.
+- **F3 (guard integrity, actioned)**: the boundary suite's
+  steps-survival leg pinned dormant code (activitySteps.js has zero
+  production callers; the steps lever runs with stepsEnabled:false and
+  currentStepsTarget:0 at the only call site, so the H6 replacement
+  copy is production-unreachable). Pins re-anchored to genuinely live
+  activity code (daily_steps schema + registry entry) with the
+  dormancy stated honestly. NEW FOUNDER ITEM FR-C4-11: activitySteps
+  module + the engine's steps lever are retained-dormant; whether to
+  revive or retire them is a product call.
+- **F4 (record truth, actioned)**: the peak-week deleted_at landing
+  was over-claimed as closing the resurrect defect; register and log
+  corrected (see the peak-week section note). Latent, no producer,
+  FR-PW-1 territory.
+- **F5 (actioned)**: `cardioNoteRow`/`cardioNoteText` styles in
+  CoachOutputScreen renamed - they style the D15 adherence-why and
+  cycle notes, nothing cardio.
+- **F6 (ruled, actioned)**: NutritionEducationScreen's maintenance
+  line keeps its true physiological claim but gains "elsewhere"
+  ("whether or not you track them elsewhere") so it cannot read as a
+  pointer to an in-app cardio tracker.
+## Adversarial Review A rulings (D95-3 continued)
+
+- **F1-F3 = Review B's cross-lane rows**: same three sites, actioned
+  once (see the cross-lane entry below).
+- **F5 (H3 limitation, recorded)**: `deleteCardioLog` is local-only
+  now that push is gone - a soft-deleted row returns on the next pull
+  (cloud deleted_at stays NULL) and sign-out/sign-in restores it.
+  Account DELETION is unaffected (server-side RPC wipes the cloud
+  table), so no GDPR erasure hole exists. RULED: no new delete-only
+  push machinery for a retired table with zero callers; H3's record
+  now states the function is account-deletion-compatible retention,
+  not a working per-row erasure. Real per-row erasure semantics join
+  the FR-C4-1 export/erasure design cluster.
+- **F6 (H1 limitation, recorded + surfaced)**: a cardio row created
+  offline and never successfully pushed before the app updates can no
+  longer reach the cloud, and sign-out wipes it. Requires the entire
+  window from creation to upgrade with no successful sync - rare, and
+  the data is invisible in-product either way. RULED: no one-shot
+  drain built in a cleanup campaign; the accepted loss is recorded
+  here and surfaced in the founder handover. If the founder wants the
+  drain, it is a small follow-up (push cardio_log once, then pull_only).
+- **F7 = Review B F4** (peak-week one-sided fix): already corrected in
+  the record; A's push-side patch not taken (no local writer sets the
+  flag, so pushing it moves nothing today) - FR-PW-1.
+- **F8 (actioned)**: the `stepsTarget: target` absence pin the lead's
+  own cardio commit (21252dbe) over-trimmed from the profileMerge
+  guard is RESTORED - a steps law, never in the cardio scope.
+- **F9 (actioned)**: migrate_059's own header now records APPLIED
+  (production sweep 2026-07-27), ending the header-vs-README
+  contradiction the docs wave half-closed.
+- **F10 (actioned)**: the public data-outputs page's "Steps:
+  Auto-averaged, or typed" check-in row removed - the check-in stopped
+  collecting a steps average long ago.
+- **F11 (actioned)**: the coachReport benign-strings pin carried a
+  fabricated string; replaced with the engine's real recovery-deload
+  note so the classification tests real vocabulary.
+- **F12 (actioned)**: ProOnboardingScreen's orphaned
+  `notifHeaderToggle` style and its five-line comment removed (its
+  only consumer was the deleted cardio switch row).
+
+- **Cross-lane dead taps (actioned)**: AUDIT-ROUTES §6 rows 7-9 and 11
+  were live MED inert taps the D95-2 ruling under-scoped (it took only
+  the six HIGH rows). Rows 7-9: WorkoutSummaryScreen's ProgressPhotos/
+  RecapStory taps now use navigateCrossTab (dead from the HomeStack
+  entry, uniform after the fix). Row 11: NotificationSettings
+  registered in ProOnboardingStack, following the in-file
+  NutritionEducation precedent ("registered here too so the onboarding
+  hand-off screen can link straight in without leaving the flow").

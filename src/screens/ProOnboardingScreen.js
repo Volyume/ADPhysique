@@ -2182,12 +2182,6 @@ const styles = StyleSheet.create({
     padding: spacing.md, marginBottom: spacing.md,
   },
   notifHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  // The two coaching-reminder rows carry a static "Part of your coaching"
-  // pill, where top-alignment reads fine as a badge. A row that instead ends
-  // in an interactive switch should sit centred against the icon and the
-  // two-line copy block like every other toggle row in the app (all the
-  // Settings toggles centre via the shared SettingRow).
-  notifHeaderToggle: { alignItems: 'center' },
   notifCopy: { flex: 1, minWidth: 0 },
   notifIconWrap: {
     width: 36, height: 36, borderRadius: radius.md,

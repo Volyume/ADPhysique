@@ -14,7 +14,12 @@ after Campaign 4.
 - Audit wave (8 lanes) — LANDED as the eight AUDIT-*.md evidence files.
 - D95 rulings — LANDED (D95-RULINGS.md; wave rulings D95-2 appended).
 - Engine/coach-screen cardio removal (lead, hands-on) — LANDED.
-- Peak-week deleted_at pull-applier fix — LANDED.
+- Peak-week deleted_at pull-applier fix — LANDED. Record corrected at
+  Review B (F4): the applier now CARRIES the column, but the
+  resurrect-on-pull defect is not closed - the legacy push never sends
+  deleted_at and no local writer sets it, so the flag is always NULL
+  end-to-end. Fully latent today (nothing can produce a soft-deleted
+  plan); delete semantics fold into FR-PW-1.
 - Dead functions / copy / modules wave (invariant moves first) — LANDED.
 - campaign4.boundaries.test.js — LANDED (14 pins incl. the behavioural
   cardio fixture).

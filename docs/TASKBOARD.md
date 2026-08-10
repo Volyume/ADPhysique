@@ -1350,6 +1350,35 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
+- **CAMPAIGN 4 (2026-08-10) — update the published listings and rule on
+  the FR-C4 items.** Full detail per item:
+  `docs/coherence-cleanup-2026-08-10/D95-RULINGS.md` (founder-items
+  section).
+  - **H4 — published listings still promise cardio.** Cardio logging is
+    removed from the app; the Play Store / App Store Connect listings
+    (and any live marketing copy sourced from them) need the cardio
+    lines removed. The repo source docs now carry STALE-ON-CARDIO
+    banners; only the founder can edit the consoles.
+  - FR-C4-1 cardio export coverage · FR-C4-2 notification-pref
+    dual-family drift · FR-C4-3 adaptation_events restore path ·
+    FR-C4-4 CALC-5 law vs live computeSetTargets · FR-C4-5 partner
+    telemetry catalogue · FR-C4-6 notification category derivation
+    gaps · FR-C4-7 progress-photo capture-weight gating
+    (ED/privacy-adjacent) · FR-C4-8 check-in reminders have no off
+    switch despite the locked unsubscribe ledger · FR-C4-9 root
+    billing.md/styling.md/watermelon.md misnamed hook scripts (rename
+    needs founder knowledge of local hook wiring) · FR-C4-10 the
+    public/app-map pages are a stale June audit report still published
+    (refresh or unpublish) · FR-C4-11 activitySteps.js and the engine's
+    steps lever are retained-dormant (zero production callers /
+    stepsEnabled:false at the only call site) - revive or retire is a
+    product call · FR-PW-1 peak-week retirement design.
+  - Data note for FR-C4-1's cluster (Review A): with cardio push
+    removed, a cardio row logged offline and never synced before the
+    app update cannot reach the cloud and is lost at sign-out (rare;
+    recorded on H1). A one-shot drain is a small follow-up if wanted.
+  - FR-1..FR-5 (Campaign 3) remain open and unchanged.
+
 - ~~RUN MIGRATIONS 129 + 130~~ DONE 2026-08-06: both applied to
   EU-Dublin by Claude on founder GO and verified (deload_week column +
   comment present -- pre-flight showed the column already existed, the

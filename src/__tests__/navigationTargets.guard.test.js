@@ -83,6 +83,31 @@ describe('cross-stack navigation guard (F4 / NAV-1/2/3)', () => {
     expect(paywall).not.toMatch(/navigation\.navigate\(\s*['"]SubscriptionPolicy['"]/);
   });
 
+  // Review A F1/F2 (AUDIT-ROUTES §6 rows 7-9): WorkoutSummary is registered
+  // in Home AND Progress, but ProgressPhotos/RecapStory live in ProgressStack
+  // only - so the post-workout photo prompt and both "Watch your block story"
+  // controls were inert on the Today-tab path, the app's main workout flow.
+  test('the post-workout photo prompt and block-story links use the cross-tab form', () => {
+    const summary = read('src/screens/WorkoutSummaryScreen.js');
+    expect(summary).toMatch(/navigateCrossTab\(navigation,\s*'ProgressTab',\s*'ProgressPhotos'\)/);
+    expect(summary.match(/navigateCrossTab\(navigation,\s*'ProgressTab',\s*'RecapStory'/g) ?? [])
+      .toHaveLength(2);
+    expect(summary).not.toMatch(/navigation\.navigate\(\s*['"](ProgressPhotos|RecapStory)['"]/);
+  });
+
+  // Review A F3 (row 11): the Pro-onboarding hand-off screen's "Reminders
+  // off" tile targets NotificationSettings, which must stay registered in
+  // ProOnboardingStack (the NutritionEducation precedent) or the tap is
+  // silently dropped - onboarding stacks cannot cross-tab.
+  test('ProOnboardingStack registers NotificationSettings for the hand-off tile', () => {
+    const nav = read('src/navigation/RootNavigator.js');
+    const start = nav.indexOf('function ProOnboardingStack');
+    const end = nav.indexOf('</Stack.Navigator>', start);
+    expect(start).toBeGreaterThan(-1);
+    const proOnboardingStack = nav.slice(start, end);
+    expect(proOnboardingStack).toMatch(/name="NotificationSettings"/);
+  });
+
   test("OB-8: the check-in's 'Log my weight first' CTA deep-links to the Today tab weight logger", () => {
     const src = read('src/screens/WeeklyCheckInScreen.js');
     // WeeklyCheckIn lives in ProfileStack; Home lives in HomeStack, so the

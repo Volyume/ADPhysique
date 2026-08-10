@@ -78,6 +78,13 @@ describe('CARDIO: logging is not part of Volyume (founder ruling, D92-1/D95)', (
 
   test('the legitimate steps/activity and health systems SURVIVE', () => {
     // Removing cardio logging must never take general activity with it.
+    // The LIVE anchors are the daily_steps store and its bidirectional
+    // sync; the engine's steps lever and activitySteps.js are RETAINED but
+    // DORMANT (the only runWeeklyCoach call site passes stepsEnabled:false,
+    // and activitySteps.js has no production caller - Review B F3,
+    // FR-C4-11), so they are pinned as retained code, not as live product.
+    expect(read('lib/database.js')).toMatch(/daily_steps/);
+    expect(read('lib/sync/registry.js')).toMatch(/table: 'daily_steps'/);
     expect(exists('lib/activitySteps.js')).toBe(true);
     expect(read('lib/weeklyCoach.js')).toMatch(/stepsAdjustment/);
     expect(read('lib/nutritionEngine.js')).toMatch(/computeStepTrendModifier/);

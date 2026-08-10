@@ -1358,7 +1358,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <ProgressPhotoPrompt
               milestoneId={photoPromptMilestoneId}
               tier={tier}
-              onAddPhoto={() => navigation.navigate('ProgressPhotos')}
+              onAddPhoto={() => navigateCrossTab(navigation, 'ProgressTab', 'ProgressPhotos')}
             />
           </RevealSection>
         ) : null}
@@ -1458,7 +1458,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             <TouchableOpacity
               style={[styles.blockRecapRow, live.blockRecapRow]}
               activeOpacity={0.85}
-              onPress={() => navigation.navigate('RecapStory', { variant: 'block', mesocycleId: blockStory.mesocycleId, blockName: blockStory.name })}
+              onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'RecapStory', { variant: 'block', mesocycleId: blockStory.mesocycleId, blockName: blockStory.name })}
               accessibilityRole="button"
               accessibilityLabel="Watch your block story"
             >
@@ -1501,7 +1501,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   icon="sparkles"
                   variant="tertiary"
                   size="sm"
-                  onPress={() => navigation.navigate('RecapStory', { variant: 'block', mesocycleId: blockStory.mesocycleId, blockName: blockStory.name })}
+                  onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'RecapStory', { variant: 'block', mesocycleId: blockStory.mesocycleId, blockName: blockStory.name })}
                   style={[styles.phaseActionBtn, live.phaseActionBtn, { backgroundColor: 'transparent' }]}
                   textStyle={[styles.phaseActionText, live.phaseActionText]}
                   accessibilityLabel="Watch your block story"

@@ -2422,9 +2422,9 @@ export default function CoachOutputScreen({ navigation, route }) {
             load time from the '@volyume_seen_*' flag and never re-shown).
             The other placement is ProSetupCompleteScreen, at Pro setup. */}
         {showAdherenceWhy ? (
-          <View style={styles.cardioNoteRow}>
+          <View style={styles.coachNoteRow}>
             <Ionicons name="bulb-outline" size={14} color={t.colors.primary} />
-            <Text style={[styles.cardioNoteText, live.cardioNoteText]}>
+            <Text style={[styles.coachNoteText, live.coachNoteText]}>
               Consistency is what your coach reads best. The more sessions you log, the better it understands how your body responds, and the more precisely it can adjust your plan.
             </Text>
           </View>
@@ -2660,9 +2660,9 @@ export default function CoachOutputScreen({ navigation, route }) {
             (advisory, no Apply; only present for a female user who flagged
             their period and shows a water-plausible rise). */}
         {cyclePhaseNote?.note ? (
-          <View style={styles.cardioNoteRow}>
+          <View style={styles.coachNoteRow}>
             <Ionicons name="water-outline" size={14} color={t.colors.primary} />
-            <Text style={[styles.cardioNoteText, live.cardioNoteText]}>{cyclePhaseNote.note}</Text>
+            <Text style={[styles.coachNoteText, live.coachNoteText]}>{cyclePhaseNote.note}</Text>
           </View>
         ) : null}
 
@@ -2837,11 +2837,11 @@ export default function CoachOutputScreen({ navigation, route }) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  cardioNoteRow: {
+  coachNoteRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
-  cardioNoteText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
+  coachNoteText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
   // A1 one-amber rule (03 gap #1 named this card): a static utility card no
   // longer wears the hero's amber border; plain outline, quiet contained actions.
   planEditCard: {
@@ -3428,7 +3428,7 @@ const styles = StyleSheet.create({
 // these style-array appends.
 function buildLiveStyles(t) {
   return {
-    cardioNoteText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    coachNoteText: { ...t.type.bodySm, color: t.colors.textSecondary },
     planEditCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     planEditHead: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     planEditBody: { ...t.type.bodySm, color: t.colors.textSecondary },

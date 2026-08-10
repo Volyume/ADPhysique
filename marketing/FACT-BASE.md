@@ -8,6 +8,13 @@ reference for building copy, NOT finished ad copy.
 
 British English. No em dash. No exclamation marks.
 
+**CORRECTION (2026-08-10, Campaign 4 / D95): cardio logging is retired.**
+Cardio logging, cardio history, the cardio activity library and the coach's
+cardio prescriptions were removed from the product (founder boundary D92-1;
+commit 3e8ab0c6). The cardio lines that stood here have been deleted so no
+copy lane, including the autonomous web lane, can source a cardio claim from
+this file. Steps and general activity remain; strength logging is unchanged.
+
 **ACCURACY RULING (enforced throughout): barcode scanning is Pro-gated, not
 free.** The shipped route is `withProGuard(..., 'Barcode scanning')`. Any
 "free barcode" line came from a proposal document (next-level-proposal P2), not
@@ -108,7 +115,6 @@ nutrition/coaching domain is Pro.
 - Adjustments with re-enforced sex-aware calorie floors at the apply path. (Pro)
 - Training volume moves within MEV/MRV/MAV, with deload and hold states. (Pro)
 - Contest countdown feeding contest-prep phase logic. (Pro)
-- Structured cardio prescriptions (dose not activity, hard 5-session cap). (Pro)
 
 ### Connection (Partners)
 - 1:1 invite-only pairs, isolated, up to 3 concurrent on Pro. (Pro)
@@ -197,8 +203,6 @@ corrected).
 - **7 training milestones:** first session, 10, 25, 50, 100, 250, 500.
 - **Mesocycle length:** standard block 5 weeks (4 build + 1 recovery), advanced 6
   weeks (5 build + 1 recovery); recovery week at 0.50 set multiplier.
-- **Cardio cap:** max 5 sessions/week; cut default 3 sessions of 20-30 min low
-  intensity.
 
 ### Food database (verified from each `.dat` `_meta` header, not estimated)
 
@@ -308,7 +312,7 @@ person." (Note: barcode scanning is a Pro feature here; do not claim it is free.
 - No exercise demo videos or animations; coaching is text cues only.
 - No velocity-based training / bar-path / VBT.
 - No wearable / smartwatch app (Wear OS or watchOS); Health Connect / HealthKit
-  is read-only and scoped to weight, steps and completed cardio, not lifting.
+  is read-only and scoped to weight and steps, not lifting.
 - iOS is TestFlight-only; no public App Store listing yet.
 - No restaurant / menu / takeaway database; food data is packaged-product (OFF)
   and generic-food (CoFID) only.

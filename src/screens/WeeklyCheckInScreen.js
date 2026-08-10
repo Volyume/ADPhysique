@@ -742,7 +742,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
         calsAdherence: calsAdherence ?? null,
         stepsAdherence: stepsAdherence ?? null,
         stepsAvg: null,
-        cardioAdherence: null,
+        // cardio_adherence is deliberately OMITTED, not nulled: the write is
+        // preserving (explicit null CLEARS a column, undefined leaves it), and
+        // stored answers from the cardio era are retained history (D95 H5).
+        // A same-day re-entry re-save must never destroy them (Review B, F1).
         cycleOverride: showCycle && cycle === 'yes',
         trainingPerformance: trainingPerformance ?? null,
         // Campaign 1 P0-4 tri-state: unanswered persists as null, never as

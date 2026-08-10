@@ -711,6 +711,10 @@ function ProOnboardingStack() {
       {/* Registered here too so the onboarding hand-off screen can link
           straight into the nutrition guide without leaving the flow. */}
       <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} />
+      {/* Same precedent (Review A F3 / AUDIT-ROUTES §6 row 11): the
+          hand-off screen's "Reminders off" tile links here, and without an
+          in-stack registration the tap was silently dropped. */}
+      <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
       {/* Wave A B3: the hand-off screen links "How Precision Coaching works"
           so the trial is never a black box before the first check-in. */}
       <Stack.Screen name="Methodology" component={MethodologyScreen} options={{ headerShown: false }} />

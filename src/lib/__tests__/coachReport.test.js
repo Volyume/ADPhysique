@@ -217,7 +217,7 @@ describe('disclosure rule: the FULL variant never reveals screening or safety st
       'Calories held. Trend is on target.',
       'Calories held. Last adjustment needs more weeks to show in the trend.',
       "Calories held. Adherence wasn't tracked, so adjusting now would be a guess.",
-      'Training volume held this week. Recovery takes priority.',
+      "Recovery's flagging across several signals, so next week is lighter to set up the next run.",
     ]) {
       expect(DISCLOSURE_PROSE.test(benign)).toBe(false);
     }
