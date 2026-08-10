@@ -687,13 +687,22 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     setSaveError(null);
     if (feedbackDebounceRef.current) clearTimeout(feedbackDebounceRef.current);
     try {
+      // C5-P17-01 (D96): Close writes ONLY real answers. Campaign 1 P0-7 D9
+      // fixed the autosave so untouched defaults never persist; this path
+      // slipped through and stamped every skipped rating as "moderate
+      // session, no joint discomfort", which the block ledger then counted
+      // as genuine evidence. A field not in realFieldsRef (touched this
+      // visit or stored from a previous one) is simply not sent - the
+      // preserving updateWorkout leaves it NULL, and the engine's unrated-
+      // session gate keeps working as designed.
+      // COMP-008: soreness_24h_before is written pre-session by createWorkout;
+      // never sent here so the post-workout save can't clobber it.
+      const ratings = {};
+      for (const k of ['sessionDifficulty', 'overallPump', 'jointDiscomfort', 'fatigueLevel']) {
+        if (realFieldsRef.current.has(k)) ratings[k] = feedback[k];
+      }
       await updateWorkout(workoutId, {
-        sessionDifficulty: feedback.sessionDifficulty,
-        overallPump: feedback.overallPump,
-        // COMP-008: soreness_24h_before is written pre-session by createWorkout;
-        // not sent here so the post-workout save can't clobber it.
-        jointDiscomfort: feedback.jointDiscomfort,
-        fatigueLevel: feedback.fatigueLevel,
+        ...ratings,
         notes: notes || null,
       });
     } catch (e) {
@@ -1577,10 +1586,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 <Text style={[styles.feedbackPurpose, live.feedbackPurpose]}>
                   Your answers shape how your recovery is read and, when coaching is active, whether next session's workload still makes sense. Skip anything you're not sure about.
                 </Text>
-                <RatingRow label="Difficulty" field="sessionDifficulty" value={feedback.sessionDifficulty} max={5} onChange={rateFeedback('sessionDifficulty')} />
-                <RatingRow label="Muscle engagement" field="overallPump" value={feedback.overallPump} max={3} onChange={rateFeedback('overallPump')} />
-                <RatingRow label="Joint discomfort" field="jointDiscomfort" value={feedback.jointDiscomfort} max={3} onChange={rateFeedback('jointDiscomfort')} hint="Joints and tendons, not normal muscle soreness" />
-                <RatingRow label="Fatigue" field="fatigueLevel" value={feedback.fatigueLevel} max={5} onChange={rateFeedback('fatigueLevel')} />
+                {/* C5-P17-02 (D96): a row shows a selection only when a REAL
+                    answer exists (touched this visit or stored). The form
+                    used to open with "Moderate" / "None" pre-selected -
+                    four answers the user never gave, contradicting its own
+                    "Skip anything you're not sure about". */}
+                <RatingRow label="Difficulty" field="sessionDifficulty" value={realFieldsRef.current.has('sessionDifficulty') ? feedback.sessionDifficulty : null} max={5} onChange={rateFeedback('sessionDifficulty')} />
+                <RatingRow label="Muscle engagement" field="overallPump" value={realFieldsRef.current.has('overallPump') ? feedback.overallPump : null} max={3} onChange={rateFeedback('overallPump')} />
+                <RatingRow label="Joint discomfort" field="jointDiscomfort" value={realFieldsRef.current.has('jointDiscomfort') ? feedback.jointDiscomfort : null} max={3} onChange={rateFeedback('jointDiscomfort')} hint="Joints and tendons, not normal muscle soreness" />
+                <RatingRow label="Fatigue" field="fatigueLevel" value={realFieldsRef.current.has('fatigueLevel') ? feedback.fatigueLevel : null} max={5} onChange={rateFeedback('fatigueLevel')} />
                 <TextField accessibilityLabel="Workout feedback notes"
                   fieldStyle={styles.notesField}
                   inputStyle={[styles.notesInput, live.notesInput]}

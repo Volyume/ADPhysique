@@ -1486,6 +1486,24 @@ export async function pullFromCloud(supabaseUserId) {
   const sb = getClient();
   if (!sb || !supabaseUserId) return 0;
   if (await _blockedByDeadSession('sync.pullFromCloud')) return 0;
+  // Article 9 gate (C-2, D96): this legacy pull moves special-category
+  // health rows (morning weights, user_body_profile incl. scoff_score) and
+  // must honour the SAME fail-closed consent predicate the registry runner
+  // enforces (runner.js F2/SC-1). Home's pull-to-refresh calls this path
+  // directly, so without this check an unresolved consent read could pull
+  // health data. ANY read failure counts as unresolved (closed), never as
+  // consent. Strictly strengthening; consented users are unaffected.
+  try {
+    // eslint-disable-next-line global-require
+    const healthConsent = require('../store/useAppStore').default.getState()?.healthConsent;
+    if (healthConsent !== true) {
+      logWarn('sync.pullFromCloud', 'skipped: health consent unresolved or refused', { supabaseUserId });
+      return 0;
+    }
+  } catch (_) {
+    logWarn('sync.pullFromCloud', 'skipped: consent state unreadable (fails closed)', { supabaseUserId });
+    return 0;
+  }
   // F1 (audit SD-2): the sign-out wipe waits for sync idle with a 5s TIMEOUT.
   // If this pull is still mid-flight when that timeout expires, its inserts
   // would repopulate the DB being wiped and its watermark writes would land

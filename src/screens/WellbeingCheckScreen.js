@@ -10,7 +10,7 @@ import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { saveUserBodyProfile } from '../lib/database';
+import { saveUserBodyProfile, getUserBodyProfile } from '../lib/database';
 import { logError } from '../lib/errorLog';
 
 const SCOFF_QUESTIONS = [
@@ -74,7 +74,15 @@ export default function WellbeingCheckScreen({ navigation }) {
         // for gating, but a swallowed cloud write left no trail (audit F-007). Log
         // the failure so a split-brain (UI says "noted" but the body-profile write
         // failed) is diagnosable. Still non-blocking: the local write governs.
-        await saveUserBodyProfile(user.id, { scoffScore: score })
+        // C5-P5-03 (D96): saveUserBodyProfile writes the WHOLE row, so the
+        // payload must merge the existing row first - the same shape every
+        // SettingsProfileScreen caller uses. Passing only { scoffScore }
+        // NULLed sex, date of birth and height on the canonical body
+        // profile (and synced the nulls), silently degrading the
+        // sex-specific safety inputs the moment someone completed the
+        // wellbeing check. SCOFF scoring itself is unchanged.
+        await getUserBodyProfile(user.id)
+          .then((existing) => saveUserBodyProfile(user.id, { ...(existing || {}), scoffScore: score }))
           .catch(e => logError('WellbeingCheck.saveScoffScore', e, { uid: user?.id }));
       }
       if (score >= 2) {

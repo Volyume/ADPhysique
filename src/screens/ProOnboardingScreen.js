@@ -473,10 +473,15 @@ export default function ProOnboardingScreen({ navigation }) {
         setStep(2);
         return;
       }
-      // Otherwise an existing account is being restored and the
-      // navigator is about to send the user to MainTabs. A hydrated
-      // userProfile means don't flash Step 2 before it catches up.
-      if (userProfile) return;
+      // Any OTHER authenticated non-local user advances too. Step 1 exists
+      // only to create an account, and this stack only mounts when the
+      // navigator has already decided the user belongs in the wizard
+      // (firstRunComplete false). The old `if (userProfile) return;` guard
+      // here assumed a hydrated profile meant "restored account about to be
+      // sent to MainTabs" - false in two deterministic live states (the
+      // Free-to-Pro upgrade via resetFirstRun, and a relaunch after a kill
+      // on the hand-off screen), where it trapped a signed-in user on an
+      // OAuth-only screen with no forward or back (C5-P29-01, D96).
       setAccountCreated(true);
       setStep(2);
     }
