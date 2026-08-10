@@ -95,6 +95,10 @@ export function EntryRow({
             ? `${name}, ${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}. ${selected ? 'Selected' : 'Not selected'}. Tap to toggle.`
             : `${name}, ${toEnergy(kcal, energyUnit)} ${energyUnitLabel(energyUnit)}. Tap to edit.`
       }
+      // D94 (Campaign 3, Phase 10): the long press is now an accelerator
+      // (the edit sheet carries the visible route), but screen-reader users
+      // deserve the same shortcut disclosure sighted users get by habit.
+      accessibilityHint={selectionMode ? undefined : 'Press and hold to select several entries.'}
     >
       {selectionMode ? (
         <View style={[styles.checkbox, live.checkbox, selected && [styles.checkboxOn, live.checkboxOn]]}>

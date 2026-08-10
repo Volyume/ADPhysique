@@ -1767,6 +1767,17 @@ export default function DiaryScreen({ navigation, route }) {
         initialEatenAt={editSheet?.entry?.eaten_at ?? null}
         onSave={saveEditSheet}
         onDelete={deleteFromEditSheet}
+        // Phase 10 finding #2 (discoverability audit 2026-08-10): the only
+        // way into multi-select was an undisclosed long press on the row.
+        // A normal tap already opens this sheet, so its "Select entries"
+        // action closes the sheet and enters the SAME selection mode
+        // (enterSelection, :1010) pre-selecting the entry the user was
+        // just looking at. No new state, no new writer.
+        onSelectEntries={() => {
+          const entry = editSheet?.entry;
+          setEditSheet(null);
+          if (entry) enterSelection(entry);
+        }}
         onClose={() => setEditSheet(null)}
       />
 
