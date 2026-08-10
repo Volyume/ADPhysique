@@ -2544,3 +2544,42 @@ scope (D92-1), Campaign 1 pins stay green.
    window (edge-case divergence, both statements individually true);
    (e) review-deferred dead code and naming items listed in the
    review files for the dead-code campaign.
+
+## D94 — Campaign 3: Discoverability, settings and existing-feature UX (founder order + lead rulings, 2026-08-10)
+
+Campaign authority: the founder's Campaign 3 order (verbatim in session
+scratchpad c3-CAMPAIGN3-ORDER.txt; taskboard block). Branch
+claude/campaign3-discoverability from main 9aae57cb; foundations merged
+at ba6f11aa. Laws: discoverability is not visibility (A-G), one owner
+per setting, controls at the point of consequence.
+
+1. (Lead ruling) Phase 2 ownership rulings on the rebuilt inventory's
+   16 writer issues, recorded in full in
+   docs/discoverability-audit-2026-08-10/SETTINGS-OWNERSHIP.md.
+   Landed fixes: partner-cheers toggle (the locked unsubscribe law's
+   missing path), onboarding check-in hour 12→18, notification blob
+   merge-write, the frozen cloud mirror restored at the live writer,
+   shared DIETS list across both diet surfaces, reader-verified
+   "Diary meals per day" relabel, and the protein silent-revert fix
+   (finding 6 RE-RULED on lane evidence from documented-intentional to
+   genuine defect: goal-setup seeded from a stale profile mirror and
+   overwrote the live nutrition_targets row on save; it now seeds from
+   the saved row). The false "as you chose" scan-privacy claim removed.
+   Finding 16 ruled STALE (per-side off switch exists). FOUR FOUNDER
+   RULINGS recorded in the order's format: FR-1 calculator Sex/Age/
+   Height fields (ED-adjacent; recommended read-only + link), FR-2
+   dormant meal-plan prefs, FR-3 hide-exact control, FR-4 rest-timer
+   beep mute.
+2. (Lead ruling) Phase 11 on the two permanent dismissals: both
+   intentional, no re-enables - the reconnect card's action stays
+   reachable via the always-visible cheer sheet, and the photo-prompt
+   opt-out ends a body-image-adjacent nudge where permanence is the
+   protective choice.
+3. (Lead rulings, Phase 9/10 landed) Point-of-consequence shortcuts:
+   the Diary discloses an applied per-day calorie adjustment with a
+   link to its canonical editor (renders only when non-zero); the
+   volume-target editor gains a Coach-tab route (its only other path
+   is data-gated). Gesture law: visible routes added for plan-day
+   exercise removal and diary multi-select (same handlers, no new
+   state); the saved-meals empty state names its gesture; entry rows
+   disclose the hold shortcut to screen readers.
