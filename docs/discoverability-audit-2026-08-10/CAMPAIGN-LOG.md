@@ -53,9 +53,23 @@ consequence, cardio permanently out, D92-11 untouched, migrations
 - P11 finding 15 — RULED (D94-2): both permanent dismissals
   intentional; reconnect action reachable via the cheer sheet; photo
   opt-out permanence is body-image-protective. No re-enables.
-- IN FLIGHT: lane B (nutrition writers), gesture lane.
-- NEXT: P3 IA, P5-P7 waves, P14 units, P16-P18, P23 pins, P24
-  reviews.
+- LANE B + gesture lane — LANDED (d91c0db8, b2d5ed08; protein
+  silent-revert RE-RULED and fixed; visible routes for all three
+  gesture-only actions).
+- P5-P7/P14/P17/P18 sweep — LANDED (23e63235); 13 findings ALL
+  ACTIONED (de591c2e lead: F1 free-user route, F10 cycle pro-gate,
+  F11 mode editor named, F5 kg hints, F13 winback de-marketed + FR-5;
+  8a3ed43d F4 unit link; ba120bd5 agent lane F2/F3/F6/F8/F9/F12 + F7
+  budget/channel note + quiet-hours denied line).
+- P3 IA — resolved via label/sub fixes (no structural moves needed);
+  P16 privacy rows verified reachable in the sweep; P19 alignment
+  confirmed by the state-gate audit; P22 Campaign 4 list carried in
+  SETTINGS-OWNERSHIP.md + review files.
+- P23 pins — campaign3.discoverability.test.js (15 pins). Full suite
+  9,756 passing, lint clean at ba120bd5.
+- P24 — IN FLIGHT: two Opus reviews (A normal user, B power
+  user/state truth). Findings will be actioned, then final gates,
+  merge, register close, 36-item handover.
 - P2-P25 — NOT STARTED.
 
 ## Landed commits (this campaign)
