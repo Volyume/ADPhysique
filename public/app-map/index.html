@@ -100,7 +100,7 @@
 <section id="what">
   <h2>1. What Volyume is</h2>
   <p>Volyume is a strength-training app with a coach built in. The free side is a serious training logbook: pick or build a plan, log every set, and watch your lifts and volume trend over months. The paid side (Pro) is the coach: it reads your training, your weight trend, and your food, then every week it adjusts your plan and your calorie and protein targets and tells you, in plain words, exactly what it changed and why.</p>
-  <p>It's Android-first, built with React Native and Expo, backed by a UK-hosted Supabase database, and it works offline: everything is logged on the phone first and synced to the cloud when there's a connection.</p>
+  <p>It's Android-first, built with React Native and Expo, backed by a Supabase database hosted in the EU (Dublin), and it works offline: everything is logged on the phone first and synced to the cloud when there's a connection.</p>
   <p class="note">Roughly 70 screens, five bottom tabs, a deterministic coaching engine, and a full offline-sync layer. It is a large, mature codebase, not a prototype.</p>
 </section>
 
@@ -122,7 +122,6 @@
       <td>
         <ul>
           <li>The whole food diary: logging, barcode scan, label scan, recipes, meals, water, steps</li>
-          <li>All cardio logging</li>
           <li>All coaching: weekly check-in, the "Your week" output, nutrition targets, goal changes, reminders</li>
           <li>Body metrics &amp; weight tracking</li>
         </ul>
@@ -189,7 +188,6 @@ Train   ·  Plans  ·  Diary [PRO]  ·  Progress  ·  You</div>
     <tr><td>Lift progress &amp; PR wall</td><td>Per-exercise strength trend and an estimated one-rep max</td><td><span class="pill free">FREE</span></td></tr>
     <tr><td>Volume, consistency, year-of-lifts</td><td>Weekly volume vs the healthy range, adherence, a year heatmap of training days</td><td><span class="pill free">FREE</span></td></tr>
     <tr><td>Body metrics &amp; weight trend</td><td>Morning weight, smoothed trend line, body-fat and measurements</td><td><span class="pill pro">PRO</span></td></tr>
-    <tr><td>Cardio summary</td><td>This week's logged cardio</td><td><span class="pill pro">PRO</span></td></tr>
   </table>
 
   <h3>You tab <span class="pill free">FREE</span> <span class="note">(coaching screens inside it are Pro)</span></h3>
@@ -230,7 +228,6 @@ Train   ·  Plans  ·  Diary [PRO]  ·  Progress  ·  You</div>
     <li><strong>Weekly coach</strong> — reads recovery (soreness × energy) against performance (adherence × PRs), and decides push, hold or cut volume, or call a lighter recovery week. It <em>holds</em> its decision when it doesn't have enough weigh-ins yet, and says so.</li>
     <li><strong>Nutrition engine</strong> — works out maintenance calories and protein from your weight (and body-fat % if given), sets a sensible deficit or surplus, adjusts calories from your actual weight trend (capped, never on rapid loss), and suggests a diet break after long cuts.</li>
     <li><strong>Safety layer</strong> — watches for too-fast weight loss and under-fuelling, and can hold or lock changes. This is the eating-disorder safeguard, and it stays on for everyone.</li>
-    <li><strong>Cardio &amp; recovery</strong> — cardio adds to a fatigue signal the coach reads; calories burned are shown as feedback only, never added to your target.</li>
   </ul>
 </section>
 
@@ -240,9 +237,9 @@ Train   ·  Plans  ·  Diary [PRO]  ·  Progress  ·  You</div>
   <p>What's switched on, what's coded and waiting for you to deploy or apply.</p>
   <table>
     <tr><th>Service</th><th>What it does</th><th>Status</th></tr>
-    <tr><td>Supabase (database + sign-in)</td><td>Stores everything in the cloud (UK), handles email + Google sign-in, row-level security so each person only sees their own data</td><td><span class="pill live">LIVE</span></td></tr>
+    <tr><td>Supabase (database + sign-in)</td><td>Stores everything in the cloud (EU, Dublin), handles email + Google sign-in, row-level security so each person only sees their own data</td><td><span class="pill live">LIVE</span></td></tr>
     <tr><td>Offline sync</td><td>Logs on the phone first, syncs both ways, resolves clashes by newest-wins</td><td><span class="pill live">LIVE</span></td></tr>
-    <tr><td>The coaching engines</td><td>Plan, weekly coach, nutrition, cardio, recovery, safety</td><td><span class="pill live">LIVE</span></td></tr>
+    <tr><td>The coaching engines</td><td>Plan, weekly coach, nutrition, recovery, safety</td><td><span class="pill live">LIVE</span></td></tr>
     <tr><td>Food data (OpenFoodFacts + USDA)</td><td>Barcode and food search, with an offline snapshot fallback</td><td><span class="pill live">LIVE</span></td></tr>
     <tr><td>Sentry (crash reports)</td><td>Tells you when the app errors, with health data scrubbed off first</td><td><span class="pill live">LIVE</span></td></tr>
     <tr><td>Local notifications</td><td>Weight, check-in and coaching reminders, with quiet hours</td><td><span class="pill live">LIVE</span></td></tr>
@@ -255,8 +252,8 @@ Train   ·  Plans  ·  Diary [PRO]  ·  Progress  ·  You</div>
 <!-- ============================================================= -->
 <section id="data">
   <h2>7. Data &amp; privacy</h2>
-  <p><strong>What it holds:</strong> workouts, body weight and measurements, the food diary, weekly check-ins (energy, sleep, mood), the eating-habits screening answers, steps, cardio, and anonymous usage stats. The body, food and check-in data is health-sensitive.</p>
-  <p><strong>Where it lives:</strong> on the phone in storage the operating system encrypts, and in the cloud (Supabase, UK). Signing out wipes the phone's copy entirely.</p>
+  <p><strong>What it holds:</strong> workouts, body weight and measurements, the food diary, weekly check-ins (energy, sleep, mood), the eating-habits screening answers, steps, and anonymous usage stats. The body, food and check-in data is health-sensitive.</p>
+  <p><strong>Where it lives:</strong> on the phone in storage the operating system encrypts, and in the cloud (Supabase, EU Dublin). Signing out wipes the phone's copy entirely.</p>
   <p><strong>Who can see it:</strong> only the user. Row-level security means one account can never read another's data. Crash reports go to Sentry with every sensitive field stripped off first (this was checked, the scrubbing is thorough). Google sees billing only. Food databases see only the barcode or search term, never your data.</p>
   <p><strong>Consent:</strong> a health-data consent screen blocks the app until the user agrees, and every agreement is logged for the audit trail. They can withdraw it later.</p>
   <p><strong>Identity:</strong> everyone has a real account (no anonymous mode), each row is tied to its owner and that link never changes, and signing out leaves nothing behind on the device.</p>

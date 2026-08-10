@@ -1,9 +1,19 @@
+⚠ STATUS (2026-08-10): PRE-CAMPAIGN BLUEPRINT/SPEC - GATED. Do not build from this document. Any item here requires the D37 triage (verify against today's tree + the decision register) and the D38 elevation test before consideration. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md.
+
 # B2B coach surface (phase 2 scoped)
 
-Locked-but-deferred design for the coach workflow. Detailed enough
-that the phase 1 schema groundwork (`engine_overrides` table,
-`coach_id` columns, server-side `clientLink` plumbing) is correctly
-shaped. Locked 2026-05-23.
+Locked-but-deferred design for the coach workflow. Locked 2026-05-23.
+
+> **Correction (2026-08-10, Campaign 4 docs-truth wave).** This paragraph
+> used to claim the document was "detailed enough that the phase 1 schema
+> groundwork (`engine_overrides` table, `coach_id` columns, server-side
+> `clientLink` plumbing) is correctly shaped". Only the first of those three
+> exists. `engine_overrides` is real (created as groundwork by
+> `supabase/migrate_017_ed_pattern_and_telemetry.sql`, still with no client
+> consumer). `coach_id` and `clientLink` appear in ZERO files under
+> `supabase/` and ZERO under `src/`; their only occurrences anywhere in the
+> repository are inside this document. Read the coach-to-client linking
+> design below as unbuilt from the schema up.
 
 ## Phase 2 scope summary
 

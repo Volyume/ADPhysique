@@ -1,3 +1,20 @@
+-- ══════════════════════════════════════════════════════════════════════════
+--  SUPERSEDED - DO NOT RUN (marked 2026-08-10, Campaign 4 docs-truth wave)
+--
+--  This is a STALE SNAPSHOT, not the schema. The canonical cloud schema is
+--  the numbered migration series in this folder (supabase/migrate_NNN_*.sql,
+--  132 files, highest migrate_135) plus supabase/README.md as the tracker.
+--
+--  It creates 16 tables with bare CREATE TABLE (no IF NOT EXISTS) and no
+--  ON DELETE behaviour on the auth.users references. Production carries far
+--  more than that (the 2026-07-27 sweep counted 55 tables, 121 columns and
+--  46 functions live), and running this against any real project would throw
+--  on the first existing table. Kept for history only.
+--
+--  If you need to stand a project up, apply the migrations in numeric order
+--  per supabase/README.md. Never run this file.
+-- ══════════════════════════════════════════════════════════════════════════
+
 -- Volyume Database Schema
 -- Run this in the Supabase SQL Editor
 

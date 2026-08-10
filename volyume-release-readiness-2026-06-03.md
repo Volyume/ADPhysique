@@ -1,3 +1,5 @@
+⚠ STATUS (2026-08-10): SUPERSEDED AUDIT - closed, do not action from this document. Dated 2026-06-03, before the app shipped to Google Play; its release-readiness verdicts describe a product that no longer exists. Any residual item needs the D37 triage (verify against today's tree + the decision register) and the D38 elevation test before consideration. Current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md.
+
 # Volyume — Release Readiness Audit
 
 Date: 2026-06-03. Repo: `main`. Scope: read-only, whole codebase.

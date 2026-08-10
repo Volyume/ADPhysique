@@ -1,3 +1,5 @@
+⚠ STATUS (2026-08-10): SUPERSEDED SNAPSHOT - do not build from this document, and do NOT treat it as the source of truth its own opening line claims. Reconciled against main on 2026-06-26 and never since. Runtime configuration, schema and security posture have all moved: the authoritative cloud-schema tracker is supabase/README.md, and current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md. Kept for history.
+
 # Volyume — Infrastructure & Current State
 
 Source of truth for the runtime configuration, schema, security posture,

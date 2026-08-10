@@ -54,7 +54,9 @@ export const LOCKED_COPY = Object.freeze({
 });
 
 // Alternate copy for users who've already used their cascade trial.
-// Same six contexts but the closer pivots to a direct purchase CTA
+// The same four contexts as above (corrected 2026-08-10: this said "six",
+// which predates the removal of energy_crash and extreme_soreness) but the
+// closer pivots to a direct purchase CTA
 // per MOVE_4 doc lines 88-90 ("We don't lie about a trial they've
 // used"). The price string is rendered at the UI layer from Google
 // Play's localised price (usePlayPrices); until it loads the CTA shows
@@ -84,12 +86,17 @@ export const TRIGGER_CONTEXTS = Object.freeze([
  * Detect which (if any) differential trigger fires this week.
  *
  * @param {object} args
- * @param {'free'|'pro'|'complete'} args.userTier
+ * @param {'free'|'pro'} args.userTier  (corrected 2026-08-10: 'complete' was
+ *   removed at the 2-tier consolidation; proGate.js maps the legacy
+ *   `paid_complete` value onto pro)
  * @param {boolean} args.hasUsedTrial           true once cascade has started
  * @param {'under'|'hit'|'over'|'untracked'|null} args.calsAdherence  current week
  * @param {Array<{adherence?: string, energy?: number, soreness?: number}>} args.recentWeeklyHistory
- *   Most-recent first. Used to evaluate the 2-of-3 adherence gate
- *   and the multi-week signal contexts (energy_crash, extreme_soreness).
+ *   Most-recent first. Used to evaluate the 2-of-3 adherence gate.
+ *   (Corrected 2026-08-10: this used to add "and the multi-week signal
+ *   contexts (energy_crash, extreme_soreness)". Both were removed as
+ *   triggers by the 2026-05-31 audit, as TRIGGER_CONTEXTS above records;
+ *   the file contradicted itself.)
  * @param {number|null} args.energyScore        current week
  * @param {number|null} args.sorenessScore      current week
  * @param {boolean} args.deloadSuggested        this week's engine flag

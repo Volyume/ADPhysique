@@ -45,7 +45,11 @@
 >   `migrate_024_consent_log_composite_pk.sql`. Brings the consent
 >   audit log into IDENTITY_AND_OWNERSHIP_LOCKED.md compliance.
 >   Applied to cloud.
-> - Tier and subscription domain (Move #5): NOT STARTED.
+> - Tier and subscription domain (Move #5): SHIPPED (corrected 2026-08-10;
+>   the line read "NOT STARTED"). Google Play Billing is live, and the
+>   domain landed across migrations 030, 033, 042, 065-068, 070, 071 and
+>   108, all applied to production. See supabase/README.md for per-migration
+>   status.
 
 Every new table, column, index, RLS policy, and RPC function needed to
 support moves #0 through #5. Locked 2026-05-23, schema-lock updated

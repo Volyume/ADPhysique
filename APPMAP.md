@@ -1,3 +1,5 @@
+⚠ STATUS (2026-08-10): SUPERSEDED SNAPSHOT - do not build from this document. Regenerated against main on 2026-06-26 and never since; it predates the logger rebuild (D43/D57-D66), the flat-diary revert (D75), the adaptive mesocycle build (D91), the Coach merge (D68) and Campaigns 1-4. Kept for history. The current whole-product map is docs/_FULL-APP-PRODUCT-MAP.md; current work runs from docs/ux-world-class-audit-2026-07-09/_HANDOVER-AND-RESUME.md and docs/TASKBOARD.md.
+
 # Volyume — Complete App Map
 
 > Regenerated from source against `main` on 2026-06-26 (app version 1.2.0,

@@ -134,9 +134,15 @@ in-wave, act only on proof.
 FR-C4-1 cardio export coverage · FR-C4-2 notification-pref dual-family
 drift · FR-C4-3 adaptation_events restore path · FR-C4-4 CALC-5 law vs
 live computeSetTargets · FR-C4-5 partner telemetry catalogue ·
-FR-C4-6 notification category derivation gaps · FR-PW-1 peak-week
-retirement design · plus H4 listing updates. FR-1..FR-5 carried
-unchanged.
+FR-C4-6 notification category derivation gaps · FR-C4-7 progress-photo
+capture-weight gating · FR-C4-8 check-in reminders vs the locked
+unsubscribe principle · FR-C4-9 root misnamed hook scripts
+(billing.md/styling.md/watermelon.md - rename/delete needs founder
+knowledge of local hook wiring) · FR-C4-10 public/app-map is a dated
+June audit report still published on the public site (stale billing
+"pending" claims, internal bug lists) - refresh or unpublish is the
+founder's call · FR-PW-1 peak-week retirement design · plus H4 listing
+updates. FR-1..FR-5 carried unchanged.
 
 ## Wave rulings (D95-2, during implementation)
 
@@ -153,3 +159,53 @@ unchanged.
   path needs its own evidence pass; a unilateral gate change on a
   body-image surface is not the lead's call. Flagged by the wave,
   recorded, untouched.
+
+## Routes/duplicates wave rulings (D95-2 continued)
+
+- **ProUpgrade policy-link back stack**: navigateCrossTab pops the
+  destination tab to root, so on the one-of-five path where the
+  paywall was opened from the Coach tab, back from SubscriptionPolicy
+  now lands on You rather than the paywall. ACCEPTED: uniform across
+  all five entries, four of which previously dead-tapped entirely, and
+  the conditional alternative is the exact hand-rolled form the
+  navigation guard bans.
+- **muscleDisplayName nullish divergence**: the three private copies
+  disagreed only on nullish input ('Muscle' / '' / throw), which is
+  unreachable at all three call sites. RULED: the shared helper takes
+  the most defensive body ('Muscle'), divergence recorded in the test.
+- **PlanLibrary fromFirstRun scope**: the audit named two lines; the
+  wave removed the whole dead branch family (param, five uses, route
+  prop) after re-proving no caller passes the param. RATIFIED - an
+  always-false variable is precisely the residue this campaign clears.
+
+## Docs-truth wave rulings (D95-2 continued)
+
+- **CLAUDE.md Pro-gating enumeration**: "cardio" removed from the
+  Section 2 Pro list (lead-executed at landing). The gating RULE is
+  unchanged; the word named a feature that no longer exists, and the
+  campaign's third law forbids a removed feature leaving a promise.
+- **BUDGET_POSTURE_LOCKED.md RevenueCat row**: dated correction note
+  added under the ledger (lead-executed): RevenueCat was never
+  adopted, billing is direct react-native-iap + Google Play Billing.
+  The posture principle stands; only the false cost claim is
+  corrected.
+- **public/app-map residency**: "UK-hosted" was never true - fixed to
+  EU (Dublin) at all three sites (lead-executed; GDPR-truth on a
+  public page). The page's broader staleness is FR-C4-10 below.
+- **Root billing.md / styling.md / watermelon.md**: proven unreferenced
+  by any in-repo hook (.claude/settings.json registers only
+  edit-gate.sh and agent-tier-guard.py). NOT renamed or deleted:
+  whether they are wired into the founder's local (out-of-repo)
+  Claude settings is unknowable from here - FR-C4-9.
+- **NOTIFICATIONS_LOCKED.md:31-32 vs live behaviour**: the locked
+  ledger says the check-in reminders are user-disableable; the live
+  CoachingRemindersScreen exposes day/hour pickers with no toggles
+  (always scheduled for Pro). Possible live breach of the doc's own
+  unsubscribe principle - FR-C4-8, adjacent to FR-5. Locked rows left
+  untouched; live state recorded in the doc's new dated block only.
+- **Folder banners beyond the 11 root docs** (web-platform, DEFECT-MAP,
+  campaign folder entry files): consciously scoped out of this
+  campaign; carried on the audit evidence for any future docs pass.
+- **129/130 applied-date conflict** (README 2026-08-08 vs headers
+  2026-08-06): unresolvable from the repo; both dates recorded
+  side-by-side in the README rather than one invented.

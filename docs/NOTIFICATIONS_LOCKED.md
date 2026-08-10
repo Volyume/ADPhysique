@@ -17,7 +17,7 @@ Push, in-app, and email (where applicable) at v1. Locked 2026-05-23.
   only. Reason: notifying someone about a possible eating disorder
   via push is the harm pattern.
 - All push respects a quiet-hours window. Default 22:00 to 07:00
-  local; user-configurable in You → Diary preferences.
+  local; user-configurable in Settings → Notifications and reminders.
 - One notification per topic per day max. No drip campaigns.
 - Every push has a clear unsubscribe path (single tap to disable
   the category).
@@ -38,6 +38,37 @@ Push, in-app, and email (where applicable) at v1. Locked 2026-05-23.
 | FFM-floor hold | In-app only | On | No |
 | Weekly coach output ready | Push | On | Yes |
 | Coach trial ending (coach side, v1.1) | Email | On | No |
+
+### The rest of the live enum (recorded 2026-08-10, Campaign 4 docs-truth)
+
+The ten rows above are the categories the 2026-05-23 lock enumerated. The
+live enum in `src/lib/notifications/categories.js` now holds **23**. The
+thirteen below shipped after the lock and were never added here, so the
+unsubscribe ledger was silent on more than half the product. Channels are
+read from `CATEGORY_CHANNELS` in that file. The control column records the
+control that actually exists today; it does not grant or remove any control,
+and it does not resolve FR-5.
+
+| Category | Channel | Default | User control today |
+| --- | --- | --- | --- |
+| Morning weigh-in (`morning_weight`) | Push | On (Pro) | Time only. Settings → Coaching reminders sets the hour; the on/off switch was deliberately removed (it is a coaching input). |
+| Evening weigh-in backstop (`evening_weight`) | Push | On (Pro) | None of its own. It rides the morning weigh-in schedule and self-suppresses once the day's weight is logged and under an open ED flag. |
+| Training reminder (`training_reminder`) | Push | Off until enabled | Yes. Settings → Notifications and reminders → "Remind me to train", with a time picker. |
+| Meal-log reminder (`meal_log_reminder`) | Push | Off (opt-in) | Yes. Settings → Notifications and reminders → Meal reminders, one switch per reminder. |
+| Year-of-lifts unlock (`year_of_lifts_unlock`) | Push | On | No dedicated control. Event push, budgeted. |
+| Monthly recap (`monthly_recap`) | Push | On | No dedicated control. Event push, budgeted. |
+| Trial day 3 (`trial_day3`) | Push + in-app | On | No dedicated control. Lifecycle push, budgeted. |
+| Win-back (`winback`) | Push + in-app | On | No dedicated control. Lifecycle push, budgeted. Carried as founder question FR-5. |
+| Partner cheer (`partner_cheer`) | Push + in-app | On | Yes. Settings → Coaching reminders → partner cheers. Downgrades to in-app only under an open ED/wellbeing flag. |
+| Missed check-in follow-up (`checkin_missed`) | Push | On (Pro) | Yes. Settings → Coaching reminders → "Check-in follow-up". |
+| Planned-meal confirm (`planned_meal_confirm`) | Push | On (Pro) | Yes. Settings → Coaching reminders → planned-meal reminders. |
+| Rest timer (`rest_timer`) | Push | On during a session | Not a scheduled push. A silent ongoing local notification presented directly during a workout; it ends with the set. |
+| Getting-started nudge (`activation_nudge`) | Push + in-app | On | Yes. Settings → Notifications and reminders → "Getting-started nudges". |
+
+Rows reading "No dedicated control" are a record of the live state, not a
+ruling that none is needed. Whether the unsubscribe principle at the top of
+this document requires one for each is a founder question (FR-5); nothing
+here changes that principle or answers it.
 
 ## Timing
 
@@ -140,15 +171,35 @@ Body:  What a year. Your wrap-up is ready, swipe through it on the
 
 ## Implementation
 
-Files:
+Files. The module has grown well past the five this section originally
+listed; the list below was corrected on 2026-08-10 and is the live contents
+(23 modules plus `__tests__/`):
 
 ```
 src/lib/notifications/
-├── index.js              -- public API: schedule(), cancel(), getCategories()
-├── categories.js         -- the category enum + defaults
-├── scheduler.js          -- cron-like scheduling helpers
-├── quietHours.js         -- the time-shift rule
-└── permissions.js        -- request / status helpers (reuses existing)
+├── index.js                   -- public API: schedule(), cancel(), getCategories()
+├── categories.js              -- the category enum + channels
+├── scheduler.js               -- the scheduling helpers
+├── quietHours.js              -- the time-shift rule
+├── permissions.js             -- request / status helpers
+├── budget.js                  -- the push budget (addendum below)
+├── channels.js                -- Android notification channels
+├── handler.js                 -- foreground presentation + suppression
+├── listeners.js               -- receive / response listeners
+├── notificationRoute.js       -- tap destination resolution
+├── preferences.js             -- per-category SQLite rows (migration 044)
+├── pushToken.js               -- Expo push token registration
+├── telemetry.js               -- sent / tapped / failed events
+├── activeWorkout.js           -- the ongoing workout notification
+├── restTimerActions.js        -- rest-timer action buttons
+├── restEnd.js                 -- the end-of-rest alert
+├── restForeground.js          -- foreground rest handling
+├── trainingReminders.js       -- the training reminder schedule
+├── trainingHabitSchedule.js   -- learned training days
+├── missedCheckin.js           -- missed check-in follow-ups
+├── plannedMealConfirm.js      -- planned-meal confirm nudge
+├── partnerBeats.js            -- partner cheer delivery
+└── winbackContent.js          -- win-back copy
 ```
 
 Database:
@@ -207,11 +258,13 @@ Aggregated daily in `engine_telemetry_daily`:
 
 ---
 
-## PROPOSED ADDENDUM — push budget reconciliation (2026-06-12)
+## ADDENDUM (SHIPPED) — push budget reconciliation (2026-06-12)
 
-**Status: PROPOSED, not yet locked. Founder reviews at PR** (deep-audit
-decision 5, `_FOUNDER-DECISIONS-2026-06-12.md`; gap G6 in the
-competitive audit). The locked body above predates several shipped
+**Status: SHIPPED** (corrected 2026-08-10; the heading and status line said
+PROPOSED long after the build landed). Live in
+`src/lib/notifications/budget.js`, consumed by `scheduler.js`. Original
+authority: deep-audit decision 5, `_FOUNDER-DECISIONS-2026-06-12.md`; gap G6
+in the competitive audit. The locked body above predates several shipped
 push types; this section reconciles the full inventory and adds a
 global budget. New pushes ship only within this budget.
 
@@ -327,9 +380,13 @@ Rules that DO apply, unchanged:
 - Foreground delivery is suppressed (the in-app timer owns the moment); the
   alert is cancelled on skip, adjust, session end and sign-out.
 
-## PROPOSED ADDENDUM — early-activation nudge (S6, 2026-07-03)
+## ADDENDUM (SHIPPED) — early-activation nudge (S6, 2026-07-03)
 
-**Status: PROPOSED, founder reviews at PR.** A new re-engagement lever for the
+**Status: SHIPPED** (corrected 2026-08-10; the heading and status line said
+PROPOSED long after the build landed). Live as `CATEGORY.ACTIVATION_NUDGE`
+in `src/lib/notifications/categories.js`, budgeted in `budget.js`, scheduled
+in `scheduler.js`, with its one-tap disable in Settings → Notifications and
+reminders. A re-engagement lever for the
 highest-churn moment: a brand-new user who stalls short of the activation
 threshold (< 3 completed sessions in their first 14 days = ~3-4x churn). Founder
 calls on record: broadest scope (0-session cold-start + the 1->2 and 2->3

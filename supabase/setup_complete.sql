@@ -1,18 +1,38 @@
+-- ══════════════════════════════════════════════════════════════════════════
+--  SUPERSEDED - DO NOT RUN (marked 2026-08-10, Campaign 4 docs-truth wave)
+--
+--  This is a STALE SNAPSHOT, not the schema. The canonical cloud schema is
+--  the numbered migration series in this folder (supabase/migrate_NNN_*.sql,
+--  132 files, highest migrate_135) plus supabase/README.md as the tracker.
+--  Apply migrations in numeric order; never run this file.
+--
+--  Why it is dangerous, not merely old: its delete_user_data() body predates
+--  migrations 025, 062, 096 and 097, and its tier trigger predates 068 and
+--  070. Re-running it would replace the live, complete GDPR erasure RPC and
+--  the live tier/trial protection trigger with earlier, weaker versions.
+--  Migration 088 also exists specifically to drop the open INSERT policy on
+--  debug_log_uploads that this file created.
+-- ══════════════════════════════════════════════════════════════════════════
+--
 -- ──────────────────────────────────────────────────────────────────────────
---  Volyume — complete Supabase setup
---  Run this once in the Supabase SQL editor.
+--  Volyume — complete Supabase setup (HISTORICAL header, kept as written
+--  except where a count was provably wrong)
 --  Idempotent: safe to re-run; existing tables/columns/policies are skipped.
 --
 --  Consolidates schema.sql + migrate_001..005 into a single defensive script.
 --  Covers:
---    1. All 16 tables (users_profile, exercises, routines, ... weekly_checkins,
---       autoregulation_suggestions)
+--    1. 23 tables (users_profile, exercises, routines, ... weekly_checkins_v2,
+--       debug_log_uploads). The old header said "All 16 tables"; the file
+--       actually carries 23 CREATE TABLE statements, and production carries
+--       55 tables (2026-07-27 sweep), so it was never "all" of anything.
 --    2. Profile column additions: first_name, tier, bar_weight, is_beta_tester,
 --       tension_at_stretch on exercises
---    3. RLS enabled on every table
+--    3. RLS enabled on every table in THIS file
 --    4. Every FOR ALL policy rebuilt with WITH CHECK
---    5. tier lockdown trigger (clients can't UPDATE their own tier)
---    6. delete_user_data() GDPR RPC covering every table
+--    5. tier lockdown trigger (clients can't UPDATE their own tier) -
+--       superseded by migrations 068 and 070
+--    6. delete_user_data() GDPR RPC covering every table IN THIS FILE -
+--       superseded by migrations 025, 062, 096 and 097
 --    7. Indexes (idx_workouts_user_started, etc.)
 -- ──────────────────────────────────────────────────────────────────────────
 

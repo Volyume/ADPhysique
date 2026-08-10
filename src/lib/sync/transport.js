@@ -72,7 +72,10 @@ function _getSupabaseClient() {
  * under tables/, (b) remove its call from the legacy bulk helpers,
  * and (c) extend the regression tests under __tests__/.
  */
-// All 16 locked tables now flow through transport. The seven
+// All 22 locked tables now flow through transport (count corrected
+// 2026-08-10: the comment said 16 and had not tracked the entries added
+// since; MIGRATED_TABLES and PULL_HANDLERS both carry 22 today, PUSH_HANDLERS
+// 18 because four tables are pull-only). The seven
 // food-domain tables share one bulk RPC pair via
 // src/lib/sync/tables/foodDomain.js; the others have dedicated
 // handlers under tables/.
