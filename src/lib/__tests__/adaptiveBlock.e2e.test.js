@@ -347,7 +347,13 @@ describe('cross-device and provenance authority (source pins)', () => {
   });
 
   test('push sends the ledger as jsonb; pull stringifies an object row back to local TEXT', () => {
-    expect(read('lib/sync.js')).toMatch(/block_ledger:.*JSON\.parse\(m\.blockLedger\)/);
+    // Re-anchored (Campaign 1 P0-8 D1): the push now OMITS the key when
+    // the device has no ledger - an upsert without the column leaves the
+    // cloud value untouched, where the old explicit null erased a stored
+    // ledger from the cloud. Stronger protection, same jsonb parse.
+    const SYNC = read('lib/sync.js');
+    expect(SYNC).toMatch(/JSON\.parse\(m\.blockLedger\)/);
+    expect(SYNC).toMatch(/return v == null \? \{\} : \{ block_ledger: v \}/);
     expect(read('lib/database.js')).toMatch(/typeof m\.block_ledger === 'string' \? m\.block_ledger : JSON\.stringify\(m\.block_ledger\)/);
   });
 

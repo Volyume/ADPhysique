@@ -1105,6 +1105,10 @@ export default function CoachOutputScreen({ navigation, route }) {
   // including a 'read_failed' sentinel from a failed read, hides it
   // entirely, so this surface fails CLOSED. Safety holds render above.
   const [countdown, setCountdown] = useState(null);
+  // Campaign 1 P0-7 D12: derived outside the effect so the fail-closed
+  // read (a missing profile is a positive screen) is also the effect's
+  // dependency - it re-evaluates when the profile arrives.
+  const countdownScoffPositive = userProfile == null || (userProfile.scoffScore ?? 0) >= 2;
 
   useEffect(() => {
     if (!user?.id || !isCompetitionGoal(userProfile?.trainingGoal)) {
@@ -1130,12 +1134,16 @@ export default function CoachOutputScreen({ navigation, route }) {
         nowMs: Date.now(),
         edPatternOpen: openFlag,
         calmMode: calm,
-        scoffPositive: (userProfile?.scoffScore ?? 0) >= 2,
+        // Campaign 1 P0-7 D12: fail CLOSED when the profile itself is
+        // unavailable - a missing profile must not read as a negative
+        // wellbeing screen (the other two suppression reads on this
+        // screen already fail closed; this one did not).
+        scoffPositive: countdownScoffPositive,
       });
       if (!cancelled) setCountdown(state);
     })();
     return () => { cancelled = true; };
-  }, [user?.id, userProfile?.trainingGoal, userProfile?.scoffScore]);
+  }, [user?.id, userProfile?.trainingGoal, countdownScoffPositive]);
 
   // Confirm-then-apply: write the suggested calorie change to
   // nutrition_targets only when the user taps Apply, then record it on
@@ -1513,7 +1521,13 @@ export default function CoachOutputScreen({ navigation, route }) {
       // Food intake (trailing 7 days) + body composition feed the calorie
       // safety floor and the adaptive-TDEE sizing. Without these the RED-S
       // FFM floor can never fire and the adherence correction stays neutral.
-      const intake = await getRecentIntakeSummary(user.id).catch(() => ({ avgKcal: null, daysLogged: 0 }));
+      // Campaign 1 P0-7 D1: a FAILED intake read must be distinguishable
+      // from a genuinely empty diary - the old catch returned the exact
+      // "no food logged" shape, so a food-DB error silently disabled the
+      // RED-S FFM floor gate and a calorie cut could proceed on a user
+      // already at or below their floor. The engine holds any cut when
+      // readFailed is set.
+      const intake = await getRecentIntakeSummary(user.id).catch(() => ({ avgKcal: null, daysLogged: 0, readFailed: true }));
       const bodyProfile = await getUserBodyProfile(user.id).catch(() => null);
       const latestBf = (await getBodyMetricLog(user.id, 60).catch(() => []))
         .find(m => m.bodyFatPercent != null) ?? null;
@@ -1553,9 +1567,17 @@ export default function CoachOutputScreen({ navigation, route }) {
       // Compute consecutivePoorRecoveryWeeks from recent check-ins
       const recentCheckins = await getRecentCheckins(user.id, 4);
       const consecutivePoorRecoveryWeeks = (() => {
+        // Campaign 1 P0-7 D2: a row with NO recorded scores is no evidence
+        // and must not terminate the run - the old ?? 3 defaults made a
+        // partial row (e.g. the sleep-only row the workout summary writes)
+        // silently reset this counter to 0, and matrixDeload hard-gates on
+        // it. Only recorded values count or end the run.
         let count = 0;
         for (const ci of recentCheckins) {
-          if ((ci.energyScore ?? 3) <= 2 || (ci.sorenessScore ?? 3) >= 4) count++;
+          const e = ci.energyScore;
+          const s = ci.sorenessScore;
+          if (e == null && s == null) continue; // no evidence: skip, never break
+          if ((e != null && e <= 2) || (s != null && s >= 4)) count++;
           else break;
         }
         return count;
@@ -1567,10 +1589,18 @@ export default function CoachOutputScreen({ navigation, route }) {
       // but the current week's own check-in is excluded — it is the week
       // being judged, not its history.
       const consecutiveGrade3RecoveryWeeks = (() => {
+        // Campaign 1 P0-7 D3: this counter certifies the ABSENCE of
+        // persistent fatigue so the peak-week softening may fire (an
+        // upward-leaning move). Unknown history cannot certify absence:
+        // a missing soreness score counts as grade-3 territory (the run
+        // continues) rather than as the old ?? 2 "not sore" that broke
+        // the run at 0 and unlocked the softening. This withholds an
+        // upgrade on unknowns - it never proposes anything downward, so
+        // no pain is manufactured.
         let count = 0;
         for (const ci of recentCheckins) {
           if ((ci.weekStart ?? 0) >= weekStart) continue; // this week's row
-          if ((ci.sorenessScore ?? 2) >= 3) count++;
+          if (ci.sorenessScore == null || ci.sorenessScore >= 3) count++;
           else break;
         }
         return count;
@@ -1706,9 +1736,17 @@ export default function CoachOutputScreen({ navigation, route }) {
         // Calorie safety + adherence sizing inputs (food log + body comp).
         recentIntakeAvgKcal: intake.avgKcal,
         recentIntakeDaysLogged: intake.daysLogged,
+        // Campaign 1 P0-7 D1: the read-failure sentinel reaches the engine
+        // so a food-DB error holds calorie cuts instead of bypassing the
+        // FFM floor gate.
+        intakeReadFailed: !!intake.readFailed,
         bodyFatPercent: latestBf?.bodyFatPercent ?? null,
         bodyFatSource: latestBf?.bodyFatSource ?? null,
-        sex: bodyProfile?.sex ?? null,
+        // Campaign 1 P0-7 D4: a failed body-profile read must not null out
+        // sex (which selects the calorie floor) - fall back to the main
+        // profile's onboarding-enforced value, as the display path already
+        // does.
+        sex: bodyProfile?.sex ?? userProfile?.sex ?? null,
         // Cardio compliance from the check-in (pre-filled from the log,
         // user-overridable) so the coach acts on it, not just the raw count.
         cardioCompliance: checkin?.cardioAdherence ?? null,
@@ -1738,7 +1776,9 @@ export default function CoachOutputScreen({ navigation, route }) {
         stepsEnabled: false,
         bodyweightKg: userProfile?.weightKg ?? null,
         units,
-        scoffPositive: (userProfile?.scoffScore ?? 0) >= 2,
+        // Campaign 1 P0-7 D12: fail CLOSED on a missing profile (see the
+        // countdown read above for the rationale).
+        scoffPositive: userProfile == null || (userProfile.scoffScore ?? 0) >= 2,
         recentWeeklyHistory,
         // Founder decision 2026-07-02 (Wave-3 review): the food-diary
         // stand-in needs a completed check-in within 14 days. Most recent

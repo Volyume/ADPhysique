@@ -349,3 +349,129 @@ describe('cardio remains out of scope (D92-1)', () => {
     expect(register).toMatch(/intentionally OUT OF SCOPE/);
   });
 });
+
+// ─── P0-7: missing data must not create false confidence ────────────────
+
+describe('P0-7: permissive-default defects are closed', () => {
+  test('D7: an argument-free adaptive decision can never recommend an increase', () => {
+    // eslint-disable-next-line global-require
+    const { computeAdaptiveDecision } = require('../algorithms');
+    const out = computeAdaptiveDecision();
+    expect(out.decision).not.toBe('add_set');
+    expect(out.delta).toBeLessThanOrEqual(0);
+  });
+
+  test('D6: one genuinely-rated high joint week is not diluted by unanswered weeks', () => {
+    // eslint-disable-next-line global-require
+    const { shouldDeload } = require('../algorithms');
+    const weeks = [
+      { avgReps: 10, avgSoreness: null, avgJointDiscomfort: null, hasOverMRV: false, weeksSinceLastDeload: 1 },
+      { avgReps: 10, avgSoreness: null, avgJointDiscomfort: null, hasOverMRV: false, weeksSinceLastDeload: 2 },
+      { avgReps: 10, avgSoreness: null, avgJointDiscomfort: 2.0, hasOverMRV: false, weeksSinceLastDeload: 3 },
+      { avgReps: 10, avgSoreness: null, avgJointDiscomfort: 2.0, hasOverMRV: false, weeksSinceLastDeload: 4 },
+    ];
+    const out = shouldDeload(weeks);
+    // Two rated weeks averaging 2.0 must register the joint reason; under
+    // the old || 0 dilution the mean was 1.0 and the trigger never fired.
+    expect(out.reasons.join(' ')).toMatch(/joint discomfort/i);
+  });
+
+  test('D10: unknown sleep neither helps nor hurts block readiness', () => {
+    // eslint-disable-next-line global-require
+    const { checkinReadiness } = require('../blockAdvisor');
+    const withSleep = checkinReadiness({ energyScore: 3, sorenessScore: 3, sleepHours: 7 });
+    const noSleep = checkinReadiness({ energyScore: 3, sorenessScore: 3, sleepHours: null });
+    // Renormalised 0.5/0.5: identical mid-scale reads agree, and unknown
+    // sleep no longer scores as a healthy seven hours.
+    expect(noSleep).toBe(50);
+    expect(withSleep).toBeCloseTo(52, 0);
+    const lowEnergyNoSleep = checkinReadiness({ energyScore: 1, sorenessScore: 5, sleepHours: null });
+    expect(lowEnergyNoSleep).toBe(0); // nothing invented to soften a poor week
+  });
+
+  test('D4: unknown sex takes the HIGHER calorie floor, never 1200', () => {
+    // eslint-disable-next-line global-require
+    const { kcalFloorForSex } = require('../coachApply');
+    expect(kcalFloorForSex('male')).toBe(1500);
+    expect(kcalFloorForSex('female')).toBe(1200);
+    expect(kcalFloorForSex(null)).toBe(1500);
+    expect(kcalFloorForSex(undefined)).toBe(1500);
+    // eslint-disable-next-line global-require
+    const { calculateNutritionTargets } = require('../nutritionEngine');
+    const out = calculateNutritionTargets({
+      sex: null, ageYears: 30, heightCm: 150, weightKg: 40,
+      activityLevel: 'sedentary', goal: 'aggressive_cut',
+    });
+    expect(out.targetKcal).toBeGreaterThanOrEqual(1500);
+  });
+
+  test('D4: a missing body weight can never size a deficit', () => {
+    // eslint-disable-next-line global-require
+    const { calculateNutritionTargets } = require('../nutritionEngine');
+    const out = calculateNutritionTargets({
+      sex: 'male', ageYears: 30, heightCm: 180, weightKg: null,
+      activityLevel: 'moderate', goal: 'mild_cut',
+    });
+    expect(out.targetKcal).toBe(out.maintenanceKcal); // held at maintenance
+    expect(out.warnings.join(' ')).toMatch(/weight is missing/i);
+    // A surplus/maintenance phase still computes (display continuity).
+    const bulk = calculateNutritionTargets({
+      sex: 'male', ageYears: 30, heightCm: 180, weightKg: null,
+      activityLevel: 'moderate', goal: 'lean_gain',
+    });
+    expect(bulk.targetKcal).toBeGreaterThan(bulk.maintenanceKcal);
+  });
+
+  test('D14: a null profile refuses meal planning instead of planning allergen-blind', () => {
+    // eslint-disable-next-line global-require
+    const { preferencesFromProfile } = require('../food/mealPlanService');
+    expect(preferencesFromProfile(null)).toBeNull();
+    expect(preferencesFromProfile(undefined)).toBeNull();
+    // A sparse-but-present profile still normalises.
+    expect(preferencesFromProfile({})).not.toBeNull();
+    const SRC = read('lib/food/mealPlanService.js');
+    expect((SRC.match(/return \{ error: 'no_profile' \}/g) || []).length).toBe(2);
+  });
+
+  test('source pins: the remaining closures cannot silently revert', () => {
+    const coach = read('screens/CoachOutputScreen.js');
+    // D1: intake read-failure sentinel reaches the engine.
+    expect(coach).toMatch(/readFailed: true/);
+    expect(coach).toMatch(/intakeReadFailed: !!intake\.readFailed/);
+    // D2: evidence-free rows never terminate the poor-recovery run.
+    expect(coach).toMatch(/if \(e == null && s == null\) continue;/);
+    // D3: unknown soreness counts as grade-3 territory.
+    expect(coach).toMatch(/ci\.sorenessScore == null \|\| ci\.sorenessScore >= 3/);
+    // D12: both scoff reads fail closed on a missing profile.
+    expect((coach.match(/userProfile == null \|\| \(userProfile\.scoffScore \?\? 0\) >= 2/g) || []).length).toBe(2);
+    // D4a: sex falls back to the onboarding-enforced profile value.
+    expect(coach).toMatch(/sex: bodyProfile\?\.sex \?\? userProfile\?\.sex \?\? null/);
+
+    const wc = read('lib/weeklyCoach.js');
+    // D5: unknown session denominator routes to stabilise, not perfection.
+    expect(wc).toMatch(/sessionsPlanned > 0 \? sessionsCompleted \/ sessionsPlanned : 0/);
+    // D1: the intake-read hold exists and explains itself.
+    expect(wc).toMatch(/intakeReadHeld = true;/);
+    expect(wc).toMatch(/type: 'intake_read_failed'/);
+
+    // D13: session adjustments fall silent on failed safety-context reads.
+    const sa = read('lib/sessionAdjustments.js');
+    expect(sa).toMatch(/READ_FAILED/);
+    expect(sa).toMatch(/coachOutput === READ_FAILED \|\| mesoWeek === READ_FAILED\) return \[\];/);
+
+    // D2 addendum: a failed check-in read silences the block advisor.
+    const ba = read('lib/blockAdvisor.js');
+    expect(ba).toMatch(/checkins = await getRecentCheckins\(userId, 8\);/);
+    expect(ba).not.toMatch(/getRecentCheckins\(userId, 8\)\.catch\(\(\) => \[\]\)/);
+
+    // D9: the summary writes only touched fields and gates the engine.
+    const ws = read('screens/WorkoutSummaryScreen.js');
+    expect(ws).toMatch(/feedbackDirtyRef\.current\.size === 0 && !notesDirtyRef\.current\) return;/);
+    expect(ws).toMatch(/if \(!feedbackTouched\) \{\s*\n\s*setAdaptiveDecisions\(\{\}\);/);
+
+    // D8: Home no longer hard-codes the joint/soreness signals away.
+    const home = read('screens/HomeScreen.js');
+    expect(home).not.toMatch(/avgJointDiscomfort: 0,\s*\/\/ not tracked/);
+    expect(home).toMatch(/jointRated\.length/);
+  });
+});

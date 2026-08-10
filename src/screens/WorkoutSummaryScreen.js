@@ -176,6 +176,20 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     fatigueLevel: 2,
     jointDiscomfort: 0,
   });
+  // Campaign 1 P0-7 D9 (root cause): the summary used to WRITE these
+  // defaults to the workout row on mount - an unanswered form became an
+  // explicit "no joint discomfort / moderate session" in the database,
+  // defeating the joint hold and admitting the row as deload evidence.
+  // Only fields the user actually touches are written now, and the
+  // adaptive engine only runs on a rated session (D7).
+  const feedbackDirtyRef = useRef(new Set());
+  const notesDirtyRef = useRef(false);
+  const [feedbackTouched, setFeedbackTouched] = useState(false);
+  const rateFeedback = (field) => (v) => {
+    feedbackDirtyRef.current.add(field);
+    setFeedbackTouched(true);
+    setFeedback((f) => ({ ...f, [field]: v }));
+  };
   // COMP-008: soreness and sleep are now captured before the session and live
   // on the workout row. The summary reads them back so the adaptive engine
   // still gets a soreness input and the weekly recovery record still receives a
@@ -406,6 +420,22 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             soreness24hBefore: w.soreness24hBefore ?? null,
             sleepQuality: w.sleepQuality ?? null,
           });
+          // Campaign 1 P0-7 D9: prefill stored ratings so a re-open shows
+          // (and re-writes) the user's real answers rather than clobbering
+          // them with defaults. Prefill never marks fields dirty; stored
+          // ratings DO count as a rated session for the engine gate.
+          // (Rows written by pre-fix builds may carry the old stamped
+          // defaults; those are indistinguishable from real answers and
+          // prefill as-is - unrecoverable legacy, documented in D92.)
+          const stored = {};
+          if (w.sessionDifficulty != null) stored.sessionDifficulty = w.sessionDifficulty;
+          if (w.overallPump != null) stored.overallPump = w.overallPump;
+          if (w.jointDiscomfort != null) stored.jointDiscomfort = w.jointDiscomfort;
+          if (w.fatigueLevel != null) stored.fatigueLevel = w.fatigueLevel;
+          if (Object.keys(stored).length) {
+            setFeedback((f) => ({ ...f, ...stored }));
+            setFeedbackTouched(true);
+          }
         }
       } catch (_e) {}
     })();
@@ -441,6 +471,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   }, [readOnly, user?.id]);
 
   useEffect(() => {
+    // Campaign 1 P0-7 D7: the engine only runs on a RATED session. The
+    // untouched form's defaults used to land exactly on under_stimulus
+    // (+2 sets) and were persisted as an adaptation event - a volume
+    // increase recommended from feedback the user never gave.
+    if (!feedbackTouched) {
+      setAdaptiveDecisions({});
+      return;
+    }
     // Map feedback to adaptive engine scales per muscle, then run adaptive engine
     // soreness24hBefore: 1=fresh→2, 2=mild→3, 3=sore→4 (now sourced pre-workout)
     // sessionDifficulty: 1=veryEasy→1(exceeded), 2=easy→1, 3=moderate→2(met), 4=hard→3(struggled), 5=brutal→4(failed)
@@ -471,23 +509,26 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const decisions = runAdaptiveEngine(muscleFeedback);
     setAdaptiveDecisions(decisions);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feedback, weeklyVolume, preWorkoutReadiness]);
+  }, [feedback, weeklyVolume, preWorkoutReadiness, feedbackTouched]);
 
   useEffect(() => {
     if (!workoutId || readOnly) return;
+    // Campaign 1 P0-7 D9: write ONLY what the user touched. The old
+    // unconditional payload stamped the default ratings onto the row on
+    // mount, turning "unanswered" into explicit negative evidence
+    // (joint_discomfort = 0 etc.). updateWorkout is a preserving partial
+    // writer, so undefined fields are left alone.
+    if (feedbackDirtyRef.current.size === 0 && !notesDirtyRef.current) return;
     if (feedbackDebounceRef.current) clearTimeout(feedbackDebounceRef.current);
     feedbackDebounceRef.current = setTimeout(async () => {
       try {
-        await updateWorkout(workoutId, {
-          sessionDifficulty: feedback.sessionDifficulty,
-          overallPump: feedback.overallPump,
-          // COMP-008: soreness_24h_before is written pre-session by
-          // createWorkout; the summary no longer rates or writes it, so it
-          // must not be sent here or it would clobber the pre-workout value.
-          jointDiscomfort: feedback.jointDiscomfort,
-          fatigueLevel: feedback.fatigueLevel,
-          notes: notes || null,
-        });
+        const patch = {};
+        for (const field of feedbackDirtyRef.current) patch[field] = feedback[field];
+        // COMP-008: soreness_24h_before is written pre-session by
+        // createWorkout; the summary no longer rates or writes it, so it
+        // must not be sent here or it would clobber the pre-workout value.
+        if (notesDirtyRef.current) patch.notes = notes || null;
+        await updateWorkout(workoutId, patch);
       } catch (_e) {}
     }, 1000);
     return () => {
@@ -1507,15 +1548,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                     pre-workout intent prompt. The block keeps the three session
                     responses you can only judge once the work is done, plus
                     fatigue. */}
-                <RatingRow label="Difficulty" field="sessionDifficulty" value={feedback.sessionDifficulty} max={5} onChange={v => setFeedback(f => ({ ...f, sessionDifficulty: v }))} />
-                <RatingRow label="Muscle engagement" field="overallPump" value={feedback.overallPump} max={3} onChange={v => setFeedback(f => ({ ...f, overallPump: v }))} />
-                <RatingRow label="Joint discomfort" field="jointDiscomfort" value={feedback.jointDiscomfort} max={3} onChange={v => setFeedback(f => ({ ...f, jointDiscomfort: v }))} />
-                <RatingRow label="Fatigue" field="fatigueLevel" value={feedback.fatigueLevel} max={5} onChange={v => setFeedback(f => ({ ...f, fatigueLevel: v }))} />
+                <RatingRow label="Difficulty" field="sessionDifficulty" value={feedback.sessionDifficulty} max={5} onChange={rateFeedback('sessionDifficulty')} />
+                <RatingRow label="Muscle engagement" field="overallPump" value={feedback.overallPump} max={3} onChange={rateFeedback('overallPump')} />
+                <RatingRow label="Joint discomfort" field="jointDiscomfort" value={feedback.jointDiscomfort} max={3} onChange={rateFeedback('jointDiscomfort')} />
+                <RatingRow label="Fatigue" field="fatigueLevel" value={feedback.fatigueLevel} max={5} onChange={rateFeedback('fatigueLevel')} />
                 <TextField accessibilityLabel="Workout feedback notes"
                   fieldStyle={styles.notesField}
                   inputStyle={[styles.notesInput, live.notesInput]}
                   value={notes}
-                  onChangeText={setNotes}
+                  onChangeText={(t) => { notesDirtyRef.current = true; setNotes(t); }}
                   placeholder="Anything notable from this session"
                   placeholderTextColor={t.colors.textMuted}
                   multiline

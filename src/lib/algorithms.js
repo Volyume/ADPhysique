@@ -772,9 +772,16 @@ export function shouldDeload(last4WeeksData) {
 
   // Wellness composite (30% weight, split across joint + volume signals).
   const weeksSinceDeload = last4WeeksData[last4WeeksData.length - 1]?.weeksSinceLastDeload || 99;
-  const avgJointDiscomfort =
-    last4WeeksData.reduce((sum, w) => sum + (w.avgJointDiscomfort || 0), 0) /
-    last4WeeksData.length;
+  // Campaign 1 P0-7 D6: average ANSWERED weeks only. Coercing unanswered
+  // weeks to 0 halved or quartered genuine joint evidence and suppressed
+  // the 18-point trigger; a week with no answers contributes nothing in
+  // either direction (blockLedgerGather posture).
+  const jointRatedWeeks = last4WeeksData
+    .map(w => (w.avgJointDiscomfort == null ? null : Number(w.avgJointDiscomfort)))
+    .filter(v => v != null && Number.isFinite(v));
+  const avgJointDiscomfort = jointRatedWeeks.length
+    ? jointRatedWeeks.reduce((sum, v) => sum + v, 0) / jointRatedWeeks.length
+    : 0;
   if (avgJointDiscomfort >= 1.5 && weeksSinceDeload >= 3) {
     score += 18;
     reasons.push('Recurring joint discomfort across the block');
@@ -787,7 +794,9 @@ export function shouldDeload(last4WeeksData) {
 
   // Soreness (20% weight, down-weighted; unreliable in trained populations).
   // Require 3+ weeks at high soreness AND time since last deload ≥ 4 weeks
-  const highSorenessWeeks = last4WeeksData.filter(w => (w.avgSoreness || 0) >= 2.5).length;
+  // Campaign 1 P0-7 D6: null weeks (nothing rated) can neither satisfy nor
+  // dilute the requirement; only genuinely-rated high weeks count.
+  const highSorenessWeeks = last4WeeksData.filter(w => w.avgSoreness != null && w.avgSoreness >= 2.5).length;
   if (highSorenessWeeks >= 3 && weeksSinceDeload >= 4) {
     score += 20;
     reasons.push('Sustained soreness across 3 or more weeks');
@@ -870,7 +879,12 @@ function buildSubstituteReason(sub, target, targetStretch = 'medium') {
 //   pump:        1=none  2=low  3=moderate  4=great
 //   joint:       0=none  1=low  2=moderate  3=high
 // Returns: { decision, delta, reasonCode, reasonText }
-export function computeAdaptiveDecision({ soreness = 2, performance = 2, pump = 3, joint = 0 } = {}) {
+// Campaign 1 P0-7 D7: hold-by-default parameter shape. The old defaults
+// (soreness 2, performance 2, pump 3) landed an ARGUMENT-FREE call in the
+// good-recovery branch and returned add_set +1 - so absent feedback could
+// recommend an increase. soreness 3 / performance 3 routes to hold; real
+// callers always pass recorded values.
+export function computeAdaptiveDecision({ soreness = 3, performance = 3, pump = 3, joint = 0 } = {}) {
   // Joint pain overrides everything, rotate the exercise
   if (joint >= 3) {
     return {

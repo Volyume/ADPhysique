@@ -48,7 +48,17 @@ export function checkinReadiness(c) {
   if (!c) return null;
   const energy  = (((c.energyScore  ?? 3) - 1) / 4) * 100;           // 0–100
   const soreness = (1 - ((c.sorenessScore ?? 3) - 1) / 4) * 100;     // inverted 0–100
-  const sleep    = Math.min(Math.max(((c.sleepHours ?? 7) - 4) / 5, 0), 1) * 100; // 4–9h → 0–100
+  // Campaign 1 P0-7 D10: sleepHours is OPTIONAL on the check-in, and the
+  // old ?? 7 scored the common unknown as a healthy seven hours - which
+  // could fabricate an improving readiness slope and remove a strain
+  // point real data would have added. Unknown sleep now drops the sleep
+  // term and renormalises energy/soreness to 0.5/0.5, so it neither
+  // helps nor hurts (countSleepFlaggedWeeks already gets this right:
+  // "unknowns never count").
+  if (c.sleepHours == null) {
+    return energy * 0.5 + soreness * 0.5;
+  }
+  const sleep = Math.min(Math.max((c.sleepHours - 4) / 5, 0), 1) * 100; // 4–9h → 0–100
   return energy * 0.4 + soreness * 0.4 + sleep * 0.2;
 }
 
@@ -235,9 +245,17 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
  * }
  */
 export async function getBlockAdvice(userId, activeBlock, userProfile) {
-  const [checkins] = await Promise.all([
-    getRecentCheckins(userId, 8).catch(() => []),
-  ]);
+  // Campaign 1 P0-7 D2: a FAILED check-in read must not masquerade as "no
+  // signals detected" - the old catch(() => []) made a read error produce
+  // a confident healthy-block advice with the heads-up and early-deload
+  // paths silently disabled. On failure the advisor says nothing (null);
+  // the one caller already tolerates null and simply renders no card.
+  let checkins;
+  try {
+    checkins = await getRecentCheckins(userId, 8);
+  } catch (_) {
+    return null;
+  }
 
   const blockStatus = activeBlock
     ? getBlockStatus(

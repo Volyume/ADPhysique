@@ -1071,12 +1071,30 @@ export default function HomeScreen({ navigation, route }) {
           const wSets = recentSets.filter(s => wIds.has(s.workoutId) && s.setType !== 'warmup');
           const totalReps = wSets.reduce((t, s) => t + (s.actualReps || 0), 0);
           const avgReps = wSets.length > 0 ? totalReps / wSets.length : 0;
+          // Campaign 1 P0-7 D8: the old hard-coded zeros silenced the joint
+          // and soreness signals entirely (the comment claiming they are
+          // "not tracked in local DB" was wrong - the workout rows carry
+          // both), so the Home recovery-week banner could only ever fire
+          // on rep performance. Answered-only averages, null when nothing
+          // was rated (never a manufactured zero). hasOverMRV remains
+          // un-computed here (needs the full volume/landmarks pass the
+          // Progress surface runs); that can only UNDER-suggest a recovery
+          // week by its 12 points - recorded as a residual in D92, and the
+          // Progress banner computes the complete signal.
+          const jointRated = weekWorkouts
+            .map(w => w.jointDiscomfort ?? w.joint_discomfort ?? null)
+            .filter(v => v != null);
+          const sorenessRated = weekWorkouts
+            .map(w => w.soreness24hBefore ?? w.soreness_24h_before ?? null)
+            .filter(v => v != null);
           return {
             avgReps,
-            weeksSinceLastDeload: 99, // not tracked in local DB; use conservative value
-            avgJointDiscomfort: 0,    // not tracked in local DB
-            hasOverMRV: false,        // not computed here, would need calculateWeeklyVolume + VOLUME_LANDMARKS
-            avgSoreness: 0,           // not tracked in local DB
+            weeksSinceLastDeload: 99, // unknown: conservative (banner may fire, never suppressed)
+            avgJointDiscomfort: jointRated.length
+              ? jointRated.reduce((s, v) => s + v, 0) / jointRated.length : null,
+            hasOverMRV: false,
+            avgSoreness: sorenessRated.length
+              ? sorenessRated.reduce((s, v) => s + v, 0) / sorenessRated.length : null,
           };
         }).reverse(); // oldest first, as shouldDeload expects
         const result = shouldDeload(last4Weeks);

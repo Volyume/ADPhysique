@@ -889,6 +889,18 @@ export function calculateNutritionTargets(inputs) {
     const mult = expMult[goal] ?? 1.0;
     phaseAdj = phaseAdj * mult;
   }
+  // Campaign 1 P0-7 D4: a missing body weight is silently substituted with
+  // 75 kg above for BMR arithmetic (display continuity), but an INVENTED
+  // weight must never size a DEFICIT - it understates the loss fraction
+  // for lighter users and delays the 1.5% hard gate and 0.8% caution. With
+  // no real weight the cut holds at maintenance until one is recorded.
+  const weightAssumed = !Number.isFinite(weightKg);
+  if (weightAssumed && phaseAdj < 0) {
+    warnings.push(
+      'Body weight is missing, so a deficit cannot be sized safely. Holding at maintenance until a weight is recorded.',
+    );
+    phaseAdj = 0;
+  }
   let targetKcal = Math.round(maintenanceKcal * (1 + phaseAdj));
 
   // --- Safety floors ---
@@ -897,7 +909,12 @@ export function calculateNutritionTargets(inputs) {
   // the meal-plan TD/NTD cycle, which must never carve calories off a
   // floored target) gate on this flag, never on warning-string matching.
   let floorApplied = false;
-  const kcalFloor = sex === 'male' ? 1500 : 1200;
+  // Campaign 1 P0-7 D4: UNKNOWN sex takes the HIGHER floor (1500), never
+  // the lower one - a floor that is too high errs protective; the old
+  // `sex === 'male' ? 1500 : 1200` gave an unknown-sex failure state the
+  // 1200 floor. Female stays 1200 exactly as before (the founder floors
+  // are untouched: 1,500 men / 1,200 women, never lower).
+  const kcalFloor = sex === 'female' ? 1200 : 1500;
   if (targetKcal < kcalFloor) {
     warnings.push(
       `Target calories (${targetKcal} kcal) below safe minimum (${kcalFloor} kcal). Raising to floor.`,

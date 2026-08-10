@@ -29,12 +29,14 @@
 export const KCAL_FLOOR = 1200;
 export const KCAL_FLOOR_MALE = 1500;
 
-// The sex-aware floor for a calorie target. Unknown sex falls to 1200 to match
-// nutritionEngine.js exactly (never assume male, but never write below 1200).
-// Sex is enforced present at onboarding (founder 2026-07-01), so 'male' is the
-// only path to the 1500 floor and a null never legitimately reaches here.
+// The sex-aware floor for a calorie target, matching nutritionEngine.js
+// exactly. Campaign 1 P0-7 D4: UNKNOWN sex takes the HIGHER floor (1500) -
+// sex is onboarding-enforced so a null only ever reaches here through a
+// failure state, and a floor that is too high errs protective where the
+// old 1200 fallback erred permissive. Female stays 1200 (founder floors
+// untouched: 1,500 men / 1,200 women, never lower).
 export function kcalFloorForSex(sex) {
-  return sex === 'male' ? KCAL_FLOOR_MALE : KCAL_FLOOR;
+  return sex === 'female' ? KCAL_FLOOR : KCAL_FLOOR_MALE;
 }
 
 // Absolute weekly per-muscle set ceiling used as a last-resort backstop in

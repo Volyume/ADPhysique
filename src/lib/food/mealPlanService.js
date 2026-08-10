@@ -89,9 +89,18 @@ export function storedTargetToEngineTarget(row) {
   return t;
 }
 
-/** Pull meal-plan preferences off the user profile (diet + plan prefs). Pure. */
+/**
+ * Pull meal-plan preferences off the user profile (diet + plan prefs). Pure.
+ * Campaign 1 P0-7 D14: a NULL profile returns null, never the least
+ * restrictive preference set - `profile || {}` used to yield empty
+ * exclusions and omnivore, so a plan generated in a profile-less window
+ * could contain allergens and be presented as coached. Generators refuse
+ * to plan without a profile (the correct failure for an allergen-bearing
+ * surface); an existing-but-sparse profile still normalises as before.
+ */
 export function preferencesFromProfile(profile) {
-  const p = profile || {};
+  if (profile == null || typeof profile !== 'object') return null;
+  const p = profile;
   return normalisePreferences({
     diet: p.dietPreference || 'omnivore',
     excludeFoodKeys: p.mealPlanExcludeFoods,
@@ -277,6 +286,9 @@ export async function generateAndSaveMealPlan(userId, profile, { schedule, seed 
   if (!engineTarget) return { error: 'no_target' };
 
   const prefs = preferencesFromProfile(profile);
+  // Campaign 1 P0-7 D14: no profile means no exclusion data - refusing to
+  // plan is the correct failure for an allergen-bearing surface.
+  if (!prefs) return { error: 'no_profile' };
   const sched = schedule
     || defaultSchedule(daysPerWeek ?? profile?.trainingDaysPerWeek ?? 4);
 
@@ -342,6 +354,8 @@ export async function generateAndSaveDayPlan(userId, profile, { seed = Date.now(
   if (!engineTarget) return { error: 'no_target' };
 
   const prefs = preferencesFromProfile(profile);
+  // Campaign 1 P0-7 D14: same refusal as the week generator.
+  if (!prefs) return { error: 'no_profile' };
   const day = assembleDayPlanBestOf({
     target: {
       kcal: engineTarget.targetKcal,

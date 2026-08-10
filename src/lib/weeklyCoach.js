@@ -602,6 +602,11 @@ export function runWeeklyCoach(inputs) {
     sex = null,
     recentIntakeAvgKcal = null,
     recentIntakeDaysLogged = 0,
+    // Campaign 1 P0-7 D1: true when the intake read THREW (as opposed to a
+    // genuinely empty diary). The FFM floor gate cannot evaluate without
+    // intake, so a failed read holds any calorie CUT rather than letting
+    // the cut proceed floor-blind.
+    intakeReadFailed = false,
     // Wave-3 review + founder decision 2026-07-02: epoch ms of the most
     // recently COMPLETED weekly check-in (the caller reads it from the
     // check-in store). Gates B1's food-diary stand-in: a skipped week only
@@ -853,8 +858,11 @@ export function runWeeklyCoach(inputs) {
     return _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, dataNote, weekSeed, onTarget });
   }
 
-  // Adherence gate (Andy Morgan rule): < 50% sessions → stabilise first
-  const sessionAdherence = sessionsPlanned > 0 ? sessionsCompleted / sessionsPlanned : 1;
+  // Adherence gate (Andy Morgan rule): < 50% sessions → stabilise first.
+  // Campaign 1 P0-7 D5: an unknown denominator routes to the stabilise
+  // path (0), never to "perfect adherence" (1) - matching interBlock's
+  // protective plannedSets > 0 ? ... : 0 posture.
+  const sessionAdherence = sessionsPlanned > 0 ? sessionsCompleted / sessionsPlanned : 0;
   if (sessionAdherence < 0.5) {
     return _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, weekSeed, onTarget });
   }
@@ -1176,6 +1184,15 @@ export function runWeeklyCoach(inputs) {
     }
   }
 
+  // Campaign 1 P0-7 D1: when the intake read FAILED, the floor gate above
+  // never evaluated - hold any cut rather than proceed floor-blind. Same
+  // most-protective shape as the FFM hold; upward/neutral moves pass.
+  let intakeReadHeld = false;
+  if (intakeReadFailed && calorieAdjustment != null && calorieAdjustment.change < 0) {
+    intakeReadHeld = true;
+    calorieAdjustment = null;
+  }
+
   // ── STEPS PRESCRIPTION ────────────────────────────────────────────────────
   let stepsAdjustment = null;
   const band = stepsBand(goalPhase, bwRef);
@@ -1461,6 +1478,14 @@ export function runWeeklyCoach(inputs) {
     heldDecisions.push({
       type: 'ffm_floor',
       reason: `Calorie target held. Your seven-day average intake of ${Math.round(ffmFloorContext.recentIntakeAvgKcal)} kcal is at or below your safety floor of ${ffmFloorContext.floorKcal} kcal. Eating below this level for long stretches can compromise recovery and lean mass.`,
+    });
+  }
+
+  // Campaign 1 P0-7 D1: the intake-read hold explains itself the same way.
+  if (intakeReadHeld) {
+    heldDecisions.push({
+      type: 'intake_read_failed',
+      reason: 'Calorie target held. Your food diary could not be read this run, so the safety floor check could not confirm a reduction is safe. Nothing changes until the next successful check.',
     });
   }
 

@@ -58,10 +58,16 @@ export async function computeAndLogSessionAdjustments({ userId, workout, exercis
       .filter(e => e.exerciseId && e.primaryMuscle && Number.isFinite(e.plannedSets) && e.plannedSets >= 1);
     if (todaysExercises.length === 0) return []; // ad-hoc / empty session → silent
 
+    // Campaign 1 P0-7 D13: a FAILED coach-output or mesocycle read must not
+    // proceed with neutral defaults - that turned a deload week's silence
+    // into a normal week, dropped the joint-pain/illness safety hold, and
+    // re-opened the +1 path. Silence is this module's documented default,
+    // so a read failure returns [] (no adjustments) rather than guessing.
+    const READ_FAILED = Symbol('read_failed');
     const [signals, coachOutput, mesoWeek, landmarkHistory, weekly, recentEvents] = await Promise.all([
       getSessionAdjustmentSignals(userId),
-      getLatestCoachOutput(userId).catch(() => null),
-      getCurrentMesocycleWeek(userId).catch(() => null),
+      getLatestCoachOutput(userId).catch(() => READ_FAILED),
+      getCurrentMesocycleWeek(userId).catch(() => READ_FAILED),
       getAdaptiveLandmarkHistory(userId).catch(() => []),
       // weeksBack 1, anchored at now → the trailing-7-day done-by-muscle volume.
       // The in-progress session isn't counted (is_completed = 1 filter).
@@ -71,6 +77,7 @@ export async function computeAndLogSessionAdjustments({ userId, workout, exercis
       // evaluation (decision === 'deload_trigger') ignores them.
       getRecentAdaptationEvents(userId, 6).catch(() => []),
     ]);
+    if (coachOutput === READ_FAILED || mesoWeek === READ_FAILED) return [];
 
     const landmarks = computeAdaptiveLandmarks(landmarkHistory ?? []);
     const lastWeek = (weekly && weekly.length) ? weekly[weekly.length - 1] : null;

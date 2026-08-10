@@ -283,12 +283,21 @@ export default function useProgressData() {
           const at = w.startedAt ?? w.createdAt ?? 0;
           return at >= start && at < end && (w.isCompleted ?? w.is_completed);
         });
-        const avgSoreness = wkWorkouts.length > 0
-          ? wkWorkouts.reduce((sum, w) => sum + (w.soreness24hBefore ?? w.soreness_24h_before ?? 0), 0) / wkWorkouts.length
-          : 0;
-        const avgJointDiscomfort = wkWorkouts.length > 0
-          ? wkWorkouts.reduce((sum, w) => sum + (w.jointDiscomfort ?? w.joint_discomfort ?? 0), 0) / wkWorkouts.length
-          : 0;
+        // Campaign 1 P0-7 D6: answered-only averages, null when nothing
+        // was rated - unanswered sessions coerced to 0 diluted genuine
+        // soreness/joint evidence and suppressed the deload triggers.
+        const sorenessRated = wkWorkouts
+          .map(w => w.soreness24hBefore ?? w.soreness_24h_before ?? null)
+          .filter(v => v != null);
+        const avgSoreness = sorenessRated.length
+          ? sorenessRated.reduce((sum, v) => sum + v, 0) / sorenessRated.length
+          : null;
+        const jointRated = wkWorkouts
+          .map(w => w.jointDiscomfort ?? w.joint_discomfort ?? null)
+          .filter(v => v != null);
+        const avgJointDiscomfort = jointRated.length
+          ? jointRated.reduce((sum, v) => sum + v, 0) / jointRated.length
+          : null;
         const avgReps = wkSets.length > 0
           ? wkSets.reduce((sum, s) => sum + (s.actualReps ?? s.actual_reps ?? 0), 0) / wkSets.length
           : 0;

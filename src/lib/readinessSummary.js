@@ -81,9 +81,15 @@ export function buildReadinessSummary({
 
   // Priority 4: fatigue trending up over the last couple of sessions (the
   // same rule and threshold buildCoachBrief uses for its own fatigue read).
-  if (fatigueHistory.length >= 2) {
-    const recent = fatigueHistory.slice(0, 2);
-    const avg = recent.reduce((s, r) => s + (r.fatigueLevel ?? r.fatigue_level ?? 0), 0) / recent.length;
+  // Campaign 1 P0-7 D11: average RATED sessions only - the old ?? 0
+  // dragged the mean toward zero on unrated sessions and suppressed the
+  // caution. Requires two rated sessions before the rule speaks.
+  const rated = fatigueHistory
+    .map((r) => r.fatigueLevel ?? r.fatigue_level ?? null)
+    .filter((v) => v != null);
+  if (rated.length >= 2) {
+    const recent = rated.slice(0, 2);
+    const avg = recent.reduce((s, v) => s + v, 0) / recent.length;
     if (avg >= FATIGUE_TREND_THRESHOLD) {
       return { tone: 'caution', line: 'Fatigue has been building over your last couple of sessions.' };
     }
