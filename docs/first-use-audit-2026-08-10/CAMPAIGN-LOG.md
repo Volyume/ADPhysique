@@ -43,10 +43,30 @@ redesign. FR-1..5, FR-C4-1..11, FR-PW-1, H4 carried unresolved
 
 ## Phase status
 
-- Opening scaffold + reconciliation — this commit.
-- Phase 1-39 audit fan-out — NEXT (workflow lanes; evidence lands in
-  this folder).
-- Everything else — NOT STARTED.
+- Opening scaffold + reconciliation — LANDED (e25268cb).
+- Phase 1-39 audit fan-out — LANDED (7cb30c72; twelve evidence files,
+  ~190 findings).
+- D96 rulings — LANDED (bf245c1c; wave assignments + eight founder
+  questions FQ-1..FQ-8, all open).
+- Wave A (lead spine: Step 1 trap, wellbeing merge-write, legacy pull
+  consent gate, no invented biology, honest session ratings +
+  campaign5.firstUse.test.js opening pins) — LANDED (ee2950c9; suite
+  9,635 passing, lint clean).
+- IN FLIGHT NEXT: Wave B (entry/account) + Wave C (plan/block/home/
+  workout surfaces) as the next two-agent pair; then Wave D
+  (week/check-in/nutrition/notifications) + Wave E (audiences/
+  density/hierarchy); then the Phase 40 test matrix + Phase 41
+  synthetic journey; then Reviews A/B/C; then the release-truth
+  audit, gates, close, 64-item handover.
+- FOUNDER QUESTIONS FQ-1..FQ-8 open in D96-RULINGS.md - work continues
+  on unblocked lanes.
+
+## Wave recovery paths
+
+- Wave B/C/D/E briefs derive from D96-RULINGS.md wave sections; every
+  edit re-proves its finding's evidence (file:line) against the
+  current tree first; agents never commit; uncommitted wave work is
+  lead-reviewed against the ruling list before landing.
 
 ## Recovery path
 
