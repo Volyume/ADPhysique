@@ -1601,7 +1601,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     padding: spacing.md,
   },
-  exclusionNoticeText: { ...type.bodySm, color: colors.text },
+  exclusionNoticeText: { ...type.bodySm, color: colors.textPrimary },
   planActionPanel: {
     gap: spacing.md,
     borderRadius: radius.lg,

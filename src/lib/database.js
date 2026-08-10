@@ -6682,14 +6682,18 @@ export async function saveCoachOutput(userId, data) {
     await d.runAsync(
       `UPDATE coach_outputs SET
         goal_phase = ?, volume_signal = ?, load_signal = ?, recovery_flag = ?,
-        calorie_change = ?, steps_target = ?, why_this = ?, output_json = ?
+        calorie_change = ?, steps_target = ?, why_this = ?, output_json = ?,
+        updated_at = ?
        WHERE id = ?`,
       [
         data.goalPhase ?? null, data.volumeSignal ?? null, data.loadSignal ?? null,
         data.recoveryFlag ?? null,
         data.adjustments?.calories?.change ?? null,
         data.adjustments?.steps?.target ?? null,
-        data.whyThisWeek ?? null, JSON.stringify(toStore), existing.id,
+        // Campaign 1 P0-8 D7: write updated_at on every save. It was never
+        // set, so the push stamped now() each cycle (laundering age) and
+        // an applied receipt could not win a cross-device comparison.
+        data.whyThisWeek ?? null, JSON.stringify(toStore), now, existing.id,
       ],
     );
     _scheduleSync();
@@ -6711,6 +6715,9 @@ export async function saveCoachOutput(userId, data) {
       data.whyThisWeek ?? null, json, now,
     ],
   );
+  // Campaign 1 P0-8 D7: stamp updated_at at birth too (same honest-age
+  // rule as the UPDATE branch above).
+  await d.runAsync('UPDATE coach_outputs SET updated_at = ? WHERE id = ?', [now, id]);
   _scheduleSync();
   return id;
 }
@@ -7084,13 +7091,71 @@ export async function insertWeeklyCheckinFromCloud(userId, c) {
 
 export async function insertCoachOutputFromCloud(userId, co) {
   const d = await db();
+  // Campaign 1 P0-8 D7/D8: last-write-wins instead of INSERT OR IGNORE.
+  // The old IGNORE meant an applied receipt (appliedAdjustments inside
+  // output_json, plus the applied flag) could NEVER update an existing
+  // local row - so device B's Apply button stayed live after device A had
+  // already applied, and with the planned-volume restore fixed (P0-1)
+  // that became a real double-apply path. A newer cloud row now updates
+  // the synced fields in place; derived columns (recovery_flag etc.) are
+  // re-populated from the JSON so restored history keeps feeding readers
+  // like getDeloadSuggestedWeekStarts instead of landing NULL.
+  const tsMs = (v) => {
+    if (v == null) return null;
+    const n = typeof v === 'number' ? v : new Date(v).getTime();
+    return Number.isFinite(n) ? n : null;
+  };
+  const cloudUpdated = tsMs(co.updated_at) ?? tsMs(co.created_at) ?? Date.now();
+  const existing = await d.getFirstAsync(
+    'SELECT updated_at FROM coach_outputs WHERE id = ?', [co.id],
+  ).catch(() => null);
+  if (existing && Number(existing.updated_at ?? 0) >= cloudUpdated) return;
+  let parsed = null;
+  try { parsed = co.output_json ? JSON.parse(co.output_json) : null; } catch (_) { parsed = null; }
+  if (existing) {
+    await d.runAsync(
+      `UPDATE coach_outputs SET
+        output_json = ?, applied = ?, updated_at = ?,
+        goal_phase = COALESCE(?, goal_phase),
+        volume_signal = COALESCE(?, volume_signal),
+        load_signal = COALESCE(?, load_signal),
+        recovery_flag = COALESCE(?, recovery_flag),
+        calorie_change = COALESCE(?, calorie_change),
+        steps_target = COALESCE(?, steps_target),
+        why_this = COALESCE(?, why_this)
+       WHERE id = ?`,
+      [
+        co.output_json, co.applied ? 1 : 0, cloudUpdated,
+        parsed?.goalPhase ?? null,
+        parsed?.volumeSignal ?? null,
+        parsed?.loadSignal ?? null,
+        parsed?.recoveryFlag ?? null,
+        parsed?.adjustments?.calories?.change ?? null,
+        parsed?.adjustments?.steps?.target ?? null,
+        parsed?.whyThisWeek ?? null,
+        co.id,
+      ],
+    );
+    return;
+  }
   await d.runAsync(
-    `INSERT OR IGNORE INTO coach_outputs (id, user_id, week_start, output_json, applied, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT OR IGNORE INTO coach_outputs
+      (id, user_id, week_start, output_json, applied,
+       goal_phase, volume_signal, load_signal, recovery_flag,
+       calorie_change, steps_target, why_this, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       co.id, userId, co.week_start, co.output_json,
       co.applied ? 1 : 0,
-      typeof co.created_at === 'string' ? new Date(co.created_at).getTime() : (co.created_at ?? Date.now()),
+      parsed?.goalPhase ?? null,
+      parsed?.volumeSignal ?? null,
+      parsed?.loadSignal ?? null,
+      parsed?.recoveryFlag ?? null,
+      parsed?.adjustments?.calories?.change ?? null,
+      parsed?.adjustments?.steps?.target ?? null,
+      parsed?.whyThisWeek ?? null,
+      tsMs(co.created_at) ?? Date.now(),
+      cloudUpdated,
     ],
   );
 }
@@ -7215,14 +7280,34 @@ export async function insertWorkoutFromCloud(userId, w) {
 
 export async function insertMesocycleFromCloud(userId, m) {
   const d = await db();
-  const now = Date.now();
+  const tsMs = (v) => {
+    if (v == null) return null;
+    const n = typeof v === 'number' ? v : new Date(v).getTime();
+    return Number.isFinite(n) ? n : null;
+  };
   // Stage 6 (2026-08-09): INSERT OR REPLACE would WIPE a locally-computed
   // Block Ledger whenever the cloud row predates migrate_131 (or was
   // pushed by an older build). The ledger is NOT derivable, so preserve
   // the local value when the cloud carries none.
   const existing = await d.getFirstAsync(
-    'SELECT block_ledger FROM mesocycles WHERE id = ?', [m.id],
+    'SELECT block_ledger, updated_at, created_at FROM mesocycles WHERE id = ?', [m.id],
   ).catch(() => null);
+  // Campaign 1 P0-8 D1: last-write-wins. A stale device's echo of an old
+  // mesocycle row (old is_active, no ledger) must never overwrite a newer
+  // local one - that path could re-activate a COMPLETED block and undo
+  // the user's decision. Without a cloud timestamp the row cannot prove
+  // freshness over an existing local row, so it does not replace one.
+  const cloudUpdated = tsMs(m.updated_at);
+  if (existing) {
+    if (cloudUpdated == null) return;
+    if (Number(existing.updated_at ?? 0) >= cloudUpdated) return;
+  }
+  // Campaign 1 P0-8 D5: preserve the row's REAL timestamps. Stamping
+  // Date.now() into created_at destroyed block ordering (created_at is
+  // the tiebreak for getActiveBlock and getAchievedWeeklyPeaks) and
+  // stamping updated_at laundered old content as fresh on the next push.
+  const createdAt = tsMs(m.created_at) ?? (Number(existing?.created_at) || Date.now());
+  const updatedAt = cloudUpdated ?? Date.now();
   await d.runAsync(
     `INSERT OR REPLACE INTO mesocycles
       (id, user_id, name, start_date, end_date, duration_weeks, planned_weeks,
@@ -7253,7 +7338,7 @@ export async function insertMesocycleFromCloud(userId, m) {
       m.block_ledger != null
         ? (typeof m.block_ledger === 'string' ? m.block_ledger : JSON.stringify(m.block_ledger))
         : (existing?.block_ledger ?? null),
-      now, now,
+      createdAt, updatedAt,
     ],
   );
 }
@@ -7261,9 +7346,28 @@ export async function insertMesocycleFromCloud(userId, m) {
 export async function insertMesocycleWeekFromCloud(w) {
   const d = await db();
   // Cloud uses week_number, local uses week_index. rir_target is
-  // NOT NULL locally but isn't on the cloud schema; default it from
-  // is_deload so the row still slots back in.
+  // NOT NULL locally but isn't on the cloud schema.
   const weekIdx = w.week_number ?? w.week_index ?? 1;
+  // Campaign 1 P0-8 D6: derive rir_target from the parent mesocycle's
+  // rir_ladder (which DOES round-trip through the cloud), indexed by
+  // week. The old flat `is_deload ? 4 : 2` default flattened a
+  // generated ladder like [3,2,1,0,0,4] into [2,2,2,2,2,4] after one
+  // sync - silently changing what the deterministic engine prescribes.
+  // The flat default remains only as the last resort when no ladder
+  // exists (legacy rows), which restores the pre-fix behaviour exactly.
+  let rirTarget = w.is_deload ? 4 : 2;
+  if (!w.is_deload) {
+    try {
+      const parent = await d.getFirstAsync(
+        'SELECT rir_ladder FROM mesocycles WHERE id = ?', [w.mesocycle_id],
+      );
+      const ladder = parent?.rir_ladder != null
+        ? (typeof parent.rir_ladder === 'string' ? JSON.parse(parent.rir_ladder) : parent.rir_ladder)
+        : null;
+      const fromLadder = Array.isArray(ladder) ? ladder[weekIdx - 1] : null;
+      if (Number.isFinite(Number(fromLadder))) rirTarget = Number(fromLadder);
+    } catch (_) { /* ladder unreadable: keep the flat default */ }
+  }
   await d.runAsync(
     `INSERT OR REPLACE INTO mesocycle_weeks
       (id, mesocycle_id, week_index, is_deload, rir_target, notes, created_at, updated_at)
@@ -7271,7 +7375,7 @@ export async function insertMesocycleWeekFromCloud(w) {
     [
       w.id, w.mesocycle_id, weekIdx,
       w.is_deload ? 1 : 0,
-      w.is_deload ? 4 : 2,
+      rirTarget,
       w.notes ?? null,
       Date.now(), Date.now(),
     ],

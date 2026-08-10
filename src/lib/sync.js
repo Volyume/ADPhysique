@@ -970,9 +970,19 @@ async function _pushMesocycles(sb, supabaseUserId, localUserId) {
         // The pull side (insertMesocycleFromCloud) preserves a local ledger
         // when the cloud row carries none, so the round trip cannot wipe.
         // Parsed to an OBJECT for the jsonb column — a raw string would
-        // store double-encoded; unparseable local text pushes null rather
-        // than poisoning the batch.
-        block_ledger: (() => { try { return m.blockLedger ? JSON.parse(m.blockLedger) : null; } catch (_) { return null; } })(),
+        // store double-encoded.
+        // Campaign 1 P0-8 D1: when this device has NO ledger (stale device,
+        // pre-campaign row, unparseable text) the key is OMITTED entirely -
+        // an upsert without the column leaves the cloud value untouched,
+        // whereas the old explicit null ERASED a stored ledger from the
+        // cloud and a later fresh-install restore lost it for good.
+        ...((() => {
+          if (!m.blockLedger) return {};
+          try {
+            const v = JSON.parse(m.blockLedger);
+            return v == null ? {} : { block_ledger: v };
+          } catch (_) { return {}; }
+        })()),
         focus: m.focus ?? null,
         is_active: !!m.isActive,
         updated_at: new Date(m.updatedAt ?? m.createdAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time

@@ -40,6 +40,10 @@ jest.mock('../../components/Toast', () => ({
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 jest.mock('../../lib/food/mealPlanService', () => ({
   loadActiveMealPlan: jest.fn(),
+  // Campaign 1 P0-3: the staleness detector; [] = no conflicts, so the
+  // pre-existing tests render without the notice. Its own behaviour is
+  // pinned against the REAL module in campaign1.integrity.test.js.
+  planConflictsWithExclusions: jest.fn(() => []),
   generateAndSaveDayPlan: jest.fn(),
   generateAndSaveMealPlan: jest.fn(),
   regenerateActiveMealPlan: jest.fn(),
