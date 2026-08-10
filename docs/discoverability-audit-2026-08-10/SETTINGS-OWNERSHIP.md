@@ -80,3 +80,30 @@ not blocked.
   fully reachable. Re-nagging a user who explicitly opted out of photo
   prompts would be anti-protective; permanence is correct here
   (suppression gates already never render it under calm/ED).
+
+**FR-5 — Win-back and weekly-coach-ready pushes without unsubscribe
+controls** (F13, DISCOVERABILITY-CLASSIFICATION.md). Current behaviour:
+both categories send with no per-category toggle, against
+NOTIFICATIONS_LOCKED.md's every-push-has-an-unsubscribe-path rule. The
+win-back copy no longer sells Pro (fixed; it states the user's own
+saved-data truth). Options: (A) add sibling-pattern toggles for both
+categories (consistent with the partner-cheers fix); (B) rule the
+win-back push outside the promise's scope and document. Recommended: A.
+Release: not blocked.
+
+**Campaign 4 recording (cardio remnant, boundary note):**
+SettingsCoachingScreen carries a live "Cardio logging" toggle inside
+the Pro block (predates this campaign). Untouched per the cardio
+boundary; its fate belongs to the dead-code/coherence campaign with
+the other D92-1 remnants.
+
+## Review B rulings (D94-3)
+
+Findings 1, 4-11 FIXED (see the remediation commit). Findings 2-3
+RULED PRE-EXISTING ARCHITECTURE, documented not reverted: every
+notification category row is a cloud-bound mirror (rows push/pull via
+the registry sync table) while runtime sends read the device blob -
+the campaign's writes match every sibling category and keep the cloud
+rows fresh rather than frozen; the rows-to-blob propagation gap on a
+second device predates this campaign and applies to all categories.
+Recorded for Campaign 4 / a future sync decision, alongside FR-1..5.

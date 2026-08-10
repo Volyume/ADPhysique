@@ -188,7 +188,11 @@ const RECOVERY_OPTIONS = [
 ];
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 5); // 5am to 6pm
+// Review B finding 6: the canonical editor (CoachingRemindersScreen
+// HOURS_MORNING) offers 5am to 12pm; onboarding offering later hours
+// left the editor showing no selected chip - same defect class as the
+// fixed check-in hour.
+const HOURS = Array.from({ length: 8 }, (_, i) => i + 5); // 5am to 12pm
 
 function fmt12(h) {
   if (h === 0) return '12 am';

@@ -212,10 +212,20 @@ export default function ProGoalSetupScreen({ navigation }) {
     const goalPhase = phaseToCoachingKey(selectedPhase);
 
     // Capture the previous state for the change-summary screen.
+    // Review B finding 4: the picker seeds from the saved targets row
+    // (the live truth every consumer reads), so the change summary's
+    // "previous" must read the same source or it reports a protein
+    // change the user never made. Profile mirror stays the fallback.
+    let previousApproach = userProfile?.proteinApproach ?? null;
+    try {
+      const prevTargets = await getNutritionTargets(user?.id);
+      const savedApproach = prevTargets?.proteinApproach ?? prevTargets?.protein_approach;
+      if (savedApproach && PROTEIN_APPROACHES[savedApproach]) previousApproach = savedApproach;
+    } catch (_) { /* profile fallback stands */ }
     const previousProfile = {
       goal: userProfile?.trainingGoal ?? null,
       phase: userProfile?.trainingPhase ?? null,
-      approach: userProfile?.proteinApproach ?? null,
+      approach: previousApproach,
     };
     let previousTargets = null;
     try {

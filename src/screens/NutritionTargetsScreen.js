@@ -670,6 +670,12 @@ export default function NutritionTargetsScreen({ navigation }) {
               </View>
               <View style={styles.formGroup}>
                 <Text style={[styles.fieldLabel, live.fieldLabel]}>Current weight (kg)</Text>
+                {/* D94 (Campaign 3, F5): this field takes kilograms whatever
+                    display unit the user set elsewhere; say so rather than
+                    silently ignoring the preference. Converting the field
+                    itself is safety-adjacent (weight feeds the floor maths)
+                    and stays with the founder's FR-1 territory. */}
+                <Text style={[styles.fieldHintKg, live.fieldHintKg]}>Entered in kilograms, whatever unit you display elsewhere.</Text>
                 <NumericField
                   value={weight}
                   onChangeText={setWeight}
@@ -761,6 +767,12 @@ export default function NutritionTargetsScreen({ navigation }) {
           {/* Weight */}
           <View style={styles.formGroup}>
             <Text style={[styles.fieldLabel, live.fieldLabel]}>Current weight (kg)</Text>
+                {/* D94 (Campaign 3, F5): this field takes kilograms whatever
+                    display unit the user set elsewhere; say so rather than
+                    silently ignoring the preference. Converting the field
+                    itself is safety-adjacent (weight feeds the floor maths)
+                    and stays with the founder's FR-1 territory. */}
+                <Text style={[styles.fieldHintKg, live.fieldHintKg]}>Entered in kilograms, whatever unit you display elsewhere.</Text>
             <NumericField
               value={weight}
               onChangeText={setWeight}
@@ -1549,6 +1561,7 @@ const styles = StyleSheet.create({
     ...type.label,
     color: colors.textSecondary,
   },
+  fieldHintKg: { ...type.caption, color: colors.textMuted, marginBottom: spacing.xs },
   optional: {
     fontWeight: fontWeight.regular,
     color: colors.textMuted,
@@ -2253,6 +2266,7 @@ function buildLiveStyles(t) {
     eduBody: { ...t.type.captionTight, color: t.colors.textSecondary },
     pageSubtitle: { ...t.type.bodySm, color: t.colors.textMuted },
     fieldLabel: { ...t.type.label, color: t.colors.textSecondary },
+    fieldHintKg: { ...t.type.caption, color: t.colors.textMuted },
     optional: { color: t.colors.textMuted },
     numInput: { ...t.type.body },
     goalCardActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },

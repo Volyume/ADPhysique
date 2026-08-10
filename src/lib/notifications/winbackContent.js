@@ -32,6 +32,13 @@ function sessionWord(n) {
 /**
  * Build the win-back title + body.
  *
+ * D94 (Campaign 3, F13): the settings screen promises 'local
+ * notifications only, never marketing'. The old core clauses sold Pro
+ * ('Pro picks up where it left off'); a push under that promise may
+ * state the user's own saved-data truth and readiness, never pitch.
+ * Whether win-back pushes need their own unsubscribe control is
+ * escalated as FR-5 (SETTINGS-OWNERSHIP.md).
+ *
  * @param {object}  args
  * @param {number}  args.sessionsSince  completed sessions logged since the lapse
  * @param {number}  args.totalSessions  total completed sessions on record
@@ -51,15 +58,15 @@ export function winbackPush({
   if (sessionsSince > 0) {
     const tail = sinceLabel ? ` since ${sinceLabel}` : '';
     title = `Still lifting. ${sessionsSince} ${sessionWord(sessionsSince)}${tail}.`;
-    core = 'Your trend data never stopped. Pro picks up exactly where it left off.';
+    core = 'Your trend data never stopped, and everything is ready whenever you are.';
   } else if (totalSessions > 0) {
     title = 'Your training is saved.';
-    core = `Your ${totalSessions} ${sessionWord(totalSessions)} are saved. Pro picks up where it left off.`;
+    core = `Your ${totalSessions} ${sessionWord(totalSessions)} are saved, ready whenever you are.`;
   } else {
     // No sessions on record at all: never show a zero, fall back to the
     // held-seat framing.
     title = 'Your training is saved.';
-    core = 'Everything you logged is saved. Pro picks up where it left off.';
+    core = 'Everything you logged is saved, ready whenever you are.';
   }
 
   // §4d: a stated break opens by acknowledging it.

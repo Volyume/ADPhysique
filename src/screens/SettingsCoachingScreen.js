@@ -275,7 +275,14 @@ export default function SettingsCoachingScreen() {
             />
           </>
         )}
-        {bioSex === 'female' && (
+        {/* D94 (Campaign 3, F10): the only consumer of this flag is the
+            Pro weekly check-in, so a free user's toggle was inert - it
+            saved a preference nothing read. Gated to Pro like its reader;
+            the sex gate is unchanged (Article 9 surface). */}
+        {/* Review B finding 8: a lapsed user with the flag ON must keep
+            the revocation path (Article 9 opt-in). The row therefore also
+            renders whenever the flag is currently on, whatever the tier. */}
+        {(tier === 'pro' || cycleEnabled) && bioSex === 'female' && (
           <SettingRow
             icon="calendar-outline"
             label="Cycle tracking"

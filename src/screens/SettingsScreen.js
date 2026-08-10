@@ -42,7 +42,7 @@ export default function SettingsScreen({ navigation }) {
         <SettingRow
           icon="barbell-outline"
           label="Coaching"
-          sub="Coach tone, cardio and weekly check-ins"
+          sub="Calmer coaching, session readiness and coaching preferences"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsCoaching'); }}
         />
         {/* CP-6 (2026-07-09 UX audit): this used to render inline on this
@@ -101,7 +101,7 @@ export default function SettingsScreen({ navigation }) {
         <SettingRow
           icon="contrast-outline"
           label="Display and accessibility"
-          sub="Text size, contrast, motion"
+          sub="Appearance, energy units, text size, contrast, motion"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsDisplay'); }}
         />
         <SettingRow

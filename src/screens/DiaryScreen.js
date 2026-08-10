@@ -455,6 +455,19 @@ export default function DiaryScreen({ navigation, route }) {
     () => resolveEffectiveTargets(targets, { isRefeedDay, refeed, macroCycle, isTrainingDay, bankedDelta, perDayOffsetKcal, floorKcal }),
     [macroCycle, refeed, isRefeedDay, targets, isTrainingDay, bankedDelta, perDayOffsetKcal, floorKcal],
   );
+  // Review B finding 1 (HIGH): the offset applies only on an otherwise
+  // plain day (effectiveTargets precedence: refeed > carb cycle > banked),
+  // and the floor clamp can zero a downward offset. The disclosure row
+  // must state what actually shaped today's number, so it derives the
+  // APPLIED delta from the resolved target itself: zero whenever another
+  // mode owned the day or the clamp swallowed the offset.
+  const appliedOffsetKcal = useMemo(() => {
+    if (isRefeedDay || macroCycle || bankedDelta) return 0;
+    const base = Number(targets?.targetKcal);
+    const eff = Number(effectiveTargets?.targetKcal);
+    if (!Number.isFinite(base) || !Number.isFinite(eff)) return 0;
+    return Math.round(eff - base);
+  }, [isRefeedDay, macroCycle, bankedDelta, targets, effectiveTargets]);
 
   const dayTypeChip = dayTypeLabel({ isRefeedDay, macroCycle, isTrainingDay, bankedDelta });
 
@@ -1432,15 +1445,18 @@ export default function DiaryScreen({ navigation, route }) {
               today's target; the point of consequence must disclose it and
               link to the one canonical editor. Renders only when an offset
               is actually applied to the day in view - zero-clutter default. */}
-          {!readOnly && perDayOffsetKcal !== 0 ? (
+          {!readOnly && appliedOffsetKcal !== 0 ? (
             <TouchableOpacity
               style={styles.targetModeRow}
-              onPress={() => navigation.navigate('PerDayTargets')}
+              // Review A finding 1: PerDayTargets lives in the ProfileTab
+              // stack; a bare navigate from DiaryTab is the F4 dead-tap
+              // class. The one sanctioned cross-tab route is the helper.
+              onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'PerDayTargets')}
               accessibilityRole="button"
-              accessibilityLabel={`Today's target includes your ${perDayOffsetKcal > 0 ? 'plus' : 'minus'} ${Math.abs(perDayOffsetKcal)} calorie day adjustment. Edit per-day targets.`}
+              accessibilityLabel={`Today's target includes your ${appliedOffsetKcal > 0 ? 'plus' : 'minus'} ${toEnergy(Math.abs(appliedOffsetKcal), energyUnit)} ${energyUnitLabel(energyUnit)} day adjustment. Edit per-day targets.`}
             >
               <Text style={[styles.targetModeText, live.targetModeText]}>
-                {`Includes your ${perDayOffsetKcal > 0 ? '+' : '-'}${Math.abs(perDayOffsetKcal)} kcal day adjustment. Edit`}
+                {`Includes your ${appliedOffsetKcal > 0 ? '+' : '-'}${toEnergy(Math.abs(appliedOffsetKcal), energyUnit)} ${energyUnitLabel(energyUnit)} day adjustment. Edit`}
               </Text>
             </TouchableOpacity>
           ) : null}

@@ -19,7 +19,10 @@ function read(rel) {
 // Routes registered ONLY in ProfileStack (see RootNavigator ProfileStack) that
 // other tabs are known to want to link to. A bare navigate to any of these
 // from a non-Profile screen is the silent-no-op bug.
-const PROFILE_ONLY_ROUTES = ['CoachOutput', 'NutritionTargets', 'SettingsPrivacy', 'WeeklyCheckIn'];
+// Campaign 3 (review B finding 11): PerDayTargets and SettingsWorkout
+// joined the canary list after the campaign's own shortcuts recreated the
+// bug class three times before review caught them.
+const PROFILE_ONLY_ROUTES = ['CoachOutput', 'NutritionTargets', 'SettingsPrivacy', 'WeeklyCheckIn', 'PerDayTargets', 'SettingsWorkout'];
 
 // Screens that live OUTSIDE ProfileStack but carry cross-tab links to it.
 const NON_PROFILE_SCREENS = [
@@ -28,6 +31,7 @@ const NON_PROFILE_SCREENS = [
   'src/screens/MealPlanScreen.js',
   'src/screens/AnalyticsScreen.js',
   'src/screens/PlansScreen.js',
+  'src/screens/BodyMetricsScreen.js',
 ];
 
 describe('cross-stack navigation guard (F4 / NAV-1/2/3)', () => {

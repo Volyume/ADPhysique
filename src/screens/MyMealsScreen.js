@@ -254,7 +254,7 @@ export default function MyMealsScreen({ navigation, route }) {
             // D94 (Campaign 3, Phase 10): the only creation path is the
             // diary long-press, and this line never said so - the one
             // instruction for a gesture-only flow must name the gesture.
-            text={'Press and hold any entry in your diary to start selecting foods, then tap "Save as meal".'}
+            text={'Tap an entry in your diary and choose Select entries, or press and hold one, then tap "Save as meal".'}
             actionLabel="Back to diary"
             onAction={() => navigation.goBack()}
           />
