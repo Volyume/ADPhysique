@@ -536,6 +536,17 @@ export default function YouScreen({ navigation }) {
               sub="Check-in, weigh-in and adherence reminders that feed the weekly loop."
               onPress={() => navigation.navigate('CoachingReminders')}
             />
+            {/* D94 (Campaign 3, Phase 9): the volume-target editor's only
+                other route is data-gated through Analytics, so a coached
+                user with sparse data had no path to the one control whose
+                manual numbers outrank the coach. Direct row, canonical
+                editor unchanged. */}
+            <NavRow
+              icon="stats-chart-outline"
+              label="Volume targets"
+              sub="Weekly set ranges per muscle. Your own numbers take precedence."
+              onPress={() => navigation.navigate('VolumeHeatmap')}
+            />
           </View>
         ) : null}
 
