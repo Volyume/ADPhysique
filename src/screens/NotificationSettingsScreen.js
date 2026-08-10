@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -599,13 +599,27 @@ export default function NotificationSettingsScreen({ navigation }) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Permission banner */}
+        {/* Permission banner. F8 (discoverability audit 2026-08-10): "enable
+            them in your device settings" had no way to get there. Mirrors the
+            camera-flow pattern already shipped (ScanBarcodeScreen.js,
+            ScanLabelScreen.js) -- Linking.openSettings() as an explicit
+            tap-through, not just an instruction. */}
         {permissionStatus === 'denied' && (
           <View style={[styles.permissionBanner, live.permissionBanner]}>
-            <Ionicons name="alert-circle-outline" size={20} color={t.colors.warning} style={styles.bannerIcon} />
-            <Text style={[styles.bannerText, live.bannerText]}>
-              Notifications are currently disabled. Enable them in your device settings to use these features.
-            </Text>
+            <View style={styles.bannerRow}>
+              <Ionicons name="alert-circle-outline" size={20} color={t.colors.warning} style={styles.bannerIcon} />
+              <Text style={[styles.bannerText, live.bannerText]}>
+                Notifications are currently disabled. Enable them in your device settings to use these features.
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => Linking.openSettings()}
+              style={styles.bannerAction}
+              accessibilityRole="button"
+              accessibilityLabel="Open Settings"
+            >
+              <Text style={[styles.bannerActionText, live.bannerActionText]}>Open Settings</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -630,7 +644,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             <View style={{ flex: 1 }}>
               <Text style={[styles.crossLinkTitle, live.crossLinkTitle]}>Coaching reminders</Text>
               <Text style={[styles.crossLinkSub, live.crossLinkSub]}>
-                Morning weight and weekly check-in schedule. Always on for Pro.
+                Weigh-in and check-in times, check-in follow-ups, meal-plan reminders and partner cheers.
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
@@ -747,6 +761,12 @@ export default function NotificationSettingsScreen({ navigation }) {
           <View style={[styles.helperRow, live.helperRow]}>
             <Text style={[styles.helperText, live.helperText]}>
               Optional reminders to log meals. No streaks and no pressure. Turn any of them off whenever you like.
+              {/* F9 (discoverability audit 2026-08-10): toggleMealReminder
+                  persists a switch as on even when permission is denied, but
+                  never actually schedules anything -- so the switch looked
+                  live with no explanation nearby. One honest line, no
+                  behaviour change. */}
+              {permissionStatus === 'denied' ? ' Notifications are disabled in your device settings, so a reminder switched on here will not fire yet.' : ''}
             </Text>
           </View>
         </Card>
@@ -798,7 +818,7 @@ export default function NotificationSettingsScreen({ navigation }) {
           )}
           <View style={[styles.helperRow, live.helperRow]}>
             <Text style={[styles.helperText, live.helperText]}>
-              A reminder that would land inside this window waits until it ends. Applies to every reminder Volyume schedules.
+              A reminder that would land inside this window waits until it ends. Applies to every reminder Volyume schedules.{permissionStatus === 'denied' ? ' Notifications are disabled in your device settings, so nothing will fire until they are enabled.' : ''}
             </Text>
           </View>
         </Card>
@@ -806,7 +826,7 @@ export default function NotificationSettingsScreen({ navigation }) {
         {/* Bottom note */}
         <View style={styles.bottomNote}>
           <Text style={[styles.bottomNoteText, live.bottomNoteText]}>
-            Volyume never sends marketing notifications. These are local reminders with no server involved. You can disable them any time from your device settings.
+            Volyume never sends marketing notifications. These are local reminders with no server involved. You can disable them any time from your device settings. To stay unobtrusive, Volyume also caps how many nudges it sends in a week, so an expected one can occasionally be skipped. On Android, your device groups these into notification channels you can tune in system settings.
           </Text>
         </View>
 
@@ -843,8 +863,6 @@ const styles = StyleSheet.create({
 
   // Permission banner
   permissionBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     backgroundColor: withAlpha(colors.warning, alpha.tint),
     borderWidth: 1,
     borderColor: withAlpha(colors.warning, 0.35),
@@ -852,6 +870,11 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.md,
     marginBottom: spacing.sm,
+  },
+  bannerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
   },
   bannerIcon: {
     marginTop: spacing.hair,
@@ -861,6 +884,15 @@ const styles = StyleSheet.create({
     ...type.bodySm,
     flex: 1,
     color: colors.warning,
+  },
+  bannerAction: {
+    alignSelf: 'flex-start',
+  },
+  bannerActionText: {
+    ...type.bodySm,
+    fontWeight: fontWeight.semibold,
+    color: colors.warning,
+    textDecorationLine: 'underline',
   },
 
   // Section label
@@ -1005,6 +1037,7 @@ function buildLiveStyles(t) {
     subtitle: { ...t.type.bodySm, color: t.colors.textSecondary },
     permissionBanner: { backgroundColor: withAlpha(t.colors.warning, alpha.tint), borderColor: withAlpha(t.colors.warning, 0.35) },
     bannerText: { ...t.type.bodySm, color: t.colors.warning },
+    bannerActionText: { ...t.type.bodySm, fontWeight: fontWeight.semibold, color: t.colors.warning },
     toggleIconWrap: { backgroundColor: t.colors.primaryBg },
     toggleLabel: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     divider: { backgroundColor: t.colors.border },

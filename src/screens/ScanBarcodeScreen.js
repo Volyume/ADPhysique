@@ -137,6 +137,16 @@ export default function ScanBarcodeScreen({ navigation, route }) {
     navigation.replace('AddCustomFood', { mealSlot, entryDate, from: 'scan_manual' });
   }, [navigation, mealSlot, entryDate]);
 
+  // F2 (discoverability audit 2026-08-10): the label scanner (ScanLabel,
+  // RootNavigator.js:395) was previously reachable only after a barcode
+  // lookup miss. A food with no barcode at all (loose, bakery, imported,
+  // own-label) had no route there at all, even though ProGate.js:32 sells
+  // label scanning as a named Pro benefit. This quiet link, beside the
+  // existing manual-entry one, gives it a direct route.
+  const gotoLabelScan = useCallback(() => {
+    navigation.replace('ScanLabel', { mealSlot, entryDate });
+  }, [navigation, mealSlot, entryDate]);
+
   // First arrival: attempt the native OS permission dialog. We fire for
   // ANY non-granted status, not just 'not-determined', because on
   // Android a prior 'denied' is still re-askable, and some OS /
@@ -376,6 +386,17 @@ export default function ScanBarcodeScreen({ navigation, route }) {
             >
               <Text style={[styles.manualLinkText, live.manualLinkText]}>Enter barcode number</Text>
             </TouchableOpacity>
+            {/* F2: a second quiet link, same visual grammar as the manual-entry
+                one above, for a food with no barcode at all. */}
+            <TouchableOpacity
+              onPress={gotoLabelScan}
+              hitSlop={12}
+              style={styles.manualLinkBtn}
+              accessibilityRole="button"
+              accessibilityLabel="No barcode? Scan the label"
+            >
+              <Text style={[styles.manualLinkText, live.manualLinkText]}>No barcode? Scan the label</Text>
+            </TouchableOpacity>
           </View>
         ) : null}
       </View>
@@ -432,7 +453,7 @@ const styles = StyleSheet.create({
   },
   manualLinkWrap: {
     position: 'absolute', bottom: spacing.xl, left: 0, right: 0,
-    alignItems: 'center',
+    alignItems: 'center', gap: spacing.xs,
   },
   manualLinkBtn: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
   manualLinkText: {
