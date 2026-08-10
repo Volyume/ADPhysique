@@ -411,10 +411,14 @@ COACHING. PRO owns adaptive coaching and Continue-with-adjustments.**
   and no partial change. Test restart/sync/retry/double-tap/recovery
   week/per-muscle divergence/Manual mode/Repeat/adjustments/stale-
   device conflicts. Adaptive mesocycle architecture unweakened.
-- **FQ-5 = APPROVED 1-6 IN PRINCIPLE, WORDING GATED.** Exact
-  proposed wording for all six consent/privacy corrections is
-  prepared and PRESENTED FOR FOUNDER REVIEW BEFORE LANDING (see
-  FQ5-CONSENT-WORDING-PROPOSAL.md in this folder). Directions:
+- **FQ-5 = WORDING APPROVED IN FULL ("Approve all", founder
+  2026-08-10) AND LANDED.** All six items landed exactly as proposed
+  in FQ5-CONSENT-WORDING-PROPOSAL.md, with item 3 as Option A
+  (mechanism-described "anonymous") and item 2's canonical-source
+  confirmation (the shipped screen is the record;
+  PRIVACY_CONSENT_LOCKED.md prints it verbatim; CONSENT_VERSION =
+  '2026-08-10', stamp-only — verified to gate nothing at runtime, so
+  no existing user is re-prompted). The original directions:
   withdrawal-consequence disclosed pre-consent; canonical consent
   content established then record and screen reconciled to identical
   substance (the three extra shipped blocks documented, not assumed

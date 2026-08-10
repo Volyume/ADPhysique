@@ -79,9 +79,12 @@ redesign. FR-1..5, FR-C4-1..11, FR-PW-1, H4 carried unresolved
     founder console check (now on TASKBOARD §3 beside H4).
   - FQ-1(c) (hand-off calm pointer + the three doc corrections) -
     lead, after Wave B lands (shares ProSetupCompleteScreen).
-  - FQ-5: wording proposal PREPARED at
-    FQ5-CONSENT-WORDING-PROPOSAL.md - AWAITING FOUNDER WORDING
-    REVIEW; nothing lands until approved. FQ-8(b): no work.
+  - FQ-5: APPROVED IN FULL by the founder ("Approve all") and LANDED
+    by the lead - all six items as proposed, item 3 Option A, consent
+    version stamp 2026-08-10 (stamp-only, no re-gating), locked
+    record reconciled to the shipped screen. FQ-6.3: RESOLVED by
+    founder console confirmation (billing.md carries the permanent
+    record). FQ-8(b): no work.
 
 ## Wave recovery paths
 

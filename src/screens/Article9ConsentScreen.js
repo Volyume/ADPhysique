@@ -33,8 +33,11 @@ const CONSENT_KEY_PFX = '@volyume_health_consent_';
 // Version of the on-screen consent text the user is shown. Pinned in the
 // audit trail (Art 7(1) / EDPB: the record should capture which consent copy
 // was presented, not just the app version). Bump this whenever the consent
-// body copy changes. Mirrors the locked-copy date in PRIVACY_CONSENT_LOCKED.md.
-const CONSENT_VERSION = '2026-07-04';
+// body copy changes. PRIVACY_CONSENT_LOCKED.md prints this screen's copy
+// verbatim under the same version stamp (reconciled 2026-08-10, FQ-5 item 2:
+// the shipped screen is the canonical record). Version comparisons gate
+// nothing at runtime - the stamp records which text was agreed to.
+const CONSENT_VERSION = '2026-08-10';
 
 export default function Article9ConsentScreen({ navigation }) {
   const { user, healthConsentGranted } = useAppStore(s => ({
@@ -195,17 +198,20 @@ export default function Article9ConsentScreen({ navigation }) {
           'Your weekly check-ins, including energy, recovery, and how you feel',
           'The screening questions you answer about eating habits',
           'Progress photos you choose to take, plus photo quality, result confidence, leanness band, Volyume Score and progress change when you use photo analysis',
-          'Anonymous measurement numbers from photo analysis (never the photos, never your name or account) to keep scoring accurate for every body type',
         ]} />
 
         <Text style={[styles.body, live.body]}>
           Volyume Score is a simple progress read, not a medical measure, DEXA scan, diagnosis, or medical advice. It may abstain or ask for a retake when photo quality is poor.
         </Text>
 
-        <Text style={[styles.subhead, live.subhead]}>A safety check that runs in the background:</Text>
-        <Text style={[styles.body, live.body]}>
-          Volyume checks your weight trend, energy, and food logs together for signs of under-fuelling or disordered eating. If a concerning pattern shows up, it pauses your calorie changes and points you to support.
-        </Text>
+        {/* FQ-5 items 4+5 (D96, founder-approved wording): transmission is
+            disclosed under a transmission heading, not inside the on-device
+            reads list, and the blocks run looks-at, leaves-phone, never-do,
+            safety check. Same sentences; grouping and order only. */}
+        <Text style={[styles.subhead, live.subhead]}>What leaves your phone:</Text>
+        <BulletList items={[
+          'Anonymous measurement numbers from photo analysis (never the photos, never your name or account) to keep scoring accurate for every body type',
+        ]} />
 
         <Text style={[styles.subhead, live.subhead]}>What we never do with it:</Text>
         <BulletList items={[
@@ -213,6 +219,11 @@ export default function Article9ConsentScreen({ navigation }) {
           'Never share it with advertisers',
           'Never use your photos or health data for advertising or third-party model training',
         ]} />
+
+        <Text style={[styles.subhead, live.subhead]}>A safety check that runs in the background:</Text>
+        <Text style={[styles.body, live.body]}>
+          Volyume checks your weight trend, energy, and food logs together for signs of under-fuelling or disordered eating. If a concerning pattern shows up, it pauses your calorie changes and points you to support.
+        </Text>
 
         <Text style={[styles.subhead, live.subhead]}>Where it lives:</Text>
         <BulletList items={[
@@ -234,7 +245,7 @@ export default function Article9ConsentScreen({ navigation }) {
         {/* Art 7(3): the user must be informed of the right to withdraw BEFORE
             giving consent, and withdrawal must be as easy as giving it. */}
         <Text style={[styles.withdrawNote, live.withdrawNote]}>
-          You can withdraw this consent at any time in Settings {'>'} Privacy & legal.
+          You can withdraw this consent at any time in Settings {'>'} Privacy and legal. Because Volyume cannot run health-data coaching without it, withdrawing means closing your account and deleting your data, the same as the choice below.
         </Text>
 
         <TouchableOpacity

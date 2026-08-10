@@ -11,7 +11,11 @@ describe('privacy, consent, export and store-copy truth', () => {
   test('Article 9 consent names Volyume Score data and its limits', () => {
     const source = readRepoFile('src', 'screens', 'Article9ConsentScreen.js');
 
-    expect(source).toContain("const CONSENT_VERSION = '2026-07-04'");
+    // FQ-5 item 2 (D96, founder-approved): the shipped screen became the
+    // canonical consent record and the version stamp moved to the
+    // reconciliation date. The pin still holds the stamp to the exact
+    // value PRIVACY_CONSENT_LOCKED.md prints.
+    expect(source).toContain("const CONSENT_VERSION = '2026-08-10'");
     expect(source).toContain('photo quality, result confidence, leanness band, Volyume Score and progress change');
     expect(source).toContain('not a medical measure, DEXA scan, diagnosis, or medical advice');
     expect(source).toContain('Progress photo image files stay on this device');

@@ -172,8 +172,12 @@ export default function WellbeingCheckScreen({ navigation }) {
           </Text>
         ) : null}
 
+        {/* FQ-5 item 6 (D96, founder-approved wording): the raw answers stay
+            local; the derived result syncs with the account so coaching
+            survives a phone change. The old line claimed device-only storage
+            for both, which was untrue of the synced result. */}
         <Text style={[styles.privacy, live.privacy]}>
-          Your answers are stored on this device and never shared without your permission.
+          Your answers stay on this device. Only the overall result is saved to your account, so your coaching stays adjusted if you change phones. Neither is ever shared outside Volyume.
         </Text>
       </ScrollView>
     </SafeAreaView>

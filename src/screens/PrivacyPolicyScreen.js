@@ -65,6 +65,20 @@ export default function PrivacyPolicyScreen() {
             progress photo analysis outputs are treated as sensitive health data. They are never sold, never shared for
             advertising, and never used for third-party model training.
           </Body>
+          {/* FQ-5 item 3 (D96, founder-approved Option A): the calibration
+              upload disclosed with its mechanism, so the anonymity claim is
+              verifiable rather than asserted. The stored row carries no user
+              id, photo, note or exact time; height and weight travel only as
+              5-unit bands (progressScanCalibrationTelemetry.js). */}
+          <Body>
+            When you use photo analysis, Volyume sends one set of anonymous
+            measurement numbers (body-shape ratios, with height and weight
+            grouped into 5-unit bands) to improve scoring accuracy for every
+            body type. These numbers are stored without your name, account,
+            photo or exact time, and cannot be traced back to you. This is
+            separate from the usage-data setting and stops if you stop using
+            photo analysis.
+          </Body>
         </Section>
 
         <Section title="Usage data">
