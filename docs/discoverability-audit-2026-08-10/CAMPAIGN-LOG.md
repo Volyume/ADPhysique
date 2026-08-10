@@ -13,8 +13,24 @@ consequence, cardio permanently out, D92-11 untouched, migrations
 
 - P1 settings inventory — IN FLIGHT (agent lane 1, writes
   SETTINGS-INVENTORY.md).
-- P4+P8 hard-to-find + control-gap verification — IN FLIGHT (agent
-  lane 2, writes CONTROL-GAPS-EVIDENCE.md).
+- P4+P8+P10 verification — EVIDENCE LANDED (CONTROL-GAPS-EVIDENCE.md).
+  Headlines: quiet hours + diet filtering + cycle opt-in already fixed
+  (map stale); travel mode NEVER hidden (map U6 wrong); manual
+  landmark editor's only route is data-gated (shortcut warranted from
+  Coach tab); per-day offsets need a Diary-side shortcut; push budget
+  is E-internal with an explanation gap (Phase 7); kJ findability is a
+  labelling issue; goal lock stays C-advanced deliberately (ED-adjacent).
+  Phase 8: partnerCheerEnabled = A-FIX (three push sends gated on a
+  writerless pref, violates NOTIFICATIONS_LOCKED unsubscribe law,
+  siblings have Switches); restSound mute = D-FOUNDER RULING;
+  hide-exact-numbers = D-FOUNDER RULING with a FALSE user-facing claim
+  ("as you chose" with zero writers, default-on for everyone) - the
+  copy half is fixable now. Phase 10: three gesture-only important
+  actions (ManualBuilder exercise remove, Diary move/copy selection
+  mode, MyMeals creation path); 0 unlabelled icon touchables;
+  tabLongPress inert (Campaign 4 list).
+- NEXT: await P1 inventory (lane 1 still running); then D94 rulings,
+  ownership/IA phases, implementation waves.
 - P2-P25 — NOT STARTED.
 
 ## Landed commits (this campaign)
