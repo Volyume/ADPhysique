@@ -66,3 +66,17 @@ neighbouring toggle explicitly disclaims them ("In-app cues are
 unaffected"). Options: (A) add a "Rest countdown sound" switch beside
 the sibling rest rows (recommended); (B) declare intentional. Release:
 not blocked.
+
+## Phase 11 ruling on finding 15 (the two permanent dismissals) — D94-2
+
+**Both DOCUMENTED as intentional; no re-enable built.**
+- Partner reconnect card: its one action (`onReconnect={openAckSheet}`,
+  PartnerScreen.js:1098) opens the SAME acknowledgement sheet the
+  always-visible per-pair cheer control opens (:1095, :876). Dismissing
+  the card forever loses a shortcut, never the capability. "Never
+  nagging" is the recorded design (:364-366).
+- Photo prompt opt-out: "Don't ask again" permanently ends a
+  body-image-adjacent NUDGE, not access - ProgressPhotosScreen remains
+  fully reachable. Re-nagging a user who explicitly opted out of photo
+  prompts would be anti-protective; permanence is correct here
+  (suppression gates already never render it under calm/ED).

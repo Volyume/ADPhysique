@@ -40,10 +40,22 @@ consequence, cardio permanently out, D92-11 untouched, migrations
   FR-2 dormant meal prefs, FR-3 hide-exact control, FR-4 rest beep).
   LEAD LANDED: the false "as you chose" scan copy is gone (resolver
   now states the fact without claiming choice).
-- NEXT: agent lanes in flight; then P3 IA, P5-P7 discoverability
-  waves, P9 shortcuts (landmark editor from Coach tab, per-day
-  offsets from Diary), P10 gesture fixes, P11 state-gated audit incl.
-  finding 15 dismissals, P23 pins, P24 reviews.
+- LANE A (notifications/onboarding) — LANDED (f113a1de): partner
+  cheers toggle (sibling pattern, default-on preserving behaviour),
+  onboarding check-in hour 12→18, blob merge-write, SQLite mirror
+  restored at the live writer (verified: the registry sync table
+  reads those rows). Full suite passed in-lane (9,730).
+- P9 shortcuts — LANDED: Diary per-day-offset disclosure row
+  (ea21a8f3) + Coach-tab Volume targets row (10a2e774).
+- P10 — MyMeals gesture named in the empty state (cbec6052); gesture
+  agent in flight for ManualBuilder visible remove + Diary selection
+  route.
+- P11 finding 15 — RULED (D94-2): both permanent dismissals
+  intentional; reconnect action reachable via the cheer sheet; photo
+  opt-out permanence is body-image-protective. No re-enables.
+- IN FLIGHT: lane B (nutrition writers), gesture lane.
+- NEXT: P3 IA, P5-P7 waves, P14 units, P16-P18, P23 pins, P24
+  reviews.
 - P2-P25 — NOT STARTED.
 
 ## Landed commits (this campaign)
