@@ -713,8 +713,11 @@ function ProOnboardingStack() {
       <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} />
       {/* Same precedent (Review A F3 / AUDIT-ROUTES §6 row 11): the
           hand-off screen's "Reminders off" tile links here, and without an
-          in-stack registration the tap was silently dropped. */}
+          in-stack registration the tap was silently dropped.
+          CoachingReminders rides along because NotificationSettings links
+          to it and has no further outbound targets (transitive closure). */}
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+      <Stack.Screen name="CoachingReminders" component={GatedCoachingReminders} />
       {/* Wave A B3: the hand-off screen links "How Precision Coaching works"
           so the trial is never a black box before the first check-in. */}
       <Stack.Screen name="Methodology" component={MethodologyScreen} options={{ headerShown: false }} />
