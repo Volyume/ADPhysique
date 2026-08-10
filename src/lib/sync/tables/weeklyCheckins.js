@@ -68,7 +68,9 @@ export async function pushWeeklyCheckins(sb, { userId, localUserId } = {}) {
       cardio_adherence: c.cardioAdherence ?? null,
       steps_avg: c.stepsAvg ?? null,
       training_performance: c.trainingPerformance ?? null,
-      joint_pain: !!c.jointPain,
+      // Campaign 1 P0-4 tri-state: unanswered travels as null (the cloud
+      // column is nullable BOOLEAN); !! used to launder null into false.
+      joint_pain: c.jointPain == null ? null : !!c.jointPain,
       sore_muscles: c.soreMuscles ?? null,
       cycle_override: !!c.cycleOverride,
       notes: c.notes ?? null,

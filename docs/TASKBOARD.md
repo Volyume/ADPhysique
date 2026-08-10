@@ -1526,3 +1526,28 @@ workflow survives as a fallback.
 - `docs/design-usability-audit-2026-07-09/`: D7 programme complete; only
   `coverage-00-SYNTHESIS.md` survives as a cited reference. Residual IDs are
   tracked in the live campaign, not re-mined from that folder.
+- CAMPAIGN 1: PRODUCT INTEGRITY (2026-08-10, founder order) - IN FLIGHT.
+  Scope: integrity/safety/privacy/state ONLY; cardio permanently out of
+  scope (D92-1). P0 verification vs main: P0-1 planned-volume restore
+  gap CONFIRMED+FIXED (pull now lands in the PRIMARY table, LWW by
+  updated_at, provenance rides via migrate_132 with column-tolerant
+  push, legacy rows degrade to research+template, unknown muscles
+  skipped; mirror no longer written - dead, for the dead-code
+  campaign); P0-2 privacy pref sync CONFIRMED+FIXED (excluded both
+  directions, read-failure fails telemetry closed, migrate_133 cleanup
+  written); P0-3 allergen stamp CONFIRMED+FIXED (tracked field +
+  staleness notice via planConflictsWithExclusions + rebuild CTA,
+  D92-2); P0-4 joint/soreness unknown-vs-no CONFIRMED+FIXED (gather
+  nulls, runner passthrough, check-in tri-state, D92-3); P0-5 meal
+  reminder restore CONFIRMED+FIXED (re-lay in restoreNotifications,
+  key single-owner); P0-6 FFM floor divergence CONFIRMED+FIXED
+  (canonical resolveFfmFloorWeightKg, both sites, D92-4). Pins:
+  campaign1.integrity.test.js (30) + syncPrefExclusions extension.
+  MIGRATIONS WRITTEN, NOT RUN (founder-gated): migrate_132 (provenance
+  columns; not a hard release gate - push is column-tolerant),
+  migrate_133 (privacy row cleanup; hygiene). IN FLIGHT: P0-7
+  fail-closed sweep agent + P0-8 sync-conflict audit agent, then
+  adversarial review. RECOVERY: agent reports land in the session
+  scratchpad map/ folder (C1P07/C1P08/REVIEW files); all code changes
+  are on branch claude/campaign1-integrity with the D92 register block
+  as the spec.

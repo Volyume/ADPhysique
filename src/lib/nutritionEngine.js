@@ -656,6 +656,32 @@ export function computeFFMFloor(weightKg, { bodyFatPercent = null, bodyFatSource
   };
 }
 
+/**
+ * THE canonical weight resolution for every FFM-floor / energy-
+ * availability evaluation (Campaign 1 P0-6, 2026-08-10). Two call sites
+ * in weeklyCoach used to resolve the fallback weight differently
+ * (profile -> last raw weigh-in for the adaptive-TDEE context; profile ->
+ * today's EWMA for the enforcing gate), so with no profile weight and a
+ * volatile morning weigh-in the two safety floors could disagree - the
+ * user could be shown one floor while a different one actually gated the
+ * adjustment. One resolver, one order, both sites:
+ *   1. profile bodyweight (the user's own stated truth)
+ *   2. today's 7-day EWMA of the weigh-in series (smoothed, needs >= 3)
+ *   3. the most recent valid weigh-in (so a 1-2-weigh-in user still gets
+ *      floor protection instead of losing it - strictly more coverage
+ *      than the old gate, never less)
+ * Returns null only when NO positive weight exists anywhere; callers
+ * hold the status quo in that case rather than inventing a floor.
+ */
+export function resolveFfmFloorWeightKg({
+  profileWeightKg = null,
+  ewmaTodayKg = null,
+  lastWeighInKg = null,
+} = {}) {
+  const pos = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null);
+  return pos(profileWeightKg) ?? pos(ewmaTodayKg) ?? pos(lastWeighInKg);
+}
+
 // Preventive low-energy-availability caution lines (U3, founder 2026-07-01).
 // Sex-aware and set ABOVE the 30 kcal/kg FFM hard floor so the warning fires
 // BEFORE a user is prescribed an under-fuelling cut, not after. Proxy EA uses

@@ -25,7 +25,7 @@ import {
   setPreference as setPrefRow,
   migrateFromLegacyBlob,
 } from '../lib/notifications/preferences';
-import { scheduleMealReminders, scheduleActivationNudge, cancelActivationNudge } from '../lib/notifications/scheduler';
+import { scheduleMealReminders, scheduleActivationNudge, cancelActivationNudge, MEAL_REMINDERS_KEY } from '../lib/notifications/scheduler';
 import { restoreNotifications } from '../lib/notifications';
 import {
   getQuietHours,
@@ -42,7 +42,8 @@ const TRAINING_PRESET_TIMES = ['06:00', '07:00', '08:00', '09:00', '10:00', '17:
 
 // Opt-in meal-log reminders (gap #4). Default OFF, convenience-only. Times are
 // chosen from a preset list (same lightweight picker as training reminders).
-const MEAL_REMINDERS_KEY = '@volyume_meal_reminders';
+// Campaign 1 P0-5: the key constant now lives in the scheduler (its restore
+// path reads it to re-lay reminders after the launch wipe); imported below.
 const MEAL_PRESET_TIMES = ['07:00', '08:00', '09:00', '12:00', '12:30', '13:00', '17:00', '18:00', '18:30', '19:00', '20:00', '21:00'];
 const DEFAULT_MEAL_REMINDERS = [
   { id: 'breakfast', label: 'Breakfast', hour: 8, minute: 0, enabled: false },

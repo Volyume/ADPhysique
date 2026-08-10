@@ -63,6 +63,14 @@ describe('shouldSyncPref excludes special-category / sensitive keys (Codex audit
   // The prefs sync is allow-by-prefix (fail-open), so each MUST be named out
   // until the model is inverted to a fail-closed allowlist.
   const SENSITIVE = [
+    // Campaign 1 P0-2: the analytics opt-out. privacyPrefs.js's contract has
+    // always read "a privacy opt-out should not itself be transmitted"; the
+    // key was missing from the exclusion list, so the bulk push shipped it
+    // and a pulled remote copy could override a stricter local choice. The
+    // same predicate filters the pull, so excluding it closes BOTH
+    // directions; cloud rows already uploaded go frozen-stale (migrate_133
+    // deletes them, founder-gated).
+    '@volyume_privacy_prefs',
     '@volyume_scoff_answers',            // raw ED-screening answers (Article 9)
     '@volyume_cycle_tracking',           // menstrual-cycle data (Article 9)
     '@volyume_cycle_tracking_v2',

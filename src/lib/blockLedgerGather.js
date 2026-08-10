@@ -101,9 +101,17 @@ export function computeMuscleRecoveryAggregates({
     sorenessLateAvg: lateSoreness.length
       ? lateSoreness.reduce((s, v) => s + v, 0) / lateSoreness.length
       : null,
+    // Campaign 1 P0-4: UNKNOWN is not NO. No joint answers means NO
+    // EVIDENCE (null), never "0 discomfort" - the old 0 default read as an
+    // explicit all-clear, the exact asymmetry soreness never had. Downstream
+    // the classifier coerces null to zero WEIGHT (no evidence adds no strain
+    // - we never manufacture pain the user did not report), but nothing may
+    // ever treat the null as a satisfied recovery requirement: the only
+    // positive-recovery gate (blockMetrics lateRecoveryOk) requires real
+    // answers for BOTH signals, pinned in the campaign suite.
     jointDiscomfortAvg: joints.length
       ? joints.reduce((s, v) => s + v, 0) / joints.length
-      : 0,
+      : null,
     dataPoints,
   };
 }

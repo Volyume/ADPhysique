@@ -520,7 +520,14 @@ export default function WeeklyCheckInScreen({ navigation }) {
             setSoreMuscles(existingCheckin.soreMuscles
               ? String(existingCheckin.soreMuscles).split(',').map(s => s.trim()).filter(Boolean)
               : []);
-            setJointPain(existingCheckin.jointPain ? 'yes' : 'no');
+            // Campaign 1 P0-4: null = the user never answered; the picker
+            // must NOT manufacture an explicit 'no' on reload (which the
+            // save below would then persist as genuine negative evidence).
+            // Legacy rows saved 0 for unanswered before the tri-state fix;
+            // those still reload as 'no' - the truth is unrecoverable.
+            setJointPain(existingCheckin.jointPain == null
+              ? null
+              : (existingCheckin.jointPain ? 'yes' : 'no'));
             setCycle(existingCheckin.cycleOverride ? 'yes' : 'no');
             const VALID_CALS = ['yes', 'no', 'untracked'];
             const VALID_PERF = ['exceeded', 'hit', 'struggled', 'dropped'];
@@ -774,7 +781,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
         cardioAdherence: cardioAdherence ?? null,
         cycleOverride: showCycle && cycle === 'yes',
         trainingPerformance: trainingPerformance ?? null,
-        jointPain: jointPain === 'yes',
+        // Campaign 1 P0-4 tri-state: unanswered persists as null, never as
+        // an explicit "no" the user did not give.
+        jointPain: jointPain === 'yes' ? true : (jointPain === 'no' ? false : null),
         soreMuscles: soreMuscles.length > 0 ? soreMuscles.join(',') : null,
         notes: [
           notes.trim(),

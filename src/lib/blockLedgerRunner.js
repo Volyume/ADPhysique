@@ -222,7 +222,13 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
         },
         performance,
         recovery: {
-          sorenessLateAvg: agg.sorenessLateAvg ?? 0,
+          // Campaign 1 P0-4: honest nulls pass THROUGH (no ?? 0). The old
+          // coercion turned "no soreness answers" into "soreness fine"
+          // before the classifier ever saw it. classifyMuscleBlock's own
+          // num(v, 0) still means no-evidence contributes zero strain
+          // weight - identical numbers, honest provenance - and the
+          // MIN_RECOVERY_POINTS gate keeps sparse blocks INSUFFICIENT_DATA.
+          sorenessLateAvg: agg.sorenessLateAvg,
           jointDiscomfortAvg: agg.jointDiscomfortAvg,
           readinessSlope,
           sleepFlaggedWeeks,

@@ -13,6 +13,7 @@ import { cutCardioTarget, nextCardioTarget, cardioRecoveryFlag } from './cardio/
 import {
   shouldSuggestDietBreak,
   computeFFMFloor,
+  resolveFfmFloorWeightKg,
   computeAdaptiveTDEEAdjustment,
   computeStepTrendModifier,
   computeEWMA as nutritionComputeEWMA,
@@ -992,8 +993,15 @@ export function runWeeklyCoach(inputs) {
     // F3 (EN-6): the FFM-floor context only forms around a genuinely positive
     // weight; otherwise it is omitted (the floor simply doesn't evaluate,
     // which holds the status quo rather than throwing).
-    const ffmWeightKg = (Number(bodyweightKg) > 0 ? Number(bodyweightKg) : null)
-      ?? (Number(series[series.length - 1]?.weightKg) > 0 ? Number(series[series.length - 1].weightKg) : null);
+    // Campaign 1 P0-6: BOTH floor evaluations in this run now resolve their
+    // weight through the one canonical resolver, so the adaptive context and
+    // the enforcing gate below can never compute different floors for the
+    // same user state (profile -> EWMA today -> last valid weigh-in).
+    const ffmWeightKg = resolveFfmFloorWeightKg({
+      profileWeightKg: bodyweightKg,
+      ewmaTodayKg: ewma7Today,
+      lastWeighInKg: series[series.length - 1]?.weightKg,
+    });
     const ffmFloorContext = (recentIntakeAvgKcal != null && recentIntakeDaysLogged >= 5 && ffmWeightKg != null)
       ? {
         weightKg: ffmWeightKg,
@@ -1119,13 +1127,28 @@ export function runWeeklyCoach(inputs) {
   let ffmFloorContext = null;
   // Wave-3 review blocker fix (2026-07-02): the gate used to require a
   // profile bodyweightKg with no fallback, so a null profile weight let a
-  // cut through while intake sat at or below the floor. It now falls back
-  // to today's EWMA of the weigh-in series — the same fallback the adaptive
-  // floor context has always used. Any run that can produce a resize has a
-  // weight series, so the floor is no longer conditional on profile health.
-  const ffmGateWeightKg = (Number.isFinite(bodyweightKg) && bodyweightKg > 0)
-    ? bodyweightKg
-    : ((Number.isFinite(ewma7Today) && ewma7Today > 0) ? ewma7Today : null);
+  // cut through while intake sat at or below the floor.
+  // Campaign 1 P0-6: the gate now uses the SAME canonical resolver as the
+  // adaptive floor context above (profile -> EWMA today -> last valid
+  // weigh-in), so the floor a user is shown is the floor that gates them,
+  // and a 1-2-weigh-in user (no EWMA yet) keeps floor protection via the
+  // last-weigh-in step instead of losing it.
+  const lastValidWeighInKg = (() => {
+    // Input order is not guaranteed (the adaptive block above sorts its own
+    // copy), so find the most recent VALID weigh-in explicitly - the same
+    // value the adaptive context's sorted series ends on.
+    let best = null;
+    for (const w of Array.isArray(morningWeights) ? morningWeights : []) {
+      if (!w || !Number.isFinite(Number(w.weightKg)) || Number(w.weightKg) <= 0 || w.loggedAt == null) continue;
+      if (best == null || w.loggedAt > best.loggedAt) best = w;
+    }
+    return best ? Number(best.weightKg) : null;
+  })();
+  const ffmGateWeightKg = resolveFfmFloorWeightKg({
+    profileWeightKg: bodyweightKg,
+    ewmaTodayKg: ewma7Today,
+    lastWeighInKg: lastValidWeighInKg,
+  });
   if (
     ffmGateWeightKg != null &&
     Number.isFinite(recentIntakeAvgKcal) &&

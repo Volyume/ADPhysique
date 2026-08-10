@@ -5950,7 +5950,10 @@ export async function saveWeeklyCheckin(userId, data) {
     ['cycleOverride', 'cycle_override', (v) => (v ? 1 : 0)],
     ['notes', 'notes', (v) => v],
     ['trainingPerformance', 'training_performance', (v) => v],
-    ['jointPain', 'joint_pain', (v) => (v ? 1 : 0)],
+    // Campaign 1 P0-4: tri-state. null = unanswered (no evidence), 0 = the
+    // user's explicit "no", 1 = flagged. The old (v ? 1 : 0) stored an
+    // unanswered question as a genuine negative answer for ever.
+    ['jointPain', 'joint_pain', (v) => (v == null ? null : (v ? 1 : 0))],
     ['soreMuscles', 'sore_muscles', (v) => v],
     ['sleepQuality', 'sleep_quality', (v) => v],
   ];
@@ -7069,7 +7072,8 @@ export async function insertWeeklyCheckinFromCloud(userId, c) {
       c.cardio_adherence ?? null, c.steps_avg ?? null,
       c.cycle_override ? 1 : 0, c.notes ?? null,
       c.training_performance ?? null,
-      c.joint_pain ? 1 : 0,
+      // Campaign 1 P0-4 tri-state: a cloud null stays null (unanswered).
+      c.joint_pain == null ? null : (c.joint_pain ? 1 : 0),
       c.sore_muscles ?? null,
       c.sleep_quality ?? null,
       Date.now(),
@@ -7583,16 +7587,54 @@ export async function insertOrUpdatePeakWeekPlanFromCloud(userId, row) {
 export async function insertOrUpdatePlannedMuscleVolumeFromCloud(userId, row) {
   if (!row?.id) return;
   const d = await db();
+  // Campaign 1 P0-1: the pull now restores into the PRIMARY table - the
+  // one every live reader consumes (weekly targets, rowMrv clamps, the
+  // block-start explanation lines). It used to write a *_sync mirror with
+  // no product reader, so a new device restored the adaptive plan into a
+  // table nothing looked at and the prescriptions read as absent.
+  //
+  // Rules:
+  // - Tombstoned cloud rows never land (the pull filters deleted_at, this
+  //   is belt and braces).
+  // - Last-write-wins by updated_at: a cloud row only replaces a local one
+  //   it is strictly newer than, so a stale device's push (which the next
+  //   pull would echo back) can never overwrite richer local provenance.
+  // - Legacy cloud rows without mev/mav/mrv (pre-migrate_132) degrade
+  //   HONESTLY: research landmarks + source 'template' - the one label
+  //   the explanation layer never builds a personalisation claim from.
+  //   An unknown muscle key cannot be represented truthfully and is
+  //   skipped rather than invented.
+  if (row.deleted_at) return;
+  const muscle = row.muscle;
+  let mev = Number.isFinite(Number(row.mev)) ? Number(row.mev) : null;
+  let mav = Number.isFinite(Number(row.mav)) ? Number(row.mav) : null;
+  let mrv = Number.isFinite(Number(row.mrv)) ? Number(row.mrv) : null;
+  let source = typeof row.source === 'string' && row.source ? row.source : null;
+  if (mev == null || mav == null || mrv == null) {
+    // eslint-disable-next-line global-require
+    const { VOLUME_LANDMARKS } = require('./algorithms');
+    const research = VOLUME_LANDMARKS[muscle];
+    if (!research) return; // unrepresentable: skip, never invent
+    mev = mev ?? research.mev;
+    mav = mav ?? research.mav;
+    mrv = mrv ?? research.mrv;
+    source = source ?? 'template';
+  }
+  const incomingUpdated = _tsToMs(row.updated_at) ?? Date.now();
+  const existing = await d.getFirstAsync(
+    'SELECT updated_at FROM planned_muscle_volume WHERE id = ?', [row.id],
+  );
+  if (existing && Number(existing.updated_at ?? 0) >= incomingUpdated) return;
   await d.runAsync(
-    `INSERT OR REPLACE INTO planned_muscle_volume_sync
-      (id, mesocycle_week_id, user_id, muscle, planned_sets, created_at, updated_at, deleted_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT OR REPLACE INTO planned_muscle_volume
+      (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      row.id, row.mesocycle_week_id, userId,
-      row.muscle, row.planned_sets ?? null,
+      row.id, row.mesocycle_week_id,
+      muscle, row.planned_sets ?? 0,
+      mev, mav, mrv, source ?? 'template',
       _tsToMs(row.created_at) ?? Date.now(),
-      _tsToMs(row.updated_at) ?? Date.now(),
-      row.deleted_at ? _tsToMs(row.deleted_at) : null,
+      incomingUpdated,
     ],
   );
 }

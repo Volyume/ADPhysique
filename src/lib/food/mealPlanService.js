@@ -34,6 +34,7 @@ import { swapFoodInMeal, swapMealInPlan, findRoleAlternatives } from './mealSwap
 import { applyMacroDeltaToPlan } from './planEdit';
 import { bankedPlanDayEdits } from './calorieBank';
 import { normalisePreferences } from './planPreferences';
+import { foodExcluded } from './foodRoles';
 import { todayLocalKey, parseLocalDay, localDayKey } from '../dayKey';
 import { track } from '../engineTelemetry';
 
@@ -365,6 +366,40 @@ export async function generateAndSaveDayPlan(userId, profile, { seed = Date.now(
 /** Load the active plan (parsed) or null. */
 export async function loadActiveMealPlan(userId) {
   return getActiveMealPlan(userId);
+}
+
+/**
+ * Campaign 1 P0-3 (safety): does a stored plan contain foods the user's
+ * CURRENT exclusions (allergen tags + individual dislikes) would ban?
+ * Generation always reads the live profile, but a plan generated BEFORE
+ * an exclusion was added kept serving those meals silently - only the
+ * "season to taste" additions filtered live. This is the pure detector
+ * behind the MealPlanScreen staleness notice; it routes through
+ * foodRoles.foodExcluded, the ONE exclusion predicate, so the rule can
+ * never drift from what generation itself enforces.
+ *
+ * Judges curated items only (foodRef 'curated:<key>'): non-curated refs
+ * carry no tag data, so they cannot be judged and are never flagged -
+ * an honest limitation, not a claim of safety. Pure; returns the unique
+ * display names (or keys) of conflicting foods, [] when clean or when
+ * the plan/exclusions are empty.
+ */
+export function planConflictsWithExclusions(plan, exclude = {}) {
+  const hasAny = (exclude?.excludeTags?.length || 0) > 0
+    || (exclude?.excludeFoodKeys?.length || 0) > 0;
+  if (!plan || !hasAny) return [];
+  const conflicts = new Set();
+  for (const dayPlan of plan?.days || []) {
+    for (const slot of dayPlan?.slots || []) {
+      for (const it of slot?.items || []) {
+        const ref = typeof it?.foodRef === 'string' ? it.foodRef : '';
+        if (!ref.startsWith('curated:')) continue;
+        const key = ref.slice('curated:'.length);
+        if (foodExcluded(key, exclude)) conflicts.add(it?.name || key);
+      }
+    }
+  }
+  return Array.from(conflicts);
 }
 
 /**

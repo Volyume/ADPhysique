@@ -263,6 +263,14 @@ export async function scheduleEveningWeightReminder(hour = 19, minute = 30) {
 // respected. Each reminder is { id, label, hour, minute, enabled }.
 const NOTIF_ID_MEAL_PREFIX = 'volyume_meal_reminder_';
 
+// Campaign 1 P0-5: the meal-reminder preference key lives HERE (single
+// owner) so restoreNotifications can re-lay the user's enabled reminders
+// after its cancelAllNotifications wipe. NotificationSettingsScreen
+// imports this same constant; before the fix the key existed only in the
+// screen and the restore path omitted meal reminders entirely, so every
+// app launch silently erased them until the user revisited settings.
+export const MEAL_REMINDERS_KEY = '@volyume_meal_reminders';
+
 export async function cancelMealReminders() {
   if (Platform.OS === 'web') return;
   try {
@@ -1270,6 +1278,21 @@ export async function restoreNotifications(prefs, userId = null) {
     const store = require('../../store/useAppStore').default;
     await scheduleActivationNudge(userId ?? store.getState().user?.id ?? null);
   } catch (_) { /* activation-nudge re-lay is best-effort */ }
+
+  // Campaign 1 P0-5: re-lay the user's opt-in meal reminders. The
+  // cancelAllNotifications above wiped them on EVERY launch and nothing
+  // restored them - the same historic wipe pattern that lost the cascade
+  // and win-back notifications. scheduleMealReminders self-guards
+  // (disabled entries skipped, quiet hours applied) and cancels its own
+  // identifiers first, so the re-lay is idempotent; a disabled or absent
+  // preference restores nothing.
+  try {
+    const rawMeals = await AsyncStorage.getItem(MEAL_REMINDERS_KEY);
+    const reminders = rawMeals ? JSON.parse(rawMeals) : null;
+    if (Array.isArray(reminders) && reminders.some((r) => r?.enabled)) {
+      await scheduleMealReminders(reminders);
+    }
+  } catch (_) { /* meal-reminder re-lay is best-effort */ }
 }
 
 // ─── Year of Lifts unlock ─────────────────────────────────────────────────────

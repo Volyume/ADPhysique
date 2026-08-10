@@ -2363,3 +2363,52 @@ building Stages 1-2 (all criterion-ruled: best for end users, never effort):
    only through new block evidence; stale-evidence holds cover overdue
    blocks, not multi-month absences). No arbitrary weekly decay. On
    docs/TASKBOARD.md as a future item.
+
+## D92 — Campaign 1: Product Integrity (founder order + lead rulings, 2026-08-10)
+
+1. (FOUNDER BOUNDARY, verbatim intent) **Volyume is not a cardio logging
+   product. Cardio logging is intentionally OUT OF SCOPE.** Any surviving
+   cardio engine/schema/screen remnants (including the dead tap found by
+   the product map: the only cardio entry navigates to an unregistered
+   route) are legacy/incomplete implementation, NOT a hidden roadmap
+   commitment. No audit should recommend restoring cardio for feature
+   completeness; no campaign may re-enable cardio routes or surface
+   cardio UI. Clean removal belongs to the later whole-product
+   coherence/dead-code campaign. Exception: a cardio VALUE feeding a
+   non-cardio safety decision may be corrected for correctness.
+2. (Lead ruling, P0-3) A stored meal plan that conflicts with the user's
+   CURRENT allergen/exclusion list is surfaced, never silent and never
+   auto-regenerated: pinned meals are the user's own choices, so the
+   MealPlanScreen shows a staleness notice naming the conflicting foods
+   with the existing one-tap rebuild. Detection routes through
+   foodRoles.foodExcluded (the single exclusion predicate) and judges
+   curated items only - non-curated refs carry no tag data and are never
+   claimed safe. The allergen list itself now rides the per-field profile
+   merge (mealPlanExcludeTags added to PROFILE_FIELDS_TRACKED), closing
+   the stale-device reversion hole.
+3. (Lead ruling, P0-4) Joint/soreness semantics: UNKNOWN is not NO.
+   Unanswered check-in joint pain persists as null (tri-state), never as
+   an explicit negative; the block gather returns null (not 0) for
+   missing joint/soreness aggregates; no-evidence contributes ZERO strain
+   weight (pain is never manufactured) and can never satisfy a positive
+   recovery requirement (lateRecoveryOk needs real answers for both
+   signals). Legacy rows that stored 0 for unanswered are unrecoverable
+   and continue to read as explicit "no".
+4. (Lead ruling, P0-6) One canonical FFM-floor weight resolution
+   (nutritionEngine.resolveFfmFloorWeightKg): profile weight, then
+   today's EWMA, then the most recent valid weigh-in. Both weeklyCoach
+   evaluations use it, so the floor shown is the floor that gates; the
+   last-weigh-in step EXTENDS gate coverage to users with fewer than
+   three weigh-ins (strictly more protective).
+5. (Lead ruling, P0-2) The analytics opt-out is device-local per its
+   module contract: excluded from pref sync in both directions; a FAILED
+   preference read keeps telemetry off for the session (a miss still
+   applies defaults). Cloud rows already uploaded are removed by
+   migrate_133 (founder-gated, hygiene, not a release gate).
+6. (Lead ruling, P0-1) planned_muscle_volume restores into the PRIMARY
+   table with last-write-wins by updated_at; provenance columns ride via
+   migrate_132 with column-tolerant pushes until it is applied; legacy
+   rows degrade to research landmarks + source 'template' (the label
+   that claims no personalisation); unknown muscles are skipped, never
+   invented. The *_sync mirror is no longer written for this table and
+   is recorded as dead for the dead-code campaign.

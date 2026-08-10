@@ -1186,19 +1186,38 @@ async function _pushPlannedMuscleVolume(sb, supabaseUserId, localUserId) {
   try {
     const rows = await getAllPlannedMuscleVolumeForUser(localUserId);
     if (!rows?.length) return;
+    // Campaign 1 P0-1: mev/mav/mrv/source now ride to the cloud
+    // (migrate_132) so the adaptive seed provenance survives a device
+    // change - the explanation surfaces derive from the written rows and
+    // their source labels, and those used to be device-local only.
     const payload = rows.map(r => ({
       id: r.id, user_id: supabaseUserId,
       mesocycle_week_id: r.mesocycleWeekId,
       muscle: r.muscle,
       planned_sets: r.plannedSets ?? null,
+      mev: r.mev ?? null,
+      mav: r.mav ?? null,
+      mrv: r.mrv ?? null,
+      source: r.source ?? null,
       created_at: new Date(r.createdAt ?? Date.now()).toISOString(),
       updated_at: new Date(r.updatedAt ?? r.createdAt ?? Date.now()).toISOString(),
       deleted_at: r.deletedAt ? new Date(r.deletedAt).toISOString() : null,
     }));
+    // Column tolerance until migrate_132 is applied (profiles.js pattern):
+    // PostgREST rejects a whole upsert for one unknown column, so on error
+    // retry the batch without the provenance columns - set counts keep
+    // syncing exactly as before the fix, nothing regresses pre-migration.
+    const stripProvenance = (batch) => batch.map(({ mev, mav, mrv, source, ...rest }) => rest);
     for (let i = 0; i < payload.length; i += 200) {
-      const { error } = await sb.from('planned_muscle_volume').upsert(
-        payload.slice(i, i + 200), { onConflict: 'user_id,id' },
+      const batch = payload.slice(i, i + 200);
+      let { error } = await sb.from('planned_muscle_volume').upsert(
+        batch, { onConflict: 'user_id,id' },
       );
+      if (error) {
+        ({ error } = await sb.from('planned_muscle_volume').upsert(
+          stripProvenance(batch), { onConflict: 'user_id,id' },
+        ));
+      }
       if (error) logPgErr('sync._pushPlannedMuscleVolume', error);
     }
   } catch (e) { logBulkWarn('sync._pushPlannedMuscleVolume', e?.message); }
@@ -1290,6 +1309,16 @@ const PREF_EXCLUDE_PATTERNS = [
   // cloud. Their real, non-sensitive counterparts (wellbeing MODE, reminder
   // config, units) sync through their own keys/tables and are unaffected.
   /^@volyume_scoff_answers$/,       // raw ED-screening answers (Article 9 + "device-only" promise)
+  // Campaign 1 P0-2 (2026-08-10): the analytics opt-out. privacyPrefs.js's
+  // contract has always read "a privacy opt-out should not itself be
+  // transmitted, so this never goes through pref sync" - but the key was
+  // missed from this list, so the bulk push shipped it and the pull could
+  // write a remote copy back over a stricter local choice. Excluding it
+  // here closes BOTH directions (the pull applies the same filter), and
+  // rows already uploaded by older builds go frozen-stale and are never
+  // imported (same posture as the cursor keys above). Cloud row cleanup:
+  // supabase/migrate_133_delete_privacy_pref_rows.sql (founder-gated).
+  /^@volyume_privacy_prefs$/,
   /^@volyume_cycle_tracking/,       // menstrual-cycle data (Article 9)
   /^@volyume_error_log/,            // diagnostic ring buffer (may hold raw messages/paths)
   /^@volyume_last_crash_meta/,      // last-crash metadata

@@ -67,6 +67,14 @@ const PROFILE_FIELDS_TRACKED = [
   // U2/E12 step 1: sex syncs via the registry profiles handler now that the
   // legacy syncProfile (its old carrier) is retired.
   'sex',
+  // Campaign 1 P0-3 (safety): the FSA allergen exclusion list. It has been
+  // in the profiles FIELD_MAP (allergen_excludes, migrate_112) since the
+  // dietary-needs build, and setAllergenExcludes has always stamped it -
+  // but the stamp was silently dropped because the field was missing from
+  // THIS list, so the push never carried a per-column timestamp and a
+  // stale device's pull could revert a newer allergen list. Exactly the
+  // failure the setMealPlanPrefs comment warns against.
+  'mealPlanExcludeTags',
 ];
 
 // Persist the per-field profile write timestamps to AsyncStorage.
@@ -1983,9 +1991,17 @@ const useAppStore = create((set, get) => ({
   privacy: { analyticsOptOut: false },
   privacyLoaded: false,
   loadPrivacyPrefs: async () => {
-    const parsed = await loadPrivacyPrefs();
-    if (parsed) set({ privacy: { ...get().privacy, ...parsed } });
+    const { prefs, readFailed } = await loadPrivacyPrefs();
+    if (prefs) set({ privacy: { ...get().privacy, ...prefs } });
     set({ privacyLoaded: true });
+    // Campaign 1 P0-2: a FAILED read is not a miss. A user who opted out
+    // must not have telemetry re-enabled because storage hiccuped, so on
+    // failure telemetry stays OFF for this session (privacy-protective);
+    // the in-memory state is left untouched for the next successful load.
+    if (readFailed) {
+      applyTelemetryEnabled(false);
+      return;
+    }
     applyTelemetryEnabled(!get().privacy.analyticsOptOut);
   },
   setAnalyticsOptOut: async (value) => {

@@ -42,6 +42,7 @@ import {
   generateAndSaveDayPlan,
   generateAndSaveMealPlan,
   regenerateActiveMealPlan,
+  planConflictsWithExclusions,
   applyPlanDayToDiary,
   applyPlanWeekToDiary,
   answerTrainingTodayOnActivePlan,
@@ -784,6 +785,17 @@ export default function MealPlanScreen({ navigation, route }) {
   // Campaign item 4's primary-surface chip: same profile fields as
   // dietSummary above, shorter wording (see dietaryChipInfo's header comment).
   const dietaryChip = useMemo(() => dietaryChipInfo(userProfile), [userProfile]);
+
+  // Campaign 1 P0-3 (safety): a plan generated BEFORE the user's current
+  // exclusions may still contain foods they now avoid. Generation always
+  // reads the live profile, so the fix is honesty at the surface: detect
+  // the conflict (foodRoles.foodExcluded, the one exclusion predicate) and
+  // say so, with the existing rebuild action one tap away. Never silent,
+  // never auto-regenerated (pinned meals are the user's own choices).
+  const exclusionConflicts = useMemo(() => planConflictsWithExclusions(plan, {
+    excludeTags: Array.isArray(userProfile?.mealPlanExcludeTags) ? userProfile.mealPlanExcludeTags : [],
+    excludeFoodKeys: Array.isArray(userProfile?.mealPlanExcludeFoods) ? userProfile.mealPlanExcludeFoods : [],
+  }), [plan, userProfile?.mealPlanExcludeTags, userProfile?.mealPlanExcludeFoods]);
   // Founder ask 2026-07-10 (defect report): this used to navigateCrossTab to
   // SettingsDietary, which stranded the user on a different tab with no
   // path back to the meal builder. The selection now opens INLINE in this
@@ -977,6 +989,26 @@ export default function MealPlanScreen({ navigation, route }) {
             </Text>
           ) : null}
           {honestyLine ? <Text style={[styles.honesty, live.honesty]}>{honestyLine}</Text> : null}
+
+          {/* Campaign 1 P0-3: dietary-needs staleness notice. Renders only
+              when the STORED plan contains foods the CURRENT exclusions ban
+              (curated items only; non-curated refs carry no tag data and are
+              never judged). The rebuild goes through the existing
+              handleRegenerate, so targets are untouched. */}
+          {exclusionConflicts.length ? (
+            <View style={[styles.exclusionNotice, live.exclusionNotice]}>
+              <Text style={[styles.exclusionNoticeText, live.exclusionNoticeText]}>
+                {`Your dietary needs changed after these meals were made. Some meals include: ${exclusionConflicts.slice(0, 3).join(', ')}${exclusionConflicts.length > 3 ? ' and more' : ''}. Rebuild to apply your current needs.`}
+              </Text>
+              <Button
+                variant="secondary"
+                title="Rebuild meals"
+                onPress={handleRegenerate}
+                accessibilityLabel="Rebuild meals to apply your current dietary needs"
+                disabled={busy}
+              />
+            </View>
+          ) : null}
 
           {/* Campaign item 4 (dietary-needs discoverability), inline per the
               founder ask 2026-07-10: a quiet chip on this primary surface,
@@ -1560,6 +1592,16 @@ const styles = StyleSheet.create({
   dayKcalTarget: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.regular },
   cycleNote: { ...type.bodySm, color: colors.textSecondary },
   honesty: { ...type.bodySm, color: colors.textSecondary, fontStyle: 'italic' },
+  // Campaign 1 P0-3: dietary-needs staleness notice.
+  exclusionNotice: {
+    gap: spacing.sm,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.warning,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+  },
+  exclusionNoticeText: { ...type.bodySm, color: colors.text },
   planActionPanel: {
     gap: spacing.md,
     borderRadius: radius.lg,
@@ -1770,6 +1812,8 @@ function buildLiveStyles(t) {
     dayKcalTarget: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     cycleNote: { ...t.type.bodySm, color: t.colors.textSecondary },
     honesty: { ...t.type.bodySm, color: t.colors.textSecondary },
+    exclusionNotice: { borderColor: t.colors.warning, backgroundColor: t.colors.surface },
+    exclusionNoticeText: { ...t.type.bodySm, color: t.colors.textPrimary },
     planActionPanel: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
     planActionIcon: { backgroundColor: t.colors.primaryBg },
     planActionTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
