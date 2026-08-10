@@ -1,7 +1,15 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ FRESH SESSION START HERE (2026-08-10, Campaign 3: discoverability) ★
+## ★ FRESH SESSION START HERE (2026-08-10, Campaign 4: coherence/cleanup) ★
+
+**Campaign 4 (whole-product coherence, legacy/dead-code cleanup,
+product-boundary closure) is IN FLIGHT on `claude/campaign4-coherence`
+from main `92b9644e`. Live state:
+docs/coherence-cleanup-2026-08-10/CAMPAIGN-LOG.md + the taskboard
+Campaign 4 block. Campaigns 1-3 are COMPLETE (D92/D93/D94). The block
+below is the superseded Campaign 3 record.**
+
 
 **Campaign 3 (discoverability/settings/existing-feature UX) is IN FLIGHT
 on `claude/campaign3-discoverability` from main `9aae57cb`. Live state:

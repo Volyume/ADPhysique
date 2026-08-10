@@ -1595,7 +1595,44 @@ workflow survives as a fallback.
   register. FIVE FOUNDER RULINGS OPEN (FR-1..FR-5 in
   SETTINGS-OWNERSHIP.md). Campaign 4 list carried in the same folder.
   Originally: IN FLIGHT on claude/campaign3-discoverability (from
-  main 9aae57cb). Objective:
+  main 9aae57cb).
+- CAMPAIGN 4: WHOLE-PRODUCT COHERENCE, LEGACY/DEAD-CODE CLEANUP AND
+  PRODUCT-BOUNDARY CLOSURE (2026-08-10, founder order) - IN FLIGHT on
+  claude/campaign4-coherence (from main 92b9644e). Purpose: make the
+  shipping product and the live repository agree. Core law: DELETE
+  ONLY WHAT YOU CAN PROVE IS DEAD OR OUT OF SCOPE (A-I classes; zero
+  callers alone is never sufficient); never delete historical user
+  data because a feature is gone; a removed feature must leave no
+  product promise behind. CARDIO LOGGING: current founder ruling, NOT
+  part of Volyume - complete boundary closure (UI/routes/toggle/copy/
+  engine deps removed non-destructively; historical data preserved
+  under export/delete contracts; permanent boundary guard) while
+  steps/general-activity and strength-to-health integrations are
+  DIFFERENT live concepts and must survive. PEAK WEEK: legacy-load-
+  bearing, migration 049 stays HELD, no casual cleanup. 30 phases:
+  reachability map, cardio closure (2A-2D), Campaign 3 deferred items,
+  dead engine functions / copy generators / modules (behavioural laws
+  move to live code BEFORE dead tests die), dark flags/rollback seams
+  (ONBOARDING_QUIZ_FIRST + PRO_BETA_ACTIVE + USE_FOREGROUND_SERVICE
+  presumed intentional), travel mode, peak week, two-family sync
+  (no wholesale consolidation), stale routes, dead pref keys,
+  FR-1..FR-5 carried NOT resolved, duplicated calculations (one
+  mathematical truth), comment/doc truth with authority chain, stale
+  SQL snapshots, test truthfulness, telemetry catalogue, subscription
+  truth, export/delete coverage for retired data, deep links/
+  notification destinations, cross-feature coherence,
+  campaign4.boundaries.test.js, tombstone guards, THREE adversarial
+  reviews (reachability / boundaries / repository truth), quality
+  gates with before/after censuses. HARD CONSTRAINTS: migrations
+  132-135 unrun + 049 held; no destructive migration without founder
+  ruling; no EAS; D92-11 unaltered; billing untouched; ED semantics
+  untouched; deterministic no-AI coaching intact; STOP after
+  Campaign 4 (no onboarding restructuring, no long-term-user work).
+  40-item final handover.
+  RECOVERY: order verbatim in session scratchpad
+  c4-CAMPAIGN4-ORDER.txt; campaign docs in
+  docs/coherence-cleanup-2026-08-10/ (CAMPAIGN-LOG.md = running
+  state); rulings register as D95. Objective:
   every EXISTING meaningful feature and behaviour-changing control
   discoverable at the moment of need, WITHOUT clutter, a settings
   dumping ground, duplicated controls, new scope, AI search/chat, or
