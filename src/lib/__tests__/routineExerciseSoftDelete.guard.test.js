@@ -45,4 +45,15 @@ describe('routine-exercise deletion is a syncing soft delete', () => {
     const ins = DATABASE.match(/export async function insertRoutineExerciseFromCloud[\s\S]*?\n\}/)?.[0] ?? '';
     expect(ins).toContain('re.deleted_at ? new Date(re.deleted_at).getTime() : null');
   });
+
+  // Campaign 1 P0-8 D3 added a second write branch to that applier (the
+  // last-write-wins UPDATE that reconciles an existing local row instead
+  // of clobbering it). A tombstone arriving for a row this device already
+  // holds takes that branch, so it has to carry deleted_at too or a
+  // delete made on another device would never stick here.
+  test('the last-write-wins UPDATE branch also applies the cloud deleted_at', () => {
+    const ins = DATABASE.match(/export async function insertRoutineExerciseFromCloud[\s\S]*?\n\}/)?.[0] ?? '';
+    const update = ins.match(/UPDATE routine_exercises SET[\s\S]*?WHERE id = \?/)?.[0] ?? '';
+    expect(update).toContain('deleted_at = ?');
+  });
 });

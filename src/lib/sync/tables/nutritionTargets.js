@@ -14,12 +14,29 @@
  *       Supabase unique index on user_id).
  *
  * Pull: select the single per-user row and route through
- *       insertNutritionTargetsFromCloud. The DB helper is
- *       INSERT-OR-IGNORE / read-only safe; LWW upgrade tracked
- *       alongside the other migrated tables.
+ *       insertNutritionTargetsFromCloud, which applies a real
+ *       last-write-wins gate on updated_at (it skips any cloud row
+ *       that is not strictly newer than the local one). The push
+ *       therefore has to ship an HONEST updated_at or that gate
+ *       reads backwards - see _toIso below (Campaign 1 P0-8 D9).
  */
 
 import { logSyncError } from '../telemetry';
+
+// Campaign 1 P0-8 D9: the row's own edit time as an ISO string.
+// saveNutritionTargets maintains a local epoch-ms updated_at honestly;
+// this push used to discard it and stamp new Date() instead, which
+// inverted LWW - a device that had not synced since before the targets
+// changed uploaded its STALE calorie/macro targets carrying the newest
+// timestamp in the account, and insertNutritionTargetsFromCloud's gate
+// then applied them over the up-to-date device. Falls back to now() only
+// when the local row genuinely carries no timestamp (legacy rows).
+function _toIso(value) {
+  if (value == null) return new Date().toISOString();
+  const ms = typeof value === 'number' ? value : Date.parse(value);
+  if (!Number.isFinite(ms)) return new Date().toISOString();
+  return new Date(ms).toISOString();
+}
 
 export async function pushNutritionTargets(sb, { userId, localUserId } = {}) {
   if (!sb || !userId) return { count: 0, errors: 0 };
@@ -45,7 +62,7 @@ export async function pushNutritionTargets(sb, { userId, localUserId } = {}) {
       gdpr_consented: !!targets.gdprConsented,
       goal: targets.goal ?? null,
       protein_approach: targets.proteinApproach ?? null,
-      updated_at: new Date().toISOString(),
+      updated_at: _toIso(targets.updatedAt),
     };
     const { error } = await sb
       .from('nutrition_targets')

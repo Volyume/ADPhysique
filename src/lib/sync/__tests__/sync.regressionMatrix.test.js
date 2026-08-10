@@ -16,8 +16,8 @@
  *   T4  Remote insert   → handler.pull      → local insert helper invoked
  *   T5  Conflict        → handler.pull/push → resolution strategy applies
  *   T6  Push error      → handler.push      → returns errors:>0; does not throw
- *   T7  Two-device      → OUT OF SCOPE      → product is Android-only single-device
- *   T8  Offline coll.   → OUT OF SCOPE      → product is Android-only single-device
+ *   T7  Two-device      → applier-level      → campaign1.syncConflict.test.js (P0-8 D15)
+ *   T8  Offline coll.   → applier-level      → campaign1.syncConflict.test.js (P0-8 D15)
  *
  * Spec also says "Files: tests/sync/<table_name>.test.js". We
  * collapse into one matrix file (driven by SYNC_REGISTRY) rather
@@ -532,7 +532,30 @@ describe('nutrition_targets', () => {
     expect(db.insertNutritionTargetsFromCloud).toHaveBeenCalledWith('u1', expect.objectContaining({ target_kcal: 2200 }));
   });
 
-  test('T5 conflict: client-side updated_at stamped on push so server LWW is comparable', async () => {
+  // Campaign 1 P0-8 D9 RE-ANCHOR (2026-08-10). This test used to assert
+  // only that SOME ISO timestamp was stamped at push time, and the handler
+  // duly stamped `new Date().toISOString()` - which INVERTS last-write-wins:
+  // `nutrition_targets` has no server-side stale-write trigger, so a device
+  // that had not synced since before the targets changed uploaded its STALE
+  // calorie/macro row carrying the newest timestamp in the account, and
+  // insertNutritionTargetsFromCloud's gate then applied it over the
+  // up-to-date device. The old expectation pinned the defect as if it were
+  // the contract. It is re-anchored here to the honest-timestamp behaviour:
+  // the push must ship the ROW's own updated_at. Deliberate correction of a
+  // wrong pin, not a relaxation - the assertion is strictly stronger.
+  test('T5 conflict: push ships the row\'s HONEST updated_at, not now() (P0-8 D9)', async () => {
+    const rowUpdatedAt = Date.UTC(2026, 0, 2, 3, 4, 5);
+    db.getNutritionTargets.mockResolvedValue({ targetKcal: 2000, updatedAt: rowUpdatedAt });
+    const sb = makeUpsertSb();
+    getSupabaseClient.mockReturnValue(sb);
+    await pushTable('nutrition_targets', { userId: 'u1', localUserId: 'u1' });
+    expect(sb._calls.upserts[0].rows.updated_at).toBe(new Date(rowUpdatedAt).toISOString());
+  });
+
+  test('T5b conflict: a row with no updated_at still ships a comparable ISO stamp', async () => {
+    // Legacy rows written before saveNutritionTargets maintained the column
+    // carry no timestamp; falling back to now() is the only honest option
+    // there and keeps the server LWW comparison well-formed.
     db.getNutritionTargets.mockResolvedValue({ targetKcal: 2000 });
     const sb = makeUpsertSb();
     getSupabaseClient.mockReturnValue(sb);
@@ -1223,7 +1246,13 @@ describe('food domain coordinator (food_entries / custom_foods / saved_meals / r
   });
 });
 
-// T7 + T8 (two-device propagation, offline collision) are out of
-// scope: Volyume is Android-only, phone-only. Sign-out + sign-in
-// on a new handset is the only realistic cross-device path and is
-// covered by manual real-device testing.
+// T7 + T8 (two-device propagation, offline collision) were marked
+// out of scope here on the grounds that "Volyume is Android-only,
+// phone-only". That justification stopped being true when the app
+// shipped on iOS via TestFlight, and the P0-8 conflict audit found
+// the scenarios it excluded were the ones carrying real defects
+// (Campaign 1 P0-8 D15). They are now covered, at the applier level
+// and with no live Supabase project needed, in
+// src/lib/__tests__/campaign1.syncConflict.test.js: a stale cloud
+// row is driven over a newer local row for each conflict-prone
+// table and the local row is asserted to survive.

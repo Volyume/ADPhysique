@@ -26,7 +26,11 @@ jest.mock('../../lib/haptics', () => ({
 }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 jest.mock('../../lib/engineTelemetry', () => ({ track: jest.fn() }));
-jest.mock('../../lib/sync', () => ({ syncUserPref: jest.fn(() => Promise.resolve()) }));
+jest.mock('../../lib/sync', () => ({
+  syncUserPref: jest.fn(() => Promise.resolve()),
+  // Campaign 1 P0-8 D10: the save/reset paths stamp the local write time.
+  notePrefWrite: jest.fn(() => Promise.resolve()),
+}));
 
 jest.mock('../../lib/database', () => ({
   getCompletedWorkoutSets: jest.fn(),

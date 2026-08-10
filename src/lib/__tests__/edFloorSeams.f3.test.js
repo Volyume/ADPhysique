@@ -38,7 +38,9 @@ describe('computeMacroCycle respects the sacred sex calorie floor (EN-2)', () =>
   });
 
   test('unknown sex uses the protective female floor, matching kcalFloorForSex', () => {
-    expect(kcalFloorForSex(null)).toBe(1200);
+    // Campaign 1 P0-7 D4 re-anchor (D92): unknown sex takes the HIGHER
+    // floor - the old 1200 pin encoded the permissive defect.
+    expect(kcalFloorForSex(null)).toBe(1500);
     const split = computeMacroCycle(
       { targetKcal: 1210, proteinG: 120, carbsG: 100, fatG: 40 },
       4,

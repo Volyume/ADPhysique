@@ -126,8 +126,12 @@ describe('preferencesFromProfile', () => {
     expect(p.diet).toBe('vegan');
     expect(p.mealsPerDay).toBe(5);
   });
-  test('defaults sensibly for an empty profile', () => {
-    const p = preferencesFromProfile(null);
+  test('a NULL profile refuses (P0-7 D14 re-anchor); a sparse profile still defaults sensibly', () => {
+    // Deliberate re-anchor (D92): profile-less generation used to default
+    // to the least restrictive preference set (no exclusions, omnivore) -
+    // allergen-blind planning. Null now refuses; {} still normalises.
+    expect(preferencesFromProfile(null)).toBeNull();
+    const p = preferencesFromProfile({});
     expect(p.diet).toBe('omnivore');
     expect(p.mealsPerDay).toBe(4);
   });

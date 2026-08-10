@@ -28,6 +28,14 @@ export async function getWellbeingMode() {
 export async function setWellbeingMode(mode) {
   try {
     await AsyncStorage.setItem(WELLBEING_KEY, mode);
+    // Campaign 1 P0-8 D11: record the local write time so the prefs pull
+    // can refuse an older cloud copy. Lazy-required (sync imports the
+    // store, which reaches back here) and best-effort: a failure only
+    // costs the stamp, the calm ratchet in the pull still applies.
+    try {
+      // eslint-disable-next-line global-require
+      require('./sync').notePrefWrite(WELLBEING_KEY);
+    } catch (_) {}
   } catch (_) {}
 }
 

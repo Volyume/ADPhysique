@@ -1095,7 +1095,16 @@ async function _pushUserBodyProfile(sb, supabaseUserId, localUserId) {
       primary_goal: p.primaryGoal ?? null,
       scoff_score: p.scoffScore ?? null,
       gdpr_consented: !!p.gdprConsented,
-      updated_at: new Date().toISOString(),
+      // Campaign 1 P0-8 D13: the goal lock has always had cloud columns
+      // (migrate_017) but was never pushed, so it stayed device-local.
+      goal_lock_advanced: !!p.goalLockAdvanced,
+      goal_lock_set_at: p.goalLockSetAt ? new Date(p.goalLockSetAt).toISOString() : null,
+      // Campaign 1 P0-8 D14: the row's HONEST edit time, not now().
+      // Stamping now() on every push meant a device that had not synced
+      // since before the user changed these values uploaded its stale
+      // copy carrying the freshest timestamp in the account, which then
+      // beat every LWW gate. scoff_score is ED-screening data.
+      updated_at: new Date(p.updatedAt ?? p.createdAt ?? Date.now()).toISOString(),
     }, { onConflict: 'user_id' });
     if (error) logPgErr('sync._pushUserBodyProfile', error);
   } catch (e) { logBulkWarn('sync._pushUserBodyProfile', e?.message); }
@@ -1334,11 +1343,61 @@ const PREF_EXCLUDE_PATTERNS = [
   /^@volyume_last_crash_meta/,      // last-crash metadata
   /^@volyume_feedback_/,            // pending feedback + prompt history (free text)
   /^@volyume_pro_onboarding_draft/, // in-progress onboarding answers (sex/goals), transient
+  // Campaign 1 P0-8 D10/D11: the per-key local write stamps written by
+  // notePrefWrite. They record when THIS device last wrote a guarded
+  // pref, so they are device state by definition - syncing them would
+  // import another device's clock and defeat the guard they exist for
+  // (exactly the failure the cursor/watermark exclusions above fix).
+  /^@volyume_pref_written_at_/,
 ];
 
 export function shouldSyncPref(key) {
   if (!key.startsWith(PREF_PREFIX)) return false;
   return !PREF_EXCLUDE_PATTERNS.some(re => re.test(key));
+}
+
+// ─── Guarded prefs (Campaign 1 P0-8 D10/D11) ─────────────────────────────
+// Two pref families carry state a stale device must never overwrite:
+//
+//   @volyume_landmarks_<uid>  manual MEV/MAV/MRV overrides. One whole-blob
+//                             value for every muscle at once, so a losing
+//                             collision silently discards the user's hand-set
+//                             targets with no merge and no notice. Manual
+//                             overrides must never be silently lost.
+//   @volyume_wellbeing_mode   calm mode. Calm is the STRICTER, ED-safer
+//                             state: it gates ED-adjacent copy, the
+//                             progress-photo card and the ledger's
+//                             suppressed flag. A device that knows less
+//                             must never be able to turn it off.
+//
+// The generic prefs pull is "cloud value wins unconditionally", which is
+// fine for units and seen-flags and wrong for both of these.
+export const PREF_WRITE_STAMP_PREFIX = '@volyume_pref_written_at_';
+const WELLBEING_PREF_KEY = '@volyume_wellbeing_mode';
+const GUARDED_PREF_PATTERNS = [
+  /^@volyume_landmarks_/,
+  /^@volyume_wellbeing_mode$/,
+];
+
+export function isGuardedPref(key) {
+  return typeof key === 'string' && GUARDED_PREF_PATTERNS.some(re => re.test(key));
+}
+
+/**
+ * Record that THIS device just wrote a guarded pref locally.
+ *
+ * Called from the write sites (the landmark editor's save/reset paths and
+ * setWellbeingMode), immediately after the AsyncStorage write. The stamp
+ * is what _pullUserPrefs compares the cloud row's updated_at against, so
+ * a cloud copy that is older than this device's own edit is dropped
+ * instead of applied. Best-effort and never throws: a missing stamp only
+ * costs the extra protection, it cannot break the write it follows.
+ */
+export async function notePrefWrite(key) {
+  if (!isGuardedPref(key)) return;
+  try {
+    await AsyncStorage.setItem(PREF_WRITE_STAMP_PREFIX + key, String(Date.now()));
+  } catch (_) { /* best-effort: the pull falls back to the monotonic rules */ }
 }
 
 /**
@@ -1797,12 +1856,63 @@ async function _pullAdaptationEvents(sb, supabaseUserId) {
  * user_prefs pull.
  *
  * Reads every key/value row the user owns from the cloud `user_prefs` table and
- * mirrors them into local AsyncStorage via multiSet (cloud value wins
- * unconditionally — there is no per-key updated_at comparison here). Returns the
- * number of keys written. (Audit 2026-06-21: this docstring previously described
- * a notification_preferences / applyPreferenceFromPull / last-write-wins path
+ * mirrors them into local AsyncStorage via multiSet. The cloud value wins
+ * unconditionally for ordinary keys (units, seen-flags): there is no per-key
+ * updated_at comparison for those. The two GUARDED families (isGuardedPref)
+ * are the exception, see filterGuardedPulledPrefs. Returns the number of keys
+ * written. (Audit 2026-06-21: this docstring previously described a
+ * notification_preferences / applyPreferenceFromPull / last-write-wins path
  * that this function does not implement.)
  */
+
+/**
+ * Campaign 1 P0-8 D10/D11. Drops the pulled entries that a stale device
+ * must not be allowed to apply. Two rules, both narrow and both fail-safe:
+ *
+ *  1. STAMP RULE (both guarded families). If this device's own local
+ *     write of the key (notePrefWrite) is at least as new as the cloud
+ *     row's updated_at, keep the local value. That is what stops a stale
+ *     device's landmark blob replacing manual overrides this device set
+ *     more recently, in either direction.
+ *
+ *  2. CALM RATCHET (wellbeing key only). Even with no stamp at all, a
+ *     pulled 'normal'/'unspecified' never replaces a local 'calm'. Calm
+ *     is the stricter, ED-safer state and no remote device may weaken it.
+ *     Consequence, stated plainly because it is a deliberate asymmetry:
+ *     turning calm OFF applies on the device where the user turned it
+ *     off (that device's own AsyncStorage write is the change) but does
+ *     NOT propagate to another device that is already calm - that device
+ *     keeps calm until the user turns it off there too. Rule 1 alone
+ *     would not give this, because the cloud row can legitimately carry a
+ *     newer updated_at than the calm device's stamp. Erring toward the
+ *     safer state is the intended behaviour; the user can always turn
+ *     calm off locally, and nothing remote can do it for them.
+ *
+ * Exported (rather than kept private) so both rules can be pinned
+ * directly in src/lib/__tests__/campaign1.syncConflict.test.js without
+ * standing up the whole pullFromCloud chain.
+ */
+export async function filterGuardedPulledPrefs(Storage, rows) {
+  const guarded = rows.filter(r => isGuardedPref(r.key));
+  if (!guarded.length) return rows;
+  let stamps = {};
+  try {
+    const pairs = await Storage.multiGet(guarded.map(r => PREF_WRITE_STAMP_PREFIX + r.key));
+    stamps = Object.fromEntries(pairs);
+  } catch (_) { stamps = {}; }
+  let localWellbeing = null;
+  if (guarded.some(r => r.key === WELLBEING_PREF_KEY)) {
+    try { localWellbeing = await Storage.getItem(WELLBEING_PREF_KEY); } catch (_) { localWellbeing = null; }
+  }
+  return rows.filter((r) => {
+    if (!isGuardedPref(r.key)) return true;
+    const localStamp = Number(stamps[PREF_WRITE_STAMP_PREFIX + r.key] ?? NaN);
+    const cloudMs = timeToMs(r.updated_at);
+    if (Number.isFinite(localStamp) && cloudMs && localStamp >= cloudMs) return false;
+    if (r.key === WELLBEING_PREF_KEY && localWellbeing === 'calm' && r.value !== 'calm') return false;
+    return true;
+  });
+}
 async function _pullUserPrefs(sb, supabaseUserId) {
   try {
     const { data, error } = await sb.from('user_prefs')
@@ -1819,9 +1929,13 @@ async function _pullUserPrefs(sb, supabaseUserId) {
     // pullFromCloud — an unfiltered multiSet would overwrite the watermarks
     // the pull just set (silently skipping unpushed rows) and could resurrect
     // another device's dead workout snapshot.
-    const entries = data
-      .filter(r => shouldSyncPref(r?.key ?? ''))
-      .map(r => [r.key, r.value == null ? '' : String(r.value)]);
+    const rows = data.filter(r => shouldSyncPref(r?.key ?? ''));
+    // Campaign 1 P0-8 D10/D11: the guarded families (manual landmarks,
+    // calm mode) are filtered here, BEFORE the multiSet, so a stale
+    // device can never silently discard a manual override or turn calm
+    // mode back off.
+    const kept = await filterGuardedPulledPrefs(AsyncStorage, rows);
+    const entries = kept.map(r => [r.key, r.value == null ? '' : String(r.value)]);
     if (!entries.length) return 0;
     try { await AsyncStorage.multiSet(entries); } catch (_) {}
     return entries.length;

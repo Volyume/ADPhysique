@@ -41,7 +41,10 @@ describe('rule 2: the surface fails closed on wellbeing reads', () => {
     expect(coachOutput).not.toMatch(/getWellbeingMode\(/);
   });
   test('SCOFF feeds the lib from the profile score', () => {
-    expect(coachOutput).toMatch(/scoffPositive: \(userProfile\?\.scoffScore \?\? 0\) >= 2/);
+    // Campaign 1 P0-7 D12 re-anchor: the read now fails CLOSED on a
+    // missing profile (a null profile is a positive screen), via the
+    // derived countdownScoffPositive value.
+    expect(coachOutput).toMatch(/userProfile == null \|\| \(userProfile\.scoffScore \?\? 0\) >= 2/);
   });
 });
 

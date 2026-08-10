@@ -51,7 +51,11 @@ const NOW_IS_HONEST_FUNCTIONS = [
   // syncProfile / syncWeeklyCheckin were retired in E12 step 1 (the registry
   // handlers own users_profile and weekly_checkins_v2 now).
   'syncMorningWeight',
-  '_pushUserBodyProfile',
+  // _pushUserBodyProfile REMOVED from the allowlist (Campaign 1 P0-8 D14):
+  // it is not a per-save push, it runs in the bulk cycle over a stored row,
+  // and stamping now() there let a stale device's sex/DOB/height/scoff_score
+  // beat every LWW gate. It now ships p.updatedAt, and its place here is
+  // gone so the fix cannot silently regress.
   'syncUserPref',
   // Recorded F5 Phase A exclusion, not an endorsement: local prefs carry no
   // updatedAt to derive from, and SD-8 (prefs out of the bulk cycle

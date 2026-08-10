@@ -2553,8 +2553,13 @@ export async function createWorkout(
 ) {
   const d = await db();
   // Auto-link to the active mesocycle so tonnage + recovery data flows into the block dashboard
+  // Campaign 1 P0-8 D4: ORDER BY created_at DESC. Two rows CAN carry
+  // is_active = 1 (two devices each starting a block while offline), and
+  // an unordered LIMIT 1 then attributed the session to an arbitrary
+  // block. This matches getActiveBlock's tiebreak, so every reader of
+  // "the active block" agrees on the same row.
   const activeMeso = await d.getFirstAsync(
-    'SELECT id FROM mesocycles WHERE user_id = ? AND is_active = 1 LIMIT 1',
+    'SELECT id FROM mesocycles WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1',
     [userId],
   );
   const mesocycleId = activeMeso?.id ?? null;
@@ -6925,6 +6930,50 @@ export async function getAllAdaptationEventsForUser(userId) {
 
 export async function insertRoutineFromCloud(userId, r) {
   const d = await db();
+  const tsMs = (v) => {
+    if (v == null) return null;
+    const n = typeof v === 'number' ? v : new Date(v).getTime();
+    return Number.isFinite(n) ? n : null;
+  };
+  // Campaign 1 P0-8 D3: last-write-wins instead of INSERT OR IGNORE.
+  // The old IGNORE meant a routine renamed or re-ordered on one device
+  // never reconciled on a device that already held the row, so the two
+  // devices disagreed about the routine for good. A newer cloud row now
+  // updates the synced columns in place; local-only columns
+  // (is_template, deleted_at) are left untouched because the UPDATE
+  // never names them. Timestamps are preserved rather than re-stamped,
+  // so a pulled row cannot be re-pushed as if it had just been edited.
+  const cloudUpdated = tsMs(r.updated_at ?? r.updatedAt);
+  const existing = await d.getFirstAsync(
+    'SELECT updated_at FROM routines WHERE id = ?', [r.id],
+  ).catch(() => null);
+  const createdAt = tsMs(r.created_at ?? r.createdAt) ?? Date.now();
+  if (existing) {
+    // Without a cloud timestamp the row cannot prove it is fresher than
+    // the local copy, so it must not replace one.
+    if (cloudUpdated == null) return;
+    if (Number(existing.updated_at ?? 0) >= cloudUpdated) return;
+    await d.runAsync(
+      `UPDATE routines SET
+        user_id = ?, name = ?, description = ?, split_type = ?, day_of_week = ?,
+        is_active = ?, is_library = ?, is_sample = ?, source_routine_id = ?,
+        programme_id = ?, position = ?, updated_at = ?
+       WHERE id = ?`,
+      [
+        userId, r.name, r.description ?? null,
+        r.split_type ?? r.splitType ?? null,
+        r.day_of_week ?? r.dayOfWeek ?? null,
+        r.is_active ?? r.isActive ?? 1,
+        r.is_library ?? r.isLibrary ?? 0,
+        r.is_sample ?? r.isSample ?? 0,
+        r.source_routine_id ?? r.sourceRoutineId ?? null,
+        r.programme_id ?? r.programmeId ?? null,
+        r.position ?? null,
+        cloudUpdated, r.id,
+      ],
+    );
+    return;
+  }
   await d.runAsync(
     `INSERT OR IGNORE INTO routines
       (id, user_id, name, description, split_type, day_of_week, is_active,
@@ -6941,14 +6990,52 @@ export async function insertRoutineFromCloud(userId, r) {
       // position may be absent on a cloud row pulled before migrate_113 lands;
       // null falls back to created_at ordering (getRoutinesForPlan).
       r.position ?? null,
-      typeof (r.created_at ?? r.createdAt) === 'string' ? new Date(r.created_at ?? r.createdAt).getTime() : (r.created_at ?? r.createdAt ?? Date.now()),
-      Date.now(),
+      createdAt,
+      cloudUpdated ?? createdAt,
     ],
   );
 }
 
 export async function insertProgrammeFromCloud(userId, p) {
   const d = await db();
+  const tsMs = (v) => {
+    if (v == null) return null;
+    const n = typeof v === 'number' ? v : new Date(v).getTime();
+    return Number.isFinite(n) ? n : null;
+  };
+  // Campaign 1 P0-8 D2: last-write-wins instead of INSERT OR IGNORE.
+  // The old IGNORE meant a plan activation made on one device
+  // (setActivePlan flips is_active) could NEVER reach a device that
+  // already held the row - so the two devices disagreed about which
+  // plan is active, permanently. A newer cloud row now updates the
+  // synced columns in place; local-only columns (folder_id, tags,
+  // split_type, is_archived, next_workout_index, difficulty,
+  // deleted_at) survive untouched because the UPDATE never names them.
+  const cloudUpdated = tsMs(p.updated_at);
+  const existing = await d.getFirstAsync(
+    'SELECT updated_at FROM programmes WHERE id = ?', [p.id],
+  ).catch(() => null);
+  const createdAt = tsMs(p.created_at) ?? Date.now();
+  if (existing) {
+    // Without a cloud timestamp the row cannot prove it is fresher than
+    // the local copy, so it must not replace one.
+    if (cloudUpdated == null) return;
+    if (Number(existing.updated_at ?? 0) >= cloudUpdated) return;
+    await d.runAsync(
+      `UPDATE programmes SET
+        user_id = ?, name = ?, description = ?, is_library = ?, is_active = ?,
+        source_programme_id = ?, updated_at = ?
+       WHERE id = ?`,
+      [
+        userId, p.name, p.description ?? null,
+        p.is_library ? 1 : 0,
+        p.is_active ? 1 : 0,
+        p.source_programme_id ?? null,
+        cloudUpdated, p.id,
+      ],
+    );
+    return;
+  }
   await d.runAsync(
     `INSERT OR IGNORE INTO programmes
       (id, user_id, name, description, is_library, is_active, source_programme_id, created_at, updated_at)
@@ -6958,14 +7045,34 @@ export async function insertProgrammeFromCloud(userId, p) {
       p.is_library ? 1 : 0,
       p.is_active ? 1 : 0,
       p.source_programme_id ?? null,
-      typeof p.created_at === 'string' ? new Date(p.created_at).getTime() : (p.created_at ?? Date.now()),
-      Date.now(),
+      createdAt,
+      cloudUpdated ?? createdAt,
     ],
   );
 }
 
 export async function insertRoutineExerciseFromCloud(re) {
   const d = await db();
+  const tsMs = (v) => {
+    if (v == null) return null;
+    const n = typeof v === 'number' ? v : new Date(v).getTime();
+    return Number.isFinite(n) ? n : null;
+  };
+  // Campaign 1 P0-8 D3: last-write-wins instead of an ungated INSERT OR
+  // REPLACE. The old REPLACE applied the cloud row in EITHER direction,
+  // so a pull could revert an exercise the user had just re-ordered or
+  // re-repped locally back to the stale cloud copy. The gate runs before
+  // the FK heal so a row that will be skipped costs no extra lookups.
+  const cloudUpdated = tsMs(re.updated_at);
+  const existingRow = await d.getFirstAsync(
+    'SELECT updated_at FROM routine_exercises WHERE id = ?', [re.id],
+  ).catch(() => null);
+  if (existingRow) {
+    // Without a cloud timestamp the row cannot prove it is fresher than
+    // the local copy, so it must not replace one.
+    if (cloudUpdated == null) return;
+    if (Number(existingRow.updated_at ?? 0) >= cloudUpdated) return;
+  }
   // Heal mismatched canonical IDs at insert time.
   // If the cloud row references an exercise_id that doesn't resolve
   // locally but carries a denormalised exercise_name, look up the
@@ -6986,6 +7093,34 @@ export async function insertRoutineExerciseFromCloud(re) {
       if (byName?.id) exerciseId = byName.id;
     }
   }
+  const createdAt = tsMs(re.created_at) ?? Date.now();
+  if (existingRow) {
+    // UPDATE rather than REPLACE so the local-only user_id column
+    // survives the reconcile.
+    await d.runAsync(
+      `UPDATE routine_exercises SET
+        routine_id = ?, exercise_id = ?, exercise_name = ?, order_in_routine = ?,
+        recommended_sets = ?, recommended_reps_min = ?, recommended_reps_max = ?,
+        notes = ?, starting_weight = ?, rest_seconds = ?, superset_group_id = ?,
+        updated_at = ?, deleted_at = ?
+       WHERE id = ?`,
+      [
+        re.routine_id, exerciseId, exerciseName,
+        re.order_in_routine ?? 0,
+        re.recommended_sets ?? 3,
+        re.recommended_reps_min ?? 6,
+        re.recommended_reps_max ?? 12,
+        re.notes ?? null,
+        re.starting_weight ?? null,
+        re.rest_seconds ?? null,
+        re.superset_group_id ?? null,
+        cloudUpdated,
+        tsMs(re.deleted_at),
+        re.id,
+      ],
+    );
+    return;
+  }
   await d.runAsync(
     `INSERT OR REPLACE INTO routine_exercises
       (id, routine_id, exercise_id, exercise_name, order_in_routine, recommended_sets,
@@ -7002,8 +7137,11 @@ export async function insertRoutineExerciseFromCloud(re) {
       re.starting_weight ?? null,
       re.rest_seconds ?? null,
       re.superset_group_id ?? null,
-      typeof re.created_at === 'string' ? new Date(re.created_at).getTime() : (re.created_at ?? Date.now()),
-      Date.now(),
+      createdAt,
+      cloudUpdated ?? createdAt,
+      // Spelled out rather than routed through tsMs because
+      // routineExerciseSoftDelete.guard.test.js pins this exact
+      // expression as the "the pull honours a cloud deleted_at" guard.
       re.deleted_at ? new Date(re.deleted_at).getTime() : null,
     ],
   );
@@ -7365,7 +7503,15 @@ export async function insertMesocycleWeekFromCloud(w) {
         ? (typeof parent.rir_ladder === 'string' ? JSON.parse(parent.rir_ladder) : parent.rir_ladder)
         : null;
       const fromLadder = Array.isArray(ladder) ? ladder[weekIdx - 1] : null;
-      if (Number.isFinite(Number(fromLadder))) rirTarget = Number(fromLadder);
+      // The null/undefined check must come FIRST: Number(null) is 0 and
+      // Number.isFinite(0) is true, so a bare finiteness test set
+      // rir_target to 0 ("take every set to failure") on any week whose
+      // parent block carries no ladder - harder than the flat default it
+      // was meant to fall back to. A real ladder entry of 0 is still
+      // honoured, because only null/undefined is rejected here.
+      if (fromLadder != null && Number.isFinite(Number(fromLadder))) {
+        rirTarget = Number(fromLadder);
+      }
     } catch (_) { /* ladder unreadable: keep the flat default */ }
   }
   await d.runAsync(
@@ -7564,21 +7710,44 @@ export async function insertOrUpdateUserBodyProfileFromCloud(userId, p) {
   if (!userId) return;
   const d = await db();
   const now = Date.now();
+  // Campaign 1 P0-8 D14: last-write-wins. This applier used to overwrite
+  // sex, DOB, height, experience, primary goal AND scoff_score from the
+  // cloud unconditionally, so a device that had not synced since before
+  // the user updated them pushed its stale copy up and then had it
+  // applied everywhere. scoff_score is ED-screening data: a stale device
+  // must never win. Without a cloud timestamp the row cannot prove it is
+  // fresher than the local copy, so it does not replace one.
+  const cloudUpdated = _tsToMs(p.updated_at);
   const existing = await d.getFirstAsync(
-    'SELECT id FROM user_body_profile WHERE user_id = ? LIMIT 1', [userId],
+    'SELECT id, updated_at FROM user_body_profile WHERE user_id = ? LIMIT 1', [userId],
   );
+  // Campaign 1 P0-8 D13: goal_lock_advanced + goal_lock_set_at now
+  // round-trip (the cloud columns have existed since migrate_017; only
+  // the client never carried them). COALESCE so a cloud row pulled from
+  // a project where 017 has not landed - i.e. the keys are absent - can
+  // never clear a lock the user set on this device.
+  const goalLock = p.goal_lock_advanced == null
+    ? null : (p.goal_lock_advanced ? 1 : 0);
+  const goalLockSetAt = p.goal_lock_set_at == null ? null : _tsToMs(p.goal_lock_set_at);
   if (existing?.id) {
+    if (cloudUpdated == null) return;
+    if (Number(existing.updated_at ?? 0) >= cloudUpdated) return;
     await d.runAsync(
       `UPDATE user_body_profile SET
         sex = ?, date_of_birth = ?, height_cm = ?, experience_level = ?,
         training_age_years = ?, primary_goal = ?, scoff_score = ?,
-        gdpr_consented = ?, updated_at = ?
+        gdpr_consented = ?,
+        goal_lock_advanced = COALESCE(?, goal_lock_advanced),
+        goal_lock_set_at = COALESCE(?, goal_lock_set_at),
+        updated_at = ?
        WHERE user_id = ?`,
       [
         p.sex ?? null, p.date_of_birth ?? null, p.height_cm ?? null,
         p.experience_level ?? null, p.training_age_years ?? null,
         p.primary_goal ?? null, p.scoff_score ?? null,
-        p.gdpr_consented ? 1 : 0, now, userId,
+        p.gdpr_consented ? 1 : 0,
+        goalLock, goalLockSetAt,
+        cloudUpdated, userId,
       ],
     );
     return;
@@ -7587,15 +7756,18 @@ export async function insertOrUpdateUserBodyProfileFromCloud(userId, p) {
     `INSERT INTO user_body_profile
       (id, user_id, sex, date_of_birth, height_cm, experience_level,
        training_age_years, primary_goal, scoff_score, gdpr_consented,
+       goal_lock_advanced, goal_lock_set_at,
        created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       uid(), userId,
       p.sex ?? null, p.date_of_birth ?? null, p.height_cm ?? null,
       p.experience_level ?? null, p.training_age_years ?? null,
       p.primary_goal ?? null, p.scoff_score ?? null,
       p.gdpr_consented ? 1 : 0,
-      _tsToMs(p.created_at) ?? now, now,
+      goalLock ?? 0, goalLockSetAt,
+      _tsToMs(p.created_at) ?? now,
+      cloudUpdated ?? now,
     ],
   );
 }

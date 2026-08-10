@@ -44,10 +44,15 @@ describe('classifyCalorieApply: floor holds are named, not silent (NU-3)', () =>
     expect(r.floorKcal).toBe(1500);
   });
 
-  test('unknown sex uses the protective 1200 floor, matching kcalFloorForSex', () => {
+  test('unknown sex uses the protective HIGHER floor, matching kcalFloorForSex (Campaign 1 P0-7 D4 re-anchor)', () => {
+    // Deliberate re-anchor (D92): unknown sex now takes the HIGHER floor
+    // (1500). Sex is onboarding-enforced, so null only occurs in failure
+    // states, and a floor that is too high errs protective - the old pin
+    // called the 1200 fallback "protective", which was the defect. A
+    // 1200-kcal target under a 1500 floor cuts to a clamp at the floor.
     const r = classifyCalorieApply(targets(1200), -100, null);
-    expect(r.kind).toBe('floor_hold');
     expect(r.floorKcal).toBe(kcalFloorForSex(null));
+    expect(r.floorKcal).toBe(1500);
   });
 
   test('a cut the floor catches PART-WAY classifies as floor_clamp with the clamped absolute', () => {

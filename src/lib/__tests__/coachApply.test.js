@@ -48,13 +48,17 @@ describe('computeCalorieTargets', () => {
   });
 
   test('clamps at the kcal floor and returns null if the floor makes it a no-op', () => {
+    // Campaign 1 P0-7 D4 re-anchor (D92): with no sex given the floor is
+    // now the HIGHER 1500, so the no-op case is pinned with an explicit
+    // female floor and the unknown-sex case asserts the raised floor.
     const low = { targetKcal: KCAL_FLOOR, proteinG: 150, fatG: 40, carbsG: 100 };
-    // A cut from the floor would go below 1200, clamps back to 1200 = no change.
-    expect(computeCalorieTargets(low, -300)).toBeNull();
+    expect(computeCalorieTargets(low, -300, 'female')).toBeNull();
+    expect(computeCalorieTargets(low, -300).newKcal).toBe(1500);
   });
 
   test('clamps a large cut to the floor when it lands below it', () => {
-    const result = computeCalorieTargets({ targetKcal: 1300, proteinG: 150, fatG: 40, carbsG: 100 }, -400);
+    // Campaign 1 P0-7 D4 re-anchor: explicit female keeps the 1200 floor.
+    const result = computeCalorieTargets({ targetKcal: 1300, proteinG: 150, fatG: 40, carbsG: 100 }, -400, 'female');
     expect(result.newKcal).toBe(KCAL_FLOOR); // 1300 - 400 = 900 → clamped to 1200
   });
 
@@ -70,9 +74,11 @@ describe('computeCalorieTargets', () => {
     expect(computeCalorieTargets({ targetKcal: 1500, proteinG: 170 }, -200, 'male')).toBeNull();
   });
 
-  test('female / unknown sex keeps the 1200 floor', () => {
+  test('female keeps the 1200 floor; unknown sex takes the higher 1500 (P0-7 D4 re-anchor)', () => {
     expect(computeCalorieTargets({ targetKcal: 1300, proteinG: 150 }, -400, 'female').newKcal).toBe(1200);
-    expect(computeCalorieTargets({ targetKcal: 1300, proteinG: 150 }, -400).newKcal).toBe(1200);
+    // Unknown sex only occurs in failure states (sex is onboarding-
+    // enforced); the raised floor errs protective by design (D92).
+    expect(computeCalorieTargets({ targetKcal: 1300, proteinG: 150 }, -400).newKcal).toBe(1500);
   });
 
   test('diet break also respects the sex-aware floor', () => {

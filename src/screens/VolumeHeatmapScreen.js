@@ -22,7 +22,7 @@ import { computeDivisionDiff, fingerprintMarkers, planWearsDivision } from '../l
 import { buildPlanInputs } from '../lib/planAutoGen';
 import { GOAL_LABELS } from '../lib/coachingGoals';
 import { logError } from '../lib/errorLog';
-import { syncUserPref } from '../lib/sync';
+import { syncUserPref, notePrefWrite } from '../lib/sync';
 import {
   calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES, getVolumeStatus,
 } from '../lib/algorithms';
@@ -269,6 +269,9 @@ export default function VolumeHeatmapScreen() {
     if (Object.keys(map).length === 0) {
       // Everything back at defaults: same semantics as a reset.
       await AsyncStorage.removeItem(key);
+      // Campaign 1 P0-8 D10: stamp the local write so a stale cloud copy
+      // of the landmark blob cannot be applied back over this edit.
+      notePrefWrite(key).catch(() => {});
       syncUserPref(user.id, key, '').catch(() => {});
       setCustomLandmarks(null);
       setEditing(false);
@@ -277,6 +280,8 @@ export default function VolumeHeatmapScreen() {
     }
     const json = JSON.stringify(map);
     await AsyncStorage.setItem(key, json);
+    // Campaign 1 P0-8 D10: stamp the local write (see above).
+    notePrefWrite(key).catch(() => {});
     // Push straight to cloud so the targets survive a reinstall even if no
     // bulk sync runs before then. Best-effort: a failure just defers the
     // push to the next bulk sync, which still covers this key.
@@ -294,6 +299,9 @@ export default function VolumeHeatmapScreen() {
         onPress: async () => {
           const key = `@volyume_landmarks_${user.id}`;
           await AsyncStorage.removeItem(key);
+          // Campaign 1 P0-8 D10: stamp the local write so a stale cloud
+          // copy cannot ride back in and undo the reset.
+          notePrefWrite(key).catch(() => {});
           // Clear the cloud copy too. Without this the old custom targets
           // would ride pullFromCloud back onto the device on the next
           // reinstall and silently undo the reset. There is no pref-delete

@@ -2412,3 +2412,51 @@ building Stages 1-2 (all criterion-ruled: best for end users, never effort):
    that claims no personalisation); unknown muscles are skipped, never
    invented. The *_sync mirror is no longer written for this table and
    is recorded as dead for the dead-code campaign.
+
+## D92 addendum — P0-7/P0-8 audit remediations (lead rulings, 2026-08-10)
+
+7. (Lead ruling, P0-8 D11) THE CALM RATCHET: on the preference pull,
+   a remote non-calm value never replaces a local 'calm', stamps or no
+   stamps. Deliberate asymmetry, stated plainly: turning calm OFF
+   applies on the device where the user turns it off and does NOT
+   remotely un-calm another device - nothing remote may weaken an
+   ED-safety state; the user can always turn calm off locally. Manual
+   landmark blobs and the wellbeing key are additionally guarded by
+   local write stamps (notePrefWrite) so a stale device's pull cannot
+   revert them.
+8. (Lead ruling, P0-7 D4) Unknown sex takes the HIGHER calorie floor
+   (1500): sex is onboarding-enforced, so null only occurs in failure
+   states, and a floor that is too high errs protective. Female stays
+   1200; the founder floors are untouched. A missing body weight can
+   never size a DEFICIT (holds at maintenance with a warning); surplus
+   and maintenance still compute for display continuity. Seven test
+   pins that encoded the old permissive behaviour were re-anchored
+   with comments naming this ruling.
+9. (Lead ruling, P0-7 D9/D7) Session feedback is written ONLY when the
+   user touches it, and the per-session adaptive engine runs ONLY on a
+   rated session. Rows stamped by pre-fix builds carry manufactured
+   default answers that are indistinguishable from real ones -
+   unrecoverable legacy, accepted.
+10. (Recorded residuals, not silently parked) (a) The Home recovery
+   banner still cannot compute hasOverMRV (needs the Progress
+   surface's full volume pass); it can only UNDER-suggest by 12
+   points and the Progress banner computes the complete signal.
+   (b) user_prefs has no cloud stale-write trigger: the calm ratchet
+   protects every device's local state, but a device that set calm
+   cannot teach an offline device that calm was set elsewhere.
+   (c) insertMesocycleWeekFromCloud still stamps pull-time timestamps
+   (weeks carry no user edits; the parent mesocycle row is the
+   guarded authority).
+11. (FOUNDER DECISION REQUIRED - flagged, no code touched, per the
+   CLAUDE.md ED-safety stop-and-ask rule) P0-8 D12: ed_pattern_flags
+   is registered pull_only + server_wins but NOTHING pushes it - an
+   open ED flag never reaches a second device, so device B keeps
+   sending weight/food-adjacent notifications and offering
+   un-suppressed coaching. The registry, the cloud table (migrate_017)
+   and a code comment all claim/expect a cloud path, so wiring a
+   raise-only push (never clears; cleared_at moves forward only)
+   appears to be the RECORDED design - but it transmits Article 9
+   special-category data and touches the locked ED-safety system, so
+   it is the founder's call, not the lead's. Options: (A) wire the
+   raise-only push per the recorded design; (B) keep flags per-device
+   deliberately and correct the registry/comment; (C) something else.
