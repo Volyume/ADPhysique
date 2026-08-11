@@ -109,11 +109,18 @@ redesign. FR-1..5, FR-C4-1..11, FR-PW-1, H4 carried unresolved
     server-side day-15 trial→free transition is observed by nothing
     client-side) recorded under FR-C4-8. FQ-6.4 will rename both
     'Switch to Free' strings (SubscriptionPolicy + SettingsAccount).
-  - NEXT: FQ-2 block-decision lane; then FQ-3 + FQ-7 (lead engine
-    work), FQ-4 (Apply wiring), FQ-6.1/6.2/6.4 (lead billing);
-    then Phase 40/41 synthetic journey + test matrix completion,
-    Reviews A/B/C, release-truth audit, gates, close, 64-item
-    handover.
+  - FQ-2 - LANDED at db1df587 (both options always rendered for Pro,
+    advisor recommends-never-gates, ledger rows tier-gated not
+    recommendation-gated, evidence-free placeholder rows score null,
+    entitlement from the real tier failing closed, Free's adjust
+    option Pro-marked routing to upgrade with a second handler lock
+    and the seed mapping carrying the entitlement; 14 new tests).
+  - NEXT: FQ-3 + FQ-7 (lead engine work: session-difficulty coarse
+    effort evidence + per-exercise PR baseline, each with its
+    dedicated test plan; FQ-3 also resolves FR-C4-4), FQ-4 (Apply
+    wiring), FQ-6.1/6.2/6.4 (lead billing); then Phase 40/41
+    synthetic journey + test matrix completion, Reviews A/B/C,
+    release-truth audit, gates, close, 64-item handover.
   - FQ-5: APPROVED IN FULL by the founder ("Approve all") and LANDED
     by the lead - all six items as proposed, item 3 Option A, consent
     version stamp 2026-08-10 (stamp-only, no re-gating), locked
