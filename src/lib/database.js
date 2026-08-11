@@ -3780,6 +3780,36 @@ export async function setActivePlan(userId, planId) {
 export async function activatePlanWithBlock(userId, planId, planName, { ledger = null } = {}) {
   await setActivePlan(userId, planId);
 
+  // C8 Work 2 (D97-9): muscle-level learned evidence survives a
+  // legitimate activation. Only "Continue with adjustments" ever passed
+  // `ledger`, so a plan switch, copied routine, phase rebuild or
+  // post-upgrade wizard build gave the ramp writer nothing and a mature
+  // user re-ramped from research values. When no explicit seed was
+  // handed in, derive one from the user's own judged block history.
+  //
+  // Conservative by construction: the helper is Pro-only (FREE HAS NO
+  // COACHING), has no current-block proposal to apply, and returns null
+  // unless something was genuinely carried - so manual overrides,
+  // suppression, research floors and evidence sufficiency all keep
+  // winning, and an activation with nothing to carry keeps the honest
+  // template ramp. Best-effort: activation must never fail on this.
+  let effectiveLedger = ledger;
+  if (!effectiveLedger) {
+    try {
+      // eslint-disable-next-line global-require
+      const store = require('../store/useAppStore').default.getState();
+      const tier = store?.tier ?? 'free';
+      if (tier === 'pro') {
+        // eslint-disable-next-line global-require
+        const { buildLearnedSeedRangesForActivation } = require('./blockLedgerRunner');
+        effectiveLedger = await buildLearnedSeedRangesForActivation(userId, {
+          userProfile: store?.userProfile ?? null,
+          tier,
+        });
+      }
+    } catch (_) { effectiveLedger = null; /* honest template ramp */ }
+  }
+
   const d = await db();
   const now = Date.now();
   const id = uid();
@@ -3835,7 +3865,7 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
 
   await generateMesocycleWeeks(id);
   const { VOLUME_LANDMARKS } = await import('./algorithms');
-  await generateInitialPlannedVolume(id, VOLUME_LANDMARKS, ledger);
+  await generateInitialPlannedVolume(id, VOLUME_LANDMARKS, effectiveLedger);
 
   // C12: refresh the weekly training reminders so their copy names the plan
   // that just became active. Read the name back from the persisted active plan
