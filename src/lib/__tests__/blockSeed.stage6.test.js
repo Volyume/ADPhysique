@@ -297,3 +297,23 @@ describe('C6 RA6-10 (D97-25): the seed/learn confidence asymmetry is deliberate,
     expect(entry.proposal.startSets).toBe(10);
   });
 });
+
+describe('C6 RE6-1 (D97-25): an unmoved band never claims to be learned', () => {
+  test('a band byte-identical to the profile prior seeds as profile provenance', () => {
+    const s = seed({
+      learnedRange: { floor: PROFILE.mev, ceiling: PROFILE.mav, isLearned: true, evidenceBlocks: 5 },
+    });
+    // Same numbers either way; only the CLAIM changes - the display
+    // layer must not say "set by what past blocks have shown" about a
+    // Day-1 research number.
+    expect(s.startSets).toBe(PROFILE.mev);
+    expect(s.source).toBe('profile');
+  });
+
+  test('a band that genuinely moved keeps its learned provenance', () => {
+    const s = seed({
+      learnedRange: { floor: PROFILE.mev, ceiling: PROFILE.mav - 3, isLearned: true, evidenceBlocks: 5 },
+    });
+    expect(s.source).toBe('learned');
+  });
+});

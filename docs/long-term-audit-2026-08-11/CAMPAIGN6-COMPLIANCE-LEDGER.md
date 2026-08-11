@@ -105,7 +105,7 @@ BLOCKED-LAW (explicit campaign law forbids change).
 | RELATIONSHIP-MOMENTS.md | COMPLETE-AUDIT | Landed; B1/B4 candidates recorded, B2 founder copy question |
 | WHAT-VOLYUME-HAS-LEARNED-FEASIBILITY.md (ten questions per candidate; verdict A/B/C/D; DO NOT BUILD) | COMPLETE-AUDIT | Delivered: five candidates scored on the ten questions; VERDICT C with recorded revisit trigger; nothing built |
 | PERSONALISATION-DIVIDEND.md | COMPLETE-IMPL | Delivered with the computed counterfactual, A-E input classification, nutrition dividend, honest weaknesses |
-| REVIEW-E-relationship.md (nine-month payer, the EXACT twelve questions) | IN PROGRESS | REVIEW-E-relationship.md LANDED (twelve verdicts: 7 STRONG, 4 ADEQUATE, 1 WEAK; 5 findings RE6-1..5); actioning under way |
+| REVIEW-E-relationship.md (nine-month payer, the EXACT twelve questions) | COMPLETE-ACTIONED | REVIEW-E-relationship.md landed (twelve verdicts: 7 STRONG, 4 ADEQUATE, 1 WEAK on visibility); ALL FIVE findings dispositioned under D97-25: RE6-1/3/4/5 FIXED with pins, RE6-2 recorded as magnitude evidence on the D97-3 founder question |
 | Six-block + 180-day relationship sections | COMPLETE-IMPL | 392fa136 + ATHLETE-180-REPORT.md (nine-question framing to be corrected as superseded) |
 | Relationship invariant tests | COMPLETE-IMPL | campaign6.relationship.test.js (12) |
 | Anti-anthropomorphism + anti-manipulation audits | COMPLETE-IMPL | Repo walkers landed (abefab54 + relationship suite); formal handover answers at items 93/94 |

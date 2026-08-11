@@ -86,7 +86,13 @@ attributable.** Chest block 3 start > block 1 start on earned
 evidence; block 6 still seeds from history. Calves show the honest
 negative: thin data (partial week, missed check-in) produced
 INSUFFICIENT_DATA and the numbers held rather than flattering the
-user with invented progression (athlete180:171-175). Specificity
+user with invented progression (athlete180:171-175). RE6-3
+CORRECTION (D97-25): that hold is a property of THIS arc, not of the
+classification - calves' start already equalled the profile MEV, so
+the learned-band fallback reproduced it. A muscle carrying an earned
+higher start resets toward the band floor on the adjust intent after
+an unjudgeable block (Repeat recovers it, P-6); the magnitude sits as
+RE6-2 evidence in the D97-3 founder question. Specificity
 never comes from flattery: recognition copy is evidence-backed and
 the banned-phrase walker in campaign6.longTerm guards the repo.
 

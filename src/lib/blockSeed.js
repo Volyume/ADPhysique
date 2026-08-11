@@ -176,6 +176,20 @@ export function resolveSeedRange({
     const ceiling = num(learnedRange.ceiling, null);
     if (floor != null && ceiling != null) {
       const { s, p } = clamp(floor, ceiling);
+      // C6 RE6-1 (D97-25): isLearned means "evidence exists", not "a
+      // bound moved" - the floor is monotone-down-only and the ceiling
+      // stops at the prior MAV, so a purely-progressing user's band can
+      // be byte-identical to the untouched profile prior. Labelling
+      // that 'learned' let the display layer say "set by what past
+      // blocks have shown" about a Day-1 research number (an overclaim,
+      // C class). When the band matches the prior exactly, the honest
+      // provenance is the profile prior - numbers identical either way.
+      const priorMev = num(profileAdjusted?.mev, null);
+      const priorMav = num(profileAdjusted?.mav, null);
+      if (priorMev != null && priorMav != null
+        && floor === priorMev && ceiling === priorMav) {
+        return { startSets: s, peakSets: p, source: 'profile' };
+      }
       return { startSets: s, peakSets: p, source: 'learned' };
     }
   }

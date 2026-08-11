@@ -821,3 +821,32 @@ that fix (four observation runs + a ten-run capture loop, parallel and
 if either reappears at the Phase 62 gates, the failing run's full log
 must be captured and chased before merge - "full bar green" was
 observed repeatedly but the intermittency is not fully root-caused.
+
+**Review E (nine-month relationship), all five dispositioned:**
+- **RE6-1 FIXED (provenance truth at the seed)**: when the learned band
+  is byte-identical to the profile-adjusted prior, resolveSeedRange now
+  labels the seed 'profile', not 'learned' - identical numbers, honest
+  claim - so "set by what past blocks have shown" can never again be
+  attributed to a Day-1 research number. Fixed at the source rather
+  than the clause so every downstream surface is true at once; pinned
+  both ways. RELATIONSHIP-MOMENTS' "C = 0" is restored by this fix.
+- **RE6-2 RECORDED (founder queue, with D97-3)**: the magnitude
+  evidence (earned start 12 -> Day-1 6 after one unjudgeable block on
+  the adjust intent) is written into the D97-3 triage row. Any fix is
+  freshness/memory semantics - exactly what D91-25 defers - and is the
+  founder's ruling, per the review's own framing. Mitigations on
+  record: the drop is stated in the receipt, and Repeat recovers the
+  earned numbers (P-6).
+- **RE6-3 FIXED (doc truth)**: PERSONALISATION-DIVIDEND §2 and
+  ATHLETE-180-REPORT Q3 now state that the insufficient-data "hold" is
+  a property of that arc (start already at profile MEV), not of the
+  classification, and point the general case at RE6-2/D97-3.
+- **RE6-4 FIXED**: the workout-summary tooltip's adaptation sentence is
+  scoped to "muscles with enough logged data" - true for any mix,
+  no per-muscle enumeration (that depth remains B1, founder-gated).
+- **RE6-5 FIXED**: readinessSummary's suite runs on a fixed clock (see
+  the flake note above).
+- The review's four RECORDED IDEAS (cumulative comparison line,
+  earned-start memory, naming the gap in the layoff line, stating how
+  long a refusal stands) stay recorded in REVIEW-E-relationship.md;
+  none built, none proposed as work (addendum law).
