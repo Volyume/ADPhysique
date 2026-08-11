@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
@@ -9,6 +9,7 @@ import Button from '../components/Button';
 import Card from '../components/Card';
 import {
   getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock,
+  getAllPlansForUser,
 } from '../lib/database';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import {
@@ -40,6 +41,8 @@ export default function FreeStarterScreen({ navigation, route }) {
   const [plans, setPlans] = useState([]);
   const [workoutCounts, setWorkoutCounts] = useState({});
   const [busy, setBusy] = useState(false);
+  // Synchronous double-tap guard for the two writing paths (C5-P29-02).
+  const startingRef = useRef(false);
   // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
@@ -80,17 +83,36 @@ export default function FreeStarterScreen({ navigation, route }) {
     else navigation.goBack();
   }
 
+  // C5-P1-05 / C5-P30-02 (D96): the on-screen chevron stepped back one
+  // question, but this is a PUSHED route, so Android's hardware Back popped
+  // the whole screen, unmounted the component and discarded every answer. Two
+  // Backs on one screen did different things. Hardware Back mirrors the
+  // chevron now: it steps back a question while there is one, and at question
+  // one it returns false so the default pop runs, which is what the chevron
+  // does there too.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return undefined;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (busy) return true;
+      if (step > 0) { setStep(s => s - 1); return true; }
+      return false;
+    });
+    return () => sub.remove();
+  }, [step, busy]);
+
   // "Skip, I'll choose myself": from first run this finishes onboarding and
   // lands on Home, where the no-plan card offers both this quiz and the
   // library. From Home/Plans it simply returns.
   async function handleSkip() {
-    if (busy) return;
+    if (busy || startingRef.current) return;
     if (fromFirstRun) {
+      startingRef.current = true;
       setBusy(true);
       try {
         await completeFirstRun();
       } catch (e) {
         logError('FreeStarter.handleSkip', e, { userId: user?.id });
+        startingRef.current = false;
         setBusy(false);
       }
       return;
@@ -107,15 +129,42 @@ export default function FreeStarterScreen({ navigation, route }) {
 
   async function handleStartPlan() {
     if (!recommendation || busy) return;
+    // C5-P29-02 route 2 (D96): `busy` is React state and does not take effect
+    // until the next render, so a fast second tap fired a second copy through
+    // the same cycle. A ref is synchronous, the guard ProOnboardingScreen's
+    // advanceFrom6 already uses against exactly this.
+    if (startingRef.current) return;
     if (!user?.id) {
       toast.show('Setting up your profile, try again in a second', { variant: 'info' });
       return;
     }
+    startingRef.current = true;
     setBusy(true);
     try {
-      const copy = await copyPlanFromLibrary(recommendation.id, user.id);
-      if (!copy?.id) throw new Error('Copy failed.');
-      await activatePlanWithBlock(user.id, copy.id, recommendation.name);
+      // C5-P29-02 route 1 (D96): a kill between activation and
+      // completeFirstRun leaves firstRunComplete false, so the navigator
+      // replays the whole quiz. This handler then copied the same library
+      // plan a SECOND time and inserted a second mesocycle that deactivated
+      // the first, so the user landed on Home with two identical plans and a
+      // block that thought it started today. Reuse the copy this user already
+      // has instead: copyPlanFromLibrary carries the library name across
+      // verbatim, so the name identifies the copy, and a copy that is already
+      // active needs no second block at all. Replay is a no-op now.
+      const existingPlans = await getAllPlansForUser(user.id).catch(() => []);
+      const existing = existingPlans.find(p => p.name === recommendation.name) ?? null;
+      let planId = existing?.id ?? null;
+      if (!planId) {
+        const copy = await copyPlanFromLibrary(recommendation.id, user.id);
+        if (!copy?.id) throw new Error('Copy failed.');
+        planId = copy.id;
+      }
+      if (existing?.isActive) {
+        // Already the active plan with its block running: touching nothing is
+        // the honest outcome, restarting the block would lose its start date.
+        if (!fromFirstRun) toast.show('That plan is already your active plan', { variant: 'info' });
+      } else {
+        await activatePlanWithBlock(user.id, planId, recommendation.name);
+      }
       if (fromFirstRun) {
         // Flips the navigator into MainTabs; Home loads the active plan and
         // the hero answers "what do I do today" with the first session.
@@ -126,6 +175,7 @@ export default function FreeStarterScreen({ navigation, route }) {
     } catch (e) {
       logError('FreeStarter.handleStartPlan', e, { userId: user?.id, planId: recommendation?.id });
       toast.show("Couldn't set up your plan, try again", { variant: 'error' });
+      startingRef.current = false;
       setBusy(false);
     }
   }

@@ -22,6 +22,8 @@ jest.mock('../../lib/supabase', () => ({
   signInWithApple: jest.fn(),
   signInWithEmail: jest.fn(),
   signUpWithEmail: jest.fn(),
+  // E-3 (D96): the reset helper the app never called until Wave B.
+  resetPassword: jest.fn(),
 }));
 // TextField/Button pull in @gorhom/bottom-sheet and expo-haptics (native
 // Expo modules) at import; this suite tests LoginScreen's handler behaviour,
@@ -54,7 +56,9 @@ jest.mock('../../components/Button', () => (props) => {
   return React.createElement('Button', props);
 });
 
-import { signInWithGoogle, signInWithEmail, signUpWithEmail } from '../../lib/supabase';
+import {
+  signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword,
+} from '../../lib/supabase';
 import LoginScreen from '../LoginScreen';
 
 function findGoogleButton(tree) {
@@ -215,6 +219,171 @@ describe('LoginScreen email + password (founder 2026-07-21)', () => {
     await act(async () => { await submit.props.onPress(); });
     await flush();
     expect(signUpWithEmail).toHaveBeenCalledWith('new@volyume.app', 'freshpw12');
+  });
+});
+
+/**
+ * Campaign 5, Wave B (D96). The entry surface's honesty and recoverability:
+ * the sign-up CTA opens a sign-up form (E-1), a duplicate address is told to
+ * sign in instead of waiting for mail Supabase never sends (E-2), a forgotten
+ * password has a route back (E-3), a dead connection is named as one (E-5),
+ * the states the user must leave the app to act on stay on screen (E-8), and
+ * the screen carries a visible back control (E-9).
+ */
+describe('LoginScreen entry honesty and recovery (Wave B, D96)', () => {
+  function typeEmail(tree, e) {
+    const emailField = tree.root.findByProps({ accessibilityLabel: 'Email address' });
+    act(() => { emailField.props.onChangeText(e); });
+  }
+  const html = (tree) => JSON.stringify(tree.toJSON());
+
+  test('E-1: the sign-up intent opens the form in create-account mode', async () => {
+    let tree;
+    await act(async () => {
+      tree = create(<LoginScreen route={{ params: { intent: 'pro_signup' } }} />);
+    });
+    expect(() => tree.root.findByProps({ accessibilityLabel: 'Create account with email' })).not.toThrow();
+    expect(() => tree.root.findByProps({ accessibilityLabel: 'Sign in with email' })).toThrow();
+  });
+
+  test('E-1: arriving without the intent still opens sign-in ("Already have an account?")', async () => {
+    let tree;
+    await act(async () => { tree = create(<LoginScreen route={{ params: {} }} />); });
+    expect(() => tree.root.findByProps({ accessibilityLabel: 'Sign in with email' })).not.toThrow();
+  });
+
+  test('E-2: an existing address is told to sign in, never promised a confirmation email', async () => {
+    // Supabase's enumeration protection: a user object, no session, and an
+    // EMPTY identities array. No email is sent for this response.
+    signUpWithEmail.mockResolvedValue({
+      data: { user: { id: 'u1', identities: [] }, session: null },
+      error: null,
+    });
+    let tree;
+    await act(async () => {
+      tree = create(<LoginScreen route={{ params: { intent: 'pro_signup' } }} />);
+    });
+    typeEmail(tree, 'already@volyume.app');
+    const pw = tree.root.findByProps({ accessibilityLabel: 'Password' });
+    act(() => { pw.props.onChangeText('freshpw12'); });
+    const submit = tree.root.findByProps({ accessibilityLabel: 'Create account with email' });
+    await act(async () => { await submit.props.onPress(); });
+    await flush();
+
+    expect(html(tree)).toContain('That email already has an account. Try signing in instead.');
+    expect(html(tree)).not.toContain('Check your email to confirm');
+    // And the form is now the one they need.
+    expect(() => tree.root.findByProps({ accessibilityLabel: 'Sign in with email' })).not.toThrow();
+  });
+
+  test('E-8: a genuine new signup keeps the confirm instruction ON SCREEN, not in a toast', async () => {
+    signUpWithEmail.mockResolvedValue({
+      data: { user: { id: 'u2', identities: [{ provider: 'email' }] }, session: null },
+      error: null,
+    });
+    let tree;
+    await act(async () => {
+      tree = create(<LoginScreen route={{ params: { intent: 'pro_signup' } }} />);
+    });
+    typeEmail(tree, 'new@volyume.app');
+    const pw = tree.root.findByProps({ accessibilityLabel: 'Password' });
+    act(() => { pw.props.onChangeText('freshpw12'); });
+    const submit = tree.root.findByProps({ accessibilityLabel: 'Create account with email' });
+    await act(async () => { await submit.props.onPress(); });
+    await flush();
+
+    expect(html(tree)).toContain('Check your email to confirm your account, then sign in.');
+    expect(mockToastShow).not.toHaveBeenCalledWith(
+      expect.stringContaining('Check your email'), expect.anything(),
+    );
+    // Dismissible, and it survives until the user dismisses it.
+    const dismiss = tree.root.findByProps({ accessibilityLabel: 'Dismiss this message' });
+    await act(async () => { dismiss.props.onPress(); });
+    expect(html(tree)).not.toContain('Check your email to confirm your account');
+  });
+
+  test('E-3: forgot password calls the reset helper and states the outcome conditionally', async () => {
+    resetPassword.mockResolvedValue({ data: {}, error: null });
+    let tree;
+    await act(async () => { tree = create(<LoginScreen />); });
+    typeEmail(tree, 'forgot@volyume.app');
+    const link = tree.root.findByProps({ accessibilityLabel: 'Send a link to get back into your account' });
+    await act(async () => { await link.props.onPress(); });
+    await flush();
+
+    expect(resetPassword).toHaveBeenCalledWith('forgot@volyume.app');
+    // Never "we have emailed you": Supabase answers unknown addresses the same.
+    expect(html(tree)).toContain('If that email has an account');
+  });
+
+  test('E-3: with no email typed, nothing is requested and the user is told what to do', async () => {
+    let tree;
+    await act(async () => { tree = create(<LoginScreen />); });
+    const link = tree.root.findByProps({ accessibilityLabel: 'Send a link to get back into your account' });
+    await act(async () => { await link.props.onPress(); });
+    await flush();
+
+    expect(resetPassword).not.toHaveBeenCalled();
+    expect(mockToastShow).toHaveBeenCalledWith(
+      'Enter your email above first, then tap Forgot password.',
+      expect.objectContaining({ variant: 'info' }),
+    );
+  });
+
+  test('E-5: a dead connection names connectivity instead of blaming the credentials', async () => {
+    signInWithEmail.mockResolvedValue({ data: null, error: { message: 'Network request failed' } });
+    let tree;
+    await act(async () => { tree = create(<LoginScreen />); });
+    typeEmail(tree, 'test@volyume.app');
+    const pw = tree.root.findByProps({ accessibilityLabel: 'Password' });
+    act(() => { pw.props.onChangeText('hunter2pw'); });
+    const submit = tree.root.findByProps({ accessibilityLabel: 'Sign in with email' });
+    await act(async () => { await submit.props.onPress(); });
+    await flush();
+
+    expect(mockToastShow).toHaveBeenCalledWith(
+      'You need an internet connection to create an account or sign in. Everything else works offline.',
+      expect.objectContaining({ variant: 'error' }),
+    );
+    expect(mockToastShow).not.toHaveBeenCalledWith(
+      'That email or password is not right.', expect.anything(),
+    );
+  });
+
+  test('E-5: an OAuth network failure names connectivity too', async () => {
+    signInWithGoogle.mockResolvedValue({ error: { message: 'Network request failed' } });
+    let tree;
+    await act(async () => { tree = create(<LoginScreen />); });
+    const google = findGoogleButton(tree);
+    await act(async () => { await google.props.onPress(); });
+    await flush();
+
+    expect(mockToastShow).toHaveBeenCalledWith(
+      'You need an internet connection to create an account or sign in. Everything else works offline.',
+      expect.objectContaining({ variant: 'error' }),
+    );
+  });
+
+  test('E-9: a visible back control appears when there is somewhere to go back to', async () => {
+    const navigation = { canGoBack: () => true, goBack: jest.fn() };
+    let tree;
+    await act(async () => { tree = create(<LoginScreen navigation={navigation} />); });
+    const back = tree.root.findByProps({ accessibilityLabel: 'Back' });
+    await act(async () => { back.props.onPress(); });
+    expect(navigation.goBack).toHaveBeenCalled();
+  });
+
+  test('E-9: and never a dead control when the screen is the stack root', async () => {
+    const navigation = { canGoBack: () => false, goBack: jest.fn() };
+    let tree;
+    await act(async () => { tree = create(<LoginScreen navigation={navigation} />); });
+    expect(() => tree.root.findByProps({ accessibilityLabel: 'Back' })).toThrow();
+  });
+
+  test('no anonymous escape hatch survives anywhere on this screen', async () => {
+    let tree;
+    await act(async () => { tree = create(<LoginScreen />); });
+    expect(html(tree)).not.toMatch(/without an account|continue as guest|skip for now/i);
   });
 });
 

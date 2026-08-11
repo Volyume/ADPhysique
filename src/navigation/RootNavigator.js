@@ -808,6 +808,13 @@ const linking = {
 
 const SPLASH_MIN_MS = 1600;
 
+// C5-P29-04: how long the consent-resolver splash may wait before the
+// fail-closed failsafe releases it to the Article 9 gate. Deliberately
+// generous (the check can involve a cloud read on a poor connection) and far
+// beyond any healthy resolution, because the escape it grants is the gate
+// itself, never the app.
+const CONSENT_LATCH_FAILSAFE_MS = 15000;
+
 // CODE-001: route bootstrap fire-and-forget rejections through the error log,
 // not raw console.*, so every fault is captured with a scope and shipped like
 // the rest. Lazy-require keeps this file's no-top-level-errorLog idiom and can
@@ -1490,6 +1497,35 @@ export default function RootNavigator() {
     if (!user && !firstRunChecked) checkFirstRun().catch(() => {});
     if (!user && isAuthLoading) setAuthLoading(false);
   }, [user, tierChecked, firstRunChecked, isAuthLoading, checkTier, checkFirstRun, setAuthLoading]);
+
+  // C5-P29-04 (D96): the consent-resolver splash below waits on
+  // healthConsentChecked, and that flag is only ever set inside the
+  // auth-enter block. Every branch in there does set it, but the block
+  // itself can be missed: onAuthStateChange may never deliver
+  // INITIAL_SESSION for a session getSession() already restored at
+  // bootstrap, and the AUTH-4 3s dedup can swallow a lone delivery. Unlike
+  // initialAuthResolved (8s) and setAuthLoading, this latch had no
+  // failsafe, so a signed-in user who had not finished onboarding could sit
+  // on the boot splash with no route out but a reinstall.
+  //
+  // FAIL CLOSED, and only closed. The failsafe resolves the latch to null,
+  // never true: null means "unresolved", which for a user who has not
+  // finished onboarding routes straight INTO the Article 9 gate
+  // (consentUnresolvedForNewUser in renderNavigator), and the sync layer
+  // keeps refusing to move health data until consent is genuinely granted.
+  // It can escape the splash to the gate; it can never grant consent, skip
+  // the gate, or overwrite a real answer (a landed check wins the race
+  // check below, and a resolved latch never re-arms this timer).
+  useEffect(() => {
+    if (!user || user.isLocal || firstRunComplete || healthConsentChecked) return undefined;
+    const timer = setTimeout(() => {
+      if (useAppStore.getState().healthConsentChecked) return;
+      _bootLog('warn', 'RootNavigator.healthConsentLatch.failsafe',
+        'consent check never resolved; routing to the Article 9 gate (consent NOT granted)');
+      useAppStore.getState().setHealthConsent(null, true);
+    }, CONSENT_LATCH_FAILSAFE_MS);
+    return () => clearTimeout(timer);
+  }, [user, firstRunComplete, healthConsentChecked]);
 
   // Founder defect (2026-07-13, Android walk): ONE splash, not two. The
   // native expo-splash-screen used to hide on App.js's themeReady (before

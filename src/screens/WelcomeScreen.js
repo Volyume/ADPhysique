@@ -70,6 +70,10 @@ export default function WelcomeScreen({ navigation }) {
       navigation.navigate('QuizTraining');
       return;
     }
+    // E-1 (D96): the intent is READ now (LoginScreen opens its email form in
+    // create-account mode for it), so the sign-up CTA no longer lands on a
+    // form whose primary button says "Sign in". The "Already have an account?"
+    // link below navigates without it and still opens sign-in.
     navigation.navigate('Login', { intent: 'pro_signup' });
   }
 

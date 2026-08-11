@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView, Animated, AccessibilityInfo } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView, Animated, AccessibilityInfo, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,6 +19,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
   logBodyMetric, logMorningWeight, saveNutritionTargets, saveUserBodyProfile,
+  getProgrammeById,
 } from '../lib/database';
 import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
 import { signInWithGoogle, signInWithApple } from '../lib/supabase';
@@ -40,7 +41,9 @@ import {
   buildNutritionEngineInputs,
 } from '../lib/coachingGoals';
 import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
-import { saveDraft, loadDraft, clearDraft, DRAFT_DEBOUNCE_MS } from '../lib/proOnboardingDraft';
+import {
+  saveDraft, loadDraft, clearDraft, loadBuildProgress, markBuildProgress, DRAFT_DEBOUNCE_MS,
+} from '../lib/proOnboardingDraft';
 import { dateOfBirthFromAgeYears } from '../lib/profileAge';
 import { FIRST_CHECKIN_MIN_DAYS } from '../lib/trialActivation';
 
@@ -580,6 +583,28 @@ export default function ProOnboardingScreen({ navigation }) {
     setStep(s => s - 1);
   }
 
+  // C5-P1-04 / C5-P30-01 (D96): the whole six-step wizard is ONE registered
+  // screen, so React Navigation had nothing to pop and Android's Back button
+  // closed the app from any step. The on-screen chevron (steps 3-6) and the
+  // hardware button did different things on the same screen, and the exit read
+  // as a crash. Hardware Back now mirrors the chevron exactly: it steps the
+  // wizard back where a legal previous step exists, and returns false at steps
+  // 1-2 so the fail-closed exit stands. Step 2 is the required-safe baseline
+  // (sex, age, height, weight) and step 1 the account, so neither can be
+  // reached past backwards, and the consent gate lives in a different stack
+  // entirely (pins C5-P30-05/06 unchanged). Mid-build, the sequence overlay
+  // owns the screen and Back must not unwind a running plan generation.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return undefined;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (submittingRef.current) return true;
+      if (step > 2) { goBack(); return true; }
+      return false;
+    });
+    return () => sub.remove();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, accountCreated]);
+
   async function handleOAuthOnboarding(provider) {
     // OAuth happens inside the in-app browser sheet, the Supabase session
     // callback is handled by App.js's deep-link handler. We just need to
@@ -802,6 +827,10 @@ export default function ProOnboardingScreen({ navigation }) {
     else setBusy(true);
 
     let planFailed = false;
+    // C5-P29-07 (D96): what an interrupted earlier run of this same build
+    // already wrote. Null on a first run and on any storage failure, in which
+    // case every write below runs exactly as it always did.
+    const priorBuild = user?.id ? await loadBuildProgress(user.id) : null;
     try {
       {
         // Flat schema: CoachingReminders, WeeklyCheckIn and the Coach tab
@@ -968,13 +997,21 @@ export default function ProOnboardingScreen({ navigation }) {
       // (Health Connect / Apple Health connect-on-enrolment was removed with the
       // step-target feature, founder 2026-06-30.)
 
+      // C5-P29-07: the enrolment body-metric row is INSERT-only (unlike the
+      // profile and targets upserts beside it), so a retry after a mid-build
+      // kill used to leave two rows for one enrolment. It is written once per
+      // build; the weight itself still reaches the profile and the morning
+      // series (which dedups by local day) on every run.
       if (user?.id && !isNaN(bwKg) && bwKg > 0) {
-        await logBodyMetric(user.id, {
-          weightKg: bwKg,
-          bodyFatPercent: bfNum,
-          bodyFatSource: baselineBfSource,
-          loggedAt: Date.now(),
-        });
+        if (!priorBuild?.weightLoggedAt) {
+          await logBodyMetric(user.id, {
+            weightKg: bwKg,
+            bodyFatPercent: bfNum,
+            bodyFatSource: baselineBfSource,
+            loggedAt: Date.now(),
+          });
+          await markBuildProgress(user.id, { weightLoggedAt: Date.now() });
+        }
         // Also seed the morning weights series so the weekly check-in
         // gate (needs 3 readings in the last 7 days) counts enrolment
         // day. Without this, a user who enrols on their chosen check-in
@@ -1037,8 +1074,33 @@ export default function ProOnboardingScreen({ navigation }) {
           recoveryRating,
         };
         let planResult = { ok: false, error: 'not attempted' };
-        try { planResult = await generateAndSavePlan(user.id, planProfile); }
-        catch (e) { planResult = { ok: false, error: e?.message ?? 'unknown' }; }
+        // C5-P29-07: a retry after a kill used to build a SECOND plan, which
+        // archived the first and took the "Your plan 2" name. If the earlier
+        // run already built a plan from these exact answers, that plan IS the
+        // result of this build, so it is adopted rather than rebuilt. Edited
+        // answers produce a different signature and generate as before.
+        const planSignature = JSON.stringify([
+          experience, daysPerWeek, sessionLengthMinutes, equipment,
+          trainingGoal, trainingPhase, planWeakPoints, recoveryRating,
+        ]);
+        const reusablePlanId = priorBuild?.planId && priorBuild.planSignature === planSignature
+          ? priorBuild.planId
+          : null;
+        const priorPlan = reusablePlanId
+          ? await getProgrammeById(reusablePlanId).catch(() => null)
+          : null;
+        // Reused only while it is still the one active, unarchived plan the
+        // earlier run left behind. Anything else regenerates, so first-run
+        // always ends on exactly one valid active plan and block.
+        if (priorPlan && priorPlan.isActive && !priorPlan.isArchived) {
+          planResult = { ok: true, programmeId: priorPlan.id };
+        } else {
+          try { planResult = await generateAndSavePlan(user.id, planProfile); }
+          catch (e) { planResult = { ok: false, error: e?.message ?? 'unknown' }; }
+          if (planResult.ok && planResult.programmeId) {
+            await markBuildProgress(user.id, { planId: planResult.programmeId, planSignature });
+          }
+        }
         if (!planResult.ok) {
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logError('ProOnboardingScreen.generateAndSavePlan', planResult.error, { userId: user.id }); } catch (_) {}

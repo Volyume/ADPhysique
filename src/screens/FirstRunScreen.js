@@ -32,7 +32,11 @@ export default function FirstRunScreen({ navigation }) {
   const live = buildLiveStyles(t);
   // Gym weights are kg-only (UK). No unit choice.
   const localUnits = 'kg';
-  const [firstName, setFirstName] = useState('');
+  // C5-P29-03 (D96): prefilled from the saved profile, the same source and
+  // the same shape the Pro wizard uses (ProOnboardingScreen's firstName
+  // state). A free user killed mid-quiz walks this screen again, and it used
+  // to ask for a name the app had already stored and written.
+  const [firstName, setFirstName] = useState(userProfile?.firstName || '');
   const [busy, setBusy] = useState(false);
   const nameRef = useRef(null);
   const hasName = firstName.trim().length > 0;
@@ -43,11 +47,16 @@ export default function FirstRunScreen({ navigation }) {
   }, []);
 
   async function finish() {
-    if (!hasName) return;
     setBusy(true);
     try {
       if (setUnits) setUnits(localUnits);
-      const merged = { ...(userProfile || {}), units: localUnits, firstName: firstName.trim() };
+      // C5-P1-09 (D96): the name is presentation only, no engine reads it, and
+      // a neutral fallback already exists everywhere it is shown (Home's
+      // greeting drops it, ProSetupComplete says "there"). It no longer gates
+      // the whole free journey. An empty field leaves any stored name intact
+      // rather than writing a blank over it.
+      const merged = { ...(userProfile || {}), units: localUnits };
+      if (hasName) merged.firstName = firstName.trim();
       if (user?.id) await saveLocalProfile(user.id, merged);
       // B2: hand over to the starter micro-quiz. It calls completeFirstRun
       // itself, after a plan is installed or the user skips.
@@ -69,19 +78,19 @@ export default function FirstRunScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.title, live.title]}>You&apos;re almost set up.</Text>
         <Text style={[styles.subtitle, live.subtitle]}>
-          Just your name, then a few quick questions to get you set up.
+          Add your name if you like, then a few quick questions to get you set up.
         </Text>
 
         <TextField
           ref={nameRef}
-          label="What should we call you?"
+          label="What should we call you? (optional)"
           containerStyle={styles.nameField}
           fieldStyle={hasName && [styles.inputActive, live.inputActive]}
           size="lg"
           value={firstName}
           onChangeText={setFirstName}
           placeholder="First name"
-          accessibilityLabel="First name"
+          accessibilityLabel="First name, optional"
           autoCapitalize="words"
           autoCorrect={false}
           returnKeyType="go"
@@ -93,7 +102,6 @@ export default function FirstRunScreen({ navigation }) {
           trailingIcon="arrow-forward"
           size="lg"
           loading={busy}
-          disabled={!hasName}
           onPress={finish}
         />
 
