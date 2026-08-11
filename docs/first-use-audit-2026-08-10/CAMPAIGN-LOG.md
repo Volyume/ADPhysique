@@ -161,9 +161,23 @@ redesign. FR-1..5, FR-C4-1..11, FR-PW-1, H4 carried unresolved
     residual, RB-13 no-action, RB-14 recorded/narrowed - rationale in
     D96-RULINGS.md Review B block. 10 CLEAN passes; 11/14 matrix
     items verified closed, the other 3 closed by RB-1's landing.
-  - NEXT: Review C in flight (REVIEW-C-experienced.md), then Phase 41
-    synthetic journey, Phase 45 release-truth audit, gates, docs
-    close, merge to main, 64-item handover.
+  - PHASE 41 - LANDED at 5f06b16c: campaign5.syntheticJourney.test.js,
+    the deterministic synthetic first user through the pure engine
+    chain (29 tests: day 0 floors/honest labels/research-only claims,
+    day 1 zero-history, day 3 effort-gated overload, day 7 partial
+    evidence, weeks 2-4 ramp, recovery week, unjudged block end,
+    next-block decision) plus all ten ordered variants.
+  - REVIEW C (Phase 44) - DELIVERED and ACTIONED at 76adcdfb: 4
+    defects (RC-1 Pro locked out of its own plan editor, RC-2 dead
+    experienced coach register, RC-3 superset lesson every session
+    for ever, RC-4 readiness opt-out hiding the ledger consequence)
+    and 5 improvements (RC-5 science-toggle over-claim, RC-6
+    beginner-calling copy, RC-7 remaining group titles, RC-8 skip
+    promise, RC-9 immortal Help pulse) all landed with 8 pins;
+    rulings incl. the RC-1 tier-visibility ruling in D96-RULINGS.md
+    Review C block. Q3/Q6 CLEAN.
+  - NEXT: Phase 45 release-truth audit, quality gates, docs close,
+    merge to main, 64-item handover.
   - FQ-5: APPROVED IN FULL by the founder ("Approve all") and LANDED
     by the lead - all six items as proposed, item 3 Option A, consent
     version stamp 2026-08-10 (stamp-only, no re-gating), locked
