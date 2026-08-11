@@ -102,6 +102,57 @@ describe('what makes a ledger entry valid', () => {
   });
 });
 
+describe('C6 P-6 (D97-20, ruling (a)): repeat keeps its promise when the block cannot be judged', () => {
+  // Before this ruling, an unjudgeable entry fell through to the learned
+  // band for a REPEAT intent too - so the button promising "the same
+  // weekly set targets as last time" delivered multi-block learned
+  // volume, including to Free, whose only reachable intent is repeat.
+  test('an INSUFFICIENT_DATA entry still repeats the observed numbers, never the learned band', () => {
+    const out = seed({
+      ledgerEntry: { ...LEDGER_ENTRY, classification: 'INSUFFICIENT_DATA' },
+      intent: 'repeat',
+      learnedRange: { floor: 9, ceiling: 16, isLearned: true },
+    });
+    expect(out).toEqual({ startSets: 10, peakSets: 16, source: 'ledger' });
+  });
+
+  test('deferredToManual and missing proposal numbers repeat the observed block too', () => {
+    const deferred = seed({
+      ledgerEntry: { ...LEDGER_ENTRY, proposal: { ...LEDGER_ENTRY.proposal, deferredToManual: true } },
+      intent: 'repeat',
+    });
+    expect(deferred).toEqual({ startSets: 10, peakSets: 16, source: 'ledger' });
+    const noNumbers = seed({
+      ledgerEntry: { ...LEDGER_ENTRY, proposal: { startSets: null, peakSets: null, stimulusChange: null, deferredToManual: false } },
+      intent: 'repeat',
+      learnedRange: { floor: 9, ceiling: 16, isLearned: true },
+    });
+    expect(noNumbers).toEqual({ startSets: 10, peakSets: 16, source: 'ledger' });
+  });
+
+  test("an ADJUST intent on an unjudgeable entry still falls back to the learned band (founder e2e ruling unchanged)", () => {
+    const out = seed({
+      ledgerEntry: { ...LEDGER_ENTRY, classification: 'INSUFFICIENT_DATA' },
+      intent: 'adjust',
+      learnedRange: { floor: 9, ceiling: 16, isLearned: true },
+    });
+    expect(out.source).toBe('learned');
+  });
+
+  test('a repeat with no observed numbers on the entry falls through exactly as before', () => {
+    const out = seed({
+      ledgerEntry: {
+        classification: 'INSUFFICIENT_DATA',
+        observed: null,
+        proposal: { startSets: null, peakSets: null, stimulusChange: null, deferredToManual: false },
+      },
+      intent: 'repeat',
+      learnedRange: { floor: 9, ceiling: 16, isLearned: true },
+    });
+    expect(out.source).toBe('learned');
+  });
+});
+
 describe('advisor button semantics (§3.5)', () => {
   test("'repeat' forces a TRUE repeat from the ledger's observed numbers, not the proposal", () => {
     const out = seed({ ledgerEntry: LEDGER_ENTRY, intent: 'repeat' });
@@ -188,5 +239,81 @@ describe('purity', () => {
     expect(SRC).not.toMatch(/Date\.now|Math\.random|new Date\(\)/);
     expect(SRC).not.toMatch(/require\(|from '\.\/database'|AsyncStorage|useAppStore|supabase/);
     expect(SRC).not.toMatch(/tier/i);
+  });
+});
+
+describe('C6 RA6-10 (D97-25): the seed/learn confidence asymmetry is deliberate, and pinned', () => {
+  // learnedRange refuses entries below confidence 0.6 as BAND evidence;
+  // resolveSeedRange checks only that the proposal carries numbers.
+  // The asymmetry is safe because interBlock's composite-confidence
+  // gate means a sub-bar block can only ever PROPOSE a retention or a
+  // reduction (the +1 requires confidence >= 0.6), so: a sub-bar entry
+  // may seed a retention but may never seed a climb. This suite is the
+  // recorded characterisation; if either bar moves, re-decide on
+  // purpose rather than by drift.
+  const { computeLearnedRange } = require('../learnedRange');
+  const { classifyMuscleBlock, BLOCK_CLASS } = require('../interBlock');
+
+  test('a confidence-0.5 entry seeds its retention numbers while teaching the band nothing', () => {
+    const subBar = {
+      ...LEDGER_ENTRY,
+      confidence: 0.5,
+      proposal: { startSets: 10, peakSets: 16, stimulusChange: null, deferredToManual: false },
+    };
+    const s = seed({ ledgerEntry: subBar });
+    expect(s.startSets).toBe(10); // the retention seeds
+    const band = computeLearnedRange({
+      prior: PROFILE, researchMev: RESEARCH.mev, adaptedMrv: null, ledgerHistory: [subBar],
+    });
+    expect(band.isLearned).toBe(false); // ...but is not band evidence
+    expect(band.evidenceBlocks).toBe(0);
+  });
+
+  test('a sub-bar block cannot EARN a climb in the first place (the +1 gate closes it)', () => {
+    const entry = classifyMuscleBlock({
+      muscle: 'chest',
+      landmarks: { mev: 8, mav: 14, mrv: 22 },
+      researchMev: 8,
+      learnedCeiling: null,
+      manualOverride: false,
+      previousStart: 10, plannedPeak: 16, achievedPeak: 16,
+      priorFlatBlocks: 0,
+      adherence: { plannedSets: 70, completedSets: 64 },
+      performance: {
+        e1rmSlopePct: 3, prDensity: 0.2, rawPrCount: 2, eligibleExposures: 10,
+        confidence: 0.5, discontinuity: false,
+        doseResponse: { lateProgression: true, lateRecoveryOk: true },
+      },
+      recovery: {
+        sorenessLateAvg: 2, jointDiscomfortAvg: 1, readinessSlope: 0,
+        sleepFlaggedWeeks: 0, deloadFlagFired: false, deloadFlagMidBlock: false,
+        dataPoints: 8,
+      },
+    }, { suppressed: false, weeksSinceBlockEnd: 0 });
+    // confidence 0.5 with 8 data points -> composite 0.5, below the
+    // CONFIDENCE_FLOOR gate... which is also the INSUFFICIENT_DATA gate,
+    // so the block is not judged at all: it can retain, never climb.
+    expect(entry.classification).toBe(BLOCK_CLASS.INSUFFICIENT_DATA);
+    expect(entry.proposal.startSets).toBe(10);
+  });
+});
+
+describe('C6 RE6-1 (D97-25): an unmoved band never claims to be learned', () => {
+  test('a band byte-identical to the profile prior seeds as profile provenance', () => {
+    const s = seed({
+      learnedRange: { floor: PROFILE.mev, ceiling: PROFILE.mav, isLearned: true, evidenceBlocks: 5 },
+    });
+    // Same numbers either way; only the CLAIM changes - the display
+    // layer must not say "set by what past blocks have shown" about a
+    // Day-1 research number.
+    expect(s.startSets).toBe(PROFILE.mev);
+    expect(s.source).toBe('profile');
+  });
+
+  test('a band that genuinely moved keeps its learned provenance', () => {
+    const s = seed({
+      learnedRange: { floor: PROFILE.mev, ceiling: PROFILE.mav - 3, isLearned: true, evidenceBlocks: 5 },
+    });
+    expect(s.source).toBe('learned');
   });
 });

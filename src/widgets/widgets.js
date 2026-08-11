@@ -105,7 +105,7 @@ export function WeeklyConsistencyWidget({ snapshot }) {
   return (
     <Shell eyebrow="THIS WEEK">
       <FlexWidget style={{ flexDirection: 'column' }}>
-        <TextWidget text={`${c.completed} of ${c.planned}`} style={{ fontSize: 28, fontWeight: 'bold', color: TEXT }} />
+        <TextWidget text={c.planned != null ? `${c.completed} of ${c.planned}` : `${c.completed}`} style={{ fontSize: 28, fontWeight: 'bold', color: TEXT }} />
         <SessionDots completed={c.completed} planned={c.planned} />
         {c.streakWeeks > 0
           ? <TextWidget text={`${c.streakWeeks} ${c.streakWeeks === 1 ? 'week' : 'weeks'} running`} style={{ fontSize: 12, color: AMBER, marginTop: 6 }} />

@@ -345,8 +345,12 @@ export async function deleteWorkoutFromCloud(supabaseUserId, workoutId) {
     if (wErr) { logPgErr('sync.deleteWorkoutFromCloud.workout', wErr); return false; }
     return true;
   } catch (e) {
+    // C6 S-5 (D97-23): rethrow so the caller sees the REAL failure shape.
+    // The queue's retry scheduler needs the message to tell offline (never
+    // spends the budget) from a definitive refusal (does); both screen
+    // callers .catch(() => enqueue) so their behaviour is unchanged.
     logWarn('sync.deleteWorkoutFromCloud', e?.message, { workoutId });
-    return false;
+    throw e;
   }
 }
 
@@ -366,8 +370,9 @@ export async function deleteWorkoutSetFromCloud(supabaseUserId, setId) {
     if (error) { logPgErr('sync.deleteWorkoutSetFromCloud', error); return false; }
     return true;
   } catch (e) {
+    // C6 S-5 (D97-23): rethrow - see deleteWorkoutFromCloud's note.
     logWarn('sync.deleteWorkoutSetFromCloud', e?.message, { setId });
-    return false;
+    throw e;
   }
 }
 
@@ -778,6 +783,11 @@ async function _pushProgrammes(sb, supabaseUserId, localUserId) {
       id: p.id, user_id: supabaseUserId,
       name: p.name, description: p.description ?? null,
       is_library: !!p.isLibrary, is_active: !!p.isActive,
+      // C6 P44-03 (D97): the archived flag finally travels. The cloud
+      // column has existed since migrate_012; it was simply never pushed
+      // or pulled, so a reinstall resurrected every plan the user ever
+      // archived (eight wizard re-runs = eight "My plans" rows).
+      is_archived: !!p.isArchived,
       source_programme_id: p.sourceProgrammeId ?? null,
       // folder_id (plan_folders, migration 089): carry the plan's folder so the
       // My Plans organisation survives a device change. Nullable; an unfiled
@@ -1032,6 +1042,10 @@ async function _pushMorningWeights(sb, supabaseUserId, localUserId) {
       // the pull-side preservation has something honest to preserve.
       created_at: new Date(w.createdAt ?? Date.now()).toISOString(),
       updated_at: new Date(w.updatedAt ?? w.loggedAt ?? Date.now()).toISOString(), // F5 Phase A
+      // C6 R-8: the soft-delete tombstone rides too, so a deletion made
+      // here reaches the cloud (whose pulls filter deleted_at IS NULL)
+      // and therefore every other device.
+      deleted_at: w.deletedAt != null ? new Date(w.deletedAt).toISOString() : null,
     })).filter(r => r.logged_at && r.weight_kg != null);
     for (let i = 0; i < rows.length; i += 200) {
       const { error } = await sb.from('morning_weights').upsert(
@@ -1385,6 +1399,32 @@ const WELLBEING_PREF_KEY = '@volyume_wellbeing_mode';
 const GUARDED_PREF_PATTERNS = [
   /^@volyume_landmarks_/,
   /^@volyume_wellbeing_mode$/,
+  // C6 F4 (D97): the per-uid profile blob carries coachTone, coachAutonomy,
+  // showScience, bodyWeightUnits and the mealPlan prefs - none of which
+  // exist as cloud columns. A stale device's routine bulk push must not
+  // make an old blob look freshest; saveLocalProfile stamps every real
+  // user write (the reinstall rebuild write deliberately does NOT, and is
+  // additionally suppressed from the push below).
+  /^@volyume_user_profile_/,
+  // C6 R-11 (D97-22): the per-user streak blob carries explicit user
+  // choices (manual goal, pauses) plus the retro-shrink guard's
+  // high-water record and seen-milestones - a stale device's unguarded
+  // "cloud wins" push discarded pauses (re-breaking runs retroactively)
+  // and re-fired milestones. saveStreakState stamps every write.
+  /^@volyume_streak_v1_/,
+  // C6 S-2 (D97-23): the notification-pref blob and quiet hours are
+  // explicit user choices; unguarded they were LAST-SYNCER-wins (push
+  // stamps push time), so a stale device's routine sync reverted a
+  // reminder or quiet-hours change on BOTH devices. Every writer stamps.
+  // The deletion/tombstone half of the family (S-3) stays with the
+  // founder's FR-C4-2 architecture question - no wholesale consolidation.
+  /^@volyume_notification_prefs$/,
+  /^@volyume_quiet_hours_v1$/,
+  // C6 RB6-6 (D97-25): the churn episode, its 180-day floor and the
+  // stated return became per-user under R-7 but still rode the
+  // unguarded cloud-wins path, so a stale device could reset the
+  // single-shot state. Every winbackState write stamps.
+  /^@volyume_winback_/,
 ];
 
 export function isGuardedPref(key) {
@@ -1455,7 +1495,19 @@ export async function syncUserPref(supabaseUserId, key, value) {
 async function _pushAllUserPrefs(sb, supabaseUserId) {
   try {
     const allKeys = await AsyncStorage.getAllKeys();
-    const keys = allKeys.filter(shouldSyncPref);
+    let keys = allKeys.filter(shouldSyncPref);
+    // C6 F4 (D97): a machine-rebuilt profile blob (reinstall restore, no
+    // user write yet this session) must never be pushed - in the
+    // push-before-pull order it would overwrite the cloud's only good
+    // copy with defaults, permanently on a single-device reinstall. The
+    // flag clears on the first real saveLocalProfile.
+    try {
+      // eslint-disable-next-line global-require
+      const store = require('../store/useAppStore').default;
+      if (store.getState()._profileBlobRebuilt) {
+        keys = keys.filter((k) => !/^@volyume_user_profile_/.test(k));
+      }
+    } catch (_) { /* store unavailable: push as before */ }
     if (!keys.length) return;
     const pairs = await AsyncStorage.multiGet(keys);
     // Finding 5: guarded keys carry the value's honest edit time so a
@@ -1634,6 +1686,27 @@ export async function pullFromCloud(supabaseUserId) {
     // about to clear — so this is the most important late check.
     if (bailForWipe('user_prefs')) return workoutCount;
     const prefCount = await _pullUserPrefs(sb, supabaseUserId);
+    // C6 RC6-8 (D97-25): on a reinstall the launch-time
+    // restoreNotifications call runs BEFORE this pull delivers the
+    // notification-prefs blob, so the first session ran with no
+    // reminders at all until the next cold launch (D97-6 fixed the
+    // call never running; this is the ordering residual it did not
+    // cover). When this pull actually delivered prefs, re-lay once:
+    // every scheduler inside self-gates on permission, tier, toggles,
+    // push budget and the ED flag, so this changes no policy - the
+    // same argument D97-6 recorded. Best effort, never blocks the pull.
+    if (prefCount > 0) {
+      try {
+        // eslint-disable-next-line global-require
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
+        if (raw) {
+          // eslint-disable-next-line global-require
+          const { restoreNotifications } = require('./notifications/scheduler');
+          restoreNotifications(JSON.parse(raw), supabaseUserId).catch(() => {});
+        }
+      } catch (_) { /* best effort */ }
+    }
     // notification_preferences moved to src/lib/sync/transport.js
     // (registry-driven per-table pull). The runner now calls
     // transport.pullTable('notification_preferences', ...) directly
@@ -1772,10 +1845,23 @@ async function _pullUserInsights(sb, supabaseUserId) {
 async function _pullExerciseUserNotes(sb, supabaseUserId) {
   try {
     const wm = await getPullWatermark(supabaseUserId, 'exercise_user_notes');
-    let q = sb.from('exercise_user_notes').select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
-    if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
-    const { data, error } = await q;
-    if (error) { logPgErr('sync._pullExerciseUserNotes', error); return 0; }
+    // C6 T-13 (D97-24) + RC6-7 (D97-25): the pull now pages with
+    // fetchAllRows (offset pagination within ONE cycle), the audit's
+    // original direction. The interim order+cap route left two holes
+    // Review C proved: rows sharing one updated_at at the cap boundary
+    // were skipped for ever (the watermark could not advance past
+    // them), and a large restore stayed partial across cycles. Offset
+    // pagination has neither; a mid-pagination error throws so the
+    // outer catch holds the watermark and the next pull retries.
+    const data = await fetchAllRows(
+      'sync._pullExerciseUserNotes',
+      () => {
+        let q = sb.from('exercise_user_notes').select('*').eq('user_id', supabaseUserId).is('deleted_at', null)
+          .order('updated_at', { ascending: true });
+        if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
+        return q;
+      },
+    );
     if (!data?.length) return 0;
     // eslint-disable-next-line global-require
     const { insertOrUpdateExerciseUserNoteFromCloud } = require('./database');
@@ -2035,10 +2121,23 @@ async function _pullUserPrefs(sb, supabaseUserId) {
 async function _pullProgrammes(sb, supabaseUserId) {
   try {
     const wm = await getPullWatermark(supabaseUserId, 'programmes');
-    let q = sb.from('programmes').select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
-    if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
-    const { data, error } = await q;
-    if (error) { logWarn('sync._pullProgrammes', error.message); return 0; }
+    // C6 T-13 (D97-24) + RC6-7 (D97-25): the pull now pages with
+    // fetchAllRows (offset pagination within ONE cycle), the audit's
+    // original direction. The interim order+cap route left two holes
+    // Review C proved: rows sharing one updated_at at the cap boundary
+    // were skipped for ever (the watermark could not advance past
+    // them), and a large restore stayed partial across cycles. Offset
+    // pagination has neither; a mid-pagination error throws so the
+    // outer catch holds the watermark and the next pull retries.
+    const data = await fetchAllRows(
+      'sync._pullProgrammes',
+      () => {
+        let q = sb.from('programmes').select('*').eq('user_id', supabaseUserId).is('deleted_at', null)
+          .order('updated_at', { ascending: true });
+        if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
+        return q;
+      },
+    );
     let n = 0;
     let failures = 0;
     let firstErr = null;
@@ -2112,10 +2211,23 @@ async function _pullRoutinesAndExercises(sb, supabaseUserId) {
 async function _pullMesocycles(sb, supabaseUserId) {
   try {
     const wm = await getPullWatermark(supabaseUserId, 'mesocycles');
-    let mq = sb.from('mesocycles').select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
-    if (wm > 0) mq = mq.gte('updated_at', isoFromMs(wm));
-    const { data: mesos, error: mErr } = await mq;
-    if (mErr) { logWarn('sync._pullMesocycles', mErr.message); return 0; }
+    // C6 T-13 (D97-24) + RC6-7 (D97-25): the pull now pages with
+    // fetchAllRows (offset pagination within ONE cycle), the audit's
+    // original direction. The interim order+cap route left two holes
+    // Review C proved: rows sharing one updated_at at the cap boundary
+    // were skipped for ever (the watermark could not advance past
+    // them), and a large restore stayed partial across cycles. Offset
+    // pagination has neither; a mid-pagination error throws so the
+    // outer catch holds the watermark and the next pull retries.
+    const mesos = await fetchAllRows(
+      'sync._pullMesocycles',
+      () => {
+        let mq = sb.from('mesocycles').select('*').eq('user_id', supabaseUserId).is('deleted_at', null)
+          .order('updated_at', { ascending: true });
+        if (wm > 0) mq = mq.gte('updated_at', isoFromMs(wm));
+        return mq;
+      },
+    );
     let n = 0;
     let mesoFailures = 0;
     for (const m of mesos ?? []) {
@@ -2165,10 +2277,23 @@ async function _pullMorningWeights(sb, supabaseUserId) {
 async function _pullCoachOutputs(sb, supabaseUserId) {
   try {
     const wm = await getPullWatermark(supabaseUserId, 'coach_outputs');
-    let q = sb.from('coach_outputs').select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
-    if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
-    const { data, error } = await q;
-    if (error) { logWarn('sync._pullCoachOutputs', error.message); return 0; }
+    // C6 T-13 (D97-24) + RC6-7 (D97-25): the pull now pages with
+    // fetchAllRows (offset pagination within ONE cycle), the audit's
+    // original direction. The interim order+cap route left two holes
+    // Review C proved: rows sharing one updated_at at the cap boundary
+    // were skipped for ever (the watermark could not advance past
+    // them), and a large restore stayed partial across cycles. Offset
+    // pagination has neither; a mid-pagination error throws so the
+    // outer catch holds the watermark and the next pull retries.
+    const data = await fetchAllRows(
+      'sync._pullCoachOutputs',
+      () => {
+        let q = sb.from('coach_outputs').select('*').eq('user_id', supabaseUserId).is('deleted_at', null)
+          .order('updated_at', { ascending: true });
+        if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
+        return q;
+      },
+    );
     let n = 0;
     let failures = 0;
     for (const co of data ?? []) {

@@ -528,9 +528,11 @@ describe('adversarial review: every genuine finding is closed', () => {
     const kept = await filterGuardedPulledPrefs(throwingStorage, [
       row('@volyume_landmarks_u1', '{}', new Date().toISOString()),
       row('@volyume_wellbeing_mode', 'normal', new Date().toISOString()),
-      row('@volyume_quiet_hours_v1', 'x', new Date().toISOString()),
+      // Re-anchored under D97-23 S-2: quiet hours is guarded now, so the
+      // unguarded pass-through witness is a plain per-device key instead.
+      row('@volyume_some_plain_pref', 'x', new Date().toISOString()),
     ]);
-    expect(kept.map((r) => r.key)).toEqual(['@volyume_quiet_hours_v1']);
+    expect(kept.map((r) => r.key)).toEqual(['@volyume_some_plain_pref']);
     // Unparseable cloud updated_at: dropped.
     const okStorage = { multiGet: async (ks) => ks.map((k) => [k, null]), getItem: async () => null };
     const kept2 = await filterGuardedPulledPrefs(okStorage, [

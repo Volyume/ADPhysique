@@ -612,16 +612,35 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
 }
 
 // Algorithm 3: PR Detection
+/**
+ * C6 P11-1 (D97-18): rows whose actual_reps is NOT a rep count are
+ * ineligible for estimated-max records. A cluster commit (myo-reps /
+ * rest-pause) stores the SUM of every effort in one row, so Epley on it
+ * fabricates a huge estimate from a light load (50kg x "27" out-scores a
+ * genuine 62.5kg x 6) and the inflated value then owns the records wall
+ * for months. Warm-ups were already excluded by callers; this is the
+ * shared eligibility read for every e1RM surface. High-rep fidelity for
+ * ORDINARY sets is a separate founder question and is NOT touched here.
+ */
+export function isE1rmEligibleRow(row) {
+  const t = row?.setType ?? row?.set_type ?? 'straight';
+  return t !== 'warmup' && t !== 'myo_reps' && t !== 'rest_pause';
+}
+
 export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
   const prs = [];
   const weight = newSet.weight || 0;
   const reps = newSet.actualReps || newSet.actual_reps || 0;
 
   if (!weight || !reps) return prs;
+  // C6 P11-1 (D97-18): a cluster row can neither set nor seed an
+  // estimated-max record - its rep count is a sum of efforts.
+  if (!isE1rmEligibleRow(newSet)) return prs;
 
   const new1RM = calculate1RM(weight, reps);
 
   const best1RM = historicalSets.reduce((best, s) => {
+    if (!isE1rmEligibleRow(s)) return best;
     const est = calculate1RM(s.weight || 0, s.actualReps || s.actual_reps || 0);
     return est > best ? est : best;
   }, 0);
@@ -1039,6 +1058,11 @@ const _UTC_WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', '
 const _defaultFormatDay = (ts) => (ts == null ? null : _UTC_WEEKDAYS[new Date(ts).getUTCDay()]);
 const HOURS_72 = 72 * 60 * 60 * 1000;
 const DAYS_4 = 4 * 24 * 60 * 60 * 1000;
+// C6 Phase 12 (D97): the engine's existing detraining boundary (the PR
+// rebound window's REBOUND_GAP_MAX_DAYS in blockLedgerGather.js uses the
+// same 14 days: "a longer gap is detraining, not rebound"). Session
+// feedback older than this cannot certify readiness for MORE volume.
+const DAYS_14 = 14 * 24 * 60 * 60 * 1000;
 
 /**
  * @param {object} input
@@ -1154,7 +1178,18 @@ export function computeSessionAdjustments({
       reasonCode = SESSION_REASON_CODES.HOLD_STALE_SORENESS;
     } else {
       // R4 / R5: well-recovered, under-stimulated → consider +1.
+      // C6 Phase 12 (D97): the feedback feeding this branch must be
+      // RECENT. lastFeedback carries no date of its own and the soreness
+      // branches are age-gated, so this was the one branch that survived
+      // a long absence - a six-month-old "easy, mild pump" session read
+      // as readiness for more volume on the first session back (absence
+      // converted into evidence). Feedback older than the engine's
+      // 14-day detraining boundary now certifies nothing; the branch
+      // simply does not fire. Conservative only: no new adds, ever.
+      const feedbackRecent = lastTrainedAt != null
+        && (now - lastTrainedAt) <= DAYS_14 && (now - lastTrainedAt) >= 0;
       const stimulusReady =
+        feedbackRecent &&
         lastPerformance <= 2 &&
         lastPump <= 2 &&
         projectedPlanned < mav &&
@@ -1340,9 +1375,14 @@ export function detectPlateau(exerciseSessions = [], _repMin = 6, _repMax = 12) 
     resolution: consecutiveStalls >= 3
       ? 'swap_exercise'      // 3+ stalls: substitute this exercise for 4-6 weeks
       : 'change_rep_range',  // 2 stalls: try a different rep range (e.g. 15-20) for 3 weeks
+    // C6 RD6-3 (D97-25): the message states the measured quantity (the
+    // session AVERAGE across all sets) rather than asserting "no
+    // progress" - a claim the mean cannot support when a top set moved
+    // - and invites a look instead of prescribing from a coarse signal.
+    // Thresholds, windows and the resolution codes are untouched.
     message: consecutiveStalls >= 3
-      ? 'No progress for 3 sessions in a row. Try a different exercise for this muscle for the next 4-6 weeks, then revisit.'
-      : 'No progress for 2 sessions. Try shifting to a higher rep range (15-20) for 3 weeks, then return to this weight.',
+      ? 'Your session average here has not moved for 3 sessions in a row. Worth a look: if the top sets have stalled too, a different exercise for this muscle for 4-6 weeks is a solid reset.'
+      : 'Your session average here has not moved for 2 sessions. Worth a look: a higher rep range (15-20) for a few weeks can restart progress.',
   };
 }
 

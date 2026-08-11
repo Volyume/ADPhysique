@@ -34,7 +34,7 @@ import { useToast } from '../components/Toast';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { logBodyMetric, updateBodyMetric, deleteBodyMetric, getBodyMetricLog, getMorningWeights, getOpenEdPatternFlag, getWorkoutSetsSince, getAllExercises } from '../lib/database';
+import { logBodyMetric, updateBodyMetric, deleteBodyMetric, getBodyMetricLog, getMorningWeights, getOpenEdPatternFlag, getWorkoutSetsSince, getAllExercises, updateMorningWeightById, deleteMorningWeightById } from '../lib/database';
 import { appAlert } from '../components/AppAlert';
 import { deriveRecomp, buildRecompShareParams } from '../lib/recompReframe';
 import { localDayKey } from '../lib/dayKey';
@@ -542,6 +542,9 @@ export default function BodyMetricsScreen() {
   // D16 (NAV-2): null while logging a new entry; set to an existing entry's
   // id while editing it, so saveMetrics() knows whether to insert or correct.
   const [editingId, setEditingId] = useState(null);
+  // C6 R-8 (D97-22): which table owns the row under edit - a merged-in
+  // morning_weights row saves/deletes through its own functions now.
+  const [editingSource, setEditingSource] = useState(null);
   const [selectedMeasurement, setSelectedMeasurement] = useState(null);
   const [ewmaData, setEwmaData] = useState([]);
   // D16 (NAV-2): scroll the "New entry"/"Edit entry" form into view when the
@@ -791,6 +794,7 @@ export default function BodyMetricsScreen() {
     setShowForm(false);
     setShowMeasurements(false);
     setEditingId(null);
+    setEditingSource(null);
     setForm(blankMetricForm());
   }
 
@@ -832,6 +836,7 @@ export default function BodyMetricsScreen() {
     });
     setShowMeasurements(hasMeasurements);
     setEditingId(entry.id);
+    setEditingSource(entry.source ?? null);
     setShowForm(true);
     // Jump the form into view: the History row that started the edit can be
     // well below the fold.
@@ -860,8 +865,12 @@ export default function BodyMetricsScreen() {
     setHistory(prev => prev.filter(h => h.id !== entry.id));
     if (editingId === entry.id) closeMetricForm();
     try {
-      const ok = await deleteBodyMetric(user.id, entry.id);
-      if (!ok) throw new Error('deleteBodyMetric: no live row matched');
+      // C6 R-8 (D97-22): a merged-in Home weigh-in deletes from its own
+      // table (soft tombstone, so the deletion syncs to other devices).
+      const ok = entry.source === 'morning_weight'
+        ? await deleteMorningWeightById(user.id, entry.id)
+        : await deleteBodyMetric(user.id, entry.id);
+      if (!ok) throw new Error('delete: no live row matched');
       if (session?.user?.id) {
         syncAll({ userId: session.user.id, localUserId: user.id, triggeredBy: 'write' }).catch(() => {});
       }
@@ -892,6 +901,8 @@ export default function BodyMetricsScreen() {
     const data = result.data;
     // D16 (NAV-2): captured before the form resets under us.
     const targetId = editingId;
+    // Captured with targetId, before the form reset (same rationale).
+    const sourceAtSave = editingSource;
     const isEdit = !!targetId;
     setSaving(true);
     try {
@@ -904,8 +915,18 @@ export default function BodyMetricsScreen() {
         setHistory(prev => prev.map(h => (h.id === targetId ? optimisticEntry : h)));
         closeMetricForm();
         try {
-          const ok = await updateBodyMetric(user.id, targetId, data);
-          if (!ok) throw new Error('updateBodyMetric: no live row matched');
+          // C6 R-8 (D97-22): a merged-in Home weigh-in saves to its own
+          // table. Weight only - a quick weigh-in row has no measurement
+          // columns, and any typed here are stated as not saved rather
+          // than silently dropped.
+          const isMorningRow = sourceAtSave === 'morning_weight';
+          if (isMorningRow && MEASUREMENTS.some(m => data[m.key] != null)) {
+            toast.show('Measurements need a full entry; only the weight was saved to this quick weigh-in.', { variant: 'warning' });
+          }
+          const ok = isMorningRow
+            ? await updateMorningWeightById(user.id, targetId, { weightKg: data.body_weight })
+            : await updateBodyMetric(user.id, targetId, data);
+          if (!ok) throw new Error(isMorningRow ? 'updateMorningWeightById: no live row matched' : 'updateBodyMetric: no live row matched');
           if (session?.user?.id) {
             syncAll({ userId: session.user.id, localUserId: user.id, triggeredBy: 'write' }).catch(() => {});
           }
@@ -1189,11 +1210,15 @@ export default function BodyMetricsScreen() {
                     ) : null}
                     <View style={styles.burnConfidenceRow}>
                       <Text style={[styles.burnConfidence, live.burnConfidence]}>
+                        {/* C6 RD6-8 (D97-25): the label names both inputs -
+                            weigh-in weeks, and whether logged food informed
+                            it or intake was assumed at target (the coach's
+                            own 5-day evidence bar decides which is true). */}
                         {adaptiveBurn.confidence === 'high'
                           ? 'High confidence'
                           : adaptiveBurn.confidence === 'medium'
                             ? 'Firming up'
-                            : 'Early estimate'}, from {adaptiveBurn.weeks} {adaptiveBurn.weeks === 1 ? 'week' : 'weeks'} of data
+                            : 'Early estimate'}, from {adaptiveBurn.weeks} {adaptiveBurn.weeks === 1 ? 'week' : 'weeks'} of weigh-ins{(recentIntake?.daysLogged ?? 0) >= 5 ? ' and your logged food' : ', assuming you ate to target'}
                       </Text>
                       <InfoTooltip text="More weeks of consistent weight and food logging tighten this estimate. It settles on its own; nothing to do." />
                     </View>
@@ -1513,13 +1538,11 @@ export default function BodyMetricsScreen() {
                       ))}
                     </View>
                   </View>
-                  {/* BUG-WEIGHT-HISTORY: a row merged in from morning_weights has no
-                      body_metric_log id, so startEditEntry/deleteMetricEntry (which
-                      call updateBodyMetric/deleteBodyMetric against body_metric_log)
-                      would silently no-op on it. Those rows are logged from Home's
-                      quick weigh-in, which has never had its own edit/delete affordance
-                      either, so omitting the actions here is not a new regression. */}
-                  {!readOnly && entry.source !== 'morning_weight' && (
+                  {/* C6 R-8 (D97-22): morning_weights rows now have their own
+                      update/soft-delete pair, so the actions render for them
+                      too and route to the owning table (see saveMetrics /
+                      deleteMetricEntry). The old silent no-op is gone. */}
+                  {!readOnly && (
                     <View style={styles.historyActions}>
                       <TouchableOpacity
                         style={[styles.historyActionBtn, live.historyActionBtn]}

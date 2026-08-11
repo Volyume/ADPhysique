@@ -24,6 +24,23 @@ export function weekRangeLabel(weekStartMs) {
   return `${formatDay(startMs)} to ${formatDayFull(end)}`;
 }
 
+// C6 RB6-9 (D97-25): the Monday redirect opens the LATEST completed
+// decision at any age, and while auto-apply refuses anything past a week
+// (D97-10) the manual Apply buttons stay live - deliberately, resuming
+// is the user's tap. What was missing (R-1/R-2's sibling, recorded
+// inside CLEAN entry R-29 and never carried) was any statement that the
+// decision is old: the card was dated but never said "this has not
+// moved since". One line of provenance on a decision older than its own
+// week; no gate, no threshold change, the buttons stay live.
+export function decisionAgeNote(weekStartMs, liveWeekStartMs) {
+  if (weekStartMs == null || liveWeekStartMs == null) return null;
+  const w = Number(weekStartMs);
+  const live = Number(liveWeekStartMs);
+  if (!Number.isFinite(w) || !Number.isFinite(live) || w <= 0 || live <= 0) return null;
+  if (live - w <= 7 * 86400000) return null;
+  return 'This decision covers the dates above and has not been updated since.';
+}
+
 export function buildOffItems(output, checkin) {
   const items = [];
   if (!output) return items;

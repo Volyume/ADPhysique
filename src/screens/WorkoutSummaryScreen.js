@@ -1472,8 +1472,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 'Red = Too much: consider doing a little less next week\n' +
                 'Blue = Just enough: right at the floor, one or two more sets would be stronger\n' +
                 'Grey = Below target: not enough logged yet to drive growth\n\n' +
+                // C6 RE6-4 (D97-25): the adapted branch fired on ANY single
+                // adapted muscle but claimed the plural for all of them -
+                // the sentence is now scoped to "muscles with enough
+                // logged data", true whatever the mix.
                 (landmarkResolution && Object.values(landmarkResolution.source ?? {}).includes('adapted')
-                  ? 'These ranges start from research values and have adjusted to your own logged response. You can also set them by hand with Edit volume targets on the Volume screen, your edits always win.'
+                  ? 'These ranges start from research values and, for muscles with enough logged data, have adjusted to your own response. You can also set them by hand with Edit volume targets on the Volume screen, your edits always win.'
                   : 'These ranges are research-based starting points. With enough logged sessions they adjust to your response, and you can set them by hand with Edit volume targets on the Volume screen.')
               } />
             </View>
@@ -1505,8 +1509,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               // the landmarks are unchanged; only the advice waits until
               // the week is one that can be judged.
               const weekJudgeable = readOnly || !weekProgress.inProgress;
-              const insight = weekJudgeable ? getVolumeInsight(muscle, data.workingSets, status) : null;
-              const why = weekJudgeable ? getVolumeWhy(muscle, data.workingSets, status) : null;
+              // C6 RD6-1 (D97-25): the copy receives the SAME resolved
+              // table (and this muscle's source) the verdict two lines up
+              // was computed from, so the quoted range can never
+              // contradict the status beside it.
+              const insight = weekJudgeable ? getVolumeInsight(muscle, data.workingSets, status, landmarkResolution?.table) : null;
+              const why = weekJudgeable ? getVolumeWhy(muscle, data.workingSets, status, landmarkResolution?.table, landmarkResolution?.source?.[muscle] ?? null) : null;
               const isExpanded = expandedVolumeWhy === muscle;
               return (
                 <View key={muscle} style={[styles.volumeRow, live.volumeRow, mi === musclesWorked.length - 1 && styles.volumeRowLast]}>

@@ -73,12 +73,34 @@ export function getLatestEwma(weights, alpha = 0.1) {
  */
 export function computeWeeklyTrendPct(morningWeights, currentBodyweightKg = null, nowMs = Date.now()) {
   if (!morningWeights || morningWeights.length < 4) return null;
+  // C6 RB6-2: the comparator can be a pre-gap point, so this value can
+  // describe a longer-than-weekly change. Whether the ED s1 signal and
+  // the rapid-loss flag should be bounded to genuine weekly comparisons
+  // is an ED-safety behaviour change and is FOUNDER-GATED (the three-way
+  // fork is recorded in REVIEW-B-returning.md and the triage); nothing
+  // here was altered. The CLAIM wording is bounded separately below.
   const ewmaNow = getLatestEwma(morningWeights);
   const ewmaPrior = getEwmaSevenDaysAgo(morningWeights, 0.1, nowMs);
   if (ewmaNow == null || ewmaPrior == null) return null;
   const reference = currentBodyweightKg || ewmaNow;
   if (!reference) return null;
   return ((ewmaNow - ewmaPrior) / reference) * 100;
+}
+
+/**
+ * C6 RB6-2 (D97-25): is the week-over-week comparator itself recent?
+ * The comparator is the most recent timed point at or before nowMs - 7d;
+ * a genuine weekly comparison requires it within the 14-day detraining
+ * boundary. Exported for the pins.
+ */
+export function weeklyComparatorFresh(morningWeights, nowMs) {
+  const cutoff = nowMs - 7 * 86400000;
+  let comparatorMs = null;
+  for (const w of (Array.isArray(morningWeights) ? morningWeights : [])) {
+    const t = Number(w?.loggedAt);
+    if (Number.isFinite(t) && t <= cutoff && (comparatorMs == null || t > comparatorMs)) comparatorMs = t;
+  }
+  return comparatorMs != null && comparatorMs >= nowMs - 14 * 86400000;
 }
 
 /**
@@ -486,6 +508,9 @@ export function mapCalsAdherence(raw, avgKcal = null, targetKcal = null) {
  * @param {number}        inputs.prsThisWeek
  * @param {string}        inputs.goalPhase                  - 'mild_cut'|'recomp'|'maint'|'mild_bulk'|'mod_bulk' (or the 'bulk' alias)
  * @param {number}        inputs.weeksInPhase               - weeks since phase was set
+ * @param {number|null}   inputs.evidencedWeeksInPhase      - C6 P-2 (D97-20): distinct weeks in this
+ *   phase with a saved weekly run, caller-derived. Bounds CLAIM copy only (week label, diet-break
+ *   wording); never the phase clock, gates or triggers. Null = claims behave as before.
  * @param {number}        inputs.consecutiveOffTargetWeeks  - weeks trend has been off-target same direction
  * @param {number}        inputs.consecutivePoorRecoveryWeeks
  * @param {number}        inputs.consecutiveExceededWeeks   - D15 (founder ruling 2026-07-09): consecutive
@@ -526,6 +551,14 @@ export function runWeeklyCoach(inputs) {
     goalPhase = 'maint',
     trainingGoal = null,
     weeksInPhase: _weeksInPhaseRaw = 1,
+    // C6 P-2 (D97-20): distinct weeks in this phase with real coached
+    // evidence (saved weekly runs), caller-derived like the consecutive-week
+    // counters. The phase CLOCK is untouched (gates, deload and diet-break
+    // triggers still read wall-clock weeksInPhase); this input only bounds
+    // the CLAIMS the run makes about the user's past, so months away can
+    // never be narrated as continuously coached months. Null (every legacy
+    // caller) keeps claims byte-identical to before.
+    evidencedWeeksInPhase: _evidencedWeeksRaw = null,
     goalStartDate = null,
     consecutiveOffTargetWeeks = 0,
     consecutivePoorRecoveryWeeks = 0,
@@ -661,6 +694,19 @@ export function runWeeklyCoach(inputs) {
   const sessionsPlanned = _safeInt(_sessionsPlannedRaw, 3);
   const prsThisWeek = _safeInt(_prsThisWeekRaw, 0);
   const weeksInPhase = Number.isFinite(_weeksInPhaseRaw) ? Math.max(1, Math.round(_weeksInPhaseRaw)) : 1;
+  // C6 P-2 (D97-20): evidence-bounded phase claims. weeksInPhase stays the
+  // wall-clock phase clock for every gate and trigger (NOT reset, NOT
+  // decayed - D91-25 untouched). But copy that asserts what the user has
+  // been doing ("Week N", "below maintenance for N weeks") must not count
+  // weeks with no coached evidence. A one-week tolerance absorbs the
+  // boundary week either side of a phase start, so a continuously coached
+  // user's numbers are unchanged; a genuine gap switches the claims to the
+  // evidenced count and to set-age wording that asserts only provable facts.
+  const evidencedWeeksInPhase = Number.isFinite(_evidencedWeeksRaw)
+    ? Math.max(1, Math.min(weeksInPhase, Math.round(_evidencedWeeksRaw)))
+    : null;
+  const phaseClaimGap = evidencedWeeksInPhase != null && evidencedWeeksInPhase < weeksInPhase - 1;
+  const claimedWeeksInPhase = phaseClaimGap ? evidencedWeeksInPhase : weeksInPhase;
 
   // ── DATA CONFIDENCE ───────────────────────────────────────────────────────
   // F10 (EN-8): "this week's weigh-ins" counts DISTINCT local calendar days,
@@ -678,8 +724,15 @@ export function runWeeklyCoach(inputs) {
     const timed = rows.filter((w) => Number.isFinite(Number(w.loggedAt)));
     const untimed = rows.length - timed.length;
     if (!timed.length) return untimed;
-    const latestMs = Math.max(...timed.map((w) => Number(w.loggedAt)));
-    const weekWindowStartMs = latestMs - 7 * 86400000;
+    // C6 R-1 (D97-22): the week window is anchored on nowMs, the engine's
+    // one injected clock - NOT on the newest row. Data-anchoring meant a
+    // user whose last seven weigh-ins were six months ago scored a full
+    // week of "this week's" data, cleared the hold at high confidence and
+    // could be cut on a trend that was never measured. Clock-anchoring is
+    // strictly more conservative: the count can only fall, so the data
+    // hold can only fire MORE often, never less. Purity is unchanged
+    // (nowMs is already a pure input; every sibling window uses it).
+    const weekWindowStartMs = nowMs - 7 * 86400000;
     const distinctDays = new Set(
       timed
         .filter((w) => Number(w.loggedAt) >= weekWindowStartMs)
@@ -705,7 +758,7 @@ export function runWeeklyCoach(inputs) {
       // with the main-card return.
       photoCorroborationApplied: false,
       photoCorroborationBlocked: true,
-      weekLabel: `Week ${Number.isFinite(weeksInPhase) ? Math.round(weeksInPhase) : 1} · ${phaseConfig(goalPhase).label}`,
+      weekLabel: `Week ${Number.isFinite(claimedWeeksInPhase) ? Math.round(claimedWeeksInPhase) : 1} · ${phaseConfig(goalPhase).label}`,
       trend: { ewma7: ewmaNow, delta: null, onTarget: false, deltaLabel: 'Log morning weight', rateLabel: null },
       whatWorking: ['Check-in saved.'],
       adjustments: { training: { signal: 'hold', note: 'Plan unchanged. A few more weigh-ins needed to act on.' }, calories: null, steps: null },
@@ -770,7 +823,25 @@ export function runWeeklyCoach(inputs) {
   const ewma7LastWk  = morningWeights.length >= 3 ? getEwmaSevenDaysAgo(morningWeights, 0.1, nowMs) : null;
   const bwRef        = bodyweightKg ?? ewma7Today ?? null;
 
-  const weightDelta  = (ewma7Today != null && ewma7LastWk != null)
+  // C6 R-1 (D97-22): when every weigh-in predates the seven-day window,
+  // "today's" EWMA and "last week's" EWMA are the SAME stale point and the
+  // delta degenerates to 0 - which read as "+0kg this week" / "stable"
+  // about a week with no readings. A week with no readings has no delta:
+  // null, so deltaLabel falls back to its honest 'Log morning weight'.
+  const latestWeighInMs = (() => {
+    const timed = (Array.isArray(morningWeights) ? morningWeights : [])
+      .map((w) => Number(w?.loggedAt)).filter(Number.isFinite);
+    return timed.length ? Math.max(...timed) : null;
+  })();
+  const weekHasReadings = latestWeighInMs != null && latestWeighInMs >= nowMs - 7 * 86400000;
+  // C6 RB6-2 (D97-25): the OTHER end of the comparison must be recent
+  // too - on the first weigh-ins back the comparator was a pre-gap point
+  // and a months-long change was spoken (and safety-flagged) as "this
+  // week". Both guards feed every consumer downstream: display, the
+  // rapid-loss flag (via actualRatePct) and the decision trend below.
+  const comparatorFresh = weeklyComparatorFresh(morningWeights, nowMs);
+
+  const weightDelta  = (weekHasReadings && ewma7Today != null && ewma7LastWk != null)
     ? Math.round((ewma7Today - ewma7LastWk) * 100) / 100
     : null;
 
@@ -824,18 +895,27 @@ export function runWeeklyCoach(inputs) {
     ? (weightDelta >= 0 ? `+${Math.abs(weightDelta)}${u}` : `-${Math.abs(weightDelta)}${u}`)
     : null;
 
+  // C6 RB6-2 CLAIM half (D97-25, lead-ruled; the safety half is
+  // founder-gated): when the week-over-week comparator is a pre-gap
+  // point, the change is real but it is NOT "this week" and NOT a
+  // "/wk" rate - a six-month loss was being narrated in per-week
+  // vocabulary on the surface that decides about food. Wording only;
+  // every numeric consumer is untouched pending the founder's fork.
   const deltaLabel = displayDelta
-    ? `${displayDelta} this week`
+    ? (comparatorFresh ? `${displayDelta} this week` : `${displayDelta} since you last logged regularly`)
     : enoughWeightData ? 'Calculating…' : 'Log morning weight';
 
   const rateLabel = weightDelta != null
-    ? (weightDelta > 0.01 ? `gaining ${Math.abs(weightDelta)}${u}/wk` :
-       weightDelta < -0.01 ? `losing ${Math.abs(weightDelta)}${u}/wk` : 'stable')
+    ? (comparatorFresh
+      ? (weightDelta > 0.01 ? `gaining ${Math.abs(weightDelta)}${u}/wk` :
+         weightDelta < -0.01 ? `losing ${Math.abs(weightDelta)}${u}/wk` : 'stable')
+      : (Math.abs(weightDelta) <= 0.01 ? 'little change across the gap'
+        : `${weightDelta > 0 ? 'up' : 'down'} ${Math.abs(weightDelta)}${u} across the gap`))
     : null;
 
   // ── Week label ────────────────────────────────────────────────────────────
   const weekLabel = [
-    Number.isFinite(weeksInPhase) && weeksInPhase >= 1 ? `Week ${Math.round(weeksInPhase)}` : null,
+    Number.isFinite(claimedWeeksInPhase) && claimedWeeksInPhase >= 1 ? `Week ${Math.round(claimedWeeksInPhase)}` : null,
     phase.label,
   ].filter(Boolean).join(' · ');
 
@@ -944,7 +1024,16 @@ export function runWeeklyCoach(inputs) {
   // recalibration while the wellbeing capture has not gone dark. One skipped
   // week still adjusts (B1's point); a user with no completed check-in in the
   // last 14 days returns to the old freeze. This week's own check-in counts.
-  const checkinRecentEnough = !!checkin
+  // C6 P-4 (D97-20): "completed check-in" means a row with check-in
+  // ANSWERS. The sleep-only row a workout summary writes is not wellbeing
+  // capture (same evidence rule as the recovery counters and FB-36), so it
+  // can neither stand as this week's check-in here nor - via the caller's
+  // lastCheckinAt - hold the 14-day gate open. Stricter only: without a
+  // real check-in the recalibration freeze stands, exactly the founder
+  // decision's stated intent.
+  const checkinCompleted = !!checkin
+    && (checkin.energyScore != null || checkin.sorenessScore != null || checkin.calsAdherence != null);
+  const checkinRecentEnough = checkinCompleted
     || (Number.isFinite(lastCheckinAt) && (nowMs - lastCheckinAt) <= 14 * 86400000);
   const foodDiaryStandsIn = recentIntakeDaysLogged >= 5
     && Number(recentIntakeAvgKcal) > 0
@@ -1282,17 +1371,24 @@ export function runWeeklyCoach(inputs) {
       if (dietBreakResult.suggest) {
         dietBreakSuggested = true;
         dietBreakWeeksInDeficit = dietBreakResult.weeksInDeficit;
-        dietBreakNote = dietBreakResult.weeksInDeficit >= 12
-          ? `You have been eating below maintenance for ${dietBreakResult.weeksInDeficit} weeks. A full week at maintenance will help your body reset before continuing.`
-          : 'Eight or more consecutive weeks eating below maintenance is a long time. One week at your full calorie need helps your body reset and makes the next stretch more effective.';
+        // C6 P-2 (D97-20): with a phase-continuity gap the suggestion stays
+        // (it is protective) but the claim may only state the provable fact
+        // - when the cut was SET - never what the user has been eating.
+        dietBreakNote = phaseClaimGap
+          ? `This cut has been set for ${dietBreakResult.weeksInDeficit} weeks. A full week at maintenance will help your body reset before continuing.`
+          : dietBreakResult.weeksInDeficit >= 12
+            ? `You have been eating below maintenance for ${dietBreakResult.weeksInDeficit} weeks. A full week at maintenance will help your body reset before continuing.`
+            : 'Eight or more consecutive weeks eating below maintenance is a long time. One week at your full calorie need helps your body reset and makes the next stretch more effective.';
       }
     } else if (weeksInPhase >= 8) {
       // Fallback when goalStartDate is not stored (older profiles).
       dietBreakSuggested = true;
       dietBreakWeeksInDeficit = weeksInPhase;
-      dietBreakNote = weeksInPhase >= 12
-        ? `You've been eating below maintenance for ${weeksInPhase} weeks. A full week at maintenance will let your body reset before continuing.`
-        : 'Eight or more consecutive weeks below maintenance is a long stretch. A week at your full calorie need lets your body reset and makes the next stretch more effective.';
+      dietBreakNote = phaseClaimGap
+        ? `This cut has been set for ${weeksInPhase} weeks. A full week at maintenance will let your body reset before continuing.`
+        : weeksInPhase >= 12
+          ? `You've been eating below maintenance for ${weeksInPhase} weeks. A full week at maintenance will let your body reset before continuing.`
+          : 'Eight or more consecutive weeks below maintenance is a long stretch. A week at your full calorie need lets your body reset and makes the next stretch more effective.';
     }
   }
 
@@ -1741,6 +1837,11 @@ export function runWeeklyCoach(inputs) {
     dietBreakSuggested,
     dietBreakNote,
     dietBreakWeeksInDeficit,
+    // C6 P-2 (D97-20): false when a phase-continuity gap means "in a
+    // deficit for N weeks" cannot be claimed; the card then states the
+    // cut's set-age instead. True for every continuously coached user
+    // and every legacy caller.
+    dietBreakContinuityEvidenced: !phaseClaimGap,
     macroCycle,
     refeed,
     heldDecisions,

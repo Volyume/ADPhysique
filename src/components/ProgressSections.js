@@ -269,7 +269,14 @@ export function WorkloadCard({ data }) {
   const { acute, chronic, ratio, weeksOfData } = data;
 
   let statusColor = t.colors.textMuted;
-  let statusText = 'Below your recent average (under 0.8). Room for more work if you feel fresh.';
+  // C6 RD6-14 (D97-25): the chronic mean can rest on as few as 2
+  // populated weeks (zero weeks are dropped), and the takeaway line
+  // already names the real count - the status text and tooltip must not
+  // contradict it by implying a fuller baseline.
+  const baselineNoun = Number.isFinite(weeksOfData) && weeksOfData < 4
+    ? `your ${weeksOfData}-week average`
+    : 'your recent average';
+  let statusText = `Below ${baselineNoun} (under 0.8). Room for more work if you feel fresh.`;
   if (ratio >= 1.5) {
     statusColor = t.colors.error;
     statusText = 'High load this week (above 1.5). Consider an easier session.';
@@ -290,7 +297,7 @@ export function WorkloadCard({ data }) {
     <View style={[styles.workloadCard, live.workloadCard]}>
       <View style={styles.rowBetween}>
         <Text style={[styles.workloadTitle, live.workloadTitle]}>Training load</Text>
-        <InfoTooltip text="Compares this week's total weight moved to your recent average. 0.8 to 1.3 is the helpful range. Above 1.5 signals high fatigue risk." />
+        <InfoTooltip text={`Compares this week's total weight moved to ${baselineNoun}. 0.8 to 1.3 is the helpful range. Above 1.5 signals high fatigue risk.`} />
       </View>
 
       <View style={[styles.workloadBarBg, live.workloadBarBg]}>

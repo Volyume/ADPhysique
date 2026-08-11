@@ -145,7 +145,13 @@ function detectSignals(checkins) {
     if (z <= -1.5) {
       signals.push({ type: 'readiness_drop', severity: 'high', label: 'Readiness well below your personal baseline', data: Math.round(z * 10) / 10 });
     } else if (z <= -1.0) {
-      signals.push({ type: 'readiness_drop', severity: 'medium', label: 'Readiness a bit below your recent average', data: Math.round(z * 10) / 10 });
+      // C6 Phase 7 (D97): the baseline is the last 8 check-in ROWS
+      // (getRecentCheckins), not a dated window - for a returning user
+      // those rows can be months old, so the label must not call them
+      // "recent". "Personal baseline" is what the maths actually is (the
+      // high-severity sibling already says so). Copy only; the z-score
+      // and thresholds are untouched.
+      signals.push({ type: 'readiness_drop', severity: 'medium', label: 'Readiness a bit below your personal baseline', data: Math.round(z * 10) / 10 });
     }
   }
 
@@ -266,7 +272,20 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
 
   // Count persistent performance/fatigue signals
   // Simplified: if this block had consistently poor readiness, suggest minor adjustment
-  const allReadiness = checkins.map(checkinReadiness).filter(r => r !== null);
+  // C6 RA6-11 (D97-25): the same row-limited-not-dated defect D97-8
+  // closed for detectSignals survived in this sibling read - the branch
+  // choice here was driven by check-ins of ANY age, so a returning
+  // user's recommendation (and its present-tense copy, "The structure
+  // is working") could be computed entirely from pre-lapse rows, and
+  // not always conservatively. Same boundary as the sibling: only
+  // check-ins inside the 14-day detraining window count; with none,
+  // the existing no-data default (70) applies, which lands on the
+  // conservative repeat branch.
+  const recentCheckins = checkins.filter((c) => {
+    const t = Number(c?.weekStart);
+    return Number.isFinite(t) && (Date.now() - t) <= 14 * 86400000;
+  });
+  const allReadiness = recentCheckins.map(checkinReadiness).filter(r => r !== null);
   const avgReadiness = allReadiness.length ? mean(allReadiness) : 70;
 
   // Default: same programme
@@ -382,13 +401,59 @@ export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro =
       )
     : null;
 
-  const signals = detectSignals(checkins);
+  // C6 Phase 1 seam 2 (D97): every signal detectSignals produces speaks
+  // in the present tense ("this week", "Your check-in shows..."), and
+  // getRecentCheckins is row-limited, not dated - so a user returning
+  // after months met recovery advice computed from, and described as,
+  // data they supplied before the gap (a fabricated recovery assumption,
+  // the lapse-is-not-failure law). A check-in older than 14 days (two
+  // weekly cycles, the engine's detraining boundary) is history, not a
+  // current signal: with no fresh check-in there ARE no current signals.
+  // The z-score baseline inside detectSignals still reads the older rows
+  // once a fresh latest exists, and blockLedgerGather's block-end reads
+  // are date-anchored separately and unaffected.
+  const latestCheckinAt = checkins[0]?.weekStart ?? null;
+  const latestIsCurrent = latestCheckinAt != null
+    && (Date.now() - latestCheckinAt) <= 14 * 86400000;
+  const signals = latestIsCurrent ? detectSignals(checkins) : [];
   const highSignals   = signals.filter(s => s.severity === 'high');
   const mediumSignals = signals.filter(s => s.severity === 'medium');
 
   // ── In recovery week ──────────────────────────────────────────────────────
   if (blockStatus?.status === 'recovery') {
+    // C6 R-4 (D97-22, ruling (b) + (a)): the block clock is pure calendar,
+    // so a user who left mid-accumulation and returned a fortnight later
+    // landed INSIDE a live "Recovery week is active" card whose body
+    // ("letting the last few weeks of work pay off") described weeks of no
+    // training - a recovery week they never earned (Phase 27: recovery
+    // state must not become fake training). A recovery week is only
+    // claimed as LIVE when the block actually trained inside the standing
+    // 14-day detraining boundary; otherwise the copy states the calendar
+    // fact and the way back without prescribing recovery from work that
+    // did not happen. The clock itself is untouched (option (c), pausing
+    // it, is D91-25-adjacent and stays a founder question in the triage);
+    // a failed read cannot invent recent training (recentTrainingAt null).
+    let recentTrainingAt = null;
+    try {
+      // eslint-disable-next-line global-require
+      const { getRecentCompletedWorkouts } = require('./database');
+      const recent = await getRecentCompletedWorkouts(userId, 1);
+      const w = recent?.[0];
+      recentTrainingAt = w ? Number(w.endedAt ?? w.startedAt ?? w.createdAt) : null;
+    } catch (_) { recentTrainingAt = null; }
+    const trainedRecently = Number.isFinite(recentTrainingAt)
+      && (Date.now() - recentTrainingAt) <= 14 * 86400000;
     const nextBlock = buildNextBlockRecommendation(checkins, userProfile, signals, 'recovery', isPro);
+    if (!trainedRecently) {
+      return {
+        action: 'in_recovery',
+        headline: 'Recovery week on the calendar',
+        body: `This block's recovery week has arrived, but you haven't trained recently, so there's nothing to recover from yet. Pick up wherever suits you: ease back in with lighter sessions, and the next-block choice opens when this week ends.`,
+        signals,
+        nextBlock,
+        blockStatus,
+      };
+    }
     return {
       action: 'in_recovery',
       headline: 'Recovery week is active',
@@ -405,14 +470,23 @@ export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro =
     const overdueWeeks = blockStatus.weeksOverdue;
     return {
       action: 'post_recovery',
+      // C6 RB6-8 (D97-25): week counts read oddly at scale ("passed 25
+      // weeks ago"); from two months the headline rolls over to months.
       headline: overdueWeeks > 0
-        ? `Recovery week passed ${overdueWeeks} week${overdueWeeks > 1 ? 's' : ''} ago`
+        ? (overdueWeeks >= 9
+          ? `Recovery week passed about ${Math.round(overdueWeeks / 4.345)} months ago`
+          : `Recovery week passed ${overdueWeeks} week${overdueWeeks > 1 ? 's' : ''} ago`)
         : 'Block finished',
       // Stage 1 honesty (2026-08-09): this state begins the week AFTER the
       // recovery week, so the old "take your recovery week" line described
       // a week that had already passed.
+      // C6 R-5 (D97-22): weeksOverdue is unbounded, so this line used to
+      // fire at 20+ weeks with urgency copy plus a physiological claim
+      // ("Your body's ready") nothing can support after an absence. The
+      // lapse law bans both; the honest line states the fact and the next
+      // step, at any age, with no pressure and no readiness claim.
       body: overdueWeeks > 0
-        ? `Your recovery week has been and gone. The sooner you start the next block the better. Your body's ready.`
+        ? `Your recovery week has been and gone. Whenever you're ready, the next step is choosing your next block.`
         : `You've finished this block, recovery week included. The next step is choosing your next block.`,
       signals,
       nextBlock,

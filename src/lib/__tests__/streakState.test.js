@@ -139,3 +139,43 @@ describe('pendingLongestRunPb (S2c, "every new all-time-high run")', () => {
     expect(pendingLongestRunPb(20, undefined)).toBeNull();
   });
 });
+
+describe('C6 R-10 (D97-22): a pause survives scrolling out of the window', () => {
+  // Consecutive Monday keys, oldest first, in the resolver's REAL v1
+  // format: epoch-ms STRINGS (String(localWeekStartMs)), per the module
+  // header. The first R-10 fix parsed keys with Date.parse, which is NaN
+  // for these - caught in lead re-review; keyMs handles both formats.
+  const mondays = (startIso, n) => {
+    const out = [];
+    const t0 = Date.parse(startIso);
+    for (let i = 0; i < n; i++) {
+      out.push(String(t0 + i * 7 * 86400000));
+    }
+    return out;
+  };
+  const weeksBefore = (firstKey, n) => String(Number(firstKey) - n * 7 * 86400000);
+  const { pausedWeekKeys } = require('../streakState');
+
+  test('a span starting before the window still covers its in-window weeks', () => {
+    // Pause started 2 weeks before the window, spanning 4 weeks: weeks 0-1
+    // of the window are still paused; week 2 is not.
+    const windowKeys = mondays('2026-06-01', 12);
+    const preWindowStart = weeksBefore(windowKeys[0], 2);
+    const set = pausedWeekKeys([{ startKey: preWindowStart, weeks: 4 }], windowKeys);
+    expect(set.has(windowKeys[0])).toBe(true);
+    expect(set.has(windowKeys[1])).toBe(true);
+    expect(set.has(windowKeys[2])).toBe(false);
+  });
+
+  test('a span that fully ended before the window covers nothing', () => {
+    const windowKeys = mondays('2026-06-01', 12);
+    const set = pausedWeekKeys([{ startKey: weeksBefore(windowKeys[0], 8), weeks: 2 }], windowKeys);
+    expect(set.size).toBe(0);
+  });
+
+  test('in-window spans are byte-identical to before', () => {
+    const windowKeys = mondays('2026-06-01', 12);
+    const set = pausedWeekKeys([{ startKey: windowKeys[3], weeks: 2 }], windowKeys);
+    expect([...set].sort()).toEqual([windowKeys[3], windowKeys[4]].sort());
+  });
+});

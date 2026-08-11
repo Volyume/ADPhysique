@@ -112,7 +112,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
   const { user, units } = useAppStore(useShallow(s => ({
     user: s.user,
     units: s.units,
-  })));
+})));
   const [data, setData] = useState(null);
   // Stage 8: the stored Block Ledger's per-muscle story.
   const [ledgerRows, setLedgerRows] = useState([]);
@@ -150,10 +150,30 @@ export default function BlockReflectionScreen({ navigation, route }) {
         const { getAllMesocyclesForUser } = require('../lib/database');
         // eslint-disable-next-line global-require
         const { buildLedgerReflectionRows } = require('../lib/blockExplain');
+        // C6 P9-01 (D97): a block the user switched away from never had
+        // its ledger computed, so this summary showed no rows for ever.
+        // Compute-if-absent; idempotent, refuses unfinished blocks, and
+        // the stale-evidence hold applies at the real gap.
+        try {
+          // eslint-disable-next-line global-require
+          const { computeAndStoreBlockLedger } = require('../lib/blockLedgerRunner');
+          // eslint-disable-next-line global-require
+          const store = require('../store/useAppStore').default;
+          const st = store.getState();
+          await computeAndStoreBlockLedger(user.id, mesocycleId, {
+            userProfile: st.userProfile ?? null, tier: st.tier ?? 'free',
+          }).catch(() => null);
+        } catch (_) { /* best effort */ }
         const mesos = await getAllMesocyclesForUser(user.id);
         const meso = mesos.find((m) => m.id === mesocycleId);
         const ledger = meso?.blockLedger ? JSON.parse(meso.blockLedger) : null;
-        if (isCurrentRequest()) setLedgerRows(buildLedgerReflectionRows(ledger));
+        // C6 M-13 (D97-24): the adaptive ledger rationales are COACHING
+        // output and the identical rows are deliberately Pro-gated on
+        // PlansScreen - Free must not read them here either (free/pro
+        // gating is binary, Section 2). Free keeps the reflection's
+        // training facts; the coach's per-muscle story is Pro's.
+        const tierNow = require('../store/useAppStore').default.getState().tier;
+        if (isCurrentRequest()) setLedgerRows(tierNow === 'pro' ? buildLedgerReflectionRows(ledger) : []);
       } catch (_e) { if (isCurrentRequest()) setLedgerRows([]); }
     } catch (_) {
       if (!isCurrentRequest()) return;

@@ -77,6 +77,14 @@ const SOURCE_CLAUSE = Object.freeze({
 const RESEARCH_SOURCES = new Set(['template', 'seed_profile', 'seed_research']);
 const RESEARCH_START_LINE =
   'Not enough personal history yet, so this block starts from research-based guidance. As blocks finish, each muscle\'s starting point comes from how it actually responded.';
+// C6 P9-06 (D97): the line above is FALSE for a mature user whose new
+// block is template-seeded after a plan switch or wizard rebuild - they
+// have plenty of personal history; this block simply did not use it
+// (activation paths outside Continue-with-adjustments seed from the
+// template; D97-9 carries whether they should). The mature variant makes
+// the same honest research claim without denying the history exists.
+const RESEARCH_START_LINE_MATURE =
+  'This block starts from research-based guidance for this plan. Your block history picks up again as its blocks finish.';
 
 /**
  * Group written planned rows into { [muscle]: { week1, peak, peakWeek,
@@ -175,7 +183,7 @@ function changeAgainstPrevious(v, prevEntry) {
  * the muscles the cap drops are counted rather than silently lost.
  * Without it, ordering and wording are exactly as they were.
  */
-export function buildBlockStartLines({ summary = {}, limit = 3, previous = null } = {}) {
+export function buildBlockStartLines({ summary = {}, limit = 3, previous = null, hadPriorBlocks = false } = {}) {
   const prev = previous && typeof previous === 'object' ? previous : null;
   const personalised = Object.entries(summary)
     .filter(([, v]) => v && SOURCE_CLAUSE[v.source] && v.week1 != null && v.peak != null);
@@ -193,7 +201,8 @@ export function buildBlockStartLines({ summary = {}, limit = 3, previous = null 
     const entries = Object.values(summary).filter(Boolean);
     const allResearch = entries.some((v) => v.week1 != null)
       && entries.every((v) => RESEARCH_SOURCES.has(v.source));
-    return allResearch ? [RESEARCH_START_LINE] : [];
+    // C6 P9-06: a user with judged block history gets the mature variant.
+    return allResearch ? [hadPriorBlocks ? RESEARCH_START_LINE_MATURE : RESEARCH_START_LINE] : [];
   }
   const changes = new Map(
     personalised.map(([muscle, v]) => [muscle, changeAgainstPrevious(v, prev?.[muscle])]),
@@ -283,6 +292,10 @@ export function buildSeedReceipt({ ranges = null, ledger = null, limit = 4 } = {
   // can end with every muscle unjudged, and "Keeping a dose that worked"
   // asserted exactly the verdict the ledger had just declined to give.
   let heldUnjudged = 0;
+  // C6 M-7 (D97-24): a muscle held on the USER'S OWN manual setting must
+  // never be credited to the coach as a retained working dose - ownership
+  // is the user's, and saying so is the RESPECT MY CHOICES promise.
+  let heldManual = 0;
   for (const [muscle, r] of Object.entries(ranges && typeof ranges === 'object' ? ranges : {})) {
     const observed = byMuscle.get(muscle)?.observed;
     const prevStart = num(observed?.startSets, null);
@@ -296,7 +309,8 @@ export function buildSeedReceipt({ ranges = null, ledger = null, limit = 4 } = {
     const dp = prevPeak != null && peak != null ? peak - prevPeak : 0;
     if (ds === 0 && dp === 0) {
       held += 1;
-      if (byMuscle.get(muscle)?.classification === 'INSUFFICIENT_DATA') heldUnjudged += 1;
+      if (r?.source === 'manual') heldManual += 1;
+      else if (byMuscle.get(muscle)?.classification === 'INSUFFICIENT_DATA') heldUnjudged += 1;
       continue;
     }
     const bits = [];
@@ -317,7 +331,7 @@ export function buildSeedReceipt({ ranges = null, ledger = null, limit = 4 } = {
   // FB-27: retention is a decision, so it gets said out loud - but only for
   // muscles the ledger actually judged. RA-2: an INSUFFICIENT_DATA hold gets
   // the honest sentence instead, and a mixed receipt states both.
-  const heldJudged = held - heldUnjudged;
+  const heldJudged = held - heldUnjudged - heldManual;
   const groupNoun = (n) => `muscle group${n === 1 ? '' : 's'}`;
   const stayedVerb = (n) => (n === 1 ? 'it was' : 'they were');
   let heldLine = null;
@@ -327,7 +341,15 @@ export function buildSeedReceipt({ ranges = null, ledger = null, limit = 4 } = {
       parts.push(`${heldJudged} other ${groupNoun(heldJudged)} stayed where ${stayedVerb(heldJudged)}. Keeping a dose that worked is a decision too.`);
     }
     if (heldUnjudged > 0) {
-      parts.push(`${heldUnjudged} ${heldJudged > 0 ? 'more ' : 'other '}${groupNoun(heldUnjudged)} stayed where ${stayedVerb(heldUnjudged)}: this block did not log enough recovery feedback to judge ${heldUnjudged === 1 ? 'it' : 'them'}, so nothing was moved on a guess.`);
+      // C6 M-8 (D97-24): the old sentence hard-coded "did not log enough
+      // recovery feedback" for every unjudgeable cause, naming the wrong
+      // reason after an exercise change or a low-confidence read. The
+      // honest cause-agnostic form claims only what is true for all of
+      // them: the block could not be judged, so nothing moved on a guess.
+      parts.push(`${heldUnjudged} ${heldJudged > 0 ? 'more ' : 'other '}${groupNoun(heldUnjudged)} stayed where ${stayedVerb(heldUnjudged)}: there wasn't enough clear evidence this block to judge ${heldUnjudged === 1 ? 'it' : 'them'}, so nothing was moved on a guess.`);
+    }
+    if (heldManual > 0) {
+      parts.push(`${heldManual} ${groupNoun(heldManual)} ${heldManual === 1 ? 'is' : 'are'} on your own settings and ${heldManual === 1 ? 'was' : 'were'} left exactly there.`);
     }
     heldLine = parts.join(' ');
   }

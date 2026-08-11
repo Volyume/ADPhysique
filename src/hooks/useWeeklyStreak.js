@@ -91,7 +91,13 @@ export default function useWeeklyStreak(userId, scoffScore = 0) {
 
       const weekStarts = [];
       for (let i = WEEKS - 1; i >= 0; i--) {
-        const ws = currentWeekStart - i * WEEK_MS;
+        // C6 T-1 (D97-24): a fixed 7-day step drifts 60 minutes across a
+        // DST transition while every producer emits the TRUE local Monday,
+        // so 10 of 12 keys mismatched after the autumn change - a
+        // prescribed deload scored as a miss and paused weeks vanished.
+        // Aim mid-week (+3 days absorbs any +/-1h drift) and normalise to
+        // that week's genuine local Monday, matching the producers.
+        const ws = localWeekStartMs(currentWeekStart - i * WEEK_MS + 3 * 86400000);
         if (earliestTrainedWeekStart != null && ws < earliestTrainedWeekStart) continue;
         weekStarts.push(ws);
       }

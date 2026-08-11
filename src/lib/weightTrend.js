@@ -24,12 +24,23 @@ export function trendStateFor(entryCount) {
   return 4;
 }
 
-function confidenceLabel(confidence, weeks) {
+// C6 RD6-8 (D97-25): "From N weeks of data" counted only weigh-in
+// weeks while the estimate's intake half was ASSUMED (adherenceFactor
+// defaults to 1.0 with no diary), so a user who never logged food was
+// told the number rested on "data". The label now names both inputs:
+// what the weigh-ins gave it, and whether logged food informed it or
+// intake was assumed at target. The coach's own evidence bar (5+
+// logged days, weeklyCoach) decides which clause is true. Engine maths
+// untouched - this is label truth only.
+function confidenceLabel(confidence, weeks, intakeDaysLogged = 0) {
   const n = Number.isFinite(weeks) ? weeks : 0;
   const plural = n === 1 ? 'week' : 'weeks';
-  if (confidence === 'high') return `From ${n} ${plural} of data`;
-  if (confidence === 'medium') return `Firming up, from ${n} ${plural} of data`;
-  return `Early estimate, from ${n} ${plural} of data`;
+  const intakeBit = Number.isFinite(intakeDaysLogged) && intakeDaysLogged >= 5
+    ? ' and your logged food'
+    : ', assuming you ate to target';
+  if (confidence === 'high') return `From ${n} ${plural} of weigh-ins${intakeBit}`;
+  if (confidence === 'medium') return `Firming up, from ${n} ${plural} of weigh-ins${intakeBit}`;
+  return `Early estimate, from ${n} ${plural} of weigh-ins${intakeBit}`;
 }
 
 // Is the trend diverging from plan enough to warrant a look? Uses the
@@ -67,7 +78,7 @@ function stepTrendLineFor(stepTrend) {
   return null;
 }
 
-export function deriveWeightTrend({ ewmaData, weeklyChange, adaptiveBurn, edFlagOpen = false, stepTrend = null } = {}) {
+export function deriveWeightTrend({ ewmaData, weeklyChange, adaptiveBurn, edFlagOpen = false, stepTrend = null, intakeDaysLogged = 0 } = {}) {
   const data = Array.isArray(ewmaData) ? ewmaData : [];
   const n = data.length;
   const state = trendStateFor(n);
@@ -131,7 +142,7 @@ export function deriveWeightTrend({ ewmaData, weeklyChange, adaptiveBurn, edFlag
       dot: 'neutral',
       insight: 'Still building confidence. Keep logging and this sharpens.',
       maintenance: hasMaintenance
-        ? { kcal: adaptiveBurn.adjustedTDEE, label: confidenceLabel(confidence, weeks), weeks }
+        ? { kcal: adaptiveBurn.adjustedTDEE, label: confidenceLabel(confidence, weeks, intakeDaysLogged), weeks }
         : { building: true },
       edFlagOpen: false,
     };
@@ -163,7 +174,7 @@ export function deriveWeightTrend({ ewmaData, weeklyChange, adaptiveBurn, edFlag
     dot: diverging ? 'watch' : 'onTrack',
     insight,
     maintenance: hasMaintenance
-      ? { kcal: adaptiveBurn.adjustedTDEE, label: confidenceLabel(confidence, weeks), weeks }
+      ? { kcal: adaptiveBurn.adjustedTDEE, label: confidenceLabel(confidence, weeks, intakeDaysLogged), weeks }
       : { building: true },
     stepTrendLine: stepTrendLineFor(stepTrend),
     edFlagOpen: false,

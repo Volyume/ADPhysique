@@ -35,17 +35,29 @@ export function computePRsPerWeek(allSets, exerciseMap, windowDays, now = Date.n
   }
   // Iterate sets; whenever a new running-max 1RM is set, record the date
   const prEvents = [];
-  for (const [, sets] of Object.entries(byEx)) {
+  for (const [exId, sets] of Object.entries(byEx)) {
+    // C6 P11-2 (D97-18): this tile now mirrors the live detector's gates.
+    // It used to count the FIRST-EVER set of every exercise as a record
+    // (the exact claim FQ-7 exists to prevent), included warm-ups and
+    // cluster rows, and never read its own exerciseMap - so three new
+    // exercises showed "3 new PRs" and distance exercises produced
+    // phantom records from their metres column.
+    const exType = exerciseMap?.[exId]?.type ?? 'weight_reps';
+    if (exType !== 'weight_reps') continue;
     let runningMax = 0;
     for (const s of sets) {
+      const st = s.setType ?? s.set_type ?? 'straight';
+      if (st === 'warmup' || st === 'myo_reps' || st === 'rest_pause') continue;
       const at = s.createdAt ?? s.created_at ?? 0;
       const w = s.weight ?? 0;
       const r = s.actualReps ?? s.actual_reps ?? 0;
       if (w <= 0 || r <= 0) continue;
       const est = calculate1RM(w, r);
       if (est > runningMax) {
+        // FQ-7: the first qualifying exposure is a BASELINE, never a record.
+        const isBaseline = runningMax === 0;
         runningMax = est;
-        if (at >= windowStart) prEvents.push(at);
+        if (!isBaseline && at >= windowStart) prEvents.push(at);
       }
     }
   }
@@ -313,9 +325,20 @@ export default function useProgressData() {
             const at = s.createdAt ?? 0;
             return at >= start && at < end;
           });
+          // C6 R-12 (D97-22): an untrained week is NOT "a rest week the
+          // user took" (absence converted into evidence, campaign law 1) -
+          // it is the boundary of continuous accumulation: fatigue cannot
+          // have been accumulating across a week with no training, so the
+          // scan ends here with the accumulation span measured so far.
+          // Outcome identical to before (deload stays suppressed after a
+          // gap - the returning user IS rested), but the rule the code
+          // expresses is now the true one, and the polarity is pinned so
+          // an inversion (a gap ever COUNTING toward accumulation or
+          // triggering deloads) fails the suite.
+          if (wkSets.length === 0) return wk; // accumulation boundary, not a rest week
           const vol = calculateWeeklyVolume(wkSets, exMap);
           const totalSets = Object.values(vol).reduce((sum, v) => sum + v.workingSets, 0);
-          if (totalSets < 15) return wk;  // found a low-volume / rest week
+          if (totalSets < 15) return wk;  // a genuinely trained lighter week
         }
         return 12; // no lighter week found in last 12 weeks
       })();

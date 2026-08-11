@@ -900,6 +900,8 @@ export default function ProOnboardingScreen({ navigation }) {
     // so it persists whatever the permission dialog returns. Denying the
     // permission used to silently discard the day picked here, then the
     // check-in gate told the user to come back on the default Sunday.
+    // eslint-disable-next-line global-require
+    try { require('../lib/sync').notePrefWrite(NOTIF_PREFS_KEY); } catch (_) {} // C6 S-2 (D97-23)
     await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs)).catch(() => {});
     // C5-P28-02 (D96): onboarding wrote ONLY the device-local AsyncStorage
     // blob, never the per-category SQLite rows, and those rows are the only

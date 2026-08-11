@@ -57,16 +57,25 @@ export function buildWidgetSnapshot({ nextSession = null, consistency = null, ed
 
   // Consistency is suppressed entirely under an open wellbeing/ED flag: the
   // widget renders the neutral next-session content instead (COMP-018 rule).
+  // C6 RD6-9 (D97-25): with no plan-derived denominator the block
+  // renders the plain session count instead of presenting a trailing
+  // average as a plan ("N of M").
   const cons = (!edFlagOpen
     && consistency
-    && Number.isFinite(consistency.completed)
-    && Number.isFinite(consistency.planned))
-    ? {
-      completed: clampInt(consistency.completed),
-      planned: clampInt(consistency.planned),
-      streakWeeks: clampInt(consistency.streakWeeks),
-      label: `${clampInt(consistency.completed)} of ${clampInt(consistency.planned)} sessions this week`,
-    }
+    && Number.isFinite(consistency.completed))
+    ? (Number.isFinite(consistency.planned) && consistency.planned > 0
+      ? {
+        completed: clampInt(consistency.completed),
+        planned: clampInt(consistency.planned),
+        streakWeeks: clampInt(consistency.streakWeeks),
+        label: `${clampInt(consistency.completed)} of ${clampInt(consistency.planned)} sessions this week`,
+      }
+      : {
+        completed: clampInt(consistency.completed),
+        planned: null,
+        streakWeeks: clampInt(consistency.streakWeeks),
+        label: `${clampInt(consistency.completed)} session${clampInt(consistency.completed) === 1 ? '' : 's'} this week`,
+      })
     : null;
 
   return {

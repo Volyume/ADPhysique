@@ -54,10 +54,14 @@ describe('BodyMetricsScreen edit/delete (D16 NAV-2) source guard', () => {
   });
 
   test('edit/delete controls are gated behind !readOnly like every other write affordance', () => {
-    // BUG-WEIGHT-HISTORY: also gated on entry.source !== 'morning_weight' -- a
-    // row merged in from morning_weights (Home's quick weigh-in) has no
-    // body_metric_log id for updateBodyMetric/deleteBodyMetric to target.
-    expect(source).toMatch(/\{!readOnly && entry\.source !== 'morning_weight' && \(\s*<View style=\{styles\.historyActions\}>/);
+    // Re-anchored under C6 R-8 (D97-22): morning_weights rows now have
+    // their own update/soft-delete pair, so the actions render for them
+    // too and route to the owning table - the old exclusion (which left a
+    // mistyped weigh-in permanent) is deliberately GONE. The readOnly
+    // gate stands unchanged.
+    expect(source).toMatch(/\{!readOnly && \(\s*<View style=\{styles\.historyActions\}>/);
+    expect(source).toMatch(/entry\.source === 'morning_weight'\s*\? await deleteMorningWeightById\(user\.id, entry\.id\)/);
+    expect(source).toMatch(/\? await updateMorningWeightById\(user\.id, targetId, \{ weightKg: data\.body_weight \}\)/);
   });
 
   test('History section shows from a single entry, not gated to 2+', () => {

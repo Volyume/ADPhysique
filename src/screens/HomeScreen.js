@@ -820,7 +820,9 @@ export default function HomeScreen({ navigation, route }) {
       setPlateauBannerDismissed(dv === 'true');
       setPlateauBanner({
         exerciseId: picked.exerciseId,
-        line: plateauBannerLine(ex.name, picked.weeks),
+        // RD6-4 (D97-25): the line carries the run's session count so
+        // the claim states its own density.
+        line: plateauBannerLine(ex.name, picked.weeks, picked.consecutiveStalls + 1),
       });
       // NAV-4: the picked plateau ({ exerciseId, weeks }) doubles as the
       // stalled-lift context for the differential loader.
@@ -870,8 +872,17 @@ export default function HomeScreen({ navigation, route }) {
         getRecentCheckins(user.id, 3).catch(() => []),
         getNutritionTargets(user.id).catch(() => null),
       ]);
-      if (!checkins.length) { setDifferentialBanner(null); return; }
-      const mapped = await Promise.all(checkins.map(async (ci) => {
+      // C6 RD6-13 (D97-25): the gate's contract is "2 of the last 3
+      // WEEKS", but getRecentCheckins is row-limited - a lapsed-Pro
+      // user's year-old check-ins could open a nutrition upsell. Only
+      // rows genuinely inside the last three calendar weeks (plus the
+      // running week) count; this can only ever show the banner LESS.
+      const paywallWindowStart = Date.now() - 28 * 86400000;
+      const checkinsInWindow = checkins.filter(
+        (ci) => Number.isFinite(Number(ci?.weekStart)) && Number(ci.weekStart) >= paywallWindowStart,
+      );
+      if (!checkinsInWindow.length) { setDifferentialBanner(null); return; }
+      const mapped = await Promise.all(checkinsInWindow.map(async (ci) => {
         let weekAvg = null;
         if (ci.weekStart) {
           try {
@@ -1106,8 +1117,17 @@ export default function HomeScreen({ navigation, route }) {
         setLastSessionTonnage(null);
       }
 
-      // Progression teaser, free tier only, needs 2+ sessions to compare
-      if (tier === 'free' && completed.length >= 2) {
+      // Progression teaser, free tier only, needs 2+ sessions to compare.
+      // C6 RD6-6 (D97-25): "last session" is a present-tense progression
+      // claim, so it needs a recent pair - the two newest workouts were
+      // previously of ANY age. Outside the app's standing 14-day
+      // boundary the card falls back to its existing untimed variants
+      // ("N sessions logged...") instead of narrating an old comparison
+      // as current.
+      const teaserLastAt = Number(completed[0]?.endedAt ?? completed[0]?.startedAt);
+      const teaserRecent = Number.isFinite(teaserLastAt)
+        && (Date.now() - teaserLastAt) <= 14 * 86400000;
+      if (tier === 'free' && completed.length >= 2 && teaserRecent) {
         getProgressionTeaser(user.id, completed[0].id, completed[1].id)
           .then(t => setTeaserInsight(t))
           .catch(() => {});
@@ -1233,7 +1253,29 @@ export default function HomeScreen({ navigation, route }) {
               }
             } catch (_e) { previous = null; }
           }
-          setBlockSeedLines(buildBlockStartLines({ summary, previous }));
+          // C6 P9-06 (D97): does this user have ANY prior block history?
+          // A template-seeded block after a plan switch must not tell a
+          // block-eight user "not enough personal history yet".
+          // C6 P-5 (D97-20): "history" means blocks TRAINED, not blocks
+          // judged - ledgers only exist where a decision surface computed
+          // one, so a mature Free upgrader (or anyone who switched plans
+          // past the decision card) had real ended blocks and zero
+          // ledgers, and was handed beginner copy. An ended prior block
+          // now counts alongside a stored ledger.
+          let hadPriorBlocks = false;
+          try {
+            // eslint-disable-next-line global-require
+            const { getAllMesocyclesForUser } = require('../lib/database');
+            const all = await getAllMesocyclesForUser(user.id);
+            const endedMs = (m) => {
+              const t = m.endDate == null ? NaN
+                : (typeof m.endDate === 'number' ? m.endDate : new Date(m.endDate).getTime());
+              return Number.isFinite(t) ? t : null;
+            };
+            hadPriorBlocks = all.some((m) => m.id !== week.mesocycleId
+              && (m.blockLedger || (endedMs(m) != null && endedMs(m) <= Date.now())));
+          } catch (_e) { hadPriorBlocks = false; }
+          setBlockSeedLines(buildBlockStartLines({ summary, previous, hadPriorBlocks }));
         } catch (_e) { setBlockSeedLines([]); }
       }
 

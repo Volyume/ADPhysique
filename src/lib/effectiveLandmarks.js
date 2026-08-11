@@ -43,7 +43,16 @@ export function mergeLandmarkPrecedence({ manual = null, adapted = null, researc
   const source = {};
   for (const muscle of Object.keys(research)) {
     const m = manual?.[muscle];
-    if (m && Number.isFinite(m.mev) && Number.isFinite(m.mav) && Number.isFinite(m.mrv)) {
+    // C6 RA6-1 (D97-25): only a REAL edit counts as manual - the same
+    // isManualEdit rule the ledger runner and the seed already apply
+    // (Stage 6 blocker #1). Without it, a legacy full-table save of
+    // untouched research defaults silently disabled the Pro adapted
+    // layer on every display surface AND in the ledger's landmark frame,
+    // while labelling values the user never chose "your own setting".
+    // An untouched/legacy default now falls through to adapted, then
+    // research; a genuinely edited muscle behaves byte-identically.
+    if (m && Number.isFinite(m.mev) && Number.isFinite(m.mav) && Number.isFinite(m.mrv)
+      && isManualEdit(m, research[muscle])) {
       table[muscle] = { ...research[muscle], mev: m.mev, mav: m.mav, mrv: m.mrv };
       source[muscle] = 'manual';
       continue;

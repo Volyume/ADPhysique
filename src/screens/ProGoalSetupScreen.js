@@ -273,6 +273,18 @@ export default function ProGoalSetupScreen({ navigation }) {
       // nutrition goal key, kept in step with the phase so surfaces reading
       // userProfile.goal (Nutrition Targets summary) match the saved calories.
       goal: phaseToNutritionKey(selectedPhase),
+      // C6 Phase 1 seam 4 (D97): the phase clock. phaseStartedAt was
+      // written exactly once, at onboarding, and never on a phase change,
+      // so weeksInPhase measured weeks-since-account for ever: every coach
+      // output after a change carried a false week label, and a brand-new
+      // cut skipped the honest baseline period (weeksInPhase >= 2 was
+      // permanently satisfied) and got full trend coaching in week one
+      // from a weight series built during the previous phase. Reset ONLY
+      // when the phase genuinely changes - saving schedule or equipment
+      // tweaks through this screen must not touch the clock.
+      ...(selectedPhase !== userProfile?.trainingPhase
+        ? { phaseStartedAt: Date.now() }
+        : {}),
       proteinApproach,
       goalStartDate,
       planWeakPoints: nextWeakPoints,
@@ -657,8 +669,13 @@ export default function ProGoalSetupScreen({ navigation }) {
         {displayWeightKg ? (
           <View style={styles.footerNote}>
             <Ionicons name="scale-outline" size={15} color={t.colors.textMuted} />
+            {/* C6 Phase 7 (D97): displayWeightKg is the LAST logged
+                weigh-in (or the profile weight) at any age - after months
+                away, "your recent weight trend" was a false recency claim.
+                "Last logged weight" is true at any age, like "last block".
+                Copy only; the value and the calculation are untouched. */}
             <Text style={[styles.footerNoteText, live.footerNoteText]}>
-              Targets use your recent weight trend, {formatBodyWeightShort(displayWeightKg, userProfile?.bodyWeightUnits ?? 'st')}. Log a new weigh-in on Today.
+              Targets use your last logged weight, {formatBodyWeightShort(displayWeightKg, userProfile?.bodyWeightUnits ?? 'st')}. Log a new weigh-in on Today.
             </Text>
           </View>
         ) : null}

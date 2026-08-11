@@ -29,6 +29,19 @@ const HIGH_SORENESS = 3;
 // disagree about what counts as "fatigue building".
 const FATIGUE_TREND_THRESHOLD = 3.5;
 
+const FATIGUE_RECENCY_MS = 14 * 86400000;
+// C6 RB6-4 (D97-25): 'fatigue has been building' and the 10%-reduction
+// advice are PRESENT-TENSE claims from the last two rated sessions - at
+// ANY age. After months away they narrated ancient sessions as current
+// fatigue (the same class R-6 closed for the sibling caution). A rated
+// session only counts here when it is inside the 14-day detraining
+// boundary; undated rows cannot prove recency and are skipped.
+const _recentRated = (rows, nowMs) => (rows ?? [])
+  .filter((r) => {
+    const t = Number(r?.startedAt ?? r?.started_at);
+    return Number.isFinite(t) && (nowMs - t) <= FATIGUE_RECENCY_MS;
+  });
+
 function joinNatural(words) {
   if (words.length === 1) return words[0];
   if (words.length === 2) return `${words[0]} and ${words[1]}`;
@@ -50,6 +63,9 @@ export function buildReadinessSummary({
   deloadSuggestion = null,
   fatigueHistory = [],
   lastSession = null,
+  // C6 R-6: injectable clock for the recency bound; defaults keep every
+  // existing caller unchanged. Pure - read once, never re-read.
+  nowMs = Date.now(),
 } = {}) {
   // Nothing to say without an active training block: this mirrors the
   // chip's existing visibility rule, only the content composes further.
@@ -57,8 +73,16 @@ export function buildReadinessSummary({
 
   // Priority 1: the plan itself has scheduled a deload this week. The most
   // concrete signal there is, since it does not depend on interpreting data.
+  // C6 RB6-3 (D97-25): "pull effort back" implies effort was being spent -
+  // an unearned calendar recovery week after a gap must state the calendar
+  // fact instead, matching the R-4 advisor ruling. Recency is judged from
+  // the same last-session evidence priority 3 uses.
   if (currentMesoWeek.isDeload) {
-    return { tone: 'recover', line: 'Recovery week, pull effort back.' };
+    const trainedRecently = Number.isFinite(Number(lastSession?.startedAt))
+      && (nowMs - Number(lastSession.startedAt)) <= 14 * 86400000;
+    return trainedRecently
+      ? { tone: 'recover', line: 'Recovery week, pull effort back.' }
+      : { tone: 'recover', line: 'Recovery week on the calendar. Ease back in whenever suits you.' };
   }
 
   // Priority 2: the training-data-driven suggestion (shouldDeload). Worded
@@ -71,11 +95,20 @@ export function buildReadinessSummary({
   // Priority 3: the soreness/sleep/energy facts captured on the pre-workout
   // prompt last time out. Today these are written and never read back to
   // the user anywhere; surfacing the low readings here closes that loop.
+  // C6 R-6 (D97-22): "Last time out ... worth listening to that TODAY"
+  // is a present-tense claim, and lastSession is simply the newest
+  // completed workout at ANY age - after a six-month gap it narrated
+  // ancient soreness as current state (a fabricated recovery assumption,
+  // lapse law). The caution now requires the session to fall inside the
+  // app's standing 14-day detraining boundary; an undated session cannot
+  // prove recency and is treated as stale.
+  const lastSessionRecent = Number.isFinite(Number(lastSession?.startedAt))
+    && (nowMs - Number(lastSession.startedAt)) <= 14 * 86400000;
   const bits = [];
   if (lastSession?.soreness24hBefore != null && lastSession.soreness24hBefore >= HIGH_SORENESS) bits.push('sore');
   if (lastSession?.sleepQuality != null && lastSession.sleepQuality <= LOW_SLEEP_OR_ENERGY) bits.push('short on sleep');
   if (lastSession?.energyScore != null && lastSession.energyScore <= LOW_SLEEP_OR_ENERGY) bits.push('low on energy');
-  if (bits.length > 0) {
+  if (bits.length > 0 && lastSessionRecent) {
     return { tone: 'caution', line: `Last time out you were ${joinNatural(bits)}. Worth listening to that today.` };
   }
 
@@ -84,7 +117,7 @@ export function buildReadinessSummary({
   // Campaign 1 P0-7 D11: average RATED sessions only - the old ?? 0
   // dragged the mean toward zero on unrated sessions and suppressed the
   // caution. Requires two rated sessions before the rule speaks.
-  const rated = fatigueHistory
+  const rated = _recentRated(fatigueHistory, nowMs)
     .map((r) => r.fatigueLevel ?? r.fatigue_level ?? null)
     .filter((v) => v != null);
   if (rated.length >= 2) {

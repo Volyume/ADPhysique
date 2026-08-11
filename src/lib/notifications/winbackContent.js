@@ -58,7 +58,10 @@ export function winbackPush({
   if (sessionsSince > 0) {
     const tail = sinceLabel ? ` since ${sinceLabel}` : '';
     title = `Still lifting. ${sessionsSince} ${sessionWord(sessionsSince)}${tail}.`;
-    core = 'Your trend data never stopped, and everything is ready whenever you are.';
+    // C6 R-17 (D97-22): 'your trend data never stopped' edged toward
+    // claiming analysis continued during the absence. Claim only what is
+    // true at any age: the history is saved and nothing is lost.
+    core = 'Your training history is all saved, and everything is ready whenever you are.';
   } else if (totalSessions > 0) {
     title = 'Your training is saved.';
     core = `Your ${totalSessions} ${sessionWord(totalSessions)} are saved, ready whenever you are.`;

@@ -3,11 +3,11 @@
 // stops a brand-new user (a single, possibly stray/seed, check-in) from being
 // shown a "Keep an eye on recovery" card before there is any real pattern.
 
-jest.mock('../database', () => ({ getRecentCheckins: jest.fn() }));
+jest.mock('../database', () => ({ getRecentCheckins: jest.fn(), getRecentCompletedWorkouts: jest.fn() }));
 jest.mock('../mesocycle', () => ({ getBlockStatus: jest.fn() }));
 
 import { getBlockAdvice, buildNextBlockOptions, checkinReadiness } from '../blockAdvisor';
-import { getRecentCheckins } from '../database';
+import { getRecentCheckins, getRecentCompletedWorkouts } from '../database';
 import { getBlockStatus } from '../mesocycle';
 
 const block = { startDate: Date.now(), plannedWeeks: 5 };
@@ -16,6 +16,19 @@ const activeStatus = (currentWeek) => ({
 });
 
 beforeEach(() => jest.clearAllMocks());
+
+test('a STALE latest check-in produces no current signals (C6 seam 2, D97)', async () => {
+  // A returning user's months-old check-in must not drive present-tense
+  // recovery advice ("this week", "Your check-in shows..."). No fresh
+  // check-in means no current signals - continue, no card.
+  getRecentCheckins.mockResolvedValue([
+    { weekStart: Date.now() - 120 * 86400000, energyScore: 1, sorenessScore: 5, sleepHours: 4 },
+    { weekStart: Date.now() - 127 * 86400000, energyScore: 1, sorenessScore: 5, sleepHours: 4 },
+  ]);
+  getBlockStatus.mockReturnValue(activeStatus(3));
+  const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' });
+  expect(advice.action).toBe('continue');
+});
 
 test('no check-ins yet stays on continue (no recovery card)', async () => {
   getRecentCheckins.mockResolvedValue([]);
@@ -26,18 +39,21 @@ test('no check-ins yet stays on continue (no recovery card)', async () => {
 
 test('a single low-energy check-in in week 1 does NOT surface a recovery card', async () => {
   // The reported bug: one stray check-in produced "Keep an eye on recovery".
-  getRecentCheckins.mockResolvedValue([{ energyScore: 1, sorenessScore: 3, sleepHours: 7 }]);
+  getRecentCheckins.mockResolvedValue([{ weekStart: Date.now() - 3 * 86400000, energyScore: 1, sorenessScore: 3, sleepHours: 7 }]);
   getBlockStatus.mockReturnValue(activeStatus(1));
   const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' });
   expect(advice.action).toBe('continue');
 });
 
+// C6 Phase 1 seam 2 (D97) re-anchor, same meaning: signals now require a
+// CURRENT latest check-in (weekStart within 14 days), so every fixture row
+// below carries a fresh stamp - these tests describe live-week signals.
 test('a real pattern (>=2 check-ins, week >=2) still surfaces a heads-up', async () => {
   // One genuine high-energy signal this week, prior week fine, so it is a
   // heads-up rather than an early deload.
   getRecentCheckins.mockResolvedValue([
-    { energyScore: 1, sorenessScore: 3, sleepHours: 7 },
-    { energyScore: 4, sorenessScore: 2, sleepHours: 8 },
+    { weekStart: Date.now() - 3 * 86400000, energyScore: 1, sorenessScore: 3, sleepHours: 7 },
+    { weekStart: Date.now() - 3 * 86400000, energyScore: 4, sorenessScore: 2, sleepHours: 8 },
   ]);
   getBlockStatus.mockReturnValue(activeStatus(2));
   const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' });
@@ -58,7 +74,7 @@ const finishedStatus = {
   status: 'completed_awaiting_decision', currentWeek: 6, totalWeeks: 6,
   recoveryWeek: 6, weeksOverdue: 0, awaitingDecision: true,
 };
-const goodWeek = { energyScore: 4, sorenessScore: 2, sleepHours: 8 };
+const goodWeek = { weekStart: Date.now() - 3 * 86400000, energyScore: 4, sorenessScore: 2, sleepHours: 8 };
 // FB-36's placeholder: WorkoutSummaryScreen writes a weekly_checkins row
 // carrying only sleepQuality (a column the readiness formula never reads)
 // on any session where the pre-workout sleep question was answered,
@@ -87,8 +103,8 @@ test('FREE: a finished block gets no adaptive coaching, whatever the check-ins s
   // 'adjust' narrative ("your next block starts from what this block
   // showed") on a free phone, for a path free cannot take.
   getRecentCheckins.mockResolvedValue([
-    { energyScore: 2, sorenessScore: 4, sleepHours: 6 },
-    { energyScore: 2, sorenessScore: 4, sleepHours: 6 },
+    { weekStart: Date.now() - 3 * 86400000, energyScore: 2, sorenessScore: 4, sleepHours: 6 },
+    { weekStart: Date.now() - 3 * 86400000, energyScore: 2, sorenessScore: 4, sleepHours: 6 },
   ]);
   getBlockStatus.mockReturnValue(finishedStatus);
   const advice = await getBlockAdvice('u1', block, {}, { isPro: false });
@@ -136,8 +152,77 @@ test('FB-36: a sleepQuality-only placeholder row changes nothing for either tier
 
 test('a row that answers even one question is scored exactly as before', () => {
   // The evidence gate must not soften any real reading.
-  expect(checkinReadiness({ energyScore: 1, sorenessScore: 5, sleepHours: 4 })).toBe(0);
-  expect(checkinReadiness({ energyScore: 3, sorenessScore: 3, sleepHours: 7 })).toBeCloseTo(52, 5);
+  expect(checkinReadiness({ weekStart: Date.now() - 3 * 86400000, energyScore: 1, sorenessScore: 5, sleepHours: 4 })).toBe(0);
+  expect(checkinReadiness({ weekStart: Date.now() - 3 * 86400000, energyScore: 3, sorenessScore: 3, sleepHours: 7 })).toBeCloseTo(52, 5);
   expect(checkinReadiness({ sorenessScore: 1 })).toBe(75);
   expect(checkinReadiness(null)).toBeNull();
+});
+
+describe('C6 R-4 (D97-22): a recovery week is only claimed live when it was earned', () => {
+  const recoveryStatus = { status: 'recovery', currentWeek: 5, totalWeeks: 5, recoveryWeek: 5, weeksOverdue: 0 };
+
+  test('no recent training: the calendar fact is stated, recovery is not prescribed', async () => {
+    getRecentCheckins.mockResolvedValue([]);
+    getBlockStatus.mockReturnValue(recoveryStatus);
+    getRecentCompletedWorkouts.mockResolvedValue([
+      { endedAt: Date.now() - 21 * 86400000 },
+    ]);
+    const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' });
+    expect(advice.action).toBe('in_recovery');
+    expect(advice.headline).toBe('Recovery week on the calendar');
+    expect(advice.body).not.toMatch(/last few weeks of work/);
+    expect(advice.body).toMatch(/haven't trained recently/);
+  });
+
+  test('trained inside 14 days: the live recovery card is unchanged', async () => {
+    getRecentCheckins.mockResolvedValue([]);
+    getBlockStatus.mockReturnValue(recoveryStatus);
+    getRecentCompletedWorkouts.mockResolvedValue([
+      { endedAt: Date.now() - 2 * 86400000 },
+    ]);
+    const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' });
+    expect(advice.headline).toBe('Recovery week is active');
+    expect(advice.body).toMatch(/letting the last few weeks of work pay off/);
+  });
+
+  test('a failed workout read cannot invent recent training (fails to the honest card)', async () => {
+    getRecentCheckins.mockResolvedValue([]);
+    getBlockStatus.mockReturnValue(recoveryStatus);
+    getRecentCompletedWorkouts.mockRejectedValue(new Error('read failed'));
+    const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' });
+    expect(advice.headline).toBe('Recovery week on the calendar');
+  });
+});
+
+// C6 RA6-11 (D97-25): the branch CHOICE now shares seam 2's boundary.
+// D97-8 stopped stale check-ins producing present-tense signals, but
+// avgReadiness still averaged the same unfiltered rows, so a returning
+// user's next-block recommendation was chosen by pre-lapse readiness -
+// and not always conservatively (stale sub-60 rows pushed them onto the
+// "Same plan, slightly adjusted. The structure is working" path).
+test('RA6-11: pre-lapse check-ins cannot choose the next-block branch', async () => {
+  // Months-old rows with terrible readiness (avg well below 60): if the
+  // old unfiltered average were still in play, this would recommend
+  // 'adjust'. With no check-in inside 14 days, the no-data default (70)
+  // applies and the conservative repeat branch wins.
+  getRecentCheckins.mockResolvedValue([
+    { weekStart: Date.now() - 120 * 86400000, energyScore: 1, sorenessScore: 5, sleepHours: 4 },
+    { weekStart: Date.now() - 127 * 86400000, energyScore: 1, sorenessScore: 5, sleepHours: 4 },
+  ]);
+  getBlockStatus.mockReturnValue(finishedStatus);
+  const advice = await getBlockAdvice('u1', block, {}, { isPro: true });
+  expect(advice.nextBlock.recommendation).toBe('repeat');
+  expect(advice.nextBlock.body).not.toMatch(/structure is working/i);
+});
+
+test('RA6-11 control: fresh sub-60 readiness still chooses adjust exactly as before', async () => {
+  // Readiness 52 each (the pinned mid-scale value): below the repeat
+  // bar, above the rebuild floor, no high signals.
+  getRecentCheckins.mockResolvedValue([
+    { weekStart: Date.now() - 3 * 86400000, energyScore: 3, sorenessScore: 3, sleepHours: 7 },
+    { weekStart: Date.now() - 6 * 86400000, energyScore: 3, sorenessScore: 3, sleepHours: 7 },
+  ]);
+  getBlockStatus.mockReturnValue(finishedStatus);
+  const advice = await getBlockAdvice('u1', block, {}, { isPro: true });
+  expect(advice.nextBlock.recommendation).toBe('adjust');
 });

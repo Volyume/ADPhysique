@@ -329,3 +329,60 @@ describe('purity', () => {
     expect(SRC).not.toMatch(/tier/i);
   });
 });
+
+describe('C6 RA6-3 (D97-25): upward ceiling steps are corroborated by the block in front of them', () => {
+  // Probe RA6-A's shape: proven capacity long ago, four strained blocks
+  // pull the ceiling down, then responsive blocks at LOW achieved volume.
+  // The old running-maximum rule re-inflated the ceiling toward the
+  // ancient peak (13 -> 19 across three blocks that achieved 10); strain
+  // evidence was spent while success evidence was permanent.
+  const strainThenLowResponsive = () => [
+    entry(BLOCK_CLASS.RESPONSIVE, { observed: { startSets: 14, achievedPeak: 21, plannedPeak: 21 } }),
+    entry(BLOCK_CLASS.STRAINED, { observed: { startSets: 19, achievedPeak: 21, plannedPeak: 21 } }),
+    entry(BLOCK_CLASS.STRAINED, { observed: { startSets: 17, achievedPeak: 19, plannedPeak: 19 } }),
+    entry(BLOCK_CLASS.STRAINED, { observed: { startSets: 15, achievedPeak: 17, plannedPeak: 17 } }),
+    entry(BLOCK_CLASS.STRAINED, { observed: { startSets: 13, achievedPeak: 15, plannedPeak: 15 } }),
+  ];
+
+  test('responsive blocks achieving 10 cannot re-inflate a strain-reduced ceiling toward the all-time maximum', () => {
+    const history = strainThenLowResponsive();
+    const reduced = range(history, { prior: { mev: 10, mav: 21, mrv: 24 } });
+    const before = reduced.ceiling;
+    history.push(
+      entry(BLOCK_CLASS.RESPONSIVE, { observed: { startSets: 8, achievedPeak: 10, plannedPeak: 12 } }),
+      entry(BLOCK_CLASS.RESPONSIVE, { observed: { startSets: 8, achievedPeak: 10, plannedPeak: 12 } }),
+      entry(BLOCK_CLASS.RESPONSIVE, { observed: { startSets: 8, achievedPeak: 10, plannedPeak: 12 } }),
+    );
+    const after = range(history, { prior: { mev: 10, mav: 21, mrv: 24 } });
+    // The muscle's recent blocks contain no evidence for more than it
+    // delivered: the ceiling may not climb past achievedPeak + 2.
+    expect(after.ceiling).toBeLessThanOrEqual(Math.max(before, 10 + 2));
+  });
+
+  test('re-earning IS still possible: corroborated higher-volume blocks climb 2 sets a block', () => {
+    const history = strainThenLowResponsive();
+    const before = range(history, { prior: { mev: 10, mav: 21, mrv: 24 } }).ceiling;
+    history.push(
+      entry(BLOCK_CLASS.RESPONSIVE, { observed: { startSets: 11, achievedPeak: before + 1, plannedPeak: before + 1 } }),
+    );
+    const after = range(history, { prior: { mev: 10, mav: 21, mrv: 24 } });
+    expect(after.ceiling).toBeGreaterThan(before);
+    expect(after.ceiling - before).toBeLessThanOrEqual(2);
+  });
+
+  test('a later good LOWER-volume block still cannot erase proven capacity (the hold rule survives)', () => {
+    // Ceiling settled at the handled peak; a lighter responsive block
+    // must hold it, not erode it (the founder's non-erasure rule).
+    const history = [
+      entry(BLOCK_CLASS.RESPONSIVE, { observed: { startSets: 14, achievedPeak: 20, plannedPeak: 20 } }),
+      entry(BLOCK_CLASS.RESPONSIVE, { observed: { startSets: 14, achievedPeak: 20, plannedPeak: 20 } }),
+      entry(BLOCK_CLASS.RESPONSIVE, { observed: { startSets: 14, achievedPeak: 20, plannedPeak: 20 } }),
+    ];
+    const settled = range(history, { prior: { mev: 10, mav: 21, mrv: 24 } }).ceiling;
+    history.push(
+      entry(BLOCK_CLASS.RESPONSIVE, { observed: { startSets: 10, achievedPeak: 12, plannedPeak: 14 } }),
+    );
+    const after = range(history, { prior: { mev: 10, mav: 21, mrv: 24 } }).ceiling;
+    expect(after).toBe(settled);
+  });
+});

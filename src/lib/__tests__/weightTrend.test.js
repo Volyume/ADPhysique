@@ -99,7 +99,9 @@ describe('deriveWeightTrend', () => {
       },
     });
     expect(vm.state).toBe(4);
-    expect(vm.maintenance.label).toBe('From 7 weeks of data');
+    // Re-anchored under RD6-8 (D97-25): the label names the assumed
+    // intake when no diary evidence informed the estimate.
+    expect(vm.maintenance.label).toBe('From 7 weeks of weigh-ins, assuming you ate to target');
   });
 
   test('ED flag open: direction-only copy, no rate, no maintenance, no dot', () => {
@@ -152,5 +154,22 @@ describe('deriveWeightTrend', () => {
       const vm = deriveWeightTrend({ ...base, edFlagOpen: true, stepTrend: { applied: true, direction: -1 } });
       expect(vm.stepTrendLine).toBeUndefined(); // ED branch returns before the line is built
     });
+  });
+});
+
+describe('C6 RD6-8 (D97-25): the maintenance label states its intake basis', () => {
+  const { deriveWeightTrend } = require('../weightTrend');
+  const entries = Array.from({ length: 49 }, (_, i) => ({ weight: 80 - i * 0.02, date: `d${i}` }));
+  const burn = { confidence: 'high', weeks: 7, adjustedTDEE: 2450, actualKgPerWeek: -0.2, expectedKgPerWeek: -0.25 };
+
+  test('with 5+ logged days the label credits the food diary', () => {
+    const vm = deriveWeightTrend({ ewmaData: entries, weeklyChange: -0.2, adaptiveBurn: burn, intakeDaysLogged: 6 });
+    expect(vm.maintenance.label).toBe('From 7 weeks of weigh-ins and your logged food');
+  });
+
+  test('below the coach evidence bar the label admits the assumption', () => {
+    const vm = deriveWeightTrend({ ewmaData: entries, weeklyChange: -0.2, adaptiveBurn: burn, intakeDaysLogged: 2 });
+    expect(vm.maintenance.label).toMatch(/assuming you ate to target$/);
+    expect(vm.maintenance.label).not.toMatch(/weeks of data/);
   });
 });

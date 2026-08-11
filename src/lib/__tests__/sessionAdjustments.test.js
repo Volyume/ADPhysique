@@ -170,7 +170,10 @@ describe('computeSessionAdjustments — R4 under-stimulus add', () => {
     expect(c.setDelta).toBe(1);
     expect(c.adjustedSets).toBe(5);
     expect(c.show).toBe(true);
-    expect(c.reasonText).toBe('Chest recovered fast and last session was strong. 1 set added today.');
+    // Re-anchored under RD6-2 (D97-25): the sentence now states the two
+    // facts the engine actually read (light pump, nothing flagged sore)
+    // instead of asserting recovery speed and strength.
+    expect(c.reasonText).toBe("Chest took a light pump last time and nothing's been flagged sore. 1 set added today.");
   });
 
   test('blocked when an add for this muscle already happened this week', () => {

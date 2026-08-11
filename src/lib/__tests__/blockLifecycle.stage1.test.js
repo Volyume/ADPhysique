@@ -146,7 +146,7 @@ describe("the 'Continue with adjustments' seam exists for the Stage 6 ledger", (
   test('activatePlanWithBlock accepts and threads a ledger option', () => {
     const SRC = read('lib/database.js');
     expect(SRC).toMatch(/export async function activatePlanWithBlock\(userId, planId, planName, \{ ledger = null \} = \{\}\)/);
-    const fn = SRC.slice(SRC.indexOf('export async function activatePlanWithBlock'), SRC.indexOf('export async function activatePlanWithBlock') + 3000);
+    const fn = SRC.slice(SRC.indexOf('export async function activatePlanWithBlock'), SRC.indexOf('export async function activatePlanWithBlock') + 3600 /* window widened for the T-2 comment */);
     expect(fn).toMatch(/generateInitialPlannedVolume\([^)]*ledger/);
   });
 

@@ -25,6 +25,7 @@ import {
   saveCoachOutput,
   getLatestCoachOutput,
   getCoachOutputHistory,
+  getCoachOutputWeekStartsSince,
   getOpenEdPatternFlag,
   raiseEdPatternFlag,
   clearEdPatternFlag,
@@ -132,6 +133,7 @@ import {
   buildFocus,
   buildOffItems,
   weekRangeLabel,
+  decisionAgeNote,
 } from '../lib/coachOutput/viewCopy';
 import {
   LedgerCard,
@@ -456,7 +458,7 @@ function TrainingNextWeekCard({
 // NU-4: the button drops the old "week" claim (the write has no expiry) and
 // the card states the post-tap absolute + honest duration before the tap.
 // NU-3: a tap-time null renders its reason (notice) instead of silence.
-function DietBreakCard({ weeksInDeficit, applied, onApply, applyState, onApplySettled, energyUnit, previewKcal, notice, hero }) {
+function DietBreakCard({ weeksInDeficit, continuityEvidenced = true, applied, onApply, applyState, onApplySettled, energyUnit, previewKcal, notice, hero }) {
   // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
   // See buildLiveStyles' header comment (defined below the frozen `styles`
   // block) for why.
@@ -476,9 +478,13 @@ function DietBreakCard({ weeksInDeficit, applied, onApply, applyState, onApplySe
         )}
       </View>
       <Text style={[styles.dietBreakBody, live.dietBreakBody]}>
-        {weeksInDeficit >= 8
-          ? `You have been in a calorie deficit for ${weeksInDeficit} weeks. `
-          : 'You have been in a calorie deficit for over eight weeks. '}
+        {!continuityEvidenced
+          // C6 P-2 (D97-20): after a coaching gap, claim only the provable
+          // set-age of the cut, never continuous deficit eating.
+          ? `This cut has been set for ${weeksInDeficit} weeks. `
+          : weeksInDeficit >= 8
+            ? `You have been in a calorie deficit for ${weeksInDeficit} weeks. `
+            : 'You have been in a calorie deficit for over eight weeks. '}
         {'A short diet break, returning to maintenance calories for one to two weeks, can help your body settle back to its normal calorie burn and improve long-term fat loss. Consider taking a break before your next phase.'}
       </Text>
       <Text style={[styles.dietBreakFootnote, live.dietBreakFootnote]}>
@@ -985,10 +991,11 @@ export default function CoachOutputScreen({ navigation, route }) {
   const [redirectWeekStart, setRedirectWeekStart] = useState(null);
   const weekStart = redirectWeekStart ?? route.params?.weekStart ?? localWeekStartMs();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, userProfile, units, saveLocalProfile, tier: storeTier, energyUnit, reduceMotion } = useAppStore(useShallow(s => ({
+  const { user, userProfile, units, bodyWeightUnits, saveLocalProfile, tier: storeTier, energyUnit, reduceMotion } = useAppStore(useShallow(s => ({
     user: s.user,
     userProfile: s.userProfile,
     units: s.units,
+    bodyWeightUnits: s.bodyWeightUnits,
     saveLocalProfile: s.saveLocalProfile,
     tier: s.tier,
     // NU-6: kJ display preference, same read as the food domain screens.
@@ -1600,9 +1607,28 @@ export default function CoachOutputScreen({ navigation, route }) {
       const weeksInPhase = phaseStartedAt
         ? Math.max(1, Math.floor((Date.now() - phaseStartedAt) / (7 * 86400000)) + 1)
         : 1;
+      // C6 P-2 (D97-20): distinct phase weeks with a saved weekly run,
+      // plus the week being run now. Bounds the engine's CLAIM copy (week
+      // label, diet-break wording) so months away are never narrated as
+      // continuously coached months; the phase clock above is untouched.
+      const evidencedWeeksInPhase = phaseStartedAt
+        ? new Set([...(await getCoachOutputWeekStartsSince(user.id, phaseStartedAt)), weekStart]).size
+        : 1;
 
       // Compute consecutivePoorRecoveryWeeks from recent check-ins
       const recentCheckins = await getRecentCheckins(user.id, 4);
+      // C6 Phase 26 (D97): "consecutive" means adjacent CALENDAR weeks.
+      // These runs used to iterate ROWS, so a months-long gap chained an
+      // ancient week onto today's and a returning user's first hard week
+      // counted as the "second consecutive" - false certainty in both
+      // directions (lapse-is-not-failure law). A row joins the run only
+      // when it is the expected next-older week; a gap ends the run.
+      // consecutiveGrade3RecoveryWeeks below is deliberately NOT
+      // adjacency-gated: it certifies the ABSENCE of persistent fatigue,
+      // and an unknown gap must keep withholding that certification.
+      const WEEK_STEP_MS = 7 * 86400000;
+      const isAdjacent = (expected, ws) =>
+        expected == null || (ws != null && Math.abs(ws - expected) <= 86400000);
       const consecutivePoorRecoveryWeeks = (() => {
         // Campaign 1 P0-7 D2: a row with NO recorded scores is no evidence
         // and must not terminate the run - the old ?? 3 defaults made a
@@ -1610,7 +1636,12 @@ export default function CoachOutputScreen({ navigation, route }) {
         // silently reset this counter to 0, and matrixDeload hard-gates on
         // it. Only recorded values count or end the run.
         let count = 0;
+        let expected = null;
         for (const ci of recentCheckins) {
+          const ws = ci.weekStart ?? null;
+          if (!isAdjacent(expected, ws)) break; // a calendar gap ends the run
+          expected = ws != null ? ws - WEEK_STEP_MS
+            : (expected != null ? expected - WEEK_STEP_MS : null);
           const e = ci.energyScore;
           const s = ci.sorenessScore;
           if (e == null && s == null) continue; // no evidence: skip, never break
@@ -1643,9 +1674,18 @@ export default function CoachOutputScreen({ navigation, route }) {
         return count;
       })();
 
-      // Compute consecutiveOffTargetWeeks from recent coach outputs
+      // Compute consecutiveOffTargetWeeks from recent coach outputs.
+      // C6 Phase 26 (D97): chain only when the last output is the
+      // immediately previous week - getLatestCoachOutput has no age
+      // bound, so a six-month-old off-target output used to increment on
+      // the first run after a return, as though the absent months were
+      // consecutive off-target weeks. (The sibling
+      // lastCalAdjustmentWeeksAgo below already counts real elapsed
+      // weeks; this brings the counter to the same standard.)
       const lastOutput = await getLatestCoachOutput(user.id);
-      const consecutiveOffTargetWeeks = lastOutput?.trend?.onTarget === false
+      const lastOutputAdjacent = lastOutput?.weekStart != null
+        && Math.abs(weekStart - lastOutput.weekStart - WEEK_STEP_MS) <= 86400000;
+      const consecutiveOffTargetWeeks = lastOutputAdjacent && lastOutput?.trend?.onTarget === false
         ? (lastOutput?.consecutiveOffTargetWeeks ?? 0) + 1
         : 0;
 
@@ -1657,7 +1697,15 @@ export default function CoachOutputScreen({ navigation, route }) {
       // over-performance case), not a newly invented metric.
       const consecutiveExceededWeeks = (() => {
         let count = 0;
+        let expected = null;
         for (const ci of recentCheckins) {
+          const ws = ci.weekStart ?? null;
+          // C6 Phase 26 (D97): same adjacency rule - ancient "exceeded"
+          // weeks chained across a gap fed the D15 faster-update path
+          // with false upward evidence.
+          if (!isAdjacent(expected, ws)) break;
+          expected = ws != null ? ws - WEEK_STEP_MS
+            : (expected != null ? expected - WEEK_STEP_MS : null);
           if (ci.trainingPerformance === 'exceeded') count++;
           else break;
         }
@@ -1779,6 +1827,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         goalPhase: userProfile?.goalPhase ?? 'maint',
         trainingGoal: userProfile?.trainingGoal ?? null,
         weeksInPhase,
+        evidencedWeeksInPhase,
         goalStartDate: userProfile?.goalStartDate ?? null,
         consecutiveOffTargetWeeks,
         consecutivePoorRecoveryWeeks,
@@ -1806,7 +1855,14 @@ export default function CoachOutputScreen({ navigation, route }) {
         // Founder decision 2026-07-02 (Wave-3 review): the food-diary
         // stand-in needs a completed check-in within 14 days. Most recent
         // first from getRecentCheckins; created_at is the completion time.
-        lastCheckinAt: recentCheckins[0]?.createdAt ?? recentCheckins[0]?.weekStart ?? null,
+        // C6 P-4 (D97-20): COMPLETED means a row with check-in answers -
+        // the sleep-only row a workout summary writes is no evidence and
+        // must not hold the recalibration gate open.
+        lastCheckinAt: (() => {
+          const completed = recentCheckins.find((ci) =>
+            ci.energyScore != null || ci.sorenessScore != null || ci.calsAdherence != null);
+          return completed?.createdAt ?? completed?.weekStart ?? null;
+        })(),
         goalLockAdvanced,
         edPatternOpen,
         // Move #4 differential paywall inputs. Tier comes from
@@ -2130,6 +2186,19 @@ export default function CoachOutputScreen({ navigation, route }) {
     if (!output || !user?.id) return;
     if (applyingKey) return;
     if (output.autoApplyHoldActive) return; // D16: hold forces confirm-first
+    // C6 Phases 16 + 26 (D97): auto-apply executes the CURRENT cycle's
+    // decision only - this week's output, or the immediately reviewed
+    // week the Monday redirect lands on. The redirect itself has no age
+    // bound (it opens the latest completed decision), so a returning
+    // Coached user's months-old reviewed-but-unapplied output would
+    // otherwise be executed into TODAY's block the moment the tab
+    // opened. An older output keeps its manual Apply buttons; resuming
+    // is the user's tap, never a resurrection.
+    {
+      const liveWeek = localWeekStartMs();
+      const outWeek = Number(output?.weekStart ?? weekStart);
+      if (Number.isFinite(outWeek) && liveWeek - outWeek > 7 * 86400000) return;
+    }
 
     // Deload supersedes the incremental training-volume push for the week
     // (TrainingNextWeekCard shows one or the other, never both); Coached
@@ -2298,10 +2367,20 @@ export default function CoachOutputScreen({ navigation, route }) {
   // NU-5: the chip's caption names the number a "7-day trend" (the check-in's
   // vocabulary), so the old "this week" suffix comes off the value here.
   // Display-only; the engine label is untouched.
-  const weightChipValue =
-    trend.deltaLabel && trend.delta !== null
-      ? trend.deltaLabel.replace(/ this week$/, '')
-      : 'No weights logged';
+  // C6 R-14 (D97-22): the engine's delta label is kg-only (its `units`
+  // input is the immutable kg gym unit), so stone/lbs users read their
+  // weekly change in kg on the one screen that decides from it while
+  // every other body-weight surface honours bodyWeightUnits. Display-only
+  // reformat here from the raw kg delta: stone users read weekly deltas
+  // in lbs (the UK convention for changes); the maths and every stored
+  // value stay kg.
+  const weightChipValue = (() => {
+    if (trend.delta == null || !trend.deltaLabel) return 'No weights logged';
+    const bwu = bodyWeightUnits || 'st';
+    if (bwu === 'kg') return trend.deltaLabel.replace(/ this week$/, '');
+    const lbs = Math.round(Math.abs(trend.delta) * 2.2046226218 * 10) / 10;
+    return `${trend.delta >= 0 ? '+' : '-'}${lbs} lb${lbs === 1 ? '' : 's'}`;
+  })();
 
   // Five-part coach response (Theme A, OPP-C01/C02/C06), rendered in the
   // user's register (C1, founder decision #2): tone preference wins, else
@@ -2455,6 +2534,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   const dietBreakCardEl = dietBreakSuggested ? (
     <DietBreakCard
       weeksInDeficit={dietBreakWeeksInDeficit}
+      continuityEvidenced={output?.dietBreakContinuityEvidenced !== false}
       applied={isApplied(output, 'dietBreak')}
       onApply={applyDisabled ? undefined : handleApplyDietBreak}
       applyState={applyStateFor('dietBreak')}
@@ -2512,6 +2592,13 @@ export default function CoachOutputScreen({ navigation, route }) {
         <Reanimated.View entering={stage(0)} style={styles.weekHeader}>
           <Text style={[styles.weekLabel, live.weekLabel]}>{weekLabel}</Text>
           <Text style={[styles.weekRange, live.weekRange]}>{weekRangeLabel(weekStart)}</Text>
+          {/* C6 RB6-9 (D97-25): a decision older than its own week says so.
+              The Apply buttons stay live - resuming is the user's tap. */}
+          {decisionAgeNote(weekStart, localWeekStartMs()) ? (
+            <Text style={[styles.weekRange, live.weekRange]}>
+              {decisionAgeNote(weekStart, localWeekStartMs())}
+            </Text>
+          ) : null}
         </Reanimated.View>
 
         {/* D15 (founder ruling 2026-07-09): the adherence-why line, said once

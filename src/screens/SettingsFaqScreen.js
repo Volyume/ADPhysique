@@ -64,12 +64,16 @@ export const FAQS = [
   {
     key: 'photo-privacy',
     q: 'Are my progress photos private?',
-    a: "Yes. Progress photos are private on this device: they are never uploaded anywhere. A full data backup includes your photo metadata but not the image files themselves, so photos only ever leave your device if you choose to share or export them yourself.",
+    // C6 T-16 (D97-24): privacy AND its consequence, stated together -
+    // the old answer framed local-only purely as a privacy property, and
+    // nothing anywhere warned that the photo files do not come back after
+    // a reinstall or a new phone.
+    a: "Yes. Progress photos are private on this device: they are never uploaded anywhere. Because of that, the image files do not come back after a reinstall or on a new phone; everything else syncs, photos stay where they were taken. A full data backup includes your photo metadata but not the image files themselves, so if you want to keep the photos, save or share them from the photo screen before changing device.",
   },
   {
     key: 'data-privacy',
     q: 'Where is my data stored, and can I export or back it up?',
-    a: 'Your data lives on your device first, and syncs to a European (Dublin) server so it follows you across devices. From Settings > Your data you can export your workout log as a CSV, create a full backup file, or restore a safety snapshot from before a recent app update.',
+    a: 'Your data lives on your device first, and syncs to a European (Dublin) server so it follows you across devices. The one exception is progress photo and scan image files, which stay only on this device. From Settings > Your data you can export your workout log as a CSV, create a full backup file, or restore a safety snapshot from before a recent app update.',
   },
   {
     key: 'delete-account',

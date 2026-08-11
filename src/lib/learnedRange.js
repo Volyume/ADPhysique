@@ -157,7 +157,25 @@ export function computeLearnedRange({
         highestHandledPeak = highestHandledPeak == null
           ? achievedPeak
           : Math.max(highestHandledPeak, achievedPeak);
-        ceiling = stepToward(ceiling, highestHandledPeak, CEILING_STEP_MAX);
+        // C6 RA6-3 (D97-25, lead ruling option a): strain evidence is
+        // spent (it lowers the ceiling once, 2 sets at a time) while the
+        // all-time maximum is permanent, so intermittent responsive
+        // blocks used to re-inflate a strain-reduced ceiling toward a
+        // peak achieved many blocks earlier with no recent evidence for
+        // it (probe RA6-A: 21 -> 13 across four strained blocks, then
+        // 13 -> 19 across three responsive blocks that achieved 10).
+        // An UPWARD step must now be corroborated by the block in front
+        // of it: the target is capped at this block's achievedPeak +
+        // CEILING_STEP_MAX, so re-earning proven capacity still takes 2
+        // sets a block but each step rests on delivered volume. The
+        // downward handled-peak step is deliberately untouched, and the
+        // up-branch can never itself move the ceiling down - the
+        // founder's "a later good lower-volume block cannot erase
+        // proven capacity" rule still holds for holds.
+        const target = highestHandledPeak > ceiling
+          ? Math.max(Math.min(highestHandledPeak, achievedPeak + CEILING_STEP_MAX), ceiling)
+          : highestHandledPeak;
+        ceiling = stepToward(ceiling, target, CEILING_STEP_MAX);
       }
     } else if (classification === BLOCK_CLASS.OVERREACHED && achievedPeak != null) {
       const target = achievedPeak - 2;

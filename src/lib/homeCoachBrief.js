@@ -18,8 +18,16 @@ export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutD
   }
 
   // Rule 2, high fatigue (avg of last 2 sessions ≥ 3.5)
-  if (fatigueHistory.length >= 2) {
-    const recent = fatigueHistory.slice(0, 2);
+  // C6 RB6-4 (D97-25): present-tense advice needs RECENT sessions - the
+  // rule read the last two rated rows at any age, telling a six-month
+  // returner (Free tier included) to cut weight 10% "today" off ancient
+  // fatigue. Sessions must sit inside the 14-day detraining boundary.
+  const recentRated = (fatigueHistory ?? []).filter((r) => {
+    const t = Number(r?.startedAt ?? r?.started_at);
+    return Number.isFinite(t) && (Date.now() - t) <= 14 * 86400000;
+  });
+  if (recentRated.length >= 2) {
+    const recent = recentRated.slice(0, 2);
     const avg = recent.reduce((s, r) => s + (r.fatigueLevel ?? r.fatigue_level ?? 0), 0) / recent.length;
     if (avg >= 3.5) {
       return {

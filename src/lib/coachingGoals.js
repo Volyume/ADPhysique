@@ -640,12 +640,12 @@ export function getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matr
       general:          'Performance and recovery need to stabilise. Hold your current plan before adding anything more.',
       mens_physique:    'Keep shoulder and back sessions steady. Performance is stable and consistent sessions build the look.',
       classic_physique: 'Hold everything steady. Consistent sessions across all groups build proportion over time.',
-      bodybuilding:     'No changes needed. Stay with current volume across all groups.',
+      bodybuilding:     'Stay with your current volume across all groups. Holding a dose is a decision, not a default.',
       bikini:           'Hold your current sessions. Glute and hamstring work is tracking well.',
       wellness:         'Keep lower body volume steady. Recovery needs more time before adding.',
       figure:           'Hold current plan. Keep shoulder and back sessions consistent.',
       womens_physique:  'Maintain current volume. Performance is stable across all groups.',
-      womens_bodybuilding: 'No changes needed. Hold your current volume across every group.',
+      womens_bodybuilding: 'Hold your current volume across every group. Holding a dose is a decision, not a default.',
     };
     return holdNotes[trainingGoal] ?? holdNotes.general;
   }

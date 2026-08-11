@@ -21,7 +21,9 @@ describe('winbackPush', () => {
   test('sessions-since headline leads with the count and lapse month', () => {
     const { title, body } = winbackPush({ sessionsSince: 14, totalSessions: 200, sinceLabel: 'March' });
     expect(title).toBe('Still lifting. 14 sessions since March.');
-    expect(body).toContain('never stopped');
+    // Re-anchored under D97-22 R-17: claims storage, never continued analysis.
+    expect(body).toContain('history is all saved');
+    expect(body).not.toContain('never stopped');
   });
 
   test('singular session reads correctly', () => {

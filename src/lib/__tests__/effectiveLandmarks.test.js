@@ -86,3 +86,30 @@ describe('getEffectiveLandmarks', () => {
     expect(table.chest).toMatchObject(VOLUME_LANDMARKS.chest);
   });
 });
+
+describe('C6 RA6-1 (D97-25): only a REAL edit counts as manual in the merge', () => {
+  test('a legacy full-table save of untouched research defaults falls through to the adapted layer', () => {
+    const { table, source } = mergeLandmarkPrecedence({
+      // The old editor saved EVERY muscle on any save; chest here is the
+      // research default byte-for-byte, quads is a genuine edit.
+      manual: {
+        chest: { mev: 6, mav: 14, mrv: 22 }, // untouched default
+        quads: { mev: 10, mav: 16, mrv: 20 }, // real edit (mev differs)
+      },
+      adapted: { chest: { mev: 7, mav: 15, mrv: 23, isAdapted: true } },
+      research,
+    });
+    expect(source.chest).toBe('adapted'); // NOT silently pinned to a value the user never chose
+    expect(table.chest).toMatchObject({ mev: 7, mav: 15, mrv: 23 });
+    expect(source.quads).toBe('manual'); // a genuine edit behaves exactly as before
+    expect(table.quads).toMatchObject({ mev: 10, mav: 16, mrv: 20 });
+  });
+
+  test('an untouched default with no adapted layer stays research, still not "manual"', () => {
+    const { source } = mergeLandmarkPrecedence({
+      manual: { chest: { mev: 6, mav: 14, mrv: 22 } },
+      research,
+    });
+    expect(source.chest).toBe('research');
+  });
+});

@@ -56,8 +56,11 @@ describe('FQ-6.1: the trial-grant retry', () => {
   });
 
   test('the consent screen queues only on failure, and the runner drains the queue', () => {
+    // Re-anchored under D97-20 (C6 P-1): startCascade NEVER rejects, so the
+    // queue arms on the RESULT (ok:false), not a .catch that never fires.
     const consent = read('screens/Article9ConsentScreen.js');
-    expect(consent).toMatch(/queuePendingCascade\(user\?\.id, e\)/);
+    expect(consent).toMatch(/const grant = await cascade\.startCascade\(\)/);
+    expect(consent).toMatch(/queuePendingCascade\(user\?\.id, err\)/);
     const runner = read('lib/sync/runner.js');
     expect(runner).toMatch(/flushPendingCascade\(userId\)/);
   });
@@ -68,10 +71,14 @@ describe('FQ-6.1: the trial-grant retry', () => {
   });
 
   test('a definitive flush outcome clears the queue (no hammering, no duplicate grants)', () => {
+    // Re-anchored under D97-20 (C6 P-1): the flush judges the resolved
+    // RESULT, keeps the queue on network-shaped failures, and clears it on
+    // success or a definitive refusal. Behavioural coverage lives in
+    // payments/__tests__/pendingCascade.flush.test.js.
     const src = read('lib/payments/pendingCascade.js');
     const fn = src.slice(src.indexOf('export async function flushPendingCascade'));
-    expect(fn).toMatch(/await clearPendingCascade\(userId\);[\s\S]{0,200}return \{ flushed: true \}/);
-    expect(fn).toMatch(/isNetworkShapedError\(e\)/);
+    expect(fn).toMatch(/await clearPendingCascade\(userId\);[\s\S]{0,300}return \{ flushed: true \}/);
+    expect(fn).toMatch(/isNetworkShapedError\(err\)/);
   });
 });
 

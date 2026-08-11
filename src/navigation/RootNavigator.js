@@ -1059,6 +1059,21 @@ export default function RootNavigator() {
 
               setAuthLoading(false);
               setInitialAuthResolved(true);
+              // C6 Phase 1 seam 3 (D97): the only launch-time
+              // restoreNotifications call sat BELOW the return on this
+              // signed-in path, so for every signed-in user it never ran -
+              // every "re-laid on every launch" guarantee (training
+              // reminders, cascade/win-back windows, meal reminders, the
+              // RB-2 coach-ready re-lay) was real only after a quiet-hours
+              // edit or a timezone change. Restore here with the REAL user
+              // id. Fire-and-forget; every scheduler inside self-gates on
+              // permission, tier, toggles, push budget and ED flags.
+              try {
+                const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
+                if (raw) {
+                  restoreNotifications(JSON.parse(raw), session.user.id).catch(() => {});
+                }
+              } catch (_e) { /* best effort */ }
               return;
             }
           }

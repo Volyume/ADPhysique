@@ -37,7 +37,7 @@ jest.mock('../../store/useAppStore', () => ({
 jest.mock('zustand/react/shallow', () => ({ useShallow: (fn) => fn }));
 jest.mock('../../lib/database', () => ({
   getExerciseById: jest.fn(),
-  getWorkoutSetsForExercise: jest.fn(),
+  getCompletedSetHistoryForExercise: jest.fn(),
   getAllExercises: jest.fn(),
   getExerciseGoal: jest.fn(),
   saveExerciseGoal: jest.fn(),
@@ -50,7 +50,7 @@ jest.mock('../../lib/swapEngine', () => ({ rankSwaps: jest.fn(() => []) }));
 
 import ExerciseDetailScreen from '../ExerciseDetailScreen';
 import {
-  getExerciseById, getWorkoutSetsForExercise, getExerciseGoal, getAllExercises,
+  getExerciseById, getCompletedSetHistoryForExercise, getExerciseGoal, getAllExercises,
 } from '../../lib/database';
 
 const EXERCISE_DETAIL_SOURCE = require('fs').readFileSync(
@@ -133,7 +133,7 @@ describe('ExerciseDetailScreen goal sheet reachability (D36a item 17 modal tails
       defaultRepMin: 6,
       defaultRepMax: 12,
     });
-    getWorkoutSetsForExercise.mockResolvedValueOnce([]);
+    getCompletedSetHistoryForExercise.mockResolvedValueOnce([]);
     getExerciseGoal.mockResolvedValueOnce(null);
     getAllExercises.mockResolvedValueOnce([]);
 
@@ -205,7 +205,7 @@ describe('ExerciseDetailScreen malformed restored/legacy data (EP-23/UI-11)', ()
       defaultRepMin: 6,
       defaultRepMax: 12,
     });
-    getWorkoutSetsForExercise.mockResolvedValueOnce([
+    getCompletedSetHistoryForExercise.mockResolvedValueOnce([
       {
         workoutId: 'w1', weight: 100, actualReps: 5, setType: 'straight',
         createdAt: 'not-a-real-date',
@@ -249,7 +249,7 @@ describe('ExerciseDetailScreen malformed restored/legacy data (EP-23/UI-11)', ()
       id: 'e1', name: 'Barbell squat', primaryMuscle: 'quads', secondaryMuscles: [],
       defaultRepMin: 6, defaultRepMax: 12,
     });
-    getWorkoutSetsForExercise.mockResolvedValueOnce([]);
+    getCompletedSetHistoryForExercise.mockResolvedValueOnce([]);
     getExerciseGoal.mockResolvedValueOnce({
       id: 'g1', targetWeight: 80, targetDate: 'not-a-real-date', achievedAt: null,
     });

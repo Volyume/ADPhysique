@@ -71,3 +71,18 @@ describe('buildWidgetSnapshot', () => {
     expect(buildWidgetSnapshot(args)).toEqual(buildWidgetSnapshot(args));
   });
 });
+
+describe('C6 RD6-9 (D97-25): no plan means no invented denominator', () => {
+  const { buildWidgetSnapshot } = require('../snapshot');
+
+  test('a plan-derived denominator renders "N of M"', () => {
+    const s = buildWidgetSnapshot({ consistency: { completed: 3, planned: 4, streakWeeks: 2 } });
+    expect(s.consistency.label).toBe('3 of 4 sessions this week');
+  });
+
+  test('an absent denominator renders the honest plain count, never a trailing average as a plan', () => {
+    const s = buildWidgetSnapshot({ consistency: { completed: 3, planned: null, streakWeeks: 2 } });
+    expect(s.consistency.label).toBe('3 sessions this week');
+    expect(s.consistency.planned).toBeNull();
+  });
+});

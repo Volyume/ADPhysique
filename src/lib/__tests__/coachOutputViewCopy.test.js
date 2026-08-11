@@ -53,3 +53,27 @@ describe('coach output view copy helpers', () => {
     });
   });
 });
+
+describe('C6 RB6-9 (D97-25): a decision older than its own week says so', () => {
+  const { decisionAgeNote } = require('../coachOutput/viewCopy');
+  const WEEK = 7 * 86400000;
+
+  test('the current or immediately reviewed week carries no age note', () => {
+    const live = 1770000000000;
+    expect(decisionAgeNote(live, live)).toBeNull();
+    expect(decisionAgeNote(live - WEEK, live)).toBeNull();
+  });
+
+  test('an older decision states it has not been updated since, without urgency', () => {
+    const live = 1770000000000;
+    const note = decisionAgeNote(live - 12 * WEEK, live);
+    expect(note).toBe('This decision covers the dates above and has not been updated since.');
+    expect(note).not.toMatch(/—/);
+    expect(note).not.toMatch(/now|hurry|expired/i);
+  });
+
+  test('undated inputs cannot prove age and stay silent', () => {
+    expect(decisionAgeNote(null, 1770000000000)).toBeNull();
+    expect(decisionAgeNote(1770000000000, undefined)).toBeNull();
+  });
+});

@@ -719,6 +719,17 @@ export async function scheduleWinbackNotification(userId) {
     // 'read_failed' sentinel so the gate suppresses (cancels) the win-back push.
     const edFlag = userId ? await db.getOpenEdPatternFlag(userId).catch(() => 'read_failed') : null;
     if (edFlag) { await cancelWinbackNotification(); return; }
+    // C6 R-17 (D97-22): calm mode joins the gate. Suppressions on this
+    // surface treat calm and an open flag as one posture (deliberately
+    // ORed app-wide); the win-back was the one lay that only checked the
+    // flag. The calm read uses the app's standard getWellbeingMode
+    // semantics; the ED read above remains the fail-closed layer.
+    try {
+      // eslint-disable-next-line global-require
+      const { getWellbeingMode, isCalm } = require('../wellbeing');
+      const mode = await getWellbeingMode().catch(() => 'calm');
+      if (isCalm(mode)) { await cancelWinbackNotification(); return; }
+    } catch (_) { await cancelWinbackNotification(); return; }
 
     const statedReturn = await getWinbackStatedReturn();
     const fire = winbackFireDate(episode.lapseAt, statedReturn);

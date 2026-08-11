@@ -34,6 +34,49 @@ const EPISODE_KEY = '@volyume_winback_episode_v1';
 const LAST_FIRED_KEY = '@volyume_winback_last_fired_v1';
 const STATED_RETURN_KEY = '@volyume_winback_stated_return_v1';
 
+// C6 R-7 (D97-22): the churn episode was stored DEVICE-GLOBALLY, so two
+// users on one phone shared a lapse state (the same defect class D97-19
+// F8 fixed for the block-decision snooze). Keys are per-user now, resolved
+// lazily from the store (the module has many small entry points across
+// four callers; threading a uid through all of them would change every
+// call site for the same result). Signed out, the legacy global key is
+// used; on the first per-user read, any legacy value migrates across and
+// the global copy is removed, so open episodes and the 180-day floor
+// survive the change.
+const _uid = () => {
+  try {
+    // Lazy require to avoid an import cycle (store -> payments -> store).
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../../store/useAppStore').default;
+    return useAppStore.getState()?.session?.user?.id ?? null;
+  } catch (_) { return null; }
+};
+const _keyFor = (base) => {
+  const uid = _uid();
+  return uid ? `${base}_${uid}` : base;
+};
+// C6 RB6-6 (D97-25): guarded prefs - every real write stamps so the
+// freshest user-state wins sync conflicts, not push order.
+const _stamp = (key) => {
+  try {
+    // eslint-disable-next-line global-require
+    require('../sync').notePrefWrite(key);
+  } catch (_) { /* best-effort */ }
+};
+/** Read base's per-user key, migrating any legacy device-global value. */
+async function _getMigrated(base) {
+  const key = _keyFor(base);
+  let raw = await AsyncStorage.getItem(key);
+  if (raw == null && key !== base) {
+    raw = await AsyncStorage.getItem(base);
+    if (raw != null) {
+      await AsyncStorage.setItem(key, raw);
+      await AsyncStorage.removeItem(base);
+    }
+  }
+  return raw;
+}
+
 const DAY_MS = 86400000;
 // Absolute floor across episodes (§4c): never more than one win-back / 180 days.
 export const WINBACK_FLOOR_MS = 180 * DAY_MS;
@@ -71,7 +114,7 @@ export function canLayWinback({ episode, lastFiredAt, now = Date.now() } = {}) {
 
 export async function getEpisode() {
   try {
-    const raw = await AsyncStorage.getItem(EPISODE_KEY);
+    const raw = await _getMigrated(EPISODE_KEY);
     if (!raw) return null;
     const ep = JSON.parse(raw);
     return (ep && typeof ep.lapseAt === 'number') ? ep : null;
@@ -90,7 +133,8 @@ export async function openEpisode(lapseAt = Date.now()) {
     const existing = await getEpisode();
     if (existing) return { episode: existing, opened: false };
     const episode = { lapseAt, reasonCaptured: false, winbackLaid: false };
-    await AsyncStorage.setItem(EPISODE_KEY, JSON.stringify(episode));
+    _stamp(_keyFor(EPISODE_KEY));
+    await AsyncStorage.setItem(_keyFor(EPISODE_KEY), JSON.stringify(episode));
     return { episode, opened: true };
   } catch (_) {
     return { episode: null, opened: false };
@@ -111,7 +155,8 @@ export async function markLapseSheetShown() {
     const ep = await getEpisode();
     if (!ep || ep.lapseSheetShown) return;
     ep.lapseSheetShown = true;
-    await AsyncStorage.setItem(EPISODE_KEY, JSON.stringify(ep));
+    _stamp(_keyFor(EPISODE_KEY));
+    await AsyncStorage.setItem(_keyFor(EPISODE_KEY), JSON.stringify(ep));
   } catch (_) { /* tolerate */ }
 }
 
@@ -120,7 +165,8 @@ export async function markReasonCaptured() {
     const ep = await getEpisode();
     if (!ep || ep.reasonCaptured) return;
     ep.reasonCaptured = true;
-    await AsyncStorage.setItem(EPISODE_KEY, JSON.stringify(ep));
+    _stamp(_keyFor(EPISODE_KEY));
+    await AsyncStorage.setItem(_keyFor(EPISODE_KEY), JSON.stringify(ep));
   } catch (_) { /* tolerate */ }
 }
 
@@ -129,17 +175,19 @@ export async function markWinbackLaid(now = Date.now()) {
     const ep = await getEpisode();
     if (ep && !ep.winbackLaid) {
       ep.winbackLaid = true;
-      await AsyncStorage.setItem(EPISODE_KEY, JSON.stringify(ep));
+      _stamp(_keyFor(EPISODE_KEY));
+      await AsyncStorage.setItem(_keyFor(EPISODE_KEY), JSON.stringify(ep));
     }
     // Record the cross-episode floor regardless, so the 180-day rule holds even
     // if the episode is later cleared by a return to Pro.
-    await AsyncStorage.setItem(LAST_FIRED_KEY, String(now));
+    _stamp(_keyFor(LAST_FIRED_KEY));
+    await AsyncStorage.setItem(_keyFor(LAST_FIRED_KEY), String(now));
   } catch (_) { /* tolerate */ }
 }
 
 export async function getLastFiredAt() {
   try {
-    const raw = await AsyncStorage.getItem(LAST_FIRED_KEY);
+    const raw = await _getMigrated(LAST_FIRED_KEY);
     if (raw == null) return null;
     const n = Number(raw);
     return Number.isFinite(n) ? n : null;
@@ -154,6 +202,10 @@ export async function getLastFiredAt() {
  */
 export async function clearEpisode() {
   try {
+    await AsyncStorage.removeItem(_keyFor(EPISODE_KEY));
+    await AsyncStorage.removeItem(_keyFor(STATED_RETURN_KEY));
+    // The legacy global copies clear too, so a pre-migration episode
+    // cannot resurface for the next signed-in user on this device.
     await AsyncStorage.removeItem(EPISODE_KEY);
     await AsyncStorage.removeItem(STATED_RETURN_KEY);
   } catch (_) { /* tolerate */ }
@@ -163,14 +215,15 @@ export async function clearEpisode() {
 export async function setStatedReturn(key) {
   try {
     if (key && STATED_RETURN_DELAY_DAYS[key] != null) {
-      await AsyncStorage.setItem(STATED_RETURN_KEY, key);
+      _stamp(_keyFor(STATED_RETURN_KEY));
+    await AsyncStorage.setItem(_keyFor(STATED_RETURN_KEY), key);
     }
   } catch (_) { /* tolerate */ }
 }
 
 export async function getStatedReturn() {
   try {
-    const v = await AsyncStorage.getItem(STATED_RETURN_KEY);
+    const v = await _getMigrated(STATED_RETURN_KEY);
     return (v && STATED_RETURN_DELAY_DAYS[v] != null) ? v : null;
   } catch (_) {
     return null;

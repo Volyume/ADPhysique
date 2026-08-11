@@ -27,7 +27,7 @@ import { GLOSSARY } from '../lib/coachGlossary';
 import { SkeletonCard } from '../components/Skeleton';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
-  getExerciseById, getWorkoutSetsForExercise, getAllExercises,
+  getExerciseById, getCompletedSetHistoryForExercise, getAllExercises,
   getExerciseGoal, saveExerciseGoal, markGoalAchieved, deleteExerciseGoal,
 } from '../lib/database';
 import { calculate1RM, MUSCLE_DISPLAY_NAMES, detectPlateau, detectPR } from '../lib/algorithms';
@@ -329,7 +329,9 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       setExercise(ex);
 
       // History, group by workout, last 8 sessions
-      const mySets = await getWorkoutSetsForExercise(exerciseId, user.id, 200);
+      // C6 P10-1 (D97-18): all completed history - a records wall may
+      // never derive from a rolling window.
+      const mySets = await getCompletedSetHistoryForExercise(exerciseId, user.id);
 
       const byWorkout = {};
       for (const s of mySets) {

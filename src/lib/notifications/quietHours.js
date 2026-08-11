@@ -49,6 +49,11 @@ export async function getQuietHours() {
 
 export async function setQuietHours(prefs) {
   const merged = { ...DEFAULT_QUIET_HOURS, ...prefs };
+  // C6 S-2 (D97-23): guarded pref - stamp the real user write.
+  try {
+    // eslint-disable-next-line global-require
+    require('../sync').notePrefWrite(QUIET_HOURS_KEY);
+  } catch (_) { /* stamp is best-effort */ }
   await AsyncStorage.setItem(QUIET_HOURS_KEY, JSON.stringify(merged));
   return merged;
 }

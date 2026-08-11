@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { generateInsights } from './insightsEngine';
-import { calculate1RM, allocateExerciseVolume } from './algorithms';
+import { calculate1RM, allocateExerciseVolume, isE1rmEligibleRow } from './algorithms';
 import { pickBestLift } from './bestLift';
 import { logError, logWarn } from './errorLog';
 import { localDayKey, localWeekStartMs, localWeekEndMs } from './dayKey';
@@ -63,11 +63,27 @@ export function uid() {
   });
 }
 
+// C6 T-8 (D97-24): the callback-regex conversion ran per column per row
+// on ten surfaces (Home readiness, workout summary, the notification
+// handler...) and measured 106ms over a year of set rows, 530ms over
+// five. Column names are a tiny closed set, so the conversion is
+// memoised once per distinct key - measured 4.8x on the same rows,
+// byte-identical output.
+const _camelKeyCache = new Map();
+function _camelKey(key) {
+  let camel = _camelKeyCache.get(key);
+  if (camel === undefined) {
+    camel = key.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
+    _camelKeyCache.set(key, camel);
+  }
+  return camel;
+}
+
 function rowToCamel(row) {
   if (!row) return null;
   const result = {};
   for (const [key, value] of Object.entries(row)) {
-    const camelKey = key.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
+    const camelKey = _camelKey(key);
     if (key === 'secondary_muscles' && typeof value === 'string') {
       try { result[camelKey] = JSON.parse(value); } catch { result[camelKey] = []; }
     } else {
@@ -2098,6 +2114,24 @@ const SCHEMA_MIGRATIONS = [
      )`,
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_coach_outputs_user_week ON coach_outputs(user_id, week_start)',
   ],
+  [
+    // v72 (C6 S-15, D97-23): re-id legacy coach_outputs rows to the
+    // deterministic co_<week_start>_<user_id> form saveCoachOutput mints,
+    // so every device's cloud upsert converges on ONE (user_id, id) per
+    // week. Without this, a device holding a legacy uid() id for a week
+    // whose surviving cloud row has a different id would - after the
+    // corrected cloud migration 135's unique index - poison its entire
+    // 200-row batch upsert with 23505 for ever. Safe by construction:
+    // v71's unique index guarantees one row per (user_id, week_start), so
+    // the target id can never collide; updated_at is NOT bumped (honest
+    // timestamps, F5) - the full-history push carries the new id anyway,
+    // and a stale cloud copy under the old id arriving later hits the
+    // applier's INSERT OR IGNORE against the v71 index and is dropped.
+    // Idempotent: rows already deterministic do not match the WHERE.
+    `UPDATE coach_outputs
+        SET id = 'co_' || week_start || '_' || user_id
+      WHERE id <> 'co_' || week_start || '_' || user_id`,
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {
@@ -2992,6 +3026,25 @@ export async function getRoutineWorkoutTonnages(userId, routineId, sinceMs, excl
   return rows.map(rowToCamel);
 }
 
+// C6 P10-1 (D97-18): the records surface's fetch. A "Personal records"
+// wall may never truncate: the old 200-row window meant the wall showed
+// the best of a rolling ~50 sessions under an all-time heading, included
+// rows from incomplete workouts, and the marker replay treated the
+// oldest in-window session as a first exposure (falsely marking its
+// second set a PR). Completed workouts only, no cap - the LiftProgress
+// pattern.
+export async function getCompletedSetHistoryForExercise(exerciseId, userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT ws.* FROM workout_sets ws
+      JOIN workouts w ON w.id = ws.workout_id
+     WHERE ws.exercise_id = ? AND ws.user_id = ? AND w.is_completed = 1
+     ORDER BY ws.created_at DESC`,
+    [exerciseId, userId],
+  );
+  return rows.map(rowToCamel);
+}
+
 export async function getWorkoutSetsForExercise(exerciseId, userId, limit = 100) {
   const d = await db();
   const rows = await d.getAllAsync(
@@ -3681,8 +3734,11 @@ export async function updateRoutinePosition(id, newPosition) {
 
 export async function getActivePlan(userId) {
   const d = await db();
+  // C6 P9-08 (D97): deterministic tiebreak, matching getActiveBlock's
+  // Campaign 1 hardening - should a sync ever leave two actives, the
+  // newest wins rather than SQL row order.
   const row = await d.getFirstAsync(
-    'SELECT * FROM programmes WHERE user_id = ? AND is_active = 1 AND (is_library = 0 OR is_library IS NULL) LIMIT 1',
+    'SELECT * FROM programmes WHERE user_id = ? AND is_active = 1 AND (is_library = 0 OR is_library IS NULL) ORDER BY updated_at DESC LIMIT 1',
     [userId],
   );
   return rowToCamel(row);
@@ -3691,15 +3747,24 @@ export async function getActivePlan(userId) {
 export async function setActivePlan(userId, planId) {
   const d = await db();
   const now = Date.now();
-  await d.runAsync(
-    'UPDATE programmes SET is_active = 0, updated_at = ? WHERE user_id = ?',
-    [now, userId],
-  );
-  if (planId) {
+  // C6 P44-02 + P9-08 (D97): one transaction (two interleaved activations
+  // could leave two is_active programmes - the same interleave RB-3 closed
+  // for mesocycles), and activation UNARCHIVES - "Set active" was reachable
+  // on an archived plan and left it active and archived simultaneously,
+  // breaking the active/archived partition every list read assumes.
+  await runInTransaction(d, async () => {
     await d.runAsync(
-      'UPDATE programmes SET is_active = 1, updated_at = ? WHERE id = ?',
-      [now, planId],
+      'UPDATE programmes SET is_active = 0, updated_at = ? WHERE user_id = ?',
+      [now, userId],
     );
+    if (planId) {
+      await d.runAsync(
+        'UPDATE programmes SET is_active = 1, is_archived = 0, updated_at = ? WHERE id = ?',
+        [now, planId],
+      );
+    }
+  });
+  if (planId) {
     // LB-8: a plan was activated (onboarding success / re-engagement). Only
     // on a real activation, not the planId=null deactivate-all path.
     _trackEvent(userId, 'plan_activated', null);
@@ -3718,7 +3783,10 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
   const d = await db();
   const now = Date.now();
   const id = uid();
-  const startDate = new Date().toISOString().slice(0, 10);
+  // C6 T-2 (D97-24): store the LOCAL activation day, not the UTC one - an
+  // evening activation in the Americas used to store tomorrow's date.
+  const _sd = new Date();
+  const startDate = `${_sd.getFullYear()}-${String(_sd.getMonth() + 1).padStart(2, '0')}-${String(_sd.getDate()).padStart(2, '0')}`;
   // end_date is required by the cloud schema (NOT NULL). Without it the
   // push silently drops the row and a fresh-install sign-in lands with
   // an active plan but no training block.
@@ -3740,6 +3808,16 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
   // One transaction closes that for every caller. No nested
   // runInTransaction runs inside (both statements are plain runAsync).
   await runInTransaction(d, async () => {
+    // C6 P44-05 (D97): an abandoned block's end_date was written once at
+    // creation and never truncated, so "Past blocks" showed overlapping
+    // ranges and a block left in week 2 read as a full six weeks. A block
+    // whose planned end is still ahead ends TODAY when the user switches
+    // away; finished blocks keep their real dates.
+    await d.runAsync(
+      `UPDATE mesocycles SET end_date = date('now'), updated_at = ?
+        WHERE user_id = ? AND is_active = 1 AND end_date > date('now')`,
+      [now, userId],
+    );
     await d.runAsync(
       'UPDATE mesocycles SET is_active = 0, updated_at = ? WHERE user_id = ?',
       [now, userId],
@@ -3865,6 +3943,7 @@ export async function archivePlan(planId) {
     'UPDATE programmes SET is_active = 0, is_archived = 1, updated_at = ? WHERE id = ?',
     [Date.now(), planId],
   );
+  _scheduleSync(); // C6 P44-03 (D97): archived state travels now
 }
 
 export async function unarchivePlan(planId) {
@@ -3873,6 +3952,7 @@ export async function unarchivePlan(planId) {
     'UPDATE programmes SET is_archived = 0, updated_at = ? WHERE id = ?',
     [Date.now(), planId],
   );
+  _scheduleSync(); // C6 P44-03 (D97)
 }
 
 export async function getArchivedPlansForUser(userId) {
@@ -3901,6 +3981,7 @@ export async function archiveOtherUserPlans(userId, keepPlanId) {
        AND (is_archived = 0 OR is_archived IS NULL)`,
     [Date.now(), userId, keepPlanId],
   );
+  _scheduleSync(); // C6 P44-03 (D97)
 }
 
 export async function duplicatePlan(planId, userId) {
@@ -3910,6 +3991,13 @@ export async function duplicatePlan(planId, userId) {
   const newPlan = await createProgramme(userId, `Copy of ${plan.name}`, plan.description, 0);
 
   const d = await db();
+  // C6 P44-11 (D97): a duplicate carries provenance like a library copy
+  // does (RB-6), so a renamed duplicate still identifies its source and
+  // can never be mistaken for an unrelated hand-built plan.
+  await d.runAsync(
+    'UPDATE programmes SET source_programme_id = ?, updated_at = ? WHERE id = ?',
+    [planId, Date.now(), newPlan.id],
+  );
   const routineRows = await d.getAllAsync(
     `SELECT * FROM routines WHERE programme_id = ? AND (is_active = 1 OR is_active IS NULL)
      ORDER BY (position IS NULL), position ASC, created_at ASC`,
@@ -4321,6 +4409,26 @@ export async function getDeloadSuggestedWeekStarts(userId, fromMs, toMs) {
        WHERE user_id = ? AND recovery_flag = 'deload_suggested'
          AND week_start >= ? AND week_start < ?`,
       [userId, fromMs, toMs],
+    );
+    return rows.map((r) => r.week_start).filter((v) => v != null);
+  } catch (_e) {
+    return [];
+  }
+}
+
+/**
+ * Distinct week starts of saved coach outputs on/after sinceMs. C6 P-2
+ * (D97-20): evidence for how many phase weeks were actually coached, so
+ * claim copy never counts months away as coached months. Fail-quiet []
+ * (the engine then treats evidence as absent, never inflated).
+ */
+export async function getCoachOutputWeekStartsSince(userId, sinceMs) {
+  try {
+    const d = await db();
+    const rows = await d.getAllAsync(
+      `SELECT DISTINCT week_start FROM coach_outputs
+       WHERE user_id = ? AND week_start >= ? AND deleted_at IS NULL`,
+      [userId, sinceMs],
     );
     return rows.map((r) => r.week_start).filter((v) => v != null);
   } catch (_e) {
@@ -4762,6 +4870,12 @@ export async function getActiveInsights(userId, limitRows = 3) {
 
 export async function dismissInsight(insightId) {
   const d = await db();
+  // C6 F5 (D97): the local table carries no updated_at column, so the
+  // honest-timestamp half of the fix would need a schema change; the
+  // pull-side ratchet in insertOrUpdateUserInsightFromCloud alone closes
+  // the user-visible defect (a dismissal can never be un-dismissed by a
+  // stale device). The cloud row may briefly flap; devices converge on
+  // dismissed.
   await d.runAsync(
     'UPDATE user_insights SET dismissed_at = ? WHERE id = ?',
     [Date.now(), insightId],
@@ -5409,6 +5523,15 @@ export async function getAdaptiveLandmarkHistory(userId) {
     const PUMP_MAP    = [1, 2, 4]; // overall_pump 1→1, 2→2, 3→4
     const SORENESS_MAP = [2, 3, 4]; // soreness_24h_before 1→2, 2→3, 3→4
 
+    // C6-P2 (D97, Campaign 6 maturity audit): computeAdaptiveLandmarks
+    // treats its input as CHRONOLOGICAL and takes entries.slice(-8) as
+    // "the last 8 data points". This query is ORDER BY started_at DESC,
+    // so without the reverse the adapted bands were computed from the
+    // OLDEST eight sessions inside the 200-row window - for a mature
+    // user, months-old evidence presented as current, barely moving as
+    // new sessions arrived. Returned oldest-first so the slice reads the
+    // genuinely most recent sessions. The trend derivation above is
+    // per-muscle-constant and unaffected by return order.
     return rows.map(row => ({
       muscle: row.muscle,
       pumpScore:       PUMP_MAP[(row.overall_pump || 2) - 1]     ?? 3,
@@ -5418,7 +5541,7 @@ export async function getAdaptiveLandmarkHistory(userId) {
       performanceTrend: trendKey[`${row.workout_id}_${row.muscle}`] ?? 0,
       prFrequency:     0,
       missedReps:      Math.round((row.avg_missed || 0) * 10) / 10,
-    }));
+    })).reverse();
   } catch (_e) {
     return [];
   }
@@ -5458,7 +5581,7 @@ export async function logMorningWeight(userId, { weightKg, loggedAt = Date.now()
   const dayStart = startLocalDay(loggedAt);
   const dayEnd = nextLocalDay(loggedAt);
   const existing = await d.getFirstAsync(
-    'SELECT id FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ?',
+    'SELECT id FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ? AND deleted_at IS NULL',
     [userId, dayStart, dayEnd],
   );
   let savedId = id;
@@ -5486,11 +5609,53 @@ export async function logMorningWeight(userId, { weightKg, loggedAt = Date.now()
   return savedId;
 }
 
+/**
+ * C6 R-8 (D97-22): a Home weigh-in had no owner anywhere - Body Metrics
+ * withheld its actions (a no-op button is worse than none) and no
+ * update/delete existed, so a mistyped weigh-in from any previous day was
+ * permanent and kept feeding the trend, the ED-safety rapid-loss signal
+ * and the FFM-floor last-weigh-in step for ever. Correcting or removing a
+ * row can only make the evidence MORE truthful; deletion is a soft
+ * tombstone so it propagates to the cloud and other devices, and every
+ * product reader filters it out. No gate, threshold or floor changes.
+ */
+export async function updateMorningWeightById(userId, id, { weightKg, notes = undefined } = {}) {
+  if (!userId || !id) return false;
+  if (!Number.isFinite(weightKg) || weightKg <= 0) {
+    throw new Error(`updateMorningWeightById: weightKg must be a positive finite number, got ${weightKg}`);
+  }
+  const d = await db();
+  const now = Date.now();
+  const res = notes === undefined
+    ? await d.runAsync(
+      'UPDATE morning_weights SET weight_kg = ?, updated_at = ? WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
+      [weightKg, now, id, userId],
+    )
+    : await d.runAsync(
+      'UPDATE morning_weights SET weight_kg = ?, notes = ?, updated_at = ? WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
+      [weightKg, notes, now, id, userId],
+    );
+  _scheduleSync();
+  return (res?.changes ?? 0) > 0;
+}
+
+export async function deleteMorningWeightById(userId, id) {
+  if (!userId || !id) return false;
+  const d = await db();
+  const now = Date.now();
+  const res = await d.runAsync(
+    'UPDATE morning_weights SET deleted_at = ?, updated_at = ? WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
+    [now, now, id, userId],
+  );
+  _scheduleSync();
+  return (res?.changes ?? 0) > 0;
+}
+
 export async function getMorningWeightsLast14Days(userId) {
   const d = await db();
   const since = Date.now() - 14 * 86400000;
   const rows = await d.getAllAsync(
-    'SELECT * FROM morning_weights WHERE user_id = ? AND logged_at >= ? ORDER BY logged_at ASC',
+    'SELECT * FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND deleted_at IS NULL ORDER BY logged_at ASC',
     [userId, since],
   );
   return rows.map(rowToCamel);
@@ -5499,7 +5664,7 @@ export async function getMorningWeightsLast14Days(userId) {
 export async function getMorningWeights(userId, limit = 90) {
   const d = await db();
   const rows = await d.getAllAsync(
-    'SELECT * FROM morning_weights WHERE user_id = ? ORDER BY logged_at DESC LIMIT ?',
+    'SELECT * FROM morning_weights WHERE user_id = ? AND deleted_at IS NULL ORDER BY logged_at DESC LIMIT ?',
     [userId, limit],
   );
   return rows.map(rowToCamel).reverse();
@@ -5513,7 +5678,7 @@ export async function getMorningWeightToday(userId) {
   // TZ-2: next local midnight, not +86400000 (DST-safe; see logMorningWeight).
   const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
   const row = await d.getFirstAsync(
-    'SELECT * FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ?',
+    'SELECT * FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ? AND deleted_at IS NULL',
     [userId, dayStart, dayEnd],
   );
   return rowToCamel(row);
@@ -6130,15 +6295,24 @@ export async function getWeeklySessionStats(userId, weekStart) {
   const weekStartMs = coerceWeekStartMs(weekStart, 'getWeeklySessionStats');
   const d = await db();
   const weekEnd = localWeekEndMs(weekStartMs); // LS-06: DST-correct week end, not fixed 168h
+  // C6 RD6-9 (D97-25): a "session" here must contain at least one set -
+  // the same evidence test ReadinessCards already applies to the same
+  // rows. Counting bare is_completed rows let a started-and-abandoned
+  // shell inflate "You hit all N sessions" and the streak/widget/partner
+  // counts built on this reader.
+  const SESSION_EVIDENCE = `AND EXISTS (
+         SELECT 1 FROM workout_sets ws WHERE ws.workout_id = workouts.id)`;
   const row = await d.getFirstAsync(
     `SELECT COUNT(*) AS completed FROM workouts
-     WHERE user_id = ? AND is_completed = 1 AND started_at >= ? AND started_at < ?`,
+     WHERE user_id = ? AND is_completed = 1 AND started_at >= ? AND started_at < ?
+       ${SESSION_EVIDENCE}`,
     [userId, weekStartMs, weekEnd],
   );
   const prev4 = await d.getAllAsync(
     `SELECT COUNT(*) AS wk_count FROM workouts
      WHERE user_id = ? AND is_completed = 1
        AND started_at >= ? AND started_at < ?
+       ${SESSION_EVIDENCE}
      GROUP BY CAST((started_at - ?) / (7 * 86400000) AS INTEGER)`,
     [userId, weekStartMs - 28 * 86400000, weekStartMs, weekStartMs - 28 * 86400000],
   );
@@ -6163,7 +6337,10 @@ export async function getWeeklySessionStats(userId, weekStart) {
   const planned = plannedFromPlan != null
     ? plannedFromPlan
     : Math.max(completed, Math.round(avgPrev) || 3);
-  return { completed, planned };
+  // RD6-9: display surfaces must not present the trailing-average
+  // estimate as though a plan prescribed it; plannedIsEstimate lets
+  // them choose honest phrasing. Existing numeric consumers unchanged.
+  return { completed, planned, plannedIsEstimate: plannedFromPlan == null };
 }
 
 // True when a workout exists for the given calendar day (any state,
@@ -6447,6 +6624,12 @@ export async function getYearOfLiftsData(userId, yearMs = null) {
   const bestByExercise = new Map();
   for (const s of sets) {
     if (!s.exercise_name) continue;
+    // C6 R-15 (D97-22): the shared e1RM eligibility rule (D97-18) applies
+    // here too - a myo-reps/rest-pause row's actual_reps is a SUM of
+    // efforts, so it could headline the recap with an inflated estimated
+    // max the live detector would refuse. Tonnage/set counts above keep
+    // every working set; only the record read is gated.
+    if (!isE1rmEligibleRow(s)) continue;
     const e1rm = calculate1RM(s.weight || 0, s.actual_reps || 0);
     if (!e1rm) continue;
     const prev = bestByExercise.get(s.exercise_name);
@@ -6743,7 +6926,7 @@ export async function saveCoachOutput(userId, data) {
       `UPDATE coach_outputs SET
         goal_phase = ?, volume_signal = ?, load_signal = ?, recovery_flag = ?,
         calorie_change = ?, steps_target = ?, why_this = ?, output_json = ?,
-        updated_at = ?
+        applied = ?, updated_at = ?
        WHERE id = ?`,
       [
         data.goalPhase ?? null, data.volumeSignal ?? null, data.loadSignal ?? null,
@@ -6753,7 +6936,16 @@ export async function saveCoachOutput(userId, data) {
         // Campaign 1 P0-8 D7: write updated_at on every save. It was never
         // set, so the push stamped now() each cycle (laundering age) and
         // an applied receipt could not win a cross-device comparison.
-        data.whyThisWeek ?? null, JSON.stringify(toStore), now, existing.id,
+        // C6 RC6-2 (D97-25): the applied COLUMN is derived from the JSON
+        // receipt on every save - it previously had NO local writer at
+        // all, so every production cloud row carried applied = false and
+        // v71's tiebreak, migrate_135's corrected S-14 predicate and the
+        // reinstall E2E's receipt assertion were all inert. Deriving it
+        // here (never set independently) means the column and the JSON
+        // can never disagree.
+        data.whyThisWeek ?? null, JSON.stringify(toStore),
+        toStore?.appliedAdjustments && Object.keys(toStore.appliedAdjustments).length ? 1 : 0,
+        now, existing.id,
       ],
     );
     _scheduleSync();
@@ -6770,15 +6962,18 @@ export async function saveCoachOutput(userId, data) {
   await d.runAsync(
     `INSERT INTO coach_outputs
       (id, user_id, week_start, goal_phase, volume_signal, load_signal, recovery_flag,
-       calorie_change, steps_target, why_this, output_json, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       calorie_change, steps_target, why_this, output_json, applied, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, userId, data.weekStart,
       data.goalPhase ?? null, data.volumeSignal ?? null, data.loadSignal ?? null,
       data.recoveryFlag ?? null,
       data.adjustments?.calories?.change ?? null,
       data.adjustments?.steps?.target ?? null,
-      data.whyThisWeek ?? null, json, now,
+      data.whyThisWeek ?? null, json,
+      // C6 RC6-2 (D97-25): applied derived from the JSON at birth too.
+      data?.appliedAdjustments && Object.keys(data.appliedAdjustments).length ? 1 : 0,
+      now,
     ],
   );
   // Campaign 1 P0-8 D7: stamp updated_at at birth too (same honest-age
@@ -6841,6 +7036,9 @@ export async function getAllMesocycleWeeksForUser(userId) {
 
 export async function getAllMorningWeightsForUser(userId) {
   const d = await db();
+  // C6 R-8: deliberately INCLUDES soft-deleted rows - this is the sync
+  // push's reader, and a deletion must propagate to the cloud tombstone.
+  // Every product reader filters deleted_at IS NULL.
   const rows = await d.getAllAsync('SELECT * FROM morning_weights WHERE user_id = ?', [userId]);
   return rows.map(rowToCamel);
 }
@@ -7069,9 +7267,11 @@ export async function insertProgrammeFromCloud(userId, p) {
   // (setActivePlan flips is_active) could NEVER reach a device that
   // already held the row - so the two devices disagreed about which
   // plan is active, permanently. A newer cloud row now updates the
-  // synced columns in place; local-only columns (folder_id, tags,
-  // split_type, is_archived, next_workout_index, difficulty,
-  // deleted_at) survive untouched because the UPDATE never names them.
+  // synced columns in place; local-only columns (tags, split_type,
+  // next_workout_index, difficulty, deleted_at) survive untouched
+  // because the UPDATE never names them. C6 P44-03 (D97): is_archived
+  // now SYNCS (push + both pull branches) - the old local-only list
+  // here wrongly named folder_id too, which has synced since 089.
   const cloudUpdated = tsMs(p.updated_at);
   const existing = await d.getFirstAsync(
     'SELECT updated_at FROM programmes WHERE id = ?', [p.id],
@@ -7085,12 +7285,13 @@ export async function insertProgrammeFromCloud(userId, p) {
     await d.runAsync(
       `UPDATE programmes SET
         user_id = ?, name = ?, description = ?, is_library = ?, is_active = ?,
-        source_programme_id = ?, updated_at = ?
+        is_archived = ?, source_programme_id = ?, updated_at = ?
        WHERE id = ?`,
       [
         userId, p.name, p.description ?? null,
         p.is_library ? 1 : 0,
         p.is_active ? 1 : 0,
+        p.is_archived ? 1 : 0,
         p.source_programme_id ?? null,
         cloudUpdated, p.id,
       ],
@@ -7099,12 +7300,13 @@ export async function insertProgrammeFromCloud(userId, p) {
   }
   await d.runAsync(
     `INSERT OR IGNORE INTO programmes
-      (id, user_id, name, description, is_library, is_active, source_programme_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, user_id, name, description, is_library, is_active, is_archived, source_programme_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       p.id, userId, p.name, p.description ?? null,
       p.is_library ? 1 : 0,
       p.is_active ? 1 : 0,
+      p.is_archived ? 1 : 0,
       p.source_programme_id ?? null,
       createdAt,
       cloudUpdated ?? createdAt,
@@ -7226,15 +7428,23 @@ export async function insertMorningWeightFromCloud(userId, w) {
   // (preserves the old non-destructive behaviour until 060 enables real LWW).
   if (existing && (cloudMs == null || (localMs != null && localMs >= cloudMs))) return;
   const createdAt = toMs(w.created_at) ?? Date.now();
+  // C6 RC6-3 (D97-25): carry deleted_at through the applier like the
+  // sibling appliers do (peak_week_plans under D95, workout_notes) -
+  // INSERT OR REPLACE without it returned the column to NULL, so any
+  // newer cloud copy resurrected a locally tombstoned weigh-in and the
+  // deletion depended entirely on the caller's .is('deleted_at', null)
+  // filter holding cloud-side. Morning weights feed the rapid-loss and
+  // max-safe-loss gates, so a resurrected row re-enters that series.
   await d.runAsync(
-    `INSERT OR REPLACE INTO morning_weights (id, user_id, weight_kg, logged_at, notes, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT OR REPLACE INTO morning_weights (id, user_id, weight_kg, logged_at, notes, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       w.id, userId, w.weight_kg,
       toMs(w.logged_at) ?? Date.now(),
       w.notes ?? null,
       createdAt,
       cloudMs ?? createdAt,
+      toMs(w.deleted_at) ?? null,
     ],
   );
 }
@@ -7307,12 +7517,27 @@ export async function insertCoachOutputFromCloud(userId, co) {
   };
   const cloudUpdated = tsMs(co.updated_at) ?? tsMs(co.created_at) ?? Date.now();
   const existing = await d.getFirstAsync(
-    'SELECT updated_at FROM coach_outputs WHERE id = ?', [co.id],
+    'SELECT updated_at, output_json FROM coach_outputs WHERE id = ?', [co.id],
   ).catch(() => null);
   if (existing && Number(existing.updated_at ?? 0) >= cloudUpdated) return;
   let parsed = null;
   try { parsed = co.output_json ? JSON.parse(co.output_json) : null; } catch (_) { parsed = null; }
   if (existing) {
+    // C6 RC6-1 (D97-25): the applied-receipt RATCHET. A newer cloud row
+    // that carries no appliedAdjustments (the other device merely VIEWED
+    // the week - the on-view save re-stamps updated_at) must never clear
+    // a local receipt: without this, the device that applied re-armed
+    // its own Apply buttons on the next pull and the change could be
+    // applied twice. Same one-way posture as the calm ratchet and the
+    // insight-dismissal ratchet (D97-19 F5), reusing the already-pinned
+    // preserveAppliedAdjustments merge. The applied column is derived
+    // from the merged JSON (RC6-2) so the two can never disagree.
+    const merged = parsed
+      ? preserveAppliedAdjustments(existing.output_json, parsed)
+      : parsed;
+    const mergedJson = merged ? JSON.stringify(merged) : co.output_json;
+    const appliedFlag = merged?.appliedAdjustments && Object.keys(merged.appliedAdjustments).length
+      ? 1 : (co.applied ? 1 : 0);
     await d.runAsync(
       `UPDATE coach_outputs SET
         output_json = ?, applied = ?, updated_at = ?,
@@ -7325,7 +7550,7 @@ export async function insertCoachOutputFromCloud(userId, co) {
         why_this = COALESCE(?, why_this)
        WHERE id = ?`,
       [
-        co.output_json, co.applied ? 1 : 0, cloudUpdated,
+        mergedJson, appliedFlag, cloudUpdated,
         parsed?.goalPhase ?? null,
         parsed?.volumeSignal ?? null,
         parsed?.loadSignal ?? null,
@@ -7338,7 +7563,7 @@ export async function insertCoachOutputFromCloud(userId, co) {
     );
     return;
   }
-  await d.runAsync(
+  const inserted = await d.runAsync(
     `INSERT OR IGNORE INTO coach_outputs
       (id, user_id, week_start, output_json, applied,
        goal_phase, volume_signal, load_signal, recovery_flag,
@@ -7358,6 +7583,16 @@ export async function insertCoachOutputFromCloud(userId, co) {
       cloudUpdated,
     ],
   );
+  // C6 RC6-10 (D97-25): a v71 unique-index collision here (a legacy
+  // uid() row already holds this user-week) silently discarded the
+  // cloud row AND its receipt with no trace. v72 re-ids the known
+  // population; this line makes any escapee diagnosable from Debug
+  // logs instead of invisible. Observability only, no behaviour change.
+  if ((inserted?.changes ?? 1) === 0) {
+    logWarn('database.insertCoachOutputFromCloud', 'cloud coach output discarded by unique index', {
+      id: co.id, weekStart: co.week_start,
+    });
+  }
 }
 
 // Upserts nutrition_targets from a cloud row. Local table has one row
@@ -7365,9 +7600,18 @@ export async function insertCoachOutputFromCloud(userId, co) {
 // user already has a local row and the cloud copy is newer.
 export async function insertNutritionTargetsFromCloud(userId, t) {
   const d = await db();
-  const updatedAt = typeof t.updated_at === 'string'
+  // C6 RC6-9 (D97-25): a cloud row with NO updated_at used to be
+  // stamped Date.now() and therefore always won, so an unprovable row
+  // could overwrite live calorie targets. Three sibling appliers
+  // (morning weights, mesocycles, coach outputs) explicitly refuse in
+  // that case; this is a calorie surface, so it gets the same rule:
+  // when a local row exists and the cloud copy cannot prove it is
+  // newer, keep the local row. A first restore with no local row still
+  // lands the cloud copy.
+  const cloudStampMs = typeof t.updated_at === 'string'
     ? new Date(t.updated_at).getTime()
-    : (t.updated_at ?? Date.now());
+    : (t.updated_at ?? null);
+  const updatedAt = Number.isFinite(cloudStampMs) ? cloudStampMs : Date.now();
   const createdAt = typeof t.created_at === 'string'
     ? new Date(t.created_at).getTime()
     : (t.created_at ?? updatedAt);
@@ -7380,6 +7624,7 @@ export async function insertNutritionTargetsFromCloud(userId, t) {
     [userId],
   );
   if (existing) {
+    if (!Number.isFinite(cloudStampMs)) return; // unprovable: keep local (RC6-9)
     if ((existing.updated_at ?? 0) >= updatedAt) return;
     await d.runAsync(
       `UPDATE nutrition_targets SET
@@ -7508,6 +7753,29 @@ export async function insertMesocycleFromCloud(userId, m) {
   // stamping updated_at laundered old content as fresh on the next push.
   const createdAt = tsMs(m.created_at) ?? (Number(existing?.created_at) || Date.now());
   const updatedAt = cloudUpdated ?? Date.now();
+  // C6 RC6-4 (D97-25): a newer cloud row must not replace a local Block
+  // Ledger of the SAME LEDGER_VERSION - the runner's idempotency is
+  // per-device, so the device that pulled less of the block's evidence
+  // could classify INSUFFICIENT_DATA where this one judged RESPONSIVE,
+  // and whichever wrote last would seed the next block from the poorer
+  // judgement. Same-version means same rules over this block; the
+  // deterministic engine makes same-evidence ledgers identical, so
+  // keeping the local one costs nothing when the devices agree and
+  // protects this device's fuller judgement when they do not. A cloud
+  // ledger of a DIFFERENT version (newer rules) still replaces.
+  const incomingLedger = m.block_ledger != null
+    ? (typeof m.block_ledger === 'string' ? m.block_ledger : JSON.stringify(m.block_ledger))
+    : null;
+  let ledgerToStore = incomingLedger ?? (existing?.block_ledger ?? null);
+  if (incomingLedger && existing?.block_ledger) {
+    try {
+      const localVersion = JSON.parse(existing.block_ledger)?.version;
+      const cloudVersion = JSON.parse(incomingLedger)?.version;
+      if (localVersion != null && localVersion === cloudVersion) {
+        ledgerToStore = existing.block_ledger;
+      }
+    } catch (_) { /* unreadable JSON: fall through to the incoming copy */ }
+  }
   await d.runAsync(
     `INSERT OR REPLACE INTO mesocycles
       (id, user_id, name, start_date, end_date, duration_weeks, planned_weeks,
@@ -7535,9 +7803,9 @@ export async function insertMesocycleFromCloud(userId, m) {
       m.deload_week ?? m.planned_weeks ?? m.duration_weeks ?? null,
       // jsonb arrives as an OBJECT from supabase-js; the local column is
       // TEXT, so stringify on the way in (and keep a plain string as-is).
-      m.block_ledger != null
-        ? (typeof m.block_ledger === 'string' ? m.block_ledger : JSON.stringify(m.block_ledger))
-        : (existing?.block_ledger ?? null),
+      // Resolution above (RC6-4): cloud-null preserves local; same
+      // LEDGER_VERSION keeps local; a different version replaces.
+      ledgerToStore,
       createdAt, updatedAt,
     ],
   );
@@ -7859,6 +8127,16 @@ export async function insertOrUpdateUserBodyProfileFromCloud(userId, p) {
 export async function insertOrUpdateUserInsightFromCloud(userId, row) {
   if (!row?.id) return;
   const d = await db();
+  // C6 F5 (D97): the dismissal RATCHET, mirroring the calm-mode ratchet -
+  // a pulled row whose dismissed_at is null may never clear a local
+  // non-null dismissal. A user's "no" stands whatever a stale device
+  // pushes; they never re-reject the same card (Promise 4).
+  const local = await d.getFirstAsync(
+    'SELECT dismissed_at FROM user_insights WHERE id = ?', [row.id],
+  ).catch(() => null);
+  const localDismissed = local?.dismissed_at ?? null;
+  const cloudDismissed = row.dismissed_at ? _tsToMs(row.dismissed_at) : null;
+  const dismissedAt = cloudDismissed ?? localDismissed;
   await d.runAsync(
     `INSERT OR REPLACE INTO user_insights
       (id, user_id, insight_key, type, severity, copy, action_payload,
@@ -7868,7 +8146,7 @@ export async function insertOrUpdateUserInsightFromCloud(userId, row) {
       row.id, userId, row.insight_key, row.type ?? null, row.severity ?? null,
       row.copy ?? null, row.action_payload ?? null,
       _tsToMs(row.generated_at) ?? Date.now(),
-      row.dismissed_at ? _tsToMs(row.dismissed_at) : null,
+      dismissedAt,
     ],
   );
 }
@@ -7876,14 +8154,18 @@ export async function insertOrUpdateUserInsightFromCloud(userId, row) {
 export async function insertOrUpdateExerciseUserNoteFromCloud(userId, row) {
   if (!row?.id) return;
   const d = await db();
+  // C6 RC6-3 (D97-25): carry deleted_at, same rationale as the sibling
+  // appliers (the local table has the column; INSERT OR REPLACE without
+  // it resurrected a soft-deleted note on every pull).
   await d.runAsync(
     `INSERT OR REPLACE INTO exercise_user_notes
-      (id, user_id, exercise_id, note, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+      (id, user_id, exercise_id, note, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       row.id, userId, row.exercise_id, row.note,
       _tsToMs(row.created_at) ?? Date.now(),
       _tsToMs(row.updated_at) ?? Date.now(),
+      _tsToMs(row.deleted_at) ?? null,
     ],
   );
 }
@@ -7975,6 +8257,32 @@ export async function insertOrUpdatePlannedMuscleVolumeFromCloud(userId, row) {
   let mav = Number.isFinite(Number(row.mav)) ? Number(row.mav) : null;
   let mrv = Number.isFinite(Number(row.mrv)) ? Number(row.mrv) : null;
   let source = typeof row.source === 'string' && row.source ? row.source : null;
+  const incomingUpdated = _tsToMs(row.updated_at) ?? Date.now();
+  const existing = await d.getFirstAsync(
+    'SELECT updated_at, mev, mav, mrv, source FROM planned_muscle_volume WHERE id = ?', [row.id],
+  );
+  if (existing && Number(existing.updated_at ?? 0) >= incomingUpdated) return;
+  if (mev == null || mav == null || mrv == null) {
+    // C6 RC6-5 (D97-25): the comment above promised a stale push "can
+    // never overwrite richer local provenance", but the degrade branch
+    // replaced wholesale - so an ESTABLISHED device holding
+    // source='ledger' bands was downgraded to research + 'template' by
+    // any newer provenance-less echo (Review C proved it: mrv 26 ->
+    // 22). When the LOCAL row already carries a full band, MERGE
+    // instead: keep the local band and label, take the incoming
+    // planned_sets and timestamp. A fresh device with no local
+    // provenance still degrades honestly, which is what the reinstall
+    // E2E pins (S-11's recorded behaviour is unchanged there).
+    const localMev = Number.isFinite(Number(existing?.mev)) ? Number(existing.mev) : null;
+    const localMav = Number.isFinite(Number(existing?.mav)) ? Number(existing.mav) : null;
+    const localMrv = Number.isFinite(Number(existing?.mrv)) ? Number(existing.mrv) : null;
+    if (localMev != null && localMav != null && localMrv != null) {
+      mev = mev ?? localMev;
+      mav = mav ?? localMav;
+      mrv = mrv ?? localMrv;
+      source = source ?? (typeof existing.source === 'string' && existing.source ? existing.source : null);
+    }
+  }
   if (mev == null || mav == null || mrv == null) {
     // eslint-disable-next-line global-require
     const { VOLUME_LANDMARKS } = require('./algorithms');
@@ -7985,11 +8293,6 @@ export async function insertOrUpdatePlannedMuscleVolumeFromCloud(userId, row) {
     mrv = mrv ?? research.mrv;
     source = source ?? 'template';
   }
-  const incomingUpdated = _tsToMs(row.updated_at) ?? Date.now();
-  const existing = await d.getFirstAsync(
-    'SELECT updated_at FROM planned_muscle_volume WHERE id = ?', [row.id],
-  );
-  if (existing && Number(existing.updated_at ?? 0) >= incomingUpdated) return;
   await d.runAsync(
     `INSERT OR REPLACE INTO planned_muscle_volume
       (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)

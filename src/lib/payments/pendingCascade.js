@@ -67,20 +67,29 @@ export async function flushPendingCascade(userId) {
   try {
     // eslint-disable-next-line global-require
     const { startCascade } = require('./cascade');
-    await startCascade();
-    // A resolved round-trip - whatever the server decided - ends the retry:
-    // the RPC is idempotent and its ok-path already mirrored any grant down.
-    await clearPendingCascade(userId);
-    logInfo('cascade.retry.flushed', `uid=${userId}`);
-    return { flushed: true };
-  } catch (e) {
-    if (!isNetworkShapedError(e)) {
-      // Definitive failure: retrying cannot change the answer.
+    // C6 P-1 (D97-20): startCascade never rejects; judge the RESULT. The
+    // old try/catch split was dead code and the unconditional clear
+    // discarded the queue on the first still-offline flush.
+    const result = await startCascade().catch((e) => ({ ok: false, error: e?.message ?? 'threw' }));
+    if (result?.ok) {
+      // A confirmed round-trip: the RPC is idempotent and its ok-path
+      // already mirrored any grant down.
       await clearPendingCascade(userId);
-      logError('cascade.retry.definitive', e, { uid: userId });
+      logInfo('cascade.retry.flushed', `uid=${userId}`);
+      return { flushed: true };
+    }
+    const err = new Error(String(result?.error ?? 'unknown'));
+    if (!isNetworkShapedError(err)) {
+      // Definitive server answer: retrying cannot change it.
+      await clearPendingCascade(userId);
+      logError('cascade.retry.definitive', err, { uid: userId });
       return { flushed: false };
     }
     // Still offline: keep the flag for the next sync trigger.
+    return { flushed: false };
+  } catch (e) {
+    // Unexpected local failure: keep the flag; the next trigger retries.
+    logError('cascade.retry.unexpected', e, { uid: userId });
     return { flushed: false };
   }
 }

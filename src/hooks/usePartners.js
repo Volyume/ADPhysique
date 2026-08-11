@@ -202,8 +202,13 @@ async function enrichPair(partnership, userId) {
     myPrevSignal, partnerPrevSignal, myPrevAimRow, partnerPrevAimRow,
     winCards,
   ] = await Promise.all([
-    optionalPartnerRead(() => getPartnerWeekSignal(partnership.id, partnerId), null),
-    optionalPartnerRead(() => getPartnerWeekSignal(partnership.id, userId), null),
+    // C6 T-18 (D97-24): scope BOTH sides' 'this week' reads to THIS week.
+    // The unscoped call returned the newest row of ANY age, so a partner
+    // who stopped syncing months ago was rendered as a live current week
+    // ('this week') indefinitely - a stale-history claim on a shared
+    // surface. No row this week now honestly reads as no signal yet.
+    optionalPartnerRead(() => getPartnerWeekSignal(partnership.id, partnerId, thisWeek), null),
+    optionalPartnerRead(() => getPartnerWeekSignal(partnership.id, userId, thisWeek), null),
     optionalPartnerRead(() => getLastCheerSentOn(partnership.id, userId), null),
     optionalPartnerRead(() => getLastCheerReceived(partnership.id, userId), null),
     optionalPartnerRead(() => getPairWeekSignals(partnership.id), []),

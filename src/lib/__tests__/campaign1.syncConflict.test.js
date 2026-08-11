@@ -286,7 +286,10 @@ describe('D2 programmes: plan activation crosses devices under last-write-wins',
     const [sql, params] = conn.runAsync.mock.calls[0];
     expect(sql).toMatch(/UPDATE programmes/);
     expect(params[4]).toBe(1);     // is_active now crosses devices
-    expect(params[6]).toBe(T_NEW); // honest timestamp, not now()
+    // C6 P44-03 (D97) re-anchor, same meaning: is_archived joined the
+    // synced columns at index 5, shifting the timestamp to index 7.
+    expect(params[5]).toBe(0);     // is_archived crosses devices too
+    expect(params[7]).toBe(T_NEW); // honest timestamp, not now()
   });
 
   test('a stale cloud row cannot deactivate a plan activated locally', async () => {
@@ -467,11 +470,20 @@ describe('D10/D11 guarded prefs: the local write stamps never sync', () => {
     expect(shouldSyncPref('@volyume_wellbeing_mode')).toBe(true);
   });
 
-  test('isGuardedPref names exactly the two safety-relevant families', () => {
+  test('isGuardedPref names exactly the guarded families and nothing else', () => {
+    // Re-anchored: the family has grown by ruling since Campaign 1 -
+    // D97-19 F4 (profile blob), D97-22 R-11 (streak blob) and D97-23 S-2
+    // (notification prefs + quiet hours) each joined explicitly. Near-miss
+    // keys still never match.
     expect(isGuardedPref('@volyume_landmarks_u1')).toBe(true);
     expect(isGuardedPref('@volyume_wellbeing_mode')).toBe(true);
-    expect(isGuardedPref('@volyume_quiet_hours_v1')).toBe(false);
+    expect(isGuardedPref('@volyume_user_profile_u1')).toBe(true);
+    expect(isGuardedPref('@volyume_streak_v1_u1')).toBe(true);
+    expect(isGuardedPref('@volyume_notification_prefs')).toBe(true);
+    expect(isGuardedPref('@volyume_quiet_hours_v1')).toBe(true);
     expect(isGuardedPref('@volyume_wellbeing_mode_extra')).toBe(false);
+    expect(isGuardedPref('@volyume_quiet_hours_v1_extra')).toBe(false);
+    expect(isGuardedPref('@volyume_notification_prefs_x')).toBe(false);
   });
 });
 

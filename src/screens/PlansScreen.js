@@ -43,7 +43,9 @@ import { useToast } from '../components/Toast';
 import { logError, logInfo } from '../lib/errorLog';
 import * as haptics from '../lib/haptics';
 
-const BLOCK_SNOOZE_KEY = '@volyume_block_snooze';
+// C6 F8 (D97): per-user, matching every sibling dismissal key - a second
+// account on the same device must not inherit the first account's snooze.
+const BLOCK_SNOOZE_KEY_FOR = (uid) => `@volyume_block_snooze_${uid ?? 'anon'}`;
 
 
 const ACTION_CARDS_DEFAULT = [
@@ -299,7 +301,7 @@ export default function PlansScreen({ navigation }) {
         // snooze so tapping "Got it" keeps the card dismissed across tab
         // focus instead of reappearing on every visit.
         if (advice && advice.action !== 'continue') {
-          const snoozeRaw = await AsyncStorage.getItem(BLOCK_SNOOZE_KEY).catch(() => null);
+          const snoozeRaw = await AsyncStorage.getItem(BLOCK_SNOOZE_KEY_FOR(user?.id)).catch(() => null);
           if (snoozeRaw) {
             setBlockSnoozed(Date.now() < parseInt(snoozeRaw, 10));
           } else {
@@ -419,7 +421,7 @@ export default function PlansScreen({ navigation }) {
               const receipt = seedIntent === 'adjust'
                 ? buildSeedReceipt({ ranges: seedRanges?.ranges, ledger: ledgerRecordRef.current })
                 : null;
-              await AsyncStorage.removeItem(BLOCK_SNOOZE_KEY).catch(() => {});
+              await AsyncStorage.removeItem(BLOCK_SNOOZE_KEY_FOR(user?.id)).catch(() => {});
               await loadData();
               if (receipt && (receipt.changed.length > 0 || receipt.held > 0)) {
                 setSeedReceipt(receipt);
@@ -438,7 +440,7 @@ export default function PlansScreen({ navigation }) {
 
   async function handleSnoozeBlock() {
     const snoozeUntil = Date.now() + 7 * 24 * 60 * 60 * 1000;
-    await AsyncStorage.setItem(BLOCK_SNOOZE_KEY, String(snoozeUntil)).catch(() => {});
+    await AsyncStorage.setItem(BLOCK_SNOOZE_KEY_FOR(user?.id), String(snoozeUntil)).catch(() => {});
     setBlockSnoozed(true);
   }
 

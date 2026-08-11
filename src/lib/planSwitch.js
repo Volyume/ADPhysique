@@ -36,6 +36,29 @@ export async function confirmPlanSwitchMidBlock(userId, opts = {}) {
   );
 
   if (status.currentWeek <= 1) return true;
+  // C6 P9-07 (D97): the old blanket "anything not 'active' passes" was
+  // justified as "about to roll over anyway" - but nothing rolls over on
+  // its own (no automatic transitions), so a switch during the recovery
+  // week or the open decision window silently dropped the pending
+  // decision. Those two states now get their own honest dialogue; the
+  // block's evidence itself survives either way (the P9-01 backfill
+  // judges switched-away finished blocks when history is next read).
+  if (status.status === 'in_recovery' || status.status === 'completed_awaiting_decision') {
+    const stateBody = status.status === 'in_recovery'
+      ? `You're in your recovery week. Switching now starts a new block today${newPlanName ? ` on "${newPlanName}"` : ''}, and this block's results will still appear under Past blocks. Your workout history and PRs are kept.`
+      : `Your finished block's decision is still open. Switching now starts a new block today${newPlanName ? ` on "${newPlanName}"` : ''} instead; what this block showed stays available under Past blocks. Your workout history and PRs are kept.`;
+    return new Promise(resolve => {
+      appAlert(
+        status.status === 'in_recovery' ? 'Switch during your recovery week?' : 'Skip the open block decision?',
+        stateBody,
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Switch plan', onPress: () => resolve(true) },
+        ],
+        { cancelable: true, onDismiss: () => resolve(false) },
+      );
+    });
+  }
   if (status.status !== 'active') return true;
 
   const body =
