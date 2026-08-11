@@ -140,6 +140,12 @@ triage carries every open item; nothing is silently decided.
   carried, maturity doc corrected; moments A=12 B=6 C=0 D=2, B1/B4
   the two saturation-rule implementation candidates (for the
   dividend synthesis), B2 a founder copy question.
+- ADDENDUM lead work LANDED: ATHLETE-180-REPORT.md with the
+  RELATIONSHIP/CONTINUITY VERDICT (nine questions lead-derived,
+  D97-21 - flagged for founder confirmation in the handover);
+  campaign6.relationship.test.js (12 behavioural invariants under
+  the five promises + FREE-PRO; walker/jargon guards referenced in
+  their existing suites).
 - IN FLIGHT (agents, opus, read-only): Phases 25-31 →
   AUDIT-RETURN-AND-HISTORY.md and Phases 32-38 →
   AUDIT-REINSTALL-SYNC-OFFLINE.md. Recovery: if either dies, the
