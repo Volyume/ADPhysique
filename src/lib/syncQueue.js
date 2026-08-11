@@ -131,6 +131,29 @@ export async function drainSyncQueue(supabaseClient, userId) {
 }
 
 async function _scheduleRetry(d, row, errorMsg) {
+  // C6 S-5 (D97-23, ruling (b) - the FQ-6.1 distinction applied here):
+  // a NETWORK-SHAPED failure never spends the retry budget. Offline
+  // drains used to exhaust all six attempts in ~11 foreground hours and
+  // park the op for 365 days with the drain selecting retries <
+  // MAX_RETRIES, so a delete made on a plane was never retried after
+  // reconnecting - sign-out refused for ever and the deleted workout
+  // resurrected from the cloud on reinstall. Offline now reschedules at
+  // the capped backoff with the budget untouched; only DEFINITIVE
+  // failures (the server answered and refused) count toward giving up.
+  let networkShaped = false;
+  try {
+    // eslint-disable-next-line global-require
+    const { isNetworkShapedError } = require('./payments/pendingCascade');
+    networkShaped = isNetworkShapedError(new Error(String(errorMsg ?? '')));
+  } catch (_) { networkShaped = false; }
+  if (networkShaped) {
+    const backoff = BACKOFFS_MS[Math.min(row.retries + 1, BACKOFFS_MS.length - 1)];
+    await d.runAsync(
+      `UPDATE pending_sync_ops SET last_error = ?, next_attempt_at = ? WHERE id = ?`,
+      [String(errorMsg).slice(0, 500), Date.now() + backoff, row.id],
+    );
+    return;
+  }
   const nextRetries = row.retries + 1;
   if (nextRetries >= MAX_RETRIES) {
     await d.runAsync(

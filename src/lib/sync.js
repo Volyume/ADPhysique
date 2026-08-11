@@ -345,8 +345,12 @@ export async function deleteWorkoutFromCloud(supabaseUserId, workoutId) {
     if (wErr) { logPgErr('sync.deleteWorkoutFromCloud.workout', wErr); return false; }
     return true;
   } catch (e) {
+    // C6 S-5 (D97-23): rethrow so the caller sees the REAL failure shape.
+    // The queue's retry scheduler needs the message to tell offline (never
+    // spends the budget) from a definitive refusal (does); both screen
+    // callers .catch(() => enqueue) so their behaviour is unchanged.
     logWarn('sync.deleteWorkoutFromCloud', e?.message, { workoutId });
-    return false;
+    throw e;
   }
 }
 
@@ -366,8 +370,9 @@ export async function deleteWorkoutSetFromCloud(supabaseUserId, setId) {
     if (error) { logPgErr('sync.deleteWorkoutSetFromCloud', error); return false; }
     return true;
   } catch (e) {
+    // C6 S-5 (D97-23): rethrow - see deleteWorkoutFromCloud's note.
     logWarn('sync.deleteWorkoutSetFromCloud', e?.message, { setId });
-    return false;
+    throw e;
   }
 }
 

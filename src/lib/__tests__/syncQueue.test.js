@@ -113,3 +113,41 @@ describe('AC-04: getPendingDeleteOpCount counts un-shipped delete tombstones', (
     expect(await getPendingDeleteOpCount('u1')).toBe(0);
   });
 });
+
+describe('C6 S-5 (D97-23): offline never spends the delete retry budget', () => {
+  // The drain reads rows WHERE retries < MAX_RETRIES; before this ruling
+  // six offline foreground drains parked a delete op for 365 days and it
+  // was never retried after reconnecting - sign-out refused for ever and
+  // the deleted workout resurrected from the cloud on reinstall.
+  const row = (retries = 0) => ({
+    id: 'q1', user_id: 'u1', op_type: 'workout_delete', entity_id: 'w1',
+    retries, next_attempt_at: 0, created_at: 1,
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('a network-shaped failure reschedules WITHOUT incrementing retries', async () => {
+    mockDb.getAllAsync.mockResolvedValueOnce([row(5)]); // one failure from parking
+    mockSync.deleteWorkoutFromCloud = jest.fn(async () => { throw new Error('Network request failed'); });
+    await drainSyncQueue(CLIENT, 'u1');
+    // The reschedule UPDATE must not touch the retries column.
+    const updates = mockDb.runAsync.mock.calls.filter(([sql]) => /UPDATE pending_sync_ops/.test(sql));
+    expect(updates.length).toBe(1);
+    expect(updates[0][0]).not.toMatch(/SET retries/);
+    // And it is scheduled for a finite backoff, not the 365-day park.
+    const nextAt = updates[0][1][1];
+    expect(nextAt - Date.now()).toBeLessThanOrEqual(8 * 60 * 60_000 + 1000);
+  });
+
+  test('a definitive failure still counts toward the budget and can park', async () => {
+    mockDb.getAllAsync.mockResolvedValueOnce([row(5)]);
+    mockSync.deleteWorkoutFromCloud = jest.fn(async () => { throw new Error('row-level security violation'); });
+    await drainSyncQueue(CLIENT, 'u1');
+    const updates = mockDb.runAsync.mock.calls.filter(([sql]) => /UPDATE pending_sync_ops/.test(sql));
+    expect(updates.length).toBe(1);
+    expect(updates[0][0]).toMatch(/SET retries = \?/);
+    expect(updates[0][1][0]).toBe(6); // parked at MAX_RETRIES
+  });
+});
