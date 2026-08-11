@@ -108,3 +108,114 @@ otherwise. The suppressed block itself held rather than climbed.
 - The suppressed-block seed path degrades to the repeat numbers at the
   SEED level too (chest B5 seeded 7, not B4's proposed 8): suppression
   binds proposal, seed and memory independently - three separate locks.
+
+---
+
+# ADDENDUM SECTION — the six-block RELATIONSHIP report (Personalisation Dividend)
+
+Per the founder's 2026-08-11 addendum. Every number below is the
+chain's own output (rerun with the C6_TRACE command above); every
+"explanation" cites the live copy source the user would actually see.
+
+## Block 1 → Block 3 → Block 6, per muscle
+
+**CHEST**
+- B1: 6 start / 23 peak, source `profile`. Knows: profile inputs
+  (intermediate, average recovery, lean gain, 31). Does not know: any
+  personal response. Explanation the user sees: the research line
+  ("Not enough personal history yet, so this block starts from
+  research-based guidance…", blockExplain RESEARCH_START_LINE) - an
+  honest non-claim.
+- B3: 7/23, source `ledger`. New knowledge since B1: two judged
+  RESPONSIVE blocks, one carrying the dose-response pair - the +1 to 7
+  exists BECAUSE block 2 kept progressing in its higher-volume weeks
+  with recovery to spare (interBlock's earned-pair rationale, spoken
+  verbatim on the decision card). Still research-framed: the peak
+  ceiling (learned ceiling never yet moved off the prior MAV).
+- B6: seeds 7/23 after the suppressed block held B5 (the B4-earned 8
+  was deliberately not carried through calm). Different from B1
+  specifically because of history: start +1 (would be 6 on profile
+  alone), seed source `ledger` not `profile`, and the recovery week is
+  strain-scaled from the block's own achieved peak rather than flat
+  research MEV. What would have been prescribed without the user's
+  history: 6/23 from the profile prior, every block, for ever.
+
+**BACK**
+- B1: 10/27 `profile` → earns +1 (pair). B3: 11/27 `ledger`, now flat
+  (STALE, first quiet hold). B6: 11/27 `ledger` with the entrenched
+  plateau having proposed a STIMULUS CHANGE (variant swap / rep
+  range) in B4 rather than a single added set - three flat blocks
+  never bought volume. The dividend here is knowledge of what NOT to
+  do: without history the profile prior would happily re-ramp; with
+  it, the app knows more sets are not this muscle's lever, and says so
+  ("…a change of stimulus is proposed rather than more volume").
+- What it deliberately did NOT infer: that flatness means try harder.
+
+**QUADS**
+- B1: 8/21 `profile`, STRAINED. B3: 8/21 `ledger` with the learned
+  ceiling already stepped 21 → 19 → 17 by two strained blocks; B3's
+  own proposal caps the peak at 17. B6: 9/21 - the start's first climb
+  in six blocks, earned only by B6's evidence pair after three clean
+  responsive blocks slowly re-proved capacity (+2/block ceiling
+  recovery). Dividend: the app REMEMBERED the strain (peaks stayed
+  reduced for three blocks) and also remembered the recovery (the
+  ceiling was re-earned, not reset). Without history: 8/21 every
+  block, with the strain invisible to the prescription.
+
+**HAMSTRINGS**
+- B1/B2: 6/21 `profile`, INSUFFICIENT_DATA (no recovery feedback) -
+  and the B3 seed HONESTLY fell back to `profile`, refusing the
+  unjudged entries as personalisation. B6: `ledger`-seeded with a
+  genuinely learned range (>= 2 evidence blocks) and a B4-earned +1.
+  Dividend: two blocks of "we still can't judge this" were never
+  laundered into claims; the moment real evidence existed, it took
+  over.
+
+**SIDE DELTS**
+- B4 seeds 12/20 `manual`; the entry defers (proposal null); the
+  learner's evidence count does not grow. B5 (override removed, calm
+  block) seeds `profile`; B6 returns to `ledger`. Dividend expressed
+  as autonomy: the user's number OWNED the block, taught nothing,
+  and its removal restored engine coaching without residue. The
+  explanation the user sees during B4 is the deferred-manual clause
+  ("Your manual volume settings stay as they are; this is a note,
+  not a change.").
+
+**CALVES**
+- B5 (calm) achieved its biggest peak, 20 sets, recorded
+  `suppressed: true`. B6's learned ceiling: 15 - exactly where the
+  unsuppressed blocks 1-4 left it. Dividend expressed as safety: the
+  suppressed peak is REMEMBERED as history but can never teach the
+  ceiling upward, at fold time or retroactively.
+
+## The addendum's seven questions, answered from the record
+
+1. **What did Volyume learn?** Chest and hamstrings' earned climbs
+   (+1 per evidence pair, never more); quads' reduced-then-re-earned
+   ceiling; back's plateau being a stimulus problem; per-muscle
+   independence throughout (six different arcs in one athlete).
+2. **What did it remember?** The strain (three blocks of reduced quad
+   peaks), the manual override (for exactly one block), the
+   suppressed peak (as history, never as capacity), every observed
+   start/peak (the repeat option's exact numbers).
+3. **How did it respond?** Only ever by ±1 start and ±2 ceiling per
+   block, only on qualifying evidence, with every hold recorded
+   (upwardCarryPrevented provenance).
+4. **What improved?** Block-6 seeds are ledger/learned for every
+   evidence-bearing muscle; zero rely on raw research; the recovery
+   week is strain-scaled instead of flat.
+5. **Where did the user retain control?** The manual block (won,
+   taught nothing); every proposal remains confirm-gated
+   (Repeat/Adjust both always rendered - FQ-2).
+6. **Could the user tell why?** Yes at every block: the rationale
+   strings are composed from the FINAL clamped numbers (interBlock),
+   the receipt distinguishes judged holds from unjudged holds (RA-2),
+   and the research line renders when nothing is personalised.
+7. **What did it correctly refuse to infer?** Personalisation from
+   INSUFFICIENT_DATA blocks, capacity from the suppressed peak,
+   progress from the manual block, volume from the plateau, and any
+   climb without the dose-response pair.
+
+**Verdict: Block 6 is measurably more individual than Block 1** - not
+Block 1 plus more data, but different numbers for different reasons
+per muscle, each with provenance the user can be shown.
