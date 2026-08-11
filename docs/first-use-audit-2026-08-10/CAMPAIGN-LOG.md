@@ -95,10 +95,25 @@ redesign. FR-1..5, FR-C4-1..11, FR-PW-1, H4 carried unresolved
     wave: a stale jest cache in /tmp/jest_0 caused an intermittent
     widgets/storage.test.js flake unrelated to any diff; cleared with
     npx jest --clearCache. If CI flakes on that suite, same cure.
-  - NEXT: dispatch Wave D (week/check-in/nutrition/notifications) +
-    Wave E (audiences/density/hierarchy + the two carried activation
-    sentences) as the next pair; FQ-2/3/7/4/6 implementations follow
-    per the recorded sequence.
+  - Waves D + E - LANDED together at df77c3eb (55 files; all ruled
+    items; lead carry-overs applied at landing: C5-P37-01 TodayStrip
+    CTA weight with its pin re-anchored, C5-P21-01's true first-sight
+    provenance line + PM-07's baseline clause on the hand-off screen,
+    wellbeing copy tier-neutralised after the W-8 move). Ruled at
+    landing: C5-P22-01 clause 3 RESOLVED BY ACCEPTANCE - the
+    enrolment weight is a genuine user-entered reading and the
+    promise-equals-gate invariant (trialActivation) outranks
+    re-anchoring the 5-day clock; clauses 1+2 landed (honest day-0,
+    labelled seed row). FM-04 premise no longer holds (ProLocked
+    covers the never-Pro case) - closed. D's C5-P28-04 residual (the
+    server-side day-15 trial→free transition is observed by nothing
+    client-side) recorded under FR-C4-8. FQ-6.4 will rename both
+    'Switch to Free' strings (SubscriptionPolicy + SettingsAccount).
+  - NEXT: FQ-2 block-decision lane; then FQ-3 + FQ-7 (lead engine
+    work), FQ-4 (Apply wiring), FQ-6.1/6.2/6.4 (lead billing);
+    then Phase 40/41 synthetic journey + test matrix completion,
+    Reviews A/B/C, release-truth audit, gates, close, 64-item
+    handover.
   - FQ-5: APPROVED IN FULL by the founder ("Approve all") and LANDED
     by the lead - all six items as proposed, item 3 Option A, consent
     version stamp 2026-08-10 (stamp-only, no re-gating), locked
