@@ -8535,6 +8535,50 @@ export async function insertOrUpdateAdaptationEventFromCloud(userId, row) {
       row.deleted_at ? _tsToMs(row.deleted_at) : null,
     ],
   );
+
+  // C8 Work 4 (FR-C4-3 / S-4): the restore above lands in the SYNC
+  // MIRROR, which no product code reads - so a reinstall silently lost
+  // the Engine Log's continuity, the twice-declined/revert memory that
+  // puts a muscle on hold, and the same-week add-frequency caps. The
+  // cloud row already carries every field the authoritative table
+  // needs (sync.js's push mapper writes decision/delta/muscle/
+  // exercise_id/reason_code/reason_text/signals into `payload`), so
+  // this is purely a wrong-destination defect: no new cloud data, no
+  // new consent, no migration.
+  //
+  // Safety posture: INSERT OR IGNORE, so a restored historical event can
+  // never overwrite a newer local one, and adaptation_events is a
+  // read-only LOG (deload triggers, revert memory, frequency caps) that
+  // nothing replays as an action - restoring it cannot re-apply
+  // anything. Tombstoned rows are skipped, and rows missing any NOT NULL
+  // column are skipped rather than invented.
+  if (row.deleted_at) return;
+  try {
+    const payload = typeof row.payload === 'string'
+      ? JSON.parse(row.payload)
+      : (row.payload && typeof row.payload === 'object' ? row.payload : null);
+    const weekId = row.mesocycle_week_id ?? null;
+    const decision = payload?.decision ?? null;
+    const reasonCode = payload?.reason_code ?? null;
+    if (!weekId || !decision || !reasonCode) return;
+    const signalsJson = payload?.signals == null
+      ? '{}'
+      : (typeof payload.signals === 'string' ? payload.signals : JSON.stringify(payload.signals));
+    await d.runAsync(
+      `INSERT OR IGNORE INTO adaptation_events
+        (id, mesocycle_week_id, muscle, exercise_id, decision, delta,
+         reason_code, reason_text, signals_json, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        row.id, weekId,
+        payload?.muscle ?? null, payload?.exercise_id ?? null,
+        decision, payload?.delta ?? null,
+        reasonCode, payload?.reason_text ?? null,
+        signalsJson,
+        _tsToMs(row.recorded_at) ?? _tsToMs(row.created_at) ?? Date.now(),
+      ],
+    );
+  } catch (_) { /* mirror already written; the log is best-effort */ }
 }
 
 // ─── Exercise User Notes ──────────────────────────────────────────────────────
