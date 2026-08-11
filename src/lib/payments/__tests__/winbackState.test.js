@@ -143,3 +143,43 @@ describe('stated return', () => {
     }
   });
 });
+
+describe('C6 R-7 (D97-22): the episode is per-user, never device-global', () => {
+  // The suite runs signed-out (legacy key path) everywhere above, which
+  // pins that behaviour unchanged. Here the store is faked to prove two
+  // users on one device no longer share an episode, and that a legacy
+  // global episode migrates to the signed-in user once.
+  const store = require('../../../store/useAppStore').default;
+  const setUid = (id) => {
+    jest.spyOn(store, 'getState').mockReturnValue({ session: id ? { user: { id } } : null });
+  };
+  afterEach(() => jest.restoreAllMocks());
+
+  test('two users on one device have independent episodes', async () => {
+    setUid('user-a');
+    await openEpisode(111);
+    expect((await getEpisode())?.lapseAt).toBe(111);
+    setUid('user-b');
+    expect(await getEpisode()).toBeNull();
+    await openEpisode(222);
+    setUid('user-a');
+    expect((await getEpisode())?.lapseAt).toBe(111);
+  });
+
+  test('a legacy device-global episode migrates to the signed-in user and the global copy clears', async () => {
+    await AsyncStorage.setItem('@volyume_winback_episode_v1', JSON.stringify({ lapseAt: 333, reasonCaptured: false, winbackLaid: false }));
+    setUid('user-a');
+    expect((await getEpisode())?.lapseAt).toBe(333);
+    expect(await AsyncStorage.getItem('@volyume_winback_episode_v1')).toBeNull();
+    setUid('user-b');
+    expect(await getEpisode()).toBeNull();
+  });
+
+  test('the 180-day floor is per-user too', async () => {
+    setUid('user-a');
+    await markWinbackLaid(444);
+    expect(await getLastFiredAt()).toBe(444);
+    setUid('user-b');
+    expect(await getLastFiredAt()).toBeNull();
+  });
+});
