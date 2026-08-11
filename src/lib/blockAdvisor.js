@@ -388,7 +388,21 @@ export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro =
       )
     : null;
 
-  const signals = detectSignals(checkins);
+  // C6 Phase 1 seam 2 (D97): every signal detectSignals produces speaks
+  // in the present tense ("this week", "Your check-in shows..."), and
+  // getRecentCheckins is row-limited, not dated - so a user returning
+  // after months met recovery advice computed from, and described as,
+  // data they supplied before the gap (a fabricated recovery assumption,
+  // the lapse-is-not-failure law). A check-in older than 14 days (two
+  // weekly cycles, the engine's detraining boundary) is history, not a
+  // current signal: with no fresh check-in there ARE no current signals.
+  // The z-score baseline inside detectSignals still reads the older rows
+  // once a fresh latest exists, and blockLedgerGather's block-end reads
+  // are date-anchored separately and unaffected.
+  const latestCheckinAt = checkins[0]?.weekStart ?? null;
+  const latestIsCurrent = latestCheckinAt != null
+    && (Date.now() - latestCheckinAt) <= 14 * 86400000;
+  const signals = latestIsCurrent ? detectSignals(checkins) : [];
   const highSignals   = signals.filter(s => s.severity === 'high');
   const mediumSignals = signals.filter(s => s.severity === 'medium');
 

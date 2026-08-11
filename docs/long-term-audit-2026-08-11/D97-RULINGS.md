@@ -85,3 +85,61 @@ consecutiveGrade3RecoveryWeeks - it certifies the ABSENCE of
 persistent fatigue to unlock an upward-leaning softening, and an
 unknown gap must keep withholding that certification (adjacency there
 would have weakened conservatism). Pinned with the asymmetry named.
+
+## D97-6 (Phase 1 seam 3) — launch-time notification restore was dead for signed-in users, FIXED
+
+The only launch-time restoreNotifications call sat BELOW the signed-in
+branch's return in RootNavigator, so for every signed-in user it never
+ran (and the no-session path it did run on had a null user id). Every
+"re-laid on every launch" guarantee (FM-03 training reminders, the
+cascade/win-back windows, meal reminders, RB-2's coach-ready re-lay)
+was real only after a quiet-hours edit or a timezone change. The
+restore now also runs on the signed-in path with the real user id;
+every scheduler inside self-gates on permission, tier, toggles, push
+budget and ED flags, so this restores intended behaviour and changes
+no policy.
+
+## D97-7 (Phase 1 seam 4) — the phase clock, FIXED
+
+phaseStartedAt was written once at onboarding and never again, so
+weeksInPhase measured weeks-since-account for ever: false week labels
+on coach outputs after any phase change, and a brand-new cut skipped
+the honest baseline period (weeksInPhase >= 2 permanently satisfied),
+receiving full trend coaching in week one from a weight series built
+during the previous phase. ProGoalSetup now resets the clock ONLY when
+the phase genuinely changes; schedule/equipment edits through the same
+screen leave it alone.
+
+## D97-8 (Phase 1 seam 2) — no current signals without a current check-in, FIXED
+
+detectSignals speaks in the present tense; its input was row-limited,
+so a returning user met "this week" recovery advice computed from
+months-old rows (a fabricated recovery assumption). getBlockAdvice now
+detects signals only when the LATEST check-in is within 14 days (the
+engine's detraining boundary); the z-score baseline still reads older
+rows once a fresh latest exists, and blockLedgerGather's block-end
+reads are date-anchored separately and unaffected. Behavioural pin in
+blockAdvisor.test.js; fixtures re-anchored same-meaning with fresh
+stamps.
+
+## D97-9 (Phase 1 seam 5) — activation paths that discard the learned band: FOUNDER QUESTION, carried
+
+Ledger seeding travels on exactly one route (Continue with adjustments
+passes { ledger: seedRanges }); plan switch, phase-change rebuild and
+the post-upgrade wizard all create template ramps (source 'template',
+honestly labelled). So a block-eight user who changes plan or phase
+receives block-one volumes even though the muscle-scoped learned band
+is portable by design intent. Wiring the learned band into the other
+activation paths is real engine design (which paths, which intent
+semantics, suppression posture) - surfaced as a founder decision in
+the Phase 57 triage with a recommendation, not silently built.
+
+## D97-3 addendum (Phase 1 seam 1)
+
+Second bypass recorded: a block abandoned mid-way classifies
+INSUFFICIENT_DATA (adherence/exposure gates), which resolveSeedRange
+treats as no-valid-ledger, falling through to the LEARNED BAND - the
+one path with no staleness guard (computeLearnedRange has no clock).
+So the exact D91-25 case (multi-month absence, return to the same
+plan) routes around the >= 4-week ledger hold. Carried with D97-3 to
+the founder triage; characterised only.

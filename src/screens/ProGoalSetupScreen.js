@@ -273,6 +273,18 @@ export default function ProGoalSetupScreen({ navigation }) {
       // nutrition goal key, kept in step with the phase so surfaces reading
       // userProfile.goal (Nutrition Targets summary) match the saved calories.
       goal: phaseToNutritionKey(selectedPhase),
+      // C6 Phase 1 seam 4 (D97): the phase clock. phaseStartedAt was
+      // written exactly once, at onboarding, and never on a phase change,
+      // so weeksInPhase measured weeks-since-account for ever: every coach
+      // output after a change carried a false week label, and a brand-new
+      // cut skipped the honest baseline period (weeksInPhase >= 2 was
+      // permanently satisfied) and got full trend coaching in week one
+      // from a weight series built during the previous phase. Reset ONLY
+      // when the phase genuinely changes - saving schedule or equipment
+      // tweaks through this screen must not touch the clock.
+      ...(selectedPhase !== userProfile?.trainingPhase
+        ? { phaseStartedAt: Date.now() }
+        : {}),
       proteinApproach,
       goalStartDate,
       planWeakPoints: nextWeakPoints,
