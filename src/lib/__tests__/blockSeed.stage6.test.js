@@ -241,3 +241,59 @@ describe('purity', () => {
     expect(SRC).not.toMatch(/tier/i);
   });
 });
+
+describe('C6 RA6-10 (D97-25): the seed/learn confidence asymmetry is deliberate, and pinned', () => {
+  // learnedRange refuses entries below confidence 0.6 as BAND evidence;
+  // resolveSeedRange checks only that the proposal carries numbers.
+  // The asymmetry is safe because interBlock's composite-confidence
+  // gate means a sub-bar block can only ever PROPOSE a retention or a
+  // reduction (the +1 requires confidence >= 0.6), so: a sub-bar entry
+  // may seed a retention but may never seed a climb. This suite is the
+  // recorded characterisation; if either bar moves, re-decide on
+  // purpose rather than by drift.
+  const { computeLearnedRange } = require('../learnedRange');
+  const { classifyMuscleBlock, BLOCK_CLASS } = require('../interBlock');
+
+  test('a confidence-0.5 entry seeds its retention numbers while teaching the band nothing', () => {
+    const subBar = {
+      ...LEDGER_ENTRY,
+      confidence: 0.5,
+      proposal: { startSets: 10, peakSets: 16, stimulusChange: null, deferredToManual: false },
+    };
+    const s = seed({ ledgerEntry: subBar });
+    expect(s.startSets).toBe(10); // the retention seeds
+    const band = computeLearnedRange({
+      prior: PROFILE, researchMev: RESEARCH.mev, adaptedMrv: null, ledgerHistory: [subBar],
+    });
+    expect(band.isLearned).toBe(false); // ...but is not band evidence
+    expect(band.evidenceBlocks).toBe(0);
+  });
+
+  test('a sub-bar block cannot EARN a climb in the first place (the +1 gate closes it)', () => {
+    const entry = classifyMuscleBlock({
+      muscle: 'chest',
+      landmarks: { mev: 8, mav: 14, mrv: 22 },
+      researchMev: 8,
+      learnedCeiling: null,
+      manualOverride: false,
+      previousStart: 10, plannedPeak: 16, achievedPeak: 16,
+      priorFlatBlocks: 0,
+      adherence: { plannedSets: 70, completedSets: 64 },
+      performance: {
+        e1rmSlopePct: 3, prDensity: 0.2, rawPrCount: 2, eligibleExposures: 10,
+        confidence: 0.5, discontinuity: false,
+        doseResponse: { lateProgression: true, lateRecoveryOk: true },
+      },
+      recovery: {
+        sorenessLateAvg: 2, jointDiscomfortAvg: 1, readinessSlope: 0,
+        sleepFlaggedWeeks: 0, deloadFlagFired: false, deloadFlagMidBlock: false,
+        dataPoints: 8,
+      },
+    }, { suppressed: false, weeksSinceBlockEnd: 0 });
+    // confidence 0.5 with 8 data points -> composite 0.5, below the
+    // CONFIDENCE_FLOOR gate... which is also the INSUFFICIENT_DATA gate,
+    // so the block is not judged at all: it can retain, never climb.
+    expect(entry.classification).toBe(BLOCK_CLASS.INSUFFICIENT_DATA);
+    expect(entry.proposal.startSets).toBe(10);
+  });
+});

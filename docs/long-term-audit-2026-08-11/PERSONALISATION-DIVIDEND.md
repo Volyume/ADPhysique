@@ -2,11 +2,17 @@
 
 Campaign 6 addendum deliverable. Every number below was COMPUTED from
 the shipping pure chain (profileAdjustedPrior → computeLearnedRange →
-resolveSeedRange → classifyMuscleBlock) by a probe run on 2026-08-11;
-the same arcs are pinned permanently in campaign6.sixBlock.test.js,
-campaign6.athlete180.test.js and campaign6.relationship.test.js.
-Nothing here is aspirational copy; where the dividend is weak the
-weakness is stated.
+resolveSeedRange → classifyMuscleBlock) by a probe run on 2026-08-11,
+and the §1 table is now pinned permanently, row by row including the
+no-history counterfactuals, in **campaign6.dividend.test.js** (added
+under C6 RA6-7, D97-25 — Review A found the original provenance line
+cited three suites that pin related arcs but not this table; the
+headline arc had no pin at all). campaign6.sixBlock.test.js,
+campaign6.athlete180.test.js and campaign6.relationship.test.js pin
+neighbouring arcs with different scripts (their chest arcs end lower
+because their blocks earn fewer pairs); the dividend suite is the
+authority for THIS table. Nothing here is aspirational copy; where the
+dividend is weak the weakness is stated.
 
 ## 1. The commissioned counterfactual
 
@@ -18,7 +24,7 @@ Intermediate profile, lean-gain, age 31. Weekly set prescriptions.
 | Chest, six responsive blocks (evidence every block) | start 6, peak 23 - profile/research | start 8 - ledger (earned +1 twice) | **start 11**, peak 23 - ledger; learned band floor 6 / ceiling 23, 5 evidence blocks; deload sized 11 | start 6, peak 23 - profile | **+5 weekly starting sets of EARNED progression, and a deload week sized to the user's own block instead of research-flat** |
 | Chest, disrupted arc (exercise change B4, calm B5) | start 6 - profile | start 7 - ledger (earned +1) | start 6, peak 23 - ledger; learned band intact, 4 evidence blocks | start 6, peak 23 - profile | Numbers deliberately COINCIDE - the working start honestly resets after disruption - but the app still KNOWS (band learned, memory kept, receipts say why). The dividend here is retained knowledge, not inflation |
 | Side delts, steady (no dose-response pairs earned) | start 8, peak 28 - profile | start 8 - ledger | start 8, peak 28 - ledger | start 8, peak 28 - profile | The RETAINED DOSE case: same numbers, different claim - "this workload has been working" by evidence, not assumption. Block 4 of the pinned sim also proves a manual override (12/20/24) wins outright and teaches nothing |
-| Calves, strain/thin-data arc | start 8, peak 21 - profile | start 8, peak 21 - ledger | start 8, **peak 15** - ledger; learned ceiling 15 | start 8, **peak 21** - profile | **Personalisation protecting the user: six months of evidence honed the ceiling DOWN to what this muscle actually handled; without history the app would prescribe a research peak of 21** |
+| Calves, handled-volume/thin-data arc | start 8, peak 21 - profile | start 8, peak 21 - ledger | start 8, **peak 15** - ledger; learned ceiling 15 | start 8, **peak 21** - profile | **Personalisation fitting the prescription to the user: six months of evidence honed the ceiling down to the volume this muscle actually handled (14-15 sets delivered against 21 prescribed); without history the app would re-prescribe the profile-adjusted MAV of 21. (RA6-7 correction: 21 is the PROFILE-ADJUSTED MAV, not the research MAV, which is 14 - the honed endpoint of 15 still sits above raw research)** |
 
 The thesis holds in both directions: where evidence exists the
 prescription is materially more individual (chest +5; calves −6 peak);
@@ -32,7 +38,7 @@ prescriptions themselves differ.
 |---|---|---|
 | Successful retained dose | Side delts B6 = B1 numbers, by evidence | sixBlock retention tests; relationship suite "identical history answers identically" |
 | Justified increase | Chest +1 per earned dose-response pair, to start 11 by B6 | sixBlock "+1 only on the paired evidence"; athlete180 b2 = b1+1 |
-| Strain-led reduction | Calves ceiling 21 → 15 from handled-volume evidence | longitudinal STRAINED/OVERREACHED fold rules |
+| Handled-volume reduction | Calves ceiling 21 → 15: the athlete delivered 14-15 sets against a 21-set prescription, and the ceiling learned what was actually done | the RESPONSIVE handled-peak step (learnedRange.js) - NOT the STRAINED/OVERREACHED fold rules; the arc contains no strained block (RA6-7 correction), and campaign6.dividend.test.js pins that absence |
 | Insufficient-data hold | Calves B4 (partial week, missed check-in) classifies INSUFFICIENT_DATA and holds its own numbers | athlete180 "thin block held its own numbers" |
 | Manual ownership | Side delts B4 manual 12/20/24 wins the seed AND teaches nothing | athlete180 + relationship suite (evidenceBlocks unchanged) |
 | Safety suppression | Calves' biggest peak (21, calm block) never raises the learned ceiling | athlete180 + relationship suite suppressed-peak pins |

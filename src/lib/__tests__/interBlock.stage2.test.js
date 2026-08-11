@@ -711,3 +711,91 @@ describe('C6 M-6 (D97-24): the suppression veto is reported truthfully', () => {
     expect(held.upwardCarryPrevented).toBe(false);
   });
 });
+
+describe('C6 RA6-2 (D97-25): OVERREACHED names the block-level cause when no per-muscle term contributed', () => {
+  test('a purely systemic recovery cost (readiness slope + flagged sleep) is not voiced as this muscle\'s late cost', () => {
+    const entry = classifyMuscleBlock(muscle({
+      recovery: {
+        sorenessLateAvg: 2, jointDiscomfortAvg: 1, // both below their thresholds
+        readinessSlope: -0.4, sleepFlaggedWeeks: 2, // two block-level terms -> weight 2
+      },
+    }), CTX);
+    expect(entry.classification).toBe(BLOCK_CLASS.OVERREACHED);
+    expect(entry.rationale).toMatch(/recovery ran high across the block as a whole/);
+    expect(entry.rationale).not.toMatch(/ran high late in the block/);
+  });
+
+  test('a genuinely muscle-local cost (late soreness + joint discomfort) keeps the muscle-voiced wording', () => {
+    const entry = classifyMuscleBlock(muscle({
+      recovery: { sorenessLateAvg: 4, jointDiscomfortAvg: 3 },
+    }), CTX);
+    expect(entry.classification).toBe(BLOCK_CLASS.OVERREACHED);
+    expect(entry.rationale).toMatch(/the recovery cost ran high late in the block/);
+  });
+
+  test('the mid-block deload-flag wording is untouched', () => {
+    const entry = classifyMuscleBlock(muscle({
+      recovery: { readinessSlope: -0.4, deloadFlagFired: true, deloadFlagMidBlock: true },
+    }), CTX);
+    expect(entry.classification).toBe(BLOCK_CLASS.OVERREACHED);
+    expect(entry.rationale).toMatch(/the recovery flag fired early in the block/);
+  });
+});
+
+describe('C6 RA6-5 (D97-25): the non-earned RESPONSIVE rationale is direction-aware', () => {
+  test('a ceiling clamp that pulls the retained dose DOWN gets the ceiling clause, not "at this dose ... starts lower"', () => {
+    const entry = classifyMuscleBlock(muscle({
+      learnedCeiling: 10, // learnedCeiling - 2 = 8 < previousStart 10
+      performance: { doseResponse: null }, // no evidence pair -> non-earned
+    }), CTX);
+    expect(entry.classification).toBe(BLOCK_CLASS.RESPONSIVE);
+    expect(entry.proposal.startSets).toBe(8); // clamped below the retained dose
+    expect(entry.rationale).toMatch(/learned volume ceiling sets where the next block can safely sit/);
+    expect(entry.rationale).not.toMatch(/at this dose/);
+    // Cause and consequence agree: the sentence carries the downward clause.
+    expect(entry.rationale).toMatch(/starts 2 sets lower/);
+  });
+
+  test('true retention keeps the plain retention line and the unchanged clause', () => {
+    const entry = classifyMuscleBlock(muscle({
+      plannedPeak: 14, achievedPeak: 14, // inside MAV, so nothing clamps
+      performance: { doseResponse: null },
+    }), CTX);
+    expect(entry.classification).toBe(BLOCK_CLASS.RESPONSIVE);
+    expect(entry.proposal.startSets).toBe(10);
+    expect(entry.rationale).toMatch(/responded well at this dose, so the starting volume carries over unchanged\./);
+  });
+});
+
+describe('C6 RA6-2 (D97-25): production-shaped systemic mirroring (runner fidelity)', () => {
+  // blockLedgerRunner computes ONE systemic read (readinessSlope,
+  // sleepFlaggedWeeks, deloadFlagFired) and mirrors it into every
+  // muscle's recovery input - per-muscle divergence on those three
+  // terms is unreachable in production (the earlier arcs above script
+  // them per muscle as CLASSIFIER coverage, which is legal for a pure
+  // function but not a production shape). This pin exercises the real
+  // shape: one fired deload flag reclassifies every progressing muscle
+  // together, and each speaks the block-level cause unless it also has
+  // local (soreness/joint) evidence.
+  const systemic = { readinessSlope: 0, sleepFlaggedWeeks: 0, deloadFlagFired: true };
+
+  test('one block-level flag moves every progressing muscle together, each voiced truthfully', () => {
+    const ledger = buildBlockLedger({
+      muscles: [
+        muscle({ muscle: 'chest', recovery: { ...systemic } }),
+        muscle({ muscle: 'quads', recovery: { ...systemic, sorenessLateAvg: 4 } }),
+      ],
+      systemic,
+      suppressed: false,
+      weeksSinceBlockEnd: 0,
+    });
+    const chest = ledger.entries.find((e) => e.muscle === 'chest');
+    const quads = ledger.entries.find((e) => e.muscle === 'quads');
+    expect(chest.classification).toBe(BLOCK_CLASS.OVERREACHED);
+    expect(quads.classification).toBe(BLOCK_CLASS.OVERREACHED);
+    // Chest reported nothing local: the block-level cause is named.
+    expect(chest.rationale).toMatch(/recovery ran high across the block as a whole/);
+    // Quads carried its own late soreness: the muscle voice is earned.
+    expect(quads.rationale).toMatch(/ran high late in the block/);
+  });
+});

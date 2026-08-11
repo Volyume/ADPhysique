@@ -272,7 +272,20 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
 
   // Count persistent performance/fatigue signals
   // Simplified: if this block had consistently poor readiness, suggest minor adjustment
-  const allReadiness = checkins.map(checkinReadiness).filter(r => r !== null);
+  // C6 RA6-11 (D97-25): the same row-limited-not-dated defect D97-8
+  // closed for detectSignals survived in this sibling read - the branch
+  // choice here was driven by check-ins of ANY age, so a returning
+  // user's recommendation (and its present-tense copy, "The structure
+  // is working") could be computed entirely from pre-lapse rows, and
+  // not always conservatively. Same boundary as the sibling: only
+  // check-ins inside the 14-day detraining window count; with none,
+  // the existing no-data default (70) applies, which lands on the
+  // conservative repeat branch.
+  const recentCheckins = checkins.filter((c) => {
+    const t = Number(c?.weekStart);
+    return Number.isFinite(t) && (Date.now() - t) <= 14 * 86400000;
+  });
+  const allReadiness = recentCheckins.map(checkinReadiness).filter(r => r !== null);
   const avgReadiness = allReadiness.length ? mean(allReadiness) : 70;
 
   // Default: same programme

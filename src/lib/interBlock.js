@@ -331,11 +331,22 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
     // exceed plannedPeak mid-block, and an overreached muscle must never
     // be offered more than it was planned (review #2).
     const start = previousStart - (recovery.deloadFlagMidBlock ? 1 : 0);
+    // C6 RA6-2 (D97-25): "the recovery cost ran high late in the block"
+    // is muscle-voiced - it reads as THIS muscle's soreness/joint cost.
+    // When neither per-muscle term contributed and the weight came only
+    // from block-level signals (readiness slope, flagged sleep, the
+    // deload flag), that sentence attributed a systemic cost to a muscle
+    // that reported nothing local. The rationale now names the
+    // block-level cause in that case; numbers are untouched.
+    const muscleVoicedCost = num(recovery.sorenessLateAvg, 0) >= SORENESS_HIGH
+      || num(recovery.jointDiscomfortAvg, 0) >= JOINT_HIGH;
     return finish(BLOCK_CLASS.OVERREACHED, start,
       Math.min(achievedPeak, plannedPeak) - 2, null,
       recovery.deloadFlagMidBlock
         ? `${name} progressed, but the recovery flag fired early in the block`
-        : `${name} progressed, but the recovery cost ran high late in the block`);
+        : muscleVoicedCost
+          ? `${name} progressed, but the recovery cost ran high late in the block`
+          : `${name} progressed, but recovery ran high across the block as a whole`);
   }
 
   if (perfUp) {
@@ -365,7 +376,16 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
         ? (ds) => (ds > 0
           ? `${name} responded well and kept progressing in the higher-volume weeks with recovery to spare`
           : `${name} responded well, and its learned volume ceiling sets where the next block can safely sit`)
-        : `${name} responded well at this dose`,
+        // C6 RA6-5 (D97-25): the non-earned branch can also be pulled
+        // DOWN by the learned-ceiling/MAV clamps (previousStart above
+        // learnedCeiling - 2), and the bare retention string then read
+        // "responded well at this dose, so the next block starts lower"
+        // - cause and consequence contradicting each other in one
+        // sentence. Same function form as the earned branch: a downward
+        // final delta gets the ceiling clause; retention keeps its line.
+        : (ds) => (ds < 0
+          ? `${name} responded well, and its learned volume ceiling sets where the next block can safely sit`
+          : `${name} responded well at this dose`),
       // The evidence earned a climb but suppression/staleness vetoed it:
       // that IS an upward carry prevented, reported truthfully (M-6).
       pairEarned && !earned);

@@ -193,3 +193,36 @@ describe('C6 R-4 (D97-22): a recovery week is only claimed live when it was earn
     expect(advice.headline).toBe('Recovery week on the calendar');
   });
 });
+
+// C6 RA6-11 (D97-25): the branch CHOICE now shares seam 2's boundary.
+// D97-8 stopped stale check-ins producing present-tense signals, but
+// avgReadiness still averaged the same unfiltered rows, so a returning
+// user's next-block recommendation was chosen by pre-lapse readiness -
+// and not always conservatively (stale sub-60 rows pushed them onto the
+// "Same plan, slightly adjusted. The structure is working" path).
+test('RA6-11: pre-lapse check-ins cannot choose the next-block branch', async () => {
+  // Months-old rows with terrible readiness (avg well below 60): if the
+  // old unfiltered average were still in play, this would recommend
+  // 'adjust'. With no check-in inside 14 days, the no-data default (70)
+  // applies and the conservative repeat branch wins.
+  getRecentCheckins.mockResolvedValue([
+    { weekStart: Date.now() - 120 * 86400000, energyScore: 1, sorenessScore: 5, sleepHours: 4 },
+    { weekStart: Date.now() - 127 * 86400000, energyScore: 1, sorenessScore: 5, sleepHours: 4 },
+  ]);
+  getBlockStatus.mockReturnValue(finishedStatus);
+  const advice = await getBlockAdvice('u1', block, {}, { isPro: true });
+  expect(advice.nextBlock.recommendation).toBe('repeat');
+  expect(advice.nextBlock.body).not.toMatch(/structure is working/i);
+});
+
+test('RA6-11 control: fresh sub-60 readiness still chooses adjust exactly as before', async () => {
+  // Readiness 52 each (the pinned mid-scale value): below the repeat
+  // bar, above the rebuild floor, no high signals.
+  getRecentCheckins.mockResolvedValue([
+    { weekStart: Date.now() - 3 * 86400000, energyScore: 3, sorenessScore: 3, sleepHours: 7 },
+    { weekStart: Date.now() - 6 * 86400000, energyScore: 3, sorenessScore: 3, sleepHours: 7 },
+  ]);
+  getBlockStatus.mockReturnValue(finishedStatus);
+  const advice = await getBlockAdvice('u1', block, {}, { isPro: true });
+  expect(advice.nextBlock.recommendation).toBe('adjust');
+});

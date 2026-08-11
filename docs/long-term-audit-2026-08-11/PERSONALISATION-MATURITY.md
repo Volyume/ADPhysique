@@ -499,9 +499,17 @@ stated plainly and nothing further is proposed.
 - **Reset condition.** N/A.
 - **Stale condition.** NONE at this layer; it inherits whatever staleness (or
   lack of it) each layer has.
-- **Manual override interaction.** This IS the override rule: manual wins
-  (`:45-50`). `isManualEdit` protects the adaptive layer from being disabled by
-  untouched editor defaults (`:85-96`).
+- **Manual override interaction.** This IS the override rule: manual wins.
+  `isManualEdit` protects the adaptive layer from being disabled by untouched
+  editor defaults. CORRECTION (RA6-1, D97-25): when this document was first
+  written that protection existed only in the ledger runner and the seed -
+  `mergeLandmarkPrecedence` itself accepted ANY finite manual entry, so a
+  legacy full-table save of untouched research defaults disabled the Pro
+  adapted layer on every display surface and in the ledger's landmark frame,
+  while labelling unchosen values "your own setting". Review A (probe RA6-M)
+  found it; the merge now requires `isManualEdit` before accepting a manual
+  entry, pinned in `effectiveLandmarks.test.js` ("only a REAL edit counts as
+  manual in the merge"). This section's original claim is true as of that fix.
 - **Safety interaction.** None; explicitly out of the ED-guardrail scope
   (`:24-27`).
 - **Tier interaction.** Only the adapted layer is gated (`:118`).
