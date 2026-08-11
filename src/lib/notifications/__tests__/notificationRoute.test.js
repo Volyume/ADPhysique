@@ -107,8 +107,41 @@ describe('routeForNotificationType', () => {
   });
 
   test('an unknown or no-op type returns null (no navigation)', () => {
-    expect(routeForNotificationType('morning_weight')).toBeNull();
+    // PM-04 (D96) re-anchor: 'morning_weight' is no longer an unrouted type.
+    // It was used here as the stand-in for "a type with no route", which is
+    // exactly the defect PM-04 closed: the two daily weigh-in prompts, the
+    // most frequent Pro pushes of the month, dead-ended on whatever screen
+    // was last open. The property this test pins (an unknown type navigates
+    // nowhere) is unchanged and still asserted below.
     expect(routeForNotificationType('unknown')).toBeNull();
     expect(routeForNotificationType(undefined)).toBeNull();
+  });
+
+  // PM-04 / FM-08 (D96): every type the scheduler sets has a route, which is
+  // this module's own stated contract.
+  test('PM-04: both weigh-in prompts open the Today strip weight input', () => {
+    for (const type of ['morning_weight', 'evening_weight']) {
+      const target = routeForNotificationType(type);
+      expect(target.tab).toBe('HomeTab');
+      expect(target.screen).toBe('Home');
+      // Minted per tap, so a repeat tap re-opens the input (HomeScreen keys
+      // the open on a fresh value, as the check-in gate's deep link does).
+      expect(Number.isFinite(target.params.openWeightLog)).toBe(true);
+    }
+  });
+
+  test('FM-08: the two Free-tier pushes land on Home rather than dead-ending', () => {
+    expect(routeForNotificationType('training_reminder')).toEqual({ tab: 'HomeTab', screen: 'Home' });
+    expect(routeForNotificationType('activation_nudge')).toEqual({ tab: 'HomeTab', screen: 'Home' });
+  });
+
+  test('PM-01(b): the coach-ready push opens the week it was laid for', () => {
+    expect(routeForNotificationType('weekly_coach_ready', { weekStart: 1750000000000 })).toEqual({
+      tab: 'ProfileTab', screen: 'CoachOutput', params: { weekStart: 1750000000000 },
+    });
+    // A legacy push with no baked week keeps the old no-params behaviour.
+    expect(routeForNotificationType('weekly_coach_ready')).toEqual({
+      tab: 'ProfileTab', screen: 'CoachOutput',
+    });
   });
 });

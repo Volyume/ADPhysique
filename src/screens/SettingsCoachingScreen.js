@@ -122,10 +122,20 @@ export default function SettingsCoachingScreen() {
   return (
     <SettingsPage title="Coaching">
       <View style={[settingsStyles.section, live.section]}>
+        {/* W-3 / W-4 (D96, wording only): the row was described in nine
+            words for a mode that changes behaviour on a dozen surfaces, and
+            "coaching never pushes for more WHILE IT'S ON" invited exactly
+            the inference the Phase 4 question asks about - that the safety
+            rules differ between modes. They do not: the calorie floors, the
+            FFM floor, the rapid-loss gate and the ED-flag suppressions are
+            mode-blind and tier-blind (proGate.js, CLAUDE.md Section 2). Two
+            consequence clauses and one true statement about existing
+            behaviour. No gate, no threshold, no detector text, and no
+            detector mechanics exposed. */}
         <SettingRow
           icon="heart-outline"
           label="Calmer coaching"
-          sub="Quieter progress prompts, and coaching never pushes for more while it's on."
+          sub="Quieter progress prompts, and coaching never pushes for more while it's on. Celebrations, streaks and progress comparisons go quiet; your plan and your numbers do not change. The safety limits on calories and training load are always on, in both modes."
           showArrow={false}
           rightElement={
             <Switch

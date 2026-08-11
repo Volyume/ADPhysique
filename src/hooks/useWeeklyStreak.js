@@ -13,7 +13,7 @@ import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   getWeeklySessionStats, getDeloadWeeksInRange, getOpenEdPatternFlag,
-  getActivePlan, getRoutinesForPlan,
+  getActivePlan, getRoutinesForPlan, getCompletedWorkoutStartTimestamps,
 } from '../lib/database';
 import { localWeekStartMs } from '../lib/dayKey';
 import { computeStreak } from '../lib/streak';
@@ -72,8 +72,29 @@ export default function useWeeklyStreak(userId, scoffScore = 0) {
         }
       } catch (_) { /* no plan -> manual goal or session-count */ }
 
+      // C5-P18-03 (D96): the window used to be a fixed 12 weeks regardless of
+      // how long the account had existed, so weeks BEFORE the user had an
+      // account carried completed: 0 against a real plan target and were
+      // classified as quiet weeks. A user who installed on Monday and trained
+      // twice opened Consistency on Friday to one in-progress mark and eleven
+      // "Quiet week" marks, and a screen-reader user heard "Last 12 weeks: 11
+      // quiet". The strip now starts at the week of the user's first
+      // completed workout and grows from one mark. computeStreak, the repair
+      // rule and the high-water guard are untouched: only which weeks exist
+      // changes, and no week the user actually lived is dropped.
+      let earliestTrainedWeekStart = null;
+      try {
+        const timestamps = await getCompletedWorkoutStartTimestamps(userId);
+        const first = Array.isArray(timestamps) ? timestamps.find(Number.isFinite) : null;
+        if (first != null) earliestTrainedWeekStart = localWeekStartMs(first);
+      } catch (_) { /* unreadable: fall back to the full 12-week window */ }
+
       const weekStarts = [];
-      for (let i = WEEKS - 1; i >= 0; i--) weekStarts.push(currentWeekStart - i * WEEK_MS);
+      for (let i = WEEKS - 1; i >= 0; i--) {
+        const ws = currentWeekStart - i * WEEK_MS;
+        if (earliestTrainedWeekStart != null && ws < earliestTrainedWeekStart) continue;
+        weekStarts.push(ws);
+      }
 
       const [statsList, deloadWeeks, edFlag, streakState, wellbeing] = await Promise.all([
         Promise.all(weekStarts.map((ws) => getWeeklySessionStats(userId, ws).catch(() => ({ completed: 0, planned: 0 })))),

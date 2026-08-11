@@ -88,7 +88,7 @@ export default function WellbeingCheckScreen({ navigation }) {
       if (score >= 2) {
         appAlert(
           'Thank you for sharing that',
-          "Some of your answers suggest it may be worth speaking to your GP or a registered dietitian alongside your training. We've noted this so your coaching focuses on performance and support rather than restriction.",
+          "Some of your answers suggest it may be worth speaking to your GP or a registered dietitian alongside your training. We've noted this so Volyume focuses on performance and support rather than restriction.",
           [{ text: 'Got it', onPress: () => navigation.goBack() }],
         );
       } else {
@@ -107,7 +107,7 @@ export default function WellbeingCheckScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
         <Text style={[styles.intro, live.intro]}>
-          Five questions about your relationship with food and eating. Your answers are private, stored only on this device, and help shape how your coaching is approached.
+          Five questions about your relationship with food and eating. Your answers are private, stored only on this device, and help shape how Volyume approaches you.
         </Text>
 
         <View style={styles.list}>

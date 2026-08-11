@@ -20,8 +20,15 @@ export const GLOSSARY = {
     'A planned higher-carb day on an aggressive cut, to ease fatigue.',
   macroCycle:
     'Alternating higher- and lower-carb days across the week.',
+  // C5-P14-03 (D96): the basis clause used to read "worked out from your
+  // recent sets", which overstates it on the surface where the term is first
+  // met. SetEntry renders Est. max live from the single set currently dialled
+  // in, before it is even logged, so on a first-ever set there are no "recent
+  // sets" at all. The maths is untouched and honest; only the claim about
+  // what it is derived from is corrected, and the new wording stays true on
+  // the history-backed surfaces (LiftProgress, BlockReflection) too.
   estMax:
-    'An estimate of the most you could lift once, worked out from your recent sets. You never have to test it.',
+    'An estimate of the most you could lift once, worked out from the weight and reps of a set. You never have to test it.',
   // D93 (Campaign 2, Phase 3): the app's most-repeated achievement term
   // finally gets its definition. One meaning everywhere: a PR is any of
   // the three record kinds, and never requires a max-out attempt.

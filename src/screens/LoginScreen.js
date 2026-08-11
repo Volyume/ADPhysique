@@ -270,6 +270,17 @@ export default function LoginScreen({ navigation, route }) {
           {/* Thin divider below brand */}
           <View style={[styles.brandDivider, live.brandDivider]} />
 
+          {/* E-7 (D96): the screen that actually demands an account carried
+              no rationale at all - the approved "why an account" sentence was
+              written on ProOnboarding step 1, which the live account-first
+              flow auto-advances past, so it never rendered for anyone. Same
+              sentence, on the form that asks. One line, not a privacy
+              lecture; the full account and data story stays in the Article 9
+              gate that follows. */}
+          <Text style={[styles.whyAccount, live.whyAccount]}>
+            Sign in once so your plan, weight history and coaching updates can be restored if you change device.
+          </Text>
+
           {/* ── OAuth sign-in ──
               Apple on iOS, Google on Android (see OAuthButtons for the
               platform split). This is the only way into the app. */}
@@ -475,6 +486,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
     marginBottom: spacing.xxl,
   },
+  // E-7: the "why an account" line, in the caption register the screen
+  // already uses for its other quiet explanation (oauthWaiting below).
+  whyAccount: {
+    ...type.caption,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
   oauthWaiting: {
     ...type.caption,
     color: colors.textSecondary,
@@ -507,6 +526,7 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     brandTagline: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    whyAccount: { ...t.type.caption, color: t.colors.textSecondary },
     brandDivider: { backgroundColor: t.colors.border },
     oauthWaiting: { ...t.type.caption, color: t.colors.textSecondary },
     emailDividerLine: { backgroundColor: t.colors.border },

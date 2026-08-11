@@ -109,8 +109,14 @@ export default function WelcomeScreen({ navigation }) {
                 <View key={b} style={styles.bulletRow}>
                   <Ionicons name="checkmark-circle" size={15} color={t.colors.primary} />
                   <Text style={[styles.bulletText, live.bulletText]}>{b}</Text>
-                  {/* U-E-1: inline gloss for the coach term on first appearance. */}
-                  {b.includes('Coach') && (
+                  {/* U-E-1: inline gloss for the coach term on first appearance.
+                      C5-P34-01 (D96): the gate was `b.includes('Coach')` and
+                      String.includes is case-sensitive, so the one bullet
+                      carrying the word ("Your coach explains what changed...")
+                      never matched and the gloss never rendered on the app's
+                      first screen. Lower-cased comparison, same gloss, same
+                      bullet, no copy change. */}
+                  {b.toLowerCase().includes('coach') && (
                     <InfoTooltip text={GLOSSARY.precisionCoaching} size={13} />
                   )}
                 </View>

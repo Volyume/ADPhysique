@@ -113,13 +113,25 @@ async function renderScreen() {
 // clearTimeout()s the pending success timer.
 let _mountedTree = null;
 
+// C5-P20-02 (D96) re-anchor, same meaning: on a FIRST check-in (no saved
+// coach output, which is what getLatestCoachOutput returns in this fixture)
+// the submit CTA names the baseline outcome instead of promising "this
+// week's coaching", because the first review can be a baseline hold. The
+// submit path itself is unchanged.
+const SUBMIT_TITLE = 'See my first review';
+
+
 // Drives the forced four-step wizard (getWeeklySessionStats returns
 // completed:0/planned:0 above, so fastEligible is false and trainingPerformance
 // is never auto-derived) from step 0 through to a submit tap. `sleepText`,
 // if given, is typed into "Average sleep hours" on step 0; omitted leaves it
 // blank, matching the field's real "Optional" default.
 async function driveToSubmit(tree, sleepText) {
-  const energy = findPressable(tree, '3 Normal')[0];
+  // C5-P20-04 (D96) re-anchor, same meaning: the rating chip's accessibility
+  // label now leads with the word and follows with the number ("Normal, 3 of
+  // 5"), because the digit-first form read as a clinical intake scale. The
+  // chip, its value and this drive are otherwise unchanged.
+  const energy = findPressable(tree, 'Normal, 3 of 5')[0];
   expect(energy).toBeTruthy();
   await act(async () => { energy.props.onPress(); });
 
@@ -138,7 +150,7 @@ async function driveToSubmit(tree, sleepText) {
   await flush();
 
   // Step 2 ("Recovery and issues"): soreness is required.
-  const soreness = findPressable(tree, '1 None')[0];
+  const soreness = findPressable(tree, 'None, 1 of 5')[0];
   expect(soreness).toBeTruthy();
   await act(async () => { soreness.props.onPress(); });
   next = findButtonByTitle(tree, 'Next');
@@ -151,7 +163,7 @@ async function driveToSubmit(tree, sleepText) {
   await act(async () => { hit.props.onPress(); });
   await flush();
 
-  const submit = findButtonByTitle(tree, "See this week's coaching");
+  const submit = findButtonByTitle(tree, SUBMIT_TITLE);
   expect(submit.length).toBeGreaterThan(0);
   await act(async () => { submit[0].props.onPress(); });
   await flush();

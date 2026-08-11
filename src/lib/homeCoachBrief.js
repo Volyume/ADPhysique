@@ -46,8 +46,13 @@ export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutD
   // their own plan's rotation. The plan owns weekly allocation; the brief
   // never second-guesses it per muscle.
 
-  // Rule 5, volume on track, low fatigue
-  if (fatigueHistory.length >= 1) {
+  // Rule 5, volume on track, low fatigue.
+  // C5-P18-04 (D96): "Training is on track" is a TREND judgement, and it used
+  // to fire from a single rated session. The sibling voice on the same screen
+  // (readinessSummary.js, priority 4) deliberately waits for two rated
+  // sessions before it speaks about a trend, so the two Home coaching voices
+  // now agree on what counts as evidence. Rules 1-3 are unaffected.
+  if (fatigueHistory.length >= 2) {
     const recent = fatigueHistory.slice(0, 2);
     const avg = recent.reduce((s, r) => s + (r.fatigueLevel ?? r.fatigue_level ?? 0), 0) / recent.length;
     if (avg <= 2) {

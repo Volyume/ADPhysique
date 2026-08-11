@@ -9,6 +9,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { runWeeklyCoach, mapCalsAdherence, corroborateConfidenceLevel } from '../lib/weeklyCoach';
 import { buildRampPositionLine } from '../lib/blockExplain';
 import { buildHoldReceipt } from '../lib/coachLedger';
+import { isCompletedCoachDecision } from '../lib/coachDecision';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getLatestCheckin,
@@ -975,7 +976,14 @@ export default function CoachOutputScreen({ navigation, route }) {
   // window (0 sessions), weekRangeLabel render an Invalid Date, and the screen
   // fall through to the baseline view, the "building baseline" screen the user
   // saw on tapping the notification.
-  const weekStart = route.params?.weekStart ?? localWeekStartMs();
+  // PM-01(a) (D96): the week this screen is scoped to. `redirectWeekStart` is
+  // set once, by the loader, when the resolved week has NO check-in but a
+  // completed decision exists for an earlier week: the screen then opens that
+  // decision instead of computing a fresh verdict for a week the user has not
+  // lived yet. The screen already accepted a weekStart param, so this is a
+  // redirect, not new machinery.
+  const [redirectWeekStart, setRedirectWeekStart] = useState(null);
+  const weekStart = redirectWeekStart ?? route.params?.weekStart ?? localWeekStartMs();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const { user, userProfile, units, saveLocalProfile, tier: storeTier, energyUnit, reduceMotion } = useAppStore(useShallow(s => ({
     user: s.user,
@@ -1449,6 +1457,34 @@ export default function CoachOutputScreen({ navigation, route }) {
   useEffect(() => {
     async function load() {
       const checkin = await getLatestCheckin(user.id, weekStart);
+      // PM-01(a) / PM-03 (D96): a week with no check-in is not a week the
+      // coach has reviewed. Running the engine on it produced the
+      // low-adherence verdict from an empty week ("get back to your full
+      // plan", on a Monday morning), PERSISTED it, and Home then advertised
+      // it as this week's decision -- while the Coach tab, using the
+      // completed-decision predicate, correctly said nothing. It also
+      // permanently retired the week-one trial ledger, the one surface built
+      // to make the loop visible before the first review.
+      //
+      // A real weekly check-in always sets an energy score (step 0 is
+      // required), so that is the "this week was reviewed" signal, exactly as
+      // WeeklyCheckInScreen's own alreadyDone test uses it. With no check-in
+      // for this week, open the latest COMPLETED decision instead; if there
+      // is none, the screen still renders (the hold receipt / baseline view
+      // below) but nothing is written. No engine change: weeklyCoach and
+      // coachApply are untouched.
+      const weekWasCheckedIn = checkin?.energyScore != null;
+      if (!weekWasCheckedIn && redirectWeekStart == null) {
+        const latestOutput = await getLatestCoachOutput(user.id).catch(() => null);
+        const latestWeek = Number(latestOutput?.weekStart);
+        if (Number.isFinite(latestWeek) && latestWeek < weekStart) {
+          const latestCheckin = await getLatestCheckin(user.id, latestWeek).catch(() => null);
+          if (isCompletedCoachDecision(latestOutput, latestCheckin)) {
+            setRedirectWeekStart(latestWeek);
+            return; // the effect re-runs against the reviewed week
+          }
+        }
+      }
       // COMP-026 (A): the adaptive-TDEE resize needs ~4+ weeks of weight to
       // reach 'high' confidence and size the calorie change from real energy
       // balance instead of the blunt fixed step. A 14-day window capped
@@ -1908,7 +1944,15 @@ export default function CoachOutputScreen({ navigation, route }) {
       // record from state, so a missing field there would wipe it on the
       // first tap of Apply.
       const persistedResult = { ...result, consecutiveOffTargetWeeks, lastCalAdjustmentWeekStart };
-      await saveCoachOutput(user.id, { weekStart, ...persistedResult });
+      // PM-01(a) / PM-03: persist only a week the user actually checked in
+      // for. This save used to run on EVERY load, so merely opening the
+      // screen (the Monday push, the volyume://coach deep link) manufactured
+      // a stored "decision" for a week with no evidence in it. The apply
+      // handlers still re-save from state, and they can only run on a real
+      // review.
+      if (weekWasCheckedIn) {
+        await saveCoachOutput(user.id, { weekStart, ...persistedResult });
+      }
 
       setOutput(persistedResult);
 
@@ -2037,8 +2081,10 @@ export default function CoachOutputScreen({ navigation, route }) {
       setLoadError(true);
       setLoading(false);
     });
+  // PM-01(a): redirectWeekStart is in the dependency list so the one-shot
+  // redirect to the reviewed week re-runs the load against it.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, reloadKey]);
+  }, [user?.id, reloadKey, redirectWeekStart]);
 
   // Ultimate-Audit item 11 (D16, founder ruling 2026-07-10,
   // pass3-v2-founder-decisions.md:166 + NA-coaching-10, pass4-blueprints-

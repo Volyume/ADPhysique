@@ -113,6 +113,7 @@ export default function ReadinessCards({ userId, tier }) {
   const live = buildLiveStyles(t);
   const [totalWorkouts, setTotalWorkouts] = useState(0);
   const [recovery, setRecovery] = useState({ soreness: null, fatigue: null, joint: null });
+  const [sampleCounts, setSampleCounts] = useState({ soreness: 0, fatigue: 0, joint: 0 });
   const [muscleFreshness, setMuscleFreshness] = useState({});
   const [recoveryTrendInsight, setRecoveryTrendInsight] = useState(null);
 
@@ -137,7 +138,32 @@ export default function ReadinessCards({ userId, tier }) {
         return (cachedCount != null && cachedCount > 0) || liveCount > 0;
       });
       setTotalWorkouts(completed.length);
-      setRecovery(computeRecoveryEMAs(completed));
+      // C5-P18-02 (D96): soreness_24h_before is written on a 1-3 domain
+      // (Fresh/Mild/Sore, the scale the adaptive engine and computeRecoveryEMAs
+      // read), but this card draws it on a gauge captioned "Scale 1-5" with
+      // 1-5 thresholds, so a user who tapped the MAXIMUM option saw a
+      // mid-scale amber "Elevated". Normalised for DISPLAY with the exact
+      // mapping WorkoutSummaryScreen already uses (1 -> 2, 2 -> 3, 3 -> 4);
+      // no stored value changes and computeRecoveryEMAs is untouched.
+      const displayWorkouts = completed.map((w) => (
+        w.soreness24hBefore == null
+          ? w
+          : { ...w, soreness24hBefore: [2, 3, 4][w.soreness24hBefore - 1] ?? w.soreness24hBefore }
+      ));
+      setRecovery(computeRecoveryEMAs(displayWorkouts));
+      // C5-P18-01 (D96): how many RATED sessions each gauge actually
+      // averaged. computeRecoveryEMAs returns a value from a single point, so
+      // one rated session produced "4.0 / Fatigue / High" beside a red dot,
+      // under a caption calling it a weighted running average and telling the
+      // user that consistently high scores mean a lighter week. Nothing had
+      // been averaged and nothing was consistent. Counted here rather than in
+      // recoveryEMA.js so the pure engine helper and its pinned shape stay
+      // exactly as they are.
+      setSampleCounts({
+        soreness: completed.filter(w => w.soreness24hBefore != null).length,
+        fatigue: completed.filter(w => w.fatigueLevel != null).length,
+        joint: completed.filter(w => (w.maxJointDiscomfort ?? w.jointDiscomfort) != null).length,
+      });
     } catch (_) {}
 
     if (tier === 'pro') {
@@ -199,13 +225,13 @@ export default function ReadinessCards({ userId, tier }) {
       <View style={styles.section}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
           <SectionLabel>Recovery</SectionLabel>
-          <InfoTooltip text="A running average of your session feedback after each workout, weighted so the last week counts most and older sessions fade out. Scored 1-5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1-5 where 1 = comfortable. If scores are consistently high, consider a lighter week." />
+          <InfoTooltip text="A running average of your session feedback after each workout, weighted so the last week counts most and older sessions fade out. It waits for a couple of rated sessions before showing a figure, because one session is not an average. Scored 1-5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1-5 where 1 = comfortable. If scores are consistently high, consider a lighter week." />
         </View>
         <View style={[styles.recoveryCard, live.recoveryCard]}>
           <View style={styles.recoveryGrid}>
-            <RecoveryGauge label="Soreness" value={recovery.soreness} />
-            <RecoveryGauge label="Fatigue" value={recovery.fatigue} />
-            <RecoveryGauge label="Joint comfort" value={recovery.joint} invertGood />
+            <RecoveryGauge label="Soreness" value={recovery.soreness} samples={sampleCounts.soreness} />
+            <RecoveryGauge label="Fatigue" value={recovery.fatigue} samples={sampleCounts.fatigue} />
+            <RecoveryGauge label="Joint comfort" value={recovery.joint} samples={sampleCounts.joint} invertGood />
           </View>
           <Text style={[styles.recoveryNote, live.recoveryNote]}>Scale 1-5 · Lower is better for soreness & fatigue</Text>
 
@@ -249,18 +275,28 @@ export default function ReadinessCards({ userId, tier }) {
   );
 }
 
-function RecoveryGauge({ label, value, invertGood = false }) {
+// MIN_RATED_SESSIONS: a "running average" needs at least two points to be one.
+// Below that the gauge shows the existing no-value state with a one-line
+// caption, and no colour verdict is rendered.
+const MIN_RATED_SESSIONS = 2;
+
+function RecoveryGauge({ label, value, samples = 0, invertGood = false }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). RecoveryGauge is a separate function
   // component from ReadinessCards above, so it calls useTheme() itself
   // (same pattern as WorkoutSummaryScreen.js's RatingRow).
   const t = useTheme();
   const live = buildLiveStyles(t);
-  const hasValue = value != null && !isNaN(value);
+  // C5-P18-01: a single rated session is not an average, so it gets no number
+  // and no coloured verdict.
+  const enoughSamples = samples >= MIN_RATED_SESSIONS;
+  const hasValue = value != null && !isNaN(value) && enoughSamples;
   const display = hasValue ? value.toFixed(1) : 'N/A';
 
   let dotColor = t.colors.textMuted;
-  let scaleNote = 'Nothing to show yet';
+  let scaleNote = samples > 0 && !enoughSamples
+    ? 'After a couple of sessions'
+    : 'Nothing to show yet';
   if (hasValue) {
     const v = parseFloat(value);
     if (invertGood) {

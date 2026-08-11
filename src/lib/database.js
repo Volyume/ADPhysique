@@ -5952,7 +5952,16 @@ export async function saveWeeklyCheckin(userId, data) {
     ['stepsAdherence', 'steps_adherence', (v) => v],
     ['cardioAdherence', 'cardio_adherence', (v) => v],
     ['stepsAvg', 'steps_avg', (v) => v],
-    ['cycleOverride', 'cycle_override', (v) => (v ? 1 : 0)],
+    // C5-P20-01 (D96): tri-state, exactly like joint_pain below. null =
+    // never asked (the Fast Check-In does not render the question, and the
+    // wizard's row is skippable), 0 = the user's explicit "not this week",
+    // 1 = flagged. The old (v ? 1 : 0) stored an unasked question as a
+    // genuine "no", which is the PERMISSIVE direction in the engine (every
+    // calorie branch is gated on !cycleOverride). The engine's own read is
+    // !!checkin.cycleOverride, so null behaves exactly as the old 0 did for
+    // coaching; what changes is that "unasked" is no longer recorded as an
+    // answer the user did not give.
+    ['cycleOverride', 'cycle_override', (v) => (v == null ? null : (v ? 1 : 0))],
     ['notes', 'notes', (v) => v],
     ['trainingPerformance', 'training_performance', (v) => v],
     // Campaign 1 P0-4: tri-state. null = unanswered (no evidence), 0 = the
@@ -7240,7 +7249,8 @@ export async function insertWeeklyCheckinFromCloud(userId, c) {
       c.energy_score ?? null, c.soreness_score ?? null, c.stress_score ?? null,
       c.sleep_hours ?? null, c.cals_adherence ?? null, c.steps_adherence ?? null,
       c.cardio_adherence ?? null, c.steps_avg ?? null,
-      c.cycle_override ? 1 : 0, c.notes ?? null,
+      // C5-P20-01 tri-state: a cloud null stays null (never asked).
+      c.cycle_override == null ? null : (c.cycle_override ? 1 : 0), c.notes ?? null,
       c.training_performance ?? null,
       // Campaign 1 P0-4 tri-state: a cloud null stays null (unanswered).
       c.joint_pain == null ? null : (c.joint_pain ? 1 : 0),

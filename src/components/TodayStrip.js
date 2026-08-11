@@ -48,6 +48,7 @@ export default function TodayStrip({
     loggedPill: { borderColor: t.colors.success, backgroundColor: t.colors.surface2 },
     loggedPillText: { ...t.type.caption, color: t.colors.textPrimary },
     logPrompt: { ...t.type.label, color: t.colors.textPrimary },
+    logWhy: { ...t.type.captionTight, color: t.colors.textMuted },
     unit: { ...t.type.caption, color: t.colors.textMuted },
     logBtnText: { ...t.type.label, color: t.colors.onPrimary },
   };
@@ -211,10 +212,25 @@ export default function TodayStrip({
           <View style={styles.metricCopy}>
             <Text style={[styles.cellLabel, live.cellLabel]}>Morning weight</Text>
             <Text style={[styles.logPrompt, live.logPrompt]} numberOfLines={1}>Not logged yet</Text>
+            {/* C5-P22-04 (D96): the surface a user touches every morning said
+                only "Morning weight / Not logged yet / Log". The why lives
+                three screens away. One caption, in the register already
+                approved on the hand-off card, on the EMPTY state only: never
+                on the logged state, never a count, never a streak or a
+                frequency, so nothing here can read as pressure to weigh. */}
+            <Text style={[styles.logWhy, live.logWhy]} numberOfLines={2}>
+              Before food, after the bathroom. It feeds your weight trend, and several mornings go by before anything changes.
+            </Text>
           </View>
         </View>
+        {/* C5-P37-01 (D96, applied by the lead at the Wave D/E landing): this
+            was the first primary-filled button on a day-0 Home, rendered
+            ABOVE the session hero's "Start workout" - two CTAs of the same
+            visual weight with the lower-priority one first. Secondary weight
+            keeps the row whole-tappable and the habit intact while the
+            session hero owns the single primary action. */}
         <Button
-          variant="primary"
+          variant="secondary"
           size="sm"
           fullWidth={false}
           title="Log"
@@ -304,6 +320,7 @@ const styles = StyleSheet.create({
   },
   loggedPillText: { ...type.caption, color: colors.textPrimary },
   logPrompt: { ...type.label, color: colors.textPrimary },
+  logWhy: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
   // R9/D70: fill/radius/label now come from the shared <Button
   // variant="primary">; the compact strip keeps its own minHeight/vertical
   // padding so the pill stays this row's height, not Button's roomier default.

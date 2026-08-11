@@ -26,6 +26,7 @@ import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
 import { planReady } from '../lib/haptics';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { isPhotoSuppressed } from '../hooks/usePhotoSuppression';
+import { BLOCK_START_SENTENCE } from '../lib/blockExplain';
 
 // Order the rationale reads top-to-bottom: how the week is structured,
 // then why the volume and progression, then exercise selection and the
@@ -366,6 +367,14 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   </View>
                 ) : null}
               </View>
+              {/* C5-P21-01 (D96, lead at the D/E landing): the FIRST place
+                  the calorie and macro targets ever appear carries their
+                  provenance - profile and research now, personalised by
+                  evidence later. Third first-use law: no claimed learning
+                  before history exists. */}
+              <Text style={[styles.targetsNote, live.targetsNote]}>
+                These start from your profile and the research, then adjust as your logs and weight trend come in.
+              </Text>
               <Text style={[styles.targetsNote, live.targetsNote]}>
                 Hit these most days. Logging your meals sharpens your coaching, and your weight trend carries the rest.
               </Text>
@@ -415,9 +424,21 @@ export default function ProSetupCompleteScreen({ navigation }) {
               <View style={{ flex: 1 }}>
                 <Text style={[styles.routineTitle, live.routineTitle]}>3. Train your split</Text>
                 {hasPlan ? (
-                  <Text style={[styles.routineBody, live.routineBody]}>
-                    {planName ?? 'Your plan'} - {planRoutines.length} workout{planRoutines.length !== 1 ? 's' : ''} per week
-                  </Text>
+                  <>
+                    <Text style={[styles.routineBody, live.routineBody]}>
+                      {planName ?? 'Your plan'} - {planRoutines.length} workout{planRoutines.length !== 1 ? 's' : ''} per week
+                    </Text>
+                    {/* C5-P10-01 (D96, wave C carry-over): setup generated
+                        and activated a plan, so a training block is already
+                        running, and nothing on the hand-off said so. The
+                        user met "Week 1 of 6" days later for something they
+                        never knowingly started. Same canonical sentence as
+                        every activation decision point, outside the collapse
+                        so it is read without a tap. */}
+                    <Text style={[styles.routineBody, live.routineBody]}>
+                      {BLOCK_START_SENTENCE}
+                    </Text>
+                  </>
                 ) : (
                   <Text style={[styles.routineBody, live.routineBody]}>
                     Create or choose a routine before your first session.
@@ -474,7 +495,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 <Text style={[styles.routineTitle, live.routineTitle]}>4. Check in once a week</Text>
                 <Text style={[styles.routineBody, live.routineBody]}>
                   {firstReviewLabel
-                    ? `Keep logging your morning weight. Your first weekly check-in opens on ${firstReviewLabel} and takes about two minutes. Your coach then explains any calorie or training change before you apply it.`
+                    ? `Keep logging your morning weight. Your first weekly check-in opens on ${firstReviewLabel} and takes about two minutes. That first review mostly sets your baseline; your coach then explains any calorie or training change before you apply it.`
                     : 'At the end of your training week, review how it went. Your coach then explains any calorie or training change before you apply it.'}
                 </Text>
                 {/* D15 (founder ruling 2026-07-09, plan-G section 2.2/4, Q3

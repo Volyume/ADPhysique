@@ -18,6 +18,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, buildVolumeStatusColor, withAlpha, alpha, circle, motion, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import InfoTooltip from '../components/InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 import BackHeader from '../components/BackHeader';
 import RollingNumber from '../components/RollingNumber';
 import BlockShapeCard from '../components/BlockShapeCard';
@@ -1385,6 +1386,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               {detectedPRs.length} new PR{detectedPRs.length !== 1 ? 's' : ''}
               {prExerciseNames ? ` - ${prExerciseNames}` : ''}
             </Text>
+            {/* C5-P34-02 (D96): this is where a novice meets the
+                abbreviation for the first time (the in-session celebration
+                labels are plain English and stay that way). GLOSSARY.pr was
+                authored for exactly this and had one consumer, a screen only
+                reachable after a whole block has finished. Same tooltip
+                primitive and same string as BlockReflectionScreen; no new
+                copy and no PR-maths change. */}
+            <InfoTooltip text={GLOSSARY.pr} size={13} />
           </View>
           </RevealSection>
         )}

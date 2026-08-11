@@ -42,16 +42,27 @@ describe('ProOnboarding: GLOSSARY.volume wired onto the "volume" jargon sites (A
     expect(window).toMatch(/tip=\{GLOSSARY\.volume\}/);
   });
 
-  test('step 5 "How\'s your recovery?" Dropdown carries the volume tooltip (also covers the Header sub above it)', () => {
+  // Same-meaning re-anchor (C5-P36-02, D96). The A6 design had ONE tooltip
+  // standing in for two "volume" sites, because the Header sub said "volume"
+  // with no field label to anchor a tooltip to. D96 ruled that shared anchor
+  // was the symptom of the duplication it was papering over, so the Header
+  // sub's volume clause is deleted and the field hint is the only "volume"
+  // site on the step. The property this suite pins is unchanged and in fact
+  // stronger: no "volume" reaches the user without its gloss attached.
+  test('step 5 "How\'s your recovery?" Dropdown carries the volume tooltip, and is now the step\'s only "volume" site', () => {
     const site = src.indexOf("label=\"How's your recovery?\"");
     expect(site).toBeGreaterThan(-1);
     const window = src.slice(site, site + 300);
     expect(window).toMatch(/hint="Be honest here\. This sets how much volume your plan includes, so it can protect your recovery\."/);
     expect(window).toMatch(/tip=\{GLOSSARY\.volume\}/);
-    // The Header sub this tooltip stands in for.
-    const subSite = src.indexOf('sub="Recovery affects your plan volume');
-    expect(subSite).toBeGreaterThan(-1);
-    expect(subSite).toBeLessThan(site); // the Header renders above the Dropdown
+    // The unanchored Header sub that used to borrow this tooltip is gone.
+    expect(src).not.toContain('sub="Recovery affects your plan volume');
+    // Every remaining user-facing "volume" string on this screen sits on a
+    // field that carries the gloss itself (this one and step 4's experience
+    // Dropdown, asserted above).
+    const volumeStrings = (src.match(/(hint|sub|label)="[^"\n]*volume[^"\n]*"/g) ?? []);
+    expect(volumeStrings).toHaveLength(2);
+    for (const s of volumeStrings) expect(s.startsWith('hint="')).toBe(true);
   });
 
   test('Dropdown itself renders the tip as an InfoTooltip beside the label (the shared primitive both sites rely on)', () => {

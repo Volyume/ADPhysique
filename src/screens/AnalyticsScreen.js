@@ -567,12 +567,22 @@ export default function AnalyticsScreen({ navigation, route }) {
           />
         )}
 
-        {/* ── Empty state (U-D-4: encouragement-framed, matching BodyMetrics) ── */}
+        {/* ── Empty state (U-D-4: encouragement-framed, matching BodyMetrics) ──
+            C5-P35-01 (D96): the second sentence named three destinations
+            (body metrics, progress photos, scans) that are ALL Pro-locked
+            for a free user with no history - the read-only guards probe a
+            history they do not have, so each tap lands on the hard gate.
+            The one piece of copy on an otherwise empty screen was a promise
+            the tier could not keep. Each tier now reads the destinations
+            that are genuinely open to it. No gate and no tier scope changes;
+            the sentence simply matches the guard that already exists. */}
         {!loading && !loadError && allSets.length === 0 && (
           <EmptyState
             icon="analytics-outline"
             title="No training trends yet"
-            text="Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below."
+            text={tier === 'pro'
+              ? 'Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below.'
+              : 'Training charts appear here once sessions are logged. Your consistency, lifts and full history are still available below.'}
           />
         )}
 

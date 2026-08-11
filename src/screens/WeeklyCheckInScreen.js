@@ -108,10 +108,14 @@ function ChipRow({ options, selected, onSelect }) {
         return (
           <Chip
             key={opt.value}
-            label={`${opt.value}\n${opt.label}`}
+            // C5-P20-04 (D96): the word leads, the number follows. Leading
+            // with the digit made the first check-in read as a clinical
+            // intake form rather than coaching. The stored value is
+            // unchanged, and the screen reader already spoke the word.
+            label={`${opt.label}\n${opt.value}`}
             selected={isSelected}
             onPress={() => onSelect(isSelected ? null : opt.value)}
-            accessibilityLabel={`${opt.value} ${opt.label}`}
+            accessibilityLabel={`${opt.label}, ${opt.value} of 5`}
             style={styles.ratingChip}
             labelStyle={styles.ratingChipLabel}
             numberOfLines={3}
@@ -285,6 +289,18 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
   // Weight data
   const [weekWeights, setWeekWeights] = useState([]);
+  // C5-P20-02 (D96): has any weekly review ever been produced for this user?
+  // Null while unread, so the first-run copy never flashes on a returning
+  // user. A saved coach output is the only durable record that a review has
+  // happened, and it is what YouScreen and Home already read.
+  const [hasPriorReview, setHasPriorReview] = useState(null);
+  // COMP-008 eligibility is decided ONCE, from the answers the screen ARRIVED
+  // with (auto-derived, or restored on re-entry). It used to be recomputed
+  // from the live answer state, so a user working through the wizard who
+  // tapped a training option on step 3 flipped the whole screen into the
+  // condensed card mid-flow. C5-P19-01 makes the wizard the normal week-1
+  // path, which made that reachable, so the decision is pinned here.
+  const [fastPrefilled, setFastPrefilled] = useState(false);
   const [alreadyLoggedToday, setAlreadyLoggedToday] = useState(false);
 
   // Step 1, How are you?
@@ -375,10 +391,28 @@ export default function WeeklyCheckInScreen({ navigation }) {
         // and PR counts further down are genuinely weekly and stay
         // Monday-anchored via weekStartMs; these are two different facts and no
         // longer share one name.
+        //
+        // C5-P22-02 (D96): the WINDOW is unchanged; what changed is the UNIT.
+        // This counted raw rows, so cloud-synced duplicates of the SAME
+        // morning (a weight logged on a phone and a tablet arrives as two
+        // rows for one local day, database.js pulls by row id) let two
+        // mornings pass a gate that promises three. The engine
+        // (weeklyCoach F10/EN-8) and Home (D93) already count DISTINCT local
+        // days for exactly this reason; this gate and its labels were the
+        // ones left behind. Deduping can only ever hold MORE than before,
+        // never adjust more. computeEWMA below keeps every row: the trend
+        // read already handles same-day points.
         const trailing7Ms = anchorMs - 7 * 86400000;
         const last7Days = weights.filter(w => (w.loggedAt ?? 0) >= trailing7Ms);
+        // Every row in the window still feeds computeEWMA below: the trend
+        // read already handles same-day points. Only the COUNT is deduped.
         setWeekWeights(last7Days);
-        setWeighInsThisWeek(last7Days.length);
+        const distinctMornings = new Set(
+          last7Days
+            .filter(w => Number.isFinite(Number(w.loggedAt)))
+            .map(w => localDayKey(Number(w.loggedAt)))
+        ).size + last7Days.filter(w => !Number.isFinite(Number(w.loggedAt))).length;
+        setWeighInsThisWeek(distinctMornings);
 
         // Compute days since the user first logged a morning weight.
         // Stand-in for "days since they started using the coaching
@@ -407,11 +441,13 @@ export default function WeeklyCheckInScreen({ navigation }) {
         // now, collapsing the week window to today, so sessions read 0 and
         // the rollup range covered a single day and nothing was ever derived:
         // the form showed only blind buttons.
-        const [sessions, prCount, targets] = await Promise.all([
+        const [sessions, prCount, targets, priorOutput] = await Promise.all([
           getWeeklySessionStats(user.id, weekStartMs).catch(() => ({ completed: 0, planned: 0 })),
           getWeeklyPRCount(user.id, weekStartMs).catch(() => 0),
           getNutritionTargets(user.id).catch(() => null),
+          getLatestCoachOutput(user.id).catch(() => null),
         ]);
+        if (!cancelled) setHasPriorReview(!!priorOutput);
         let rollups = [];
         let plannedDays = [];
         if (targets?.targetKcal) {
@@ -441,11 +477,19 @@ export default function WeeklyCheckInScreen({ navigation }) {
           }
         } catch (_) { /* volume trend optional */ }
 
+        // C5-P19-01 (D96): whether there is an earlier week to be measured
+        // against at all. volLastWeek is this week's Mon-Sun predecessor's
+        // working-set volume, so > 0 means the user genuinely trained in a
+        // prior week. Without one, the derivation refuses the comparative
+        // verdicts rather than pre-selecting a downgrade the user cannot have
+        // earned.
+        const hasPriorWeek = Number.isFinite(volLastWeek) && volLastWeek > 0;
         const trainingPerf = deriveTrainingPerformance({
           completed: sessions?.completed ?? 0,
           planned: sessions?.planned ?? 0,
           prs: prCount ?? 0,
           volDeltaPct,
+          hasPriorWeek,
         });
         const calsAdh = deriveCalsAdherence({
           rollups,
@@ -475,6 +519,16 @@ export default function WeeklyCheckInScreen({ navigation }) {
               target: targets.targetKcal,
             } : null,
           });
+          const VALID_PERF_AT_LOAD = ['exceeded', 'hit', 'struggled', 'dropped'];
+          const perfAtLoad = alreadyDone && VALID_PERF_AT_LOAD.includes(existingCheckin.trainingPerformance)
+            ? existingCheckin.trainingPerformance
+            : trainingPerf;
+          const calsAtLoad = alreadyDone && ['yes', 'no', 'untracked'].includes(existingCheckin.calsAdherence)
+            ? existingCheckin.calsAdherence
+            : calsAdh;
+          setFastPrefilled(
+            perfAtLoad != null && (!targets?.targetKcal || calsAtLoad != null),
+          );
           if (alreadyDone) {
             // Re-entry: prefill the user's saved answers so they edit, not
             // restart, and the derived figures above still show the intelligence.
@@ -494,7 +548,11 @@ export default function WeeklyCheckInScreen({ navigation }) {
             setJointPain(existingCheckin.jointPain == null
               ? null
               : (existingCheckin.jointPain ? 'yes' : 'no'));
-            setCycle(existingCheckin.cycleOverride ? 'yes' : 'no');
+            // C5-P20-01: an unanswered cycle question reloads as unanswered,
+            // the same tri-state the joint-pain restore above uses.
+            setCycle(existingCheckin.cycleOverride == null
+              ? null
+              : (existingCheckin.cycleOverride ? 'yes' : 'no'));
             const VALID_CALS = ['yes', 'no', 'untracked'];
             const VALID_PERF = ['exceeded', 'hit', 'struggled', 'dropped'];
             setCalsAdherence(VALID_CALS.includes(existingCheckin.calsAdherence)
@@ -548,7 +606,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             hasStartedBaseline: !!earliestTs,
           });
           setGateState('too_soon');
-        } else if (last7Days.length < MIN_WEIGH_INS) {
+        } else if (distinctMornings < MIN_WEIGH_INS) {
           setGateState('need_weights');
         } else if (dayLate) {
           // OB-7: the stricter data gates above still win; a day-late user
@@ -660,6 +718,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const fastEligible =
     gateState === 'open' &&
     !forceFullWizard &&
+    fastPrefilled &&
     trainingPerformance != null &&
     (!hasNutritionTarget || calsAdherence != null);
 
@@ -746,7 +805,17 @@ export default function WeeklyCheckInScreen({ navigation }) {
         // preserving (explicit null CLEARS a column, undefined leaves it), and
         // stored answers from the cardio era are retained history (D95 H5).
         // A same-day re-entry re-save must never destroy them (Review B, F1).
-        cycleOverride: showCycle && cycle === 'yes',
+        // C5-P20-01 (D96): Campaign 1's null law applied to the cycle answer.
+        // `showCycle && cycle === 'yes'` collapsed "never asked" and "not this
+        // week" into the same stored FALSE, and false is the PERMISSIVE
+        // direction in the engine (every calorie branch is gated on
+        // !cycleOverride). The Fast Check-In never renders the question at
+        // all, so a user who opts into cycle tracking was silently recorded
+        // as having said no. Unanswered now persists as null; the engine's
+        // own read (!!checkin.cycleOverride) treats null exactly as it
+        // treats false, so nothing about the coaching changes for a user who
+        // genuinely answered. The question's wording is untouched.
+        cycleOverride: !showCycle || cycle == null ? null : cycle === 'yes',
         trainingPerformance: trainingPerformance ?? null,
         // Campaign 1 P0-4 tri-state: unanswered persists as null, never as
         // an explicit "no" the user did not give.
@@ -794,9 +863,14 @@ export default function WeeklyCheckInScreen({ navigation }) {
         // overnight. Lay (or refresh) the recurring Monday 09:00 "plan
         // ready" reminder unless the user disabled it. Default on.
         if (prefs?.coachReady?.enabled !== false) {
+          // PM-01(b) (D96): the push is about THIS week's review, so it
+          // carries this week's weekStart. Without it the Monday tap opened
+          // CoachOutput's default (the current week), which by then is a week
+          // nine hours old with no check-in in it.
           await scheduleWeeklyCoachReady(
             prefs?.coachReady?.hour ?? 9,
             prefs?.coachReady?.minute ?? 0,
+            { weekStart: weekStart.getTime() },
           );
         }
       } catch (_) {}
@@ -918,7 +992,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
     return (
       <>
         <Text style={[styles.stepHeading, live.stepHeading]}>This week's data</Text>
-        <Text style={[styles.stepSubtitle, live.stepSubtitle]}>We pre-fill what we can from your logs. Correct anything that does not reflect the week.</Text>
+        {/* C5-P20-03 (D96): the consequence, in step 2's register (the model
+            the audit names). This step described its mechanics only. */}
+        <Text style={[styles.stepSubtitle, live.stepSubtitle]}>We pre-fill what we can from your logs. Correct anything that does not reflect the week, because this is what the weekly decision is measured against.</Text>
 
         {/* Weight trend, read-only */}
         {!loading && (
@@ -928,11 +1004,14 @@ export default function WeeklyCheckInScreen({ navigation }) {
             >
               Morning weight trend
             </SectionLabel>
-            {weekWeights.length > 0 ? (
+            {weighInsThisWeek > 0 ? (
               <View style={[styles.weightSummaryRow, live.weightSummaryRow]}>
                 <Ionicons name="checkmark-circle" size={16} color={t.colors.success} />
                 <Text style={[styles.weightSummaryText, live.weightSummaryText]}>
-                  {weekWeights.length} {weekWeights.length === 1 ? 'day' : 'days'} logged
+                  {/* C5-P22-02: distinct mornings, never raw rows - the label
+                      promises days and the engine credits one weigh-in per
+                      local day. */}
+                  {weighInsThisWeek} {weighInsThisWeek === 1 ? 'day' : 'days'} logged
                   {trendKg ? ` - trend ${formatBodyWeightShort(trendKg, bwu)}` : ''}
                 </Text>
                 {!alreadyLoggedToday && (
@@ -1146,9 +1225,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
       <>
         <Text style={[styles.stepHeading, live.stepHeading]}>Training performance</Text>
         <Text style={[styles.stepSubtitle, live.stepSubtitle]}>
+          {/* C5-P20-03 (D96): both variants now name the consequence. */}
           {autoDerived.trainingPerformance
-            ? 'Pre-filled from your logged sessions. Tap a different option if it feels wrong.'
-            : 'How did your sessions go compared to what you expected?'}
+            ? 'Pre-filled from your logged sessions. Tap a different option if it feels wrong. This tells the coach whether the current workload is landing.'
+            : 'How did your sessions go compared to what you expected? This tells the coach whether the current workload is landing.'}
         </Text>
 
         <View style={styles.section}>
@@ -1233,7 +1313,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         key: 'weight',
         icon: 'scale-outline',
         label: 'Weight',
-        value: `${weekWeights.length} ${weekWeights.length === 1 ? 'day' : 'days'} logged${trendKg ? ` - trend ${formatBodyWeightShort(trendKg, bwu)}` : ''}`,
+        value: `${weighInsThisWeek} ${weighInsThisWeek === 1 ? 'day' : 'days'} logged${trendKg ? ` - trend ${formatBodyWeightShort(trendKg, bwu)}` : ''}`,
       },
       // Progress scan context row (integration-plan.md §5): read-only,
       // shown only when a valid packet exists for this window; absent
@@ -1306,6 +1386,28 @@ export default function WeeklyCheckInScreen({ navigation }) {
             onSelect={setSorenessScore}
           />
         </View>
+
+        {/* C5-P20-01 (D96): the fast path's own contract is that it condenses
+            fields that are ALREADY confidently auto-derived. The cycle answer
+            is not derived at all and cannot be, so it is asked here too rather
+            than being dropped. Same single row, same wording as the wizard. */}
+        {showCycle && (
+          <View style={styles.section}>
+            <SectionLabel
+              hint="If your period could be moving the scale this week, flag it. The coach holds weight-based changes so a normal fluctuation isn't read as fat gain or loss."
+            >
+              Cycle
+            </SectionLabel>
+            <OptionRow
+              options={[
+                { value: 'yes', label: 'Affecting the scale' },
+                { value: 'no', label: 'Not this week' },
+              ]}
+              selected={cycle}
+              onSelect={setCycle}
+            />
+          </View>
+        )}
       </>
     );
   }
@@ -1464,12 +1566,19 @@ export default function WeeklyCheckInScreen({ navigation }) {
               Your coach needs at least {FIRST_CHECKIN_MIN_DAYS} days of data before the first weekly check-in. Right now there {daysToWait === 1 ? 'is 1 day' : `are ${daysToWait} days`} of baseline data left.
               {'\n\n'}
               Volyume waits for your next {scheduledDayName} after that baseline is ready, so each check-in compares like for like. Keep logging your morning weight each day, and food if you use Eat. Your first check-in opens on {safeFirstCheckinLabel}.
+              {'\n\n'}
+              {/* PM-07 (D96): "the first review sets your baseline" was true,
+                  honest and said only AFTER the first check-in, inside the
+                  hold receipt. Said here too, before the work. */}
+              That first review sets your baseline, so your coach may hold your targets steady rather than change them.
             </Text>
           ) : (
             <Text style={[styles.gateBody, live.gateBody]}>
               Your coach needs at least {FIRST_CHECKIN_MIN_DAYS} days of data before the first weekly check-in.
               {'\n\n'}
               Log your first morning weight from the Today tab to start the baseline. Once the baseline is ready, your first check-in opens on your scheduled day: {scheduledDayName}.
+              {'\n\n'}
+              That first review sets your baseline, so your coach may hold your targets steady rather than change them.
             </Text>
           )}
           <Button
@@ -1498,11 +1607,11 @@ export default function WeeklyCheckInScreen({ navigation }) {
           </View>
           <Text style={[styles.gateTitle, live.gateTitle]}>A few more weight readings needed</Text>
           <Text style={[styles.gateBody, live.gateBody]}>
-            You've logged {weighInsThisWeek} {weighInsThisWeek === 1 ? 'reading' : 'readings'} in the last 7 days. Your coach needs at least {MIN_WEIGH_INS} to calculate a reliable trend.
+            You've logged {weighInsThisWeek} {weighInsThisWeek === 1 ? 'morning' : 'mornings'} in the last 7 days. Your coach needs at least {MIN_WEIGH_INS} to calculate a reliable trend.
             {'\n\n'}
             Body weight shifts naturally each day due to fluid, food, and hormones. Logging every other day gives enough readings to smooth out that noise and see what's actually changing. With fewer readings, the coaching adjustments won't be as accurate.
             {'\n\n'}
-            Log {remaining} more {remaining === 1 ? 'reading' : 'readings'} from the Today tab and come back on {dayName}.
+            Log {remaining} more {remaining === 1 ? 'morning' : 'mornings'} from the Today tab and come back on {dayName}.
           </Text>
           {/* OB-8: the label promises an action, so perform it. Deep-link to
               the Today tab's weight cell (TodayStrip) and pop its input open.
@@ -1627,7 +1736,20 @@ export default function WeeklyCheckInScreen({ navigation }) {
           {!fastEligible && step === 0 && (
             <View style={styles.ritualIntro}>
               <Text style={[styles.ritualIntroTitle, live.ritualIntroTitle]}>{checkinDayLabel}</Text>
-              <Text style={[styles.ritualIntroSub, live.ritualIntroSub]}>Four short sections. Volyume combines them with your logs, then shows the weekly coaching decision straight away.</Text>
+              {/* C5-P20-02 (D96): before this, a first-timer answered four
+                  sections under a promise of "the weekly coaching decision
+                  straight away" and landed on "Building your baseline". The
+                  first-run line names the baseline outcome BEFORE the work,
+                  reusing the wording already approved on the hold receipt
+                  (coachLedger: "the first review sets your baseline"). It
+                  does not promise a hold either: on most enrolment days the
+                  first review is a real decision, so the line says the
+                  targets may hold rather than that they will. */}
+              <Text style={[styles.ritualIntroSub, live.ritualIntroSub]}>
+                {hasPriorReview === false
+                  ? 'Four short sections. Volyume combines them with your logs, then shows what your coach makes of the week. Your first review sets the baseline future weeks are measured against, so it may hold your targets steady rather than change them.'
+                  : 'Four short sections. Volyume combines them with your logs, then shows the weekly coaching decision straight away.'}
+              </Text>
             </View>
           )}
 
@@ -1657,7 +1779,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
           <View style={styles.ctaRow}>
             {fastEligible ? (
               <Button
-                title="See this week's coaching"
+                title={hasPriorReview === false ? 'See my first review' : "See this week's coaching"}
                 onPress={handleSubmit}
                 disabled={!fastCanSubmit}
                 state={submitSuccess ? 'success' : busy ? 'loading' : 'idle'}
@@ -1678,7 +1800,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
               />
             ) : (
               <Button
-                title="See this week's coaching"
+                title={hasPriorReview === false ? 'See my first review' : "See this week's coaching"}
                 onPress={handleSubmit}
                 disabled={!stepCanAdvance(step)}
                 state={submitSuccess ? 'success' : busy ? 'loading' : 'idle'}

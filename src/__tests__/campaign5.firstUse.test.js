@@ -688,3 +688,810 @@ describe('BLOCK: the first block explains itself and never advances on its own (
     }
   });
 });
+
+// ───────────────────────────────────────────────────────────────────────
+// Wave E (D96): audiences, copy density, hierarchy, tier truth.
+//
+// The organising rule for the two tier blocks below: FREE DOES NOT HAVE
+// COACHING (founder, 2026-08-10). Every pin here is copy, hierarchy or
+// affordance truth. Not one of them moves a gate, and the single
+// reachability change in the wave (the Safety checks section) moves a
+// guardrail INPUT out of a tier branch, which the tier-blind guardrail
+// mandate requires rather than permits.
+// ───────────────────────────────────────────────────────────────────────
+
+describe('FREE: the tier is told the truth about itself (C5-P7-*, C5-P8-*, D96)', () => {
+  test('no surface advertises the deleted plate calculator (C5-P7-02)', () => {
+    // The feature is REJECTED and gone (D14/D57). It was being sold on the
+    // very screen the paywall nominates as its honest answer.
+    for (const f of [
+      'screens/SubscriptionPolicyScreen.js',
+      'screens/ProUpgradeScreen.js',
+      'screens/WelcomeScreen.js',
+      'components/TierComparisonStrip.js',
+    ]) {
+      expect(stripComments(read(f))).not.toMatch(/[Pp]late calculator/);
+    }
+  });
+
+  test('the account and cloud backup are never sold as a Pro feature (C5-P7-03 / C5-P8-05)', () => {
+    const policy = read('screens/SubscriptionPolicyScreen.js');
+    // An account is mandatory for everyone and the sync layer reads no tier.
+    expect(policy).not.toContain('An account so your data is backed up and follows you across phones.');
+    expect(policy).not.toContain('your training data stays on your phone.');
+    expect(policy).toMatch(/backed up to your account whatever tier you are on/);
+    // The paywall's unreachable no-account branch carried the same framing.
+    expect(read('screens/ProUpgradeScreen.js')).not.toContain('Pro needs a free account');
+  });
+
+  test('the downgrade promises name only what the guards actually keep readable (C5-P7-04)', () => {
+    const policy = read('screens/SubscriptionPolicyScreen.js');
+    const account = read('screens/SettingsAccountScreen.js');
+    // WeeklyCheckIn and NutritionTargets are hard withProGuard locks, not
+    // read-only ones, so neither may be promised as "stays viewable".
+    expect(policy).not.toContain("Past check-ins stay viewable");
+    expect(policy).not.toContain('Nutrition targets last set on Pro stay visible');
+    expect(account).not.toMatch(/Past coach decisions, check-ins, training blocks and PRs remain readable/);
+    // The three screens the founder's 2026-07-02 read-only decision covers.
+    expect(policy).toMatch(/Body measurements, progress photos and your food diary stay viewable/);
+    const nav = read('navigation/RootNavigator.js');
+    expect(nav).toMatch(/const GatedWeeklyCheckIn\s*= lazyScreen\(\(\) => withProGuard\(/);
+    expect(nav).toMatch(/const GatedNutritionTargets = lazyScreen\(\(\) => withProGuard\(/);
+    expect(nav).toContain('name="WeeklyCheckIn" component={GatedWeeklyCheckIn}');
+    expect(nav).toContain('name="NutritionTargets" component={GatedNutritionTargets}');
+  });
+
+  test('one canonical "what stays free" list, and the shorter surfaces point at it (C5-P7-09)', () => {
+    const policy = read('screens/SubscriptionPolicyScreen.js');
+    // Every item on the shorter lists appears on the canonical one.
+    for (const claim of ['plans you can pick from', 'Create your own', 'Personal records', 'Training blocks']) {
+      expect(policy).toContain(claim);
+    }
+    // The paywall FAQ no longer drops the plan library and blocks, and it
+    // names where the full answer lives.
+    const paywall = read('screens/ProUpgradeScreen.js');
+    expect(paywall).toMatch(/the plan library[\s\S]{0,80}training blocks/);
+    expect(paywall).toContain('What stays if you switch back to Free later');
+  });
+
+  test('the tier is named calmly, before a lock names it (C5-P7-10)', () => {
+    const coach = read('screens/YouScreen.js');
+    expect(coach).toContain("You&apos;re on Free");
+    // Stated, never sold: no price, trial or CTA rides the line.
+    const line = coach.slice(coach.indexOf("You&apos;re on Free") - 400, coach.indexOf("You&apos;re on Free") + 200);
+    expect(line).not.toMatch(/trial|upgrade|ProUpgrade|£/i);
+  });
+
+  test('the Coach tab tells a free user what it becomes, not what it is doing (C5-P7-08)', () => {
+    const coach = stripComments(read('screens/YouScreen.js'));
+    expect(coach).not.toContain('Your coach reads your logs, applies safety limits, and explains every decision.');
+    expect(coach).toContain('On Pro this tab carries your weekly check-in');
+    // Copy only: the pitch card still opens the same upgrade route.
+    expect(coach).toContain("navigation.navigate('ProUpgrade', { source: 'coach_pitch_card' })");
+  });
+
+  test('the free column carries the tier word, never a hardcoded currency (C5-P8-01)', () => {
+    const strip = stripComments(read('components/TierComparisonStrip.js'));
+    expect(strip).not.toMatch(/£0/);
+    expect(strip).not.toMatch(/[£$€]\d/);
+    // The Pro column still reads the active store's localised price.
+    expect(strip).toContain("priceFor('pro', pricingWindow)");
+  });
+
+  test('the differential copy never credits an engine the free reader does not have (FB-13 / C5-P7-06)', () => {
+    const src = read('lib/differentialPaywall.js');
+    // The trigger is fed from the tier-blind deload signal, not the Pro engine.
+    expect(src).not.toContain('Precision Coaching is holding a lighter week');
+    expect(src).toContain('Your training is pointing to a lighter week.');
+    // The stalled-lift trigger fires for ANY lift and is passed no identity.
+    expect(src).not.toContain("Your bench hasn't moved");
+    expect(src).toContain("One of your lifts hasn't moved in three weeks.");
+  });
+
+  test('the Pro teaser ends, like every other card on Home (FM-05)', () => {
+    const card = read('components/HomeProTeaserCard.js');
+    // The per-week dismissal the free weekly line already uses, keyed per
+    // user per local week. Frequency only: who sees it and when it first
+    // appears are unchanged (HomeScreen still gates on tier + 3 sessions).
+    expect(card).toContain('@volyume_pro_teaser_dismissed_');
+    expect(card).toContain('localWeekStartMs()');
+    expect(card).toContain('if (dismissed) return null;');
+    expect(card).toContain('accessibilityLabel="Dismiss the Pro suggestion"');
+    // Defaults to hidden so a dismissed card never flashes before the read.
+    expect(card).toMatch(/useState\(true\)/);
+    expect(read('screens/HomeScreen.js')).toMatch(/tier === 'free' && totalSessions >= 3/);
+  });
+
+  test('the Progress empty state promises a free user only free destinations (C5-P35-01)', () => {
+    const src = read('screens/AnalyticsScreen.js');
+    // Body metrics, progress photos and scans are all Pro-locked for a
+    // zero-history free user: their read-only guards probe a history that
+    // does not exist, so each tap lands on the hard gate.
+    expect(src).toMatch(/tier === 'pro'\s*\n?\s*\? 'Training charts appear here once sessions are logged\. Body metrics/);
+    expect(src).toContain('Your consistency, lifts and full history are still available below.');
+  });
+
+  test('the safety screener is reachable on every tier (W-8 / C5-P7-07)', () => {
+    const coach = read('screens/YouScreen.js');
+    const section = coach.slice(coach.indexOf('<SectionLabel>Safety checks</SectionLabel>') - 600);
+    // YouScreen is the ONLY route to the wellbeing screener in the app, and
+    // it sat inside the isPro branch. Guardrails never consult tier.
+    expect(section).toContain("navigation.navigate('WellbeingCheck')");
+    expect(coach).not.toMatch(/\{isPro \? \([\s\S]{0,200}<SectionLabel>Safety checks<\/SectionLabel>/);
+    // Both destinations are registered ungated, so the rows cannot dead-end.
+    const nav = read('navigation/RootNavigator.js');
+    expect(nav).toMatch(/name="WellbeingCheck" component=\{WellbeingCheckScreen\}/);
+    expect(nav).toMatch(/name="GoalLockConsent" component=\{GoalLockConsentScreen\}/);
+    expect(nav).not.toMatch(/withProGuard\(WellbeingCheckScreen/);
+  });
+
+  test('no dead Pro route: every free-reachable lock still lands on a working gate', () => {
+    const gate = read('components/ProGate.js');
+    // A "Not now" that always lands somewhere, an upgrade path and a restore.
+    expect(gate).toContain('HomeTab');
+    expect(gate).toMatch(/ProUpgrade/);
+    expect(gate).toMatch(/[Rr]estore/);
+  });
+});
+
+describe('FREE: zero-history Home claims no history it does not have (C5-P7-05 / C5-P1-08, D96)', () => {
+  test('the welcome card promises a coach only to the tier that has one', () => {
+    const card = read('components/HomeWelcomeCard.js');
+    expect(card).toContain("isPro ? 'Your coach learns as you train' : 'Your progress builds as you train'");
+    // The free sentence names only what free genuinely accumulates, and both
+    // sentences stay future-facing (third first-use law).
+    expect(card).toContain('Every session you log builds your history, your records and your weekly volume.');
+    expect(read('screens/HomeScreen.js')).toContain("<HomeWelcomeCard onDismiss={dismissWelcome} isPro={tier === 'pro'} />");
+  });
+
+  test('the free welcome copy claims no past training and no personalisation from it', () => {
+    const card = stripComments(read('components/HomeWelcomeCard.js'));
+    // Nothing may read the app's history back to a user who has none.
+    expect(card).not.toMatch(/based on your (last|previous|recent)/i);
+    expect(card).not.toMatch(/we(?:'ve| have) (?:seen|learned|noticed)/i);
+    expect(card).not.toMatch(/your (?:trend|average|usual)/i);
+  });
+});
+
+describe('PRO: setup hands over live features only, and no removed one (D96)', () => {
+  test('the hand-off states that a training block is already running (C5-P10-01)', () => {
+    // The wave C carry-over: setup generates AND activates a plan, so a block
+    // is live, and the user first met "Week 1 of 6" days later.
+    expect(read('screens/ProSetupCompleteScreen.js')).toContain('BLOCK_START_SENTENCE');
+    expect(read('screens/FreeStarterScreen.js')).toContain('BLOCK_START_SENTENCE');
+  });
+
+  test('every hand-off destination is a registered, live route', () => {
+    const src = read('screens/ProSetupCompleteScreen.js');
+    const nav = read('navigation/RootNavigator.js');
+    const routes = [...src.matchAll(/navigation\.navigate\('([A-Za-z]+)'/g)].map(m => m[1]);
+    expect(routes.length).toBeGreaterThan(0);
+    for (const route of new Set(routes)) {
+      expect(nav).toContain(`name="${route}"`);
+    }
+  });
+
+  test('no cardio promise survives on any first-use surface, either tier', () => {
+    for (const f of [
+      'screens/ProSetupCompleteScreen.js',
+      'screens/ProOnboardingScreen.js',
+      'screens/FreeStarterScreen.js',
+      'screens/FirstRunScreen.js',
+      'screens/WelcomeScreen.js',
+      'screens/SubscriptionPolicyScreen.js',
+      'components/TierComparisonStrip.js',
+      'components/HomeWelcomeCard.js',
+    ]) {
+      expect(stripComments(read(f))).not.toMatch(/[Cc]ardio/);
+    }
+  });
+});
+
+describe('DENSITY: the wizard explains each step once (C5-P36-01/02/03, D96)', () => {
+  test('the header sub is the single explanation carrier on every step', () => {
+    const src = read('screens/ProOnboardingScreen.js');
+    // Each step used to render a header title+sub then a group title+sub
+    // saying the same thing, before the first field.
+    for (const dupe of [
+      'Name, sex, age, height and body weight are the minimum safe inputs for your first targets.',
+      'These answers choose the starting split, exercise pool and weekly workload.',
+      'Start with the broad goal. Competitive category and weak points are optional refinements.',
+    ]) {
+      expect(src).not.toContain(dupe);
+    }
+    // The QuestionGroup icon+title stays: it does real structural work.
+    for (const title of ['title="Required details"', 'title="Plan fit"', 'title="Goal and targets"']) {
+      expect(src).toContain(title);
+    }
+    // Every header sub, and therefore every step's purpose, is still stated.
+    for (const sub of [
+      'These details let the app set a safe starting baseline without guessing.',
+      'An honest estimate sharpens your first plan. Skip this if you are not sure.',
+      'The plan should fit your real week, not the week you wish you had.',
+      'Your goal sets the calorie direction, training bias and nutrition target.',
+    ]) {
+      expect(src).toContain(sub);
+    }
+  });
+
+  test('onboarding advertises no feature the user has not reached (C5-P36-03)', () => {
+    const src = stripComments(read('screens/ProOnboardingScreen.js'));
+    // The body-fat question carried a Volyume Score trailer with none of the
+    // careful framing that feature's own surfaces use, weeks before it is
+    // relevant. Body-image adjacent, and an explicit non-goal of the order.
+    expect(src).not.toMatch(/Progress Photos can refine physique change later/);
+    expect(src).not.toMatch(/Volyume Score/);
+  });
+
+  test('no field, gate or safety hint was removed with the duplication', () => {
+    const src = read('screens/ProOnboardingScreen.js');
+    for (const hint of [
+      'Complete your name, sex, age, height and body weight to continue.',
+      'Choose your experience and equipment to continue.',
+      'Enter your best current estimate or a measured value.',
+      'Be honest here. This sets how much volume your plan includes, so it can protect your recovery.',
+    ]) {
+      expect(src).toContain(hint);
+    }
+    // The recovery question, what it drives and the write-before-prompt
+    // reminder ordering are all untouched.
+    expect(src).toContain("label=\"How's your recovery?\"");
+    expect(src).toContain('tip={GLOSSARY.volume}');
+  });
+});
+
+describe('HIERARCHY: two instructional sheets never stack (C5-P37-02, D96)', () => {
+  test('each auto-firing sheet defers while the other is open, and re-fires after', () => {
+    const src = read('screens/ActiveWorkoutScreen.js');
+    // Generated plans really do pair unilateral accessories into supersets
+    // (assignSupersets excludes beginners only), so the exposed case is an
+    // intermediate or advanced user's FIRST session.
+    expect(src).toContain('if (unilateralSheetOpenRef.current) return;');
+    expect(src).toContain('if (supersetSheetOpenRef.current) return;');
+    // The refs are set beside each setState, so the guard holds inside the
+    // same commit, where the state has not landed yet.
+    expect(src).toMatch(/supersetSheetOpenRef\.current = true;\s*\n\s*setSupersetHeadsUp\(\{/);
+    expect(src).toMatch(/unilateralSheetOpenRef\.current = true;\s*\n\s*setUnilateralSuggest\(\{/);
+    // Each effect re-runs when the other sheet closes, so the deferred one
+    // arrives at its next natural moment rather than being lost.
+    expect(src).toMatch(/\}, \[currentSGI, pairedExerciseName, exercise\?\.name, unilateralSuggest\]\);/);
+    expect(src).toMatch(/unilateralPrefsLoaded, unilateralAsked, supersetHeadsUp\]\);/);
+    // Both one-time acknowledgement rules survive untouched.
+    expect(src).toContain('acknowledgedSupersetsRef.current.add(currentSGI);');
+    expect(src).toContain('acknowledgedUnilateralRef.current.add(exercise.id);');
+  });
+});
+
+describe('VOCABULARY: the words are glossed where they are first met (C5-P34-*, D96)', () => {
+  test('the coach gloss on the app\'s first screen actually renders (C5-P34-01)', () => {
+    const src = read('screens/WelcomeScreen.js');
+    // String.includes is case-sensitive and no bullet carries a capital
+    // "Coach", so the authored gloss never rendered at all.
+    expect(stripComments(src)).not.toContain("b.includes('Coach')");
+    expect(src).toContain("b.toLowerCase().includes('coach')");
+    // The bullet the gate is meant to catch still exists.
+    expect(src).toMatch(/Your coach explains what changed, what stayed the same, and why\./);
+  });
+
+  test('PR is glossed on the surface a novice first meets the abbreviation (C5-P34-02)', () => {
+    const summary = read('screens/WorkoutSummaryScreen.js');
+    expect(summary).toContain("import { GLOSSARY } from '../lib/coachGlossary';");
+    expect(stripComments(summary)).toMatch(/new PR\{detectedPRs\.length !== 1[\s\S]{0,200}<InfoTooltip text=\{GLOSSARY\.pr\} size=\{13\} \/>/);
+    // The in-session celebration labels stay plain English, unabbreviated.
+    const celebration = read('components/PRCelebration.js');
+    expect(celebration).toContain('First lift logged');
+    expect(celebration).toContain('New heaviest weight');
+  });
+
+  test('the effort instruction names its own door (C5-P34-04)', () => {
+    const home = read('screens/HomeScreen.js');
+    // The chip publishes "stop N short of failure" and opens the only sheet
+    // that defines it; its label named the block and nothing else.
+    expect(home).toContain('accessibilityLabel="See the shape of your training block and what the effort target means"');
+    expect(read('components/HomeBlockShapeSheet.js')).toContain('GLOSSARY.rir');
+  });
+
+  test('Est. max claims only the evidence it has (C5-P14-03)', () => {
+    // SetEntry computes it live from the single set in the stepper, before
+    // that set is logged, so "your recent sets" was false at first exposure.
+    expect(read('lib/coachGlossary.js')).not.toContain('worked out from your recent sets');
+    expect(read('lib/coachGlossary.js')).toContain('worked out from the weight and reps of a set');
+    expect(read('components/SetEntry.js')).toContain('GLOSSARY.estMax');
+  });
+});
+
+describe('LOGGER: the first session states its effort target and its own words (C5-P13-*, C5-P14-02, D96)', () => {
+  test('the session header carries the block\'s effort target (C5-P13-01)', () => {
+    const src = read('screens/ActiveWorkoutScreen.js');
+    // Derived from the block row Home already reads, in Home's own wording,
+    // so the logger can never state an effort the block does not prescribe.
+    expect(src).toContain('setWeekRirTarget(currentWeek.rirTarget ?? null)');
+    expect(src).toContain('`This week: stop ${weekRirTarget} short of failure`');
+    expect(src).toContain('<InfoTooltip text={GLOSSARY.rir} size={13} />');
+    // Suppressed in a recovery week, where the Recovery banner already says
+    // the week is deliberately lighter.
+    expect(src).toContain('{weekRirTarget != null && !isDeloadWeek ? (');
+  });
+
+  test('the set/rep cue survives until it has been used once (C5-P13-03)', () => {
+    const src = read('screens/ActiveWorkoutScreen.js');
+    // Logging a set used to write the once-ever seen flag, destroying the
+    // only cue pointing at the only definitions of "set" and "rep".
+    const logHandler = src.slice(src.indexOf('addSetToCurrentExercise(setData);'), src.indexOf("audit('workout.set.logged'"));
+    expect(logHandler).not.toContain('@volyume_seen_workout_info');
+    // The overflow tap still retires it, once ever.
+    const overflowTap = src.slice(src.indexOf("audit('workout.overflow.open'") - 500, src.indexOf("audit('workout.overflow.open'"));
+    expect(overflowTap).toContain("AsyncStorage.setItem('@volyume_seen_workout_info', 'true')");
+    // And while it is live the button says what is behind it.
+    expect(src).toContain("accessibilityLabel={showInfoTipPulse ? 'Exercise options, including how logging works' : 'Exercise options'}");
+    expect(src).toMatch(/showInfoTipPulse \? \(\s*\n\s*<Text style=\{\[styles\.overflowHintLabel/);
+  });
+
+  test('the warm-up sheet helps the user with no working weight (C5-P13-04)', () => {
+    const src = read('screens/ActiveWorkoutScreen.js');
+    // The branch aimed at the first-timer used to be a dead end.
+    expect(src).not.toContain('Enter your working weight first, then come back for warm-up sets.');
+    expect(src).toContain('No working weight yet. Start with the empty bar');
+    // B8 stands: still pull, never push. Nothing auto-suggests a warm-up.
+    expect(src).toContain('<WorkoutBottomSheet\n          visible={showWarmupRamp}');
+    expect(src).toContain('setShowWarmupRamp(true)');
+  });
+
+  test('a first-ever set is anchored to the bottom of the rep band (C5-P14-02)', () => {
+    const src = read('screens/ActiveWorkoutScreen.js');
+    // Zero-history loader branch AND the swap path, which resets history by
+    // construction. Both update seededEntryRef, so C5-P13-02's "unlogged
+    // set" baseline stays exact.
+    expect(src).toContain('reps: routineExercise?.recommendedRepsMin || DEFAULT_SET.reps');
+    expect(src).not.toContain('reps: routineExercise?.recommendedRepsMax || DEFAULT_SET.reps');
+    expect(src).toContain('seededEntryRef.current = { weight: DEFAULT_SET.weight, reps: newRepMin || DEFAULT_SET.reps }');
+    // The history-anchored branch is untouched: it still seeds from what was
+    // actually lifted last time.
+    expect(src).toMatch(/const lastActual = getBestAnchorSet\(prev, currentWorkingCount\)/);
+  });
+});
+
+describe('WELLBEING + ACCOUNT: the two settings sentences (W-3/W-4, E-7, D96)', () => {
+  test('calm mode says what it changes, and that the safety limits do not (W-3/W-4)', () => {
+    const src = read('screens/SettingsCoachingScreen.js');
+    expect(src).toContain('Celebrations, streaks and progress comparisons go quiet; your plan and your numbers do not change.');
+    expect(src).toContain('The safety limits on calories and training load are always on, in both modes.');
+    // A true statement about existing behaviour only: no threshold, gate or
+    // detector mechanic reaches the user.
+    const strings = (stripComments(src).match(/'[^'\n]{20,}'|\"[^\"\n]{20,}\"/g) ?? []);
+    for (const literal of strings) {
+      expect(literal).not.toMatch(/SCOFF|threshold|detector|flag count/i);
+    }
+    expect(src).toContain('await setWellbeingMode(mode)');
+    // Still tier-blind, still outside the Pro block.
+    const calmRow = src.slice(src.indexOf('label="Calmer coaching"'));
+    expect(calmRow.indexOf("{tier === 'pro' && (")).toBeGreaterThan(0);
+  });
+
+  test('the sign-in screen says why an account is needed (E-7)', () => {
+    const login = read('screens/LoginScreen.js');
+    // The approved sentence existed only on a wizard step the live flow
+    // auto-advances past, so nobody ever read it.
+    expect(login).toContain('Sign in once so your plan, weight history and coaching updates can be restored if you change device.');
+    // One line, not a privacy lecture: the Article 9 gate that follows is
+    // still the place the full data story is told, so no consent copy is
+    // duplicated onto this screen.
+    const strings = (stripComments(login).match(/'[^'\n]{20,}'|\"[^\"\n]{20,}\"/g) ?? []);
+    for (const literal of strings) {
+      expect(literal).not.toMatch(/Article 9|special category/i);
+    }
+  });
+});
+
+describe('ANALYTICS: the existing onboarding events fire once (C5-P38-05, D96)', () => {
+  test('a Back-then-forward round trip cannot re-emit a completed step', () => {
+    const src = read('screens/ProOnboardingScreen.js');
+    expect(src).toContain('const emittedStepsRef = useRef(new Set());');
+    expect(src).toMatch(/function emitStepDone\(n\) \{\s*\n\s*if \(!user\?\.id\) return;\s*\n\s*if \(emittedStepsRef\.current\.has\(n\)\) return;\s*\n\s*emittedStepsRef\.current\.add\(n\);/);
+  });
+
+  test('no new event and no new payload field rides this fix', () => {
+    const src = read('screens/ProOnboardingScreen.js');
+    const events = [...src.matchAll(/track\(user\.id, '([a-z_]+)'/g)].map(m => m[1]);
+    expect(new Set(events)).toEqual(new Set(['onboarding_step_completed']));
+    expect(src).toContain("track(user.id, 'onboarding_step_completed', { step: n })");
+    // Still an integer-only payload, per the Campaign 1 privacy law.
+    expect(read('lib/telemetry/events.js')).toContain('onboarding_step_completed');
+  });
+});
+
+// ─── Wave D: week / check-in / nutrition / notifications (D96) ───────────────
+
+describe('CHECK-IN: the first check-in works from partial evidence and invents no baseline (C5-P19-01, D96)', () => {
+  const { deriveTrainingPerformance, PERF_VERDICT_TEXT } = require('../lib/checkinDerive');
+
+  test('a first week never pre-selects a downgrade verdict', () => {
+    // 3 of 4 sessions, no prior week, and no PR is possible in week 1
+    // (a first-ever lift is deliberately not a record). The old derivation
+    // fell through to "struggled" and spoke it back as "a bit below your
+    // usual"; the user has no usual.
+    expect(deriveTrainingPerformance({
+      completed: 3, planned: 4, prs: 0, volDeltaPct: null, hasPriorWeek: false,
+    })).toBeNull();
+    // A mid-week start managing one session is not "Performance dropped".
+    expect(deriveTrainingPerformance({
+      completed: 1, planned: 4, prs: 0, volDeltaPct: null, hasPriorWeek: false,
+    })).toBeNull();
+    // Not even with a PR in it: the downgrade wording is comparative either way.
+    expect(deriveTrainingPerformance({
+      completed: 3, planned: 4, prs: 1, volDeltaPct: null, hasPriorWeek: false,
+    })).toBeNull();
+  });
+
+  test('a first week still records the two non-comparative positives', () => {
+    expect(deriveTrainingPerformance({
+      completed: 4, planned: 4, prs: 0, volDeltaPct: null, hasPriorWeek: false,
+    })).toBe('hit');
+    expect(deriveTrainingPerformance({
+      completed: 4, planned: 4, prs: 1, volDeltaPct: null, hasPriorWeek: false,
+    })).toBe('exceeded');
+    // Neither of those speaks about a personal baseline.
+    expect(PERF_VERDICT_TEXT.hit).not.toMatch(/usual/);
+    expect(PERF_VERDICT_TEXT.exceeded).not.toMatch(/usual/);
+  });
+
+  test('with a real prior week every verdict still derives exactly as before', () => {
+    expect(deriveTrainingPerformance({ completed: 1, planned: 4, prs: 0, volDeltaPct: 0 })).toBe('dropped');
+    expect(deriveTrainingPerformance({ completed: 4, planned: 4, prs: 1, volDeltaPct: 0 })).toBe('exceeded');
+    expect(deriveTrainingPerformance({ completed: 4, planned: 4, prs: 0, volDeltaPct: -0.2 })).toBe('struggled');
+    expect(deriveTrainingPerformance({ completed: 4, planned: 4, prs: 0, volDeltaPct: 0 })).toBe('hit');
+    expect(deriveTrainingPerformance({ completed: 3, planned: 4, prs: 0, volDeltaPct: 0 })).toBe('struggled');
+  });
+
+  test('no derived verdict means the wizard, not a silent condensed submit', () => {
+    const src = read('screens/WeeklyCheckInScreen.js');
+    // Eligibility is decided from what the screen arrived with, so answering
+    // step 3 cannot flip the user into the condensed card mid-flow.
+    expect(src).toMatch(/const fastEligible =[\s\S]{0,220}fastPrefilled/);
+    expect(src).toMatch(/setFastPrefilled\(/);
+  });
+});
+
+describe('CHECK-IN: an unasked question is never stored as an answer (C5-P20-01, D96)', () => {
+  test('the cycle write is tri-state, and the fast path asks rather than assuming', () => {
+    const src = read('screens/WeeklyCheckInScreen.js');
+    // The old form: showCycle && cycle === 'yes' -> a hard false for a
+    // question the fast path never renders. False is the permissive
+    // direction in the engine (every calorie branch is gated on
+    // !cycleOverride), so an unasked question licensed weight-based changes.
+    expect(stripComments(src)).not.toMatch(/cycleOverride: showCycle && cycle === 'yes'/);
+    expect(src).toMatch(/cycleOverride: !showCycle \|\| cycle == null \? null : cycle === 'yes'/);
+    // renderFastCheckIn asks it when it applies.
+    const fast = src.slice(src.indexOf('function renderFastCheckIn'), src.indexOf('// --- Gate screens'));
+    expect(fast).toMatch(/showCycle &&/);
+  });
+
+  test('the persistence layer keeps the third state instead of coercing it', () => {
+    expect(read('lib/database.js'))
+      .toMatch(/\['cycleOverride', 'cycle_override', \(v\) => \(v == null \? null : \(v \? 1 : 0\)\)\]/);
+    expect(read('lib/sync/tables/weeklyCheckins.js'))
+      .toMatch(/cycle_override: c\.cycleOverride == null \? null : !!c\.cycleOverride/);
+  });
+
+  test('the engine reads it exactly as before, so no coaching changes', () => {
+    // Unchanged line: null and false are identical to !!, which is why this
+    // fix needs no engine change at all.
+    expect(read('lib/weeklyCoach.js')).toContain('const cycleOverride  = !!(checkin?.cycleOverride);');
+  });
+});
+
+describe('CHECK-IN: the first check-in states its outcome before the work (C5-P20-02 / PM-07, D96)', () => {
+  test('the first-run intro and CTA name the baseline instead of promising a decision', () => {
+    const src = read('screens/WeeklyCheckInScreen.js');
+    expect(src).toMatch(/hasPriorReview === false/);
+    expect(src).toContain('sets the baseline future weeks are measured against');
+    expect(src).toContain("hasPriorReview === false ? 'See my first review'");
+  });
+
+  test('the baseline statement also appears BEFORE the first check-in, on the gate', () => {
+    const src = read('screens/WeeklyCheckInScreen.js');
+    const gate = src.slice(src.indexOf("gateState === 'too_soon'"), src.indexOf("gateState === 'need_weights'"));
+    expect(gate).toMatch(/first review sets your baseline/);
+  });
+
+  test('neither line promises a hold: on most enrolment days the first review is real', () => {
+    const src = read('screens/WeeklyCheckInScreen.js');
+    expect(src).toMatch(/may hold your targets steady/);
+    expect(stripComments(src)).not.toMatch(/your first review will hold/i);
+  });
+});
+
+describe('CHECK-IN: one weigh-in cannot become a week of evidence (C5-P22-02, D96)', () => {
+  test('the gate and its labels count distinct mornings, not raw rows', () => {
+    const src = read('screens/WeeklyCheckInScreen.js');
+    // Two devices syncing one morning arrive as two rows (the cloud pull
+    // inserts by row id), so raw counting let two mornings pass a gate that
+    // promises three.
+    expect(src).toMatch(/const distinctMornings = new Set\(/);
+    expect(src).toMatch(/distinctMornings < MIN_WEIGH_INS/);
+    expect(stripComments(src)).not.toMatch(/last7Days\.length < MIN_WEIGH_INS/);
+    expect(stripComments(src)).not.toMatch(/\{weekWeights\.length\} \{weekWeights\.length === 1/);
+  });
+
+  test('the trend still reads every row: only the count is deduped', () => {
+    const src = read('screens/WeeklyCheckInScreen.js');
+    expect(src).toContain('setWeekWeights(last7Days);');
+    expect(src).toMatch(/computeEWMA\(weekWeights\)/);
+  });
+
+  test("Home's check-in nudge mirrors the same unit", () => {
+    const src = read('screens/HomeScreen.js');
+    // The nudge's own gate, which mirrors the WeeklyCheckIn gate exactly.
+    const nudge = src.slice(src.indexOf("if (tier === 'pro' && completed.length >= 3)"));
+    expect(nudge.slice(0, 2000)).toMatch(/const weighIns7d = new Set\(/);
+    expect(nudge.slice(0, 2000)).toMatch(/weighIns7d >= MIN_WEIGH_INS/);
+  });
+});
+
+describe('CHECK-IN: one rated session is never rendered as a trend (C5-P18-01/02/03/04, D96)', () => {
+  test('a recovery gauge waits for a second rated session before it shows a verdict', () => {
+    const src = read('components/ReadinessCards.js');
+    expect(src).toContain('const MIN_RATED_SESSIONS = 2;');
+    expect(src).toMatch(/const enoughSamples = samples >= MIN_RATED_SESSIONS;/);
+    expect(src).toMatch(/const hasValue = value != null && !isNaN\(value\) && enoughSamples;/);
+    // The existing no-value state is reused, with an honest caption.
+    expect(src).toContain("'After a couple of sessions'");
+  });
+
+  test('the 1-3 soreness answer is not drawn on a 1-5 gauge', () => {
+    const src = read('components/ReadinessCards.js');
+    // Same mapping WorkoutSummaryScreen already uses; display only.
+    expect(src).toMatch(/\[2, 3, 4\]\[w\.soreness24hBefore - 1\]/);
+    expect(src).toContain('setRecovery(computeRecoveryEMAs(displayWorkouts));');
+  });
+
+  test('the pure EMA helper is untouched by the display fix', () => {
+    const { computeRecoveryEMAs } = require('../lib/recoveryEMA');
+    expect(computeRecoveryEMAs([])).toEqual({ soreness: null, fatigue: null, joint: null });
+  });
+
+  test('the 12-week strip never shows weeks the account did not exist for', () => {
+    const src = read('hooks/useWeeklyStreak.js');
+    expect(src).toMatch(/getCompletedWorkoutStartTimestamps/);
+    expect(src).toMatch(/if \(earliestTrainedWeekStart != null && ws < earliestTrainedWeekStart\) continue;/);
+  });
+
+  test('"Training is on track" needs two rated sessions, like its sibling voice', () => {
+    const { buildCoachBrief } = require('../lib/homeCoachBrief');
+    const one = buildCoachBrief({ fatigueHistory: [{ fatigueLevel: 1 }], deloadSuggestion: null, lastWorkoutDaysAgo: 1 });
+    expect(one.headline).not.toBe('Looking good');
+    const two = buildCoachBrief({ fatigueHistory: [{ fatigueLevel: 1 }, { fatigueLevel: 2 }], deloadSuggestion: null, lastWorkoutDaysAgo: 1 });
+    expect(two.headline).toBe('Looking good');
+  });
+});
+
+describe('CHECK-IN: no false-confidence recommendation from a week with no check-in (PM-01/PM-03/PM-06, D96)', () => {
+  const { isCompletedCoachDecision } = require('../lib/coachDecision');
+
+  test('a decision requires the check-in that produced it, for the same week', () => {
+    const out = { weekStart: 100, hasEnoughData: true };
+    expect(isCompletedCoachDecision(out, { weekStart: 100, energyScore: 3 })).toBe(true);
+    // A row manufactured for a week the user never checked in for.
+    expect(isCompletedCoachDecision(out, null)).toBe(false);
+    // Last week's check-in does not vouch for this week's output.
+    expect(isCompletedCoachDecision(out, { weekStart: 99, energyScore: 3 })).toBe(false);
+    // A row with only the workout-summary sleep write is not a check-in.
+    expect(isCompletedCoachDecision(out, { weekStart: 100, energyScore: null })).toBe(false);
+    // The baseline weeks still never advertise a ready review.
+    expect(isCompletedCoachDecision({ weekStart: 100, hasEnoughData: false }, { weekStart: 100, energyScore: 3 })).toBe(false);
+  });
+
+  test('the Coach screen neither computes nor persists a verdict for an unreviewed week', () => {
+    const src = read('screens/CoachOutputScreen.js');
+    expect(src).toMatch(/const weekWasCheckedIn = checkin\?\.energyScore != null;/);
+    expect(src).toMatch(/if \(weekWasCheckedIn\) \{\s*\n\s*await saveCoachOutput\(user\.id, \{ weekStart, \.\.\.persistedResult \}\);/);
+    // With no check-in it opens the latest completed decision instead.
+    expect(src).toMatch(/setRedirectWeekStart\(latestWeek\);/);
+    expect(src).toMatch(/isCompletedCoachDecision\(latestOutput, latestCheckin\)/);
+  });
+
+  test('the Monday push carries the week it was laid for', () => {
+    const src = read('screens/WeeklyCheckInScreen.js');
+    expect(src).toMatch(/scheduleWeeklyCoachReady\([\s\S]{0,160}weekStart: weekStart\.getTime\(\)/);
+  });
+
+  test('the week-one ledger survives a visit made before the first review', () => {
+    const src = read('screens/HomeScreen.js');
+    expect(stripComments(src)).not.toMatch(/if \(coachOut\) \{ setTrialBanner\(null\); return; \}/);
+    expect(src).toMatch(/if \(isCompletedCoachDecision\(coachOut, outCheckin\)\) \{ setTrialBanner\(null\); return; \}/);
+  });
+
+  test('the engine files are untouched by this fix', () => {
+    for (const f of ['lib/weeklyCoach.js', 'lib/coachApply.js']) {
+      expect(read(f)).not.toMatch(/PM-01|redirectWeekStart|weekWasCheckedIn/);
+    }
+  });
+});
+
+describe('NUTRITION: the first targets are described as profile and research based (C5-P21-01/02/03, D96)', () => {
+  test('the target states where it came from, and claims no learned history', () => {
+    const src = read('screens/NutritionTargetsScreen.js');
+    expect(src).toContain('Worked out from your profile and the research, then adjusted as your own evidence arrives.');
+    expect(src).not.toMatch(/based on what we have learned about you/i);
+  });
+
+  test('adherence bars stay unfilled until there is a pattern to claim', () => {
+    const src = read('screens/FoodInsightsScreen.js');
+    expect(src).toContain('const MIN_DAYS_FOR_ADHERENCE_BAR = 3;');
+    expect(src).toMatch(/const enoughDays = total >= MIN_DAYS_FOR_ADHERENCE_BAR;/);
+    expect(src).toMatch(/\{enoughDays \? \(/);
+    // The per-day figures are never hidden.
+    expect(src).toMatch(/\{hit\}\/\{total\}/);
+  });
+
+  test('the Diary has a door to the primer the first nutrition week needs', () => {
+    const src = read('screens/DiaryScreen.js');
+    expect(src).toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'NutritionEducation'\)/);
+  });
+});
+
+describe('WEIGH-IN: day 0 never claims a weigh-in the user did not take (C5-P22-01/03/04, D96)', () => {
+  const { isEnrolmentSeedWeight, ENROLMENT_WEIGHT_NOTE, hasLoggedToday } = require('../lib/checkinDerive');
+
+  test('the enrolment seed is marked at the write and recognised at the read', () => {
+    expect(ENROLMENT_WEIGHT_NOTE).toBe('enrolment');
+    expect(isEnrolmentSeedWeight({ notes: 'enrolment' })).toBe(true);
+    expect(isEnrolmentSeedWeight({ notes: null })).toBe(false);
+    expect(isEnrolmentSeedWeight(null)).toBe(false);
+    expect(read('screens/ProOnboardingScreen.js')).toMatch(/notes: ENROLMENT_WEIGHT_NOTE/);
+  });
+
+  test('a typed enrolment figure does not read as "logged today"', () => {
+    const now = Date.now();
+    expect(hasLoggedToday([{ loggedAt: now, notes: 'enrolment' }])).toBe(false);
+    expect(hasLoggedToday([{ loggedAt: now }])).toBe(true);
+    expect(read('screens/HomeScreen.js')).toMatch(/isEnrolmentSeedWeight\(entry\) \? null :/);
+  });
+
+  test('what counts toward the check-in gate is deliberately unchanged', () => {
+    // Tightening MIN_WEIGH_INS would be a worse defect than the disclosure
+    // gap, so the seeded row still counts as a reading for the gate.
+    const src = read('screens/WeeklyCheckInScreen.js');
+    expect(stripComments(src)).not.toMatch(/isEnrolmentSeedWeight/);
+  });
+
+  test('the evening backstop teaches the morning rule rather than fighting it', () => {
+    const src = read('lib/notifications/scheduler.js');
+    const copies = src.slice(src.indexOf('function eveningCopies'), src.indexOf('function pickEveningCopy'));
+    expect(copies).toMatch(/tomorrow morning is the reading the trend uses best/i);
+    expect(copies).toMatch(/a morning reading is the one the trend uses best/i);
+    // Still neutral: no accusation anywhere in the rotation.
+    expect(copies).not.toMatch(/you haven't logged|you missed|behind/i);
+  });
+
+  test('the weigh-in strip says why, on the empty state only, with no count', () => {
+    const src = stripComments(read('components/TodayStrip.js'));
+    const empty = src.slice(src.indexOf('function WeightEmpty'), src.indexOf('if (editing)'));
+    expect(empty).toMatch(/several mornings go by before anything changes/);
+    expect(empty).not.toMatch(/streak|days in a row|of 3/i);
+    const logged = src.slice(src.indexOf('function WeightLogged'), src.indexOf('function WeightEmpty'));
+    expect(logged).not.toMatch(/several mornings/);
+  });
+});
+
+describe('NOTIFICATIONS: a denied permission produces no fake scheduled state (C5-P27-01/02/03/04, D96)', () => {
+  test('opening notification settings reads the status, it does not prompt', () => {
+    const src = read('screens/NotificationSettingsScreen.js');
+    const mount = src.slice(src.indexOf('async function init()'), src.indexOf('function getPrefs('));
+    expect(mount).toMatch(/const status = await getNotificationPermissionStatus\(\);/);
+    expect(stripComments(mount)).not.toMatch(/await requestNotificationPermissions\(\)/);
+    // The user-action path still prompts.
+    expect(src).toMatch(/requestNotificationPermissions\(\)\.then\(\(status\) => \{/);
+  });
+
+  test('nothing is scheduled without a granted permission', () => {
+    const onboarding = read('screens/ProOnboardingScreen.js');
+    expect(onboarding).toMatch(/const status = await requestNotificationPermissions\(\);\s*\n\s*if \(status === 'granted'\) \{/);
+    // ... and the preference is written BEFORE the prompt, so a denial never
+    // discards the chosen check-in day (OB-2).
+    const block = onboarding.slice(onboarding.indexOf('async function applyReminderPreferences'));
+    expect(block.indexOf('AsyncStorage.setItem(NOTIF_PREFS_KEY'))
+      .toBeLessThan(block.indexOf('await requestNotificationPermissions()'));
+    expect(read('lib/notifications/scheduler.js'))
+      .toMatch(/const status = await getNotificationPermissionStatus\(\);\s*\n\s*if \(status !== 'granted'\) return;/);
+  });
+
+  test('the OS prompt no longer lands under the build animation', () => {
+    const src = read('screens/ProOnboardingScreen.js');
+    const fn = src.slice(src.indexOf('async function advanceFrom6'));
+    expect(fn.indexOf('await applyReminderPreferences()'))
+      .toBeLessThan(fn.indexOf('if (useSequence) startSequence();'));
+  });
+
+  test('every surface that says "turn it on in Settings" can get there', () => {
+    for (const f of ['components/ProgressGhostCapture.js', 'screens/CoachingRemindersScreen.js']) {
+      const src = read(f);
+      expect(src).toMatch(/Linking\.openSettings\(\)/);
+      expect(src).toMatch(/accessibilityLabel="Open Settings"/);
+    }
+  });
+});
+
+describe('NOTIFICATIONS: the displayed reminder state is the real one (C5-P28-01/02/03, FM-02/FM-03, D96)', () => {
+  const { shiftHourMinuteOutOfQuietHours, DEFAULT_QUIET_HOURS } = require('../lib/notifications/quietHours');
+
+  test('a 5 AM pick inside quiet hours is displayed as the time it will arrive', () => {
+    // The rule itself is locked and unchanged: 05:00 still shifts to 07:00.
+    expect(shiftHourMinuteOutOfQuietHours(5, 0, DEFAULT_QUIET_HOURS))
+      .toEqual({ hour: 7, minute: 0, shifted: true });
+    expect(shiftHourMinuteOutOfQuietHours(8, 0, DEFAULT_QUIET_HOURS))
+      .toEqual({ hour: 8, minute: 0, shifted: false });
+    for (const f of ['screens/CoachingRemindersScreen.js', 'screens/ProOnboardingScreen.js']) {
+      const src = read(f);
+      expect(src).toMatch(/morningShift\.shifted/);
+      expect(src).toMatch(/Quiet hours currently run to/);
+    }
+  });
+
+  test('the second daily weight prompt is named on the surface that owns the morning one', () => {
+    for (const f of ['screens/CoachingRemindersScreen.js', 'screens/ProOnboardingScreen.js']) {
+      expect(read(f)).toMatch(/7\.30 pm/);
+    }
+  });
+
+  test('onboarding mirrors its choices into the rows that sync', () => {
+    const src = read('screens/ProOnboardingScreen.js');
+    expect(src).toMatch(/setPrefRow\(user\.id, 'morning_weight', \{ enabled: true, time_pref: morningTime \}\)/);
+    expect(src).toMatch(/setPrefRow\(user\.id, 'weekly_checkin_reminder'/);
+  });
+
+  test('a training reminder that cannot fire yet says so, and is re-laid after a launch wipe', () => {
+    const settings = read('screens/NotificationSettingsScreen.js');
+    expect(settings).toMatch(/trainingScheduleReady === false \?/);
+    expect(settings).toMatch(/couple of weeks of logged sessions/);
+    const sched = read('lib/notifications/scheduler.js');
+    const restore = sched.slice(sched.indexOf('export async function restoreNotifications'));
+    expect(restore).toMatch(/scheduleTrainingReminders/);
+  });
+});
+
+describe('TIER: a Pro feature never fails silently on a Free phone (FM-01, FM-04/FM-08, PM-04/PM-05, D96)', () => {
+  test('meal reminders are Pro at the offer AND at scheduling', () => {
+    const settings = read('screens/NotificationSettingsScreen.js');
+    const section = settings.slice(settings.indexOf('Meal-log reminders (opt-in'));
+    expect(section).toMatch(/\{isPro && \(/);
+    const sched = read('lib/notifications/scheduler.js');
+    const fn = sched.slice(sched.indexOf('export async function scheduleMealReminders'));
+    expect(fn.slice(0, 900)).toMatch(/tier !== 'pro'\) return;/);
+  });
+
+  test('training reminders stay tier-blind: they are not a Pro feature', () => {
+    const sched = read('lib/notifications/trainingReminders.js');
+    expect(sched).not.toMatch(/tier !== 'pro'/);
+  });
+
+  test('one canonical check-in day default across every reader', () => {
+    // CoachingReminders alone defaulted to Monday, so touching any control
+    // silently moved a user whose blob lacks the key to a different day.
+    expect(read('screens/CoachingRemindersScreen.js')).toMatch(/useState\(0\); \/\/ Sun/);
+    expect(read('screens/WeeklyCheckInScreen.js')).toMatch(/let scheduledDay = 0; \/\/ default Sunday/);
+  });
+
+  test('coaching weight prompts stand down when the entitlement goes away', () => {
+    const src = read('lib/payments/lapseDetect.js');
+    const lapse = src.slice(src.indexOf('if (!isAuthoritativeLapse(result))'));
+    expect(lapse).toMatch(/cancelMorningNotification/);
+    expect(lapse).toMatch(/cancelEveningWeightReminder/);
+    // Only on a confirmed lapse: a stale/unverified read must not cancel.
+    expect(src).toMatch(/if \(!isAuthoritativeLapse\(result\)\) return \{ lapsed: false, opened: false \};/);
+  });
+});
+
+describe('HOME: the recovery suggestion acknowledges the block it is arguing with (PM-08 / FM-07, D96)', () => {
+  test('the banner names the scheduled recovery week when one is still ahead', () => {
+    const src = read('screens/HomeScreen.js');
+    expect(src).toMatch(/const scheduledRecoveryAhead =/);
+    expect(src).toMatch(/already has a recovery week scheduled at week \$\{scheduledRecoveryWeekIndex\}/);
+    // FB-02's suppression inside a scheduled recovery week is untouched.
+    expect(src).toMatch(/const inScheduledRecovery = !!currentMesoWeek\?\.isDeload \|\| !!currentMesoWeek\?\.awaitingDecision;/);
+  });
+
+  test('the deload maths itself is untouched', () => {
+    expect(read('lib/algorithms.js')).not.toMatch(/scheduledRecoveryAhead|PM-08/);
+  });
+});

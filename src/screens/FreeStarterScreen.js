@@ -19,6 +19,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 import { logError, logWarn } from '../lib/errorLog';
+import { BLOCK_START_SENTENCE } from '../lib/blockExplain';
 
 // B2, the FREE guided beginner on-ramp (founder decision 4a: this is free).
 // Three plain questions -> one difficulty-0 library plan, installed and
@@ -262,6 +263,13 @@ export default function FreeStarterScreen({ navigation, route }) {
                 ].filter(Boolean).join(' - ')}
               </Text>
             </Card>
+            {/* C5-P10-01 (D96, wave C carry-over): this is a first-plan
+                activation decision point and it said nothing about what
+                activating does. Same canonical sentence as every other
+                activation point, stated BEFORE the decision, tier-blind. */}
+            <Text style={[styles.resultFootnote, live.resultFootnote]}>
+              {BLOCK_START_SENTENCE}
+            </Text>
             <Button
               title="Start with this plan"
               size="lg"

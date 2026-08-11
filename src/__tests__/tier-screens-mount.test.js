@@ -188,7 +188,10 @@ describe('DifferentialBadge mount', () => {
       differential: {
         shown: true,
         trigger: 'deload',
-        with_food_data_message: "Precision Coaching is holding a lighter week. Your food log could show whether fuel is the cause.",
+        // Same-meaning re-anchor (C5-P7-06 / FB-13, D96): the deload variant
+        // no longer attributes the lighter week to the Pro engine a free
+        // reader does not have. This is a prop fixture, not a copy pin.
+        with_food_data_message: "Your training is pointing to a lighter week. Your food log could show whether fuel is the cause.",
         paywall_cta: 'try_pro_14d',
       },
       pricingWindow: 'open_beta',

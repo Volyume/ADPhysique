@@ -1013,6 +1013,16 @@ export default function NutritionTargetsScreen({ navigation }) {
                         <Text style={[styles.heroFloorText, live.heroFloorText]}>Held at your safe minimum</Text>
                       </View>
                     ) : null}
+                    {/* C5-P21-01 (D96): provenance, stated where the number
+                        is. The full derivation exists in the tooltip at the
+                        top of this screen, but the figure itself carried no
+                        statement of where it came from. Both halves, in the
+                        register the audit asks for: profile plus research
+                        now, learned from your own data over time. It claims
+                        no learned history, so it is honest on day 0. */}
+                    <Text style={[styles.heroProvenance, live.heroProvenance]}>
+                      Worked out from your profile and the research, then adjusted as your own evidence arrives.
+                    </Text>
                   </Card>
                 );
               })()}
@@ -1944,6 +1954,12 @@ const styles = StyleSheet.create({
     ...type.bodySm,
     color: colors.success,
   },
+  heroProvenance: {
+    ...type.captionTight,
+    color: colors.textMuted,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+  },
 
   easeNudge: {
     flexDirection: 'row',
@@ -2314,6 +2330,7 @@ function buildLiveStyles(t) {
     floorBanner: { backgroundColor: t.colors.successBg, borderColor: withAlpha(t.colors.success, alpha.edge) },
     floorBannerText: { ...t.type.bodySm, color: t.colors.textSecondary },
     heroFloorText: { ...t.type.bodySm, color: t.colors.success },
+    heroProvenance: { ...t.type.captionTight, color: t.colors.textMuted },
     easeNudge: { borderColor: withAlpha(t.colors.primary, alpha.strong), backgroundColor: t.colors.primaryBg },
     easeNudgeText: { fontSize: t.fontSize.sm, color: t.colors.primary },
     awarenessTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },

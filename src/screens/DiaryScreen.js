@@ -1441,6 +1441,25 @@ export default function DiaryScreen({ navigation, route }) {
             dayTypeLabel={dayTypeChip}
             onPress={viewEntries.length ? () => setBreakdownVisible(true) : undefined}
           />
+          {/* C5-P21-03 (D96): the 5-minute nutrition primer and the full
+              "why protein" explanation exist, and were reachable from exactly
+              two screens, neither of which is the Diary -- where the first
+              nutrition week is actually lived. One quiet door, no new
+              content. Pro only, because the primer explains targets the free
+              tier does not have. */}
+          {!readOnly ? (
+            <TouchableOpacity
+              style={styles.targetsChangedRow}
+              onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'NutritionEducation'); }}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel="New to calories and macros? Open the 5-minute guide"
+            >
+              <Ionicons name="book-outline" size={13} color={t.colors.textSecondary} />
+              <Text style={[styles.targetsChangedText, live.targetsChangedText]}>New to macros? Read the 5-minute guide</Text>
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+            </TouchableOpacity>
+          ) : null}
           {/* D94 (Campaign 3, Phase 9): a per-day offset silently reshapes
               today's target; the point of consequence must disclose it and
               link to the one canonical editor. Renders only when an offset

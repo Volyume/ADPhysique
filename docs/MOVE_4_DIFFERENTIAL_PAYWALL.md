@@ -79,6 +79,18 @@ Max 25 words each, no blocklist terms.
 > prompt. All "free for 7 days" / "7 days free" below now read 7.
 > See `SUBSCRIPTION_AND_PAYMENT_LOCKED.md` 2026-06-06 override.
 
+> **Actor corrected 2026-08-11 (D96, C5-P7-06 + FB-13):** two variants
+> named an actor the code does not use. The stalled-lift line named a
+> specific lift ("your bench") for a trigger that fires on
+> `weeksLiftStalled >= 3` for ANY lift, with no lift identity passed by
+> the caller; it now reads "One of your lifts hasn't moved in three
+> weeks." The deload line credited "Precision Coaching" (the Pro
+> engine) for a lighter week served to FREE users, where the signal is
+> the tier-blind `shouldDeload` output or the plan's own scheduled
+> recovery week; it now reads "Your training is pointing to a lighter
+> week." `src/lib/differentialPaywall.js` is the live record for both
+> variants. No trigger, CTA, price or trial claim changed.
+
 ```
 Stalled lift:
   "Your bench has stalled for three weeks. With food data, we could

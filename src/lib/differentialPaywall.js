@@ -46,9 +46,17 @@
 // states only the insight; the badge CTA states the offer and is the
 // single source of truth, so the two can never drift again. These
 // variants are deliberately identical to LOCKED_COPY_NO_TRIAL below.
+// C5-P7-06 / FB-13 (D96): two of the four lines named the wrong actor.
+// `stalled_lift` fires on weeksLiftStalled >= 3 for ANY lift and the caller
+// passes no lift identity, so a squatter was told a fact about a bench.
+// `deload` is fed from deloadSuggested (the tier-blind shouldDeload signal or
+// the plan's own scheduled lighter week), never from Precision Coaching,
+// which is the Pro engine the free reader of this line does not have.
+// Both now name what actually happened. The upsell framing, the CTA, the
+// trial/price claims and the four contexts are untouched.
 export const LOCKED_COPY = Object.freeze({
-  stalled_lift: "Your bench hasn't moved in three weeks. Lifting data alone can't show if the cause is training or fuel.",
-  deload: "Precision Coaching is holding a lighter week. Your food log could show whether fuel is the cause.",
+  stalled_lift: "One of your lifts hasn't moved in three weeks. Lifting data alone can't show if the cause is training or fuel.",
+  deload: "Your training is pointing to a lighter week. Your food log could show whether fuel is the cause.",
   missing_tdee: "Your weight is moving faster than your logged calories explain. Pro tracks the calories your body actually uses.",
   block_summary: "Your training block just ended. With your food log, Precision Coaching could show how fuel shaped your results.",
 });
@@ -62,8 +70,9 @@ export const LOCKED_COPY = Object.freeze({
 // Play's localised price (usePlayPrices); until it loads the CTA shows
 // a price-free "Get Pro" rather than a hardcoded figure (PLAY-002).
 export const LOCKED_COPY_NO_TRIAL = Object.freeze({
-  stalled_lift: "Your bench hasn't moved in three weeks. Lifting data alone can't show if the cause is training or fuel.",
-  deload: "Precision Coaching is holding a lighter week. Your food log could show whether fuel is the cause.",
+  // C5-P7-06 / FB-13 (D96): corrected in step with LOCKED_COPY above.
+  stalled_lift: "One of your lifts hasn't moved in three weeks. Lifting data alone can't show if the cause is training or fuel.",
+  deload: "Your training is pointing to a lighter week. Your food log could show whether fuel is the cause.",
   missing_tdee: "Your weight is moving faster than your logged calories explain. Pro tracks the calories your body actually uses.",
   block_summary: "Your training block just ended. With your food log, Precision Coaching could show how fuel shaped your results.",
 });

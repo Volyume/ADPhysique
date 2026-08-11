@@ -67,6 +67,7 @@ import {
 } from '../lib/unilateral';
 import { FORM_TIPS } from '../lib/formTips';
 import { GLOSSARY } from '../lib/coachGlossary';
+import InfoTooltip from '../components/InfoTooltip';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage, getStarterSessionMessage } from '../lib/whyThisTemplates';
 import { getReadinessTweak, applyReadinessToSets, applyReadinessToTargets } from '../lib/sessionAdjustments';
@@ -384,6 +385,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // isDeloadWeek alone would claim a live "Recovery week" for ever. The
   // targets legitimately hold at that row's volume; only the copy changes.
   const [blockFinished, setBlockFinished] = useState(false);
+  // C5-P13-01 (D96): the block week's reps-in-reserve target. The product
+  // published its effort instruction on the HOME chip and in a Home sheet,
+  // and then said nothing at all in the one place a set is actually
+  // performed, so a novice had to have opened a sheet two screens away,
+  // translated it, and carried it into a session that never mentions it
+  // again. This is that same number, on the session header, in the same
+  // words Home uses. One line, no tutorial, no new control.
+  const [weekRirTarget, setWeekRirTarget] = useState(null);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
   // B2 (Wave-3 review): the session-wide dismissal of the readiness tweak
   // lives ON the active workout (store action dismissReadinessTweak) so it
@@ -796,11 +805,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setPrevSets([]);
     setAllTimeSets([]);
     setLoggedSets([]);
+    // C5-P14-02 (D96): a swapped-in exercise is a zero-history first-ever
+    // set (handleConfirmSwap deliberately clears prevSets/allTimeSets and
+    // nulls startingWeight), so it seeds from the same end of the band as the
+    // zero-history branch in the exercise loader. seededEntryRef follows.
     setCurrentSet({
       ...DEFAULT_SET,
-      reps: newRepMax || DEFAULT_SET.reps,
+      reps: newRepMin || DEFAULT_SET.reps,
     });
-    seededEntryRef.current = { weight: DEFAULT_SET.weight, reps: newRepMax || DEFAULT_SET.reps };
+    seededEntryRef.current = { weight: DEFAULT_SET.weight, reps: newRepMin || DEFAULT_SET.reps };
     setGhostSet(null);
     setCluster(null);
     setClusterReps('');
@@ -946,13 +959,35 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // group id per workout, dismissing acknowledges; unlinking removes the
   // whole group; swap opens the swap UI for the current exercise. Works for a
   // pair (two members) or a giant set (3+).
+  // C5-P37-02 (D96): the two auto-firing instructional sheets on this screen
+  // (this one and the unilateral walkthrough below) keyed off the same
+  // exercise with no mutual guard, so an exercise that satisfied both
+  // conditions opened both at once and the later-declared one covered the
+  // other. Generated plans really do pair unilateral accessories into
+  // supersets (planEngine assignSupersets excludes beginners only), so the
+  // first session of an intermediate or advanced user was the exposed case.
+  // The refs below are set synchronously beside each setState so the guard
+  // holds within the SAME commit, where the state has not landed yet;
+  // whichever sheet is relevant first wins and the other defers to its next
+  // natural moment (the effects re-run when the open sheet closes, because
+  // the other's state is in their dependency lists). Both sheets, both copy
+  // blocks and both one-time persistence rules are untouched.
+  const supersetSheetOpenRef = useRef(false);
+  const unilateralSheetOpenRef = useRef(false);
+  useEffect(() => {
+    if (!supersetHeadsUp) supersetSheetOpenRef.current = false;
+    if (!unilateralSuggest) unilateralSheetOpenRef.current = false;
+  }, [supersetHeadsUp, unilateralSuggest]);
+
   useEffect(() => {
     if (currentSGI == null) return;
     if (acknowledgedSupersetsRef.current.has(currentSGI)) return;
     if (!pairedExerciseName) return; // safety
+    if (unilateralSheetOpenRef.current) return; // C5-P37-02: defer, do not stack
     // Tag as acknowledged immediately so navigating away+back doesn't re-fire
     // before the user dismisses.
     acknowledgedSupersetsRef.current.add(currentSGI);
+    supersetSheetOpenRef.current = true;
     setSupersetHeadsUp({
       groupId: currentSGI,
       // Every member in session order (a pair is just two; a giant set 3+).
@@ -961,8 +996,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     hapticsVocab.selection();
     // groupMemberNames is derived from currentSGI + workoutExercises and only
     // read once, behind the acknowledged-ref gate, so it needn't re-trigger.
+    // unilateralSuggest is in the list so a deferred heads-up re-fires the
+    // moment the unilateral sheet closes (C5-P37-02).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSGI, pairedExerciseName, exercise?.name]);
+  }, [currentSGI, pairedExerciseName, exercise?.name, unilateralSuggest]);
 
   // D9: metadata-flagged unilateral exercises (exercise.laterality, finally
   // read here - exerciseMetadata.js's deriveLaterality was computed and
@@ -983,6 +1020,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (exercise.laterality !== 'unilateral') return;
     if (unilateralAsked.has(exercise.id)) return;
     if (acknowledgedUnilateralRef.current.has(exercise.id)) return;
+    if (supersetSheetOpenRef.current) return; // C5-P37-02: defer, do not stack
     acknowledgedUnilateralRef.current.add(exercise.id);
     hapticsVocab.selection();
     if (unilateralWalkthroughSeenRef.current) {
@@ -995,10 +1033,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         ],
       );
     } else {
+      unilateralSheetOpenRef.current = true;
       setUnilateralSuggest({ exerciseId: exercise.id, exerciseName: exercise.name });
     }
+  // supersetHeadsUp is in the list so a deferred walkthrough fires the moment
+  // the superset sheet closes (C5-P37-02).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exercise?.id, exercise?.laterality, exercise?.name, unilateralPrefsLoaded, unilateralAsked]);
+  }, [exercise?.id, exercise?.laterality, exercise?.name, unilateralPrefsLoaded, unilateralAsked, supersetHeadsUp]);
 
   // First-use info tip: pulse the Info button until tapped. The pulse itself
   // is suppressed under Reduce Motion (the static badge still shows so the
@@ -1271,9 +1312,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         setCurrentSet({ ...DEFAULT_SET, ...seeded });
         seededEntryRef.current = seeded;
       } else {
+        // C5-P14-02 (D96): the zero-history seed used the TOP of the rep
+        // band, so on an 8-12 plan the card said "8-12 reps", the prefill row
+        // said "First time - Target 8-12 reps", and the stepper sat on 12. A
+        // novice reads a prefilled number as an instruction, so the app was
+        // simultaneously saying "we do not know your strength" (blank weight)
+        // and pre-selecting the hardest end of the range. The bottom of the
+        // band is the honest starting point, and matches the seed the
+        // warm-up auto-switch below already uses. Nothing else moves: the
+        // history-anchored branch and the carry-forward are untouched, and
+        // seededEntryRef follows this seed so C5-P13-02's "unlogged set"
+        // baseline stays exact.
         const seeded = {
           weight: routineExercise?.startingWeight ?? '',
-          reps: routineExercise?.recommendedRepsMax || DEFAULT_SET.reps,
+          reps: routineExercise?.recommendedRepsMin || DEFAULT_SET.reps,
         };
         setCurrentSet({ ...DEFAULT_SET, ...seeded });
         seededEntryRef.current = seeded;
@@ -1314,6 +1366,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         if (currentWeek) {
           setIsDeloadWeek(!!currentWeek.isDeload);
           setBlockFinished(!!currentWeek.awaitingDecision);
+          // C5-P13-01: the block's own effort target, for the session header
+          // line below. Read from the same row Home's readiness chip reads.
+          setWeekRirTarget(currentWeek.rirTarget ?? null);
 
           // If this is a deload week, generate deload prescription from week-1 sets
           if (currentWeek.isDeload && currentWeek.mesocycleId && exercise?.id) {
@@ -1501,16 +1556,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const newLoggedSets = [...loggedSets, setData];
       setLoggedSets(newLoggedSets);
       addSetToCurrentExercise(setData);
-      // The first-time hint has done its job the moment a set lands. Persist
-      // the same seen-flag the overflow tap writes, so the hint (and the info
-      // pulse) never come back on later sessions or new exercises. The
-      // overflow menu itself stays put, so form guidance remains one tap away.
-      if (showInfoTipPulse) {
-        infoPulseLoop.current?.stop();
-        infoPulseAnim.setValue(1);
-        setShowInfoTipPulse(false);
-        AsyncStorage.setItem('@volyume_seen_workout_info', 'true').catch(() => {});
-      }
+      // C5-P13-03 (D96): logging a set used to extinguish the info pulse and
+      // write the once-ever seen flag, whether or not the user had ever
+      // opened the menu behind it. So the ONE cue pointing at the only place
+      // "set", "rep", "working set" and "warm-up" are defined was destroyed
+      // by the very action it exists to explain, and never returned on any
+      // exercise in any later session. The cue is now retired only by an
+      // actual overflow open (the tap handler already does exactly that), so
+      // it survives until it has been used once. Nothing is added to the set
+      // card, and the flag stays once-ever after that first open.
       audit('workout.set.logged', {
         exerciseId: exercise.id,
         setType: setData.setType,
@@ -2605,7 +2659,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Text style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.overflowBtn, live.overflowBtn]}
+                style={[styles.overflowBtn, live.overflowBtn, showInfoTipPulse && styles.overflowBtnHinted]}
                 onPress={() => {
                   if (showInfoTipPulse) {
                     infoPulseLoop.current?.stop();
@@ -2618,9 +2672,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 }}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessibilityRole="button"
-                accessibilityLabel="Exercise options"
+                // C5-P13-03 (D96): while the first-use cue is live the button
+                // also says what is behind it. A bare pulsing "..." labelled
+                // "Exercise options" gave a novice no reason to think it held
+                // the only definitions of "set" and "rep" in the product. One
+                // short word, one time; it goes with the pulse the first time
+                // the sheet is opened.
+                accessibilityLabel={showInfoTipPulse ? 'Exercise options, including how logging works' : 'Exercise options'}
               >
-                <Animated.View style={showInfoTipPulse ? { transform: [{ scale: infoPulseAnim }] } : null}>
+                <Animated.View style={[styles.overflowGlyphRow, showInfoTipPulse ? { transform: [{ scale: infoPulseAnim }] } : null]}>
+                  {showInfoTipPulse ? (
+                    <Text style={[styles.overflowHintLabel, live.overflowHintLabel]}>Help</Text>
+                  ) : null}
                   <Ionicons name="ellipsis-horizontal" size={20} color={t.colors.textSecondary} />
                 </Animated.View>
               </TouchableOpacity>
@@ -2628,6 +2691,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             {/* Muscle line deleted (COMP-001): primary muscle and equipment
                 already show in the exercise info sheet. Superset chip moved
                 into the collapsed "N notes" rail (U-A-1). */}
+            {/* C5-P13-01 (D96): the session's effort target, in the exact
+                wording Home's readiness chip already publishes, with the
+                existing GLOSSARY.rir gloss one tap away for the novice who
+                does not know what "short of failure" means. Suppressed in a
+                recovery week, where the Recovery banner above already says
+                the week is deliberately easy. Derived from the block row, so
+                it can never state an effort the block does not prescribe. */}
+            {weekRirTarget != null && !isDeloadWeek ? (
+              <View style={styles.effortLineRow}>
+                <Text style={[styles.effortLineText, live.effortLineText]}>
+                  {`This week: stop ${weekRirTarget} short of failure`}
+                </Text>
+                <InfoTooltip text={GLOSSARY.rir} size={13} />
+              </View>
+            ) : null}
           </View>
 
           {/* D43 S2: the "N notes" accordion is retired. Content-labelled
@@ -3457,16 +3535,51 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 const working = (entryIsWorking && Number.isFinite(entryWeight) && entryWeight > 0)
                   ? entryWeight
                   : rampAnchorRef.current;
+                const isBarbellLift = BARBELL_EQUIPMENT.test(exercise?.equipment || '');
+                const barKg = barWeight || DEFAULT_BAR_KG;
                 if (!Number.isFinite(working) || working <= 0) {
+                  // C5-P13-04 (D96): this branch used to be a dead end -
+                  // "Enter your working weight first, then come back" - aimed
+                  // squarely at the one user who most needs a warm-up: the
+                  // first-timer, whose weight IS blank, on the zero-history
+                  // path. B8 stands (warm-ups are still never suggested
+                  // automatically, and nothing auto-appears); this is the
+                  // pulled sheet answering honestly instead of refusing. For
+                  // a barbell lift the empty bar is a warm-up that needs no
+                  // working weight, and it is the same first row warmupRamp
+                  // itself produces, so nothing new is invented.
                   return (
-                    <Text style={[styles.sheetExplainer, live.sheetExplainer]}>
-                      Enter your working weight first, then come back for warm-up sets.
-                    </Text>
+                    <>
+                      <Text style={[styles.sheetExplainer, live.sheetExplainer]}>
+                        {isBarbellLift
+                          ? `No working weight yet. Start with the empty bar, then set your working weight and come back for the rest of the ramp. Warm-ups are saved but not counted in your working-set target.`
+                          : `Set your working weight on the set card and your warm-up sets appear here. Warm-ups are saved but not counted in your working-set target.`}
+                      </Text>
+                      {isBarbellLift ? (
+                        <TouchableOpacity
+                          style={[styles.sheetOption, live.sheetOption]}
+                          onPress={() => {
+                            hapticsVocab.selection();
+                            setGhostSet(null);
+                            setCurrentSet(s => ({ ...s, weight: barKg, reps: 10, setType: 'warmup', isGhost: false }));
+                            setShowWarmupRamp(false);
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Empty bar, ${barKg} ${units}, 10 reps. Load as a warm-up set.`}
+                        >
+                          <View style={styles.overflowOptionRow}>
+                            <Ionicons name="flame-outline" size={16} color={t.colors.warning} />
+                            <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{`${barKg} ${units} x 10`}</Text>
+                          </View>
+                          <Text style={[styles.rampBarTag, live.rampBarTag]}>Empty bar</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </>
                   );
                 }
                 const rows = warmupRamp(working, {
-                  isBarbell: BARBELL_EQUIPMENT.test(exercise?.equipment || ''),
-                  barKg: barWeight || DEFAULT_BAR_KG,
+                  isBarbell: isBarbellLift,
+                  barKg,
                 });
                 if (rows.length === 0) {
                   return (
@@ -4100,6 +4213,10 @@ const styles = StyleSheet.create({
   // notesExpanded) is retired -- StatusStrip (src/components/workout/
   // StatusStrip.js) owns the equivalent chip-row styling now.
   exerciseHeader: { gap: spacing.xs },
+  // C5-P13-01: the session effort line, quiet caption weight so it orients
+  // without competing with the exercise title above it.
+  effortLineRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  effortLineText: { ...type.caption, color: colors.textSecondary },
   // R2-4 (2026-07-11): a consistent row height (the options button's own
   // 44dp) with centre alignment so the exercise title and the "..." options
   // button share one row and align on their centres at any title length.
@@ -4335,6 +4452,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  // C5-P13-03: the one-time hinted state. The button widens to fit the
+  // label rather than cropping it inside the fixed square, and returns to
+  // the plain square the moment the cue retires.
+  overflowBtnHinted: { width: 'auto', paddingHorizontal: spacing.sm },
+  overflowGlyphRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  overflowHintLabel: { ...type.captionStrong, color: colors.textSecondary },
   overflowOptionRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   supersetChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
@@ -4547,6 +4670,7 @@ function buildLiveStyles(t) {
     navTabBadge: { backgroundColor: t.colors.primaryFill },
     navTabBadgeText: { ...t.type.caption, color: t.colors.onPrimary, fontSize: t.fontSize.micro },
     exerciseName: { ...t.type.title, color: t.colors.textPrimary },
+    effortLineText: { ...t.type.caption, color: t.colors.textSecondary },
     swapSafe: { backgroundColor: t.colors.background },
     swapHeader: { borderBottomColor: t.colors.borderSubtle },
     swapTitle: { ...t.type.title, color: t.colors.textPrimary },
@@ -4597,6 +4721,7 @@ function buildLiveStyles(t) {
     clusterCancel: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     clusterCancelText: { ...t.type.label, color: t.colors.textPrimary },
     overflowBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    overflowHintLabel: { ...t.type.captionStrong, color: t.colors.textSecondary },
     // R2-3: contained note-corner button chrome, live-mirrored.
     noteCornerBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     supersetChip: { backgroundColor: t.colors.primaryBg },

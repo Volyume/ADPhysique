@@ -93,7 +93,11 @@ describe('weight cell', () => {
     expect(SOURCE).toContain('metricAction: {');
     expect(SOURCE).toContain('borderColor: colors.border');
     expect(SOURCE).toContain('backgroundColor: colors.surface2');
-    expect(SOURCE).toMatch(/variant="primary"[\s\S]{0,200}title="Log"/);
+    // C5-P37-01 (D96): the Log button dropped from primary to secondary so
+    // the session hero owns Home's single primary action. The law this pin
+    // holds is unchanged - contained button chrome, never an amber text
+    // link - and secondary is contained chrome.
+    expect(SOURCE).toMatch(/variant="secondary"[\s\S]{0,300}title="Log"/);
     expect(SOURCE).toContain('logPrompt: { ...type.label, color: colors.textPrimary }');
     expect(SOURCE).not.toContain('emptyLogBox: {');
     expect(SOURCE).not.toContain('logPrompt: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary }');

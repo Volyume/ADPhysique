@@ -46,7 +46,12 @@ export default function SettingsAccountScreen({ navigation }) {
             onPress={() =>
               appAlert(
                 'Switch to Free?',
-                'Everything you\'ve logged stays. Past coach decisions, check-ins, training blocks and PRs remain readable. You just won\'t get new weekly coaching adjustments until you re-enable Pro.',
+                // C5-P7-04 (D96): "check-ins ... remain readable" was not
+                // true - WeeklyCheckIn is a hard Pro lock, not a view-only
+                // one. The bullet-for-bullet truth lives on
+                // SubscriptionPolicyScreen; this confirm now names only what
+                // the guards actually keep readable.
+                'Everything you\'ve logged stays. Past coach decisions, training blocks and PRs remain readable, and your body measurements, photos and food diary stay viewable. Weekly check-ins and nutrition targets pause with the rest of coaching until you re-enable Pro.',
                 [
                   { text: 'Keep Pro', style: 'cancel' },
                   {
