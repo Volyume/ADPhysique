@@ -71,8 +71,17 @@ export function pausedWeekKeys(pauses, orderedWeekKeys) {
     let start = orderedWeekKeys.indexOf(p.startKey);
     let remaining = span;
     if (start < 0) {
-      const startMs = Date.parse(p.startKey);
-      const windowStartMs = Date.parse(orderedWeekKeys[0]);
+      // The resolver's v1 keys are epoch-ms STRINGS (String(localWeekStartMs),
+      // see the header) - Number() first; Date.parse only as a fallback so
+      // a future ISO key format would keep working.
+      const keyMs = (k) => {
+        const n = Number(k);
+        if (Number.isFinite(n) && n > 0) return n;
+        const d = Date.parse(k);
+        return Number.isFinite(d) ? d : NaN;
+      };
+      const startMs = keyMs(p.startKey);
+      const windowStartMs = keyMs(orderedWeekKeys[0]);
       if (!Number.isFinite(startMs) || !Number.isFinite(windowStartMs)) continue;
       if (startMs > windowStartMs) continue; // future/off-grid key: unchanged
       const elapsed = Math.round((windowStartMs - startMs) / (7 * 86400000));
@@ -154,6 +163,12 @@ export async function loadStreakState(userId) {
 
 async function saveStreakState(userId, state) {
   if (!userId) return;
+  // C6 R-11 (D97-22): guarded pref - stamp every real write so the
+  // freshest-stamp rule (sync.js) decides conflicts, not push order.
+  try {
+    // eslint-disable-next-line global-require
+    require('./sync').notePrefWrite(KEY(userId));
+  } catch (_) { /* stamp is best-effort; the write itself must not fail */ }
   try { await AsyncStorage.setItem(KEY(userId), JSON.stringify(normalise(state))); } catch (_) {}
 }
 

@@ -1401,6 +1401,12 @@ const GUARDED_PREF_PATTERNS = [
   // user write (the reinstall rebuild write deliberately does NOT, and is
   // additionally suppressed from the push below).
   /^@volyume_user_profile_/,
+  // C6 R-11 (D97-22): the per-user streak blob carries explicit user
+  // choices (manual goal, pauses) plus the retro-shrink guard's
+  // high-water record and seen-milestones - a stale device's unguarded
+  // "cloud wins" push discarded pauses (re-breaking runs retroactively)
+  // and re-fired milestones. saveStreakState stamps every write.
+  /^@volyume_streak_v1_/,
 ];
 
 export function isGuardedPref(key) {

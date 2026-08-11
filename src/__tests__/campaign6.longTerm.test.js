@@ -364,3 +364,13 @@ describe('R-8 (D97-22): a Home weigh-in can be corrected and removed', () => {
     expect(read('lib/sync.js')).toMatch(/deleted_at: w\.deletedAt != null \? new Date\(w\.deletedAt\)\.toISOString\(\) : null,/);
   });
 });
+
+describe('R-11 (D97-22): the streak blob is a guarded pref', () => {
+  test('the pattern is registered and every write stamps', () => {
+    const sync = read('lib/sync.js');
+    expect(sync).toMatch(/\/\^@volyume_streak_v1_\//);
+    const st = read('lib/streakState.js');
+    const save = st.slice(st.indexOf('async function saveStreakState'));
+    expect(save.slice(0, 600)).toMatch(/notePrefWrite\(KEY\(userId\)\)/);
+  });
+});
