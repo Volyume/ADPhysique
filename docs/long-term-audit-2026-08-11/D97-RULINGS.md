@@ -309,3 +309,71 @@ From AUDIT-TIER-TRANSITIONS.md (6 DEFECT / 5 LATENT / 5 CLEAN):
 - **P-3 (MED-HIGH), fix**: blockLedgerRunner's sleepFreeReadiness
   still defaults energy/soreness to 3 for evidence-free rows - align
   with FB-36 (a row answering neither is no reading, returns null).
+
+**P-1 LANDED** at 23e3f907: Article9ConsentScreen queues on the
+RESULT (`grant.ok === false`), flushPendingCascade judges the result
+(ok → clear + flushed; network-shaped error → KEEP queue; definitive
+refusal → clear without grant; unexpected local throw → keep).
+Behavioural suite `payments/__tests__/pendingCascade.flush.test.js`
+(6 tests, mocked storage + cascade) replaces the dead-path source
+pins; fq6.billing pins re-anchored same-meaning. Full bar green
+(825 suites, 10,036 tests, lint clean).
+
+**P-3 LANDED** at 06796ce8: sleepFreeReadiness in blockLedgerRunner
+holds the FB-36 guard (a row answering neither energy nor soreness
+returns null, which computeReadinessSlope already discards); pinned
+in campaign6.longTerm.test.js.
+
+**P-2 LANDED** at the following commit: evidence-bounded claims,
+exactly per the recorded direction. Mechanism: new pure engine input
+`evidencedWeeksInPhase` (caller-derived: distinct phase weeks with a
+saved coach output via new `getCoachOutputWeekStartsSince`, plus the
+week being run). The phase clock, gates, deload trigger and
+diet-break TRIGGER still read wall-clock weeksInPhase (no reset, no
+decay, D91-25 untouched). Claims bounded: week label counts coached
+weeks; under a genuine gap (evidenced < wall-clock - 1) the
+diet-break note and the DietBreakCard state the cut's SET-AGE ("This
+cut has been set for N weeks") instead of continuous under-eating,
+via new output field `dietBreakContinuityEvidenced`. One-week
+tolerance keeps continuously coached users byte-identical; absent
+input keeps every legacy caller byte-identical (both pinned in
+weeklyCoach.evidencedClaims.test.js, 9 tests).
+
+**P-4 LANDED** at 853819d0 (lead-ruled, D33: evidence-honest and
+stricter only). Both arms of the completed-check-in gate (the bare
+`!!checkin` truthiness and the caller's lastCheckinAt taking the
+newest row regardless of content) accepted the sleep-only row a
+workout summary writes; both now require recorded check-in answers
+(energy, soreness or calorie adherence) - the same evidence rule as
+FB-36 and the recovery counters. Without a real check-in the
+recalibration freeze stands, which is the founder decision's stated
+intent ("the wellbeing capture has not gone dark"). Pinned in
+adaptiveTdee.b1.replay.test.js.
+
+**P-5 LANDED** at 61fb8a51 (lead-ruled): hadPriorBlocks counts an
+ENDED prior block alongside a stored ledger, so a mature user whose
+blocks were never judged is no longer handed beginner copy. No claim
+gets stronger. Pin re-anchored in campaign6.longTerm.test.js.
+
+**P-6 LANDED** at 300bd5d1 (lead-ruled, D33 rationale recorded): of
+the audit's fork, ruling (a) - a repeat intent seeds from the
+finished block's own observed numbers before any learned step, even
+when the entry is unjudgeable - is the best-for-user answer because
+(i) it makes the repeat button's promise TRUE rather than re-wording
+it, (ii) it closes the free/pro leak (Free's only intent is repeat;
+the learned band is coaching-shaped) which option (b) would leave
+open, and (iii) it honours self-directed continuity as autonomy (the
+addendum's RESPECT MY CHOICES). Adjust intent untouched; the D97-3
+staleness question on the learned band stays open and unchanged.
+Pinned in blockSeed.stage6.test.js (4 tests).
+
+**Latents P-7..P-11 disposition (lead):** P-7 (startCascade fails
+OPEN on {ok:true, data:null} - defaults to a live trial and writes
+tier pro) is a billing-flow behaviour change and therefore
+FOUNDER-GATED under Section 2; carried to Phase 57 triage as a
+founder question with a written test-plan requirement. P-8 (Pro-era
+recovery cards render up to 14 days after tier loss), P-9 (recovery
+insight calls sleep rows "weekly check-ins"), P-10 (offline-expired
+trial shows stale Subscription copy) and P-11 (ledger frozen with
+computing tier, no tier provenance) carried to Phase 57 triage with
+severities as recorded in AUDIT-TIER-TRANSITIONS.md.

@@ -123,19 +123,33 @@ triage carries every open item; nothing is silently decided.
   campaign6.athlete180.test.js (11 tests; repeat transition, exercise
   change, manual, calm, nutrition thread with weigh-in gap; full
   thesis asserted).
-- IN FLIGHT (agents): Phases 18-21 (AUDIT-TIER-TRANSITIONS.md) and
-  the addendum lanes (CHOICE-MEMORY.md + RELATIONSHIP-MOMENTS.md).
-- NEXT: land the in-flight audit pair (lead-review, action findings);
-  then agent pairs for 15-21 (modes/tier/trial), 25-31 (weight/lapse/
-  streak/win-back/progress/edits), 32-38 (reinstall/migration
-  contracts/sync/offline), 39-43 + 45-46 + 48-49, PLUS the addendum
-  lanes (CHOICE-MEMORY.md, RELATIONSHIP-MOMENTS.md,
-  WHAT-VOLYUME-HAS-LEARNED-FEASIBILITY.md as agent audits;
+- Phases 18-21 (AUDIT-TIER-TRANSITIONS.md) — DELIVERED, LANDED, and
+  ACTIONED (D97-20): P-1 trial-grant retry rewired on RESULTS with a
+  behavioural suite (23e3f907); P-2 evidence-bounded phase claims
+  (evidencedWeeksInPhase input; clock/gates untouched; set-age
+  diet-break wording under a gap); P-3 FB-36 guard on the ledger
+  readiness slope (06796ce8); P-4 sleep-only rows refused at the
+  completed-check-in gate (853819d0); P-5 ended blocks count as
+  personal history (61fb8a51); P-6 repeat seeds observed numbers on
+  an unjudgeable ledger, closing the Free learned-band leak
+  (300bd5d1). P-7 (billing, founder-gated) + P-8..P-11 latents
+  carried to Phase 57 triage. Choice-memory lane fixes landed
+  earlier at 0b383230 (D97-19).
+- Addendum lanes CHOICE-MEMORY.md + RELATIONSHIP-MOMENTS.md — LANDED
+  and dispositioned at 0b383230 (D97-19): F5/F8/F4 fixed, F3/F9
+  carried, maturity doc corrected; moments A=12 B=6 C=0 D=2, B1/B4
+  the two saturation-rule implementation candidates (for the
+  dividend synthesis), B2 a founder copy question. No agents in
+  flight.
+- NEXT: agent pairs for 25-31 (weight/lapse/streak/win-back/
+  progress/edits) and 32-38 (reinstall/migration contracts/sync/
+  offline); then 39-43 + 45-46 + 48-49, PLUS
+  WHAT-VOLYUME-HAS-LEARNED-FEASIBILITY.md as an agent audit;
   PERSONALISATION-DIVIDEND.md + the six-block/180-day relationship
   report expansions + relationship invariant pins as lead work); then
-  E2Es (50-52), Reviews A-E (53-56 + the addendum's Review E), debt
-  triage (57), H4/legal (58-59), campaign6 gates (62), docs close,
-  merge to main, 96-item handover (80 + addendum items 81-96).
+  E2Es (52 reinstall), Reviews A-E (53-56 + the addendum's Review E),
+  debt triage (57), H4/legal (58-59), campaign6 gates (62), docs
+  close, merge to main, 96-item handover (80 + addendum items 81-96).
 
 ## Wave recovery paths
 
