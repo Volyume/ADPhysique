@@ -238,7 +238,12 @@ describe('ACCOUNT: first use never duplicates the starter plan (C5-P29-02, D96)'
     const src = stripComments(read('screens/FreeStarterScreen.js'));
     expect(src).toMatch(/if \(startingRef\.current\) return;/);
     expect(src).toMatch(/getAllPlansForUser\(user\.id\)/);
-    expect(src).toMatch(/existingPlans\.find\(p => p\.name === recommendation\.name\)/);
+    // RB-6 (Review B, D96) re-anchor, same meaning made sharper: the copy
+    // is identified by PROVENANCE (copyPlanFromLibrary stamps
+    // sourceProgrammeId), with the name check surviving only for legacy
+    // null-provenance copies.
+    expect(src).toMatch(/existingPlans\.find\(p => p\.sourceProgrammeId === recommendation\.id\)/);
+    expect(src).toMatch(/!p\.sourceProgrammeId && p\.name === recommendation\.name/);
     // An already-active copy is never re-activated (that restarted the block).
     expect(src).toMatch(/if \(existing\?\.isActive\)/);
   });
@@ -259,7 +264,10 @@ describe('ACCOUNT: the final build survives a retry (C5-P29-07, D96)', () => {
   test('the enrolment metric and the generated plan are written once per build', () => {
     const src = stripComments(read('screens/ProOnboardingScreen.js'));
     expect(src).toMatch(/loadBuildProgress\(user\.id\)/);
-    expect(src).toMatch(/if \(!priorBuild\?\.weightLoggedAt\)/);
+    // RB-7 (Review B, D96) re-anchor: still once per build, and ALSO
+    // re-logged when the user stepped back and changed the weight, so the
+    // enrolment row can never disagree with the profile and morning series.
+    expect(src).toMatch(/if \(!priorBuild\?\.weightLoggedAt \|\| \(Number\.isFinite\(priorBuild\?\.weightKg\) && priorBuild\.weightKg !== bwKg\)\)/);
     expect(src).toMatch(/markBuildProgress\(user\.id, \{ weightLoggedAt/);
     expect(src).toMatch(/markBuildProgress\(user\.id, \{ planId: planResult\.programmeId, planSignature \}\)/);
     // Edited answers still rebuild: reuse is keyed on the same inputs.
@@ -1746,5 +1754,80 @@ describe('REVIEW A: the brand-new-user findings stay fixed (RA-1..RA-10, D96)', 
     const src = read('screens/LoginScreen.js');
     expect(src).toMatch(/intent === 'pro_signup' \? \(/);
     expect(src).toMatch(/Your 14-day free trial starts once your account is set up\./);
+  });
+});
+
+describe('REVIEW B: the interruption and state findings stay fixed (RB-1..RB-12, D96)', () => {
+  test('RB-1: the build record outlives the wizard and dies with first run', () => {
+    const draft = read('lib/proOnboardingDraft.js');
+    // clearDraft removes ONLY the draft; the build record has its own clear.
+    const clearFn = draft.slice(draft.indexOf('export async function clearDraft'), draft.indexOf('export async function clearBuildProgress'));
+    expect(clearFn).not.toMatch(/buildKey\(userId\)/);
+    expect(draft).toMatch(/export async function clearBuildProgress/);
+    const store = read('store/useAppStore.js');
+    // Both ends of first run own the record's removal.
+    const complete = store.slice(store.indexOf('completeFirstRun: async'));
+    expect(complete.slice(0, 1200)).toMatch(/clearBuildProgress\(uid\)/);
+    const reset = store.slice(store.indexOf('resetFirstRun: async'));
+    expect(reset.slice(0, 1600)).toMatch(/clearBuildProgress\(uid\)/);
+    // And the hand-off screen no longer exits the app on hardware Back.
+    expect(read('screens/ProSetupCompleteScreen.js')).toMatch(/BackHandler\.addEventListener\('hardwareBackPress', \(\) => true\)/);
+  });
+
+  test('RB-2: the weekly coach-ready push survives a notification restore', () => {
+    const sched = read('lib/notifications/scheduler.js');
+    const restore = sched.slice(sched.indexOf('export async function restoreNotifications'));
+    expect(restore).toMatch(/scheduleWeeklyCoachReady\(crHour, crMinute, \{ weekStart: ws \}\)/);
+    // Re-laid only when a check-in stamped it and its Monday is still ahead.
+    expect(restore).toMatch(/Number\.isFinite\(ws\)/);
+    expect(read('screens/WeeklyCheckInScreen.js')).toMatch(/coachReady: \{ \.\.\.\(prefs\?\.coachReady \|\| \{\}\), weekStart: weekStart\.getTime\(\) \}/);
+  });
+
+  test('RB-3: every plan-activation path holds a synchronous entry guard', () => {
+    const plans = read('screens/PlansScreen.js');
+    // The block-restart guard sits BEFORE the alert, not inside its onPress.
+    const restart = plans.slice(plans.indexOf('async function handleRestartPlan'));
+    const alertAt = restart.indexOf('appAlert(');
+    expect(restart.slice(0, alertAt)).toMatch(/if \(restartingRef\.current\) return;/);
+    const setActive = plans.slice(plans.indexOf('async function handleSetActive'));
+    const setActiveTry = setActive.indexOf('try {');
+    expect(setActive.slice(0, setActiveTry)).toMatch(/if \(restartingRef\.current\) return;/);
+    expect(read('screens/ManualBuilderScreen.js')).toMatch(/if \(activatingRef\.current\) return;/);
+    expect(read('screens/PlanLibraryScreen.js')).toMatch(/if \(addingRef\.current\) return;/);
+    // And the data layer closes the two-active-blocks interleave for all.
+    const db = read('lib/database.js');
+    const act = db.slice(db.indexOf('export async function activatePlanWithBlock'));
+    expect(act.slice(0, 2600)).toMatch(/runInTransaction\(d, async \(\) => \{/);
+  });
+
+  test('RB-4: only the newest PlansScreen load may paint any of its state', () => {
+    const plans = read('screens/PlansScreen.js');
+    const load = plans.slice(plans.indexOf('async function loadData'));
+    const firstGuard = load.indexOf('if (req !== ledgerLoadRef.current) return;');
+    const firstSetter = load.indexOf('setActivePlanData(');
+    expect(firstGuard).toBeGreaterThan(-1);
+    expect(firstGuard).toBeLessThan(firstSetter);
+  });
+
+  test('RB-5: the library activation path cannot fail silently', () => {
+    const lib = read('screens/PlanLibraryScreen.js');
+    const start = lib.slice(lib.indexOf("text: 'Add and start this plan'"));
+    const tryAt = start.indexOf('try {');
+    const activateAt = start.indexOf('await activatePlanWithBlock(');
+    const catchAt = start.indexOf('} catch');
+    expect(tryAt).toBeGreaterThan(-1);
+    expect(tryAt).toBeLessThan(activateAt);
+    expect(activateAt).toBeLessThan(catchAt);
+  });
+
+  test('RB-10/RB-11/RB-12: the synchronous-guard and dismiss seams', () => {
+    const coach = read('screens/CoachOutputScreen.js');
+    expect(coach).toMatch(/if \(applyingRef\.current \|\| applyingKey \|\| !user\?\.id \|\| !output\) return;/);
+    expect(read('components/AppAlert.js')).toMatch(/options\.onDismiss\?\.\(\)/);
+    const wiz = read('screens/ProOnboardingScreen.js');
+    const from6 = wiz.slice(wiz.indexOf('async function advanceFrom6'));
+    const armAt = from6.indexOf('submittingRef.current = true;');
+    expect(from6.slice(armAt, armAt + 700)).toMatch(/setBusy\(true\);/);
+    expect(from6.slice(armAt, armAt + 1200)).toMatch(/clearTimeout\(draftTimerRef\.current\)/);
   });
 });

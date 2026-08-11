@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform,
@@ -777,8 +777,16 @@ export default function ManualBuilderScreen({ navigation, route }) {
   const [successModal, setSuccessModal] = useState(false);
   const [savedPlanName, setSavedPlanName] = useState('');
 
+  // RB-3 (D96, Review B): setSaving(true) happened AFTER the awaited
+  // confirm, and confirmPlanSwitchMidBlock returns true silently in week 1,
+  // so a first-week double tap ran two activations with no dialogue between
+  // them. Synchronous ref, checked before anything awaits.
+  const activatingRef = useRef(false);
+
   async function handleSaveAndActivate() {
     if (!validate(true)) return;
+    if (activatingRef.current) return;
+    activatingRef.current = true;
     // C5-P10-10 (D96): this was the ONE activation path that skipped
     // confirmPlanSwitchMidBlock, so a user who built their own plan in week
     // 3 silently restarted their block and never saw the one dialogue that
@@ -787,7 +795,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
     const ok = await confirmPlanSwitchMidBlock(user.id, {
       newPlanName: editablePlanName.trim() || planName.trim() || 'My Plan',
     });
-    if (!ok) return;
+    if (!ok) { activatingRef.current = false; return; }
     setSaving(true);
     try {
       // A rename on this final builder page lives in editablePlanName, not
@@ -806,6 +814,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
       toast.show("Couldn't save your plan, try again", { variant: 'error' });
     } finally {
       setSaving(false);
+      activatingRef.current = false;
     }
   }
 

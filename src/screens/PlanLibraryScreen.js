@@ -293,6 +293,10 @@ export default function PlanLibraryScreen({ navigation }) {
   const [activeCollection, setActiveCollection] = useState('all');
   const [selectedDivision, setSelectedDivision] = useState(null);
   const listRef = useRef(null);
+  // RB-3 (D96, Review B): appAlert queues, so two taps on a plan card used
+  // to queue two dialogs and run two copies + two activations. One
+  // synchronous guard across the whole add flow.
+  const addingRef = useRef(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loaded, setLoaded] = useState(false);
   // FF-004: distinguish a real load/init failure from a genuinely empty library
@@ -355,6 +359,8 @@ export default function PlanLibraryScreen({ navigation }) {
       toast.show('Setting up your profile, try again in a second', { variant: 'info' });
       return;
     }
+    if (addingRef.current) return;
+    addingRef.current = true;
     // C4: one decision, one dialog. Both choices copy the plan; only what
     // happens after the copy differs, so each button owns its own copy call
     // and error handling (matches the copy-failure toast either way).
@@ -375,7 +381,7 @@ export default function PlanLibraryScreen({ navigation }) {
       `Copy "${planHeadingName(plan.name)}" into your plans. Make it active now, or just add it for later.`
       + `\n\n${BLOCK_START_SENTENCE} ${ACTIVATION_MEANING_SENTENCE}`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel', onPress: () => { addingRef.current = false; } },
         {
           text: 'Save for later',
           onPress: async () => {
@@ -385,30 +391,37 @@ export default function PlanLibraryScreen({ navigation }) {
               navigation.goBack();
             } catch (_e) {
               toast.show("Couldn't copy plan, try again", { variant: 'error' });
+            } finally {
+              addingRef.current = false;
             }
           },
         },
         {
           text: 'Add and start this plan',
           onPress: async () => {
-            let copy;
+            // RB-5 (D96, Review B): the try used to end after the copy, so
+            // an activation throw rejected an async onPress with no
+            // handler - no toast, no navigation, no active plan, and a
+            // stray copied programme left behind. The whole path is now
+            // wrapped, like every sibling activation path.
             try {
-              copy = await copyPlanFromLibrary(plan.id, user.id);
+              const copy = await copyPlanFromLibrary(plan.id, user.id);
               if (!copy?.id) throw new Error('Copy failed.');
+              const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: planHeadingName(plan.name) });
+              if (!ok) { navigation.goBack(); return; }
+              await activatePlanWithBlock(user.id, copy.id, planHeadingName(plan.name));
+              // C5-P10-05 (D96): activation used to end in a bare goBack(),
+              // visually identical to "Save for later" -- a user who saw no
+              // change tapped a second plan and silently replaced the block
+              // created seconds earlier. Same confirmation shape every other
+              // activation entry point uses.
+              toast.show(`"${planHeadingName(plan.name)}" is now your active plan`, { variant: 'success' });
+              navigation.goBack();
             } catch (_e) {
-              toast.show("Couldn't copy plan, try again", { variant: 'error' });
-              return;
+              toast.show("Couldn't set active plan, try again", { variant: 'error' });
+            } finally {
+              addingRef.current = false;
             }
-            const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: planHeadingName(plan.name) });
-            if (!ok) { navigation.goBack(); return; }
-            await activatePlanWithBlock(user.id, copy.id, planHeadingName(plan.name));
-            // C5-P10-05 (D96): activation used to end in a bare goBack(),
-            // visually identical to "Save for later" -- a user who saw no
-            // change tapped a second plan and silently replaced the block
-            // created seconds earlier. Same confirmation shape every other
-            // activation entry point uses.
-            toast.show(`"${planHeadingName(plan.name)}" is now your active plan`, { variant: 'success' });
-            navigation.goBack();
           },
         },
       ],

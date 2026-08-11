@@ -872,6 +872,15 @@ export default function WeeklyCheckInScreen({ navigation }) {
             prefs?.coachReady?.minute ?? 0,
             { weekStart: weekStart.getTime() },
           );
+          // RB-2 (D96, Review B): stamp what was just laid into the blob,
+          // so restoreNotifications (which cancels everything) can re-lay
+          // this push with its week intact after a quiet-hours edit or a
+          // DST reschedule. Without the stamp the push died silently until
+          // the next check-in.
+          await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify({
+            ...(prefs || {}),
+            coachReady: { ...(prefs?.coachReady || {}), weekStart: weekStart.getTime() },
+          })).catch(() => {});
         }
       } catch (_) {}
 

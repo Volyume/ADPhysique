@@ -1274,6 +1274,25 @@ export async function restoreNotifications(prefs, userId = null) {
     );
   }
 
+  // RB-2 (D96, Review B): the Monday "coaching ready" push was the ONE
+  // family this restore did not re-lay, so a quiet-hours edit or a DST
+  // reschedule (both call this) silently destroyed it along with its
+  // PM-01(b) weekStart param, which only the NEXT check-in could rebuild.
+  // The check-in submit stamps coachReady.weekStart into the prefs blob;
+  // re-lay only a push a check-in actually laid, and only while its own
+  // Monday (the one after the reviewed week) is still ahead - later, the
+  // schedule call would aim the push at the wrong week. Pro-only, like the
+  // check-in reminder above; not weight- or food-adjacent.
+  if (isPro && prefs?.coachReady?.enabled !== false) {
+    const ws = Number(prefs?.coachReady?.weekStart);
+    const crHour = prefs?.coachReady?.hour ?? 9;
+    const crMinute = prefs?.coachReady?.minute ?? 0;
+    if (Number.isFinite(ws)
+      && Date.now() < ws + 7 * 86400000 + crHour * 3600000 + crMinute * 60000) {
+      await scheduleWeeklyCoachReady(crHour, crMinute, { weekStart: ws });
+    }
+  }
+
   // cancelAllNotifications above wiped the trial-window pushes too. They were
   // previously laid once at startCascade and never restored, so on the next app
   // launch the cascade-gate pushes (legacy ids _19/_21, which fire at trial

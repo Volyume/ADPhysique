@@ -83,10 +83,21 @@ export async function clearDraft(userId) {
   const key = draftKey(userId);
   if (!key) return;
   try { await AsyncStorage.removeItem(key); } catch (_) { /* best effort */ }
-  // The build record is part of the same resume state: once the wizard is
-  // complete there is nothing left to resume, and a stale record must never
-  // suppress a later rebuild.
-  try { await AsyncStorage.removeItem(buildKey(userId)); } catch (_) { /* best effort */ }
+  // RB-1 (D96, Review B): the build record is deliberately NOT cleared here
+  // any more. clearDraft runs at the end of advanceFrom6, one screen before
+  // first run actually completes, and backing out of the hand-off screen
+  // re-runs the wizard with nothing left to suppress the replay - a second
+  // enrolment body-metric row, "Your plan 2", a reset block. The record now
+  // lives until completeFirstRun (the moment first run is truly over),
+  // which calls clearBuildProgress below.
+}
+
+// RB-1: cleared by completeFirstRun (useAppStore), and by resetFirstRun so
+// a deliberate Free-to-Pro re-run never reuses a stale record.
+export async function clearBuildProgress(userId) {
+  const key = buildKey(userId);
+  if (!key) return;
+  try { await AsyncStorage.removeItem(key); } catch (_) { /* best effort */ }
 }
 
 // ── Build progress (C5-P29-07) ──────────────────────────────────────────────
@@ -105,6 +116,9 @@ export function parseBuildProgress(raw) {
   if (!d || typeof d !== 'object' || Array.isArray(d)) return null;
   return {
     weightLoggedAt: Number.isFinite(d.weightLoggedAt) ? d.weightLoggedAt : null,
+    // RB-7 (D96, Review B): the weight the record logged, so a retry can
+    // tell "already logged this reading" from "the user changed it".
+    weightKg: Number.isFinite(d.weightKg) && d.weightKg > 0 ? d.weightKg : null,
     planId: typeof d.planId === 'string' && d.planId ? d.planId : null,
     planSignature: typeof d.planSignature === 'string' && d.planSignature ? d.planSignature : null,
   };

@@ -220,6 +220,11 @@ export default function PlansScreen({ navigation }) {
         getActiveBlock(user.id),
         getPlanFolders(user.id),
       ]);
+      // RB-4 (D96, Review B): the req guard used to protect only the ledger
+      // story, so a stale pro-tier load resolving after the tier-lapse
+      // reload (the FQ-2 effect) could repaint the Pro decision card for a
+      // free user. Guard EVERY setter: only the newest request paints.
+      if (req !== ledgerLoadRef.current) return;
       setActivePlanData(active || null);
       // FB-15 (D96): the finished block's id, so the decision card can offer
       // the summary that informs the decision.
@@ -237,6 +242,9 @@ export default function PlansScreen({ navigation }) {
         // nothing about that decision reads check-in rows any more.
         const advice = await getBlockAdvice(user.id, block, userProfile, { isPro: tier === 'pro' })
           .catch(() => null);
+        // RB-4: re-check after the await; the advice carries the closure's
+        // tier, so a stale request must never paint it.
+        if (req !== ledgerLoadRef.current) return;
         setBlockAdvice(advice);
 
         // Stage 8 (§3.6): the block-end story on the decision card. The
@@ -349,20 +357,26 @@ export default function PlansScreen({ navigation }) {
     // function's own argument, so each path now describes what it does.
     // The seedIntent mapping below is untouched.
     const isAdjust = intent === 'adjust';
+    // RB-3 (D96, Review B): the guard moves to the TOP, before the alert.
+    // appAlert is a queue, so two same-frame taps on the two decision
+    // buttons used to queue two confirms, and the second ran a second
+    // activation after the first's finally released the ref. Checked and
+    // set synchronously here; released on cancel (the backdrop dismiss
+    // resolves through the cancel button too) and in the finally.
+    if (restartingRef.current) return;
+    restartingRef.current = true;
     appAlert(
       isAdjust ? 'Start your next block?' : 'Run this plan again?',
       isAdjust
         ? 'A new training block starts today with the same workouts. The weekly set targets start from what your last block showed, muscle by muscle.'
         : "A new training block starts today with the same workouts and the same set targets as last time. Aim to match or improve on last time's weights.",
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel', onPress: () => { restartingRef.current = false; } },
         {
           text: isAdjust ? 'Start next block' : 'Start new block',
           onPress: async () => {
-            // Stage 6 review #11: the seed build is real work; a
-            // re-confirmed alert must never run two activations.
-            if (restartingRef.current) return;
-            restartingRef.current = true;
+            // Stage 6 review #11 + RB-3: the ref is already held from the
+            // entry guard above; the try/finally below still owns release.
             try {
               logInfo('PlansScreen.blockRestart', `intent=${intent}`);
               // Stage 6 (2026-08-09): the ledger seam goes live. The
@@ -460,21 +474,27 @@ export default function PlansScreen({ navigation }) {
     // restarts), and two dialogues in a row would be the noise Campaign 5
     // is removing. In week 1 that confirm passes silently by design, which
     // is why a first-time user could never be told.
-    if (!activePlan) {
-      const confirmed = await new Promise((resolve) => {
-        appAlert(
-          'Make this your active plan?',
-          `${BLOCK_START_SENTENCE} ${ACTIVATION_MEANING_SENTENCE}`,
-          [
-            { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-            { text: 'Set as active', onPress: () => resolve(true) },
-          ],
-          { cancelable: true, onDismiss: () => resolve(false) },
-        );
-      });
-      if (!confirmed) return;
-    }
+    // RB-3 (D96, Review B): this path had no entry guard at all, and once a
+    // plan is active the confirm above it is skipped, so two taps ran two
+    // activations back to back. Same ref as the block restart, so the two
+    // activation paths also exclude each other.
+    if (restartingRef.current) return;
+    restartingRef.current = true;
     try {
+      if (!activePlan) {
+        const confirmed = await new Promise((resolve) => {
+          appAlert(
+            'Make this your active plan?',
+            `${BLOCK_START_SENTENCE} ${ACTIVATION_MEANING_SENTENCE}`,
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Set as active', onPress: () => resolve(true) },
+            ],
+            { cancelable: true, onDismiss: () => resolve(false) },
+          );
+        });
+        if (!confirmed) return;
+      }
       const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: planHeadingName(plan.name) });
       if (!ok) return;
       await activatePlanWithBlock(user.id, plan.id, planHeadingName(plan.name));
@@ -485,6 +505,8 @@ export default function PlansScreen({ navigation }) {
     } catch (e) {
       logError('PlansScreen.handleSetActive', e, { userId: user?.id, planId: plan?.id });
       toast.show("Couldn't set active plan, try again", { variant: 'error' });
+    } finally {
+      restartingRef.current = false;
     }
   }
 

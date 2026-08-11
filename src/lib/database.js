@@ -3717,11 +3717,6 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
 
   const d = await db();
   const now = Date.now();
-  await d.runAsync(
-    'UPDATE mesocycles SET is_active = 0, updated_at = ? WHERE user_id = ?',
-    [now, userId],
-  );
-
   const id = uid();
   const startDate = new Date().toISOString().slice(0, 10);
   // end_date is required by the cloud schema (NOT NULL). Without it the
@@ -3739,15 +3734,26 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
   // reads too, so no surface can describe a block length this writer does
   // not create. The written values are byte-identical to the constants
   // that stood here.
-  await d.runAsync(
-    `INSERT INTO mesocycles
-      (id, user_id, name, start_date, end_date, duration_weeks, planned_weeks, deload_week, focus,
-       block_type, rir_ladder, is_active, auto_regulation_enabled, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?)`,
-    [id, userId, planName, startDate, endDate,
-      BLOCK_PLANNED_WEEKS, BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK,
-      'hypertrophy', 'offseason_hypertrophy', '[3,2,1,0,0,4]', now, now],
-  );
+  // RB-3 (D96, Review B): deactivate-all and insert-new used to be two
+  // awaited statements, so two overlapping activations could interleave as
+  // A.UPDATE, B.UPDATE, A.INSERT, B.INSERT and leave TWO is_active rows.
+  // One transaction closes that for every caller. No nested
+  // runInTransaction runs inside (both statements are plain runAsync).
+  await runInTransaction(d, async () => {
+    await d.runAsync(
+      'UPDATE mesocycles SET is_active = 0, updated_at = ? WHERE user_id = ?',
+      [now, userId],
+    );
+    await d.runAsync(
+      `INSERT INTO mesocycles
+        (id, user_id, name, start_date, end_date, duration_weeks, planned_weeks, deload_week, focus,
+         block_type, rir_ladder, is_active, auto_regulation_enabled, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?)`,
+      [id, userId, planName, startDate, endDate,
+        BLOCK_PLANNED_WEEKS, BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK,
+        'hypertrophy', 'offseason_hypertrophy', '[3,2,1,0,0,4]', now, now],
+    );
+  });
 
   await generateMesocycleWeeks(id);
   const { VOLUME_LANDMARKS } = await import('./algorithms');
@@ -3822,6 +3828,15 @@ export async function copyPlanFromLibrary(libraryPlanId, userId) {
   if (!libPlan) throw new Error('Plan not found');
 
   const newPlan = await createProgramme(userId, libPlan.name, libPlan.description, 0);
+  // RB-6 (D96, Review B): stamp which library plan this copy came from, so
+  // consumers can identify the copy by provenance instead of by name (a
+  // rename used to defeat the FreeStarter dedup, and an unrelated user plan
+  // sharing the name was silently adopted as "the recommendation"). The
+  // column already exists and syncs; it was simply never written here.
+  await d.runAsync(
+    'UPDATE programmes SET source_programme_id = ?, updated_at = ? WHERE id = ?',
+    [libraryPlanId, Date.now(), newPlan.id],
+  );
 
   const libRoutineRows = await d.getAllAsync(
     `SELECT * FROM routines WHERE programme_id = ? AND (is_active = 1 OR is_active IS NULL)
@@ -3841,7 +3856,7 @@ export async function copyPlanFromLibrary(libraryPlanId, userId) {
     );
   }
 
-  return newPlan;
+  return { ...newPlan, sourceProgrammeId: libraryPlanId };
 }
 
 export async function archivePlan(planId) {

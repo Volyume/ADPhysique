@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, BackHandler,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -48,6 +48,17 @@ export default function ProSetupCompleteScreen({ navigation }) {
   // Memoised: this screen renders a mapped macroTargets list.
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
+
+  // RB-1 (D96, Review B): this screen is reached by navigation.replace, so
+  // the stack holds one screen and hardware Back exited the APP from the
+  // hand-off - then, with firstRunComplete still false, relaunch re-ran the
+  // whole wizard. There is genuinely nowhere to go back to from here; the
+  // only exit is Start training.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return undefined;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => sub.remove();
+  }, []);
 
   const [nutritionSummary, setNutritionSummary] = useState(null);
   const [planRoutines, setPlanRoutines] = useState([]);

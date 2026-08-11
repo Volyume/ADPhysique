@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, AccessibilityInfo,
 } from 'react-native';
@@ -1027,6 +1027,13 @@ export default function CoachOutputScreen({ navigation, route }) {
   const [coachHistory, setCoachHistory] = useState([]);
   const [_adaptiveTDEE, setAdaptiveTDEE] = useState(null);
   const [applyingKey, setApplyingKey] = useState(null);
+  // RB-10 (D96, Review B): applyingKey is state, so the guard in each Apply
+  // handler is one render behind a same-frame double tap. Today both
+  // invocations converge (every handler re-reads its base and writes
+  // absolute values), but that is convergence by accident of shape; this
+  // ref makes the entry guard synchronous, the same pattern the wizard and
+  // the activation paths use.
+  const applyingRef = useRef(false);
   // Food-level receipt after a calorie apply edits an active meal plan
   // ({ headline, body, deepLink, floorNote } from planExplain, or null).
   const [planEditNote, setPlanEditNote] = useState(null);
@@ -1161,9 +1168,10 @@ export default function CoachOutputScreen({ navigation, route }) {
   // twice. Current targets are re-read at tap time so we never scale
   // from a stale snapshot.
   async function handleApplyCalories() {
-    if (applyingKey || !user?.id || !output) return;
+    if (applyingRef.current || applyingKey || !user?.id || !output) return;
     if (isApplied(output, 'calories')) return;
     setPlanEditNote(null); // clear any stale receipt before re-applying
+    applyingRef.current = true;
     setApplyingKey('calories');
     try {
       const current = await getNutritionTargets(user.id);
@@ -1226,6 +1234,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       logError('CoachOutputScreen.handleApplyCalories', e, { userId: user?.id });
     } finally {
       setApplyingKey(null);
+      applyingRef.current = false;
     }
   }
 
@@ -1236,13 +1245,14 @@ export default function CoachOutputScreen({ navigation, route }) {
   // so it's distinguishable from the template ramp and the per-session
   // adaptive writes.
   async function handleApplyTraining() {
-    if (applyingKey || !user?.id || !output) return;
+    if (applyingRef.current || applyingKey || !user?.id || !output) return;
     if (isApplied(output, 'training')) return;
     const delta = output.volumeSignal ?? 0;
     if (!delta || !nextTrainingWeekId) return;
     // Stage 4: never add sets to a recovery week (the card explains this
     // instead of offering the button; this guard is the backstop).
     if (delta > 0 && nextWeekIsDeload) return;
+    applyingRef.current = true;
     setApplyingKey('training');
     try {
       const rows = await getPlannedMuscleVolume(nextTrainingWeekId);
@@ -1266,6 +1276,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       logError('CoachOutputScreen.handleApplyTraining', e, { userId: user?.id });
     } finally {
       setApplyingKey(null);
+      applyingRef.current = false;
     }
   }
 
@@ -1279,9 +1290,10 @@ export default function CoachOutputScreen({ navigation, route }) {
   // re-evaluates each week. blockAdvisor only advises, it never writes,
   // so there is nothing to reconcile against on the write side.
   async function handleApplyDeload() {
-    if (applyingKey || !user?.id || !output) return;
+    if (applyingRef.current || applyingKey || !user?.id || !output) return;
     if (isApplied(output, 'deload')) return;
     if (!nextTrainingWeekId) return;
+    applyingRef.current = true;
     setApplyingKey('deload');
     try {
       await setMesocycleWeekDeload(nextTrainingWeekId);
@@ -1322,6 +1334,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       logError('CoachOutputScreen.handleApplyDeload', e, { userId: user?.id });
     } finally {
       setApplyingKey(null);
+      applyingRef.current = false;
     }
   }
 
@@ -1332,8 +1345,9 @@ export default function CoachOutputScreen({ navigation, route }) {
   // every diary surface that reads the targets. Re-reads current targets
   // at tap time so it never scales from a stale snapshot.
   async function handleApplyDietBreak() {
-    if (applyingKey || !user?.id || !output) return;
+    if (applyingRef.current || applyingKey || !user?.id || !output) return;
     if (isApplied(output, 'dietBreak')) return;
+    applyingRef.current = true;
     setApplyingKey('dietBreak');
     try {
       const current = await getNutritionTargets(user.id);
@@ -1362,6 +1376,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       logError('CoachOutputScreen.handleApplyDietBreak', e, { userId: user?.id });
     } finally {
       setApplyingKey(null);
+      applyingRef.current = false;
     }
   }
 
@@ -1372,10 +1387,11 @@ export default function CoachOutputScreen({ navigation, route }) {
   // being viewed. Re-reads current targets at tap time and recomputes
   // so the persisted split never scales from a stale snapshot.
   async function handleApplyMacroCycle() {
-    if (applyingKey || !user?.id || !output) return;
+    if (applyingRef.current || applyingKey || !user?.id || !output) return;
     if (isApplied(output, 'macroCycle')) return;
     const trainingDays = output.macroCycle?.trainingDaysPerWeek;
     if (!trainingDays) return;
+    applyingRef.current = true;
     setApplyingKey('macroCycle');
     try {
       const current = await getNutritionTargets(user.id);
@@ -1410,6 +1426,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       logError('CoachOutputScreen.handleApplyMacroCycle', e, { userId: user?.id });
     } finally {
       setApplyingKey(null);
+      applyingRef.current = false;
     }
   }
 
@@ -1421,8 +1438,9 @@ export default function CoachOutputScreen({ navigation, route }) {
   // current targets at tap time so the refeed never scales from a stale
   // snapshot.
   async function handleApplyRefeed() {
-    if (applyingKey || !user?.id || !output) return;
+    if (applyingRef.current || applyingKey || !user?.id || !output) return;
     if (isApplied(output, 'refeed')) return;
+    applyingRef.current = true;
     setApplyingKey('refeed');
     try {
       const current = await getNutritionTargets(user.id);
@@ -1451,6 +1469,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       logError('CoachOutputScreen.handleApplyRefeed', e, { userId: user?.id });
     } finally {
       setApplyingKey(null);
+      applyingRef.current = false;
     }
   }
 

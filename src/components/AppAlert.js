@@ -80,7 +80,15 @@ export function AppAlertHost() {
   const onBackdrop = () => {
     if (!cancelable) return;
     const cancelBtn = buttons.find((b) => b.style === 'cancel');
-    dismiss(cancelBtn?.onPress);
+    // RB-11 (D96, Review B): options.onDismiss was accepted and silently
+    // ignored - two call sites pass it, and both survived only because
+    // their cancel button resolves the same promise. Honour it (React
+    // Native Alert parity) alongside the cancel path, so a future confirm
+    // that relies on onDismiss alone cannot hang its await.
+    dismiss(() => {
+      try { cancelBtn?.onPress?.(); } catch (_) { /* swallow */ }
+      try { options.onDismiss?.(); } catch (_) { /* swallow */ }
+    });
   };
   // Row layout for the common 1-2 button case (matches the native dialog's
   // bottom-aligned actions); stack when there are more.

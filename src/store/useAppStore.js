@@ -1113,6 +1113,13 @@ const useAppStore = create((set, get) => ({
       if (uid) await AsyncStorage.setItem(FIRST_RUN_KEY_PFX + uid, 'false');
     } catch (_e) {}
     set({ firstRunComplete: false, firstRunChecked: true });
+    // RB-1 (D96, Review B): a deliberate re-run must start clean - a stale
+    // build record from a previous wizard pass must never suppress the
+    // rebuild this reset exists to trigger.
+    if (uid) {
+      // eslint-disable-next-line global-require
+      require('../lib/proOnboardingDraft').clearBuildProgress(uid).catch(() => {});
+    }
     require('../lib/errorLog').logInfo('useAppStore.resetFirstRun', 'firstRunComplete → false');
     return { ok: true };
   },
@@ -1138,6 +1145,14 @@ const useAppStore = create((set, get) => ({
       if (uid) await AsyncStorage.setItem(FIRST_RUN_KEY_PFX + uid, 'true');
     } catch (_e) {}
     set({ firstRunComplete: true, proOnboardingAccountCreated: false });
+    // RB-1 (D96, Review B): the wizard's build record survives until HERE,
+    // the moment first run is actually over. Clearing it with the draft at
+    // the end of advanceFrom6 left a window (the hand-off screen) where a
+    // back-out re-ran the wizard with its idempotence record already gone.
+    if (uid) {
+      // eslint-disable-next-line global-require
+      require('../lib/proOnboardingDraft').clearBuildProgress(uid).catch(() => {});
+    }
     // Mirror to cloud so a user who signs in on a new device doesn't
     // have to redo onboarding. Fire-and-forget; if offline the next
     // bulk sync catches it.

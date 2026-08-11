@@ -952,6 +952,16 @@ export default function ProOnboardingScreen({ navigation }) {
     }
     if (submittingRef.current) return;
     submittingRef.current = true;
+    // RB-12 (D96, Review B): from this line hardware Back is swallowed, but
+    // no busy state rendered until startSequence, so a slow permission
+    // dialog left an idle-looking, Back-dead step 6. The spinner now shows
+    // for the whole guarded window (the sequence overlay covers it later).
+    setBusy(true);
+    // RB-9 (D96, Review B): a draft save debounced within the last 600ms
+    // would otherwise fire mid-build and re-save a step-6 draft, racing the
+    // clearDraft below. The guard in the save effect reads this ref at
+    // effect-run time only, so kill the pending timer at the source.
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
 
     // C5-P27-02 (D96): the reminder preferences and the OS permission dialog
     // are settled BEFORE the build animation starts. They used to run after
@@ -1090,14 +1100,19 @@ export default function ProOnboardingScreen({ navigation }) {
       // build; the weight itself still reaches the profile and the morning
       // series (which dedups by local day) on every run.
       if (user?.id && !isNaN(bwKg) && bwKg > 0) {
-        if (!priorBuild?.weightLoggedAt) {
+        // RB-7 (D96, Review B): a mid-build kill, a step back to change the
+        // weight, and a resubmit used to keep the FIRST weight in the
+        // enrolment row forever while the profile and morning series carried
+        // the new one. The record stores the weight it logged, so an edited
+        // weight re-logs and the enrolment row agrees with its siblings.
+        if (!priorBuild?.weightLoggedAt || (Number.isFinite(priorBuild?.weightKg) && priorBuild.weightKg !== bwKg)) {
           await logBodyMetric(user.id, {
             weightKg: bwKg,
             bodyFatPercent: bfNum,
             bodyFatSource: baselineBfSource,
             loggedAt: Date.now(),
           });
-          await markBuildProgress(user.id, { weightLoggedAt: Date.now() });
+          await markBuildProgress(user.id, { weightLoggedAt: Date.now(), weightKg: bwKg });
         }
         // Also seed the morning weights series so the weekly check-in
         // gate (needs 3 readings in the last 7 days) counts enrolment

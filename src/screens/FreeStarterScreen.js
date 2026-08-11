@@ -154,7 +154,15 @@ export default function FreeStarterScreen({ navigation, route }) {
       // verbatim, so the name identifies the copy, and a copy that is already
       // active needs no second block at all. Replay is a no-op now.
       const existingPlans = await getAllPlansForUser(user.id).catch(() => []);
-      const existing = existingPlans.find(p => p.name === recommendation.name) ?? null;
+      // RB-6 (D96, Review B): provenance first - copyPlanFromLibrary stamps
+      // sourceProgrammeId, so a renamed copy still dedups and a hand-built
+      // plan that merely shares the library name is never adopted as "the
+      // recommendation". The name check survives ONLY for legacy copies made
+      // before the stamp existed (their provenance is null), where the
+      // name-collision residual is accepted and recorded.
+      const existing = existingPlans.find(p => p.sourceProgrammeId === recommendation.id)
+        ?? existingPlans.find(p => !p.sourceProgrammeId && p.name === recommendation.name)
+        ?? null;
       let planId = existing?.id ?? null;
       if (!planId) {
         const copy = await copyPlanFromLibrary(recommendation.id, user.id);

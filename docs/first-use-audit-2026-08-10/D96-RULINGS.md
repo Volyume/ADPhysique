@@ -651,3 +651,70 @@ Pins: campaign5.firstUse.test.js "REVIEW A" describe (10 tests);
 re-anchors: FB-19 rows pin (allRows), C5-P36-01 title list,
 "Complete your name..." hint, screen-mount C5-P29-01 "Step 1 of 5 -
 Baseline".
+
+## Review B (Phase 43, interruption / state) — lead rulings on findings
+
+Report: `REVIEW-B-state.md` (5 DEFECT, 9 LATENT, 10 CLEAN; 11 of 14
+matrix items verified fully closed). Rulings (D33):
+
+- **RB-1 (defect, HIGH) — ACTIONED.** clearDraft no longer removes the
+  build record; completeFirstRun AND resetFirstRun call the new
+  clearBuildProgress, so the record lives exactly as long as first run
+  and never suppresses a deliberate rebuild. ProSetupCompleteScreen
+  gets a hardware BackHandler returning true (reached by replace, the
+  stack holds one screen; Back exited the APP and forced the wizard
+  re-run RB-1 demonstrates).
+- **RB-2 (defect) — ACTIONED.** The check-in submit stamps
+  coachReady.weekStart into the prefs blob; restoreNotifications
+  re-lays scheduleWeeklyCoachReady from it — Pro-only, only when a
+  check-in actually laid the push, and only while that push's own
+  Monday is still ahead (a later re-lay would aim at the wrong week).
+  Not weight/food-adjacent; ED suppressions untouched.
+- **RB-3 (defect) — ACTIONED.** Synchronous entry guards on all four
+  activation paths: handleRestartPlan's restartingRef moves to the
+  top (before the queued appAlert; cancel and backdrop release it),
+  handleSetActive shares the same ref, ManualBuilder gains
+  activatingRef before its awaited confirm, PlanLibrary gains
+  addingRef across the whole add dialog. Belt-and-braces:
+  activatePlanWithBlock wraps deactivate+insert in runInTransaction
+  (verified nest-free; planAutoGen calls it outside its own
+  transaction), closing the two-is_active-rows interleave for every
+  caller.
+- **RB-4 (defect) — ACTIONED.** loadData's request guard hoisted above
+  every setter, and re-checked after the getBlockAdvice await, so a
+  stale pro-tier load can never repaint the Pro decision card for a
+  lapsed user.
+- **RB-5 (defect) — ACTIONED.** PlanLibrary's activation path fully
+  wrapped; a throw now toasts instead of vanishing.
+- **RB-6 (latent) — ACTIONED, wider than proposed.** The report's
+  sharper key (source_programme_id) was right but the column was never
+  actually written by copyPlanFromLibrary (the report's :3403-3406
+  citation is the ROUTINE-level stamp); the copy now stamps it (column
+  exists and syncs already - additive write, no schema change) and the
+  FreeStarter dedup keys on provenance first, name only for legacy
+  null-provenance copies (residual recorded).
+- **RB-7 (latent) — ACTIONED.** The build record stores the weight it
+  logged; a retry re-logs when the user changed it, so the enrolment
+  row can no longer disagree with the profile and morning series.
+- **RB-9/RB-10/RB-11/RB-12 (latent) — ACTIONED.** Draft timer killed at
+  submit arming; applyingRef synchronous guard on all six Apply
+  handlers; AppAlert honours options.onDismiss (RN parity) beside the
+  cancel path; setBusy(true) rides the submittingRef arming so the
+  Back-dead window is visibly busy.
+- **RB-8 (latent) — ACCEPTED RESIDUAL.** The ms-scale mark-after-write
+  window stands; closing it needs transactional coupling of every
+  build write to its record, disproportionate to a window this size.
+  Recorded so it is never mistaken for closure.
+- **RB-13 (latent) — NO ACTION.** Step 1 stays as dark code: it is the
+  account leg's fallback UI and costs nothing; RA-3 already removed it
+  from display. Removing the only in-wizard OAuth surface for a saved
+  re-auth affordance is a different decision, carried to the handover.
+- **RB-14 (latent) — RECORDED, NARROWED.** The consent-time pull racing
+  a Free-to-Pro wizard is minutes-scale and last-write-wins shaped;
+  RB-3's transaction narrows the activation half. The archive+create
+  pair itself is the FR-C4-2 sync-architecture seam; carried.
+
+Pins: campaign5.firstUse.test.js "REVIEW B" describe (6 tests);
+re-anchors named in place: proOnboardingDraft clear-semantics test
+(RB-1), weightKg shape (RB-7), the C5-P29-02 provenance dedup pin and
+the C5-P29-07 weight-gate pin.
