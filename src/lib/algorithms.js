@@ -405,7 +405,31 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
     incrementKg = null,
     prevPrevSets = [],  // sets from the workout before last, for consecutive-miss detection
     layoffMultiplier = 1.0, // < 1 when returning from a training break
+    // FQ-3 (D96, founder ruling 2026-08-10): the previous session's
+    // post-workout difficulty rating (1-5, null when the user skipped it).
+    // This is SESSION-LEVEL coarse effort evidence and the ONLY effort
+    // input the overload decision consults. Per-set effort is unknown
+    // unless genuinely known, and no surface collects it (the per-set RIR
+    // picker is permanently removed, D14/D19); the old per-set rir read
+    // here was a fabricated default stamped on every set, which made the
+    // novice-overload guard unreachable. The rating is never converted
+    // into fake per-set RIR - it gates the load decision as itself.
+    prevSessionDifficulty = null,
   } = options;
+
+  // Deterministic mapping, conservative by construction:
+  //   1-3 (very easy / easy / moderate) -> the session corroborates load
+  //       progression where the reps also support it;
+  //   4-5 (hard / brutal)               -> the session was already very
+  //       hard, so automatic load adds hold;
+  //   null (skipped)                    -> effort unknown, hold with honest
+  //       copy. Never an instruction to log RIR: that input no longer
+  //       exists.
+  // Number(null) is 0, so nullish must be mapped to NaN explicitly or a
+  // skipped rating would read as a finite (if unusable) number.
+  const sd = prevSessionDifficulty == null ? NaN : Number(prevSessionDifficulty);
+  const effortSupportsLoad = Number.isFinite(sd) && sd >= 1 && sd <= 3;
+  const effortVeryHard = Number.isFinite(sd) && sd >= 4;
 
   function getIncrement(weight) {
     if (incrementKg != null) return incrementKg;
@@ -430,11 +454,15 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
     let action = 'maintain';
 
     if (prevReps >= max) {
-      // Hit top of band, only increase load if RIR was logged AND ≥ 1.
-      // Null RIR → hold weight. Novice lifters systematically underestimate their
-      // RIR by 2-4 reps; optimistically increasing load when RIR is unlogged drives
-      // premature overload. Log RIR to unlock progression suggestions.
-      const hadHeadroom = prevRIR !== null && prevRIR >= 1;
+      // Hit top of band. Load increases only when the session-level effort
+      // evidence corroborates it (FQ-3): novice lifters systematically
+      // underestimate how hard they worked, and optimistically adding load
+      // on unknown effort drives premature overload, so unknown or
+      // very-hard effort holds the weight.
+      // FR-C4-4 (resolved here per the FQ-3 ruling): a bodyweight /
+      // unloaded set (prevWeight <= 0) has no load to add - it can never
+      // receive a micro-load instruction, whatever the effort evidence.
+      const hadHeadroom = effortSupportsLoad && prevWeight > 0;
       if (hadHeadroom) {
         const increment = getIncrement(prevWeight);
         // 5% session-over-session cap. Always apply it: the previous form
@@ -449,8 +477,9 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
         targetWeight = prevWeight + Math.max(0.25, rounded);
         action = 'increase';
       } else {
-        // Grinded it out with RIR 0, same weight, push for +1 rep is not valid
-        // so just hold and let RIR recover
+        // Topped the band but the effort evidence does not corroborate a
+        // load add (very hard session, skipped rating, or a bodyweight
+        // set): hold, and let the reason copy carry the honest why.
         targetMin = min;
         action = 'maintain';
       }
@@ -504,13 +533,15 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
   if (bestPrevSet && layoffMultiplier >= 1.0) {
     const bw = bestPrevW;
     const br = bestPrevSet.actualReps ?? bestPrevSet.actual_reps ?? 0;
-    const bRIR = bestPrevSet.rir ?? null;
     for (let i = 0; i < targets.length; i++) {
       if (targets[i].prevWeight < bw) {
         let newWeight = bw;
         let newAction = 'anchor';
         if (br >= max) {
-          const hadHeadroom = bRIR !== null && bRIR >= 1;
+          // FQ-3: same session-level effort gate as the main pass (bw > 0
+          // holds by construction here - the anchor only exists when a
+          // loaded best set does).
+          const hadHeadroom = effortSupportsLoad;
           if (hadHeadroom) {
             const inc = getIncrement(bw);
             // Same 5% session-over-session cap as the main pass. The old form
@@ -540,15 +571,27 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
   const allMaintain = targets.every(t => t.action === 'maintain');
   const anyAnchored = targets.some(t => t.anchored);
   const isLayoff = layoffMultiplier < 1.0;
-  const noRIRLogged = targets.every(t => t.prevRIR === null);
-  const repsHitTopNoRIR = noRIRLogged && targets.every(t => t.prevReps >= max);
+  // FQ-3 (D96): honest holds at the top of the band, keyed on the
+  // session-level evidence. The old copy here told the user to "note how
+  // many reps you had left" - an instruction pointing at an input that no
+  // longer exists. The approved wording states the truth instead: the range
+  // is topped, and adding weight is the user's call.
+  const allTopped = targets.every(t => t.prevReps >= max);
+  const toppedEffortUnknown = allTopped && allMaintain && !Number.isFinite(sd);
+  const toppedVeryHard = allTopped && allMaintain && effortVeryHard;
 
   let reason;
   if (isLayoff) {
     const pct = Math.round((1 - layoffMultiplier) * 100);
     reason = `Loads reduced by ${pct}% for your first session back after a break. Rebuild over the next 1 to 2 weeks.`;
-  } else if (repsHitTopNoRIR) {
-    reason = `You hit the top of the range. Next time, note how many reps you had left and we'll tell you whether to add weight.`;
+  } else if (toppedVeryHard) {
+    reason = `You've topped the range, but that session was a hard one. Keep this load until it feels smoother, then add weight.`;
+  } else if (toppedEffortUnknown) {
+    reason = `You've topped the range. Add weight when you're ready.`;
+  } else if (allTopped && allMaintain && effortSupportsLoad) {
+    // Only reachable when nothing carried a load to add (FR-C4-4: bodyweight
+    // sets hold instead of receiving a micro-load instruction).
+    reason = `You've topped the range. Add reps, slow the reps down, or move to a harder variation when you're ready.`;
   } else if (anyAnchored) {
     const n = targets.filter(t => t.anchored).length;
     reason = `${n === targets.length ? 'All' : n} set target${n > 1 ? 's' : ''} raised to match your best set so far (${bestPrevW}${units}), not just this set's own history.`;

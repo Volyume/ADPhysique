@@ -292,20 +292,22 @@ describe('getProgressionSuggestion, unit-aware increments (A2-043)', () => {
 });
 
 describe('computeSetTargets, unit-aware increments (A2-043)', () => {
-  const prev = (weight) => [{ weight, actualReps: 12, rir: 2, set_type: 'straight' }];
+  // FQ-3 (D96): the top-of-band unlock is session-level difficulty now, not
+  // the (fabricated) per-set rir. The increment laws under test are unchanged.
+  const prev = (weight) => [{ weight, actualReps: 12, set_type: 'straight' }];
 
   test('lbs compound adds 5lb at the top of the range', () => {
-    const { targets } = computeSetTargets(prev(185), 8, 12, 'lbs', { exerciseCategory: 'compound' });
+    const { targets } = computeSetTargets(prev(185), 8, 12, 'lbs', { exerciseCategory: 'compound', prevSessionDifficulty: 2 });
     expect(targets[0].weight).toBe(190);
   });
 
   test('kg compound adds 2.5kg', () => {
-    const { targets } = computeSetTargets(prev(80), 8, 12, 'kg', { exerciseCategory: 'compound' });
+    const { targets } = computeSetTargets(prev(80), 8, 12, 'kg', { exerciseCategory: 'compound', prevSessionDifficulty: 2 });
     expect(targets[0].weight).toBe(82.5);
   });
 
   test('explicit incrementKg still overrides the unit default', () => {
-    const { targets } = computeSetTargets(prev(185), 8, 12, 'lbs', { exerciseCategory: 'compound', incrementKg: 2 });
+    const { targets } = computeSetTargets(prev(185), 8, 12, 'lbs', { exerciseCategory: 'compound', incrementKg: 2, prevSessionDifficulty: 2 });
     expect(targets[0].weight).toBe(187);
   });
 });
@@ -340,8 +342,8 @@ describe('computeSetTargets, the anchor pass honours the 5% cap at low load (LS-
   // the same cap as the main pass.
   test('anchoring a light set caps the jump at 5% (+0.25 floor), not the full increment', () => {
     const { targets } = computeSetTargets(
-      [{ weight: 2.5, actualReps: 8, rir: 2 }, { weight: 5, actualReps: 12, rir: 2 }],
-      6, 12, 'kg',
+      [{ weight: 2.5, actualReps: 8 }, { weight: 5, actualReps: 12 }],
+      6, 12, 'kg', { prevSessionDifficulty: 2 }, // FQ-3: session-level unlock
     );
     // Set 1 (5kg) hit the top with headroom → 5 + min(inc, 5*0.05=0.25) = 5.25.
     // Set 0 anchors to that same capped 5.25, NOT to the old 6.25 (25% jump).

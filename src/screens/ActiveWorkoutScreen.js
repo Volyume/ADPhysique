@@ -36,7 +36,7 @@ import NowCard from '../components/workout/NowCard';
 import WorkoutBottomBar from '../components/workout/WorkoutBottomBar';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet } from '../lib/database';
+import { getAllCompletedSetsForExercise, getWorkoutById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet } from '../lib/database';
 import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
@@ -75,7 +75,14 @@ import { DEFAULT_BAR_KG } from '../lib/warmupRamp';
 import { warmupRamp } from '../lib/warmupRamp';
 import { shareSessionName } from '../lib/sessionShareData';
 
-const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 2 };
+// FQ-3 (D96): rir defaults to NULL. The per-set RIR picker is permanently
+// removed (D14/D19), so no set carries a genuine per-set effort rating, and
+// the old `rir: 2` default stamped a fabricated one onto every logged set -
+// which defeated the engine's own novice-overload guard. Per-set effort is
+// unknown unless genuinely known; the progression engine now reads the
+// SESSION-level difficulty rating instead (computeSetTargets'
+// prevSessionDifficulty).
+const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: null };
 
 // C5-P15-01 (D96): a warm-up is not a record attempt, and must not be one
 // either side of a comparison. Tolerates both the camelCase session shape
@@ -1258,6 +1265,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const prevPrev = lastN[1] || [];
       setPrevSets(prev);
       setAllTimeSets(allTime);
+      // FQ-3 (D96): the previous session's post-workout difficulty rating is
+      // the session-level effort evidence the progression engine consults at
+      // the top of the rep band. Null when the user skipped the rating (the
+      // engine then holds conservatively) - and thanks to C5-P17-01, a
+      // skipped rating IS stored as null, never as a fabricated 'moderate'.
+      let prevSessionDifficulty = null;
+      const prevWorkoutId = prev[0]?.workoutId ?? prev[0]?.workout_id ?? null;
+      if (prevWorkoutId) {
+        const prevWorkout = await getWorkoutById(prevWorkoutId).catch(() => null);
+        if (cancelled) return;
+        const rawSd = Number(prevWorkout?.sessionDifficulty ?? prevWorkout?.session_difficulty);
+        prevSessionDifficulty = Number.isFinite(rawSd) && rawSd >= 1 ? rawSd : null;
+      }
 
       // Ghost pre-fill: use the matching set index from last session
       const allLoggedAtLoad = workoutExercises[currentExerciseIndex]?.sets || [];
@@ -1292,6 +1312,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           incrementKg: exercise?.incrementKg || exercise?.increment_kg || null,
           prevPrevSets: prevPrev,
           layoffMultiplier,
+          prevSessionDifficulty,
         },
       );
       setSetTargets(computed);
@@ -1612,19 +1633,31 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id && isWorkingSetRow(s)),
       ];
       sessionSetsRef.current = [...sessionSetsRef.current, setData];
+      // FQ-7 (D96, founder ruling 2026-08-10): the first qualifying exposure
+      // to an exercise establishes the BASELINE, per exercise; records begin
+      // from the next comparable exposure. Without this, set 2 beating set 1
+      // inside the very first session was celebrated as a full personal
+      // record - a record against a baseline minutes old. Prior exposure
+      // means completed WORKING sets from a previous session (allTimeSets
+      // excludes this workout by id, and a swapped-in exercise loads its own
+      // history, so substitution can never inherit an unrelated baseline).
+      // The rule holds for a veteran account meeting a brand-new exercise.
+      // detectPR's maths and the three record types are untouched.
+      const hadPriorExposure = allTimeSets.some(isWorkingSetRow);
       // PR detection runs ONLY for weight-based schemas. duration/distance
       // reuse the weight field for time/distance, so running the weight x reps
       // 1RM/heaviest detector over them would report meaningless "PRs".
       // A warm-up never runs it at all (C5-P15-01).
-      const prs = isWeightReps && !isWarmupSet ? detectPR(setData, prHistory, exercise, units) : [];
-      if (prs.length > 0 && prHistory.length === 0) {
-        // Wave A A1: the first-ever set of an exercise beats nothing,
-        // detectPR compares against empty history, so "PERSONAL RECORD"
-        // would be a false claim in the very session that builds trust.
-        // Acknowledge the first honestly and quietly instead (PRCelebration
-        // renders its calm first-lift toast), and it never joins the
-        // session's PR list. detectPR itself is untouched: this set still
-        // becomes the baseline every later comparison uses.
+      const prs = isWeightReps && !isWarmupSet && hadPriorExposure
+        ? detectPR(setData, prHistory, exercise, units) : [];
+      if (isWeightReps && !isWarmupSet && !hadPriorExposure && prHistory.length === 0) {
+        // Wave A A1 (re-keyed under FQ-7): the first working set of a first
+        // exposure beats nothing, so "PERSONAL RECORD" would be a false
+        // claim in the very session that builds trust. Acknowledge it
+        // honestly and quietly instead (PRCelebration renders its calm
+        // first-lift toast), and it never joins the session's PR list.
+        // Later sets of this same first exposure are silent baseline
+        // material - records begin from the next comparable exposure.
         showPRCelebration({
           type: 'first_lift',
           weight: setData.weight,
@@ -1896,7 +1929,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           ...allTimeSets.filter(isWorkingSetRow),
           ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id && s.id !== editingSet.id && isWorkingSetRow(s)),
         ];
-        const editedPrs = detectPR({ weight, actualReps }, editPrHistory, exercise, units);
+        // FQ-7 (D96): the same per-exercise baseline rule as the log path -
+        // no record inside a first exposure, edited or not.
+        const editHadPriorExposure = allTimeSets.some(isWorkingSetRow);
+        const editedPrs = editHadPriorExposure
+          ? detectPR({ weight, actualReps }, editPrHistory, exercise, units) : [];
         if (editedPrs.length > 0 && editPrHistory.length > 0) {
           showPRCelebration({ ...editedPrs[0], exerciseName: exercise.name });
         }
