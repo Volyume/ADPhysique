@@ -1,7 +1,24 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ FRESH SESSION START HERE (2026-08-11, after Campaign 5) ★
+## ★ FRESH SESSION START HERE (2026-08-11, Campaign 6: long-term) ★
+
+**Campaign 6 (returning users, long-term personalisation, lapses,
+reinstall, multi-block) is IN FLIGHT on `claude/campaign6-long-term`
+from main `5764a947`. Live state:
+docs/long-term-audit-2026-08-11/CAMPAIGN-LOG.md + the taskboard
+Campaign 6 block. Order verbatim in the session scratchpad
+(c6-CAMPAIGN6-ORDER.txt). Rulings register as D97. Three long-term
+laws: memory must help never trap / no personalisation without
+provenance / lapse ≠ failure. 62 phases, four adversarial reviews,
+three permanent E2Es, 80-item handover. D91-24 characterise-only,
+D91-25 characterise-only (NO freshness algorithm), migrations 132-135
++ 049 NEVER run, trial law settled (never re-ask). Campaigns 1-5
+COMPLETE (D92-D96). The block below is the superseded post-Campaign-5
+record.**
+
+===============================================================================
+## ★ SUPERSEDED (2026-08-11, after Campaign 5) ★
 
 **Campaigns 1-5 are ALL COMPLETE and merged to main (D92/D93/D94/D95/
 D96). Campaign 5 (first-use, onboarding and first-block journey)

@@ -769,6 +769,45 @@ queue paused here for the founder review per D55.
 
 ## 1. IN FLIGHT
 
+### CAMPAIGN 6: RETURNING USERS, LONG-TERM PERSONALISATION, LAPSES,
+### REINSTALL AND MULTI-BLOCK EXPERIENCE (founder order 2026-08-11)
+- IN FLIGHT on `claude/campaign6-long-term` from main `5764a947`.
+- Purpose: Campaign 5 answered "does Volyume make sense when I
+  start?"; Campaign 6 answers "does Volyume still make sense after it
+  knows me?" — 30/90/180/365-day horizons, lapse/return, reinstall,
+  new device, two devices, plan/phase/tier changes, multi-block.
+  Central promise: PERSONALISATION SHOULD COMPOUND, but history must
+  never become false certainty.
+- Three long-term laws: MEMORY MUST HELP NEVER TRAP; NO
+  PERSONALISATION WITHOUT PROVENANCE; LAPSE ≠ FAILURE.
+- 62 phases: journey map (16 personas), personalisation maturity
+  model, six-block synthetic athlete + compounding invariants,
+  learnedRange longitudinal audit, D91-25 long-layoff
+  CHARACTERISATION (never implemented), D91-24 CHARACTERISATION
+  (never stealth-fixed), stale-history copy truth, plan switching,
+  exercise history/PR/progression/Apply over months, Repeat-vs-Adjust
+  sequences, manual overrides, coaching modes, calm mode, tier
+  transitions (Free↔Pro), trial-retry long-term, nutrition
+  90/180-day + phases + lapses, weight history, lapse/return matrix,
+  block state during absence, streaks, win-back, progress at scale,
+  historical edits, reinstall, migration 132/134/135 contracts
+  (NEVER run), adaptation_events (FR-C4-3), notification prefs
+  (FR-C4-2), two-device conflicts, weeks offline, timezone/DST,
+  scale/row-caps, local-only truth, partners, plan archives,
+  personalisation copy maturity, non-change explanations, long-term
+  safety, six-month Free/Pro, three permanent E2Es (180-day athlete /
+  90-day lapse / reinstall), four adversarial reviews, debt triage,
+  H4, legal copy gate, migration release table,
+  campaign6.longTerm.test.js, gates, 80-item handover. STOP after.
+- HARD: no production migration run; trial law settled (never
+  re-ask); Free has no coaching; no cardio/AI/social/gamification;
+  no auto transitions; Article 9/ED/billing/D92-11 untouched; no
+  travel mode (clock correctness only); no photo cloud sync.
+- RECOVERY: order verbatim in session scratchpad
+  c6-CAMPAIGN6-ORDER.txt; campaign docs in
+  docs/long-term-audit-2026-08-11/ (CAMPAIGN-LOG.md = running
+  state); rulings register as D97.
+
 ### ADAPTIVE MESOCYCLE BUILD (founder GO 2026-08-09) — 8 stages, test-first
 - Authority: docs/blueprint-adaptive-mesocycle-2026-08-09.md §3.9 + the
   founder's staged order (verbatim in session 2026-08-09): Stage 1
