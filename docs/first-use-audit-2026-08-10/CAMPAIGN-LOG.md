@@ -145,10 +145,25 @@ redesign. FR-1..5, FR-C4-1..11, FR-PW-1, H4 carried unresolved
     founder-verified 14+7 trial shape pinned untouched. Gate: lint
     clean, 815/816 suites (widgets/storage env flake only, passes
     standalone).
-  - NEXT: Reviews A/B in flight (REVIEW-A-new-user.md /
-    REVIEW-B-state.md), then Review C, Phase 41 synthetic journey,
-    Phase 45 release-truth audit, gates, docs close, merge to main,
-    64-item handover.
+  - REVIEW A (Phase 42) - DELIVERED and ACTIONED at eb374fba: 4
+    defects (RA-1 quiz-days ignored, RA-2 unjudged-hold receipt
+    claim, RA-3 Step-2-of-6 + dead step 1 paint, RA-4 unjustified
+    required name) + 6 improvements (RA-5 hand-off reorder, RA-6/9
+    glosses, RA-7 group title, RA-8 trial thread, RA-10 trial chip),
+    all landed with 10 pins; rulings in D96-RULINGS.md Review A
+    block. 5 CLEAN passes recorded.
+  - REVIEW B (Phase 43) - DELIVERED and ACTIONED at 40a7e360: 5
+    defects (RB-1 build-record early clear + hand-off Back exit, RB-2
+    coach-ready push wiped by restores, RB-3 no synchronous
+    activation guards + two-active-blocks interleave, RB-4 stale-tier
+    decision-card repaint, RB-5 silent library activation throw) and
+    latents RB-6/7/9/10/11/12 all landed with 6 pins; RB-8 accepted
+    residual, RB-13 no-action, RB-14 recorded/narrowed - rationale in
+    D96-RULINGS.md Review B block. 10 CLEAN passes; 11/14 matrix
+    items verified closed, the other 3 closed by RB-1's landing.
+  - NEXT: Review C in flight (REVIEW-C-experienced.md), then Phase 41
+    synthetic journey, Phase 45 release-truth audit, gates, docs
+    close, merge to main, 64-item handover.
   - FQ-5: APPROVED IN FULL by the founder ("Approve all") and LANDED
     by the lead - all six items as proposed, item 3 Option A, consent
     version stamp 2026-08-10 (stamp-only, no re-gating), locked
