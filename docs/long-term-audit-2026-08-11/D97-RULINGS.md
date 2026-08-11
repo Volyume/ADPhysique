@@ -393,3 +393,70 @@ final handover; if the founder's intended nine differ, the section is
 re-answered against them. Rationale: the mapping uses only the
 addendum's own stated frameworks, adds nothing, and keeps the
 deliverable auditable against its source.
+
+## D97-22 (Phases 25-31) — return/history audit rulings
+
+From AUDIT-RETURN-AND-HISTORY.md (29 findings, lead-verified):
+- **R-1 (HIGH) FIXED** at 1e90ae09: the weigh-in week window is
+  clock-anchored (nowMs) instead of newest-row-anchored, and a week
+  with no readings has a null delta. Strictly conservative (the data
+  hold can only fire more often). Verified hands-on: the caller read
+  IS row-limited (getMorningWeights(60)) and the degenerate 0-delta
+  was real. LAPSE-MATRIX.md's adaptive-TDEE "truthful" row is
+  superseded; corrected banner to be added when that file is next
+  touched.
+- **R-2 (MED-HIGH), fix ruled**: the Progress trend card must be
+  date-windowed like the coach now is (decision vs displayed truth
+  must agree). NEXT batch.
+- **R-4 (MED-HIGH), fix ruled**: a mid-accumulation leaver must not
+  resume inside an unearned recovery week; direction to be
+  implemented against the audit's 4x3 matrix. NEXT batch.
+- **R-5 (MED-HIGH), fix ruled**: "Your body's ready" at unbounded
+  weeksOverdue is an unsupportable claim plus urgency copy in the
+  lapse lane; replace with honest neutral copy. NEXT batch.
+- **R-3 FOUNDER-GATED (verbatim carried)**: buildWeighInSeries still
+  has no production caller (revert dd67bbf4) - ED-safety gates stay
+  blind to Body Metrics weigh-ins; added to the founder board beside
+  D97-3.
+- R-7 (device-global churn key), R-8 (Home weigh-in uneditable),
+  R-9 (ledger never rebuilds after history deletion; force exists
+  uncalled - attached to D97-3), R-10 (streak pause evaporates
+  outside the 12-week window): ruled fix/carry per the audit's
+  sketches, worked in the NEXT batches; remaining LATENT/IMPROVEMENT
+  items to Phase 57 triage.
+
+## D97-23 (Phases 32-38) — reinstall/sync audit rulings
+
+From AUDIT-REINSTALL-SYNC-OFFLINE.md (24 findings, key items
+lead-verified hands-on):
+- **S-1 (HIGH) FOUNDER QUESTION (ED-safety, Section 2 "stop and
+  ask")**: the ED-pattern flag has NO cloud writer anywhere (client
+  pull_only; the handler comment claiming the server writes it is
+  false; partner-cheer and migrate_123 READ the never-written table,
+  so their cloud-side ED suppressions can never fire). Verified
+  hands-on. Recommended design: a client push path on raise/clear,
+  fail-open on none... NO - fail CLOSED semantics preserved locally;
+  cloud becomes restorable. Not implemented without founder sign-off.
+- **S-14 + S-15 (HIGH) VERIFIED - migration 135 is DEFECTIVE AS
+  WRITTEN and must NOT be run**: its tie-break deletes the applied
+  receipt when the merely-viewed duplicate is newer, and after its
+  unique index a device holding a legacy coach-output id poisons its
+  entire 200-row batch upsert (atomic) with 23505 permanently.
+  MIGRATION-RELEASE-GATES.md corrected: 135 HELD pending a corrected
+  tie-break (applied wins outright, newest among applied) plus a
+  client-side re-id migration in the same build. Revised order:
+  134 -> 132 -> 133; 135 later.
+- **S-11 (HIGH) VERIFIED**: 132 is a hard gate for cross-device
+  adaptive truth (provenance AND the [mev,mrv] clamp band are lost
+  without it); stays in the run-next batch.
+- **S-2/S-3/S-8 (pref sync last-syncer-wins, no tombstones, dual
+  notification families)**: narrow fixes ruled IN PRINCIPLE within
+  the existing guarded-pref mechanism (extend stamps to the
+  reminder/quiet-hours keys); NO wholesale consolidation. NEXT
+  batch; FR-C4-2 remains the founder's architecture question.
+- **S-4 (adaptation_events restore lands in a zero-reader mirror)**:
+  product consequence now proven (revert memory, add-frequency cap,
+  Engine Log lost on reinstall); FR-C4-3 carried to the founder with
+  this evidence. **S-5 (offline delete queue parks + resurrection)**:
+  fix ruled, NEXT batch. S-6/S-7/S-17/S-19 + S-16's correction to
+  the gates record: recorded; triage.
