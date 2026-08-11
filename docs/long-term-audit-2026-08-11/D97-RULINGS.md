@@ -545,3 +545,34 @@ enumeration, not session memory.
   the gap is false-negative shaped (a user weighing in only via Body
   Metrics gets no rapid-loss protection); R-8's fix narrows the gap's
   edge (Home rows now correctable) but does not close it.
+
+## D97-24 (Phases 39-49) — the maturity and clock/scale audit rulings
+
+From AUDIT-MATURITY-AND-SIX-MONTHS.md (24 findings) and
+AUDIT-CLOCK-SCALE-LOCAL-PARTNER.md (30 findings), lead-verified:
+- **M-6 FIXED**: upwardCarryPrevented now reports the upstream
+  suppression/staleness veto of an earned climb (pairEarned split from
+  earned; numbers byte-identical; behavioural pins). B2's copy ruling,
+  when the founder makes it, now lands on a TRUE flag.
+- **M-13 FIXED**: BlockReflection's adaptive rationales Pro-gated,
+  mirroring the PlansScreen sibling (Section 2 binary gating).
+- **M-7 FIXED**: manual-held muscles credited to the user ("on your
+  own settings"), never to the coach. **M-8 FIXED**: the unjudged-hold
+  sentence is cause-agnostic and true for all five causes.
+  **M-9 FIXED**: no goal string opens "No changes needed." any more.
+- **M-21 CHARACTERISED ONLY**: the NEXT BLOCK → NUTRITION ADJUSTMENT
+  chain edge is unwired; any fix touches a calorie target (Section 2)
+  → founder queue. M-1/M-3 (frozen SOURCE_CLAUSE; evidenceBlocks
+  computed, never read) = the B1 copy candidate, founder-gated.
+  Remaining M IMPROVEMENT/LATENT rows → triage register.
+- **T-1 FIXED** (DST-proof streak grid), **T-2 FIXED** (local-midnight
+  block starts, local activation day), **T-8 FIXED** (memoised row
+  converter, measured 4.8x), **T-12/T-13 FIXED** (cheers newest-first
+  capped; the four watermarked pulls ascending+capped so truncation
+  becomes catch-up), **T-18 FIXED** (partner signals scoped to this
+  week), **T-16 FIXED** (photo impermanence stated with privacy).
+- **T-9 ACCEPTED**: R-13's measured verdict is ~6.6ms at year scale
+  (~7% of landing cost) → severity LOW, no further action beyond T-8.
+- T-17 (backup restores scan rows with dead URIs) and the remaining
+  T LATENT/IMPROVEMENT rows → triage register. Phase 42's copy gap is
+  closed by T-16; the rest of the local-only inventory came back CLEAN.
