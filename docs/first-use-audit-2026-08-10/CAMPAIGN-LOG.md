@@ -131,9 +131,23 @@ redesign. FR-1..5, FR-C4-1..11, FR-PW-1, H4 carried unresolved
     allocated base; unapplied proposals' volumeSignal gated on a
     persisted coach row for the week (safetyHold stays automatic);
     applyWiring.fq4.test.js pins the full law.
-  - NEXT: FQ-6.1/6.2/6.4 (lead billing, each with its written test
-    plan); then Phase 40/41 synthetic journey + test matrix
-    completion, Reviews A/B/C, release-truth audit, gates, close,
+  - FQ-6.1/6.2/6.4 - LANDED at 17298b24 (lead hands-on, billing test
+    plan fq6.billing.test.js, 12 pins): 6.1 pendingCascade retry
+    queue (pendingConsent shape, drained by the sync runner, network
+    vs definitive split, idempotent start_cascade, never invents a
+    local entitlement, calm FirstRun note while queued); 6.2 one
+    authoritative trial end date (cascade.trialEndsAtMs/
+    trialEndsLabel; daysRemaining, Account row and Home banner all
+    read it); 6.4 fake local "Switch to Free" (setTier('free'))
+    replaced by truthful "Manage subscription" opening the platform
+    subscription surface with the real expiry semantics stated;
+    SubscriptionPolicy pointer matched. Product IDs and the
+    founder-verified 14+7 trial shape pinned untouched. Gate: lint
+    clean, 815/816 suites (widgets/storage env flake only, passes
+    standalone).
+  - NEXT: Reviews A/B in flight (REVIEW-A-new-user.md /
+    REVIEW-B-state.md), then Review C, Phase 41 synthetic journey,
+    Phase 45 release-truth audit, gates, docs close, merge to main,
     64-item handover.
   - FQ-5: APPROVED IN FULL by the founder ("Approve all") and LANDED
     by the lead - all six items as proposed, item 3 Option A, consent
