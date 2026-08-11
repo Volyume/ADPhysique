@@ -295,3 +295,12 @@ describe('R-2 (D97-22): the displayed trend shares the decision trend\'s clock',
     expect(src).toMatch(/const ewmaData = computeEWMA\(windowed\);/);
   });
 });
+
+describe('R-15 (D97-22): the year recap cannot headline an inflated cluster-row max', () => {
+  test('the Year of Lifts PR loop applies the shared e1RM eligibility rule', () => {
+    const src = read('lib/database.js');
+    const fn = src.slice(src.indexOf('const bestByExercise = new Map();'));
+    expect(fn.slice(0, 700)).toMatch(/if \(!isE1rmEligibleRow\(s\)\) continue;/);
+    expect(src).toMatch(/import \{ calculate1RM, allocateExerciseVolume, isE1rmEligibleRow \} from '\.\/algorithms';/);
+  });
+});

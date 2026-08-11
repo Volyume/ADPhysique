@@ -50,6 +50,9 @@ export function buildReadinessSummary({
   deloadSuggestion = null,
   fatigueHistory = [],
   lastSession = null,
+  // C6 R-6: injectable clock for the recency bound; defaults keep every
+  // existing caller unchanged. Pure - read once, never re-read.
+  nowMs = Date.now(),
 } = {}) {
   // Nothing to say without an active training block: this mirrors the
   // chip's existing visibility rule, only the content composes further.
@@ -71,11 +74,20 @@ export function buildReadinessSummary({
   // Priority 3: the soreness/sleep/energy facts captured on the pre-workout
   // prompt last time out. Today these are written and never read back to
   // the user anywhere; surfacing the low readings here closes that loop.
+  // C6 R-6 (D97-22): "Last time out ... worth listening to that TODAY"
+  // is a present-tense claim, and lastSession is simply the newest
+  // completed workout at ANY age - after a six-month gap it narrated
+  // ancient soreness as current state (a fabricated recovery assumption,
+  // lapse law). The caution now requires the session to fall inside the
+  // app's standing 14-day detraining boundary; an undated session cannot
+  // prove recency and is treated as stale.
+  const lastSessionRecent = Number.isFinite(Number(lastSession?.startedAt))
+    && (nowMs - Number(lastSession.startedAt)) <= 14 * 86400000;
   const bits = [];
   if (lastSession?.soreness24hBefore != null && lastSession.soreness24hBefore >= HIGH_SORENESS) bits.push('sore');
   if (lastSession?.sleepQuality != null && lastSession.sleepQuality <= LOW_SLEEP_OR_ENERGY) bits.push('short on sleep');
   if (lastSession?.energyScore != null && lastSession.energyScore <= LOW_SLEEP_OR_ENERGY) bits.push('low on energy');
-  if (bits.length > 0) {
+  if (bits.length > 0 && lastSessionRecent) {
     return { tone: 'caution', line: `Last time out you were ${joinNatural(bits)}. Worth listening to that today.` };
   }
 

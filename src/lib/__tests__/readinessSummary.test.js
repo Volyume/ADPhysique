@@ -36,7 +36,7 @@ describe('buildReadinessSummary', () => {
       currentMesoWeek: { ...BASE_MESO, isDeload: true },
       deloadSuggestion: { deload: true },
       fatigueHistory: [{ fatigueLevel: 5 }, { fatigueLevel: 5 }],
-      lastSession: { soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
+      lastSession: { startedAt: Date.now(), soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
     });
     expect(result).toEqual({ tone: 'recover', line: 'Recovery week, pull effort back.' });
   });
@@ -46,7 +46,7 @@ describe('buildReadinessSummary', () => {
       currentMesoWeek: BASE_MESO,
       deloadSuggestion: { deload: true, reasons: ['Reps trending down'] },
       fatigueHistory: [{ fatigueLevel: 5 }, { fatigueLevel: 5 }],
-      lastSession: { soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
+      lastSession: { startedAt: Date.now(), soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
     });
     expect(result).toEqual({ tone: 'recover', line: 'Recent training signals point towards easing off soon.' });
     // Worded distinctly from the top banner's own copy.
@@ -58,7 +58,7 @@ describe('buildReadinessSummary', () => {
       currentMesoWeek: BASE_MESO,
       deloadSuggestion: null,
       fatigueHistory: [],
-      lastSession: { soreness24hBefore: 3, sleepQuality: null, energyScore: null },
+      lastSession: { startedAt: Date.now(), soreness24hBefore: 3, sleepQuality: null, energyScore: null },
     });
     expect(result).toEqual({ tone: 'caution', line: 'Last time out you were sore. Worth listening to that today.' });
   });
@@ -68,7 +68,7 @@ describe('buildReadinessSummary', () => {
       currentMesoWeek: BASE_MESO,
       deloadSuggestion: null,
       fatigueHistory: [],
-      lastSession: { soreness24hBefore: null, sleepQuality: 2, energyScore: 2 },
+      lastSession: { startedAt: Date.now(), soreness24hBefore: null, sleepQuality: 2, energyScore: 2 },
     });
     expect(result).toEqual({
       tone: 'caution',
@@ -81,7 +81,7 @@ describe('buildReadinessSummary', () => {
       currentMesoWeek: BASE_MESO,
       deloadSuggestion: null,
       fatigueHistory: [],
-      lastSession: { soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
+      lastSession: { startedAt: Date.now(), soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
     });
     expect(result.line).toBe('Last time out you were sore, short on sleep and low on energy. Worth listening to that today.');
   });
@@ -176,5 +176,44 @@ describe('buildReadinessSummary', () => {
       expect(result.line).not.toMatch(/red|amber|green light/i);
       expect(result.line).not.toMatch(/—/); // no em dash, British-English house style
     }
+  });
+});
+
+describe('C6 R-6 (D97-22): the caution is bounded to a recent session', () => {
+  const { buildReadinessSummary } = require('../readinessSummary');
+  const BASE = { weekType: 'accumulation', weekIndex: 2, isDeload: false };
+
+  test('a months-old sore session is not narrated as current state', () => {
+    const nowMs = Date.now();
+    const result = buildReadinessSummary({
+      currentMesoWeek: BASE,
+      deloadSuggestion: null,
+      fatigueHistory: [],
+      lastSession: { startedAt: nowMs - 180 * 86400000, soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
+      nowMs,
+    });
+    expect(result?.line ?? '').not.toMatch(/Last time out/);
+  });
+
+  test('an undated session cannot prove recency and is treated as stale', () => {
+    const result = buildReadinessSummary({
+      currentMesoWeek: BASE,
+      deloadSuggestion: null,
+      fatigueHistory: [],
+      lastSession: { soreness24hBefore: 3, sleepQuality: null, energyScore: null },
+    });
+    expect(result?.line ?? '').not.toMatch(/Last time out/);
+  });
+
+  test('a session inside 14 days still cautions exactly as before', () => {
+    const nowMs = Date.now();
+    const result = buildReadinessSummary({
+      currentMesoWeek: BASE,
+      deloadSuggestion: null,
+      fatigueHistory: [],
+      lastSession: { startedAt: nowMs - 3 * 86400000, soreness24hBefore: 3, sleepQuality: null, energyScore: null },
+      nowMs,
+    });
+    expect(result).toEqual({ tone: 'caution', line: 'Last time out you were sore. Worth listening to that today.' });
   });
 });

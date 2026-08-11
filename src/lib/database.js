@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { generateInsights } from './insightsEngine';
-import { calculate1RM, allocateExerciseVolume } from './algorithms';
+import { calculate1RM, allocateExerciseVolume, isE1rmEligibleRow } from './algorithms';
 import { pickBestLift } from './bestLift';
 import { logError, logWarn } from './errorLog';
 import { localDayKey, localWeekStartMs, localWeekEndMs } from './dayKey';
@@ -6533,6 +6533,12 @@ export async function getYearOfLiftsData(userId, yearMs = null) {
   const bestByExercise = new Map();
   for (const s of sets) {
     if (!s.exercise_name) continue;
+    // C6 R-15 (D97-22): the shared e1RM eligibility rule (D97-18) applies
+    // here too - a myo-reps/rest-pause row's actual_reps is a SUM of
+    // efforts, so it could headline the recap with an inflated estimated
+    // max the live detector would refuse. Tonnage/set counts above keep
+    // every working set; only the record read is gated.
+    if (!isE1rmEligibleRow(s)) continue;
     const e1rm = calculate1RM(s.weight || 0, s.actual_reps || 0);
     if (!e1rm) continue;
     const prev = bestByExercise.get(s.exercise_name);
