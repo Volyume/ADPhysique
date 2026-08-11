@@ -209,7 +209,7 @@ describe('PHASES 9 + 44: plan lifecycle laws (D97-11..17)', () => {
   test('P44-05: an abandoned block ends the day the user switches away', () => {
     const src = read('lib/database.js');
     const act = src.slice(src.indexOf('export async function activatePlanWithBlock'));
-    expect(act.slice(0, 2200)).toMatch(/SET end_date = date\('now'\)/);
+    expect(act.slice(0, 2800)).toMatch(/SET end_date = date\('now'\)/); // window widened for the T-2 comment
   });
 
   test('P9-06: a mature user is never told they lack personal history', () => {
@@ -417,5 +417,47 @@ describe('M-13 (D97-24): the reflection ledger story is Pro-gated like its Plans
     expect(src).toMatch(/setLedgerRows\(tierNow === 'pro' \? buildLedgerReflectionRows\(ledger\) : \[\]\)/);
     // And the sibling gate it mirrors stays in place.
     expect(read('screens/PlansScreen.js')).toMatch(/rows: tier === 'pro' \? allRows\.slice\(0, 4\) : \[\]/);
+  });
+});
+
+describe('T-lane fixes (D97-24): clock, caps, partner truth, photo honesty', () => {
+  test('T-1: the streak week grid normalises every key through the true local Monday', () => {
+    const src = read('hooks/useWeeklyStreak.js');
+    expect(src).toMatch(/localWeekStartMs\(currentWeekStart - i \* WEEK_MS \+ 3 \* 86400000\)/);
+  });
+
+  test('T-2: date-only block starts anchor at LOCAL midnight on read and store the LOCAL day on write', () => {
+    const src = read('lib/mesocycle.js');
+    expect(src).toMatch(/function parseBlockStartMs\(v\)/);
+    expect((src.match(/parseBlockStartMs\(/g) || []).length).toBeGreaterThanOrEqual(4);
+    expect(read('lib/database.js')).toMatch(/store the LOCAL activation day/);
+  });
+
+  test('T-8: the row converter memoises keys (measured hot path)', () => {
+    const src = read('lib/database.js');
+    expect(src).toMatch(/const _camelKeyCache = new Map\(\);/);
+    expect(src).toMatch(/const camelKey = _camelKey\(key\);/);
+  });
+
+  test('T-13: the four watermarked pulls order ascending and cap, so truncation becomes catch-up', () => {
+    const src = read('lib/sync.js');
+    const hits = (src.match(/\.order\('updated_at', \{ ascending: true \}\)\.limit\(1000\)/g) || []).length;
+    expect(hits).toBeGreaterThanOrEqual(4);
+  });
+
+  test('T-12: partner cheers pull newest-first with a cap', () => {
+    expect(read('lib/sync/tables/partners.js')).toMatch(/\.order\('created_at', \{ ascending: false \}\)\.limit\(200\)/);
+  });
+
+  test('T-18: both partner week signals are scoped to THIS week', () => {
+    const src = read('hooks/usePartners.js');
+    expect(src).toMatch(/getPartnerWeekSignal\(partnership\.id, partnerId, thisWeek\)/);
+    expect(src).toMatch(/getPartnerWeekSignal\(partnership\.id, userId, thisWeek\)/);
+  });
+
+  test('T-16: the photo FAQ states impermanence alongside privacy', () => {
+    const src = read('screens/SettingsFaqScreen.js');
+    expect(src).toMatch(/do not come back after a reinstall or on a new phone/);
+    expect(src).toMatch(/The one exception is progress photo and scan image files/);
   });
 });

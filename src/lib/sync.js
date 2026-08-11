@@ -1819,7 +1819,13 @@ async function _pullUserInsights(sb, supabaseUserId) {
 async function _pullExerciseUserNotes(sb, supabaseUserId) {
   try {
     const wm = await getPullWatermark(supabaseUserId, 'exercise_user_notes');
-    let q = sb.from('exercise_user_notes').select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
+    let q = sb.from('exercise_user_notes').select('*').eq('user_id', supabaseUserId).is('deleted_at', null)
+      .order('updated_at', { ascending: true }).limit(1000);
+    // C6 T-13 (D97-24): ascending order + a page cap turn PostgREST's
+    // silent 1000-row truncation into honest incremental catch-up - the
+    // watermark only ever advances to the max RECEIVED updated_at, and
+    // with ascending order every undelivered row sits ABOVE it, so the
+    // next cycle collects it instead of skipping it for ever.
     if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
     const { data, error } = await q;
     if (error) { logPgErr('sync._pullExerciseUserNotes', error); return 0; }
@@ -2082,7 +2088,13 @@ async function _pullUserPrefs(sb, supabaseUserId) {
 async function _pullProgrammes(sb, supabaseUserId) {
   try {
     const wm = await getPullWatermark(supabaseUserId, 'programmes');
-    let q = sb.from('programmes').select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
+    let q = sb.from('programmes').select('*').eq('user_id', supabaseUserId).is('deleted_at', null)
+      .order('updated_at', { ascending: true }).limit(1000);
+    // C6 T-13 (D97-24): ascending order + a page cap turn PostgREST's
+    // silent 1000-row truncation into honest incremental catch-up - the
+    // watermark only ever advances to the max RECEIVED updated_at, and
+    // with ascending order every undelivered row sits ABOVE it, so the
+    // next cycle collects it instead of skipping it for ever.
     if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
     const { data, error } = await q;
     if (error) { logWarn('sync._pullProgrammes', error.message); return 0; }
@@ -2159,7 +2171,13 @@ async function _pullRoutinesAndExercises(sb, supabaseUserId) {
 async function _pullMesocycles(sb, supabaseUserId) {
   try {
     const wm = await getPullWatermark(supabaseUserId, 'mesocycles');
-    let mq = sb.from('mesocycles').select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
+    let mq = sb.from('mesocycles').select('*').eq('user_id', supabaseUserId).is('deleted_at', null)
+      .order('updated_at', { ascending: true }).limit(1000);
+    // C6 T-13 (D97-24): ascending order + a page cap turn PostgREST's
+    // silent 1000-row truncation into honest incremental catch-up - the
+    // watermark only ever advances to the max RECEIVED updated_at, and
+    // with ascending order every undelivered row sits ABOVE it, so the
+    // next cycle collects it instead of skipping it for ever.
     if (wm > 0) mq = mq.gte('updated_at', isoFromMs(wm));
     const { data: mesos, error: mErr } = await mq;
     if (mErr) { logWarn('sync._pullMesocycles', mErr.message); return 0; }
@@ -2212,7 +2230,13 @@ async function _pullMorningWeights(sb, supabaseUserId) {
 async function _pullCoachOutputs(sb, supabaseUserId) {
   try {
     const wm = await getPullWatermark(supabaseUserId, 'coach_outputs');
-    let q = sb.from('coach_outputs').select('*').eq('user_id', supabaseUserId).is('deleted_at', null);
+    let q = sb.from('coach_outputs').select('*').eq('user_id', supabaseUserId).is('deleted_at', null)
+      .order('updated_at', { ascending: true }).limit(1000);
+    // C6 T-13 (D97-24): ascending order + a page cap turn PostgREST's
+    // silent 1000-row truncation into honest incremental catch-up - the
+    // watermark only ever advances to the max RECEIVED updated_at, and
+    // with ascending order every undelivered row sits ABOVE it, so the
+    // next cycle collects it instead of skipping it for ever.
     if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
     const { data, error } = await q;
     if (error) { logWarn('sync._pullCoachOutputs', error.message); return 0; }

@@ -105,7 +105,7 @@ export function localDaysElapsed(startMs, endMs) {
  */
 export function getCurrentMesoWeek(startDateMs, experience = 'intermediate', nowMs = Date.now(), { wrap = true } = {}) {
   const schedule = getMesoSchedule(experience);
-  const start = typeof startDateMs === 'string' ? new Date(startDateMs).getTime() : startDateMs;
+  const start = parseBlockStartMs(startDateMs);
   // CALC-8: an invalid start (NaN / undefined) used to propagate NaN out as the
   // week number. Fall back to week 1 instead.
   if (!Number.isFinite(start)) return 1;
@@ -148,8 +148,21 @@ export function getCurrentMesoWeek(startDateMs, experience = 'intermediate', now
  * @param {number} [nowMs] - epoch ms to treat as "now"
  * @returns {number} 1-based week index, clamped to [1, plannedWeeks]
  */
+// C6 T-2 (D97-24): a stored date-ONLY string ('YYYY-MM-DD') is the block's
+// calendar start day and must anchor at LOCAL midnight - new Date(str)
+// parses it as UTC midnight, which lands 19:00-20:00 the PREVIOUS local
+// day in the Americas (week ticking a day early) and one hour into the
+// day under BST (an hour late at midnight). Full ISO timestamps keep
+// their instant. Every status/week read in this module shares this rule.
+function parseBlockStartMs(v) {
+  if (typeof v !== 'string') return v;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime();
+  return new Date(v).getTime();
+}
+
 export function getCurrentBlockWeekIndex(startDateMs, plannedWeeks, nowMs = Date.now()) {
-  const start = typeof startDateMs === 'string' ? new Date(startDateMs).getTime() : startDateMs;
+  const start = parseBlockStartMs(startDateMs);
   const totalWeeks = Number.isFinite(plannedWeeks) && plannedWeeks > 0 ? Math.round(plannedWeeks) : 1;
   if (!Number.isFinite(start)) return 1;
   const daysElapsed = localDaysElapsed(start, nowMs);
@@ -455,7 +468,7 @@ export function applyTimeCrunch(exercises, targetMinutes, estimateFn, options = 
  *     post-recovery week), so copy can say how long the decision has waited.
  */
 export function getBlockStatus(startDateMs, plannedWeeks, nowMs = Date.now()) {
-  let start = typeof startDateMs === 'string' ? new Date(startDateMs).getTime() : (startDateMs ?? nowMs);
+  let start = parseBlockStartMs(startDateMs ?? nowMs);
   // Wave-3 review: mirror getCurrentMesoWeek's CALC-8 guard. An unparseable
   // stored start date used to propagate NaN into currentWeek/weeksOverdue
   // ('Week NaN' in any consumer). Treat it as a block starting now (week 1).

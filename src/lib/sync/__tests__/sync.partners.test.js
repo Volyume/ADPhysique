@@ -128,7 +128,10 @@ describe('pullPartners', () => {
           return { select: () => ({ in: () => Promise.resolve({ data: signals, error: null }) }) };
         }
         if (table === 'partner_cheers') {
-          return { select: () => ({ in: () => Promise.resolve({ data: cheers, error: null }) }) };
+          // T-12 (D97-24): the pull is newest-first + capped now; the stub
+          // grew the chained order().limit() shape, same resolved data.
+          const resolved = Promise.resolve({ data: cheers, error: null });
+          return { select: () => ({ in: () => ({ order: () => ({ limit: () => resolved }) }) }) };
         }
         if (table === 'partner_shared_blocks') {
           return { select: () => ({ in: () => Promise.resolve(blocksError ? { data: null, error: blocksError } : { data: blocks, error: null }) }) };

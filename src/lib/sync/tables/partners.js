@@ -164,8 +164,15 @@ export async function pullPartners(sb, { userId } = {}) {
       }
 
       // 3. Cheers for active pairs.
+      // C6 T-12 (D97-24): unordered + unpaginated hit PostgREST's
+      // 1000-row cap in about 1.4 years of cheering, after which NEW
+      // cheers stopped reliably arriving (arbitrary rows returned).
+      // Newest-first + a cap guarantees fresh cheers always land; the
+      // cheer surfaces read recency (last received, allowance), never
+      // deep history.
       const { data: cheers, error: cErr } = await sb.from('partner_cheers')
-        .select('*').in('pair_id', activePairIds);
+        .select('*').in('pair_id', activePairIds)
+        .order('created_at', { ascending: false }).limit(200);
       if (!cErr) {
         for (const row of (cheers || [])) {
           try { await db.upsertPartnerCheerFromCloud(row); applied += 1; } catch (e) {
