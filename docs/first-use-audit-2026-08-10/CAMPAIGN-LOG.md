@@ -82,11 +82,23 @@ redesign. FR-1..5, FR-C4-1..11, FR-PW-1, H4 carried unresolved
     that stack) + wellbeing.js header + ONBOARDING_SEQUENCE_LOCKED
     status banner; PRIVACY_CONSENT_LOCKED's line was corrected in the
     FQ-5 landing.
-  - Wave B (entry/account) - COMPLETE, lead diff review PASSED
-    (failsafe fail-closed, idempotent build record, auth copy module);
-    LANDING HELD until Wave C reports because both waves extend the
-    shared campaign5.firstUse.test.js - B and C land in sequence over
-    the settled tree.
+  - Wave B (entry/account) - LANDED at 0aa31e79 (11 files; all 12
+    ruled items; lead review passed).
+  - Wave C (plan/block/Home/workout) - LANDED at 7074f2ee (37 files;
+    all ruled items; C5-P12-03 correctly routed to Wave E; two
+    C5-P10-01 activation paths in Wave B files noted as remaining -
+    FreeStarter and ProSetupComplete still lack the block sentence,
+    carried to Wave E; 60 new pins + 12 same-meaning re-anchors).
+    NOTE: Wave C was interrupted mid-flight by a foreground turn and
+    resumed via SendMessage with context intact - the resume completed
+    all work and the gate ran green three times. Diagnostic from the
+    wave: a stale jest cache in /tmp/jest_0 caused an intermittent
+    widgets/storage.test.js flake unrelated to any diff; cleared with
+    npx jest --clearCache. If CI flakes on that suite, same cure.
+  - NEXT: dispatch Wave D (week/check-in/nutrition/notifications) +
+    Wave E (audiences/density/hierarchy + the two carried activation
+    sentences) as the next pair; FQ-2/3/7/4/6 implementations follow
+    per the recorded sequence.
   - FQ-5: APPROVED IN FULL by the founder ("Approve all") and LANDED
     by the lead - all six items as proposed, item 3 Option A, consent
     version stamp 2026-08-10 (stamp-only, no re-gating), locked
