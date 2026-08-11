@@ -8,6 +8,33 @@ docs/TASKBOARD.md. Rulings register as **D97**
 (D97-RULINGS.md in this folder + register blocks in
 docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md).
 
+## FOUNDER ADDENDUM (2026-08-11, mid-campaign): THE PERSONALISATION DIVIDEND
+
+Governing product law added to THIS campaign (no restart, no rescope;
+verbatim in the scratchpad, `c6-ADDENDUM-PERSONALISATION-DIVIDEND.txt`).
+Core: Volyume should become OBSERVABLY more individual as evidence
+accumulates - the user should be able to SEE that their history made
+the coaching more specific, through deterministic, provenance-provable
+behaviour only. Five permanent promises frame the audit: REMEMBER ME,
+RESPOND TO ME (every recurring input classified A-E with effects
+proven), HELP ME IMPROVE (specificity, never flattery), RESPECT MY
+CHOICES (autonomy IS the retention model), SHOW ME WHY (consequences,
+never internals). Non-change states must never collapse to "No
+changes" (working / insufficient / user-choice / safety / stimulus /
+exact-repeat are distinct). Anti-anthropomorphism and
+anti-manipulative-retention laws bind all new copy. New deliverables:
+PERSONALISATION-DIVIDEND.md, CHOICE-MEMORY.md,
+RELATIONSHIP-MOMENTS.md, WHAT-VOLYUME-HAS-LEARNED-FEASIBILITY.md
+(investigate only - verdict A/B/C/D, never built without a separate
+founder ruling), REVIEW-E-relationship.md (fourth+1 adversarial
+review: the nine-month paying user, twelve questions); the six-block
+and 180-day reports gain relationship sections; relationship-level
+invariants join the campaign 6 suites; handover items 81-96 append to
+the 80-item list (now 96 items, incl. the honest long-term loyalty
+verdict). Personalisation saturation restraint: a handful of
+high-value moments, never sprayed copy. Evidence-age language tiers
+apply to every relationship claim; D91-25 stays unimplemented.
+
 ## Binding laws for this campaign
 
 Three long-term laws: (1) **MEMORY MUST HELP, NEVER TRAP** — history
@@ -77,9 +104,14 @@ triage carries every open item; nothing is silently decided.
 - NEXT: land the in-flight audit pair (lead-review, action findings);
   then agent pairs for 15-21 (modes/tier/trial), 25-31 (weight/lapse/
   streak/win-back/progress/edits), 32-38 (reinstall/migration
-  contracts/sync/offline), 39-43 + 45-46 + 48-49; then E2Es (50-52),
-  Reviews A-D (53-56), debt triage (57), H4/legal (58-59), campaign6
-  gates (62), docs close, merge to main, 80-item handover.
+  contracts/sync/offline), 39-43 + 45-46 + 48-49, PLUS the addendum
+  lanes (CHOICE-MEMORY.md, RELATIONSHIP-MOMENTS.md,
+  WHAT-VOLYUME-HAS-LEARNED-FEASIBILITY.md as agent audits;
+  PERSONALISATION-DIVIDEND.md + the six-block/180-day relationship
+  report expansions + relationship invariant pins as lead work); then
+  E2Es (50-52), Reviews A-E (53-56 + the addendum's Review E), debt
+  triage (57), H4/legal (58-59), campaign6 gates (62), docs close,
+  merge to main, 96-item handover (80 + addendum items 81-96).
 
 ## Wave recovery paths
 

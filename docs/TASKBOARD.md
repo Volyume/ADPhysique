@@ -803,8 +803,19 @@ queue paused here for the founder review per D55.
   re-ask); Free has no coaching; no cardio/AI/social/gamification;
   no auto transitions; Article 9/ED/billing/D92-11 untouched; no
   travel mode (clock correctness only); no photo cloud sync.
+- FOUNDER ADDENDUM (2026-08-11 mid-campaign): THE PERSONALISATION
+  DIVIDEND + long-term coaching relationship - governing law for this
+  campaign (verbatim in scratchpad
+  c6-ADDENDUM-PERSONALISATION-DIVIDEND.txt; summarised at the top of
+  the campaign log). Five promises (remember/respond/improve/respect/
+  show-why), muscle-specific dividend proof Block 1->3->6, non-change
+  states never collapse, anti-anthropomorphism + anti-manipulative-
+  retention laws, four new docs + Review E, relationship invariants in
+  the suites, handover grows to 96 items. Integrated, not a new
+  campaign; "What Volyume has learned" surface is feasibility-audit
+  ONLY (verdict A/B/C/D, separate founder ruling to build).
 - RECOVERY: order verbatim in session scratchpad
-  c6-CAMPAIGN6-ORDER.txt; campaign docs in
+  c6-CAMPAIGN6-ORDER.txt + the addendum file above; campaign docs in
   docs/long-term-audit-2026-08-11/ (CAMPAIGN-LOG.md = running
   state); rulings register as D97.
 
