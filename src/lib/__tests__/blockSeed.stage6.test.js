@@ -102,6 +102,57 @@ describe('what makes a ledger entry valid', () => {
   });
 });
 
+describe('C6 P-6 (D97-20, ruling (a)): repeat keeps its promise when the block cannot be judged', () => {
+  // Before this ruling, an unjudgeable entry fell through to the learned
+  // band for a REPEAT intent too - so the button promising "the same
+  // weekly set targets as last time" delivered multi-block learned
+  // volume, including to Free, whose only reachable intent is repeat.
+  test('an INSUFFICIENT_DATA entry still repeats the observed numbers, never the learned band', () => {
+    const out = seed({
+      ledgerEntry: { ...LEDGER_ENTRY, classification: 'INSUFFICIENT_DATA' },
+      intent: 'repeat',
+      learnedRange: { floor: 9, ceiling: 16, isLearned: true },
+    });
+    expect(out).toEqual({ startSets: 10, peakSets: 16, source: 'ledger' });
+  });
+
+  test('deferredToManual and missing proposal numbers repeat the observed block too', () => {
+    const deferred = seed({
+      ledgerEntry: { ...LEDGER_ENTRY, proposal: { ...LEDGER_ENTRY.proposal, deferredToManual: true } },
+      intent: 'repeat',
+    });
+    expect(deferred).toEqual({ startSets: 10, peakSets: 16, source: 'ledger' });
+    const noNumbers = seed({
+      ledgerEntry: { ...LEDGER_ENTRY, proposal: { startSets: null, peakSets: null, stimulusChange: null, deferredToManual: false } },
+      intent: 'repeat',
+      learnedRange: { floor: 9, ceiling: 16, isLearned: true },
+    });
+    expect(noNumbers).toEqual({ startSets: 10, peakSets: 16, source: 'ledger' });
+  });
+
+  test("an ADJUST intent on an unjudgeable entry still falls back to the learned band (founder e2e ruling unchanged)", () => {
+    const out = seed({
+      ledgerEntry: { ...LEDGER_ENTRY, classification: 'INSUFFICIENT_DATA' },
+      intent: 'adjust',
+      learnedRange: { floor: 9, ceiling: 16, isLearned: true },
+    });
+    expect(out.source).toBe('learned');
+  });
+
+  test('a repeat with no observed numbers on the entry falls through exactly as before', () => {
+    const out = seed({
+      ledgerEntry: {
+        classification: 'INSUFFICIENT_DATA',
+        observed: null,
+        proposal: { startSets: null, peakSets: null, stimulusChange: null, deferredToManual: false },
+      },
+      intent: 'repeat',
+      learnedRange: { floor: 9, ceiling: 16, isLearned: true },
+    });
+    expect(out.source).toBe('learned');
+  });
+});
+
 describe('advisor button semantics (§3.5)', () => {
   test("'repeat' forces a TRUE repeat from the ledger's observed numbers, not the proposal", () => {
     const out = seed({ ledgerEntry: LEDGER_ENTRY, intent: 'repeat' });

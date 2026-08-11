@@ -148,6 +148,26 @@ export function resolveSeedRange({
     return out;
   }
 
+  // 2b. C6 P-6 (D97-20, ruling (a)): repeat means the block the user just
+  // ran, even when it could not be judged. Before this, an unjudgeable
+  // entry (INSUFFICIENT_DATA / deferredToManual / missing numbers) fell
+  // through to the learned band for a REPEAT intent too, so the button
+  // promising "the same set targets as last time" delivered multi-block
+  // learned volume - including to Free, whose only reachable intent is
+  // repeat. The entry echoes the observed numbers even when it cannot
+  // judge them (interBlock keeps them on the record); for a repeat they
+  // ARE the promise, so they speak before any learned/profile/research
+  // step. No deload sizing here - that stays exclusive to a judgeable
+  // ledger seed, and a true repeat keeps its flat recovery week anyway.
+  if (intent === 'repeat') {
+    const repeatStart = num(observed?.startSets, null);
+    const repeatPeak = num(observed?.plannedPeak, null);
+    if (repeatStart != null && repeatStart > 0) {
+      const { s, p } = clamp(repeatStart, repeatPeak ?? repeatStart);
+      return { startSets: s, peakSets: p, source: 'ledger' };
+    }
+  }
+
   // 3. The learned band — skipped under suppression (its ceiling may sit
   // above the research default, and a flagged user gets the conservative
   // ramp; the band itself is memory and survives untouched).
