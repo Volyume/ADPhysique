@@ -77,39 +77,39 @@ BLOCKED-LAW (explicit campaign law forbids change).
 | 50 | 180-day athlete E2E | COMPLETE-IMPL | campaign6.athlete180.test.js (11 tests, 517c2cc3) - deterministic, real chain, all commissioned beats; ATHLETE-180-REPORT.md reconciled to it |
 | 51 | 90-day lapse E2E | COMPLETE-IMPL | campaign6.lapse90.test.js (11 tests, 6700a9f7) |
 | 52 | Reinstall E2E | COMPLETE-IMPL | campaign6.reinstall.test.js: real fresh DB via real init (full schema + 72 migrations on real SQLite), real appliers, 9 pins incl. tombstones, receipts, ledger protection, photo local-only |
-| 53 | Review A (six-month athlete) | NOT STARTED | Fresh agent, exact commissioned questions from the order |
-| 54 | Review B (returning user) | NOT STARTED | Fresh agent, exact commissioned questions |
-| 55 | Review C (reinstall/two devices) | NOT STARTED | Fresh agent, exact commissioned questions |
-| 56 | Review D (product truth) | NOT STARTED | Fresh agent, exact commissioned question |
+| 53 | Review A (six-month athlete) | IN PROGRESS | Fresh opus agent IN FLIGHT on the exact ten commissioned questions → REVIEW-A-six-month.md; findings actioned on return |
+| 54 | Review B (returning user) | IN PROGRESS | Fresh opus agent IN FLIGHT on the exact eight questions x five return windows → REVIEW-B-returning.md |
+| 55 | Review C (reinstall/two devices) | IN PROGRESS | Fresh opus agent IN FLIGHT on the ten targets x six failure classes → REVIEW-C-sync.md |
+| 56 | Review D (product truth) | IN PROGRESS | Fresh opus agent IN FLIGHT on the commissioned question over the ten claim families → REVIEW-D-truth.md |
 | 57 | Open debt triage | COMPLETE-AUDIT | TRIAGE-2026-08-11.md: every carried item with the six fields; the complete founder queue; final migration release table |
 | 58 | H4 release blocker | BLOCKED-FOUNDER | Stays open until founder confirms live store listings changed; repository copy is not proof |
 | 59 | Legal copy review gate | COMPLETE-AUDIT | FQ-5 approval PROVEN from DECISIONS-2026-07-09.md:2697-2699 ('Approve all', stamp-only landing 2026-08-10); C6 changed no consent/legal copy |
 | 60 | Migration release table | COMPLETE-AUDIT | Final table in TRIAGE-2026-08-11.md (134 → 132 → 133; repaired 135 after the v72 build; 049 HELD) + MIGRATION-RELEASE-GATES.md history |
-| 61 | Campaign 6 test suites | IN PROGRESS | sixBlock 24, longitudinal 27, longTerm 27, applyRepeat 11, nutrition 10, lapse90 11, athlete180 11, relationship 12 + fix-batch pins; grows with remaining fixes |
+| 61 | Campaign 6 test suites | COMPLETE-IMPL | Twelve permanent suites: sixBlock 24, longitudinal 27, longTerm 44, applyRepeat 11, nutrition 10, lapse90 11, athlete180 11, relationship 12, reinstall 9, evidencedClaims 11, pendingCascade.flush 6, coachOutputReid 3 - plus the fix pins in existing suites (handover item 77) |
 | 62 | Quality gates | NOT STARTED | Final full-campaign regression + no-change laws + jargon + identity, then merged-main rerun |
 
 ## B. First addendum (Personalisation Dividend) requirements
 
 | Req | Status | Evidence / remaining |
 |---|---|---|
-| Dividend as product law + evidence maturity + Block 1/3/6 | IN PROGRESS | Pinned in suites; PERSONALISATION-DIVIDEND.md (with the without-history counterfactual) NOT yet written |
+| Dividend as product law + evidence maturity + Block 1/3/6 | COMPLETE-IMPL | PERSONALISATION-DIVIDEND.md delivered with the computed counterfactual and the seven commissioned behaviours pinned |
 | Visible accumulated history; no false certainty; intelligent non-change; continuity; no fake percentages; no anthropomorphism | COMPLETE-AUDIT | RELATIONSHIP-MOMENTS.md A/B/C/D classification (C=0); repo walkers (banned copy + percentages) in campaign6.longTerm |
-| Final handover items A-H | NOT STARTED | Answered explicitly at handover time |
+| Final handover items A-H | COMPLETE-IMPL | Answered explicitly in CAMPAIGN6-FINAL-HANDOVER.md (F carries the B2-gated caveat honestly) |
 
 ## C. Second addendum (Long-term relationship / loyalty) requirements
 
 | Req | Status | Evidence / remaining |
 |---|---|---|
-| Five-promise audit + A-E input classification | IN PROGRESS | CHOICE-MEMORY.md (39 choices) + RELATIONSHIP-MOMENTS.md landed (0b383230); campaign6.relationship.test.js (12 invariants); REMAINING: consolidated classification table in PERSONALISATION-DIVIDEND.md |
+| Five-promise audit + A-E input classification | COMPLETE-IMPL | CHOICE-MEMORY.md + RELATIONSHIP-MOMENTS.md + campaign6.relationship.test.js + the consolidated A-E classification in PERSONALISATION-DIVIDEND.md §3 |
 | CHOICE-MEMORY.md | COMPLETE-AUDIT | Landed; F5/F8/F4 fixed, F3/F9 carried with rulings |
 | RELATIONSHIP-MOMENTS.md | COMPLETE-AUDIT | Landed; B1/B4 candidates recorded, B2 founder copy question |
 | WHAT-VOLYUME-HAS-LEARNED-FEASIBILITY.md (ten questions per candidate; verdict A/B/C/D; DO NOT BUILD) | COMPLETE-AUDIT | Delivered: five candidates scored on the ten questions; VERDICT C with recorded revisit trigger; nothing built |
 | PERSONALISATION-DIVIDEND.md | COMPLETE-IMPL | Delivered with the computed counterfactual, A-E input classification, nutrition dividend, honest weaknesses |
-| REVIEW-E-relationship.md (nine-month payer, the EXACT twelve questions) | NOT STARTED | Fresh agent; twelve questions verbatim from the recovery order |
+| REVIEW-E-relationship.md (nine-month payer, the EXACT twelve questions) | IN PROGRESS | Fresh opus agent IN FLIGHT on the twelve verbatim questions |
 | Six-block + 180-day relationship sections | COMPLETE-IMPL | 392fa136 + ATHLETE-180-REPORT.md (nine-question framing to be corrected as superseded) |
 | Relationship invariant tests | COMPLETE-IMPL | campaign6.relationship.test.js (12) |
 | Anti-anthropomorphism + anti-manipulation audits | COMPLETE-IMPL | Repo walkers landed (abefab54 + relationship suite); formal handover answers at items 93/94 |
-| Handover items 81-96 | NOT STARTED | Answered explicitly at handover time |
+| Handover items 81-96 | IN PROGRESS | 15 of 16 answered explicitly in CAMPAIGN6-FINAL-HANDOVER.md; item 95 fills from Review E on its return |
 
 ## D. Fix/disposition queue derived from the audits (all in-scope → FIX NOW)
 
