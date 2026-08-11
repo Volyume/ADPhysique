@@ -54,7 +54,7 @@ BLOCKED-LAW (explicit campaign law forbids change).
 | 27 | Block state during absence | COMPLETE-IMPL | R-21/R-22 clean; R-4 landed (recovery week only claimed live when trained within 14 days; option (c) clock pause = triage founder item) |
 | 28 | Streaks and lapses | COMPLETE-IMPL | R-26/R-27 clean; R-10 landed (+key-format correction on lead re-review); R-11 landed (guarded blob) |
 | 29 | Win-back surfaces | COMPLETE-IMPL | R-28 clean; R-7 landed; R-17 landed (storage-only claim + calm gate on the lay) |
-| 30 | Progress history at scale | IN PROGRESS | R-24/R-25 clean; R-2, R-15 landed; R-13 carried to the Phase 40 measure-first lane |
+| 30 | Progress history at scale | COMPLETE-IMPL | R-24/R-25 clean; R-2, R-15 landed; R-13 measured in Phase 40 (verdict LOW, T-8 fixed the real cost) |
 | 31 | Old record edits/deletions | COMPLETE-IMPL | R-23 clean; R-8 landed (morning_weights update/soft-delete pair, tombstone syncs); R-9 carried with D97-3 (one founder decision) |
 | 32 | Reinstall same account | COMPLETE-IMPL | Audit + REINSTALL-MATRIX.md + the Phase 52 executable E2E (campaign6.reinstall.test.js, 9 tests through the real init path and real appliers) |
 | 33 | Migration 132 contract | COMPLETE-AUDIT | S-10/S-11 proven in scratch cluster; hard release gate confirmed; NOT run |
@@ -63,17 +63,17 @@ BLOCKED-LAW (explicit campaign law forbids change).
 | 36 | Notification pref multi-device (FR-C4-2) | COMPLETE-IMPL | S-2 landed (guarded stamps, all writers); S-3 tombstones + the dual-family architecture stay with FR-C4-2 (founder) |
 | 37 | Two-device training | COMPLETE-AUDIT | MULTI-DEVICE-MATRIX.md walks the commissioned scenario step-by-step with pins; residuals S-19/S-6/S-7 recorded for triage |
 | 38 | Offline for weeks | COMPLETE-IMPL | S-21/S-22 clean; S-5 landed (offline never spends the delete budget) |
-| 39 | Timezone/DST/clock | NOT STARTED | R-20 (DST-safe morning rows) is partial evidence only; dedicated audit required |
-| 40 | Data scale/performance | NOT STARTED | R-13 provides one measurement; commissioned measure-first audit required |
-| 41 | Row cap/pagination | NOT STARTED | P10-1 fixed one window; dedicated 1000-row/default-cap sweep required |
-| 42 | Local-only data truth | IN PROGRESS | S-23 (photos never sync, guard-tested) + scans; REMAINING: full local-only inventory pass |
-| 43 | Partner long-term | NOT STARTED | Dedicated audit required (existing accountability only) |
+| 39 | Timezone/DST/clock | COMPLETE-IMPL | AUDIT-CLOCK-SCALE-LOCAL-PARTNER.md; T-1 (DST streak grid) and T-2 (local-midnight block starts) FIXED and verified in Europe/London + America/New_York; quiet hours/morning rows CLEAN; no travel mode |
+| 40 | Data scale/performance | COMPLETE-IMPL | Measured: T-8 rowToCamel hot path FIXED (4.8x); T-9/R-13 measured verdict LOW (6.6ms/yr) accepted; remaining IMPROVEMENT rows in triage |
+| 41 | Row cap/pagination | COMPLETE-IMPL | The 38-read ROW-CAP TABLE delivered; T-12 (cheers) and T-13 (four watermarked pulls) FIXED so truncation becomes catch-up; the rest verdicted per row |
+| 42 | Local-only data truth | COMPLETE-IMPL | Full inventory delivered (T-28 clean rows); T-16 FIXED (impermanence stated with privacy in the FAQ pair); T-17 (backup scan URIs) in triage |
+| 43 | Partner long-term | COMPLETE-IMPL | Audited; T-18 FIXED (signals scoped to this week); T-12 FIXED; remove/replace/tier/lapse paths verdicted; no new social scope |
 | 44 | Plan archive/history | COMPLETE-IMPL | With Phase 9 (D97-12/13/16/17; P44 items landed 4ef410c3) |
-| 45 | Personalisation copy maturity | NOT STARTED | Block 1 vs 2 vs 5 vs long-gap return copy pass |
-| 46 | Non-change as mature decision | IN PROGRESS | Six non-change states distinct by construction (blockExplain, heldUnjudged RA-2); REMAINING: surface-level audit that each is REACHABLE and spoken |
+| 45 | Personalisation copy maturity | COMPLETE-AUDIT | AUDIT-MATURITY-AND-SIX-MONTHS.md block-language table; banned-vocabulary CLEAN; M-1/M-3 frozen-clause maturity = the B1 founder-gated copy candidate |
+| 46 | Non-change as mature decision | COMPLETE-IMPL | Six-state reachability table delivered; M-6 (safety veto now truthfully flagged), M-7 (manual ownership spoken), M-8 (cause-agnostic unjudged), M-9 (no 'No changes needed.') all FIXED; the safety COPY line itself remains B2 founder-gated |
 | 47 | Long-term safety | COMPLETE-AUDIT | No-learning-around-safety pinned at every layer (relationship suite, sixBlock, athlete180, S-20); thresholds untouched |
-| 48 | Six-month Free experience | NOT STARTED | Dedicated simulation/audit |
-| 49 | Six-month Pro experience | NOT STARTED | Dedicated coherence audit |
+| 48 | Six-month Free experience | COMPLETE-IMPL | Walked in the maturity audit: coherent self-directed training; M-13 FIXED (the one coaching leak found); upsell cadence CLEAN (2/day 8/week budget, one banner) |
+| 49 | Six-month Pro experience | COMPLETE-AUDIT | One-system walk: 7 of 9 chain edges genuinely wired; M-21 (next block → nutrition adjustment edge) characterised only - Section 2 calorie territory, founder queue |
 | 50 | 180-day athlete E2E | COMPLETE-IMPL | campaign6.athlete180.test.js (11 tests, 517c2cc3) - deterministic, real chain, all commissioned beats; ATHLETE-180-REPORT.md reconciled to it |
 | 51 | 90-day lapse E2E | COMPLETE-IMPL | campaign6.lapse90.test.js (11 tests, 6700a9f7) |
 | 52 | Reinstall E2E | COMPLETE-IMPL | campaign6.reinstall.test.js: real fresh DB via real init (full schema + 72 migrations on real SQLite), real appliers, 9 pins incl. tombstones, receipts, ledger protection, photo local-only |
