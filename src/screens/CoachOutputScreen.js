@@ -133,6 +133,7 @@ import {
   buildFocus,
   buildOffItems,
   weekRangeLabel,
+  decisionAgeNote,
 } from '../lib/coachOutput/viewCopy';
 import {
   LedgerCard,
@@ -2591,6 +2592,13 @@ export default function CoachOutputScreen({ navigation, route }) {
         <Reanimated.View entering={stage(0)} style={styles.weekHeader}>
           <Text style={[styles.weekLabel, live.weekLabel]}>{weekLabel}</Text>
           <Text style={[styles.weekRange, live.weekRange]}>{weekRangeLabel(weekStart)}</Text>
+          {/* C6 RB6-9 (D97-25): a decision older than its own week says so.
+              The Apply buttons stay live - resuming is the user's tap. */}
+          {decisionAgeNote(weekStart, localWeekStartMs()) ? (
+            <Text style={[styles.weekRange, live.weekRange]}>
+              {decisionAgeNote(weekStart, localWeekStartMs())}
+            </Text>
+          ) : null}
         </Reanimated.View>
 
         {/* D15 (founder ruling 2026-07-09): the adherence-why line, said once
