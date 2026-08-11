@@ -28,7 +28,7 @@ BLOCKED-LAW (explicit campaign law forbids change).
 | 1 | Long-term journey map | COMPLETE-AUDIT | CURRENT-LONG-TERM-JOURNEYS.md (8fce6a11); seams 2/3/4 FIXED (D97-8/6/7), seams 1/5 = D97-3-addendum/D97-9 founder items in triage |
 | 2 | 30/90/180/365 personalisation model | COMPLETE-AUDIT | PERSONALISATION-MATURITY.md (239ee7a3) + dated correction banner (D97-19) |
 | 3 | Six-block simulation | COMPLETE-IMPL | SIX-BLOCK-SIMULATION.md + campaign6.sixBlock.test.js (24 tests, 13ad9f9e) + relationship report (392fa136) |
-| 4 | Prove personalisation compounds | IN PROGRESS | Compounding pinned (sixBlock, athlete180 thesis tests); REMAINING: the explicit Block-6-without-history counterfactual, to land in PERSONALISATION-DIVIDEND.md |
+| 4 | Prove personalisation compounds | COMPLETE-IMPL | PERSONALISATION-DIVIDEND.md: computed counterfactual (chest B6 start 11 vs 6 without history; calves peak 15 vs 21 - protective) + seven behaviours with pins |
 | 5 | learnedRange longitudinal | COMPLETE-IMPL | campaign6.longitudinal.test.js (27 tests, 13ad9f9e): floor/ceiling/responsive/strained/alternating/missing/manual/suppressed/insufficient all characterised |
 | 6 | D91-25 layoff characterisation (AUDIT ONLY) | COMPLETE-AUDIT | Longitudinal suite + LAPSE-MATRIX.md; stored-ledger asymmetry = D97-3 founder item; NOTHING implemented |
 | 7 | Stale-history copy | COMPLETE-IMPL | D97-1 + LAPSE-MATRIX claim table; R-1, R-2 landed; R-6 landed (readiness caution bounded to 14 days, behavioural matrix pinned) |
@@ -39,9 +39,9 @@ BLOCKED-LAW (explicit campaign law forbids change).
 | 12 | Progression over many sessions (FQ-3) | COMPLETE-IMPL | D97-4 stimulusReady 14-day gate + C5 FQ-3 prevSessionDifficulty; pinned |
 | 13 | Apply loop over weeks | COMPLETE-IMPL | campaign6.applyRepeat.test.js (adc6efee) |
 | 14 | Repeat vs Adjust across blocks | COMPLETE-IMPL | Same suite + P-6 (300bd5d1) making repeat true on unjudgeable ledgers |
-| 15 | Manual overrides over time | IN PROGRESS | Engine-level pins complete (manual wins/teaches-nothing: longitudinal, athlete180, relationship suites); REMAINING: reinstall/new-device/removal/mode-return surface audit pass |
-| 16 | Coaching mode changes | IN PROGRESS | D97-10 (coached auto-walk bounded); REMAINING: full Coached/Collaborative/Manual matrix across block states |
-| 17 | Calm mode over time | IN PROGRESS | One-way ratchet + no-upward-carry pinned (S-20, relationship suite); REMAINING: dedicated Standard→Calm→Standard pass incl. copy |
+| 15 | Manual overrides over time | COMPLETE-AUDIT | Engine pins + AUDIT-MODES-AND-MANUAL.md (set/removal/reinstall/mode-return traced; F9 expiry = recorded founder question) |
+| 16 | Coaching mode changes | COMPLETE-AUDIT | D97-10 + AUDIT-MODES-AND-MANUAL.md matrix (manual disables all 8 Apply sites; coached bounded by age gate + safety hold; no mode can roll a block) |
+| 17 | Calm mode over time | COMPLETE-AUDIT | AUDIT-MODES-AND-MANUAL.md (ratchet binds sync only, user exits freely; no retroactive teaching, no catch-up; no surface narrates the calm period) |
 | 18 | Free → Pro | COMPLETE-IMPL | AUDIT-TIER-TRANSITIONS.md Phases 18; P-4 (853819d0), P-5 (61fb8a51) landed; P-11 latent in triage |
 | 19 | Pro → Free | COMPLETE-AUDIT | Same audit; P-6 leak closed (300bd5d1); P-8 latent (14-day Pro-era cards) in triage |
 | 20 | Free → Pro again | COMPLETE-IMPL | Same audit; P-2 landed; P-5 landed |
@@ -56,12 +56,12 @@ BLOCKED-LAW (explicit campaign law forbids change).
 | 29 | Win-back surfaces | COMPLETE-IMPL | R-28 clean; R-7 landed; R-17 landed (storage-only claim + calm gate on the lay) |
 | 30 | Progress history at scale | IN PROGRESS | R-24/R-25 clean; R-2, R-15 landed; R-13 carried to the Phase 40 measure-first lane |
 | 31 | Old record edits/deletions | COMPLETE-IMPL | R-23 clean; R-8 landed (morning_weights update/soft-delete pair, tombstone syncs); R-9 carried with D97-3 (one founder decision) |
-| 32 | Reinstall same account | IN PROGRESS | AUDIT-REINSTALL-SYNC-OFFLINE.md; S-9/S-23/S-24 clean; F4 fixed (D97-19); REMAINING: Phase 52 E2E + REINSTALL-MATRIX.md |
+| 32 | Reinstall same account | COMPLETE-IMPL | Audit + REINSTALL-MATRIX.md + the Phase 52 executable E2E (campaign6.reinstall.test.js, 9 tests through the real init path and real appliers) |
 | 33 | Migration 132 contract | COMPLETE-AUDIT | S-10/S-11 proven in scratch cluster; hard release gate confirmed; NOT run |
 | 34 | Migrations 134/135 contract | COMPLETE-IMPL | S-12/S-13 proven; 135 REPAIRED unapplied (route A+C: corrected tie-break + deterministic re-id + local v72; scratch-cluster and behavioural proofs; release condition recorded) |
 | 35 | adaptation_events restore (FR-C4-3) | COMPLETE-AUDIT | S-4: product consequence proven (revert memory, add-frequency cap, Engine Log); carried to founder under FR-C4-3 with evidence |
 | 36 | Notification pref multi-device (FR-C4-2) | COMPLETE-IMPL | S-2 landed (guarded stamps, all writers); S-3 tombstones + the dual-family architecture stay with FR-C4-2 (founder) |
-| 37 | Two-device training | IN PROGRESS | S-12/S-18/S-19/S-20 + campaign1.syncConflict; REMAINING: MULTI-DEVICE-MATRIX.md (commissioned doc) |
+| 37 | Two-device training | COMPLETE-AUDIT | MULTI-DEVICE-MATRIX.md walks the commissioned scenario step-by-step with pins; residuals S-19/S-6/S-7 recorded for triage |
 | 38 | Offline for weeks | COMPLETE-IMPL | S-21/S-22 clean; S-5 landed (offline never spends the delete budget) |
 | 39 | Timezone/DST/clock | NOT STARTED | R-20 (DST-safe morning rows) is partial evidence only; dedicated audit required |
 | 40 | Data scale/performance | NOT STARTED | R-13 provides one measurement; commissioned measure-first audit required |
@@ -76,7 +76,7 @@ BLOCKED-LAW (explicit campaign law forbids change).
 | 49 | Six-month Pro experience | NOT STARTED | Dedicated coherence audit |
 | 50 | 180-day athlete E2E | COMPLETE-IMPL | campaign6.athlete180.test.js (11 tests, 517c2cc3) - deterministic, real chain, all commissioned beats; ATHLETE-180-REPORT.md reconciled to it |
 | 51 | 90-day lapse E2E | COMPLETE-IMPL | campaign6.lapse90.test.js (11 tests, 6700a9f7) |
-| 52 | Reinstall E2E | NOT STARTED | Permanent deterministic suite required |
+| 52 | Reinstall E2E | COMPLETE-IMPL | campaign6.reinstall.test.js: real fresh DB via real init (full schema + 72 migrations on real SQLite), real appliers, 9 pins incl. tombstones, receipts, ledger protection, photo local-only |
 | 53 | Review A (six-month athlete) | NOT STARTED | Fresh agent, exact commissioned questions from the order |
 | 54 | Review B (returning user) | NOT STARTED | Fresh agent, exact commissioned questions |
 | 55 | Review C (reinstall/two devices) | NOT STARTED | Fresh agent, exact commissioned questions |
@@ -103,8 +103,8 @@ BLOCKED-LAW (explicit campaign law forbids change).
 | Five-promise audit + A-E input classification | IN PROGRESS | CHOICE-MEMORY.md (39 choices) + RELATIONSHIP-MOMENTS.md landed (0b383230); campaign6.relationship.test.js (12 invariants); REMAINING: consolidated classification table in PERSONALISATION-DIVIDEND.md |
 | CHOICE-MEMORY.md | COMPLETE-AUDIT | Landed; F5/F8/F4 fixed, F3/F9 carried with rulings |
 | RELATIONSHIP-MOMENTS.md | COMPLETE-AUDIT | Landed; B1/B4 candidates recorded, B2 founder copy question |
-| WHAT-VOLYUME-HAS-LEARNED-FEASIBILITY.md (ten questions per candidate; verdict A/B/C/D; DO NOT BUILD) | NOT STARTED | Commissioned, not optional |
-| PERSONALISATION-DIVIDEND.md | NOT STARTED | Lead synthesis incl. counterfactual + nutrition dividend |
+| WHAT-VOLYUME-HAS-LEARNED-FEASIBILITY.md (ten questions per candidate; verdict A/B/C/D; DO NOT BUILD) | COMPLETE-AUDIT | Delivered: five candidates scored on the ten questions; VERDICT C with recorded revisit trigger; nothing built |
+| PERSONALISATION-DIVIDEND.md | COMPLETE-IMPL | Delivered with the computed counterfactual, A-E input classification, nutrition dividend, honest weaknesses |
 | REVIEW-E-relationship.md (nine-month payer, the EXACT twelve questions) | NOT STARTED | Fresh agent; twelve questions verbatim from the recovery order |
 | Six-block + 180-day relationship sections | COMPLETE-IMPL | 392fa136 + ATHLETE-180-REPORT.md (nine-question framing to be corrected as superseded) |
 | Relationship invariant tests | COMPLETE-IMPL | campaign6.relationship.test.js (12) |
@@ -123,11 +123,10 @@ Landed already: P-1..P-6, R-1, R-2, R-5, R-7, R-10, F4/F5/F8.
 
 CURRENT-LONG-TERM-JOURNEYS.md YES · PERSONALISATION-MATURITY.md YES ·
 SIX-BLOCK-SIMULATION.md YES · LAPSE-MATRIX.md YES ·
-REINSTALL-MATRIX.md **MISSING** · MULTI-DEVICE-MATRIX.md **MISSING** ·
+REINSTALL-MATRIX.md YES · MULTI-DEVICE-MATRIX.md YES ·
 MIGRATION-RELEASE-GATES.md YES · REVIEW-A/B/C/D/E **MISSING** ·
-PERSONALISATION-DIVIDEND.md **MISSING** · CHOICE-MEMORY.md YES ·
-RELATIONSHIP-MOMENTS.md YES · WHAT-VOLYUME-HAS-LEARNED-FEASIBILITY.md
-**MISSING** · CAMPAIGN6-COMPLIANCE-LEDGER.md YES (this file) ·
+PERSONALISATION-DIVIDEND.md YES · CHOICE-MEMORY.md YES ·
+RELATIONSHIP-MOMENTS.md YES · WHAT-VOLYUME-HAS-LEARNED-FEASIBILITY.md YES · CAMPAIGN6-COMPLIANCE-LEDGER.md YES (this file) ·
 AUDIT-* extras retained (do not substitute).
 
 ## F. Standing confirmations (verified this date)
