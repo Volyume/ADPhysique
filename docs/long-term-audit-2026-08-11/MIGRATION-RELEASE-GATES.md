@@ -1,0 +1,113 @@
+# Campaign 6 — Phase 60: migration release analysis
+
+NO migration was run in this campaign. Table derived from the migration
+file headers and the live client code on this branch. Cloud migrations
+are applied MANUALLY by the founder with the exact phrase
+"run against production" per batch; nothing here changes that.
+Applied history: through migrate_131 (mesocycles.block_ledger). 132-135
+are written and UNAPPLIED; 049 is HELD.
+
+## The release table
+
+### migrate_132 — planned_muscle_volume provenance (mev/mav/mrv/source to cloud)
+
+- PURPOSE: carry per-muscle landmark bounds and seed source/provenance
+  to the cloud so a new device restores prescriptions WITH their
+  explanation provenance (Campaign 1 P0-1).
+- CURRENT CODE DEPENDENCY: the client already pushes these columns with
+  column-tolerant retries (`sync.js:1240-1246` retries without them
+  until the cloud accepts) and the local table has always carried them.
+- WHAT BREAKS WITHOUT IT: nothing crashes; set counts keep syncing.
+  What stays broken: cross-device/reinstall ADAPTIVE TRUTH - restored
+  rows arrive without source, degrade honestly to research/'template',
+  so a reinstalled device shows "research-based" explanations for a
+  block that was genuinely ledger-seeded, and Campaign 6's provenance
+  law is unmet across devices.
+- HARD RELEASE GATE? Not for shipping the client (its header says the
+  same). It IS the gate for calling cross-device adaptive provenance
+  true - and Campaign 6's Phase 52 reinstall equivalence is only fully
+  satisfiable once applied. Verdict: SHOULD run in the next production
+  batch, before any marketing claim about cross-device coaching truth.
+- SAFE ORDER: any time; independent of 133-135.
+- DESTRUCTIVE? No. Additive, nullable, idempotent; rollback documented.
+- FOUNDER ACTION: include in the next "run against production" batch.
+
+### migrate_133 — delete leaked privacy-pref rows
+
+- PURPOSE: remove '@volyume_privacy_prefs' rows older builds wrongly
+  bulk-pushed into user_prefs (contract: the analytics opt-out never
+  syncs).
+- CURRENT CODE DEPENDENCY: none - the client excludes the key in both
+  directions already; the rows are frozen and unread.
+- WHAT BREAKS WITHOUT IT: nothing functionally; the privacy CONTRACT
+  remains retroactively unhonoured in the cloud (data that should never
+  have been transmitted stays stored).
+- HARD RELEASE GATE? No for function; YES in spirit for the privacy
+  posture (GDPR data-minimisation hygiene). Verdict: next batch.
+- SAFE ORDER: any time. DESTRUCTIVE? Deletes only the leaked rows the
+  client no longer reads; idempotent. FOUNDER ACTION: next batch.
+
+### migrate_134 — refuse-stale-write triggers on nine coaching-state tables
+
+- PURPOSE: server-side last-write-wins on mesocycles, mesocycle_weeks,
+  coach_outputs, nutrition_targets, user_body_profile, programmes,
+  routines, routine_exercises, planned_muscle_volume - the tables where
+  a stale offline device's push-before-pull can today overwrite newer
+  cloud state (proven cases: re-activating a COMPLETED block and
+  nulling its ledger; stale targets landing over newer ones; stale
+  scoff_score overwriting current ED-screening data).
+- CURRENT CODE DEPENDENCY: the sync runner's push-before-pull order is
+  unchanged; the client has no substitute guard for these nine tables.
+- WHAT BREAKS WITHOUT IT: every Campaign 6 two-device scenario (Phase
+  37) on those tables remains vulnerable to stale-device overwrite -
+  including the safety-adjacent scoff_score case. The Campaign 1
+  conflict laws are only PARTIALLY enforced until this lands.
+- HARD RELEASE GATE? **YES for any multi-device user.** This is the
+  strongest gate in the set: without it a stale device can resurrect a
+  completed block, null a ledger, and clobber ED-screening state. A
+  build shipping Campaigns 1-6 to users with two devices without 134
+  ships known-vulnerable conflict semantics.
+- SAFE ORDER: before or with 135 (135's header says "after 134").
+- DESTRUCTIVE? No data change; adds triggers only. Idempotent.
+- FOUNDER ACTION: next batch, ordered before 135.
+
+### migrate_135 — coach_outputs one-row-per-user-week
+
+- PURPOSE: de-duplicate legacy per-device coach-output rows and make
+  (user_id, week_start) structurally unique - closing the double-apply
+  path where the applied receipt lived on only one of two rows.
+- CURRENT CODE DEPENDENCY: the client already writes deterministic ids
+  and the LOCAL unique index exists (database.js v71,
+  idx_coach_outputs_user_week) - so new rows cannot duplicate, but
+  legacy cloud pairs persist and can restore as duplicates.
+- WHAT BREAKS WITHOUT IT: a reinstall/second device pulling a legacy
+  duplicated week can resurrect a live Apply button for an
+  already-applied change (bounded by RB-10's applyingRef and the
+  isApplied receipt on ONE row, but the other row's receipt is empty).
+- HARD RELEASE GATE? Yes-leaning for long-term users with legacy rows:
+  the double-apply path is real, though only for weeks generated by
+  pre-fix builds. Verdict: same batch as 134, ordered after it.
+- SAFE ORDER: after 134. DESTRUCTIVE? Deletes stale duplicate copies
+  (content carried by the surviving row); idempotent; rollback = drop
+  index. FOUNDER ACTION: next batch, after 134.
+
+### migrate_049 — drop peak_week_plans (HELD)
+
+- PURPOSE (original): drop the peak-week table. The original rationale
+  was wrong: the table is LIVE behind the B4 contest countdown, read by
+  two shipped screens.
+- CURRENT CODE DEPENDENCY: ProGoalSetupScreen and CoachOutputScreen
+  read getActivePeakWeekPlan; sync pulls the table.
+- WHAT BREAKS IF APPLIED: deletes data behind a shipped surface and
+  breaks sync. HARD GATE: **must NOT run.** Stays HELD until the
+  FR-PW-1 retirement design exists. DESTRUCTIVE? Yes (table drop).
+- FOUNDER ACTION: none now; keep HELD.
+
+## Recommended batch, with reasons (not "apply all")
+
+Order: **134 → 135 → 132 → 133.** 134 first because it is the live
+conflict-safety gate (including ED-screening data) and 135 depends on
+its ordering; 132 next for cross-device adaptive truth; 133 last as
+retroactive privacy hygiene with no functional coupling. All four are
+idempotent and additive-or-hygienic; none is destructive to live
+product state. 049 excluded deliberately - it is destructive and HELD.
