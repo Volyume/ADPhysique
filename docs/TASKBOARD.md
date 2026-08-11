@@ -1845,3 +1845,9 @@ workflow survives as a fallback.
   RECOVERY: campaign evidence in session scratchpad c2/ ; spec is the
   founder's Campaign 2 order (2026-08-10 chat) + this block; code on
   claude/campaign2-comprehension; rulings go to the D-register as D93.
+
+## CAMPAIGN 7 (2026-08-11) — release readiness. Branch claude/campaign7-release-readiness off main 80ff8191.
+Order: 90 phases, docs under docs/release-readiness-2026-08-11/, five adversarial
+reviews, 1-124 handover. NO production actions of any kind. Recovery path for all
+agent lanes: each writes ONLY its named docs; on death relaunch from the phase
+list; lead lands all findings hands-on. Ledger: CAMPAIGN7-COMPLIANCE-LEDGER.md.

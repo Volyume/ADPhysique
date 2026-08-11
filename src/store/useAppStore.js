@@ -540,6 +540,23 @@ const useAppStore = create((set, get) => ({
       }
     }
 
+    // C7 release audit (notifications F1): cancel every OS-scheduled
+    // notification BEFORE the storage wipe. Sign-out never cancelled
+    // them, so the previous user's weigh-in/training/meal reminders -
+    // with their first name baked into the copy - kept firing on a
+    // device that might now belong to someone else, and the wiped
+    // prefs blob meant the next launch's restore path (gated on the
+    // blob existing) could not clean them up either. "Leave nothing
+    // behind" includes the notification queue.
+    try {
+      // eslint-disable-next-line global-require
+      const Notifications = require('expo-notifications');
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      log.logInfo('clearAuthStateForSignOut.notifications.cancelled', 'ok');
+    } catch (e) {
+      log.logError('clearAuthStateForSignOut.notifications.cancel.failed', e, { prevUid });
+    }
+
     // Sign-out wipes everything from the device for this user.
     // Per founder direction: signing out should leave nothing
     // behind. Same hammer as delete-account. AsyncStorage.clear()

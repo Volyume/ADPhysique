@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, KeyboardAvoidingView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, shadow } from '../styles/theme';
@@ -632,8 +632,34 @@ export default function ProUpgradeScreen({ navigation, route }) {
             fullWidth={false}
             style={styles.policyLink}
             onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'SubscriptionPolicy'); }}
-            accessibilityLabel="Subscription terms"
+            accessibilityLabel="What stays if you switch back to Free later"
           />
+
+          {/* C7 release audit (platform risk 4): a paywall selling
+              auto-renewable subscriptions must link the Terms of Use
+              (Apple's standard EULA covers the app) and the privacy
+              policy - their absence is a routine App Review 3.1.2
+              rejection. Plain links, no copy/price/product change. The
+              button above also carried a misleading "Subscription
+              terms" accessibility label for a feature-downgrade
+              explainer; it now says what it opens. */}
+          <View style={styles.legalRow}>
+            <TouchableOpacity
+              onPress={() => { Linking.openURL('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/').catch(() => {}); }}
+              accessibilityRole="link"
+              accessibilityLabel="Terms of use"
+            >
+              <Text style={[styles.legalLink, live.legalLink]}>Terms of use</Text>
+            </TouchableOpacity>
+            <Text style={[styles.legalDot, live.legalDot]}>·</Text>
+            <TouchableOpacity
+              onPress={() => { Linking.openURL('https://volyume.app/privacy').catch(() => {}); }}
+              accessibilityRole="link"
+              accessibilityLabel="Privacy policy"
+            >
+              <Text style={[styles.legalLink, live.legalLink]}>Privacy policy</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Haptics completion pass (2026-07-10): "Maybe later" is neither a
               plan-comparison segment nor a navigation row (the campaign's
@@ -735,6 +761,13 @@ const styles = StyleSheet.create({
   switchAction: { color: colors.primary, fontWeight: fontWeight.semibold },
 
   laterBtn: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.xs },
+  // C7: the paywall's legal links row (terms of use + privacy policy).
+  legalRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
+  // No underline: this screen's contained-neutral-chrome rule bans
+  // textDecorationLine (shareCopyPolish.guard). The links read as links
+  // from their placement, colour and accessibilityRole.
+  legalLink: { fontSize: fontSize.xs, color: colors.textSecondary, paddingVertical: spacing.xs },
+  legalDot: { fontSize: fontSize.xs, color: colors.textMuted },
   laterText: { fontSize: fontSize.sm, color: colors.textMuted },
 
   // Success
@@ -775,6 +808,8 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
+    legalLink: { color: t.colors.textSecondary },
+    legalDot: { color: t.colors.textMuted },
     iconWrap: { backgroundColor: t.colors.primaryBg },
     title: { fontSize: t.fontSize.xxxl, color: t.colors.textPrimary },
     subtitle: { fontSize: t.fontSize.md, color: t.colors.textSecondary },

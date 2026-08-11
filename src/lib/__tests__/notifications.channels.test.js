@@ -21,8 +21,11 @@ beforeEach(() => jest.clearAllMocks());
 describe('ensureNotifChannels (D4)', () => {
   test('registers training/coaching/rest-alerts (HIGH, sound) and rest-timer (LOW, silent)', async () => {
     await ensureNotifChannels();
-    expect(mockSetChannel).toHaveBeenCalledTimes(4);
+    // Re-anchored under C7 F2: the 'default' channel the send-push
+    // Edge Function already targets is now created client-side too.
+    expect(mockSetChannel).toHaveBeenCalledTimes(5);
     const byId = Object.fromEntries(mockSetChannel.mock.calls.map(([id, cfg]) => [id, cfg]));
+    expect(byId['default']).toMatchObject({ name: 'Updates' });
     expect(byId['training-reminders']).toMatchObject({
       importance: 4, sound: 'default', enableVibrate: true, showBadge: false,
     });

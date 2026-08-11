@@ -46,6 +46,11 @@ const REST_CHANNEL_ID = 'rest-timer';
 // crash no longer exists, but a shortService (~3 min) cannot host a
 // session-length notification anyway. If the session surface is ever
 // revived, it needs its own service-type decision.
+// C7 release audit correction: FOREGROUND_SERVICE is NOT a dead
+// permission - modules/rest-timer-live hosts a live shortService
+// foreground service (E6A, founder-approved 2026-07-02) that depends on
+// the app-level declaration. This flag governs only the SESSION sticky
+// surface, which stays off.
 const USE_FOREGROUND_SERVICE = false;
 
 // Lazy require of the native module. The require itself is cheap on
@@ -215,6 +220,11 @@ async function ensureRestChannel() {
   try {
     await Notifications.setNotificationChannelAsync(REST_CHANNEL_ID, {
       name: 'Rest timer',
+      // C7 release audit F9: this second creation site used to omit the
+      // description channels.js gives the same channel, and re-creating
+      // an existing channel with no description WIPES it in the OS
+      // settings screen. Kept byte-identical with channels.js.
+      description: 'Live countdown shown while a rest timer is running',
       importance: Notifications.AndroidImportance.LOW,
       sound: null,
       vibrationPattern: [0],
