@@ -139,8 +139,14 @@ triage carries every open item; nothing is silently decided.
   and dispositioned at 0b383230 (D97-19): F5/F8/F4 fixed, F3/F9
   carried, maturity doc corrected; moments A=12 B=6 C=0 D=2, B1/B4
   the two saturation-rule implementation candidates (for the
-  dividend synthesis), B2 a founder copy question. No agents in
-  flight.
+  dividend synthesis), B2 a founder copy question.
+- IN FLIGHT (agents, opus, read-only): Phases 25-31 →
+  AUDIT-RETURN-AND-HISTORY.md and Phases 32-38 →
+  AUDIT-REINSTALL-SYNC-OFFLINE.md. Recovery: if either dies, the
+  partial audit file (if any) is lead-reviewed against the order's
+  phase text and the lane relaunched with the same brief; no src
+  changes are expected from either - any found are discarded after
+  lead review confirms they are agent overreach.
 - NEXT: agent pairs for 25-31 (weight/lapse/streak/win-back/
   progress/edits) and 32-38 (reinstall/migration contracts/sync/
   offline); then 39-43 + 45-46 + 48-49, PLUS
