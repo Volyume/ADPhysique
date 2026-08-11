@@ -31,11 +31,11 @@ BLOCKED-LAW (explicit campaign law forbids change).
 | 4 | Prove personalisation compounds | IN PROGRESS | Compounding pinned (sixBlock, athlete180 thesis tests); REMAINING: the explicit Block-6-without-history counterfactual, to land in PERSONALISATION-DIVIDEND.md |
 | 5 | learnedRange longitudinal | COMPLETE-IMPL | campaign6.longitudinal.test.js (27 tests, 13ad9f9e): floor/ceiling/responsive/strained/alternating/missing/manual/suppressed/insufficient all characterised |
 | 6 | D91-25 layoff characterisation (AUDIT ONLY) | COMPLETE-AUDIT | Longitudinal suite + LAPSE-MATRIX.md; stored-ledger asymmetry = D97-3 founder item; NOTHING implemented |
-| 7 | Stale-history copy | IN PROGRESS | D97-1 two copy fixes + LAPSE-MATRIX claim table; R-1 (1e90ae09) and R-2 (1574ad8c) landed; REMAINING: R-6 (Home present-tense from any-age session) |
+| 7 | Stale-history copy | COMPLETE-IMPL | D97-1 + LAPSE-MATRIX claim table; R-1, R-2 landed; R-6 landed (readiness caution bounded to 14 days, behavioural matrix pinned) |
 | 8 | D91-24 characterisation (AUDIT ONLY) | COMPLETE-AUDIT | campaign6.longitudinal; conservative bias proven, NOT fixed, pinned unchanged |
 | 9 | Plan switching over time | COMPLETE-IMPL | AUDIT-PLAN-LIFECYCLE.md actioned at 4ef410c3 (D97-11..17) |
 | 10 | Exercise history over months | COMPLETE-IMPL | AUDIT-EXERCISE-PR-HISTORY.md actioned at 49b3f253 (D97-18); high-rep Epley = triage item |
-| 11 | Long-term PR meaning (FQ-7) | IN PROGRESS | D97-18 (records wall, PR tile FQ-7 baseline); REMAINING: R-15 (Year of Lifts admits cluster rows) |
+| 11 | Long-term PR meaning (FQ-7) | COMPLETE-IMPL | D97-18 + R-15 landed (year recap gated by isE1rmEligibleRow, pinned) |
 | 12 | Progression over many sessions (FQ-3) | COMPLETE-IMPL | D97-4 stimulusReady 14-day gate + C5 FQ-3 prevSessionDifficulty; pinned |
 | 13 | Apply loop over weeks | COMPLETE-IMPL | campaign6.applyRepeat.test.js (adc6efee) |
 | 14 | Repeat vs Adjust across blocks | COMPLETE-IMPL | Same suite + P-6 (300bd5d1) making repeat true on unjudgeable ledgers |
@@ -50,10 +50,10 @@ BLOCKED-LAW (explicit campaign law forbids change).
 | 23 | Nutrition phase changes | COMPLETE-IMPL | Same suite (phase-change baseline re-entry pins) |
 | 24 | Nutrition lapses | COMPLETE-IMPL | Same suite + campaign6.lapse90 + R-1 fix |
 | 25 | Weight history over time | IN PROGRESS | AUDIT-RETURN-AND-HISTORY.md; R-1 landed; R-19/R-20 clean; REMAINING: R-14 (kg-only coach line), R-18 (stale FFM weight) disposition |
-| 26 | Lapse/return experience | IN PROGRESS | Audit + R-5 landed (62907806), R-29 clean (one banner); REMAINING: R-6, R-16 (360 prompts), R-12 |
-| 27 | Block state during absence | IN PROGRESS | Audit + R-21/R-22 clean (no wrap, no auto-block); REMAINING: R-4 (unearned recovery week) |
+| 26 | Lapse/return experience | IN PROGRESS | Audit + R-5, R-6 landed; R-29 clean; REMAINING: R-16 (prompt stand-down), R-12 (unopened week as rest week) |
+| 27 | Block state during absence | COMPLETE-IMPL | R-21/R-22 clean; R-4 landed (recovery week only claimed live when trained within 14 days; option (c) clock pause = triage founder item) |
 | 28 | Streaks and lapses | IN PROGRESS | R-26/R-27 clean; R-10 landed (0dddb9ad); REMAINING: R-11 (unguarded blob sync) |
-| 29 | Win-back surfaces | IN PROGRESS | R-28 clean; R-7 landed (62d8a1ca); REMAINING: R-17 (copy + calm gate) |
+| 29 | Win-back surfaces | COMPLETE-IMPL | R-28 clean; R-7 landed; R-17 landed (storage-only claim + calm gate on the lay) |
 | 30 | Progress history at scale | IN PROGRESS | R-24/R-25 clean; R-2 landed; REMAINING: R-13 (measured perf improvement) disposition, R-15 |
 | 31 | Old record edits/deletions | IN PROGRESS | R-23 clean (records derive at read time); REMAINING: R-8 (uneditable Home weigh-in), R-9 (ledger rebuild; attached to D97-3) |
 | 32 | Reinstall same account | IN PROGRESS | AUDIT-REINSTALL-SYNC-OFFLINE.md; S-9/S-23/S-24 clean; F4 fixed (D97-19); REMAINING: Phase 52 E2E + REINSTALL-MATRIX.md |
