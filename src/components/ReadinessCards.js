@@ -64,10 +64,32 @@ function buildFreshnessMeta(c) {
 // is not enough signal to say anything useful. Reads energy, soreness and
 // sleep quality; sleep is collected on the weekly check-in but, before
 // this, was never read back to the user.
-export function computeRecoveryTrendInsight(checkins) {
-  const energies = checkins.map(c => c.energyScore ?? null).filter(v => v !== null);
-  const soreness = checkins.map(c => c.sorenessScore ?? null).filter(v => v !== null);
-  const sleep = checkins.map(c => c.sleepQuality ?? null).filter(v => v !== null);
+export function computeRecoveryTrendInsight(checkins, nowMs = Date.now()) {
+  // C6 RD6-7 (D97-25): every sentence below speaks in runs and the
+  // present tense ("in a row", "weeks running", "is trending"), but the
+  // input was six ROWS of any age with no adjacency test - the exact
+  // class D97-5 ruled for the coach counters, unapplied to this
+  // surface. Two bounds, both from the standing rulings: the latest
+  // check-in must be current (14-day boundary, as blockAdvisor's
+  // sibling), and a run only counts across ADJACENT calendar weeks -
+  // the walk stops at the first gap, so a lapse can never chain an
+  // ancient week onto today's. Thresholds and wording are unchanged.
+  const rows = Array.isArray(checkins) ? checkins : [];
+  const latestWs = Number(rows[0]?.weekStart ?? rows[0]?.week_start);
+  if (!Number.isFinite(latestWs) || (nowMs - latestWs) > 14 * 86400000) return null;
+  const adjacent = [];
+  let expectedWs = latestWs;
+  for (const c of rows) {
+    const ws = Number(c?.weekStart ?? c?.week_start);
+    if (!Number.isFinite(ws)) break;
+    // 1.5-day tolerance on the 7-day step absorbs DST-length weeks.
+    if (Math.abs(ws - expectedWs) > 1.5 * 86400000) break;
+    adjacent.push(c);
+    expectedWs = ws - 7 * 86400000;
+  }
+  const energies = adjacent.map(c => c.energyScore ?? null).filter(v => v !== null);
+  const soreness = adjacent.map(c => c.sorenessScore ?? null).filter(v => v !== null);
+  const sleep = adjacent.map(c => c.sleepQuality ?? null).filter(v => v !== null);
   if (energies.length < 3 && soreness.length < 3 && sleep.length < 3) return null;
 
   const recentEnergy = energies.slice(0, 4);
@@ -145,7 +167,20 @@ export default function ReadinessCards({ userId, tier }) {
       // mid-scale amber "Elevated". Normalised for DISPLAY with the exact
       // mapping WorkoutSummaryScreen already uses (1 -> 2, 2 -> 3, 3 -> 4);
       // no stored value changes and computeRecoveryEMAs is untouched.
-      const displayWorkouts = completed.map((w) => (
+      // C6 RD6-12 (D97-25): the tooltip promises older sessions "fade
+      // out", but emaValue normalises by the weight sum, so the OUTPUT
+      // is age-invariant and the gauges were fed every completed
+      // workout ever - after months away, "Fatigue - High" rendered a
+      // present-tense read of ancient sessions. The gauges now read
+      // only sessions inside the standing 14-day boundary (the same
+      // bound R-6/RB6-4 gave the sibling readiness surfaces); with
+      // nothing recent they fall to their existing waiting state. The
+      // pure EMA helper is untouched.
+      const gaugeRecent = completed.filter((w) => {
+        const at = Number(w.endedAt ?? w.startedAt ?? w.createdAt);
+        return Number.isFinite(at) && (Date.now() - at) <= 14 * 86400000;
+      });
+      const displayWorkouts = gaugeRecent.map((w) => (
         w.soreness24hBefore == null
           ? w
           : { ...w, soreness24hBefore: [2, 3, 4][w.soreness24hBefore - 1] ?? w.soreness24hBefore }
@@ -160,9 +195,9 @@ export default function ReadinessCards({ userId, tier }) {
       // recoveryEMA.js so the pure engine helper and its pinned shape stay
       // exactly as they are.
       setSampleCounts({
-        soreness: completed.filter(w => w.soreness24hBefore != null).length,
-        fatigue: completed.filter(w => w.fatigueLevel != null).length,
-        joint: completed.filter(w => (w.maxJointDiscomfort ?? w.jointDiscomfort) != null).length,
+        soreness: gaugeRecent.filter(w => w.soreness24hBefore != null).length,
+        fatigue: gaugeRecent.filter(w => w.fatigueLevel != null).length,
+        joint: gaugeRecent.filter(w => (w.maxJointDiscomfort ?? w.jointDiscomfort) != null).length,
       });
     } catch (_) {}
 
@@ -209,7 +244,15 @@ export default function ReadinessCards({ userId, tier }) {
             {next && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                 <Text style={[styles.milestoneNext, live.milestoneNext]}>{next.sessions - totalWorkouts} to go: {next.label}</Text>
-                <InfoTooltip size={11} text={"Consistency is the biggest predictor of long-term progress. The more sessions you log, the better Volyume understands how your body responds, so it can suggest the right weights, spot when your reps are slipping, and time your lighter weeks correctly.\n\nBuilding the habit is the foundation everything else sits on."} />
+                {/* C6 RD6-10 (D97-25): the learning promise forks on tier,
+                    exactly as HomeWelcomeCard already does - the three
+                    coaching capabilities (weights, rep-slip detection,
+                    lighter-week timing) are Pro; free genuinely gets
+                    history, records and progress stats. The consistency
+                    message itself is true for both tiers and stays. */}
+                <InfoTooltip size={11} text={tier === 'pro'
+                  ? "Consistency is the biggest predictor of long-term progress. The more sessions you log, the better Volyume understands how your body responds, so it can suggest the right weights, spot when your reps are slipping, and time your lighter weeks correctly.\n\nBuilding the habit is the foundation everything else sits on."
+                  : "Consistency is the biggest predictor of long-term progress. Every session you log builds your history, your records and your progress stats, and the plan you built stays exactly yours.\n\nBuilding the habit is the foundation everything else sits on."} />
               </View>
             )}
           </View>
@@ -225,7 +268,7 @@ export default function ReadinessCards({ userId, tier }) {
       <View style={styles.section}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
           <SectionLabel>Recovery</SectionLabel>
-          <InfoTooltip text="A running average of your session feedback after each workout, weighted so the last week counts most and older sessions fade out. It waits for a couple of rated sessions before showing a figure, because one session is not an average. Scored 1-5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1-5 where 1 = comfortable. If scores are consistently high, consider a lighter week." />
+          <InfoTooltip text="A running average of your session feedback after each workout, weighted so the last week counts most, and read only from your last two weeks of rated sessions. It waits for a couple of rated sessions before showing a figure, because one session is not an average. Scored 1-5 where lower is better for Soreness and Fatigue (1 = fresh, 5 = very sore/tired). Joint Comfort is also 1-5 where 1 = comfortable. If scores are consistently high, consider a lighter week." />
         </View>
         <View style={[styles.recoveryCard, live.recoveryCard]}>
           <View style={styles.recoveryGrid}>
@@ -244,7 +287,11 @@ export default function ReadinessCards({ userId, tier }) {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.mfTitle, live.mfTitle]}>Muscle recovery</Text>
-                  <Text style={[styles.mfSub, live.mfSub]}>How recovered your muscles are based on your recent training.</Text>
+                  {/* C6 RD6-11 (D97-25): the band is days-since-trained
+                      against a typical window - it never reads this user's
+                      soreness data - so the gloss says what it measures,
+                      matching the heatmap sibling's honest wording. */}
+                  <Text style={[styles.mfSub, live.mfSub]}>How recently each muscle was trained, against its typical recovery window.</Text>
                 </View>
               </View>
               <View style={styles.mfChipGrid}>

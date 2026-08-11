@@ -522,7 +522,7 @@ export default function VolumeHeatmapScreen() {
           <LegendItem color={freshnessMeta.fatigued.color} label="Recently trained" />
           <InfoTooltip size={11} text={
             'A second, separate view: how recently each muscle was trained.\n\n' +
-            '  Fresh: recovered and ready\n' +
+            '  Fresh: outside its typical recovery window\n' + // RD6-11: time-based, never a recovery verdict
             '  Recovering: part-way through its recovery window\n' +
             '  Recently trained: trained today\n\n' +
             'Each muscle has a sensible recovery window, so larger muscles take longer to read as fresh. The dot beside each bar shows its current state.'

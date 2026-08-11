@@ -129,9 +129,16 @@ export function stripAutoNotes(raw) {
 
 // Plain-language read of the derived training verdict, shown next to the
 // session count so the user sees what the app concluded before overriding.
+// C6 RD6-5 (D97-25): "your usual" asserted a personal baseline the
+// verdict does not have - struggled rests on the plan ratio OR one
+// adjacent week's volume, and dropped is purely a plan-adherence read
+// with no volume evidence at all. Each downgrade string now names the
+// comparison actually made (plan / last week), which is also what the
+// narration sentence beside it already shows the user in numbers. The
+// user's own tappable chip labels are their self-report and unchanged.
 export const PERF_VERDICT_TEXT = {
   exceeded: 'looks like you beat your targets',
   hit: 'on track with your plan',
-  struggled: 'a bit below your usual',
-  dropped: 'well down on your usual',
+  struggled: 'a lighter week than planned or last week',
+  dropped: 'well short of the plan this week',
 };

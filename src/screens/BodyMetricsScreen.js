@@ -1210,11 +1210,15 @@ export default function BodyMetricsScreen() {
                     ) : null}
                     <View style={styles.burnConfidenceRow}>
                       <Text style={[styles.burnConfidence, live.burnConfidence]}>
+                        {/* C6 RD6-8 (D97-25): the label names both inputs -
+                            weigh-in weeks, and whether logged food informed
+                            it or intake was assumed at target (the coach's
+                            own 5-day evidence bar decides which is true). */}
                         {adaptiveBurn.confidence === 'high'
                           ? 'High confidence'
                           : adaptiveBurn.confidence === 'medium'
                             ? 'Firming up'
-                            : 'Early estimate'}, from {adaptiveBurn.weeks} {adaptiveBurn.weeks === 1 ? 'week' : 'weeks'} of data
+                            : 'Early estimate'}, from {adaptiveBurn.weeks} {adaptiveBurn.weeks === 1 ? 'week' : 'weeks'} of weigh-ins{(recentIntake?.daysLogged ?? 0) >= 5 ? ' and your logged food' : ', assuming you ate to target'}
                       </Text>
                       <InfoTooltip text="More weeks of consistent weight and food logging tighten this estimate. It settles on its own; nothing to do." />
                     </View>

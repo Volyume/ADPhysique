@@ -6295,15 +6295,24 @@ export async function getWeeklySessionStats(userId, weekStart) {
   const weekStartMs = coerceWeekStartMs(weekStart, 'getWeeklySessionStats');
   const d = await db();
   const weekEnd = localWeekEndMs(weekStartMs); // LS-06: DST-correct week end, not fixed 168h
+  // C6 RD6-9 (D97-25): a "session" here must contain at least one set -
+  // the same evidence test ReadinessCards already applies to the same
+  // rows. Counting bare is_completed rows let a started-and-abandoned
+  // shell inflate "You hit all N sessions" and the streak/widget/partner
+  // counts built on this reader.
+  const SESSION_EVIDENCE = `AND EXISTS (
+         SELECT 1 FROM workout_sets ws WHERE ws.workout_id = workouts.id)`;
   const row = await d.getFirstAsync(
     `SELECT COUNT(*) AS completed FROM workouts
-     WHERE user_id = ? AND is_completed = 1 AND started_at >= ? AND started_at < ?`,
+     WHERE user_id = ? AND is_completed = 1 AND started_at >= ? AND started_at < ?
+       ${SESSION_EVIDENCE}`,
     [userId, weekStartMs, weekEnd],
   );
   const prev4 = await d.getAllAsync(
     `SELECT COUNT(*) AS wk_count FROM workouts
      WHERE user_id = ? AND is_completed = 1
        AND started_at >= ? AND started_at < ?
+       ${SESSION_EVIDENCE}
      GROUP BY CAST((started_at - ?) / (7 * 86400000) AS INTEGER)`,
     [userId, weekStartMs - 28 * 86400000, weekStartMs, weekStartMs - 28 * 86400000],
   );
@@ -6328,7 +6337,10 @@ export async function getWeeklySessionStats(userId, weekStart) {
   const planned = plannedFromPlan != null
     ? plannedFromPlan
     : Math.max(completed, Math.round(avgPrev) || 3);
-  return { completed, planned };
+  // RD6-9: display surfaces must not present the trailing-average
+  // estimate as though a plan prescribed it; plannedIsEstimate lets
+  // them choose honest phrasing. Existing numeric consumers unchanged.
+  return { completed, planned, plannedIsEstimate: plannedFromPlan == null };
 }
 
 // True when a workout exists for the given calendar day (any state,

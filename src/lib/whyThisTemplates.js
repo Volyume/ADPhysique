@@ -341,7 +341,15 @@ export function getSessionAdjustmentMessage(reasonCode, opts = {}) {
           : `${muscleName} is still sore. 1 set fewer today.`;
       break;
     case C.ADD_UNDER_STIMULUS:
-      msg = `${muscleName} recovered fast and last session was strong. 1 set added today.`;
+      // C6 RD6-2 (D97-25): the old line ("recovered fast and last
+      // session was strong") asserted recovery speed and strength the
+      // inputs cannot show - "recovered" was the ABSENCE of a soreness
+      // answer, "strong" a light pump plus a defaulted rating. The
+      // engine's decision is sound (under-stimulated, nothing flagged
+      // sore); the sentence now states exactly those two facts, in the
+      // sibling codes' register. The reason code and behaviour are
+      // untouched.
+      msg = `${muscleName} took a light pump last time and nothing's been flagged sore. 1 set added today.`;
       break;
     case C.HOLD_WEEKLY_PRECEDENCE:
       msg = `Feeling sharp, but this is a lighter week. Sets stay as planned.`;

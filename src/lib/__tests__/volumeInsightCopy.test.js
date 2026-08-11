@@ -74,3 +74,34 @@ describe('getVolumeWhy', () => {
     expect(why).not.toContain('drop');
   });
 });
+
+describe('C6 RD6-1 (D97-25): the copy quotes the band the verdict used', () => {
+  const { getVolumeInsight, getVolumeWhy } = require('../volumeInsightCopy');
+  // A user whose resolved chest ceiling is 16 (adapted), against a
+  // research table of 22: the sentence must carry 16, not 22.
+  const resolved = { chest: { mev: 6, mav: 12, mrv: 16 } };
+
+  test('the insight line quotes the resolved range, not frozen research', () => {
+    const line = getVolumeInsight('chest', 18, 'over_mrv', resolved);
+    expect(line).toContain('6–16 sets/week');
+    expect(line).not.toContain('22');
+  });
+
+  test('the why body quotes the resolved ceiling', () => {
+    const why = getVolumeWhy('chest', 18, 'over_mrv', resolved, 'adapted');
+    expect(why).toContain('(16 sets per week)');
+    expect(why).not.toContain('22');
+  });
+
+  test('no table falls back to research byte-identically', () => {
+    expect(getVolumeInsight('chest', 18, 'over_mrv')).toBe(getVolumeInsight('chest', 18, 'over_mrv', null));
+  });
+
+  test('the closing clause is true per provenance: adapted claims adaptation, manual claims ownership, research claims research', () => {
+    expect(getVolumeWhy('chest', 10, 'optimal', resolved, 'adapted')).toMatch(/Targets adjust over time as your body responds to training\.$/);
+    expect(getVolumeWhy('chest', 10, 'optimal', resolved, 'manual')).toMatch(/your own volume targets, exactly as you set them\.$/);
+    expect(getVolumeWhy('chest', 10, 'optimal', resolved, 'research')).toMatch(/research-based starting points\.$/);
+    // Unknown provenance may never claim adaptation.
+    expect(getVolumeWhy('chest', 10, 'optimal', null, null)).not.toMatch(/adjust over time/);
+  });
+});

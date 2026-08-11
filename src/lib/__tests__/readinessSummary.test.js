@@ -20,13 +20,21 @@
 import { buildReadinessSummary } from '../readinessSummary';
 
 const BASE_MESO = { isDeload: false, weekIndex: 2, plannedWeeks: 4, rirTarget: 2 };
+// C6 RE6-5 (D97-25): a fixed clock, threaded as nowMs into every test
+// whose fixture carries timestamps. The suite previously read
+// Date.now() at fixture build AND let buildReadinessSummary default
+// nowMs to a second Date.now() read; Review E observed one full-bar
+// failure in four runs with an isolated pass, and a non-deterministic
+// test makes "full bar green" an unreliable landing gate. Hermetic
+// now, no live clock reads.
+const NOW = 1770000000000;
 
 describe('buildReadinessSummary', () => {
   test('returns null with no active mesocycle week, regardless of other signals', () => {
     expect(buildReadinessSummary({
       currentMesoWeek: null,
       deloadSuggestion: { deload: true },
-      fatigueHistory: [{ fatigueLevel: 5, startedAt: Date.now() - 2 * 86400000 }, { fatigueLevel: 5, startedAt: Date.now() - 4 * 86400000 }], // D97-25 RB6-4 re-anchor
+      fatigueHistory: [{ fatigueLevel: 5, startedAt: NOW - 2 * 86400000 }, { fatigueLevel: 5, startedAt: NOW - 4 * 86400000 }], nowMs: NOW, // D97-25 RB6-4 re-anchor + RE6-5 hermetic clock
       lastSession: { soreness24hBefore: 3 },
     })).toBeNull();
   });
@@ -35,8 +43,8 @@ describe('buildReadinessSummary', () => {
     const result = buildReadinessSummary({
       currentMesoWeek: { ...BASE_MESO, isDeload: true },
       deloadSuggestion: { deload: true },
-      fatigueHistory: [{ fatigueLevel: 5, startedAt: Date.now() - 2 * 86400000 }, { fatigueLevel: 5, startedAt: Date.now() - 4 * 86400000 }], // D97-25 RB6-4 re-anchor
-      lastSession: { startedAt: Date.now(), soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
+      fatigueHistory: [{ fatigueLevel: 5, startedAt: NOW - 2 * 86400000 }, { fatigueLevel: 5, startedAt: NOW - 4 * 86400000 }], nowMs: NOW, // D97-25 RB6-4 re-anchor + RE6-5 hermetic clock
+      lastSession: { startedAt: NOW, soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
     });
     expect(result).toEqual({ tone: 'recover', line: 'Recovery week, pull effort back.' });
   });
@@ -45,8 +53,8 @@ describe('buildReadinessSummary', () => {
     const result = buildReadinessSummary({
       currentMesoWeek: BASE_MESO,
       deloadSuggestion: { deload: true, reasons: ['Reps trending down'] },
-      fatigueHistory: [{ fatigueLevel: 5, startedAt: Date.now() - 2 * 86400000 }, { fatigueLevel: 5, startedAt: Date.now() - 4 * 86400000 }], // D97-25 RB6-4 re-anchor
-      lastSession: { startedAt: Date.now(), soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
+      fatigueHistory: [{ fatigueLevel: 5, startedAt: NOW - 2 * 86400000 }, { fatigueLevel: 5, startedAt: NOW - 4 * 86400000 }], nowMs: NOW, // D97-25 RB6-4 re-anchor + RE6-5 hermetic clock
+      lastSession: { startedAt: NOW, soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
     });
     expect(result).toEqual({ tone: 'recover', line: 'Recent training signals point towards easing off soon.' });
     // Worded distinctly from the top banner's own copy.
@@ -58,7 +66,8 @@ describe('buildReadinessSummary', () => {
       currentMesoWeek: BASE_MESO,
       deloadSuggestion: null,
       fatigueHistory: [],
-      lastSession: { startedAt: Date.now(), soreness24hBefore: 3, sleepQuality: null, energyScore: null },
+      lastSession: { startedAt: NOW, soreness24hBefore: 3, sleepQuality: null, energyScore: null },
+      nowMs: NOW,
     });
     expect(result).toEqual({ tone: 'caution', line: 'Last time out you were sore. Worth listening to that today.' });
   });
@@ -68,7 +77,8 @@ describe('buildReadinessSummary', () => {
       currentMesoWeek: BASE_MESO,
       deloadSuggestion: null,
       fatigueHistory: [],
-      lastSession: { startedAt: Date.now(), soreness24hBefore: null, sleepQuality: 2, energyScore: 2 },
+      lastSession: { startedAt: NOW, soreness24hBefore: null, sleepQuality: 2, energyScore: 2 },
+      nowMs: NOW,
     });
     expect(result).toEqual({
       tone: 'caution',
@@ -81,7 +91,8 @@ describe('buildReadinessSummary', () => {
       currentMesoWeek: BASE_MESO,
       deloadSuggestion: null,
       fatigueHistory: [],
-      lastSession: { startedAt: Date.now(), soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
+      lastSession: { startedAt: NOW, soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
+      nowMs: NOW,
     });
     expect(result.line).toBe('Last time out you were sore, short on sleep and low on energy. Worth listening to that today.');
   });
@@ -100,8 +111,9 @@ describe('buildReadinessSummary', () => {
     const result = buildReadinessSummary({
       currentMesoWeek: BASE_MESO,
       deloadSuggestion: null,
-      fatigueHistory: [{ fatigueLevel: 4, startedAt: Date.now() - 1 * 86400000 }, { fatigueLevel: 3.5, startedAt: Date.now() - 3 * 86400000 }, { fatigueLevel: 1, startedAt: Date.now() - 5 * 86400000 }], // D97-25 RB6-4 re-anchor
+      fatigueHistory: [{ fatigueLevel: 4, startedAt: NOW - 1 * 86400000 }, { fatigueLevel: 3.5, startedAt: NOW - 3 * 86400000 }, { fatigueLevel: 1, startedAt: NOW - 5 * 86400000 }], // D97-25 RB6-4 re-anchor + RE6-5 hermetic clock
       lastSession: { soreness24hBefore: null, sleepQuality: null, energyScore: null },
+      nowMs: NOW,
     });
     expect(result).toEqual({ tone: 'caution', line: 'Fatigue has been building over your last couple of sessions.' });
   });
@@ -120,7 +132,7 @@ describe('buildReadinessSummary', () => {
     const result = buildReadinessSummary({
       currentMesoWeek: BASE_MESO,
       deloadSuggestion: null,
-      fatigueHistory: [{ fatigue_level: 4, started_at: Date.now() - 2 * 86400000 }, { fatigue_level: 4, started_at: Date.now() - 4 * 86400000 }], // D97-25 RB6-4 re-anchor
+      fatigueHistory: [{ fatigue_level: 4, started_at: NOW - 2 * 86400000 }, { fatigue_level: 4, started_at: NOW - 4 * 86400000 }], nowMs: NOW, // D97-25 RB6-4 re-anchor + RE6-5 hermetic clock
       lastSession: null,
     });
     expect(result.tone).toBe('caution');
@@ -166,8 +178,8 @@ describe('buildReadinessSummary', () => {
     const scenarios = [
       { currentMesoWeek: { ...BASE_MESO, isDeload: true }, deloadSuggestion: null, fatigueHistory: [], lastSession: null },
       { currentMesoWeek: BASE_MESO, deloadSuggestion: { deload: true }, fatigueHistory: [], lastSession: null },
-      { currentMesoWeek: BASE_MESO, deloadSuggestion: null, fatigueHistory: [], lastSession: { soreness24hBefore: 3 } },
-      { currentMesoWeek: BASE_MESO, deloadSuggestion: null, fatigueHistory: [{ fatigueLevel: 5, startedAt: Date.now() - 2 * 86400000 }, { fatigueLevel: 5, startedAt: Date.now() - 4 * 86400000 }], lastSession: null },
+      { currentMesoWeek: BASE_MESO, deloadSuggestion: null, fatigueHistory: [], lastSession: { startedAt: NOW, soreness24hBefore: 3 }, nowMs: NOW },
+      { currentMesoWeek: BASE_MESO, deloadSuggestion: null, fatigueHistory: [{ fatigueLevel: 5, startedAt: NOW - 2 * 86400000 }, { fatigueLevel: 5, startedAt: NOW - 4 * 86400000 }], lastSession: null, nowMs: NOW },
       { currentMesoWeek: BASE_MESO, deloadSuggestion: null, fatigueHistory: [], lastSession: null },
     ];
     for (const scenario of scenarios) {

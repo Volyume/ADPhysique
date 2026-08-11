@@ -98,8 +98,20 @@ export function selectPlateauForBanner(sets = [], { now = Date.now(), maxStalene
 
 // The banner line. Calm, specific, actionable; British English, no em dash
 // (docs/COACHING_VOICE_SYNTHESIS_LOCKED.md).
-export function plateauBannerLine(exerciseName, weeks) {
+// C6 RD6-3 + RD6-4 (D97-25): "has plateaued for N weeks" claimed more
+// than the detector measures on two axes. The detector compares SESSION
+// AVERAGES over every set (warm-ups included), so a user who added
+// three reps to their top set could be told they had plateaued; and the
+// weeks figure was the calendar span of as few as three sessions, so
+// three sessions across eight weeks read "plateaued for 7 weeks". The
+// line now states the measured quantity and carries the density it
+// rests on (sessions AND span), inviting a look instead of asserting a
+// verdict the tap-through detail lets the user judge for themselves.
+export function plateauBannerLine(exerciseName, weeks, sessions = null) {
   const n = Math.max(1, Math.round(weeks ?? 1));
   const unit = n === 1 ? 'week' : 'weeks';
-  return `${exerciseName} has plateaued for ${n} ${unit}. Tap for a way through.`;
+  const sc = Number.isFinite(sessions) && sessions >= 2 ? sessions : null;
+  return sc
+    ? `${exerciseName}'s session average hasn't moved across your last ${sc} sessions (${n} ${unit}). Tap to take a look.`
+    : `${exerciseName}'s session average hasn't moved in about ${n} ${unit}. Tap to take a look.`;
 }

@@ -106,20 +106,28 @@ describe('selectPlateauForBanner', () => {
   });
 });
 
+// Re-anchored under RD6-3/RD6-4 (D97-25): the banner now states the
+// measured quantity (session average) and carries the run's session
+// count, instead of asserting "has plateaued" from a mean that a moved
+// top set contradicts.
 describe('plateauBannerLine', () => {
-  test('the exact calm sentence, pluralised', () => {
-    expect(plateauBannerLine('Bench Press', 3))
-      .toBe('Bench Press has plateaued for 3 weeks. Tap for a way through.');
+  test('the exact calm sentence, with density and pluralised span', () => {
+    expect(plateauBannerLine('Bench Press', 3, 4))
+      .toBe("Bench Press's session average hasn't moved across your last 4 sessions (3 weeks). Tap to take a look.");
   });
 
-  test('singular week', () => {
+  test('singular week, no session count falls back to span-only wording', () => {
     expect(plateauBannerLine('Seated Row', 1))
-      .toBe('Seated Row has plateaued for 1 week. Tap for a way through.');
+      .toBe("Seated Row's session average hasn't moved in about 1 week. Tap to take a look.");
+  });
+
+  test('never claims a verdict the mean cannot support', () => {
+    expect(plateauBannerLine('Bench Press', 3, 4)).not.toMatch(/has plateaued|No progress/);
   });
 
   test('no em dash, and a broken weeks value never renders below 1', () => {
     const line = plateauBannerLine('Deadlift', 0);
-    expect(line).toBe('Deadlift has plateaued for 1 week. Tap for a way through.');
-    expect(line).not.toContain('—');
+    expect(line).toBe("Deadlift's session average hasn't moved in about 1 week. Tap to take a look.");
+    expect(line).not.toContain('\u2014');
   });
 });

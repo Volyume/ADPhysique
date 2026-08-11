@@ -750,3 +750,74 @@ separately below as they land.
 - Matrices corrected: REINSTALL-MATRIX receipt row and
   MULTI-DEVICE-MATRIX receipt + ledger rows now state the fixed
   mechanisms and name the pre-fix falsity.
+
+**Review D (product truth), all fourteen dispositioned:**
+- **RD6-1 FIXED**: getVolumeInsight/getVolumeWhy now receive the SAME
+  resolved landmark table (and per-muscle source) the verdict beside
+  them used, so the quoted range can never contradict the status; the
+  closing clause tells the truth per provenance (adapted claims
+  adaptation, manual claims ownership, research claims research - the
+  free-safe conservative default). Pinned. The deeper per-muscle
+  provenance NAMING pass remains B1 (founder-gated), unchanged.
+- **RD6-2 FIXED**: the session_add_under_stimulus line states the two
+  facts the engine read (light pump, nothing flagged sore) instead of
+  asserting recovery speed and strength. Engine behaviour untouched.
+- **RD6-3 SPLIT**: copy FIXED - the banner and detectPlateau messages
+  state the measured quantity (session average) and invite a look
+  instead of prescribing from a coarse signal. The DETECTION basis
+  (session means incl. warm-ups vs top-set comparison) is a genuine
+  behaviour change that would break plateauSurfacing's stated
+  banner/target-screen invariant -> FOUNDER QUEUE with the review's
+  framing.
+- **RD6-4 SPLIT**: copy FIXED - the banner carries its own density
+  (sessions AND span). The stricter run-contiguity threshold and the
+  LOCKED_COPY paywall line -> FOUNDER QUEUE (locked copy carries
+  founder history; not rewritten).
+- **RD6-5 FIXED**: the downgrade verdicts name the comparison actually
+  made ("a lighter week than planned or last week"; "well short of the
+  plan this week") instead of asserting a personal "usual".
+- **RD6-6 FIXED**: the free progression teaser names the weight ("added
+  weight" / "stayed at the same top weight") and requires the pair
+  inside the 14-day boundary, falling back to the existing untimed
+  variants.
+- **RD6-7 FIXED**: computeRecoveryTrendInsight now requires a current
+  latest check-in AND calendar-adjacent weeks before speaking in runs
+  (D97-5's own standard applied to the surface it missed). Pinned with
+  a gap-breaks-the-run case.
+- **RD6-8 FIXED (label truth)**: the maintenance label names both
+  inputs - weigh-in weeks, and whether logged food informed it or
+  intake was assumed at target (the coach's own 5-day bar decides),
+  on both the trend card and Body Metrics. Engine maths untouched.
+  The optional building-state fallback was declined: the label is now
+  honest, and hiding the estimate would remove true information.
+- **RD6-9 FIXED**: getWeeklySessionStats counts only sessions with at
+  least one set (the app's own ReadinessCards standard), and no
+  surface presents the trailing-average estimate as a plan any more
+  (plannedIsEstimate exposed; the widget falls to its honest plain
+  count; useWeeklyStreak/partners already only used real plan targets).
+- **RD6-10 FIXED**: the consistency tooltip forks on tier exactly as
+  HomeWelcomeCard does; free claims history/records/stats only.
+- **RD6-11 FIXED**: the freshness gloss says what the band measures
+  (recency vs a typical window), on both surfaces; feeding real
+  soreness data into the band is recorded as a product idea, not built.
+- **RD6-12 FIXED**: the recovery gauges read only the last two weeks of
+  rated sessions (the standing boundary) and the tooltip states that
+  bound instead of promising a fade the maths never delivered.
+- **RD6-13 FIXED**: the differential-paywall gate receives only
+  check-ins genuinely inside its own contracted window - strictly
+  conservative on a monetisation surface.
+- **RD6-14 FIXED**: the workload card's status text and tooltip name
+  the real baseline week count when it is under four, matching the
+  takeaway line.
+
+**Cross-suite flake (RB header + RE6-5) investigation:** the one
+failure with a captured signature (readinessSummary line 106) is
+CLOSED hermetically - the suite now uses a fixed clock threaded as
+nowMs into every dated fixture, so it can no longer read ambient time.
+The widgets/storage and blockLifecycle.stage1 failures could NOT be
+reproduced in 14 subsequent full-bar runs on the settled tree after
+that fix (four observation runs + a ten-run capture loop, parallel and
+--runInBand); no failing log was obtainable. Recorded as a WATCH item:
+if either reappears at the Phase 62 gates, the failing run's full log
+must be captured and chased before merge - "full bar green" was
+observed repeatedly but the intermittency is not fully root-caused.

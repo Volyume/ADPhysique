@@ -66,10 +66,13 @@ function HomeProTeaserCard({ totalSessions, teaserInsight, onPress }) {
         <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.proTeaserTitle, live.proTeaserTitle]}>
+            {/* C6 RD6-6 (D97-25): the comparison reads MAX WEIGHT only,
+                so the copy names the weight rather than passing a verdict
+                on the lift - "held" contradicted a genuine rep PR. */}
             {teaserInsight?.progressed && teaserInsight?.stalled
-              ? `${teaserInsight.progressed} went up. ${teaserInsight.stalled} held. Pro tells you what to do next.`
+              ? `${teaserInsight.progressed} added weight. ${teaserInsight.stalled} stayed at the same top weight. Pro tells you what to do next.`
               : teaserInsight?.progressed
-                ? `${teaserInsight.progressed} progressed last session. Pro builds on it.`
+                ? `${teaserInsight.progressed} added weight last session. Pro builds on it.`
                 : totalSessions >= 10
                   ? `${totalSessions} sessions logged. Pro coaching uses all of it.`
                   : 'Add a coach that adjusts your plan each week.'}

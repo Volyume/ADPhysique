@@ -1375,9 +1375,14 @@ export function detectPlateau(exerciseSessions = [], _repMin = 6, _repMax = 12) 
     resolution: consecutiveStalls >= 3
       ? 'swap_exercise'      // 3+ stalls: substitute this exercise for 4-6 weeks
       : 'change_rep_range',  // 2 stalls: try a different rep range (e.g. 15-20) for 3 weeks
+    // C6 RD6-3 (D97-25): the message states the measured quantity (the
+    // session AVERAGE across all sets) rather than asserting "no
+    // progress" - a claim the mean cannot support when a top set moved
+    // - and invites a look instead of prescribing from a coarse signal.
+    // Thresholds, windows and the resolution codes are untouched.
     message: consecutiveStalls >= 3
-      ? 'No progress for 3 sessions in a row. Try a different exercise for this muscle for the next 4-6 weeks, then revisit.'
-      : 'No progress for 2 sessions. Try shifting to a higher rep range (15-20) for 3 weeks, then return to this weight.',
+      ? 'Your session average here has not moved for 3 sessions in a row. Worth a look: if the top sets have stalled too, a different exercise for this muscle for 4-6 weeks is a solid reset.'
+      : 'Your session average here has not moved for 2 sessions. Worth a look: a higher rep range (15-20) for a few weeks can restart progress.',
   };
 }
 

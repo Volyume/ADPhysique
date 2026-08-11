@@ -1505,8 +1505,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               // the landmarks are unchanged; only the advice waits until
               // the week is one that can be judged.
               const weekJudgeable = readOnly || !weekProgress.inProgress;
-              const insight = weekJudgeable ? getVolumeInsight(muscle, data.workingSets, status) : null;
-              const why = weekJudgeable ? getVolumeWhy(muscle, data.workingSets, status) : null;
+              // C6 RD6-1 (D97-25): the copy receives the SAME resolved
+              // table (and this muscle's source) the verdict two lines up
+              // was computed from, so the quoted range can never
+              // contradict the status beside it.
+              const insight = weekJudgeable ? getVolumeInsight(muscle, data.workingSets, status, landmarkResolution?.table) : null;
+              const why = weekJudgeable ? getVolumeWhy(muscle, data.workingSets, status, landmarkResolution?.table, landmarkResolution?.source?.[muscle] ?? null) : null;
               const isExpanded = expandedVolumeWhy === muscle;
               return (
                 <View key={muscle} style={[styles.volumeRow, live.volumeRow, mi === musclesWorked.length - 1 && styles.volumeRowLast]}>

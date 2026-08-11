@@ -91,6 +91,9 @@ export default function useWeightTrend(userId) {
         adaptiveBurn,
         edFlagOpen: !!edFlag,
         stepTrend,
+        // C6 RD6-8 (D97-25): the label needs to know whether logged
+        // food informed the estimate or intake was assumed at target.
+        intakeDaysLogged: recentIntake?.daysLogged ?? 0,
       });
 
       setResult({ ...vm, ewmaData, rawData: weights || [], loading: false });

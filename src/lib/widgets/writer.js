@@ -65,7 +65,11 @@ export async function gatherWidgetInputs(userId) {
   const edFlag = await getOpenEdPatternFlag(userId).catch(() => 'read_failed');
   const wellbeing = await AsyncStorage.getItem(WELLBEING_KEY)
     .then((v) => v || 'unspecified').catch(() => 'read_failed');
-  const planned = (Array.isArray(routines) && routines.length) ? routines.length : (stats?.planned ?? 0);
+  // C6 RD6-9 (D97-25): with no active plan the stats fallback is a
+  // trailing-average ESTIMATE, and the widget rendered it as "N of M
+  // sessions this week" as though a plan prescribed M. No plan -> no
+  // denominator; the widget falls to its honest plain-count mode.
+  const planned = (Array.isArray(routines) && routines.length) ? routines.length : null;
 
   // T1 (comprehension-trust audit 2026-08-06): streakWeeks was a hardcoded 0,
   // so the widget's promised streak line could never render. The widget does

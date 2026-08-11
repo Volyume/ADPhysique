@@ -15,9 +15,18 @@ import { VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES } from './algorithms';
 /**
  * At-a-glance insight line for a muscle row: set count, status phrase and the
  * MEV–MRV target range. Returns null for a muscle with no landmarks.
+ *
+ * C6 RD6-1 (D97-25): callers pass the RESOLVED landmark table (manual >
+ * adapted > research) the verdict itself was computed from, so the range
+ * quoted in the sentence is the range that produced the status beside
+ * it. Reading frozen VOLUME_LANDMARKS here while the verdict used the
+ * resolved table made the copy contradict the verdict on any adapted or
+ * manual muscle ("18 sets - over your recovery limit (aim for 6-22)"
+ * against a resolved ceiling of 16). Research stays the fallback so
+ * every legacy caller is byte-identical.
  */
-export function getVolumeInsight(muscle, sets, status) {
-  const landmarks = VOLUME_LANDMARKS[muscle];
+export function getVolumeInsight(muscle, sets, status, table = null) {
+  const landmarks = table?.[muscle] ?? VOLUME_LANDMARKS[muscle];
   if (!landmarks) return null;
   const { mev, mrv } = landmarks;
   const n = Math.round(sets);
@@ -34,12 +43,23 @@ export function getVolumeInsight(muscle, sets, status) {
 // muscle row. The insight line above is at-a-glance; this body answers
 // the "but why?" question with concrete next-week guidance and the
 // landmark numbers for THIS muscle specifically.
-export function getVolumeWhy(muscle, sets, status) {
-  const landmarks = VOLUME_LANDMARKS[muscle];
+export function getVolumeWhy(muscle, sets, status, table = null, source = null) {
+  const landmarks = table?.[muscle] ?? VOLUME_LANDMARKS[muscle];
   if (!landmarks) return null;
   const { mev, mrv } = landmarks;
   const name = MUSCLE_DISPLAY_NAMES[muscle] || muscle;
-  const closing = ' Targets adjust over time as your body responds to training.';
+  // C6 RD6-1 (D97-25): the closing clause tells the truth about WHICH
+  // band the reader is looking at. "Targets adjust over time" was
+  // attached unconditionally - true for a Pro adapted muscle, false for
+  // a free user on research constants, and misleading for a manual
+  // muscle whose numbers deliberately never move. Each source now gets
+  // its own true sentence; unknown source keeps the research wording
+  // (the conservative claim, true for every band that has not adapted).
+  const closing = source === 'adapted'
+    ? ' Targets adjust over time as your body responds to training.'
+    : source === 'manual'
+      ? ' These are your own volume targets, exactly as you set them.'
+      : ' These targets are research-based starting points.';
   if (status === 'optimal') {
     return `${name}'s productive range sits between ${mev} and ${mrv} sets per week, and you landed inside it. Next week, look for an extra rep on at least one exercise rather than piling on more sets.${closing}`;
   }
