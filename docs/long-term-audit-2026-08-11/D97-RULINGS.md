@@ -481,3 +481,39 @@ exact twelve questions from the founder's restatement. Root cause
 (compressed addendum captures) recorded in the compliance ledger;
 every subsequent requirement check runs against the recovery order's
 enumeration, not session memory.
+
+## D97-22 dispositions completed under the compliance recovery order
+
+- **R-4 FIXED** (ruling (b)+(a)): a recovery week is only claimed LIVE
+  with a completed workout inside the 14-day boundary; otherwise the
+  calendar fact is stated with no prescription. Option (c) (pausing
+  the block clock) is D91-25-adjacent → Phase 57 founder item.
+- **R-6 FIXED**: the Home readiness caution requires the last session
+  inside 14 days; undated sessions cannot prove recency.
+- **R-12 FIXED (semantics)**: an untrained week is the accumulation
+  boundary, never "a rest week the user took"; outcome unchanged and
+  polarity pinned.
+- **R-14 FIXED (display only)**: the coach weight chip formats the
+  raw kg delta per bodyWeightUnits; maths and storage stay kg.
+- **R-15 FIXED**: Year of Lifts records gated by isE1rmEligibleRow.
+- **R-17 FIXED**: win-back claims storage only; calm mode joins the
+  lay gate.
+- **R-16 BLOCKED-FOUNDER**: an inactivity stand-down for the weigh-in
+  prompts is NEW notification policy under NOTIFICATIONS_LOCKED.md
+  (Section 2 locked doc) and sits beside the already-founder-gated
+  FR-5 unsubscribe question. Recommendation for the ruling: stand
+  both prompts down after 3 consecutive weeks with no weigh-in and no
+  session (mirroring lapseDetect's C5-P28-04 precedent), re-laid by
+  restoreNotifications on return; full stop, no taper. NOT built.
+- **R-18 BLOCKED-FOUNDER**: the FFM-floor weight input (profile
+  weight of unbounded age) is a floor INPUT and therefore Section 2;
+  carried to Phase 57 beside R-3 with recommendation (a) (refresh
+  userProfile.weightKg from logged morning weights exactly as Goal
+  Setup already back-fills it - keeps "stated truth" stated, never
+  lowers a floor by rule change). NOT built.
+- **R-9 CARRIED**: ledger rebuild after historical deletion is the
+  D97-3 family (the force path exists, uncalled); one founder
+  decision covers both.
+- **R-13 CARRIED to Phase 40**: the ~20-rescan Progress landing cost
+  is the commissioned measure-first performance lane's first
+  measurement, actioned there, not ad hoc.
