@@ -1,13 +1,15 @@
 # CAMPAIGN 6 — FINAL HANDOVER (1-80, then A-H, then 81-96)
 
-Assembled during campaign close; cells marked [FILL-AT-CLOSE] receive
-the final SHAs/gate outputs/review results at merge time. Every other
-answer is final and evidence-backed now.
+FINAL — assembled and completed at campaign close, 2026-08-11. Every
+item is an actual answer; the review items (56-59, 95) carry the full
+per-finding dispositions and the gate items (1, 2, 80) carry the
+merged-main SHA, the exact merged-main gate counts and the complete
+commit list.
 
 ## ORIGINAL ITEMS 1-80
 
-1. **Final main SHA**: [FILL-AT-CLOSE — the merged-main SHA, reported after the merged-main gate rerun].
-2. **Final tests/lint/invariant status**: [FILL-AT-CLOSE — exact counts from the merged-main run]. Branch state through the campaign: lint clean at every landing; identity invariant clean; full suite green at every commit (latest branch run before close: 829 suites / 10,104 passing tests, plus later additions).
+1. **Final main SHA**: **03ad787dfd1ca289f0462bc5dfee426b7df8f62d** (the Campaign 6 merge commit on main, 2026-08-11). A doc-only follow-up merge carrying this handover's own final fills lands immediately after and is named in the closing report.
+2. **Final tests/lint/invariant status**: on MERGED MAIN (03ad787d): `npm run lint` clean (eslint, max-warnings 0); `scripts/check-identity-invariant.sh` clean; full suite **830 passed / 1 skipped suites, 10,161 passed / 10 skipped tests, 17 snapshots** (parallel rerun fully green; the first merged-main run showed the one known intermittent failure, which passed on the immediate rerun — that intermittency is hermetically closed at its only captured signature (RE6-5) and carried as a named WATCH item in D97-RULINGS.md, not hidden). Branch state through the campaign: lint clean at every landing; identity invariant clean; full bar green at every commit, verified additionally in the CI arbiter form (`--runInBand`: 10,161 passed).
 3. **30/90/180/365-day personalisation model**: PERSONALISATION-MATURITY.md (28 systems), corrected under D97-19 (pref-sync reinstall claims were wrong and now carry a dated correction banner). What genuinely matures: 30d — adapted session bands + first coach calibration; 90d — first judged blocks, learned bands become seed sources; 180d — multi-block learned ranges, block history narrative, calibrated maintenance; 365d — no additional mechanism exists beyond 180d (stated honestly; the ledger's prior-evidence window is 180 days, so beyond it the ledger re-baselines while the PR wall stays all-time — the two deliberately disagree, recorded as P10-8).
 4. **Six-block simulation result**: SIX-BLOCK-SIMULATION.md + campaign6.sixBlock.test.js (24 tests) + the relationship report section: differentiated muscle outcomes (responsive/stale/strained), +1 only on paired dose-response evidence with confidence, retention as first-class outcome, suppression holds, MEV floor clamps on strained starts.
 5. **Evidence personalisation compounds**: PERSONALISATION-DIVIDEND.md §1 — computed from the real chain: chest with six responsive blocks starts Block 6 at 11 weekly sets vs 6 without history; the disrupted arc honestly resets numbers while keeping the learned band (4 evidence blocks); calves' ceiling hones DOWN 21→15 from handled evidence (protection as personalisation).
@@ -85,7 +87,94 @@ answer is final and evidence-backed now.
 77. **Tests added/removed/re-anchored**: NOTHING REMOVED. Added (permanent campaign suites): campaign6.sixBlock (24), campaign6.longitudinal (27), campaign6.longTerm (grown to 44 law pins), campaign6.applyRepeat (11), campaign6.nutrition (10), campaign6.lapse90 (11), campaign6.athlete180 (11), campaign6.relationship (12), campaign6.reinstall (9, real init path + real appliers), weeklyCoach.evidencedClaims (11), payments/pendingCascade.flush (6 behavioural), database.coachOutputReid (3, real migration pipeline). Added into existing suites: interBlock.stage2 (M-6 veto truth), blockAdvisor (R-4 recovery-week matrix), readinessSummary (R-6 recency matrix), streakState (R-10 boundary matrix, real key format), winbackState (R-7 per-user + migration), syncQueue (S-5 offline-budget pins), blockSeed.stage6 (P-6, 4 tests), adaptiveTdee.b1.replay (P-4). Re-anchored SAME-MEANING with the ruling named in-file: fq6.billing (P-1 result shape), campaign1.integrity + campaign1.syncConflict (grown guarded-pref family), campaign5.firstUse + campaign5.syntheticJourney (M-8 cause-agnostic wording), weeklyCoach.test + weeklyCoach.f10 (R-1 clock injection), BodyMetricsScreen.editDelete.guard (R-8 actions enabled), ExerciseDetail mocks (P10-1), campaign1.syncConflict positional pin (is_archived column), sync.partners stub (T-12 chained shape), two slice-window widenings (T-2 comments), migration-harness offsets +1 (v72, per that harness's own convention).
 78. **Current live/deferred product debt**: TRIAGE-2026-08-11.md is the complete register; nothing else is deferred anywhere.
 79. **Device checklist for a future physical build**: (numbered, EAS build, physical Android) 1. Fresh install, sign into an established account → expect plans, block, records, targets and weights present; no onboarding re-run. 2. Open Coach after 0 recent weigh-ins → expect "Log morning weight" hold, no adjustment. 3. Log a weigh-in from Home, open Body Metrics history → expect edit/delete on that row; delete it; confirm it stays gone after pull-to-refresh. 4. Set a manual muscle override, run a block decision → expect "your own setting" provenance and unchanged numbers. 5. Switch coach autonomy to Manual → expect every Apply button informational. 6. Enable calm mode → expect win-back/weight prompts silent, coach card softened; disable → expect normal, with no catch-up applies. 7. As Free: press Repeat on a finished block → expect exactly last block's numbers; confirm Adjust is locked. 8. ED-safety cases: with an open flag (test account), confirm weight prompts, win-back and share cards stay suppressed and the coach never proposes a cut below floors. 9. Two devices: apply a coach adjustment on A, open B after sync → expect B's Apply dead. 10. Airplane-mode: delete a workout offline, reconnect hours later → expect the deletion to reach the cloud (no resurrection after reinstall).
-80. **Commits in order**: [FILL-AT-CLOSE — git log main..HEAD at merge]
+80. **Commits in order** (84 campaign commits, oldest first, merged to main at 03ad787d):
+
+```
+c99f677e Open Campaign 6: long-term personalisation, lapses, reinstall, multi-block
+13ad9f9e Land the six-block athlete and the longitudinal engine characterisations (C6 Phases 3-6, 8)
+987a42f9 Land the Phase 7 stale-history copy fixes and the lapse evidence doc
+239ee7a3 Land the Phase 2 maturity model and fix the adaptive-band ordering inversion (D97-2)
+8fce6a11 Stop absence converting into evidence: age-gate the +1 branch and the week counters (D97-4/5)
+139069a2 Fix the three verified Phase 1 seams: dead notification restore, frozen phase clock, stale present-tense signals (D97-6/7/8)
+adc6efee Land the Phase 13/14 suites: the multi-week Apply loop and Repeat-vs-Adjust sequences
+0e672a9a Land the Phase 22-24 nutrition athlete and the nutrition safety pins
+c0ecd6c2 Phase 60: the migration release table (132-135 + 049), nothing run
+ee5d7789 Bound Coached auto-apply to the current cycle (D97-10)
+9493dfce Update the campaign log scoreboard
+7f220f56 Integrate the founder's Personalisation Dividend addendum into Campaign 6
+abefab54 Pin the addendum's anti-anthropomorphism and anti-manipulation laws
+392fa136 Add the six-block relationship report (Personalisation Dividend addendum)
+4ef410c3 Action the plan-lifecycle audit: ledger backfill, archive partition, archived sync, switch dialogues (D97-11..17)
+045736db Record the exercise/PR audit ruling directions (D97-18)
+49b3f253 Close the three HIGH record defects: cluster eligibility, honest PR tile, unbounded records wall (D97-18)
+12703d64 Update the campaign log scoreboard
+6700a9f7 Land the Phase 51 permanent 90-day lapse E2E
+517c2cc3 Land the Phase 50 permanent 180-day E2E athlete
+75bef1dd Update the campaign log scoreboard
+0b383230 Action the choice-memory lane and record the tier-audit directions (D97-19/20)
+23e3f907 Rewire the FQ-6.1 trial-grant retry on results (C6 P-1, D97-20)
+06796ce8 Give the ledger readiness slope the FB-36 evidence guard (C6 P-3, D97-20)
+9c02c798 Bound coach phase claims by coached evidence (C6 P-2, D97-20)
+853819d0 Refuse sleep-only rows at the completed-check-in gate (C6 P-4, D97-20)
+61fb8a51 Count ended blocks as personal history, not just judged ones (C6 P-5, D97-20)
+300bd5d1 Make repeat keep its promise on an unjudgeable ledger (C6 P-6, D97-20)
+2cdef4bb Record the tier-audit actioning in the D97 register and campaign log
+59171439 Record the 25-31 / 32-38 audit wave and its recovery path
+afabf5a5 Add the 180-day relationship report with the continuity verdict (D97-21)
+68519aeb Pin the addendum's relationship-level invariants (Campaign 6)
+53f89e28 Log the addendum lead landings (180-day report, relationship pins)
+5a4fde4e Land the phase 25-31 and 32-38 audit deliverables
+1e90ae09 Anchor the weigh-in week window on the clock, not the newest row (C6 R-1, D97-22)
+e24423da Record D97-22/D97-23 audit rulings after lead verification
+151e1ec3 Correct the migration gates record: 135 held as defective (D97-23)
+bb8159b8 Log the 25-31/32-38 wave landings, rulings and next fix batches
+62907806 Drop the readiness claim and urgency from the overdue block line (C6 R-5, D97-22)
+62d8a1ca Make the churn episode per-user, never device-global (C6 R-7, D97-22)
+1574ad8c Date-window the Progress trend card (C6 R-2, D97-22)
+0dddb9ad Keep a streak pause alive when its start scrolls out of view (C6 R-10, D97-22)
+cf27bedd Correct S-1's disposition: it is D92-11 and stays unchanged
+4f9748c3 Create the Campaign 6 compliance ledger (recovery order, first action)
+de8a1144 Correct the nine-questions error at source (D97-21 superseded)
+1b7c45c0 Bound the Home readiness caution to a recent session and gate the year recap's records (C6 R-6 + R-15, D97-22)
+9cf09c56 Only claim a live recovery week when it was earned (C6 R-4, D97-22)
+e283f924 Make the win-back claim storage only and gate its lay on calm mode (C6 R-17, D97-22)
+ef579d7f Ledger: R-4, R-6, R-15, R-17 landed; phases 7/11/27/29 complete
+e501ea46 Stop counting gap weeks as rest weeks, and show the coach delta in the user's unit (C6 R-12 + R-14, D97-22)
+55809559 Record the R-lane dispositions under D97-22
+3ad52a20 Give Home weigh-ins an owner: edit and soft-delete from Body Metrics (C6 R-8, D97-22)
+f79520df Guard the streak blob and correct R-10's key parsing (C6 R-10 fix + R-11, D97-22)
+ca6a6c4b Guard the notification-pref blob and quiet hours (C6 S-2, D97-23)
+0ab7af38 Never spend the delete retry budget on being offline (C6 S-5, D97-23)
+e016f65c Repair migration 135 and ship its client half, unapplied (C6 S-14/S-15, D97-23)
+935a856f Record the S-lane dispositions and R-3 proof; ledger updated
+71f6da00 Board: dispatch the 39-43 / 45-49 audit wave
+1befa469 Add the permanent reinstall E2E (Campaign 6 Phase 52)
+ef31ace3 Add the commissioned reinstall and multi-device matrices (Phases 32/37)
+08ac2cdf Prove the personalisation dividend with the commissioned counterfactual
+5fd22e6d Deliver the What-Volyume-Has-Learned feasibility verdict: C
+1e1e80bc Close phases 15-17 with the modes/manual audit; ledger updated for 4/32/37/52 and the addendum docs
+16b3ac0d Deliver the Phase 57 triage, Phase 59 verification and the final Phase 60 release table
+7b4e37c2 Board: reviews A and B dispatched under the founder's wider window
+5ebe16a7 Draft the final handover (fill-at-close cells marked); land the phases 45-49 maturity audit
+c741f087 Action the maturity audit's defects (C6 M-6/M-7/M-8/M-9/M-13, D97-24)
+28fc6bf3 Land the phases 39-43 clock/scale/local/partner audit
+fa35314d Action the clock/scale/local/partner audit's defects (C6 T-lane, D97-24)
+bff777fc Record D97-24 (M and T lane rulings)
+6c9b10ff Ledger and handover filled from the M and T audits (phases 30/39-49 closed)
+2950af2a Board: all five reviews in flight
+5d0d007a Handover: founder-ruling queue (61) and test inventory (77) filled
+6ab09acc Ledger sweep: only review-in-flight and gate-at-close rows remain open
+08aab7a0 Land Reviews A and B (six-month athlete; returning user)
+6320b62c Review B's final citation corrections
+be609217 Action Review B's residual findings (C6 RB6 lane, D97-25)
+eacc7aea Action Review A findings across the adaptive chain (D97-25)
+2ef8d798 State the age of an old reviewed coaching decision (RB6-9, D97-25)
+44d105cc Land Reviews C, D and E; record D97-25 and the Review A/B dispositions
+34eabe79 Action Review C: receipt ratchet, applied writer, tombstone carry, ledger and provenance guards (D97-25)
+4459ac37 Action Review D: claim families brought back inside their evidence (D97-25)
+108d6dcb Action Review E: seed provenance truth and doc corrections (D97-25)
+e83087a0 Close the Campaign 6 ledger: all rows resolved or founder-blocked
+```
 
 ## FIRST ADDENDUM ITEMS A-H
 
