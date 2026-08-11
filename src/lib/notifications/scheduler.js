@@ -99,6 +99,42 @@ function pickMorningCopy(dayOfWeek, name = '') {
  * @param {number} hour    0-23, default 7
  * @param {number} minute  0-59, default 0
  */
+
+// ─── C8 Work 5 (R-16): bounded weigh-in reminder horizon ─────────────────────
+// The two daily weight prompts used to be laid as REPEATING WEEKLY
+// triggers, i.e. indefinitely. Campaign 7 measured the consequence: a
+// user who stops opening the app keeps receiving two audible weight
+// prompts a day for months (~360 over a 180-day lapse), with no in-app
+// off switch at the tier most of them are on.
+//
+// The fix is restraint, not retention. Instead of an unbounded repeat,
+// each prompt is laid as a bounded run of one-shot DATE triggers
+// covering the app's existing 14-day recency boundary (the same
+// constant the engine already treats as the detraining horizon - no new
+// magic duration). Opening the app re-lays them (restoreNotifications
+// runs at launch), so an ACTIVE user's experience is unchanged and a
+// genuine return immediately restores the normal cadence. A user who
+// never comes back simply stops being prompted after the horizon runs
+// out.
+//
+// Copy rotation is preserved: each date keeps the weekday's own copy.
+// Pending-notification budget: 14 days x 2 prompts is 28 one-shots,
+// which sits inside iOS's 64-pending ceiling alongside the training,
+// check-in and meal reminders.
+const WEIGH_IN_HORIZON_DAYS = 14;
+
+function weighInHorizonDates(hour, minute, days = WEIGH_IN_HORIZON_DAYS) {
+  const out = [];
+  const now = new Date();
+  for (let i = 0; i <= days; i += 1) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, hour, minute, 0, 0);
+    if (d.getTime() <= Date.now()) continue; // never schedule into the past
+    out.push(d);
+    if (out.length >= days) break;
+  }
+  return out;
+}
+
 export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
   if (Platform.OS === 'web') return;
   try {
@@ -114,11 +150,15 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
     // actually rotates. The old single DAILY trigger froze whatever copy was
     // picked at schedule time, so the per-weekday rotation never happened until
     // the next re-lay. expo weekday is 1=Sunday..7=Saturday -> JS getDay (w-1).
-    for (let expoWeekday = 1; expoWeekday <= 7; expoWeekday += 1) {
-      const copy = pickMorningCopy(expoWeekday - 1, name);
+    // C8 Work 5 (R-16): a BOUNDED run of one-shots, re-laid on every
+    // launch, instead of an indefinite weekly repeat.
+    const dates = weighInHorizonDates(h, m);
+    for (let i = 0; i < dates.length; i += 1) {
+      const when = dates[i];
+      const copy = pickMorningCopy(when.getDay(), name);
       // eslint-disable-next-line no-await-in-loop
       await Notifications.scheduleNotificationAsync({
-        identifier: `${NOTIF_ID_MORNING}_${expoWeekday}`,
+        identifier: `${NOTIF_ID_MORNING}_${i + 1}`,
         content: {
           title: copy.title,
           body: copy.body,
@@ -131,10 +171,8 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
         },
         trigger: {
           channelId: COACHING_REMINDERS_CHANNEL,
-          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-          weekday: expoWeekday,
-          hour: h,
-          minute: m,
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: when,
         },
       });
     }
@@ -205,16 +243,18 @@ async function weighInEdFlagOpen() {
 }
 
 export async function cancelEveningWeightReminder() {
-  for (let w = 1; w <= 7; w += 1) {
+  // C8 Work 5: covers the old 7 weekly ids and the bounded one-shots.
+  for (let w = 1; w <= WEIGH_IN_HORIZON_DAYS; w += 1) {
     // eslint-disable-next-line no-await-in-loop
     try { await Notifications.cancelScheduledNotificationAsync(`${NOTIF_ID_EVENING}_${w}`); } catch {}
   }
 }
 
 /**
- * Evening weigh-in backstop. Lays one WEEKLY trigger per weekday (rotating copy,
- * like the morning nudge). Suppressed at schedule time under an open ED flag,
- * and again at delivery (handler) once the weight is logged / the flag is open.
+ * Evening weigh-in backstop. Lays a BOUNDED 14-day run of one-shot triggers
+ * (rotating copy, like the morning nudge), refreshed on every launch.
+ * Suppressed at schedule time under an open ED flag, and again at delivery
+ * (handler) once the weight is logged / the flag is open.
  *
  * @param {number} hour    0-23, default 19 (19:30 local)
  * @param {number} minute  0-59, default 30
@@ -230,11 +270,14 @@ export async function scheduleEveningWeightReminder(hour = 19, minute = 30) {
     const quiet = await getQuietHours();
     const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hour, minute, quiet);
     const name = greetName();
-    for (let expoWeekday = 1; expoWeekday <= 7; expoWeekday += 1) {
-      const copy = pickEveningCopy(expoWeekday - 1, name);
+    // C8 Work 5 (R-16): same bounded horizon as the morning prompt.
+    const dates = weighInHorizonDates(h, m);
+    for (let i = 0; i < dates.length; i += 1) {
+      const when = dates[i];
+      const copy = pickEveningCopy(when.getDay(), name);
       // eslint-disable-next-line no-await-in-loop
       await Notifications.scheduleNotificationAsync({
-        identifier: `${NOTIF_ID_EVENING}_${expoWeekday}`,
+        identifier: `${NOTIF_ID_EVENING}_${i + 1}`,
         content: {
           title: copy.title,
           body: copy.body,
@@ -243,10 +286,8 @@ export async function scheduleEveningWeightReminder(hour = 19, minute = 30) {
         },
         trigger: {
           channelId: COACHING_REMINDERS_CHANNEL,
-          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-          weekday: expoWeekday,
-          hour: h,
-          minute: m,
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: when,
         },
       });
     }
@@ -1195,9 +1236,12 @@ export async function cancelWeeklyCoachReady() {
 // ─── Cancel helpers ───────────────────────────────────────────────────────────
 
 export async function cancelMorningNotification() {
-  // Legacy single id (pre-NOTIF-4) plus the 7 per-weekday ids.
+  // Legacy single id (pre-NOTIF-4), the 7 per-weekday ids from the old
+  // weekly scheme, and the C8 Work 5 bounded horizon's one-shot ids.
+  // The range covers both schemes so an upgrading device is cleaned.
   try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_MORNING); } catch {}
-  for (let w = 1; w <= 7; w += 1) {
+  for (let w = 1; w <= WEIGH_IN_HORIZON_DAYS; w += 1) {
+    // eslint-disable-next-line no-await-in-loop
     try { await Notifications.cancelScheduledNotificationAsync(`${NOTIF_ID_MORNING}_${w}`); } catch {}
   }
   // Q1: the evening backstop rides the same morningEnabled toggle, so turning
