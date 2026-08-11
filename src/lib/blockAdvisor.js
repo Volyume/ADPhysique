@@ -408,7 +408,39 @@ export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro =
 
   // ── In recovery week ──────────────────────────────────────────────────────
   if (blockStatus?.status === 'recovery') {
+    // C6 R-4 (D97-22, ruling (b) + (a)): the block clock is pure calendar,
+    // so a user who left mid-accumulation and returned a fortnight later
+    // landed INSIDE a live "Recovery week is active" card whose body
+    // ("letting the last few weeks of work pay off") described weeks of no
+    // training - a recovery week they never earned (Phase 27: recovery
+    // state must not become fake training). A recovery week is only
+    // claimed as LIVE when the block actually trained inside the standing
+    // 14-day detraining boundary; otherwise the copy states the calendar
+    // fact and the way back without prescribing recovery from work that
+    // did not happen. The clock itself is untouched (option (c), pausing
+    // it, is D91-25-adjacent and stays a founder question in the triage);
+    // a failed read cannot invent recent training (recentTrainingAt null).
+    let recentTrainingAt = null;
+    try {
+      // eslint-disable-next-line global-require
+      const { getRecentCompletedWorkouts } = require('./database');
+      const recent = await getRecentCompletedWorkouts(userId, 1);
+      const w = recent?.[0];
+      recentTrainingAt = w ? Number(w.endedAt ?? w.startedAt ?? w.createdAt) : null;
+    } catch (_) { recentTrainingAt = null; }
+    const trainedRecently = Number.isFinite(recentTrainingAt)
+      && (Date.now() - recentTrainingAt) <= 14 * 86400000;
     const nextBlock = buildNextBlockRecommendation(checkins, userProfile, signals, 'recovery', isPro);
+    if (!trainedRecently) {
+      return {
+        action: 'in_recovery',
+        headline: 'Recovery week on the calendar',
+        body: `This block's recovery week has arrived, but you haven't trained recently, so there's nothing to recover from yet. Pick up wherever suits you: ease back in with lighter sessions, and the next-block choice opens when this week ends.`,
+        signals,
+        nextBlock,
+        blockStatus,
+      };
+    }
     return {
       action: 'in_recovery',
       headline: 'Recovery week is active',

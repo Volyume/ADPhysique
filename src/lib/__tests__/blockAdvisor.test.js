@@ -3,11 +3,11 @@
 // stops a brand-new user (a single, possibly stray/seed, check-in) from being
 // shown a "Keep an eye on recovery" card before there is any real pattern.
 
-jest.mock('../database', () => ({ getRecentCheckins: jest.fn() }));
+jest.mock('../database', () => ({ getRecentCheckins: jest.fn(), getRecentCompletedWorkouts: jest.fn() }));
 jest.mock('../mesocycle', () => ({ getBlockStatus: jest.fn() }));
 
 import { getBlockAdvice, buildNextBlockOptions, checkinReadiness } from '../blockAdvisor';
-import { getRecentCheckins } from '../database';
+import { getRecentCheckins, getRecentCompletedWorkouts } from '../database';
 import { getBlockStatus } from '../mesocycle';
 
 const block = { startDate: Date.now(), plannedWeeks: 5 };
@@ -156,4 +156,40 @@ test('a row that answers even one question is scored exactly as before', () => {
   expect(checkinReadiness({ weekStart: Date.now() - 3 * 86400000, energyScore: 3, sorenessScore: 3, sleepHours: 7 })).toBeCloseTo(52, 5);
   expect(checkinReadiness({ sorenessScore: 1 })).toBe(75);
   expect(checkinReadiness(null)).toBeNull();
+});
+
+describe('C6 R-4 (D97-22): a recovery week is only claimed live when it was earned', () => {
+  const recoveryStatus = { status: 'recovery', currentWeek: 5, totalWeeks: 5, recoveryWeek: 5, weeksOverdue: 0 };
+
+  test('no recent training: the calendar fact is stated, recovery is not prescribed', async () => {
+    getRecentCheckins.mockResolvedValue([]);
+    getBlockStatus.mockReturnValue(recoveryStatus);
+    getRecentCompletedWorkouts.mockResolvedValue([
+      { endedAt: Date.now() - 21 * 86400000 },
+    ]);
+    const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' });
+    expect(advice.action).toBe('in_recovery');
+    expect(advice.headline).toBe('Recovery week on the calendar');
+    expect(advice.body).not.toMatch(/last few weeks of work/);
+    expect(advice.body).toMatch(/haven't trained recently/);
+  });
+
+  test('trained inside 14 days: the live recovery card is unchanged', async () => {
+    getRecentCheckins.mockResolvedValue([]);
+    getBlockStatus.mockReturnValue(recoveryStatus);
+    getRecentCompletedWorkouts.mockResolvedValue([
+      { endedAt: Date.now() - 2 * 86400000 },
+    ]);
+    const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' });
+    expect(advice.headline).toBe('Recovery week is active');
+    expect(advice.body).toMatch(/letting the last few weeks of work pay off/);
+  });
+
+  test('a failed workout read cannot invent recent training (fails to the honest card)', async () => {
+    getRecentCheckins.mockResolvedValue([]);
+    getBlockStatus.mockReturnValue(recoveryStatus);
+    getRecentCompletedWorkouts.mockRejectedValue(new Error('read failed'));
+    const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' });
+    expect(advice.headline).toBe('Recovery week on the calendar');
+  });
 });
