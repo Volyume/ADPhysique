@@ -1,5 +1,17 @@
 # Personalisation maturity model, rebuilt from code
 
+> **CORRECTION (2026-08-11, choice-memory lane, verified by the lead).**
+> This document states in several places (entry 5, the Day-180 close)
+> that AsyncStorage-only values - manual landmarks, streak state,
+> wellbeing mode, win-back state, the habit schedule - are lost on
+> reinstall. That is WRONG: shouldSyncPref is allow-by-prefix
+> (`sync.js`), every `@volyume_` key mirrors to user_prefs unless
+> explicitly excluded, and manual landmarks + calm mode are additionally
+> write-stamp guarded (calm has a one-way ratchet). All five cross a
+> reinstall. The learning conclusions are unaffected; only the
+> persistence column is corrected. See CHOICE-MEMORY.md Part 0.
+
+
 Campaign 6, Phase 2 ("30 / 90 / 180 DAY PRODUCT MODEL"). Audit only. Nothing
 in `src/`, no test and no other document was modified to produce this file.
 

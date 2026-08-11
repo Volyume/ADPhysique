@@ -286,7 +286,14 @@ const useAppStore = create((set, get) => ({
     try {
       await AsyncStorage.setItem(PROFILE_KEY_PFX + userId, JSON.stringify(profile));
     } catch (_) {}
-    set({ userProfile: profile });
+    // C6 F4 (D97): a real user write - stamp the guarded pref (so a stale
+    // device's bulk push cannot out-fresh it) and clear the
+    // machine-rebuilt flag (so the push suppression lifts).
+    try {
+      // eslint-disable-next-line global-require
+      require('../lib/sync').notePrefWrite(PROFILE_KEY_PFX + userId);
+    } catch (_) { /* best effort */ }
+    set({ userProfile: profile, _profileBlobRebuilt: false });
     // Mirror to cloud if signed in. Fire-and-forget through the registry
     // runner (E12 step 1: the legacy per-save syncProfile dual writer is
     // retired; pushProfiles reads the store state set above). The runner's
@@ -955,7 +962,10 @@ const useAppStore = create((set, get) => ({
         // survives even if that row is missing. Only accept the enforced values.
         ...(cloudData.sex === 'male' || cloudData.sex === 'female' ? { sex: cloudData.sex } : {}),
       };
+      // C6 F4 (D97): a MACHINE-REBUILT blob - deliberately unstamped, and
+      // flagged so the pref push skips it until a real user write lands.
       try { await AsyncStorage.setItem(PROFILE_KEY_PFX + supabaseUserId, JSON.stringify(profile)); } catch (_) {}
+      set({ _profileBlobRebuilt: true });
       const hydratedTimestamps = await _hydrateProfileTimestamps(supabaseUserId);
       // AUTH-2: don't write user A's profile if user B signed in during the
       // awaits above.

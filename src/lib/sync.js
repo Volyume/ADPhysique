@@ -1390,6 +1390,13 @@ const WELLBEING_PREF_KEY = '@volyume_wellbeing_mode';
 const GUARDED_PREF_PATTERNS = [
   /^@volyume_landmarks_/,
   /^@volyume_wellbeing_mode$/,
+  // C6 F4 (D97): the per-uid profile blob carries coachTone, coachAutonomy,
+  // showScience, bodyWeightUnits and the mealPlan prefs - none of which
+  // exist as cloud columns. A stale device's routine bulk push must not
+  // make an old blob look freshest; saveLocalProfile stamps every real
+  // user write (the reinstall rebuild write deliberately does NOT, and is
+  // additionally suppressed from the push below).
+  /^@volyume_user_profile_/,
 ];
 
 export function isGuardedPref(key) {
@@ -1460,7 +1467,19 @@ export async function syncUserPref(supabaseUserId, key, value) {
 async function _pushAllUserPrefs(sb, supabaseUserId) {
   try {
     const allKeys = await AsyncStorage.getAllKeys();
-    const keys = allKeys.filter(shouldSyncPref);
+    let keys = allKeys.filter(shouldSyncPref);
+    // C6 F4 (D97): a machine-rebuilt profile blob (reinstall restore, no
+    // user write yet this session) must never be pushed - in the
+    // push-before-pull order it would overwrite the cloud's only good
+    // copy with defaults, permanently on a single-device reinstall. The
+    // flag clears on the first real saveLocalProfile.
+    try {
+      // eslint-disable-next-line global-require
+      const store = require('../store/useAppStore').default;
+      if (store.getState()._profileBlobRebuilt) {
+        keys = keys.filter((k) => !/^@volyume_user_profile_/.test(k));
+      }
+    } catch (_) { /* store unavailable: push as before */ }
     if (!keys.length) return;
     const pairs = await AsyncStorage.multiGet(keys);
     // Finding 5: guarded keys carry the value's honest edit time so a

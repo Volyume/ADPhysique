@@ -257,3 +257,55 @@ invariants):
   standing cluster-eligibility wiring: carried on the audit file for
   the next batch; the record WRITER (detectPR) is closed, so no new
   inflated records can be created from clusters anywhere.
+
+## D97-19 (addendum: choice memory) — F-register rulings
+
+From CHOICE-MEMORY.md (39 choices: 29 remembered/respected, 10 not):
+- **F5 FIXED**: the insight-dismissal ratchet on pull (a cloud null can
+  never clear a local dismissal - the calm-ratchet pattern; Promise 4).
+  The honest-timestamp half needs a local schema column - deferred with
+  the note in code.
+- **F8 FIXED**: the block-decision snooze is per-user now.
+- **F4 FIXED (both safe halves)**: the per-uid profile blob (tone,
+  autonomy, show-science, bodyweight units, meal prefs) is now a
+  GUARDED pref - saveLocalProfile stamps real writes; and a
+  machine-rebuilt blob (reinstall restore) is flagged and suppressed
+  from the pref push until a real user write lands, closing the
+  single-device reinstall wipe. Residual recorded: the choices are
+  absent for the first post-reinstall session (in-memory profile
+  rehydrates next launch).
+- **F3 CARRIED** (workout_notes sync needs a cloud migration - founder
+  decision), **F9 CARRIED** (revert expiry is undefined product law -
+  beside D97-3 in the triage), F6=FR-C4-2, F7=P44-13 as already ruled.
+- **PERSONALISATION-MATURITY.md corrected** (dated banner): the
+  AsyncStorage reinstall-loss claims were wrong - pref sync is
+  allow-by-prefix and manual landmarks/calm are stamp-guarded; all
+  five named values cross a reinstall. Verified by the lead.
+- Relationship moments: A=12 B=6 C=0 D=2. B2 (upwardCarryPrevented
+  never spoken) is a FOUNDER COPY QUESTION (calm/ED are deliberately
+  ORed; separating them in copy risks exposing detector state). B1
+  (per-muscle band provenance dropped at the merge) and B4 (nutrition
+  provenance constant) recorded as the two implementation candidates
+  under the saturation rule; evidence-age gaps deliberately routed to
+  the D91-25/D97-3 triage.
+
+## D97-20 (Phases 18-21) — tier/trial audit ruling directions
+
+From AUDIT-TIER-TRANSITIONS.md (6 DEFECT / 5 LATENT / 5 CLEAN):
+- **P-1 (HIGH), fix**: the FQ-6.1 retry never arms - startCascade
+  NEVER rejects ({ok:false} results), so the consent screen's .catch
+  queue path and the flush's try/catch split are dead code, and the
+  flush clears the queue unconditionally. Rewire both to inspect
+  RESULTS (queue on network-shaped ok:false; keep the queue on a
+  failed flush; clear only on success or definitive refusal), with
+  BEHAVIOURAL tests this time.
+- **P-2 (HIGH), split**: weeksInPhase counts wall-clock across
+  uncoached months ("Week 34 · Cut" + "below maintenance for 34
+  weeks" on the first run back; hasEnoughData permanently satisfied).
+  Direction: evidence-bounded claims - the copy that asserts
+  continuous adherence must not count gap weeks; the diet-break
+  suggestion is protective and stays. Exact mechanism to be
+  implemented with care next batch; NOT a silent phase-clock reset.
+- **P-3 (MED-HIGH), fix**: blockLedgerRunner's sleepFreeReadiness
+  still defaults energy/soreness to 3 for evidence-free rows - align
+  with FB-36 (a row answering neither is no reading, returns null).

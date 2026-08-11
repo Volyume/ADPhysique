@@ -4813,6 +4813,12 @@ export async function getActiveInsights(userId, limitRows = 3) {
 
 export async function dismissInsight(insightId) {
   const d = await db();
+  // C6 F5 (D97): the local table carries no updated_at column, so the
+  // honest-timestamp half of the fix would need a schema change; the
+  // pull-side ratchet in insertOrUpdateUserInsightFromCloud alone closes
+  // the user-visible defect (a dismissal can never be un-dismissed by a
+  // stale device). The cloud row may briefly flap; devices converge on
+  // dismissed.
   await d.runAsync(
     'UPDATE user_insights SET dismissed_at = ? WHERE id = ?',
     [Date.now(), insightId],
@@ -7923,6 +7929,16 @@ export async function insertOrUpdateUserBodyProfileFromCloud(userId, p) {
 export async function insertOrUpdateUserInsightFromCloud(userId, row) {
   if (!row?.id) return;
   const d = await db();
+  // C6 F5 (D97): the dismissal RATCHET, mirroring the calm-mode ratchet -
+  // a pulled row whose dismissed_at is null may never clear a local
+  // non-null dismissal. A user's "no" stands whatever a stale device
+  // pushes; they never re-reject the same card (Promise 4).
+  const local = await d.getFirstAsync(
+    'SELECT dismissed_at FROM user_insights WHERE id = ?', [row.id],
+  ).catch(() => null);
+  const localDismissed = local?.dismissed_at ?? null;
+  const cloudDismissed = row.dismissed_at ? _tsToMs(row.dismissed_at) : null;
+  const dismissedAt = cloudDismissed ?? localDismissed;
   await d.runAsync(
     `INSERT OR REPLACE INTO user_insights
       (id, user_id, insight_key, type, severity, copy, action_payload,
@@ -7932,7 +7948,7 @@ export async function insertOrUpdateUserInsightFromCloud(userId, row) {
       row.id, userId, row.insight_key, row.type ?? null, row.severity ?? null,
       row.copy ?? null, row.action_payload ?? null,
       _tsToMs(row.generated_at) ?? Date.now(),
-      row.dismissed_at ? _tsToMs(row.dismissed_at) : null,
+      dismissedAt,
     ],
   );
 }
